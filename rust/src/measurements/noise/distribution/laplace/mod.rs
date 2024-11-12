@@ -6,6 +6,7 @@ use opendp_derive::{bootstrap, proven};
 use crate::core::{Measure, Metric, MetricSpace};
 use crate::measurements::noise::nature::Nature;
 use crate::measurements::{MakeNoise, NoiseDomain, NoisePrivacyMap, ZExpFamily};
+use crate::metrics::ModularMetric;
 use crate::{
     core::{Domain, Measurement, PrivacyMap},
     error::Fallible,
@@ -69,14 +70,15 @@ pub struct Laplace {
 
 /// Laplace mechanism
 #[proven(proof_path = "measurements/noise/distribution/laplace/MakeNoise_for_Laplace.tex")]
-impl<DI: NoiseDomain, MI: Metric, MO: 'static + Measure> MakeNoise<DI, MI, MO> for Laplace
+impl<DI: NoiseDomain, MI: ModularMetric, MO: 'static + Measure> MakeNoise<DI, MI, MO> for Laplace
 where
     (DI, MI): MetricSpace,
     DI::Atom: Nature,
     <DI::Atom as Nature>::RV<1>: MakeNoise<DI, MI, MO>,
 {
     fn make_noise(self, input_space: (DI, MI)) -> Fallible<Measurement<DI, DI::Carrier, MI, MO>> {
-        DI::Atom::new_distribution(self.scale, self.k)?.make_noise(input_space)
+        let modular = input_space.1.modular();
+        DI::Atom::new_distribution(self.scale, self.k, modular)?.make_noise(input_space)
     }
 }
 
@@ -84,8 +86,19 @@ where
     proof_path = "measurements/noise/distribution/laplace/NoisePrivacyMap_for_ZExpFamily1.tex"
 )]
 impl NoisePrivacyMap<L1Distance<RBig>, MaxDivergence> for ZExpFamily<1> {
-    fn noise_privacy_map(self) -> Fallible<PrivacyMap<L1Distance<RBig>, MaxDivergence>> {
-        let ZExpFamily { scale } = self;
+    fn noise_privacy_map(
+        &self,
+        input_metric: &L1Distance<RBig>,
+    ) -> Fallible<PrivacyMap<L1Distance<RBig>, MaxDivergence>> {
+        if self.divisor.is_some() != input_metric.modular() {
+            return fallible!(
+                MakeMeasurement,
+                "divisor ({}) must be set if and only if the input metric is modular ({})",
+                self.divisor.is_some(),
+                input_metric.modular()
+            );
+        }
+        let scale = self.scale.clone();
         if scale < RBig::ZERO {
             return fallible!(MakeMeasurement, "scale ({}) must not be negative", scale);
         }
