@@ -33,6 +33,7 @@ fn test_vector_bigint_gaussian_big_scale() -> Fallible<()> {
     );
     let distribution = ZExpFamily {
         scale: rbig!(23948285282902934157),
+        divisor: None,
     };
 
     let meas = distribution.make_noise(space)?;
@@ -45,7 +46,10 @@ fn test_vector_bigint_gaussian_big_scale() -> Fallible<()> {
 fn test_vector_bigint_gaussian_zero_scale() -> Fallible<()> {
     let domain = VectorDomain::<AtomDomain<IBig>>::default();
     let metric = L2Distance::default();
-    let distribution = ZExpFamily { scale: rbig!(0) };
+    let distribution = ZExpFamily {
+        scale: rbig!(0),
+        divisor: None,
+    };
 
     let meas = distribution.make_noise((domain, metric))?;
     assert_eq!(meas.invoke(&vec![ibig!(0)])?, vec![ibig!(0)]);

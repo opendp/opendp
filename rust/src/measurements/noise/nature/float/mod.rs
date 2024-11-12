@@ -37,6 +37,7 @@ where
         let FloatExpFamily { scale, k } = self;
         let distribution = ZExpFamily {
             scale: integerize_scale(scale, k)?,
+            divisor: None,
         };
 
         let size = input_domain.size;
