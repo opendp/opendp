@@ -23,7 +23,9 @@ Proves soundness of the implementation of \rustdoc{measurements/noise/trait}{Sam
 \begin{theorem}
     \label{postcondition}
     Either returns \texttt{Err(e)} independently of the input \texttt{shift},
-    or \texttt{Ok(shift + Z)} where \texttt{Z} is a sample from the distribution defined by \texttt{self}.
+    or returns a sample from the additive mechanism defined by \texttt{self} shifted by
+    \texttt{shift}. When \texttt{self.divisor} is \texttt{None}, this is \texttt{shift + Z}.
+    When \texttt{self.divisor = m}, this is \texttt{(shift + Z) mod m}.
 \end{theorem}
 
 \begin{proof}
@@ -32,10 +34,13 @@ Proves soundness of the implementation of \rustdoc{measurements/noise/trait}{Sam
     \texttt{self.scale} is non-negative.
 
     Since the preconditions for \rustdoc{traits/samplers/cks20/sample\_discrete\_gaussian} are met (non-negative scale),
-    then we claim the postcondition that the returned value follows a given distribution.
-    This distribution matches that defined by \texttt{self}.
+    the sample drawn on line \ref{line:add} has the base discrete-Gaussian law encoded by \texttt{self.scale}.
 
-    By the addition on line \ref{line:add}, the implementation satisfies the postcondition.
+    If \texttt{self.divisor} is absent, line \ref{line:add} returns \texttt{shift + Z}, establishing
+    the non-modular case.
+    If \texttt{self.divisor} is present, line \ref{line:mod} deterministically reduces the result modulo
+    the divisor, which is exactly the wrapped additive mechanism encoded by \texttt{self}.
+    Therefore the implementation satisfies the postcondition in either branch.
 \end{proof}
 
 \end{document}

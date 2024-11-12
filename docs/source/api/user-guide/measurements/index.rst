@@ -29,6 +29,9 @@ There is a symmetric structure to the additive noise measurements:
 
 By passing the appropriate input space,
 you can construct either scalar or vector-valued mechanisms.
+On integer domains, you can also set ``modular=True`` on
+``AbsoluteDistance``, ``L1Distance``, or ``L2Distance`` to sample wrapped
+noise over native integer rings.
 
 More details on `laplacian and gaussian noise mechanisms here <additive-noise-mechanisms.html>`_.
 

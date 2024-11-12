@@ -33,6 +33,28 @@ fn test_make_gaussian_native_types() -> Fallible<()> {
 }
 
 #[test]
+fn test_make_gaussian_modular_native_types() -> Fallible<()> {
+    let scalar = make_gaussian(
+        AtomDomain::<i32>::default(),
+        AbsoluteDistance::<f64>::new(true),
+        2.,
+        None,
+    )?;
+    scalar.invoke(&0)?;
+    assert_eq!(scalar.map(&1.)?, 0.125);
+
+    let vector = make_gaussian(
+        VectorDomain::new(AtomDomain::<i32>::default()),
+        L2Distance::<f64>::new(true),
+        2.,
+        None,
+    )?;
+    vector.invoke(&vec![0, 1])?;
+    assert_eq!(vector.map(&1.)?, 0.125);
+    Ok(())
+}
+
+#[test]
 fn test_make_gaussian_bigint() -> Fallible<()> {
     // scalar ibig
     let meas = make_gaussian(
@@ -139,6 +161,7 @@ fn test_make_noise_zexpfamily2_large_scale() -> Fallible<()> {
     let space = (AtomDomain::<IBig>::default(), AbsoluteDistance::default());
     let distribution = ZExpFamily::<2> {
         scale: rbig!(23948285282902934157),
+        divisor: None,
     };
 
     let meas = distribution.make_noise(space)?;
@@ -152,7 +175,10 @@ fn test_make_noise_zexpfamily2_large_scale() -> Fallible<()> {
 fn test_make_noise_zexpfamily2_zero_scale() -> Fallible<()> {
     let domain = VectorDomain::<AtomDomain<IBig>>::default();
     let metric = L2Distance::default();
-    let distribution = ZExpFamily { scale: rbig!(0) };
+    let distribution = ZExpFamily {
+        scale: rbig!(0),
+        divisor: None,
+    };
 
     let meas = distribution.make_noise((domain, metric))?;
     assert_eq!(meas.invoke(&vec![ibig!(0)])?, vec![ibig!(0)]);
