@@ -382,7 +382,7 @@ class Context(object):
         split_evenly_over: Optional[int] = None,
         split_by_weights: Optional[list[float]] = None,
         domain: Optional[Domain] = None,
-        margins: Optional[dict[Union[tuple[str, ...], str], Margin]] = None,
+        margins: Optional[dict[tuple[str, ...], Margin]] = None,
     ) -> "Context":
         """Constructs a new context containing a sequential compositor with the given weights.
 
@@ -403,7 +403,6 @@ class Context(object):
 
         if margins:
             for by, margin in margins.items():
-                # wrap single strings in a singleton tuple
                 if not isinstance(by, tuple):
                     msg = by if isinstance(by, str) else "your-column"
                     raise ValueError(f"Margin keys must be tuples. For single-valued tuples include a trailing comma, ie: `('{msg}',)`")
