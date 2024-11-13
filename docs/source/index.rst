@@ -47,6 +47,7 @@ Some of the applications of OpenDP in healthcare, government, and tech include:
 * `Microsoft <https://microsoft.com>`_ uses OpenDP and the `SmartNoise SDK <https://github.com/opendp/smartnoise-sdk>`_ (which is based on OpenDP) both internally as well as for several public research projects, including the `United States Broadband Percentages Database <https://github.com/microsoft/USBroadbandUsagePercentages>`_.
 * `Spectus <https://spectus.ai/>`_ is using OpenDP to create `privacy enhanced mobility data <https://spectus.ai/wp-content/uploads/2022/10/Spectus_DPWhitepaper_v01b.pdf>`_
 * `LiveRamp <https://liveramp.com>`_ is using OpenDP to `support COVID research <https://liveramp.com/developers/blog/two-liveramp-engineers-named-harvard-opendp-fellows/>`_
+* Researchers with the `Christchurch Call Initiative on Algorithmic Outcomes <https://www.christchurchcall.org/christchurch-call-initiative-on-algorithmic-outcomes/>`_ used OpenDP to `audit of recommender algorithms <https://www.christchurchcall.org/content/files/2024/11/Christchurch-Call-AI-Transparency-in-Practice-Report-October-2024-1.pdf>`_.
 
 
 What next?
