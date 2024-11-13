@@ -40,6 +40,20 @@ fn test_margin() -> Fallible<()> {
     Ok(())
 }
 
+fn assert_row_descriptors<F: Frame>(
+    domain: &FrameDomain<F>,
+    by: &[&str],
+    max_partition_length: Option<u32>,
+    max_partition_contributions: Option<u32>,
+) {
+    let margin = domain.get_margin(by.iter().map(ToString::to_string).collect());
+    assert_eq!(margin.max_partition_length, max_partition_length);
+    assert_eq!(
+        margin.max_partition_contributions,
+        max_partition_contributions
+    );
+}
+
 #[test]
 fn test_get_margin_max_partition_descriptors() -> Fallible<()> {
     let lf_domain = LazyFrameDomain::new(vec![
@@ -53,34 +67,20 @@ fn test_get_margin_max_partition_descriptors() -> Fallible<()> {
             .with_max_partition_contributions(3),
     )?;
 
-    assert_eq!(
-        lf_domain
-            .get_margin(BTreeSet::from(["A".to_string(), "B".to_string()]))
-            .max_partition_length,
-        Some(10)
-    );
-
-    assert_eq!(
-        lf_domain
-            .get_margin(BTreeSet::from(["B".to_string()]))
-            .max_partition_length,
-        None
-    );
-
-    assert_eq!(
-        lf_domain
-            .get_margin(BTreeSet::from(["A".to_string(), "B".to_string()]))
-            .max_partition_contributions,
-        Some(3)
-    );
-
-    assert_eq!(
-        lf_domain
-            .get_margin(BTreeSet::from(["B".to_string()]))
-            .max_partition_contributions,
-        None
-    );
+    assert_row_descriptors(&lf_domain, &["A", "B"], Some(10), Some(3));
+    assert_row_descriptors(&lf_domain, &["B"], None, None);
     Ok(())
+}
+
+fn assert_partition_descriptors<F: Frame>(
+    domain: &FrameDomain<F>,
+    by: &[&str],
+    max_num_partitions: Option<u32>,
+    max_influenced_partitions: Option<u32>,
+) {
+    let margin = domain.get_margin(by.iter().map(ToString::to_string).collect());
+    assert_eq!(margin.max_num_partitions, max_num_partitions);
+    assert_eq!(margin.max_influenced_partitions, max_influenced_partitions);
 }
 
 #[test]
@@ -88,6 +88,7 @@ fn test_get_margin_covering_small_to_large() -> Fallible<()> {
     let lf_domain = LazyFrameDomain::new(vec![
         SeriesDomain::new("A", AtomDomain::<i32>::default()),
         SeriesDomain::new("B", AtomDomain::<i32>::default()),
+        SeriesDomain::new("C", AtomDomain::<i32>::default()),
     ])?
     .with_margin(
         &["A"],
@@ -98,23 +99,14 @@ fn test_get_margin_covering_small_to_large() -> Fallible<()> {
     .with_margin(
         &["B"],
         Margin::default()
-            .with_max_num_partitions(10)
-            .with_max_influenced_partitions(3),
+            .with_max_num_partitions(11)
+            .with_max_influenced_partitions(4),
     )?;
 
-    assert_eq!(
-        lf_domain
-            .get_margin(BTreeSet::from(["A".to_string(), "B".to_string()]))
-            .max_num_partitions,
-        Some(100)
-    );
-
-    assert_eq!(
-        lf_domain
-            .get_margin(BTreeSet::from(["B".to_string()]))
-            .max_influenced_partitions,
-        Some(3)
-    );
+    assert_partition_descriptors(&lf_domain, &["A", "B"], Some(110), Some(12));
+    assert_partition_descriptors(&lf_domain, &["B"], Some(11), Some(4));
+    assert_partition_descriptors(&lf_domain, &[], Some(1), Some(1));
+    assert_partition_descriptors(&lf_domain, &["C"], None, None);
     Ok(())
 }
 
@@ -123,6 +115,7 @@ fn test_get_margin_covering_large_to_small() -> Fallible<()> {
     let lf_domain = LazyFrameDomain::new(vec![
         SeriesDomain::new("A", AtomDomain::<i32>::default()),
         SeriesDomain::new("B", AtomDomain::<i32>::default()),
+        SeriesDomain::new("C", AtomDomain::<i32>::default()),
     ])?
     .with_margin(
         &["A", "B"],
@@ -131,19 +124,10 @@ fn test_get_margin_covering_large_to_small() -> Fallible<()> {
             .with_max_influenced_partitions(3),
     )?;
 
-    assert_eq!(
-        lf_domain
-            .get_margin(BTreeSet::from(["A".to_string()]))
-            .max_num_partitions,
-        Some(10)
-    );
-
-    assert_eq!(
-        lf_domain
-            .get_margin(BTreeSet::from(["B".to_string()]))
-            .max_influenced_partitions,
-        Some(3)
-    );
+    assert_partition_descriptors(&lf_domain, &["A"], Some(10), Some(3));
+    assert_partition_descriptors(&lf_domain, &["B"], Some(10), Some(3));
+    assert_partition_descriptors(&lf_domain, &[], Some(1), Some(1));
+    assert_partition_descriptors(&lf_domain, &["C"], None, None);
     Ok(())
 }
 
@@ -153,15 +137,23 @@ fn test_get_margin_public_info() -> Fallible<()> {
         SeriesDomain::new("A", AtomDomain::<i32>::default()),
         SeriesDomain::new("B", AtomDomain::<i32>::default()),
     ])?
-    .with_margin(&["A", "B"], Margin::default().with_public_keys())?;
+    .with_margin(&["A", "B"], Margin::default().with_public_lengths())?;
 
-    // keys are known on coarser partitions
-    assert_eq!(
-        lf_domain
-            .get_margin(BTreeSet::from(["A".to_string()]))
-            .public_info,
-        Some(MarginPub::Keys)
-    );
+    // nothing is known when grouping not in margins
+    let margin_abc = lf_domain.get_margin(BTreeSet::from([
+        "A".to_string(),
+        "B".to_string(),
+        "C".to_string(),
+    ]));
+    assert_eq!(margin_abc.public_info, None);
+
+    // retrieving info directly from the margin as-is
+    let margin_ab = lf_domain.get_margin(BTreeSet::from(["A".to_string(), "B".to_string()]));
+    assert_eq!(margin_ab.public_info, Some(MarginPub::Lengths));
+
+    // keys and lengths are known on coarser partitions
+    let margin_a = lf_domain.get_margin(BTreeSet::from(["A".to_string()]));
+    assert_eq!(margin_a.public_info, Some(MarginPub::Lengths));
     Ok(())
 }
 

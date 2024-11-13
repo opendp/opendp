@@ -44,8 +44,6 @@ where
         input_domain.context.clone(),
     );
 
-    let margin = input_domain.active_margin()?;
-
     //  norm_map(d_in) returns d_in^(1/p)
     let norm_map = move |d_in: f64| match P {
         1 => Ok(d_in),
@@ -57,6 +55,8 @@ where
             )
         }
     };
+
+    let margin = input_domain.active_margin()?;
 
     //  pp_map(d_in) returns the per-partition change in counts if d_in input records are changed
     let pp_map = move |d_in: &IntDistance| match margin.public_info {
