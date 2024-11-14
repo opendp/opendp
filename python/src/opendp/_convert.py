@@ -286,6 +286,9 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
 
         if type_name.origin == "HashMap":
             return _hashmap_to_slice(value, type_name)
+        
+        if type_name.origin == "Function":
+            return _function_to_slice(value, type_name)
 
         if type_name.origin == "Tuple":
             return _tuple_to_slice(value, type_name)
@@ -517,10 +520,20 @@ def _hashmap_to_slice(val: dict[Any, Any], type_name: RuntimeType) -> FfiSlicePt
     ffislice.depends_on(keys, vals)
     return ffislice
 
+
 def _slice_to_function(raw: FfiSlicePtr) -> Function:
+    # for ε(α)-RDP curves
     function = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyFunction)).contents
     # put the contents behind a new, python pointer
     return ctypes.cast(ctypes.pointer(function), Function)
+
+
+def _function_to_slice(raw: Function, type_name: RuntimeType) -> FfiSlicePtr:
+    if not isinstance(raw, Function):
+        from opendp.core import new_function
+        raw = new_function(raw, TO=type_name.args[1])
+    return _wrap_in_slice(raw, 1)
+
 
 def _slice_to_hashmap(raw: FfiSlicePtr) -> dict[Any, Any]:
     slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyObjectPtr))

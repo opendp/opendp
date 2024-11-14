@@ -265,6 +265,18 @@ def test_approx_to_approx_zCDP():
     assert release == [1, 2, 3]
 
 
+def test_agg_input():
+    dp.enable_features("contrib")
+    context = dp.Context.compositor(
+        data=0,
+        privacy_unit=dp.unit_of(absolute=1),
+        privacy_loss=dp.loss_of(rho=0.5, delta=0.0),
+        split_evenly_over=1,
+    )
+
+    assert isinstance(context.query().gaussian().release(), int)
+
+
 def test_transformation_release_error():
     privacy_unit = dp.unit_of(contributions=2)
     privacy_loss = dp.loss_of(epsilon=1.0)

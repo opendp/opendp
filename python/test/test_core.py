@@ -328,4 +328,8 @@ def test_pointer_classes_dont_iter():
     # We override __iter__ so as to make this infinite loop/lock impossible to accidentally trigger
     with pytest.raises(ValueError):
         [*dp.atom_domain(T=bool)]
-    
+
+
+def test_erfc():
+    from opendp._data import erfc
+    assert erfc(0.5) == 0.4795001222363462
