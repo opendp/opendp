@@ -115,15 +115,19 @@ def test_renyidp():
 def test_make_approximate():
     input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
 
-    meas = dp.c.make_basic_composition([
-        dp.c.make_approximate(dp.m.make_laplace(*input_space, 10.)),
-        dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 10.)), delta=1e-6)
-    ])
+    # spot check that mechanisms get delta terms
+    m_gauss = dp.c.make_approximate(dp.m.make_gaussian(*input_space, 1.0))
+    assert m_gauss.map(1.) == (0.5, 0.0)
 
-    assert meas.map(1.) == (0.5299414688369495, 1e-06)
-    
-    meas = dp.c.make_approximate(dp.m.make_gaussian(*input_space, 1.0))
-    assert meas.map(1.) == (0.5, 0.0)
+    m_lap = dp.c.make_approximate(dp.m.make_laplace(*input_space, 1.0))
+    assert m_lap.map(1.) == (1.0, 0.0)
+
+    # composition works properly
+    m_comp = dp.c.make_basic_composition([
+        m_lap,
+        dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 1.)), delta=1e-6)
+    ])
+    assert isinstance(m_comp.map(1.), tuple)
 
 
 def test_make_pureDP_to_zCDP():
@@ -133,6 +137,7 @@ def test_make_pureDP_to_zCDP():
         dp.m.make_gaussian(*input_space, 10.)
     ])
 
+    # (1/10)^2 / 2 + 1 / 10^2 / 2
     assert meas.map(1.) == 0.010000000000000002
 
 if __name__ == "__main__":

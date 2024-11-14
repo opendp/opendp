@@ -127,6 +127,18 @@ def test_context_zCDP():
     print(dp_sum.release())
 
 
+def test_middle_param():
+    context = dp.Context.compositor(
+        data=[1.0, 2.0, 3.0],
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=3.0),
+        split_evenly_over=1,
+    )
+
+    dp_sum = context.query().resize(constant=2.0).clamp((1.0, 10.0)).mean().laplace(1.0)  # type: ignore
+    print(dp_sum.release())
+
+
 def test_query_repr():
     context = dp.Context.compositor(
         data=[1, 2, 3],
@@ -266,7 +278,6 @@ def test_approx_to_approx_zCDP():
 
 
 def test_agg_input():
-    dp.enable_features("contrib")
     context = dp.Context.compositor(
         data=0,
         privacy_unit=dp.unit_of(absolute=1),

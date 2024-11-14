@@ -44,6 +44,7 @@ from opendp.mod import (
     Domain,
     Measurement,
     Metric,
+    PartialConstructor,
     Queryable,
     Transformation,
     Measure,
@@ -697,7 +698,7 @@ class PartialChain(object):
 
     def __call__(self, v):
         """Returns the transformation or measurement with the given parameter."""
-        return self.partial(v) # pragma: no cover
+        return self.partial(v)
 
     def fix(self, d_in: float, d_out: float, output_measure: Optional[Measure] = None, T=None):
         """Returns the closest transformation or measurement that satisfies the given stability or privacy constraint.
@@ -720,11 +721,12 @@ class PartialChain(object):
         chain.param = param
         return chain
 
-    def __rshift__(self, other: Union[Transformation, Measurement]):
+    def __rshift__(self, other: Union[Transformation, Measurement, PartialConstructor]):
         # partials may be chained with other transformations or measurements to form a new partial
-        if isinstance(other, (Transformation, Measurement)): # pragma: no cover
+        if isinstance(other, (Transformation, Measurement, PartialConstructor)):
             return PartialChain(lambda x: self(x) >> other)
 
+        print(self, other)
         raise ValueError("At most one parameter may be missing at a time")
     
     def __rrshift__(self, other: Union[tuple[Domain, Metric], Transformation, Measurement]):
