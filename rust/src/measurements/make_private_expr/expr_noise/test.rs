@@ -141,9 +141,8 @@ fn check_autocalibration(
     bounds: (u32, u32),
     d_in: (u32, u32, u32),
 ) -> Fallible<()> {
-    let lf_domain =
-        LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?
-            .with_margin::<&str>(&[], margin)?;
+    let series_domain = SeriesDomain::new("A", AtomDomain::<i32>::default());
+    let lf_domain = LazyFrameDomain::new(vec![series_domain])?.with_margin::<&str>(&[], margin)?;
     let expr_domain = lf_domain.select();
 
     // Get resulting sum (expression result)
@@ -155,7 +154,7 @@ fn check_autocalibration(
         .make_private(
             expr_domain,
             PartitionDistance(InsertDeleteDistance),
-            MaxDivergence::default(),
+            MaxDivergence,
             Some(1.),
         )?;
 
