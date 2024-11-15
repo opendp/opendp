@@ -7,7 +7,7 @@ use crate::{
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     measurements::{MakeNoise, NoiseDomain, NoisePrivacyMap, ZExpFamily},
-    metrics::{AbsoluteDistance, L1Distance},
+    metrics::{AbsoluteDistance, L1Distance, LpDistance, ModularMetric},
     traits::{samplers::sample_discrete_laplace_linear, ExactIntCast, Integer, SaturatingCast},
     transformations::{make_vec, then_index_or_default},
 };
@@ -112,9 +112,11 @@ where
         let distribution = ZExpFamily {
             scale: RBig::from_f64(scale)
                 .ok_or_else(|| err!(MakeTransformation, "scale ({}) must be finite", scale))?,
+            divisor: None,
         };
 
-        let privacy_map = distribution.noise_privacy_map()?;
+        let privacy_map =
+            distribution.noise_privacy_map(&LpDistance::new(input_metric.modular()))?;
 
         Measurement::new(
             input_domain,

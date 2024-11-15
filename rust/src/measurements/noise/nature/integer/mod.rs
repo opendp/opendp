@@ -1,11 +1,14 @@
-use dashu::{integer::IBig, rational::RBig};
+use dashu::{
+    integer::{fast_div::ConstDivisor, IBig},
+    rational::RBig,
+};
 
 use crate::{
     core::{Function, Measure, Measurement, StabilityMap, Transformation},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     measurements::{MakeNoise, NoisePrivacyMap, ZExpFamily},
-    metrics::{AbsoluteDistance, LpDistance},
+    metrics::{AbsoluteDistance, LpDistance, ModularMetric},
     traits::{Integer, Number, SaturatingCast},
     transformations::{make_vec, then_index_or_default},
 };
@@ -14,6 +17,7 @@ use super::float::integerize_scale;
 
 pub struct IntExpFamily<const P: usize> {
     pub scale: f64,
+    pub divisor: Option<ConstDivisor>,
 }
 
 /// Integer vector mechanism
@@ -31,7 +35,9 @@ where
     ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, Vec<T>, LpDistance<P, QI>, MO>> {
         let distribution = ZExpFamily {
             scale: integerize_scale(self.scale, 0)?,
+            divisor: self.divisor,
         };
+        let modular = input_metric.modular();
 
         let t_int = Transformation::new(
             input_domain.clone(),
@@ -43,6 +49,13 @@ where
                 arg.into_iter()
                     .cloned()
                     .map(|x_i| IBig::from(x_i.clone()))
+                    .map(|x_i| {
+                        if modular {
+                            x_i + IBig::from(T::MIN_FINITE)
+                        } else {
+                            x_i
+                        }
+                    })
                     .collect()
             }),
             input_metric.clone(),
@@ -55,7 +68,17 @@ where
         let m_noise = distribution.make_noise(t_int.output_space())?;
 
         let f_native_int = Function::new(move |x: &Vec<IBig>| {
-            x.into_iter().cloned().map(T::saturating_cast).collect()
+            x.into_iter()
+                .cloned()
+                .map(|x_i| {
+                    if modular {
+                        x_i - IBig::from(T::MIN_FINITE)
+                    } else {
+                        x_i
+                    }
+                })
+                .map(T::saturating_cast)
+                .collect()
         });
 
         t_int >> m_noise >> f_native_int

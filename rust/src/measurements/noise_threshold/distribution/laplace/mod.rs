@@ -13,7 +13,7 @@ use crate::{
         ZExpFamily,
     },
     measures::{Approximate, MaxDivergence},
-    metrics::{AbsoluteDistance, PartitionDistance},
+    metrics::{AbsoluteDistance, ModularMetric, PartitionDistance},
     traits::{InfCast, InfPowI, InfSub},
 };
 
@@ -70,7 +70,8 @@ where
         input_space: (DI, MI),
         threshold: DI::Atom,
     ) -> Fallible<Measurement<DI, DI::Carrier, MI, MO>> {
-        DI::Atom::new_distribution(self.scale, self.k)?.make_noise_threshold(input_space, threshold)
+        DI::Atom::new_distribution(self.scale, self.k, false)?
+            .make_noise_threshold(input_space, threshold)
     }
 }
 
@@ -78,14 +79,30 @@ impl NoiseThresholdPrivacyMap<PartitionDistance<AbsoluteDistance<UBig>>, Approxi
     for ZExpFamily<1>
 {
     fn noise_threshold_privacy_map(
-        self,
+        &self,
+        input_metric: &PartitionDistance<AbsoluteDistance<UBig>>,
         threshold: IBig,
     ) -> Fallible<PrivacyMap<PartitionDistance<AbsoluteDistance<UBig>>, Approximate<MaxDivergence>>>
     {
-        let ZExpFamily { scale } = self;
-        if scale < RBig::ZERO {
+        if self.divisor.is_some() != input_metric.0.modular() {
+            return fallible!(
+                MakeMeasurement,
+                "divisor ({}) must be set if and only if the input metric is modular ({})",
+                self.divisor.is_some(),
+                input_metric.0.modular()
+            );
+        }
+        let ZExpFamily { scale, divisor } = self;
+        if scale < &RBig::ZERO {
             return fallible!(MakeMeasurement, "scale ({}) must not be negative", scale);
         }
+        if divisor.is_some() {
+            return fallible!(
+                MakeMeasurement,
+                "modular noise addition is not supported in thresholded noise"
+            );
+        }
+        let scale = scale.clone();
         Ok(PrivacyMap::new_fallible(
             move |(l0, l1, li): &(u32, UBig, UBig)| {
                 if l1.is_zero() {

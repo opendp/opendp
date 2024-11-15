@@ -52,6 +52,7 @@ where
         let FloatExpFamily { scale, k } = self;
         let distribution = ZExpFamily {
             scale: integerize_scale(scale, k)?,
+            divisor: None,
         };
         let rounding_distance = get_rounding_distance::<TV>(k, None)?;
 

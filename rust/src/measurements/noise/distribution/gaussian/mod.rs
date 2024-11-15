@@ -6,7 +6,7 @@ use crate::{
     error::Fallible,
     measurements::{noise::nature::Nature, MakeNoise, NoiseDomain, NoisePrivacyMap, ZExpFamily},
     measures::ZeroConcentratedDivergence,
-    metrics::L2Distance,
+    metrics::{L2Distance, ModularMetric},
     traits::InfCast,
 };
 
@@ -59,24 +59,36 @@ pub struct Gaussian {
 }
 
 /// Gaussian mechanism
-impl<DI: NoiseDomain, MI: Metric, MO: 'static + Measure> MakeNoise<DI, MI, MO> for Gaussian
+impl<DI: NoiseDomain, MI: ModularMetric, MO: 'static + Measure> MakeNoise<DI, MI, MO> for Gaussian
 where
     (DI, MI): MetricSpace,
     DI::Atom: Nature<2>,
     <DI::Atom as Nature<2>>::RV: MakeNoise<DI, MI, MO>,
 {
     fn make_noise(self, input_space: (DI, MI)) -> Fallible<Measurement<DI, DI::Carrier, MI, MO>> {
-        DI::Atom::new_distribution(self.scale, self.k)?.make_noise(input_space)
+        let modular = input_space.1.modular();
+        let distribution = DI::Atom::new_distribution(self.scale, self.k, modular)?;
+
+        distribution.make_noise(input_space)
     }
 }
 
 impl NoisePrivacyMap<L2Distance<RBig>, ZeroConcentratedDivergence> for ZExpFamily<2> {
     fn noise_privacy_map(
-        self,
+        &self,
+        input_metric: &L2Distance<RBig>,
     ) -> Fallible<PrivacyMap<L2Distance<RBig>, ZeroConcentratedDivergence>> {
-        let ZExpFamily { scale } = self;
+        if self.divisor.is_some() != input_metric.modular() {
+            return fallible!(
+                MakeMeasurement,
+                "divisor ({}) must be set if and only if the input metric is modular ({})",
+                self.divisor.is_some(),
+                input_metric.modular()
+            );
+        }
+        let scale = self.scale.clone();
         if scale < RBig::ZERO {
-            return fallible!(MakeMeasurement, "scale must not be negative");
+            return fallible!(MakeMeasurement, "scale ({}) must not be negative", scale);
         }
         Ok(PrivacyMap::new_fallible(move |d_in: &RBig| {
             if d_in < &RBig::ZERO {
