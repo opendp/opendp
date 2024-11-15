@@ -288,6 +288,16 @@ def test_agg_input():
     assert isinstance(context.query().gaussian().release(), int)
 
 
+def test_rshift_multi_partial():
+    context = dp.Context.compositor(
+        data=[1, 2, 3],
+        privacy_unit=dp.unit_of(l1=1),
+        privacy_loss=dp.loss_of(epsilon=0.5),
+        split_evenly_over=1,
+    )
+    with pytest.raises(ValueError, match="laplace is missing"):
+        context.query().b_ary_tree(leaf_count=3).laplace()
+
 def test_transformation_release_error():
     privacy_unit = dp.unit_of(contributions=2)
     privacy_loss = dp.loss_of(epsilon=1.0)

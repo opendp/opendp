@@ -200,8 +200,8 @@ jobs:
         # "polars" implies "scikit-learn": see setup.cfg.
         if: ${{ contains(matrix.extra-install, 'polars') && contains(matrix.python-version, '3.12') }}
         run: |
-          set -o pipefail
-          coverage report | tee /tmp/coverage.txt
+          coverage report
+          touch /tmp/coverage.txt
 
       - name: Upload coverage
         if: ${{ contains(matrix.extra-install, 'polars') && contains(matrix.python-version, '3.12') }}

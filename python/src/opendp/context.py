@@ -716,7 +716,7 @@ class PartialChain(object):
                 meas = _cast_measure(self(param), output_measure, d_out)
                 return meas.check(d_in, d_out)
         
-        param = binary_search(predicate, T=T)
+        param = binary_search(predicate)
         chain = self.partial(param)
         chain.param = param
         return chain
@@ -726,7 +726,6 @@ class PartialChain(object):
         if isinstance(other, (Transformation, Measurement, PartialConstructor)):
             return PartialChain(lambda x: self(x) >> other)
 
-        print(self, other)
         raise ValueError("At most one parameter may be missing at a time")
     
     def __rrshift__(self, other: Union[tuple[Domain, Metric], Transformation, Measurement]):
