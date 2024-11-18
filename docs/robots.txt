@@ -5,6 +5,9 @@
 User-agent: *
 Disallow: /en/beta/
 Disallow: /en/nightly/
+
+# Path globbing is not universally supported.
+Disallow: /en/v*
 Disallow: /en/v0.11.1/
 Disallow: /en/v0.11.0/
 Disallow: /en/v0.10.0/
