@@ -3,6 +3,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::marker::PhantomData;
 
+use opendp_derive::proven;
 use polars::lazy::dsl::len;
 use polars::prelude::*;
 
@@ -257,6 +258,7 @@ impl<F: Frame> FrameDomain<F> {
         Ok(self)
     }
 
+    #[proven]
     /// # Proof Definition
     /// Return margin descriptors when grouped by `by`
     /// that can be inferred from `self`.
@@ -494,8 +496,9 @@ impl Margin {
     }
 }
 
+#[proven]
 /// # Proof Definition
-/// Return a subset of `sets` whose intersection is a superset of `must_cover`.
+/// Return a subset of `sets` whose intersection contains `must_cover`, or None.
 ///
 /// While this algorithm also tries to minimize the number of sets returned,
 /// finding the optimal smallest set of sets is not a requirement to prove correctness of this algorithm.

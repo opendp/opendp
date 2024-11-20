@@ -1,0 +1,55 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn find\_min\_covering}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of \rustdoc{domains/polars/frame/fn}{find\_min\_covering} in \asOfCommit{mod.rs}{f5bb719}.
+
+\texttt{find\_min\_covering} attempts to return the smallest covering 
+from \texttt{sets} that spans \texttt{must\_cover}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Argument \texttt{must\_cover} is of type \texttt{BTreeSet<T>}
+    \item Argument \texttt{sets} is of type \texttt{HashMap<BTreeSet<T>, u32>}
+    \item Generic \texttt{T} is some type that implements Hash and has total Ord, so that it can be used in a B-tree set.
+\end{itemize}
+
+\subsubsection*{Human-verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/find_min_covering.py}
+
+\subsection*{Postcondition}
+Return a subset of \texttt{sets} whose intersection contains \texttt{must\_cover}, or None.
+
+\section{Proofs}
+
+\begin{proof} 
+    All that needs to be proven is that the return set covers \texttt{must\_cover}.
+    While the algorithm makes a best effort to minimize the cardinality of the cover,
+    nothing about optimality of the algorithm has been proven.
+
+    The algorithm initializes with an empty cover on \ref{covered} and 
+    continues to run until all elements have been added to the cover (see \ref{loop}).
+    If there are no remaining sets that intersect with \texttt{must\_cover},
+    then the algorithm terminates without a cover, which is a valid output.
+
+    Otherwise, on \texttt{state}, a new set is added to the cover and those elements in \texttt{must\_cover} are removed.
+    The algorithm only terminates once all members of \texttt{must\_cover} have had sets that include them added to \texttt{covered}.
+
+    Therefore \texttt{covered} returns a subset of \texttt{sets} 
+    whose intersection contains \texttt{must\_cover}, or None.
+
+\end{proof}
+\end{document}
