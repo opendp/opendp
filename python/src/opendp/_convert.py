@@ -78,7 +78,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
     if isinstance(value, c_type):
         return value
 
-    if c_type == CallbackFn:
+    if c_type == CallbackFnPtr:
         return _wrap_py_func(value, type_name)
     
     if c_type == TransitionFn:
@@ -651,11 +651,6 @@ def _wrap_in_slice(ptr, len_: int) -> FfiSlicePtr:
     return FfiSlicePtr(FfiSlice(ctypes.cast(ptr, ctypes.c_void_p), len_))
 
 
-# The output type cannot be an `ctypes.POINTER(FfiResult)` due to:
-#   https://bugs.python.org/issue5710#msg85731
-#                            (output         , input       )
-CallbackFn = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr)
-
 def _wrap_py_func(func, TO):
     from opendp._convert import c_to_py, py_to_c
 
@@ -688,7 +683,10 @@ def _wrap_py_func(func, TO):
                 ctypes.c_char_p(traceback.format_exc().encode()),
             )
 
-    return CallbackFn(wrapper_func)
+    c_wrapper_func = CallbackFnValue(wrapper_func)
+    lifeline = ExtrinsicObject(ctypes.py_object(c_wrapper_func), c_counter)
+
+    return ctypes.pointer(CallbackFn(c_wrapper_func, lifeline))
 
 
 # The output type cannot be an `ctypes.POINTER(FfiResult)` due to:

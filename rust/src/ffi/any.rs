@@ -16,7 +16,7 @@ use crate::error::*;
 use crate::interactive::{Answer, Query, Queryable};
 use crate::{err, fallible};
 
-use super::util::{into_owned, Type};
+use super::util::{into_owned, ExtrinsicObject, Type};
 
 /// A trait for something that can be downcast to a concrete type.
 pub trait Downcast {
@@ -344,12 +344,17 @@ impl Debug for AnyMetric {
     }
 }
 
-pub type CallbackFn = extern "C" fn(*const AnyObject) -> *mut FfiResult<*mut AnyObject>;
+#[repr(C)]
+#[derive(Clone)]
+pub struct CallbackFn {
+    pub(crate) callback: extern "C" fn(*const AnyObject) -> *mut FfiResult<*mut AnyObject>,
+    pub(crate) lifeline: ExtrinsicObject,
+}
 
 // wrap a CallbackFn in a closure, so that it can be used in transformations and measurements
 pub fn wrap_func(func: CallbackFn) -> impl Fn(&AnyObject) -> Fallible<AnyObject> {
     move |arg: &AnyObject| -> Fallible<AnyObject> {
-        into_owned(func(arg as *const AnyObject))?.into()
+        into_owned((func.callback)(arg as *const AnyObject))?.into()
     }
 }
 

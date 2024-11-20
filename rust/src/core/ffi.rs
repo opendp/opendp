@@ -687,16 +687,17 @@ pub extern "C" fn opendp_core__measurement_output_distance_type(
 /// # Generics
 /// * `TO` - Output Type
 #[allow(dead_code)]
-fn new_function<TO>(function: CallbackFn) -> Fallible<AnyFunction> {
+fn new_function<TO>(function: *const CallbackFn) -> Fallible<AnyFunction> {
     let _ = function;
     panic!("this signature only exists for code generation")
 }
 
 #[no_mangle]
 pub extern "C" fn opendp_core__new_function(
-    function: CallbackFn,
+    function: *const CallbackFn,
     TO: *const c_char,
 ) -> FfiResult<*mut AnyFunction> {
+    let function = try_as_ref!(function).clone();
     let _TO = TO;
     FfiResult::Ok(util::into_raw(Function::new_fallible(wrap_func(function))))
 }
