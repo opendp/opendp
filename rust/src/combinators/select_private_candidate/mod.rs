@@ -2,14 +2,11 @@ use crate::{
     core::{Domain, Function, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
     measures::MaxDivergence,
-    traits::{
-        samplers::sample_geometric_exp_fast, CastInternalRational, InfAdd, InfCast, InfDiv, InfExp,
-        InfLn, InfMul, InfSub, NextFloat,
-    },
+    traits::{samplers::sample_geometric_exp_fast, CastInternalRational, InfLn, InfMul, InfSub},
 };
 use dashu::integer::UBig;
 use opendp_derive::bootstrap;
-use std::{f64::consts::E, fmt::Debug, ops::Neg};
+use std::{fmt::Debug, ops::Neg};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -19,10 +16,7 @@ mod test;
 
 #[bootstrap(
     features("contrib"),
-    arguments(
-        measurement(rust_type = "AnyMeasurement"),
-        max_iterations(default = b"null")
-    ),
+    arguments(measurement(rust_type = "AnyMeasurement"),),
     generics(DI(suppress), MI(suppress), TO(suppress)),
     dependencies("$get_dependencies(measurement)")
 )]
@@ -46,7 +40,6 @@ mod test;
 /// * `measurement` - A measurement that releases a 2-tuple of (score, candidate)
 /// * `stop_probability` - The probability of stopping early at any iteration.
 /// * `threshold` - The threshold score. Return immediately if the score is above this threshold.
-/// * `max_iterations` - Optional. Run the algorithm at most this many iterations.
 ///
 /// # Returns
 /// A measurement that returns a release from `measurement` whose score is greater than `threshold`, or none.
@@ -58,7 +51,6 @@ pub fn make_select_private_candidate<
     measurement: Measurement<DI, (f64, TO), MI, MaxDivergence>,
     stop_probability: f64,
     threshold: f64,
-    max_iterations: Option<u64>,
 ) -> Fallible<Measurement<DI, Option<(f64, TO)>, MI, MaxDivergence>>
 where
     (DI, MI): MetricSpace,
@@ -73,25 +65,6 @@ where
         return fallible!(MakeMeasurement, "threshold must be finite");
     }
 
-    let epsilon_0 = if let Some(max_iterations) = max_iterations {
-        // 1 / (e γ) + 1
-        let fewest_max_iterations =
-            u64::inf_cast((E.next_up_().inf_mul(&stop_probability)?.recip()).inf_add(&1.0)?)?;
-
-        if max_iterations < fewest_max_iterations {
-            return fallible!(
-                MakeMeasurement,
-                "max_iterations must not be less than {}",
-                fewest_max_iterations
-            );
-        }
-        // 2 / exp(T γ)
-        let x = f64::neg_inf_cast(max_iterations)?.neg_inf_mul(&stop_probability)?;
-        (2.0).inf_div(&x.neg_inf_exp()?)?
-    } else {
-        0.0
-    };
-
     let scale = if stop_probability > 0.0 {
         let ln_cp = 1.0.neg_inf_sub(&stop_probability)?.inf_ln()?;
         Some(ln_cp.recip().neg().into_rational()?)
@@ -101,15 +74,13 @@ where
 
     let function = measurement.function.clone();
     let privacy_map = measurement.privacy_map.clone();
-    let max_iterations = max_iterations.map(UBig::from);
 
     Measurement::new(
         measurement.input_domain.clone(),
         Function::new_fallible(move |arg| {
-            let num_iterations = (scale.clone())
+            let mut remaining_iterations = (scale.clone())
                 .map(|s| sample_geometric_exp_fast(s).map(|v| v + UBig::ONE))
                 .transpose()?;
-            let mut remaining_iterations = option_min(num_iterations, max_iterations.clone());
 
             loop {
                 let (score, output) = function.eval(arg)?;
@@ -128,16 +99,6 @@ where
         }),
         measurement.input_metric.clone(),
         measurement.output_measure.clone(),
-        PrivacyMap::new_fallible(move |d_in| {
-            privacy_map.eval(d_in)?.inf_mul(&2.0)?.inf_add(&epsilon_0)
-        }),
+        PrivacyMap::new_fallible(move |d_in| privacy_map.eval(d_in)?.inf_mul(&2.0)),
     )
-}
-
-fn option_min<T: Ord>(a: Option<T>, b: Option<T>) -> Option<T> {
-    match (a, b) {
-        (Some(a), Some(b)) => Some(a.min(b)),
-        (Some(v), _) | (_, Some(v)) => Some(v),
-        _ => None,
-    }
 }

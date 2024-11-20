@@ -3,8 +3,6 @@ import pytest
 
 
 def test_private_selection_threshold_composition():
-    np = pytest.importorskip("numpy")
-
     bounds = 0.0, 100.0
     range_ = max(abs(bounds[0]), bounds[1])
     epsilon = 1.0
@@ -29,6 +27,7 @@ def test_private_selection_threshold_composition():
         m_scored_candidate, threshold=threshold, stop_probability=0
     )
 
+    np = pytest.importorskip("numpy")
     data = np.random.default_rng(seed=42).normal(10, 5, 20)
 
     score, candidate = m_private_selection(data)
@@ -51,7 +50,7 @@ def test_private_selection_threshold_plugin():
         TO="(f64, ExtrinsicObject)"
     )
 
-    print(m_plugin(20))
+    assert m_plugin(20)[1] == 20
 
     m_private_selection = dp.c.make_select_private_candidate(
         m_plugin, threshold=threshold, stop_probability=0
@@ -62,3 +61,27 @@ def test_private_selection_threshold_plugin():
     assert score >= threshold
     assert m_private_selection.map(1) == 2 * m_plugin.map(1)
     assert isinstance(candidate, float)
+
+
+def test_private_selection_no_answer():
+    np = pytest.importorskip("numpy")
+    threshold = 10_000
+
+    space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+
+    m_plugin = space >> dp.m.then_user_measurement(
+        dp.max_divergence(),
+        lambda x: (np.random.normal(loc=x), x),
+        lambda d_in: d_in,
+        TO="(f64, ExtrinsicObject)"
+    )
+
+    assert m_plugin(20)[1] == 20
+
+    m_private_selection = dp.c.make_select_private_candidate(
+        m_plugin, threshold=threshold, stop_probability=0.001
+    )
+
+    assert m_private_selection(20) is None
+    assert m_private_selection.map(1) == 2 * m_plugin.map(1)
+

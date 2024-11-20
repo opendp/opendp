@@ -1,9 +1,11 @@
+use core::f64;
+
 use crate::{
     core::{FfiResult, Function, Measurement, PrivacyMap},
     error::Fallible,
     ffi::{
         any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast},
-        util::{self, Type},
+        util::Type,
     },
     measures::MaxDivergence,
     traits::RoundCast,
@@ -20,7 +22,6 @@ fn make_select_private_candidate(
     measurement: &AnyMeasurement,
     stop_probability: f64,
     threshold: f64,
-    max_iterations: Option<u64>,
 ) -> Fallible<AnyMeasurement> {
     let function = measurement.function.clone();
     let privacy_map = measurement.privacy_map.clone();
@@ -53,12 +54,7 @@ fn make_select_private_candidate(
         PrivacyMap::new_fallible(move |d_in: &AnyObject| privacy_map.eval(d_in)?.downcast()),
     )?;
 
-    let m = super::make_select_private_candidate(
-        measurement,
-        stop_probability,
-        threshold,
-        max_iterations,
-    )?;
+    let m = super::make_select_private_candidate(measurement, stop_probability, threshold)?;
 
     let privacy_map = m.privacy_map.clone();
     let function = m.function.clone();
@@ -79,12 +75,10 @@ pub extern "C" fn opendp_combinators__make_select_private_candidate(
     measurement: *const AnyMeasurement,
     stop_probability: f64,
     threshold: f64,
-    max_iterations: *const u64,
 ) -> FfiResult<*mut AnyMeasurement> {
     FfiResult::from(make_select_private_candidate(
         try_as_ref!(measurement),
         stop_probability,
         threshold,
-        util::as_ref(max_iterations).cloned(),
     ))
 }

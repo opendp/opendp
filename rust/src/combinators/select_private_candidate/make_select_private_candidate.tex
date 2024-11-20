@@ -11,8 +11,6 @@
 
 \contrib
 Proves soundness of \rustdoc{combinators/fn}{make\_select\_private\_candidate} in \asOfCommit{mod.rs}{f5bb719}.
-This constructor is a special case of \rustdoc{combinators/fn}{make\_select\_private\_candidate}.
-The proof for this constructor appeals to the proof for \rustdoc{combinators/fn}{make\_select\_private\_candidate}.
 
 \texttt{make\_select\_private\_candidate} returns a Measurement that returns a release from \texttt{measurement} whose score is above \texttt{threshold},
 or may fail and return nothing.
@@ -27,7 +25,6 @@ or may fail and return nothing.
     \item Argument \texttt{measurement} is a measurement whose output metric is \rustdoc{measures/struct}{MaxDivergence}, and releases a tuple \texttt{(f64, TO)}, where \texttt{TO} is some arbitrary type.
     \item Argument \texttt{stop\_probability} is of type \texttt{f64}.
     \item Argument \texttt{threshold} is of type \texttt{f64}.
-    \item Argument \texttt{max\_iterations} is of type \texttt{Option<u64>}.
 \end{itemize}
 
 \subsubsection*{User-verified}
@@ -37,13 +34,12 @@ None
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_select_private_candidate.py}
 
 \subsection*{Postcondition}
-\validMeasurement{\texttt{(measurement, stop\_probability, threshold, max\_iterations, DI, MI, TO)}}{\texttt{make\_select\_private\_candidate}}
+\validMeasurement{\texttt{(measurement, stop\_probability, threshold, DI, MI, TO)}}{\texttt{make\_select\_private\_candidate}}
 
 \section{Proofs}
 This section shows that the pseudocode implements Theorem 3.1 in \cite{liu2018privateselectionprivatecandidates}, where 
-\texttt{stop\_probability} is $\gamma$,
-\texttt{threshold} is $\tau$, and
-\texttt{max\_iterations} is $T$.
+\texttt{stop\_probability} is $\gamma$ and
+\texttt{threshold} is $\tau$.
 
 \begin{theorem}
     \label{algorithm-equivalence}
@@ -60,12 +56,11 @@ This section shows that the pseudocode implements Theorem 3.1 in \cite{liu2018pr
     Therefore in \ref{sample-geometric}, 
     the precondition of \rustdoc{traits/samplers/cks20/fn}{sample\_geometric\_exp\_fast} is satisfied.
     In Algorithm 1, the mechanism is invoked once before potentially terminating, so one is added to the sample.
-    \texttt{num\_iterations}, a sample from the shifted geometric distribution, 
+    \texttt{remaining\_iterations}, a sample from the shifted geometric distribution, 
     is then equivalent to a count of the number of coin flips made until sampling one heads,
     as is used in Algorithm 1.
 
-    We then only run as many iterations as has been sampled, or the upper bound on the number of distributions \texttt{max\_iterations} if set, 
-    whichever is fewer, as in Algorithm 1.
+    We then only run as many iterations as has been sampled, as in Algorithm 1.
     In the case where $T$ is infinity and $\gamma$ is zero, then the algorithm only terminates when score exceeds threshold.
 
     If the measurement releases a score of NaN, then this is effectively treated as a score below negative infinity, 
@@ -80,13 +75,7 @@ This section shows that the pseudocode implements Theorem 3.1 in \cite{liu2018pr
 \end{theorem}
 
 \begin{proof}
-    If there is no limit on iterations, then $\epsilon_0$ is zero.
-    Otherwise, by \ref{fewest-max-iterations}, we have that \texttt{max\_iterations} is at least $\frac{1}{e \gamma} + 1$, 
-    the second term that $T$ must be greater than.
-    We then use the first term that $T$ must be greater than to solve for $epsilon_0$, 
-    with arithmetic conservatively rounded up.
-    This ensures that the additional privacy loss $epsilon_0$ is as small as is allowed by Theorem 3.1.
-
+    Since there is no limit on iterations, $\epsilon_0$ is zero.
     By \ref{algorithm-equivalence}, the function is equivalent to Algorithm 1, so we can claim parts a-e of Theorem 3.1.
     Since \texttt{measurement} is a valid measurement, then we know that it satisfies $\epsilon_1$-DP.
     The privacy map returns $2\epsilon_1 + \epsilon_0$ with arithmetic rounded conservatively up,
