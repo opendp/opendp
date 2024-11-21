@@ -77,7 +77,6 @@ where
         .make_stable(input_domain.as_row_by_row(), input_metric.clone())
         .is_ok();
 
-    // try to construct a row-by-row expression
     let t_prior = input.make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
