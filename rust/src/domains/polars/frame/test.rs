@@ -206,11 +206,3 @@ fn test_find_min_covering_nonoptimal() -> Fallible<()> {
     assert_eq!(intersection, must_cover);
     Ok(())
 }
-
-#[test]
-fn test_option_min() {
-    assert_eq!(option_min(Some(1), Some(2)), Some(1));
-    assert_eq!(option_min(Some(1), None), Some(1));
-    assert_eq!(option_min(None, Some(1)), Some(1));
-    assert_eq!(option_min::<i32>(None, None), None);
-}

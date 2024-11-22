@@ -174,7 +174,7 @@ pub extern "C" fn opendp_internal___extrinsic_domain(
     let descriptor = try_as_ref!(descriptor).clone();
     let element = ExtrinsicElement::new(identifier, descriptor);
     let member = Function::new_fallible(move |arg: &ExtrinsicObject| -> Fallible<bool> {
-        let c_res = member(AnyObject::new_raw(arg.clone()));
+        let c_res = (member.callback)(AnyObject::new_raw(arg.clone()));
         Fallible::from(util::into_owned(c_res)?)?.downcast::<bool>()
     });
 

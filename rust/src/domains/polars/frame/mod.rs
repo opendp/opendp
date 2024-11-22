@@ -8,7 +8,7 @@ use polars::prelude::*;
 
 use crate::core::Domain;
 use crate::metrics::{LInfDistance, LpDistance};
-use crate::traits::ProductOrd;
+use crate::traits::{InfMul, ProductOrd};
 use crate::{
     core::MetricSpace, domains::SeriesDomain, error::Fallible, transformations::DatasetMetric,
 };
@@ -240,6 +240,7 @@ impl<F: Frame> FrameDomain<F> {
             .get(&grouping_columns)
             .cloned()
             .unwrap_or_default();
+
         let subset_margins = self
             .margins
             .iter()
@@ -248,40 +249,34 @@ impl<F: Frame> FrameDomain<F> {
 
         // the max_partition_* descriptors can take the minimum known value from any margin on a subset of the grouping columns
         margin.max_partition_length = (subset_margins.iter())
-            .map(|(_, m)| m.max_partition_length)
-            .reduce(option_min)
-            .unwrap_or_default();
+            .filter_map(|(_, m)| m.max_partition_length)
+            .min();
 
         margin.max_partition_contributions = (subset_margins.iter())
-            .map(|(_, m)| m.max_partition_contributions)
-            .reduce(option_min)
-            .unwrap_or_default();
+            .filter_map(|(_, m)| m.max_partition_contributions)
+            .min();
+
+        let all_mnps = (self.margins.iter())
+            .filter_map(|(set, m)| Some((set, m.max_num_partitions?)))
+            .collect();
 
         // in the worst case, the max partition length is the product of the max partition lengths of the cover
-        margin.max_num_partitions = find_min_covering(
-            grouping_columns.clone(),
-            self.margins
-                .iter()
-                .filter_map(|(set, m)| Some((set, m.max_num_partitions?)))
-                .collect(),
-        )
-        .map(|cover| cover.values().product());
+        margin.max_num_partitions = find_min_covering(grouping_columns.clone(), all_mnps)
+            .map(|cover| cover.values().try_fold(1u32, |acc, v| acc.inf_mul(v).ok()))
+            .flatten();
+
+        let all_mips = (self.margins.iter())
+            .filter_map(|(set, m)| Some((set, m.max_influenced_partitions?)))
+            .collect();
 
         // in the worst case, the max partition contributions is the product of the max partition contributions of the cover
-        margin.max_influenced_partitions = find_min_covering(
-            grouping_columns.clone(),
-            self.margins
-                .iter()
-                .filter_map(|(set, m)| Some((set, m.max_influenced_partitions?)))
-                .collect(),
-        )
-        .map(|cover| cover.values().product());
+        margin.max_influenced_partitions = find_min_covering(grouping_columns.clone(), all_mips)
+            .map(|cover| cover.values().try_fold(1u32, |acc, v| acc.inf_mul(v).ok()))
+            .flatten();
 
         // if keys or lengths are known about any higher-way marginal,
         // then the same is known about lower-way marginals
-        margin.public_info = self
-            .margins
-            .iter()
+        margin.public_info = (self.margins.iter())
             .filter(|(id, _)| grouping_columns.is_subset(id))
             .map(|(_, margin)| margin.public_info)
             .max()
@@ -497,11 +492,4 @@ fn find_min_covering<T: Hash + Ord>(
         covered.insert(best_set, weight);
     }
     Some(covered)
-}
-
-/// # Proof Definition
-/// Returns the smaller of `a` or `b` if both are defined,
-/// `a` if defined, `b` if defined, otherwise none.
-fn option_min<T: Ord + Copy>(a: Option<T>, b: Option<T>) -> Option<T> {
-    a.zip(b).map(|(a, b)| std::cmp::min(a, b)).or(a).or(b)
 }
