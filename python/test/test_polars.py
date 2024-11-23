@@ -749,7 +749,7 @@ def test_csv_bad_encoding_loading():
         # With "delete=False", clean up when exiting "with" instead.
         fp.write(b'name\n' + name_b)
         fp.close()
-        df = pl.scan_csv(fp.name, ignore_errors=True)
+        df = pl.scan_csv(fp.name, encoding="utf8-lossy")
         expected = pl.LazyFrame(
             {"name": [name]},
             schema={"name": pl.String},
