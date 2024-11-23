@@ -1,0 +1,49 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{fn match\_datetime\_component}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of \rustdoc{transformations/make\_stable\_expr/namespace\_dt/expr\_datetime\_component/fn}{match\_datetime\_component} in \asOfCommit{mod.rs}{f5bb719}.
+
+\texttt{match\_datetime\_component} returns the data type and number of possible unique values of a compute operation that retrieves a datetime component.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Argument \texttt{temporal\_function} of type \texttt{TemporalFunction} 
+\end{itemize}
+
+\subsubsection*{Human-verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/match_datetime_component.py}
+
+\subsection*{Postcondition}
+\validTransformation{\texttt{(temporal\_function)}}{\texttt{match\_datetime\_component}}
+
+\section{Proof}
+
+\begin{proof}
+    For each compute operation, the data type is automatically tested and verified to be correct.
+    Only output cardinalities that are specified must be proven.
+    Of note:
+    \begin{itemize}
+        \item there may be up to 53 weeks in a year, due to partial weeks overlapping the end of the year.
+        \item There are up to 366 ordinal days due to leap years.
+        \item Polars does not account for leap seconds, so there are at most 60 seconds in a minute.
+        \item Milliseconds, microseconds and nanoseconds are computed modulo seconds.
+    \end{itemize}
+
+
+\end{proof}
+
+\end{document}
