@@ -18,16 +18,15 @@ use crate::{
 /// * `QO` - Output distance type. One of `f32` or `f64`.
 /// For more details, see: https://differentialprivacy.org/exponential-mechanism-bounded-range/
 
-pub fn make_bounded_range_to_pureDP<DI, TO, MI, QO>(
-    m: Measurement<DI, TO, MI, BoundedRange<QO>>,
-) -> Fallible<Measurement<DI, TO, MI, MaxDivergence<QO>>>
+pub fn make_bounded_range_to_pureDP<DI, TO, MI>(
+    m: Measurement<DI, TO, MI, BoundedRange>,
+) -> Fallible<Measurement<DI, TO, MI, MaxDivergence>>
 where
     DI: Domain,
     MI: 'static + Metric,
-    QO: Float,
     (DI, MI): MetricSpace,
 {
-    let privacy_map: PrivacyMap<MI, BoundedRange<QO>> = m.privacy_map.clone();
+    let privacy_map: PrivacyMap<MI, BoundedRange> = m.privacy_map.clone();
     m.with_map(
         m.input_metric.clone(),
         MaxDivergence::default(),

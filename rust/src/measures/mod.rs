@@ -262,31 +262,9 @@ impl Measure for RenyiDivergence {
 /// define $P$ and $Q$ to be the distributions of $M(u)$ and $M(v)$.
 /// We say that $u, v$ are $d$-close under bounded range divergence measure (abbreviated as $D_{\alpha}$)
 /// TODO: Finish this
+#[derive(Default, Clone, Debug, PartialEq)]
+pub struct BoundedRange;
 
-pub struct BoundedRange<Q>(PhantomData<fn() -> Q>);
-impl<Q> Default for BoundedRange<Q> {
-    fn default() -> Self {
-        BoundedRange(PhantomData)
-    }
-}
-impl<Q> Clone for BoundedRange<Q> {
-    fn clone(&self) -> Self {
-        BoundedRange(PhantomData)
-    }
-}
-
-impl<Q> PartialEq for BoundedRange<Q> {
-    fn eq(&self, _other: &Self) -> bool {
-        true
-    }
-}
-
-impl<Q> Debug for BoundedRange<Q> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "BoundedRange({})", type_name!(Q))
-    }
-}
-
-impl<Q> Measure for BoundedRange<Q> {
-    type Distance = Q;
+impl Measure for BoundedRange {
+    type Distance = f64;
 }
