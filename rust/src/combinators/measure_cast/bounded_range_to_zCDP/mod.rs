@@ -19,24 +19,15 @@ use crate::{
 /// For more details, see: https://differentialprivacy.org/exponential-mechanism-bounded-range/
 
 pub fn make_bounded_range_to_zCDP<DI, TO, MI, QO>(
-    m: Measurement<DI, TO, MI, BoundedRange<QO>>,
-) -> Fallible<Measurement<DI, TO, MI, ZeroConcentratedDivergence<QO>>>
+    m: Measurement<DI, TO, MI, BoundedRange>,
+) -> Fallible<Measurement<DI, TO, MI, ZeroConcentratedDivergence>>
 where
     DI: Domain,
     MI: 'static + Metric,
     QO: Float,
     (DI, MI): MetricSpace,
 {
-    let privacy_map: PrivacyMap<MI, BoundedRange<QO>> = m.privacy_map.clone();
-    // For Mike: How to make this sane? I just want an 8
-    let constant: QO = QO::one()
-        + QO::one()
-        + QO::one()
-        + QO::one()
-        + QO::one()
-        + QO::one()
-        + QO::one()
-        + QO::one();
+    let privacy_map: PrivacyMap<MI, BoundedRange> = m.privacy_map.clone();
 
     m.with_map(
         m.input_metric.clone(),
@@ -44,7 +35,7 @@ where
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             privacy_map
                 .eval(d_in)
-                .map(|br_eps| br_eps.powi(2) / constant)
+                .map(|br_eps| br_eps.powi(2) / 8.0)
         }),
     )
 }
