@@ -25,7 +25,7 @@ fn test_summarize_polars_measurement() -> Fallible<()> {
     ])?
     .with_margin::<&str>(
         &[],
-        Margin::new()
+        Margin::default()
             .with_public_keys()
             .with_max_partition_length(10),
     )?;
@@ -73,7 +73,7 @@ fn test_summarize_polars_measurement_mean() -> Fallible<()> {
     ])?
     .with_margin::<&str>(
         &[],
-        Margin::new()
+        Margin::default()
             .with_public_lengths()
             .with_max_partition_length(10),
     )?;
@@ -116,7 +116,7 @@ fn test_summarize_polars_measurement_quantile() -> Fallible<()> {
         LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?
             .with_margin::<&str>(
                 &[],
-                Margin::new()
+                Margin::default()
                     .with_public_lengths()
                     .with_max_partition_length(100),
             )?;

@@ -15,7 +15,7 @@ This functionality is not enabled by default.
 
         .. prompt:: bash
 
-            pip install opendp[polars]
+            pip install 'opendp[polars]'
 
         This installs the specific version of the Python Polars package that is compatible with the OpenDP Library.
 

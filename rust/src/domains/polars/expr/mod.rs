@@ -5,14 +5,14 @@ use std::fmt::{Debug, Formatter};
 
 use crate::core::{Metric, MetricSpace};
 use crate::metrics::{
-    AbsoluteDistance, ChangeOneDistance, HammingDistance, InsertDeleteDistance, LInfDistance,
-    LpDistance, Parallel, PartitionDistance, SymmetricDistance,
+    ChangeOneDistance, HammingDistance, InsertDeleteDistance, LInfDistance, LpDistance, Parallel,
+    PartitionDistance, SymmetricDistance,
 };
 use crate::traits::ProductOrd;
 use crate::transformations::DatasetMetric;
 use crate::{core::Domain, error::Fallible};
 
-use super::{DslPlanDomain, Frame, FrameDomain, Margin, NumericDataType, SeriesDomain};
+use super::{DslPlanDomain, Frame, FrameDomain, Margin, SeriesDomain};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -41,11 +41,13 @@ pub enum ExprContext {
 }
 
 impl ExprContext {
-    fn get_plan(&self, val: &(DslPlan, Expr)) -> DslPlan {
-        let (lp, expr) = val.clone();
-        let frame = LazyFrame::from(lp);
+    /// # Proof Definition
+    /// Given a context (`self`), logical plan (`lp`) and expression,
+    /// returns a new logical plan where the expression has been applied to the logical plan by means specified by the context.
+    fn get_plan(&self, (lp, expr): &(DslPlan, Expr)) -> DslPlan {
+        let frame = LazyFrame::from(lp.clone());
         match self {
-            ExprContext::RowByRow => frame.select([expr]),
+            ExprContext::RowByRow => frame.select([expr.clone()]),
             ExprContext::Aggregate { grouping_columns } => frame
                 .group_by(
                     &grouping_columns
@@ -54,11 +56,14 @@ impl ExprContext {
                         .map(col)
                         .collect::<Vec<_>>(),
                 )
-                .agg([expr]),
+                .agg([expr.clone()]),
         }
         .logical_plan
     }
 
+    /// # Proof Definition
+    /// Return the grouping columns specified by `self` if in an aggregation context,
+    /// otherwise return an error.
     pub fn grouping_columns(&self) -> Fallible<BTreeSet<String>> {
         match self {
             // ExprContext::Aggregate serves both `select` and `group_by/agg`
@@ -69,6 +74,13 @@ impl ExprContext {
         }
     }
 
+    /// # Proof Definition
+    /// Only return without an error if the expression context `self`
+    /// allows for row ordering or the number of rows to be changed.
+    ///
+    /// This is used to disallow operations like sorting, shuffling or filtering
+    /// when row alignment must not change,
+    /// like when augmenting a new column via `with_column`.
     pub fn break_alignment(&self) -> Fallible<()> {
         if !matches!(self, ExprContext::Aggregate { .. }) {
             return fallible!(
@@ -104,6 +116,8 @@ pub struct ExprDomain {
 }
 
 impl ExprDomain {
+    /// # Proof Definition
+    /// Returns an [`ExprDomain`] with members matching those of `frame_domain`.
     pub fn new<F: Frame>(frame_domain: FrameDomain<F>, context: ExprContext) -> ExprDomain {
         Self {
             frame_domain: frame_domain.cast_carrier(),
@@ -111,16 +125,27 @@ impl ExprDomain {
         }
     }
 
+    /// # Proof Definition
+    /// If there is only one series in `self`,
+    /// returns the series domain for that column,
+    /// otherwise an error.
     pub fn active_series(&self) -> Fallible<&SeriesDomain> {
         self.check_one_column()?;
         Ok(&self.frame_domain.series_domains[0])
     }
 
+    /// # Proof Definition
+    /// If there is only one series in `self`,
+    /// returns a mutable reference to the series domain for that column,
+    /// otherwise returns an error.
     pub fn active_series_mut(&mut self) -> Fallible<&mut SeriesDomain> {
         self.check_one_column()?;
         Ok(&mut self.frame_domain.series_domains[0])
     }
 
+    /// # Proof Definition
+    /// Returns the margin corresponding to the grouping columns in the context,
+    /// otherwise returns an error.
     pub fn active_margin(&self) -> Fallible<&Margin> {
         let grouping_columns = self.context.grouping_columns()?;
         self.frame_domain
@@ -129,6 +154,8 @@ impl ExprDomain {
             .ok_or_else(|| err!(FailedFunction, "No known margin for {:?}", grouping_columns))
     }
 
+    /// # Proof Definition
+    /// Returns Ok if members of `self` have one column, otherwise an error.
     pub fn check_one_column(&self) -> Fallible<()> {
         let series_domains = &self.frame_domain.series_domains;
         if series_domains.len() != 1 {
@@ -178,8 +205,17 @@ impl Debug for ExprDomain {
     }
 }
 
+/// OuterMetric encodes the relationship between
+/// the metric on data that may be grouped vs the metric on individual groups.
 pub trait OuterMetric: 'static + Metric + Send + Sync {
+    /// # Proof Definition
+    /// Type of metric used to measure distances between each group.
     type InnerMetric: Metric + Send + Sync;
+
+    /// # Proof Definition
+    /// Returns the inner metric of `self`.
+    ///
+    /// This is the metric used to measure distances between non-grouped datasets.
     fn inner_metric(&self) -> Self::InnerMetric;
 }
 
@@ -196,18 +232,6 @@ macro_rules! impl_expr_metric_select {
 }
 impl_expr_metric_select!(InsertDeleteDistance SymmetricDistance HammingDistance ChangeOneDistance);
 
-impl<const P: usize, Q: 'static + Send + Sync> OuterMetric for LpDistance<P, Q> {
-    type InnerMetric = Self;
-    fn inner_metric(&self) -> Self::InnerMetric {
-        self.clone()
-    }
-}
-impl<Q: 'static + Send + Sync> OuterMetric for LInfDistance<Q> {
-    type InnerMetric = Self;
-    fn inner_metric(&self) -> Self::InnerMetric {
-        self.clone()
-    }
-}
 impl<M: 'static + Metric> OuterMetric for PartitionDistance<M> {
     type InnerMetric = M;
     fn inner_metric(&self) -> Self::InnerMetric {
@@ -248,18 +272,5 @@ impl<M: DatasetMetric> MetricSpace for (ExprDomain, PartitionDistance<M>) {
     fn check_space(&self) -> Fallible<()> {
         let (expr_domain, PartitionDistance(inner_metric)) = self;
         (expr_domain.frame_domain.clone(), inner_metric.clone()).check_space()
-    }
-}
-
-impl<Q: ProductOrd + NumericDataType> MetricSpace for (ExprDomain, AbsoluteDistance<Q>) {
-    fn check_space(&self) -> Fallible<()> {
-        if self.0.active_series()?.field.dtype != Q::dtype() {
-            return fallible!(
-                MetricSpace,
-                "selected column must be of type {}",
-                Q::dtype()
-            );
-        }
-        Ok(())
     }
 }

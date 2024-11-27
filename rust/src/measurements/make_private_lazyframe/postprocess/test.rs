@@ -18,7 +18,7 @@ fn test_make_private_lazyframe_sort() -> Fallible<()> {
 
     let lf_domain = LazyFrameDomain::new(vec![s1, s2])?.with_margin(
         &["B"],
-        Margin::new()
+        Margin::default()
             .with_public_lengths()
             .with_max_partition_length(5),
     )?;

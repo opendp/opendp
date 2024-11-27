@@ -1,5 +1,5 @@
 '''
-This module requires extra installs: ``pip install opendp[polars]``
+This module requires extra installs: ``pip install 'opendp[polars]'``
 
 The ``opendp.extras.polars`` module adds differential privacy to the
 `Polars DataFrame library <https://docs.pola.rs>`_.
