@@ -33,9 +33,7 @@ where
         m.input_metric.clone(),
         ZeroConcentratedDivergence::default(),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
-            privacy_map
-                .eval(d_in)
-                .map(|br_eps| br_eps.powi(2) / 8.0)
+            privacy_map.eval(d_in).map(|br_eps| br_eps.powi(2) / 8.0)
         }),
     )
 }
