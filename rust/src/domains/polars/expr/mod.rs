@@ -116,7 +116,7 @@ impl LazyFrameDomain {
 
     pub fn aggregate<S: AsRef<str>, const P: usize>(self, by: [S; P]) -> WildExprDomain {
         let by: BTreeSet<_> = by.iter().map(|s| s.as_ref().into()).collect();
-        let margin = self.get_margin(by.clone());
+        let margin = self.get_margin(&by);
         WildExprDomain {
             columns: self.series_domains,
             context: Context::Grouping { by, margin },
@@ -144,7 +144,7 @@ impl Domain for ExprDomain {
         }
         .collect()?;
 
-        if !(self.column).member(frame.column(self.column.field.name.as_str())?)? {
+        if !(self.column).member(frame.column(self.column.name.as_str())?)? {
             return Ok(false);
         }
 

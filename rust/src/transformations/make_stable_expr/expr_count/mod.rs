@@ -85,7 +85,7 @@ where
 
     let output_domain = ExprDomain {
         column: SeriesDomain::new(
-            middle_domain.column.field.name.as_str(),
+            middle_domain.column.name.as_str(),
             AtomDomain::<u32>::default(),
         ),
         context: Context::Grouping {
