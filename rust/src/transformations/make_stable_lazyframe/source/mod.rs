@@ -41,13 +41,7 @@ where
         );
     }
 
-    let domain_schema = input_domain
-        .series_domains
-        .iter()
-        .map(|s| s.field.clone())
-        .collect::<Schema>();
-
-    if &domain_schema != schema.as_ref() {
+    if &input_domain.schema() != schema.as_ref() {
         return fallible!(
             MakeTransformation,
             "Schema mismatch. LazyFrame schema must match the schema from the input domain."

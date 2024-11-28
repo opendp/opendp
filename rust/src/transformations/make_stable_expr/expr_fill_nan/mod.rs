@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use polars::datatypes::DataType;
 use polars_plan::dsl::Expr;
 
@@ -55,7 +53,7 @@ where
     }
 
     let fill_series = &fill_domain.column;
-    let fill_can_be_nan = match &fill_series.field.dtype {
+    let fill_can_be_nan = match fill_series.dtype() {
         // from the perspective of atom domain, null refers to existence of any missing value.
         // For float types, this is NaN.
         // Therefore if the float domain may be nullable, then the domain includes NaN
@@ -82,9 +80,9 @@ where
     let series_domain = &mut output_domain.column;
     series_domain.drop_bounds().ok();
 
-    series_domain.element_domain = match &series_domain.field.dtype {
-        DataType::Float32 => Arc::new(AtomDomain::<f32>::default()),
-        DataType::Float64 => Arc::new(AtomDomain::<f64>::default()),
+    match series_domain.dtype() {
+        DataType::Float32 => series_domain.set_element_domain(AtomDomain::<f32>::default()),
+        DataType::Float64 => series_domain.set_element_domain(AtomDomain::<f64>::default()),
         _ => {
             return fallible!(
                 MakeTransformation,
