@@ -1,15 +1,16 @@
 use std::collections::BTreeSet;
+use std::sync::Arc;
 
 use crate::combinators::{make_basic_composition, BasicCompositionMeasure};
 use crate::core::{Function, Measurement, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{DslPlanDomain, ExprContext, ExprDomain, MarginPub};
+use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
 use crate::measurements::make_private_expr;
 use crate::metrics::PartitionDistance;
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::{DatasetMetric, StableDslPlan};
 use make_private_expr::PrivateExpr;
-use polars::prelude::*;
+use polars::prelude::{DslPlan, Expr};
 
 #[cfg(test)]
 mod test;
@@ -37,8 +38,6 @@ where
     DslPlan: StableDslPlan<MS, MI>,
     (DslPlanDomain, MS): MetricSpace,
     (DslPlanDomain, MI): MetricSpace,
-    (ExprDomain, MI): MetricSpace,
-    (ExprDomain, PartitionDistance<MI>): MetricSpace,
 {
     let DslPlan::Select { expr, input, .. } = plan.clone() else {
         return fallible!(MakeMeasurement, "Expected selection in logical plan");
@@ -50,19 +49,15 @@ where
         .make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
-    let mut expr_domain = ExprDomain::new(
-        middle_domain.clone(),
-        ExprContext::Aggregate {
-            grouping_columns: BTreeSet::new(),
-        },
-    );
+    let margin = middle_domain.get_margin(BTreeSet::new());
 
-    let margin = expr_domain
-        .frame_domain
-        .margins
-        .entry(BTreeSet::new())
-        .or_insert_with(Default::default);
-    margin.public_info.get_or_insert(MarginPub::Keys);
+    let expr_domain = WildExprDomain {
+        columns: middle_domain.series_domains.clone(),
+        context: Context::Grouping {
+            by: BTreeSet::new(),
+            margin: margin.clone(),
+        },
+    };
 
     // now that the domain is set up, we can clone it for use in the closure
     let margin = margin.clone();
@@ -84,7 +79,7 @@ where
     }
 
     let t_group_by = Transformation::new(
-        expr_domain.clone(),
+        middle_domain.clone(),
         expr_domain.clone(),
         Function::new(Clone::clone),
         middle_metric.clone(),
@@ -122,7 +117,7 @@ where
             } = output
             {
                 *input = Arc::new(arg.clone());
-                *expr = m_select_expr.invoke(&(arg.clone(), all()))?;
+                *expr = m_select_expr.invoke(arg)?;
             };
             Ok(output)
         }),

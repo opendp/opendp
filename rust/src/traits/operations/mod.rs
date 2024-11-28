@@ -316,14 +316,14 @@ macro_rules! impl_inherent_null_float {
 impl_inherent_null_float!(f64, f32);
 
 // TRAIT ProductOrd
-macro_rules! impl_total_ord_for_ord {
+macro_rules! impl_ProductOrd_for_ord {
     ($($ty:ty),*) => {$(impl ProductOrd for $ty {
         fn total_cmp(&self, other: &Self) -> Fallible<Ordering> {Ok(Ord::cmp(self, other))}
     })*}
 }
-impl_total_ord_for_ord!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize);
+impl_ProductOrd_for_ord!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize);
 
-impl_total_ord_for_ord!(RBig, IBig);
+impl_ProductOrd_for_ord!(RBig, IBig);
 
 macro_rules! impl_total_ord_for_float {
     ($($ty:ty),*) => {

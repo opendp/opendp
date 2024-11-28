@@ -46,7 +46,7 @@ fn assert_row_descriptors<F: Frame>(
     max_partition_length: Option<u32>,
     max_partition_contributions: Option<u32>,
 ) {
-    let margin = domain.get_margin(by.iter().map(ToString::to_string).collect());
+    let margin = domain.get_margin(by.iter().map(|s| s.to_string().into()).collect());
     assert_eq!(margin.max_partition_length, max_partition_length);
     assert_eq!(
         margin.max_partition_contributions,
@@ -78,7 +78,7 @@ fn assert_partition_descriptors<F: Frame>(
     max_num_partitions: Option<u32>,
     max_influenced_partitions: Option<u32>,
 ) {
-    let margin = domain.get_margin(by.iter().map(ToString::to_string).collect());
+    let margin = domain.get_margin(by.iter().map(|s| s.to_string().into()).collect());
     assert_eq!(margin.max_num_partitions, max_num_partitions);
     assert_eq!(margin.max_influenced_partitions, max_influenced_partitions);
 }
@@ -140,19 +140,15 @@ fn test_get_margin_public_info() -> Fallible<()> {
     .with_margin(&["A", "B"], Margin::default().with_public_lengths())?;
 
     // nothing is known when grouping not in margins
-    let margin_abc = lf_domain.get_margin(BTreeSet::from([
-        "A".to_string(),
-        "B".to_string(),
-        "C".to_string(),
-    ]));
+    let margin_abc = lf_domain.get_margin(BTreeSet::from(["A".into(), "B".into(), "C".into()]));
     assert_eq!(margin_abc.public_info, None);
 
     // retrieving info directly from the margin as-is
-    let margin_ab = lf_domain.get_margin(BTreeSet::from(["A".to_string(), "B".to_string()]));
+    let margin_ab = lf_domain.get_margin(BTreeSet::from(["A".into(), "B".into()]));
     assert_eq!(margin_ab.public_info, Some(MarginPub::Lengths));
 
     // keys and lengths are known on coarser partitions
-    let margin_a = lf_domain.get_margin(BTreeSet::from(["A".to_string()]));
+    let margin_a = lf_domain.get_margin(BTreeSet::from(["A".into()]));
     assert_eq!(margin_a.public_info, Some(MarginPub::Lengths));
     Ok(())
 }

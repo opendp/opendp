@@ -2,7 +2,7 @@ use polars_plan::dsl::Expr;
 
 use crate::{
     core::{FfiResult, IntoAnyMeasurementFfiResultExt, Measure},
-    domains::ExprDomain,
+    domains::WildExprDomain,
     error::Fallible,
     ffi::{
         any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, Downcast},
@@ -23,7 +23,7 @@ pub extern "C" fn opendp_measurements__make_private_expr(
     expr: *const AnyObject,
     global_scale: *const AnyObject,
 ) -> FfiResult<*mut AnyMeasurement> {
-    let input_domain = try_!(try_as_ref!(input_domain).downcast_ref::<ExprDomain>()).clone();
+    let input_domain = try_!(try_as_ref!(input_domain).downcast_ref::<WildExprDomain>()).clone();
     let input_metric =
         try_!(try_as_ref!(input_metric).downcast_ref::<PartitionDistance<SymmetricDistance>>())
             .clone();
@@ -40,7 +40,7 @@ pub extern "C" fn opendp_measurements__make_private_expr(
     };
 
     fn monomorphize<MO: 'static + Measure>(
-        input_domain: ExprDomain,
+        input_domain: WildExprDomain,
         input_metric: PartitionDistance<SymmetricDistance>,
         output_measure: &AnyMeasure,
         expr: Expr,
