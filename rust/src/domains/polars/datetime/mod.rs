@@ -15,9 +15,11 @@ pub struct DatetimeDomain {
 }
 
 impl Domain for DatetimeDomain {
-    type Carrier = u64;
+    // i64 is the physical type. Not using chrono::NaiveDateTime (nanoseconds) because the time unit may vary
+    type Carrier = i64;
 
     fn member(&self, _val: &Self::Carrier) -> Fallible<bool> {
+        // all integers correspond to valid datetimes in the domain
         Ok(true)
     }
 }

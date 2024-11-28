@@ -60,6 +60,9 @@ mod expr_sum;
 mod expr_to_physical;
 
 #[cfg(feature = "contrib")]
+mod namespace_dt;
+
+#[cfg(feature = "contrib")]
 mod namespace_str;
 
 #[bootstrap(
@@ -158,6 +161,12 @@ where
                 function: ToPhysical,
                 ..
             } => expr_to_physical::make_expr_to_physical(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Function {
+                function: FunctionExpr::TemporalExpr(_),
+                ..
+            } => namespace_dt::make_namespace_dt(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
             Function {
