@@ -1,0 +1,162 @@
+use std::str::FromStr;
+
+use chrono::NaiveTime;
+
+use crate::domains::{AtomDomain, LazyFrameDomain};
+use crate::metrics::SymmetricDistance;
+use crate::transformations::make_stable_lazyframe;
+
+use super::*;
+
+#[test]
+fn test_make_expr_strptime() -> Fallible<()> {
+    let lf_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("time", AtomDomain::<String>::default()),
+        SeriesDomain::new("datetime", AtomDomain::<String>::default()),
+        SeriesDomain::new("date", AtomDomain::<String>::default()),
+    ])?;
+    let lf = df!(
+        "time" => &["00:00:00", "30:00:00", "00:00:80", "-10:00:00"],
+        "datetime" => &["2000-01-01 00:00:00", "2000-13-01 00:00:00", "2000-01-40 00:00:00", "2000-13-01 00:00:80"],
+        "date" => &["+10000-01-01", "2000-13-01", "2000-01-40", "2000-13-40"]
+    )?
+    .lazy();
+
+    let casted = lf.clone().with_columns([
+        col("time").str().strptime(
+            DataType::Time,
+            StrptimeOptions {
+                format: Some("%H:%M:%S".to_string()),
+                strict: false,
+                exact: true,
+                cache: true,
+            },
+            lit("null"),
+        ),
+        col("datetime").str().strptime(
+            DataType::Datetime(TimeUnit::Milliseconds, None),
+            StrptimeOptions {
+                format: Some("%Y-%m-%d %H:%M:%S".to_string()),
+                strict: false,
+                exact: false,
+                cache: true,
+            },
+            lit("null"),
+        ),
+        col("date").str().strptime(
+            DataType::Date,
+            StrptimeOptions {
+                format: Some("%Y-%m-%d".to_string()),
+                strict: false,
+                exact: false,
+                cache: true,
+            },
+            lit("null"),
+        ),
+    ]);
+    let t_casted = make_stable_lazyframe(lf_domain, SymmetricDistance, casted)?;
+
+    let observed = t_casted.invoke(&lf)?.collect()?;
+    let expected = r#"shape: (4, 3)
+┌──────────┬─────────────────────┬──────────────┐
+│ time     ┆ datetime            ┆ date         │
+│ ---      ┆ ---                 ┆ ---          │
+│ time     ┆ datetime[ms]        ┆ date         │
+╞══════════╪═════════════════════╪══════════════╡
+│ 00:00:00 ┆ 2000-01-01 00:00:00 ┆ +10000-01-01 │
+│ null     ┆ null                ┆ null         │
+│ null     ┆ null                ┆ null         │
+│ null     ┆ null                ┆ null         │
+└──────────┴─────────────────────┴──────────────┘"#;
+    assert_eq!(format!("{:?}", observed), expected);
+    Ok(())
+}
+
+#[test]
+fn test_strptime_datetime() -> Fallible<()> {
+    let lf = df!("datetime" => &[
+        "+262142-01-01T00:00:00Z",
+        "+262143-01-01T00:00:00Z",
+        "+262144-01-01T00:00:00Z",
+    ])?
+    .lazy()
+    .with_column(col("datetime").str().strptime(
+        DataType::Datetime(TimeUnit::Milliseconds, None),
+        StrptimeOptions {
+            format: Some("%Y-%m-%dT%H:%M:%SZ".to_string()),
+            strict: false,
+            exact: true,
+            cache: true,
+        },
+        lit("null"),
+    ));
+
+    println!("{:?}", lf.collect());
+
+    Ok(())
+}
+
+#[test]
+fn test_strptime_time() -> Fallible<()> {
+    let lf = df!("t" => &["+262142-01-01T01:02:03.232345Z"])?
+        .lazy()
+        .with_column(col("t").str().strptime(
+            DataType::Time,
+            StrptimeOptions {
+                format: Some("%Y-%m-%dT%H:%M:%S.fZ".to_string()),
+                strict: false,
+                exact: true,
+                cache: true,
+            },
+            lit("null"),
+        ));
+
+    let expected = DataFrame::new(vec![Series::new("t", vec![None::<NaiveTime>])])?;
+    assert_eq!(lf.collect()?, expected);
+
+    let lf = df!("t" => &["+262142-01-01T01:02:03Z"])?
+        .lazy()
+        .with_column(col("t").str().strptime(
+            DataType::Time,
+            StrptimeOptions {
+                format: Some("%Y-%m-%dT%H:%M:%SZ".to_string()),
+                strict: false,
+                exact: true,
+                cache: true,
+            },
+            lit("null"),
+        ));
+
+    let series = Series::new("t", vec![NaiveTime::from_str("01:02:03").unwrap()]);
+    let expected = DataFrame::new(vec![series])?;
+    assert_eq!(lf.collect()?, expected);
+
+    Ok(())
+}
+
+#[test]
+fn test_strptime_nano_panic() -> Fallible<()> {
+    let closure = || {
+        df!("d" => &["2300-01-01T00:00:00Z".to_string()])?
+            .lazy()
+            .with_column(col("d").str().strptime(
+                DataType::Datetime(TimeUnit::Nanoseconds, None),
+                StrptimeOptions {
+                    format: Some("%Y-%m-%dT%H:%M:%SZ".to_string()),
+                    strict: false,
+                    exact: true,
+                    cache: true,
+                },
+                lit("null"),
+            ))
+            .collect()
+    };
+
+    if std::panic::catch_unwind(closure).is_ok() {
+        // This panic will be raised if Polars nanosecond parsing stops panicking.
+        // See https://github.com/pola-rs/polars/issues/19928
+        // If Polars stops panicking (this panic is raised), consider allowing nanosecond datetimes.
+        panic!("expected polars to panic")
+    }
+    Ok(())
+}

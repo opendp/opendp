@@ -7,9 +7,10 @@ use crate::error::Fallible;
 use crate::transformations::traits::UnboundedMetric;
 use crate::{core::Domain, traits::CheckAtom};
 
+use chrono::{NaiveDate, NaiveTime};
 use polars::prelude::*;
 
-use crate::domains::{AtomDomain, CategoricalDomain, OptionDomain};
+use crate::domains::{AtomDomain, CategoricalDomain, DatetimeDomain, OptionDomain};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -130,6 +131,15 @@ impl SeriesDomain {
             DataType::Float32 => new_series_domain!(f64, new_nullable),
             DataType::Float64 => new_series_domain!(f64, new_nullable),
             DataType::String => new_series_domain!(String, default),
+            DataType::Date => new_series_domain!(NaiveDate, default),
+            DataType::Datetime(time_unit, time_zone) => SeriesDomain::new(
+                field.name.as_str(),
+                OptionDomain::new(DatetimeDomain {
+                    time_unit: time_unit.clone(),
+                    time_zone: time_zone.clone(),
+                }),
+            ),
+            DataType::Time => new_series_domain!(NaiveTime, default),
             dtype => return fallible!(MakeDomain, "unsupported type {}", dtype),
         })
     }
@@ -260,6 +270,19 @@ impl SeriesElementDomain for CategoricalDomain {
     const NULLABLE: bool = false;
 }
 
+impl SeriesElementDomain for DatetimeDomain {
+    type InnerDomain = Self;
+
+    fn dtype(&self) -> DataType {
+        DataType::Datetime(self.time_unit.clone(), self.time_zone.clone())
+    }
+    fn inner_domain(&self) -> &Self {
+        self
+    }
+
+    const NULLABLE: bool = false;
+}
+
 /// Object-safe version of [`SeriesElementDomain`].
 pub trait DynSeriesElementDomain: Send + Sync {
     /// This method makes it possible to downcast a trait object of Self
@@ -341,4 +364,10 @@ impl PrimitiveDataType for bool {
 }
 impl PrimitiveDataType for String {
     type Polars = StringType;
+}
+impl PrimitiveDataType for NaiveDate {
+    type Polars = DateType;
+}
+impl PrimitiveDataType for NaiveTime {
+    type Polars = TimeType;
 }
