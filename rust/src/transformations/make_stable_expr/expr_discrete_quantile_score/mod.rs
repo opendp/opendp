@@ -1,5 +1,5 @@
-use crate::core::{MetricSpace, StabilityMap, Transformation};
-use crate::domains::MarginPub;
+use crate::core::{StabilityMap, Transformation};
+use crate::domains::{ExprDomain, MarginPub, WildExprDomain};
 use crate::metrics::{LInfDistance, Parallel, PartitionDistance};
 use crate::polars::{apply_plugin, literal_value_of, match_plugin, ExprFunction, OpenDPPlugin};
 use crate::traits::{InfCast, Number};
@@ -7,7 +7,7 @@ use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::{
     score_candidates_constants, score_candidates_map, validate_candidates, StableExpr,
 };
-use crate::{core::Function, domains::ExprDomain, error::Fallible};
+use crate::{core::Function, error::Fallible};
 
 use polars::datatypes::{
     Float32Type, Float64Type, Int16Type, Int32Type, Int64Type, Int8Type, PolarsDataType,
@@ -30,16 +30,15 @@ pub mod test;
 /// * `input_metric` - The metric space under which neighboring LazyFrames are compared
 /// * `expr` - The expression to which the Laplace noise will be added
 pub fn make_expr_discrete_quantile_score<MI>(
-    input_domain: ExprDomain,
+    input_domain: WildExprDomain,
     input_metric: PartitionDistance<MI>,
     expr: Expr,
 ) -> Fallible<
-    Transformation<ExprDomain, ExprDomain, PartitionDistance<MI>, Parallel<LInfDistance<f64>>>,
+    Transformation<WildExprDomain, ExprDomain, PartitionDistance<MI>, Parallel<LInfDistance<f64>>>,
 >
 where
     MI: 'static + UnboundedMetric,
     Expr: StableExpr<PartitionDistance<MI>, PartitionDistance<MI>>,
-    (ExprDomain, PartitionDistance<MI>): MetricSpace,
 {
     let Some((input, alpha, candidates)) = match_discrete_quantile_score(&expr)? else {
         return fallible!(
@@ -52,7 +51,7 @@ where
     let t_prior = input.clone().make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
-    let active_series = middle_domain.active_series()?.clone();
+    let active_series = &middle_domain.column;
     if active_series.nullable {
         return fallible!(
             MakeTransformation,
@@ -61,7 +60,7 @@ where
     }
     let candidates = candidates.strict_cast(&active_series.field.dtype)?;
 
-    match active_series.field.dtype {
+    match &active_series.field.dtype {
         UInt32 => validate::<UInt32Type>(&candidates),
         UInt64 => validate::<UInt64Type>(&candidates),
         Int8 => validate::<Int8Type>(&candidates),
@@ -85,7 +84,7 @@ where
         }
     }?;
 
-    let margin = middle_domain.active_margin()?.clone();
+    let margin = middle_domain.context.grouping("count")?.1;
 
     let mpl = margin
         .max_partition_length

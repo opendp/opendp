@@ -4,7 +4,7 @@ use polars::datatypes::DataType;
 use polars_plan::dsl::Expr;
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{AtomDomain, ExprContext, ExprDomain, OuterMetric};
+use crate::domains::{AtomDomain, ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::transformations::DatasetMetric;
 
@@ -20,13 +20,14 @@ mod test;
 /// * `input_metric` - The metric under which neighboring LazyFrames are compared
 /// * `expr` - The fill_nan expression
 pub fn make_expr_fill_nan<M: OuterMetric>(
-    input_domain: ExprDomain,
+    input_domain: WildExprDomain,
     input_metric: M,
     expr: Expr,
-) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>>
+) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
 where
     M::InnerMetric: DatasetMetric,
     M::Distance: Clone,
+    (WildExprDomain, M): MetricSpace,
     (ExprDomain, M): MetricSpace,
     Expr: StableExpr<M, M>,
 {
@@ -34,18 +35,12 @@ where
         return fallible!(MakeTransformation, "expected fill_nan expression");
     };
 
-    let ExprDomain {
-        frame_domain,
-        context,
-    } = input_domain.clone();
-    let rr_domain = ExprDomain::new(frame_domain, ExprContext::RowByRow);
-
     let t_data = data
         .clone()
-        .make_stable(rr_domain.clone(), input_metric.clone())?;
+        .make_stable(input_domain.as_row_by_row(), input_metric.clone())?;
     let t_fill = fill
         .clone()
-        .make_stable(rr_domain.clone(), input_metric.clone())?;
+        .make_stable(input_domain.as_row_by_row(), input_metric.clone())?;
 
     let (data_domain, data_metric) = t_data.output_space();
     let (fill_domain, fill_metric) = t_fill.output_space();
@@ -59,7 +54,7 @@ where
         );
     }
 
-    let fill_series = fill_domain.active_series()?;
+    let fill_series = &fill_domain.column;
     let fill_can_be_nan = match &fill_series.field.dtype {
         // from the perspective of atom domain, null refers to existence of any missing value.
         // For float types, this is NaN.
@@ -84,8 +79,7 @@ where
 
     let mut output_domain = data_domain.clone();
     // fill_nan should not change the output context-- just require that its input is row-by-row
-    output_domain.context = context;
-    let series_domain = output_domain.active_series_mut()?;
+    let series_domain = &mut output_domain.column;
     series_domain.drop_bounds().ok();
 
     series_domain.element_domain = match &series_domain.field.dtype {
@@ -105,7 +99,7 @@ where
         Function::new_fallible(move |arg| {
             let expr_data = t_data.invoke(arg)?.1;
             let expr_fill = t_fill.invoke(arg)?.1;
-            Ok((arg.0.clone(), expr_data.fill_nan(expr_fill)))
+            Ok((arg.clone(), expr_data.fill_nan(expr_fill)))
         }),
         input_metric.clone(),
         input_metric,

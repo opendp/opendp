@@ -1,6 +1,6 @@
 use polars::df;
 use polars::lazy::frame::IntoLazy;
-use polars_plan::dsl::{all, col};
+use polars_plan::dsl::col;
 
 use crate::domains::{AtomDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
 use crate::metrics::SymmetricDistance;
@@ -19,14 +19,14 @@ fn test_make_expr_fill_nan() -> Fallible<()> {
     let t_fill_nan = col("f64")
         .fill_nan(0.0)
         .make_stable(lf_domain.clone().row_by_row(), SymmetricDistance)?;
-    let expr_fill_nan = t_fill_nan.invoke(&(lf.logical_plan.clone(), all()))?.1;
+    let expr_fill_nan = t_fill_nan.invoke(&lf.logical_plan)?.1;
     let actual = lf.with_column(expr_fill_nan).collect()?;
 
     assert_eq!(actual, df!("f64" => [None, Some(1.), Some(0.)])?);
 
     assert!(!t_fill_nan
         .output_domain
-        .active_series()?
+        .column
         .atom_domain::<f64>()?
         .nullable());
 

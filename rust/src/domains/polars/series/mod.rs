@@ -97,8 +97,8 @@ impl SeriesDomain {
     /// and elements of the series are members of `element_domain`.
     pub fn new<DA: 'static + SeriesElementDomain>(name: &str, element_domain: DA) -> Self {
         SeriesDomain {
-            field: Field::new(name, DA::dtype()),
-            element_domain: Arc::new(element_domain.inner_domain()),
+            field: Field::new(name, element_domain.dtype()),
+            element_domain: Arc::new(element_domain.inner_domain().clone()),
             nullable: DA::NULLABLE,
         }
     }
@@ -208,7 +208,7 @@ pub trait SeriesElementDomain: Domain + Send + Sync {
     type InnerDomain: SeriesElementDomain;
     /// # Proof Definition
     /// Returns the [`DataType`] of elements in the series.
-    fn dtype() -> DataType;
+    fn dtype(&self) -> DataType;
 
     /// # Proof Definition
     /// Returns the domain elements in the physical backing store.
@@ -216,7 +216,7 @@ pub trait SeriesElementDomain: Domain + Send + Sync {
     /// Polars Series represents nullity via a separate validity bit vector,
     /// so that non-null data can be stored contiguously.
     /// This function returns specifically the domain of non-null elements.
-    fn inner_domain(self) -> Self::InnerDomain;
+    fn inner_domain(&self) -> &Self::InnerDomain;
 
     /// # Proof Definition
     /// True if Series domains may contain null elements, otherwise False.
@@ -225,10 +225,10 @@ pub trait SeriesElementDomain: Domain + Send + Sync {
 impl<T: CheckAtom + PrimitiveDataType> SeriesElementDomain for AtomDomain<T> {
     type InnerDomain = Self;
 
-    fn dtype() -> DataType {
+    fn dtype(&self) -> DataType {
         T::dtype()
     }
-    fn inner_domain(self) -> Self {
+    fn inner_domain(&self) -> &Self {
         self
     }
 
@@ -237,11 +237,11 @@ impl<T: CheckAtom + PrimitiveDataType> SeriesElementDomain for AtomDomain<T> {
 impl<D: SeriesElementDomain> SeriesElementDomain for OptionDomain<D> {
     type InnerDomain = D;
 
-    fn dtype() -> DataType {
-        D::dtype()
+    fn dtype(&self) -> DataType {
+        self.inner_domain().dtype()
     }
-    fn inner_domain(self) -> D {
-        self.element_domain
+    fn inner_domain(&self) -> &D {
+        &self.element_domain
     }
 
     const NULLABLE: bool = true;
@@ -250,10 +250,10 @@ impl<D: SeriesElementDomain> SeriesElementDomain for OptionDomain<D> {
 impl SeriesElementDomain for CategoricalDomain {
     type InnerDomain = Self;
 
-    fn dtype() -> DataType {
+    fn dtype(&self) -> DataType {
         DataType::Categorical(None, Default::default())
     }
-    fn inner_domain(self) -> Self {
+    fn inner_domain(&self) -> &Self {
         self
     }
 

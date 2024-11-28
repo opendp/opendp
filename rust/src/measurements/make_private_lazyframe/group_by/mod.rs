@@ -6,7 +6,7 @@ use crate::accuracy::{
 };
 use crate::combinators::{make_basic_composition, BasicCompositionMeasure};
 use crate::core::{Function, Measurement, MetricSpace, PrivacyMap};
-use crate::domains::{DslPlanDomain, ExprContext, ExprDomain};
+use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
 use crate::measurements::expr_noise::Distribution;
 use crate::measurements::make_private_expr;
@@ -18,7 +18,7 @@ use crate::transformations::{DatasetMetric, StableDslPlan};
 use dashu::integer::IBig;
 use make_private_expr::PrivateExpr;
 use matching::{find_len_expr, match_grouping_columns, MatchGroupBy};
-use polars_plan::dsl::{all, col, lit, Expr};
+use polars_plan::dsl::{col, lit, Expr};
 use polars_plan::plans::DslPlan;
 
 #[cfg(test)]
@@ -53,8 +53,6 @@ where
     DslPlan: StableDslPlan<MS, MI>,
     (DslPlanDomain, MS): MetricSpace,
     (DslPlanDomain, MI): MetricSpace,
-    (ExprDomain, MI): MetricSpace,
-    (ExprDomain, PartitionDistance<MI>): MetricSpace,
 {
     let Some(MatchGroupBy {
         input: input_expr,
@@ -69,15 +67,15 @@ where
     let t_prior = input_expr.clone().make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
-    let grouping_columns = match_grouping_columns(keys.clone())?;
-
-    let expr_domain = ExprDomain::new(
-        middle_domain.clone(),
-        ExprContext::Aggregate {
-            grouping_columns: grouping_columns.clone(),
+    let by = match_grouping_columns(keys.clone())?;
+    let margin = middle_domain.get_margin(by.clone());
+    let expr_domain = WildExprDomain {
+        columns: middle_domain.series_domains.clone(),
+        context: Context::Grouping {
+            by: by.clone(),
+            margin: margin.clone(),
         },
-    );
-    let margin = expr_domain.active_margin()?;
+    };
 
     let m_exprs = make_basic_composition(
         aggs.into_iter()
@@ -95,7 +93,7 @@ where
 
     let f_comp = m_exprs.function.clone();
     let privacy_map = m_exprs.privacy_map.clone();
-    let dp_exprs = m_exprs.invoke(&(input_expr, all()))?;
+    let dp_exprs = m_exprs.invoke(&input_expr)?;
 
     let threshold_info = if margin.public_info.is_some() {
         None
@@ -108,7 +106,7 @@ where
         let (name, noise) = find_len_expr(&dp_exprs, None)?;
         Some((name, noise, threshold_value, true))
     } else {
-        return fallible!(MakeMeasurement, "The key-set of {:?} is private and cannot be released without filtering. Please pass a filtering threshold into make_private_lazyframe.", grouping_columns);
+        return fallible!(MakeMeasurement, "The key-set of {:?} is private and cannot be released without filtering. Please pass a filtering threshold into make_private_lazyframe.", by);
     };
 
     let final_predicate = if let Some((name, _, threshold_value, is_present)) = &threshold_info {
@@ -127,7 +125,7 @@ where
             let mut output = DslPlan::GroupBy {
                 input: Arc::new(arg.clone()),
                 keys: keys.clone(),
-                aggs: f_comp.eval(&(arg.clone(), all()))?,
+                aggs: f_comp.eval(arg)?,
                 apply: None,
                 maintain_order: false,
                 options: Default::default(),

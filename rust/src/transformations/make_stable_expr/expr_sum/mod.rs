@@ -1,5 +1,7 @@
-use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{ExprDomain, Margin, MarginPub::Lengths, NumericDataType, SeriesDomain};
+use crate::core::{Function, StabilityMap, Transformation};
+use crate::domains::{
+    Context, ExprDomain, Margin, MarginPub::Lengths, NumericDataType, SeriesDomain, WildExprDomain,
+};
 use crate::error::*;
 use crate::metrics::{IntDistance, LpDistance, PartitionDistance};
 use crate::polars::ExprFunction;
@@ -13,7 +15,6 @@ use crate::transformations::{
 };
 use num::Zero;
 use polars::prelude::*;
-use std::collections::HashMap;
 
 use super::StableExpr;
 
@@ -29,13 +30,12 @@ use super::StableExpr;
 /// * `input_metric` - valid selections shown in table above
 /// * `expr` - an expression ending with sum
 pub fn make_expr_sum<MI, const P: usize>(
-    input_domain: ExprDomain,
+    input_domain: WildExprDomain,
     input_metric: PartitionDistance<MI>,
     expr: Expr,
-) -> Fallible<Transformation<ExprDomain, ExprDomain, PartitionDistance<MI>, LpDistance<P, f64>>>
+) -> Fallible<Transformation<WildExprDomain, ExprDomain, PartitionDistance<MI>, LpDistance<P, f64>>>
 where
     MI: 'static + UnboundedMetric,
-    (ExprDomain, PartitionDistance<MI>): MetricSpace,
     Expr: StableExpr<PartitionDistance<MI>, PartitionDistance<MI>>,
 {
     let Expr::Agg(AggExpr::Sum(prior_expr)) = expr else {
@@ -48,25 +48,29 @@ where
         .make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
-    let dtype = &middle_domain.active_series()?.field.dtype;
+    let dtype = &middle_domain.column.field.dtype;
 
-    // check that we are in a context where it is ok to break row-alignment
-    middle_domain.context.check_alignment_can_be_broken()?;
+    let (by, input_margin) = middle_domain.context.grouping("sum")?;
 
     // build output domain
     let mut output_domain = middle_domain.clone();
 
     // summation invalidates bounds on the active column
-    output_domain.active_series_mut()?.drop_bounds()?;
-
-    let margin_id = middle_domain.context.grouping_columns()?;
-    let input_margin = middle_domain.active_margin()?;
+    output_domain.column.drop_bounds()?;
 
     // Set the margins on the output domain to consist of only one margin: 1 row per group, with at most 1 record in each group.
-    let output_margin = input_margin.clone().with_max_partition_length(1);
-    output_domain.frame_domain.margins = HashMap::from_iter([(margin_id, output_margin)]);
+    output_domain.context = Context::Grouping {
+        by,
+        margin: Margin {
+            max_partition_length: Some(1),
+            max_num_partitions: input_margin.max_num_partitions,
+            max_partition_contributions: None,
+            max_influenced_partitions: Some(1),
+            public_info: input_margin.public_info,
+        },
+    };
 
-    let series_domain = middle_domain.active_series()?.clone();
+    let series_domain = middle_domain.column.clone();
     let stability_map = match dtype {
         DataType::UInt32 => sum_stability_map::<MI, P, u32>(series_domain, input_margin),
         DataType::UInt64 => sum_stability_map::<MI, P, u64>(series_domain, input_margin),

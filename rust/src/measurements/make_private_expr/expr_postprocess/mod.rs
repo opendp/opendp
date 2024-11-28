@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use crate::combinators::{make_basic_composition, BasicCompositionMeasure};
 use crate::core::{Metric, MetricSpace};
+use crate::domains::WildExprDomain;
 use crate::{
     core::{Function, Measurement},
-    domains::ExprDomain,
     error::Fallible,
 };
 
@@ -25,16 +25,16 @@ mod test;
 /// * `postprocessor` - function that applies post-processing to the expressions
 /// * `param` - global noise (re)scale parameter
 pub fn make_expr_postprocess<MI: 'static + Metric, MO: 'static + BasicCompositionMeasure>(
-    input_domain: ExprDomain,
+    input_domain: WildExprDomain,
     input_metric: MI,
     output_measure: MO,
     input_exprs: Vec<Expr>,
     postprocessor: impl Fn(Vec<Expr>) -> Fallible<Expr> + 'static + Send + Sync,
     param: Option<f64>,
-) -> Fallible<Measurement<ExprDomain, Expr, MI, MO>>
+) -> Fallible<Measurement<WildExprDomain, Expr, MI, MO>>
 where
     Expr: PrivateExpr<MI, MO>,
-    (ExprDomain, MI): MetricSpace,
+    (WildExprDomain, MI): MetricSpace,
 {
     let m_exprs = input_exprs
         .into_iter()
@@ -61,15 +61,15 @@ where
 }
 
 pub fn match_postprocess<MI: 'static + Metric, MO: 'static + BasicCompositionMeasure>(
-    input_domain: ExprDomain,
+    input_domain: WildExprDomain,
     input_metric: MI,
     output_measure: MO,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Option<Measurement<ExprDomain, Expr, MI, MO>>>
+) -> Fallible<Option<Measurement<WildExprDomain, Expr, MI, MO>>>
 where
     Expr: PrivateExpr<MI, MO>,
-    (ExprDomain, MI): MetricSpace,
+    (WildExprDomain, MI): MetricSpace,
 {
     match expr {
         #[cfg(feature = "contrib")]

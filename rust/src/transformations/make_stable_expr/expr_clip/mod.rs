@@ -2,7 +2,9 @@ use polars::prelude::*;
 use polars_plan::dsl::{Expr, FunctionExpr};
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{Bounds, ExprDomain, NumericDataType, OuterMetric, SeriesDomain};
+use crate::domains::{
+    Bounds, ExprDomain, NumericDataType, OuterMetric, SeriesDomain, WildExprDomain,
+};
 use crate::error::*;
 use crate::polars::ExprFunction;
 use crate::traits::Number;
@@ -17,13 +19,14 @@ use super::StableExpr;
 /// * `input_metric` - The metric under which neighboring LazyFrames are compared
 /// * `expr` - The clipping expression
 pub fn make_expr_clip<M: OuterMetric>(
-    input_domain: ExprDomain,
+    input_domain: WildExprDomain,
     input_metric: M,
     expr: Expr,
-) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>>
+) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
 where
     M::InnerMetric: DatasetMetric,
     M::Distance: Clone,
+    (WildExprDomain, M): MetricSpace,
     (ExprDomain, M): MetricSpace,
     Expr: StableExpr<M, M>,
 {
@@ -56,18 +59,18 @@ where
 
     let mut output_domain = middle_domain.clone();
     let (lower, upper) = {
-        let series_domain = output_domain.active_series_mut()?;
+        let data_column = &mut output_domain.column;
 
         use DataType::*;
-        match &series_domain.field.dtype {
-            UInt32 => extract_bounds::<u32>(lower, upper, series_domain)?,
-            UInt64 => extract_bounds::<u64>(lower, upper, series_domain)?,
-            Int8 => extract_bounds::<i8>(lower, upper, series_domain)?,
-            Int16 => extract_bounds::<i16>(lower, upper, series_domain)?,
-            Int32 => extract_bounds::<i32>(lower, upper, series_domain)?,
-            Int64 => extract_bounds::<i64>(lower, upper, series_domain)?,
-            Float32 => extract_bounds::<f32>(lower, upper, series_domain)?,
-            Float64 => extract_bounds::<f64>(lower, upper, series_domain)?,
+        match &data_column.field.dtype {
+            UInt32 => extract_bounds::<u32>(lower, upper, data_column)?,
+            UInt64 => extract_bounds::<u64>(lower, upper, data_column)?,
+            Int8 => extract_bounds::<i8>(lower, upper, data_column)?,
+            Int16 => extract_bounds::<i16>(lower, upper, data_column)?,
+            Int32 => extract_bounds::<i32>(lower, upper, data_column)?,
+            Int64 => extract_bounds::<i64>(lower, upper, data_column)?,
+            Float32 => extract_bounds::<f32>(lower, upper, data_column)?,
+            Float64 => extract_bounds::<f64>(lower, upper, data_column)?,
             UInt8 | UInt16 => {
                 return fallible!(
                     MakeTransformation,

@@ -29,7 +29,7 @@ macro_rules! is_nullable {
         $col.$op()
             .make_stable($domain.clone(), SymmetricDistance)?
             .output_domain
-            .active_series()?
+            .column
             .nullable
     };
 }

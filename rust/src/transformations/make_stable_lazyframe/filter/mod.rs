@@ -1,5 +1,5 @@
 use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{DslPlanDomain, ExprContext, ExprDomain};
+use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::StableExpr;
@@ -37,13 +37,16 @@ where
         .make_stable(input_domain.clone(), input_metric.clone())?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
-    let expr_domain = ExprDomain::new(middle_domain.clone(), ExprContext::RowByRow);
+    let expr_domain = WildExprDomain {
+        columns: middle_domain.series_domains.clone(),
+        context: Context::RowByRow,
+    };
 
     let t_pred = predicate
         .clone()
         .make_stable(expr_domain, middle_metric.clone())?;
 
-    let pred_dtype = t_pred.output_domain.active_series()?.field.dtype.clone();
+    let pred_dtype = t_pred.output_domain.column.field.dtype.clone();
 
     if !pred_dtype.is_bool() {
         return fallible!(

@@ -1,4 +1,4 @@
-use std::{any::TypeId, ffi::c_char};
+use std::{any::TypeId, ffi::c_char, os::raw::c_void};
 
 use opendp_derive::bootstrap;
 
@@ -8,7 +8,7 @@ use crate::{
     error::Fallible,
     ffi::{
         any::{AnyDomain, AnyMetric, AnyObject, Downcast},
-        util::{self, to_option_str, AnyDomainPtr, Type},
+        util::{self, AnyDomainPtr, Type},
     },
     transformations::DatasetMetric,
 };
@@ -27,7 +27,7 @@ use polars::prelude::*;
 /// * `series_domains` - Domain of each series in the lazyframe.
 #[no_mangle]
 pub extern "C" fn opendp_domains__lazyframe_domain(
-    series_domains: *mut AnyObject,
+    series_domains: *const AnyObject,
 ) -> FfiResult<*mut AnyDomain> {
     Ok(AnyDomain::new(try_!(LazyFrameDomain::new(try_!(
         unpack_series_domains(series_domains)
@@ -54,7 +54,9 @@ pub extern "C" fn opendp_domains___lazyframe_from_domain(
     _lazyframe_from_domain(domain).map(AnyObject::new).into()
 }
 
-fn unpack_series_domains(series_domains: *mut AnyObject) -> Fallible<Vec<SeriesDomain>> {
+pub(crate) fn unpack_series_domains(
+    series_domains: *const AnyObject,
+) -> Fallible<Vec<SeriesDomain>> {
     let vec_any = try_as_ref!(series_domains).downcast_ref::<Vec<AnyDomainPtr>>()?;
 
     vec_any
@@ -73,10 +75,14 @@ fn unpack_series_domains(series_domains: *mut AnyObject) -> Fallible<Vec<SeriesD
     arguments(
         frame_domain(rust_type = b"null"),
         by(rust_type = "Vec<String>"),
-        max_partition_length(rust_type = "Option<u32>", default = b"null"),
-        max_num_partitions(rust_type = "Option<u32>", default = b"null"),
-        max_partition_contributions(rust_type = "Option<u32>", default = b"null"),
-        max_influenced_partitions(rust_type = "Option<u32>", default = b"null"),
+        max_partition_length(c_type = "void *", rust_type = "Option<u32>", default = b"null"),
+        max_num_partitions(c_type = "void *", rust_type = "Option<u32>", default = b"null"),
+        max_partition_contributions(
+            c_type = "void *",
+            rust_type = "Option<u32>",
+            default = b"null"
+        ),
+        max_influenced_partitions(c_type = "void *", rust_type = "Option<u32>", default = b"null"),
         public_info(rust_type = "Option<String>", default = b"null")
     ),
     returns(c_type = "FfiResult<AnyDomain *>")
@@ -85,45 +91,27 @@ fn unpack_series_domains(series_domains: *mut AnyObject) -> Fallible<Vec<SeriesD
 pub extern "C" fn opendp_domains__with_margin(
     frame_domain: *mut AnyDomain,
     by: *mut AnyObject,
-    max_partition_length: *mut AnyObject,
-    max_num_partitions: *mut AnyObject,
-    max_partition_contributions: *mut AnyObject,
-    max_influenced_partitions: *mut AnyObject,
+    max_partition_length: *mut c_void,
+    max_num_partitions: *mut c_void,
+    max_partition_contributions: *mut c_void,
+    max_influenced_partitions: *mut c_void,
     public_info: *mut c_char,
 ) -> FfiResult<*mut AnyDomain> {
     let domain = try_as_ref!(frame_domain);
     let by = try_!(try_as_ref!(by).downcast_ref::<Vec<String>>()).clone();
 
-    let max_partition_length = if let Some(x) = util::as_ref(max_partition_length) {
-        Some(*try_!(x.downcast_ref::<u32>()))
-    } else {
-        None
-    };
-    let max_num_partitions = if let Some(x) = util::as_ref(max_num_partitions) {
-        Some(*try_!(x.downcast_ref::<u32>()))
-    } else {
-        None
-    };
-
-    let max_partition_contributions = if let Some(x) = util::as_ref(max_partition_contributions) {
-        Some(*try_!(x.downcast_ref::<u32>()))
-    } else {
-        None
-    };
-    let max_influenced_partitions = if let Some(x) = util::as_ref(max_influenced_partitions) {
-        Some(*try_!(x.downcast_ref::<u32>()))
-    } else {
-        None
-    };
-
-    let public_info = if let Some(public_info) = try_!(to_option_str(public_info)) {
-        Some(match public_info {
-            "keys" => MarginPub::Keys,
-            "lengths" => MarginPub::Lengths,
+    let margin = Margin {
+        max_partition_length: util::as_ref(max_partition_length as *const u32).cloned(),
+        max_num_partitions: util::as_ref(max_num_partitions as *const u32).cloned(),
+        max_partition_contributions: util::as_ref(max_partition_contributions as *const u32)
+            .cloned(),
+        max_influenced_partitions: util::as_ref(max_influenced_partitions as *const u32).cloned(),
+        public_info: match try_!(util::to_option_str(public_info)) {
+            Some("keys") => Some(MarginPub::Keys),
+            Some("lengths") => Some(MarginPub::Lengths),
+            None => None,
             _ => return err!(FFI, "public_info must be one of 'keys' or 'lengths'").into(),
-        })
-    } else {
-        None
+        },
     };
 
     let frame_domain = try_as_ref!(frame_domain);
@@ -147,14 +135,6 @@ pub extern "C" fn opendp_domains__with_margin(
         let domain = domain.downcast_ref::<FrameDomain<F>>()?.clone();
         Ok(AnyDomain::new(domain.with_margin(&by, margin)?))
     }
-
-    let margin = Margin {
-        max_partition_length,
-        max_num_partitions,
-        max_partition_contributions,
-        max_influenced_partitions,
-        public_info,
-    };
 
     dispatch!(
         monomorphize,

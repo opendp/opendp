@@ -1,4 +1,5 @@
-use crate::core::{MetricSpace, PrivacyMap};
+use crate::core::PrivacyMap;
+use crate::domains::WildExprDomain;
 use crate::measurements::{report_noisy_max_gumbel_map, select_score, Optimize};
 use crate::metrics::{IntDistance, LInfDistance, Parallel, PartitionDistance};
 use crate::polars::{apply_plugin, literal_value_of, match_plugin, ExprFunction, OpenDPPlugin};
@@ -7,7 +8,6 @@ use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::StableExpr;
 use crate::{
     core::{Function, Measurement},
-    domains::ExprDomain,
     error::Fallible,
     measures::MaxDivergence,
 };
@@ -42,14 +42,13 @@ mod test;
 /// * `expr` - The expression to which the selection will be applied
 /// * `global_scale` - (Re)scale the noise distribution
 pub fn make_expr_report_noisy_max<MI: 'static + UnboundedMetric>(
-    input_domain: ExprDomain,
+    input_domain: WildExprDomain,
     input_metric: PartitionDistance<MI>,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<MI>, MaxDivergence>>
+) -> Fallible<Measurement<WildExprDomain, Expr, PartitionDistance<MI>, MaxDivergence>>
 where
     Expr: StableExpr<PartitionDistance<MI>, Parallel<LInfDistance<f64>>>,
-    (ExprDomain, MI): MetricSpace,
 {
     let (input, optimize, scale) = match_report_noisy_max(&expr)?
         .ok_or_else(|| err!(MakeMeasurement, "Expected {}", ReportNoisyMaxPlugin::NAME))?;
@@ -93,7 +92,7 @@ where
 
     let scale = scale.inf_mul(&global_scale)?;
 
-    if middle_domain.active_series()?.nullable {
+    if middle_domain.column.nullable {
         return fallible!(
             MakeMeasurement,
             "{} requires non-nullable input",

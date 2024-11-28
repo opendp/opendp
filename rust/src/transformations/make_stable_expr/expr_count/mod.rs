@@ -1,5 +1,7 @@
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{AtomDomain, DslPlanDomain, ExprContext, ExprDomain, MarginPub, SeriesDomain};
+use crate::domains::{
+    AtomDomain, Context, ExprDomain, Margin, MarginPub, SeriesDomain, WildExprDomain,
+};
 use crate::error::*;
 use crate::metrics::{IntDistance, LpDistance, PartitionDistance};
 use crate::polars::ExprFunction;
@@ -32,10 +34,10 @@ enum Strategy {
 /// * `input_metric` - valid selections shown in table above
 /// * `expr` - a length expression
 pub fn make_expr_count<MI, const P: usize>(
-    input_domain: ExprDomain,
+    input_domain: WildExprDomain,
     input_metric: PartitionDistance<MI>,
     expr: Expr,
-) -> Fallible<Transformation<ExprDomain, ExprDomain, PartitionDistance<MI>, LpDistance<P, f64>>>
+) -> Fallible<Transformation<WildExprDomain, ExprDomain, PartitionDistance<MI>, LpDistance<P, f64>>>
 where
     MI: 'static + UnboundedMetric,
     (ExprDomain, PartitionDistance<MI>): MetricSpace,
@@ -70,36 +72,42 @@ where
         }
     };
 
-    // construct prior transformation
-    let t_prior = input
+    let is_row_by_row = input
         .clone()
-        .make_stable(input_domain.clone(), input_metric.clone())?;
+        .make_stable(input_domain.as_row_by_row(), input_metric.clone())
+        .is_ok();
+
+    // try to construct a row-by-row expression
+    let t_prior = input.make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
-    // check that we are in a context where it is ok to break row-alignment
-    middle_domain.context.check_alignment_can_be_broken()?;
+    let (by, margin) = middle_domain.context.grouping("count")?;
 
-    let output_series = SeriesDomain::new(
-        middle_domain.active_series()?.field.name.as_str(),
-        AtomDomain::<u32>::default(),
-    );
-    let output_domain = ExprDomain::new(
-        DslPlanDomain::new(vec![output_series])?,
-        middle_domain.context.clone(),
-    );
-
-    // check if input is row-by-row
-    let rr_domain = ExprDomain::new(input_domain.frame_domain.clone(), ExprContext::RowByRow);
-    let is_row_by_row = input.make_stable(rr_domain, input_metric).is_ok();
+    let output_domain = ExprDomain {
+        column: SeriesDomain::new(
+            middle_domain.column.field.name.as_str(),
+            AtomDomain::<u32>::default(),
+        ),
+        context: Context::Grouping {
+            by: by.clone(),
+            margin: Margin {
+                max_partition_length: Some(1),
+                max_num_partitions: margin.max_num_partitions,
+                max_partition_contributions: None,
+                max_influenced_partitions: margin.max_influenced_partitions,
+                public_info: margin.public_info.clone(),
+            },
+        },
+    };
 
     let will_count_all = match strategy {
         Strategy::Len => is_row_by_row,
-        Strategy::Count => is_row_by_row && !middle_domain.active_series()?.nullable,
+        Strategy::Count => is_row_by_row && !middle_domain.column.nullable,
         _ => false,
     };
 
     let public_info = if will_count_all {
-        middle_domain.active_margin()?.public_info
+        margin.public_info
     } else {
         None
     };

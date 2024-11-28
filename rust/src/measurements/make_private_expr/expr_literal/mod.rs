@@ -1,9 +1,8 @@
 use crate::core::{Measure, Metric, MetricSpace, PrivacyMap};
+use crate::domains::WildExprDomain;
 use crate::metrics::PartitionDistance;
-use crate::polars::ExprFunction;
 use crate::{
     core::{Function, Measurement},
-    domains::ExprDomain,
     error::Fallible,
 };
 
@@ -22,13 +21,13 @@ mod test;
 /// * `input_metric` - valid selections shown in table above
 /// * `expr` - literal expression
 pub fn make_expr_private_lit<MI: 'static + Metric, MO: 'static + Measure>(
-    input_domain: ExprDomain,
+    input_domain: WildExprDomain,
     input_metric: PartitionDistance<MI>,
     expr: Expr,
-) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<MI>, MO>>
+) -> Fallible<Measurement<WildExprDomain, Expr, PartitionDistance<MI>, MO>>
 where
     MO::Distance: Zero,
-    (ExprDomain, PartitionDistance<MI>): MetricSpace,
+    (WildExprDomain, PartitionDistance<MI>): MetricSpace,
 {
     let Expr::Literal(_) = &expr else {
         return fallible!(MakeMeasurement, "Expected Literal expression");
@@ -36,9 +35,9 @@ where
 
     Measurement::new(
         input_domain,
-        Function::from_expr(expr),
+        Function::new(move |_| expr.clone()),
         input_metric,
         MO::default(),
-        PrivacyMap::new(move |_| MO::Distance::zero()),
+        PrivacyMap::new(|_| MO::Distance::zero()),
     )
 }
