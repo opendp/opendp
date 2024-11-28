@@ -2,7 +2,7 @@ use polars::prelude::*;
 use polars_plan::dsl::Expr;
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{ExprDomain, OuterMetric, SeriesDomain, WildExprDomain};
+use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::polars::{literal_value_of, ExprFunction};
 use crate::transformations::DatasetMetric;
@@ -74,14 +74,13 @@ where
 
     let mut output_domain = middle_domain.clone();
     let series_domain = &mut output_domain.column;
-    let name = series_domain.field.name.as_ref();
 
     // check input and output types
-    if series_domain.field.dtype != DataType::String {
+    if series_domain.dtype() != DataType::String {
         return fallible!(
             MakeTransformation,
             "str.strptime input dtype must be String, found {}",
-            series_domain.field.dtype
+            series_domain.dtype()
         );
     }
 
@@ -104,7 +103,8 @@ where
         );
     }
 
-    *series_domain = SeriesDomain::new_from_field(Field::new(name, to_type.clone()))?;
+    series_domain.set_dtype(to_type.clone())?;
+    series_domain.nullable = true;
 
     t_prior
         >> Transformation::new(

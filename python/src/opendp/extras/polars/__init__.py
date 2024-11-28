@@ -420,7 +420,7 @@ class DPExpr(object):
         │ ---    │
         │ f64    │
         ╞════════╡
-        │ ...    │
+        │ ...... │
         └────────┘
 
         Privately estimates the numerator and denominator separately, and then returns their ratio.

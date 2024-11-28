@@ -80,9 +80,9 @@ where
     } else {
         compute_labels(&breaks, left_closed)?
     };
-    let series_domain = &mut output_domain.column;
-    series_domain.element_domain = Arc::new(CategoricalDomain::new_with_encoding(categories)?);
-    series_domain.field.dtype = DataType::Categorical(None, Default::default());
+
+    let element_domain = CategoricalDomain::new_with_encoding(categories)?;
+    output_domain.column.set_element_domain(element_domain);
 
     t_prior
         >> Transformation::new(

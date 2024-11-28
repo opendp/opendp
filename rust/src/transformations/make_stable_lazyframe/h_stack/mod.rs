@@ -65,7 +65,7 @@ where
         .chain(new_series.clone())
         .for_each(|series_domain| {
             lookup
-                .entry(series_domain.field.name.to_string())
+                .entry(series_domain.name.to_string())
                 .and_modify(|i| {
                     series_domains[*i] = series_domain.clone();
                 })
@@ -77,7 +77,7 @@ where
 
     // only keep margins for series that have not changed
     let new_series_names = new_series
-        .map(|series_domain| series_domain.field.name.clone())
+        .map(|series_domain| series_domain.name.clone())
         .collect();
     let margins = (middle_domain.margins.iter())
         .filter(|(k, _)| k.is_disjoint(&new_series_names))

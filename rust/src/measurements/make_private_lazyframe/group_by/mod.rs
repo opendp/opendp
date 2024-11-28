@@ -68,7 +68,7 @@ where
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let by = match_grouping_columns(keys.clone())?;
-    let margin = middle_domain.get_margin(by.clone());
+    let margin = middle_domain.get_margin(&by);
     let expr_domain = WildExprDomain {
         columns: middle_domain.series_domains.clone(),
         context: Context::Grouping {

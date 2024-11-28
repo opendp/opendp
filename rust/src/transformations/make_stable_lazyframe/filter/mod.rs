@@ -46,7 +46,7 @@ where
         .clone()
         .make_stable(expr_domain, middle_metric.clone())?;
 
-    let pred_dtype = t_pred.output_domain.column.field.dtype.clone();
+    let pred_dtype = t_pred.output_domain.column.dtype();
 
     if !pred_dtype.is_bool() {
         return fallible!(

@@ -61,7 +61,7 @@ where
         );
     }
 
-    if matches!(data_domain.column.field.dtype, DataType::Categorical(_, _)) {
+    if matches!(data_domain.column.dtype(), DataType::Categorical(_, _)) {
         return fallible!(MakeTransformation, "fill_null cannot be applied to categorical data, because it may trigger a data-dependent CategoricalRemappingWarning in Polars");
     }
 

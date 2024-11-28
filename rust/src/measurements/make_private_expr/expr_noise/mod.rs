@@ -205,7 +205,7 @@ where
         }
     };
 
-    let support = match &middle_domain.column.field.dtype {
+    let support = match &middle_domain.column.dtype() {
         dt if dt.is_integer() => Support::Integer,
         dt if dt.is_float() => Support::Float,
         dt => {

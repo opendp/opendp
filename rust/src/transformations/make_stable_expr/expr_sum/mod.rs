@@ -48,7 +48,7 @@ where
         .make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
-    let dtype = &middle_domain.column.field.dtype;
+    let dtype = middle_domain.column.dtype();
 
     let (by, input_margin) = middle_domain.context.grouping("sum")?;
 

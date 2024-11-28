@@ -11,7 +11,7 @@ fn assert_expr_to_physical<DI: 'static + SeriesElementDomain, DO: 'static + Seri
     out_series: Series,
 ) -> Fallible<()> {
     let name = in_series.name().to_string();
-    let in_series_domain = SeriesDomain::new(&name, in_elem_domain);
+    let in_series_domain = SeriesDomain::new(name.clone(), in_elem_domain);
     let lf_domain = LazyFrameDomain::new(vec![in_series_domain.clone()])?;
     let lf = DataFrame::new(vec![in_series])?.lazy();
 
@@ -27,7 +27,7 @@ fn assert_expr_to_physical<DI: 'static + SeriesElementDomain, DO: 'static + Seri
     assert_eq!(expected, actual);
 
     // check that domain is transformed as expected
-    let out_series_domain = SeriesDomain::new(&name, out_elem_domain);
+    let out_series_domain = SeriesDomain::new(name, out_elem_domain);
     let expected_lf_domain = LazyFrameDomain::new(vec![out_series_domain])?;
 
     assert_eq!(t_binned.output_domain, expected_lf_domain);

@@ -23,8 +23,7 @@ fn test_expr_cut() -> Fallible<()> {
 
     // check domain output
     let encoding = compute_labels(&[-1.0, 1.0], false)?;
-    series_domain.element_domain = Arc::new(CategoricalDomain::new_with_encoding(encoding)?);
-    series_domain.field.dtype = DataType::Categorical(None, Default::default());
+    series_domain.set_element_domain(CategoricalDomain::new_with_encoding(encoding)?);
     let lf_domain_exp = LazyFrameDomain::new(vec![series_domain])?;
 
     assert_eq!(t_cut.output_domain, lf_domain_exp);

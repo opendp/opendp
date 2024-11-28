@@ -38,7 +38,7 @@ where
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let mut output_domain = middle_domain.clone();
-    output_domain.column.field.name = name.as_ref().into();
+    output_domain.column.name = name.as_ref().into();
 
     let t_alias = Transformation::new(
         middle_domain.clone(),
