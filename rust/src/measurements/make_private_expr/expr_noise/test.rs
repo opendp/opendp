@@ -13,18 +13,17 @@ use crate::{
 #[test]
 fn test_make_expr_puredp() -> Fallible<()> {
     let (lf_domain, lf) = get_test_data()?;
-    let expr_domain = lf_domain.select();
     let scale: f64 = 0.0;
 
     let m_quant = make_private_expr(
-        expr_domain,
+        lf_domain.select(),
         PartitionDistance(InsertDeleteDistance),
         MaxDivergence::default(),
         col("const_1f64").dp().sum((0., 1.), Some(scale)),
         None,
     )?;
 
-    let dp_expr = m_quant.invoke(&(lf.logical_plan.clone(), all()))?;
+    let dp_expr = m_quant.invoke(&lf.logical_plan)?;
     let df_actual = lf.select([dp_expr]).collect()?;
 
     assert_eq!(df_actual, df!("const_1f64" => [1000.0])?);
@@ -35,18 +34,17 @@ fn test_make_expr_puredp() -> Fallible<()> {
 #[test]
 fn test_make_expr_zcdp() -> Fallible<()> {
     let (lf_domain, lf) = get_test_data()?;
-    let expr_domain = lf_domain.select();
     let scale: f64 = 0.0;
 
     let m_quant = make_private_expr(
-        expr_domain,
+        lf_domain.select(),
         PartitionDistance(InsertDeleteDistance),
         ZeroConcentratedDivergence::default(),
         col("const_1f64").dp().sum((0., 1.), Some(scale)),
         None,
     )?;
 
-    let dp_expr = m_quant.invoke(&(lf.logical_plan.clone(), all()))?;
+    let dp_expr = m_quant.invoke(&lf.logical_plan)?;
     let df_actual = lf.select([dp_expr]).collect()?;
 
     assert_eq!(df_actual, df!("const_1f64" => [1000.0])?);
@@ -57,11 +55,10 @@ fn test_make_expr_zcdp() -> Fallible<()> {
 #[test]
 fn test_fail_make_expr_wrong_distribution() -> Fallible<()> {
     let (lf_domain, _) = get_test_data()?;
-    let expr_domain = lf_domain.select();
     let scale: f64 = 0.0;
 
     let variant = make_private_expr(
-        expr_domain,
+        lf_domain.select(),
         PartitionDistance(InsertDeleteDistance),
         MaxDivergence::default(),
         col("const_1f64")
@@ -83,18 +80,17 @@ fn test_fail_make_expr_wrong_distribution() -> Fallible<()> {
 #[test]
 fn test_make_expr_gaussian() -> Fallible<()> {
     let (lf_domain, lf) = get_test_data()?;
-    let expr_domain = lf_domain.select();
     let scale: f64 = 0.0;
 
     let m_quant = make_private_expr(
-        expr_domain,
+        lf_domain.select(),
         PartitionDistance(InsertDeleteDistance),
         ZeroConcentratedDivergence::default(),
         col("const_1f64").dp().sum((0., 1.), Some(scale)),
         None,
     )?;
 
-    let dp_expr = m_quant.invoke(&(lf.logical_plan.clone(), all()))?;
+    let dp_expr = m_quant.invoke(&lf.logical_plan)?;
     let df_actual = lf.select([dp_expr]).collect()?;
 
     assert_eq!(df_actual, df!("const_1f64" => [1000.0])?);

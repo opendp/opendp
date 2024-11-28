@@ -1,5 +1,6 @@
 use std::{collections::BTreeSet, sync::Arc};
 
+use polars::prelude::SmartString;
 use polars_plan::{
     dsl::{Expr, Operator},
     plans::DslPlan,
@@ -58,13 +59,13 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
     }))
 }
 
-pub fn match_grouping_columns(keys: Vec<Expr>) -> Fallible<BTreeSet<String>> {
+pub fn match_grouping_columns(keys: Vec<Expr>) -> Fallible<BTreeSet<SmartString>> {
     Ok(keys
         .iter()
         .map(|e| {
             Ok(match e {
-                Expr::Column(name) => vec![(*name).to_string()],
-                Expr::Columns(names) => names.iter().map(|s| s.to_string()).collect(),
+                Expr::Column(name) => vec![name.as_ref().into()],
+                Expr::Columns(names) => names.iter().map(|s| s.as_ref().into()).collect(),
                 e => {
                     return fallible!(
                         MakeMeasurement,

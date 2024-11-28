@@ -57,7 +57,7 @@ const BLACKLIST: &'static [&'static str] = &[
     "lazyframe_domain",
     "_lazyframe_from_domain",
     "with_margin",
-    "expr_domain",
+    "wild_expr_domain",
     "make_stable_lazyframe",
     "make_stable_expr",
     "make_private_lazyframe",

@@ -3,7 +3,7 @@ use polars_plan::dsl::{BooleanFunction, Expr, FunctionExpr};
 use polars_plan::prelude::{ApplyOptions, FunctionOptions};
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{AtomDomain, ExprDomain, OuterMetric};
+use crate::domains::{AtomDomain, ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::polars::ExprFunction;
 use crate::transformations::DatasetMetric;
@@ -20,13 +20,14 @@ mod test;
 /// * `input_metric` - The metric under which neighboring LazyFrames are compared
 /// * `expr` - The boolean function expression
 pub fn make_expr_boolean_function<M: OuterMetric>(
-    input_domain: ExprDomain,
+    input_domain: WildExprDomain,
     input_metric: M,
     expr: Expr,
-) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>>
+) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
 where
     M::InnerMetric: DatasetMetric,
     M::Distance: Clone,
+    (WildExprDomain, M): MetricSpace,
     (ExprDomain, M): MetricSpace,
     Expr: StableExpr<M, M>,
 {
@@ -75,19 +76,19 @@ where
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let mut output_domain = middle_domain.clone();
-    let active_series = output_domain.active_series_mut()?;
+    let data_column = &mut output_domain.column;
 
     if matches!(bool_function, IsNull | IsNotNull) {
-        active_series.nullable = false;
+        data_column.nullable = false;
     }
 
-    if matches!(bool_function, Not) && active_series.field.dtype != DataType::Boolean {
+    if matches!(bool_function, Not) && data_column.field.dtype != DataType::Boolean {
         // under these conditions, the expression performs a bitwise negation
-        active_series.drop_bounds()?;
+        data_column.drop_bounds()?;
     } else {
         // otherwise, the output data will be a bool
-        active_series.element_domain = Arc::new(AtomDomain::<bool>::default());
-        active_series.field.dtype = DataType::Boolean;
+        data_column.element_domain = Arc::new(AtomDomain::<bool>::default());
+        data_column.field.dtype = DataType::Boolean;
     }
 
     t_prior

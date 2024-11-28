@@ -19,7 +19,7 @@ use super::NumericDataType;
 mod test;
 
 #[cfg(feature = "ffi")]
-mod ffi;
+pub(crate) mod ffi;
 
 pub trait Frame: Clone + Send + Sync {
     /// # Proof Definition
@@ -88,7 +88,7 @@ impl Frame for DataFrame {
 #[derive(Clone)]
 pub struct FrameDomain<F: Frame> {
     pub series_domains: Vec<SeriesDomain>,
-    pub margins: HashMap<BTreeSet<String>, Margin>,
+    pub margins: HashMap<BTreeSet<SmartString>, Margin>,
     _marker: PhantomData<F>,
 }
 
@@ -164,7 +164,7 @@ impl<F: Frame> FrameDomain<F> {
     /// or an error.
     pub(crate) fn new_with_margins(
         series_domains: Vec<SeriesDomain>,
-        margins: HashMap<BTreeSet<String>, Margin>,
+        margins: HashMap<BTreeSet<SmartString>, Margin>,
     ) -> Fallible<Self> {
         let n_unique = series_domains
             .iter()
@@ -220,7 +220,7 @@ impl<F: Frame> FrameDomain<F> {
         margin: Margin,
     ) -> Fallible<Self> {
         let grouping_columns =
-            BTreeSet::from_iter(grouping_columns.iter().map(|v| v.as_ref().to_string()));
+            BTreeSet::from_iter(grouping_columns.iter().map(|v| v.as_ref().into()));
         if self.margins.contains_key(&grouping_columns) {
             return fallible!(MakeDomain, "margin already exists");
         }
@@ -234,7 +234,7 @@ impl<F: Frame> FrameDomain<F> {
     ///
     /// Best effort is made to derive more restrictive descriptors,
     /// but optimal inference of descriptors is not guaranteed.
-    pub fn get_margin(&self, grouping_columns: BTreeSet<String>) -> Margin {
+    pub fn get_margin(&self, grouping_columns: BTreeSet<SmartString>) -> Margin {
         let mut margin = self
             .margins
             .get(&grouping_columns)
@@ -245,7 +245,7 @@ impl<F: Frame> FrameDomain<F> {
             .margins
             .iter()
             .filter(|(id, _)| id.is_subset(&grouping_columns))
-            .collect::<Vec<(&BTreeSet<String>, &Margin)>>();
+            .collect::<Vec<(&BTreeSet<SmartString>, &Margin)>>();
 
         // the max_partition_* descriptors can take the minimum known value from any margin on a subset of the grouping columns
         margin.max_partition_length = (subset_margins.iter())
@@ -282,7 +282,22 @@ impl<F: Frame> FrameDomain<F> {
             .max()
             .flatten();
 
+        // with no grouping, the key-set is trivial/public
+        if grouping_columns.is_empty() {
+            margin.public_info.get_or_insert(MarginPub::Keys);
+            margin.max_num_partitions = Some(1);
+            margin.max_influenced_partitions = Some(1);
+        }
+
         margin
+    }
+
+    pub fn series_domain(&self, name: SmartString) -> Fallible<SeriesDomain> {
+        self.series_domains
+            .iter()
+            .find(|s| s.field.name == name)
+            .cloned()
+            .ok_or_else(|| err!(MakeTransformation, "unrecognized column: {}", name))
     }
 }
 
@@ -409,7 +424,7 @@ impl Margin {
 
     /// # Proof Definition
     /// Only returns `Ok(true)` if the grouped data `value` is consistent with the domain descriptors in `self`.
-    fn member(&self, value: LazyGroupBy) -> Fallible<bool> {
+    pub(crate) fn member(&self, value: LazyGroupBy) -> Fallible<bool> {
         // retrieves the first row/first column from $tgt as type $ty
         macro_rules! item {
             ($tgt:expr, $ty:ident) => {

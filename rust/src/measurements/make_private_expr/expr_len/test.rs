@@ -22,7 +22,7 @@ fn test_make_count_expr_grouped() -> Fallible<()> {
         None,
     )?;
 
-    let meas_res = m_lap.invoke(&(lf.logical_plan.clone(), all()))?;
+    let meas_res = m_lap.invoke(&lf.logical_plan)?;
 
     let df_actual = lf
         .clone()

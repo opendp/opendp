@@ -271,7 +271,7 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
         if type_name == "Series":
             return _series_to_slice(value)
         
-        if type_name == "LazyFrame":
+        if type_name in {"LazyFrame", "DslPlan"}:
             return _lazyframe_to_slice(value)
         
         if type_name == "DataFrame":
@@ -450,14 +450,6 @@ def _tuple_to_slice(val: tuple[Any, ...], type_name: Union[RuntimeType, str]) ->
     if len(inner_type_names) != len(val):
         raise TypeError("type_name members must have same length as tuple")
 
-    if inner_type_names == ['DslPlan', 'Expr']:
-        lf_slice = _lazyframe_to_slice(val[0])
-        expr_slice = _expr_to_slice(val[1])
-        array = (ctypes.c_void_p * len(val))(ctypes.cast(lf_slice, ctypes.c_void_p), ctypes.cast(expr_slice, ctypes.c_void_p))
-        out = _wrap_in_slice(ctypes.pointer(array), 2)
-        out.depends_on(lf_slice, expr_slice)
-        return out
-
     for t in inner_type_names:
         if t not in ATOM_MAP:
             raise TypeError(f"Tuple members must be one of {ATOM_MAP.keys()}. Got {t}")
@@ -484,11 +476,6 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]
     # list of void*
     ptr_data = void_array_ptr[0:raw.contents.len]
 
-    if inner_type_names == ['DslPlan', 'Expr']:
-        lp_slice = ctypes.cast(ptr_data[0], FfiSlicePtr)
-        expr_slice = ctypes.cast(ptr_data[1], FfiSlicePtr)
-        return _slice_to_lazyframe(lp_slice), _slice_to_expr(expr_slice)
-    
     if inner_type_names == ['PrivacyProfile', 'f64']:
         curve = ctypes.cast(ptr_data[0], AnyObjectPtr)
         delta = ctypes.cast(ptr_data[1], ctypes.POINTER(ctypes.c_double))

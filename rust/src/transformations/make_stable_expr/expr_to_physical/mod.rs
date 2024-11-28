@@ -2,7 +2,7 @@ use polars::prelude::*;
 use polars_plan::dsl::{Expr, FunctionExpr};
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{AtomDomain, CategoricalDomain, ExprDomain, OuterMetric};
+use crate::domains::{AtomDomain, CategoricalDomain, ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::polars::ExprFunction;
 use crate::transformations::DatasetMetric;
@@ -19,13 +19,14 @@ mod test;
 /// * `input_metric` - The metric under which neighboring LazyFrames are compared
 /// * `expr` - The clipping expression
 pub fn make_expr_to_physical<M: OuterMetric>(
-    input_domain: ExprDomain,
+    input_domain: WildExprDomain,
     input_metric: M,
     expr: Expr,
-) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>>
+) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
 where
     M::InnerMetric: DatasetMetric,
     M::Distance: Clone,
+    (WildExprDomain, M): MetricSpace,
     (ExprDomain, M): MetricSpace,
     Expr: StableExpr<M, M>,
 {
@@ -58,7 +59,7 @@ where
 
     let mut output_domain = middle_domain.clone();
 
-    let active_series = output_domain.active_series_mut()?;
+    let active_series = &mut output_domain.column;
 
     use DataType::*;
     let in_dtype = &active_series.field.dtype;

@@ -8,7 +8,7 @@ use std::fmt::Debug;
 use crate::{
     combinators::{make_approximate, BasicCompositionMeasure},
     core::{Function, Measure, Measurement, Metric, MetricSpace},
-    domains::{DslPlanDomain, ExprDomain, LazyFrameDomain},
+    domains::{DslPlanDomain, LazyFrameDomain},
     error::Fallible,
     measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
     metrics::PartitionDistance,
@@ -43,8 +43,6 @@ where
     MO::Distance: Debug,
     Expr: PrivateExpr<PartitionDistance<MS>, MO>,
     DslPlan: StableDslPlan<MS, MS>,
-    (DslPlanDomain, MS): MetricSpace,
-    (ExprDomain, MS): MetricSpace,
 {
     #[cfg(feature = "contrib")]
     if group_by::match_group_by(plan.clone())?.is_some() {
@@ -147,11 +145,8 @@ const SORT_ERR_MSG: &'static str = "Found sort in query plan. To conceal row ord
 
 impl<MS> PrivateDslPlan<MS, MaxDivergence> for DslPlan
 where
-    MS: 'static + UnboundedMetric + DatasetMetric,
-    Expr: PrivateExpr<PartitionDistance<MS>, MaxDivergence>,
+    MS: 'static + UnboundedMetric,
     DslPlan: StableDslPlan<MS, MS>,
-    (DslPlanDomain, MS): MetricSpace,
-    (ExprDomain, MS): MetricSpace,
 {
     fn make_private(
         self,
@@ -178,11 +173,8 @@ where
 
 impl<MS> PrivateDslPlan<MS, ZeroConcentratedDivergence> for DslPlan
 where
-    MS: 'static + UnboundedMetric + DatasetMetric,
-    Expr: PrivateExpr<PartitionDistance<MS>, ZeroConcentratedDivergence>,
+    MS: 'static + UnboundedMetric,
     DslPlan: StableDslPlan<MS, MS>,
-    (DslPlanDomain, MS): MetricSpace,
-    (ExprDomain, MS): MetricSpace,
 {
     fn make_private(
         self,
@@ -209,15 +201,12 @@ where
 
 impl<MS, MO> PrivateDslPlan<MS, Approximate<MO>> for DslPlan
 where
-    MS: 'static + UnboundedMetric + DatasetMetric,
+    MS: 'static + UnboundedMetric,
     MO: 'static + BasicCompositionMeasure,
     Approximate<MO>: 'static + ApproximateMeasure,
     <Approximate<MO> as Measure>::Distance: Debug,
-    Expr: PrivateExpr<PartitionDistance<MS>, MO>
-        + PrivateExpr<PartitionDistance<MS>, Approximate<MO>>,
+    Expr: PrivateExpr<PartitionDistance<MS>, Approximate<MO>>,
     DslPlan: StableDslPlan<MS, MS> + PrivateDslPlan<MS, MO>,
-    (DslPlanDomain, MS): MetricSpace,
-    (ExprDomain, MS): MetricSpace,
 {
     fn make_private(
         self,

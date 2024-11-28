@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{DslPlanDomain, ExprContext, ExprDomain};
+use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::StableExpr;
@@ -45,7 +45,10 @@ where
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     // create a transformation for each expression
-    let expr_domain = ExprDomain::new(middle_domain.clone(), ExprContext::RowByRow);
+    let expr_domain = WildExprDomain {
+        columns: middle_domain.series_domains.clone(),
+        context: Context::RowByRow,
+    };
     let t_exprs = exprs
         .into_iter()
         .map(|expr| expr.make_stable(expr_domain.clone(), middle_metric.clone()))
@@ -56,9 +59,7 @@ where
     // keys are the column name, values are the index of the column
     let mut lookup = HashMap::new();
 
-    let new_series = t_exprs
-        .iter()
-        .flat_map(|t| t.output_domain.frame_domain.series_domains.iter());
+    let new_series = t_exprs.iter().map(|t| &t.output_domain.column);
 
     (middle_domain.series_domains.iter())
         .chain(new_series.clone())
@@ -76,7 +77,7 @@ where
 
     // only keep margins for series that have not changed
     let new_series_names = new_series
-        .map(|series_domain| series_domain.field.name.to_string())
+        .map(|series_domain| series_domain.field.name.clone())
         .collect();
     let margins = (middle_domain.margins.iter())
         .filter(|(k, _)| k.is_disjoint(&new_series_names))
@@ -90,7 +91,7 @@ where
         middle_domain,
         output_domain,
         Function::new_fallible(move |plan: &DslPlan| {
-            let expr_arg = (plan.clone(), all());
+            let expr_arg = plan.clone();
             Ok(DslPlan::HStack {
                 input: Arc::new(plan.clone()),
                 exprs: (t_exprs.iter())

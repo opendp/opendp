@@ -1,4 +1,5 @@
-use crate::core::{Measure, Metric, MetricSpace, PrivacyMap};
+use crate::core::{Measure, MetricSpace, PrivacyMap};
+use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
 use crate::measurements::{gaussian_zcdp_map, get_discretization_consts, laplace_puredp_map};
 use crate::measures::ZeroConcentratedDivergence;
 use crate::metrics::{L1Distance, L2Distance, PartitionDistance};
@@ -12,7 +13,6 @@ use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::StableExpr;
 use crate::{
     core::{Function, Measurement},
-    domains::ExprDomain,
     error::Fallible,
     measures::MaxDivergence,
     traits::SaturatingCast,
@@ -125,7 +125,7 @@ pub enum Support {
 }
 
 pub trait NoiseExprMeasure: 'static + Measure<Distance = f64> {
-    type Metric: 'static + Metric<Distance = f64>;
+    type Metric: 'static + OuterMetric<Distance = f64>;
     const DISTRIBUTION: Distribution;
     fn map_function(scale: f64) -> impl Fn(&f64) -> Fallible<f64> + 'static + Send + Sync;
 }
@@ -153,14 +153,13 @@ impl NoiseExprMeasure for ZeroConcentratedDivergence {
 /// * `expr` - The expression to which the noise will be added
 /// * `global_scale` - (Re)scale the noise parameter for the noise distribution
 pub fn make_expr_noise<MI: 'static + UnboundedMetric, MO: NoiseExprMeasure>(
-    input_domain: ExprDomain,
+    input_domain: WildExprDomain,
     input_metric: PartitionDistance<MI>,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<MI>, MO>>
+) -> Fallible<Measurement<WildExprDomain, Expr, PartitionDistance<MI>, MO>>
 where
     Expr: StableExpr<PartitionDistance<MI>, MO::Metric>,
-    (ExprDomain, PartitionDistance<MI>): MetricSpace,
     (ExprDomain, MO::Metric): MetricSpace,
 {
     let Some((input, distribution, scale)) = match_noise_shim(&expr)? else {
@@ -189,7 +188,7 @@ where
         return fallible!(MakeMeasurement, "noise scale must not be negative");
     }
 
-    if middle_domain.active_series()?.nullable {
+    if middle_domain.column.nullable {
         return fallible!(
             MakeMeasurement,
             "Noise mechanism requires non-nullable input"
@@ -206,7 +205,7 @@ where
         }
     };
 
-    let support = match &middle_domain.active_series()?.field.dtype {
+    let support = match &middle_domain.column.field.dtype {
         dt if dt.is_integer() => Support::Integer,
         dt if dt.is_float() => Support::Float,
         dt => {

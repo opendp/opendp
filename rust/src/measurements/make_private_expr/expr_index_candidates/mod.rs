@@ -1,17 +1,20 @@
 use crate::core::{Measure, Metric, MetricSpace};
+use crate::domains::WildExprDomain;
 use crate::polars::{apply_plugin, literal_value_of, match_plugin, ExprFunction, OpenDPPlugin};
 use crate::{
     core::{Function, Measurement},
-    domains::ExprDomain,
     error::Fallible,
 };
 
 use polars::datatypes::{DataType, Field};
+use polars::error::polars_bail;
+#[cfg(feature = "ffi")]
+use polars::error::polars_err;
 use polars::error::PolarsResult;
-use polars::error::{polars_bail, polars_err};
 use polars::series::Series;
 use polars_plan::dsl::{Expr, GetOutput, SeriesUdf};
 use polars_plan::prelude::{ApplyOptions, FunctionOptions};
+#[cfg(feature = "ffi")]
 use pyo3_polars::derive::polars_expr;
 #[cfg(feature = "ffi")]
 use serde::{Deserialize, Serialize};
@@ -29,15 +32,15 @@ mod test;
 /// * `expr` - The expression to which the Laplace noise will be added
 /// * `param` - (Re)scale the noise parameter for the laplace distribution
 pub fn make_expr_index_candidates<MI: 'static + Metric, MO: 'static + Measure>(
-    input_domain: ExprDomain,
+    input_domain: WildExprDomain,
     input_metric: MI,
     output_measure: MO,
     expr: Expr,
     param: Option<f64>,
-) -> Fallible<Measurement<ExprDomain, Expr, MI, MO>>
+) -> Fallible<Measurement<WildExprDomain, Expr, MI, MO>>
 where
     Expr: PrivateExpr<MI, MO>,
-    (ExprDomain, MI): MetricSpace,
+    (WildExprDomain, MI): MetricSpace,
 {
     let (input, IndexCandidatesPlugin { candidates }) =
         match_index_candidates(&expr)?.ok_or_else(|| {
@@ -92,7 +95,8 @@ pub(crate) fn match_index_candidates(
     Ok(Some((input, IndexCandidatesPlugin { candidates })))
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "ffi", derive(Serialize, Deserialize))]
+#[derive(Clone)]
 pub(crate) struct IndexCandidatesShim;
 impl SeriesUdf for IndexCandidatesShim {
     // makes it possible to downcast the AnonymousFunction trait object back to Self

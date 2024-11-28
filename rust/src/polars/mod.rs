@@ -12,9 +12,14 @@ use crate::{
     },
     transformations::expr_discrete_quantile_score::DiscreteQuantileScoreShim,
 };
-use polars::{frame::DataFrame, lazy::frame::LazyFrame, prelude::NamedFrom, series::Series};
+use polars::{
+    frame::DataFrame,
+    lazy::frame::LazyFrame,
+    prelude::{FunctionExpr, NamedFrom},
+    series::Series,
+};
 use polars_plan::{
-    dsl::{lit, Expr, FunctionExpr, SeriesUdf, SpecialEq},
+    dsl::{lit, Expr, SeriesUdf, SpecialEq},
     plans::{Literal, LiteralValue, Null},
     prelude::FunctionOptions,
 };
@@ -22,7 +27,7 @@ use serde::{Deserialize, Serialize};
 
 // this trait is used to make the Deserialize trait bound conditional on the feature flag
 #[cfg(not(feature = "ffi"))]
-pub(crate) trait OpenDPShim: 'static + Clone + SeriesUdf {
+pub(crate) trait OpenDPPlugin: 'static + Clone + SeriesUdf {
     const NAME: &'static str;
     fn function_options() -> FunctionOptions;
 }
@@ -235,31 +240,16 @@ impl ExtractValue for String {
 
 pub(crate) trait ExprFunction {
     fn then_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self;
-    fn from_expr(expr: Expr) -> Self;
 }
 
 impl<F: Clone> ExprFunction for Function<(F, Expr), (F, Expr)> {
     fn then_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self {
         Self::new(move |arg: &(F, Expr)| (arg.0.clone(), function(arg.1.clone())))
     }
-    fn from_expr(expr: Expr) -> Self {
-        Self::new_fallible(
-            move |(frame, expr_wild): &(F, Expr)| -> Fallible<(F, Expr)> {
-                assert_is_wildcard(expr_wild)?;
-                Ok((frame.clone(), expr.clone()))
-            },
-        )
-    }
 }
 impl<F: Clone> ExprFunction for Function<(F, Expr), Expr> {
     fn then_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self {
         Self::new(move |arg: &(F, Expr)| function(arg.1.clone()))
-    }
-    fn from_expr(expr: Expr) -> Self {
-        Self::new_fallible(move |(_, expr_wild): &(F, Expr)| -> Fallible<Expr> {
-            assert_is_wildcard(expr_wild)?;
-            Ok(expr.clone())
-        })
     }
 }
 
@@ -267,22 +257,6 @@ impl ExprFunction for Function<Expr, Expr> {
     fn then_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self {
         Self::new(move |arg: &Expr| function(arg.clone()))
     }
-    fn from_expr(expr: Expr) -> Self {
-        Self::new_fallible(move |expr_wild: &Expr| -> Fallible<Expr> {
-            assert_is_wildcard(expr_wild)?;
-            Ok(expr.clone())
-        })
-    }
-}
-
-fn assert_is_wildcard(expr: &Expr) -> Fallible<()> {
-    if expr != &Expr::Wildcard {
-        return fallible!(
-            FailedFunction,
-            "The only valid input expression is all() (denoting that all columns are selected)."
-        );
-    }
-    Ok(())
 }
 
 /// Helper trait for Rust users to access differentially private expressions.

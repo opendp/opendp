@@ -2,7 +2,7 @@ use polars_plan::dsl::Expr;
 
 use crate::{
     core::{FfiResult, IntoAnyTransformationFfiResultExt},
-    domains::ExprDomain,
+    domains::WildExprDomain,
     ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast},
     metrics::{L1Distance, PartitionDistance, SymmetricDistance},
 };
@@ -15,7 +15,7 @@ pub extern "C" fn opendp_transformations__make_stable_expr(
     input_metric: *const AnyMetric,
     expr: *const AnyObject,
 ) -> FfiResult<*mut AnyTransformation> {
-    let input_domain = try_!(try_as_ref!(input_domain).downcast_ref::<ExprDomain>()).clone();
+    let input_domain = try_!(try_as_ref!(input_domain).downcast_ref::<WildExprDomain>()).clone();
     let input_metric =
         try_!(try_as_ref!(input_metric).downcast_ref::<PartitionDistance<SymmetricDistance>>())
             .clone();

@@ -3,7 +3,7 @@ use polars::prelude::*;
 use polars_plan::dsl::Expr;
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{ExprDomain, OuterMetric, SeriesDomain};
+use crate::domains::{ExprDomain, OuterMetric, SeriesDomain, WildExprDomain};
 use crate::error::*;
 use crate::polars::ExprFunction;
 use crate::transformations::DatasetMetric;
@@ -18,15 +18,16 @@ mod test;
 /// # Arguments
 /// * `input_domain` - Expr domain
 /// * `input_metric` - The metric under which neighboring LazyFrames are compared
-/// * `expr` - The clipping expression
+/// * `expr` - The cast expression
 pub fn make_expr_cast<M: OuterMetric>(
-    input_domain: ExprDomain,
+    input_domain: WildExprDomain,
     input_metric: M,
     expr: Expr,
-) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>>
+) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
 where
     M::InnerMetric: DatasetMetric,
     M::Distance: Clone,
+    (WildExprDomain, M): MetricSpace,
     (ExprDomain, M): MetricSpace,
     Expr: StableExpr<M, M>,
 {
@@ -53,13 +54,13 @@ where
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let mut output_domain = middle_domain.clone();
-    let series_domain = output_domain.active_series_mut()?;
-    let name = series_domain.field.name.as_ref();
+    let data_column = &mut output_domain.column;
+    let name = data_column.field.name.as_ref();
 
     // it is possible to tighten this:
     // in cases where casting will never fail, the nullable and/or nan bits can be left false
     // in the meantime, users will need to impute
-    *series_domain = SeriesDomain::new_from_field(Field::new(name, to_type.clone()))?;
+    *data_column = SeriesDomain::new_from_field(Field::new(name, to_type.clone()))?;
 
     t_prior
         >> Transformation::new(
