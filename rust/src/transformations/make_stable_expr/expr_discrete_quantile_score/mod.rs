@@ -58,9 +58,9 @@ where
             "Quantile estimation requires non-null inputs"
         );
     }
-    let candidates = candidates.strict_cast(&active_series.field.dtype)?;
+    let candidates = candidates.strict_cast(&active_series.dtype())?;
 
-    match &active_series.field.dtype {
+    match active_series.dtype() {
         UInt32 => validate::<UInt32Type>(&candidates),
         UInt64 => validate::<UInt64Type>(&candidates),
         Int8 => validate::<Int8Type>(&candidates),
