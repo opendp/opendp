@@ -38,7 +38,7 @@
 ...     """Create a measurement that selects a set of grouping columns from `candidates`."""
 ...     return (
 ...         make_grouping_cols_score(candidates, min_bin_size)
-...         >> dp.m.then_report_noisy_max_gumbel(scale, optimize="max")
+...         >> dp.m.then_noisy_max(dp.max_divergence(), scale)
 ...         >> (lambda idx: candidates[idx])
 ...     )
 

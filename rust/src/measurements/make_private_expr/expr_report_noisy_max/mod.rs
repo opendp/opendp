@@ -1,6 +1,7 @@
 use crate::core::PrivacyMap;
 use crate::domains::{AtomDomain, ExprPlan, VectorDomain, WildExprDomain};
-use crate::measurements::{Optimize, make_report_noisy_max_gumbel, report_noisy_max_gumbel_map, select_score};
+use crate::measurements::{Optimize, SelectionMeasure, make_report_noisy_max};
+use crate::measures::MaxDivergence;
 use crate::metrics::{IntDistance, L0InfDistance, L01InfDistance, LInfDistance};
 use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
 use crate::traits::{InfCast, InfMul, Number};
@@ -9,7 +10,6 @@ use crate::transformations::traits::UnboundedMetric;
 use crate::{
     core::{Function, Measurement},
     error::Fallible,
-    measures::MaxDivergence,
 };
 use dashu::float::FBig;
 
@@ -45,12 +45,12 @@ mod test;
 /// * `input_metric` - The metric space under which neighboring LazyFrames are compared
 /// * `expr` - The expression to which the selection will be applied
 /// * `global_scale` - (Re)scale the noise distribution
-pub fn make_expr_report_noisy_max<MI: 'static + UnboundedMetric>(
+pub fn make_expr_noisy_max<MI: 'static + UnboundedMetric, MO: 'static + TopKMeasure>(
     input_domain: WildExprDomain,
     input_metric: L01InfDistance<MI>,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<WildExprDomain, L01InfDistance<MI>, MaxDivergence, ExprPlan>>
+) -> Fallible<Measurement<WildExprDomain, L01InfDistance<MI>, MO, ExprPlan>>
 where
     Expr: StableExpr<L01InfDistance<MI>, L0InfDistance<LInfDistance<f64>>>,
 {
@@ -121,6 +121,14 @@ where
             ReportNoisyMaxPlugin::NAME
         );
     }
+    let m_rnm = make_report_noisy_max(
+        VectorDomain::<AtomDomain<f64>>::default(),
+        middle_metric.0.clone(),
+        MO::default(),
+        scale,
+        optimize,
+    )?;
+    let privacy_map = m_rnm.privacy_map.clone();
 
     t_prior
         >> Measurement::<_, L0InfDistance<LInfDistance<f64>>, _, _>::new(
@@ -138,8 +146,7 @@ where
                 )
             }),
             PrivacyMap::new_fallible(move |(l0, li): &(IntDistance, f64)| {
-                let linf_metric = middle_metric.0.clone();
-                let epsilon = report_noisy_max_gumbel_map(scale, linf_metric)(li)?;
+                let epsilon = privacy_map.eval(li)?;
                 f64::inf_cast(*l0)?.inf_mul(&epsilon)
             }),
         )?
@@ -265,7 +272,7 @@ fn report_noisy_max_gumbel_udf(
     }
 
     // PT stands for Polars Type
-    fn rnm_gumbel_impl<PT: 'static + PolarsDataType>(
+    fn rnm_impl<PT: 'static + PolarsDataType>(
         column: &Column,
         scale: f64,
         optimize: Optimize,
@@ -276,9 +283,10 @@ fn report_noisy_max_gumbel_udf(
         FBig: TryFrom<PT::Physical<'static>>,
         f64: InfCast<PT::Physical<'static>>,
     {
-        let m_rnm = make_report_noisy_max_gumbel::<PT::Physical<'static>>(
-            VectorDomain::new(AtomDomain::default()),
+        let m_rnm = make_report_noisy_max(
+            VectorDomain::<AtomDomain<PT::Physical<'static>>>::default(),
             LInfDistance::default(),
+            MaxDivergence,
             scale,
             optimize,
         )?;
@@ -309,14 +317,14 @@ fn report_noisy_max_gumbel_udf(
     };
 
     match dtype.as_ref() {
-        UInt32 => rnm_gumbel_impl::<UInt32Type>(series, scale, optimize),
-        UInt64 => rnm_gumbel_impl::<UInt64Type>(series, scale, optimize),
-        Int8 => rnm_gumbel_impl::<Int8Type>(series, scale, optimize),
-        Int16 => rnm_gumbel_impl::<Int16Type>(series, scale, optimize),
-        Int32 => rnm_gumbel_impl::<Int32Type>(series, scale, optimize),
-        Int64 => rnm_gumbel_impl::<Int64Type>(series, scale, optimize),
-        Float32 => rnm_gumbel_impl::<Float32Type>(series, scale, optimize),
-        Float64 => rnm_gumbel_impl::<Float64Type>(series, scale, optimize),
+        UInt32 => rnm_impl::<UInt32Type>(series, scale, optimize),
+        UInt64 => rnm_impl::<UInt64Type>(series, scale, optimize),
+        Int8 => rnm_impl::<Int8Type>(series, scale, optimize),
+        Int16 => rnm_impl::<Int16Type>(series, scale, optimize),
+        Int32 => rnm_impl::<Int32Type>(series, scale, optimize),
+        Int64 => rnm_impl::<Int64Type>(series, scale, optimize),
+        Float32 => rnm_impl::<Float32Type>(series, scale, optimize),
+        Float64 => rnm_impl::<Float64Type>(series, scale, optimize),
         UInt8 | UInt16 => {
             polars_bail!(InvalidOperation: "u8 and u16 not supported in the OpenDP Polars plugin. Please use u32 or u64.")
         }

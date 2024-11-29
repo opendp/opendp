@@ -5,6 +5,7 @@ use polars_arrow::array::{FixedSizeListArray, UInt32Array};
 use crate::{
     error::ErrorVariant,
     measurements::make_private_expr,
+    measures::MaxDivergence,
     metrics::{L0PInfDistance, SymmetricDistance},
     polars::PrivacyNamespace,
     transformations::expr_discrete_quantile_score::test::get_quantile_test_data,
@@ -62,7 +63,7 @@ fn test_report_noisy_max_gumbel_expr() -> Fallible<()> {
             .dp()
             .quantile_score(0.5, candidates)
             .dp()
-            .report_noisy_max_gumbel(Optimize::Min, Some(scale)),
+            .report_noisy_max(Optimize::Min, Some(scale)),
         None,
     )?;
 
