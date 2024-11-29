@@ -1,8 +1,8 @@
 use crate::{
     error::Fallible,
     traits::samplers::{
-        psrn::test::{assert_ordered_progression, kolmogorov_smirnov},
         PartialSample,
+        psrn::test::{assert_ordered_progression, kolmogorov_smirnov},
     },
 };
 
@@ -20,7 +20,7 @@ fn test_sample_exponential_interval_progression() -> Fallible<()> {
 
 #[test]
 fn test_exponential_psrn() -> Fallible<()> {
-    let gumbel = ExponentialRV::new(FBig::ZERO, FBig::ONE)?;
+    let rv = ExponentialRV::new(FBig::ZERO, FBig::ONE)?;
 
     let samples = (0..1000)
         .map(|_| PartialSample::new(rv.clone()).value::<f64>())
