@@ -840,3 +840,16 @@ def test_float_sum_with_unlimited_reorderable_partitions():
     # since there are an unknown number of partitions, and each partition has non-zero sensitivity, sensitivity is undefined
     with pytest.raises(dp.OpenDPException, match='max_num_partitions must be known when the metric is not sensitive to ordering'):
         dp.m.make_private_lazyframe(lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan)
+
+
+def test_sort_usability():
+    pl = pytest.importorskip("polars")
+
+    context = dp.Context.compositor(
+        data=pl.LazyFrame(schema={"A": pl.Int32}),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+    )
+    with pytest.raises(dp.OpenDPException, match="Found sort in query plan."):
+        context.query().select(pl.len().dp.noise()).sort(by="A").release()

@@ -143,6 +143,8 @@ pub trait PrivateDslPlan<MI: Metric, MO: Measure> {
     ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MI, MO>>;
 }
 
+const SORT_ERR_MSG: &'static str = "Found sort in query plan. To conceal row ordering in the original dataset, the output dataset is shuffled. Therefore, sorting the data before release (that shuffles) is wasted computation.";
+
 impl<MS> PrivateDslPlan<MS, MaxDivergence> for DslPlan
 where
     MS: 'static + UnboundedMetric + DatasetMetric,
@@ -159,6 +161,10 @@ where
         global_scale: Option<f64>,
         threshold: Option<u32>,
     ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, MaxDivergence>> {
+        if matches!(self, DslPlan::Sort { .. }) {
+            return fallible!(MakeMeasurement, "{}", SORT_ERR_MSG);
+        }
+
         make_private_aggregation::<MS, MS, _>(
             input_domain,
             input_metric,
@@ -186,6 +192,10 @@ where
         global_scale: Option<f64>,
         threshold: Option<u32>,
     ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, ZeroConcentratedDivergence>> {
+        if matches!(self, DslPlan::Sort { .. }) {
+            return fallible!(MakeMeasurement, "{}", SORT_ERR_MSG);
+        }
+
         make_private_aggregation::<MS, MS, _>(
             input_domain,
             input_metric,
@@ -217,6 +227,10 @@ where
         global_scale: Option<f64>,
         threshold: Option<u32>,
     ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, Approximate<MO>>> {
+        if matches!(self, DslPlan::Sort { .. }) {
+            return fallible!(MakeMeasurement, "{}", SORT_ERR_MSG);
+        }
+
         if let Ok(meas) = make_private_aggregation::<MS, MS, _>(
             input_domain.clone(),
             input_metric.clone(),
