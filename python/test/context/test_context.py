@@ -135,8 +135,17 @@ def test_middle_param():
         split_evenly_over=1,
     )
 
-    dp_sum = context.query().resize(constant=2.0).clamp((1.0, 10.0)).mean().laplace(1.0)  # type: ignore
-    print(dp_sum.release())
+    dp_sum = context.query().resize(constant=2.0).clamp((1.0, 10.0)).mean().laplace(1.0)
+    # scale = (U - L) / n / ε
+    # 1     = (10- 1) / n / 3
+    # n     = 9 / 3
+    # Due to float rounding, n = 3 results in slightly higher sensitivity, 
+    # so the lib picks n=4, which is large enough for the sensitivity to be small enough
+    # for the query to satisfy ε=3
+    dp_sum.param() == 4
+
+    # a sample from Laplace(loc=6 / n, scale=1)
+    assert isinstance(dp_sum.release(), float)
 
 
 def test_query_repr():
@@ -295,7 +304,7 @@ def test_rshift_multi_partial():
         privacy_loss=dp.loss_of(epsilon=0.5),
         split_evenly_over=1,
     )
-    with pytest.raises(ValueError, match="laplace is missing"):
+    with pytest.raises(ValueError, match="laplace is missing 1 parameter"):
         context.query().b_ary_tree(leaf_count=3).laplace()
 
 def test_transformation_release_error():
