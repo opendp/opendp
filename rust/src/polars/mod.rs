@@ -495,7 +495,7 @@ impl OnceFrame {
     ///    
     /// To ensure that row ordering is not observed:
     /// 1. Do not extend the compute plan with order-sensitive computations.
-    /// 2. Shuffle the output once collected.
+    /// 2. Shuffle the output once collected ([in Polars sample all, with shuffling enabled](https://docs.rs/polars/latest/polars/frame/struct.DataFrame.html#method.sample_n_literal)).
     #[cfg(feature = "honest-but-curious")]
     pub fn lazyframe(&mut self) -> LazyFrame {
         let answer = self.eval_query(Query::Internal(&ExtractLazyFrame)).unwrap();

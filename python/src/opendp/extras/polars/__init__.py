@@ -324,7 +324,7 @@ class OnceFrame(object):
         
         To ensure that row ordering is not observed:
         1. Do not extend the compute plan with order-sensitive computations.
-        2. Shuffle the output once collected.
+        2. Shuffle the output once collected `(in Polars sample all, with shuffle enabled) <https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.sample.html>`_.
         """
         from opendp._data import onceframe_lazy
 
