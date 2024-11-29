@@ -4,16 +4,6 @@
 //! Constructors are named in the form `make_xxx()`, where `xxx` indicates what the resulting `Measurement` does.
 
 #[cfg(feature = "contrib")]
-mod gumbel_max;
-#[cfg(feature = "contrib")]
-pub use gumbel_max::*;
-
-#[cfg(feature = "contrib")]
-mod exponential_max;
-#[cfg(feature = "contrib")]
-pub use exponential_max::*;
-
-#[cfg(feature = "contrib")]
 mod laplace;
 #[cfg(feature = "contrib")]
 pub use laplace::*;
@@ -57,6 +47,11 @@ pub use randomized_response::*;
 mod randomized_response_bitvec;
 #[cfg(feature = "contrib")]
 pub use randomized_response_bitvec::*;
+
+#[cfg(feature = "contrib")]
+mod report_noisy_max;
+#[cfg(feature = "contrib")]
+pub use report_noisy_max::*;
 
 #[cfg(all(feature = "floating-point", feature = "contrib"))]
 mod alp;

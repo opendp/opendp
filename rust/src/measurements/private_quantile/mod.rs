@@ -11,7 +11,7 @@ use crate::{
     },
 };
 
-use super::{Optimize, make_report_noisy_max_gumbel};
+use super::{Optimize, SelectionMeasure, make_report_noisy_max};
 
 #[cfg(test)]
 mod test;
@@ -21,7 +21,8 @@ mod ffi;
 
 #[bootstrap(
     features("contrib"),
-    generics(MI(suppress), T(suppress)),
+    arguments(output_measure(c_type = "AnyMeasure *", rust_type = b"null", hint = "Measure")),
+    generics(MI(suppress), MO(suppress), T(suppress)),
     derived_types(T = "$get_atom(get_type(input_domain))")
 )]
 /// Makes a Measurement the computes the quantile of a dataset.
@@ -29,6 +30,7 @@ mod ffi;
 /// # Arguments
 /// * `input_domain` - Uses a tighter sensitivity when the size of vectors in the input domain is known.
 /// * `input_metric` - Either SymmetricDistance or InsertDeleteDistance.
+/// * `output_measure` - Either MaxDivergence or RangeDivergence.
 /// * `candidates` - Potential quantiles to score
 /// * `alpha` - a value in $[0, 1]$. Choose 0.5 for median
 /// * `scale` - the scale of the noise added
@@ -36,13 +38,14 @@ mod ffi;
 /// # Generics
 /// * `MI` - Input Metric.
 /// * `TIA` - Atomic Input Type. Type of elements in the input vector
-pub fn make_private_quantile<MI: 'static + UnboundedMetric, T: Number>(
+pub fn make_private_quantile<MI: 'static + UnboundedMetric, MO: SelectionMeasure, T: Number>(
     input_domain: VectorDomain<AtomDomain<T>>,
     input_metric: MI,
+    output_measure: MO,
     mut candidates: Vec<T>,
     alpha: f64,
     scale: f64,
-) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, T, MI, RangeDivergence>>
+) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, T, MI, MO>>
 where
     (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
 {
@@ -65,9 +68,10 @@ where
     let t_score =
         make_quantile_score_candidates(input_domain, input_metric, candidates.clone(), alpha)?;
 
-    let m_rnm = make_report_noisy_max_gumbel(
+    let m_rnm = make_report_noisy_max(
         t_score.output_domain.clone(),
         t_score.output_metric.clone(),
+        output_measure,
         scale * denominator as f64,
         Optimize::Min,
     )?;

@@ -423,14 +423,14 @@ impl DPExpr {
         )
     }
 
-    /// Report the argmax or argmin after adding Gumbel noise.
+    /// Report the argmax or argmin after adding noise.
     ///
     /// The scale calibrates the level of entropy when selecting an index.
     ///
     /// # Arguments
     /// * `optimize` - Distinguish between argmax and argmin.
-    /// * `scale` - Noise scale parameter for the Gumbel distribution.
-    pub(crate) fn report_noisy_max_gumbel(self, optimize: Optimize, scale: Option<f64>) -> Expr {
+    /// * `scale` - Noise scale parameter for the noise distribution.
+    pub(crate) fn report_noisy_max(self, optimize: Optimize, scale: Option<f64>) -> Expr {
         let optimize = lit(format!("{optimize}"));
         let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
         apply_anonymous_function(vec![self.0, optimize, scale], ReportNoisyMaxShim)
@@ -438,7 +438,7 @@ impl DPExpr {
 
     /// Index into a candidate set.
     ///
-    /// Typically used after `rnm_gumbel` to map selected indices to candidates.
+    /// Typically used after `report_noisy_max` to map selected indices to candidates.
     ///
     /// # Arguments
     /// * `candidates` - The values that each selected index corresponds to.
@@ -453,13 +453,13 @@ impl DPExpr {
     /// # Arguments
     /// * `alpha` - a value in $[0, 1]$. Choose 0.5 for median
     /// * `candidates` - Potential quantiles to select from.
-    /// * `scale` - Noise scale parameter for the Gumbel distribution.
+    /// * `scale` - scale parameter for the noise distribution.
     pub fn quantile(self, alpha: f64, candidates: Series, scale: Option<f64>) -> Expr {
         self.0
             .dp()
             .quantile_score(alpha, candidates.clone())
             .dp()
-            .report_noisy_max_gumbel(Optimize::Min, scale)
+            .report_noisy_max(Optimize::Min, scale)
             .dp()
             .index_candidates(Series::new("".into(), candidates))
     }
@@ -470,7 +470,7 @@ impl DPExpr {
     ///
     /// # Arguments
     /// * `candidates` - Potential quantiles to select from.
-    /// * `scale` - Noise scale parameter for the Gumbel distribution.
+    /// * `scale` - scale parameter for the noise distribution.
     pub fn median(self, candidates: Series, scale: Option<f64>) -> Expr {
         self.0.dp().quantile(0.5, candidates, scale)
     }
