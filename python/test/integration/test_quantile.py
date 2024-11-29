@@ -13,7 +13,7 @@ def test_quantile_score_candidates():
 
     assert quant_trans(list(range(100))) == [59, 33, 19, 1, 45, 100]
 
-    expo_meas = dp.m.then_report_noisy_max_gumbel(1., "min")
+    expo_meas = dp.m.then_report_noisy_max(dp.max_divergence(), 1., "min")
 
     quantile_meas = quant_trans >> expo_meas
     idx = quantile_meas(list(range(100)))

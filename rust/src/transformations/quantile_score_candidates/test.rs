@@ -92,7 +92,8 @@ fn test_scorer() -> Fallible<()> {
 #[cfg(feature = "derive")]
 mod test_trans {
     use crate::{
-        measurements::{make_report_noisy_max_gumbel, Optimize},
+        measurements::{make_report_noisy_max, Optimize},
+        measures::RangeDivergence,
         metrics::SymmetricDistance,
     };
 
@@ -129,9 +130,10 @@ mod test_trans {
         let input_domain = VectorDomain::new(AtomDomain::default());
         let input_metric = SymmetricDistance::default();
         let trans = make_quantile_score_candidates(input_domain, input_metric, candidates, 0.75)?;
-        let exp_mech = make_report_noisy_max_gumbel(
+        let exp_mech = make_report_noisy_max(
             trans.output_domain.clone(),
             trans.output_metric.clone(),
+            RangeDivergence,
             trans.map(&1)? as f64 * 2.,
             Optimize::Min,
         )?;
@@ -150,9 +152,10 @@ mod test_trans {
         let input_metric = SymmetricDistance::default();
         let trans_sized =
             make_quantile_score_candidates(input_domain, input_metric, candidates, 0.75)?;
-        let exp_mech = make_report_noisy_max_gumbel(
+        let exp_mech = make_report_noisy_max(
             trans_sized.output_domain.clone(),
             trans_sized.output_metric.clone(),
+            RangeDivergence,
             trans_sized.map(&2)? as f64 * 2.,
             Optimize::Min,
         )?;
