@@ -91,8 +91,8 @@ impl<M: 'static + UnboundedMetric> PrivateExpr<L01InfDistance<M>, MaxDivergence>
             return expr_noise::make_expr_noise(input_domain, input_metric, self, global_scale);
         }
 
-        if expr_report_noisy_max::match_report_noisy_max(&self)?.is_some() {
-            return expr_report_noisy_max::make_expr_report_noisy_max::<M>(
+        if expr_noisy_max::match_noisy_max(&self)?.is_some() {
+            return expr_noisy_max::make_expr_noisy_max::<M, MaxDivergence>(
                 input_domain,
                 input_metric,
                 self,
