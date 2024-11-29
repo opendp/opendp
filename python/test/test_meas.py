@@ -204,13 +204,13 @@ def test_report_noisy_max_gumbel():
     input_domain = dp.vector_domain(dp.atom_domain(T=dp.usize))
 
     input_metric = dp.linf_distance(T=dp.usize)
-    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max_gumbel(1., "max")
+    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max(dp.range_divergence(), 1., "max")
     # fails with very small probability
     assert meas([0, 0, 20, 40]) == 3  # because score 3 is by far the greatest
     assert meas.map(2) == 4
 
     input_metric = dp.linf_distance(monotonic=True, T=dp.usize)
-    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max_gumbel(1., "max")
+    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max(dp.range_divergence(), 1., "max")
     # fails with very small probability
     assert meas([0, 0, 20, 0]) == 2  # because score 2 is by far the greatest
     assert meas.map(2) == 2
@@ -220,13 +220,13 @@ def test_report_noisy_max_exponential():
     input_domain = dp.vector_domain(dp.atom_domain(T=dp.usize))
 
     input_metric = dp.linf_distance(T=dp.usize)
-    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max_exponential(1., "max")
+    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max(dp.max_divergence(), 1., "max")
     # fails with probability about e^{-20} / 3
     assert meas([0, 0, 20, 0]) == 2  # because score 2 is by far the greatest
     assert meas.map(2) == 4
 
     input_metric = dp.linf_distance(monotonic=True, T=dp.usize)
-    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max_exponential(1., "max")
+    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max(dp.max_divergence(), 1., "max")
     # fails with probability about e^{-20} / 3
     assert meas([0, 0, 20, 0]) == 2  # because score 2 is by far the greatest
     assert meas.map(2) == 2
