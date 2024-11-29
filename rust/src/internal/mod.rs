@@ -11,7 +11,7 @@ use crate::{
     error::Fallible,
     ffi::{
         any::{
-            wrap_func, AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject,
+            wrap_func, AnyDomain, AnyFunction, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject,
             AnyTransformation, CallbackFn, Downcast,
         },
         util::{self, ExtrinsicObject},
@@ -219,4 +219,35 @@ pub extern "C" fn opendp_internal___extrinsic_distance(
 ) -> FfiResult<*mut AnyMetric> {
     let descriptor = try_!(to_str(descriptor)).to_string();
     Ok(AnyMetric::new(ExtrinsicDistance { descriptor })).into()
+}
+
+#[bootstrap(
+    features("contrib"),
+    arguments(function(rust_type = "$pass_through(TO)")),
+    dependencies("c_function")
+)]
+/// Construct a Function from a user-defined callback.
+/// This is meant for internal use, as it does not require "honest-but-curious",
+/// unlike `new_function`.
+///
+/// See `new_function` for correct usage and proof definition for this function.
+///
+/// # Arguments
+/// * `function` - A function mapping data to a value of type `TO`
+///
+/// # Generics
+/// * `TO` - Output Type
+#[allow(dead_code)]
+fn _new_pure_function<TO>(function: CallbackFn) -> Fallible<AnyFunction> {
+    let _ = function;
+    panic!("this signature only exists for code generation")
+}
+
+#[no_mangle]
+pub extern "C" fn opendp_internal___new_pure_function(
+    function: CallbackFn,
+    TO: *const c_char,
+) -> FfiResult<*mut AnyFunction> {
+    let _TO = TO;
+    FfiResult::Ok(util::into_raw(Function::new_fallible(wrap_func(function))))
 }

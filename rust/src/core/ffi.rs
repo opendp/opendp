@@ -682,7 +682,8 @@ pub extern "C" fn opendp_core__measurement_output_distance_type(
 /// Can be used to build a post-processor.
 ///
 /// # Why honest-but-curious?
-/// `function` must meet two criteria.
+/// An OpenDP `function` must satisfy two criteria.
+/// These invariants about functions are necessary to show correctness of other algorithms.
 ///
 /// First, `function` must not use global state.
 /// For instance, a postprocessor that accesses the system clock time
@@ -706,48 +707,6 @@ fn new_function<TO>(function: CallbackFn) -> Fallible<AnyFunction> {
 
 #[no_mangle]
 pub extern "C" fn opendp_core__new_function(
-    function: CallbackFn,
-    TO: *const c_char,
-) -> FfiResult<*mut AnyFunction> {
-    let _TO = TO;
-    FfiResult::Ok(util::into_raw(Function::new_fallible(wrap_func(function))))
-}
-
-#[bootstrap(
-    features("contrib"),
-    arguments(function(rust_type = "$pass_through(TO)")),
-    dependencies("c_function")
-)]
-/// Construct a Function from a user-defined callback.
-/// This is meant for internal use, as it does not require "honest-but-curious",
-/// unlike `new_function`.
-///
-/// Can be used to build a post-processor.
-///
-/// `function` must meet two criteria.
-///
-/// First, `function` must not use global state.
-/// For instance, a postprocessor that accesses the system clock time
-/// can be used to build a measurement that reveals elapsed execution time,
-/// which escalates a side-channel vulnerability into a direct vulnerability.
-///
-/// Secondly, `function` must only raise data-independent exceptions.
-/// For instance, raising an exception with the value of a DP release will both
-/// reveal the DP output and cancel the computation, potentially avoiding privacy accounting.
-///
-/// # Arguments
-/// * `function` - A function mapping data to a value of type `TO`
-///
-/// # Generics
-/// * `TO` - Output Type
-#[allow(dead_code)]
-fn _new_pure_function<TO>(function: CallbackFn) -> Fallible<AnyFunction> {
-    let _ = function;
-    panic!("this signature only exists for code generation")
-}
-
-#[no_mangle]
-pub extern "C" fn opendp_core___new_pure_function(
     function: CallbackFn,
     TO: *const c_char,
 ) -> FfiResult<*mut AnyFunction> {
