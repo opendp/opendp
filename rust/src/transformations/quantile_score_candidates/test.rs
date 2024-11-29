@@ -200,7 +200,8 @@ fn test_score_candidates_map() -> Fallible<()> {
 #[cfg(feature = "derive")]
 mod integration_tests {
     use crate::{
-        measurements::{Optimize, make_report_noisy_max_gumbel},
+        measurements::{Optimize, make_report_noisy_max},
+        measures::RangeDivergence,
         metrics::SymmetricDistance,
     };
 
@@ -237,9 +238,10 @@ mod integration_tests {
         let input_domain = VectorDomain::new(AtomDomain::default());
         let input_metric = SymmetricDistance;
         let trans = make_quantile_score_candidates(input_domain, input_metric, candidates, 0.75)?;
-        let exp_mech = make_report_noisy_max_gumbel(
+        let exp_mech = make_report_noisy_max(
             trans.output_domain.clone(),
             trans.output_metric.clone(),
+            RangeDivergence,
             trans.map(&1)? as f64 * 2.,
             Optimize::Min,
         )?;
@@ -258,9 +260,10 @@ mod integration_tests {
         let input_metric = SymmetricDistance;
         let trans_sized =
             make_quantile_score_candidates(input_domain, input_metric, candidates, 0.75)?;
-        let exp_mech = make_report_noisy_max_gumbel(
+        let exp_mech = make_report_noisy_max(
             trans_sized.output_domain.clone(),
             trans_sized.output_metric.clone(),
+            RangeDivergence,
             trans_sized.map(&2)? as f64 * 2.,
             Optimize::Min,
         )?;
