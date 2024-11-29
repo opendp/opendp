@@ -76,6 +76,7 @@ pub fn generate_bindings(modules: &HashMap<String, Vec<Function>>) -> HashMap<Pa
 
     let r_bindings = modules
         .into_iter()
+        .filter(|(name, _)| name.as_str() != "internal")
         .map(|(module_name, module)| {
             (
                 PathBuf::from(format!("R/{}.R", module_name)),
@@ -86,6 +87,7 @@ pub fn generate_bindings(modules: &HashMap<String, Vec<Function>>) -> HashMap<Pa
 
     let mut c_bindings = modules
         .into_iter()
+        .filter(|(name, _)| name.as_str() != "internal")
         .map(|(module_name, module)| {
             (
                 PathBuf::from(format!("src/{}.c", module_name)),

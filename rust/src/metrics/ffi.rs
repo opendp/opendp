@@ -276,32 +276,6 @@ pub extern "C" fn opendp_metrics__user_distance(
     Ok(AnyMetric::new(ExtrinsicDistance { descriptor })).into()
 }
 
-#[bootstrap(
-    name = "_extrinsic_distance",
-    arguments(descriptor(rust_type = "String"))
-)]
-/// Construct a new ExtrinsicDistance.
-/// This is meant for internal use, as it does not require "honest-but-curious",
-/// unlike `user_distance`.
-///
-/// Any two instances of an ExtrinsicDistance are equal if their string descriptors are equal.
-///
-/// The definition of `d` must satisfy the requirements of a pseudo-metric:
-/// 1. for any $x$, $d(x, x) = 0$
-/// 2. for any $x, y$, $d(x, y) \ge 0$ (non-negativity)
-/// 3. for any $x, y$, $d(x, y) = d(y, x)$ (symmetry)
-/// 4. for any $x, y, z$, $d(x, z) \le d(x, y) + d(y, z)$ (triangle inequality)
-///
-/// # Arguments
-/// * `descriptor` - A string description of the metric.
-#[no_mangle]
-pub extern "C" fn opendp_metrics___extrinsic_distance(
-    descriptor: *mut c_char,
-) -> FfiResult<*mut AnyMetric> {
-    let descriptor = try_!(to_str(descriptor)).to_string();
-    Ok(AnyMetric::new(ExtrinsicDistance { descriptor })).into()
-}
-
 pub struct TypedMetric<Q> {
     metric: AnyMetric,
     marker: PhantomData<fn() -> Q>,

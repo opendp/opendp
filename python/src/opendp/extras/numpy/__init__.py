@@ -18,7 +18,7 @@ from opendp.typing import RuntimeTypeDescriptor, ELEMENTARY_TYPES
 from opendp._convert import ATOM_MAP
 from opendp._lib import import_optional_dependency
 from opendp.extras._utilities import register_transformation
-from opendp.domains import _extrinsic_domain
+from opendp._internal import _make_transformation, _extrinsic_domain
 import typing
 
 if typing.TYPE_CHECKING: # pragma: no cover
@@ -264,7 +264,7 @@ def make_np_clamp(
         "p": p,
         "origin": origin,
     }
-    return dp.t._make_transformation(
+    return _make_transformation(
         input_domain,
         input_metric,
         dp.numpy.array2_domain(**kwargs),

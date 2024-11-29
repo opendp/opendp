@@ -298,7 +298,7 @@ pub extern "C" fn opendp_domains__vector_domain(
         TypeContents::GENERIC { name: "AtomDomain", .. } => 
             dispatch!(monomorphize_all, [(atom_domain.carrier_type, @primitives)], (atom_domain, size)),
         TypeContents::PLAIN("ExtrinsicDomain") => monomorphize_user_domain(atom_domain, size),
-        _ => fallible!(FFI, "Inner domain of VectorDomain must be AtomDomain or ExtrinsicDomain (created via user_domain)")
+        _ => fallible!(FFI, "Inner domain of VectorDomain must be AtomDomain or ExtrinsicDomain (created through foreign language bindings)")
     }.into()
 }
 
@@ -360,7 +360,7 @@ pub extern "C" fn opendp_domains__map_domain(
             dispatch!(monomorphize, [(key_domain.carrier_type, @hashable), (value_domain.carrier_type, @primitives)], (key_domain, value_domain)),
         (TypeContents::GENERIC { name: "AtomDomain", .. }, TypeContents::PLAIN("ExtrinsicDomain")) => 
             dispatch!(monomorphize_extrinsic, [(key_domain.carrier_type, @hashable)], (key_domain, value_domain)),
-        _ => fallible!(FFI, "Value domain of MapDomain must be AtomDomain or ExtrinsicDomain (created via user_domain)"),
+        _ => fallible!(FFI, "Value domain of MapDomain must be AtomDomain or ExtrinsicDomain (created through foreign language bindings)"),
     }.into()
 }
 
@@ -368,9 +368,9 @@ pub extern "C" fn opendp_domains__map_domain(
 /// UserDomain, UserMetric, UserMeasure.
 pub struct ExtrinsicElement {
     /// The name of the element, used for display and partial equality
-    identifier: String,
+    pub identifier: String,
     /// Data stored inside the element native to a foreign (extrinsic) language
-    value: ExtrinsicObject,
+    pub value: ExtrinsicObject,
 }
 
 impl Clone for ExtrinsicElement {
@@ -384,7 +384,7 @@ impl Clone for ExtrinsicElement {
 }
 
 impl ExtrinsicElement {
-    fn new(identifier: String, value: ExtrinsicObject) -> Self {
+    pub fn new(identifier: String, value: ExtrinsicObject) -> Self {
         (value.count)(value.ptr, true);
         ExtrinsicElement { value, identifier }
     }
@@ -498,50 +498,4 @@ pub extern "C" fn opendp_domains___extrinsic_domain_descriptor(
 ) -> FfiResult<*mut ExtrinsicObject> {
     let domain = try_!(try_as_ref!(domain).downcast_ref::<ExtrinsicDomain>()).clone();
     FfiResult::Ok(util::into_raw(domain.element.value.clone()))
-}
-
-#[bootstrap(
-    name = "_extrinsic_domain",
-    arguments(
-        identifier(c_type = "char *", rust_type = b"null"),
-        member(rust_type = "bool"),
-        descriptor(default = b"null", rust_type = "ExtrinsicObject")
-    ),
-    dependencies("c_member")
-)]
-/// Construct a new ExtrinsicDomain.
-/// This is meant for internal use, as it does not require "honest-but-curious",
-/// unlike `user_domain`.
-///
-/// The identifier must uniquely identify this domain.
-/// If the identifier is not uniquely identifying,
-/// then two different domains with the same identifier will chain,
-/// which can violate transformation stability.
-///
-/// In addition, the member function must:
-/// 1. be a pure function
-/// 2. be sound (only return true if its input is a member of the domain).
-///
-/// Any two instances of an ExtrinsicDomain are equal if their string descriptors are equal.
-/// Contains a function used to check if any value is a member of the domain.
-///
-/// # Arguments
-/// * `identifier` - A string description of the data domain.
-/// * `member` - A function used to test if a value is a member of the data domain.
-/// * `descriptor` - Additional constraints on the domain.
-#[no_mangle]
-pub extern "C" fn opendp_domains___extrinsic_domain(
-    identifier: *mut c_char,
-    member: CallbackFn,
-    descriptor: *mut ExtrinsicObject,
-) -> FfiResult<*mut AnyDomain> {
-    let identifier = try_!(to_str(identifier)).to_string();
-    let descriptor = try_as_ref!(descriptor).clone();
-    let element = ExtrinsicElement::new(identifier, descriptor);
-    let member = Function::new_fallible(move |arg: &ExtrinsicObject| -> Fallible<bool> {
-        let c_res = member(AnyObject::new_raw(arg.clone()));
-        Fallible::from(util::into_owned(c_res)?)?.downcast::<bool>()
-    });
-
-    Ok(AnyDomain::new(ExtrinsicDomain { element, member })).into()
 }

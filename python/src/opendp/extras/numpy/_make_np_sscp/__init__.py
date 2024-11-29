@@ -2,6 +2,7 @@ from opendp.extras._utilities import to_then
 from opendp.extras.numpy import _sscp_domain
 from opendp.mod import Domain, Metric, Transformation
 from opendp._lib import import_optional_dependency
+from opendp._internal import _make_transformation
 
 # planning to make this public, but may make more API changes
 
@@ -47,7 +48,7 @@ def make_np_sscp(
             "expected an output metric of either type SymmetricDistance or L2Distance<_>"
         )
 
-    return dp.t._make_transformation(
+    return _make_transformation(
         input_domain,
         input_metric,
         _sscp_domain(

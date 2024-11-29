@@ -317,41 +317,6 @@ pub extern "C" fn opendp_measures__user_divergence(
     Ok(AnyMeasure::new(ExtrinsicDivergence { descriptor })).into()
 }
 
-#[bootstrap(
-    name = "_extrinsic_divergence",
-    arguments(descriptor(rust_type = "String"))
-)]
-/// Construct a new ExtrinsicDivergence, a privacy measure defined from a bindings language.
-/// This is meant for internal use, as it does not require "honest-but-curious",
-/// unlike `user_divergence`.
-///
-/// Any two instances of ExtrinsicDivergence are equal if their string descriptors are equal.
-///
-/// The essential requirement of a privacy measure is that it is closed under postprocessing.
-/// Your privacy measure `D` must satisfy that, for any pure function `f` and any two distributions `Y, Y'`, then $D(Y, Y') \ge D(f(Y), f(Y'))$.
-///
-/// Beyond this, you should also consider whether your privacy measure can be used to provide meaningful privacy guarantees to your privacy units.
-///
-/// # Proof definition
-///
-/// For any two distributions $Y, Y'$ and any $d$,
-/// $Y, Y'$ are $d$-close under the user divergence measure ($D_U$) if,
-///
-/// $D_U(Y, Y') \le d$.
-///
-/// For $D_U$ to qualify as a privacy measure, then for any postprocessing function $f$,
-/// $D_U(Y, Y') \ge D_U(f(Y), f(Y'))$.
-///
-/// # Arguments
-/// * `descriptor` - A string description of the privacy measure.
-#[no_mangle]
-pub extern "C" fn opendp_measures___extrinsic_divergence(
-    descriptor: *mut c_char,
-) -> FfiResult<*mut AnyMeasure> {
-    let descriptor = try_!(to_str(descriptor)).to_string();
-    Ok(AnyMeasure::new(ExtrinsicDivergence { descriptor })).into()
-}
-
 pub struct TypedMeasure<Q> {
     pub measure: AnyMeasure,
     marker: PhantomData<fn() -> Q>,
