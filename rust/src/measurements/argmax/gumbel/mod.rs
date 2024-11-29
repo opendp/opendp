@@ -1,8 +1,7 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
-use core::f64;
-
+use dashu::float::FBig;
 use num::Zero;
 use opendp_derive::bootstrap;
 
@@ -15,35 +14,29 @@ use crate::{
     traits::{InfAdd, InfCast, InfDiv, Number},
 };
 
-use crate::traits::samplers::ExponentialRV;
-use dashu::float::FBig;
+use crate::traits::samplers::GumbelRV;
 
-use super::{select_score, Optimize};
+use super::{select_score, ArgmaxRV, Optimize};
 
 #[cfg(test)]
-pub mod test;
+mod test;
 
 #[bootstrap(
     features("contrib"),
     arguments(optimize(c_type = "char *", rust_type = "String")),
     generics(TIA(suppress))
 )]
-/// Make a Measurement that privately selects the index of the highest score.
-///
-/// The measurement takes a vector of scores, adds noise from the exponential distribution,
-/// and returns the index of the highest or lowest noisy score.
-///
-/// Dominates utility of report noisy max with gumbel noise in pure-DP, but vice-versa in zCDP.
+/// Make a Measurement that takes a vector of scores and privately selects the index of the highest score.
 ///
 /// # Arguments
 /// * `input_domain` - Domain of the input vector. Must be a non-nullable VectorDomain.
 /// * `input_metric` - Metric on the input domain. Must be LInfDistance
-/// * `scale` - Noise scale for the Exponential distribution.
+/// * `scale` - Noise scale for the Gumbel distribution.
 /// * `optimize` - Indicate whether to privately return the "max" or "min"
 ///
 /// # Generics
 /// * `TIA` - Atom Input Type. Type of each element in the score vector.
-pub fn make_report_noisy_max_exponential<TIA>(
+pub fn make_report_noisy_max_gumbel<TIA>(
     input_domain: VectorDomain<AtomDomain<TIA>>,
     input_metric: LInfDistance<TIA>,
     scale: f64,
@@ -71,15 +64,21 @@ where
     Measurement::new(
         input_domain,
         Function::new_fallible(move |arg: &Vec<TIA>| {
-            select_score::<_, ExponentialRV>(arg.iter().cloned(), optimize.clone(), f_scale.clone())
+            select_score::<_, GumbelRV>(arg.iter().cloned(), optimize.clone(), f_scale.clone())
         }),
         input_metric.clone(),
         MaxDivergence::default(),
-        PrivacyMap::new_fallible(report_noisy_max_exponential_map(scale, input_metric)),
+        PrivacyMap::new_fallible(report_noisy_max_gumbel_map(scale, input_metric)),
     )
 }
 
-pub(crate) fn report_noisy_max_exponential_map<QI>(
+impl ArgmaxRV for GumbelRV {
+    fn new(shift: FBig, scale: FBig) -> Fallible<Self> {
+        GumbelRV::new(shift, scale)
+    }
+}
+
+pub(crate) fn report_noisy_max_gumbel_map<QI>(
     scale: f64,
     input_metric: LInfDistance<QI>,
 ) -> impl Fn(&QI) -> Fallible<f64>
@@ -95,11 +94,7 @@ where
         let d_in = f64::inf_cast(d_in)?;
 
         if d_in.is_sign_negative() {
-            return fallible!(
-                InvalidDistance,
-                "sensitivity ({}) must be non-negative",
-                d_in
-            );
+            return fallible!(InvalidDistance, "sensitivity must be non-negative");
         }
 
         if scale.is_zero() {

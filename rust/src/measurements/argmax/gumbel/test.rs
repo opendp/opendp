@@ -1,4 +1,4 @@
-use crate::error::Fallible;
+use crate::{error::Fallible, measurements::select_score};
 
 use super::*;
 
