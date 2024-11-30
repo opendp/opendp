@@ -12,10 +12,10 @@ This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsec
  
 \section{Hoare Triple} 
 \subsection*{Precondition} 
-\textbf{Compiler-verified} 
+\subsubsection*{Compiler-verified} 
 Argument \texttt{scale} is of type \texttt{RBig}, a bignum rational 
  
-\textbf{User-verified} 
+\subsubsection*{User-verified} 
 $\texttt{scale} \geq 0$ 
  
 \subsection*{Pseudocode}         
@@ -29,11 +29,11 @@ or \texttt{Ok(out)}, where \texttt{out} is distributed as $\mathcal{L}_\mathbb{Z
  
 \section{Proof} 
 \begin{definition} \cite{BV17} 
-    (Discrete Laplace). Let $\mu, \sigma \in \mathbb{R}$ with $\sigma > 0$.  
+    (Discrete Laplace). Let $\mu, s \in \mathbb{R}$ with $s > 0$.  
     The discrete laplace distribution with location $\mu$ and scale $s$ is denoted $\mathcal{L}_\mathbb{Z}(\mu, s)$.  
     It is a probability distribution supported on the integers and defined by 
     \begin{equation*} 
-        \forall x \in \mathbb{Z} \quad  P[X = x] = \frac{e^{1/s} - 1}{e^{1/s} + 1} e^{-|x|/s} \quad \text{where } X \sim \mathcal{L}_\mathbb{Z}(\mu, s) 
+        \forall x \in \mathbb{Z} \quad  P[X = x] = \frac{e^{1/s} - 1}{e^{1/s} + 1} e^{-|x-\mu|/s} \quad \text{where } X \sim \mathcal{L}_\mathbb{Z}(\mu, s) 
     \end{equation*} 
 \end{definition} 
  
@@ -45,12 +45,12 @@ Assume the preconditions are met.
 \end{lemma} 
  
 \begin{proof} 
-    By the non-negativity precondition on \texttt{scale}, 
-    the precondition on \rustdoc{traits/samplers/cks20/fn}{sample\_geometric\_exp\_fast} is met. 
-    By the definitions of \texttt{sample\_geometric\_exp\_fast} and \texttt{sample\_standard\_bernoulli},  
+    By the non-negativity precondition on \texttt{scale},
+    the user-verified precondition on \rustdoc{traits/samplers/cks20/fn}{sample\_geometric\_exp\_fast} is met. 
+    By the definitions of \rustdoc{traits/samplers/cks20/fn}{sample\_geometric\_exp\_fast} and \rustdoc{traits/samplers/fn}{sample\_standard\_bernoulli},  
     an error is only returned when there is a lack of system entropy. 
     The only source of errors is from the invocation of these functions, 
-    therefore \texttt{sample\_discrete\_gaussian} only returns \texttt{Err(e)} when there is a lack of system entropy. 
+    therefore \texttt{sample\_discrete\_laplace} only returns \texttt{Err(e)} when there is a lack of system entropy. 
 \end{proof} 
  
 We now condition on not returning an error, and establish some helpful lemmas. 
@@ -94,7 +94,15 @@ P[X = x | (B, Y) \neq (\top, 0)] &= \frac{P[X = x, (B, Y) \neq (\top, 0)]}{P[(B,
     In the \ref{err-e} proof, it was established that the preconditions on \texttt{sample\_geometric\_exp\_fast} are met. 
     therefore \texttt{magnitude} on line \ref{line:magnitude} is distributed as $ Geometric(1 - e^{-1/scale})$. 
     Similarly, by the definition of \texttt{sample\_standard\_bernoulli}, \texttt{sign} is distributed according to $Bernoulli(p=1/2)$. 
-    The branching logic from line \ref{line:branching} on satisfies the procedures described in \ref{P_Lx_BY_ne_T0}. 
+    The branching logic from line \ref{line:branching} satisfies the procedures described in \ref{P_Lx_BY_ne_T0}, as shown by the following equality: 
+    \begin{align*}
+        &\Pr[(B,Y) \neq (\top,0)] \\
+        &= \Pr[\neg((B, Y) = (\top, 0))] \\ 
+        &= \Pr[\neg(B=\top \wedge Y=0)] \\
+        &= \Pr[B\neq\top \vee Y\neq 0] \\
+        &= \Pr[B = \top \vee Y\neq 0] && \text{since } \Pr[B \neq \top] = \Pr[B = \top]\\
+    \end{align*}
+
     Therefore, by \ref{P_Lx_BY_ne_T0}, \texttt{out} is distributed as $\mathcal{L}_\mathbb{Z}(0, scale)$. 
 \end{proof} 
  
