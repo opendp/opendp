@@ -8,19 +8,11 @@
     ]{biblatex}
 \addbibresource{ref.bib} 
 
-\usepackage{thmtools}
-\usepackage{thm-restate}
-\newtheorem{thm}{Theorem}
-\newtheorem{defn}{Definition} 
-\newtheorem{prop}{Proposition}
-
 \title{\texttt{fn make\_tulap}}
 \author{Yu-Ju Ku, Jordan Awan, Aishwarya Ramasethu, Michael Shoemate}
 \begin{document}
 
 \maketitle
-
-\contrib
 
 Proves soundness of \rustdoc{measurements/fn}{make\_tulap}.
 % in \asOfCommit{mod.rs}{f5bb719}.
@@ -51,23 +43,22 @@ None
 
 \subsection*{Postcondition}
 
-\validMeasurement{\texttt{(input\_domain, input\_metric, epsilon, \\ delta)}}{\texttt{make\_tulap}}
+\begin{theorem}
+    \label{valid-measurement}
+    \validMeasurement{\texttt{(input\_domain, input\_metric, epsilon, \\ delta)}}{\texttt{make\_tulap}}
+\end{theorem}
 
-\section{Proof}
-
-\begin{proof} 
-\textbf{(Privacy guarantee.)} 
-
+\begin{proof}
+$ $\newline
+\subsubsection*{Data-independent runtime errors}
 \rustdoc{traits/samplers/struct}{PartialSample}\texttt{.value}, hereafter referred to as just \texttt{value} (a function) 
 can only fail when the pseudorandom byte generator used in its implementation fails due to lack of system entropy. 
 This is usually related to the computer's physical environment and not the dataset. 
 The rest of this proof is conditioned on the assumption that \texttt{value} does not raise an exception. \\
 
-A canonical noise distribution (CND)~\parencite{awan2023canonical}, 
-captures whether a real-valued distribution is perfectly tailored to satisfy . 
-We formalize this in Definition~\ref{def2}~\parencite{awan2023canonical}". The definition uses $T$ which is the tradeoff function of $type 1$ and $type 2$ errors between two distributions. A larger $T$ would mean it is harder to distiguish between two distributions.  
-\begin{defn}\label{def2}  % Def 3.1
-    \cite[Definition~3.1]{awan2023canonical} \\
+\subsubsection*{Privacy guarantee}
+\begin{definition}[\protect{\cite[Definition~3.1]{awan2023canonical}}]
+    \label{def2}    
     Let $f$ be a symmetric nontrivial tradeoff function. A {continuous} distribution function $F$ is a \emph{canonical noise distribution} (CND) for $f$ if 
     \begin{enumerate}[(1)]
         \item for every statistic $S: X^n\rightarrow \mathbb{R}$ with sensitivity $\Delta>0$, and $N\sim F(\cdot)$, 
@@ -76,42 +67,46 @@ We formalize this in Definition~\ref{def2}~\parencite{awan2023canonical}". The d
         \item $T(F(\cdot),F(\cdot-1))(\alpha) = F(F^{-1}(1-\alpha)-1)$ for all $\alpha \in (0,1)$,
         \item $F(x) = 1-F(-x)$ for all $x\in \mathbb{R}$; that is, $F$ is the cdf of a random variable which is symmetric about zero.
     \end{enumerate}
-\end{defn}
+\end{definition}
 
-\begin{defn} \label{def1}  % Def 3.7
-    \cite[Definition~3.7]{awan2023canonical} \\
+The definition uses $T$ which is the tradeoff function of type-I and type-II errors of an adversary attempting to distinguish 
+between an answer on a dataset with or without any given individual. 
+A larger $T$ indicates it is more difficult to distiguish between the distributions.
+
+\begin{definition}[\protect{\cite[Definition~3.7]{awan2023canonical}}]
+    \label{def1}  % Def 3.7
     Let $f$ be a symmetric nontrivial tradeoff function, and let {$c\in [0,1/2)$} be the unique fixed point of $f$: $f(c)=c$. 
     We define $F_f:\mathbb{R}\rightarrow \mathbb{R}$ as  \[ F_f(x) = \begin{cases}
         f(1-F_f(x+1))&x<-1/2\\
-        c(1/2-x) + (1-c)(x+1/2)&-1/2\leq x\leq 1/2\\
+        c \cdot (1/2-x) + (1-c)(x+1/2)&-1/2\leq x\leq 1/2\\
         1-f(F_f(x-1))&x>1/2.\\
     \end{cases}\]
-\end{defn}
-In Definition~\ref{def1}~\parencite{awan2023canonical}, 
+\end{definition}
+In Definition~\ref{def1}, 
 the fact that there is a unique fixed point follows from the fact that $f$ is convex and decreasing $f$-DP~\parencite{dong2019gaussian}, 
 and so intersects the line $y=\alpha$ at a unique value. 
-Note that in Definition~\ref{def1}~\parencite{awan2023canonical}, 
+Note that in Definition~\ref{def1}, 
 the cumulative distribution function (CDF) corresponds to a uniform random variable on the interval $[-1/2,1/2]$. 
 However, due to the recursive nature of $F_f$ and the fact that $f$ is generally non-linear, 
-the Canonical Noise Distribution (CND) from Definition~\ref{def1}~\parencite{awan2023canonical} need not be uniformly distributed on any other intervals.
+the Canonical Noise Distribution (CND) from Definition~\ref{def1} need not be uniformly distributed on any other intervals.
 
-Theorem~\ref{thm1}~\parencite{awan2023canonical} below states that for any nontrivial tradeoff function, 
-this construction yields a CND, which can be constructed as in Definition~\ref{def1}~\parencite{awan2023canonical}. 
-This CND can be used to add perfectly calibrated noise to a statistic to achieve $f$-DP~\parencite[Proposition~2.2]{dong2019gaussian}. 
+Theorem~\ref{thm1} below states that for any nontrivial tradeoff function, 
+this construction yields a CND, which can be constructed as in Definition~\ref{def1}. 
+This CND can be used to add perfectly calibrated noise to a statistic to achieve $f$-DP. 
 
-\begin{thm} \label{thm1}  % Thm 3.9
-    \cite[Theorem~3.9]{awan2023canonical} \\
-    Let $f$ be a symmetric nontrivial tradeoff function and let $F_f$ be as in Definition~\ref{def1}~\parencite{awan2023canonical}. 
+\begin{theorem}[\protect{\cite[Theorem~3.9]{awan2023canonical}}]
+    \label{thm1}
+    Let $f$ be a symmetric nontrivial tradeoff function and let $F_f$ be as in Definition~\ref{def1}. 
     Then, as stated in \parencite[Theorem~3.9]{awan2023canonical}, $F_f$ is a canonical noise distribution for $f$. 
-\end{thm}
+\end{theorem}
 
-In Definition~\ref{def1}~\parencite{awan2023canonical}, we explained the cdf of the CND we made. 
+Definition~\ref{def1} explains the cdf of the CND we made. 
 This explanation helps us understand the distribution's features, but when it comes to sampling, the quantile function is key. 
-In Proposition~\ref{prop1}~\parencite{awan2023canonical} provides a recursive formula for the CND's quantile function,
-as described in Definition~\ref{def2}~\parencite{awan2023canonical}, and show that we can finish it in just a few steps.
+Proposition~\ref{prop1} provides a recursive formula for the CND's quantile function,
+as described in Definition~\ref{def2}, and show that we can finish it in just a few steps.
 
-\begin{prop}\label{prop1}   % Prop F.6
-    \cite[Proposition~F.6]{awan2023canonical} \\
+\begin{proposition}[\protect{\cite[Proposition~F.6]{awan2023canonical}}]
+    \label{prop1}
     Let $f$ be a symmetric nontrivial tradeoff function and let $F_f$ be as in Definition~\ref{def1}. 
     Then the quantile function $F_f^{-1}:(0,1)\rightarrow \mathbb{R}$ for $F_f$ can be expressed as
     \[F_f^{-1}(u) = \begin{cases}
@@ -122,15 +117,15 @@ as described in Definition~\ref{def2}~\parencite{awan2023canonical}, and show th
     where $c$ is the unique fixed point of $f$. 
     {Furthermore, for any $u\in (0,1)$, the expression $Q_f(u)$ takes a finite number of recursive steps to evaluate. Thus,} 
     if $U\sim U(0,1)$, then $F_f^{-1}(U) \sim F_f$. 
-\end{prop}
+\end{proposition}
 
 % Cor 3.10
 According to Corollary~3.10 in \cite{awan2023canonical}, 
 the distribution $\mathrm{Tulap}(0,b,q)$, where $b=\exp(-\epsilon)$ and $q = \frac{2\delta b}{1-b+2\delta b}$ 
-is a CND for $f_{\epsilon,\delta}$-DP, which agrees with the construction of Definition~\ref{def1}~\parencite{awan2023canonical}. 
+is a CND for $f_{\epsilon,\delta}$-DP, which agrees with the construction of Definition~\ref{def1}. 
 
 From the definition, it is easy to verify that the cdf of a Tulap random variable agrees with $F_f$ on $[-1/2,1/2]$. 
-Tulap cdf also satisfies the recurrence relation of Definition~\ref{def1}~\parencite{awan2023canonical}. 
+Tulap cdf also satisfies the recurrence relation of Definition~\ref{def1}. 
 Note that the cdf of $\mathrm{Tulap}(0,b,0)$ is 
 \[F_{N_0}(x) = \begin{cases}
     \frac{b^{-[x]}}{1+b}(b+\{x-[x]+1/2\}(1-b))& x\leq 0\\
@@ -145,10 +140,10 @@ The cdf of $\mathrm{Tulap}(0,b,q)$ is
 \end{cases}\]
 By inspection, the fixed point of $f_{\epsilon,\delta}$ is $c=\frac{1-\delta}{1+e^\epsilon}$. 
 It is easy to verify that $F_N(x) = c(1/2-x) + (1-c)(x+1/2)$ for $x\in (-1/2,1/2)$. 
-We then have that $F_N$ satisfies the recurrence relation in Definition~\ref{def1}~\parencite{awan2023canonical}. 
+We then have that $F_N$ satisfies the recurrence relation in Definition~\ref{def1}. 
 We conclude that $F_N = F_f$ and that $F_N$ is a CND for N. Therefore, The distribution $\mathrm{Tulap}(0,b,q)$ satisfies $(\epsilon, \delta)$-DP.
-\end{proof}
 
+\end{proof}
 \printbibliography
 
 \end{document}
