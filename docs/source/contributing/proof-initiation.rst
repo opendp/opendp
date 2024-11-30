@@ -171,8 +171,8 @@ If you use VSCode, the “Development Environment” documentation contains
 some advice for integrating this with the LaTex-Workshop extension.
 
 These options emit the build artifacts to ./out, which is configured to
-be ignored by git. **This is intentional, you should only include the
-``.tex`` file when committing to OpenDP!** A bot will attempt to build
+be ignored by git. **This is intentional, you should only include the** 
+``.tex`` **file when committing to OpenDP!** A bot will attempt to build
 and link generated ``.pdf`` files from your PR.
 
 We now continue by filling out the proof sections.

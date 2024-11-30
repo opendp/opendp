@@ -59,7 +59,7 @@ reference:
   - has_concept("measures")
 
 - title: Metrics
-  desc: The `metrics` module provides fuctions that measure the distance between two elements of a domain.
+  desc: The `metrics` module provides functions that measure the distance between two elements of a domain.
   contents:
   - has_concept("metrics")
 
@@ -71,7 +71,7 @@ reference:
   - has_concept("mod")
 
 - title: Transformations
-  desc: The `transformations` module provides functions that deterministicly transform datasets.
+  desc: The `transformations` module provides functions that deterministically transform datasets.
   contents:
   - has_concept("transformations")
 
