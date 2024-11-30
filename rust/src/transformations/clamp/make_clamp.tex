@@ -14,23 +14,23 @@ Proves soundness of \texttt{fn make\_clamp} in \asOfCommit{mod.rs}{0db9c6036}.
 \section{Hoare Triple} 
 \subsection*{Precondition} 
  
-\textbf{Compiler-verified} 
+\subsubsection*{Compiler-verified} 
 \begin{itemize} 
-    \item Type \texttt{TA} must have traits \texttt{Clone + ProductOrd + CheckAtom}. 
-    \item Type \texttt{M} must have trait \texttt{DatasetMetric}. 
-    \item Argument \texttt{input\_domain} is of type \texttt{VectorDomain<AtomDomain<TA>>}. 
+    \item Argument \texttt{input\_domain} is of type \texttt{VectorDomain<AtomDomain<TA>{}>}. 
     \item Argument \texttt{input\_metric} is of type \texttt{M}. 
     \item Argument \texttt{bounds} is of type \texttt{(T, T)}. 
+    \item Generic \texttt{TA} must implement \rustdoc{traits/trait}{Number}. 
+    \item Generic \texttt{M} must have trait \rustdoc{transformations/trait}{DatasetMetric}. 
 \end{itemize} 
  
-\textbf{User-verified} 
+\subsubsection*{User-verified} 
 None 
- 
+
 \subsection*{Pseudocode} 
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_clamp.py} 
  
-\subsubsection*{Postconditions} 
-\validTransformation{\texttt{(input\_domain, input\_metric, bounds, TA, M)}}{\texttt{make\_clamp}} 
+\subsubsection*{Postcondition} 
+\validTransformation{\texttt{(input\_domain, input\_metric, bounds, TA, M)}}{\texttt{make\_clamp}}
  
 \section{Proof} 
  
@@ -39,24 +39,34 @@ None
 \end{lemma} 
  
 \begin{proof} 
+    Assume the input is a member of \texttt{input\_domain}'s row domain.  
+    Therefore, by \ref{line:assert-non-null}, the input is non-null. 
+    In addition, since \texttt{Bounds.new\_closed} did not raise an exception, then by the definition of \texttt{Bounds.new\_closed}, the bounds are non-null. 
+    
     \label{lemma:row-by-row-precondition} 
     The preconditions of \texttt{make\_clamp} and pseudocode definition (line \ref{line:def}) ensure that the type preconditions of \texttt{make\_row\_by\_row\_fallible} are satisfied.  
     The remaining preconditions of \texttt{make\_row\_by\_row\_fallible} are: 
     \begin{itemize} 
-        \item \texttt{row\_function} has no side-effects. 
+        \item Errors from \texttt{row\_function} are data-independent.
+        \item \texttt{row\_function} has no side-effects.
         \item If the input to \texttt{row\_function} is a member of \texttt{input\_domain}'s row domain, then the output is a member of \texttt{output\_row\_domain}. 
-    \end{itemize} 
+    \end{itemize}
+    
+    \item By the definition of \rustdoc{traits/trait}{ProductOrd}\texttt{.total\_clamp}, 
+    \texttt{total\_clamp} won't raise because \texttt{arg} and both bounds are not null.
+    Since \texttt{total\_clamp} is the only potential source of errors, and it cannot throw an error,
+    there are no runtime errors in \texttt{row\_function}, satisfying the first remaining precondition.
+
+    The second remaining precondition is satisfied by the definition of \texttt{clamper} (line \ref{line:clamper}) in the pseudocode.
+    The function uses \rustdoc{traits/trait}{ProductOrd}\texttt{.total\_clamp}, and by its definition there are no side-effects.
  
-    The first precondition is satisfied by the definition of \texttt{clamper} (line \ref{line:clamper}) in the pseudocode. 
- 
-    For the second precondition, assume the input is a member of \texttt{input\_domain}'s row domain.  
-    Therefore, by \ref{line:assert-non-null}, the input is non-null. 
-    In addition, since \texttt{Bounds.new\_closed} did not raise an exception, then by the definition of \texttt{Bounds.new\_closed}, the bounds are non-null. 
-    Thus, by the definition of \rustdoc{traits/trait}{ProductOrd}, the preconditions of \texttt{total\_clamp} are satisfied, so the output is within the bounds. 
+    For the last remaining precondition, 
+    by the postcondition/proof definition of \rustdoc{traits/trait}{ProductOrd}\texttt{.total\_clamp},
+    the outcome is within the bounds, which satisfies the additional descriptor bound in the output domain.
     Therefore, the output is a member of \texttt{output\_row\_domain}. 
 \end{proof} 
  
-We now prove the postcondition of \texttt{make\_clamp}. 
+We now prove theorem \ref{valid-transformation}. 
 \begin{proof} 
 By \ref{lemma:row-by-row-precondition}, the preconditions of \rustdoc{transformations/manipulation/fn}{make\_row\_by\_row\_fallible} are satisfied. 
 Thus, by the definition of \\\texttt{make\_row\_by\_row\_fallible}, the output is a valid transformation. 

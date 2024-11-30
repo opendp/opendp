@@ -8,7 +8,7 @@ def make_clamp(
 
     # clone to make it explicit that we are not mutating the input domain 
     output_row_domain = input_domain.element_domain.clone() 
-    output_row_domain.bounds = Bounds.new_closed(bounds) 
+    output_row_domain.bounds = Bounds.new_closed(bounds)  # |\label{line:new-closed}| 
 
     def clamper(value: TA) -> TA: # |\label{line:clamper}| 
         return value.total_clamp(bounds[0], bounds[1]) 
