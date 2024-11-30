@@ -173,10 +173,13 @@
 
 
 \newcommand{\validMeasurement}[2]{%
-  \begin{theorem}
   For every setting of the input parameters #1 to #2 such that the given preconditions
-  hold, #2 raises an exception (at compile time or run time) or returns a valid measurement. A valid measurement has the following property:
+  hold, #2 raises an exception (at compile time or run time) or returns a valid measurement. A valid measurement has the following properties:
   \begin{enumerate}
+      \item \textup{(Data-independent runtime errors).}
+      For every pair of elements $x, x'$ in \texttt{input\_domain},
+      $\function(x)$ returns an error if and only if $\function(x')$ returns an error.
+
       \item \textup{(Privacy guarantee).}
       For every pair of elements $x, x'$ in \texttt{input\_domain} and for every pair $(\din, \dout)$,
       where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \\ \texttt{output\_measure},
@@ -184,7 +187,6 @@
       and $\texttt{privacy\_map}(\din) \leq \dout$,
       then $\function(x), \function(x')$ are $\dout$-close under \texttt{output\_measure}.
   \end{enumerate}
-  \end{theorem}
 }
 
 \newcommand{\validPostprocessor}[2]{%

@@ -34,10 +34,6 @@ Proves soundness of \rustdoc{traits/samplers/psrn/tulap/struct}{TulapRV}.
     \end{warning}
 \end{tcolorbox}
 
-\subsection*{PR History}
-\begin{itemize}
-    \item \vettingPR{1126}
-\end{itemize}
 
 \section{Hoare Triple}
 
@@ -53,10 +49,11 @@ Proves soundness of \rustdoc{traits/samplers/psrn/tulap/struct}{TulapRV}.
 
 \subsection*{Postcondition}
 
+\begin{theorem}
+
 \texttt{edge} returns an upper or lower bound for the true Tulap sample,
 a distribution with CDF defined in \texttt{make\_tulap}.
-
-\section{Proof}
+\end{theorem}
 
 \begin{proof} 
 
