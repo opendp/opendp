@@ -18,15 +18,19 @@ mod test;
 mod gumbel;
 pub use gumbel::GumbelRV;
 
-mod tulap;
-pub use tulap::TulapRV;
+mod canonical;
+pub use canonical::CanonicalRV;
 
 pub trait InverseCDF: Sized {
     /// Type of lower or upper bound on the true random sample.
     type Edge: PartialOrd + Debug;
 
-    /// Calculate either a lower or upper bound on the inverse cumulative distribution function.
-    /// Returns None if the inverse CDF cannot be computed for the given uniform sample.
+    /// # Proof Definition
+    /// Given a random variable `self` (of type `Self`),
+    /// return `Ok(out)` where `out` is the inverse cumulative distribution function evaluated at `uniform`
+    /// with error in direction `R`, or `None`.
+    ///
+    /// The error between `out` and the exactly-computed CDF decreases monotonically as `refinements` increases.
     fn inverse_cdf<R: ODPRound>(&self, uniform: RBig, refinements: usize) -> Option<Self::Edge>;
 }
 
