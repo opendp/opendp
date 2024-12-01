@@ -1194,10 +1194,10 @@ struct FfiResult_____AnyMeasurement opendp_measurements__make_randomized_respons
 struct FfiResult_____AnyObject opendp_measurements__debias_randomized_response_bitvec(const struct AnyObject *answers,
                                                                                       double f);
 
-struct FfiResult_____AnyMeasurement opendp_measurements__make_tulap(const struct AnyDomain *input_domain,
-                                                                    const struct AnyMetric *input_metric,
-                                                                    double epsilon,
-                                                                    double delta);
+struct FfiResult_____AnyMeasurement opendp_measurements__make_canonical_noise(const struct AnyDomain *input_domain,
+                                                                              const struct AnyMetric *input_metric,
+                                                                              double d_in,
+                                                                              const struct AnyObject *d_out);
 
 struct FfiResult_____AnyMeasurement opendp_measurements__make_alp_queryable(const struct AnyDomain *input_domain,
                                                                             const struct AnyMetric *input_metric,

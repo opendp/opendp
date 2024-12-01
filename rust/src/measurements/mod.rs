@@ -49,9 +49,9 @@ mod randomized_response_bitvec;
 pub use randomized_response_bitvec::*;
 
 #[cfg(feature = "contrib")]
-mod tulap;
+mod canonical_noise;
 #[cfg(feature = "contrib")]
-pub use tulap::*;
+pub use canonical_noise::*;
 
 #[cfg(all(feature = "floating-point", feature = "contrib"))]
 mod alp;

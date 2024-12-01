@@ -309,7 +309,7 @@ def test_gaussian_threshold_float():
 
 def test_tulap():
     space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
-    tulap_meas = space >> dp.m.then_tulap(epsilon=1., delta=1e-6)
+    tulap_meas = space >> dp.m.then_canonical_noise(d_in=1., d_out=(1., 1e-6))
 
     assert tulap_meas.map(1.) == (1.0, 1e-6)
     # just check that it runs
