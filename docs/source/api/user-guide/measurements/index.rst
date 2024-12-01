@@ -93,9 +93,9 @@ The geometric mechanism (:func:`make_geometric <opendp.measurements.make_geometr
 If you need constant-time execution to protect against timing side-channels, specify bounds!
 
 
-Tulap Noise
+Canonical Noise
 ***************
-The Tulap mechanism (:func:`make_geometric <opendp.measurements.make_tulap>`) `is discussed in more detail in the linked notebook <tulap.html>`_
+The Tulap mechanism (:func:`make_geometric <opendp.measurements.make_canonical_noise>`) `is discussed in more detail in the linked notebook <tulap.html>`_
 
 
 Noise Addition with Thresholding

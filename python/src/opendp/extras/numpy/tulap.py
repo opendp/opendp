@@ -6,7 +6,7 @@ from opendp._lib import import_optional_dependency
 from opendp.mod import binary_search
 
 
-class BinomialTulap(object):
+class BinomialTulap:
     """
     Utilities to conduct statistical inference on a realization of the random variable Z = M + T,
     where M ~ Binomial(n=size, p=theta), T ~ Tulap(0, b, q), and b and q are calibrated to satisfy (ε, δ)-DP.
@@ -16,7 +16,7 @@ class BinomialTulap(object):
 
     A counting query is a realization of M ~ Binomial(n=size, p=theta) when,
     for each row in data with ``size`` rows, the counter is incremented with probability theta.
-    This quantity is then privatized by the Tulap mechanism :py:func:`opendp.measurements.make_tulap`,
+    This quantity is then privatized by the Tulap mechanism :py:func:`opendp.measurements.make_canonical_noise`,
     a noise perturbation mechanism that privatizes the count by adding a sample from T ~ Tulap(0, b, q).
 
     :param estimate: a draw from Z, the outcome of the Tulap mechanism on binomial data
