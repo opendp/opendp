@@ -9,7 +9,7 @@
  
 Proves soundness of \rustdoc{traits/samplers/cks20/fn}{sample\_bernoulli\_exp} in \asOfCommit{mod.rs}{0be3ab3e6}. 
  
-\texttt{fn sample\_bernoulli\_exp} returns a sample from the $Bernoulli(exp(-x))$ distribution for some rational, non-negative, finite \texttt{x}. 
+\texttt{fn sample\_bernoulli\_exp} returns a sample from the $Bernoulli(exp(-x))$ distribution for some rational, non-negative \texttt{x}. 
 This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.5.1}{subsection 5.1} of \cite{CKS20}. 
  
 \section{Hoare Triple} 
@@ -56,7 +56,6 @@ Assume the preconditions are met.
     For $0 \le i \le \lfloor x \rfloor$, let $b_i$ denote the $i^{th}$ outcome of \texttt{sample\_bernoulli\_exp1} on line \ref{line:B_i}. 
     By the definition of \texttt{sample\_bernoulli\_exp1}, under the established conditions and preconditions, 
     each $B_i$ is distributed as $Bernoulli(exp(-1))$. 
-    Let $c$ denote the outcome of \texttt{sample\_bernoulli\_exp1} on line \ref{line:C}.  
     Similarly as before, $C$ is distributed $Bernoulli(exp(-(x - \lfloor x \rfloor)))$. 
  
     \begin{align*} 
