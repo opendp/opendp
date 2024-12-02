@@ -229,7 +229,7 @@ def test_filter(measure):
 
     lf_domain, lf = example_lf(margin=[], public_info="keys", max_partition_length=50)
 
-    plan = lf.filter(pl.col("B") < 2).select(pl.len().dp.noise(scale=0.0))
+    plan = lf.filter(pl.col("B") < 2).select(dp.len(scale=0.0))
 
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), measure, plan
@@ -240,10 +240,8 @@ def test_filter(measure):
 
 
 def test_onceframe_multi_collect():
-    pl = pytest.importorskip("polars")
-
     lf_domain, lf = example_lf()
-    plan = seed(lf.collect_schema()).select(pl.len().dp.noise(0.0))
+    plan = seed(lf.collect_schema()).select(dp.len(0.0))
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan
     )
@@ -258,7 +256,7 @@ def test_onceframe_lazy():
     pl = pytest.importorskip("polars")
 
     lf_domain, lf = example_lf()
-    plan = seed(lf.collect_schema()).select(pl.len().dp.noise(0.0))
+    plan = seed(lf.collect_schema()).select(dp.len(0.0))
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan
     )
