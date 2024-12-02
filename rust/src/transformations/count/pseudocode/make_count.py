@@ -3,10 +3,10 @@ def make_count(
     input_domain: VectorDomain[AtomDomain[TIA]],
     input_metric: SymmetricDistance
 ):
-    output_domain = AtomDomain(TO) # |\label{line:output-domain}|
+    output_domain = AtomDomain.default(TO) # |\label{line:output-domain}|
 
-    def function(data: Vec[TIA]) -> TO: # |\label{line:TO-output}|
-        size = len(data) # |\label{line:size}|
+    def function(arg: Vec[TIA]) -> TO: # |\label{line:TO-output}|
+        size = arg.len() # |\label{line:size}|
         try: # |\label{line:try-catch}|
             return TO.exact_int_cast(size) # |\label{line:exact-int-cast}|
         except FailedCast:
