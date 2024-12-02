@@ -73,48 +73,39 @@ fn test_make_expr_strptime() -> Fallible<()> {
 }
 
 #[test]
-fn test_strptime_datetime() -> Fallible<()> {
+fn test_strptime_datetime_edge() -> Fallible<()> {
+    // this is the boundary between an acceptable and unacceptable datetime in milliseconds
     let lf = df!("datetime" => &[
         "+262142-01-01T00:00:00Z",
         "+262143-01-01T00:00:00Z",
-        "+262144-01-01T00:00:00Z",
     ])?
     .lazy()
-    .with_column(col("datetime").str().strptime(
-        DataType::Datetime(TimeUnit::Milliseconds, None),
-        StrptimeOptions {
-            format: Some("%Y-%m-%dT%H:%M:%SZ".to_string()),
-            strict: false,
-            exact: true,
-            cache: true,
-        },
-        lit("null"),
-    ));
+    .with_column(
+        col("datetime")
+            .str()
+            .strptime(
+                DataType::Datetime(TimeUnit::Milliseconds, None),
+                StrptimeOptions {
+                    format: Some("%Y-%m-%dT%H:%M:%SZ".to_string()),
+                    strict: false,
+                    exact: true,
+                    cache: true,
+                },
+                lit("null"),
+            )
+            .is_null(),
+    );
 
-    println!("{:?}", lf.collect());
+    assert_eq!(lf.collect()?, df!["datetime" => [false, true]]?);
 
     Ok(())
 }
 
 #[test]
-fn test_strptime_time() -> Fallible<()> {
-    let lf = df!("t" => &["+262142-01-01T01:02:03.232345Z"])?
-        .lazy()
-        .with_column(col("t").str().strptime(
-            DataType::Time,
-            StrptimeOptions {
-                format: Some("%Y-%m-%dT%H:%M:%S.fZ".to_string()),
-                strict: false,
-                exact: true,
-                cache: true,
-            },
-            lit("null"),
-        ));
-
-    let expected = DataFrame::new(vec![Series::new("t", vec![None::<NaiveTime>])])?;
-    assert_eq!(lf.collect()?, expected);
-
-    let lf = df!("t" => &["+262142-01-01T01:02:03Z"])?
+fn test_strptime_time_ignore_bad_date() -> Fallible<()> {
+    // check that invalid dates that could overflow/panic are ignored
+    //                     nano overflow        ,  milli overflow
+    let lf = df!("t" => &["2300-01-01T00:00:00Z", "+262142-01-01T01:02:03Z"])?
         .lazy()
         .with_column(col("t").str().strptime(
             DataType::Time,
@@ -127,8 +118,11 @@ fn test_strptime_time() -> Fallible<()> {
             lit("null"),
         ));
 
-    let series = Series::new("t", vec![NaiveTime::from_str("01:02:03").unwrap()]);
-    let expected = DataFrame::new(vec![series])?;
+    let expected_data = vec!["00:00:00", "01:02:03"]
+        .into_iter()
+        .map(|s| NaiveTime::from_str(s).unwrap())
+        .collect::<Vec<_>>();
+    let expected = df!["t" => expected_data]?;
     assert_eq!(lf.collect()?, expected);
 
     Ok(())
