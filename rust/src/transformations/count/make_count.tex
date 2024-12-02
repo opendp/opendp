@@ -23,7 +23,7 @@ the cast saturates at the maximum value of type \texttt{TO}.
 \begin{itemize} 
     \item Generic \texttt{TIA} (atomic input type) is a type with trait \rustdoc{traits/trait}{Primitive}. 
     \item Generic \texttt{TO} (output type) is a type with trait \rustdoc{traits/trait}{Number}. 
-    \item Argument \texttt{input\_domain} is of type \texttt{VectorDomain<AtomDomain<TIA>>}. 
+    \item Argument \texttt{input\_domain} is of type \texttt{VectorDomain<AtomDomain<TIA>{}>}. 
     \item Argument \texttt{input\_metric} is of type \texttt{SymmetricDistance}. 
 \end{itemize} 
  
@@ -54,16 +54,16 @@ Before proceeding with proving the validity of the stability map, we provide a c
 \end{lemma} 
  
 \begin{proof} 
-    By \rustdoc{domains/trait}{CollectionDomain}, we know \texttt{size} on line \ref{line:size} is of type \texttt{usize},  
-    so it is non-negative and integral. 
-    Therefore, by the definition of \texttt{ExactIntCast},  
+    As \texttt{arg} has type \texttt{Vec<TIA>}, it supports the Rust standard library function \texttt{len}
+    that returns the number of elements in the \texttt{arg} as type \texttt{usize} on line \ref{line:size}.
+    By the definition of \texttt{ExactIntCast},  
     the invocation of \texttt{TO.exact\_int\_cast} on line \ref{line:exact-int-cast} can only fail if the argument is greater than \texttt{TO.MAX\_CONSECUTIVE}. 
     In this case, the value is replaced with \texttt{TO.MAX\_CONSECUTIVE}. 
-    Therefore, $\function(x) = min(\texttt{len(x)}, c)$, where $c = \texttt{TO.MAX\_CONSECUTIVE}$. 
+    Therefore, $\function(x) = \min(\texttt{len(x)}, c)$, where $c = \texttt{TO.MAX\_CONSECUTIVE}$. 
     We use this equality to prove the lemma: 
  
     \begin{align*} 
-        |\function(x) - \function(x')| &= |min(\texttt{len(x)}, c) - min(\texttt{len(x')}, c)| \\ 
+        |\function(x) - \function(x')| &= |\min(\texttt{len(x)}, c) - \min(\texttt{len(x')}, c)| \\ 
         &\leq |\texttt{len(x)} - \texttt{len(x')}| &&\text{since clamping is stable} \\ 
     \end{align*} 
 \end{proof} 
