@@ -404,6 +404,9 @@ class Context(object):
 
         if margins:
             for by, margin in margins.items():
+                if not isinstance(by, tuple):
+                    msg = by if isinstance(by, str) else "your-column"
+                    raise ValueError(f"Margin keys must be tuples. For single-valued tuples include a trailing comma, ie: `('{msg}',)`")
                 domain = with_margin(domain, by=list(by), **asdict(margin))
 
         accountant, d_mids = _sequential_composition_by_weights(
