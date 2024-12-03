@@ -24,7 +24,7 @@ use crate::core::{FfiError, FfiResult, FfiSlice, Function};
 use crate::data::Column;
 use crate::domains::BitVector;
 use crate::error::Fallible;
-use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, Downcast};
+use crate::ffi::any::{AnyFunction, AnyMeasurement, AnyObject, AnyQueryable, Downcast};
 use crate::ffi::util::{self, into_c_char_p, AnyDomainPtr, ExtrinsicObject};
 use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents};
 use crate::measures::PrivacyProfile;
@@ -158,6 +158,16 @@ pub extern "C" fn opendp_data__slice_as_object(
         let v2 = util::as_ref(slice[2] as *const T).ok_or_else(new_err)?.clone();
         Ok(AnyObject::new((v0, v1, v2)))
     }
+
+    fn raw_to_function<TI: 'static + Clone, TO>(obj: &FfiSlice) -> Fallible<AnyObject> {
+        let Some(function) = util::as_ref(obj.ptr as *const AnyFunction).cloned() else {
+            return fallible!(FFI, "Function must not be null pointer");
+        };
+        Ok(AnyObject::new(Function::new_fallible(move |x: &TI| {
+            function.eval(&AnyObject::new(x.clone()))?.downcast::<TI>()
+        })))
+    }
+
     fn raw_to_hashmap<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(
         raw: &FfiSlice,
     ) -> Fallible<AnyObject> {
@@ -266,6 +276,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         
         Ok(AnyObject::new((dsl, expr)))
     }
+
     match T_.contents {
         TypeContents::PLAIN("BitVector") => raw_to_bitvector(raw),
         TypeContents::PLAIN("String") => raw_to_string(raw),
@@ -319,8 +330,13 @@ pub extern "C" fn opendp_data__slice_as_object(
                 l => return err!(FFI, "Only tuples of length 2 or 3 are supported, found a length of {}", l).into()
             }
         }
-        TypeContents::GENERIC { name, args } => {
-            if name == "HashMap" {
+        TypeContents::GENERIC { name, ref args } => {
+            if name == "Function" {
+                if T_ != Type::of::<Function<f64, f64>>() {
+                    return err!(FFI, "only Renyi-DP curves of type Function<f64, f64> are supported").into()
+                }
+                raw_to_function::<f64, f64>(raw)
+            } else if name == "HashMap" {
                 if args.len() != 2 {
                     return err!(FFI, "HashMaps should have 2 type arguments, but found {}", args.len()).into();
                 }

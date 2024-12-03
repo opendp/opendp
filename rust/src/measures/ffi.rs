@@ -388,16 +388,16 @@ impl<Q> Measure for TypedMeasure<Q> {
 /// * rejects epsilon values that are less than zero or nan
 /// * returns delta values only within [0, 1]
 #[allow(dead_code)]
-fn new_privacy_profile(curve: CallbackFn) -> Fallible<AnyObject> {
+fn new_privacy_profile(curve: *const CallbackFn) -> Fallible<AnyObject> {
     let _ = curve;
     panic!("this signature only exists for code generation")
 }
 
 #[no_mangle]
 pub extern "C" fn opendp_measures__new_privacy_profile(
-    curve: CallbackFn,
+    curve: *const CallbackFn,
 ) -> FfiResult<*mut AnyObject> {
-    let curve = wrap_func(curve);
+    let curve = wrap_func(try_as_ref!(curve).clone());
     FfiResult::Ok(AnyObject::new_raw(PrivacyProfile::new(
         move |epsilon: f64| curve(&AnyObject::new(epsilon))?.downcast::<f64>(),
     )))

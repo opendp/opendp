@@ -53,16 +53,16 @@ pub extern "C" fn opendp_transformations__make_user_transformation(
     input_metric: *const AnyMetric,
     output_domain: *const AnyDomain,
     output_metric: *const AnyMetric,
-    function: CallbackFn,
-    stability_map: CallbackFn,
+    function: *const CallbackFn,
+    stability_map: *const CallbackFn,
 ) -> FfiResult<*mut AnyTransformation> {
     Transformation::new(
         try_as_ref!(input_domain).clone(),
         try_as_ref!(output_domain).clone(),
-        Function::new_fallible(wrap_func(function)),
+        Function::new_fallible(wrap_func(try_as_ref!(function).clone())),
         try_as_ref!(input_metric).clone(),
         try_as_ref!(output_metric).clone(),
-        StabilityMap::new_fallible(wrap_func(stability_map)),
+        StabilityMap::new_fallible(wrap_func(try_as_ref!(stability_map).clone())),
     )
     .into()
 }

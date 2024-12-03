@@ -223,6 +223,21 @@ class ExtrinsicObjectPtr(ctypes.POINTER(ExtrinsicObject)): # type: ignore[misc]
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
+
+# The output type cannot be an `ctypes.POINTER(FfiResult)` due to:
+#   https://bugs.python.org/issue5710#msg85731
+#                                 (output         , input       )
+CallbackFnValue = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr)
+
+class CallbackFn(ctypes.Structure):
+    _fields_ = [
+        ("callback", CallbackFnValue),
+        ("lifeline", ExtrinsicObject)
+    ]
+
+class CallbackFnPtr(ctypes.POINTER(CallbackFn)): # type: ignore[misc]
+    _type_ = CallbackFn
+
 # def _str_to_c_char_p(s: Optional[str]) -> Optional[bytes]:
 #     return s and s.encode("utf-8")
 def _c_char_p_to_str(s: Optional[bytes]) -> Optional[str]:

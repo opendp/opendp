@@ -78,7 +78,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
     if isinstance(value, c_type):
         return value
 
-    if c_type == CallbackFn:
+    if c_type == CallbackFnPtr:
         return _wrap_py_func(value, type_name)
     
     if c_type == TransitionFn:
@@ -286,6 +286,9 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
 
         if type_name.origin == "HashMap":
             return _hashmap_to_slice(value, type_name)
+        
+        if type_name.origin == "Function":
+            return _function_to_slice(value, type_name)
 
         if type_name.origin == "Tuple":
             return _tuple_to_slice(value, type_name)
@@ -517,10 +520,20 @@ def _hashmap_to_slice(val: dict[Any, Any], type_name: RuntimeType) -> FfiSlicePt
     ffislice.depends_on(keys, vals)
     return ffislice
 
+
 def _slice_to_function(raw: FfiSlicePtr) -> Function:
+    # for ε(α)-RDP curves
     function = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyFunction)).contents
     # put the contents behind a new, python pointer
     return ctypes.cast(ctypes.pointer(function), Function)
+
+
+def _function_to_slice(raw: Function, type_name: RuntimeType) -> FfiSlicePtr:
+    if not isinstance(raw, Function):
+        from opendp.core import new_function
+        raw = new_function(raw, TO=type_name.args[1])
+    return _wrap_in_slice(raw, 1)
+
 
 def _slice_to_hashmap(raw: FfiSlicePtr) -> dict[Any, Any]:
     slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyObjectPtr))
@@ -638,11 +651,6 @@ def _wrap_in_slice(ptr, len_: int) -> FfiSlicePtr:
     return FfiSlicePtr(FfiSlice(ctypes.cast(ptr, ctypes.c_void_p), len_))
 
 
-# The output type cannot be an `ctypes.POINTER(FfiResult)` due to:
-#   https://bugs.python.org/issue5710#msg85731
-#                            (output         , input       )
-CallbackFn = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr)
-
 def _wrap_py_func(func, TO):
     from opendp._convert import c_to_py, py_to_c
 
@@ -675,7 +683,10 @@ def _wrap_py_func(func, TO):
                 ctypes.c_char_p(traceback.format_exc().encode()),
             )
 
-    return CallbackFn(wrapper_func)
+    c_wrapper_func = CallbackFnValue(wrapper_func)
+    lifeline = ExtrinsicObject(ctypes.py_object(c_wrapper_func), c_counter)
+
+    return ctypes.pointer(CallbackFn(c_wrapper_func, lifeline))
 
 
 # The output type cannot be an `ctypes.POINTER(FfiResult)` due to:

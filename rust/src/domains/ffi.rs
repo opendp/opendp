@@ -470,14 +470,15 @@ impl Domain for ExtrinsicDomain {
 #[no_mangle]
 pub extern "C" fn opendp_domains__user_domain(
     identifier: *mut c_char,
-    member: CallbackFn,
+    member: *const CallbackFn,
     descriptor: *mut ExtrinsicObject,
 ) -> FfiResult<*mut AnyDomain> {
     let identifier = try_!(to_str(identifier)).to_string();
     let descriptor = try_as_ref!(descriptor).clone();
     let element = ExtrinsicElement::new(identifier, descriptor);
+    let member = try_as_ref!(member).clone();
     let member = Function::new_fallible(move |arg: &ExtrinsicObject| -> Fallible<bool> {
-        let c_res = member(AnyObject::new_raw(arg.clone()));
+        let c_res = (member.callback)(AnyObject::new_raw(arg.clone()));
         Fallible::from(util::into_owned(c_res)?)?.downcast::<bool>()
     });
 

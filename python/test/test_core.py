@@ -251,6 +251,11 @@ def test_user_domain():
 
 def test_extrinsic_free():
     space = dp.user_domain("anything", lambda _: True), dp.symmetric_distance()
+    query = space >> dp.m.then_user_measurement(
+        dp.max_divergence(),
+        lambda x: x,
+        lambda _: 0.0,
+    )
 
     sc_meas = space >> dp.c.then_sequential_composition(
         dp.max_divergence(),
@@ -262,12 +267,6 @@ def test_extrinsic_free():
     qbl = sc_meas([])
     # at this point []'s refcount is zero, but has not been freed yet, because the gc has not run
     # however, a pointer to [] is stored inside qbl
-
-    query = space >> dp.m.then_user_measurement(
-        dp.max_divergence(),
-        lambda x: x,
-        lambda _: 0.0,
-    )
 
     import gc
 
@@ -328,4 +327,8 @@ def test_pointer_classes_dont_iter():
     # We override __iter__ so as to make this infinite loop/lock impossible to accidentally trigger
     with pytest.raises(ValueError):
         [*dp.atom_domain(T=bool)]
-    
+
+
+def test_erfc():
+    from opendp._data import erfc
+    assert erfc(0.5) == 0.4795001222363462
