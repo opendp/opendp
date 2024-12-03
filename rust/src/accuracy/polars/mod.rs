@@ -105,10 +105,13 @@ fn summarize_logical_plan(logical_plan: &DslPlan, alpha: Option<f64>) -> Fallibl
     }) = match_group_by(logical_plan.clone())?
     {
         let threshold = if let Some(KeySanitizer::Filter(predicate)) = key_sanitizer {
-            Some(
-                is_threshold_predicate(predicate.clone())
-                    .ok_or_else(|| err!(FailedFunction, "predicate is not a valid filter"))?,
-            )
+            Some(is_threshold_predicate(predicate.clone()).ok_or_else(|| {
+                err!(
+                    FailedFunction,
+                    "predicate is not a valid filter: {}",
+                    predicate
+                )
+            })?)
         } else {
             None
         };

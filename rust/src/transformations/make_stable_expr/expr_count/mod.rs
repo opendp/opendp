@@ -6,8 +6,9 @@ use crate::error::*;
 use crate::metrics::{IntDistance, LpDistance, PartitionDistance};
 use crate::traits::{InfMul, InfSqrt, ProductOrd};
 use crate::transformations::traits::UnboundedMetric;
-use polars::prelude::{lit, AggExpr, FunctionExpr};
+use polars::prelude::{AggExpr, FunctionExpr};
 use polars_plan::dsl::Expr;
+use polars_plan::plans::typed_lit;
 
 use super::StableExpr;
 
@@ -121,7 +122,7 @@ where
                 Strategy::Len => e.len(),
                 Strategy::NUnique => e.n_unique(),
             })
-            .fill_with(lit(0u32)),
+            .fill_with(typed_lit(0u32)),
             middle_metric,
             LpDistance::default(),
             counting_query_stability_map(public_info),

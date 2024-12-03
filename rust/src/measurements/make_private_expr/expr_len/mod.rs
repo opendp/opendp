@@ -9,8 +9,8 @@ use crate::{
 
 use num::Zero;
 use polars::lazy::dsl::Expr;
-use polars::prelude::lit;
 use polars_plan::dsl::len;
+use polars_plan::plans::typed_lit;
 
 #[cfg(test)]
 mod test;
@@ -57,7 +57,7 @@ where
 
     Measurement::new(
         input_domain,
-        Function::from_expr(len()).fill_with(lit(0u32)),
+        Function::from_expr(len()).fill_with(typed_lit(0u32)),
         input_metric,
         output_measure,
         PrivacyMap::new(move |_| MO::Distance::zero()),

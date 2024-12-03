@@ -190,14 +190,21 @@ def test_stable_expr():
 
 def test_private_expr():
     pl = pytest.importorskip("polars")
-    domain = dp.wild_expr_domain(example_series()[0], by=[])
-    with pytest.raises(dp.OpenDPException):
-        dp.m.make_private_expr(
-            domain,
-            dp.symmetric_distance(),
-            dp.max_divergence(),
-            pl.col("A").sum(),
-        )
+    pl_testing = pytest.importorskip("polars.testing")
+    m_len = dp.m.make_private_expr(
+        dp.wild_expr_domain([], by=[]),
+        dp.partition_distance(dp.symmetric_distance()),
+        dp.max_divergence(),
+        dp.len(scale=1.0)
+    )
+
+    e_plan = m_len(pl.LazyFrame(dict()))
+
+    pl_testing.assert_frame_equal(e_plan.plan, pl.LazyFrame(dict()))
+
+    print(e_plan.fill)
+    assert bool(re.match("len().*:noise_plugin()", str(e_plan.expr)))
+    assert bool(re.match("0.*:noise_plugin()", str(e_plan.fill)))
 
 
 def test_private_lazyframe_median():
@@ -678,8 +685,8 @@ def test_pickle_bomb():
     pl.LazyFrame.deserialize(io.BytesIO(ser_lf))
 
     # OpenDP explicitly rejects any pickled data it finds
-    err_msg = "OpenDP does not allow pickled keyword arguments as they may enable remote code execution."
-    with pytest.raises(dp.OpenDPException, match=err_msg):
+    err_msg_re = "OpenDP does not allow pickled keyword arguments as they may enable remote code execution."
+    with pytest.raises(dp.OpenDPException, match=err_msg_re):
         dp.m.make_private_expr(
             dp.wild_expr_domain(example_series()[0], by=[]),
             dp.partition_distance(dp.symmetric_distance()),
@@ -687,7 +694,7 @@ def test_pickle_bomb():
             bomb_expr,
         )
 
-    with pytest.raises(dp.OpenDPException, match=err_msg):
+    with pytest.raises(dp.OpenDPException, match=err_msg_re):
         dp.m.make_private_lazyframe(
             lf_domain,
             dp.symmetric_distance(),
@@ -919,7 +926,7 @@ def test_explicit_grouping_keys_context():
         domain=lf_domain,
     )
 
-    keys = pl.LazyFrame(pl.Series("B", [2, 3, 4, 5, 6], dtype=pl.Int32))
+    keys = pl.DataFrame(pl.Series("B", [2, 3, 4, 5, 6], dtype=pl.Int32))
     query = context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys)
     observed = query.release().collect().sort("B")
     

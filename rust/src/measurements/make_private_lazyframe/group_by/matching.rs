@@ -17,7 +17,7 @@ use super::Fallible;
 pub enum KeySanitizer {
     Filter(Expr),
     Join {
-        labels: Arc<DslPlan>,
+        keys: Arc<DslPlan>,
         how: JoinType,
         left_on: Vec<Expr>,
         right_on: Vec<Expr>,
@@ -54,14 +54,14 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
                 );
             }
             let how = options.as_ref().args.how.clone();
-            let labels = match how {
+            let (keys, keys_on, input_on) = match how {
                 JoinType::Left => {
                     plan = input_right.as_ref().clone();
-                    input_left
+                    (input_left, &left_on, &right_on)
                 }
                 JoinType::Right => {
                     plan = input_left.as_ref().clone();
-                    input_right
+                    (input_right, &right_on, &left_on)
                 }
                 _ => {
                     return fallible!(
@@ -70,8 +70,29 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
                     )
                 }
             };
+
+            let keys_on_columns = match_grouping_columns(keys_on.clone())
+                .map_err(|_| err!(MakeMeasurement, "join on must consist of column exprs"))?;
+            let input_on_columns = match_grouping_columns(input_on.clone())
+                .map_err(|_| err!(MakeMeasurement, "join on must consist of column exprs"))?;
+
+            if input_on_columns.len() != keys_on_columns.len() {
+                return fallible!(
+                    MakeMeasurement,
+                    "left_on and right_on must have same number of join keys"
+                );
+            }
+
+            let label_schema = keys.compute_schema()?;
+            if keys_on_columns != label_schema.iter_names().cloned().collect::<BTreeSet<_>>() {
+                return fallible!(
+                    MakeMeasurement,
+                    "label dataframe columns must match join keys"
+                );
+            }
+
             Some(KeySanitizer::Join {
-                labels,
+                keys,
                 how,
                 left_on,
                 right_on,

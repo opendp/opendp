@@ -13,6 +13,7 @@ use crate::transformations::{
 };
 use num::Zero;
 use polars::prelude::*;
+use polars_plan::plans::{typed_lit, TypedLiteral};
 
 use super::StableExpr;
 
@@ -106,11 +107,11 @@ where
 fn sum_components<TI>(name: PlSmallStr) -> Fallible<(SeriesDomain, Expr)>
 where
     TI: Summand,
-    TI::Sum: Zero,
+    TI::Sum: Zero + TypedLiteral,
 {
     Ok((
         SeriesDomain::new(name, AtomDomain::<TI::Sum>::default()),
-        lit(TI::Sum::zero()),
+        typed_lit(TI::Sum::zero()),
     ))
 }
 

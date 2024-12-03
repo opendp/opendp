@@ -1,4 +1,3 @@
-use std::collections::BTreeSet;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -73,49 +72,9 @@ where
     let by = match_grouping_columns(keys.clone())?;
     let mut margin = middle_domain.get_margin(&by.clone());
 
-    let is_join = if let Some(KeySanitizer::Join {
-        labels,
-        left_on,
-        right_on,
-        ..
-    }) = &key_sanitizer
-    {
-        let left_on = match_grouping_columns(left_on.clone())
-            .map_err(|_| err!(MakeMeasurement, "left_on must consist of column exprs"))?;
-        let right_on = match_grouping_columns(right_on.clone())
-            .map_err(|_| err!(MakeMeasurement, "right_on must consist of column exprs"))?;
-
-        if right_on.len() != left_on.len() {
-            return fallible!(
-                MakeMeasurement,
-                "left_on and right_on must have same number of join keys"
-            );
-        }
-
-        let label_schema = labels.compute_schema()?;
-        if right_on != label_schema.iter_names().cloned().collect::<BTreeSet<_>>() {
-            return fallible!(
-                MakeMeasurement,
-                "label dataframe columns must match join keys"
-            );
-        }
-
-        if right_on != by {
-            return fallible!(
-                MakeMeasurement,
-                "key sanitization requires that label dataframe columns match right_on"
-            );
-        }
-
-        let max_num_partitions = LazyFrame::from(labels.as_ref().clone())
-            .select([len()])
-            .collect()?
-            .column("len")?
-            .u32()?
-            .last()
-            .unwrap();
-
-        margin.max_num_partitions = Some(max_num_partitions);
+    let is_join = if let Some(KeySanitizer::Join { keys, .. }) = key_sanitizer.clone() {
+        let num_keys = LazyFrame::from((*keys).clone()).select([len()]).collect()?;
+        margin.max_num_partitions = Some(num_keys.column("len")?.u32()?.last().unwrap());
 
         true
     } else {
@@ -161,7 +120,7 @@ where
         let (name, noise) = find_len_expr(&dp_exprs, None)?;
         Some((name, noise, threshold_value, true))
     } else {
-        return fallible!(MakeMeasurement, "The key-set of {:?} is private and cannot be released without filtering. Please pass a filtering threshold into make_private_lazyframe.", by);
+        return fallible!(MakeMeasurement, "The key-set of {:?} is private and cannot be released without a filter or join. Please pass a filtering threshold into make_private_lazyframe or conduct a join against a public key-set.", by);
     };
 
     if let Some((name, _, threshold_value, is_present)) = &threshold_info {
@@ -204,7 +163,7 @@ where
                     predicate: predicate.clone(),
                 },
                 Some(KeySanitizer::Join {
-                    labels,
+                    keys: labels,
                     how,
                     left_on,
                     right_on,

@@ -3,8 +3,8 @@ use crate::domains::{AtomDomain, Context, ExprDomain, Margin, SeriesDomain, Wild
 use crate::error::*;
 use crate::metrics::{LpDistance, PartitionDistance};
 use crate::transformations::traits::UnboundedMetric;
-use polars::prelude::lit;
 use polars_plan::dsl::{len, Expr};
+use polars_plan::plans::typed_lit;
 
 use super::expr_count::counting_query_stability_map;
 
@@ -57,7 +57,7 @@ where
     Transformation::new(
         input_domain,
         output_domain,
-        Function::from_expr(len()).fill_with(lit(0u32)),
+        Function::from_expr(len()).fill_with(typed_lit(0u32)),
         input_metric,
         LpDistance::default(),
         counting_query_stability_map(margin.public_info),

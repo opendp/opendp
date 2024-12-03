@@ -14,11 +14,12 @@ use polars::datatypes::{
     StaticArray, UInt32Type, UInt64Type,
 };
 use polars::lazy::dsl::Expr;
-use polars::prelude::{lit, DataType::*};
+use polars::prelude::DataType::*;
 
 mod plugin_dq_score;
 pub(crate) use plugin_dq_score::{DiscreteQuantileScorePlugin, DiscreteQuantileScoreShim};
 use polars::series::Series;
+use polars_plan::plans::typed_lit;
 
 #[cfg(test)]
 pub mod test;
@@ -95,7 +96,7 @@ where
         score_candidates_constants::<u64>(Some(mpl as u64), alpha)?;
 
     let len = candidates.len() as i64;
-    let fill_value = lit(0).repeat_by(len).reshape(&[-1, len]);
+    let fill_value = typed_lit(0u64).repeat_by(len).reshape(&[-1, len]);
 
     t_prior
         >> Transformation::<_, _, PartitionDistance<MI>, Parallel<LInfDistance<_>>>::new(
