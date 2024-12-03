@@ -17,7 +17,9 @@ use polars::datatypes::{
     DataType, Field, Float32Type, Float64Type, Int16Type, Int32Type, Int64Type, Int8Type,
     PolarsDataType, UInt32Type, UInt64Type,
 };
-use polars::error::{polars_bail, polars_err};
+use polars::error::polars_bail;
+#[cfg(feature = "ffi")]
+use polars::error::polars_err;
 use polars::error::{PolarsError, PolarsResult};
 use polars::lazy::dsl::Expr;
 use polars::series::{IntoSeries, Series};
@@ -25,7 +27,6 @@ use polars_arrow::array::PrimitiveArray;
 use polars_arrow::types::NativeType;
 use polars_plan::dsl::{GetOutput, SeriesUdf};
 use polars_plan::prelude::{ApplyOptions, FunctionOptions};
-use pyo3_polars::derive::polars_expr;
 use serde::de::IntoDeserializer;
 use serde::{Deserialize, Serialize};
 
@@ -303,7 +304,7 @@ fn report_noisy_max_gumbel_udf(
 }
 
 #[cfg(feature = "ffi")]
-#[polars_expr(output_type=Null)]
+#[pyo3_polars::derive::polars_expr(output_type=Null)]
 fn report_noisy_max(_: &[Series]) -> PolarsResult<Series> {
     polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")
 }
@@ -343,7 +344,7 @@ pub(crate) fn report_noisy_max_plugin_type_udf(input_fields: &[Field]) -> Polars
 
 // generate the FFI plugin for the report_noisy_max_gumbel expression
 #[cfg(feature = "ffi")]
-#[polars_expr(output_type_func=report_noisy_max_plugin_type_udf)]
+#[pyo3_polars::derive::polars_expr(output_type_func=report_noisy_max_plugin_type_udf)]
 fn report_noisy_max_plugin(
     inputs: &[Series],
     kwargs: ReportNoisyMaxPlugin,

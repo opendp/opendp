@@ -7,13 +7,15 @@ use crate::{
 };
 
 use polars::datatypes::{DataType, Field};
+use polars::error::polars_bail;
+#[cfg(feature = "ffi")]
+use polars::error::polars_err;
 use polars::error::PolarsResult;
-use polars::error::{polars_bail, polars_err};
 use polars::series::Series;
 use polars_plan::dsl::{Expr, GetOutput, SeriesUdf};
 use polars_plan::prelude::{ApplyOptions, FunctionOptions};
-use pyo3_polars::derive::polars_expr;
 #[cfg(feature = "ffi")]
+use pyo3_polars::derive::polars_expr;
 use serde::{Deserialize, Serialize};
 
 use super::PrivateExpr;
@@ -110,8 +112,7 @@ impl SeriesUdf for IndexCandidatesShim {
     }
 }
 
-#[derive(Clone)]
-#[cfg_attr(feature = "ffi", derive(Deserialize, Serialize))]
+#[derive(Clone, Deserialize, Serialize)]
 pub(crate) struct IndexCandidatesPlugin {
     pub candidates: Series,
 }
@@ -175,6 +176,7 @@ fn index_candidates(_: &[Series]) -> PolarsResult<Series> {
     polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")
 }
 
+#[cfg(feature = "ffi")]
 /// Helper function for the Polars plan optimizer to determine the output type of the expression.
 ///
 /// Ensures that the input field is numeric.

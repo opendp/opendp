@@ -149,13 +149,8 @@ where
         middle_metric,
         output_measure.clone(),
         PrivacyMap::new_fallible(move |&d_in| {
-            let mip = margin.max_influenced_partitions.unwrap_or(d_in);
-            let mnp = margin.max_num_partitions.unwrap_or(d_in);
-            let mpc = margin.max_partition_contributions.unwrap_or(d_in);
-            let mpl = margin.max_partition_length.unwrap_or(d_in);
-
-            let l0 = mip.min(mnp).min(d_in);
-            let li = mpc.min(mpl).min(d_in);
+            let l0 = margin.l_0(d_in);
+            let li = margin.l_inf(d_in);
             let l1 = l0.inf_mul(&li)?.min(d_in);
 
             let mut d_out = privacy_map.eval(&(l0, l1, li))?;

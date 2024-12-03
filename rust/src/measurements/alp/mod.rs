@@ -12,10 +12,13 @@ use crate::domains::{AtomDomain, MapDomain};
 use crate::error::Fallible;
 use crate::interactive::Queryable;
 use crate::measures::MaxDivergence;
-use crate::metrics::L1Distance;
+use crate::metrics::{AbsoluteDistance, PartitionDistance};
 use crate::traits::samplers::{fill_bytes, sample_bernoulli_float};
-use crate::traits::{Hashable, InfCast, Integer, ToFloatRounded};
+use crate::traits::{Hashable, InfCast, InfMul, Integer, ToFloatRounded};
 use std::collections::hash_map::DefaultHasher;
+
+#[cfg(test)]
+mod test;
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -215,17 +218,24 @@ fn compute_estimate<K>(state: &AlpState<K>, key: &K) -> f64 {
 /// The evaluation time of post-processing is O(h.len()).
 pub fn make_alp_state_with_hashers<K, CI>(
     input_domain: SparseDomain<K, CI>,
-    input_metric: L1Distance<CI>,
+    input_metric: PartitionDistance<AbsoluteDistance<CI>>,
     scale: f64,
     alpha: f64,
     projection_size: usize,
     hashers: Vec<HashFunction<K>>,
-) -> Fallible<Measurement<SparseDomain<K, CI>, AlpState<K>, L1Distance<CI>, MaxDivergence>>
+) -> Fallible<
+    Measurement<
+        SparseDomain<K, CI>,
+        AlpState<K>,
+        PartitionDistance<AbsoluteDistance<CI>>,
+        MaxDivergence,
+    >,
+>
 where
     K: 'static + Hashable,
     CI: 'static + Integer + ToPrimitive,
     f64: InfCast<CI>,
-    (SparseDomain<K, CI>, L1Distance<CI>): MetricSpace,
+    (SparseDomain<K, CI>, PartitionDistance<AbsoluteDistance<CI>>): MetricSpace,
 {
     if input_domain.value_domain.nullable() {
         return fallible!(MakeMeasurement, "value domain must be non-nullable");
@@ -260,7 +270,7 @@ where
         }),
         input_metric,
         MaxDivergence::default(),
-        PrivacyMap::new_from_constant(scale),
+        PrivacyMap::new_fallible(move |(_l0, l1, _li)| f64::inf_cast(*l1)?.inf_mul(&scale)),
     )
 }
 
@@ -269,18 +279,25 @@ where
 /// See [`make_alp_queryable`] for details.
 pub fn make_alp_state<K, CI>(
     input_domain: SparseDomain<K, CI>,
-    input_metric: L1Distance<CI>,
+    input_metric: PartitionDistance<AbsoluteDistance<CI>>,
     scale: f64,
     total_limit: CI,
     value_limit: Option<CI>,
     size_factor: Option<u32>,
     alpha: Option<u32>,
-) -> Fallible<Measurement<SparseDomain<K, CI>, AlpState<K>, L1Distance<CI>, MaxDivergence>>
+) -> Fallible<
+    Measurement<
+        SparseDomain<K, CI>,
+        AlpState<K>,
+        PartitionDistance<AbsoluteDistance<CI>>,
+        MaxDivergence,
+    >,
+>
 where
     K: 'static + Hashable,
     CI: 'static + Integer + InfCast<f64> + ToPrimitive,
     f64: InfCast<CI> + InfCast<u32>,
-    (SparseDomain<K, CI>, L1Distance<CI>): MetricSpace,
+    (SparseDomain<K, CI>, PartitionDistance<AbsoluteDistance<CI>>): MetricSpace,
 {
     let value_limit: f64 = value_limit
         // if value limit is None, read it from the domain
@@ -368,7 +385,7 @@ where
 /// * `alpha` - Optional parameter (default of 4) for scaling and determining p in randomized response step.
 pub fn make_alp_queryable<K, CI>(
     input_domain: MapDomain<AtomDomain<K>, AtomDomain<CI>>,
-    input_metric: L1Distance<CI>,
+    input_metric: PartitionDistance<AbsoluteDistance<CI>>,
     scale: f64,
     total_limit: CI,
     value_limit: Option<CI>,
@@ -378,7 +395,7 @@ pub fn make_alp_queryable<K, CI>(
     Measurement<
         MapDomain<AtomDomain<K>, AtomDomain<CI>>,
         Queryable<K, f64>,
-        L1Distance<CI>,
+        PartitionDistance<AbsoluteDistance<CI>>,
         MaxDivergence,
     >,
 >
@@ -386,7 +403,10 @@ where
     K: 'static + Hashable,
     CI: 'static + Integer + InfCast<f64> + ToPrimitive,
     f64: InfCast<CI>,
-    (MapDomain<AtomDomain<K>, AtomDomain<CI>>, L1Distance<CI>): MetricSpace,
+    (
+        MapDomain<AtomDomain<K>, AtomDomain<CI>>,
+        PartitionDistance<AbsoluteDistance<CI>>,
+    ): MetricSpace,
 {
     // this constructor is a simple wrapper for make_alp_state that adds a postprocessing step
     make_alp_state(
@@ -399,6 +419,3 @@ where
         alpha,
     )? >> post_alp_state_to_queryable()
 }
-
-#[cfg(test)]
-mod test;
