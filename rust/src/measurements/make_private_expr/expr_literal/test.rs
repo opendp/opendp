@@ -35,10 +35,7 @@ fn test_make_expr_private_lit_groupby() -> Fallible<()> {
         lf_domain.cast_carrier(),
         SymmetricDistance,
         MaxDivergence::default(),
-        lf.clone()
-            .group_by(["chunk_2_bool"])
-            .agg([lit(1)])
-            .sort(["chunk_2_bool"], Default::default()),
+        lf.clone().group_by(["chunk_2_bool"]).agg([lit(1)]),
         None,
         None,
     )?;
