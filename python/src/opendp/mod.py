@@ -504,8 +504,8 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     
     @property
     def descriptor(self) -> Any:
-        from opendp.domains import _user_domain_descriptor
-        return _user_domain_descriptor(self)
+        from opendp.domains import _extrinsic_domain_descriptor
+        return _extrinsic_domain_descriptor(self)
 
     def __repr__(self) -> str:
         from opendp.domains import domain_debug

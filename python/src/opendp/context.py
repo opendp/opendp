@@ -161,7 +161,7 @@ def domain_of(T, infer: bool = False) -> Domain:
     Traceback (most recent call last):
     ...
     opendp.mod.OpenDPException:
-      FFI("VectorDomain constructor only supports AtomDomain or UserDomain inner domains")
+      FFI("Inner domain of VectorDomain must be AtomDomain or ExtrinsicDomain (created via user_domain)")
 
     Alternatively, an example of the data can be provided, but note that passing sensitive data may result in a privacy violation:
 

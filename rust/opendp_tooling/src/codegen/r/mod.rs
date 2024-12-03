@@ -41,7 +41,12 @@ const BLACKLIST: &'static [&'static str] = &[
     "new_queryable",
     "new_privacy_profile",
     "user_domain",
-    "_user_domain_descriptor",
+    "_make_transformation",
+    "_make_measurement",
+    "_extrinsic_domain",
+    "_extrinsic_domain_descriptor",
+    "_extrinsic_distance",
+    "_extrinsic_divergence",
     // polars
     "new_arrow_array",
     "series_domain",
@@ -71,6 +76,7 @@ pub fn generate_bindings(modules: &HashMap<String, Vec<Function>>) -> HashMap<Pa
 
     let r_bindings = modules
         .into_iter()
+        .filter(|(name, _)| name.as_str() != "internal")
         .map(|(module_name, module)| {
             (
                 PathBuf::from(format!("R/{}.R", module_name)),
@@ -81,6 +87,7 @@ pub fn generate_bindings(modules: &HashMap<String, Vec<Function>>) -> HashMap<Pa
 
     let mut c_bindings = modules
         .into_iter()
+        .filter(|(name, _)| name.as_str() != "internal")
         .map(|(module_name, module)| {
             (
                 PathBuf::from(format!("src/{}.c", module_name)),

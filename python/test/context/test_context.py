@@ -1,7 +1,7 @@
 import pytest
 import logging
 import opendp.prelude as dp
-
+from opendp._internal import _make_measurement
 
 
 def test_unit_of():
@@ -254,7 +254,7 @@ def test_approx_to_approx_zCDP():
 
     dom, met = context_azcdp.accountant.input_space
     # the important test is that the following is a valid query for an approx-zCDP compositor
-    release = context_azcdp(dp.m.make_user_measurement(
+    release = context_azcdp(_make_measurement(
         dom, met,
         azcdp_measure,
         lambda x: x,

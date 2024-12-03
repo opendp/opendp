@@ -1,6 +1,7 @@
 from opendp.extras._utilities import to_then, with_privacy
 from opendp.mod import Domain, Metric, Transformation
 from opendp._lib import import_optional_dependency
+from opendp._internal import _make_transformation
 
 # planning to make this public, but may make more API changes
 
@@ -32,7 +33,7 @@ def make_eigenvalues(input_domain: Domain, input_metric: Metric) -> Transformati
         #     will not be offset by the removal of another row shifted by the origin
         raise ValueError("expected sized data")
 
-    return dp.t.make_user_transformation(
+    return _make_transformation(
         input_domain,
         input_metric,
         dp.vector_domain(dp.atom_domain(T=input_desc.T)),

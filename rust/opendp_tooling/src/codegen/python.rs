@@ -21,10 +21,10 @@ pub fn generate_bindings(modules: &HashMap<String, Vec<Function>>) -> HashMap<Pa
             (
                 PathBuf::from(format!(
                     "{}.py",
-                    if module_name == "data" {
-                        "_data"
+                    if ["data", "internal"].contains(&module_name.as_str()) {
+                        format!("_{module_name}")
                     } else {
-                        module_name.as_str()
+                        module_name.clone()
                     }
                 )),
                 generate_module(module_name, module, &typemap, &hierarchy),
@@ -61,7 +61,7 @@ fn generate_module(
         .join("\n");
 
     // the comb module needs access to core functions for type introspection on measurements/transformations
-    let constructor_mods = ["combinators", "measurements", "transformations"];
+    let constructor_mods = ["combinators", "measurements", "transformations", "internal"];
 
     let extra_imports = if constructor_mods.contains(&module_name) {
         r#"from opendp.core import *
@@ -131,6 +131,7 @@ We suggest importing under the conventional name ``dp``:
             "{}{}",
             "The ``transformations`` module provides functions that deterministicly transform datasets.",
             special_boilerplate("transformations".to_string())),
+        "internal" => "The ``internal`` module provides functions that can be used to construct library primitives without the use of the \"honest-but-curious\" flag.".to_string(),
         _ => "TODO!".to_string()
     };
 

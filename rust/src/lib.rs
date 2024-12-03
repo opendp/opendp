@@ -182,6 +182,8 @@ pub mod data;
 pub mod domains;
 #[cfg(feature = "contrib")]
 pub mod interactive;
+#[cfg(feature = "ffi")]
+pub mod internal;
 pub mod measurements;
 pub mod measures;
 pub mod metrics;

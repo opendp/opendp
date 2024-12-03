@@ -1,6 +1,7 @@
 from opendp.extras._utilities import to_then, with_privacy
 from opendp.mod import Domain, Metric, Transformation
 from opendp._lib import import_optional_dependency
+from opendp._internal import _make_transformation
 
 
 # planning to make this public, but may make more API changes
@@ -33,7 +34,7 @@ def make_np_sum(input_domain: Domain, input_metric: Metric) -> Transformation:
     else:
         stability = lambda d_in: d_in // 2 * 2 * norm
 
-    return dp.t.make_user_transformation(
+    return _make_transformation(
         input_domain,
         input_metric,
         dp.vector_domain(dp.atom_domain(T=input_desc.T)),

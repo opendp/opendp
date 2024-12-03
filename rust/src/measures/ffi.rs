@@ -206,7 +206,7 @@ pub extern "C" fn opendp_measures__approximate(
                 MaxDivergence,
                 SmoothedMaxDivergence,
                 ZeroConcentratedDivergence,
-                UserDivergence
+                ExtrinsicDivergence
             ]
         )],
         (measure)
@@ -262,23 +262,23 @@ pub extern "C" fn opendp_measures__renyi_divergence() -> FfiResult<*mut AnyMeasu
 }
 
 #[derive(Clone, Default)]
-pub struct UserDivergence {
+pub struct ExtrinsicDivergence {
     pub descriptor: String,
 }
 
-impl std::fmt::Debug for UserDivergence {
+impl std::fmt::Debug for ExtrinsicDivergence {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "UserDivergence({:?})", self.descriptor)
     }
 }
 
-impl PartialEq for UserDivergence {
+impl PartialEq for ExtrinsicDivergence {
     fn eq(&self, other: &Self) -> bool {
         self.descriptor == other.descriptor
     }
 }
 
-impl Measure for UserDivergence {
+impl Measure for ExtrinsicDivergence {
     type Distance = ExtrinsicObject;
 }
 
@@ -314,7 +314,7 @@ pub extern "C" fn opendp_measures__user_divergence(
     descriptor: *mut c_char,
 ) -> FfiResult<*mut AnyMeasure> {
     let descriptor = try_!(to_str(descriptor)).to_string();
-    Ok(AnyMeasure::new(UserDivergence { descriptor })).into()
+    Ok(AnyMeasure::new(ExtrinsicDivergence { descriptor })).into()
 }
 
 pub struct TypedMeasure<Q> {

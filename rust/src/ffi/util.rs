@@ -8,11 +8,11 @@ use std::os::raw::c_char;
 use std::str::Utf8Error;
 
 use crate::core::Function;
-use crate::domains::ffi::UserDomain;
+use crate::domains::ffi::ExtrinsicDomain;
 use crate::domains::{AtomDomain, BitVector, CategoricalDomain, OptionDomain, VectorDomain};
 use crate::error::*;
 use crate::ffi::any::{AnyObject, AnyQueryable};
-use crate::measures::ffi::UserDivergence;
+use crate::measures::ffi::ExtrinsicDivergence;
 use crate::measures::{
     Approximate, MaxDivergence, PrivacyProfile, RenyiDivergence, SmoothedMaxDivergence,
     ZeroConcentratedDivergence,
@@ -346,7 +346,7 @@ lazy_static! {
             type_vec![[OptionDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
             type_vec![[VectorDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
             type_vec![[VectorDomain OptionDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
-            type_vec![UserDomain],
+            type_vec![ExtrinsicDomain],
             type_vec![DataFrameDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>],
             type_vec![ExprDomain, LazyFrameDomain, SeriesDomain],
             type_vec![CategoricalDomain],
@@ -360,8 +360,8 @@ lazy_static! {
             type_vec![L2Distance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
 
             // measures
-            type_vec![MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence, RenyiDivergence, UserDivergence],
-            type_vec![Approximate, <MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence, RenyiDivergence, UserDivergence>],
+            type_vec![MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence, RenyiDivergence, ExtrinsicDivergence],
+            type_vec![Approximate, <MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence, RenyiDivergence, ExtrinsicDivergence>],
 
             // measure distances
             type_vec![PrivacyProfile],
