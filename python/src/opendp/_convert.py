@@ -239,6 +239,9 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
 
         if type_name.origin == "Tuple":
             return _slice_to_tuple(raw, type_name)
+        
+        if type_name.origin == "Option":
+            return _slice_to_option(raw, type_name)
 
     raise UnknownTypeException(type_name)
 
@@ -457,6 +460,17 @@ def _tuple_to_slice(val: tuple[Any, ...], type_name: Union[RuntimeType, str]) ->
         out = _wrap_in_slice(ctypes.pointer(array), 2)
         out.depends_on(lf_slice, expr_slice)
         return out
+    
+    if inner_type_names == ['f64', 'ExtrinsicObject']:
+        score_ptr = ctypes.pointer(ctypes.c_double(val[0]))
+        ext_obj = ctypes.pointer(ExtrinsicObject(ctypes.py_object(val[1]), c_counter))
+
+        cand_ptr = py_to_c(ext_obj, c_type=AnyObjectPtr, type_name="ExtrinsicObject")
+        array = (ctypes.c_void_p * 2)(
+            ctypes.cast(score_ptr, ctypes.c_void_p), 
+            ctypes.cast(cand_ptr, ctypes.c_void_p), 
+        )
+        return _wrap_in_slice(ctypes.pointer(array), 2)
 
     for t in inner_type_names:
         if t not in ATOM_MAP:
@@ -494,9 +508,22 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]
         delta = ctypes.cast(ptr_data[1], ctypes.POINTER(ctypes.c_double))
         return PrivacyProfile(curve), delta.contents.value
     
+    if inner_type_names == ['f64', 'AnyObject']:
+        score = ctypes.cast(ptr_data[0], ctypes.POINTER(ctypes.c_double))
+        candidate_obj = ctypes.cast(ptr_data[1], AnyObjectPtr)
+        candidate = c_to_py(c_to_py(candidate_obj))
+        candidate_obj.__class__ = ctypes.POINTER(AnyObject) # type: ignore[assignment]
+        return score.contents.value, candidate
+    
     # tuple of instances of Python types
     return tuple(ctypes.cast(void_p, ctypes.POINTER(ATOM_MAP[name])).contents.value # type: ignore[index,attr-defined]
                  for void_p, name in zip(ptr_data, inner_type_names))
+
+
+def _slice_to_option(raw: FfiSlicePtr, type_name: RuntimeType) -> Optional[Any]:
+    if raw.contents.len == 0:
+        return None
+    return _slice_to_py(raw, type_name.args[0])
 
 
 def _hashmap_to_slice(val: dict[Any, Any], type_name: RuntimeType) -> FfiSlicePtr:
