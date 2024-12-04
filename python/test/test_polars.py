@@ -159,7 +159,7 @@ def test_private_lazyframe_mean(measure):
         margin=["B"], public_info="lengths", max_partition_length=50, max_num_partitions=10,
     )
 
-    expr = pl.col("A").fill_null(0.0).dp.mean((1.0, 2.0), scale=0.0)
+    expr = pl.col("A").fill_null(0.0).dp.mean((1.0, 2.0), scale=(0.0, 0.0))
     plan = seed(lf.collect_schema()).group_by("B").agg(expr)
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), measure, plan, 1.0
@@ -341,7 +341,7 @@ def test_polars_context():
     (
         context.query()
         .group_by("B")
-        .agg(pl.len().dp.noise(), pl.col("A").fill_null(2).dp.sum((0, 3)))
+        .agg(dp.len(), pl.col("A").fill_null(2).dp.sum((0, 3)))
         .release()
         .collect()
     )
@@ -366,7 +366,7 @@ def test_polars_describe():
     expected = pl.DataFrame(
         {
             "column": ["len", "A", "B"],
-            "aggregate": ["Len", "Sum", "Sum"],
+            "aggregate": ["Frame Length", "Sum", "Sum"],
             "distribution": ["Integer Laplace", "Integer Laplace", "Integer Laplace"],
             # * sensitivity of the count is 1 (adding/removing one row changes the count by at most one), 
             # * sensitivity of each sum is 3 (adding/removing one row with value as big as three...) 
@@ -381,7 +381,7 @@ def test_polars_describe():
     query = (
         context.query()
         .group_by("B")
-        .agg(pl.len().dp.noise(), summer, summer.alias("B"))
+        .agg(dp.len(), summer, summer.alias("B"))
     )
 
     actual = query.summarize()
@@ -414,7 +414,7 @@ def test_polars_accuracy_threshold():
     expected = pl.DataFrame(
         {
             "column": ["len", "A"],
-            "aggregate": ["Len", "Sum"],
+            "aggregate": ["Frame Length", "Sum"],
             "distribution": ["Integer Laplace", "Integer Laplace"],
             "scale": [4.000000000000001, 12.000000000000004],
             "threshold": [65, None]
@@ -425,7 +425,7 @@ def test_polars_accuracy_threshold():
     query = (
         context.query()
         .group_by("B")
-        .agg(pl.len().dp.noise(), pl.col("A").fill_null(2).dp.sum((0, 3)))
+        .agg(dp.len(), pl.col("A").fill_null(2).dp.sum((0, 3)))
     )
 
     actual = query.summarize()
@@ -490,13 +490,13 @@ def test_polars_threshold_epsilon():
     actual = (
         context.query()
         .group_by("A")
-        .agg(pl.len().dp.noise())
+        .agg(dp.len())
         .summarize()
     )
 
     expected = pl.DataFrame({
         "column": ["len"],
-        "aggregate": ["Len"],
+        "aggregate": ["Frame Length"],
         "distribution": ["Integer Laplace"],
         "scale": [2.0]
     })
@@ -509,7 +509,7 @@ def test_polars_threshold_epsilon():
     print(
         context.query()
         .group_by("A")
-        .agg(pl.len().dp.noise())
+        .agg(dp.len())
         .release()
         .collect()
     )
@@ -517,13 +517,13 @@ def test_polars_threshold_epsilon():
     actual = (
         context.query()
         .group_by("B")
-        .agg(pl.len().dp.noise())
+        .agg(dp.len())
         .summarize()
     )
 
     expected = pl.DataFrame({
         "column": ["len"],
-        "aggregate": ["Len"],
+        "aggregate": ["Frame Length"],
         "distribution": ["Integer Laplace"],
         "scale": [2.0],
         "threshold": [33]
@@ -537,7 +537,7 @@ def test_polars_threshold_epsilon():
     print(
         context.query()
         .group_by("B")
-        .agg(pl.len().dp.noise())
+        .agg(dp.len())
         .release()
         .collect()
     )
@@ -562,13 +562,13 @@ def test_polars_threshold_rho():
     query = (
         context.query()
         .group_by("B")
-        .agg(pl.len().dp.noise())
+        .agg(dp.len())
     )
 
     actual = query.summarize()
     expected = pl.DataFrame({
         "column": ["len"],
-        "aggregate": ["Len"],
+        "aggregate": ["Frame Length"],
         "distribution": ["Integer Gaussian"],
         # rho = .5, split over two queries, so rho_0 = 0.25.
         # gaussian formula is rho_0 = (d_in / scale)^2 / 2, now solve for scale:
@@ -716,7 +716,7 @@ def test_cut():
     actual = (
         context.query()
         .group_by("x")
-        .agg(pl.len().dp.noise())
+        .agg(dp.len())
         .release()
         .collect()
         .sort("x")
@@ -800,7 +800,7 @@ def test_categorical_context():
     release = (
         context.query()
         .group_by("B")
-        .agg(pl.len().dp.noise())
+        .agg(dp.len())
         .release()
         .collect()
     )
@@ -852,3 +852,34 @@ def test_sort_usability():
     )
     with pytest.raises(dp.OpenDPException, match="Found sort in query plan."):
         context.query().select(pl.len().dp.noise()).sort(by="A").release()
+
+
+def test_count_queries():
+    pl = pytest.importorskip('polars')
+    pl_testing = pytest.importorskip("polars.testing")
+
+    lf_domain = dp.lazyframe_domain([
+        dp.series_domain("data", dp.atom_domain(T=dp.i64))
+    ])
+
+    from opendp.domains import _lazyframe_from_domain
+    lf = _lazyframe_from_domain(lf_domain)
+
+    # sum of income per region, add noise with scale of 1.0
+    plan = lf.select([
+        pl.col("data").dp.len(scale=0).alias("len"),
+        pl.col("data").dp.count(scale=0).alias("count"),
+        pl.col("data").dp.n_unique(scale=0).alias("n_unique"),
+        pl.col("data").dp.null_count(scale=0).alias("null_count"),
+    ])
+
+    m_counts = dp.m.make_private_lazyframe(lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan)
+
+    release = m_counts(pl.LazyFrame({"data": [1, 1, 1, None]})).collect()
+    expected = pl.DataFrame({
+        "len": [4],
+        "count": [3],
+        "n_unique": [2],
+        "null_count": [1],
+    }).cast({pl.Int64: pl.UInt32})
+    pl_testing.assert_frame_equal(release, expected)
