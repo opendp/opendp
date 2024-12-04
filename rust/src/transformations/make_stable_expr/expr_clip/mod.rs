@@ -77,6 +77,7 @@ where
                     "u8 and 16 are not supported, please use u32 or u64 instead"
                 )
             }
+            Unknown(_) => return fallible!(MakeTransformation, "clip requires input data type to be statically known. Cast your data first: `.cast(dtype)`."),
             dtype => return fallible!(MakeTransformation, "unsupported dtype: {}", dtype),
         }
     };

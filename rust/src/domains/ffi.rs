@@ -14,7 +14,7 @@ use crate::{
 };
 
 #[cfg(feature = "polars")]
-use crate::domains::CategoricalDomain;
+use crate::domains::{CategoricalDomain, UnknownValueDomain};
 
 use super::{BitVectorDomain, Bounds, Null, OptionDomain};
 
@@ -236,6 +236,12 @@ pub extern "C" fn opendp_domains__option_domain(
     #[cfg(feature = "polars")]
     if T == Type::of::<CategoricalDomain>() {
         let element_domain = try_!(element_domain.downcast_ref::<CategoricalDomain>()).clone();
+        return Ok(AnyDomain::new(option_domain(element_domain))).into();
+    }
+
+    #[cfg(feature = "polars")]
+    if T == Type::of::<UnknownValueDomain>() {
+        let element_domain = try_!(element_domain.downcast_ref::<UnknownValueDomain>()).clone();
         return Ok(AnyDomain::new(option_domain(element_domain))).into();
     }
 

@@ -80,6 +80,7 @@ where
         DataType::Int64 => sum_stability_map::<MI, P, i64>(series_domain, input_margin),
         DataType::Float32 => sum_stability_map::<MI, P, f32>(series_domain, input_margin),
         DataType::Float64 => sum_stability_map::<MI, P, f64>(series_domain, input_margin),
+        DataType::Unknown(_) => return fallible!(MakeTransformation, "sum requires input data type to be statically known. Cast your data first: `.cast(dtype)`."),
         _ => fallible!(MakeTransformation, "unsupported data type"),
     }?;
 
