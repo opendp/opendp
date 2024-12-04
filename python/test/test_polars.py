@@ -202,9 +202,8 @@ def test_private_expr():
 
     pl_testing.assert_frame_equal(e_plan.plan, pl.LazyFrame(dict()))
 
-    print(e_plan.fill)
-    assert bool(re.match("len().*:noise_plugin()", str(e_plan.expr)))
-    assert bool(re.match("0.*:noise_plugin()", str(e_plan.fill)))
+    assert re.match("len().*:noise_plugin()", str(e_plan.expr))
+    assert re.match("0.*:noise_plugin()", str(e_plan.fill))
 
 
 def test_private_lazyframe_median():

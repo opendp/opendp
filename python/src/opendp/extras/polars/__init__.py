@@ -896,6 +896,13 @@ try:
             """
             Shorthand to join with an explicit key-set.
             """
+            # Motivation for adding this new API:
+            # 1. Writing a left join is more difficult in the context API: 
+            #   see the complexity of this implementation, where you have to go under the hood. 
+            #   This gives an easier shorthand to write a left join.
+            # 2. Left joins are more likely to be supported by database backends.
+            # 3. Easier to use; with the Polars API the key set needs to be lazy, user must specify they want a right join and the join keys.
+
             if isinstance(keys, _DataFrame):
                 keys = keys.lazy()
             
