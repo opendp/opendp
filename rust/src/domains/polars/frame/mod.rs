@@ -3,6 +3,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::marker::PhantomData;
 
+use opendp_derive::proven;
 use polars::lazy::dsl::{col, len};
 use polars::prelude::*;
 
@@ -229,8 +230,7 @@ impl<F: Frame> FrameDomain<F> {
     }
 
     /// # Proof Definition
-    /// Return margin descriptors about `grouping_columns`
-    /// that can be inferred from `self`.
+    /// Returns a [`Margin`] that describes properties of members of self when grouped by grouping\_columns.
     ///
     /// Best effort is made to derive more restrictive descriptors,
     /// but optimal inference of descriptors is not guaranteed.
@@ -457,8 +457,9 @@ impl Margin {
     }
 }
 
+#[proven]
 /// # Proof Definition
-/// Return a subset of `sets` whose intersection is a superset of `must_cover`.
+/// Return a subset of `sets` whose intersection contains `must_cover`, or None.
 ///
 /// While this algorithm also tries to minimize the number of sets returned,
 /// finding the optimal smallest set of sets is not a requirement to prove correctness of this algorithm.
