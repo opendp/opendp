@@ -3,6 +3,11 @@
 //! The different [`crate::core::Measurement`] implementations in this module are accessed by calling the appropriate constructor function.
 //! Constructors are named in the form `make_xxx()`, where `xxx` indicates what the resulting `Measurement` does.
 
+#[cfg(feature = "contrib")]
+mod argmax;
+#[cfg(feature = "contrib")]
+pub use argmax::*;
+
 #[cfg(all(feature = "contrib"))]
 mod gaussian;
 #[cfg(all(feature = "contrib"))]
@@ -12,11 +17,6 @@ pub use gaussian::*;
 mod geometric;
 #[cfg(feature = "contrib")]
 pub use geometric::*;
-
-#[cfg(feature = "contrib")]
-mod gumbel_max;
-#[cfg(feature = "contrib")]
-pub use gumbel_max::*;
 
 #[cfg(feature = "contrib")]
 mod laplace;
