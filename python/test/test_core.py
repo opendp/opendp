@@ -1,7 +1,7 @@
 import pytest
 
 import opendp.prelude as dp
-from opendp._internal import _extrinsic_domain, _extrinsic_distance, _extrinsic_divergence
+from opendp._internal import _extrinsic_domain, _extrinsic_distance, _extrinsic_divergence, _new_pure_function
 
 
 def test_type_getters():
@@ -205,7 +205,7 @@ def test_new_domain():
 
 
 @pytest.mark.parametrize("new_domain", [dp.user_domain, _extrinsic_domain])
-def test_user_domain(new_domain):
+def test_custom_domain(new_domain):
     from datetime import datetime
 
     def datetime_domain(months):
@@ -281,7 +281,7 @@ def test_extrinsic_free():
 
 
 @pytest.mark.parametrize("new_distance,new_divergence", zip([dp.user_distance, _extrinsic_distance], [dp.user_divergence, _extrinsic_divergence]))
-def test_user_distance(new_distance, new_divergence):
+def test_custom_distance(new_distance, new_divergence):
     from datetime import datetime, timedelta
 
     # create custom transformation
@@ -316,7 +316,6 @@ def test_user_distance(new_distance, new_divergence):
 
 
 def test_pure_function():
-    from opendp._internal import _new_pure_function
     fun = _new_pure_function(lambda x: x + 1, TO="i32")
     assert fun(1) == 2
 
