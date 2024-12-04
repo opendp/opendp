@@ -33,8 +33,8 @@ pub trait OrderedMetric: DatasetMetric<Distance = IntDistance> {
     /// UnorderedMetric denotes the associated metric that is insensitive to row ordering.
     ///
     /// # Proof Definition
-    /// For any choice of dataset x, x' where d(x, x') > 0 wrt OrderedMetric and only differs by the reordering of rows,
-    /// then d(x, x') = 0 wrt UnorderedMetric.
+    /// For any choice of datasets x, x' where d(x, x') > 0 for an OrderedMetric d and only differs by the reordering of rows,
+    /// then d'(x, x') = 0 for a corresponding UnorderedMetric d'.
     type UnorderedMetric: Metric<Distance = Self::Distance>;
 }
 impl OrderedMetric for InsertDeleteDistance {
@@ -52,7 +52,7 @@ pub trait BoundedMetric: DatasetMetric<Distance = IntDistance> {
     /// UnboundedMetric denotes the associated metric that measures edit distance.
     ///
     /// # Proof Definition
-    /// For any choice of dataset x, x' where d(x, x') = 1 wrt BoundedMetric, then d(x, x') = 2 wrt UnboundedMetric.
+    /// For any choice of datasets x, x' where d(x, x') = 1 for a BoundedMetric d, then d'(x, x') = 2 for the corresponding UnboundedMetric d'.
     type UnboundedMetric: Metric<Distance = Self::Distance>;
 }
 impl BoundedMetric for ChangeOneDistance {
@@ -70,7 +70,7 @@ pub trait UnboundedMetric: DatasetMetric<Distance = IntDistance> {
     /// BoundedMetric denotes the associated metric that measures edit distance.
     ///
     /// # Proof Definition
-    /// For any choice of dataset x, x' where d(x, x') = 1 wrt BoundedMetric, then d(x, x') = 2 wrt UnboundedMetric.
+    /// For any choice of datasets x, x' where d(x, x') = 1 for a BoundedMetric d, then d'(x, x') = 2 for a corresponding UnboundedMetric d'.
     type BoundedMetric: Metric<Distance = Self::Distance>;
 }
 impl UnboundedMetric for SymmetricDistance {
