@@ -50,7 +50,7 @@ fn test_make_expr_components() -> Fallible<()> {
     Ok(())
 }
 
-fn test_temporal_op_schema<const L: usize>(df: DataFrame, ops: [TemporalFunction; L]) {
+fn assert_temporal_op_schema<const L: usize>(df: DataFrame, ops: [TemporalFunction; L]) {
     let exprs = ops
         .iter()
         .map(|op| {
@@ -80,7 +80,7 @@ fn test_temporal_op_schema<const L: usize>(df: DataFrame, ops: [TemporalFunction
 #[test]
 fn test_time_op_schema() {
     let time_ops = [Hour, Minute, Second, Millisecond, Microsecond, Nanosecond];
-    test_temporal_op_schema(
+    assert_temporal_op_schema(
         df!("x" => &[NaiveTime::from_str("00:01:02").unwrap()]).unwrap(),
         time_ops,
     );
@@ -107,7 +107,7 @@ fn test_datetime_op_schema() {
         Nanosecond,
     ];
 
-    test_temporal_op_schema(
+    assert_temporal_op_schema(
         df!("x" => &[NaiveDateTime::from_str("2000-01-02T03:04:05").unwrap()]).unwrap(),
         datetime_ops,
     );
@@ -118,7 +118,7 @@ fn test_date_op_schema() {
     let date_ops = [
         Millennium, Century, Year, IsoYear, Quarter, Month, Week, WeekDay, Day, OrdinalDay,
     ];
-    test_temporal_op_schema(
+    assert_temporal_op_schema(
         df!("x" => &[NaiveDate::from_str("2000-01-02").unwrap()]).unwrap(),
         date_ops,
     );
