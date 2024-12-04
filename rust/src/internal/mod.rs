@@ -78,17 +78,17 @@ pub extern "C" fn opendp_internal___make_measurement(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
     output_measure: *const AnyMeasure,
-    function: CallbackFn,
-    privacy_map: CallbackFn,
+    function: *const CallbackFn,
+    privacy_map: *const CallbackFn,
     TO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
     let _TO = TO;
     Measurement::new(
         try_as_ref!(input_domain).clone(),
-        Function::new_fallible(wrap_func(function)),
+        Function::new_fallible(wrap_func(try_as_ref!(function).clone())),
         try_as_ref!(input_metric).clone(),
         try_as_ref!(output_measure).clone(),
-        PrivacyMap::new_fallible(wrap_func(privacy_map)),
+        PrivacyMap::new_fallible(wrap_func(try_as_ref!(privacy_map).clone())),
     )
     .into()
 }
@@ -131,16 +131,16 @@ pub extern "C" fn opendp_internal___make_transformation(
     input_metric: *const AnyMetric,
     output_domain: *const AnyDomain,
     output_metric: *const AnyMetric,
-    function: CallbackFn,
-    stability_map: CallbackFn,
+    function: *const CallbackFn,
+    stability_map: *const CallbackFn,
 ) -> FfiResult<*mut AnyTransformation> {
     Transformation::new(
         try_as_ref!(input_domain).clone(),
         try_as_ref!(output_domain).clone(),
-        Function::new_fallible(wrap_func(function)),
+        Function::new_fallible(wrap_func(try_as_ref!(function).clone())),
         try_as_ref!(input_metric).clone(),
         try_as_ref!(output_metric).clone(),
-        StabilityMap::new_fallible(wrap_func(stability_map)),
+        StabilityMap::new_fallible(wrap_func(try_as_ref!(stability_map).clone())),
     )
     .into()
 }
@@ -167,15 +167,15 @@ pub extern "C" fn opendp_internal___make_transformation(
 #[no_mangle]
 pub extern "C" fn opendp_internal___extrinsic_domain(
     identifier: *mut c_char,
-    member: CallbackFn,
+    member: *const CallbackFn,
     descriptor: *mut ExtrinsicObject,
 ) -> FfiResult<*mut AnyDomain> {
     let identifier = try_!(to_str(identifier)).to_string();
     let descriptor = try_as_ref!(descriptor).clone();
+    let member = wrap_func(try_as_ref!(member).clone());
     let element = ExtrinsicElement::new(identifier, descriptor);
     let member = Function::new_fallible(move |arg: &ExtrinsicObject| -> Fallible<bool> {
-        let c_res = (member.callback)(AnyObject::new_raw(arg.clone()));
-        Fallible::from(util::into_owned(c_res)?)?.downcast::<bool>()
+        member(&AnyObject::new(arg.clone()))?.downcast::<bool>()
     });
 
     Ok(AnyDomain::new(ExtrinsicDomain { element, member })).into()
@@ -245,9 +245,11 @@ fn _new_pure_function<TO>(function: CallbackFn) -> Fallible<AnyFunction> {
 
 #[no_mangle]
 pub extern "C" fn opendp_internal___new_pure_function(
-    function: CallbackFn,
+    function: *const CallbackFn,
     TO: *const c_char,
 ) -> FfiResult<*mut AnyFunction> {
     let _TO = TO;
-    FfiResult::Ok(util::into_raw(Function::new_fallible(wrap_func(function))))
+    FfiResult::Ok(util::into_raw(Function::new_fallible(wrap_func(
+        try_as_ref!(function).clone(),
+    ))))
 }
