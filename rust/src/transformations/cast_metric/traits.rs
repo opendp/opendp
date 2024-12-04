@@ -14,8 +14,8 @@ pub trait UnorderedMetric: DatasetMetric<Distance = IntDistance> {
     /// OrderedMetric denotes the associated metric that is sensitive to row ordering.
     ///
     /// # Proof Definition
-    /// For any choice of dataset x, x' where d(x, x') > 0 wrt OrderedMetric and only differs by the reordering of rows,
-    /// then d(x, x') = 0 wrt UnorderedMetric.
+    /// For any choice of datasets x and x' where d(x, x') > 0 for an OrderedMetric d, and x and x' only differ by the reordering of rows,
+    /// then d'(x, x') = 0 for a corresponding UnorderedMetric d'.
     type OrderedMetric: Metric<Distance = Self::Distance>;
 }
 impl UnorderedMetric for SymmetricDistance {
@@ -25,7 +25,7 @@ impl UnorderedMetric for ChangeOneDistance {
     type OrderedMetric = HammingDistance;
 }
 
-/// UnorderedMetric is implemented for metrics that compute the distance between datasets in a way that is sensitive to row ordering.
+/// OrderedMetric is implemented for metrics that compute the distance between datasets in a way that is sensitive to row ordering.
 ///
 /// # Proof Definition
 /// For any choice of x and x' where x' only differs by the reordering of rows, then $d(x, x') > 0$.
