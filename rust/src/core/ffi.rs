@@ -673,7 +673,6 @@ pub extern "C" fn opendp_core__measurement_output_distance_type(
 }
 
 #[bootstrap(
-    name = "new_function",
     features("contrib", "honest-but-curious"),
     arguments(function(rust_type = "$pass_through(TO)")),
     dependencies("c_function")
