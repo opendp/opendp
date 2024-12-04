@@ -67,78 +67,71 @@ where
         return fallible!(MakeMeasurement, "expected group by");
     };
 
+    // 1: establish stability of `group_by`
     let t_prior = input.clone().make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
-    // create a transformation for each expression
-    let expr_domain = WildExprDomain {
-        columns: middle_domain.series_domains.clone(),
-        context: Context::RowByRow,
-    };
-    let t_group_by = group_by
-        .iter()
-        .map(|expr| {
-            expr.clone()
-                .make_stable(expr_domain.clone(), L0PInfDistance(middle_metric.0.clone()))
-        })
-        .collect::<Fallible<Vec<_>>>()?;
+    for expr in &group_by {
+        // grouping keys must be stable
+        let t_group_by = expr.clone().make_stable(
+            WildExprDomain {
+                columns: middle_domain.series_domains.clone(),
+                context: Context::RowByRow,
+            },
+            L0PInfDistance(middle_metric.0.clone()),
+        )?;
 
-    t_group_by.iter().try_for_each(|t_group_by| {
         let series_domain = &t_group_by.output_domain.column;
-        let Ok(domain) = series_domain.element_domain::<CategoricalDomain>() else {
-            return Ok(())
+        if let Ok(domain) = series_domain.element_domain::<CategoricalDomain>() {
+            if domain.categories().is_none() {
+                return fallible!(
+                    MakeMeasurement,
+                    "Categories are data-dependent, which may reveal sensitive record ordering. Cast {} to string before grouping.",
+                    series_domain.name
+                );
+            }
         };
-        if domain.categories().is_none() {
-            return fallible!(
-                MakeMeasurement,
-                "Categories are data-dependent, which may reveal sensitive record ordering. Cast {} to string before grouping.", 
-                series_domain.name
-            );
-        }
-        Ok(())
-    })?;
-    let group_by_id = group_by.iter().cloned().collect();
+    }
 
+    // 2: prepare for release of `aggs`
+    let group_by_id = HashSet::from_iter(group_by.iter().cloned());
     let mut margin = middle_domain.get_margin(&group_by_id);
 
     let is_join = if let Some(KeySanitizer::Join { keys, .. }) = key_sanitizer.clone() {
         let num_keys = LazyFrame::from((*keys).clone()).select([len()]).collect()?;
         margin.max_groups = Some(num_keys.column("len")?.u32()?.last().unwrap());
-
         true
     } else {
         false
     };
 
-    let expr_domain = WildExprDomain {
-        columns: middle_domain.series_domains.clone(),
-        context: Context::Aggregation {
-            margin: margin.clone(),
-        },
-    };
+    let m_expr_aggs = aggs.into_iter().map(|expr| {
+        make_private_expr(
+            WildExprDomain {
+                columns: middle_domain.series_domains.clone(),
+                context: Context::Aggregation {
+                    margin: margin.clone(),
+                },
+            },
+            L0PInfDistance(middle_metric.0.clone()),
+            output_measure.clone(),
+            expr,
+            global_scale,
+        )
+    });
+    let m_aggs = make_composition(m_expr_aggs.collect::<Fallible<_>>()?)?;
 
-    let m_exprs = make_composition(
-        aggs.into_iter()
-            .map(|expr| {
-                make_private_expr(
-                    expr_domain.clone(),
-                    L0PInfDistance(middle_metric.0.clone()),
-                    output_measure.clone(),
-                    expr,
-                    global_scale,
-                )
-            })
-            .collect::<Fallible<_>>()?,
-    )?;
+    let f_comp = m_aggs.function.clone();
+    let privacy_map = m_aggs.privacy_map.clone();
 
-    let f_comp = m_exprs.function.clone();
-    let privacy_map = m_exprs.privacy_map.clone();
-    let (dp_exprs, null_exprs): (_, Vec<Option<Expr>>) = m_exprs
+    // 3: prepare for release of `keys`
+    let (dp_exprs, null_exprs): (_, Vec<Option<Expr>>) = m_aggs
         .invoke(&input)?
         .into_iter()
-        .map(|ep| (ep.expr, ep.fill))
+        .map(|plan| (plan.expr, plan.fill))
         .unzip();
 
+    // 3.1: reconcile information about the threshold
     let threshold_info = if margin.invariant.is_some() || is_join {
         None
     } else if let Some((name, threshold_value)) = match_filter(&key_sanitizer) {
@@ -155,6 +148,7 @@ where
         );
     };
 
+    // 3.2: update key sanitizer
     if let Some((name, _, threshold_value, is_present)) = &threshold_info {
         let threshold_expr = col(name).gt(lit(*threshold_value));
         key_sanitizer = Some(KeySanitizer::Filter(match (is_present, key_sanitizer) {
@@ -178,129 +172,134 @@ where
         );
     }
 
-    let m_group_by_agg = Measurement::new(
-        middle_domain,
-        Function::new_fallible(move |arg: &DslPlan| {
-            let output = DslPlan::GroupBy {
-                input: Arc::new(arg.clone()),
-                keys: group_by.clone(),
-                aggs: f_comp.eval(&arg)?.into_iter().map(|p| p.expr).collect(),
-                apply: None,
-                maintain_order: false,
-                options: Default::default(),
-            };
-            Ok(match key_sanitizer.clone() {
-                Some(KeySanitizer::Filter(predicate)) => DslPlan::Filter {
-                    input: Arc::new(output),
-                    predicate: predicate.clone(),
-                },
-                Some(KeySanitizer::Join {
-                    keys: labels,
-                    how,
-                    left_on,
-                    right_on,
-                    options,
-                    fill_null,
-                }) => {
-                    let (input_left, input_right) = match how {
-                        JoinType::Left => (labels, Arc::new(output)),
-                        JoinType::Right => (Arc::new(output), labels),
-                        _ => unreachable!(
-                            "Invariant: by constructor checks, JoinType is only Left or Right"
-                        ),
-                    };
-                    DslPlan::HStack {
-                        input: Arc::new(DslPlan::Join {
-                            input_left,
-                            input_right,
-                            left_on,
-                            right_on,
-                            predicates: vec![],
-                            options,
-                        }),
-                        exprs: fill_null.unwrap(),
-                        options: ProjectionOptions::default(),
+    let function = Function::new_fallible(move |arg: &DslPlan| {
+        let output = DslPlan::GroupBy {
+            input: Arc::new(arg.clone()),
+            keys: group_by.clone(),
+            aggs: f_comp.eval(&arg)?.into_iter().map(|p| p.expr).collect(),
+            apply: None,
+            maintain_order: false,
+            options: Default::default(),
+        };
+        Ok(match key_sanitizer.clone() {
+            Some(KeySanitizer::Filter(predicate)) => DslPlan::Filter {
+                input: Arc::new(output),
+                predicate: predicate.clone(),
+            },
+            Some(KeySanitizer::Join {
+                keys: labels,
+                how,
+                left_on,
+                right_on,
+                options,
+                fill_null,
+            }) => {
+                let (input_left, input_right) = match how {
+                    JoinType::Left => (labels, Arc::new(output)),
+                    JoinType::Right => (Arc::new(output), labels),
+                    _ => unreachable!(
+                        "Invariant: by constructor checks, JoinType is only Left or Right"
+                    ),
+                };
+                DslPlan::HStack {
+                    input: Arc::new(DslPlan::Join {
+                        input_left,
+                        input_right,
+                        left_on,
+                        right_on,
+                        predicates: vec![],
+                        options,
+                    }),
+                    exprs: fill_null.unwrap(),
+                    options: ProjectionOptions::default(),
+                }
+            }
+            None => output,
+        })
+    });
+
+    let privacy_map = PrivacyMap::new_fallible(move |d_in: &Bounds| {
+        let bound = d_in.get_bound(&group_by_id);
+
+        // incorporate all information into optional bounds
+        let l0 = option_min(bound.num_groups, margin.max_groups);
+        let li = option_min(bound.per_group, margin.max_length);
+        let l1 = d_in.get_bound(&HashSet::new()).per_group;
+
+        // reduce optional bounds to concrete bounds
+        let (l0, l1, li) = match (l0, l1, li) {
+            (Some(l0), Some(l1), Some(li)) => (l0, l1, li),
+            (l0, Some(l1), li) => (l0.unwrap_or(l1), l1, li.unwrap_or(l1)),
+            (Some(l0), None, Some(li)) => (l0, l0.inf_mul(&li)?, li),
+            _ => {
+                let msg = if is_truncated {
+                    let mut msg =
+                        " This is likely due to a missing truncation earlier in the data pipeline."
+                            .to_string();
+                    let by_str = group_by_id
+                        .iter()
+                        .map(|e| format!("{e:?}"))
+                        .collect::<Vec<_>>()
+                        .join(", ");
+
+                    if l0.is_none() {
+                        msg = format!(
+                            "{msg} To bound `num_groups` in the Context API, try using `.truncate_num_groups(num_groups, by=[{by_str}])`."
+                        );
                     }
-                }
-                None => output,
-            })
-        }),
-        middle_metric,
-        output_measure.clone(),
-        PrivacyMap::new_fallible(move |d_in: &Bounds| {
-            let bound = d_in.get_bound(&group_by_id);
-
-            // incorporate all information into optional bounds
-            let l0 = option_min(bound.num_groups, margin.max_groups);
-            let li = option_min(bound.per_group, margin.max_length);
-            let l1 = d_in.get_bound(&HashSet::new()).per_group;
-
-            // reduce optional bounds to concrete bounds
-            let (l0, l1, li) = match (l0, l1, li) {
-                (Some(l0), Some(l1), Some(li)) => (l0, l1, li),
-                (l0, Some(l1), li) => (l0.unwrap_or(l1), l1, li.unwrap_or(l1)),
-                (Some(l0), None, Some(li)) => (l0, l0.inf_mul(&li)?, li),
-                _ => {
-                    let msg = if is_truncated {
-                        let mut msg = " This is likely due to a missing truncation earlier in the data pipeline.".to_string();
-                        let by_str = group_by_id
-                            .iter()
-                            .map(|e| format!("{e:?}"))
-                            .collect::<Vec<_>>()
-                            .join(", ");
-
-                        if l0.is_none() {
-                            msg = format!(
-                                "{msg} To bound `num_groups` in the Context API, try using `.truncate_num_groups(num_groups, by=[{by_str}])`."
-                            );
-                        }
-                        if li.is_none() {
-                            msg = format!(
-                                "{msg} To bound `per_group` in the Context API, try using `.truncate_per_group(per_group, by=[{by_str}])`."
-                            );
-                        }
-                        msg
-                    } else {
-                        "".to_string()
-                    };
-                    return fallible!(
-                        FailedMap,
-                        "num_groups ({l0:?}), total contributions ({l1:?}), and per_group ({li:?}) are not sufficiently well-defined.{msg}"
-                    );
-                }
-            };
-
-            let mut d_out = privacy_map.eval(&(l0, l1, li))?;
-
-            if is_join {
-                ()
-            } else if let Some((_, noise, threshold_value, _)) = &threshold_info {
-                if li >= *threshold_value {
-                    return fallible!(FailedMap, "threshold must be greater than {:?}", li);
-                }
-
-                let d_instability = threshold_value.neg_inf_sub(&li)?;
-                let delta_single =
-                    integrate_discrete_noise_tail(noise.distribution, noise.scale, d_instability)?;
-                let delta_joint = (1.0).inf_sub(
-                    &(1.0)
-                        .neg_inf_sub(&delta_single)?
-                        .neg_inf_powi(IBig::from(l0))?,
-                )?;
-                d_out = MO::add_delta(d_out, delta_joint)?;
-            } else if margin.invariant.is_none() {
+                    if li.is_none() {
+                        msg = format!(
+                            "{msg} To bound `per_group` in the Context API, try using `.truncate_per_group(per_group, by=[{by_str}])`."
+                        );
+                    }
+                    msg
+                } else {
+                    "".to_string()
+                };
                 return fallible!(
                     FailedMap,
-                    "key-sets cannot be privatized under {:?}. FixedSmoothedMaxDivergence is necessary.",
-                    output_measure
+                    "num_groups ({l0:?}), total contributions ({l1:?}), and per_group ({li:?}) are not sufficiently well-defined.{msg}"
                 );
             }
+        };
 
-            Ok(d_out)
-        }),
-    )?;
+        let mut d_out = privacy_map.eval(&(l0, l1, li))?;
 
-    t_prior >> m_group_by_agg
+        if margin.invariant.is_some() || is_join {
+            ()
+        } else if let Some((_, noise, threshold_value, _)) = &threshold_info {
+            if li >= *threshold_value {
+                return fallible!(FailedMap, "threshold must be greater than {:?}", li);
+            }
+
+            let d_instability = threshold_value.neg_inf_sub(&li)?;
+            let delta_single =
+                integrate_discrete_noise_tail(noise.distribution, noise.scale, d_instability)?;
+            let delta_joint = (1.0).inf_sub(
+                &(1.0)
+                    .neg_inf_sub(&delta_single)?
+                    .neg_inf_powi(IBig::from(l0))?,
+            )?;
+            d_out = MO::add_delta(d_out, delta_joint)?;
+        } else {
+            return fallible!(
+                FailedMap,
+                "The key-set is data-dependent and must be protected. Either use a join with a public key-set (`.with_keys(keys)` in the Context API) or use Approximate-DP or Approximate-zCDP."
+            );
+        }
+
+        Ok(d_out)
+    });
+
+    // 4: build final measurement
+    t_prior
+        >> Measurement::new(
+            middle_domain,
+            function,
+            middle_metric,
+            output_measure,
+            privacy_map,
+        )?
 }
 
 fn match_filter(key_sanitizer: &Option<KeySanitizer>) -> Option<(String, u32)> {
