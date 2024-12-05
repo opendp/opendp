@@ -1,7 +1,7 @@
 import pytest
 import logging
 import opendp.prelude as dp
-
+from opendp._internal import _make_measurement
 
 
 def test_unit_of():
@@ -125,6 +125,27 @@ def test_context_zCDP():
 
     dp_sum = context.query().clamp((1, 10)).sum().gaussian()  # type: ignore
     print(dp_sum.release())
+
+
+def test_middle_param():
+    context = dp.Context.compositor(
+        data=[1.0, 2.0, 3.0],
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=3.0),
+        split_evenly_over=1,
+    )
+
+    dp_sum = context.query().resize(constant=2.0).clamp((1.0, 10.0)).mean().laplace(1.0)
+    # scale = (U - L) / n / ε
+    # 1     = (10- 1) / n / 3
+    # n     = 9 / 3
+    # Due to float rounding, n = 3 results in slightly higher sensitivity, 
+    # so the lib picks n=4, which is large enough for the sensitivity to be small enough
+    # for the query to satisfy ε=3
+    dp_sum.param() == 4
+
+    # a sample from Laplace(loc=6 / n, scale=1)
+    assert isinstance(dp_sum.release(), float)
 
 
 def test_query_repr():
@@ -254,7 +275,7 @@ def test_approx_to_approx_zCDP():
 
     dom, met = context_azcdp.accountant.input_space
     # the important test is that the following is a valid query for an approx-zCDP compositor
-    release = context_azcdp(dp.m.make_user_measurement(
+    release = context_azcdp(_make_measurement(
         dom, met,
         azcdp_measure,
         lambda x: x,
@@ -264,6 +285,27 @@ def test_approx_to_approx_zCDP():
 
     assert release == [1, 2, 3]
 
+
+def test_agg_input():
+    context = dp.Context.compositor(
+        data=0,
+        privacy_unit=dp.unit_of(absolute=1),
+        privacy_loss=dp.loss_of(rho=0.5, delta=0.0),
+        split_evenly_over=1,
+    )
+
+    assert isinstance(context.query().gaussian().release(), int)
+
+
+def test_rshift_multi_partial():
+    context = dp.Context.compositor(
+        data=[1, 2, 3],
+        privacy_unit=dp.unit_of(l1=1),
+        privacy_loss=dp.loss_of(epsilon=0.5),
+        split_evenly_over=1,
+    )
+    with pytest.raises(ValueError, match="laplace is missing 1 parameter"):
+        context.query().b_ary_tree(leaf_count=3).laplace()
 
 def test_transformation_release_error():
     privacy_unit = dp.unit_of(contributions=2)

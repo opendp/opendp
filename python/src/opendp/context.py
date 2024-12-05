@@ -44,6 +44,7 @@ from opendp.mod import (
     Domain,
     Measurement,
     Metric,
+    PartialConstructor,
     Queryable,
     Transformation,
     Measure,
@@ -161,7 +162,7 @@ def domain_of(T, infer: bool = False) -> Domain:
     Traceback (most recent call last):
     ...
     opendp.mod.OpenDPException:
-      FFI("VectorDomain constructor only supports AtomDomain or UserDomain inner domains")
+      FFI("Inner domain of VectorDomain must be AtomDomain or ExtrinsicDomain (created via user_domain)")
 
     Alternatively, an example of the data can be provided, but note that passing sensitive data may result in a privacy violation:
 
@@ -403,6 +404,9 @@ class Context(object):
 
         if margins:
             for by, margin in margins.items():
+                if not isinstance(by, tuple):
+                    msg = by if isinstance(by, str) else "your-column"
+                    raise ValueError(f"Margin keys must be tuples. For single-valued tuples include a trailing comma, ie: `('{msg}',)`")
                 domain = with_margin(domain, by=list(by), **asdict(margin))
 
         accountant, d_mids = _sequential_composition_by_weights(
@@ -697,8 +701,7 @@ class PartialChain(object):
 
     def __call__(self, v):
         """Returns the transformation or measurement with the given parameter."""
-        # TODO: Can we exercise this?
-        return self.partial(v) # pragma: no cover
+        return self.partial(v)
 
     def fix(self, d_in: float, d_out: float, output_measure: Optional[Measure] = None, T=None):
         """Returns the closest transformation or measurement that satisfies the given stability or privacy constraint.
@@ -709,24 +712,29 @@ class PartialChain(object):
         # The delta parameter should be fixed in _cast_measure, and if not, then the search will be impossible here anyways.
         if output_measure == fixed_smoothed_max_divergence():
             def predicate(param):
-                meas = _cast_measure(self.partial(param), output_measure, d_out)
+                meas = _cast_measure(self(param), output_measure, d_out)
                 return meas.map(d_in)[0] <= d_out[0] # type: ignore[index] 
         else:
             def predicate(param):
-                meas = _cast_measure(self.partial(param), output_measure, d_out)
+                meas = _cast_measure(self(param), output_measure, d_out)
                 return meas.check(d_in, d_out)
         
-        param = binary_search(predicate, T=T)
+        param = binary_search(predicate)
         chain = self.partial(param)
         chain.param = param
         return chain
 
-    def __rshift__(self, other: Union[Transformation, Measurement]):
+    def __rshift__(self, other: Union[Transformation, Measurement, PartialConstructor]):
         # partials may be chained with other transformations or measurements to form a new partial
-        # TODO: Can we exercise this?
-        if isinstance(other, (Transformation, Measurement)): # pragma: no cover
-            return PartialChain(lambda x: self.partial(x) >> other)
+        if isinstance(other, (Transformation, Measurement, PartialConstructor)):
+            return PartialChain(lambda x: self(x) >> other)
 
+        raise ValueError("At most one parameter may be missing at a time")
+    
+    def __rrshift__(self, other: Union[tuple[Domain, Metric], Transformation, Measurement]):
+        if isinstance(other, (tuple, Transformation, Measurement)):
+            return PartialChain(lambda x: other >> self(x))
+        
         raise ValueError("At most one parameter may be missing at a time")
 
     @classmethod

@@ -78,7 +78,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
     if isinstance(value, c_type):
         return value
 
-    if c_type == CallbackFn:
+    if c_type == CallbackFnPtr:
         return _wrap_py_func(value, type_name)
     
     if c_type == TransitionFn:
@@ -239,6 +239,9 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
 
         if type_name.origin == "Tuple":
             return _slice_to_tuple(raw, type_name)
+        
+        if type_name.origin == "Option":
+            return _slice_to_option(raw, type_name)
 
     raise UnknownTypeException(type_name)
 
@@ -286,6 +289,9 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
 
         if type_name.origin == "HashMap":
             return _hashmap_to_slice(value, type_name)
+        
+        if type_name.origin == "Function":
+            return _function_to_slice(value, type_name)
 
         if type_name.origin == "Tuple":
             return _tuple_to_slice(value, type_name)
@@ -454,6 +460,17 @@ def _tuple_to_slice(val: tuple[Any, ...], type_name: Union[RuntimeType, str]) ->
         out = _wrap_in_slice(ctypes.pointer(array), 2)
         out.depends_on(lf_slice, expr_slice)
         return out
+    
+    if inner_type_names == ['f64', 'ExtrinsicObject']:
+        score_ptr = ctypes.pointer(ctypes.c_double(val[0]))
+        ext_obj = ctypes.pointer(ExtrinsicObject(ctypes.py_object(val[1]), c_counter))
+
+        cand_ptr = py_to_c(ext_obj, c_type=AnyObjectPtr, type_name="ExtrinsicObject")
+        array = (ctypes.c_void_p * 2)(
+            ctypes.cast(score_ptr, ctypes.c_void_p), 
+            ctypes.cast(cand_ptr, ctypes.c_void_p), 
+        )
+        return _wrap_in_slice(ctypes.pointer(array), 2)
 
     for t in inner_type_names:
         if t not in ATOM_MAP:
@@ -491,9 +508,22 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]
         delta = ctypes.cast(ptr_data[1], ctypes.POINTER(ctypes.c_double))
         return PrivacyProfile(curve), delta.contents.value
     
+    if inner_type_names == ['f64', 'AnyObject']:
+        score = ctypes.cast(ptr_data[0], ctypes.POINTER(ctypes.c_double))
+        candidate_obj = ctypes.cast(ptr_data[1], AnyObjectPtr)
+        candidate = c_to_py(c_to_py(candidate_obj))
+        candidate_obj.__class__ = ctypes.POINTER(AnyObject) # type: ignore[assignment]
+        return score.contents.value, candidate
+    
     # tuple of instances of Python types
     return tuple(ctypes.cast(void_p, ctypes.POINTER(ATOM_MAP[name])).contents.value # type: ignore[index,attr-defined]
                  for void_p, name in zip(ptr_data, inner_type_names))
+
+
+def _slice_to_option(raw: FfiSlicePtr, type_name: RuntimeType) -> Optional[Any]:
+    if raw.contents.len == 0:
+        return None
+    return _slice_to_py(raw, type_name.args[0])
 
 
 def _hashmap_to_slice(val: dict[Any, Any], type_name: RuntimeType) -> FfiSlicePtr:
@@ -517,10 +547,20 @@ def _hashmap_to_slice(val: dict[Any, Any], type_name: RuntimeType) -> FfiSlicePt
     ffislice.depends_on(keys, vals)
     return ffislice
 
+
 def _slice_to_function(raw: FfiSlicePtr) -> Function:
+    # for ε(α)-RDP curves
     function = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyFunction)).contents
     # put the contents behind a new, python pointer
     return ctypes.cast(ctypes.pointer(function), Function)
+
+
+def _function_to_slice(raw: Function, type_name: RuntimeType) -> FfiSlicePtr:
+    if not isinstance(raw, Function):
+        from opendp.core import new_function
+        raw = new_function(raw, TO=type_name.args[1])
+    return _wrap_in_slice(raw, 1)
+
 
 def _slice_to_hashmap(raw: FfiSlicePtr) -> dict[Any, Any]:
     slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyObjectPtr))
@@ -638,11 +678,6 @@ def _wrap_in_slice(ptr, len_: int) -> FfiSlicePtr:
     return FfiSlicePtr(FfiSlice(ctypes.cast(ptr, ctypes.c_void_p), len_))
 
 
-# The output type cannot be an `ctypes.POINTER(FfiResult)` due to:
-#   https://bugs.python.org/issue5710#msg85731
-#                            (output         , input       )
-CallbackFn = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr)
-
 def _wrap_py_func(func, TO):
     from opendp._convert import c_to_py, py_to_c
 
@@ -675,7 +710,10 @@ def _wrap_py_func(func, TO):
                 ctypes.c_char_p(traceback.format_exc().encode()),
             )
 
-    return CallbackFn(wrapper_func)
+    c_wrapper_func = CallbackFnValue(wrapper_func)
+    lifeline = ExtrinsicObject(ctypes.py_object(c_wrapper_func), c_counter)
+
+    return ctypes.pointer(CallbackFn(c_wrapper_func, lifeline))
 
 
 # The output type cannot be an `ctypes.POINTER(FfiResult)` due to:

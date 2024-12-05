@@ -21,6 +21,7 @@ from opendp.extras.numpy._make_np_mean import make_private_np_mean
 from opendp.extras.sklearn._make_eigendecomposition import then_private_np_eigendecomposition
 from opendp.mod import Domain, Measurement, Metric
 from opendp._lib import import_optional_dependency
+from opendp._internal import _make_measurement, _make_transformation
 
 if TYPE_CHECKING: # pragma: no cover
     import numpy # type: ignore[import-not-found]
@@ -156,7 +157,7 @@ def make_private_pca(
         # make full release
         return qbl(make_eigdecomp(norm, origin))
 
-    return dp.m.make_user_measurement(
+    return _make_measurement(
         input_domain,
         input_metric,
         compositor.output_measure,
@@ -319,7 +320,7 @@ def _make_center(input_domain, input_metric):
     input_desc = input_domain.descriptor
 
     kwargs = input_desc._asdict() | {"origin": np.zeros(input_desc.num_columns)}
-    return dp.t.make_user_transformation(
+    return _make_transformation(
         input_domain,
         input_metric,
         dp.numpy.array2_domain(**kwargs),

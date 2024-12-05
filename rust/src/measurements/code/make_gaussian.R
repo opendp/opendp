@@ -11,7 +11,7 @@ space <- c(atom_domain(.T = f64), absolute_distance(.T = f64))
 gaussian <- space |> then_gaussian(scale = 1.0)
 gaussian(arg = 100.0)
 
-# Sensitivity of this measurment:
+# Sensitivity of this measurement:
 gaussian(d_in = 1)
 gaussian(d_in = 2)
 gaussian(d_in = 4)

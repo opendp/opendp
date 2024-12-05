@@ -246,7 +246,7 @@ def test_randomized_response_bitvec():
     assert np.array_equal(data, np.array([0, 8, 12], dtype=np.uint8))
 
     # roundtrip: bytes -> mech -> numpy
-    release = np.frombuffer(m_rr(data.tobytes()), dtype=np.uint8)
+    release = np.frombuffer(m_rr(data), dtype=np.uint8)
 
     print(np.unpackbits(data), np.unpackbits(release))
     # epsilon is 2 * m * ln((2 - f) / f)

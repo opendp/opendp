@@ -51,7 +51,7 @@ where
     let dtype = &middle_domain.active_series()?.field.dtype;
 
     // check that we are in a context where it is ok to break row-alignment
-    middle_domain.context.break_alignment()?;
+    middle_domain.context.check_alignment_can_be_broken()?;
 
     // build output domain
     let mut output_domain = middle_domain.clone();
@@ -59,11 +59,8 @@ where
     // summation invalidates bounds on the active column
     output_domain.active_series_mut()?.drop_bounds()?;
 
-    // we only care about the margin that matches the current grouping columns
     let margin_id = middle_domain.context.grouping_columns()?;
-    let input_margin = (output_domain.frame_domain.margins.get(&margin_id))
-        .cloned()
-        .unwrap_or_default();
+    let input_margin = middle_domain.active_margin()?;
 
     // Set the margins on the output domain to consist of only one margin: 1 row per group, with at most 1 record in each group.
     let output_margin = input_margin.clone().with_max_partition_length(1);
