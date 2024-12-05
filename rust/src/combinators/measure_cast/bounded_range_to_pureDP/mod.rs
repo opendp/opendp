@@ -2,7 +2,6 @@ use crate::{
     core::{Domain, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
     measures::{BoundedRange, MaxDivergence},
-    traits::Float,
 };
 
 /// Constructs a new output measurement where the output measure
