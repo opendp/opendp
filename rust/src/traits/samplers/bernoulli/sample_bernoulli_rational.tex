@@ -1,0 +1,71 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn sample\_bernoulli\_rational}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+\contrib
+\begin{tcolorbox}
+    \begin{warning}[Code is not constant-time]
+     \texttt{sample\_bernoulli\_rational} takes in an optional \texttt{trials} parameter to denote the number of trials to run. The current implementation does not guard against other types of timing side-channels that can break differential privacy, e.g., non-constant time code execution due to branching.
+    \end{warning}
+\end{tcolorbox}
+
+\subsection*{PR History}
+\begin{itemize}
+    \item \vettingPR{473}
+\end{itemize}
+
+This document proves that the implementations of \rustdoc{traits/samplers/bernoulli/fn}{sample\_bernoulli\_rational} in \asOfCommit{mod.rs}{f5bb719} 
+satisfies its proof definition.
+
+At a high level, \texttt{sample\_bernoulli} considers the binary expansion of \texttt{prob} into an infinite sequence $\texttt{a\_i}$, 
+like so: $\texttt{prob} = \sum_{i = 0}^{\infty} \frac{a_i}{2^{i + 1}}$. 
+The algorithm samples $I \sim Geom(0.5)$ using an internal function \rustdoc{traits/samplers/geometric/fn}{sample\_geometric\_buffer}, then returns $a_I$. 
+
+\subsection{Hoare Triple}
+\subsubsection*{Preconditions}
+\begin{itemize}
+    \item \textbf{User-specified types:}
+    \begin{itemize}
+        \item Variable \texttt{prob} must be of type \texttt{T}
+        \item Variable \texttt{constant\_time} must be of type \texttt{bool}
+        \item Type \texttt{T} has trait \rustdoc{traits/trait}{Float}. 
+            \texttt{Float} implies there exists an associated type \texttt{T::Bits} (defined in \rustdoc{traits/trait}{FloatBits}) that captures the underlying bit representation of \texttt{T}.
+        \item Type \texttt{T::Bits} has traits \texttt{PartialOrd} and \texttt{ExactIntCast<usize>}
+        \item Type \texttt{usize} has trait \texttt{ExactIntCast<T::Bits>}
+    \end{itemize}
+\end{itemize}
+
+\subsubsection*{Pseudocode}
+
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_bernoulli_rational.py}
+
+\subsubsection*{Postcondition}
+\begin{definition}
+    \label{sample-bernoulli}
+
+    For any setting of the input parameters
+    \texttt{prob} of type \texttt{T} restricted to $[0, 1]$,
+    and optionally \texttt{trials} of type \texttt{usize},
+    \texttt{sample\_bernoulli\_rational} either
+    \begin{itemize}
+        \item raises an exception if there is a lack of system entropy or if \texttt{trials} is set and it runs more than \texttt{trials} times, or
+        \item returns \texttt{out} where \texttt{out} is $\top$ with probability \texttt{prob}, otherwise $\bot$.
+    \end{itemize}
+     If \texttt{trials} is set, the implementation's runtime is constant.    
+\end{definition}
+
+\begin{proof} 
+An integer sample is taken uniformly at random from $[0, denom)$, where \texttt{denom} is the denominator of \texttt{prob}.
+The implementation then returns $\top$ if the sample is less than the numerator of \texttt{prob}, and $\bot$ otherwise.
+Since only at most \texttt{numer} outcomes of $\top$ are possible, out of \texttt{denom} possible outcomes,
+the implementation returns $\top$ with probability \texttt{prob}.
+
+The implementation runs in constant-time if \texttt{trials} is set.
+\end{proof}
+
+\end{document}
