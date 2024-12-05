@@ -69,7 +69,7 @@ pub fn make_report_noisy_max_gumbel<TIA>(
     input_metric: LInfDistance<TIA>,
     scale: f64,
     optimize: Optimize,
-) -> Fallible<Measurement<VectorDomain<AtomDomain<TIA>>, usize, LInfDistance<TIA>, BoundedRange<QO>>>
+) -> Fallible<Measurement<VectorDomain<AtomDomain<TIA>>, usize, LInfDistance<TIA>, BoundedRange>>
 where
     TIA: Number,
     f64: DistanceConstant<TIA>,
@@ -108,8 +108,6 @@ where
     move |d_in: &QI| {
         // convert L_\infty distance to range distance
         let d_in = input_metric.range_distance(d_in.clone())?;
-
-        // convert data type to QO
         let d_in = f64::inf_cast(d_in)?;
 
         if d_in.is_sign_negative() {
