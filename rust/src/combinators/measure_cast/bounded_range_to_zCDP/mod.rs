@@ -18,7 +18,7 @@ use crate::{
 /// * `QO` - Output distance type. One of `f32` or `f64`.
 /// For more details, see: https://differentialprivacy.org/exponential-mechanism-bounded-range/
 
-pub fn make_bounded_range_to_zCDP<DI, TO, MI, QO>(
+pub fn bounded_range_to_zCDP<DI, TO, MI, QO>(
     m: Measurement<DI, TO, MI, BoundedRange>,
 ) -> Fallible<Measurement<DI, TO, MI, ZeroConcentratedDivergence>>
 where
