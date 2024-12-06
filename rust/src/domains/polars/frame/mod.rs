@@ -125,7 +125,7 @@ impl<F: Frame, const P: usize, T: ProductOrd + NumericDataType> MetricSpace
             .0
             .series_domains
             .iter()
-            .any(|s| s.field.dtype != T::dtype())
+            .any(|s| s.dtype() != T::dtype())
         {
             return fallible!(
                 MetricSpace,
@@ -168,7 +168,7 @@ impl<F: Frame> FrameDomain<F> {
     ) -> Fallible<Self> {
         let n_unique = series_domains
             .iter()
-            .map(|s| &s.field.name)
+            .map(|s| &s.name)
             .collect::<HashSet<_>>()
             .len();
         if n_unique != series_domains.len() {
@@ -195,7 +195,11 @@ impl<F: Frame> FrameDomain<F> {
     /// # Proof Definition
     /// Return the schema shared by all members of the domain.
     pub fn schema(&self) -> Schema {
-        Schema::from_iter(self.series_domains.iter().map(|s| s.field.clone()))
+        Schema::from_iter(
+            self.series_domains
+                .iter()
+                .map(|s| Field::new(s.name.as_str(), s.dtype())),
+        )
     }
 
     /// # Proof Definition
@@ -234,17 +238,17 @@ impl<F: Frame> FrameDomain<F> {
     ///
     /// Best effort is made to derive more restrictive descriptors,
     /// but optimal inference of descriptors is not guaranteed.
-    pub fn get_margin(&self, grouping_columns: BTreeSet<SmartString>) -> Margin {
+    pub fn get_margin(&self, grouping_columns: &BTreeSet<SmartString>) -> Margin {
         let mut margin = self
             .margins
-            .get(&grouping_columns)
+            .get(grouping_columns)
             .cloned()
             .unwrap_or_default();
 
         let subset_margins = self
             .margins
             .iter()
-            .filter(|(id, _)| id.is_subset(&grouping_columns))
+            .filter(|(id, _)| id.is_subset(grouping_columns))
             .collect::<Vec<(&BTreeSet<SmartString>, &Margin)>>();
 
         // the max_partition_* descriptors can take the minimum known value from any margin on a subset of the grouping columns
@@ -295,7 +299,7 @@ impl<F: Frame> FrameDomain<F> {
     pub fn series_domain(&self, name: SmartString) -> Fallible<SeriesDomain> {
         self.series_domains
             .iter()
-            .find(|s| s.field.name == name)
+            .find(|s| s.name == name)
             .cloned()
             .ok_or_else(|| err!(MakeTransformation, "unrecognized column: {}", name))
     }
@@ -315,7 +319,7 @@ impl<F: Frame> Debug for FrameDomain<F> {
             "FrameDomain({}; margins=[{}])",
             self.series_domains
                 .iter()
-                .map(|s| format!("{}: {}", s.field.name, s.field.dtype))
+                .map(|s| format!("{}: {}", s.name, s.dtype()))
                 .collect::<Vec<_>>()
                 .join(", "),
             margins_debug

@@ -82,13 +82,12 @@ where
         data_column.nullable = false;
     }
 
-    if matches!(bool_function, Not) && data_column.field.dtype != DataType::Boolean {
+    if matches!(bool_function, Not) && data_column.dtype() != DataType::Boolean {
         // under these conditions, the expression performs a bitwise negation
         data_column.drop_bounds()?;
     } else {
         // otherwise, the output data will be a bool
-        data_column.element_domain = Arc::new(AtomDomain::<bool>::default());
-        data_column.field.dtype = DataType::Boolean;
+        data_column.set_element_domain(AtomDomain::<bool>::default());
     }
 
     t_prior
