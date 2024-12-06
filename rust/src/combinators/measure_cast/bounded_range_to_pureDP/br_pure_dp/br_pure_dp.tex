@@ -1,0 +1,55 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+
+\title{\texttt{Bounded Range to Pure DP}}
+\author{Tudor Cebere}
+
+\begin{document}
+\maketitle
+
+\contrib
+Proves soundness of \texttt{fn bounded\_range\_to\_pureDP} in \asOfCommit{mod.rs}{0b8f4222}.
+This proof is an adaptation of Lemma 2 \href{https://differentialprivacy.org/exponential-mechanism-bounded-range/}{here}, which proves the conversion between bounded range \cite{durfee2019practical} and pure DP.
+
+\subsection{Hoare Triple}
+\subsubsection*{Preconditions}
+\begin{itemize}
+    \item \textbf{User-specified types:}
+    \begin{itemize}
+        \item Variable \texttt{eta} must be of type float64
+    \end{itemize}
+\end{itemize}
+
+\subsubsection*{Pseudocode}
+
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/br_pure_dp.py}
+
+\subsubsection*{Postcondition}
+
+\begin{definition}[$\eta$-Range Bounded]
+\label{def:br}
+    Let $M : X^n \to Y$ be a randomized mechanism and let $\eta > 0$. 
+    We say that $M$ is $\varepsilon$-range-bounded if $\forall y \in Y$ 
+    and any pair of neighboring datasets $x, x' \in X^n$, there exists a $t$ such that:
+    \begin{equation}
+        \log \left( \frac{\Pr[M(x) = y]}{\Pr[M(x') = y]} \right) \in \left[t, t + \eta \right].
+    \end{equation}
+\end{definition}
+
+\begin{definition}[$\varepsilon$-Differential Privacy]
+\label{def:dp}
+    Let $M : X^n \to Y$ be a randomized mechanism and let $\varepsilon > 0$. 
+    We say that $M$ is $\varepsilon$-differentially private if for any pair of neighboring datasets 
+    $x, x' \in X^n$, and $\forall y \in Y$, it holds that
+    \begin{equation}
+      \left| \log \left( \frac{\Pr[M(x) = y]}{\Pr[M(x') = y]} \right) \right| \leq \varepsilon \cdot.
+    \end{equation}
+\end{definition}
+  
+
+Bounded range demans that the privacy loss distribution (PLD) has a support of length $\eta$, while differential privacy demands that the privacy loss is bounded by $epsilon$.
+PLDs cross 0 (they cannot be only positive or negative) and $t > -\eta$, meaning that the support crosses 0. This implies that $\left[t, t+\eta\right] \in \left[-\eta, \eta\right]$. This implies that $\eta$-Bounded Range mechanisms satisfy $\epsilon$-Differential Privacy by definition.
+
+
+\end{document}
