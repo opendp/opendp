@@ -210,7 +210,6 @@ def test_split_by_weights_ints():
     )
 
 
-@pytest.mark.xfail(raises=TypeError)
 def test_split_by_weights_floats():
     dp.Context.compositor(
         data=[1, 2, 3],
