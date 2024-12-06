@@ -57,3 +57,8 @@ pub use randomized_response_bitvec::*;
 mod alp;
 #[cfg(all(feature = "floating-point", feature = "contrib"))]
 pub use alp::*;
+
+#[cfg(feature = "contrib")]
+mod make_private_sql;
+#[cfg(feature = "contrib")]
+pub use make_private_sql::*;

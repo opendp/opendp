@@ -30,6 +30,7 @@ use serde::{Deserialize, Serialize};
 pub(crate) trait OpenDPPlugin: 'static + Clone + ColumnsUdf {
     const NAME: &'static str;
     fn function_options() -> FunctionOptions;
+    fn get_output(&self) -> GetOutput;
 }
 #[cfg(feature = "ffi")]
 pub(crate) trait OpenDPPlugin:
@@ -37,7 +38,7 @@ pub(crate) trait OpenDPPlugin:
 {
     const NAME: &'static str;
     fn function_options() -> FunctionOptions;
-    fn get_output(&self) -> Option<GetOutput>;
+    fn get_output(&self) -> GetOutput;
 }
 
 static OPENDP_LIB_NAME: &str = "opendp";
@@ -186,15 +187,7 @@ pub(crate) fn apply_anonymous_function<KW: OpenDPPlugin>(input: Vec<Expr>, kwarg
         // pass through the constructor to activate the expression
         function: LazySerde::Deserialized(SpecialEq::new(Arc::new(kwargs.clone()))),
         // have no option but to panic in this case, since the polars api does not accept results
-        output_type: kwargs
-            .get_output()
-            .ok_or_else(|| {
-                err!(
-                    FailedFunction,
-                    "Anonymous function must have an output type"
-                )
-            })
-            .unwrap(),
+        output_type: kwargs.get_output(),
         options: KW::function_options(),
     }
 }
