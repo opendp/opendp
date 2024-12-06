@@ -1,5 +1,5 @@
 matplotlib
-randomgen
+randomgen>=2.0.0
 pandas
 seaborn
 scipy
