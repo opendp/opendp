@@ -7,6 +7,7 @@ tests = {
     'flake8 linting': 'cd .. && flake8 . --count --show-source --statistics',
     # Had non-reproducible errors between local runs, so disable caching.
     'mypy type checking': 'mypy . --cache-dir=/dev/null',
+    '"print" in tests': "! egrep 'print\\([^\"'\"'\"'f]' -r test",
 }
 
 @pytest.mark.skipif(sys.version_info < (3, 11), reason='mypy will fail on 3.9')
