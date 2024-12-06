@@ -1,4 +1,4 @@
-from typing import Sequence, Union, cast
+from typing import Sequence, Union, cast, MutableMapping
 from inspect import signature
 
 from opendp._lib import *
@@ -513,9 +513,9 @@ def _slice_to_option(raw: FfiSlicePtr, type_name: RuntimeType) -> Optional[Any]:
     return _slice_to_py(raw, type_name.args[0])
 
 
-def _hashmap_to_slice(val: dict[Any, Any], type_name: RuntimeType) -> FfiSlicePtr:
+def _hashmap_to_slice(val: MutableMapping, type_name: RuntimeType) -> FfiSlicePtr:
     key_type, val_type = type_name.args
-    if not isinstance(val, dict):
+    if not isinstance(val, MutableMapping):
         raise TypeError(f"Expected type is {type_name} but input data is not a dict.")
 
     val = {
@@ -549,7 +549,7 @@ def _function_to_slice(raw: Function, type_name: RuntimeType) -> FfiSlicePtr:
     return _wrap_in_slice(raw, 1)
 
 
-def _slice_to_hashmap(raw: FfiSlicePtr) -> dict[Any, Any]:
+def _slice_to_hashmap(raw: FfiSlicePtr) -> MutableMapping:
     slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyObjectPtr))
     keys: AnyObjectPtr = slice_array[0]
     vals: AnyObjectPtr = slice_array[1]
