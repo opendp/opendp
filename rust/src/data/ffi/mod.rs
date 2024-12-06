@@ -22,7 +22,6 @@ mod polars;
 use bitvec::slice::BitSlice;
 
 use crate::core::{FfiError, FfiResult, FfiSlice, Function};
-use crate::data::Column;
 use crate::domains::BitVector;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyFunction, AnyMeasurement, AnyObject, AnyQueryable, Downcast};
@@ -214,9 +213,9 @@ pub extern "C" fn opendp_data__slice_as_object(
 
             let field = arrow::ffi::import_field_from_c(schema)
                 .map_err(|e| err!(FFI, "failed to import field from c: {}", e.to_string()))?;
-            let array = arrow::ffi::import_array_from_c(array, field.data_type)
+            let array = arrow::ffi::import_array_from_c(array, field.dtype)
                 .map_err(|e| err!(FFI, "failed to import array from c: {}", e.to_string()))?;
-            Series::try_from((name, array))
+            Series::try_from((PlSmallStr::from_str(name), array))
                 .map_err(|e| err!(FFI, "failed to construct Series: {}", e.to_string()))?
         })
     }
@@ -232,8 +231,8 @@ pub extern "C" fn opendp_data__slice_as_object(
         raw: &FfiSlice
     ) -> Fallible<AnyObject> {
         let slices = unsafe { slice::from_raw_parts(raw.ptr as *const *const FfiSlice, raw.len) };
-        let series = slices.iter().map(|&s| raw_to_concrete_series(try_as_ref!(s)))
-        .collect::<Fallible<Vec<Series>>>()?;
+        let series = slices.iter().map(|&s| raw_to_concrete_series(try_as_ref!(s)).map(Column::Series))
+        .collect::<Fallible<Vec<Column>>>()?;
         
         Ok(AnyObject::new(DataFrame::new(series)?))
     }
@@ -539,7 +538,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         let columns = frame
             .get_columns()
             .iter()
-            .map(concrete_series_to_raw)
+            .map(concrete_column_to_raw)
             .collect::<Fallible<Vec<FfiSlice>>>()?;
         let slice = FfiSlice {
             ptr: columns.as_ptr() as *mut c_void,
@@ -550,14 +549,16 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
     }
 
     #[cfg(feature = "polars")]
-    fn concrete_series_to_raw(series: &Series) -> Fallible<FfiSlice> {
+    fn concrete_column_to_raw(column: &Column) -> Fallible<FfiSlice> {
         // Rechunk aggregates all chunks to a contiguous array of memory.
         // since we rechunked, we can assume there is only one chunk
-        let array = series.rechunk().to_arrow(0, false);
+
+        let series = column.as_materialized_series();
+        let array = series.rechunk().to_arrow(0, CompatLevel::newest());
 
         let schema = arrow::ffi::export_field_to_c(&ArrowField::new(
-            series.name(),
-            array.data_type().clone(),
+            series.name().clone(),
+            array.dtype().clone(),
             true,
         ));
         let array = arrow::ffi::export_array_to_c(array);
@@ -565,7 +566,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         let buffer = vec![
             util::into_raw(array) as *const c_void,
             util::into_raw(schema) as *const c_void,
-            into_c_char_p(series.name().to_string())? as *const c_void,
+            into_c_char_p(column.name().to_string())? as *const c_void,
         ];
         let slice = FfiSlice {
             ptr: buffer.as_ptr() as *mut c_void,
@@ -577,7 +578,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
 
     #[cfg(feature = "polars")]
     fn series_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        concrete_series_to_raw(obj.downcast_ref::<Series>()?)
+        concrete_column_to_raw(&Column::Series(obj.downcast_ref::<Series>()?.clone()))
     }
 
     #[cfg(feature = "polars")]
@@ -867,14 +868,9 @@ impl std::fmt::Debug for AnyObject {
         }
         let type_arg = &self.type_;
         f.write_str(dispatch!(monomorphize, [(type_arg, [
-            u32, u64, i32, i64, f32, f64, bool, String, u8, Column,
+            u32, u64, i32, i64, f32, f64, bool, String, u8,
             (f64, f64),
-            Vec<u32>, Vec<u64>, Vec<i32>, Vec<i64>, Vec<f32>, Vec<f64>, Vec<bool>, Vec<String>, Vec<u8>, Vec<Column>, Vec<Vec<String>>,
-            HashMap<String, Column>,
-            // FIXME: The following are for Python demo use of compositions. Need to figure this out!!!
-            (Box<i32>, Box<f64>),
-            (Box<i32>, Box<u32>),
-            (Box<(Box<f64>, Box<f64>)>, Box<f64>),
+            Vec<u32>, Vec<u64>, Vec<i32>, Vec<i64>, Vec<f32>, Vec<f64>, Vec<bool>, Vec<String>, Vec<u8>, Vec<Vec<String>>,
             (AnyObject, AnyObject),
             AnyObject
         ])], (self)).unwrap_or_else(|_| "[Non-debuggable]".to_string()).as_str())

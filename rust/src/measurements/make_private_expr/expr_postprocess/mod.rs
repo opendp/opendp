@@ -81,7 +81,7 @@ where
             move |exprs| {
                 let [expr] = <[Expr; 1]>::try_from(exprs)
                     .expect("Alias will always be applied to exactly one expression.");
-                Ok(expr.alias(name.as_ref()))
+                Ok(expr.alias(name.clone()))
             },
             global_scale,
         ),
