@@ -200,12 +200,22 @@ def test_measure_cast():
     context.query().compositor(split_evenly_over=1) # TODO: Exercise different output_measure params
 
 
-def test_split_by_weights():
+def test_split_by_weights_ints():
     dp.Context.compositor(
         data=[1, 2, 3],
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=3.0, delta=1e-6),
         split_by_weights=[1, 2],
+        domain=dp.vector_domain(dp.atom_domain(T=int)),
+    )
+
+
+def test_split_by_weights_floats():
+    dp.Context.compositor(
+        data=[1, 2, 3],
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=3.0, delta=1e-6),
+        split_by_weights=[1.0, 2.0],
         domain=dp.vector_domain(dp.atom_domain(T=int)),
     )
 
