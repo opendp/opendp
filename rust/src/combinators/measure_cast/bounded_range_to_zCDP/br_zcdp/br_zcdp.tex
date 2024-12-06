@@ -1,0 +1,100 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+
+\title{\texttt{Bounded Range to zCDP}}
+\author{Tudor Cebere}
+
+\begin{document}
+\maketitle
+
+\contrib
+Proves soundness of \texttt{fn bounded\_range\_to\_zCDP} in \asOfCommit{mod.rs}{0b8f4222}.
+This proof is an adaptation of Theorem 5 \href{https://differentialprivacy.org/exponential-mechanism-bounded-range/}{here}, which proves the conversion between bounded range \cite{durfee2019practical} and zCDP.
+
+\subsection{Hoare Triple}
+\subsubsection*{Preconditions}
+\begin{itemize}
+    \item Variable \texttt{eta} must be of type float64
+\end{itemize}
+
+\subsubsection*{Pseudocode}
+
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/br_zcdp.py}
+
+\subsubsection*{Postcondition}
+\begin{definition}[Privacy Loss Random Variable]
+    Let $M : X^n \to \Omega$ be a randomized mechanism, and let $D, D' \in X^n$ be two neighboring datasets. 
+    For each possible output $y \in \Omega$, define the \emph{privacy loss at $y$} as
+    \begin{equation}
+      f(y) := \log\left(\frac{\Pr[M(D) = y]}{\Pr[M(D') = y]}\right).
+    \end{equation}
+    Since $M(D)$ is a random outcome in $\Omega$, we can then define the \emph{privacy loss random variable} $Z$ as
+    \begin{equation}
+      Z := f(M(D)).
+    \end{equation}
+    In other words, $Z$ is the random variable obtained by first drawing an outcome $y$ from $M(D)$ and then evaluating $f(y)$.
+  \end{definition}
+  
+\begin{definition}[$\eta$-Range Bounded]
+\label{def:br}
+    Let $M : X^n \to Y$ be a randomized mechanism and let $\eta > 0$. 
+    We say that $M$ is $\varepsilon$-range-bounded if $\forall y \in Y$ 
+    and any pair of neighboring datasets $D, D' \in X^n$, there exists a $t$ such that:
+    \begin{equation}
+        Z \in \left[t, t + \eta \right].
+    \end{equation}
+\end{definition}
+
+\begin{definition}[Concentrated Differential Privacy]
+    \label{def:zcdp}
+    A randomized algorithm \( M : \mathcal{X}^n \to \mathcal{Y} \) satisfies \(\rho\)-concentrated differential privacy if, for all pairs of inputs \( x, x' \in \mathcal{X}^n \) differing only in the data of a single individual and $\forall \lambda > 0$, we have:
+    \begin{equation}
+        \mathbb{E}\left[\exp(\lambda Z)\right] \le \exp\left(\lambda(\lambda+1)\rho\right),
+    \end{equation}
+\end{definition}
+
+\begin{lemma} A privacy loss random variable $Z$ satisfies
+    \label{lemma:PRV_lemma_1}
+    \begin{equation}
+        \mathbb{E}\left[\exp(-Z)\right] = 1
+    \end{equation}
+    \begin{proof}
+    \begin{align}
+        \mathbb{E}\left[(-Z)\right] &= \sum_y \mathbb{P}\left[ M(x) = y\right] \exp(-f(y)) \\
+        & = \sum_y \mathbb{P}\left[M(x) = y\right] \frac{M(x') = y}{M(x) = y} = 1
+    \end{align}
+    \end{proof}
+\end{lemma}
+
+\begin{lemma} Let M satisfy $\eta$-Bounded Range, then it's associated privacy random variable satisfies:
+    \label{lemma:PRV_lemma_2}
+    \begin{equation}
+        \mathbb{E}\left[Z\right] \leq \frac{1}{8}\eta^2
+    \end{equation}
+
+    \begin{proof}
+    \begin{align}
+        \mathbb{E}\left[\exp(-Z)\right] & \leq \exp(-\mathbb{E}[Z] + \frac{\eta^2}{8}) && (\text{Via Hoeffding, using } Z \in [t, t+\eta]) \\
+        \implies \mathbb{E}\left[Z\right] & \leq \frac{\eta^2}{8} - \log{E[\exp(-Z)]} && (\text{rearranging the terms}) \\
+        & = \frac{\eta^2}{8} && (\text{using Lemma \ref{lemma:PRV_lemma_1}})
+    \end{align}
+    \end{proof}
+\end{lemma}
+
+\begin{theorem}[Bounded Range implies zCDP]
+    If $M$ is $\eta$-bounded range, then it is $\frac{1}{8}\eta^{2}$-concentrated differentially private.
+\end{theorem}
+
+\begin{proof}
+\begin{align}
+    \mathbb{E}\left[\exp(\lambda Z)\right]
+    & \leq \exp(\mathbb{E}[Z] \lambda + \frac{\eta^2}{8} \lambda^2) && (\text{Via Hoeffding, using } Z \in [t, t+\eta]) \\
+    & \leq \exp(\frac{\eta^2}{8} \lambda + \frac{\eta^2}{8} \lambda^2) && (\text{Via Lemma \ref{lemma:PRV_lemma_2}})
+    & \leq \exp(\frac{\eta^2}{8} \lambda + \frac{\eta^2}{8} \lambda^2) \\
+    & \leq \exp(\frac{\eta^2}{8} \lambda \left( \lambda + 1\right)) \\
+    & \implies \frac{\eta^2}{8}\text{-zCDP} && (\text{Via Definition \ref{def:zcdp}})
+\end{align}
+\end{proof}
+
+\end{document}
