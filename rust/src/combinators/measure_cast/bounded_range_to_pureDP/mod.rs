@@ -17,7 +17,7 @@ use crate::{
 /// * `QO` - Output distance type. One of `f32` or `f64`.
 /// For more details, see: https://differentialprivacy.org/exponential-mechanism-bounded-range/
 
-pub fn make_bounded_range_to_pureDP<DI, TO, MI>(
+pub fn bounded_range_to_pureDP<DI, TO, MI>(
     m: Measurement<DI, TO, MI, BoundedRange>,
 ) -> Fallible<Measurement<DI, TO, MI, MaxDivergence>>
 where
