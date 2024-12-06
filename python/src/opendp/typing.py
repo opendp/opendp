@@ -16,7 +16,7 @@ We suggest importing under the conventional name ``dp``:
 from __future__ import annotations
 import typing
 from collections.abc import Hashable
-from typing import Optional, Union, Any, Type, _GenericAlias # type: ignore[attr-defined]
+from typing import Optional, Union, Any, Type, MutableMapping, _GenericAlias # type: ignore[attr-defined]
 from types import GenericAlias
 import re
 
@@ -24,7 +24,7 @@ from opendp.mod import Function, UnknownTypeException, Measurement, Transformati
 from opendp._lib import ATOM_EQUIVALENCE_CLASSES, import_optional_dependency
 
 
-ELEMENTARY_TYPES: dict[Any, str] = {
+ELEMENTARY_TYPES: MutableMapping[type, str] = {
     int: 'i32',
     float: 'f64',
     str: 'String',

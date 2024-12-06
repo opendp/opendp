@@ -12,7 +12,7 @@ We suggest importing under the conventional name ``dp``:
 '''
 
 import logging
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional, Union, MutableMapping
 import importlib
 from inspect import signature
 from functools import partial
@@ -383,7 +383,7 @@ class Context(object):
         split_evenly_over: Optional[int] = None,
         split_by_weights: Optional[list[float]] = None,
         domain: Optional[Domain] = None,
-        margins: Optional[dict[tuple[str, ...], Margin]] = None,
+        margins: Optional[MutableMapping[tuple[str, ...], Margin]] = None,
     ) -> "Context":
         """Constructs a new context containing a sequential compositor with the given weights.
 
