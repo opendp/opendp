@@ -37,7 +37,7 @@ def test_pca():
         m_pca = space >> then_private_pca(unit_epsilon=1.0)
 
     with optional_dependency('randomgen'):
-        print(m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows)))
+        print("TODO: explain", m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows)))
     assert m_pca.check(2, 1.0)
 
 
@@ -57,7 +57,7 @@ def test_pca_skl():
 
     with optional_dependency('randomgen'):
         model.fit(data)
-    print(model)
+    print("TODO: explain", model)
 
     print("singular values", model.singular_values_)
     print("components", model.components_)
@@ -81,7 +81,7 @@ def test_pca_skl():
     )
     meas = model.measurement()
     meas(data)
-    print(model.components_)
+    print("TODO: explain", model.components_)
 
 
 def flip_row_signs(a, b):
@@ -109,8 +109,8 @@ def flaky_assert_pca_compare_sklearn():
     model_skl = sklearn.decomposition.PCA()
     model_skl.fit(data)
 
-    print(model_odp)
-    print(model_skl)
+    print("TODO: explain", model_odp)
+    print("TODO: explain", model_skl)
 
     print("odp singular values", model_odp.singular_values_)
     print("skl singular values", model_skl.singular_values_)
@@ -126,8 +126,8 @@ def flaky_assert_pca_compare_sklearn():
     print("diff\n", odp_comp - skl_comp)
     assert np.allclose(odp_comp, skl_comp, atol=1e-3)
 
-    print(model_skl.explained_variance_)
-    print(model_odp.explained_variance_)
+    print("TODO: explain", model_skl.explained_variance_)
+    print("TODO: explain", model_odp.explained_variance_)
 
 
 def test_pca_compare_sklearn():
