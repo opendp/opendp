@@ -66,6 +66,7 @@ where
         return fallible!(MakeMeasurement, "expected group by");
     };
 
+    // 1: establish stability of input
     let t_prior = input.clone().make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
@@ -81,6 +82,7 @@ where
         false
     };
 
+    // 2: prepare for release of `aggs`
     let expr_domain = WildExprDomain {
         columns: middle_domain.series_domains.clone(),
         context: Context::Grouping {
@@ -105,12 +107,15 @@ where
 
     let f_comp = m_exprs.function.clone();
     let privacy_map = m_exprs.privacy_map.clone();
+
+    // 3: prepare for release of `keys`
     let (dp_exprs, null_exprs): (_, Vec<Option<Expr>>) = m_exprs
         .invoke(&input)?
         .into_iter()
         .map(|ep| (ep.expr, ep.fill))
         .unzip();
 
+    // 3.1: reconcile information about the threshold
     let threshold_info = if margin.public_info.is_some() || is_join {
         None
     } else if let Some((name, threshold_value)) = match_filter(&key_sanitizer) {
@@ -123,6 +128,7 @@ where
         return fallible!(MakeMeasurement, "The key-set of {:?} is private and cannot be released without a filter or join. Please pass a filtering threshold into make_private_lazyframe or conduct a join against a public key-set.", by);
     };
 
+    // 3.2: update key sanitizer
     if let Some((name, _, threshold_value, is_present)) = &threshold_info {
         let threshold_expr = col(name).gt(lit(*threshold_value));
         key_sanitizer = Some(KeySanitizer::Filter(match (is_present, key_sanitizer) {
@@ -146,6 +152,7 @@ where
         );
     }
 
+    // 4: build final measurement
     let m_group_by_agg = Measurement::new(
         middle_domain,
         Function::new_fallible(move |arg: &DslPlan| {

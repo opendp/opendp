@@ -12,62 +12,144 @@
 \contrib
 Proves soundness of \texttt{fn make\_private\_group\_by} in \asOfCommit{mod.rs}{0db9c6036}.
 
-\subsection*{Vetting History}
-\begin{itemize}
-    \item \vettingPR{512}
-\end{itemize}
-
 \section{Hoare Triple}
 \subsection*{Precondition}
-To ensure the correctness of the output, we require the following preconditions:
-
+\subsubsection*{Compiler-verified}
 \begin{itemize}
-    \item Type \texttt{MS} must have trait \texttt{DatasetMetric}.
-    \item Type \texttt{MI} must have trait \texttt{UnboundedMetric}.
-    \item Type \texttt{MO} must have trait \texttt{ApproximateMeasure}.
+    \item Generic \texttt{MS} must implement trait \texttt{DatasetMetric}.
+    \item Generic \texttt{MI} must implement trait \texttt{UnboundedMetric}.
+    \item Generic \texttt{MO} must implement trait \texttt{ApproximateMeasure}.
 \end{itemize}
+
+\subsubsection*{User-verified}
+None
 
 \subsection*{Pseudocode}
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_private_group_by.py}
 
 \subsubsection*{Postconditions}
-\validMeasurement{\texttt{(input\_domain, input\_metric, output\_measure, \\plan, global\_scale, threshold)}}{\texttt{make\_private\_group\_by}}
-
+\begin{theorem}
+    \label{postcondition}
+    \validMeasurement{\texttt{(input\_domain, input\_metric, \\output\_measure, plan, global\_scale, threshold, MS, MI, MO)}}{\texttt{make\_private\_group\_by}}
+\end{theorem}
 \section{Proof}
 
-We now prove the postcondition of \texttt{make\_private\_group\_by}.
+We now prove the postcondition (Theorem~\ref{postcondition}).
 \begin{proof}
 
+The function logic breaks down into parts:
+\begin{enumerate}
+    \item establish stability of input (line \ref{line:input_stability})
+    \item prepare for release of \texttt{aggs} (line \ref{line:prep-release-aggs})
+    \item prepare for release of \texttt{keys} (line \ref{line:prep-release-keys})
+    \begin{enumerate}
+        \item reconcile information about the threshold (line \ref{line:reconcile-threshold})
+        \item update key sanitizer (line \ref{line:final-sanitizer})
+    \end{enumerate}
+    \item build final measurement (line \ref{line:build-meas})
+    \begin{enumerate}
+        \item construct function (line \ref{line:function})
+        \item construct privacy map (line \ref{line:privacy-map})
+    \end{enumerate}
+\end{enumerate}
+
+\rustdoc{measurements/make\_private\_lazyframe/group\_by/matching/fn}{match\_group\_by} returns a valid
+\rustdoc{measurements/make\_private\_lazyframe/group\_by/matching/struct}{MatchGroupBy} struct. 
+In this struct, \texttt{input} is the input plan, \texttt{keys} is the grouping keys, \texttt{aggs} is the list of expressions to compute per-partition,
+and \texttt{key\_sanitizer} details how to sanitize the key-set (line \ref{line:match-group-by}).
+
+\subsection{Stability of input}
 Start by establishing properties of the following variables, 
 which hold for any setting of the input arguments.
 
+By the postcondition of \texttt{StableDslPlan.make\_stable}, \texttt{t\_prior} is a valid transformation (line \ref{line:tprior}).
+By the postcondition of \texttt{match\_grouping\_columns}, \texttt{grouping\_columns} holds the names of the grouping columns.
+\texttt{margin} denotes what is considered public information about the key set, 
+pulled from descriptors in the input domain (line \ref{line:groupcols}).
+
+When sanitizing keys via a join, an upper bound on the total number of partitions
+can be statically derived via the length of the grouping keys.
+Line \ref{line:keys-len} retrieves this information from the key-set and assigns it to the margin.
+
+\texttt{is\_join} indicates that key sanitization will occur via a join. 
+This will be a useful criteria later.
+
+\subsection{Prepare to release \texttt{aggs}}
+Line \ref{line:joint} starts the process to prepare a joint measurement 
+for releasing the per-partition aggregations \texttt{aggs}.
+Each measurement's input domain is the wildcard expression domain,
+used to prepare computations that will be applied over data grouped by grouping columns \texttt{by}.
+
+By the postcondition of \texttt{make\_basic\_composition}, 
+\texttt{m\_exprs} is a valid measurement that prepares a batch of expressions that, 
+when executed via \texttt{f\_comp}, satisfies the privacy guarantee of \texttt{f\_privacy\_map}.
+
+Now that we've prepared the necessary prerequisites for privatizing the aggregations,
+we switch to privatizing the keys.
+
+\subsection{Prepare to release \texttt{keys}}
+\texttt{key\_sanitization} needs to be updated with information that was not available in the initial match on line \ref{line:match-group-by}.
 \begin{itemize}
-    \item By the postcondition of \texttt{StableDslPlan.make\_stable}, \texttt{t\_prior} is a valid transformation. \ref{line:tprior}
-    \item By the postcondition of \texttt{match\_grouping\_columns}, \texttt{grouping\_columns} holds the names of the grouping columns.
-        \texttt{margin} denotes what is considered public information about the key set, 
-        pulled from descriptors in the input domain. \ref{line:groupcols}
-    \item By the postcondition of \texttt{make\_basic\_composition}, 
-        \texttt{m\_exprs} is a valid measurement that prepares a batch of expressions that, 
-        when executed, satisfies the privacy guarantee of \texttt{m\_exprs}.  \ref{line:joint}
+    \item When filtering, a threshold may be passed into the constructor, and we must determine a suitable column to filter/threshold against.
+    \item When joining, we need expressions for filling null values corresponding to partitions that don't exist in the sensitive data.
 \end{itemize}
 
-We now reconcile information about the censoring threshold. \ref{line:reconcile-threshold}
-In the setting where grouping keys are considered public, no thresholding is necessary.
-In the setting where grouping keys are considered private information,
-threshold information is prepared from either \texttt{predicate} or \texttt{threshold}.
-By the post-condition of \texttt{find\_len\_expr}, filtering on \texttt{name} can be used to satisfy 
-$\delta$-approximate DP.
 
-The final predicate to be applied is the intersection of conditions necessary for filtering, 
-and initial conditions set in the predicate.
-The thresholding predicate is only added to the final predicate 
-if the threshold is not already present in the predicate.
+We first reconcile information about the filtering threshold (line \ref{line:reconcile-threshold}).
+\begin{itemize}
+    \item In the setting where grouping keys are considered public, 
+    or key sanitization is handled via a join, no thresholding is necessary (line \ref{line:no-thresholding}).
+    \item Otherwise, if the key sanitizer contains filtering criteria (line \ref{line:sanitizer-threshold}),
+    then by the postcondition of \texttt{find\_len\_expr}, filtering on \texttt{name} can be used to satisfy 
+    $\delta$-approximate DP.
+    \texttt{noise} of type \rustdoc{measurements/make\_private\_expr/fn}{NoisePlugin} details the noise distribution and scale. 
+    \texttt{threshold\_info} then contains the column name, noise distribution, threshold value and whether a filter needs to be inserted into the query plan.
+    In this case, since the threshold comes from the query plan, it is not necessary to add it to the query plan, and is therefore false.
+    \item In the case that a threshold has been provided to the constructor (line \ref{line:constructor-threshold}),
+    then \texttt{find\_len\_expr} will search for a suitable column to threshold on, 
+    returning with the \texttt{name} and \texttt{noise} distribution of the column.
+    Since the threshold comes from the constructor and not the plan, it will be necessary to add this filtering threshold to the query plan (explaining the true value).
+    \item By line \ref{line:not-private} no suitable filtering criteria have been found, 
+    and by the first case there is no suitable invariant for the margin or explicit join keys,
+    so it is not possible to release the keys in a way that satisfies differential privacy,
+    and the constructor refuses to build a measurement.
+\end{itemize}
 
-We now move on to the implementation of the function. \ref{line:function}
+In common use through the context API, if a mechanism is allotted a delta parameter for stable key release but doesn't already satisfy approximate-DP,
+then a search is conducted for the smallest suitable threshold parameter.
+The branching logic from line \ref{line:reconcile-threshold} is intentionally written to ignore the constructor threshold 
+when a suitable filtering threshold is already detected in the plan, to avoid overwriting/changing it.
+
+We now update \texttt{key\_sanitization} starting from line \ref{line:final-sanitizer}:
+\begin{itemize}
+    \item When filtering (line \ref{line:incorporate-threshold}), \texttt{threshold\_info} will always be set. 
+    \texttt{threshold\_expr} reflects the reconciled criteria, using the chosen filtering column and threshold. 
+    This threshold expression is applied either way the logic branches on line \ref{line:new-threshold-sanitizer}.
+    The first case preserves any additional filtering criteria that was already present in the plan, but not used for key release.
+    \item When joining (line \ref{line:incorporate-join-fill}) the sanitizer needs a way to fill missing values from partitions missing in the data.
+    This is provided by \texttt{null\_exprs}, which contain imputation strategies for filling in missing values 
+    in a way that is indistinguishable from running the mechanism on an empty partition.
+\end{itemize}
+
+\texttt{key\_sanitizer} now contains all necessary information to ensure that the keys are sanitized, 
+and will be used to construct the function.
+\texttt{threshold\_info}, \texttt{is\_join} and \texttt{public\_info} are consistent with \texttt{key\_sanitizer}, 
+and will be used to construct the privacy map.
+
+\subsection{Build final measurement}
+We now move on to the implementation of the function on line \ref{line:function}, 
+using all of the properties shown of the variables established thus far.
 The function returns a DslPlan that applies each expression from \texttt{m\_exprs}
 to \texttt{arg} grouped by \texttt{keys}.
-\texttt{threshold\_info} is conveyed into the plan, if set, 
+\texttt{key\_sanitizer} is conveyed into the plan, if set, 
 to ensure that the keys are also privatized if necessary.
+
+In the case of the join privatization, by the definition of \texttt{KeySanitizer},
+the join will either be a left or right join.
+The branching swaps the input plan and labels plan to ensure that the sensitive input data is always joined against the labels,
+but using the same join type as in the original plan.
+Once the join is applied, the fill imputation expressions are applied, hiding which partitions don't exist in the original data.
+
 It is assumed that the emitted DSL is executed in the same fashion as is done by Polars.
 This proof/implementation does not take into consideration side-channels involved in the execution of the DSL.
 
@@ -87,9 +169,14 @@ The measurement for each expression expects data set distances in terms of a tri
     but could be tighter when accounting for the $L^0$ and $L^\infty$ distances.
 \end{itemize}
 
-By the postcondition of the map on \texttt{m\_exprs}, the privacy loss, 
+By the postcondition of \texttt{f\_privacy\_map}, the privacy loss of releasing the output of \texttt{aggs}, 
 when grouped data sets may differ by this distance triple,
 is \texttt{d\_out}.
+
+We also need to consider the privacy loss from releasing \texttt{keys}.
+On line \ref{line:privacy-map-static-keys} under the \texttt{public\_info} invariant, or under the join sanitization, 
+releases on any neighboring datasets $x$ and $x'$ will share the same key-set,
+resulting in zero privacy loss.
 
 % If the grouping keys are private, then the threshold has been prepared in \ref{reconcile-threshold}.
 % At this point, it is necessary to show that the probability that any unstable partition is released is at most $\delta$.
@@ -102,7 +189,8 @@ is \texttt{d\_out}.
 % that an unstable partition an individual contributes is still present in the release,
 % because noise added to release the DP count estimate exceeds \texttt{d\_instability}.
 
-We now adapt the proof from \cite{rogers2023unifyingprivacyanalysisframework} (Theorem 7).
+We now adapt the proof from \cite{rogers2023unifyingprivacyanalysisframework} (Theorem 7) 
+to consider the case of stable key release from line \ref{line:privacy-map-threshold}.
 Consider $S$ to be the set of labels that are common between $x$ and $x'$.
 Define event $E$ to be any potential outcome of the mechanism for which all labels are in $S$
 (where only stable partitions are released).
@@ -137,5 +225,5 @@ then it is shown that \function(x), \function(x') are \dout-close under \texttt{
 \end{proof}
 
 \bibliographystyle{alpha}
-\bibliography{make_private_group_by}
+\bibliography{ref}
 \end{document}
