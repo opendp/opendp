@@ -259,6 +259,10 @@ pub extern "C" fn opendp_data__slice_as_object(
         Ok(AnyObject::new(LazyFrame::from(deserialize_raw::<DslPlan>(raw, "LazyFrame")?)))
     }
     #[cfg(feature = "polars")]
+    fn raw_to_dslplan(raw: &FfiSlice) -> Fallible<AnyObject> {
+        Ok(AnyObject::new(LazyFrame::from(deserialize_raw::<DslPlan>(raw, "LazyFrame")?).logical_plan))
+    }
+    #[cfg(feature = "polars")]
     fn raw_to_tuple_lf_expr(
         raw: &FfiSlice,
     ) -> Fallible<AnyObject> {
@@ -285,6 +289,8 @@ pub extern "C" fn opendp_data__slice_as_object(
 
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("LazyFrame") => raw_to_lazyframe(raw),
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("DslPlan") => raw_to_dslplan(raw),
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("Expr") => raw_to_expr(raw),
         #[cfg(feature = "polars")]

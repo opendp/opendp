@@ -3,7 +3,7 @@ use polars_plan::dsl::{AggExpr, Expr, FunctionExpr};
 
 use crate::{
     core::{Metric, MetricSpace, Transformation},
-    domains::{ExprDomain, OuterMetric},
+    domains::{ExprDomain, OuterMetric, WildExprDomain},
     error::Fallible,
     metrics::{LInfDistance, LpDistance, Parallel, PartitionDistance},
     polars::get_disabled_features_message,
@@ -71,13 +71,13 @@ mod expr_to_physical;
 /// * `input_metric` - How to measure distances between neighboring input data sets.
 /// * `expr` - The expression to be analyzed for stability.
 pub fn make_stable_expr<MI: 'static + Metric, MO: 'static + Metric>(
-    input_domain: ExprDomain,
+    input_domain: WildExprDomain,
     input_metric: MI,
     expr: Expr,
-) -> Fallible<Transformation<ExprDomain, ExprDomain, MI, MO>>
+) -> Fallible<Transformation<WildExprDomain, ExprDomain, MI, MO>>
 where
     Expr: StableExpr<MI, MO>,
-    (ExprDomain, MI): MetricSpace,
+    (WildExprDomain, MI): MetricSpace,
     (ExprDomain, MO): MetricSpace,
 {
     expr.make_stable(input_domain, input_metric)
@@ -86,22 +86,23 @@ where
 pub trait StableExpr<MI: Metric, MO: Metric> {
     fn make_stable(
         self,
-        input_domain: ExprDomain,
+        input_domain: WildExprDomain,
         input_metric: MI,
-    ) -> Fallible<Transformation<ExprDomain, ExprDomain, MI, MO>>;
+    ) -> Fallible<Transformation<WildExprDomain, ExprDomain, MI, MO>>;
 }
 
 impl<M: OuterMetric> StableExpr<M, M> for Expr
 where
     M::InnerMetric: DatasetMetric,
     M::Distance: Clone,
+    (WildExprDomain, M): MetricSpace,
     (ExprDomain, M): MetricSpace,
 {
     fn make_stable(
         self,
-        input_domain: ExprDomain,
+        input_domain: WildExprDomain,
         input_metric: M,
-    ) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>> {
+    ) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>> {
         if expr_fill_nan::match_fill_nan(&self).is_some() {
             return expr_fill_nan::make_expr_fill_nan(input_domain, input_metric, self);
         }
@@ -172,10 +173,11 @@ where
 {
     fn make_stable(
         self,
-        input_domain: ExprDomain,
+        input_domain: WildExprDomain,
         input_metric: PartitionDistance<MI>,
-    ) -> Fallible<Transformation<ExprDomain, ExprDomain, PartitionDistance<MI>, LpDistance<P, f64>>>
-    {
+    ) -> Fallible<
+        Transformation<WildExprDomain, ExprDomain, PartitionDistance<MI>, LpDistance<P, f64>>,
+    > {
         use Expr::*;
         match self {
             #[cfg(feature = "contrib")]
@@ -207,10 +209,15 @@ where
 {
     fn make_stable(
         self,
-        input_domain: ExprDomain,
+        input_domain: WildExprDomain,
         input_metric: PartitionDistance<MI>,
     ) -> Fallible<
-        Transformation<ExprDomain, ExprDomain, PartitionDistance<MI>, Parallel<LInfDistance<f64>>>,
+        Transformation<
+            WildExprDomain,
+            ExprDomain,
+            PartitionDistance<MI>,
+            Parallel<LInfDistance<f64>>,
+        >,
     > {
         if expr_discrete_quantile_score::match_discrete_quantile_score(&self)?.is_some() {
             return expr_discrete_quantile_score::make_expr_discrete_quantile_score(

@@ -28,7 +28,8 @@ use crate::{polars::OpenDPPlugin, traits::RoundCast};
 
 use super::series_to_vec;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone)]
+#[cfg_attr(feature = "ffi", derive(Serialize, Deserialize))]
 pub(crate) struct DiscreteQuantileScoreShim;
 impl SeriesUdf for DiscreteQuantileScoreShim {
     // makes it possible to downcast the AnonymousFunction trait object back to Self

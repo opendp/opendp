@@ -27,7 +27,6 @@ fn test_index_candidates_udf() -> Fallible<()> {
 #[test]
 fn test_index_candidates_expr() -> Fallible<()> {
     let (lf_domain, lf) = get_quantile_test_data()?;
-    let expr_domain = lf_domain.select();
     let candidates = Series::new("", [0., 10., 20., 30., 40., 50., 60., 70., 80., 90., 100.]);
     let scale: f64 = 1e-8;
 
@@ -35,13 +34,13 @@ fn test_index_candidates_expr() -> Fallible<()> {
         .dp()
         .quantile(0.80, candidates, Some(scale))
         .make_private(
-            expr_domain,
+            lf_domain.select(),
             PartitionDistance(SymmetricDistance),
             MaxDivergence::default(),
             None,
         )?;
 
-    let dp_expr = m_quant.invoke(&(lf.logical_plan.clone(), all()))?;
+    let dp_expr = m_quant.invoke(&lf.logical_plan)?;
     let df = lf.select([dp_expr]).collect()?;
     let actual = df.column("cycle_(..101f64)")?.f64()?.get(0).unwrap();
     assert_eq!(actual, 80.);
@@ -50,6 +49,7 @@ fn test_index_candidates_expr() -> Fallible<()> {
 }
 
 #[test]
+#[cfg(feature = "ffi")]
 fn test_index_candidates_serde() -> Fallible<()> {
     macro_rules! test_roundtrip {
         ($args:expr) => {{

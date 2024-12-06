@@ -1,18 +1,18 @@
 use polars::lazy::dsl::Expr;
 use polars::prelude::*;
-use std::collections::BTreeSet;
-use std::fmt::{Debug, Formatter};
+use std::collections::{BTreeSet, HashMap};
+use std::fmt::Debug;
 
 use crate::core::{Metric, MetricSpace};
 use crate::metrics::{
-    ChangeOneDistance, HammingDistance, InsertDeleteDistance, LInfDistance, LpDistance, Parallel,
-    PartitionDistance, SymmetricDistance,
+    AbsoluteDistance, ChangeOneDistance, HammingDistance, InsertDeleteDistance, LInfDistance,
+    LpDistance, Parallel, PartitionDistance, SymmetricDistance,
 };
 use crate::traits::ProductOrd;
 use crate::transformations::DatasetMetric;
 use crate::{core::Domain, error::Fallible};
 
-use super::{DslPlanDomain, Frame, FrameDomain, Margin, SeriesDomain};
+use super::{Frame, FrameDomain, LazyFrameDomain, Margin, SeriesDomain};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -22,13 +22,13 @@ mod ffi;
 /// Expressions used in the Polars API fall into four categories:
 ///
 /// 1. Not useful on their own for DP (shift)
-/// 2. Must be leaf nodes, like only col or lit (impute, group by or join keys, explode)
-/// 3. Must be row-by-row (sorting by, filter, with column, top/bottom k)
-/// 4. Aggregates (select, aggregate)
+/// 2. Leaf nodes, like only col or lit (impute, group by or join keys, explode)
+/// 3. Row-by-row (sorting by, filter, with column, top/bottom k)
+/// 4. Grouping (select, aggregate)
 ///
 /// Specifying the expression context is not necessary for categories one or two, leaving only row-by-row and aggregates.
 #[derive(Clone, PartialEq, Debug)]
-pub enum ExprContext {
+pub enum Context {
     /// Requires that the expression applied to the data frame is row-by-row, i.e. the expression is applied to each row independently.
     ///
     /// Rows cannot be added or removed, and the order of rows cannot be changed.
@@ -37,152 +37,97 @@ pub enum ExprContext {
     ///
     /// `.agg(exprs)` is the general case where there are grouping columns.
     /// `.select(exprs)` is the special case where there are no grouping columns.
-    Aggregate { grouping_columns: BTreeSet<String> },
+    Grouping {
+        by: BTreeSet<SmartString>,
+        margin: Margin,
+    },
 }
 
-impl ExprContext {
+impl Context {
     /// # Proof Definition
-    /// Given a context (`self`), logical plan (`lp`) and expression,
-    /// returns a new logical plan where the expression has been applied to the logical plan by means specified by the context.
-    fn get_plan(&self, (lp, expr): &(DslPlan, Expr)) -> DslPlan {
-        let frame = LazyFrame::from(lp.clone());
-        match self {
-            ExprContext::RowByRow => frame.select([expr.clone()]),
-            ExprContext::Aggregate { grouping_columns } => frame
-                .group_by(
-                    &grouping_columns
-                        .iter()
-                        .map(AsRef::as_ref)
-                        .map(col)
-                        .collect::<Vec<_>>(),
-                )
-                .agg([expr.clone()]),
-        }
-        .logical_plan
-    }
-
-    /// # Proof Definition
-    /// Return the grouping columns specified by `self` if in an aggregation context,
+    /// Return the grouping columns and margin specified by `self` if in a grouping context,
     /// otherwise return an error.
-    pub fn grouping_columns(&self) -> Fallible<BTreeSet<String>> {
+    pub fn grouping(&self, operation: &str) -> Fallible<(BTreeSet<SmartString>, Margin)> {
         match self {
-            // ExprContext::Aggregate serves both `select` and `group_by/agg`
-            ExprContext::Aggregate { grouping_columns } => Ok(grouping_columns.clone()),
-            ExprContext::RowByRow => {
-                fallible!(FailedFunction, "RowByRow context has no grouping columns")
-            }
+            Context::RowByRow { .. } => fallible!(
+                MakeDomain,
+                "{} is only allowed within `.agg(...)` or `.select(...)`",
+                operation
+            ),
+            Context::Grouping { by, margin } => Ok((by.clone(), margin.clone())),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct WildExprDomain {
+    /// Domains for each column.
+    pub columns: Vec<SeriesDomain>,
+    /// The context in which a frame resides.
+    pub context: Context,
+}
+
+impl Domain for WildExprDomain {
+    type Carrier = DslPlan;
+
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+        self.clone()
+            .to_frame_domain()?
+            .member(&LazyFrame::from(val.clone()))
+    }
+}
+
+impl WildExprDomain {
+    pub fn as_row_by_row(&self) -> Self {
+        Self {
+            columns: self.columns.clone(),
+            context: Context::RowByRow,
         }
     }
 
-    /// # Proof Definition
-    /// Only return without an error if the expression context `self`
-    /// allows for row ordering or the number of rows to be changed.
-    ///
-    /// This is used to disallow operations like sorting, shuffling or filtering
-    /// when row alignment must not change,
-    /// like when augmenting a new column via `with_column`.
-    pub fn check_alignment_can_be_broken(&self) -> Fallible<()> {
-        if !matches!(self, ExprContext::Aggregate { .. }) {
-            return fallible!(
-                MakeMeasurement,
-                "record alignment can only be broken in a selection or aggregation"
-            );
-        }
-        Ok(())
+    fn to_frame_domain<F: Frame>(self) -> Fallible<FrameDomain<F>> {
+        FrameDomain::new_with_margins(
+            self.columns,
+            match self.context {
+                Context::RowByRow => HashMap::default(),
+                Context::Grouping { by, margin } => {
+                    let by = BTreeSet::from_iter(by);
+                    HashMap::from([(by, margin)])
+                }
+            },
+        )
     }
 }
 
 /// # Proof Definition
-/// `ExprDomain` is the domain of data frames that can be constructed by applying a given expression to a given data frame.
-///
-/// # Example
-/// ```
-/// use polars::prelude::*;
-/// use opendp::domains::{AtomDomain, SeriesDomain, LazyFrameDomain, ExprDomain, ExprContext};
-/// let lf_domain = LazyFrameDomain::new(vec![
-///     SeriesDomain::new("A", AtomDomain::<i32>::default()),
-///     SeriesDomain::new("B", AtomDomain::<f64>::default()),
-/// ])?;
-///
-/// let expr_domain = ExprDomain::new(lf_domain, ExprContext::RowByRow);
-/// # opendp::error::Fallible::Ok(())
-/// ```
-#[derive(Clone, PartialEq)]
+/// `ExprDomain` is the domain of series that can be constructed by applying an expression to a data frame.
+#[derive(Clone, PartialEq, Debug)]
 pub struct ExprDomain {
     /// The domain that materialized data frames are a member of.
-    pub frame_domain: DslPlanDomain,
-    /// Denotes how an expression must be applied to materialize a member of the domain.
-    pub context: ExprContext,
+    pub column: SeriesDomain,
+    /// Context-specific descriptors.
+    pub context: Context,
 }
 
-impl ExprDomain {
-    /// # Proof Definition
-    /// Returns an [`ExprDomain`] with members matching those of `frame_domain`.
-    pub fn new<F: Frame>(frame_domain: FrameDomain<F>, context: ExprContext) -> ExprDomain {
-        Self {
-            frame_domain: frame_domain.cast_carrier(),
-            context,
+impl LazyFrameDomain {
+    pub fn select(self) -> WildExprDomain {
+        self.aggregate::<String, 0>([])
+    }
+
+    pub fn aggregate<S: AsRef<str>, const P: usize>(self, by: [S; P]) -> WildExprDomain {
+        let by: BTreeSet<_> = by.iter().map(|s| s.as_ref().into()).collect();
+        let margin = self.get_margin(by.clone());
+        WildExprDomain {
+            columns: self.series_domains,
+            context: Context::Grouping { by, margin },
         }
     }
 
-    /// # Proof Definition
-    /// If there is only one series in `self`,
-    /// returns the series domain for that column,
-    /// otherwise an error.
-    pub fn active_series(&self) -> Fallible<&SeriesDomain> {
-        self.check_one_column()?;
-        Ok(&self.frame_domain.series_domains[0])
-    }
-
-    /// # Proof Definition
-    /// If there is only one series in `self`,
-    /// returns a mutable reference to the series domain for that column,
-    /// otherwise returns an error.
-    pub fn active_series_mut(&mut self) -> Fallible<&mut SeriesDomain> {
-        self.check_one_column()?;
-        Ok(&mut self.frame_domain.series_domains[0])
-    }
-
-    /// # Proof Definition
-    /// If `self.context` does not have grouping columns, return an error.
-    /// Otherwise return margin descriptors about the grouping columns in `self.context`
-    /// that can be inferred from `self.frame_domain`.
-    pub fn active_margin(&self) -> Fallible<Margin> {
-        let grouping_columns = self.context.grouping_columns()?;
-        Ok(self.frame_domain.get_margin(grouping_columns))
-    }
-
-    /// # Proof Definition
-    /// Returns Ok if members of `self` have one column, otherwise an error.
-    pub fn check_one_column(&self) -> Fallible<()> {
-        let series_domains = &self.frame_domain.series_domains;
-        if series_domains.len() != 1 {
-            return fallible!(
-                FailedFunction,
-                "expression must span exactly one column, but expression spans {} columns",
-                series_domains.len()
-            );
+    pub fn row_by_row(self) -> WildExprDomain {
+        WildExprDomain {
+            columns: self.series_domains,
+            context: Context::RowByRow,
         }
-        Ok(())
-    }
-}
-
-#[cfg(test)]
-impl<F: Frame> FrameDomain<F> {
-    pub fn row_by_row(&self) -> ExprDomain {
-        ExprDomain::new(self.clone(), ExprContext::RowByRow)
-    }
-    pub fn aggregate<E: AsRef<[IE]>, IE: AsRef<str>>(&self, by: E) -> ExprDomain {
-        let by = BTreeSet::from_iter(by.as_ref().iter().map(|s| s.as_ref().to_string()));
-        ExprDomain::new(
-            self.clone(),
-            ExprContext::Aggregate {
-                grouping_columns: by,
-            },
-        )
-    }
-    pub fn select(&self) -> ExprDomain {
-        self.aggregate::<_, &str>([])
     }
 }
 
@@ -190,16 +135,32 @@ impl Domain for ExprDomain {
     type Carrier = (DslPlan, Expr);
 
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
-        let frame = self.context.get_plan(val);
-        self.frame_domain.member(&frame)
-    }
-}
+        let (plan, expr) = (LazyFrame::from(val.0.clone()), val.1.clone());
+        let frame = match &self.context {
+            Context::RowByRow { .. } => plan.select([expr]),
+            Context::Grouping { by, .. } => plan
+                .group_by(&by.iter().map(|s| s.as_str()).collect::<Vec<_>>())
+                .agg([expr.clone()]),
+        }
+        .collect()?;
 
-impl Debug for ExprDomain {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ExprDomain")
-            .field("lazy_frame_domain", &self.frame_domain)
-            .finish()
+        if !(self.column).member(frame.column(self.column.field.name.as_str())?)? {
+            return Ok(false);
+        }
+
+        match &self.context {
+            Context::RowByRow => (),
+            Context::Grouping { margin, by } => {
+                if !margin.member(
+                    frame
+                        .lazy()
+                        .group_by(&by.iter().map(|s| s.as_str()).collect::<Vec<_>>()),
+                )? {
+                    return Ok(false);
+                }
+            }
+        }
+        Ok(true)
     }
 }
 
@@ -232,15 +193,53 @@ impl_expr_metric_select!(InsertDeleteDistance SymmetricDistance HammingDistance 
 
 impl<M: 'static + Metric> OuterMetric for PartitionDistance<M> {
     type InnerMetric = M;
+
     fn inner_metric(&self) -> Self::InnerMetric {
         self.0.clone()
     }
 }
 
-impl<M: DatasetMetric> MetricSpace for (ExprDomain, M) {
+impl<M: 'static + Metric> OuterMetric for Parallel<M> {
+    type InnerMetric = M;
+
+    fn inner_metric(&self) -> Self::InnerMetric {
+        self.0.clone()
+    }
+}
+
+impl<const P: usize, Q: 'static> OuterMetric for LpDistance<P, Q> {
+    type InnerMetric = AbsoluteDistance<Q>;
+
+    fn inner_metric(&self) -> Self::InnerMetric {
+        AbsoluteDistance::default()
+    }
+}
+
+impl<M: DatasetMetric> MetricSpace for (WildExprDomain, M) {
     fn check_space(&self) -> Fallible<()> {
         let (expr_domain, metric) = self;
-        (expr_domain.frame_domain.clone(), metric.clone()).check_space()
+        (
+            expr_domain.clone().to_frame_domain::<DslPlan>()?,
+            metric.clone(),
+        )
+            .check_space()
+    }
+}
+
+impl<M: DatasetMetric> MetricSpace for (WildExprDomain, PartitionDistance<M>) {
+    fn check_space(&self) -> Fallible<()> {
+        let (expr_domain, PartitionDistance(inner_metric)) = self;
+        (
+            expr_domain.clone().to_frame_domain::<DslPlan>()?,
+            inner_metric.clone(),
+        )
+            .check_space()
+    }
+}
+
+impl<M: DatasetMetric> MetricSpace for (ExprDomain, M) {
+    fn check_space(&self) -> Fallible<()> {
+        Ok(())
     }
 }
 
@@ -268,7 +267,6 @@ impl<Q: ProductOrd> MetricSpace for (ExprDomain, Parallel<LInfDistance<Q>>) {
 
 impl<M: DatasetMetric> MetricSpace for (ExprDomain, PartitionDistance<M>) {
     fn check_space(&self) -> Fallible<()> {
-        let (expr_domain, PartitionDistance(inner_metric)) = self;
-        (expr_domain.frame_domain.clone(), inner_metric.clone()).check_space()
+        Ok(())
     }
 }

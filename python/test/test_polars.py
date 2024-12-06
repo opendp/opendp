@@ -51,8 +51,11 @@ def example_lf(margin=None, **kwargs):
 
 
 def test_expr_domain():
-    lf_domain, _ = example_lf()
-    dp.expr_domain(lf_domain)
+    series_domains, _ = example_series()
+    dp.wild_expr_domain(series_domains)
+    dp.wild_expr_domain(series_domains, by=["A", "B"])
+    dp.wild_expr_domain(series_domains, by=["A", "B"], max_num_partitions=10)
+    dp.wild_expr_domain(series_domains, by=["A", "B"], public_info="keys")
 
 
 def test_domains():
@@ -85,15 +88,6 @@ def test_lazyframe_ffi():
     t_ident = (lf_domain, dp.symmetric_distance()) >> dp.t.then_identity()
 
     pl_testing.assert_frame_equal(t_ident(lf).collect(), lf.collect())
-
-
-def test_expr_ffi():
-    """ensure that expr domain's carrier type can be passed to/from Rust"""
-    pl = pytest.importorskip("polars")
-    lf_domain, lf = example_lf()
-    expr_domain = dp.expr_domain(lf_domain, grouping_columns=[])
-    t_ident = (expr_domain, dp.symmetric_distance()) >> dp.t.then_identity()
-    assert str(t_ident((lf, pl.col("A")))[1]) == str(pl.col("A"))
 
 
 @pytest.mark.parametrize(
@@ -188,14 +182,14 @@ def test_cast():
 
 def test_stable_expr():
     pl = pytest.importorskip("polars")
-    domain = dp.expr_domain(example_lf()[0])
+    domain = dp.wild_expr_domain(example_series()[0])
     with pytest.raises(dp.OpenDPException):
         dp.t.make_stable_expr(domain, dp.symmetric_distance(), pl.col("A").cast(int))
 
 
 def test_private_expr():
     pl = pytest.importorskip("polars")
-    domain = dp.expr_domain(example_lf(margin=[])[0], grouping_columns=[])
+    domain = dp.wild_expr_domain(example_series()[0], by=[])
     with pytest.raises(dp.OpenDPException):
         dp.m.make_private_expr(
             domain,
@@ -235,7 +229,7 @@ def test_filter(measure):
 
     lf_domain, lf = example_lf(margin=[], public_info="keys", max_partition_length=50)
 
-    plan = lf.filter(pl.col("B") < 2).select(pl.len().dp.noise(scale=0.0))
+    plan = lf.filter(pl.col("B") < 2).select(dp.len(scale=0.0))
 
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), measure, plan
@@ -246,10 +240,8 @@ def test_filter(measure):
 
 
 def test_onceframe_multi_collect():
-    pl = pytest.importorskip("polars")
-
     lf_domain, lf = example_lf()
-    plan = seed(lf.collect_schema()).select(pl.len().dp.noise(0.0))
+    plan = seed(lf.collect_schema()).select(dp.len(0.0))
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan
     )
@@ -264,7 +256,7 @@ def test_onceframe_lazy():
     pl = pytest.importorskip("polars")
 
     lf_domain, lf = example_lf()
-    plan = seed(lf.collect_schema()).select(pl.len().dp.noise(0.0))
+    plan = seed(lf.collect_schema()).select(dp.len(0.0))
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan
     )
@@ -610,23 +602,23 @@ def test_polars_threshold_rho():
 def test_replace_binary_path():
     import os
     pl = pytest.importorskip("polars")
-    expr = pl.len().dp.noise(scale=1.)
+    expr = dp.len(scale=1.)
 
     # check that the library overwrites paths
     os.environ["OPENDP_POLARS_LIB_PATH"] = "testing!"
 
     m_expr = dp.m.make_private_expr(
-        dp.expr_domain(example_lf()[0], grouping_columns=[]),
+        dp.wild_expr_domain(example_series()[0], by=[]),
         dp.partition_distance(dp.symmetric_distance()),
         dp.max_divergence(),
         expr,
     )
 
-    assert str(m_expr((pl.LazyFrame(dict()), pl.all()))) == "len().testing!:noise_plugin()"
+    assert str(m_expr(pl.LazyFrame(dict()))) == "len().testing!:noise_plugin()"
 
     # check that local paths in new expressions get overwritten
     os.environ["OPENDP_POLARS_LIB_PATH"] = __file__
-    assert str(pl.len().dp.noise(scale=1.)) == f"len().{__file__}:noise([null, dyn float: 1.0])"
+    assert str(dp.len(scale=1.)) == f"len().{__file__}:noise([null, dyn float: 1.0])"
 
     # cleanup
     del os.environ["OPENDP_POLARS_LIB_PATH"]
@@ -685,7 +677,7 @@ def test_pickle_bomb():
     err_msg_re = re.escape("OpenDP does not allow pickled keyword arguments as they may enable remote code execution.")
     with pytest.raises(dp.OpenDPException, match=err_msg_re):
         dp.m.make_private_expr(
-            dp.expr_domain(lf_domain, grouping_columns=[]),
+            dp.wild_expr_domain(example_series()[0], by=[]),
             dp.partition_distance(dp.symmetric_distance()),
             dp.max_divergence(),
             bomb_expr,
