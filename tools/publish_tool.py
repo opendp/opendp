@@ -13,6 +13,7 @@ def rust(args):
     dry_run_arg = " --dry-run" if args.dry_run else "" # Keep dash in this arg.
     run_command("Publishing opendp_tooling crate", f"cargo publish{dry_run_arg} --verbose --manifest-path=rust/opendp_tooling/Cargo.toml")
     if not args.dry_run:
+        run_command("Publishing opendp-polars-sql crate", "cargo publish --verbose --manifest-path=rust/opendp-polars-sql/Cargo.toml")
         # As of https://github.com/rust-lang/cargo/pull/11062, cargo publish blocks until the index is propagated,
         # so we don't have to wait here anymore.
         run_command("Publishing opendp_derive crate", "cargo publish --verbose --manifest-path=rust/opendp_derive/Cargo.toml")

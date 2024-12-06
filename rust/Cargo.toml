@@ -70,11 +70,13 @@ polars = { version = "=0.44.2", features = [
     "meta",
     "cutqcut",
     "strings",
+    "sql",
 ], optional = true }
 polars-plan = { version = "=0.44.2", features = [
     "ffi_plugin",
 ], optional = true }
 chrono = { version = "*", optional = true }
+opendp-polars-sql = {path = "opendp-polars-sql", version = "0.44.2", optional = true}
 
 # Temporary fix until Polars is updated.
 # See https://github.com/pola-rs/polars/issues/19063#issuecomment-2397815029
@@ -82,7 +84,7 @@ hashbrown = { version = "=0.14.5", features = ["raw"] }
 
 polars-arrow = { version = "=0.44.2", optional = true }
 pyo3 = { version = "0.21.2", features = ["abi3-py39", "extension-module"], optional = true }
-pyo3-polars = { version = "=0.18.0", features = ["derive", "dtype-array", "dtype-categorical", "dtype-struct"], optional = true }
+pyo3-polars = { version = "=0.18.0", features = ["derive", "dtype-array", "dtype-categorical", "dtype-struct", "dtype-decimal"], optional = true }
 serde = { version = "1.0", optional = true }
 serde-pickle = { version = "1.1", optional = true }
 ciborium = { version = "0.2.1", optional = true }
@@ -115,6 +117,7 @@ polars = [
     "ciborium",
     "chrono"
 ]
+sql = ["opendp-polars-sql"]
 use-openssl = ["openssl"]
 
 # for plotting in unit tests

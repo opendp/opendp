@@ -57,9 +57,9 @@ impl OpenDPPlugin for DiscreteQuantileScoreShim {
         }
     }
 
-    fn get_output(&self) -> Option<GetOutput> {
-        // dtype is unknown
-        Some(GetOutput::from_type(DataType::Array(Box::new(UInt64), 1)))
+    fn get_output(&self) -> GetOutput {
+        // length is unknown
+        GetOutput::from_type(DataType::Array(Box::new(UInt64), 1))
     }
 }
 
@@ -86,11 +86,11 @@ impl OpenDPPlugin for DiscreteQuantileScorePlugin {
         }
     }
 
-    fn get_output(&self) -> Option<GetOutput> {
+    fn get_output(&self) -> GetOutput {
         let kwargs = self.clone();
-        Some(GetOutput::map_fields(move |fields| {
+        GetOutput::map_fields(move |fields| {
             discrete_quantile_score_plugin_type_udf(fields, kwargs.clone())
-        }))
+        })
     }
 }
 

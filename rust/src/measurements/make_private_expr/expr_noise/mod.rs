@@ -64,10 +64,8 @@ impl OpenDPPlugin for NoiseShim {
         }
     }
 
-    fn get_output(&self) -> Option<GetOutput> {
-        Some(GetOutput::map_fields(|fields| {
-            noise_plugin_type_udf(fields)
-        }))
+    fn get_output(&self) -> GetOutput {
+        GetOutput::map_fields(|fields| noise_plugin_type_udf(fields))
     }
 }
 
@@ -106,10 +104,8 @@ impl OpenDPPlugin for NoisePlugin {
         }
     }
 
-    fn get_output(&self) -> Option<GetOutput> {
-        Some(GetOutput::map_fields(|fields| {
-            noise_plugin_type_udf(fields)
-        }))
+    fn get_output(&self) -> GetOutput {
+        GetOutput::map_fields(|fields| noise_plugin_type_udf(fields))
     }
 }
 

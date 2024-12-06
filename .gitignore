@@ -140,6 +140,7 @@ target/
 vendor/
 binary/
 
+rust/opendp-polars-sql/
 # Auto-generated files
 rust/opendp.h
 R/opendp/R/accuracy.R

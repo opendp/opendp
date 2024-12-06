@@ -126,9 +126,9 @@ impl OpenDPPlugin for IndexCandidatesShim {
         }
     }
 
-    fn get_output(&self) -> Option<GetOutput> {
+    fn get_output(&self) -> GetOutput {
         // dtype is unknown
-        Some(GetOutput::from_type(DataType::Null))
+        GetOutput::from_type(DataType::Null)
     }
 }
 
@@ -142,11 +142,9 @@ impl OpenDPPlugin for IndexCandidatesPlugin {
         }
     }
 
-    fn get_output(&self) -> Option<GetOutput> {
+    fn get_output(&self) -> GetOutput {
         let dtype = self.candidates.0.dtype().clone();
-        Some(GetOutput::map_field(move |f| {
-            Ok(Field::new(f.name().clone(), dtype.clone()))
-        }))
+        GetOutput::map_field(move |f| Ok(Field::new(f.name().clone(), dtype.clone())))
     }
 }
 

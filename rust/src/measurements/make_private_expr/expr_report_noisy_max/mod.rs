@@ -185,10 +185,8 @@ impl OpenDPPlugin for ReportNoisyMaxShim {
         }
     }
 
-    fn get_output(&self) -> Option<GetOutput> {
-        Some(GetOutput::map_fields(|fields| {
-            report_noisy_max_plugin_type_udf(fields)
-        }))
+    fn get_output(&self) -> GetOutput {
+        GetOutput::map_fields(|fields| report_noisy_max_plugin_type_udf(fields))
     }
 }
 
@@ -211,10 +209,8 @@ impl OpenDPPlugin for ReportNoisyMaxPlugin {
         }
     }
 
-    fn get_output(&self) -> Option<GetOutput> {
-        Some(GetOutput::map_fields(|fields| {
-            report_noisy_max_plugin_type_udf(fields)
-        }))
+    fn get_output(&self) -> GetOutput {
+        GetOutput::map_fields(|fields| report_noisy_max_plugin_type_udf(fields))
     }
 }
 
