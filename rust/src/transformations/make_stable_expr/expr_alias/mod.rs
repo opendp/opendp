@@ -3,7 +3,6 @@ use polars_plan::dsl::Expr;
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
-use crate::polars::ExprFunction;
 
 use super::StableExpr;
 

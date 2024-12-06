@@ -1,7 +1,7 @@
 use crate::core::{StabilityMap, Transformation};
 use crate::domains::{ExprDomain, MarginPub, WildExprDomain};
 use crate::metrics::{LInfDistance, Parallel, PartitionDistance};
-use crate::polars::{apply_plugin, literal_value_of, match_plugin, ExprFunction, OpenDPPlugin};
+use crate::polars::{apply_plugin, literal_value_of, match_plugin, OpenDPPlugin};
 use crate::traits::{InfCast, Number};
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::{
@@ -19,6 +19,7 @@ use polars::prelude::DataType::*;
 mod plugin_dq_score;
 pub(crate) use plugin_dq_score::{DiscreteQuantileScorePlugin, DiscreteQuantileScoreShim};
 use polars::series::Series;
+use polars_plan::plans::typed_lit;
 
 #[cfg(test)]
 pub mod test;
@@ -94,6 +95,9 @@ where
     let (alpha_num, alpha_den, size_limit) =
         score_candidates_constants::<u64>(Some(mpl as u64), alpha)?;
 
+    let len = candidates.len() as i64;
+    let fill_value = typed_lit(0u64).repeat_by(len).reshape(&[-1, len]);
+
     t_prior
         >> Transformation::<_, _, PartitionDistance<MI>, Parallel<LInfDistance<_>>>::new(
             middle_domain.clone(),
@@ -108,7 +112,8 @@ where
                         size_limit,
                     },
                 )
-            }),
+            })
+            .fill_with(fill_value),
             middle_metric,
             Parallel(LInfDistance::new(false)),
             StabilityMap::new_fallible(move |(l0, _, li)| {

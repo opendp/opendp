@@ -1,8 +1,8 @@
 use crate::core::PrivacyMap;
-use crate::domains::WildExprDomain;
+use crate::domains::{ExprPlan, WildExprDomain};
 use crate::measurements::{report_noisy_max_gumbel_map, select_score, Optimize};
 use crate::metrics::{IntDistance, LInfDistance, Parallel, PartitionDistance};
-use crate::polars::{apply_plugin, literal_value_of, match_plugin, ExprFunction, OpenDPPlugin};
+use crate::polars::{apply_plugin, literal_value_of, match_plugin, OpenDPPlugin};
 use crate::traits::{InfCast, InfMul, Number};
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::StableExpr;
@@ -47,7 +47,7 @@ pub fn make_expr_report_noisy_max<MI: 'static + UnboundedMetric>(
     input_metric: PartitionDistance<MI>,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<WildExprDomain, Expr, PartitionDistance<MI>, MaxDivergence>>
+) -> Fallible<Measurement<WildExprDomain, ExprPlan, PartitionDistance<MI>, MaxDivergence>>
 where
     Expr: StableExpr<PartitionDistance<MI>, Parallel<LInfDistance<f64>>>,
 {

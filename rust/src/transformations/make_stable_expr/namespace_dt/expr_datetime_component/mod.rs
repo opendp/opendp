@@ -5,7 +5,6 @@ use polars_plan::prelude::{ApplyOptions, FunctionOptions};
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
-use crate::polars::ExprFunction;
 use crate::transformations::DatasetMetric;
 
 use super::StableExpr;

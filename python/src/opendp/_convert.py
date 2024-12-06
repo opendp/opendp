@@ -226,6 +226,9 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
         
         if type_name == "Expr":
             return _slice_to_expr(raw)
+        
+        if type_name == "ExprPlan":
+            return _slice_to_exprplan(raw)
 
     if isinstance(type_name, RuntimeType):
         if type_name.origin == "Vec":
@@ -599,6 +602,22 @@ def _slice_to_expr(raw: FfiSlicePtr):
     slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_uint8))
     expr.__setstate__(bytes(slice_array[0:raw.contents.len]))
     return expr
+
+
+def _slice_to_exprplan(raw: FfiSlicePtr):
+    # typed pointer
+    void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
+    # list of void*
+    ptr_data = void_array_ptr[0:raw.contents.len]
+
+    plan = _slice_to_lazyframe(ctypes.cast(ptr_data[0], FfiSlicePtr))
+    expr = _slice_to_expr(ctypes.cast(ptr_data[1], FfiSlicePtr))
+    fill = _slice_to_expr(ctypes.cast(ptr_data[2], FfiSlicePtr)) if raw.contents.len == 3 else None
+
+    from collections import namedtuple
+
+    ExprPlan = namedtuple("ExprPlan", ["plan", "expr", "fill"])
+    return ExprPlan(plan, expr, fill)
 
 def _dataframe_to_slice(val) -> FfiSlicePtr:
     pl = import_optional_dependency('polars')

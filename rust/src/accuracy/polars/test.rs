@@ -20,7 +20,7 @@ use crate::{
 use super::summarize_polars_measurement;
 
 #[test]
-fn test_summarize_polars_measurement() -> Fallible<()> {
+fn test_summarize_polars_measurement_basic() -> Fallible<()> {
     let lf_domain = LazyFrameDomain::new(vec![
         SeriesDomain::new("A", AtomDomain::<i32>::default()),
         SeriesDomain::new("B", AtomDomain::<f64>::default()),

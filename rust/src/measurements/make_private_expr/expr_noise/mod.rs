@@ -1,9 +1,9 @@
 use crate::core::{Measure, MetricSpace, PrivacyMap};
-use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
+use crate::domains::{ExprDomain, ExprPlan, OuterMetric, WildExprDomain};
 use crate::measurements::{gaussian_zcdp_map, get_discretization_consts, laplace_puredp_map};
 use crate::measures::ZeroConcentratedDivergence;
 use crate::metrics::{L1Distance, L2Distance, PartitionDistance};
-use crate::polars::{apply_plugin, literal_value_of, match_plugin, ExprFunction, OpenDPPlugin};
+use crate::polars::{apply_plugin, literal_value_of, match_plugin, OpenDPPlugin};
 use crate::traits::samplers::{
     sample_discrete_gaussian, sample_discrete_gaussian_Z2k, sample_discrete_laplace,
     sample_discrete_laplace_Z2k,
@@ -158,7 +158,7 @@ pub fn make_expr_noise<MI: 'static + UnboundedMetric, MO: NoiseExprMeasure>(
     input_metric: PartitionDistance<MI>,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<WildExprDomain, Expr, PartitionDistance<MI>, MO>>
+) -> Fallible<Measurement<WildExprDomain, ExprPlan, PartitionDistance<MI>, MO>>
 where
     Expr: StableExpr<PartitionDistance<MI>, MO::Metric>,
     (ExprDomain, MO::Metric): MetricSpace,

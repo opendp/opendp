@@ -3,7 +3,7 @@ use polars_plan::dsl::Expr;
 use polars_plan::utils::expr_output_name;
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{AtomDomain, ExprDomain, OuterMetric, SeriesDomain, WildExprDomain};
+use crate::domains::{AtomDomain, ExprDomain, ExprPlan, OuterMetric, SeriesDomain, WildExprDomain};
 use crate::error::*;
 use crate::transformations::DatasetMetric;
 
@@ -69,15 +69,22 @@ where
         input_domain,
         output_domain,
         Function::new_fallible(move |arg: &DslPlan| {
-            let left = t_left.invoke(arg)?.1;
-            let right = t_right.invoke(arg)?.1;
+            let left = t_left.invoke(arg)?;
+            let right = t_right.invoke(arg)?;
 
-            let binary = Expr::BinaryExpr {
-                left: Arc::new(left),
-                right: Arc::new(right),
-                op: op.clone(),
-            };
-            Ok((arg.clone(), binary))
+            Ok(ExprPlan {
+                plan: arg.clone(),
+                expr: Expr::BinaryExpr {
+                    left: Arc::new(left.expr),
+                    right: Arc::new(right.expr),
+                    op: op.clone(),
+                },
+                fill: left.fill.zip(right.fill).map(|(l, r)| Expr::BinaryExpr {
+                    left: Arc::new(l),
+                    right: Arc::new(r),
+                    op: op.clone(),
+                }),
+            })
         }),
         input_metric.clone(),
         input_metric,

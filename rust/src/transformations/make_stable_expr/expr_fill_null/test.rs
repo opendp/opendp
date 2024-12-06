@@ -19,7 +19,7 @@ fn test_make_expr_fill_null() -> Fallible<()> {
     let t_fill_null = col("i32")
         .fill_null(0)
         .make_stable(lf_domain.clone().row_by_row(), SymmetricDistance)?;
-    let expr_fill_null = t_fill_null.invoke(&lf.logical_plan)?.1;
+    let expr_fill_null = t_fill_null.invoke(&lf.logical_plan)?.expr;
     println!("{:?}", expr_fill_null);
     let actual = lf.with_column(expr_fill_null).collect()?;
 

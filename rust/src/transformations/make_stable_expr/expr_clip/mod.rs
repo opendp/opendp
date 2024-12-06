@@ -6,7 +6,6 @@ use crate::domains::{
     Bounds, ExprDomain, NumericDataType, OuterMetric, SeriesDomain, WildExprDomain,
 };
 use crate::error::*;
-use crate::polars::ExprFunction;
 use crate::traits::Number;
 use crate::transformations::DatasetMetric;
 

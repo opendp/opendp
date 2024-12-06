@@ -46,7 +46,7 @@ fn test_index_candidates_expr() -> Fallible<()> {
             None,
         )?;
 
-    let dp_expr = m_quant.invoke(&lf.logical_plan)?;
+    let dp_expr = m_quant.invoke(&lf.logical_plan)?.expr;
     let df = lf.select([dp_expr]).collect()?;
     let actual = df.column("cycle_(..101f64)")?.f64()?.get(0).unwrap();
     assert_eq!(actual, 80.);

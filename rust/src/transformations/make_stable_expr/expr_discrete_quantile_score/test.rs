@@ -40,7 +40,7 @@ fn test_expr_discrete_quantile_score_float() -> Fallible<()> {
         .quantile_score(0.5, candidates)
         .make_stable(lf_domain.select(), PartitionDistance(SymmetricDistance))?;
 
-    let dp_expr = m_quant.invoke(&lf.logical_plan)?.1;
+    let dp_expr = m_quant.invoke(&lf.logical_plan)?.expr;
 
     let df_actual = lf.clone().select([dp_expr]).collect()?;
     let AnyValue::Array(series, _) = df_actual.column("cycle_(..101f64)")?.get(0)? else {
@@ -70,7 +70,7 @@ fn test_expr_discrete_quantile_score_int() -> Fallible<()> {
         .quantile_score(0.5, candidates)
         .make_stable(expr_domain, PartitionDistance(SymmetricDistance))?;
 
-    let dp_expr = m_quant.invoke(&lf.logical_plan)?.1;
+    let dp_expr = m_quant.invoke(&lf.logical_plan)?.expr;
 
     let df_actual = lf.clone().select([dp_expr]).collect()?;
     let AnyValue::Array(series, _) = df_actual.column("cycle_(..10i32)")?.get(0)? else {

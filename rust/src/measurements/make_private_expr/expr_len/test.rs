@@ -22,12 +22,12 @@ fn test_make_count_expr_grouped() -> Fallible<()> {
         None,
     )?;
 
-    let meas_res = m_lap.invoke(&lf.logical_plan)?;
+    let dp_expr = m_lap.invoke(&lf.logical_plan)?.expr;
 
     let df_actual = lf
         .clone()
         .group_by([col("chunk_2_bool")])
-        .agg([meas_res])
+        .agg([dp_expr])
         .collect()?;
     let df_exact = lf.group_by([col("chunk_2_bool")]).agg([len()]).collect()?;
 

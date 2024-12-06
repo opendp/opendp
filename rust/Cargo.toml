@@ -70,6 +70,7 @@ polars = { version = "=0.44.2", features = [
     "meta",
     "cutqcut",
     "strings",
+    "repeat_by",
 ], optional = true }
 polars-plan = { version = "=0.44.2", features = [
     "ffi_plugin",

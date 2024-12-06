@@ -13,7 +13,7 @@ fn test_make_col_expr() -> Fallible<()> {
     let t_col = expected
         .clone()
         .make_stable(expr_domain.clone(), SymmetricDistance)?;
-    let actual = t_col.invoke(&lf.logical_plan)?.1;
+    let actual = t_col.invoke(&lf.logical_plan)?.expr;
 
     assert_eq!(actual, expected);
 

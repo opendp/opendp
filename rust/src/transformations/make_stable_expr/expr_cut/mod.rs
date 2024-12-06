@@ -4,7 +4,6 @@ use polars_plan::dsl::{Expr, FunctionExpr};
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{CategoricalDomain, ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
-use crate::polars::ExprFunction;
 use crate::transformations::DatasetMetric;
 
 use super::StableExpr;

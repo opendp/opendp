@@ -95,7 +95,7 @@ where
             Ok(DslPlan::HStack {
                 input: Arc::new(plan.clone()),
                 exprs: (t_exprs.iter())
-                    .map(|t| t.invoke(&expr_arg).map(|p| p.1))
+                    .map(|t| t.invoke(&expr_arg).map(|p| p.expr))
                     .collect::<Fallible<Vec<_>>>()?,
                 options,
             })

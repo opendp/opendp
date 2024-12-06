@@ -38,7 +38,7 @@ where
     Transformation::new(
         input_domain,
         output_domain,
-        Function::new(move |lf: &DslPlan| (lf.clone(), col(&*col_name))),
+        Function::from_expr(col(&*col_name)),
         input_metric.clone(),
         input_metric,
         StabilityMap::new(Clone::clone),

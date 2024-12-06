@@ -4,7 +4,7 @@ use polars_plan::dsl::Expr;
 use crate::{
     combinators::{make_approximate, BasicCompositionMeasure},
     core::{Measure, Measurement, Metric, MetricSpace, Transformation},
-    domains::{Context, ExprDomain, MarginPub, WildExprDomain},
+    domains::{Context, ExprDomain, ExprPlan, MarginPub, WildExprDomain},
     error::Fallible,
     measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
     metrics::PartitionDistance,
@@ -61,7 +61,7 @@ pub fn make_private_expr<MI: 'static + Metric, MO: 'static + Measure>(
     output_measure: MO,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<WildExprDomain, Expr, MI, MO>>
+) -> Fallible<Measurement<WildExprDomain, ExprPlan, MI, MO>>
 where
     Expr: PrivateExpr<MI, MO>,
     (WildExprDomain, MI): MetricSpace,
@@ -76,7 +76,7 @@ pub trait PrivateExpr<MI: Metric, MO: Measure> {
         input_metric: MI,
         output_metric: MO,
         global_scale: Option<f64>,
-    ) -> Fallible<Measurement<WildExprDomain, Expr, MI, MO>>;
+    ) -> Fallible<Measurement<WildExprDomain, ExprPlan, MI, MO>>;
 }
 
 impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, MaxDivergence> for Expr {
@@ -86,7 +86,7 @@ impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, MaxDivergen
         input_metric: PartitionDistance<M>,
         output_measure: MaxDivergence,
         global_scale: Option<f64>,
-    ) -> Fallible<Measurement<WildExprDomain, Expr, PartitionDistance<M>, MaxDivergence>> {
+    ) -> Fallible<Measurement<WildExprDomain, ExprPlan, PartitionDistance<M>, MaxDivergence>> {
         if expr_noise::match_noise_shim(&self)?.is_some() {
             return expr_noise::make_expr_noise(input_domain, input_metric, self, global_scale);
         }
@@ -119,8 +119,9 @@ impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, ZeroConcent
         input_metric: PartitionDistance<M>,
         output_measure: ZeroConcentratedDivergence,
         global_scale: Option<f64>,
-    ) -> Fallible<Measurement<WildExprDomain, Expr, PartitionDistance<M>, ZeroConcentratedDivergence>>
-    {
+    ) -> Fallible<
+        Measurement<WildExprDomain, ExprPlan, PartitionDistance<M>, ZeroConcentratedDivergence>,
+    > {
         if expr_noise::match_noise_shim(&self)?.is_some() {
             return expr_noise::make_expr_noise(input_domain, input_metric, self, global_scale);
         }
@@ -146,7 +147,8 @@ where
         input_metric: PartitionDistance<MI>,
         output_measure: Approximate<MO>,
         global_scale: Option<f64>,
-    ) -> Fallible<Measurement<WildExprDomain, Expr, PartitionDistance<MI>, Approximate<MO>>> {
+    ) -> Fallible<Measurement<WildExprDomain, ExprPlan, PartitionDistance<MI>, Approximate<MO>>>
+    {
         make_approximate(self.make_private(
             input_domain,
             input_metric,
@@ -165,7 +167,7 @@ fn make_private_measure_agnostic<
     output_measure: MO,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<WildExprDomain, Expr, PartitionDistance<MI>, MO>>
+) -> Fallible<Measurement<WildExprDomain, ExprPlan, PartitionDistance<MI>, MO>>
 where
     Expr: PrivateExpr<PartitionDistance<MI>, MO>,
 {

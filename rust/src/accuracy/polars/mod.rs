@@ -24,7 +24,7 @@ use crate::{
         expr_index_candidates::IndexCandidatesPlugin,
         expr_noise::{Distribution, NoisePlugin, Support},
         expr_report_noisy_max::ReportNoisyMaxPlugin,
-        is_threshold_predicate,
+        is_threshold_predicate, match_group_by, KeySanitizer, MatchGroupBy,
     },
     polars::{match_trusted_plugin, ExtractLazyFrame, OnceFrame},
     transformations::expr_discrete_quantile_score::DiscreteQuantileScorePlugin,
@@ -83,7 +83,7 @@ struct UtilitySummary {
 /// * `lazyframe` - computation from which you want to read noise scale parameters from
 /// * `alpha` - optional statistical significance to use to compute accuracy estimates
 pub fn summarize_lazyframe(lazyframe: &LazyFrame, alpha: Option<f64>) -> Fallible<DataFrame> {
-    let mut utility = summarize_logical_plan(&lazyframe.logical_plan, alpha, None)?;
+    let mut utility = summarize_logical_plan(&lazyframe.logical_plan, alpha)?;
 
     // only include the accuracy column if alpha is passed
     if alpha.is_none() {
@@ -97,65 +97,90 @@ pub fn summarize_lazyframe(lazyframe: &LazyFrame, alpha: Option<f64>) -> Fallibl
 }
 
 /// Summarize the statistics to be computed in a LogicalPlan
-fn summarize_logical_plan(
-    logical_plan: &DslPlan,
-    alpha: Option<f64>,
-    threshold: Option<(String, u32)>,
-) -> Fallible<DataFrame> {
-    match logical_plan {
-        DslPlan::Select { expr: exprs, .. } | DslPlan::GroupBy { aggs: exprs, .. } => {
-            let rows = exprs
-                .iter()
-                .map(|e| {
-                    // ensures that the column name is right when summarizing columns with multiple statistics
-                    let name = e.clone().meta().output_name()?.to_string();
-                    Ok(summarize_expr(&e, alpha, threshold.clone())?
-                        .into_iter()
-                        .map(|mut summary| {
-                            summary.name = name.clone();
-                            summary
-                        })
-                        .collect())
-                })
-                .collect::<Fallible<Vec<Vec<UtilitySummary>>>>()?;
-
-            Ok(DataFrame::from_rows_and_schema(
-                &(rows.iter().flatten())
-                    .map(|summary| {
-                        Row(vec![
-                            AnyValue::String(summary.name.as_ref()),
-                            AnyValue::String(summary.aggregate.as_ref()),
-                            match &summary.distribution {
-                                Some(distribution) => AnyValue::String(distribution.as_ref()),
-                                None => AnyValue::Null,
-                            },
-                            AnyValue::from(summary.scale),
-                            AnyValue::from(summary.accuracy),
-                            AnyValue::from(summary.threshold),
-                        ])
-                    })
-                    .collect::<Vec<_>>(),
-                &Schema::from_iter(vec![
-                    Field::new("column".into(), DataType::String),
-                    Field::new("aggregate".into(), DataType::String),
-                    Field::new("distribution".into(), DataType::String),
-                    Field::new("scale".into(), DataType::Float64),
-                    Field::new("accuracy".into(), DataType::Float64),
-                    Field::new("threshold".into(), DataType::UInt32),
-                ]),
-            )?)
-        }
-        DslPlan::Filter { input, predicate } => {
-            let threshold = is_threshold_predicate(predicate.clone());
-            summarize_logical_plan(input.as_ref(), alpha, threshold)
-        }
-        DslPlan::Sort { input, .. }
-        | DslPlan::Slice { input, .. }
-        | DslPlan::Sink { input, .. } => summarize_logical_plan(input.as_ref(), alpha, threshold),
-        dsl => fallible!(FailedFunction, "unrecognized dsl: {:?}", dsl.describe()),
+fn summarize_logical_plan(logical_plan: &DslPlan, alpha: Option<f64>) -> Fallible<DataFrame> {
+    if let Some(MatchGroupBy {
+        aggs: exprs,
+        key_sanitizer,
+        ..
+    }) = match_group_by(logical_plan.clone())?
+    {
+        let threshold = if let Some(KeySanitizer::Filter(predicate)) = key_sanitizer {
+            Some(is_threshold_predicate(predicate.clone()).ok_or_else(|| {
+                err!(
+                    FailedFunction,
+                    "predicate is not a valid filter: {}",
+                    predicate
+                )
+            })?)
+        } else {
+            None
+        };
+        return agg_dataframe(&exprs, threshold, alpha);
     }
+    if let DslPlan::Select { expr: exprs, .. } = logical_plan {
+        return agg_dataframe(exprs, None, alpha);
+    }
+
+    if let DslPlan::Slice { input, .. }
+    | DslPlan::Sink { input, .. }
+    | DslPlan::HStack { input, .. } = logical_plan
+    {
+        return summarize_logical_plan(input.as_ref(), alpha);
+    }
+
+    fallible!(
+        FailedFunction,
+        "unrecognized dsl: {}",
+        logical_plan.describe()?
+    )
 }
 
+fn agg_dataframe(
+    exprs: &Vec<Expr>,
+    threshold: Option<(String, u32)>,
+    alpha: Option<f64>,
+) -> Fallible<DataFrame> {
+    let rows = exprs
+        .iter()
+        .map(|e| {
+            // ensures that the column name is right when summarizing columns with multiple statistics
+            let name = e.clone().meta().output_name()?.to_string();
+            Ok(summarize_expr(&e, alpha, threshold.clone())?
+                .into_iter()
+                .map(|mut summary| {
+                    summary.name = name.clone();
+                    summary
+                })
+                .collect())
+        })
+        .collect::<Fallible<Vec<Vec<UtilitySummary>>>>()?;
+
+    Ok(DataFrame::from_rows_and_schema(
+        &(rows.iter().flatten())
+            .map(|summary| {
+                Row(vec![
+                    AnyValue::String(summary.name.as_ref()),
+                    AnyValue::String(summary.aggregate.as_ref()),
+                    match &summary.distribution {
+                        Some(distribution) => AnyValue::String(distribution.as_ref()),
+                        None => AnyValue::Null,
+                    },
+                    AnyValue::from(summary.scale),
+                    AnyValue::from(summary.accuracy),
+                    AnyValue::from(summary.threshold),
+                ])
+            })
+            .collect::<Vec<_>>(),
+        &Schema::from_iter(vec![
+            Field::new("column".into(), DataType::String),
+            Field::new("aggregate".into(), DataType::String),
+            Field::new("distribution".into(), DataType::String),
+            Field::new("scale".into(), DataType::Float64),
+            Field::new("accuracy".into(), DataType::Float64),
+            Field::new("threshold".into(), DataType::UInt32),
+        ]),
+    )?)
+}
 /// Summarize the statistics to be computed in an Expr
 fn summarize_expr<'a>(
     expr: &Expr,
