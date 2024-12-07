@@ -37,8 +37,8 @@ def test_sized_bounded_float_sum():
 
     data = "\n".join(["1"] * size)
 
-    print(laplace_known_n_sum_from_dataframe(data))
-    print(gaussian_known_n_sum_from_dataframe(data))
+    print("TODO: explain", laplace_known_n_sum_from_dataframe(data))
+    print("TODO: explain", gaussian_known_n_sum_from_dataframe(data))
 
 
 def test_sized_bounded_int_sum():
@@ -72,7 +72,7 @@ def test_sized_bounded_int_sum():
 
     data = "\n".join(["1"] * size)
 
-    print(noisy_known_n_sum_from_dataframe(data))
+    print("TODO: explain", noisy_known_n_sum_from_dataframe(data))
 
 
 def test_bounded_float_sum():
@@ -106,8 +106,8 @@ def test_bounded_float_sum():
 
     data = "\n".join(["1"] * 100)
 
-    print(laplace_sum_from_dataframe(data))
-    print(gaussian_sum_from_dataframe(data))
+    print("TODO: explain", laplace_sum_from_dataframe(data))
+    print("TODO: explain", gaussian_sum_from_dataframe(data))
 
 
 def test_bounded_int_sum():
@@ -132,5 +132,5 @@ def test_bounded_int_sum():
 
     data = "\n".join(["1"] * 100)
 
-    print(noisy_sum_from_dataframe(data))
+    print("TODO: explain", noisy_sum_from_dataframe(data))
 
