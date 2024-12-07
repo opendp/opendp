@@ -108,6 +108,30 @@ typedef struct FfiResult_____AnyMeasurement {
  */
 typedef struct Transformation_AnyDomain__AnyDomain__AnyMetric__AnyMetric AnyTransformation;
 
+/**
+ * An Odometer with all generic types filled by Any types. This is the type of Odometers
+ * passed back and forth over FFI.
+ */
+typedef struct Odometer_AnyDomain__AnyObject__AnyMetric__AnyMeasure AnyOdometer;
+
+enum FfiResult_____AnyOdometer_Tag {
+  Ok_____AnyOdometer,
+  Err_____AnyOdometer,
+};
+typedef uint32_t FfiResult_____AnyOdometer_Tag;
+
+typedef struct FfiResult_____AnyOdometer {
+  FfiResult_____AnyOdometer_Tag tag;
+  union {
+    struct {
+      AnyOdometer *ok;
+    };
+    struct {
+      struct FfiError *err;
+    };
+  };
+} FfiResult_____AnyOdometer;
+
 enum FfiResult_____AnyTransformation_Tag {
   Ok_____AnyTransformation,
   Err_____AnyTransformation,
@@ -132,30 +156,6 @@ typedef struct FfiSlice {
   const void *ptr;
   uintptr_t len;
 } FfiSlice;
-
-/**
- * An Odometer with all generic types filled by Any types. This is the type of Odometers
- * passed back and forth over FFI.
- */
-typedef struct Odometer_AnyDomain__AnyObject__AnyMetric__AnyMeasure AnyOdometer;
-
-enum FfiResult_____AnyOdometer_Tag {
-  Ok_____AnyOdometer,
-  Err_____AnyOdometer,
-};
-typedef uint32_t FfiResult_____AnyOdometer_Tag;
-
-typedef struct FfiResult_____AnyOdometer {
-  FfiResult_____AnyOdometer_Tag tag;
-  union {
-    struct {
-      AnyOdometer *ok;
-    };
-    struct {
-      struct FfiError *err;
-    };
-  };
-} FfiResult_____AnyOdometer;
 
 enum FfiResult_____AnyFunction_Tag {
   Ok_____AnyFunction,
@@ -362,11 +362,17 @@ struct FfiResult_____AnyMeasurement opendp_combinators__make_population_amplific
 struct FfiResult_____AnyMeasurement opendp_combinators__make_chain_mt(const AnyMeasurement *measurement1,
                                                                       const AnyTransformation *transformation0);
 
+struct FfiResult_____AnyOdometer opendp_combinators__make_chain_ot(const AnyOdometer *odometer1,
+                                                                   const AnyTransformation *transformation0);
+
 struct FfiResult_____AnyTransformation opendp_combinators__make_chain_tt(const AnyTransformation *transformation1,
                                                                          const AnyTransformation *transformation0);
 
 struct FfiResult_____AnyMeasurement opendp_combinators__make_chain_pm(const AnyFunction *postprocess1,
                                                                       const AnyMeasurement *measurement0);
+
+struct FfiResult_____AnyOdometer opendp_combinators__make_chain_po(const AnyFunction *function1,
+                                                                   const AnyOdometer *odometer0);
 
 struct FfiResult_____AnyMeasurement opendp_combinators__make_basic_composition(struct FfiSlice *measurements);
 
