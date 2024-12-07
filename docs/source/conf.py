@@ -184,7 +184,7 @@ html_last_updated_fmt = '%b %d, %Y'
 # Full list of options at https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/layout.html#references
 html_theme_options = {
     "github_url": "https://github.com/opendp",
-    "article_header_end": ["old-version-warning"]
+    "article_header_end": ["questions-feedback", "old-version-warning"]
 }
 
 html_theme = 'pydata_sphinx_theme'
