@@ -16,7 +16,6 @@ def get_params_from_node_docstring(node):
     return set(re.findall(r':param (\w+):', docstring))  # type: ignore[arg-type]
 
 
-
 public_functions = []
 
 src_dir_path = Path(__file__).parent.parent / 'src'
