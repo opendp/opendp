@@ -252,3 +252,12 @@ def test_randomized_response_bitvec():
     # epsilon is 2 * m * ln((2 - f) / f)
     # where m = 4 and f = .95
     assert m_rr.map(1) == 0.8006676684558611
+
+
+def test_tulap():
+    space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    tulap_meas = space >> dp.m.then_canonical_noise(d_in=1., d_out=(1., 1e-6))
+
+    assert tulap_meas.map(1.) == (1.0, 1e-6)
+    # just check that it runs
+    assert isinstance(tulap_meas(0.), float)
