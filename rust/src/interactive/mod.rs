@@ -144,12 +144,12 @@ impl Wrapper {
 // The use of a struct avoids an infinite recursion in the type system,
 // as the first argument to the closure is the same type as the closure itself.
 #[derive(Clone)]
-struct RecursiveWrapper(
+pub(crate) struct RecursiveWrapper(
     pub Arc<dyn Fn(RecursiveWrapper, PolyQueryable) -> Fallible<PolyQueryable> + Send + Sync>,
 );
 
 impl RecursiveWrapper {
-    fn to_wrapper(self) -> Wrapper {
+    pub(crate) fn to_wrapper(self) -> Wrapper {
         Wrapper::new(move |qbl: PolyQueryable| self.0(self.clone(), qbl))
     }
 }
