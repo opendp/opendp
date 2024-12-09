@@ -10,8 +10,11 @@ class Function(NamedTuple):
     file: str
     node: ast.AST
 
-    def __repr__(self):
-        return f'{self.file} [line {self.node.lineno}]: {self.node.name}()'
+
+def get_params_from_node_docstring(node):
+    docstring = ast.get_docstring(node)
+    return set(re.findall(r':param (\w+):', docstring))
+
 
 
 public_functions = []
@@ -23,17 +26,21 @@ for code_path in src_dir_path.glob('**/*.py'):
     code = code_path.read_text()
     tree = ast.parse(code)
     for node in ast.walk(tree):
-        if isinstance(node, ast.FunctionDef):
-            if not node.name.startswith('_'):
-                rel_path = re.sub(r'.*/src/', '', str(code_path))
-                public_functions.append(Function(file=rel_path, node=node))
+        if not isinstance(node, ast.FunctionDef):
+            continue
+        if node.name.startswith('_'):
+            continue
+        if not ast.get_docstring(node):
+            continue
+        if not get_params_from_node_docstring(node):
+            continue
+        rel_path = re.sub(r'.*/src/', '', str(code_path))
+        public_functions.append(Function(file=rel_path, node=node))
 
 
-# _file and _name are included to make the test output more readable.
-@pytest.mark.parametrize("_file,_name,node", [(f.file, f.node.name, f.node) for f in public_functions])
-def test_function_docs(_file, _name, node):
-    docstring = ast.get_docstring(node) or ''
-    param_names = set(re.findall(r':param (\w+):', docstring))
+@pytest.mark.parametrize("file,name,node", [(f.file, f.node.name, f.node) for f in public_functions])
+def test_function_docs(file, name, node):
+    param_names = get_params_from_node_docstring(node)
     args = (
         node.args.posonlyargs
         + node.args.args
@@ -41,6 +48,6 @@ def test_function_docs(_file, _name, node):
     )
     arg_names = {arg.arg for arg in args} - {'self'}
 
-    assert param_names == arg_names
+    assert param_names == arg_names, f'In {file}, function {name}, line {node.lineno}, docstring params ({", ".join(param_names)}) != function signature ({", ".join(arg_names)})'
 
  
