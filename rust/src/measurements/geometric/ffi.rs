@@ -1,6 +1,6 @@
 use super::LaplaceDomain;
 use crate::{
-    core::{FfiResult, IntoAnyMeasurementFfiResultExt, Metric, MetricSpace},
+    core::{Domain, FfiResult, IntoAnyMeasurementFfiResultExt, Metric, MetricSpace},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     ffi::{
@@ -29,6 +29,8 @@ pub extern "C" fn opendp_measurements__make_geometric(
         <AtomDomain<T> as LaplaceDomain>::InputMetric: Metric<Distance = T>,
         VectorDomain<AtomDomain<T>>: GeometricDomain,
         <VectorDomain<AtomDomain<T>> as LaplaceDomain>::InputMetric: Metric<Distance = T>,
+        <AtomDomain<T> as Domain>::Carrier: Send + Sync,
+        <VectorDomain<AtomDomain<T>> as Domain>::Carrier: Send + Sync,
         (AtomDomain<T>, <AtomDomain<T> as LaplaceDomain>::InputMetric): MetricSpace,
         (
             VectorDomain<AtomDomain<T>>,
@@ -45,6 +47,7 @@ pub extern "C" fn opendp_measurements__make_geometric(
             )>,
         ) -> Fallible<AnyMeasurement>
         where
+            D::Carrier: Send + Sync,
             (D, D::InputMetric): MetricSpace,
         {
             let input_domain = input_domain.downcast_ref::<D>()?.clone();

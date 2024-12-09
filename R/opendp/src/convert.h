@@ -20,6 +20,7 @@ typedef unsigned char c_bool;
 char *rt_to_string(SEXP type_name);
 SEXP get_private_func(const char *func_name);
 
+FfiSlice *sexp_to_ffisliceptr(SEXP data, SEXP type_name);
 AnyObject *sexp_to_anyobjectptr(SEXP data, SEXP type_name);
 SEXP anyobjectptr_to_sexp(AnyObject *obj);
 
