@@ -128,6 +128,65 @@ SEXP anymeasurementptr_to_sexp(AnyMeasurement *input, SEXP log)
     return measurement;
 }
 
+
+// ODOMETER
+#define Check_AnyOdometer_Ptr(s)                                       \
+    do                                                                 \
+    {                                                                  \
+        if (TYPEOF(s) != EXTPTRSXP ||                                  \
+            R_ExternalPtrTag(s) != AnyOdometer_tag)                    \
+            error("expected an odometer, but got a different type");   \
+        if (!R_ExternalPtrAddr(s))                                     \
+            error("Got null pointer. Reusing an odometer from a previous session is not supported."); \
+    } while (0)
+
+AnyOdometer *sexp_to_anyodometerptr(SEXP value)
+{
+    PROTECT(value);
+
+    int errorOccurred;
+    SEXP class_expr = lang2(install("class"), value);
+    SEXP class = R_tryEval(class_expr, R_GlobalEnv, &errorOccurred);
+    if (errorOccurred)
+        error("could not determine class");
+
+    if (str_equal(sexp_to_charptr(class), "odometer"))
+    {
+        SEXP call = PROTECT(Rf_lang2(value, PROTECT(Rf_mkString("ptr"))));
+        value = Rf_eval(call, R_GlobalEnv);
+        UNPROTECT(2);
+    }
+    Check_AnyOdometer_Ptr(value);
+    UNPROTECT(1);
+    return (AnyOdometer *)R_ExternalPtrAddr(value);
+}
+
+void odp_AnyOdometer_finalizer(SEXP XPtr)
+{
+    if (NULL == R_ExternalPtrAddr(XPtr))
+        return;
+    Check_AnyOdometer_Ptr(XPtr);
+    AnyOdometer *ptr = (AnyOdometer *)R_ExternalPtrAddr(XPtr);
+    opendp_core___odometer_free(ptr);
+    R_ClearExternalPtr(XPtr);
+}
+
+SEXP anyodometerptr_to_sexp(AnyOdometer *input, SEXP log)
+{
+    SEXP XPtr = PROTECT(R_MakeExternalPtr(input, AnyOdometer_tag, R_NilValue));
+    R_RegisterCFinalizerEx(XPtr, odp_AnyOdometer_finalizer, TRUE);
+
+    int errorOccurred;
+    SEXP new_odometer = PROTECT(get_private_func("new_odometer"));
+    SEXP odometer_expr = lang3(new_odometer, XPtr, log);
+    SEXP odometer = R_tryEval(odometer_expr, R_GlobalEnv, &errorOccurred);
+    if (errorOccurred)
+        error("failed to construct odometer");
+
+    UNPROTECT(2);
+    return odometer;
+}
+
 // DOMAIN
 #define Check_AnyDomain_Ptr(s)                                    \
     do                                                            \
@@ -457,6 +516,46 @@ SEXP anyqueryableptr_to_sexp(AnyObject *input, SEXP info)
     SEXP queryable = R_tryEval(queryable_expr, R_GlobalEnv, &errorOccurred);
     if (errorOccurred)
         error("failed to construct queryable");
+
+    UNPROTECT(1);
+    return queryable;
+}
+
+
+// AnyObject: OdometerQueryable
+AnyObject *sexp_to_anyodometerqueryableptr(SEXP value)
+{
+    PROTECT(value);
+
+    int errorOccurred;
+    SEXP class_expr = lang2(install("class"), value);
+    SEXP class = R_tryEval(class_expr, R_GlobalEnv, &errorOccurred);
+    if (errorOccurred)
+        error("could not determine class");
+
+    if (str_equal(sexp_to_charptr(class), "odometer_queryable"))
+    {
+        SEXP call = PROTECT(Rf_lang2(value, PROTECT(Rf_mkString("ptr"))));
+        value = Rf_eval(call, R_GlobalEnv);
+        UNPROTECT(2);
+    }
+    Check_AnyObject_Ptr(value);
+
+    UNPROTECT(1);
+    return (AnyObject *)R_ExternalPtrAddr(value);
+}
+
+SEXP anyodometerqueryableptr_to_sexp(AnyObject *input, SEXP info)
+{
+    SEXP XPtr = PROTECT(R_MakeExternalPtr(input, AnyObject_tag, info));
+    R_RegisterCFinalizerEx(XPtr, odp_AnyObject_finalizer, TRUE);
+
+    int errorOccurred;
+    SEXP new_queryable = get_private_func("new_odometer_queryable");
+    SEXP queryable_expr = lang2(new_queryable, XPtr);
+    SEXP queryable = R_tryEval(queryable_expr, R_GlobalEnv, &errorOccurred);
+    if (errorOccurred)
+        error("failed to construct odometer queryable");
 
     UNPROTECT(1);
     return queryable;

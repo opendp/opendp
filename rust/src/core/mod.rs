@@ -527,6 +527,15 @@ impl<Q, BI, A, BO> Queryable<OdometerQuery<Q, BI>, OdometerAnswer<A, BO>> {
             fallible!(FailedCast, "return type is not an answer")
         }
     }
+    pub(crate) fn eval_invoke_wrap(&mut self, query: Q, wrapper: Option<Wrapper>) -> Fallible<A> {
+        if let OdometerAnswer::Invoke(answer) =
+            self.eval_wrap(&OdometerQuery::Invoke(query), wrapper)?
+        {
+            Ok(answer)
+        } else {
+            fallible!(FailedCast, "return type is not an answer")
+        }
+    }
     pub fn eval_map(&mut self, d_in: BI) -> Fallible<BO> {
         if let OdometerAnswer::Map(map) = self.eval(&OdometerQuery::Map(d_in))? {
             Ok(map)
@@ -601,6 +610,28 @@ mod partials {
             input_domain: DI,
             input_metric: MI,
         ) -> Fallible<Measurement<DI, TO, MI, MO>> {
+            (self.0)(input_domain, input_metric)
+        }
+    }
+
+    pub struct PartialOdometer<DI: Domain, MI: Metric, MO: Measure, Q, A>(
+        Box<dyn FnOnce(DI, MI) -> Fallible<Odometer<DI, MI, MO, Q, A>>>,
+    );
+
+    impl<DI: Domain, MI: Metric, MO: Measure, Q, A> PartialOdometer<DI, MI, MO, Q, A>
+    where
+        (DI, MI): MetricSpace,
+    {
+        pub fn new(
+            partial: impl FnOnce(DI, MI) -> Fallible<Odometer<DI, MI, MO, Q, A>> + 'static,
+        ) -> Self {
+            Self(Box::new(partial))
+        }
+        pub fn fix(
+            self,
+            input_domain: DI,
+            input_metric: MI,
+        ) -> Fallible<Odometer<DI, MI, MO, Q, A>> {
             (self.0)(input_domain, input_metric)
         }
     }

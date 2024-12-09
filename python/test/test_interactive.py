@@ -121,3 +121,61 @@ def test_plugin_queryable_error():
 
     with pytest.raises(TypeError):
         qbl(2)
+
+
+def test_sequential_odometer():
+    max_influence = 1
+    space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
+    o_sc = space >> dp.c.then_fully_adaptive_composition(dp.max_divergence())
+    assert space == o_sc.input_space
+
+    assert str(o_sc) == """Odometer(
+    input_domain   = VectorDomain(AtomDomain(T=i32)),
+    input_metric   = SymmetricDistance(),
+    output_measure = MaxDivergence)"""
+
+    oqbl_sc: dp.OdometerQueryable = o_sc([1] * 200)
+    assert oqbl_sc.map(max_influence) == 0.0
+
+    assert str(oqbl_sc) == "OdometerQueryable(Q=AnyMeasurement, d_in=u32)"
+    m_sum = space >> dp.t.then_clamp((0, 10)) >> dp.t.then_sum() >> dp.m.then_laplace(100.)
+
+    # evaluating
+    assert isinstance(oqbl_sc(m_sum), int)
+    assert oqbl_sc.map(max_influence) == m_sum.map(max_influence)
+
+    m_lap = dp.m.make_laplace(dp.atom_domain(T=int), dp.absolute_distance(T=int), 200.)
+    t_sum = space >> dp.t.then_clamp((0, 10)) >> dp.t.then_sum()
+    m_sum_compositor = t_sum >> dp.c.then_sequential_composition(
+        output_measure=dp.max_divergence(),
+        d_in=t_sum.map(max_influence),
+        d_mids=[0.2, 0.09]
+    )
+    qbl_summed = oqbl_sc.invoke(m_sum_compositor)
+    # it's slightly larger, checking greater than will do
+    assert oqbl_sc.map(max_influence) > m_sum.map(max_influence) + 0.2 + 0.09
+
+    assert isinstance(qbl_summed(m_lap), int) # child release
+    assert isinstance(qbl_summed(m_lap), int) # child release
+    assert isinstance(oqbl_sc(m_sum), int) # root release
+
+    # it's slightly larger, checking greater than will do
+    assert oqbl_sc.map(max_influence) > m_sum.map(max_influence) * 2 + 0.2 + 0.09
+
+def test_odometer_supporting_elements():
+    sc_odo = dp.c.make_fully_adaptive_composition(
+        input_domain=dp.vector_domain(dp.atom_domain(T=int)),
+        input_metric=dp.symmetric_distance(),
+        output_measure=dp.max_divergence(),
+    )
+
+    assert isinstance(sc_odo.invoke([]), dp.OdometerQueryable)
+    assert sc_odo.input_domain == dp.vector_domain(dp.atom_domain(T=int))
+    assert sc_odo.input_metric == dp.symmetric_distance()
+    assert sc_odo.output_measure == dp.max_divergence()
+    assert sc_odo.input_space == (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
+    assert sc_odo.input_distance_type == dp.u32
+    assert sc_odo.output_distance_type == dp.f64
+    assert sc_odo.input_carrier_type == dp.Vec[dp.i32]
+
+    

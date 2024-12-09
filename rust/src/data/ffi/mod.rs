@@ -24,7 +24,9 @@ use bitvec::slice::BitSlice;
 use crate::core::{FfiError, FfiResult, FfiSlice, Function};
 use crate::domains::BitVector;
 use crate::error::Fallible;
-use crate::ffi::any::{AnyFunction, AnyMeasurement, AnyObject, AnyQueryable, Downcast};
+use crate::ffi::any::{
+    AnyFunction, AnyMeasurement, AnyObject, AnyOdometer, AnyQueryable, Downcast,
+};
 use crate::ffi::util::{self, into_c_char_p, ExtrinsicObject};
 use crate::ffi::util::{c_bool, Type, TypeContents};
 use crate::measures::PrivacyProfile;
@@ -262,6 +264,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         Ok(AnyObject::new(LazyFrame::from(deserialize_raw::<DslPlan>(raw, "LazyFrame")?).logical_plan))
     }
     match T_.contents {
+        TypeContents::PLAIN("AnyMeasurementPtr") => raw_to_plain::<AnyMeasurement>(raw),
         TypeContents::PLAIN("BitVector") => raw_to_bitvector(raw),
         TypeContents::PLAIN("String") => raw_to_string(raw),
         TypeContents::PLAIN("ExtrinsicObject") => raw_to_plain::<ExtrinsicObject>(raw),
@@ -340,7 +343,7 @@ pub extern "C" fn opendp_data__slice_as_object(
             raw_to_plain,
             [(
                 T_,
-                [u8, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, AnyMeasurement, AnyQueryable]
+                [u8, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, AnyMeasurement, AnyOdometer, AnyQueryable]
             )],
             (raw)
         )},
@@ -960,7 +963,8 @@ impl Clone for AnyObject {
                             bool,
                             String,
                             ExtrinsicObject,
-                            BitVector
+                            BitVector,
+                            AnyMeasurement
                         ]
                     )],
                     (self)

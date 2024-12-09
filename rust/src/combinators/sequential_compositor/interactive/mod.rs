@@ -143,7 +143,7 @@ where
                                 // when the output measure doesn't allow concurrent composition,
                                 // wrap any interactive queryables spawned.
                                 // This way, when the child gets a query it sends an AskPermission query to this parent queryable
-                                // giving this sequential composition queryable
+                                // it gives this sequential composition queryable (or any parent of this queryable)
                                 // a chance to deny the child permission to execute
                                 let child_id = d_mids.len() - 1;
 
