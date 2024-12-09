@@ -127,6 +127,30 @@ where
                     Answer::External(OdometerAnswer::Map(d_out))
                 }
                 Query::Internal(query) => {
+                    // handler to see privacy usage after running a query.
+                    // Someone is passing in an OdometerQuery internally,
+                    // so return the potential privacy map of this odometer after running this query
+                    if let Some(OdometerQuery::Invoke(meas)) = query
+                        .downcast_ref::<OdometerQuery<Measurement<DI, TO, MI, MO>, MI::Distance>>()
+                    {
+                        let mut pending_child_maps = child_maps.clone();
+                        pending_child_maps.push(meas.privacy_map.clone());
+
+                        let pending_map: PrivacyMap<MI, MO> = PrivacyMap::new_fallible(enclose!(
+                            (output_measure, pending_child_maps),
+                            move |d_in| {
+                                output_measure.compose(
+                                    pending_child_maps
+                                        .iter()
+                                        .map(|pmap| pmap.eval(d_in))
+                                        .collect::<Fallible<_>>()?,
+                                )
+                            }
+                        ));
+
+                        return Ok(Answer::internal(pending_map));
+                    }
+
                     // check if the query is from a child queryable who is asking for permission to execute
                     if let Some(AskPermission(id)) = query.downcast_ref() {
                         // deny permission if the sequential odometer has moved on
