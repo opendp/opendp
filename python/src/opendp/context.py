@@ -776,7 +776,12 @@ def _sequential_composition_by_weights(
     if split_evenly_over is not None:
         weights = [d_out] * split_evenly_over
     elif split_by_weights is not None:
-        weights = [d_out * w for w in split_by_weights]
+        # TODO: Wrap d_out in an object that defines __mul__,
+        # and fix the typing on the signature.
+        if isinstance(d_out, float):
+            weights = [d_out * w for w in split_by_weights]
+        else:
+            weights = [(d_out[0] * w, d_out[1] * w) for w in split_by_weights]
     else:
         raise ValueError(
             "Must specify either `split_evenly_over` or `split_by_weights`"
