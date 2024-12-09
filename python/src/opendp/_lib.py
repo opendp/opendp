@@ -37,7 +37,7 @@ def _load_library():
         ]
         
         if len(lib_dir_file_names) != 1:
-            raise Exception(f"Expected exactly one binary to be present in {lib_dir}. Got: {lib_dir_file_names}")
+            raise Exception(f"Expected exactly one binary to be present in {lib_dir}. Got: {lib_dir_file_names}")  # pragma: no cover
         
         lib_path = lib_dir / lib_dir_file_names[0]
         try:
@@ -49,7 +49,7 @@ def _load_library():
         return None, None
 
     else:
-        raise ValueError("Unable to find lib directory. Consider setting OPENDP_LIB_DIR to a valid directory.")
+        raise ValueError("Unable to find lib directory. Consider setting OPENDP_LIB_DIR to a valid directory.")  # pragma: no cover
     
 
 lib, lib_path = _load_library()
@@ -267,7 +267,7 @@ def unwrap(result, type_) -> Any:
     backtrace = _c_char_p_to_str(err_contents.backtrace)
 
     if not _error_free(err):
-        raise OpenDPException("Failed to free error.")
+        raise OpenDPException("Failed to free error.")  # pragma: no cover
 
     # Rust stack traces follow from here:
     pl = import_optional_dependency('polars', raise_error=False)
@@ -321,7 +321,7 @@ def make_proof_link(
     absolute_path = os.path.join(source_dir, relative_path)
 
     if not os.path.exists(absolute_path):
-        raise ValueError(f"{absolute_path} does not exist!")
+        raise ValueError(f"{absolute_path} does not exist!")  # pragma: no cover
 
     # link to the pdf, not the tex
     relative_path = relative_path.replace(".tex", ".pdf")

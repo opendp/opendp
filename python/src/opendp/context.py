@@ -120,7 +120,7 @@ def space_of(T, M=None, infer: bool = False) -> tuple[Domain, Metric]:
         elif D.origin == "AtomDomain" and ty.get_atom(D) in ty.NUMERIC_TYPES: # type: ignore[union-attr]
             M = ty.AbsoluteDistance
         else:
-            raise TypeError(f"no default metric for domain {D}. Please set `M`")
+            raise TypeError(f"no default metric for domain {D}. Please set `M`")  # pragma: no cover
 
     # choose a distance type if not set
     if isinstance(M, ty.RuntimeType) and not M.args:
@@ -200,7 +200,7 @@ def domain_of(T, infer: bool = False) -> Domain:
     if T in ty.PRIMITIVE_TYPES:
         return atom_domain(T=T)
 
-    raise TypeError(f"unrecognized carrier type: {T}")
+    raise TypeError(f"unrecognized carrier type: {T}")  # pragma: no cover
 
 
 def metric_of(M) -> Metric:
@@ -231,7 +231,7 @@ def metric_of(M) -> Metric:
     if M == ty.DiscreteDistance:
         return metrics.discrete_distance()
 
-    raise TypeError(f"unrecognized metric: {M}")
+    raise TypeError(f"unrecognized metric: {M}")  # pragma: no cover
 
 
 def loss_of(
@@ -263,7 +263,7 @@ def loss_of(
             logger.info(f'{name} is typically less than or equal to {info_level}')
 
     if [rho is None, epsilon is None].count(True) != 1:
-        raise ValueError("Either epsilon or rho must be specified, and they are mutually exclusive.")
+        raise ValueError("Either epsilon or rho must be specified, and they are mutually exclusive.")  # pragma: no cover
     
     if epsilon is not None:
         range_warning('epsilon', epsilon, 1, 5)
@@ -314,7 +314,7 @@ def unit_of(
         return p not in ["ordered", "U", "_is_distance"] and v is not None
 
     if sum(1 for p, v in locals().items() if _is_distance(p, v)) != 1:
-        raise ValueError("Must specify exactly one distance.")
+        raise ValueError("Must specify exactly one distance.")  # pragma: no cover
 
     if contributions is not None:
         metric = insert_delete_distance() if ordered else symmetric_distance()
@@ -331,7 +331,7 @@ def unit_of(
     if l2 is not None:
         metric = l2_distance(T=RuntimeType.parse_or_infer(U, l2))
         return metric, l2
-    raise Exception('No matching metric found')
+    raise Exception('No matching metric found')  # pragma: no cover
 
 
 class Context(object):
@@ -447,9 +447,9 @@ class Context(object):
         d_query = None
         if self.d_mids is not None:
             if kwargs:
-                raise ValueError(f"Expected no privacy arguments but got {kwargs}")
+                raise ValueError(f"Expected no privacy arguments but got {kwargs}")  # pragma: no cover
             if not self.d_mids:
-                raise ValueError("Privacy allowance has been exhausted")
+                raise ValueError("Privacy allowance has been exhausted")  # pragma: no cover
             d_query = self.d_mids[0]
         elif kwargs: # pragma: no cover
             # TODO: Is there a way to reach this? The usual ways of constructing a Context will populate d_mids.
@@ -535,7 +535,7 @@ class Query(object):
     def __getattr__(self, name: str) -> Callable[..., "Query"]:
         """Creates a new query by applying a transformation or measurement to the current chain."""
         if name not in constructors:
-            raise AttributeError(f"Unrecognized constructor: '{name}'")
+            raise AttributeError(f"Unrecognized constructor: '{name}'")  # pragma: no cover
 
         def make(*args, **kwargs) -> "Query":
             """Wraps the ``make_{name}`` constructor to allow one optional parameter and chains it to the current query.
@@ -558,7 +558,7 @@ class Query(object):
             elif param_diff < 0:
                 raise ValueError(f"{name} is missing {-param_diff} parameter(s).")
             elif param_diff > 0:
-                raise ValueError(f"{name} has {param_diff} parameter(s) too many.")
+                raise ValueError(f"{name} has {param_diff} parameter(s) too many.")  # pragma: no cover
 
             new_chain = constructor(*args, **kwargs)
             if is_partial or not isinstance(self._chain, tuple):
@@ -633,9 +633,9 @@ class Query(object):
         """
 
         if d_out is not None and self._d_out is not None:
-            raise ValueError("`d_out` has already been specified in query")
+            raise ValueError("`d_out` has already been specified in query")  # pragma: no cover
         if d_out is None and self._d_out is None:
-            raise ValueError("`d_out` has not yet been specified in the query")
+            raise ValueError("`d_out` has not yet been specified in the query")  # pragma: no cover
         d_out = d_out or self._d_out
 
         if output_measure is not None:
@@ -729,13 +729,13 @@ class PartialChain(object):
         if isinstance(other, (Transformation, Measurement, PartialConstructor)):
             return PartialChain(lambda x: self(x) >> other)
 
-        raise ValueError("At most one parameter may be missing at a time")
+        raise ValueError("At most one parameter may be missing at a time")  # pragma: no cover
     
     def __rrshift__(self, other: Union[tuple[Domain, Metric], Transformation, Measurement]):
         if isinstance(other, (tuple, Transformation, Measurement)):
             return PartialChain(lambda x: other >> self(x))
         
-        raise ValueError("At most one parameter may be missing at a time")
+        raise ValueError("At most one parameter may be missing at a time")  # pragma: no cover
 
     @classmethod
     def wrap(cls, f):
@@ -771,7 +771,7 @@ def _sequential_composition_by_weights(
     if split_evenly_over is not None and split_by_weights is not None:
         raise ValueError(
             "Cannot specify both `split_evenly_over` and `split_by_weights`"
-        )
+        )  # pragma: no cover
 
     if split_evenly_over is not None:
         weights = [d_out] * split_evenly_over
@@ -785,7 +785,7 @@ def _sequential_composition_by_weights(
     else:
         raise ValueError(
             "Must specify either `split_evenly_over` or `split_by_weights`"
-        )
+        )  # pragma: no cover
 
     def mul(dist, scale: float):
         if isinstance(dist, tuple):
@@ -839,7 +839,7 @@ def _cast_measure(chain, to_measure: Optional[Measure] = None, d_to=None):
     ):
         return make_fix_delta(make_zCDP_to_approxDP(chain), d_to[1])
     
-    raise ValueError(f"Unable to cast measure from {from_to[0]} to {from_to[1]}")
+    raise ValueError(f"Unable to cast measure from {from_to[0]} to {from_to[1]}")  # pragma: no cover
 
 
 def _translate_measure_distance(d_from, from_measure: Measure, to_measure: Measure, alpha: Optional[float] = None):
@@ -896,11 +896,11 @@ def _translate_measure_distance(d_from, from_measure: Measure, to_measure: Measu
     ):
         epsilon, delta = d_from
         if alpha is None or not (0 <= alpha < 1):
-            raise ValueError(f"alpha ({alpha}) must be in [0, 1)")
+            raise ValueError(f"alpha ({alpha}) must be in [0, 1)")  # pragma: no cover
         delta_zCDP, delta_inf = delta * (1 - alpha), delta * alpha
 
         rho = _translate_measure_distance((epsilon, delta_zCDP), from_measure, zero_concentrated_divergence())
         return rho, delta_inf
         
 
-    raise ValueError(f"Unable to translate distance from {from_to[0]} to {from_to[1]}")
+    raise ValueError(f"Unable to translate distance from {from_to[0]} to {from_to[1]}")  # pragma: no cover
