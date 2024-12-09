@@ -418,7 +418,7 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
     return _wrap_in_slice(array, len(val))
 
 
-def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> list[Any]:
+def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> Sequence[Any]:
     if type_name.origin != 'Vec' or len(type_name.args) != 1:
         raise ValueError("type_name must be a Vec<_>")
     

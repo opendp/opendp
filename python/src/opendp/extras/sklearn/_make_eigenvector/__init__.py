@@ -1,3 +1,5 @@
+from typing import Sequence
+
 from opendp.extras.numpy import _sscp_domain
 from opendp.extras._utilities import to_then
 from opendp._lib import get_np_csprng, import_optional_dependency
@@ -136,7 +138,7 @@ then_np_sscp_projection = to_then(make_np_sscp_projection)
 
 
 def make_private_eigenvectors(
-    input_domain: Domain, input_metric: Metric, unit_epsilons: list[float]
+    input_domain: Domain, input_metric: Metric, unit_epsilons: Sequence[float]
 ) -> Measurement:
     np = import_optional_dependency('numpy')
     import opendp.prelude as dp
