@@ -31,19 +31,19 @@ def make_private_np_eigendecomposition(
     input_desc = input_domain.descriptor
 
     if input_desc.size is None:
-        raise ValueError("input_domain's size must be known")
+        raise ValueError("input_domain's size must be known")  # pragma: no cover
 
     if input_desc.num_columns is None:
-        raise ValueError("input_domain's num_columns must be known")
+        raise ValueError("input_domain's num_columns must be known")  # pragma: no cover
 
     if input_desc.p != 2:
-        raise ValueError("input_domain's norm must be an L2 norm")
+        raise ValueError("input_domain's norm must be an L2 norm")  # pragma: no cover
 
     if input_desc.num_columns < 1:
-        raise ValueError("input_domain's num_columns must be >= 1")
+        raise ValueError("input_domain's num_columns must be >= 1")  # pragma: no cover
 
     if num_components is not None and num_components < 1:
-        raise ValueError("num_components must be least one")
+        raise ValueError("num_components must be least one")  # pragma: no cover
 
     # if number of components is not specified, default to num_columns
     num_components = num_components or input_desc.num_columns

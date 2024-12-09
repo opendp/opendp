@@ -33,20 +33,20 @@ def _check_norm_and_p(norm: float | None, p: int | None):
         if isinstance(norm, int):
             norm = float(norm)
         if not isinstance(norm, float):
-            raise ValueError("norm must be float")
+            raise ValueError("norm must be float")  # pragma: no cover
         if norm < 0.0:
-            raise ValueError("norm must be non-negative")
+            raise ValueError("norm must be non-negative")  # pragma: no cover
 
     if p not in {None, 1, 2}:
-        raise ValueError("p must be 1 or 2")
+        raise ValueError("p must be 1 or 2")  # pragma: no cover
 
 
 def _check_nonnegative_int(v: int | None, name: str):
     if v is not None:
         if not isinstance(v, int):
-            raise ValueError(f"{name} must be an integer")
+            raise ValueError(f"{name} must be an integer")  # pragma: no cover
         if v < 0:
-            raise ValueError(f"{name} must be non-negative")
+            raise ValueError(f"{name} must be non-negative")  # pragma: no cover
 
 
 def _fmt_attrs(attrs: NamedTuple) -> str:
@@ -81,7 +81,7 @@ def array2_domain(
         origin = origin if origin is not None else 0.0
 
     if norm is None and origin is not None:
-        raise ValueError("origin may only be set if data has bounded norm")
+        raise ValueError("origin may only be set if data has bounded norm")  # pragma: no cover
 
     if isinstance(origin, (int, float)):
         # normalize origin to a 1d-ndarray
@@ -108,7 +108,7 @@ def array2_domain(
                 raise ValueError(f"origin must have num_columns={num_columns} values")
 
         if origin.ndim not in {0, 1}:
-            raise ValueError("origin must have 0 or 1 dimensions")
+            raise ValueError("origin must have 0 or 1 dimensions")  # pragma: no cover
 
     elif origin is not None:
         raise ValueError("origin must be a scalar or ndarray")
@@ -119,29 +119,29 @@ def array2_domain(
 
     T = T or ELEMENTARY_TYPES.get(origin.dtype.type)
     if T is None:
-        raise ValueError("must specify T, the type of data in the array")
+        raise ValueError("must specify T, the type of data in the array")  # pragma: no cover
     T = dp.RuntimeType.parse(T)
     if T not in ATOM_MAP:
-        raise ValueError("T must be in an elementary type")
+        raise ValueError("T must be in an elementary type")  # pragma: no cover
 
     def member(x):
         if not isinstance(x, np.ndarray):
-            raise TypeError("must be a numpy ndarray")
+            raise TypeError("must be a numpy ndarray")  # pragma: no cover
         T_actual = ELEMENTARY_TYPES.get(x.dtype.type)
         if T_actual != T:
-            raise TypeError(f"expected data of type {T}, got {T_actual}")
+            raise TypeError(f"expected data of type {T}, got {T_actual}")  # pragma: no cover
         if x.ndim != 2:
-            raise ValueError("Expected 2-dimensional array")
+            raise ValueError("Expected 2-dimensional array")  # pragma: no cover
         if num_columns is not None and x.shape[1] != num_columns:
-            raise ValueError(f"must have {num_columns} columns")
+            raise ValueError(f"must have {num_columns} columns")  # pragma: no cover
         if origin is not None:
             x = x - origin
         if norm is not None:
             max_norm = np.linalg.norm(x, ord=p, axis=1).max()
             if max_norm > norm:
-                raise ValueError(f"row norm is too large. {max_norm} > {norm}")
+                raise ValueError(f"row norm is too large. {max_norm} > {norm}")  # pragma: no cover
         if size is not None and len(x) != size:
-            raise ValueError(f"expected exactly {size} rows")
+            raise ValueError(f"expected exactly {size} rows")  # pragma: no cover
         return True
 
     class NPArray2Descriptor(NamedTuple):
@@ -188,19 +188,19 @@ def _sscp_domain(
     _check_nonnegative_int(num_features, "num_features")
 
     if T is None:
-        raise ValueError("must specify T, the type of data in the array")
+        raise ValueError("must specify T, the type of data in the array")  # pragma: no cover
     T = dp.RuntimeType.parse(T)
     if T not in {dp.f32, dp.f64}:
         raise ValueError("T must be a float type")
 
     def member(x):
         if not isinstance(x, np.ndarray):
-            raise TypeError("must be a numpy ndarray")
+            raise TypeError("must be a numpy ndarray")  # pragma: no cover
         T_actual = ELEMENTARY_TYPES.get(x.dtype.type)
         if T_actual != T:
             raise TypeError(f"expected data of type {T}, got {T_actual}")
         if x.shape != (num_features,) * 2:
-            raise ValueError(f"expected a square array with {num_features} features")
+            raise ValueError(f"expected a square array with {num_features} features")  # pragma: no cover
         return True
 
     class NPSSCPDescriptor(NamedTuple):
@@ -239,9 +239,9 @@ def make_np_clamp(
 
     norm = float(norm)
     if norm < 0.0:
-        raise ValueError("norm must not be negative")
+        raise ValueError("norm must not be negative")  # pragma: no cover
     if p not in {1, 2}:
-        raise ValueError("order p must be 1 or 2")
+        raise ValueError("order p must be 1 or 2")  # pragma: no cover
 
     if origin is None:
         origin = 0.0

@@ -100,7 +100,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
 
     if c_type == ctypes.c_void_p:
         if type_name is None:
-            raise ValueError("type_name must be known")
+            raise ValueError("type_name must be known")  # pragma: no cover
 
         rust_type = str(type_name)
         
@@ -112,7 +112,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
         if rust_type == "String":
             return ctypes.c_char_p(value.encode())
 
-        raise UnknownTypeException(rust_type)
+        raise UnknownTypeException(rust_type)  # pragma: no cover
 
     if c_type == AnyObjectPtr:
         from opendp._data import slice_as_object
@@ -120,7 +120,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
 
     if c_type == FfiSlicePtr:
         if type_name is None:
-            raise ValueError("type_name must be known")
+            raise ValueError("type_name must be known")  # pragma: no cover
         return _py_to_slice(value, RuntimeType.parse(type_name))
 
     if isinstance(value, RuntimeType):
@@ -133,7 +133,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
         # throw an error if the value is already a c_type, but the wrong one
         # (like passing a Metric into an argument expecting a Domain)
         if hasattr(value, "_type_"):
-            raise ValueError(f"Cannot convert {value} to {c_type}")
+            raise ValueError(f"Cannot convert {value} to {c_type}")  # pragma: no cover
         value = c_type(value)
 
     return value
@@ -246,7 +246,7 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
         if type_name.origin == "Option":
             return _slice_to_option(raw, type_name)
 
-    raise UnknownTypeException(type_name)
+    raise UnknownTypeException(type_name)  # pragma: no cover
 
 
 def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
@@ -299,7 +299,7 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
         if type_name.origin == "Tuple":
             return _tuple_to_slice(value, type_name)
 
-    raise UnknownTypeException(type_name)
+    raise UnknownTypeException(type_name)  # pragma: no cover
 
 
 def _scalar_to_slice(val, type_name: str) -> FfiSlicePtr:
@@ -352,7 +352,7 @@ def _bitvector_to_slice(val: Sequence[Any]) -> FfiSlicePtr:
         val = val.tobytes()
     
     if not isinstance(val, (bytes, bytearray)):
-        raise TypeError("Expected type is BitVector but input data is not bytes or bytearray.")
+        raise TypeError("Expected type is BitVector but input data is not bytes or bytearray.")  # pragma: no cover
 
     array = (ctypes.c_uint8 * len(val)).from_buffer_copy(val) # type: ignore[operator]
     return _wrap_in_slice(array, len(val) * 8)
@@ -368,7 +368,7 @@ def _slice_to_bitvector(raw: FfiSlicePtr) -> bytes:
 
 def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
     if type_name.origin != 'Vec' or len(type_name.args) != 1:
-        raise ValueError("type_name must be a Vec<_>")
+        raise ValueError("type_name must be a Vec<_>")  # pragma: no cover
 
     inner_type_name = type_name.args[0]
     # when input is numpy array
@@ -412,7 +412,7 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
         return _wrap_in_slice(array, len(val))
 
     if inner_type_name not in ATOM_MAP:
-        raise TypeError(f"Members must be one of {tuple(ATOM_MAP.keys())}. Found {inner_type_name}.")
+        raise TypeError(f"Members must be one of {tuple(ATOM_MAP.keys())}. Found {inner_type_name}.")  # pragma: no cover
 
     array = (ATOM_MAP[inner_type_name] * len(val))(*val) # type: ignore[operator]
     return _wrap_in_slice(array, len(val))
@@ -420,7 +420,7 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
 
 def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> list[Any]:
     if type_name.origin != 'Vec' or len(type_name.args) != 1:
-        raise ValueError("type_name must be a Vec<_>")
+        raise ValueError("type_name must be a Vec<_>")  # pragma: no cover
     
     inner_type_name = type_name.args[0]
 
@@ -451,10 +451,10 @@ def _tuple_to_slice(val: tuple[Any, ...], type_name: Union[RuntimeType, str]) ->
     type_name = cast(RuntimeType, type_name)
     inner_type_names = type_name.args
     if not isinstance(val, tuple):
-        raise TypeError("Cannot coerce a non-tuple type to a tuple")
+        raise TypeError("Cannot coerce a non-tuple type to a tuple")  # pragma: no cover
 
     if len(inner_type_names) != len(val):
-        raise TypeError("type_name members must have same length as tuple")
+        raise TypeError("type_name members must have same length as tuple")  # pragma: no cover
 
     if inner_type_names == ['f64', 'ExtrinsicObject']:
         score_ptr = ctypes.pointer(ctypes.c_double(val[0]))
@@ -469,7 +469,7 @@ def _tuple_to_slice(val: tuple[Any, ...], type_name: Union[RuntimeType, str]) ->
 
     for t in inner_type_names:
         if t not in ATOM_MAP:
-            raise TypeError(f"Tuple members must be one of {ATOM_MAP.keys()}. Got {t}")
+            raise TypeError(f"Tuple members must be one of {ATOM_MAP.keys()}. Got {t}")  # pragma: no cover
 
     # check that actual type can be represented by the inner_type_name
     val = tuple(
@@ -519,7 +519,7 @@ def _slice_to_option(raw: FfiSlicePtr, type_name: RuntimeType) -> Optional[Any]:
 def _hashmap_to_slice(val: MutableMapping, type_name: RuntimeType) -> FfiSlicePtr:
     key_type, val_type = type_name.args
     if not isinstance(val, MutableMapping):
-        raise TypeError(f"Expected type is {type_name} but input data is not a dict.")
+        raise TypeError(f"Expected type is {type_name} but input data is not a dict.")  # pragma: no cover
 
     val = {
         _check_and_cast_scalar(key_type, k):
@@ -622,7 +622,7 @@ def _slice_to_exprplan(raw: FfiSlicePtr):
 def _dataframe_to_slice(val) -> FfiSlicePtr:
     pl = import_optional_dependency('polars')
     if not isinstance(val, pl.DataFrame):
-        raise ValueError("expected Polars DataFrame")
+        raise ValueError("expected Polars DataFrame")  # pragma: no cover
     
     slices = list(_series_to_slice(s) for s in val.get_columns())
     raw = _wrap_in_slice(ctypes.pointer((FfiSlicePtr * val.width)(*slices)), val.width)

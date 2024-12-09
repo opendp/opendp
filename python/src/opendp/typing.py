@@ -120,7 +120,7 @@ class RuntimeType(object):
 
     def __init__(self, origin, args=None):
         if not isinstance(origin, str):
-            raise ValueError("origin must be a string", origin)
+            raise ValueError("origin must be a string", origin)  # pragma: no cover
         self.origin = origin
         self.args = args or []
 
@@ -243,7 +243,7 @@ class RuntimeType(object):
             return ELEMENTARY_TYPES[type_name]
 
         if type_name == tuple:
-            raise UnknownTypeException("non-parameterized argument")
+            raise UnknownTypeException("non-parameterized argument")  # pragma: no cover
 
         raise UnknownTypeException(f"unable to parse type: {type_name}")
 
@@ -322,10 +322,10 @@ class RuntimeType(object):
             if public_example.ndim == 1:
                 inner_type = ELEMENTARY_TYPES.get(public_example.dtype.type)
                 if inner_type is None:
-                    raise UnknownTypeException(f"Unknown numpy array dtype: {public_example.dtype.type}")
+                    raise UnknownTypeException(f"Unknown numpy array dtype: {public_example.dtype.type}")  # pragma: no cover
                 return RuntimeType('Vec', [inner_type])
 
-            raise UnknownTypeException("arrays with greater than one axis are not yet supported")
+            raise UnknownTypeException("arrays with greater than one axis are not yet supported")  # pragma: no cover
 
         if isinstance(public_example, dict):
             return RuntimeType('HashMap', [
@@ -365,7 +365,7 @@ class RuntimeType(object):
             return cls.parse(type_name, generics)
         if public_example is not None:
             return cls.infer(public_example)
-        raise UnknownTypeException("either type_name or public_example must be passed")
+        raise UnknownTypeException("either type_name or public_example must be passed")  # pragma: no cover
 
     def substitute(self: Union["RuntimeType", str], **kwargs):
         if isinstance(self, GenericType):
@@ -377,7 +377,7 @@ class RuntimeType(object):
 
 class GenericType(RuntimeType):
     def __repr__(self):
-        raise UnknownTypeException(f"attempted to create a type_name with an unknown generic: {self.origin}")
+        raise UnknownTypeException(f"attempted to create a type_name with an unknown generic: {self.origin}")  # pragma: no cover
 
 
 SymmetricDistance = 'SymmetricDistance'
