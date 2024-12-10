@@ -31,13 +31,14 @@ for code_path in src_dir_path.glob('**/*.py'):
         rel_path = re.sub(r'.*/src/', '', str(code_path))
         public_functions.append(Function(file=rel_path, node=node))
 
+assert len(public_functions) > 100
+
 
 @pytest.mark.parametrize("file,name,node", [(f.file, f.node.name, f.node) for f in public_functions])  # type: ignore[attr-defined]
 def test_function_docs(file, name, node):
+    where = f'In {file}, def {name}, line {node.lineno}'
     docstring = ast.get_docstring(node)
-    if docstring is None:
-        # TODO: Public functions should have docstrings
-        return
+    assert docstring is not None, f'{where}, docstring is missing'
     param_names = set(re.findall(r':param (\w+):', docstring))
     args = (
         node.args.posonlyargs
@@ -48,6 +49,6 @@ def test_function_docs(file, name, node):
         args.append(node.args.kwarg)
     arg_names = {arg.arg for arg in args} - {'self'} - {'cls'} # TODO: Check that it really is a class method.
 
-    assert param_names == arg_names, f'In {file}, function {name}, line {node.lineno}, docstring params ({", ".join(param_names)}) != function signature ({", ".join(arg_names)})'
+    assert param_names == arg_names, f'{where}, docstring params ({", ".join(param_names)}) != function signature ({", ".join(arg_names)})'
 
  

@@ -106,17 +106,17 @@ def make_private_pca(
 
     eigvals_epsilon, eigvecs_epsilons, mean_epsilon = unit_epsilon
 
-    def eig_to_SVt(decomp):
+    def _eig_to_SVt(decomp):
         eigvals, eigvecs = decomp
         return np.sqrt(np.maximum(eigvals, 0))[::-1], eigvecs.T
 
-    def make_eigdecomp(norm, origin):
+    def _make_eigdecomp(norm, origin):
         return (
             (input_domain, input_metric)
             >> then_np_clamp(norm, p=2, origin=origin)
             >> then_center()
             >> then_private_np_eigendecomposition(eigvals_epsilon, eigvecs_epsilons)
-            >> (lambda out: PCAResult(origin, *eig_to_SVt(out)))
+            >> (lambda out: PCAResult(origin, *_eig_to_SVt(out)))
         )
 
     if input_desc.norm is not None:
@@ -124,7 +124,7 @@ def make_private_pca(
             raise ValueError("mean_epsilon should be zero because origin is known")  # pragma: no cover
         norm = input_desc.norm if norm is None else norm
         norm = min(input_desc.norm, norm)
-        return make_eigdecomp(norm, input_desc.origin)
+        return _make_eigdecomp(norm, input_desc.origin)
     elif norm is None:
         raise ValueError("must have either bounded `input_domain` or specify `norm`")  # pragma: no cover
 
@@ -137,10 +137,10 @@ def make_private_pca(
         input_metric,
         dp.max_divergence(),
         d_in=unit_d_in,
-        d_mids=[mean_epsilon, make_eigdecomp(norm, 0).map(unit_d_in)],
+        d_mids=[mean_epsilon, _make_eigdecomp(norm, 0).map(unit_d_in)],
     )
 
-    def function(data):
+    def _function(data):
         nonlocal input_domain
         qbl = compositor(data)
 
@@ -155,13 +155,13 @@ def make_private_pca(
         )
         origin = qbl(m_mean)
         # make full release
-        return qbl(make_eigdecomp(norm, origin))
+        return qbl(_make_eigdecomp(norm, origin))
 
     return _make_measurement(
         input_domain,
         input_metric,
         compositor.output_measure,
-        function,
+        _function,
         compositor.map,
     )
 
@@ -195,6 +195,7 @@ class PCA(_SKLPCA):
 
     @property
     def n_features(self):
+        '''TODO'''
         return self.n_features_in_
 
     # this overrides the scikit-learn method to instead use the opendp-core constructor
