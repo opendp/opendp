@@ -50,6 +50,8 @@ assert len(public_functions) > 100
 @pytest.mark.parametrize("file,name,node", [(f.file, f.node.name, f.node) for f in public_functions])  # type: ignore[attr-defined]
 def test_function_docs(file, name, node):
     where = f'In {file}, def {name}, line {node.lineno}'
+
+    # First, check the docstring in isolation:
     docstring = ast.get_docstring(node)
     assert docstring is not None, f'{where}, add docstring or make private'
 
@@ -59,7 +61,14 @@ def test_function_docs(file, name, node):
         f'{where} has unknown directives: {", ".join(unknown_directives)}'
     )
 
-    param_names = set(re.findall(r':param (\w+):', docstring))
+    param_dict = dict(re.findall(r':param (\w+):(.*)', docstring))
+    # TODO: Maybe accept either description or type?
+    # k_wo_v = [k for k, v in param_dict.items() if not v.strip()]
+    # assert not k_wo_v, (
+    #     f'{where} has params without descriptions: {", ".join(k_wo_v)}'
+    # )
+
+    # Then, compare the docstring to the AST:
     args = (
         node.args.posonlyargs
         + node.args.args
@@ -70,9 +79,11 @@ def test_function_docs(file, name, node):
 
     # TODO: For "self" and "cls", check that it really is a method.
     arg_names = {arg.arg for arg in args} - {'self'} - {'cls'}
-    assert param_names == arg_names, (
-        f'{where}, docstring params ({", ".join(param_names)}) '
+    assert param_dict.keys() == arg_names, (
+        f'{where}, docstring params ({", ".join(param_dict.keys())}) '
         f'!= function signature ({", ".join(arg_names)})'
     )
+
+    # TODO: check for documentation of return value
 
  
