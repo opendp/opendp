@@ -6,6 +6,11 @@ from typing import NamedTuple
 import pytest
 
 
+def ends_with_ellipsis(node):
+    last_node_value = getattr(node.body[-1], 'value', None)
+    last_node_value_value = getattr(last_node_value, 'value', None)
+    return last_node_value_value == Ellipsis
+
 class Function(NamedTuple):
     file: str
     node: ast.AST
@@ -14,6 +19,7 @@ class Function(NamedTuple):
 public_functions = []
 
 src_dir_path = Path(__file__).parent.parent / 'src'
+top_dir_path = src_dir_path.parent
 for code_path in src_dir_path.glob('**/*.py'):
     if any(parent.name.startswith('_') for parent in code_path.parents):
         continue
@@ -26,11 +32,9 @@ for code_path in src_dir_path.glob('**/*.py'):
             continue
         if node.name.startswith('_'):
             continue
-        last_node_value = getattr(node.body[-1], 'value', None)
-        last_node_value_value = getattr(last_node_value, 'value', None)
-        if last_node_value_value == Ellipsis:
+        if ends_with_ellipsis(node):
             continue
-        rel_path = re.sub(r'.*/src/', '', str(code_path))
+        rel_path = code_path.relative_to(top_dir_path)
         public_functions.append(Function(file=rel_path, node=node))
 
 assert len(public_functions) > 100
