@@ -15,6 +15,8 @@ public_functions = []
 
 src_dir_path = Path(__file__).parent.parent / 'src'
 for code_path in src_dir_path.glob('**/*.py'):
+    if any(parent.name.startswith('_') for parent in code_path.parents):
+        continue
     if code_path.name.startswith('_') and code_path.name != '__init__.py':
         continue
     code = code_path.read_text()
@@ -38,7 +40,7 @@ assert len(public_functions) > 100
 def test_function_docs(file, name, node):
     where = f'In {file}, def {name}, line {node.lineno}'
     docstring = ast.get_docstring(node)
-    assert docstring is not None, f'{where}, docstring is missing'
+    assert docstring is not None, f'{where}, add docstring or make private'
     param_names = set(re.findall(r':param (\w+):', docstring))
     args = (
         node.args.posonlyargs
