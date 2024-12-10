@@ -6,20 +6,30 @@ from typing import NamedTuple
 import pytest
 
 
+def ends_with_ellipsis(node):
+    '''
+    >>> ends_with_ellipsis(ast.parse('def nope(): pass').body[0])
+    False
+    >>> ends_with_ellipsis(ast.parse('def yeah(): ...').body[0])
+    True
+
+    Need body[0] because parse wraps these in a "Module".
+    '''
+    last_node_value = getattr(node.body[-1], 'value', None)
+    last_node_value_value = getattr(last_node_value, 'value', None)
+    return last_node_value_value == Ellipsis
+
 class Function(NamedTuple):
     file: str
     node: ast.AST
-
-
-def get_params_from_node_docstring(node):
-    docstring = ast.get_docstring(node)
-    return set(re.findall(r':param (\w+):', docstring))  # type: ignore[arg-type]
 
 
 public_functions = []
 
 src_dir_path = Path(__file__).parent.parent / 'src'
 for code_path in src_dir_path.glob('**/*.py'):
+    if any(parent.name.startswith('_') for parent in code_path.parents):
+        continue
     if code_path.name.startswith('_') and code_path.name != '__init__.py':
         continue
     code = code_path.read_text()
@@ -29,19 +39,36 @@ for code_path in src_dir_path.glob('**/*.py'):
             continue
         if node.name.startswith('_'):
             continue
-        if not ast.get_docstring(node):
-            # TODO: All public functions should have docstrings
+        if ends_with_ellipsis(node):
             continue
-        if not get_params_from_node_docstring(node):
-            # TODO: If the docstring has no params, should make sure that matches signature
-            continue
-        rel_path = re.sub(r'.*/src/', '', str(code_path))
-        public_functions.append(Function(file=rel_path, node=node))
+        short_path = f'{code_path.parent.name}/{code_path.name}'
+        public_functions.append(Function(file=short_path, node=node))
+
+assert len(public_functions) > 100
 
 
 @pytest.mark.parametrize("file,name,node", [(f.file, f.node.name, f.node) for f in public_functions])  # type: ignore[attr-defined]
 def test_function_docs(file, name, node):
-    param_names = get_params_from_node_docstring(node)
+    where = f'In {file}, def {name}, line {node.lineno}'
+
+    # First, check the docstring in isolation:
+    docstring = ast.get_docstring(node)
+    assert docstring is not None, f'{where}, add docstring or make private'
+
+    directives = set(re.findall(r'^\s*:(\w+)', docstring, re.MULTILINE))
+    unknown_directives = directives - {'param', 'rtype', 'type', 'raises', 'example', 'return'}
+    assert not unknown_directives, (
+        f'{where} has unknown directives: {", ".join(unknown_directives)}'
+    )
+
+    param_dict = dict(re.findall(r':param (\w+):(.*)', docstring))
+    # TODO: Maybe accept either description or type?
+    # k_wo_v = [k for k, v in param_dict.items() if not v.strip()]
+    # assert not k_wo_v, (
+    #     f'{where} has params without descriptions: {", ".join(k_wo_v)}'
+    # )
+
+    # Then, compare the docstring to the AST:
     args = (
         node.args.posonlyargs
         + node.args.args
@@ -49,8 +76,14 @@ def test_function_docs(file, name, node):
     )
     if node.args.kwarg is not None:
         args.append(node.args.kwarg)
-    arg_names = {arg.arg for arg in args} - {'self'} - {'cls'} # TODO: Check that it really is a class method.
 
-    assert param_names == arg_names, f'In {file}, function {name}, line {node.lineno}, docstring params ({", ".join(param_names)}) != function signature ({", ".join(arg_names)})'
+    # TODO: For "self" and "cls", check that it really is a method.
+    arg_names = {arg.arg for arg in args} - {'self'} - {'cls'}
+    assert param_dict.keys() == arg_names, (
+        f'{where}, docstring params ({", ".join(param_dict.keys())}) '
+        f'!= function signature ({", ".join(arg_names)})'
+    )
+
+    # TODO: check for documentation of return value
 
  
