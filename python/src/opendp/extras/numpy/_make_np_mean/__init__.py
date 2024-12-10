@@ -25,7 +25,7 @@ def make_private_np_mean(
     :param p: designates L`p` norm
     :param origin: norm clamping is centered on this point. Defaults to zero
 
-    :returns a Measurement that computes the DP mean
+    :return a Measurement that computes the DP mean
     """
     import opendp.prelude as dp
     np = import_optional_dependency('numpy')

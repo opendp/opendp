@@ -825,7 +825,7 @@ def binary_search_chain(
     :raises ValueError: if the predicate function is constant, bounds cannot be inferred, or decision boundary is not within `bounds`.
 
 
-    :examples:
+    :example:
 
     Find a laplace measurement with the smallest noise scale that is still (d_in, d_out)-close.
 

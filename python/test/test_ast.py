@@ -13,7 +13,7 @@ def ends_with_ellipsis(node):
     >>> ends_with_ellipsis(ast.parse('def yeah(): ...').body[0])
     True
 
-    (Need body[0], because parse wraps these in a "Module".)
+    Need body[0] because parse wraps these in a "Module".
     '''
     last_node_value = getattr(node.body[-1], 'value', None)
     last_node_value_value = getattr(last_node_value, 'value', None)
@@ -52,6 +52,13 @@ def test_function_docs(file, name, node):
     where = f'In {file}, def {name}, line {node.lineno}'
     docstring = ast.get_docstring(node)
     assert docstring is not None, f'{where}, add docstring or make private'
+
+    directives = set(re.findall(r'^\s*:(\w+)', docstring, re.MULTILINE))
+    unknown_directives = directives - {'param', 'rtype', 'type', 'raises', 'example', 'return'}
+    assert not unknown_directives, (
+        f'{where} has unknown directives: {", ".join(unknown_directives)}'
+    )
+
     param_names = set(re.findall(r':param (\w+):', docstring))
     args = (
         node.args.posonlyargs
@@ -60,6 +67,7 @@ def test_function_docs(file, name, node):
     )
     if node.args.kwarg is not None:
         args.append(node.args.kwarg)
+
     # TODO: For "self" and "cls", check that it really is a method.
     arg_names = {arg.arg for arg in args} - {'self'} - {'cls'}
     assert param_names == arg_names, (

@@ -16,7 +16,7 @@ def make_np_sscp(
     :param input_metric: instance of `symmetric_distance()`
     :param output_metric: either `symmetric_distance()` or `l2_distance()`
 
-    :returns a Measurement that computes the DP sum
+    :return a Measurement that computes the DP sum
     """
     import opendp.prelude as dp
     np = import_optional_dependency('numpy')

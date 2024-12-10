@@ -160,7 +160,7 @@ class RuntimeType(object):
         :rtype: Union["RuntimeType", str]
         :raises UnknownTypeException: if `type_name` fails to parse
 
-        :examples:
+        :example:
 
         >>> dp.RuntimeType.parse(int)
         'i32'
@@ -262,7 +262,7 @@ class RuntimeType(object):
         :rtype: Union["RuntimeType", str]
         :raises UnknownTypeException: if inference fails on `public_example`
 
-        :examples:
+        :example:
 
         >>> dp.RuntimeType.infer(23)
         'i32'
