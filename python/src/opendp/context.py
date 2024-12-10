@@ -256,7 +256,7 @@ def loss_of(
     :param rho: Parameter for zero-concentrated ρ-DP.
 
     """
-    def range_warning(name, value, info_level, warn_level):
+    def _range_warning(name, value, info_level, warn_level):
         if value > warn_level:
             if info_level == warn_level:
                 logger.warning(f'{name} should be less than or equal to {warn_level}')
@@ -269,17 +269,17 @@ def loss_of(
         raise ValueError("Either epsilon or rho must be specified, and they are mutually exclusive.")  # pragma: no cover
     
     if epsilon is not None:
-        range_warning('epsilon', epsilon, 1, 5)
+        _range_warning('epsilon', epsilon, 1, 5)
         measure, loss = max_divergence(), epsilon
 
     if rho is not None:
-        range_warning('rho', rho, 0.25, 0.5)
+        _range_warning('rho', rho, 0.25, 0.5)
         measure, loss = zero_concentrated_divergence(), rho
     
     if delta is None:
         return measure, loss
     else:
-        range_warning('delta', delta, 1e-6, 1e-6)
+        _range_warning('delta', delta, 1e-6, 1e-6)
         return approximate(measure), (loss, delta)
 
 
@@ -652,7 +652,7 @@ class Query(object):
                 d_out, self._output_measure, output_measure, alpha
             )
 
-        def compositor(chain: Union[tuple[Domain, Metric], Transformation], d_in):
+        def _compositor(chain: Union[tuple[Domain, Metric], Transformation], d_in):
             if isinstance(chain, tuple):
                 input_domain, input_metric = chain
             elif isinstance(chain, Transformation):
@@ -673,7 +673,7 @@ class Query(object):
             if isinstance(chain, Transformation):
                 accountant = chain >> accountant
 
-            def wrap_release(queryable):
+            def _wrap_release(queryable):
                 return Context(
                     accountant=accountant,
                     queryable=queryable,
@@ -682,9 +682,9 @@ class Query(object):
                     space_override=(input_domain, input_metric)
                 )
 
-            return self.new_with(chain=accountant, wrap_release=wrap_release)
+            return self.new_with(chain=accountant, wrap_release=_wrap_release)
 
-        return self._compose_context(compositor)
+        return self._compose_context(_compositor)
 
     def _compose_context(self, compositor):
         """Helper function for composition in a context."""
@@ -725,15 +725,15 @@ class PartialChain(object):
         # When the output measure corresponds to approx-DP, only optimize the epsilon parameter.
         # The delta parameter should be fixed in _cast_measure, and if not, then the search will be impossible here anyways.
         if output_measure == fixed_smoothed_max_divergence():
-            def predicate(param):
+            def _predicate(param):
                 meas = _cast_measure(self(param), output_measure, d_out)
                 return meas.map(d_in)[0] <= d_out[0] # type: ignore[index] 
         else:
-            def predicate(param):
+            def _predicate(param):
                 meas = _cast_measure(self(param), output_measure, d_out)
                 return meas.check(d_in, d_out)
         
-        param = binary_search(predicate)
+        param = binary_search(_predicate)
         chain = self.partial(param)
         chain.param = param
         return chain
@@ -758,10 +758,10 @@ class PartialChain(object):
         :param f: function to wrap
         """
 
-        def inner(*args, **kwargs):
+        def _inner(*args, **kwargs):
             return cls(f, *args, **kwargs)
 
-        return inner
+        return _inner
 
 
 def _sequential_composition_by_weights(
@@ -804,28 +804,28 @@ def _sequential_composition_by_weights(
             "Must specify either `split_evenly_over` or `split_by_weights`"
         )  # pragma: no cover
 
-    def mul(dist, scale: float):
+    def _mul(dist, scale: float):
         if isinstance(dist, tuple):
             return dist[0] * scale, dist[1] * scale
         else:
             return dist * scale
 
-    def scale_weights(scale: float, weights):
-        return [mul(w, scale) for w in weights]
+    def _scale_weights(scale: float, weights):
+        return [_mul(w, scale) for w in weights]
 
-    def scale_sc(scale: float):
+    def _scale_sc(scale: float):
         return make_sequential_composition(
             input_domain=domain,
             input_metric=input_metric,
             output_measure=output_measure,
             d_in=d_in,
-            d_mids=scale_weights(scale, weights),
+            d_mids=_scale_weights(scale, weights),
         )
 
-    scale = binary_search_param(scale_sc, d_in=d_in, d_out=d_out, T=float)
+    scale = binary_search_param(_scale_sc, d_in=d_in, d_out=d_out, T=float)
 
     # return the accountant and d_mids
-    return scale_sc(scale), scale_weights(scale, weights)
+    return _scale_sc(scale), _scale_weights(scale, weights)
 
 
 def _cast_measure(chain, to_measure: Optional[Measure] = None, d_to=None):
@@ -895,12 +895,12 @@ def _translate_measure_distance(d_from, from_measure: Measure, to_measure: Measu
         "Approximate<MaxDivergence>",
         "ZeroConcentratedDivergence",
     ):
-        def caster(measurement):
+        def _caster(measurement):
             return make_fix_delta(make_zCDP_to_approxDP(measurement), delta=d_from[1])
 
         space = atom_domain(T=int), absolute_distance(T=float)
         scale = binary_search_param(
-            lambda scale: caster(make_gaussian(*space, scale)),
+            lambda scale: _caster(make_gaussian(*space, scale)),
             d_in=constant,
             d_out=d_from,
             T=float,
