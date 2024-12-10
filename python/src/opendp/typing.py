@@ -301,7 +301,7 @@ class RuntimeType(object):
         if isinstance(public_example, tuple):
             return RuntimeType('Tuple', [cls.infer(e, py_object) for e in public_example])
 
-        def infer_homogeneous(value):
+        def _infer_homogeneous(value):
             types = {cls.infer(v, py_object=py_object) for v in value}
 
             if len(types) == 0:
@@ -313,7 +313,7 @@ class RuntimeType(object):
             raise TypeError(f"elements must be homogeneously typed. Found {types}")
         
         if isinstance(public_example, list):
-            return RuntimeType('Vec', [infer_homogeneous(public_example)])
+            return RuntimeType('Vec', [_infer_homogeneous(public_example)])
 
         if np is not None and isinstance(public_example, np.ndarray):
             if public_example.ndim == 0:
@@ -329,8 +329,8 @@ class RuntimeType(object):
 
         if isinstance(public_example, dict):
             return RuntimeType('HashMap', [
-                infer_homogeneous(public_example.keys()),
-                infer_homogeneous(public_example.values())
+                _infer_homogeneous(public_example.keys()),
+                _infer_homogeneous(public_example.values())
             ])
 
         if public_example is None:
@@ -368,6 +368,11 @@ class RuntimeType(object):
         raise UnknownTypeException("either type_name or public_example must be passed")  # pragma: no cover
 
     def substitute(self: Union["RuntimeType", str], **kwargs):
+        '''
+        TODO
+        
+        :param kwargs:
+        '''
         if isinstance(self, GenericType):
             return kwargs.get(self.origin, self)
         if isinstance(self, RuntimeType):
@@ -467,6 +472,10 @@ MapDomain: DomainDescriptor = DomainDescriptor('MapDomain')
 
 
 def get_atom(type_name):
+    '''Parse type name and return the contained atomic type.
+    
+    :param type_name:
+    '''
     type_name = RuntimeType.parse(type_name)
     while isinstance(type_name, RuntimeType):
         if isinstance(type_name, GenericType):
@@ -476,35 +485,86 @@ def get_atom(type_name):
 
 
 def get_atom_or_infer(type_name: Union[RuntimeType, str], example):
+    '''Parse type name and return the contained atomic type,
+    or infer from example.
+    
+    :param type_name:
+    :param example:
+    '''
     return get_atom(type_name) or RuntimeType.infer(example)
 
 
 def get_first(value):
+    '''
+    Get first value from iterable.
+    
+    :param value:
+    '''
     if value is None or not len(value):
         return None
     return next(iter(value))
 
 def parse_or_infer(type_name: RuntimeTypeDescriptor | None, example) -> Union[RuntimeType, str]:
+    '''
+    TODO
+
+    :param type_name:
+    :param example:
+    '''
     return RuntimeType.parse_or_infer(type_name, example)
 
 def pass_through(value: Any) -> Any:
+    '''
+    No-op
+
+    :param value:
+    '''
     return value
 
 def get_dependencies(value: Union[Measurement, Transformation, Function]) -> Any:
+    '''
+    TODO
+
+    :param value:
+    '''
     return getattr(value, "_dependencies", None)
 
 def get_dependencies_iterable(value: list[Union[Measurement, Transformation, Function]]) -> list[Any]:
+    '''
+    TODO
+
+    :param value:
+    '''
     return list(map(get_dependencies, value))
 
 def get_carrier_type(value: Domain) -> Union[RuntimeType, str]:
+    '''
+    TODO
+
+    :param value:
+    '''
     return value.carrier_type
 
-
 def get_type(value):
+    '''
+    TODO
+
+    :param value:
+    '''
     return value.type
 
 def get_value_type(type_name):
+    '''
+    TODO
+
+    :param type_name:
+    '''
     return RuntimeType.parse(type_name).args[1] # type: ignore[union-attr]
 
 def get_distance_type(value: Union[Metric, Measure]) -> Union[RuntimeType, str]:
+    '''
+    TODO
+
+    :param value:
+    '''
     return value.distance_type
