@@ -11,11 +11,6 @@ class Function(NamedTuple):
     node: ast.AST
 
 
-def get_params_from_node_docstring(node):
-    docstring = ast.get_docstring(node) or ''
-    return set(re.findall(r':param (\w+):', docstring))  # type: ignore[arg-type]
-
-
 public_functions = []
 
 src_dir_path = Path(__file__).parent.parent / 'src'
@@ -29,8 +24,9 @@ for code_path in src_dir_path.glob('**/*.py'):
             continue
         if node.name.startswith('_'):
             continue
-        if not get_params_from_node_docstring(node):
-            # TODO: If the docstring has no params, should make sure that matches signature
+        last_node_value = getattr(node.body[-1], 'value', None)
+        last_node_value_value = getattr(last_node_value, 'value', None)
+        if last_node_value_value == Ellipsis:
             continue
         rel_path = re.sub(r'.*/src/', '', str(code_path))
         public_functions.append(Function(file=rel_path, node=node))
@@ -38,7 +34,11 @@ for code_path in src_dir_path.glob('**/*.py'):
 
 @pytest.mark.parametrize("file,name,node", [(f.file, f.node.name, f.node) for f in public_functions])  # type: ignore[attr-defined]
 def test_function_docs(file, name, node):
-    param_names = get_params_from_node_docstring(node)
+    docstring = ast.get_docstring(node)
+    if docstring is None:
+        # TODO: Public functions should have docstrings
+        return
+    param_names = set(re.findall(r':param (\w+):', docstring))
     args = (
         node.args.posonlyargs
         + node.args.args

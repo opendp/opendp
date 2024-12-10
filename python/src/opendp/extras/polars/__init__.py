@@ -895,6 +895,9 @@ try:
         ) -> LazyFrameQuery:
             """
             Shorthand to join with an explicit key-set.
+
+            :param keys:
+            :param on:
             """
             # Motivation for adding this new API:
             # 1. Writing a left join is more difficult in the context API: 
@@ -1041,6 +1044,8 @@ try:
         ) -> LazyFrameQuery:
             """
             Compute aggregations for each group of a group by operation.
+
+            :param named_aggs:
             """
             lf_plan = self._lgb_plan.agg(*aggs, **named_aggs)
             return LazyFrameQuery(lf_plan, self._query)
@@ -1065,7 +1070,10 @@ except ImportError:  # pragma: no cover
             raise ImportError(ERR_MSG)
 
         def summarize(self, alpha: float | None = None):
-            """Summarize the statistics released by this query."""
+            """Summarize the statistics released by this query.
+            
+            :param alpha:
+            """
             raise ImportError(ERR_MSG)
 
 

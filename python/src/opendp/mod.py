@@ -86,7 +86,10 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         return measurement_invoke(self, arg)
 
     def map(self, d_in):
-        """Map an input distance `d_in` to an output distance."""
+        """Map an input distance `d_in` to an output distance.
+        
+        :param d_in: Input distance
+        """
         from opendp.core import measurement_map
         return measurement_map(self, d_in)
 
@@ -275,7 +278,10 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         return transformation_invoke(self, arg)
 
     def map(self, d_in):
-        """Map an input distance `d_in` to an output distance."""
+        """Map an input distance `d_in` to an output distance.
+        
+        :param d_in: Input distance
+        """
         from opendp.core import transformation_map
         return transformation_map(self, d_in)
 
@@ -1062,8 +1068,12 @@ def exponential_bounds_search(
 
     # core search functionality
     def signed_band_search(center, at_center, sign):
-        """identify which band (of eight) the decision boundary lies in, 
-        starting from `center` in the direction indicated by `sign`"""
+        """Identify which band (of eight) the decision boundary lies in.
+
+        :param center: Start here
+        :param at_center:
+        :param sign: Search in this direction
+        """
 
         if T == int:
             # searching bands of [(k - 1) * 2^16, k * 2^16].

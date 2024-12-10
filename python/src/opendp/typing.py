@@ -82,7 +82,7 @@ def set_default_int_type(T: RuntimeTypeDescriptor) -> None:
 
     The default int type is i32.
     
-    :params T: must be one of [u8, u16, u32, u64, usize, i8, i16, i32, i64]
+    :param T: must be one of [u8, u16, u32, u64, usize, i8, i16, i32, i64]
     :type T: :ref:`RuntimeTypeDescriptor`
     """
     equivalence_class = ATOM_EQUIVALENCE_CLASSES[ELEMENTARY_TYPES[int]]
@@ -100,7 +100,7 @@ def set_default_float_type(T: RuntimeTypeDescriptor) -> None:
 
     The default float type is f64.
 
-    :params T: must be one of [f32, f64]
+    :param T: must be one of [f32, f64]
     :type T: :ref:`RuntimeTypeDescriptor`
     """
 

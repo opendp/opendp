@@ -204,7 +204,10 @@ def domain_of(T, infer: bool = False) -> Domain:
 
 
 def metric_of(M) -> Metric:
-    """Constructs an instance of a metric from metric type ``M``."""
+    """Constructs an instance of a metric from metric type ``M``.
+    
+    :param M: Metric type
+    """
     import opendp.typing as ty
     import opendp.metrics as metrics
 
@@ -541,6 +544,8 @@ class Query(object):
             """Wraps the ``make_{name}`` constructor to allow one optional parameter and chains it to the current query.
 
             This function will be called when the user calls ``query.{name}(...)``.
+
+            :param kwargs:
             """
             constructor, is_partial = constructors[name]
 
@@ -569,7 +574,11 @@ class Query(object):
         return make
 
     def new_with(self, *, chain: Chain, wrap_release=None) -> "Query":
-        """Convenience constructor that creates a new query with a different chain."""
+        """Convenience constructor that creates a new query with a different chain.
+        
+        :param chain:
+        :param wrap_release:
+        """
         return Query(
             chain=chain,
             output_measure=self._output_measure,
@@ -707,6 +716,11 @@ class PartialChain(object):
         """Returns the closest transformation or measurement that satisfies the given stability or privacy constraint.
 
         The discovered parameter is assigned to the param attribute of the returned transformation or measurement.
+
+        :param d_in:
+        :param d_out:
+        :param output_measure:
+        :param T:
         """
         # When the output measure corresponds to approx-DP, only optimize the epsilon parameter.
         # The delta parameter should be fixed in _cast_measure, and if not, then the search will be impossible here anyways.
@@ -739,7 +753,10 @@ class PartialChain(object):
 
     @classmethod
     def wrap(cls, f):
-        """Wraps a constructor for a transformation or measurement to return a partial chain instead."""
+        """Wraps a constructor for a transformation or measurement to return a partial chain instead.
+        
+        :param f: function to wrap
+        """
 
         def inner(*args, **kwargs):
             return cls(f, *args, **kwargs)
