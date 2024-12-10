@@ -12,7 +12,7 @@ class Function(NamedTuple):
 
 
 def get_params_from_node_docstring(node):
-    docstring = ast.get_docstring(node)
+    docstring = ast.get_docstring(node) or ''
     return set(re.findall(r':param (\w+):', docstring))  # type: ignore[arg-type]
 
 
@@ -28,9 +28,6 @@ for code_path in src_dir_path.glob('**/*.py'):
         if not isinstance(node, ast.FunctionDef):
             continue
         if node.name.startswith('_'):
-            continue
-        if not ast.get_docstring(node):
-            # TODO: All public functions should have docstrings
             continue
         if not get_params_from_node_docstring(node):
             # TODO: If the docstring has no params, should make sure that matches signature
