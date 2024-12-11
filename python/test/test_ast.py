@@ -39,30 +39,37 @@ class Function(NamedTuple):
 
 
 public_functions = []
+all_functions = []
 
 src_dir_path = Path(__file__).parent.parent / 'src'
 for code_path in src_dir_path.glob('**/*.py'):
+    is_public = True
     if any(parent.name.startswith('_') for parent in code_path.parents):
-        continue
+        is_public = False
     if code_path.name.startswith('_') and code_path.name != '__init__.py':
-        continue
+        is_public = False
     code = code_path.read_text()
     tree = ast.parse(code)
     for node in ast.walk(tree):
         if not isinstance(node, ast.FunctionDef):
             continue
-        if node.name.startswith('_'):
-            continue
         if ends_with_ellipsis(node):
             continue
+        if node.name.startswith('_'):
+            is_public = False
         short_path = f'{code_path.parent.name}/{code_path.name}'
-        public_functions.append(Function(file=short_path, node=node))
 
+        function = Function(file=short_path, node=node)
+        all_functions.append(function)
+        if is_public:
+            public_functions.append(function)
+
+# Typo check:
 assert len(public_functions) > 100
 
 
 @pytest.mark.parametrize("file,name,node", [(f.file, f.node.name, f.node) for f in public_functions])  # type: ignore[attr-defined]
-def test_function_docs(file, name, node):
+def test_public_function_docs(file, name, node):
     where = f'In {file}, def {name}, line {node.lineno}'
 
     # First, check the docstring in isolation:
