@@ -62,7 +62,7 @@ class Checker():
         if args.kwarg is not None:
             self.all_ast_args.append(args.kwarg)
         if len(self.all_ast_args) and self.all_ast_args[0].arg in ['self', 'cls']:
-            # TODO: Confirm that this is a method.
+            # TODO: Confirm that this is a method in a class.
             self.all_ast_args.pop(0)
 
     def _check_docstring(self):
@@ -72,9 +72,9 @@ class Checker():
             self.errors.append(f'unknown directives: {", ".join(unknown_directives)}')
 
     def _check_params(self):
-        doc_param_dict = dict(re.findall(r':param (\w+):(.*)', self.docstring))
+        doc_param_dict = dict(re.findall(r':param (\w+): *(.*)', self.docstring))
         # TODO: Has 68 failures; Enable and fill in the docs
-        # k_missing_v = [k for k, v in doc_param_dict.items() if not v.strip()]
+        # k_missing_v = [k for k, v in doc_param_dict.items() if not v]
         # if k_missing_v:
         #     errors.append(f'params missing descriptions: {", ".join(k_missing_v)}')
 
@@ -89,7 +89,32 @@ class Checker():
                 )
 
     def _check_types(self):
-        doc_type_dict = dict(re.findall(r':type (\w+):(.*)', self.docstring))
+        doc_type_dict = dict(re.findall(r':type (\w+): *(.*)', self.docstring))
+        ast_node_dict = {
+            arg.arg: getattr(arg, 'annotation', None)
+            for arg in self.all_ast_args
+        }
+        ast_type_dict = {
+            k: ast.unparse(v)
+            for k, v in ast_node_dict.items()
+            if v is not None
+        }
+        
+        # TODO: Has 151 errors; Enable and fill in the docs.
+        # if doc_type_dict != ast_type_dict:
+        #     self.errors.append(
+        #         f'docstring types ({doc_type_dict}) '
+        #         f'!= function signature ({ast_type_dict})'
+        #     )
+        
+        # TODO: Has 83 errors: Enable and fill in the docs.
+        # for k, v in doc_type_dict.items():
+        #     if ast_type_dict[k] != v:
+        #         self.errors.append(
+        #             f'docstring type ({doc_type_dict[k]}) '
+        #             f'!= function signature ({ast_type_dict[k]}) '
+        #             f'for {k}'
+        #         )
 
     def _check_return(self):
         has_return_statement = ast_has_return(self.tree)
