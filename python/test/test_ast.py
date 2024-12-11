@@ -89,32 +89,38 @@ class Checker():
                 )
 
     def _check_types(self):
-        doc_type_dict = dict(re.findall(r':type (\w+): *(.*)', self.docstring))
+        doc_type_dict = {
+            # TODO: Pick either ":py:ref:" or ":ref:"
+            k: re.sub(r'(?::py)?:ref:`(\w+)`', r'\1', v)
+            for k, v in re.findall(r':type (\w+): *(.*)', self.docstring)
+        }
+
         ast_node_dict = {
             arg.arg: getattr(arg, 'annotation', None)
             for arg in self.all_ast_args
         }
         ast_type_dict = {
-            k: ast.unparse(v)
+            # TODO: Docsting should include "Optional"
+            k: re.sub(r'Optional\[(.+)\]', r'\1', ast.unparse(v))
             for k, v in ast_node_dict.items()
+            # TODO: More could be annotated
             if v is not None
         }
         
-        # TODO: Has 151 errors; Enable and fill in the docs.
+        # TODO: Has 66 errors; Enable and fill in the docs.
         # if doc_type_dict != ast_type_dict:
         #     self.errors.append(
         #         f'docstring types ({doc_type_dict}) '
         #         f'!= function signature ({ast_type_dict})'
         #     )
         
-        # TODO: Has 83 errors: Enable and fill in the docs.
-        # for k, v in doc_type_dict.items():
-        #     if ast_type_dict[k] != v:
-        #         self.errors.append(
-        #             f'docstring type ({doc_type_dict[k]}) '
-        #             f'!= function signature ({ast_type_dict[k]}) '
-        #             f'for {k}'
-        #         )
+        for k, v in doc_type_dict.items():
+            if ast_type_dict[k] != v:
+                self.errors.append(
+                    f'docstring type ({doc_type_dict[k]}) '
+                    f'!= function signature ({ast_type_dict[k]}) '
+                    f'for {k}'
+                )
 
     def _check_return(self):
         has_return_statement = ast_has_return(self.tree)
