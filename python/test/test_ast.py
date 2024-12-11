@@ -19,6 +19,20 @@ def ends_with_ellipsis(node):
     last_node_value_value = getattr(last_node_value, 'value', None)
     return last_node_value_value == Ellipsis
 
+
+def has_return(tree):
+    '''
+    >>> has_return(ast.parse('def nope(): pass'))
+    False
+    >>> has_return(ast.parse('def yeah(): return 1'))
+    True
+    '''
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Return):
+            return True
+    return False
+
+
 class Function(NamedTuple):
     file: str
     node: ast.AST
@@ -55,8 +69,8 @@ def test_function_docs(file, name, node):
     docstring = ast.get_docstring(node)
     assert docstring is not None, f'{where}, add docstring or make private'
 
-    directives = set(re.findall(r'^\s*:(\w+)', docstring, re.MULTILINE))
-    unknown_directives = directives - {'param', 'rtype', 'type', 'raises', 'example', 'return'}
+    directives = set(re.findall(r'^\s*(\:\w+:?)', docstring, re.MULTILINE))
+    unknown_directives = directives - {':param', ':rtype:', ':type', ':raises', ':example:', ':return:'}
     assert not unknown_directives, (
         f'{where} has unknown directives: {", ".join(unknown_directives)}'
     )
@@ -77,7 +91,7 @@ def test_function_docs(file, name, node):
     if node.args.kwarg is not None:
         args.append(node.args.kwarg)
 
-    # TODO: For "self" and "cls", check that it really is a method.
+    # TODO: For "self" and "cls", confirm that it really is a method.
     arg_names = {arg.arg for arg in args} - {'self'} - {'cls'}
     assert param_dict.keys() == arg_names, (
         f'{where}, docstring params ({", ".join(param_dict.keys())}) '
