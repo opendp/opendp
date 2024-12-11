@@ -50,7 +50,20 @@ class Checker():
         self.tree = tree
         self.docstring = docstring
         self.is_public = is_public
+
         self.errors = []
+
+        args = self.tree.args
+        self.all_ast_args = (
+            args.posonlyargs
+            + args.args
+            + args.kwonlyargs
+        )
+        if args.kwarg is not None:
+            self.all_ast_args.append(args.kwarg)
+        if len(self.all_ast_args) and self.all_ast_args[0].arg in ['self', 'cls']:
+            # TODO: Confirm that this is a method.
+            self.all_ast_args.pop(0)
 
     def _check_docstring(self):
         directives = set(re.findall(r'^\s*(\:\w+:?)', self.docstring, re.MULTILINE))
@@ -59,31 +72,24 @@ class Checker():
             self.errors.append(f'unknown directives: {", ".join(unknown_directives)}')
 
     def _check_params(self):
-        doc_arg_dict = dict(re.findall(r':param (\w+):(.*)', self.docstring))
+        doc_param_dict = dict(re.findall(r':param (\w+):(.*)', self.docstring))
         # TODO: Has 68 failures; Enable and fill in the docs
-        # k_missing_v = [k for k, v in doc_arg_dict.items() if not v.strip()]
+        # k_missing_v = [k for k, v in doc_param_dict.items() if not v.strip()]
         # if k_missing_v:
         #     errors.append(f'params missing descriptions: {", ".join(k_missing_v)}')
 
-        args = self.tree.args
-        all_ast_args = (
-            args.posonlyargs
-            + args.args
-            + args.kwonlyargs
-        )
-        if args.kwarg is not None:
-            all_ast_args.append(args.kwarg)
-
-        # TODO: For "self" and "cls", confirm that it really is a method.
-        all_arg_names = {arg.arg for arg in all_ast_args} - {'self'} - {'cls'}
-        if doc_arg_dict or is_public:
+        ast_arg_names = {arg.arg for arg in self.all_ast_args}
+        if doc_param_dict or is_public:
             # Private functions don't need to document params,
             # but if they do, they should be consistent with signature.
-            if doc_arg_dict.keys() != all_arg_names:
+            if doc_param_dict.keys() != ast_arg_names:
                 self.errors.append(
-                    f'docstring params ({", ".join(doc_arg_dict.keys())}) '
-                    f'!= function signature ({", ".join(all_arg_names)})'
+                    f'docstring params ({", ".join(doc_param_dict.keys())}) '
+                    f'!= function signature ({", ".join(ast_arg_names)})'
                 )
+
+    def _check_types(self):
+        doc_type_dict = dict(re.findall(r':type (\w+):(.*)', self.docstring))
 
     def _check_return(self):
         has_return_statement = ast_has_return(self.tree)
@@ -110,6 +116,7 @@ class Checker():
     def get_errors(self):
         self._check_docstring()
         self._check_params()
+        self._check_types()
         self._check_return()
         if self.errors:
             return '; '.join(f'({i+1}) {e}' for i, e in enumerate(self.errors))
@@ -158,14 +165,14 @@ assert len(functions) > 100
 
 
 @pytest.mark.parametrize("file,name,tree,visibility", functions)  # type: ignore[attr-defined]
-def test_public_function_docs(file, name, tree, visibility):
+def test_function_docs(file, name, tree, visibility):
     where = f'In {file}, line {tree.lineno}, def {name}'
     is_public = visibility == PUBLIC
 
     docstring = ast.get_docstring(tree)
     if not is_public and docstring is None:
        return
-    assert docstring is not None, f'{where}, add docstring or make private'
+    assert docstring is not None, f'{where}: add docstring or make private'
 
     errors = Checker(
         tree=tree,
