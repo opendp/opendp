@@ -290,7 +290,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         from opendp.core import transformation_map
         return transformation_map(self, d_in)
 
-    def check(self, d_in, d_out, *, debug=False):
+    def check(self, d_in, d_out, *, debug=False) -> bool:
         """Check if the transformation is (`d_in`, `d_out`)-close.
         If true, implies that if the distance between inputs is at most `d_in`, then the distance between outputs is at most `d_out`.
         See also :func:`~Measurement.check`, a similar check for measurements.

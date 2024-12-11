@@ -33,6 +33,19 @@ def has_return(tree):
     return False
 
 
+def return_type(tree):
+    '''
+    >>> return_type(ast.parse('def f() -> list[int]: return [1]').body[0])
+    'list[int]'
+
+    Need body[0] because parse wraps these in a "Module".
+    '''
+    type_node = tree.returns
+    if type_node is not None:
+        return ast.unparse(type_node)
+
+
+
 class Function(NamedTuple):
     file: str
     name: str
@@ -129,5 +142,21 @@ def test_public_function_docs(file, name, node, is_public):
             assert has_return_statement, (
                 f'{where}, function has :return: directive, '
                 'but no return statement'
+            )
+
+    rtype_match = re.search(r':rtype:(.*)', docstring)
+    if rtype_match:
+        doc_rtype = rtype_match.group(1).strip().replace('"', "'")
+        sig_rtype = return_type(node)
+        # We trust mypy to check that the annotation is consistent with the actual return,
+        # so we just check that the annotation is consistent with docstring.
+        if sig_rtype is None:
+            assert False, (
+                f'{where}, to match :rtype:, add "-> {doc_rtype}"'
+            )
+        # If it's a single character, probably a typevar, so just skip.
+        elif len(sig_rtype) > 1:
+            assert doc_rtype == sig_rtype, (
+                f'{where}, update :rtype: from "{doc_rtype}" to "{sig_rtype}"'
             )
  
