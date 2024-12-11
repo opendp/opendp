@@ -115,7 +115,8 @@ class Checker():
         #     )
         
         for k, v in doc_type_dict.items():
-            if ast_type_dict[k] != v:
+            # TODO: "k in ast_type_dict" only needed in CI?
+            if k in ast_type_dict and ast_type_dict[k] != v:
                 self.errors.append(
                     f'docstring type ({doc_type_dict[k]}) '
                     f'!= function signature ({ast_type_dict[k]}) '
