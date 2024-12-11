@@ -35,11 +35,12 @@ def has_return(tree):
 
 class Function(NamedTuple):
     file: str
+    name: str
     node: ast.AST
+    is_public: bool
 
 
-public_functions = []
-all_functions = []
+functions = []
 
 src_dir_path = Path(__file__).parent.parent / 'src'
 for code_path in src_dir_path.glob('**/*.py'):
@@ -59,22 +60,29 @@ for code_path in src_dir_path.glob('**/*.py'):
             is_public = False
         short_path = f'{code_path.parent.name}/{code_path.name}'
 
-        function = Function(file=short_path, node=node)
-        all_functions.append(function)
-        if is_public:
-            public_functions.append(function)
+        function = Function(
+            file=short_path,
+            name=node.name,
+            node=node,
+            is_public=is_public,
+        )
+        functions.append(function)
 
 # Typo check:
-assert len(public_functions) > 100
+assert len(functions) > 100
 
 
-@pytest.mark.parametrize("file,name,node", [(f.file, f.node.name, f.node) for f in public_functions])  # type: ignore[attr-defined]
-def test_public_function_docs(file, name, node):
+@pytest.mark.parametrize("file,name,node,is_public", functions)  # type: ignore[attr-defined]
+def test_public_function_docs(file, name, node, is_public):
     where = f'In {file}, def {name}, line {node.lineno}'
 
     # First, check the docstring in isolation:
     docstring = ast.get_docstring(node)
-    assert docstring is not None, f'{where}, add docstring or make private'
+    if is_public:
+        assert docstring is not None, f'{where}, add docstring or make private'
+    else:
+        if docstring is None:
+            return
 
     directives = set(re.findall(r'^\s*(\:\w+:?)', docstring, re.MULTILINE))
     unknown_directives = directives - {':param', ':rtype:', ':type', ':raises', ':example:', ':return:'}
@@ -100,10 +108,13 @@ def test_public_function_docs(file, name, node):
 
     # TODO: For "self" and "cls", confirm that it really is a method.
     arg_names = {arg.arg for arg in args} - {'self'} - {'cls'}
-    assert param_dict.keys() == arg_names, (
-        f'{where}, docstring params ({", ".join(param_dict.keys())}) '
-        f'!= function signature ({", ".join(arg_names)})'
-    )
+    if param_dict or is_public:
+        # Private functions don't need to document params,
+        # but if they do, they should be consistent with signature.
+        assert param_dict.keys() == arg_names, (
+            f'{where}, docstring params ({", ".join(param_dict.keys())}) '
+            f'!= function signature ({", ".join(arg_names)})'
+        )
 
     # TODO: check for documentation of return value
 

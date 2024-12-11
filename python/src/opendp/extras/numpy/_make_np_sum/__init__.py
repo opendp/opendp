@@ -13,7 +13,7 @@ def make_np_sum(input_domain: Domain, input_metric: Metric) -> Transformation:
     :param input_domain: instance of `array2_domain(size=_, num_columns=_)`
     :param input_metric: instance of `symmetric_distance()`
 
-    :return a Measurement that computes the DP sum
+    :return: a Measurement that computes the DP sum
     """
     import opendp.prelude as dp
     np = import_optional_dependency('numpy')

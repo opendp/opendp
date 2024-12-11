@@ -179,6 +179,7 @@ def _sscp_domain(
     :param p: designates L`p` norm
     :param size: number of rows in data
     :param num_features: number of rows/columns in the matrix
+    :param T:
     """
     import opendp.prelude as dp
     np = import_optional_dependency('numpy')
