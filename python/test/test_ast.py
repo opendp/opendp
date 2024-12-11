@@ -44,6 +44,64 @@ def ast_return_type(tree):
     if type_node is not None:
         return ast.unparse(type_node)
 
+
+def check_docstring(docstring, errors):
+    directives = set(re.findall(r'^\s*(\:\w+:?)', docstring, re.MULTILINE))
+    unknown_directives = directives - {':param', ':rtype:', ':type', ':raises', ':example:', ':return:'}
+    if unknown_directives:
+        errors.append(f'unknown directives: {", ".join(unknown_directives)}')
+
+
+def check_params(node, docstring, errors, is_public):
+    doc_arg_dict = dict(re.findall(r':param (\w+):(.*)', docstring))
+    # TODO: Has 68 failures; Enable and fill in the docs
+    # k_missing_v = [k for k, v in doc_arg_dict.items() if not v.strip()]
+    # if k_missing_v:
+    #     errors.append(f'params missing descriptions: {", ".join(k_missing_v)}')
+
+    ast_args = (
+        node.args.posonlyargs
+        + node.args.args
+        + node.args.kwonlyargs
+    )
+    if node.args.kwarg is not None:
+        ast_args.append(node.args.kwarg)
+
+    # TODO: For "self" and "cls", confirm that it really is a method.
+    ast_arg_names = {arg.arg for arg in ast_args} - {'self'} - {'cls'}
+    if doc_arg_dict or is_public:
+        # Private functions don't need to document params,
+        # but if they do, they should be consistent with signature.
+        if doc_arg_dict.keys() != ast_arg_names:
+            errors.append(
+                f'docstring params ({", ".join(doc_arg_dict.keys())}) '
+                f'!= function signature ({", ".join(ast_arg_names)})'
+            )
+
+
+def check_return(node, docstring, errors):
+    has_return_statement = ast_has_return(node)
+    has_return_directive = ':return:' in docstring
+    # TODO: Has 261 failures; Enable and fill in the docs.
+    # if has_return_statement and not has_return_directive:
+    #     errors.append('return statement, but no :return: in docstring')
+    if has_return_directive and not has_return_statement:
+        errors.append(':return: directive, but no return statement')
+
+    rtype_match = re.search(r':rtype:(.*)', docstring)
+    if rtype_match:
+        doc_rtype = rtype_match.group(1).strip().replace('"', "'")
+        ast_rtype = ast_return_type(node)
+        # We trust mypy to check that the annotation is consistent with the actual return,
+        # so we just check that the annotation is consistent with docstring.
+        if ast_rtype is None:
+            errors.append(f'to match :rtype:, add "-> {doc_rtype}"')
+        # If it's a single character, probably a typevar, which we won't try to resolve.
+        elif len(ast_rtype) > 1:
+            if doc_rtype != ast_rtype:
+                errors.append(f'update :rtype: from "{doc_rtype}" to "{ast_rtype}"')
+
+
 PUBLIC = 'public'
 PRIVATE = 'private'
 
@@ -92,66 +150,15 @@ def test_public_function_docs(file, name, node, visibility):
     is_public = visibility == PUBLIC
     errors = []
 
-    ### First, check the docstring in isolation:
-    docstring = ast.get_docstring(node)
-    if is_public:
-        assert docstring is not None, f'{where}, add docstring or make private'
-    else:
-        if docstring is None:
-            return
+    docs = ast.get_docstring(node)
+    if not is_public and docs is None:
+        return
+    assert docs is not None, f'{where}, add docstring or make private'
 
-    directives = set(re.findall(r'^\s*(\:\w+:?)', docstring, re.MULTILINE))
-    unknown_directives = directives - {':param', ':rtype:', ':type', ':raises', ':example:', ':return:'}
-    if unknown_directives:
-        errors.append(f'unknown directives: {", ".join(unknown_directives)}')
+    check_docstring(docstring=docs, errors=errors)
+    check_params(node=node, docstring=docs, errors=errors, is_public=is_public)
+    check_return(node=node, docstring=docs, errors=errors)
 
-    doc_arg_dict = dict(re.findall(r':param (\w+):(.*)', docstring))
-    # TODO: Has 68 failures; Enable and fill in the docs
-    # k_missing_v = [k for k, v in doc_arg_dict.items() if not v.strip()]
-    # if k_missing_v:
-    #     errors.append(f'params missing descriptions: {", ".join(k_missing_v)}')
-
-    ### Then, compare the docstring to the AST:
-    ast_args = (
-        node.args.posonlyargs
-        + node.args.args
-        + node.args.kwonlyargs
-    )
-    if node.args.kwarg is not None:
-        ast_args.append(node.args.kwarg)
-
-    # TODO: For "self" and "cls", confirm that it really is a method.
-    ast_arg_names = {arg.arg for arg in ast_args} - {'self'} - {'cls'}
-    if doc_arg_dict or is_public:
-        # Private functions don't need to document params,
-        # but if they do, they should be consistent with signature.
-        if doc_arg_dict.keys() != ast_arg_names:
-            errors.append(
-                f'docstring params ({", ".join(doc_arg_dict.keys())}) '
-                f'!= function signature ({", ".join(ast_arg_names)})'
-            )
-
-    has_return_statement = ast_has_return(node)
-    has_return_directive = ':return:' in docstring
-    # TODO: Has 261 failures; Enable and fill in the docs.
-    # if has_return_statement and not has_return_directive:
-    #     errors.append('return statement, but no :return: in docstring')
-    if has_return_directive and not has_return_statement:
-        errors.append(':return: directive, but no return statement')
-
-    rtype_match = re.search(r':rtype:(.*)', docstring)
-    if rtype_match:
-        doc_rtype = rtype_match.group(1).strip().replace('"', "'")
-        ast_rtype = ast_return_type(node)
-        # We trust mypy to check that the annotation is consistent with the actual return,
-        # so we just check that the annotation is consistent with docstring.
-        if ast_rtype is None:
-            errors.append(f'to match :rtype:, add "-> {doc_rtype}"')
-        # If it's a single character, probably a typevar, which we won't try to resolve.
-        elif len(ast_rtype) > 1:
-            if doc_rtype != ast_rtype:
-                errors.append(f'update :rtype: from "{doc_rtype}" to "{ast_rtype}"')
-    
     # We want to get all errors in one pass, instead of getting one set of errors,
     # correcting them, and getting a new set when you re-run.
     if errors:
