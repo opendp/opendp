@@ -202,7 +202,7 @@ def test_function_docs(file, name, tree, visibility):
 
     docstring = ast.get_docstring(tree)
     if not is_public and docstring is None:
-       return
+        return
     assert docstring is not None, f'{where}: add docstring or make private'
 
     errors = Checker(
