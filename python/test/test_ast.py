@@ -74,7 +74,7 @@ assert len(functions) > 100
 
 @pytest.mark.parametrize("file,name,node,is_public", functions)  # type: ignore[attr-defined]
 def test_public_function_docs(file, name, node, is_public):
-    where = f'In {file}, def {name}, line {node.lineno}'
+    where = f'In {file}, line {node.lineno}, def {name}'
 
     # First, check the docstring in isolation:
     docstring = ast.get_docstring(node)
@@ -91,10 +91,10 @@ def test_public_function_docs(file, name, node, is_public):
     )
 
     param_dict = dict(re.findall(r':param (\w+):(.*)', docstring))
-    # TODO: Maybe accept either description or type?
-    # k_wo_v = [k for k, v in param_dict.items() if not v.strip()]
-    # assert not k_wo_v, (
-    #     f'{where} has params without descriptions: {", ".join(k_wo_v)}'
+    # TODO: Has 68 failures; Enable and fill in the docs
+    # k_missing_v = [k for k, v in param_dict.items() if not v.strip()]
+    # assert not k_missing_v, (
+    #     f'{where} has params missing descriptions: {", ".join(k_missing_v)}'
     # )
 
     # Then, compare the docstring to the AST:
@@ -116,6 +116,18 @@ def test_public_function_docs(file, name, node, is_public):
             f'!= function signature ({", ".join(arg_names)})'
         )
 
-    # TODO: check for documentation of return value
-
+    if is_public:
+        has_return_statement = has_return(node)
+        has_return_directive = ':return:' in docstring
+        # TODO: Has 142 failures; Enable and fill in the docs.
+        # if has_return_statement:
+        #     assert has_return_directive, (
+        #         f'{where}, function has return statement, '
+        #         'but no :return: in docstring'
+        #     )
+        if has_return_directive:
+            assert has_return_statement, (
+                f'{where}, function has :return: directive, '
+                'but no return statement'
+            )
  
