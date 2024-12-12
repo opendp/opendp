@@ -86,7 +86,10 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         return measurement_invoke(self, arg)
 
     def map(self, d_in):
-        """Map an input distance `d_in` to an output distance."""
+        """Map an input distance `d_in` to an output distance.
+        
+        :param d_in: Input distance
+        """
         from opendp.core import measurement_map
         return measurement_map(self, d_in)
 
@@ -128,25 +131,30 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
 
     @property
     def input_domain(self) -> "Domain":
+        '''TODO'''
         from opendp.core import measurement_input_domain
         return measurement_input_domain(self)
     
     @property
     def input_metric(self) -> "Metric":
+        '''TODO'''
         from opendp.core import measurement_input_metric
         return measurement_input_metric(self)
 
     @property
     def input_space(self) -> tuple["Domain", "Metric"]:
+        '''TODO'''
         return self.input_domain, self.input_metric
     
     @property
     def output_measure(self) -> "Measure":
+        '''TODO'''
         from opendp.core import measurement_output_measure
         return measurement_output_measure(self)
     
     @property
     def function(self) -> "Function":
+        '''TODO'''
         from opendp.core import measurement_function
         return measurement_function(self)
     
@@ -275,11 +283,14 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         return transformation_invoke(self, arg)
 
     def map(self, d_in):
-        """Map an input distance `d_in` to an output distance."""
+        """Map an input distance `d_in` to an output distance.
+        
+        :param d_in: Input distance
+        """
         from opendp.core import transformation_map
         return transformation_map(self, d_in)
 
-    def check(self, d_in, d_out, *, debug=False):
+    def check(self, d_in, d_out, *, debug=False) -> bool:
         """Check if the transformation is (`d_in`, `d_out`)-close.
         If true, implies that if the distance between inputs is at most `d_in`, then the distance between outputs is at most `d_out`.
         See also :func:`~Measurement.check`, a similar check for measurements.
@@ -336,36 +347,43 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
 
     @property
     def input_domain(self) -> "Domain":
+        '''TODO'''
         from opendp.core import transformation_input_domain
         return transformation_input_domain(self)
     
 
     @property
     def output_domain(self) -> "Domain":
+        '''TODO'''
         from opendp.core import transformation_output_domain
         return transformation_output_domain(self)
     
 
     @property
     def input_metric(self) -> "Metric":
+        '''TODO'''
         from opendp.core import transformation_input_metric
         return transformation_input_metric(self)
     
     @property
     def output_metric(self) -> "Metric":
+        '''TODO'''
         from opendp.core import transformation_output_metric
         return transformation_output_metric(self)
     
     @property
     def input_space(self) -> tuple["Domain", "Metric"]:
+        '''TODO'''
         return self.input_domain, self.input_metric
     
     @property
     def output_space(self) -> tuple["Domain", "Metric"]:
+        '''TODO'''
         return self.output_domain, self.output_metric
     
     @property
     def function(self) -> "Function":
+        '''TODO'''
         from opendp.core import transformation_function
         return transformation_function(self)
 
@@ -438,6 +456,10 @@ class Queryable(object):
         return queryable_eval(self.value, query)
     
     def eval(self, query):
+        '''TODO
+        
+        :param query:
+        '''
         from opendp.core import queryable_eval # pragma: no cover
         return queryable_eval(self.value, query) # pragma: no cover
 
@@ -487,23 +509,30 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     _type_ = AnyDomain
 
     def member(self, val):
+        '''TODO
+        
+        :param val:
+        '''
         from opendp.domains import member
         return member(self, val)
 
     @property
     def type(self) -> Union["RuntimeType", str]:
+        '''TODO'''
         from opendp.domains import domain_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(domain_type(self))
     
     @property
     def carrier_type(self) -> Union["RuntimeType", str]:
+        '''TODO'''
         from opendp.domains import domain_carrier_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(domain_carrier_type(self))
     
     @property
     def descriptor(self) -> Any:
+        '''TODO'''
         from opendp.domains import _extrinsic_domain_descriptor
         return _extrinsic_domain_descriptor(self)
 
@@ -546,12 +575,14 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
 
     @property
     def type(self):
+        '''TODO'''
         from opendp.metrics import metric_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(metric_type(self))
     
     @property
     def distance_type(self) -> Union["RuntimeType", str]:
+        '''TODO'''
         from opendp.metrics import metric_distance_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(metric_distance_type(self))
@@ -598,12 +629,14 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
 
     @property
     def type(self):
+        '''TODO'''
         from opendp.measures import measure_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(measure_type(self))
     
     @property
     def distance_type(self) -> Union["RuntimeType", str]:
+        '''TODO'''
         from opendp.measures import measure_distance_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(measure_distance_type(self))
@@ -636,10 +669,18 @@ class PrivacyProfile(object):
         self.curve = curve
 
     def delta(self, epsilon):
+        '''TODO
+        
+        :param epsilon:
+        '''
         from opendp._data import privacy_profile_delta
         return privacy_profile_delta(self.curve, epsilon)
 
     def epsilon(self, delta):
+        '''TODO
+        
+        :param delta:
+        '''
         from opendp._data import privacy_profile_epsilon
         return privacy_profile_epsilon(self.curve, delta)
     
@@ -689,9 +730,9 @@ class OpenDPException(Exception):
         return re.split(r"\s*[0-9]+: ", self.raw_traceback or "")
     
     def _frames(self):
-        def format_frame(frame):
+        def _format_frame(frame):
             return "\n  ".join(line.strip() for line in frame.split("\n"))
-        return [format_frame(f) for f in self._raw_frames() if f.startswith("opendp") or f.startswith("<opendp")]
+        return [_format_frame(f) for f in self._raw_frames() if f.startswith("opendp") or f.startswith("<opendp")]
 
     def _continued_stack_trace(self):
         # join and split by newlines because frames may be multi-line
@@ -784,7 +825,7 @@ def binary_search_chain(
     :raises ValueError: if the predicate function is constant, bounds cannot be inferred, or decision boundary is not within `bounds`.
 
 
-    :examples:
+    :example:
 
     Find a laplace measurement with the smallest noise scale that is still (d_in, d_out)-close.
 
@@ -1043,7 +1084,7 @@ def exponential_bounds_search(
 
     # try to infer T
     if T is None:
-        def check_type(v):
+        def _check_type(v):
             try:
                 predicate(v)
             except TypeError:
@@ -1053,17 +1094,21 @@ def exponential_bounds_search(
                     return False # pragma: no cover
             return True
         
-        if check_type(0.):
+        if _check_type(0.):
             T = float
-        elif check_type(0):
+        elif _check_type(0):
             T = int
         else:
             raise TypeError("unable to infer type `T`; pass the type `T` or bounds")  # pragma: no cover
 
     # core search functionality
     def signed_band_search(center, at_center, sign):
-        """identify which band (of eight) the decision boundary lies in, 
-        starting from `center` in the direction indicated by `sign`"""
+        """Identify which band (of eight) the decision boundary lies in.
+
+        :param center: Start here
+        :param at_center:
+        :param sign: Search in this direction
+        """
 
         if T == int:
             # searching bands of [(k - 1) * 2^16, k * 2^16].
@@ -1100,13 +1145,13 @@ def exponential_bounds_search(
     # predicate has thrown an exception
     # 1. Treat exceptions as a secondary decision boundary, and find the edge value
     # 2. Return a bound by searching from the exception edge, in the direction away from the exception
-    def exception_predicate(v):
+    def _exception_predicate(v):
         try:
             predicate(v)
             return True
         except Exception:
             return False
-    exception_bounds = exponential_bounds_search(exception_predicate, T=T)
+    exception_bounds = exponential_bounds_search(_exception_predicate, T=T)
     if exception_bounds is None:
         try:
             predicate(center)
@@ -1117,7 +1162,7 @@ def exponential_bounds_search(
             raise
     
 
-    center, sign = binary_search(exception_predicate, bounds=exception_bounds, T=T, return_sign=True)
+    center, sign = binary_search(_exception_predicate, bounds=exception_bounds, T=T, return_sign=True)
     at_center = predicate(center)
     return signed_band_search(center, at_center, sign)
 
