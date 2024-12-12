@@ -75,8 +75,9 @@ class Checker():
         # TODO: Require ":return" if ":rtype" is given: "(:return(:rtype)?)?"
         canonical_order = r'^(:param(:type)?)*(:return)?(:rtype)?(:raises)*(:example)?$'
         if not re.search(canonical_order, order):
+            short_order = re.sub(r'[:$^]', '', canonical_order)
             self.errors.append(
-                f'Directives {order} are not in canonical order: {re.sub(r'[:$^]', '', canonical_order)}'
+                f'Directives {order} are not in canonical order: {short_order}'
             )
 
     def _check_params(self):
