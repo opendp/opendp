@@ -73,10 +73,11 @@ class Checker():
 
     def _check_params(self):
         doc_param_dict = dict(re.findall(r':param (\w+): *(.*)', self.docstring))
-        # TODO: Has 68 failures; Enable and fill in the docs
-        # k_missing_v = [k for k, v in doc_param_dict.items() if not v]
-        # if k_missing_v:
-        #     errors.append(f'params missing descriptions: {", ".join(k_missing_v)}')
+        # TODO: Has 34 failures for public, 68 for all functions; Enable and fill in the docs
+        # if self.is_public:
+        #     k_missing_v = [k for k, v in doc_param_dict.items() if not v]
+        #     if k_missing_v:
+        #         self.errors.append(f'params missing descriptions: {", ".join(k_missing_v)}')
 
         ast_arg_names = {arg.arg for arg in self.all_ast_args}
         if doc_param_dict or is_public:
@@ -100,19 +101,20 @@ class Checker():
             for arg in self.all_ast_args
         }
         ast_type_dict = {
-            # TODO: Docsting should include "Optional"
+            # TODO: Has 32 failures where "Optional" not specified
             k: re.sub(r'Optional\[(.+)\]', r'\1', ast.unparse(v))
             for k, v in ast_node_dict.items()
-            # TODO: More could be annotated
+            # TODO: Has 154 failures w/o this exclusion.
             if v is not None
         }
         
-        # TODO: Has 66 errors; Enable and fill in the docs.
-        # if doc_type_dict != ast_type_dict:
-        #     self.errors.append(
-        #         f'docstring types ({doc_type_dict}) '
-        #         f'!= function signature ({ast_type_dict})'
-        #     )
+        # TODO: Has 17 failures, or 66  w/o "if is_public"; Enable and fill in the docs.
+        # if self.is_public:
+        #     if doc_type_dict != ast_type_dict:
+        #         self.errors.append(
+        #             f'docstring types ({doc_type_dict}) '
+        #             f'!= function signature ({ast_type_dict})'
+        #         )
         
         for k, v in doc_type_dict.items():
             # TODO: "k in ast_type_dict" only needed in CI?
@@ -126,9 +128,10 @@ class Checker():
     def _check_return(self):
         has_return_statement = ast_has_return(self.tree)
         has_return_directive = ':return:' in self.docstring
-        # TODO: Has 261 failures; Enable and fill in the docs.
-        # if has_return_statement and not has_return_directive:
-        #     errors.append('return statement, but no :return: in docstring')
+        # TODO: Has 142 failures; Enable and fill in the docs.
+        # if self.is_public:
+        #     if has_return_statement and not has_return_directive:
+        #         self.errors.append('return statement, but no :return: in docstring')
         if has_return_directive and not has_return_statement:
             self.errors.append(':return: directive, but no return statement')
 
@@ -182,10 +185,9 @@ for code_path in src_dir_path.glob('**/*.py'):
             continue
         if node.name.startswith('_'):
             is_public = False
-        short_path = f'{code_path.parent.name}/{code_path.name}'
 
         function = Function(
-            file=short_path,
+            file=f'{code_path.parent.name}/{code_path.name}',
             name=node.name,
             tree=node,
             visibility=PUBLIC if is_public else PRIVATE,
@@ -196,7 +198,7 @@ for code_path in src_dir_path.glob('**/*.py'):
 assert len(functions) > 100
 
 
-@pytest.mark.parametrize("file,name,tree,visibility", functions)  # type: ignore[attr-defined]
+@pytest.mark.parametrize("file,name,tree,visibility", functions)
 def test_function_docs(file, name, tree, visibility):
     where = f'In {file}, line {tree.lineno}, def {name}'
     is_public = visibility == PUBLIC
