@@ -66,10 +66,18 @@ class Checker():
             self.all_ast_args.pop(0)
 
     def _check_docstring(self):
-        directives = set(re.findall(r'^\s*(\:\w+:?)', self.docstring, re.MULTILINE))
-        unknown_directives = directives - {':param', ':rtype:', ':type', ':raises', ':example:', ':return:'}
+        directives = re.findall(r'^\s*(\:\w+:?)', self.docstring, re.MULTILINE)
+        unknown_directives = set(directives) - {':param', ':rtype:', ':type', ':raises', ':example:', ':return:'}
         if unknown_directives:
             self.errors.append(f'unknown directives: {", ".join(unknown_directives)}')
+        
+        order = ''.join(re.sub(r':$', '', d) for d in directives)
+        # TODO: Require ":return" if ":rtype" is given: "(:return(:rtype)?)?"
+        canonical_order = r'^(:param(:type)?)*(:return)?(:rtype)?(:raises)*(:example)?$'
+        if not re.search(canonical_order, order):
+            self.errors.append(
+                f'Directives {order} are not in canonical order: {re.sub(r'[:$^]', '', canonical_order)}'
+            )
 
     def _check_params(self):
         doc_param_dict = dict(re.findall(r':param (\w+): *(.*)', self.docstring))

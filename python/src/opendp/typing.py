@@ -354,10 +354,10 @@ class RuntimeType(object):
 
         :param type_name: type specifier. See RuntimeType.parse for documentation on valid inputs
         :param public_example: data used to infer the type
-        :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
-        :rtype: Union["RuntimeType", str]
         :param generics: For internal use. List of type names to consider generic when parsing.
         :type generics: list[str]
+        :return: Normalized type. If the type has subtypes, returns a RuntimeType, else a str.
+        :rtype: Union["RuntimeType", str]
         :raises ValueError: if `type_name` fails to parse
         :raises UnknownTypeException: if inference fails on `public_example` or no args are supplied
         """

@@ -974,6 +974,8 @@ try:
         def summarize(self, alpha: float | None = None):
             """Summarize the statistics released by this query.
 
+            :param alpha: optional. A value in [0, 1] denoting the statistical significance.
+
             If ``alpha`` is passed, the resulting data frame includes an ``accuracy`` column.
 
             If a threshold is configured for censoring small/sensitive partitions,
@@ -1020,8 +1022,6 @@ try:
             ...     )
             ...
             >>> interpret_accuracy("Integer Laplace", 2.0, 6.429605, alpha=.05) # doctest:+SKIP
-
-            :param alpha: optional. A value in [0, 1] denoting the statistical significance.
             """
             from opendp.accuracy import summarize_polars_measurement
 
