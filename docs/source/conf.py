@@ -12,7 +12,7 @@ from sphinx.ext import autodoc
 os.environ["OPENDP_HEADLESS"] = "true"
 
 # We're inside source when this runs.
-# Docs would be the same for all versions. Fix from: https://github.com/Holzhaus/sphinx-multiversion/issues/42
+# Docs would be the same for all versions. Fix from: https://github.com/sphinx-contrib/multiversion/issues/42
 rootdir = os.path.join(os.getenv("SPHINX_MULTIVERSION_SOURCEDIR", default=os.getcwd()), "..", "..", "python", "src")
 sys.path.insert(0, rootdir)
 
@@ -218,7 +218,7 @@ smv_remote_whitelist = r'origin'
 # Pattern for released versions
 smv_released_pattern = r'^tags/v\d+\.\d+\.\d+$'
 
-# Command that sphinx-multiversion runs for each version. Requires patch from https://github.com/Holzhaus/sphinx-multiversion/pull/62
+# Command that sphinx-multiversion runs for each version. Requires patch from https://github.com/sphinx-contrib/multiversion/pull/62
 # We use this to generate the templates for the Python API docs.
 # Because we need values to be calculated for each version, we can't use Python variables, so we have the shell expand them.
 version_cmd = 'VERSION=`cat ../VERSION`'
