@@ -60,6 +60,8 @@ Features that are available from Python and R:
      - Enable to include transformations and measurements with floating-point vulnerabilities.
    * - ``rust-stack-trace``
      - Enable to allow stack traces to include stack frames from Rust.
+   * - ``serialization``
+     - Python only. Adds a ``to_json`` method to many OpenDP objects.
 
 See also the :ref:`comprehensive listing of features for Rust<rust-feature-listing>`.
 

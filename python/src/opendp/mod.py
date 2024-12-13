@@ -752,7 +752,7 @@ def disable_features(*features: str) -> None:
     if SERIALIZATION in features:
         from logging import warning
         warning("Once enabled, serialization can not be disabled")
-    GLOBAL_FEATURES.difference_update(set(features))
+    GLOBAL_FEATURES.difference_update(set(features) - {SERIALIZATION})
 
 
 def assert_features(*features: str) -> None:
