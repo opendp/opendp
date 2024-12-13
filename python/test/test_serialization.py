@@ -13,6 +13,14 @@ def test_serialization():
         dp.t.make_select_column(key="income", TOA=str)
     )
 
+    expected_str = '''Transformation(
+    input_domain   = AtomDomain(T=String),
+    output_domain  = VectorDomain(AtomDomain(T=String)),
+    input_metric   = SymmetricDistance(),
+    output_metric  = SymmetricDistance())'''
+
+    assert str(preprocessor) == expected_str
+
     # serialize the chain to json
     json_str = preprocessor.to_json(indent=2)
     json_dict = json.loads(json_str)
@@ -51,8 +59,4 @@ def test_serialization():
     }
 
     # reconstruct the obj from the json string
-    assert str(dp.make_load_json(json_str)) == '''Transformation(
-    input_domain   = AtomDomain(T=String),
-    output_domain  = VectorDomain(AtomDomain(T=String)),
-    input_metric   = SymmetricDistance(),
-    output_metric  = SymmetricDistance())'''
+    assert str(dp.make_load_json(json_str)) == expected_str
