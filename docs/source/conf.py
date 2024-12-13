@@ -199,7 +199,9 @@ html_sidebars = {
 }
 html_context = {
     # Expected sphinx-multiversion to set "latest_version", but it was None, so set it manually.
-    'latest_version_name': f'v{version}'
+    'latest_version_name': f'v{version}',
+    # Uncomment this to see the old-version-warning:
+    # 'current_version': 'some-old-version'
 }
 
 # SPHINX-MULTIVERSION STUFF
