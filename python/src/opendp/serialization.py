@@ -1,13 +1,10 @@
-import opendp.prelude as dp
 import importlib
-
 import json
 import builtins
-
-
 from functools import wraps
 
-import importlib
+import opendp.prelude as dp
+
 
 __all__ = ["enable_logging"]
 LOGGED_CLASSES = (
@@ -35,14 +32,14 @@ def wrap_func(f, module_name):
     def wrapper(*args, **kwargs):
         chain = f(*args, **kwargs)
         if isinstance(chain, LOGGED_CLASSES):
-            chain.log = {
+            chain.log = {  # type: ignore[union-attr]
                 "_type": "constructor",
                 "func": f.__name__,
                 "module": module_name,
             }
-            args and chain.log.setdefault("args", args)
-            kwargs and chain.log.setdefault("kwargs", kwargs)
-        return chain  # pragma: no cover (if isinstance is false)
+            args and chain.log.setdefault("args", args)  # type: ignore[union-attr]
+            kwargs and chain.log.setdefault("kwargs", kwargs)  # type: ignore[union-attr]
+        return chain
 
     return wrapper
 
@@ -50,10 +47,10 @@ def wrap_func(f, module_name):
 def to_ast(item):
     if isinstance(item, LOGGED_CLASSES):
         if not hasattr(item, "log"):  # pragma: no cover
-            msg = "invoke `opendp_logger.enable_logging()` before constructing your measurement"
+            msg = "invoke `enable_logging()` before constructing your measurement"
             raise ValueError(msg)
 
-        return to_ast(item.log)
+        return to_ast(item.log)  # type: ignore[union-attr]
     if isinstance(item, tuple):
         return [to_ast(e) for e in item]
     if isinstance(item, list):
@@ -77,7 +74,7 @@ def to_json(chain, *args, **kwargs):
 def decode_ast(obj):
     if isinstance(obj, dict):
         if obj.get("_type") == "type":
-            return getattr(builtins, dp.RuntimeType.parse(obj["name"]))  # pragma: no cover
+            return getattr(builtins, dp.RuntimeType.parse(obj["name"]))  # type: ignore[arg-type]
 
         if obj.get("_type") == "list":
             return [decode_ast(i) for i in obj["_items"]]
@@ -86,7 +83,10 @@ def decode_ast(obj):
             module = importlib.import_module(f"opendp.{obj['module']}")
             constructor = getattr(module, obj["func"])
 
-            return constructor(*decode_ast(obj.get("args", ())), **decode_ast(obj.get("kwargs", {})))
+            return constructor(
+                *decode_ast(obj.get("args", ())),
+                **decode_ast(obj.get("kwargs", {}))
+            )
         
         if obj.get("_type") == "partial_chain":
             return decode_ast(obj["lhs"]) >> decode_ast(obj["rhs"])
@@ -125,8 +125,8 @@ def enable_logging():
                 module.__dict__[f] = wrap_func(getattr(module, f), name)
 
     for cls in LOGGED_CLASSES:
-        cls.to_ast = to_ast
-        cls.to_json = to_json
+        cls.to_ast = to_ast  # type: ignore[union-attr]
+        cls.to_json = to_json  # type: ignore[union-attr]
 
     trans_shift_inner = dp.Transformation.__rshift__
 
@@ -134,10 +134,14 @@ def enable_logging():
     def trans_shift_outer(lhs: dp.Transformation, rhs):
         chain = trans_shift_inner(lhs, rhs)
         if isinstance(rhs, dp.PartialConstructor):
-            chain.log = {"_type": "partial_chain", "lhs": lhs.log, "rhs": rhs.log}
+            chain.log = {
+                "_type": "partial_chain",
+                "lhs": lhs.log,  # type: ignore[attr-defined]
+                "rhs": rhs.log,  # type: ignore[attr-defined]
+            }
         return chain
 
-    dp.Transformation.__rshift__ = trans_shift_outer
+    dp.Transformation.__rshift__ = trans_shift_outer  # type: ignore[method-assign,assignment]
 
     # only run once
     enable_logging.__code__ = (lambda: None).__code__
