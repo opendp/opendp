@@ -6,7 +6,6 @@ from functools import wraps
 import opendp.prelude as dp
 
 
-__all__ = ["enable_logging"]
 LOGGED_CLASSES = (
     dp.Transformation,
     dp.Measurement,
@@ -27,7 +26,7 @@ WRAPPED_MODULES = [
 ]
 
 
-def wrap_func(f, module_name):
+def _wrap_func(f, module_name):
     @wraps(f)
     def wrapper(*args, **kwargs):
         chain = f(*args, **kwargs)
@@ -44,25 +43,25 @@ def wrap_func(f, module_name):
     return wrapper
 
 
-def to_ast(item):
+def _to_ast(item):
     if isinstance(item, LOGGED_CLASSES):
         if not hasattr(item, "log"):  # pragma: no cover
             msg = "invoke `dp.enable_features('serialization')` before constructing your measurement"
             raise ValueError(msg)
 
-        return to_ast(item.log)  # type: ignore[union-attr]
+        return _to_ast(item.log)  # type: ignore[union-attr]
     if isinstance(item, tuple):
-        return [to_ast(e) for e in item]
+        return [_to_ast(e) for e in item]
     if isinstance(item, list):
-        return {"_type": "list", "_items": [to_ast(e) for e in item]}
+        return {"_type": "list", "_items": [_to_ast(e) for e in item]}
     if isinstance(item, dict):
-        return {key: to_ast(value) for key, value in item.items()}
+        return {key: _to_ast(value) for key, value in item.items()}
     if isinstance(item, (dp.RuntimeType, type)):
         return str(dp.RuntimeType.parse(item))
     return item
 
 
-def to_json(chain, *args, **kwargs):
+def _to_json(chain, *args, **kwargs):
     return json.dumps(
         # TODO: Include OpenDP version
         # https://github.com/opendp/opendp/issues/2103
@@ -71,38 +70,38 @@ def to_json(chain, *args, **kwargs):
 
 
 
-def decode_ast(obj):
+def _decode_ast(obj):
     if isinstance(obj, dict):
         if obj.get("_type") == "type":  # pragma: no cover # TODO
             return getattr(builtins, dp.RuntimeType.parse(obj["name"]))  # type: ignore[arg-type]
 
         if obj.get("_type") == "list":
-            return [decode_ast(i) for i in obj["_items"]]
+            return [_decode_ast(i) for i in obj["_items"]]
 
         if obj.get("_type") == "constructor":
             module = importlib.import_module(f"opendp.{obj['module']}")
             constructor = getattr(module, obj["func"])
 
             return constructor(
-                *decode_ast(obj.get("args", ())),
-                **decode_ast(obj.get("kwargs", {}))
+                *_decode_ast(obj.get("args", ())),
+                **_decode_ast(obj.get("kwargs", {}))
             )
         
         if obj.get("_type") == "partial_chain":  # pragma: no cover # TODO
-            return decode_ast(obj["lhs"]) >> decode_ast(obj["rhs"])
+            return _decode_ast(obj["lhs"]) >> _decode_ast(obj["rhs"])
     
-        return {k: decode_ast(v) for k, v in obj.items()}
+        return {k: _decode_ast(v) for k, v in obj.items()}
 
     if isinstance(obj, list):
-        return tuple(decode_ast(i) for i in obj)
+        return tuple(_decode_ast(i) for i in obj)
 
     return obj
 
 
 def make_load_json(parse_str: str):
-    return make_load_ast(json.loads(parse_str))
+    return _make_load_ast(json.loads(parse_str))
 
-def make_load_ast(obj, force=False):
+def _make_load_ast(obj, force=False):
     # TODO: Reenable when we can get the OpenDP version:
     # https://github.com/opendp/opendp/issues/2103
     #
@@ -111,22 +110,22 @@ def make_load_ast(obj, force=False):
     #         f"OpenDP version in parsed object ({obj['version']}) does not match the current installation ({OPENDP_VERSION}). Set `force=True` to try to load anyways."
     #     )
 
-    return decode_ast(obj["ast"])
+    return _decode_ast(obj["ast"])
 
 
 
-def enable_logging():
+def _enable_logging():
     for name in WRAPPED_MODULES:
         module = importlib.import_module(f"opendp.{name}")
         for f in dir(module):
             is_constructor = f.startswith("make_") or f.startswith("then_")
             is_elem = any(f.endswith(s) for s in ["domain", "distance", "divergence"])
             if is_constructor or is_elem:
-                module.__dict__[f] = wrap_func(getattr(module, f), name)
+                module.__dict__[f] = _wrap_func(getattr(module, f), name)
 
     for cls in LOGGED_CLASSES:
-        cls.to_ast = to_ast  # type: ignore[union-attr]
-        cls.to_json = to_json  # type: ignore[union-attr]
+        cls.to_ast = _to_ast  # type: ignore[union-attr]
+        cls.to_json = _to_json  # type: ignore[union-attr]
 
     trans_shift_inner = dp.Transformation.__rshift__
 
@@ -144,4 +143,4 @@ def enable_logging():
     dp.Transformation.__rshift__ = trans_shift_outer  # type: ignore[method-assign,assignment]
 
     # only run once
-    enable_logging.__code__ = (lambda: None).__code__
+    _enable_logging.__code__ = (lambda: None).__code__
