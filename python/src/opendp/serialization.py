@@ -133,7 +133,7 @@ def enable_logging():
     @wraps(trans_shift_inner)
     def trans_shift_outer(lhs: dp.Transformation, rhs):
         chain = trans_shift_inner(lhs, rhs)
-        if isinstance(rhs, dp.PartialConstructor):
+        if isinstance(rhs, dp.PartialConstructor) and hasattr(lhs, 'log') and hasattr(rhs, 'log'):
             chain.log = {
                 "_type": "partial_chain",
                 "lhs": lhs.log,  # type: ignore[attr-defined]
