@@ -1,12 +1,10 @@
 import json
 
-from opendp.serialization import enable_logging, make_load_json
 import opendp.prelude as dp
 
-enable_logging()
+dp.enable_features('serialization')
 
 def test_serialization():
-
     preprocessor = (
         # load data into a dataframe where columns are of type Vec<str>
         dp.t.make_split_dataframe(separator=",", col_names=["hello", "world"])
@@ -53,7 +51,7 @@ def test_serialization():
     }
 
     # reconstruct the obj from the json string
-    assert str(make_load_json(json_str)) == '''Transformation(
+    assert str(dp.make_load_json(json_str)) == '''Transformation(
     input_domain   = AtomDomain(T=String),
     output_domain  = VectorDomain(AtomDomain(T=String)),
     input_metric   = SymmetricDistance(),
