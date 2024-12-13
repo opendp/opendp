@@ -1,5 +1,9 @@
+.. _serialization-user-guide:
+
 Serialization
 =============
+
+(See also :py:mod:`opendp.serialization` in the API reference.)
 
 The core classes in OpenDP can be serialized to JSON, and then reinstantiated.
 This feature requires opt-in, and is only available in Python.
