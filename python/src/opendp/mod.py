@@ -740,7 +740,7 @@ def enable_features(*features: str) -> None:
     Allow the use of optional features. See :ref:`feature-listing` for details.
     '''
     if SERIALIZATION in features:
-        from opendp._serialization import enable_logging
+        from opendp.serialization import enable_logging
         enable_logging()
     GLOBAL_FEATURES.update(set(features) - {SERIALIZATION})
 

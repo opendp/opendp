@@ -48,6 +48,6 @@ from opendp.typing import *
 from opendp.accuracy import *
 from opendp.core import new_function, new_queryable
 from opendp.context import *
-from opendp._serialization import make_load_json
+from opendp.serialization import make_load_json
 
 __all__ = ["t", "m", "c"]
