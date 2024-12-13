@@ -4,7 +4,23 @@ import opendp.prelude as dp
 
 dp.enable_features('serialization')
 
-def test_serialization():
+
+def test_noisy_sum():
+    sum_trans = dp.t.make_sum(
+        dp.vector_domain(dp.atom_domain(bounds=(0, 1))),
+        dp.symmetric_distance()
+    )
+    laplace = dp.m.make_laplace(
+        sum_trans.output_domain,
+        sum_trans.output_metric,
+        scale=1.0
+    )
+    noisy_sum = sum_trans >> laplace
+    noisy_sum_str = str(noisy_sum)
+    noisy_sum_json = noisy_sum.to_json()
+
+
+def test_old_dataframe_api():
     preprocessor = (
         # load data into a dataframe where columns are of type Vec<str>
         dp.t.make_split_dataframe(separator=",", col_names=["hello", "world"])

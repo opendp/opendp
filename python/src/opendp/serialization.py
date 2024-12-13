@@ -120,6 +120,7 @@ def make_load_json(json_serialization: str):
     '''
     return _make_load_ast(json.loads(json_serialization))
 
+
 def _make_load_ast(obj, force=False):
     # TODO: Reenable when we can get the OpenDP version:
     # https://github.com/opendp/opendp/issues/2103
