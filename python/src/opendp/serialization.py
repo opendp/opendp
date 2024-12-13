@@ -140,6 +140,11 @@ def _enable_logging():
         for f in dir(module):
             is_constructor = f.startswith("make_") or f.startswith("then_")
             is_elem = any(f.endswith(s) for s in ["domain", "distance", "divergence"])
+            
+            if callable(getattr(module, f)) and not (is_constructor or is_elem):
+                # TODO: wrap more of these?
+                print('skiping:', name, f)
+
             if is_constructor or is_elem:
                 module.__dict__[f] = _wrap_func(getattr(module, f), name)
 
