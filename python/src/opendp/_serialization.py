@@ -47,7 +47,7 @@ def wrap_func(f, module_name):
 def to_ast(item):
     if isinstance(item, LOGGED_CLASSES):
         if not hasattr(item, "log"):  # pragma: no cover
-            msg = "invoke `enable_logging()` before constructing your measurement"
+            msg = "invoke `dp.enable_features('serialization')` before constructing your measurement"
             raise ValueError(msg)
 
         return to_ast(item.log)  # type: ignore[union-attr]
