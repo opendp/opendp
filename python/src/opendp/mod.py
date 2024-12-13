@@ -732,19 +732,26 @@ class OpenDPException(Exception):
 
 
 GLOBAL_FEATURES = set()
+SERIALIZATION = 'serialization'
 
 
 def enable_features(*features: str) -> None:
     '''
     Allow the use of optional features. See :ref:`feature-listing` for details.
     '''
-    GLOBAL_FEATURES.update(set(features))
+    if SERIALIZATION in features:
+        from opendp.serialization import enable_logging
+        enable_logging()
+    GLOBAL_FEATURES.update(set(features) - {SERIALIZATION})
 
 
 def disable_features(*features: str) -> None:
     '''
     Disallow the use of optional features. See :ref:`feature-listing` for details.
     '''
+    if SERIALIZATION in features:
+        from logging import warning
+        warning("Once enabled, serialization can not be disabled")
     GLOBAL_FEATURES.difference_update(set(features))
 
 

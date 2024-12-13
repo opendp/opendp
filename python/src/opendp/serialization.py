@@ -73,7 +73,7 @@ def to_json(chain, *args, **kwargs):
 
 def decode_ast(obj):
     if isinstance(obj, dict):
-        if obj.get("_type") == "type":  # pragma: no cover
+        if obj.get("_type") == "type":  # pragma: no cover # TODO
             return getattr(builtins, dp.RuntimeType.parse(obj["name"]))  # type: ignore[arg-type]
 
         if obj.get("_type") == "list":
@@ -88,7 +88,7 @@ def decode_ast(obj):
                 **decode_ast(obj.get("kwargs", {}))
             )
         
-        if obj.get("_type") == "partial_chain":  # pragma: no cover
+        if obj.get("_type") == "partial_chain":  # pragma: no cover # TODO
             return decode_ast(obj["lhs"]) >> decode_ast(obj["rhs"])
     
         return {k: decode_ast(v) for k, v in obj.items()}
