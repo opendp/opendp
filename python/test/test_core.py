@@ -98,26 +98,26 @@ def test_supporting_elements():
     input_metric = symmetric_distance()
 
     clamper = make_clamp(input_domain, input_metric, (0, 2))
-    print(clamper.input_domain)
-    print(clamper.input_domain.carrier_type)
-    print(clamper.output_domain)
-    print(clamper.output_domain.carrier_type)
-    print(clamper.input_metric)
-    print(clamper.input_metric.distance_type)
-    print(clamper.output_metric)
-    print(clamper.output_metric.distance_type)
+    print("TODO: explain", clamper.input_domain)
+    print("TODO: explain", clamper.input_domain.carrier_type)
+    print("TODO: explain", clamper.output_domain)
+    print("TODO: explain", clamper.output_domain.carrier_type)
+    print("TODO: explain", clamper.input_metric)
+    print("TODO: explain", clamper.input_metric.distance_type)
+    print("TODO: explain", clamper.output_metric)
+    print("TODO: explain", clamper.output_metric.distance_type)
 
     from opendp.measurements import make_laplace
     from opendp.domains import atom_domain
     from opendp.metrics import absolute_distance
 
     mechanism = make_laplace(atom_domain(T=float), absolute_distance(T=float), 1.0)
-    print(mechanism.input_domain)
-    print(mechanism.input_domain.carrier_type)
-    print(mechanism.input_metric)
-    print(mechanism.input_metric.distance_type)
-    print(mechanism.output_measure)
-    print(mechanism.output_measure.distance_type)
+    print("TODO: explain", mechanism.input_domain)
+    print("TODO: explain", mechanism.input_domain.carrier_type)
+    print("TODO: explain", mechanism.input_metric)
+    print("TODO: explain", mechanism.input_metric.distance_type)
+    print("TODO: explain", mechanism.output_measure)
+    print("TODO: explain", mechanism.output_measure.distance_type)
 
 
 def test_function():
@@ -134,7 +134,7 @@ def test_function():
     # Exercise postprocessing transformation
     transformation = make_identity(atom_domain(T=float), absolute_distance(T=float))
     mechanism = mechanism >> transformation
-    print(mechanism(0.0))
+    print("TODO: explain", mechanism(0.0))
 
 
 def test_privacy_profile():
@@ -177,30 +177,30 @@ def test_new_domain():
     domain = atom_domain((1, 2))
     assert domain.member(2)
     assert not domain.member(3)
-    print(domain)
+    print("TODO: explain", domain)
 
     domain = vector_domain(atom_domain(T=dp.i32))
     assert domain.member([2])
-    print(domain)
+    print("TODO: explain", domain)
     domain = vector_domain(atom_domain((2, 3)))
     assert domain.member([2])
     assert not domain.member([2, 4])
-    print(domain)
+    print("TODO: explain", domain)
 
     domain = vector_domain(atom_domain(T=dp.i32), 10)
     assert domain.member([1] * 10)
-    print(domain)
+    print("TODO: explain", domain)
     domain = vector_domain(atom_domain((2.0, 7.0)), 10)
     assert domain.member([3.0] * 10)
     assert not domain.member([1.0] * 10)
-    print(domain)
+    print("TODO: explain", domain)
 
     null_domain = atom_domain(nullable=True, T=float)
-    print(null_domain)
+    print("TODO: explain", null_domain)
     assert null_domain.member(float("nan"))
 
     not_null_domain = atom_domain(nullable=False, T=float)
-    print(not_null_domain)
+    print("TODO: explain", not_null_domain)
     assert not not_null_domain.member(float("nan"))
 
 

@@ -7,11 +7,11 @@ from opendp.typing import *
 
 def test_numpy_function():
     np = pytest.importorskip('numpy')
-    print(RuntimeType.infer(np.array([1, 2, 3])))
-    print(RuntimeType.infer(np.array(1)))
-    print(RuntimeType.infer(np.array(1.)))
-    print(RuntimeType.infer(np.array("A")))
-    print(RuntimeType.infer(np.array(["A", "B"])))
+    print("TODO: explain", RuntimeType.infer(np.array([1, 2, 3])))
+    print("TODO: explain", RuntimeType.infer(np.array(1)))
+    print("TODO: explain", RuntimeType.infer(np.array(1.)))
+    print("TODO: explain", RuntimeType.infer(np.array("A")))
+    print("TODO: explain", RuntimeType.infer(np.array(["A", "B"])))
 
 
 def test_typing_infer_to_string():
