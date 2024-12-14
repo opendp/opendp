@@ -250,3 +250,21 @@ pub struct RenyiDivergence;
 impl Measure for RenyiDivergence {
     type Distance = Function<f64, f64>;
 }
+
+// $epsilon$-bounded range.
+///
+/// The greatest bounded range divergence between any randomly selected subset of the support.
+///
+/// # Proof Definition
+///
+/// ### `d`-closeness
+/// For any two vectors $u, v \in \texttt{D}$ and any $d$ of generic type $\texttt{Q}$,
+/// define $P$ and $Q$ to be the distributions of $M(u)$ and $M(v)$.
+/// We say that $u, v$ are $d$-close under bounded range divergence measure (abbreviated as $D_{\alpha}$)
+/// TODO: Finish this
+#[derive(Default, Clone, Debug, PartialEq)]
+pub struct BoundedRange;
+
+impl Measure for BoundedRange {
+    type Distance = f64;
+}
