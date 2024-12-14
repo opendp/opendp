@@ -27,7 +27,7 @@ mod ffi;
 /// resulting in noise sampled from the Tulap distribution.
 ///
 /// # Citations
-/// - [AW21 Canonical Noise Distributions and Private Hypothesis Tests](https://arxiv.org/pdf/2108.04303)
+/// - [AV23 Canonical Noise Distributions and Private Hypothesis Tests](https://projecteuclid.org/journals/annals-of-statistics/volume-51/issue-2/Canonical-noise-distributions-and-private-hypothesis-tests/10.1214/23-AOS2259.short)
 ///
 /// # Arguments
 /// * `input_domain` - Domain of the input.
