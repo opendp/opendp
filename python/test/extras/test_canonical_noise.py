@@ -1,8 +1,8 @@
 import opendp.prelude as dp
 import numpy as np  # type: ignore[import]
-from opendp.extras.numpy.tulap import (
-    BinomialTulap,
-    _tulap_cdf,
+from opendp.extras.numpy.canonical import (
+    BinomialCND,
+    _cnd_cdf,
     one_sided_pvalue,
     one_sided_uniformly_most_powerful_tests,
 )
@@ -22,16 +22,9 @@ def approx_trials(n, prob=1, alpha=0):
 
 # generate random samples from Tulap distribution using rejection sampling
 # used for more efficient sampling from the Tulap distribution in tests
-def sample_tulap_fast(n, m=0, epsilon=0, delta=0):
-    """
-    Fast, non-floating-safe sampling from the Tulap distribution
-    m - real number
-    b - (0, 1)
-    q - [0, 1)
-
-    Note:
-    Tulap random variable Tulap(m, b, q) is continuous and symmetric of m
-    """
+def sample_tulap_fast(n, shift, d_in, d_out):
+    """Fast inexact sampling from the Tulap distribution"""
+    epsilon, delta = d_out
     np = pytest.importorskip("numpy")
     stats = pytest.importorskip("scipy.stats")
     b = math.exp(-epsilon)
@@ -50,11 +43,13 @@ def sample_tulap_fast(n, m=0, epsilon=0, delta=0):
         # sample from the original Tulambda distribution
         geos1 = stats.geom.rvs(size=n2, p=(1 - b))
         geos2 = stats.geom.rvs(size=n2, p=(1 - b))
-        unifs = stats.uniform.rvs(loc=-1 / 2, scale=1, size=n2)  # range = [loc, loc+scale]
-        samples = m + geos1 - geos2 + unifs  # numpy ndarray
+        unifs = stats.uniform.rvs(
+            loc=-1 / 2, scale=1, size=n2
+        )  # range = [loc, loc+scale]
+        samples = shift + geos1 - geos2 + unifs  # numpy ndarray
 
         # cut the tails based on the untampered CDF (i.e. no cuts)
-        probs = _tulap_cdf(samples, m=m, epsilon=epsilon)
+        probs = _cnd_cdf(samples, shift=shift, d_in=d_in, d_out=(epsilon, 0.0))
         is_mid_bool = np.logical_and(
             np.less_equal(lcut, probs), np.less_equal(probs, (1 - rcut))
         ).astype(int)
@@ -67,7 +62,7 @@ def sample_tulap_fast(n, m=0, epsilon=0, delta=0):
         length = len(mids)
         while length < n:
             diff = n - length
-            Zs = sample_tulap_fast(n=diff, m=m, epsilon=epsilon, delta=delta)
+            Zs = sample_tulap_fast(n=diff, shift=shift, d_in=d_in, d_out=d_out)
             mids = np.concatenate((mids, Zs), axis=None)
             length = len(mids)
         return mids[:n]
@@ -75,19 +70,14 @@ def sample_tulap_fast(n, m=0, epsilon=0, delta=0):
     geos1 = stats.geom.rvs(size=n2, p=(1 - b))
     geos2 = stats.geom.rvs(size=n2, p=(1 - b))
     unifs = stats.uniform.rvs(loc=-1 / 2, scale=1, size=n2)
-    samples = m + geos1 - geos2 + unifs
+    samples = shift + (geos1 - geos2 + unifs) * d_in
     return samples
-
-
-
-
-dp.enable_features("contrib")
 
 
 def test__tulap_cdf_positive_input():
     """Test with a positive t, checks basic operation"""
     t = np.array([1])  # Adjusted to array
-    result = _tulap_cdf(t, epsilon=0.1, delta=1e-8)
+    result = _cnd_cdf(t, shift=0.0, d_in=1.0, d_out=(0.1, 1e-8))
     assert isinstance(result, np.ndarray)
     assert result[0] > 0, "Result should be positive for positive t"
 
@@ -95,7 +85,7 @@ def test__tulap_cdf_positive_input():
 def test__tulap_cdf_negative_input():
     """Test with a negative t, checks basic operation"""
     t = -1
-    result = _tulap_cdf(t, epsilon=0.1, delta=0.1)
+    result = _cnd_cdf(t, shift=0.0, d_in=1.0, d_out=(0.1, 0.1))
     assert isinstance(result, np.ndarray)
     assert result < 1, "Result should be less than 1 for negative t"
 
@@ -103,13 +93,13 @@ def test__tulap_cdf_negative_input():
 def test__tulap_cdf_array_input():
     """Test with an array of t values"""
     t = np.array([0, 1, -1])
-    result = _tulap_cdf(t, epsilon=0.1, delta=1e-6)
+    result = _cnd_cdf(t, shift=0.0, d_in=1.0, d_out=(0.1, 1e-6))
     assert isinstance(result, np.ndarray)
     assert len(result) == 3, "Result should have the same length as input"
 
     t_values = np.array([-1.0, -0.5, 0.0, 0.5, 1.0])
 
-    ptulap_results = _tulap_cdf(t_values, epsilon=0.5, delta=1e-7)
+    ptulap_results = _cnd_cdf(t_values, shift=0.0, d_in=1.0, d_out=(0.5, 1e-7))
     assert list(ptulap_results) == [
         0.30326526920325075,
         0.37754063104407853,
@@ -123,32 +113,31 @@ def test__tulap_cdf_inf_handling():
     """Test to ensure infinities are handled correctly"""
     pytest.importorskip("numpy")
     with pytest.warns():
-        result = _tulap_cdf(np.array([np.inf]), epsilon=0.1, delta=1e-8)
+        result = _cnd_cdf(np.array([np.inf]), shift=0.0, d_in=1.0, d_out=(0.1, 1e-8))
     assert not np.isinf(result).any(), "Result should not contain infinities"
-
 
 
 def test_confidence_interval():
     pytest.importorskip("scipy")
     Z = 100.0
-    epsilon, delta = 0.1, 1e-8
-    
+    d_in = 1.0
+    d_out = 0.1, 1e-8
+
     size = 1000
-    samples = sample_tulap_fast(n=10_000, m=Z, epsilon=epsilon, delta=delta) / size
-    tulap = BinomialTulap(Z, epsilon=epsilon, delta=delta, size=size)
+    samples = sample_tulap_fast(n=10_000, shift=Z, d_in=d_in, d_out=d_out) / size
+    tulap = BinomialCND(Z, d_in=d_in, d_out=d_out, size=size)
 
     alpha = 0.05
     ci = tulap.confidence_interval(alpha=alpha)
     # scipy functions give slightly different numbers on 1.13 vs 1.14
-    assert np.allclose(ci, [
-        0.06555402885319662,
-        0.13444597114680337,
-    ])
+    assert np.allclose(
+        ci,
+        [
+            0.06555402885319662,
+            0.13444597114680337,
+        ],
+    )
 
-    # sampling from the tulap is somewhat slow -->
-    #    so a small number of samples is taken --> 
-    #       so empirical alpha varies somewhat -->
-    #        so empirical alpha is not checked
     empirical_alpha = (np.less(samples, ci[0]) | np.greater(samples, ci[1])).mean()  # type: ignore[index]
     assert empirical_alpha < alpha
 
@@ -161,34 +150,77 @@ def test_confidence_interval():
 
 def test_oneside_pvalue():
     pytest.importorskip("scipy")
-    tulap = BinomialTulap(5.0, epsilon=0.1, delta=1e-6, size=10)
-    print(tulap)
+    tulap = BinomialCND(5.0, d_in=1.0, d_out=(0.1, 1e-6), size=10)
+    assert str(tulap) == "BinomialCND(estimate=5.0, d_in=1.0, d_out=(0.1, 1e-06), size=10)"
+    
     # should be approximately equal to 0.5
     assert np.allclose(tulap.p_value(theta=0.5, tail="right"), 0.4993195913951362)
     assert np.allclose(tulap.p_value(theta=0.5, tail="left"), 0.49970384610486424)
 
     pvalue = one_sided_pvalue(
-        Z=3, epsilon=0.5, delta=1e-8, size=10, theta=0.5, tail="right"
+        Z=3, d_in=1.0, d_out=(0.5, 1e-8), size=10, theta=0.5, tail="right"
     )
     assert np.allclose(pvalue, 0.7606589354450621)
 
 
 def test_twoside_pvalue():
     pytest.importorskip("scipy")
-    tulap = BinomialTulap(1.0, epsilon=0.5, delta=1e-8, size=10)
+    tulap = BinomialCND(1.0, d_in=1.0, d_out=(0.5, 1e-8), size=10)
     assert np.allclose(tulap.p_value(theta=0.5), 0.18443148204450355)
 
 
 def test_1s_ump_basic():
     pytest.importorskip("scipy")
     result = one_sided_uniformly_most_powerful_tests(
-        theta=0.5, epsilon=0.1, delta=1e-7, size=10, alpha=0.05, tail="left"
+        theta=0.5, d_in=1.0, d_out=(0.1, 1e-7), size=10, alpha=0.05, tail="left"
     )
     # tail should be monotonically increasing
     assert (np.diff(result) > 0).sum() == len(result) - 1
 
     result = one_sided_uniformly_most_powerful_tests(
-        theta=0.5, epsilon=0.1, delta=1e-7, size=10, alpha=0.05, tail="right"
+        theta=0.5, d_in=1.0, d_out=(0.1, 1e-7), size=10, alpha=0.05, tail="right"
     )
     # tail should be monotonically increasing
     assert (np.diff(result) < 0).sum() == len(result) - 1
+
+
+def test_canonical_context_no_transformation():
+    context = dp.Context.compositor(
+        data=1.0,
+        privacy_unit=dp.unit_of(absolute=1.0),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=2,
+    )
+
+    assert isinstance(context.query().canonical_noise().release(), float)
+    assert isinstance(
+        context.query().canonical_noise(binomial_size=1000).release(), BinomialCND
+    )
+
+
+def test_canonical_context_with_transformation():
+    context = dp.Context.compositor(
+        data=[1.0, 2.0, 3.0, 4.0],
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=2,
+    )
+
+    query = context.query().clamp((0.0, 1.0)).sum()
+
+    assert isinstance(query.canonical_noise().release(), float)
+    assert isinstance(query.canonical_noise(binomial_size=1000).release(), BinomialCND)
+
+
+def test_canonical_context_with_partial_transformation():
+    context = dp.Context.compositor(
+        data=[1.0, 2.0, 3.0, 4.0],
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=2,
+    )
+
+    with pytest.raises(
+        ValueError, match="You may be missing an argument in your query."
+    ):
+        context.query().resize(constant=1.0).clamp((0.0, 1.0)).sum().canonical_noise()
