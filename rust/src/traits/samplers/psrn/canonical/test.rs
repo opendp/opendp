@@ -1,7 +1,7 @@
 use crate::{
     error::Fallible,
     measurements::approximate_to_tradeoff,
-    traits::samplers::{psrn::test::assert_ordered_progression, PartialSample},
+    traits::samplers::{PartialSample, psrn::test::assert_ordered_progression},
 };
 
 use super::*;

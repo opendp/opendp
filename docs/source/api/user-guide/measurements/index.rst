@@ -16,8 +16,8 @@ This means you will need to choose a measurement that chains with your :ref:`agg
 
   additive-noise-mechanisms
   thresholded-noise-mechanisms
+  canonical-noise-mechanism
   randomized-response
-  tulap
 
 Additive Noise Mechanisms
 -------------------------
@@ -97,7 +97,7 @@ If you need constant-time execution to protect against timing side-channels, spe
 
 Canonical Noise
 ***************
-The Tulap mechanism (:func:`make_geometric <opendp.measurements.make_canonical_noise>`) `is discussed in more detail in the linked notebook <tulap.html>`_
+The canonical noise mechanism (:func:`make_geometric <opendp.measurements.make_canonical_noise>`) `is discussed in more detail in the linked notebook <canonical-noise-mechanism.html>`_
 
 
 Thresholded Noise Mechanisms

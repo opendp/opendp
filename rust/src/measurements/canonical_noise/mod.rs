@@ -1,7 +1,7 @@
 use dashu::{
     float::{
-        round::mode::{Down, Up},
         FBig,
+        round::mode::{Down, Up},
     },
     rational::RBig,
     rbig,
@@ -27,7 +27,7 @@ mod ffi;
 /// resulting in noise sampled from the Tulap distribution.
 ///
 /// # Citations
-/// - [AW21 Canonical Noise Distributions and Private Hypothesis Tests](https://arxiv.org/pdf/2108.04303)
+/// - [AV23 Canonical Noise Distributions and Private Hypothesis Tests](https://projecteuclid.org/journals/annals-of-statistics/volume-51/issue-2/Canonical-noise-distributions-and-private-hypothesis-tests/10.1214/23-AOS2259.short)
 ///
 /// # Arguments
 /// * `input_domain` - Domain of the input.
@@ -41,11 +41,8 @@ pub fn make_canonical_noise(
     d_out: (f64, f64),
 ) -> Fallible<Measurement<AtomDomain<f64>, f64, AbsoluteDistance<f64>, Approximate<MaxDivergence>>>
 {
-    if input_domain.nullable() {
-        return fallible!(
-            MakeMeasurement,
-            "input_domain must consist of non-null data"
-        );
+    if input_domain.nan() {
+        return fallible!(MakeMeasurement, "input_domain must consist of non-nan data");
     }
     if d_in.is_sign_negative() || !d_in.is_finite() {
         return fallible!(
@@ -120,7 +117,10 @@ pub(crate) fn approximate_to_tradeoff(
     // greater than 1/2 means the tradeoff curve is greater than 1 - x, which is invalid
     // exactly 1 / 2 means perfect privacy, and results in an infinite loop when sampling "infinite" noise
     if fixed_point >= rbig!(1 / 2) {
-        return fallible!(MakeMeasurement, "fixed-point of the f-DP tradeoff curve must be less than 1/2. This indicates that your privacy parameters are too small.");
+        return fallible!(
+            MakeMeasurement,
+            "fixed-point of the f-DP tradeoff curve must be less than 1/2. This indicates that your privacy parameters are too small."
+        );
     }
 
     let tradeoff = move |alpha: RBig| {

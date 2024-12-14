@@ -6,31 +6,27 @@ from opendp._lib import import_optional_dependency
 from opendp.mod import binary_search
 
 
-class BinomialTulap:
+class BinomialCND:
     """
-    Utilities to conduct statistical inference on a realization of the random variable Z = M + T,
-    where M ~ Binomial(n=size, p=theta), T ~ Tulap(0, b, q), and b and q are calibrated to satisfy (ε, δ)-DP.
+    Utilities to conduct statistical inference on the output of the canonical noise mechanism on binomially-distributed data.
+    The mechanism outputs a sample from X + N,
+    where X ~ Binomial(n=size, p=theta), N ~ CND(0, d_in, d_out).
 
-    Equivalently, Z ~ Tulap(m, b, q), where m is a realization of M ~ Binomial(n=size, p=theta),
-    and b and q are calibrated to satisfy (ε, δ)-DP.
+    A counting query is a realization of X ~ Binomial(n=size, p=theta) when,
+    for each row in data with ``size`` rows, a counter is incremented with probability theta.
 
-    A counting query is a realization of M ~ Binomial(n=size, p=theta) when,
-    for each row in data with ``size`` rows, the counter is incremented with probability theta.
-    This quantity is then privatized by the Tulap mechanism :py:func:`opendp.measurements.make_canonical_noise`,
-    a noise perturbation mechanism that privatizes the count by adding a sample from T ~ Tulap(0, b, q).
-
-    :param estimate: a draw from Z, the outcome of the Tulap mechanism on binomial data
-    :param epsilon: noise parameter ε for the Tulap distribution
-    :param delta: noise parameter δ for the Tulap distribution
+    :param estimate: the differentially private outcome of the canonical noise mechanism on binomial data
+    :param d_in: sensitivity of the input to the mechanism
+    :param d_out: privacy parameters (ε, δ)
     :param size: (approximate) total number of records in the sensitive dataset
     """
 
     def __init__(
-        self, estimate: float, epsilon: float, delta: float, size: int
+        self, estimate: float, d_in: float, d_out: tuple[float, float], size: int
     ) -> None:
         self.estimate = estimate
-        self.epsilon = epsilon
-        self.delta = delta
+        self.d_in = d_in
+        self.d_out = d_out
         self.size = size
 
     def confidence_interval(
@@ -48,15 +44,15 @@ class BinomialTulap:
         """
         if side is None:
             return two_sided_confidence_interval(
-                self.estimate, self.epsilon, self.delta, self.size, alpha
+                self.estimate, self.d_in, self.d_out, self.size, alpha
             )
 
         if side in {"lower", "upper"}:
             return one_sided_confidence_interval(
-                self.estimate, self.epsilon, self.delta, self.size, alpha, side
+                self.estimate, self.d_in, self.d_out, self.size, alpha, side
             )
 
-        raise ValueError("tail must be None, lower or upper")
+        raise ValueError("tail must be None, lower or upper")  # pragma: no cover
 
     def p_value(
         self, theta: float, tail: Literal["left", "right"] | None = None
@@ -74,31 +70,33 @@ class BinomialTulap:
         """
         if tail is None:
             return two_sided_pvalue(
-                self.estimate, self.epsilon, self.delta, self.size, theta
+                self.estimate, self.d_in, self.d_out, self.size, theta
             )
 
         if tail in {"left", "right"}:
             return one_sided_pvalue(
-                self.estimate, self.epsilon, self.delta, self.size, theta, tail
+                self.estimate, self.d_in, self.d_out, self.size, theta, tail
             )
 
-        raise ValueError("tail must be None, left or right")
+        raise ValueError("tail must be None, left or right")  # pragma: no cover
 
     def __repr__(self) -> str:
-        return f"Tulap(estimate={self.estimate}, epsilon={self.epsilon}, delta={self.delta}, size={self.size})"
+        return f"BinomialCND(estimate={self.estimate}, d_in={self.d_in}, d_out={self.d_out}, size={self.size})"
 
 
-def _tulap_cdf(t, m: float = 0, epsilon: float = 0, delta: float = 0):
-    """Computes the value of the cumulative density function Pr[T <= t] where T ~ Tulap(m, b, q),
-    where b and q are calibrated to satisfy (ε, δ)-DP"""
+# If the canonical noise mechanism is generalized beyond (ε, δ)-DP, 
+# then this needs to be updated, as it only considers the Tulap noise generated from this definition.
+def _cnd_cdf(t, shift, d_in: float, d_out: tuple[float, float]):
+    """Computes the value of the cumulative density function Pr[T <= t] where T ~ Tulap(shift, b, q),
+    where b and q are calibrated to satisfy d_out-DP when sensitivity is d_in"""
     np = import_optional_dependency("numpy")
+    epsilon, delta = d_out
 
-    t = np.atleast_1d(t)
+    t = (np.atleast_1d(t) - shift) / d_in
     b = math.exp(-epsilon)
     q = (2 * delta * b) / (1 - b + 2 * delta * b)
     lcut = q / 2
     rcut = q / 2
-    t = t - m  # normalize
     r = np.rint(t)
     g = -math.log(b)
     l = math.log(1 + b)  # noqa
@@ -124,30 +122,30 @@ def _tulap_cdf(t, m: float = 0, epsilon: float = 0, delta: float = 0):
 
 
 def two_sided_confidence_interval(
-    Z: float, epsilon: float, delta: float, size: int, alpha: float
+    Z: float, d_in: float, d_out: tuple[float, float], size: int, alpha: float
 ) -> tuple[float, float]:
     """Compute a two-sided confidence interval centered on ``Z``.
 
-    :param Z: tulap random variable
-    :param epsilon: noise parameter ε for the Tulap distribution
-    :param delta: noise parameter δ for the Tulap distribution
+    :param Z: realization of cnd random variable
+    :param d_in: sensitivity of the input to the mechanism
+    :param d_out: privacy parameters (ε, δ)
     :param size: (approximate) total number of records in the sensitive dataset
     :param alpha: statistical significance level
     :return: confidence interval bounds
     """
     mle = max(min(Z / size, 1.0), 0.0)
-    predicate = lambda B: two_sided_pvalue(B * size, epsilon, delta, size, mle) > alpha
+    predicate = lambda B: two_sided_pvalue(B * size, d_in, d_out, size, mle) > alpha
 
     L = binary_search(predicate, bounds=(0.0, mle)) if mle > 0 else 0.0
     U = binary_search(predicate, bounds=(mle, 1.0)) if mle < 1 else 1.0
 
-    return L, U
+    return float(L), float(U)
 
 
 def one_sided_confidence_interval(
     Z: float,
-    epsilon: float,
-    delta: float,
+    d_in: float,
+    d_out: tuple[float, float],
     size: int,
     alpha: float,
     side: Literal["lower", "upper"],
@@ -157,9 +155,9 @@ def one_sided_confidence_interval(
     * tail="lower": return a one-sided confidence interval lower bound
     * tail="upper": return a one-sided confidence interval upper bound
 
-    :param Z: tulap random variable
-    :param epsilon: noise parameter ε for the Tulap distribution
-    :param delta: noise parameter δ for the Tulap distribution
+    :param Z: realization of cnd random variable
+    :param d_in: sensitivity of the input to the mechanism
+    :param d_out: privacy parameters (ε, δ)
     :param size: (approximate) total number of records in the sensitive dataset
     :param alpha: statistical significance level
     :param side: configure interval type
@@ -168,19 +166,19 @@ def one_sided_confidence_interval(
     mle = max(min(Z / size, 1.0), 0.0)
     tail = {"lower": "left", "upper": "right"}.get(side)
     if tail is None:
-        raise ValueError("tail must be 'lower' or 'upper'")
-    pred = lambda B: one_sided_pvalue(B * size, epsilon, delta, size, mle, tail) > alpha  # type: ignore[arg-type]
-    return binary_search(pred, bounds=(0.0, 1.0))
+        raise ValueError("tail must be 'lower' or 'upper'")  # pragma: no cover
+    pred = lambda B: one_sided_pvalue(B * size, d_in, d_out, size, mle, tail) > alpha  # type: ignore[arg-type]
+    return float(binary_search(pred, bounds=(0.0, 1.0)))
 
 
 def two_sided_pvalue(
-    Z: float, epsilon: float, delta: float, size: int, theta: float
+    Z: float, d_in: float, d_out: tuple[float, float], size: int, theta: float
 ) -> float:
     """Computes a p-value for a hypothesis test on the probability of success.
 
-    :param Z: tulap random variable
-    :param epsilon: noise parameter ε for the Tulap distribution
-    :param delta: noise parameter δ for the Tulap distribution
+    :param Z: realization of cnd random variable
+    :param d_in: sensitivity of the input to the mechanism
+    :param d_out: privacy parameters (ε, δ)
     :param size: (approximate) number of trials
     :param theta: true probability of binomial distribution
     :return: Probability of observing Z when the true success rate is theta
@@ -188,28 +186,28 @@ def two_sided_pvalue(
     T = abs(size * theta - Z)
     left_tail = one_sided_pvalue(
         Z=size * theta + T,
-        epsilon=epsilon,
-        delta=delta,
+        d_in=d_in,
+        d_out=d_out,
         size=size,
         theta=theta,
         tail="right",
     )
     right_tail = one_sided_pvalue(
         Z=size * theta - T,
-        epsilon=epsilon,
-        delta=delta,
+        d_in=d_in,
+        d_out=d_out,
         size=size,
         theta=theta,
         tail="right",
     )
 
-    return left_tail + (1 - right_tail)
+    return float(left_tail + (1 - right_tail))
 
 
 def one_sided_pvalue(
     Z: float,
-    epsilon: float,
-    delta: float,
+    d_in: float,
+    d_out: tuple[float, float],
     size: int,
     theta: float,
     tail: Literal["left", "right"],
@@ -219,9 +217,9 @@ def one_sided_pvalue(
     * tail="left": null hypothesis states that true proportion is no less than theta
     * tail="right": null hypothesis states that true proportion is no greater than theta
 
-    :param Z: tulap random variable
-    :param epsilon: noise parameter ε for the Tulap distribution
-    :param delta: noise parameter δ for the Tulap distribution
+    :param Z: realization of cnd random variable
+    :param d_in: sensitivity of the input to the mechanism
+    :param d_out: privacy parameters (ε, δ)
     :param size: (approximate) number of trials
     :param theta: true probability of binomial distribution
     :param tail: either "left" or "right"
@@ -233,18 +231,18 @@ def one_sided_pvalue(
     values = np.arange(size)
     B = stats.binom.pmf(k=values, n=size, p=theta)
     if tail == "right":
-        F = _tulap_cdf(t=values - Z, epsilon=epsilon, delta=delta)
+        F = _cnd_cdf(values, Z, d_in=d_in, d_out=d_out)
     elif tail == "left":
-        F = 1 - _tulap_cdf(t=values - Z, epsilon=epsilon, delta=delta)
+        F = 1 - _cnd_cdf(values, Z, d_in=d_in, d_out=d_out)
     else:
-        raise ValueError("tail must be 'left' or 'right'")
-    return np.dot(F.T, B)
+        raise ValueError("tail must be 'left' or 'right'")  # pragma: no cover
+    return float(np.dot(F.T, B))
 
 
 def one_sided_uniformly_most_powerful_tests(
     theta: float,
-    epsilon: float,
-    delta: float,
+    d_in: float, 
+    d_out: tuple[float, float],
     size: int,
     alpha: float,
     tail: Literal["left", "right"],
@@ -254,9 +252,9 @@ def one_sided_uniformly_most_powerful_tests(
     * When tail="left", then the null hypothesis is: the estimate is at most ``i``
     * When tail="right", then the null hypothesis is: the estimate is at least ``i``
 
-    :param Z: tulap random variable
-    :param epsilon: noise parameter ε for the Tulap distribution
-    :param delta: noise parameter δ for the Tulap distribution
+    :param Z: realization of cnd random variable
+    :param d_in: sensitivity of the input to the mechanism
+    :param d_out: privacy parameters (ε, δ)
     :param size: (approximate) number of trials
     :param theta: true probability of binomial distribution
     :param tail: either "left" or "right"
@@ -268,10 +266,10 @@ def one_sided_uniformly_most_powerful_tests(
     values = np.arange(0, size + 1)
     B = stats.binom.pmf(k=values, n=size, p=theta)
 
-    predicate = lambda s: np.dot(B, _tulap_cdf(values - s, 0.0, epsilon, delta)) > alpha
+    predicate = lambda s: np.dot(B, _cnd_cdf(values, s, d_in, d_out)) > alpha
 
     root = binary_search(predicate)
-    phi = _tulap_cdf(t=values - root, epsilon=epsilon, delta=delta)
+    phi = _cnd_cdf(values, root, d_in, d_out)
 
     if tail == "left":
         return phi
@@ -279,4 +277,4 @@ def one_sided_uniformly_most_powerful_tests(
     if tail == "right":
         return 1 - phi
 
-    raise ValueError("tail must be either 'left' or 'right'")
+    raise ValueError("tail must be either 'left' or 'right'")  # pragma: no cover

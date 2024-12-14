@@ -639,6 +639,9 @@ class Query(object):
 
     def __getattr__(self, name: str) -> Callable[..., "Query"]:
         """Creates a new query by applying a transformation or measurement to the current chain."""
+        if name == "canonical_noise":
+            return self._canonical_noise
+        
         if name not in constructors:
             raise AttributeError(
                 f"Unrecognized constructor: '{name}'"
@@ -679,6 +682,40 @@ class Query(object):
             return self.new_with(chain=new_chain)
 
         return make
+    
+    def _canonical_noise(self, binomial_size: Optional[int] = None):
+        """Make a measurement that adds noise from the canonical noise distribution.
+
+        :param binomial_size: (approximate) total number of records if dataset consists of bernoulli draws
+        """
+        # left as private method so that it behaves like other constructors in IDEs
+        # this is getting a special wrapper because
+        # - its d_in argument is the stability of the prior transformation
+        # - its d_out argument is already stored in the chain
+        # - it has a special postprocessor
+        from opendp.measurements import then_canonical_noise
+        from opendp._internal import _new_pure_function
+        from opendp.extras.numpy.canonical import BinomialCND
+
+        def then(d_in, d_out):
+            m_noise = then_canonical_noise(d_in, d_out)
+            if binomial_size is not None:
+                m_noise = m_noise >> _new_pure_function(
+                    lambda x: BinomialCND(x, d_in, d_out, binomial_size),
+                    TO="ExtrinsicObject",
+                )
+            return m_noise
+
+        if isinstance(self._chain, tuple):
+            d_mid = self._d_in
+        elif isinstance(self._chain, Transformation):
+            d_mid = self._chain.map(self._d_in)
+        else:
+            raise ValueError(
+                "The canonical noise mechanism may only be applied to fully-specified transformations. You may be missing an argument in your query."
+            )
+
+        return self.new_with(chain=self._chain >> then(d_mid, self._d_out))
 
     def new_with(self, *, chain: Chain, wrap_release=None) -> "Query":
         """Convenience constructor that creates a new query with a different chain.
