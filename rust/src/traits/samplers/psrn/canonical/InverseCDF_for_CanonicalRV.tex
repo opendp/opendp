@@ -2,7 +2,7 @@
 \input{../../../../lib.sty}
 
 \title{\texttt{impl InverseCDF for CanonicalRV}}
-\author{Yu-Ju Ku, Jordan Awan, Aishwarya Ramasethu, Michael Shoemate}
+\author{Aishwarya Ramasethu, Yu-Ju Ku, Jordan Awan, Michael Shoemate}
 \begin{document}
 
 \maketitle
@@ -45,7 +45,7 @@ The error between \texttt{out} and the exactly-computed CDF decreases monotonica
 By the definition of \rustdoc{traits/samplers/psrn/canonical/struct}{CanonicalRV},
 \begin{itemize}
     \item \texttt{self.tradeoff} is a symmetric nontrivial tradeoff function
-    \item \texttt{self.fixed\_point} is the fixed point of \texttt{self.tradeoff}, where \texttt{tradeoff(fixed\_point) = c}.
+    \item \texttt{self.fixed\_point} is the fixed point of \texttt{self.tradeoff}, where \texttt{tradeoff(fixed\_point) = fixed\_point}.
 \end{itemize}
 
 Therefore the preconditions of \texttt{quantile\_cnd} are met,
@@ -53,7 +53,7 @@ so \texttt{f\_inv} on line \ref{f_inv} is a sample from the canonical noise dist
 
 The function then returns the outcome, scaled by \texttt{self.scale} and shifted by \texttt{self.shift}.
 
-$F_f^{-1}$, rescale and shift are computed exactly via fractional arithmetic, 
+Computing $F_f^{-1}$, rescaling and shifting are exact via fractional arithmetic, 
 so making use of refinements is not necessary, 
 as the error in computing the inverse CDF is already zero, satisfying the monotonicity property of the error.
 
