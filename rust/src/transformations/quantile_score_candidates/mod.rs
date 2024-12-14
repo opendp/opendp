@@ -5,21 +5,19 @@ use num::NumCast;
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::{Function, MetricSpace, StabilityMap, Transformation},
+    core::{Function, StabilityMap, Transformation},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    metrics::{IntDistance, LInfDistance},
+    metrics::{IntDistance, LInfDistance, SymmetricDistance},
     traits::{ExactIntCast, Integer, Number, RoundCast},
 };
-
-use super::traits::UnboundedMetric;
 
 #[cfg(feature = "ffi")]
 mod ffi;
 
 #[bootstrap(
     features("contrib"),
-    generics(MI(suppress), TIA(suppress)),
+    generics(TIA(suppress)),
     derived_types(TIA = "$get_atom(get_type(input_domain))")
 )]
 /// Makes a Transformation that scores how similar each candidate is to the given `alpha`-quantile on the input dataset.
@@ -27,29 +25,25 @@ mod ffi;
 ///
 /// # Arguments
 /// * `input_domain` - Uses a tighter sensitivity when the size of vectors in the input domain is known.
-/// * `input_metric` - Either SymmetricDistance or InsertDeleteDistance.
+/// * `input_metric` - SymmetricDistance.
 /// * `candidates` - Potential quantiles to score
 /// * `alpha` - a value in $[0, 1]$. Choose 0.5 for median
 ///
 /// # Generics
-/// * `MI` - Input Metric.
 /// * `TIA` - Atomic Input Type. Type of elements in the input vector
-pub fn make_quantile_score_candidates<MI: UnboundedMetric, TIA: Number>(
+pub fn make_quantile_score_candidates<TIA: Number>(
     input_domain: VectorDomain<AtomDomain<TIA>>,
-    input_metric: MI,
+    input_metric: SymmetricDistance,
     candidates: Vec<TIA>,
     alpha: f64,
 ) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<TIA>>,
         VectorDomain<AtomDomain<usize>>,
-        MI,
+        SymmetricDistance,
         LInfDistance<usize>,
     >,
->
-where
-    (VectorDomain<AtomDomain<TIA>>, MI): MetricSpace,
-{
+> {
     if input_domain.element_domain.nullable() {
         return fallible!(MakeTransformation, "input must be non-null");
     }
