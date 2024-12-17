@@ -6,7 +6,7 @@ use crate::accuracy::{
 };
 use crate::combinators::{make_basic_composition, BasicCompositionMeasure};
 use crate::core::{Function, Measurement, MetricSpace, PrivacyMap};
-use crate::domains::{Context, DslPlanDomain, WildExprDomain};
+use crate::domains::{CategoricalDomain, Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
 use crate::measurements::expr_noise::Distribution;
 use crate::measurements::make_private_expr;
@@ -70,6 +70,18 @@ where
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let by = match_grouping_columns(keys.clone())?;
+
+    by.iter().try_for_each(|name| {
+        let series_domain = middle_domain.series_domain(name.clone())?;
+        let Ok(domain) = series_domain.element_domain::<CategoricalDomain>() else {
+            return Ok(())
+        };
+        if domain.encoding().is_none() {
+            return fallible!(MakeMeasurement, "Categorical encoding is data-dependent, which may reveal sensitive record ordering. Convert {} to string before grouping.", name);
+        }
+        Ok(())
+    })?;
+
     let mut margin = middle_domain.get_margin(&by.clone());
 
     let is_join = if let Some(KeySanitizer::Join { keys, .. }) = key_sanitizer.clone() {

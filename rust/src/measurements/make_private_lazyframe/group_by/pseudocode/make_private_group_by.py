@@ -12,18 +12,18 @@ def make_private_group_by(
     t_prior = input_expr.make_stable(input_domain, input_metric)  # |\label{line:tprior}|
     middle_domain, middle_metric = t_prior.output_space()
 
-    grouping_columns = match_grouping_columns(keys)  # |\label{line:groupcols}|
+    by = match_grouping_columns(keys)  # |\label{line:groupcols}|
 
     margin = (
         middle_domain
         .margins
-        .get(grouping_columns, Margin.default())
+        .get(by, Margin.default())
     )  # |\label{line:margin}|
 
     # prepare a joint measurement over all expressions
     expr_domain = ExprDomain(  # |\label{line:joint}|
         middle_domain,
-        ExprContext.Aggregate(grouping_columns),
+        ExprContext.Aggregate(by),
     )
 
     m_exprs = make_basic_composition([
@@ -49,7 +49,7 @@ def make_private_group_by(
         name, noise = find_len_expr(dp_exprs, None)[1]
         threshold_info = name, noise, threshold_value, True
     else:
-        raise f"The key set of {grouping_columns} is private and cannot be released."
+        raise f"The key set of {by} is private and cannot be released."
 
     # prepare the final_predicate to be used in the function |\label{line:final-predicate}|
     if threshold_info is not None:

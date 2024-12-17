@@ -4,6 +4,7 @@ import warnings
 import re
 import os
 import io
+from datetime import date, time, datetime
 
 
 def test_polars_version():
@@ -758,7 +759,7 @@ def test_csv_bad_encoding_loading():
         pl_testing.assert_frame_equal(observed, expected)
 
 
-def test_categorical_domain():
+def test_categorical_domain_no_encoding():
     pl = pytest.importorskip("polars")
 
     lf = pl.LazyFrame([pl.Series("A", ["Texas", "New York", None], dtype=pl.Categorical)])
@@ -779,6 +780,27 @@ def test_categorical_domain():
             )
 
 
+def test_categorical_domain_with_encoding():
+    pl = pytest.importorskip("polars")
+
+    lf = pl.LazyFrame([pl.Series("A", ["Texas", "New York", None], dtype=pl.Categorical)])
+
+    encoding = ["Texas", "New York"]
+    keys = pl.LazyFrame([pl.Series("A", encoding, dtype=pl.Categorical)])
+    for element_domain in [
+        dp.option_domain(dp.categorical_domain(encoding)),
+        dp.categorical_domain(encoding),
+    ]:
+        lf_domain = dp.lazyframe_domain([dp.series_domain("A", element_domain)])
+        assert str(lf_domain) == "FrameDomain(A: cat; margins=[])"
+        # checks that categorical grouping keys can be released if encoding is public
+        dp.m.make_private_lazyframe(
+            lf_domain, dp.symmetric_distance(), dp.max_divergence(),
+            lf.group_by("A").agg(dp.len()).join(keys, how="right", on=["A"]),
+            global_scale=1.0
+        )
+
+
 def test_categorical_context():
     pl = pytest.importorskip("polars")
 
@@ -790,17 +812,15 @@ def test_categorical_context():
     context = dp.Context.compositor(
         data=lf,
         privacy_unit=dp.unit_of(contributions=1),
-        privacy_loss=dp.loss_of(epsilon=1.0),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-6),
         split_evenly_over=1,
-        margins={
-            ("B",): dp.polars.Margin(public_info="keys"),
-        },
     )
 
     # check that query runs.
     print('output should be two columns ("B" and "len") with two rows (1, ~500)')
     release = (
         context.query()
+        .with_columns(pl.col.B.cast(str))
         .group_by("B")
         .agg(dp.len())
         .release()
@@ -938,3 +958,48 @@ def test_explicit_grouping_keys_context():
     assert observed.collect_schema() == expected.collect_schema()
     observed = observed.with_columns(D=expected["D"])
     pl_testing.assert_frame_equal(observed, expected)
+
+
+@pytest.mark.parametrize("dtype", ["Time", "Datetime", "Date"])
+def test_datetime(dtype):
+    pl = pytest.importorskip("polars")
+    dtype = getattr(pl, dtype)
+
+    context = dp.Context.compositor(
+        data=pl.LazyFrame([pl.Series("x", ["2000-01-02T03:04:05"])]),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=1
+    )
+    query = (
+        context.query()
+        .with_columns(pl.col.x.str.strptime(format=r"%Y-%m-%dT%H:%M:%S", dtype=dtype))
+        .group_by("x").agg(dp.len())
+    )
+    observed = query.release().collect()
+    assert observed["x"].dtype == dtype
+
+
+def test_temporal_domain():
+    pl = pytest.importorskip("polars")
+
+    # this triggers construction of a lazyframe domain from the schema
+    context = dp.Context.compositor(
+        data=pl.LazyFrame([
+            pl.Series("date", [date(2000, 1, 1)]),
+            pl.Series("time", [time(7, 8, 9)]),
+            pl.Series("datetime", [datetime(2000, 1, 1, 7, 8, 9)]),
+        ]),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=1
+    )
+    observed = context.accountant.input_domain
+    expected = dp.lazyframe_domain([
+        dp.series_domain("date", dp.option_domain(dp.atom_domain(T="NaiveDate"))),
+        dp.series_domain("time", dp.option_domain(dp.atom_domain(T="NaiveTime"))),
+        dp.series_domain("datetime", dp.option_domain(dp.datetime_domain(time_unit="us"))),
+    ])
+
+    # check that domain is as expected
+    assert observed == expected

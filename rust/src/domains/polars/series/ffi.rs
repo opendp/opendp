@@ -1,13 +1,14 @@
 use std::ffi::c_char;
 
+use chrono::{NaiveDate, NaiveTime};
 use opendp_derive::bootstrap;
 
 use crate::{
     core::{FfiResult, MetricSpace},
-    domains::{AtomDomain, CategoricalDomain, OptionDomain, PrimitiveDataType},
+    domains::{AtomDomain, CategoricalDomain, DatetimeDomain, OptionDomain, PrimitiveDataType},
     error::Fallible,
     ffi::{
-        any::{AnyDomain, AnyMetric, Downcast},
+        any::{AnyDomain, AnyMetric, AnyObject, Downcast},
         util::{self, Type},
     },
     traits::CheckAtom,
@@ -49,6 +50,11 @@ pub extern "C" fn opendp_domains__series_domain(
                 try_!(element_domain.downcast_ref::<OptionDomain<CategoricalDomain>>()).clone();
             return Ok(AnyDomain::new(series_domain(name, element_domain))).into();
         }
+        if T == Type::of::<DatetimeDomain>() {
+            let element_domain =
+                try_!(element_domain.downcast_ref::<OptionDomain<DatetimeDomain>>()).clone();
+            return Ok(AnyDomain::new(series_domain(name, element_domain))).into();
+        }
 
         fn monomorphize_option<T: 'static + CheckAtom + PrimitiveDataType>(
             name: &str,
@@ -64,13 +70,21 @@ pub extern "C" fn opendp_domains__series_domain(
             monomorphize_option,
             // These types are the Polars primitive datatypes.
             // Don't forget to update the corresponding list below.
-            [(T, [u32, u64, i32, i64, f32, f64, bool, String])],
+            [(
+                T,
+                [u32, u64, i32, i64, f32, f64, bool, String, NaiveDate, NaiveTime]
+            )],
             (name, element_domain)
         )
         .into()
     } else {
         if T == Type::of::<CategoricalDomain>() {
             let element_domain = try_!(element_domain.downcast_ref::<CategoricalDomain>()).clone();
+            return Ok(AnyDomain::new(series_domain(name, element_domain))).into();
+        }
+
+        if T == Type::of::<DatetimeDomain>() {
+            let element_domain = try_!(element_domain.downcast_ref::<DatetimeDomain>()).clone();
             return Ok(AnyDomain::new(series_domain(name, element_domain))).into();
         }
 
@@ -83,7 +97,10 @@ pub extern "C" fn opendp_domains__series_domain(
         }
         dispatch!(
             monomorphize_atom,
-            [(T, [u32, u64, i32, i64, f32, f64, bool, String])],
+            [(
+                T,
+                [u32, u64, i32, i64, f32, f64, bool, String, NaiveDate, NaiveTime]
+            )],
             (name, element_domain)
         )
         .into()
@@ -92,13 +109,29 @@ pub extern "C" fn opendp_domains__series_domain(
 
 #[bootstrap(
     name = "categorical_domain",
+    arguments(encoding(rust_type = "Option<Vec<String>>", default = b"null")),
     returns(c_type = "FfiResult<AnyDomain *>")
 )]
 /// Construct an instance of `CategoricalDomain`.
 /// Can be used as an argument to a Polars series domain.
+///
+/// # Arguments
+/// * `encoding` - Optional ordered set of valid string categories
 #[no_mangle]
-pub extern "C" fn opendp_domains__categorical_domain() -> FfiResult<*mut AnyDomain> {
-    Ok(AnyDomain::new(CategoricalDomain::default())).into()
+pub extern "C" fn opendp_domains__categorical_domain(
+    encoding: *const AnyObject,
+) -> FfiResult<*mut AnyDomain> {
+    let domain = if let Some(encoding) = util::as_ref(encoding) {
+        let encoding = try_!(encoding.downcast_ref::<Vec<String>>())
+            .into_iter()
+            .map(|s| s.into())
+            .collect();
+        try_!(CategoricalDomain::new_with_encoding(encoding))
+    } else {
+        CategoricalDomain::default()
+    };
+
+    Ok(AnyDomain::new(domain)).into()
 }
 
 impl MetricSpace for (SeriesDomain, AnyMetric) {

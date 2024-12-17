@@ -49,9 +49,30 @@ where
 
     let (by, input_margin) = middle_domain.context.grouping("sum")?;
 
+    if middle_domain.column.nullable {
+        return fallible!(
+            MakeTransformation,
+            "input data might contain nulls. Preprocess your data with `.fill_null`."
+        );
+    }
+
     let dtype = middle_domain.column.dtype();
 
     use DataType::*;
+
+    let nan = match dtype {
+        Float32 => middle_domain.column.atom_domain::<f32>()?.nullable(),
+        Float64 => middle_domain.column.atom_domain::<f64>()?.nullable(),
+        _ => false,
+    };
+
+    if nan {
+        return fallible!(
+            MakeTransformation,
+            "input data might contain nans. Preprocess your data with `.fill_nan`."
+        );
+    }
+
     let stability_map = match dtype {
         UInt32 => sum_stability_map::<MI, P, u32>(&middle_domain),
         UInt64 => sum_stability_map::<MI, P, u64>(&middle_domain),
