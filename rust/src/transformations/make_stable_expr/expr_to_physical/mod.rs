@@ -69,7 +69,7 @@ where
         (Categorical(_, _), UInt32) => {
             let cat_domain = active_series.element_domain::<CategoricalDomain>()?;
 
-            if cat_domain.encoding().is_none() {
+            if cat_domain.categories().is_none() {
                 return fallible!(MakeTransformation, "to_physical: to prevent potentially revealing information about row ordering, category ordering must be statically known. Convert to String first.");
             }
 

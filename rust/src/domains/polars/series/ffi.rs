@@ -109,24 +109,24 @@ pub extern "C" fn opendp_domains__series_domain(
 
 #[bootstrap(
     name = "categorical_domain",
-    arguments(encoding(rust_type = "Option<Vec<String>>", default = b"null")),
+    arguments(categories(rust_type = "Option<Vec<String>>", default = b"null")),
     returns(c_type = "FfiResult<AnyDomain *>")
 )]
 /// Construct an instance of `CategoricalDomain`.
 /// Can be used as an argument to a Polars series domain.
 ///
 /// # Arguments
-/// * `encoding` - Optional ordered set of valid string categories
+/// * `categories` - Optional ordered set of valid string categories
 #[no_mangle]
 pub extern "C" fn opendp_domains__categorical_domain(
-    encoding: *const AnyObject,
+    categories: *const AnyObject,
 ) -> FfiResult<*mut AnyDomain> {
-    let domain = if let Some(encoding) = util::as_ref(encoding) {
-        let encoding = try_!(encoding.downcast_ref::<Vec<String>>())
+    let domain = if let Some(categories) = util::as_ref(categories) {
+        let categories = try_!(categories.downcast_ref::<Vec<String>>())
             .into_iter()
             .map(|s| s.into())
             .collect();
-        try_!(CategoricalDomain::new_with_encoding(encoding))
+        try_!(CategoricalDomain::new_with_categories(categories))
     } else {
         CategoricalDomain::default()
     };

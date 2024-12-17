@@ -52,7 +52,8 @@ where
     if middle_domain.column.nullable {
         return fallible!(
             MakeTransformation,
-            "input data might contain nulls. Preprocess your data with `.fill_null`."
+            "input data ({}) might contain nulls. Preprocess your data with `.fill_null`.",
+            (*input).clone().meta().output_name()?
         );
     }
 
@@ -69,7 +70,8 @@ where
     if nan {
         return fallible!(
             MakeTransformation,
-            "input data might contain nans. Preprocess your data with `.fill_nan`."
+            "input data ({}) might contain nans. Preprocess your data with `.fill_nan`.",
+            (*input).clone().meta().output_name()?
         );
     }
 

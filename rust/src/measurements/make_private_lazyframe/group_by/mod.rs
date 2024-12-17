@@ -76,8 +76,8 @@ where
         let Ok(domain) = series_domain.element_domain::<CategoricalDomain>() else {
             return Ok(())
         };
-        if domain.encoding().is_none() {
-            return fallible!(MakeMeasurement, "Categorical encoding is data-dependent, which may reveal sensitive record ordering. Convert {} to string before grouping.", name);
+        if domain.categories().is_none() {
+            return fallible!(MakeMeasurement, "Categories are data-dependent, which may reveal sensitive record ordering. Cast {} to string before grouping.", name);
         }
         Ok(())
     })?;

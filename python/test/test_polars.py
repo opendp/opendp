@@ -759,7 +759,7 @@ def test_csv_bad_encoding_loading():
         pl_testing.assert_frame_equal(observed, expected)
 
 
-def test_categorical_domain_no_encoding():
+def test_categorical_domain_no_mapping():
     pl = pytest.importorskip("polars")
 
     lf = pl.LazyFrame([pl.Series("A", ["Texas", "New York", None], dtype=pl.Categorical)])
@@ -780,25 +780,26 @@ def test_categorical_domain_no_encoding():
             )
 
 
-def test_categorical_domain_with_encoding():
+@pytest.mark.parametrize("wrap_with_option", [False, True])
+def test_categorical_domain_with_mapping(wrap_with_option):
     pl = pytest.importorskip("polars")
 
-    lf = pl.LazyFrame([pl.Series("A", ["Texas", "New York", None], dtype=pl.Categorical)])
+    categories = ["Texas", "New York"]
+    keys = pl.LazyFrame([pl.Series("A", categories, dtype=pl.Categorical)])
+    lf = pl.LazyFrame([pl.Series("A", categories + [None], dtype=pl.Categorical)])
 
-    encoding = ["Texas", "New York"]
-    keys = pl.LazyFrame([pl.Series("A", encoding, dtype=pl.Categorical)])
-    for element_domain in [
-        dp.option_domain(dp.categorical_domain(encoding)),
-        dp.categorical_domain(encoding),
-    ]:
-        lf_domain = dp.lazyframe_domain([dp.series_domain("A", element_domain)])
-        assert str(lf_domain) == "FrameDomain(A: cat; margins=[])"
-        # checks that categorical grouping keys can be released if encoding is public
-        dp.m.make_private_lazyframe(
-            lf_domain, dp.symmetric_distance(), dp.max_divergence(),
-            lf.group_by("A").agg(dp.len()).join(keys, how="right", on=["A"]),
-            global_scale=1.0
-        )
+    element_domain = dp.categorical_domain(categories)
+    if wrap_with_option:
+        element_domain = dp.option_domain(element_domain)
+    
+    lf_domain = dp.lazyframe_domain([dp.series_domain("A", element_domain)])
+    assert str(lf_domain) == "FrameDomain(A: cat; margins=[])"
+    # checks that categorical grouping keys can be released if encoding is public
+    dp.m.make_private_lazyframe(
+        lf_domain, dp.symmetric_distance(), dp.max_divergence(),
+        lf.group_by("A").agg(dp.len()).join(keys, how="right", on=["A"]),
+        global_scale=1.0
+    )
 
 
 def test_categorical_context():
@@ -815,6 +816,17 @@ def test_categorical_context():
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-6),
         split_evenly_over=1,
     )
+
+    try:
+        (
+            context.query()
+            .group_by("B")
+            .agg(dp.len())
+            .release()
+        )
+        assert False, "unreachable"
+    except dp.OpenDPException as err:
+        assert "Categories are data-dependent" in str(err)
 
     # check that query runs.
     print('output should be two columns ("B" and "len") with two rows (1, ~500)')

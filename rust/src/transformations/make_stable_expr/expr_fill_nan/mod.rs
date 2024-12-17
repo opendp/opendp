@@ -59,7 +59,13 @@ where
         // Therefore if the float domain may be nullable, then the domain includes NaN
         DataType::Float32 => fill_series.atom_domain::<f32>()?.nullable(),
         DataType::Float64 => fill_series.atom_domain::<f64>()?.nullable(),
-        _ => return fallible!(MakeTransformation, "filler data for fill_nan must be float"),
+        i if i.is_numeric() => false,
+        _ => {
+            return fallible!(
+                MakeTransformation,
+                "filler data for fill_nan must be numeric"
+            )
+        }
     };
 
     if fill_can_be_nan {

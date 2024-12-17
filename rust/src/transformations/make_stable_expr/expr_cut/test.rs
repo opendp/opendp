@@ -23,7 +23,7 @@ fn test_expr_cut() -> Fallible<()> {
 
     // check domain output
     let encoding = compute_labels(&[-1.0, 1.0], false)?;
-    series_domain.set_element_domain(CategoricalDomain::new_with_encoding(encoding)?);
+    series_domain.set_element_domain(CategoricalDomain::new_with_categories(encoding)?);
     let lf_domain_exp = LazyFrameDomain::new(vec![series_domain])?;
 
     assert_eq!(t_cut.output_domain, lf_domain_exp);

@@ -12,7 +12,7 @@ use crate::{
 use super::DatetimeDomain;
 
 #[bootstrap(
-    arguments(time_zone(default = b"null")),
+    arguments(time_unit(default = "us"), time_zone(default = b"null")),
     generics(DI(suppress)),
     returns(c_type = "FfiResult<AnyDomain *>")
 )]

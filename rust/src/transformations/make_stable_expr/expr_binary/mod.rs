@@ -55,10 +55,9 @@ where
     let left_series = &t_left.output_domain.column;
     let right_series = &t_right.output_domain.column;
 
-    if matches!(left_series.dtype(), DataType::Categorical(_, _)) {
-        return fallible!(MakeTransformation, "{} cannot be applied to categorical data, because it may trigger a data-dependent CategoricalRemappingWarning in Polars", op);
-    }
-    if matches!(right_series.dtype(), DataType::Categorical(_, _)) {
+    if matches!(left_series.dtype(), DataType::Categorical(_, _))
+        || matches!(right_series.dtype(), DataType::Categorical(_, _))
+    {
         return fallible!(MakeTransformation, "{} cannot be applied to categorical data, because it may trigger a data-dependent CategoricalRemappingWarning in Polars", op);
     }
 
