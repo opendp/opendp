@@ -129,4 +129,7 @@ See :py:func:`opendp.context.Context.compositor` for more information.
 
   essential-statistics
   grouping
-  counting-queries
+  preparing-microdata
+  gaussian-noise
+  data-types
+  expressions/index
