@@ -817,16 +817,8 @@ def test_categorical_context():
         split_evenly_over=1,
     )
 
-    try:
-        (
-            context.query()
-            .group_by("B")
-            .agg(dp.len())
-            .release()
-        )
-        assert False, "unreachable"
-    except dp.OpenDPException as err:
-        assert "Categories are data-dependent" in str(err)
+    with pytest.raises(dp.OpenDPException, match=r'Categories are data-dependent'):
+        context.query().group_by("B").agg(dp.len()).release()
 
     # check that query runs.
     print('output should be two columns ("B" and "len") with two rows (1, ~500)')
