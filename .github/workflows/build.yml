@@ -168,9 +168,10 @@ jobs:
           CIBW_SKIP: "pp*"
           CIBW_ENVIRONMENT: 'PATH="$HOME/.cargo/bin:$PATH"'
           CIBW_ENVIRONMENT_WINDOWS: 'PATH="$UserProfile\.cargo\bin;$PATH"'
-          # first find the xcode version: https://github.com/actions/runner-images/blob/main/images/macos/macos-13-Readme.md
-          #   (currently 14.3)
-          # then find the deployment target: https://developer.apple.com/support/xcode/
+          # first find the xcode version for the mac images:
+          #   https://github.com/actions/runner-images/blob/main/images/macos/macos-13-Readme.md
+          # then find the xcode version line, deployment target column: 
+          #   https://developer.apple.com/support/xcode/
           CIBW_ENVIRONMENT_MACOS: 'MACOSX_DEPLOYMENT_TARGET=10.13'
           # omits i686 because OpenSSL fails to build due to libatomic
           # aarch64 is not added because it is not supported by cibuildwheel and qemu is too slow (6+ hours compilation)
