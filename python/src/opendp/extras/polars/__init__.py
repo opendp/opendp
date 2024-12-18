@@ -99,7 +99,7 @@ class DPExpr(object):
         * - `sum <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.sum.html>`_
           - Sum
 
-    Note that frame `len <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.len.html>`
+    Note that frame `len <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.len.html>`_
     can be different from expression len, if the expression can change the number of rows.
     """
 
