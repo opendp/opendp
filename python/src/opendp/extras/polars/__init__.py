@@ -32,6 +32,7 @@ from opendp.domains import (
     option_domain,
     atom_domain,
     categorical_domain,
+    datetime_domain,
 )
 from opendp.measurements import make_private_lazyframe
 
@@ -661,6 +662,9 @@ def _series_domain_from_field(field) -> Domain:
     name, dtype = field
     if dtype == pl.Categorical:
         return series_domain(name, option_domain(categorical_domain()))
+    if dtype == pl.Datetime:
+        dt_domain = datetime_domain(dtype.time_unit, dtype.time_zone)
+        return series_domain(name, option_domain(dt_domain))
 
     T = {
         pl.UInt32: "u32",
@@ -673,6 +677,8 @@ def _series_domain_from_field(field) -> Domain:
         pl.Float64: "f64",
         pl.Boolean: "bool",
         pl.String: "String",
+        pl.Time: "NaiveTime",
+        pl.Date: "NaiveDate",
     }.get(dtype)
 
     if T is None:

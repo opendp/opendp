@@ -14,7 +14,7 @@ use crate::{
 };
 
 #[cfg(feature = "polars")]
-use crate::domains::CategoricalDomain;
+use crate::domains::{CategoricalDomain, DatetimeDomain};
 
 use super::{BitVectorDomain, Bounds, Null, OptionDomain};
 
@@ -178,6 +178,16 @@ pub extern "C" fn opendp_domains__atom_domain(
         Some(())
     }
 
+    #[cfg(feature = "polars")]
+    if let Some(_) = dispatch!(in_set, [(T_, [chrono::NaiveDate, chrono::NaiveTime])]) {
+        return dispatch!(
+            monomorphize_simple,
+            [(T_, [chrono::NaiveDate, chrono::NaiveTime])],
+            (bounds, nullable)
+        )
+        .into();
+    };
+
     if let Some(_) = dispatch!(in_set, [(T_, [f32, f64])]) {
         dispatch!(monomorphize_float, [(T_, [f32, f64])], (bounds, nullable))
     } else if let Some(_) = dispatch!(
@@ -231,12 +241,26 @@ pub extern "C" fn opendp_domains__option_domain(
     }
 
     let element_domain = try_as_ref!(element_domain);
-    let T = try_!(try_!(Type::try_from(D)).get_atom());
+    let D = try_!(Type::try_from(D));
+    let T = try_!(D.get_atom());
 
     #[cfg(feature = "polars")]
-    if T == Type::of::<CategoricalDomain>() {
+    if D == Type::of::<CategoricalDomain>() {
         let element_domain = try_!(element_domain.downcast_ref::<CategoricalDomain>()).clone();
         return Ok(AnyDomain::new(option_domain(element_domain))).into();
+    }
+    #[cfg(feature = "polars")]
+    if D == Type::of::<DatetimeDomain>() {
+        let element_domain = try_!(element_domain.downcast_ref::<DatetimeDomain>()).clone();
+        return Ok(AnyDomain::new(option_domain(element_domain))).into();
+    }
+    #[cfg(feature = "polars")]
+    if T == Type::of::<chrono::NaiveDate>() {
+        return monomorphize_atom::<chrono::NaiveDate>(element_domain).into();
+    }
+    #[cfg(feature = "polars")]
+    if T == Type::of::<chrono::NaiveTime>() {
+        return monomorphize_atom::<chrono::NaiveTime>(element_domain).into();
     }
 
     dispatch!(
