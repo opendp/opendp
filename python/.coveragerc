@@ -1,0 +1,24 @@
+[run]
+# All files under source are checked, even if not otherwise referenced.
+source = .
+
+# More strict: Check transitions between lines, not just individual lines.
+# TODO: branch = True
+
+omit =
+  # TODO: Test polars methods:
+  src/opendp/measurements.py
+  src/opendp/transformations.py
+  # We have some tests with conditional logic depending on environment.
+  test/*
+  # Runs during install:
+  setup.py
+
+[report]
+show_missing = True
+skip_covered = True
+fail_under = 100
+exclude_also =
+  # TODO: Improve coverage and shorten this list!
+  os\.environ
+  ^\s*\.\.\.\s*$
