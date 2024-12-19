@@ -4,8 +4,121 @@ This file documents the version history of OpenDP. The links on each version num
 showing the source changes from the previous version.
 
 
+## [0.12.0-dev](https://github.com/opendp/opendp/compare/v0.11.1...HEAD) - TBD
 
-## [0.11.1](https://github.com/opendp/opendp/compare/v0.11.0...HEAD) - TBD
+### Added
+
+- Polars
+    - 0.12 polish [#2199](https://github.com/opendp/opendp/pull/2199)
+    - private grouping with explicit key sets [#2104](https://github.com/opendp/opendp/pull/2104)
+    - add date and time components [#2097](https://github.com/opendp/opendp/pull/2097)
+    - simplify SeriesDomain [#2158](https://github.com/opendp/opendp/pull/2158)
+    - add strptime [#2096](https://github.com/opendp/opendp/pull/2096)
+    - simplify ExprDomain [#2157](https://github.com/opendp/opendp/pull/2157)
+    - add len, count, null_count, n_unique [#2095](https://github.com/opendp/opendp/pull/2095)
+    - update honest-but-curious note on OnceFrame.lazy [#2093](https://github.com/opendp/opendp/pull/2093)
+    - reuse margin descriptors [#2091](https://github.com/opendp/opendp/pull/2091)
+    - error if string given as margin identifier [#2089](https://github.com/opendp/opendp/pull/2089)
+    - proof definitions [#2087](https://github.com/opendp/opendp/pull/2087)
+    - add to_physical transformation [#2004](https://github.com/opendp/opendp/pull/2004)
+    - stable key release under approx-zCDP [#2009](https://github.com/opendp/opendp/pull/2009)
+    - add cut transformation and categorical dtype [#2003](https://github.com/opendp/opendp/pull/2003)
+    - add cast transformation [#1715](https://github.com/opendp/opendp/pull/1715)
+    - Update to Polars Rust 0.44.2/Python 1.12.0 [#2144](https://github.com/opendp/opendp/pull/2144)
+- `make_private_candidate_selection` (Rust) [#2126](https://github.com/opendp/opendp/pull/2126)
+- measurement for private selection with known threshold [#1782](https://github.com/opendp/opendp/pull/1782)
+- plugin FFI for privacy profiles [#2001](https://github.com/opendp/opendp/pull/2001)
+- approximate zCDP [#2008](https://github.com/opendp/opendp/pull/2008)
+- Renyi DP [#2027](https://github.com/opendp/opendp/pull/2027)
+- Approximate privacy measure [#1768](https://github.com/opendp/opendp/pull/1768)
+- Replace ε(δ) curve with δ(ε) curve [#1831](https://github.com/opendp/opendp/pull/1831)
+- non-honest-but-curious plugin APIs [#2129](https://github.com/opendp/opendp/pull/2129)
+- Testing
+    - Cover `raise` statements [#2178](https://github.com/opendp/opendp/pull/2178)
+    - tests of code generation [#1987](https://github.com/opendp/opendp/pull/1987)
+    - checks on "except" lines for test coverage [#1867](https://github.com/opendp/opendp/pull/1867)
+    - check for absolute links to docs.opendp.org [#1938](https://github.com/opendp/opendp/pull/1938)
+    - Add xfail for mis-encoded CSV loading [#1983](https://github.com/opendp/opendp/pull/1983)
+- Documentation
+    - required features note [#2014](https://github.com/opendp/opendp/pull/2014)
+    - warning on docs for older versions [#1986](https://github.com/opendp/opendp/pull/1986)
+    - randomized bitvec example [#1966](https://github.com/opendp/opendp/pull/1966)
+    - links for Title IX and Maintainer Notes [#2013](https://github.com/opendp/opendp/pull/2013)
+    - Block older versions of docs [#2148](https://github.com/opendp/opendp/pull/2148)
+    - quotes on pip install 'opendp[polars]' and others [#2138](https://github.com/opendp/opendp/pull/2138)
+    - expand commentary on accuracy estimation in polars intro [#2088](https://github.com/opendp/opendp/pull/2088)
+    - include Polars in docs.rs build [#1949](https://github.com/opendp/opendp/pull/1949)
+    - disable ffi and partial features on docs.rs [#2086](https://github.com/opendp/opendp/pull/2086)
+    - Check for honest-but-curious explanations [#2052](https://github.com/opendp/opendp/pull/2052)
+    - Document supported polars methods [#2040](https://github.com/opendp/opendp/pull/2040)
+- Proofs
+    - prepare for proofwriting [#2041](https://github.com/opendp/opendp/pull/2041)
+
+
+### Changed
+
+- refactor PSRNs [#1568](https://github.com/opendp/opendp/pull/1568)
+- rename SMDCurve to PrivacyProfile [#1999](https://github.com/opendp/opendp/pull/1999)
+- remove generics from measures [#2007](https://github.com/opendp/opendp/pull/2007)
+- update users list on docs homepage [#2175](https://github.com/opendp/opendp/pull/2175)
+- update pysyft info [#2017](https://github.com/opendp/opendp/pull/2017)
+- Christchurch Call to list of examples [#2147](https://github.com/opendp/opendp/pull/2147)
+- dict -> MutableMapping [#2170](https://github.com/opendp/opendp/pull/2170)
+- Add a couple more generated files to gitignore list [#2053](https://github.com/opendp/opendp/pull/2053)
+- simplify sum traits [#2084](https://github.com/opendp/opendp/pull/2084)
+- move from 2 checkboxes to one pulldown [#1381](https://github.com/opendp/opendp/pull/1381)
+- unpin numpy dependency [#2056](https://github.com/opendp/opendp/pull/2056)
+- make rust error messages more explicit [#1993](https://github.com/opendp/opendp/pull/1993)
+- upgrade python dev dependencies [#1887](https://github.com/opendp/opendp/pull/1887)
+
+
+### Deprecated
+- deprecation notes on old dataframe functions [#1961](https://github.com/opendp/opendp/pull/1961)
+
+
+### Removed
+- sort postprocessor [#2092](https://github.com/opendp/opendp/pull/2092)
+
+
+### Fixed
+
+- set MACOSX_DEPLOYMENT_TARGET to fix nightly [#2202](https://github.com/opendp/opendp/pull/2202)
+- Reposition version warning after page load [#2187](https://github.com/opendp/opendp/pull/2187)
+- update discrete gaussian tail test [#2058](https://github.com/opendp/opendp/pull/2058)
+- split_by_weights with floats [#2171](https://github.com/opendp/opendp/pull/2171)
+- Link in paper is still 404, but the redirect after 5 seconds will now work [#2176](https://github.com/opendp/opendp/pull/2176)
+- minimum version on randomgen [#2174](https://github.com/opendp/opendp/pull/2174)
+- add check for null measurement [#1563](https://github.com/opendp/opendp/pull/1563)
+- add "mailto" and "https" in code of conduct [#1963](https://github.com/opendp/opendp/pull/1963)
+- add test for data loader error [#1906](https://github.com/opendp/opendp/pull/1906)
+- add `opendp-derive` to `default_members` [#2015](https://github.com/opendp/opendp/pull/2015)
+- add "--package" to "cargo publish" [#2010](https://github.com/opendp/opendp/pull/2010)
+- CallbackFn segfault [#2168](https://github.com/opendp/opendp/pull/2168)
+- coverage check in CI, RDP function FFI [#2150](https://github.com/opendp/opendp/pull/2150)
+- nightly build [#2079](https://github.com/opendp/opendp/pull/2079)
+- typos [#2161](https://github.com/opendp/opendp/pull/2161)
+- R package maintenance [#2082](https://github.com/opendp/opendp/pull/2082)
+- check max_changed_partitions at construction-time [#2059](https://github.com/opendp/opendp/pull/2059)
+- don't try to latex-build deletion diffs [#2043](https://github.com/opendp/opendp/pull/2043)
+- pick just one binary [#2026](https://github.com/opendp/opendp/pull/2026)
+- exclude code snips from indexing [#2018](https://github.com/opendp/opendp/pull/2018)
+- Resolve pandoc version warning [#1911](https://github.com/opendp/opendp/pull/1911)
+
+### Security
+- honest-but-curious function [#2130](https://github.com/opendp/opendp/pull/2130)
+- controlled rounding for sub-sub-normals [#1998](https://github.com/opendp/opendp/pull/1998)
+
+### Migration
+
+- user-defined postprocessors are now "honest-but-curious" [#2130](https://github.com/opendp/opendp/pull/2130)
+- Privacy profiles now take ε and return δ.
+- All privacy measures are no longer generic over the distance type
+    - Remove the `T=float` arguments
+- `FixedSmoothedMaxDivergence<f64>` is now `Approximate<MaxDivergence>`
+- rename SMDCurve to PrivacyProfile [#1999](https://github.com/opendp/opendp/pull/1999)
+
+
+## [0.11.1](https://github.com/opendp/opendp/compare/v0.11.0...v0.11.1) - 2024-08-19
 
 ### Added
 
