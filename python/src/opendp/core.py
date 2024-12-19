@@ -464,7 +464,7 @@ def new_function(
 
     Required features: `contrib`, `honest-but-curious`
 
-    [new_function in Rust documentation.](https://docs.rs/opendp/0.12.0-beta.20241219.1/opendp/core/fn.new_function.html)
+    [new_function in Rust documentation.](https://docs.rs/opendp/0.12.0/opendp/core/fn.new_function.html)
 
     **Why honest-but-curious?:**
 

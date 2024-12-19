@@ -15,7 +15,7 @@ NULL
 #' The measurement's input metric defines the notion of adjacency,
 #' and the measurement's input domain defines the set of possible datasets.
 #'
-#' [approximate in Rust documentation.](https://docs.rs/opendp/0.12.0-beta.20241219.1/opendp/measures/fn.approximate.html)
+#' [approximate in Rust documentation.](https://docs.rs/opendp/0.12.0/opendp/measures/fn.approximate.html)
 #'
 #' **Proof Definition:**
 #'

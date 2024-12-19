@@ -58,7 +58,7 @@ def debias_randomized_response_bitvec(
 
     Required features: `contrib`
 
-    [debias_randomized_response_bitvec in Rust documentation.](https://docs.rs/opendp/0.12.0-beta.20241219.1/opendp/measurements/fn.debias_randomized_response_bitvec.html)
+    [debias_randomized_response_bitvec in Rust documentation.](https://docs.rs/opendp/0.12.0/opendp/measurements/fn.debias_randomized_response_bitvec.html)
 
     :param answers: A vector of BitVectors with consistent size
     :param f: The per bit flipping probability used to encode `answers`
@@ -110,7 +110,7 @@ def make_alp_queryable(
 
     Required features: `contrib`
 
-    [make_alp_queryable in Rust documentation.](https://docs.rs/opendp/0.12.0-beta.20241219.1/opendp/measurements/fn.make_alp_queryable.html)
+    [make_alp_queryable in Rust documentation.](https://docs.rs/opendp/0.12.0/opendp/measurements/fn.make_alp_queryable.html)
 
     **Citations:**
 
@@ -210,7 +210,7 @@ def make_gaussian(
 
     Required features: `contrib`
 
-    [make_gaussian in Rust documentation.](https://docs.rs/opendp/0.12.0-beta.20241219.1/opendp/measurements/fn.make_gaussian.html)
+    [make_gaussian in Rust documentation.](https://docs.rs/opendp/0.12.0/opendp/measurements/fn.make_gaussian.html)
 
     **Supporting Elements:**
 
@@ -321,7 +321,7 @@ def make_geometric(
 
     Required features: `contrib`
 
-    [make_geometric in Rust documentation.](https://docs.rs/opendp/0.12.0-beta.20241219.1/opendp/measurements/fn.make_geometric.html)
+    [make_geometric in Rust documentation.](https://docs.rs/opendp/0.12.0/opendp/measurements/fn.make_geometric.html)
 
     **Citations:**
 
@@ -438,7 +438,7 @@ def make_laplace(
 
     Required features: `contrib`
 
-    [make_laplace in Rust documentation.](https://docs.rs/opendp/0.12.0-beta.20241219.1/opendp/measurements/fn.make_laplace.html)
+    [make_laplace in Rust documentation.](https://docs.rs/opendp/0.12.0/opendp/measurements/fn.make_laplace.html)
 
     **Citations:**
 
@@ -551,7 +551,7 @@ def make_laplace_threshold(
 
     Required features: `contrib`, `floating-point`
 
-    [make_laplace_threshold in Rust documentation.](https://docs.rs/opendp/0.12.0-beta.20241219.1/opendp/measurements/fn.make_laplace_threshold.html)
+    [make_laplace_threshold in Rust documentation.](https://docs.rs/opendp/0.12.0/opendp/measurements/fn.make_laplace_threshold.html)
 
     **Supporting Elements:**
 
@@ -632,7 +632,7 @@ def make_private_expr(
 
     Required features: `contrib`, `honest-but-curious`
 
-    [make_private_expr in Rust documentation.](https://docs.rs/opendp/0.12.0-beta.20241219.1/opendp/measurements/fn.make_private_expr.html)
+    [make_private_expr in Rust documentation.](https://docs.rs/opendp/0.12.0/opendp/measurements/fn.make_private_expr.html)
 
     **Why honest-but-curious?:**
 
@@ -717,7 +717,7 @@ def make_private_lazyframe(
 
     Required features: `contrib`
 
-    [make_private_lazyframe in Rust documentation.](https://docs.rs/opendp/0.12.0-beta.20241219.1/opendp/measurements/fn.make_private_lazyframe.html)
+    [make_private_lazyframe in Rust documentation.](https://docs.rs/opendp/0.12.0/opendp/measurements/fn.make_private_lazyframe.html)
 
     **Supporting Elements:**
 
@@ -929,7 +929,7 @@ def make_randomized_response(
 
     Required features: `contrib`
 
-    [make_randomized_response in Rust documentation.](https://docs.rs/opendp/0.12.0-beta.20241219.1/opendp/measurements/fn.make_randomized_response.html)
+    [make_randomized_response in Rust documentation.](https://docs.rs/opendp/0.12.0/opendp/measurements/fn.make_randomized_response.html)
 
     **Supporting Elements:**
 
@@ -940,7 +940,7 @@ def make_randomized_response(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/measurements/randomized_response/make_randomized_response.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/v0.12.0/proofs/rust/src/measurements/randomized_response/make_randomized_response.pdf)
 
     :param categories: Set of valid outcomes
     :param prob: Probability of returning the correct answer. Must be in `[1/num_categories, 1)`
@@ -993,7 +993,7 @@ def make_randomized_response_bitvec(
 
     Required features: `contrib`
 
-    [make_randomized_response_bitvec in Rust documentation.](https://docs.rs/opendp/0.12.0-beta.20241219.1/opendp/measurements/fn.make_randomized_response_bitvec.html)
+    [make_randomized_response_bitvec in Rust documentation.](https://docs.rs/opendp/0.12.0/opendp/measurements/fn.make_randomized_response_bitvec.html)
 
     **Citations:**
 
@@ -1008,7 +1008,7 @@ def make_randomized_response_bitvec(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/measurements/randomized_response_bitvec/make_randomized_response_bitvec.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/v0.12.0/proofs/rust/src/measurements/randomized_response_bitvec/make_randomized_response_bitvec.pdf)
 
     :param input_domain: BitVectorDomain with max_weight
     :type input_domain: Domain
@@ -1142,7 +1142,7 @@ def make_randomized_response_bool(
 
     Required features: `contrib`
 
-    [make_randomized_response_bool in Rust documentation.](https://docs.rs/opendp/0.12.0-beta.20241219.1/opendp/measurements/fn.make_randomized_response_bool.html)
+    [make_randomized_response_bool in Rust documentation.](https://docs.rs/opendp/0.12.0/opendp/measurements/fn.make_randomized_response_bool.html)
 
     **Supporting Elements:**
 
@@ -1153,7 +1153,7 @@ def make_randomized_response_bool(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/measurements/randomized_response/make_randomized_response_bool.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/v0.12.0/proofs/rust/src/measurements/randomized_response/make_randomized_response_bool.pdf)
 
     :param prob: Probability of returning the correct answer. Must be in `[0.5, 1)`
     :type prob: float
@@ -1200,7 +1200,7 @@ def make_report_noisy_max_gumbel(
 
     Required features: `contrib`
 
-    [make_report_noisy_max_gumbel in Rust documentation.](https://docs.rs/opendp/0.12.0-beta.20241219.1/opendp/measurements/fn.make_report_noisy_max_gumbel.html)
+    [make_report_noisy_max_gumbel in Rust documentation.](https://docs.rs/opendp/0.12.0/opendp/measurements/fn.make_report_noisy_max_gumbel.html)
 
     **Supporting Elements:**
 
@@ -1211,7 +1211,7 @@ def make_report_noisy_max_gumbel(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/measurements/gumbel_max/make_report_noisy_max_gumbel.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/v0.12.0/proofs/rust/src/measurements/gumbel_max/make_report_noisy_max_gumbel.pdf)
 
     :param input_domain: Domain of the input vector. Must be a non-nullable VectorDomain.
     :type input_domain: Domain
