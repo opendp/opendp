@@ -45,62 +45,15 @@ class DPExpr(object):
     An expression can be used as a plan in :py:func:`opendp.measurements.make_private_lazyframe`;
     See the full example there for more information.
 
+    In addition to the DP-specific methods here, many Polars ``Expr`` methods are also supported,
+    and are documented in the :ref:`API User Guide <expression-index>`.    
+
     This class is typically not used directly by users:
     Instead its methods are registered under the ``dp`` namespace of Polars expressions.
 
     >>> import polars as pl
     >>> pl.len().dp
     <opendp.extras.polars.DPExpr object at ...>
-
-    In addition to the DP-specific methods documented below, some Polars ``Expr`` methods are also supported.
-    For these, the best documentation is the `official Polars documentation <https://docs.pola.rs/api/python/stable/reference/expressions/index.html>`_.
-
-    .. list-table:: Supported Polars ``Expr`` Methods
-        :header-rows: 1
-
-        * - Method
-          - Comments
-        * - `alias <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.alias.html>`_
-          - Rename the expression
-        * - `eq, ne, lt, le, gt, ge <https://docs.pola.rs/api/python/stable/reference/expressions/operators.html#comparison>`_
-          - Comparison operators may be more readable: ``==`` ``!=`` ``<`` ``<=`` ``>`` ``>=``
-        * - `and_, or_, xor <https://docs.pola.rs/api/python/stable/reference/expressions/operators.html#conjunction>`_
-          - Bit-wise operators may be more readable: ``&`` ``|`` ``^``
-        * - `is_null, is_not_null, is_finite, is_not_finite, is_nan, is_not_nan, not <https://docs.pola.rs/api/python/stable/reference/expressions/boolean.html>`_
-          - Boolean information
-        * - `clip <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.clip.html>`_
-          - Set value outside bounds to boundary value
-        * - `fill_null <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.fill_null.html>`_, `fill_nan <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.fill_nan.html>`_
-          - Fill missing values with provided value
-        * - `lit <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.lit.html>`_
-          - Return an expression representing a literal value
-        * - `str.strptime <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.str.strptime.html>`_
-          - Parse a string into a date, time or datetime
-        * - `date components <https://docs.pola.rs/api/python/stable/reference/expressions/temporal.html>`_
-          - ``year``, ``iso_year``, ``quarter``, ``month``, ``week``, ``weekday``, ``day``, ``ordinal_day``
-        * - `time components <https://docs.pola.rs/api/python/stable/reference/expressions/temporal.html>`_
-          - ``hour``, ``minute``, ``second``, ``millisecond``, ``microsecond``, ``nanosecond``
-
-    A few ``Expr`` aggregation methods are also available:
-
-    .. list-table:: Supported Polars ``Expr`` Aggregation Methods
-        :header-rows: 1
-
-        * - Method
-          - Comments
-        * - `len <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.len.html>`_
-          - Number of elements in an expression, including nulls
-        * - `count <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.count.html>`_
-          - Number of non-null elements in an expression
-        * - `null_count <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.null_count.html>`_
-          - Number of null elements in an expression
-        * - `n_unique <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.n_unique.html>`_
-          - Number of unique elements in an expression, including null
-        * - `sum <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.sum.html>`_
-          - Sum
-
-    Note that frame `len <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.len.html>`
-    can be different from expression len, if the expression can change the number of rows.
     """
 
     def __init__(self, expr):
