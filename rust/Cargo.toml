@@ -1,0 +1,148 @@
+[workspace.package]
+version = "0.12.0-beta.20241219.1"
+license-file = "../LICENSE"
+readme = "../README.md"
+homepage = "https://opendp.org/"
+repository = "https://github.com/opendp/opendp"
+authors = ["The OpenDP Project <info@opendp.org>"]
+edition = "2021"
+rust-version = "1.64.0" # MSRV via `cargo install cargo-msrv && cargo msrv --min 1.49.0 -- cargo check --all-features`
+
+[workspace]
+members = [".", "opendp_derive", "opendp_tooling"]
+default-members = [".", "opendp_derive", "opendp_tooling"]
+
+[workspace.dependencies]
+syn = { version = "1.0", features = ["full", "parsing"] }
+quote = { version = "1.0" }
+proc-macro2 = { version = "1.0" }
+
+[package]
+name = "opendp"
+description = "A library of differential privacy algorithms for the statistical analysis of sensitive private data."
+build = "build/main.rs"
+version.workspace = true
+license-file.workspace = true
+readme.workspace = true
+homepage.workspace = true
+repository.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+exclude = ["windows/*"]
+
+[dependencies]
+opendp_derive = { path = "opendp_derive", version = "0.12.0-beta.20241219.1" }
+rand = "0.7.3"
+num = "0.3.1"
+thiserror = "1.0.24"
+statrs = "0.13.0"
+dashu = { version = "0.4.0", features = ["num-traits_v02"] }
+openssl = { version = "0.10.64", features = ["vendored"], optional = true }
+
+# Temporary fix until OpenSSL is updated to 3.4.
+# See https://github.com/openssl/openssl/issues/25366
+openssl-src = "=300.3.1"
+
+opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.12.0-beta.20241219.1" }
+readonly = "0.2"
+bitvec = "1.0"
+
+# A strict version requirement is necessary to keep the serialization format of LazyFrames stable.
+# If you change the version of Polars, 
+# be sure to also change the Python package version requirement and test binary compatibility.
+polars = { version = "=0.44.2", features = [
+    "lazy",
+    "csv",
+    "dtype-struct",
+    "dtype-array",
+    "dtype-date",
+    "dtype-datetime",
+    "dtype-time",
+    "parquet",
+    "serde-lazy",
+    "streaming",
+    "round_series",
+    "rank",
+    "polars-ops",
+    "abs",
+    "meta",
+    "cutqcut",
+    "strings",
+    "repeat_by",
+    "concat_str",
+], optional = true }
+polars-plan = { version = "=0.44.2", features = [
+    "ffi_plugin",
+], optional = true }
+# matches the version specified in Polars: 
+#   https://github.com/pola-rs/polars/blob/main/Cargo.toml
+chrono = { version = "0.4.31", default-features = false, features = ["std"], optional = true }
+
+polars-arrow = { version = "=0.44.2", optional = true }
+pyo3 = { version = "0.21.2", features = ["abi3-py39", "extension-module"], optional = true }
+pyo3-polars = { version = "=0.18.0", features = ["derive", "dtype-array", "dtype-categorical", "dtype-struct"], optional = true }
+serde = { version = "1.0", optional = true }
+serde-pickle = { version = "1.1", optional = true }
+ciborium = { version = "0.2.1", optional = true }
+
+lazy_static = { version = "1.4.0", optional = true }
+vega_lite_4 = { version = "0.6.0", optional = true }
+
+[build-dependencies]
+opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.12.0-beta.20241219.1" }
+syn = { workspace = true, optional = true }
+proc-macro2 = { workspace = true, optional = true }
+cbindgen = { version = "0.20.0", optional = true }
+
+[features]
+default = ["partials", "use-openssl"]
+
+floating-point = []
+contrib = []
+honest-but-curious = []
+untrusted = ["floating-point", "contrib", "honest-but-curious"]
+
+polars = [
+    "dep:polars",
+    "polars-plan",
+    "polars-arrow",
+    "pyo3",
+    "pyo3-polars",
+    "serde",
+    "serde-pickle",
+    "ciborium",
+    "chrono"
+]
+use-openssl = ["openssl"]
+
+# for plotting in unit tests
+test-plot = ["vega_lite_4"]
+
+# include extern "C" functions in cdylib
+ffi = ["lazy_static", "cbindgen"]
+# execute proc macros to insert proof links
+derive = ["opendp_tooling", "opendp_derive/full", "syn", "proc-macro2"]
+
+# deprecated
+bindings-python = ["bindings"]
+# generate language bindings
+bindings = ["ffi", "derive"]
+
+# generate "then_xxx" functions in Rust for "make_xxx" functions whose first two arguments are the metric space
+partials = ["derive", "opendp_derive/partials"]
+
+[lib]
+crate-type = ["rlib", "cdylib", "staticlib"]
+
+[package.metadata.docs.rs]
+no-default-features = true
+features = ["use-openssl", "derive", "untrusted", "polars"]
+rustdoc-args = [
+    # so that latex renders
+    "--html-in-header", "katex.html",
+    
+    # so that proof documents are visible
+    "--document-private-items"
+]
