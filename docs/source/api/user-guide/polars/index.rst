@@ -4,8 +4,7 @@ Polars
 ======
 
 OpenDP uses `Polars <https://pola.rs/>`_ to work with dataframes.
-This documentation assumes you've already read `Working with Tabular Data <../../../getting-started/tabular-data/index.html>`_,
-and are interested in more comprehensive reference material.
+If you haven't already, please review :ref:`tabular-data` in "Getting Started" before diving into this material.
 
 .. toctree::
   :titlesonly:

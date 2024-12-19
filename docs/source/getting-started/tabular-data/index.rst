@@ -1,3 +1,5 @@
+.. _tabular-data:
+
 Working with Tabular Data
 =========================
 

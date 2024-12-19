@@ -45,15 +45,15 @@ class DPExpr(object):
     An expression can be used as a plan in :py:func:`opendp.measurements.make_private_lazyframe`;
     See the full example there for more information.
 
+    In addition to the DP-specific methods here, many Polars ``Expr`` methods are also supported,
+    and are documented in the :ref:`API User Guide <expression-index>`.    
+
     This class is typically not used directly by users:
     Instead its methods are registered under the ``dp`` namespace of Polars expressions.
 
     >>> import polars as pl
     >>> pl.len().dp
     <opendp.extras.polars.DPExpr object at ...>
-
-    In addition to the DP-specific methods documented below, many Polars ``Expr`` methods are also supported.
-    For these, the best documentation is the Expression Index in the OpenDP User Guide.
     """
 
     def __init__(self, expr):

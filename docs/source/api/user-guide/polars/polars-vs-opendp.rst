@@ -13,13 +13,15 @@ Polars vs. OpenDP
     ...     split_evenly_over=10,
     ... )
 
-For this comparison assume you have created a :py:class:`opendp.context.Context` named :code:`context`.
-OpenDP Polars differs from typical Polars in three ways:
+We'll assume you have created a :py:class:`opendp.context.Context` named :code:`context`.
+OpenDP Polars differs from typical Polars in these ways:
 
 1. **How you specify the data.**
-   Instead of directly manipulating the data (a LazyFrame), you now manipulate :code:`context.query()` (a :py:class:`opendp.extras.polars.LazyFrameQuery`).
+   Instead of directly manipulating the data (a ``LazyFrame``),
+   you now manipulate an :py:class:`opendp.extras.polars.LazyFrameQuery`
+   returned by :code:`context.query()`
    You can think of :code:`context.query()` as a mock for the real data
-   (in reality, a LazyFrameQuery is an empty LazyFrame with some extra methods).
+   (although in reality, a ``LazyFrameQuery`` is an empty ``LazyFrame`` with some extra methods).
 
    .. doctest:: python
 
@@ -28,7 +30,7 @@ OpenDP Polars differs from typical Polars in three ways:
 
 2. **How you construct the query.**
    OpenDP extends the Polars API to include differentially private methods and statistics.
-   LazyFrame (now LazyFrameQuery) has additional methods, like :code:`.summarize` and :code:`.release`.
+   ``LazyFrame`` (now ``LazyFrameQuery``) has additional methods, like :code:`.summarize` and :code:`.release`.
 
    .. doctest:: python
 
@@ -55,8 +57,7 @@ OpenDP Polars differs from typical Polars in three ways:
 
 3. **How you run the query.**
    When used from OpenDP, you must first call :code:`.release()` before executing the computation with :code:`.collect()`.
-   :code:`.release()` tells the OpenDP Library to ensure the query satisfies differential privacy, 
-   account for the privacy loss of releasing the query, and then allow the query to be collected once.
+   :code:`.release()` accounts for the privacy loss of releasing the query, and updates the privacy budget.
 
    .. doctest:: python
 
@@ -77,7 +78,7 @@ OpenDP Polars differs from typical Polars in three ways:
 
    To satisfy differential privacy, there are also cases where OpenDP must change the arguments to a Polars expression.
    Most commonly this is to ensure that failures don't raise data-dependent errors.
-   OpenDP may also make arguments mandatory, as in the case of the format string in temporal parsing,
-   or dis-allow the use of expressions on certain data types, as in the case of imputation on categorical data.
+   OpenDP may also make arguments mandatory (for example, `format strings in temporal parsing <expressions/string.html#Strptime,-To-Date,-To-Datetime,-To-Time>`_),
+   or disallow the use of expressions on certain data types (for example, `imputation on categorical data <data-types.html#Categorical>`_).
 
-   These changes in behavior, and the reasoning behind them, are discussed in `expressions <expressions/index.html>`_.
+   These changes in behavior, and the reasoning behind them, are discussed in :ref:`expression-index`.
