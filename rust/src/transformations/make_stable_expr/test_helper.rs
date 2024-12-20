@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain};
 use crate::error::*;
 use polars::prelude::*;
@@ -10,14 +12,14 @@ pub fn get_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
         SeriesDomain::new("chunk_(..10u32)", AtomDomain::<u32>::default()),
         SeriesDomain::new("cycle_(..100i32)", AtomDomain::<i32>::default()),
     ])?
-    .with_margin::<&str>(
-        &[],
+    .with_margin(
+        HashSet::new(),
         Margin::default()
             .with_public_lengths()
             .with_max_partition_length(1000),
     )?
     .with_margin(
-        &["chunk_2_bool"],
+        HashSet::from([col("chunk_2_bool")]),
         Margin::default()
             .with_public_lengths()
             .with_max_partition_length(500)
@@ -25,13 +27,13 @@ pub fn get_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
             .with_max_partition_contributions(1),
     )?
     .with_margin(
-        &["chunk_2_bool", "cycle_5_alpha"],
+        HashSet::from([col("chunk_2_bool"), col("cycle_5_alpha")]),
         Margin::default()
             .with_public_keys()
             .with_max_partition_length(200),
     )?
     .with_margin(
-        &["chunk_(..10u32)"],
+        HashSet::from([col("chunk_(..10u32)")]),
         Margin::default()
             .with_public_keys()
             .with_max_partition_length(100),

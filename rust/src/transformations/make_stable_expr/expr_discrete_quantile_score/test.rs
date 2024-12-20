@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use super::*;
 use polars::prelude::*;
 
@@ -15,8 +17,8 @@ pub fn get_quantile_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
         SeriesDomain::new("cycle_(..101f64)", AtomDomain::<i32>::default()),
         SeriesDomain::new("cycle_(..10i32)", AtomDomain::<f64>::default()),
     ])?
-    .with_margin::<&str>(&[], pub_keys_margin.clone())?
-    .with_margin(&["cycle_(..10i32)"], pub_keys_margin)?;
+    .with_margin(HashSet::new(), pub_keys_margin.clone())?
+    .with_margin(HashSet::from([col("cycle_(..10i32)")]), pub_keys_margin)?;
 
     let lf = df!(
         "cycle_(..101f64)" => (0..1010).map(|i| (i % 101) as f64).collect::<Vec<_>>(),

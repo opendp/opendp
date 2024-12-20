@@ -23,7 +23,7 @@ mod filter;
 mod h_stack;
 
 #[cfg(feature = "contrib")]
-mod select;
+pub(crate) mod select;
 
 #[bootstrap(
     features("contrib"),

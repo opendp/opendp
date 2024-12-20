@@ -77,7 +77,7 @@ where
 
     // only keep margins for series that have not changed
     let new_series_names = new_series
-        .map(|series_domain| series_domain.name.clone())
+        .map(|series_domain| col(series_domain.name.clone()))
         .collect();
     let margins = (middle_domain.margins.iter())
         .filter(|(k, _)| k.is_disjoint(&new_series_names))
