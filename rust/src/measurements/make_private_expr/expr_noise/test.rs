@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use super::*;
 use polars::prelude::*;
 
@@ -138,7 +140,8 @@ fn check_autocalibration(
     d_in: (u32, u32, u32),
 ) -> Fallible<()> {
     let series_domain = SeriesDomain::new("A", AtomDomain::<i32>::default());
-    let lf_domain = LazyFrameDomain::new(vec![series_domain])?.with_margin::<&str>(&[], margin)?;
+    let lf_domain =
+        LazyFrameDomain::new(vec![series_domain])?.with_margin(HashSet::new(), margin)?;
     let expr_domain = lf_domain.select();
 
     // Get resulting sum (expression result)
