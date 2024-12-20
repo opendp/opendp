@@ -48,6 +48,7 @@ def example_lf(margin=None, **kwargs):
     domains, series = example_series()
     lf_domain, lf = dp.lazyframe_domain(domains), pl.LazyFrame(series)
     if margin is not None:
+        margin = [col if isinstance(col, pl.Expr) else pl.col(col) for col in margin]
         lf_domain = dp.with_margin(lf_domain, by=margin, **kwargs)
     return lf_domain, lf
 
@@ -55,9 +56,12 @@ def example_lf(margin=None, **kwargs):
 def test_expr_domain():
     series_domains, _ = example_series()
     dp.wild_expr_domain(series_domains)
-    dp.wild_expr_domain(series_domains, by=["A", "B"])
-    dp.wild_expr_domain(series_domains, by=["A", "B"], max_num_partitions=10)
-    dp.wild_expr_domain(series_domains, by=["A", "B"], public_info="keys")
+
+    pl = pytest.importorskip("polars")
+    by = [pl.col("A"), pl.col("B")]
+    dp.wild_expr_domain(series_domains, by=by)
+    dp.wild_expr_domain(series_domains, by=by, max_num_partitions=10)
+    dp.wild_expr_domain(series_domains, by=by, public_info="keys")
 
 
 def test_domains():
@@ -708,17 +712,18 @@ def test_cut():
     pl_testing = pytest.importorskip("polars.testing")
 
     data = pl.LazyFrame({"x": [0.4, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5]})
+    by = (pl.col("x").cut([1.0, 2.0, 3.0]).to_physical(),)
     with warnings.catch_warnings():
         context = dp.Context.compositor(
-            data=data.with_columns(pl.col("x").cut([1.0, 2.0, 3.0]).to_physical()),
+            data=data,
             privacy_unit=dp.unit_of(contributions=1),
             privacy_loss=dp.loss_of(epsilon=10000.0),
             split_evenly_over=1,
-            margins={("x",): dp.polars.Margin(public_info="keys")},
+            margins=[(by, dp.polars.Margin(public_info="keys"))],
         )
     actual = (
         context.query()
-        .group_by("x")
+        .group_by(*by)
         .agg(dp.len())
         .release()
         .collect()
@@ -847,11 +852,12 @@ def test_to_physical_unordered():
 
 
 def test_float_sum_with_unlimited_reorderable_partitions():
+    pl = pytest.importorskip("polars")
     lf_domain = dp.lazyframe_domain([
         dp.series_domain("region", dp.atom_domain(T=dp.i64)),
         dp.series_domain("income", dp.atom_domain(T=dp.f64))
     ])
-    lf_domain = dp.with_margin(lf_domain, by=["region"], public_info="lengths", max_partition_length=6)
+    lf_domain = dp.with_margin(lf_domain, by=[pl.col("region")], public_info="lengths", max_partition_length=6)
 
     from opendp.domains import _lazyframe_from_domain
     lf = _lazyframe_from_domain(lf_domain)
@@ -977,8 +983,8 @@ def test_datetime(dtype):
     )
     query = (
         context.query()
-        .with_columns(pl.col.x.str.strptime(format=r"%Y-%m-%dT%H:%M:%S", dtype=dtype))
-        .group_by("x").agg(dp.len())
+        .group_by(pl.col.x.str.strptime(format=r"%Y-%m-%dT%H:%M:%S", dtype=dtype))
+        .agg(dp.len())
     )
     observed = query.release().collect()
     assert observed["x"].dtype == dtype

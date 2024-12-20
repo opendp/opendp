@@ -1,4 +1,4 @@
-use std::{any::TypeId, ffi::c_char, os::raw::c_void};
+use std::{any::TypeId, collections::HashSet, ffi::c_char, os::raw::c_void};
 
 use opendp_derive::bootstrap;
 
@@ -74,7 +74,7 @@ pub(crate) fn unpack_series_domains(
     name = "with_margin",
     arguments(
         frame_domain(rust_type = b"null"),
-        by(rust_type = "Vec<String>"),
+        by(rust_type = "Vec<Expr>"),
         max_partition_length(c_type = "void *", rust_type = "Option<u32>", default = b"null"),
         max_num_partitions(c_type = "void *", rust_type = "Option<u32>", default = b"null"),
         max_partition_contributions(
@@ -98,7 +98,7 @@ pub extern "C" fn opendp_domains__with_margin(
     public_info: *mut c_char,
 ) -> FfiResult<*mut AnyDomain> {
     let domain = try_as_ref!(frame_domain);
-    let by = try_!(try_as_ref!(by).downcast_ref::<Vec<String>>()).clone();
+    let by = HashSet::from_iter(try_!(try_as_ref!(by).downcast_ref::<Vec<Expr>>()).clone());
 
     let margin = Margin {
         max_partition_length: util::as_ref(max_partition_length as *const u32).cloned(),
@@ -129,11 +129,11 @@ pub extern "C" fn opendp_domains__with_margin(
 
     fn monomorphize<F: 'static + Frame>(
         domain: &AnyDomain,
-        by: Vec<String>,
+        by: HashSet<Expr>,
         margin: Margin,
     ) -> Fallible<AnyDomain> {
         let domain = domain.downcast_ref::<FrameDomain<F>>()?.clone();
-        Ok(AnyDomain::new(domain.with_margin(&by, margin)?))
+        Ok(AnyDomain::new(domain.with_margin(by, margin)?))
     }
 
     dispatch!(
