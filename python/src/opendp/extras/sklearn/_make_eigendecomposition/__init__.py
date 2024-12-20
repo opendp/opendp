@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Sequence
 
 from opendp.extras._utilities import register_measurement
 from opendp.extras.sklearn._make_eigenvector import then_private_eigenvectors
@@ -12,7 +13,7 @@ def make_private_np_eigendecomposition(
     input_domain: Domain,
     input_metric: Metric,
     eigvals_epsilon: float,
-    eigvecs_epsilons: list[float],
+    eigvecs_epsilons: Sequence[float],
     num_components: int | None = None,
 ) -> Measurement:
     """Construct a Measurement that releases eigenvalues and eigenvectors.

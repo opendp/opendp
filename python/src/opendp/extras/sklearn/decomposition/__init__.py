@@ -14,7 +14,7 @@ See also our :ref:`tutorial on diffentially private PCA <dp-pca>`.
 '''
 
 from __future__ import annotations
-from typing import NamedTuple, Optional, TYPE_CHECKING
+from typing import NamedTuple, Optional, TYPE_CHECKING, Sequence
 from opendp.extras.numpy import then_np_clamp
 from opendp.extras._utilities import register_measurement, to_then
 from opendp.extras.numpy._make_np_mean import make_private_np_mean
@@ -47,7 +47,7 @@ else: # pragma: no cover
 
 class PCAEpsilons(NamedTuple):
     eigvals: float
-    eigvecs: list[float]
+    eigvecs: Sequence[float]
     mean: Optional[float]
 
 
