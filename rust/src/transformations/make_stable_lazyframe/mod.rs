@@ -94,12 +94,22 @@ impl StableDslPlan<SymmetricDistance, SymmetricDistance> for DslPlan {
             DslPlan::Select { .. } => {
                 select::make_select(input_domain, input_metric, self)
             }
-            dsl => fallible!(
-                MakeTransformation,
-                "A step in your query is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
-                dsl.describe()?,
-                get_disabled_features_message()
-            )
+            dsl => {
+                match dsl.describe() {
+                    Ok(describe) => fallible!(
+                        MakeTransformation,
+                        "A step in your query is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
+                        describe,
+                        get_disabled_features_message()
+                    ),
+                    Err(e) => fallible!(
+                        MakeTransformation,
+                        "A step in your query is not recognized at this time, and the step cannot be identified due to the following error: {}. {:?}",
+                        e,
+                        get_disabled_features_message()
+                    )
+                }
+            }
         }
     }
 }
