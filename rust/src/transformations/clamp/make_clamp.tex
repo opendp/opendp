@@ -53,7 +53,8 @@ None
     \end{itemize}
     
     \item By the definition of \rustdoc{traits/trait}{ProductOrd}\texttt{.total\_clamp}, 
-    \texttt{total\_clamp} won't raise because \texttt{arg} and both bounds are not null.
+    \texttt{total\_clamp} won't raise because \texttt{arg} and both bounds are not null,
+    and because the lower bound is less than the upper bound by the postcondition of \texttt{Bounds.new\_closed} on line~\ref{line:new-closed}.
     Since \texttt{total\_clamp} is the only potential source of errors, and it cannot throw an error,
     there are no runtime errors in \texttt{row\_function}, satisfying the first remaining precondition.
 
