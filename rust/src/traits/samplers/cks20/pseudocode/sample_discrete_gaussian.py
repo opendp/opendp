@@ -8,7 +8,10 @@ def sample_discrete_gaussian(scale: RBig) -> int:
 
     while True: 
         candidate = sample_discrete_laplace(t) # |\label{line:candidate}| 
+
+        # prepare rejection probability: "bias"
         x = abs(candidate) - sigma2 / t 
         bias = x**2 / (2 * sigma2)  # |\label{line:bias}| 
+        
         if sample_bernoulli_exp(bias): # |\label{line:bern}| 
             return candidate 
