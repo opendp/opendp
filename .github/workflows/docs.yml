@@ -76,8 +76,8 @@ jobs:
           echo "Install Sphinx and deploy docs..."
           cd docs
           python --version
-          python -m venv venv
-          source venv/bin/activate
+          python -m venv .venv-docs
+          source .venv-docs/bin/activate
           
           echo "Upgrade pip and install requirements."
           python -m pip install --upgrade pip

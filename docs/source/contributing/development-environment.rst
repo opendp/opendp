@@ -141,8 +141,8 @@ You can install a local Python package that uses your new OpenDP binary.
 
         # recommended. conda is just as valid
         cd python
-        python3 -m venv .venv
-        source .venv/bin/activate
+        python3 -m venv .venv-dev
+        source .venv-dev/bin/activate
 
 
 Change to the ``python`` directory, install dependencies, and then install the Python OpenDP library itself.
