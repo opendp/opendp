@@ -1,14 +1,14 @@
-use std::{any::TypeId, ffi::c_char, os::raw::c_void};
+use std::{any::TypeId, ffi::c_char, os::raw::c_void, slice::from_raw_parts};
 
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::{FfiResult, MetricSpace},
+    core::{FfiResult, FfiSlice, MetricSpace},
     domains::{Margin, MarginPub, SeriesDomain},
     error::Fallible,
     ffi::{
         any::{AnyDomain, AnyMetric, AnyObject, Downcast},
-        util::{self, AnyDomainPtr, Type},
+        util::{self, Type},
     },
     transformations::DatasetMetric,
 };
@@ -27,12 +27,10 @@ use polars::prelude::*;
 /// * `series_domains` - Domain of each series in the lazyframe.
 #[no_mangle]
 pub extern "C" fn opendp_domains__lazyframe_domain(
-    series_domains: *const AnyObject,
+    series_domains: *mut FfiSlice,
 ) -> FfiResult<*mut AnyDomain> {
-    Ok(AnyDomain::new(try_!(LazyFrameDomain::new(try_!(
-        unpack_series_domains(series_domains)
-    )))))
-    .into()
+    let series_domains = try_!(unpack_series_domains(series_domains));
+    Ok(AnyDomain::new(try_!(LazyFrameDomain::new(series_domains)))).into()
 }
 
 #[bootstrap()]
@@ -55,19 +53,18 @@ pub extern "C" fn opendp_domains___lazyframe_from_domain(
 }
 
 pub(crate) fn unpack_series_domains(
-    series_domains: *const AnyObject,
+    series_domains: *const FfiSlice,
 ) -> Fallible<Vec<SeriesDomain>> {
-    let vec_any = try_as_ref!(series_domains).downcast_ref::<Vec<AnyDomainPtr>>()?;
-
-    vec_any
-        .iter()
-        .map(|x| {
-            util::as_ref(x.clone())
-                .and_then(|ad| ad.downcast_ref::<SeriesDomain>().ok())
-                .cloned()
-        })
-        .collect::<Option<Vec<SeriesDomain>>>()
-        .ok_or_else(|| err!(FailedCast, "domain downcast failed"))
+    let series_domains = try_as_ref!(series_domains);
+    unsafe {
+        from_raw_parts(
+            series_domains.ptr as *const *const AnyDomain,
+            series_domains.len,
+        )
+    }
+    .into_iter()
+    .map(|ptr| Ok(try_as_ref!(*ptr).downcast_ref::<SeriesDomain>()?.clone()))
+    .collect()
 }
 
 #[bootstrap(
