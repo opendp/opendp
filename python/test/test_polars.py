@@ -1058,3 +1058,36 @@ def test_replace():
         .collect()["alpha"].sort(), 
         pl.Series("alpha", ["C", "D", "E"])
     )
+
+
+def test_cast_enum():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    # this triggers construction of a lazyframe domain from the schema
+    context = dp.Context.compositor(
+        data=pl.LazyFrame(pl.Series("alpha", ["A", "B", "C"] * 100)),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=1,
+    )
+    print(context)
+
+    # print(
+    #     context.query()
+    #     .with_columns(pl.col.alpha.cast(pl.Enum(["A", "B", "C"]), strict=False))
+    #     .group_by(pl.col.alpha)
+    #     .agg(dp.len())
+    #     .release()
+    #     .collect()
+    # )
+
+    # pl_testing.assert_series_equal(
+    #     context.query()
+    #     .group_by(pl.col.alpha.cast(pl.Enum(["A", "B", "C"])))
+    #     .agg(dp.len())
+    #     .release()
+    #     .collect()["alpha"].sort(), 
+    #     # TODO: why is this collecting to categorical?
+    #     pl.Series("alpha", ["A", "B", "C"], pl.Enum(["A", "B", "C"]))
+    # )
