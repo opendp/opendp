@@ -1081,3 +1081,49 @@ def test_replace_strict():
         .collect()["alpha"][0],
         int
     )
+
+def test_cast_enum():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+    # this triggers construction of a lazyframe domain from the schema
+    context = dp.Context.compositor(
+        data=pl.LazyFrame(pl.Series("alpha", ["A", "B", "C"] * 100)),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=1,
+        margins=[dp.polars.Margin(by=(), max_partition_length=300)],
+    )
+
+    enum_dtype = pl.Enum(["A", "B", "C"])
+
+    pl_testing.assert_series_equal(
+        context.query()
+        .with_columns(pl.col.alpha.cast(enum_dtype))
+        .group_by(pl.col.alpha)
+        .agg(dp.len())
+        .release()
+        .collect()["alpha"]
+        .sort()
+        # TODO: why is this collecting to categorical?
+        .cast(enum_dtype), 
+        pl.Series("alpha", ["A", "B", "C"], enum_dtype)
+    )
+
+def test_enum_domain():
+    pl = pytest.importorskip("polars")
+
+    enum_dtype = pl.Enum(["A", "B", "C"])
+    # this triggers construction of a lazyframe domain from the schema
+    context = dp.Context.compositor(
+        data=pl.LazyFrame(pl.Series("alpha", ["A", "B", "C"] * 100, dtype=enum_dtype)),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=1,
+    )
+    observed = context.accountant.input_domain
+    expected = dp.lazyframe_domain([
+        dp.series_domain("alpha", dp.option_domain(dp.enum_domain(enum_dtype.categories))),
+    ])
+
+    # check that domain is as expected
+    assert observed == expected

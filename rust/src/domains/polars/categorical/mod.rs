@@ -4,6 +4,9 @@ use polars::prelude::PlSmallStr;
 
 use crate::{core::Domain, error::Fallible};
 
+#[cfg(feature = "ffi")]
+mod ffi;
+
 /// A domain that represents categorical data.
 ///
 /// Categorical data is ostensibly a string,

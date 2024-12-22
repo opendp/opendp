@@ -1,4 +1,4 @@
-use crate::domains::{AtomDomain, LazyFrameDomain};
+use crate::domains::{AtomDomain, LazyFrameDomain, SeriesDomain};
 use crate::metrics::SymmetricDistance;
 use crate::transformations::make_stable_lazyframe;
 
