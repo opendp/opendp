@@ -67,9 +67,12 @@ where
         >> Transformation::new(
             middle_domain,
             output_domain,
-            Function::new(move |plan: &DslPlan| DslPlan::Filter {
-                input: Arc::new(plan.clone()),
-                predicate: predicate.clone(),
+            Function::new_fallible(move |plan: &DslPlan| {
+                let predicate = t_pred.invoke(plan)?.expr;
+                Ok(DslPlan::Filter {
+                    input: Arc::new(plan.clone()),
+                    predicate: predicate.clone(),
+                })
             }),
             middle_metric.clone(),
             middle_metric,
