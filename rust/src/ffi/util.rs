@@ -43,7 +43,8 @@ pub struct Pairwise<T>(PhantomData<T>);
 // If polars is not enabled, then these structs don't exist.
 #[cfg(feature = "polars")]
 use crate::domains::{
-    CategoricalDomain, DatetimeDomain, ExprDomain, ExprPlan, LazyFrameDomain, SeriesDomain,
+    CategoricalDomain, DatetimeDomain, EnumDomain, ExprDomain, ExprPlan, LazyFrameDomain,
+    SeriesDomain,
 };
 #[cfg(feature = "polars")]
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
@@ -305,8 +306,8 @@ lazy_static! {
             type_vec![AtomDomain, <NaiveDate, NaiveTime>],
             type_vec![[OptionDomain AtomDomain], <NaiveDate, NaiveTime>],
 
-            type_vec![CategoricalDomain, DatetimeDomain],
-            type_vec![OptionDomain, <CategoricalDomain, DatetimeDomain>],
+            type_vec![CategoricalDomain, DatetimeDomain, EnumDomain],
+            type_vec![OptionDomain, <CategoricalDomain, DatetimeDomain, EnumDomain>],
 
             vec![t!((DslPlan, Expr))],
             type_vec![Vec, <(DslPlan, Expr), SeriesDomain, Expr>],

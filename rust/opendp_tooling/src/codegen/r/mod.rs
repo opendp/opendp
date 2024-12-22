@@ -12,7 +12,7 @@ mod c;
 pub(crate) mod r;
 
 // some functions are called directly by R's C layer instead of through the codegen
-const BLACKLIST: &'static [&'static str] = &[
+const BLOCKLIST: &'static [&'static str] = &[
     // core
     "_error_free",
     "bool_free",
@@ -52,6 +52,7 @@ const BLACKLIST: &'static [&'static str] = &[
     "new_arrow_array",
     "series_domain",
     "categorical_domain",
+    "enum_domain",
     "datetime_domain",
     "arrow_array_free",
     "dataframe_domain",
