@@ -54,6 +54,9 @@ mod expr_len;
 mod expr_lit;
 
 #[cfg(feature = "contrib")]
+mod expr_replace;
+
+#[cfg(feature = "contrib")]
 mod expr_sum;
 
 #[cfg(feature = "contrib")]
@@ -161,6 +164,12 @@ where
                 function: ToPhysical,
                 ..
             } => expr_to_physical::make_expr_to_physical(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Function {
+                function: Replace,
+                ..
+            } => expr_replace::make_expr_replace(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
             Function {
