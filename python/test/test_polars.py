@@ -1012,3 +1012,46 @@ def test_temporal_domain():
 
     # check that domain is as expected
     assert observed == expected
+
+def test_replace():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    # this triggers construction of a lazyframe domain from the schema
+    context = dp.Context.compositor(
+        data=pl.LazyFrame(pl.Series("alpha", ["A", "B", "C"] * 100)),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=4,
+        margins=[dp.polars.Margin(by=(), max_partition_length=5)],
+    )
+    
+    # replace multiple input values with one output value    
+    pl_testing.assert_series_equal(
+        context.query()
+        .group_by(pl.col.alpha.replace(["A", "B"], "D"))
+        .agg(dp.len())
+        .release()
+        .collect()["alpha"].sort(), 
+        pl.Series("alpha", ["C", "D"])
+    )
+
+    # replace multiple input values with respective output values (lists)
+    pl_testing.assert_series_equal(
+        context.query()
+        .group_by(pl.col.alpha.replace(["A", "B"], ["D", "E"]))
+        .agg(dp.len())
+        .release()
+        .collect()["alpha"].sort(), 
+        pl.Series("alpha", ["C", "D", "E"])
+    )
+
+    # replace multiple input values with respective output values (dict)
+    pl_testing.assert_series_equal(
+        context.query()
+        .group_by(pl.col.alpha.replace({"A": "D", "B": "E"}))
+        .agg(dp.len())
+        .release()
+        .collect()["alpha"].sort(), 
+        pl.Series("alpha", ["C", "D", "E"])
+    )
