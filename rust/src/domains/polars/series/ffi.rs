@@ -6,7 +6,8 @@ use opendp_derive::bootstrap;
 use crate::{
     core::{FfiResult, MetricSpace},
     domains::{
-        AtomDomain, CategoricalDomain, DatetimeDomain, EnumDomain, OptionDomain, PrimitiveDataType,
+        ArrayDomain, AtomDomain, CategoricalDomain, DatetimeDomain, EnumDomain, OptionDomain,
+        PrimitiveDataType,
     },
     error::Fallible,
     ffi::{
@@ -46,22 +47,20 @@ pub extern "C" fn opendp_domains__series_domain(
     let DA = element_domain.type_.clone();
     let T = try_!(DA.get_atom());
 
+    macro_rules! handle_type {
+        ($type:ty) => {
+            if DA == Type::of::<$type>() {
+                let element_domain = try_!(element_domain.downcast_ref::<$type>()).clone();
+                return Ok(AnyDomain::new(series_domain(name, element_domain))).into();
+            }
+        };
+    }
+
     if DA.descriptor.starts_with("OptionDomain") {
-        if T == Type::of::<CategoricalDomain>() {
-            let element_domain =
-                try_!(element_domain.downcast_ref::<OptionDomain<CategoricalDomain>>()).clone();
-            return Ok(AnyDomain::new(series_domain(name, element_domain))).into();
-        }
-        if T == Type::of::<EnumDomain>() {
-            let element_domain =
-                try_!(element_domain.downcast_ref::<OptionDomain<EnumDomain>>()).clone();
-            return Ok(AnyDomain::new(series_domain(name, element_domain))).into();
-        }
-        if T == Type::of::<DatetimeDomain>() {
-            let element_domain =
-                try_!(element_domain.downcast_ref::<OptionDomain<DatetimeDomain>>()).clone();
-            return Ok(AnyDomain::new(series_domain(name, element_domain))).into();
-        }
+        handle_type!(OptionDomain<CategoricalDomain>);
+        handle_type!(OptionDomain<EnumDomain>);
+        handle_type!(OptionDomain<ArrayDomain>);
+        handle_type!(OptionDomain<DatetimeDomain>);
 
         fn monomorphize_option<T: 'static + CheckAtom + PrimitiveDataType>(
             name: &str,
@@ -85,19 +84,10 @@ pub extern "C" fn opendp_domains__series_domain(
         )
         .into()
     } else {
-        if T == Type::of::<CategoricalDomain>() {
-            let element_domain = try_!(element_domain.downcast_ref::<CategoricalDomain>()).clone();
-            return Ok(AnyDomain::new(series_domain(name, element_domain))).into();
-        }
-        if T == Type::of::<EnumDomain>() {
-            let element_domain = try_!(element_domain.downcast_ref::<EnumDomain>()).clone();
-            return Ok(AnyDomain::new(series_domain(name, element_domain))).into();
-        }
-
-        if T == Type::of::<DatetimeDomain>() {
-            let element_domain = try_!(element_domain.downcast_ref::<DatetimeDomain>()).clone();
-            return Ok(AnyDomain::new(series_domain(name, element_domain))).into();
-        }
+        handle_type!(CategoricalDomain);
+        handle_type!(EnumDomain);
+        handle_type!(ArrayDomain);
+        handle_type!(DatetimeDomain);
 
         fn monomorphize_atom<T: 'static + CheckAtom + PrimitiveDataType>(
             name: &str,
