@@ -2,30 +2,31 @@
 \input{../../../../lib.sty}
 
 
-\title{\texttt{Bounded Range to Pure DP}}
+\title{\texttt{fn make\_bounded\_range\_to\_pureDP}}
 \author{Tudor Cebere}
 
 \begin{document}
 \maketitle
 
 \contrib
-Proves soundness of \texttt{fn bounded\_range\_to\_pureDP} in \asOfCommit{mod.rs}{0b8f4222}.
+Proves soundness of \texttt{fn make\_bounded\_range\_to\_pureDP}. % in \asOfCommit{mod.rs}{0b8f4222}.
 This proof is an adaptation of Lemma 2 \href{https://differentialprivacy.org/exponential-mechanism-bounded-range/}{here}, which proves the conversion between bounded range \cite{durfee2019practical} and pure DP.
 
-\subsection{Hoare Triple}
-\subsubsection*{Preconditions}
+\section{Hoare Triple}
+\subsection*{Preconditions}
+\subsubsection*{Compiler-verified}
 \begin{itemize}
-    \item \textbf{User-specified types:}
-    \begin{itemize}
-        \item Variable \texttt{eta} must be of type float64
-    \end{itemize}
+    \item Variable \texttt{eta} must be of type float64
 \end{itemize}
 
-\subsubsection*{Pseudocode}
+\subsubsection*{User-verified}
+None
 
-\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/br_pure_dp.py}
+\subsection*{Pseudocode}
 
-\subsubsection*{Postcondition}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_bounded_range_to_pureDP.py}
+
+\subsection*{Postcondition}
 
 \begin{definition}[$\eta$-Range Bounded]
 \label{def:br}
