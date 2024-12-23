@@ -2,7 +2,7 @@
 \input{../../../../lib.sty}
 
 
-\title{\texttt{Bounded Range to zCDP}}
+\title{\texttt{fn make\_bounded\_range\_to\_zCDP}}
 \author{Tudor Cebere}
 
 \begin{document}
@@ -12,17 +12,21 @@
 Proves soundness of \texttt{fn bounded\_range\_to\_zCDP} in \asOfCommit{mod.rs}{0b8f4222}.
 This proof is an adaptation of Theorem 5 \href{https://differentialprivacy.org/exponential-mechanism-bounded-range/}{here}, which proves the conversion between bounded range \cite{durfee2019practical} and zCDP.
 
-\subsection{Hoare Triple}
-\subsubsection*{Preconditions}
+\section{Hoare Triple}
+\subsection*{Preconditions}
+\subsubsection*{Compiler-verified}
 \begin{itemize}
     \item Variable \texttt{eta} must be of type float64
 \end{itemize}
 
-\subsubsection*{Pseudocode}
+\subsubsection*{Human-verified}
+None
 
-\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/br_zcdp.py}
+\subsection*{Pseudocode}
 
-\subsubsection*{Postcondition}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_bounded_range_to_zCDP.py}
+
+\subsection*{Postcondition}
 \begin{definition}[Privacy Loss Random Variable]
     Let $M : X^n \to \Omega$ be a randomized mechanism, and let $D, D' \in X^n$ be two neighboring datasets. 
     For each possible output $y \in \Omega$, define the \emph{privacy loss at $y$} as
