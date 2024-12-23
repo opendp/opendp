@@ -69,6 +69,9 @@ mod expr_sum;
 mod expr_to_physical;
 
 #[cfg(feature = "contrib")]
+mod namespace_arr;
+
+#[cfg(feature = "contrib")]
 mod namespace_dt;
 
 #[cfg(feature = "contrib")]
@@ -185,6 +188,12 @@ where
                 function: Replace,
                 ..
             } => expr_replace::make_expr_replace(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Function {
+                function: FunctionExpr::ArrayExpr(_),
+                ..
+            } => namespace_arr::make_namespace_arr(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
             Function {
