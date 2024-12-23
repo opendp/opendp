@@ -212,6 +212,9 @@ def test_report_noisy_max_gumbel():
     print("should be 8-ish", meas(list(range(10))))
     assert meas.map(2) == 2
 
+    assert dp.c.make_bounded_range_to_pureDP(meas).map(1) == 1
+    assert dp.c.make_bounded_range_to_zCDP(meas).map(1) == 1 / 8
+
 
 def test_alp_histogram():
     counter = dp.t.make_count_by(
