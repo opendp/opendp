@@ -1,4 +1,5 @@
 use dashu::ibig;
+use opendp_derive::bootstrap;
 
 use crate::{
     core::{Domain, Measurement, Metric, MetricSpace, PrivacyMap},
@@ -7,6 +8,14 @@ use crate::{
     traits::{InfDiv, InfPowI},
 };
 
+#[cfg(feature = "ffi")]
+mod ffi;
+
+#[bootstrap(
+    features("contrib"),
+    arguments(meas(rust_type = "AnyMeasurement")),
+    generics(DI(suppress), TO(suppress), MI(suppress))
+)]
 /// Constructs a new output measurement where the output measure
 /// is casted from `BoundedRange` to `ZeroConcentratedDivergence`.
 ///
