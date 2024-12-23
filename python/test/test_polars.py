@@ -1126,3 +1126,22 @@ def test_enum_domain():
 
     # check that domain is as expected
     assert observed == expected
+
+
+def test_array_domain():
+    pl = pytest.importorskip("polars")
+
+    # this triggers construction of a lazyframe domain from the schema
+    context = dp.Context.compositor(
+        data=pl.LazyFrame(pl.Series("alpha", [["A", "B", "C"]] * 100, dtype=pl.Array(pl.String, 3))),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=1,
+    )
+    observed = context.accountant.input_domain
+    expected = dp.lazyframe_domain([
+        dp.series_domain("alpha", dp.option_domain(dp.array_domain(dp.atom_domain(T=str), 3))),
+    ])
+
+    # check that domain is as expected
+    assert observed == expected
