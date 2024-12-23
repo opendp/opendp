@@ -14,8 +14,8 @@ use crate::error::*;
 use crate::ffi::any::{AnyObject, AnyQueryable};
 use crate::measures::ffi::ExtrinsicDivergence;
 use crate::measures::{
-    Approximate, MaxDivergence, PrivacyProfile, RenyiDivergence, SmoothedMaxDivergence,
-    ZeroConcentratedDivergence,
+    Approximate, BoundedRange, MaxDivergence, PrivacyProfile, RenyiDivergence,
+    SmoothedMaxDivergence, ZeroConcentratedDivergence,
 };
 use crate::metrics::{
     AbsoluteDistance, ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance,
@@ -382,7 +382,9 @@ lazy_static! {
             type_vec![L2Distance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
 
             // measures
-            type_vec![MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence, RenyiDivergence, ExtrinsicDivergence],
+            type_vec![MaxDivergence, SmoothedMaxDivergence],
+            type_vec![ZeroConcentratedDivergence, RenyiDivergence],
+            type_vec![BoundedRange, ExtrinsicDivergence],
             type_vec![Approximate, <MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence, RenyiDivergence, ExtrinsicDivergence>],
 
             // measure distances
