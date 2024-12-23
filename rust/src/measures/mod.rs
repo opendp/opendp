@@ -251,17 +251,20 @@ impl Measure for RenyiDivergence {
     type Distance = Function<f64, f64>;
 }
 
-// $epsilon$-bounded range.
+/// Privacy measure used to define $\eta$-Bounded Range.
 ///
 /// The greatest bounded range divergence between any randomly selected subset of the support.
 ///
 /// # Proof Definition
 ///
 /// ### `d`-closeness
-/// For any two vectors $u, v \in \texttt{D}$ and any $d$ of generic type $\texttt{Q}$,
-/// define $P$ and $Q$ to be the distributions of $M(u)$ and $M(v)$.
-/// We say that $u, v$ are $d$-close under bounded range divergence measure (abbreviated as $D_{\alpha}$)
-/// TODO: Finish this
+/// For any two distributions $Y, Y'$ and any non-negative $d$ ($\eta$),
+/// $Y, Y'$ are $d$-close under the bounded-range privacy measure whenever,
+/// there exists some choice of $t \in \mathbb{R}$ such that
+///
+/// ```math
+/// D_{\mathrm{BR}}(Y, Y') = \max_{y \in \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y = s]}{\Pr[Y' = s]} \Big] \in [t, t + d].
+/// ```
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct BoundedRange;
 
