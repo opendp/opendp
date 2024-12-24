@@ -1,15 +1,15 @@
 use crate::core::PrivacyMap;
-use crate::domains::{ExprPlan, WildExprDomain};
-use crate::measurements::{report_noisy_max_gumbel_map, select_score, Optimize};
+use crate::domains::{AtomDomain, ExprPlan, VectorDomain, WildExprDomain};
+use crate::measurements::{make_report_noisy_max, select_score, ArgmaxMeasure, Optimize};
 use crate::metrics::{IntDistance, LInfDistance, Parallel, PartitionDistance};
 use crate::polars::{apply_plugin, literal_value_of, match_plugin, OpenDPPlugin};
+use crate::traits::samplers::GumbelRV;
 use crate::traits::{InfCast, InfMul, Number};
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::StableExpr;
 use crate::{
     core::{Function, Measurement},
     error::Fallible,
-    measures::MaxDivergence,
 };
 use dashu::float::FBig;
 
@@ -42,12 +42,12 @@ mod test;
 /// * `input_metric` - The metric space under which neighboring LazyFrames are compared
 /// * `expr` - The expression to which the selection will be applied
 /// * `global_scale` - (Re)scale the noise distribution
-pub fn make_expr_report_noisy_max<MI: 'static + UnboundedMetric>(
+pub fn make_expr_report_noisy_max<MI: 'static + UnboundedMetric, MO: 'static + ArgmaxMeasure>(
     input_domain: WildExprDomain,
     input_metric: PartitionDistance<MI>,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<WildExprDomain, ExprPlan, PartitionDistance<MI>, MaxDivergence>>
+) -> Fallible<Measurement<WildExprDomain, ExprPlan, PartitionDistance<MI>, MO>>
 where
     Expr: StableExpr<PartitionDistance<MI>, Parallel<LInfDistance<f64>>>,
 {
@@ -101,6 +101,15 @@ where
         );
     }
 
+    let m_rnm = make_report_noisy_max(
+        VectorDomain::<AtomDomain<f64>>::default(),
+        middle_metric.0.clone(),
+        MO::default(),
+        scale,
+        optimize,
+    )?;
+    let privacy_map = m_rnm.privacy_map.clone();
+
     t_prior
         >> Measurement::<_, _, Parallel<LInfDistance<f64>>, _>::new(
             middle_domain,
@@ -115,10 +124,9 @@ where
                 )
             }),
             middle_metric.clone(),
-            MaxDivergence::default(),
+            MO::default(),
             PrivacyMap::new_fallible(move |(l0, li): &(IntDistance, f64)| {
-                let linf_metric = middle_metric.0.clone();
-                let epsilon = report_noisy_max_gumbel_map(scale, linf_metric)(li)?;
+                let epsilon = privacy_map.eval(li)?;
                 f64::inf_cast(*l0)?.inf_mul(&epsilon)
             }),
         )?
@@ -260,7 +268,7 @@ fn report_noisy_max_gumbel_udf(
     where
         // the physical (rust) dtype must be a number that can be converted into a rational
         for<'a> PT::Physical<'a>: NativeType + Number,
-        for<'a> FBig: TryFrom<PT::Physical<'a>>,
+        FBig: for<'a> TryFrom<PT::Physical<'a>>,
     {
         Ok(column
             .as_materialized_series()
@@ -275,8 +283,12 @@ fn report_noisy_max_gumbel_udf(
                         PolarsError::InvalidOperation("input dtype does not match".into())
                     })?;
 
-                select_score(arr.values_iter().cloned(), optimize.clone(), scale.clone())
-                    .map(|idx| idx as u32)
+                select_score::<_, GumbelRV>(
+                    arr.values_iter().cloned(),
+                    optimize.clone(),
+                    scale.clone(),
+                )
+                .map(|idx| idx as u32)
             })?
             // convert the resulting chunked array back to a series
             .into_series()
