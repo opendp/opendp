@@ -774,7 +774,7 @@ try:
             """
             Select columns from this ``LazyFrame``.
 
-            OpenDP allows expressions in select statements that aggregate to not be row-by-row.
+            OpenDP expects expressions in select statements that don't aggregate to be row-by-row.
             """
             ...
 
