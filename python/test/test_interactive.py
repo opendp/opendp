@@ -24,7 +24,7 @@ def test_sequential_composition():
     )
 
     print("evaluating")
-    print("TODO: explain", sc_qbl(sum_query))
+    print("TODO: explain: sc_qbl(sum_query)", sc_qbl(sum_query))
 
     exact_sum = (
         sc_meas.input_space

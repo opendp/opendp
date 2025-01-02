@@ -31,5 +31,5 @@ def test_private_np_sum():
     meas = space >> then_private_np_sum(dp.zero_concentrated_divergence(), scale=1.)
     np = pytest.importorskip('numpy')
     data = np.random.normal(size=(1000, 4))
-    print("TODO: explain", meas(data))
+    print("TODO: explain: meas(data)", meas(data))
     assert meas.map(1) == 0.5

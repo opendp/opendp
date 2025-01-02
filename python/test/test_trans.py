@@ -389,8 +389,8 @@ def test_lipschitz_b_ary_tree():
         alphas=[0., .1, .2, .3, .4, .5, .6, .7, .8, .9, 1.])
 
     data = ["A"] * 34 + ["B"] * 23 + ["C"] * 12 + ["D"] * 84 + ["E"] * 34 + ["F"] * 85 + ["G"] * 75
-    print("TODO: explain", meas_cdf(data))
-    print("TODO: explain", meas_quantiles(data))
+    print("TODO: explain: meas_cdf(data)", meas_cdf(data))
+    print("TODO: explain: meas_quantiles(data)", meas_quantiles(data))
 
     assert meas_cdf.map(1) == 4.
 

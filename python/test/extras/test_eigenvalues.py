@@ -25,5 +25,5 @@ def test_eigenvalues():
 
     # also test the private constructor
     meas = space >> then_private_eigenvalues(dp.max_divergence(), scale=1.0)
-    print("TODO: explain", meas(data))
+    print("TODO: explain: meas(data)", meas(data))
     assert meas.map(1) == 1.0

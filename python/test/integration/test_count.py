@@ -18,7 +18,7 @@ def test_count():
     k = 40
     data = "\n".join(map(str, range(k)))
 
-    print("TODO: explain", noisy_count_from_dataframe(data))
+    print("TODO: explain: noisy_count_from_dataframe(data)", noisy_count_from_dataframe(data))
 
 
 def test_count_distinct():
@@ -37,7 +37,7 @@ def test_count_distinct():
     k = 40
     data = "\n".join(map(str, range(k)))
 
-    print("TODO: explain", noisy_count_from_dataframe(data))
+    print("TODO: explain: noisy_count_from_dataframe(data)", noisy_count_from_dataframe(data))
 
 
 def test_float_count():
@@ -50,5 +50,5 @@ def test_float_count():
     k = 40
     data = "\n".join(map(str, range(k)))
 
-    print("TODO: explain", (preprocess >> dp.m.then_laplace(1.))(data))
-    print("TODO: explain", (preprocess >> dp.m.then_gaussian(1.))(data))
+    print("TODO: explain: (preprocess >> dp.m.then_laplace(1.))(data)", (preprocess >> dp.m.then_laplace(1.))(data))
+    print("TODO: explain: (preprocess >> dp.m.then_gaussian(1.))(data)", (preprocess >> dp.m.then_gaussian(1.))(data))

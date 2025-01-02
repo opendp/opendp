@@ -39,5 +39,5 @@ def test_make_sized_bounded_int_split_sum():
 def test_make_discrete_gaussian_sum():
     meas_dg_sum = dp.t.make_sized_bounded_int_split_sum(3, (0, 10)) >> dp.m.then_gaussian(2.)
 
-    print("TODO: explain", meas_dg_sum([1, 2, 4]))
+    print("TODO: explain: meas_dg_sum([1, 2, 4])", meas_dg_sum([1, 2, 4]))
     assert meas_dg_sum.check(3, 12.5)

@@ -37,7 +37,7 @@ def test_pca():
         m_pca = space >> then_private_pca(unit_epsilon=1.0)
 
     with optional_dependency('randomgen'):
-        print("TODO: explain", m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows)))
+        print("TODO: explain: m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows))", m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows)))
     assert m_pca.check(2, 1.0)
 
 
@@ -81,7 +81,7 @@ def test_pca_skl():
     )
     meas = model.measurement()
     meas(data)
-    print("TODO: explain", model.components_)
+    print("TODO: explain: model.components_", model.components_)
 
 
 def flip_row_signs(a, b):
