@@ -82,7 +82,6 @@ def test_roundtrip_ffisliceptr_int():
     ffi_slice_ptr = FfiSlicePtr(ffi_slice)
     ffi_slice = ffi_slice_ptr.contents
     out = ctypes.cast(ffi_slice.ptr, ctypes.POINTER(ctypes.c_int32)).contents.value
-    print("TODO: explain", out)
     assert out == in_
 
 
@@ -90,7 +89,6 @@ def test_roundtrip_ffisliceptr_int_lib():
     in_ = 23
     ffi_slice_ptr = _scalar_to_slice(in_, 'i32')
     out = _slice_to_scalar(ffi_slice_ptr, 'i32')
-    print("TODO: explain", out)
     assert out == in_
 
 
@@ -118,7 +116,7 @@ def test_hashmap():
 def test_numpy_data():
     np = pytest.importorskip('numpy')
     def roundtrip(value, type_name, dtype=None):
-        print("TODO: explain", c_to_py(py_to_c(np.array(value, dtype=dtype), AnyObjectPtr, type_name=type_name)))
+        assert value == c_to_py(py_to_c(np.array(value, dtype=dtype), AnyObjectPtr, type_name=type_name))
     roundtrip([1, 2], "Vec<i32>", dtype=np.int32)
     roundtrip(1, "i32", dtype=np.int32)
     roundtrip([1., 2.], "Vec<f64>")

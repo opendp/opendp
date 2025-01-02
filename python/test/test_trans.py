@@ -121,7 +121,7 @@ def test_split_lines__cast__impute():
 
     assert query("1\n2\n3") == [1, 2, 3]
     query.check(1, 1)
-    print("TODO: explain", query.map(1))
+    assert query.map(1) == 1
 
 
 def test_inherent_cast__impute():
@@ -234,7 +234,6 @@ def test_bounded_variance():
     query = dp.t.make_variance(
         dp.vector_domain(dp.atom_domain(bounds=(0., 10.)), size=9),
         dp.symmetric_distance())
-    print("TODO: explain", query(FLOAT_DATA))
     assert query(FLOAT_DATA) == 7.5
     assert query.check(2, 11.111111 + 1e-6)
 
@@ -317,8 +316,8 @@ def test_indexing():
 def test_lipschitz_mul_float():
     trans = dp.t.make_sized_bounded_float_ordered_sum(10, (0., 10.)) >> dp.t.make_lipschitz_float_mul(1 / 10, (-3., 4.))
 
-    print("TODO: explain", trans([3.] * 10))
-    print("TODO: explain", trans.map(2))
+    assert trans([3.] * 10) == 0.4
+    assert trans.map(2) == 1.0000000000000153
 
 
 # pytest.mark will override pytest.ini and reenable DeprecationWarnings,

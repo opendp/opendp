@@ -75,7 +75,7 @@ def make_postprocess_frac():
 
 def test_make_user_postprocessor():
     mech = make_postprocess_frac()
-    print("TODO: explain", mech([12., 100.]))
+    assert mech([12., 100.]) == 0.12
 
 
 def test_user_constructors():

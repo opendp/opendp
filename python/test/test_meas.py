@@ -228,10 +228,10 @@ def test_alp_histogram():
 
     alp_qbl = alp_meas(["A"] * 20 + ["B"] * 10)
 
-    print("TODO: explain", alp_qbl("A"))
-    print("TODO: explain", alp_qbl("B"))
-    print("TODO: explain", alp_qbl("C"))
-    print("TODO: explain", alp_meas.map(1))
+    print("Should be high-ish", alp_qbl("A"))
+    print("Should be mid-ish", alp_qbl("B"))
+    print("Should be low-ish", alp_qbl("C"))
+    assert alp_meas.map(1) == 1
 
 def test_randomized_response_bitvec():
     np = pytest.importorskip('numpy')

@@ -98,26 +98,26 @@ def test_supporting_elements():
     input_metric = symmetric_distance()
 
     clamper = make_clamp(input_domain, input_metric, (0, 2))
-    print("TODO: explain", clamper.input_domain)
-    print("TODO: explain", clamper.input_domain.carrier_type)
-    print("TODO: explain", clamper.output_domain)
-    print("TODO: explain", clamper.output_domain.carrier_type)
-    print("TODO: explain", clamper.input_metric)
-    print("TODO: explain", clamper.input_metric.distance_type)
-    print("TODO: explain", clamper.output_metric)
-    print("TODO: explain", clamper.output_metric.distance_type)
+    assert str(clamper.input_domain) == 'VectorDomain(AtomDomain(T=i32))'
+    assert str(clamper.input_domain.carrier_type) == 'Vec<i32>'
+    assert str(clamper.output_domain) == 'VectorDomain(AtomDomain(bounds=[0, 2], T=i32))'
+    assert str(clamper.output_domain.carrier_type) == 'Vec<i32>'
+    assert str(clamper.input_metric) == 'SymmetricDistance()'
+    assert str(clamper.input_metric.distance_type) == 'u32'
+    assert str(clamper.output_metric) == 'SymmetricDistance()'
+    assert str(clamper.output_metric.distance_type) == 'u32'
 
     from opendp.measurements import make_laplace
     from opendp.domains import atom_domain
     from opendp.metrics import absolute_distance
 
     mechanism = make_laplace(atom_domain(T=float), absolute_distance(T=float), 1.0)
-    print("TODO: explain", mechanism.input_domain)
-    print("TODO: explain", mechanism.input_domain.carrier_type)
-    print("TODO: explain", mechanism.input_metric)
-    print("TODO: explain", mechanism.input_metric.distance_type)
-    print("TODO: explain", mechanism.output_measure)
-    print("TODO: explain", mechanism.output_measure.distance_type)
+    assert str(mechanism.input_domain) == 'AtomDomain(T=f64)'
+    assert str(mechanism.input_domain.carrier_type) == 'f64'
+    assert str(mechanism.input_metric) == 'AbsoluteDistance(f64)'
+    assert str(mechanism.input_metric.distance_type) == 'f64'
+    assert str(mechanism.output_measure) == 'MaxDivergence'
+    assert str(mechanism.output_measure.distance_type) == 'f64'
 
 
 def test_function():
@@ -171,36 +171,41 @@ def test_new_domain():
 
     domain = atom_domain(T=dp.i32)
     assert domain.member(3)
+    assert str(domain) == 'AtomDomain(T=i32)'
+
     domain = atom_domain(T=dp.f64)
     assert not domain.member(float("nan"))
+    assert str(domain) == 'AtomDomain(T=f64)'
 
     domain = atom_domain((1, 2))
     assert domain.member(2)
     assert not domain.member(3)
-    print("TODO: explain", domain)
+    assert str(domain) == 'AtomDomain(bounds=[1, 2], T=i32)'
 
     domain = vector_domain(atom_domain(T=dp.i32))
     assert domain.member([2])
-    print("TODO: explain", domain)
+    assert str(domain) == 'VectorDomain(AtomDomain(T=i32))'
+
     domain = vector_domain(atom_domain((2, 3)))
     assert domain.member([2])
     assert not domain.member([2, 4])
-    print("TODO: explain", domain)
+    assert str(domain) == 'VectorDomain(AtomDomain(bounds=[2, 3], T=i32))'
 
     domain = vector_domain(atom_domain(T=dp.i32), 10)
     assert domain.member([1] * 10)
-    print("TODO: explain", domain)
+    assert str(domain) == 'VectorDomain(AtomDomain(T=i32), size=10)'
+
     domain = vector_domain(atom_domain((2.0, 7.0)), 10)
     assert domain.member([3.0] * 10)
     assert not domain.member([1.0] * 10)
-    print("TODO: explain", domain)
+    assert str(domain) == 'VectorDomain(AtomDomain(bounds=[2.0, 7.0], T=f64), size=10)'
 
     null_domain = atom_domain(nullable=True, T=float)
-    print("TODO: explain", null_domain)
+    assert str(null_domain) == 'AtomDomain(nullable=true, T=f64)'
     assert null_domain.member(float("nan"))
 
     not_null_domain = atom_domain(nullable=False, T=float)
-    print("TODO: explain", not_null_domain)
+    assert str(not_null_domain) == 'AtomDomain(T=f64)'
     assert not not_null_domain.member(float("nan"))
 
 

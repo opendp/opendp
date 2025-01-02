@@ -71,8 +71,9 @@ def test_count_by_threshold():
     data = "\n".join(["a"] * 500 + ["b"] * 200 + ["other"] * 100)
 
     assert pre(data) == {"a": 500, "b": 200, "other": 100}
-    print("TODO: explain", laplace_histogram_from_dataframe(data))
-    print("TODO: explain", scale, threshold)
+    print("laplace_histogram_from_dataframe", laplace_histogram_from_dataframe(data))
+    assert scale == 1.0
+    assert threshold == 18.727533563392424
 
     with pytest.raises(dp.OpenDPException):
         dp.m.make_laplace_threshold(
