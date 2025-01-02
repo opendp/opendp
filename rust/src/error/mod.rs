@@ -4,6 +4,7 @@ use std::fmt;
 use std::fmt::Debug;
 
 use std::backtrace::Backtrace as _Backtrace;
+use std::sync::PoisonError;
 
 use dashu::base::ConversionError;
 #[cfg(feature = "polars")]
@@ -162,6 +163,12 @@ impl From<ConversionError> for Error {
             message: Some(err.to_string()),
             backtrace: std::backtrace::Backtrace::capture(),
         }
+    }
+}
+
+impl<T> From<PoisonError<T>> for Error {
+    fn from(value: PoisonError<T>) -> Self {
+        err!(FailedFunction, "{:?}", value)
     }
 }
 
