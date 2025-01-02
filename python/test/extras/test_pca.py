@@ -37,7 +37,7 @@ def test_pca():
         m_pca = space >> then_private_pca(unit_epsilon=1.0)
 
     with optional_dependency('randomgen'):
-        print(m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows)))
+        print("m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows))", m_pca(sample_microdata(num_columns=num_columns, num_rows=num_rows)))
     assert m_pca.check(2, 1.0)
 
 
@@ -57,8 +57,8 @@ def test_pca_skl():
 
     with optional_dependency('randomgen'):
         model.fit(data)
-    print(model)
-
+    assert str(model) == 'PCA(epsilon=1.0, n_components=4, n_features=4, n_samples=10000, row_norm=1.0)'
+    print("PCA object", model)
     print("singular values", model.singular_values_)
     print("components", model.components_)
 
@@ -81,7 +81,7 @@ def test_pca_skl():
     )
     meas = model.measurement()
     meas(data)
-    print(model.components_)
+    print("model.components_", model.components_)
 
 
 def flip_row_signs(a, b):
@@ -109,11 +109,12 @@ def flaky_assert_pca_compare_sklearn():
     model_skl = sklearn.decomposition.PCA()
     model_skl.fit(data)
 
-    print(model_odp)
-    print(model_skl)
+    print("opendp object", model_odp)
+    print("opendp singular values", model_odp.singular_values_)
 
-    print("odp singular values", model_odp.singular_values_)
-    print("skl singular values", model_skl.singular_values_)
+    print("sk-learn object", model_skl)
+    print("sk-learn singular values", model_skl.singular_values_)
+
     np = pytest.importorskip('numpy')
     assert np.allclose(
         model_odp.singular_values_, model_skl.singular_values_, atol=1e-1
@@ -121,13 +122,13 @@ def flaky_assert_pca_compare_sklearn():
 
     odp_comp, skl_comp = flip_row_signs(model_odp.components_, model_skl.components_)
 
-    print("odp components\n", odp_comp)
-    print("skl components\n", skl_comp)
+    print("opendp components\n", odp_comp)
+    print("sk-learn components\n", skl_comp)
     print("diff\n", odp_comp - skl_comp)
     assert np.allclose(odp_comp, skl_comp, atol=1e-3)
 
-    print(model_skl.explained_variance_)
-    print(model_odp.explained_variance_)
+    print("opendp explained variance", model_odp.explained_variance_)
+    print("sk-learn explained variance", model_skl.explained_variance_)
 
 
 def test_pca_compare_sklearn():

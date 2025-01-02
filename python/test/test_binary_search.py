@@ -41,7 +41,7 @@ def test_stuck():
         d_in=1,
         bounds=(0.0, real_v * 2.0),
         d_out=epsilon)
-    print(discovered_scale)
+    assert discovered_scale == 192307694098.69745
     
 def test_binary_search():
     assert dp.binary_search(lambda x: x <= -5, T=int) == -5

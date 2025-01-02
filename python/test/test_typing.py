@@ -7,11 +7,11 @@ from opendp.typing import *
 
 def test_numpy_function():
     np = pytest.importorskip('numpy')
-    print(RuntimeType.infer(np.array([1, 2, 3])))
-    print(RuntimeType.infer(np.array(1)))
-    print(RuntimeType.infer(np.array(1.)))
-    print(RuntimeType.infer(np.array("A")))
-    print(RuntimeType.infer(np.array(["A", "B"])))
+    assert str(RuntimeType.infer(np.array([1, 2, 3]))) == 'Vec<i64>'
+    assert str(RuntimeType.infer(np.array(1))) == 'i32'
+    assert str(RuntimeType.infer(np.array(1.))) == 'f64'
+    assert str(RuntimeType.infer(np.array("A"))) == 'String'
+    assert str(RuntimeType.infer(np.array(["A", "B"]))) == 'Vec<String>'
 
 
 def test_typing_infer_to_string():
