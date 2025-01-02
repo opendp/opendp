@@ -55,9 +55,12 @@ def _load_library():
 lib, lib_path = _load_library()
 
 
+# Key: Optional module name
+# Value: The opendp extra that provides this module,
+#        with the appropriate version pin, if needed
 install_names = {
     'sklearn': 'scikit-learn',
-    'randomgen': 'scikit-learn',
+    'randomgen': 'numpy',
 }
 
 
