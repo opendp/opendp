@@ -4,10 +4,13 @@
 
 [flake8]
 exclude =
-    # suggested virtualenv for python/
-    .venv
-    # suggested virtualenv for docs/
+    # old
     venv
+    .venv
+    # suggested virtualenv for python/
+    .venv-dev
+    # suggested virtualenv for docs/
+    .venv-docs
     out
     vendor
 
