@@ -446,6 +446,6 @@ pub fn make_rustdoc_link(module: &str, name: &str) -> Result<String> {
     };
 
     Ok(format!(
-        "[{name} in Rust documentation.]({proof_uri}/opendp/{module}/fn.{name}.html)"
+        "[`{name}` in Rust documentation.]({proof_uri}/opendp/{module}/fn.{name}.html)"
     ))
 }

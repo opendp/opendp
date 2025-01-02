@@ -69,13 +69,13 @@ where
         (Categorical(_, _), UInt32) => {
             let cat_domain = active_series.element_domain::<CategoricalDomain>()?;
 
-            if cat_domain.encoding().is_none() {
+            if cat_domain.categories().is_none() {
                 return fallible!(MakeTransformation, "to_physical: to prevent potentially revealing information about row ordering, category ordering must be statically known. Convert to String first.");
             }
 
             active_series.set_element_domain(AtomDomain::<u32>::default());
         }
-        (Date, UInt32) => {
+        (Date, Int32) => {
             active_series.set_element_domain(AtomDomain::<u32>::default());
         }
         (Datetime(_, _) | Time | Duration(_), Int64) => {

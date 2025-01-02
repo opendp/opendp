@@ -59,7 +59,13 @@ where
         // Therefore if the float domain may be nullable, then the domain includes NaN
         DataType::Float32 => fill_series.atom_domain::<f32>()?.nullable(),
         DataType::Float64 => fill_series.atom_domain::<f64>()?.nullable(),
-        _ => return fallible!(MakeTransformation, "filler data for fill_nan must be float"),
+        i if i.is_numeric() => false,
+        _ => {
+            return fallible!(
+                MakeTransformation,
+                "filler data for fill_nan must be numeric"
+            )
+        }
     };
 
     if fill_can_be_nan {
@@ -75,20 +81,21 @@ where
         );
     }
 
-    let mut output_domain = data_domain.clone();
-    // fill_nan should not change the output context-- just require that its input is row-by-row
-    let series_domain = &mut output_domain.column;
-    series_domain.drop_bounds().ok();
-
+    let mut series_domain = data_domain.column.clone();
     match series_domain.dtype() {
-        DataType::Float32 => series_domain.set_element_domain(AtomDomain::<f32>::default()),
-        DataType::Float64 => series_domain.set_element_domain(AtomDomain::<f64>::default()),
+        DataType::Float32 => series_domain.set_element_domain(AtomDomain::<f32>::new(None, None)),
+        DataType::Float64 => series_domain.set_element_domain(AtomDomain::<f64>::new(None, None)),
         _ => {
             return fallible!(
                 MakeTransformation,
                 "fill_nan may only be applied to float data"
             )
         }
+    }
+    let output_domain = ExprDomain {
+        column: series_domain,
+        // fill_nan should not change the output context-- just require that its input is row-by-row
+        context: input_domain.context.clone(),
     };
 
     Transformation::new(
