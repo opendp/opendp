@@ -4,7 +4,6 @@ use polars_plan::dsl::{Expr, FunctionExpr};
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{CategoricalDomain, ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
-use crate::polars::ExprFunction;
 use crate::transformations::DatasetMetric;
 
 use super::StableExpr;
@@ -80,9 +79,9 @@ where
     } else {
         compute_labels(&breaks, left_closed)?
     };
-    let series_domain = &mut output_domain.column;
-    series_domain.element_domain = Arc::new(CategoricalDomain::new_with_encoding(categories)?);
-    series_domain.field.dtype = DataType::Categorical(None, Default::default());
+
+    let element_domain = CategoricalDomain::new_with_categories(categories)?;
+    output_domain.column.set_element_domain(element_domain);
 
     t_prior
         >> Transformation::new(

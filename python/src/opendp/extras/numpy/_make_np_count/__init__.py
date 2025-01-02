@@ -16,7 +16,7 @@ def make_np_count(input_domain: Domain, input_metric: Metric) -> Transformation:
     size = input_domain.descriptor.size
 
     if input_metric != dp.symmetric_distance():
-        raise ValueError("input metric must be symmetric distance")
+        raise ValueError("input metric must be symmetric distance")  # pragma: no cover
 
     return _make_transformation(
         input_domain,

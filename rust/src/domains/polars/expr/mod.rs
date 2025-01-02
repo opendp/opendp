@@ -1,7 +1,7 @@
 use polars::lazy::dsl::Expr;
 use polars::prelude::*;
 use std::collections::{BTreeSet, HashMap};
-use std::fmt::Debug;
+use std::fmt::{Debug, Formatter};
 
 use crate::core::{Metric, MetricSpace};
 use crate::metrics::{
@@ -38,7 +38,7 @@ pub enum Context {
     /// `.agg(exprs)` is the general case where there are grouping columns.
     /// `.select(exprs)` is the special case where there are no grouping columns.
     Grouping {
-        by: BTreeSet<SmartString>,
+        by: BTreeSet<PlSmallStr>,
         margin: Margin,
     },
 }
@@ -47,7 +47,7 @@ impl Context {
     /// # Proof Definition
     /// Return the grouping columns and margin specified by `self` if in a grouping context,
     /// otherwise return an error.
-    pub fn grouping(&self, operation: &str) -> Fallible<(BTreeSet<SmartString>, Margin)> {
+    pub fn grouping(&self, operation: &str) -> Fallible<(BTreeSet<PlSmallStr>, Margin)> {
         match self {
             Context::RowByRow { .. } => fallible!(
                 MakeDomain,
@@ -116,7 +116,7 @@ impl LazyFrameDomain {
 
     pub fn aggregate<S: AsRef<str>, const P: usize>(self, by: [S; P]) -> WildExprDomain {
         let by: BTreeSet<_> = by.iter().map(|s| s.as_ref().into()).collect();
-        let margin = self.get_margin(by.clone());
+        let margin = self.get_margin(&by);
         WildExprDomain {
             columns: self.series_domains,
             context: Context::Grouping { by, margin },
@@ -131,11 +131,55 @@ impl LazyFrameDomain {
     }
 }
 
+#[derive(Clone)]
+pub struct ExprPlan {
+    pub plan: DslPlan,
+    pub expr: Expr,
+    pub fill: Option<Expr>,
+}
+
+impl Debug for ExprPlan {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ExprPlan")
+            .field("expr", &self.expr)
+            .field("default", &self.fill.is_some())
+            .finish()
+    }
+}
+
+impl ExprPlan {
+    /// # Proof Definition
+    /// Return a compute plan where the expression and fill expression in `self` are extended by `function`.
+    pub fn then(&self, function: impl Fn(Expr) -> Expr) -> Self {
+        Self {
+            plan: self.plan.clone(),
+            expr: function(self.expr.clone()),
+            fill: self.fill.clone().map(function),
+        }
+    }
+}
+
+impl From<DslPlan> for ExprPlan {
+    fn from(value: DslPlan) -> Self {
+        ExprPlan {
+            plan: value,
+            expr: all(),
+            fill: None,
+        }
+    }
+}
+
+impl From<LazyFrame> for ExprPlan {
+    fn from(value: LazyFrame) -> Self {
+        ExprPlan::from(value.logical_plan)
+    }
+}
+
 impl Domain for ExprDomain {
-    type Carrier = (DslPlan, Expr);
+    type Carrier = ExprPlan;
 
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
-        let (plan, expr) = (LazyFrame::from(val.0.clone()), val.1.clone());
+        let (plan, expr) = (LazyFrame::from(val.plan.clone()), val.expr.clone());
         let frame = match &self.context {
             Context::RowByRow { .. } => plan.select([expr]),
             Context::Grouping { by, .. } => plan
@@ -144,7 +188,8 @@ impl Domain for ExprDomain {
         }
         .collect()?;
 
-        if !(self.column).member(frame.column(self.column.field.name.as_str())?)? {
+        let series = frame.column(&self.column.name)?.as_materialized_series();
+        if !(self.column).member(series)? {
             return Ok(false);
         }
 

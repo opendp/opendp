@@ -6,7 +6,6 @@ use crate::domains::{
     Bounds, ExprDomain, NumericDataType, OuterMetric, SeriesDomain, WildExprDomain,
 };
 use crate::error::*;
-use crate::polars::ExprFunction;
 use crate::traits::Number;
 use crate::transformations::DatasetMetric;
 
@@ -62,7 +61,7 @@ where
         let data_column = &mut output_domain.column;
 
         use DataType::*;
-        match &data_column.field.dtype {
+        match data_column.dtype() {
             UInt32 => extract_bounds::<u32>(lower, upper, data_column)?,
             UInt64 => extract_bounds::<u64>(lower, upper, data_column)?,
             Int8 => extract_bounds::<i8>(lower, upper, data_column)?,
@@ -117,7 +116,7 @@ fn extract_bounds<T: Number + NumericDataType + Literal>(
 
     let mut atom_domain = domain.atom_domain::<T>()?.clone();
     atom_domain.bounds = Some(Bounds::new_closed(bounds)?);
-    domain.element_domain = Arc::new(atom_domain);
+    domain.set_element_domain(atom_domain);
 
     Ok((bounds.0.lit(), bounds.1.lit()))
 }

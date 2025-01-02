@@ -32,6 +32,7 @@ from opendp.domains import (
     option_domain,
     atom_domain,
     categorical_domain,
+    datetime_domain,
 )
 from opendp.measurements import make_private_lazyframe
 
@@ -44,56 +45,15 @@ class DPExpr(object):
     An expression can be used as a plan in :py:func:`opendp.measurements.make_private_lazyframe`;
     See the full example there for more information.
 
+    In addition to the DP-specific methods here, many Polars ``Expr`` methods are also supported,
+    and are documented in the :ref:`API User Guide <expression-index>`.    
+
     This class is typically not used directly by users:
     Instead its methods are registered under the ``dp`` namespace of Polars expressions.
 
     >>> import polars as pl
     >>> pl.len().dp
     <opendp.extras.polars.DPExpr object at ...>
-
-    In addition to the DP-specific methods documented below, some Polars ``Expr`` methods are also supported.
-    For these, the best documentation is the `official Polars documentation <https://docs.pola.rs/api/python/stable/reference/expressions/index.html>`_.
-
-    .. list-table:: Supported Polars ``Expr`` Methods
-        :header-rows: 1
-
-        * - Method
-          - Comments
-        * - `alias <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.alias.html>`_
-          - Rename the expression
-        * - `eq, ne, lt, le, gt, ge <https://docs.pola.rs/api/python/stable/reference/expressions/operators.html#comparison>`_
-          - Comparison operators may be more readable: ``==`` ``!=`` ``<`` ``<=`` ``>`` ``>=``
-        * - `and_, or_, xor <https://docs.pola.rs/api/python/stable/reference/expressions/operators.html#conjunction>`_
-          - Bit-wise operators may be more readable: ``&`` ``|`` ``^``
-        * - `is_null, is_not_null, is_finite, is_not_finite, is_nan, is_not_nan, not <https://docs.pola.rs/api/python/stable/reference/expressions/boolean.html>`_
-          - Boolean information
-        * - `clip <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.clip.html>`_
-          - Set value outside bounds to boundary value
-        * - `fill_null <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.fill_null.html>`_, `fill_nan <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.fill_nan.html>`_
-          - Fill missing values with provided value
-        * - `lit <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.lit.html>`_
-          - Return an expression representing a literal value
-
-    A few ``Expr`` aggregation methods are also available:
-
-    .. list-table:: Supported Polars ``Expr`` Aggregation Methods
-        :header-rows: 1
-
-        * - Method
-          - Comments
-        * - `len <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.len.html>`_
-          - Number of elements in an expression, including nulls
-        * - `count <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.count.html>`_
-          - Number of non-null elements in an expression
-        * - `null_count <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.null_count.html>`_
-          - Number of null elements in an expression
-        * - `n_unique <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.n_unique.html>`_
-          - Number of unique elements in an expression, including null
-        * - `sum <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.sum.html>`_
-          - Sum
-
-    Note that frame `len <https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.len.html>`
-    can be different from expression len, if the expression can change the number of rows.
     """
 
     def __init__(self, expr):
@@ -420,7 +380,7 @@ class DPExpr(object):
         │ ---    │
         │ f64    │
         ╞════════╡
-        │ ...    │
+        │ ...... │
         └────────┘
 
         Privately estimates the numerator and denominator separately, and then returns their ratio.
@@ -655,6 +615,9 @@ def _series_domain_from_field(field) -> Domain:
     name, dtype = field
     if dtype == pl.Categorical:
         return series_domain(name, option_domain(categorical_domain()))
+    if dtype == pl.Datetime:
+        dt_domain = datetime_domain(dtype.time_unit, dtype.time_zone)
+        return series_domain(name, option_domain(dt_domain))
 
     T = {
         pl.UInt32: "u32",
@@ -667,10 +630,12 @@ def _series_domain_from_field(field) -> Domain:
         pl.Float64: "f64",
         pl.Boolean: "bool",
         pl.String: "String",
+        pl.Time: "NaiveTime",
+        pl.Date: "NaiveDate",
     }.get(dtype)
 
     if T is None:
-        raise ValueError(f"unrecognized dtype: {dtype}")
+        raise ValueError(f"unrecognized dtype: {dtype}")  # pragma: no cover
 
     element_domain = option_domain(atom_domain(T=T, nullable=T in {"f32", "f64"}))
     return series_domain(name, element_domain)
@@ -713,8 +678,10 @@ try:
             "Sphinx always fails to find a reference to LazyFrame. Falling back to dummy class."
         )
     from polars.lazyframe.frame import LazyFrame as _LazyFrame  # type: ignore[import-not-found]
+    from polars.dataframe.frame import DataFrame as _DataFrame  # type: ignore[import-not-found]
+    from polars.expr.expr import Expr as _Expr  # type: ignore[import-not-found]
     from polars.lazyframe.group_by import LazyGroupBy as _LazyGroupBy  # type: ignore[import-not-found]
-    from polars._typing import IntoExpr, IntoExprColumn  # type: ignore[import-not-found]
+    from polars._typing import IntoExpr, IntoExprColumn, JoinStrategy, JoinValidation  # type: ignore[import-not-found]
     import numpy as np  # type: ignore[import-not-found]
 
     class LazyFrameQuery(_LazyFrame):
@@ -859,6 +826,52 @@ try:
             expressions may not change the number or order of records
             """
             ...
+
+        def join(  # type: ignore[empty-body]
+            self,
+            other: _LazyFrame,
+            on: str | _Expr | Sequence[str | _Expr] | None = None,
+            how: JoinStrategy = "inner",
+            *,
+            left_on: str | _Expr | Sequence[str | _Expr] | None = None,
+            right_on: str | _Expr | Sequence[str | _Expr] | None = None,
+            suffix: str = "_right",
+            validate: JoinValidation = "m:m",
+            join_nulls: bool = False,
+            coalesce: bool | None = None,
+            allow_parallel: bool = True,
+            force_parallel: bool = False,
+        ) -> LazyFrameQuery:
+            """
+            Add a join operation to the Logical Plan.
+            """
+            ...
+
+        def with_keys(
+            self,
+            keys: _LazyFrame,
+            on: list[str] | None = None,
+        ) -> LazyFrameQuery:
+            """
+            Shorthand to join with an explicit key-set.
+            """
+            # Motivation for adding this new API:
+            # 1. Writing a left join is more difficult in the context API: 
+            #   see the complexity of this implementation, where you have to go under the hood. 
+            #   This gives an easier shorthand to write a left join.
+            # 2. Left joins are more likely to be supported by database backends.
+            # 3. Easier to use; with the Polars API the key set needs to be lazy, user must specify they want a right join and the join keys.
+
+            if isinstance(keys, _DataFrame):
+                keys = keys.lazy()
+            
+            if on is None:
+                on = keys.collect_schema().names()
+
+            return LazyFrameQuery(
+                keys.join(self._lf_plan, how="left", on=on),
+                self._query,
+            )
 
         def resolve(self) -> Measurement:
             """Resolve the query into a measurement."""

@@ -1,8 +1,10 @@
 import pytest
 import opendp.prelude as dp
-import os
 import warnings
 import re
+import os
+import io
+from datetime import date, time, datetime
 
 
 def test_polars_version():
@@ -189,14 +191,20 @@ def test_stable_expr():
 
 def test_private_expr():
     pl = pytest.importorskip("polars")
-    domain = dp.wild_expr_domain(example_series()[0], by=[])
-    with pytest.raises(dp.OpenDPException):
-        dp.m.make_private_expr(
-            domain,
-            dp.symmetric_distance(),
-            dp.max_divergence(),
-            pl.col("A").sum(),
-        )
+    pl_testing = pytest.importorskip("polars.testing")
+    m_len = dp.m.make_private_expr(
+        dp.wild_expr_domain([], by=[]),
+        dp.partition_distance(dp.symmetric_distance()),
+        dp.max_divergence(),
+        dp.len(scale=1.0)
+    )
+
+    e_plan = m_len(pl.LazyFrame(dict()))
+
+    pl_testing.assert_frame_equal(e_plan.plan, pl.LazyFrame(dict()))
+
+    assert re.match("len().*:noise_plugin()", str(e_plan.expr))
+    assert re.match("0.*:noise_plugin()", str(e_plan.fill))
 
 
 def test_private_lazyframe_median():
@@ -436,10 +444,14 @@ def test_polars_non_wrapping():
     # only calls that return a LazyFrame or LazyGroupBy are wrapped
     assert context.query().explain() == 'DF ["A"]; PROJECT */1 COLUMNS; SELECTION: None'
     assert context.query().collect_schema() == {"A": pl.String}
-    serial = context.query().with_columns(pl.col("A") + 2).serialize(format="json")
-    assert serial.startswith('{"HStack":')
+
     # for coverage: attribute access works properly
     context.query()._ldf
+
+    # serialize/deserialize roundtrip
+    query = context.query().select(dp.len())
+    serde_plan = pl.LazyFrame.deserialize(io.BytesIO(query.serialize())) # type: ignore
+    assert query.serialize() == serde_plan.serialize()
 
 
 def test_polars_collect_early():
@@ -613,8 +625,7 @@ def test_replace_binary_path():
         dp.max_divergence(),
         expr,
     )
-
-    assert str(m_expr(pl.LazyFrame(dict()))) == "len().testing!:noise_plugin()"
+    assert 'testing!' in str(m_expr(pl.LazyFrame(dict())).expr)
 
     # check that local paths in new expressions get overwritten
     os.environ["OPENDP_POLARS_LIB_PATH"] = __file__
@@ -674,7 +685,7 @@ def test_pickle_bomb():
     pl.LazyFrame.deserialize(io.BytesIO(ser_lf))
 
     # OpenDP explicitly rejects any pickled data it finds
-    err_msg_re = re.escape("OpenDP does not allow pickled keyword arguments as they may enable remote code execution.")
+    err_msg_re = "OpenDP does not allow pickled keyword arguments as they may enable remote code execution."
     with pytest.raises(dp.OpenDPException, match=err_msg_re):
         dp.m.make_private_expr(
             dp.wild_expr_domain(example_series()[0], by=[]),
@@ -740,15 +751,15 @@ def test_csv_bad_encoding_loading():
         # With "delete=False", clean up when exiting "with" instead.
         fp.write(b'name\n' + name_b)
         fp.close()
-        df = pl.scan_csv(fp.name, ignore_errors=True)
+        observed = pl.scan_csv(fp.name, encoding="utf8-lossy")
         expected = pl.LazyFrame(
             {"name": [name]},
             schema={"name": pl.String},
         )
-        pl_testing.assert_frame_equal(df, expected)
+        pl_testing.assert_frame_equal(observed, expected)
 
 
-def test_categorical_domain():
+def test_categorical_domain_no_mapping():
     pl = pytest.importorskip("polars")
 
     lf = pl.LazyFrame([pl.Series("A", ["Texas", "New York", None], dtype=pl.Categorical)])
@@ -769,6 +780,28 @@ def test_categorical_domain():
             )
 
 
+@pytest.mark.parametrize("wrap_with_option", [False, True])
+def test_categorical_domain_with_mapping(wrap_with_option):
+    pl = pytest.importorskip("polars")
+
+    categories = ["Texas", "New York"]
+    keys = pl.LazyFrame([pl.Series("A", categories, dtype=pl.Categorical)])
+    lf = pl.LazyFrame([pl.Series("A", categories + [None], dtype=pl.Categorical)])
+
+    element_domain = dp.categorical_domain(categories)
+    if wrap_with_option:
+        element_domain = dp.option_domain(element_domain)
+    
+    lf_domain = dp.lazyframe_domain([dp.series_domain("A", element_domain)])
+    assert str(lf_domain) == "FrameDomain(A: cat; margins=[])"
+    # checks that categorical grouping keys can be released if encoding is public
+    dp.m.make_private_lazyframe(
+        lf_domain, dp.symmetric_distance(), dp.max_divergence(),
+        lf.group_by("A").agg(dp.len()).join(keys, how="right", on=["A"]),
+        global_scale=1.0
+    )
+
+
 def test_categorical_context():
     pl = pytest.importorskip("polars")
 
@@ -780,17 +813,18 @@ def test_categorical_context():
     context = dp.Context.compositor(
         data=lf,
         privacy_unit=dp.unit_of(contributions=1),
-        privacy_loss=dp.loss_of(epsilon=1.0),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-6),
         split_evenly_over=1,
-        margins={
-            ("B",): dp.polars.Margin(public_info="keys"),
-        },
     )
+
+    with pytest.raises(dp.OpenDPException, match=r'Categories are data-dependent'):
+        context.query().group_by("B").agg(dp.len()).release()
 
     # check that query runs.
     print('output should be two columns ("B" and "len") with two rows (1, ~500)')
     release = (
         context.query()
+        .with_columns(pl.col.B.cast(str))
         .group_by("B")
         .agg(dp.len())
         .release()
@@ -875,3 +909,101 @@ def test_count_queries():
         "null_count": [1],
     }).cast({pl.Int64: pl.UInt32})
     pl_testing.assert_frame_equal(release, expected)
+
+
+def test_explicit_grouping_keys():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    lf_domain, lf = example_lf(margin=["B"], max_partition_length=100)
+
+    plan_right = seed(lf.collect_schema()).group_by("B").agg(pl.col("D").dp.sum((0, 10)))
+    labels = pl.LazyFrame(pl.Series("B", [2, 3, 4, 5, 6], dtype=pl.Int32))
+    plan = labels.join(plan_right, on="B", how="left")
+    m_lf = dp.m.make_private_lazyframe(
+        lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan, 0.0
+    )
+
+    df_act = m_lf(lf).collect()
+
+    df_exp = pl.DataFrame(
+        [
+            pl.Series("B", list(range(2, 7)), dtype=pl.Int32),
+            pl.Series("D", [20] * 4 + [0], dtype=pl.Int32),
+        ]
+    )
+    pl_testing.assert_frame_equal(df_act.sort("B"), df_exp)
+
+
+def test_explicit_grouping_keys_context():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    lf_domain, lf = example_lf(margin=["B"], max_partition_length=100)
+
+    context = dp.Context.compositor(
+        data=lf,
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.),
+        split_evenly_over=1,
+        domain=lf_domain,
+    )
+
+    keys = pl.DataFrame(pl.Series("B", [2, 3, 4, 5, 6], dtype=pl.Int32))
+    query = context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys)
+    observed = query.release().collect().sort("B")
+    
+    expected = pl.DataFrame(
+        [
+            pl.Series("B", list(range(2, 7)), dtype=pl.Int32),
+            pl.Series("D", [20] * 4 + [0], dtype=pl.Int32),
+        ]
+    )
+    assert observed.collect_schema() == expected.collect_schema()
+    observed = observed.with_columns(D=expected["D"])
+    pl_testing.assert_frame_equal(observed, expected)
+
+
+@pytest.mark.parametrize("dtype", ["Time", "Datetime", "Date"])
+def test_datetime(dtype):
+    pl = pytest.importorskip("polars")
+    dtype = getattr(pl, dtype)
+
+    context = dp.Context.compositor(
+        data=pl.LazyFrame([pl.Series("x", ["2000-01-02T03:04:05"])]),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=1
+    )
+    query = (
+        context.query()
+        .with_columns(pl.col.x.str.strptime(format=r"%Y-%m-%dT%H:%M:%S", dtype=dtype))
+        .group_by("x").agg(dp.len())
+    )
+    observed = query.release().collect()
+    assert observed["x"].dtype == dtype
+
+
+def test_temporal_domain():
+    pl = pytest.importorskip("polars")
+
+    # this triggers construction of a lazyframe domain from the schema
+    context = dp.Context.compositor(
+        data=pl.LazyFrame([
+            pl.Series("date", [date(2000, 1, 1)]),
+            pl.Series("time", [time(7, 8, 9)]),
+            pl.Series("datetime", [datetime(2000, 1, 1, 7, 8, 9)]),
+        ]),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=1
+    )
+    observed = context.accountant.input_domain
+    expected = dp.lazyframe_domain([
+        dp.series_domain("date", dp.option_domain(dp.atom_domain(T="NaiveDate"))),
+        dp.series_domain("time", dp.option_domain(dp.atom_domain(T="NaiveTime"))),
+        dp.series_domain("datetime", dp.option_domain(dp.datetime_domain(time_unit="us"))),
+    ])
+
+    # check that domain is as expected
+    assert observed == expected

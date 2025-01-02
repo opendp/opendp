@@ -14,7 +14,7 @@ See also our :ref:`tutorial on diffentially private PCA <dp-pca>`.
 '''
 
 from __future__ import annotations
-from typing import NamedTuple, Optional, TYPE_CHECKING
+from typing import NamedTuple, Optional, TYPE_CHECKING, Sequence
 from opendp.extras.numpy import then_np_clamp
 from opendp.extras._utilities import register_measurement, to_then
 from opendp.extras.numpy._make_np_mean import make_private_np_mean
@@ -47,7 +47,7 @@ else: # pragma: no cover
 
 class PCAEpsilons(NamedTuple):
     eigvals: float
-    eigvecs: list[float]
+    eigvecs: Sequence[float]
     mean: Optional[float]
 
 
@@ -80,16 +80,16 @@ def make_private_pca(
 
     input_desc = input_domain.descriptor
     if input_desc.size is None:
-        raise ValueError("input_domain's size must be known")
+        raise ValueError("input_domain's size must be known")  # pragma: no cover
 
     if input_desc.num_columns is None:
-        raise ValueError("input_domain's num_columns must be known")
+        raise ValueError("input_domain's num_columns must be known")  # pragma: no cover
 
     if input_desc.p not in {None, 2}:
-        raise ValueError("input_domain's norm must be an L2 norm")
+        raise ValueError("input_domain's norm must be an L2 norm")  # pragma: no cover
 
     if input_desc.num_columns < 1:
-        raise ValueError("input_domain's num_columns must be >= 1")
+        raise ValueError("input_domain's num_columns must be >= 1")  # pragma: no cover
 
     num_components = (
         input_desc.num_columns if num_components is None else num_components
@@ -102,7 +102,7 @@ def make_private_pca(
         )
 
     if not isinstance(unit_epsilon, PCAEpsilons):
-        raise ValueError("epsilon must be a float or instance of PCAEpsilons")
+        raise ValueError("epsilon must be a float or instance of PCAEpsilons")  # pragma: no cover
 
     eigvals_epsilon, eigvecs_epsilons, mean_epsilon = unit_epsilon
 
@@ -121,12 +121,12 @@ def make_private_pca(
 
     if input_desc.norm is not None:
         if mean_epsilon is not None:
-            raise ValueError("mean_epsilon should be zero because origin is known")
+            raise ValueError("mean_epsilon should be zero because origin is known")  # pragma: no cover
         norm = input_desc.norm if norm is None else norm
         norm = min(input_desc.norm, norm)
         return make_eigdecomp(norm, input_desc.origin)
     elif norm is None:
-        raise ValueError("must have either bounded `input_domain` or specify `norm`")
+        raise ValueError("must have either bounded `input_domain` or specify `norm`")  # pragma: no cover
 
 
     # make releases under the assumption that d_in is 2.
@@ -207,7 +207,7 @@ class PCA(_SKLPCA):
         import opendp.prelude as dp
 
         if hasattr(self, "components_"):
-            raise ValueError("DP-PCA model has already been fitted")
+            raise ValueError("DP-PCA model has already been fitted")  # pragma: no cover
 
         input_domain = dp.numpy.array2_domain(
             num_columns=self.n_features_in_, size=self.n_samples, T=float
@@ -294,7 +294,7 @@ def _smaller(v):
     np = import_optional_dependency('numpy')
 
     if v < 0:
-        raise ValueError("expected non-negative value")
+        raise ValueError("expected non-negative value")  # pragma: no cover
     return v if v == 0 else np.nextafter(v, -1)
 
 

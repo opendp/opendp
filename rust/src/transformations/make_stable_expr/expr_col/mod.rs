@@ -29,7 +29,7 @@ where
 
     let output_domain = ExprDomain {
         column: (input_domain.columns.iter())
-            .find(|s| s.field.name.as_str() == col_name.as_ref())
+            .find(|s| s.name == col_name)
             .ok_or_else(|| err!(MakeTransformation, "unrecognized column: {}", col_name))?
             .clone(),
         context: input_domain.context.clone(),
@@ -38,7 +38,7 @@ where
     Transformation::new(
         input_domain,
         output_domain,
-        Function::new(move |lf: &DslPlan| (lf.clone(), col(&*col_name))),
+        Function::from_expr(col(&*col_name)),
         input_metric.clone(),
         input_metric,
         StabilityMap::new(Clone::clone),

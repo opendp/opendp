@@ -18,7 +18,7 @@ fn test_lit() -> Fallible<()> {
     let lf = df!("bool" => [true; 3])?.lazy();
 
     let t_const = lit(1.0).make_stable(lf_domain.row_by_row(), SymmetricDistance)?;
-    let expr_const = t_const.invoke(&lf.logical_plan)?.1;
+    let expr_const = t_const.invoke(&lf.logical_plan)?.expr;
     assert_eq!(expr_const, lit(1.0));
 
     let actual = lf.with_column(expr_const).collect()?;

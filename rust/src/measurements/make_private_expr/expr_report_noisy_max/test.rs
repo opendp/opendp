@@ -19,13 +19,17 @@ fn test_report_noisy_max_gumbel_udf() -> Fallible<()> {
     let expect_slice = &[0u32, 1, 2];
 
     let dtype = ArrowDataType::FixedSizeList(
-        Box::new(ArrowField::new("item", ArrowDataType::UInt32, true)),
+        Box::new(ArrowField::new("item".into(), ArrowDataType::UInt32, true)),
         3,
     );
 
-    let fsla =
-        FixedSizeListArray::new(dtype, Box::new(UInt32Array::from_slice(scores_slice)), None);
-    let scores = Series::from(ArrayChunked::from(fsla));
+    let fsla = FixedSizeListArray::new(
+        dtype,
+        3,
+        Box::new(UInt32Array::from_slice(scores_slice)),
+        None,
+    );
+    let scores = Series::from(ArrayChunked::from(fsla)).into_column();
 
     let actual = super::report_noisy_max_gumbel_udf(
         &[scores],
@@ -35,7 +39,7 @@ fn test_report_noisy_max_gumbel_udf() -> Fallible<()> {
         },
     )?;
 
-    let expect = Series::new("", expect_slice);
+    let expect = Column::new("".into(), expect_slice);
 
     assert_eq!(actual, expect);
     Ok(())
@@ -45,7 +49,10 @@ fn test_report_noisy_max_gumbel_udf() -> Fallible<()> {
 fn test_report_noisy_max_gumbel_expr() -> Fallible<()> {
     let (lf_domain, lf) = get_quantile_test_data()?;
     let scale: f64 = 1e-8;
-    let candidates = Series::new("", [0., 10., 20., 30., 40., 50., 60., 70., 80., 90., 100.]);
+    let candidates = Series::new(
+        "".into(),
+        [0., 10., 20., 30., 40., 50., 60., 70., 80., 90., 100.],
+    );
 
     let m_quant = make_private_expr(
         lf_domain.select(),
@@ -59,7 +66,7 @@ fn test_report_noisy_max_gumbel_expr() -> Fallible<()> {
         None,
     )?;
 
-    let dp_expr = m_quant.invoke(&lf.logical_plan)?;
+    let dp_expr = m_quant.invoke(&lf.logical_plan)?.expr;
     let df = lf.select([dp_expr]).collect()?;
     let actual = df.column("cycle_(..101f64)")?.u32()?.get(0).unwrap();
     assert_eq!(actual, 5);
@@ -71,7 +78,10 @@ fn test_report_noisy_max_gumbel_expr() -> Fallible<()> {
 fn test_fail_report_noisy_max_gumbel_expr_nan_scale() -> Fallible<()> {
     let (lf_domain, _) = get_quantile_test_data()?;
     let scale: f64 = f64::NAN;
-    let candidates = Series::new("", [0., 10., 20., 30., 40., 50., 60., 70., 80., 90., 100.]);
+    let candidates = Series::new(
+        "".into(),
+        [0., 10., 20., 30., 40., 50., 60., 70., 80., 90., 100.],
+    );
 
     let err_variant = make_private_expr(
         lf_domain.select(),

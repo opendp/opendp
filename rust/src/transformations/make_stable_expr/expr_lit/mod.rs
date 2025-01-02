@@ -1,4 +1,3 @@
-use polars::prelude::DslPlan;
 use polars_plan::dsl::Expr;
 use polars_plan::plans::LiteralValue;
 use polars_plan::utils::expr_output_name;
@@ -36,7 +35,7 @@ where
 
     macro_rules! series_domain {
         ($ty:ty, $null:expr) => {{
-            SeriesDomain::new(name.as_ref(), AtomDomain::<$ty>::new(None, $null))
+            SeriesDomain::new(name, AtomDomain::<$ty>::new(None, $null))
         }};
     }
 
@@ -62,7 +61,7 @@ where
     Transformation::new(
         input_domain,
         output_domain,
-        Function::new(move |lp: &DslPlan| (lp.clone(), expr.clone())),
+        Function::from_expr(expr),
         input_metric.clone(),
         input_metric,
         StabilityMap::new(Clone::clone),

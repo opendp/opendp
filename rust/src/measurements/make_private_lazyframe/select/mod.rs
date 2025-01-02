@@ -49,7 +49,7 @@ where
         .make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
-    let margin = middle_domain.get_margin(BTreeSet::new());
+    let margin = middle_domain.get_margin(&BTreeSet::new());
 
     let expr_domain = WildExprDomain {
         columns: middle_domain.series_domains.clone(),
@@ -117,7 +117,11 @@ where
             } = output
             {
                 *input = Arc::new(arg.clone());
-                *expr = m_select_expr.invoke(arg)?;
+                *expr = m_select_expr
+                    .invoke(&arg)?
+                    .into_iter()
+                    .map(|e| e.expr)
+                    .collect();
             };
             Ok(output)
         }),

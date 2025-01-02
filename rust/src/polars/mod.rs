@@ -2,6 +2,7 @@ use std::{env, sync::Arc};
 
 use crate::{
     core::Function,
+    domains::ExprPlan,
     error::Fallible,
     interactive::{Answer, Query, Queryable},
     measurements::{
@@ -15,28 +16,29 @@ use crate::{
 use polars::{
     frame::DataFrame,
     lazy::frame::LazyFrame,
-    prelude::{FunctionExpr, NamedFrom},
+    prelude::{DslPlan, GetOutput, LazySerde, NamedFrom},
     series::Series,
 };
 use polars_plan::{
-    dsl::{lit, Expr, SeriesUdf, SpecialEq},
+    dsl::{lit, ColumnsUdf, Expr, FunctionExpr, SpecialEq},
     plans::{Literal, LiteralValue, Null},
-    prelude::FunctionOptions,
+    prelude::{FunctionFlags, FunctionOptions},
 };
 use serde::{Deserialize, Serialize};
 
 // this trait is used to make the Deserialize trait bound conditional on the feature flag
 #[cfg(not(feature = "ffi"))]
-pub(crate) trait OpenDPPlugin: 'static + Clone + SeriesUdf {
+pub(crate) trait OpenDPPlugin: 'static + Clone + ColumnsUdf {
     const NAME: &'static str;
     fn function_options() -> FunctionOptions;
 }
 #[cfg(feature = "ffi")]
 pub(crate) trait OpenDPPlugin:
-    'static + Clone + SeriesUdf + for<'de> Deserialize<'de> + Serialize
+    'static + Clone + ColumnsUdf + for<'de> Deserialize<'de> + Serialize
 {
     const NAME: &'static str;
     fn function_options() -> FunctionOptions;
+    fn get_output(&self) -> Option<GetOutput>;
 }
 
 static OPENDP_LIB_NAME: &str = "opendp";
@@ -58,7 +60,7 @@ where
             ..
         } => {
             // check that the plugin is from the opendp library and the plugin has a matching name
-            if !lib.contains(OPENDP_LIB_NAME) || symbol.as_ref() != KW::NAME {
+            if !lib.contains(OPENDP_LIB_NAME) || symbol.as_str() != KW::NAME {
                 return Ok(None);
             }
 
@@ -71,7 +73,13 @@ where
         Expr::AnonymousFunction {
             input, function, ..
         } => {
-            if function.as_any().downcast_ref::<KW>().is_none() {
+            if function
+                .clone()
+                .materialize()?
+                .as_any()
+                .downcast_ref::<KW>()
+                .is_none()
+            {
                 return Ok(None);
             };
             input
@@ -97,7 +105,7 @@ where
             ..
         } => {
             // check that the plugin is from the opendp library and the plugin has a matching name
-            if !lib.contains(OPENDP_LIB_NAME) || symbol.as_ref() != KW::NAME {
+            if !lib.contains(OPENDP_LIB_NAME) || symbol.as_str() != KW::NAME {
                 return Ok(None);
             }
             let args = serde_pickle::from_slice(kwargs.as_ref(), Default::default())
@@ -107,6 +115,7 @@ where
         Expr::AnonymousFunction {
             input, function, ..
         } => {
+            let function = function.clone().materialize()?;
             let Some(args) = function.as_any().downcast_ref::<KW>() else {
                 return Ok(None);
             };
@@ -119,9 +128,9 @@ where
 /// Augment the input expression to apply the plugin expression.
 ///
 /// # Arguments
-/// * `input_expr` - The input expression to which the Laplace noise will be added
+/// * `input_expr` - The input expression to which the plugin will be applied
 /// * `plugin_expr` - A plugin expression. The input to the plugin is replaced with input_expr.
-/// * `kwargs` - Extra parameters to the plugin
+/// * `kwargs_new` - Extra parameters to the plugin
 pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
     input_expr: Expr,
     plugin_expr: Expr,
@@ -143,7 +152,7 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
             } = &mut function
             {
                 if let Ok(path) = env::var("OPENDP_POLARS_LIB_PATH") {
-                    *lib = Arc::from(path);
+                    *lib = path.into();
                 }
                 *symbol = KW::NAME.into();
                 *kwargs = serde_pickle::to_vec(&kwargs_new, Default::default())
@@ -164,7 +173,7 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
             ..
         } => Expr::AnonymousFunction {
             input: vec![input_expr],
-            function: SpecialEq::new(Arc::new(kwargs_new)),
+            function: LazySerde::Deserialized(SpecialEq::new(Arc::new(kwargs_new))),
             output_type,
             options,
         },
@@ -176,7 +185,7 @@ pub(crate) fn apply_anonymous_function<KW: OpenDPPlugin>(input: Vec<Expr>, kwarg
     Expr::AnonymousFunction {
         input,
         // pass through the constructor to activate the expression
-        function: SpecialEq::new(Arc::new(kwargs.clone())),
+        function: LazySerde::Deserialized(SpecialEq::new(Arc::new(kwargs.clone()))),
         // have no option but to panic in this case, since the polars api does not accept results
         output_type: kwargs
             .get_output()
@@ -232,30 +241,58 @@ impl ExtractValue for String {
     fn extract(literal: LiteralValue) -> Fallible<Option<Self>> {
         Ok(match literal {
             LiteralValue::Null => None,
-            LiteralValue::String(string) => Some(string),
+            LiteralValue::String(string) => Some(string.into_string()),
             _ => return fallible!(FailedFunction, "expected String, found: {:?}", literal),
         })
     }
 }
 
-pub(crate) trait ExprFunction {
-    fn then_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self;
-}
+impl Function<ExprPlan, ExprPlan> {
+    /// # Proof Definition
+    /// Return a Function that, when passed a plan,
+    /// returns the same plan but with the expression extended via `function`.
+    pub(crate) fn then_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self {
+        Self::new(move |arg: &ExprPlan| arg.then(&function))
+    }
 
-impl<F: Clone> ExprFunction for Function<(F, Expr), (F, Expr)> {
-    fn then_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self {
-        Self::new(move |arg: &(F, Expr)| (arg.0.clone(), function(arg.1.clone())))
+    /// # Proof Definition
+    /// Returns a Function that specifies what the function should return if evaluated on an empty partition.
+    ///
+    /// Polars only keeps non-empty partitions in group-by,
+    /// so this is used to fill missing values after joining with an explicit key set.
+    pub(crate) fn fill_with(self, value: Expr) -> Self {
+        Self::new_fallible(move |arg: &ExprPlan| {
+            let mut plan = self.eval(arg)?;
+            plan.fill = Some(value.clone());
+            Ok(plan)
+        })
     }
 }
-impl<F: Clone> ExprFunction for Function<(F, Expr), Expr> {
-    fn then_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self {
-        Self::new(move |arg: &(F, Expr)| function(arg.1.clone()))
+impl Function<DslPlan, ExprPlan> {
+    /// # Proof Definition
+    /// Return a Function that, if passed a plan with a wildcard expression,
+    /// returns the same plan but with `expr` expression instead.
+    pub(crate) fn from_expr(expr: Expr) -> Self {
+        Self::new_fallible(move |arg: &DslPlan| -> Fallible<ExprPlan> {
+            Ok(ExprPlan {
+                plan: arg.clone(),
+                expr: expr.clone(),
+                fill: None,
+            })
+        })
     }
-}
 
-impl ExprFunction for Function<Expr, Expr> {
-    fn then_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self {
-        Self::new(move |arg: &Expr| function(arg.clone()))
+    /// # Proof Definition
+    /// Returns a Function that specifies what the function should return if evaluated on an empty partition.
+    ///
+    /// Polars only keeps non-empty partitions in group-by,
+    /// so this is used to fill missing values after joining with an explicit key set.
+    pub(crate) fn fill_with(self, value: Expr) -> Self {
+        Self::new_fallible(move |arg: &DslPlan| {
+            let mut plan = self.eval(arg)?;
+            plan.fill = Some(value.clone());
+            Ok(plan)
+        })
     }
 }
 
@@ -421,7 +458,7 @@ impl DPExpr {
             .dp()
             .report_noisy_max_gumbel(Optimize::Min, scale)
             .dp()
-            .index_candidates(Series::new("", candidates))
+            .index_candidates(Series::new("".into(), candidates))
     }
 
     /// Compute a differentially private median.
@@ -533,4 +570,11 @@ pub(crate) fn get_disabled_features_message() -> String {
             disabled_features.join(", ")
         )
     }
+}
+
+pub(crate) fn function_flags<const L: usize>(flags: [&'static str; L]) -> FunctionFlags {
+    flags
+        .into_iter()
+        .map(|f| FunctionFlags::from_name(f).unwrap())
+        .fold(FunctionFlags::default(), FunctionFlags::intersection)
 }

@@ -3,7 +3,6 @@ use polars_plan::dsl::Expr;
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
-use crate::polars::ExprFunction;
 
 use super::StableExpr;
 
@@ -38,12 +37,12 @@ where
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let mut output_domain = middle_domain.clone();
-    output_domain.column.field.name = name.as_ref().into();
+    output_domain.column.name = name.clone();
 
     let t_alias = Transformation::new(
         middle_domain.clone(),
         output_domain,
-        Function::then_expr(move |expr| expr.alias(name.as_ref())),
+        Function::then_expr(move |expr| expr.alias(name.clone())),
         middle_metric.clone(),
         middle_metric,
         StabilityMap::new(Clone::clone),

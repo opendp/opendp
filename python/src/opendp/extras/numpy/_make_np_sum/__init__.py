@@ -23,7 +23,7 @@ def make_np_sum(input_domain: Domain, input_metric: Metric) -> Transformation:
     input_desc = input_domain.descriptor
     norm = input_desc.norm
     if norm is None:
-        raise ValueError("input_domain must have bounds. See make_np_clamp")
+        raise ValueError("input_domain must have bounds. See make_np_clamp")  # pragma: no cover
 
     output_metric = {1: dp.l1_distance, 2: dp.l2_distance}[input_desc.p]
 

@@ -88,7 +88,7 @@ impl Frame for DataFrame {
 #[derive(Clone)]
 pub struct FrameDomain<F: Frame> {
     pub series_domains: Vec<SeriesDomain>,
-    pub margins: HashMap<BTreeSet<SmartString>, Margin>,
+    pub margins: HashMap<BTreeSet<PlSmallStr>, Margin>,
     _marker: PhantomData<F>,
 }
 
@@ -125,7 +125,7 @@ impl<F: Frame, const P: usize, T: ProductOrd + NumericDataType> MetricSpace
             .0
             .series_domains
             .iter()
-            .any(|s| s.field.dtype != T::dtype())
+            .any(|s| s.dtype() != T::dtype())
         {
             return fallible!(
                 MetricSpace,
@@ -164,11 +164,11 @@ impl<F: Frame> FrameDomain<F> {
     /// or an error.
     pub(crate) fn new_with_margins(
         series_domains: Vec<SeriesDomain>,
-        margins: HashMap<BTreeSet<SmartString>, Margin>,
+        margins: HashMap<BTreeSet<PlSmallStr>, Margin>,
     ) -> Fallible<Self> {
         let n_unique = series_domains
             .iter()
-            .map(|s| &s.field.name)
+            .map(|s| &s.name)
             .collect::<HashSet<_>>()
             .len();
         if n_unique != series_domains.len() {
@@ -195,7 +195,11 @@ impl<F: Frame> FrameDomain<F> {
     /// # Proof Definition
     /// Return the schema shared by all members of the domain.
     pub fn schema(&self) -> Schema {
-        Schema::from_iter(self.series_domains.iter().map(|s| s.field.clone()))
+        Schema::from_iter(
+            self.series_domains
+                .iter()
+                .map(|s| Field::new(s.name.clone(), s.dtype())),
+        )
     }
 
     /// # Proof Definition
@@ -234,18 +238,18 @@ impl<F: Frame> FrameDomain<F> {
     ///
     /// Best effort is made to derive more restrictive descriptors,
     /// but optimal inference of descriptors is not guaranteed.
-    pub fn get_margin(&self, grouping_columns: BTreeSet<SmartString>) -> Margin {
+    pub fn get_margin(&self, grouping_columns: &BTreeSet<PlSmallStr>) -> Margin {
         let mut margin = self
             .margins
-            .get(&grouping_columns)
+            .get(grouping_columns)
             .cloned()
             .unwrap_or_default();
 
         let subset_margins = self
             .margins
             .iter()
-            .filter(|(id, _)| id.is_subset(&grouping_columns))
-            .collect::<Vec<(&BTreeSet<SmartString>, &Margin)>>();
+            .filter(|(id, _)| id.is_subset(grouping_columns))
+            .collect::<Vec<(&BTreeSet<_>, &Margin)>>();
 
         // the max_partition_* descriptors can take the minimum known value from any margin on a subset of the grouping columns
         margin.max_partition_length = (subset_margins.iter())
@@ -292,10 +296,10 @@ impl<F: Frame> FrameDomain<F> {
         margin
     }
 
-    pub fn series_domain(&self, name: SmartString) -> Fallible<SeriesDomain> {
+    pub fn series_domain(&self, name: PlSmallStr) -> Fallible<SeriesDomain> {
         self.series_domains
             .iter()
-            .find(|s| s.field.name == name)
+            .find(|s| s.name == name)
             .cloned()
             .ok_or_else(|| err!(MakeTransformation, "unrecognized column: {}", name))
     }
@@ -315,7 +319,7 @@ impl<F: Frame> Debug for FrameDomain<F> {
             "FrameDomain({}; margins=[{}])",
             self.series_domains
                 .iter()
-                .map(|s| format!("{}: {}", s.field.name, s.field.dtype))
+                .map(|s| format!("{}: {}", s.name, s.dtype()))
                 .collect::<Vec<_>>()
                 .join(", "),
             margins_debug
@@ -334,7 +338,12 @@ impl<F: Frame> Domain for FrameDomain<F> {
         }
 
         // check if each column is a member of the series domain
-        for (series_domain, series) in self.series_domains.iter().zip(val_df.get_columns().iter()) {
+        for (series_domain, series) in self.series_domains.iter().zip(
+            val_df
+                .get_columns()
+                .iter()
+                .map(|c| c.as_materialized_series()),
+        ) {
             if !series_domain.member(series)? {
                 return Ok(false);
             }
@@ -342,7 +351,11 @@ impl<F: Frame> Domain for FrameDomain<F> {
 
         // check that margins are satisfied
         for (grouping_columns, margin) in self.margins.iter() {
-            let grouping_columns = grouping_columns.iter().map(|c| col(c)).collect::<Vec<_>>();
+            let grouping_columns = grouping_columns
+                .iter()
+                .cloned()
+                .map(col)
+                .collect::<Vec<_>>();
             if !margin.member(val.clone().lazyframe().group_by(grouping_columns))? {
                 return Ok(false);
             }

@@ -1,6 +1,7 @@
 use std::{collections::BTreeSet, sync::Arc};
 
-use polars::prelude::SmartString;
+use polars::prelude::PlSmallStr;
+use polars::prelude::{JoinOptions, JoinType};
 use polars_plan::{
     dsl::{Expr, Operator},
     plans::DslPlan,
@@ -12,19 +13,94 @@ use crate::{measurements::expr_noise::NoisePlugin, polars::match_trusted_plugin}
 
 use super::Fallible;
 
+#[derive(Clone)]
+pub enum KeySanitizer {
+    Filter(Expr),
+    Join {
+        keys: Arc<DslPlan>,
+        how: JoinType,
+        left_on: Vec<Expr>,
+        right_on: Vec<Expr>,
+        options: Arc<JoinOptions>,
+        fill_null: Option<Vec<Expr>>,
+    },
+}
+
 pub(crate) struct MatchGroupBy {
     pub input: DslPlan,
     pub keys: Vec<Expr>,
     pub aggs: Vec<Expr>,
-    pub predicate: Option<Expr>,
+    pub key_sanitizer: Option<KeySanitizer>,
 }
 
 pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>> {
-    let predicate = if let DslPlan::Filter { input, predicate } = plan {
-        plan = input.as_ref().clone();
-        Some(predicate)
-    } else {
-        None
+    let key_sanitizer = match plan {
+        DslPlan::Filter { input, predicate } => {
+            plan = input.as_ref().clone();
+            Some(KeySanitizer::Filter(predicate))
+        }
+        DslPlan::Join {
+            input_left,
+            input_right,
+            left_on,
+            right_on,
+            predicates,
+            options,
+        } => {
+            if !predicates.is_empty() {
+                return fallible!(
+                    MakeMeasurement,
+                    "predicates are not supported in key-privatization joins"
+                );
+            }
+            let how = options.as_ref().args.how.clone();
+            let (keys, keys_on, input_on) = match how {
+                JoinType::Left => {
+                    plan = input_right.as_ref().clone();
+                    (input_left, &left_on, &right_on)
+                }
+                JoinType::Right => {
+                    plan = input_left.as_ref().clone();
+                    (input_right, &right_on, &left_on)
+                }
+                _ => {
+                    return fallible!(
+                        MakeMeasurement,
+                        "only left or right joins can be used to privatize key-sets"
+                    )
+                }
+            };
+
+            let keys_on_columns = match_grouping_columns(keys_on.clone())
+                .map_err(|_| err!(MakeMeasurement, "join on must consist of column exprs"))?;
+            let input_on_columns = match_grouping_columns(input_on.clone())
+                .map_err(|_| err!(MakeMeasurement, "join on must consist of column exprs"))?;
+
+            if input_on_columns.len() != keys_on_columns.len() {
+                return fallible!(
+                    MakeMeasurement,
+                    "left_on and right_on must have same number of join keys"
+                );
+            }
+
+            let label_schema = keys.compute_schema()?;
+            if keys_on_columns != label_schema.iter_names().cloned().collect::<BTreeSet<_>>() {
+                return fallible!(
+                    MakeMeasurement,
+                    "label dataframe columns must match join keys"
+                );
+            }
+
+            Some(KeySanitizer::Join {
+                keys,
+                how,
+                left_on,
+                right_on,
+                options,
+                fill_null: None,
+            })
+        }
+        _ => None,
     };
 
     let DslPlan::GroupBy {
@@ -55,17 +131,17 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
         input: Arc::unwrap_or_clone(input),
         keys,
         aggs,
-        predicate,
+        key_sanitizer,
     }))
 }
 
-pub fn match_grouping_columns(keys: Vec<Expr>) -> Fallible<BTreeSet<SmartString>> {
+pub fn match_grouping_columns(keys: Vec<Expr>) -> Fallible<BTreeSet<PlSmallStr>> {
     Ok(keys
         .iter()
         .map(|e| {
             Ok(match e {
-                Expr::Column(name) => vec![name.as_ref().into()],
-                Expr::Columns(names) => names.iter().map(|s| s.as_ref().into()).collect(),
+                Expr::Column(name) => vec![name.clone()],
+                Expr::Columns(names) => names.to_vec(),
                 e => {
                     return fallible!(
                         MakeMeasurement,
@@ -89,11 +165,18 @@ pub(super) fn find_len_expr(
     (exprs.iter())
         .find_map(|e| is_len_expr(e, name))
         .ok_or_else(|| {
-            err!(
-                MakeMeasurement,
-                "expected exactly one DP length expression with name: {:?}",
-                name
-            )
+            if let Some(name) = name {
+                err!(
+                    MakeMeasurement,
+                    "stable key release expects a DP length expression with name: {:?}",
+                    name
+                )
+            } else {
+                err!(
+                    MakeMeasurement,
+                    "stable key release requires a `dp.len()` expression"
+                )
+            }
         })
 }
 
@@ -102,7 +185,7 @@ fn is_len_expr(expr: &Expr, name: Option<&str>) -> Option<(String, NoisePlugin)>
 
     // check if the expression matches the expected name
     if let Some(name) = name {
-        if name != output_name.as_ref() {
+        if name != output_name.as_str() {
             return None;
         }
     }

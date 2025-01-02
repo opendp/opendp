@@ -4,11 +4,11 @@ use crate::domains::{
 };
 use crate::error::*;
 use crate::metrics::{IntDistance, LpDistance, PartitionDistance};
-use crate::polars::ExprFunction;
 use crate::traits::{InfMul, InfSqrt, ProductOrd};
 use crate::transformations::traits::UnboundedMetric;
 use polars::prelude::{AggExpr, FunctionExpr};
 use polars_plan::dsl::Expr;
+use polars_plan::plans::typed_lit;
 
 use super::StableExpr;
 
@@ -85,7 +85,7 @@ where
 
     let output_domain = ExprDomain {
         column: SeriesDomain::new(
-            middle_domain.column.field.name.as_str(),
+            middle_domain.column.name.as_str(),
             AtomDomain::<u32>::default(),
         ),
         context: Context::Grouping {
@@ -121,7 +121,8 @@ where
                 Strategy::NullCount => e.null_count(),
                 Strategy::Len => e.len(),
                 Strategy::NUnique => e.n_unique(),
-            }),
+            })
+            .fill_with(typed_lit(0u32)),
             middle_metric,
             LpDistance::default(),
             counting_query_stability_map(public_info),

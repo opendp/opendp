@@ -20,7 +20,7 @@ use crate::{
 use super::summarize_polars_measurement;
 
 #[test]
-fn test_summarize_polars_measurement() -> Fallible<()> {
+fn test_summarize_polars_measurement_basic() -> Fallible<()> {
     let lf_domain = LazyFrameDomain::new(vec![
         SeriesDomain::new("A", AtomDomain::<i32>::default()),
         SeriesDomain::new("B", AtomDomain::<f64>::default()),
@@ -60,7 +60,7 @@ fn test_summarize_polars_measurement() -> Fallible<()> {
     let description = summarize_polars_measurement(meas.clone(), Some(0.05))?;
 
     let accuracy = discrete_laplacian_scale_to_accuracy(1.0, 0.05)?;
-    expected.with_column(Series::new("accuracy", &[accuracy, accuracy]))?;
+    expected.with_column(Series::new("accuracy".into(), &[accuracy, accuracy]))?;
     println!("{:?}", expected);
     assert_eq!(expected, description);
 
@@ -105,7 +105,10 @@ fn test_summarize_polars_measurement_mean() -> Fallible<()> {
     let description = summarize_polars_measurement(meas.clone(), Some(0.05))?;
 
     let accuracy = discrete_laplacian_scale_to_accuracy(1.0, 0.05)?;
-    expected.with_column(Series::new("accuracy", &[Some(accuracy), Some(f64::NAN)]))?;
+    expected.with_column(Series::new(
+        "accuracy".into(),
+        &[Some(accuracy), Some(f64::NAN)],
+    ))?;
     println!("{:?}", expected);
     assert_eq!(description, expected);
 
@@ -125,7 +128,10 @@ fn test_summarize_polars_measurement_quantile() -> Fallible<()> {
 
     let lf = df!("A" => (0..=100i32).collect::<Vec<_>>())?.lazy();
 
-    let cands = Series::new("candidates", (0..=10).map(|v| v * 10).collect::<Vec<_>>());
+    let cands = Series::new(
+        "candidates".into(),
+        (0..=10).map(|v| v * 10).collect::<Vec<_>>(),
+    );
     let meas = make_private_lazyframe(
         lf_domain,
         SymmetricDistance,

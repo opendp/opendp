@@ -5,7 +5,6 @@ use polars_plan::dsl::Expr;
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{ExprDomain, OuterMetric, SeriesDomain, WildExprDomain};
 use crate::error::*;
-use crate::polars::ExprFunction;
 use crate::transformations::DatasetMetric;
 
 use super::StableExpr;
@@ -33,7 +32,7 @@ where
 {
     let Expr::Cast {
         expr: input,
-        data_type: to_type,
+        dtype: to_type,
         mut options,
     } = expr
     else {
@@ -55,7 +54,7 @@ where
 
     let mut output_domain = middle_domain.clone();
     let data_column = &mut output_domain.column;
-    let name = data_column.field.name.as_ref();
+    let name = data_column.name.clone();
 
     // it is possible to tighten this:
     // in cases where casting will never fail, the nullable and/or nan bits can be left false
@@ -68,7 +67,7 @@ where
             output_domain,
             Function::then_expr(move |expr| Expr::Cast {
                 expr: Arc::new(expr),
-                data_type: to_type.clone(),
+                dtype: to_type.clone(),
                 // Specify behavior for when casting fails (this is forced to be non-strict).
                 options,
             }),

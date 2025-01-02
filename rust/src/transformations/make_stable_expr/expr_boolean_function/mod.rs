@@ -3,9 +3,8 @@ use polars_plan::dsl::{BooleanFunction, Expr, FunctionExpr};
 use polars_plan::prelude::{ApplyOptions, FunctionOptions};
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{AtomDomain, ExprDomain, OuterMetric, WildExprDomain};
+use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
-use crate::polars::ExprFunction;
 use crate::transformations::DatasetMetric;
 
 use super::StableExpr;
@@ -82,14 +81,12 @@ where
         data_column.nullable = false;
     }
 
-    if matches!(bool_function, Not) && data_column.field.dtype != DataType::Boolean {
-        // under these conditions, the expression performs a bitwise negation
-        data_column.drop_bounds()?;
+    data_column.set_dtype(if matches!(bool_function, Not) {
+        // under these conditions, the expression performs a bitwise negation and all descriptors are dropped
+        data_column.dtype()
     } else {
-        // otherwise, the output data will be a bool
-        data_column.element_domain = Arc::new(AtomDomain::<bool>::default());
-        data_column.field.dtype = DataType::Boolean;
-    }
+        DataType::Boolean
+    })?;
 
     t_prior
         >> Transformation::new(

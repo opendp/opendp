@@ -30,7 +30,7 @@ fn test_select_make_expr_counting() -> Fallible<()> {
         let t_sum: Transformation<_, _, _, L1Distance<f64>> = expr
             .clone()
             .make_stable(expr_domain.clone(), PartitionDistance(SymmetricDistance))?;
-        let expr_res = t_sum.invoke(&lf.logical_plan)?.1;
+        let expr_res = t_sum.invoke(&lf.logical_plan)?.expr;
         assert_eq!(expr_res, expr);
 
         let sensitivity = t_sum.map(&(1, 2, 2))?;
@@ -68,7 +68,7 @@ fn test_grouped_make_len_expr() -> Fallible<()> {
         let t_sum: Transformation<_, _, _, L2Distance<f64>> = expr
             .clone()
             .make_stable(expr_domain.clone(), PartitionDistance(SymmetricDistance))?;
-        let expr_res = t_sum.invoke(&lf.logical_plan)?.1;
+        let expr_res = t_sum.invoke(&lf.logical_plan)?.expr;
         assert_eq!(expr_res, expr);
 
         // assume we're in a grouping context.

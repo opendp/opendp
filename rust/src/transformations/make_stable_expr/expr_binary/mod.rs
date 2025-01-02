@@ -3,7 +3,7 @@ use polars_plan::dsl::Expr;
 use polars_plan::utils::expr_output_name;
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{AtomDomain, ExprDomain, OuterMetric, SeriesDomain, WildExprDomain};
+use crate::domains::{AtomDomain, ExprDomain, ExprPlan, OuterMetric, SeriesDomain, WildExprDomain};
 use crate::error::*;
 use crate::transformations::DatasetMetric;
 
@@ -52,13 +52,18 @@ where
         return fallible!(MakeTransformation, "unsupported operator: {:?}. Only binary operations that emit booleans are currently supported.", op);
     }
 
+    let left_series = &t_left.output_domain.column;
+    let right_series = &t_right.output_domain.column;
+
+    if matches!(left_series.dtype(), DataType::Categorical(_, _))
+        || matches!(right_series.dtype(), DataType::Categorical(_, _))
+    {
+        return fallible!(MakeTransformation, "{} cannot be applied to categorical data, because it may trigger a data-dependent CategoricalRemappingWarning in Polars", op);
+    }
+
     let mut data_column =
-        SeriesDomain::new(&*expr_output_name(&expr)?, AtomDomain::<bool>::default());
-
-    let left_nullable = t_left.output_domain.column.nullable;
-    let right_nullable = t_right.output_domain.column.nullable;
-
-    data_column.nullable = left_nullable || right_nullable;
+        SeriesDomain::new(expr_output_name(&expr)?, AtomDomain::<bool>::default());
+    data_column.nullable = left_series.nullable || right_series.nullable;
 
     let output_domain = ExprDomain {
         column: data_column,
@@ -69,15 +74,22 @@ where
         input_domain,
         output_domain,
         Function::new_fallible(move |arg: &DslPlan| {
-            let left = t_left.invoke(arg)?.1;
-            let right = t_right.invoke(arg)?.1;
+            let left = t_left.invoke(arg)?;
+            let right = t_right.invoke(arg)?;
 
-            let binary = Expr::BinaryExpr {
-                left: Arc::new(left),
-                right: Arc::new(right),
-                op: op.clone(),
-            };
-            Ok((arg.clone(), binary))
+            Ok(ExprPlan {
+                plan: arg.clone(),
+                expr: Expr::BinaryExpr {
+                    left: Arc::new(left.expr),
+                    right: Arc::new(right.expr),
+                    op: op.clone(),
+                },
+                fill: left.fill.zip(right.fill).map(|(l, r)| Expr::BinaryExpr {
+                    left: Arc::new(l),
+                    right: Arc::new(r),
+                    op: op.clone(),
+                }),
+            })
         }),
         input_metric.clone(),
         input_metric,

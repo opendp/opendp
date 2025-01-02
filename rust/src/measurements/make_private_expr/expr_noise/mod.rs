@@ -1,9 +1,9 @@
 use crate::core::{Measure, MetricSpace, PrivacyMap};
-use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
+use crate::domains::{ExprDomain, ExprPlan, OuterMetric, WildExprDomain};
 use crate::measurements::{gaussian_zcdp_map, get_discretization_consts, laplace_puredp_map};
 use crate::measures::ZeroConcentratedDivergence;
 use crate::metrics::{L1Distance, L2Distance, PartitionDistance};
-use crate::polars::{apply_plugin, literal_value_of, match_plugin, ExprFunction, OpenDPPlugin};
+use crate::polars::{apply_plugin, literal_value_of, match_plugin, OpenDPPlugin};
 use crate::traits::samplers::{
     sample_discrete_gaussian, sample_discrete_gaussian_Z2k, sample_discrete_laplace,
     sample_discrete_laplace_Z2k,
@@ -18,6 +18,7 @@ use crate::{
     traits::SaturatingCast,
 };
 use dashu::{integer::IBig, rational::RBig};
+use polars::prelude::{Column, CompatLevel, IntoColumn};
 use serde::de::value::Error;
 
 use polars::chunked_array::ChunkedArray;
@@ -29,7 +30,7 @@ use polars::error::PolarsResult;
 use polars::error::{polars_bail, polars_err};
 use polars::lazy::dsl::Expr;
 use polars::series::{IntoSeries, Series};
-use polars_plan::dsl::{GetOutput, SeriesUdf};
+use polars_plan::dsl::{ColumnsUdf, GetOutput};
 use polars_plan::prelude::{ApplyOptions, FunctionOptions};
 use pyo3_polars::derive::polars_expr;
 use serde::de::IntoDeserializer;
@@ -42,20 +43,14 @@ mod test;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub(crate) struct NoiseShim;
-impl SeriesUdf for NoiseShim {
+impl ColumnsUdf for NoiseShim {
     // makes it possible to downcast the AnonymousFunction trait object back to Self
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
 
-    fn call_udf(&self, _: &mut [Series]) -> PolarsResult<Option<Series>> {
+    fn call_udf(&self, _: &mut [Column]) -> PolarsResult<Option<Column>> {
         polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")
-    }
-
-    fn get_output(&self) -> Option<GetOutput> {
-        Some(GetOutput::map_fields(|fields| {
-            noise_plugin_type_udf(fields)
-        }))
     }
 }
 
@@ -67,6 +62,12 @@ impl OpenDPPlugin for NoiseShim {
             fmt_str: Self::NAME,
             ..Default::default()
         }
+    }
+
+    fn get_output(&self) -> Option<GetOutput> {
+        Some(GetOutput::map_fields(|fields| {
+            noise_plugin_type_udf(fields)
+        }))
     }
 }
 
@@ -84,20 +85,14 @@ pub struct NoisePlugin {
 }
 
 // allow the NoiseArgs struct to be stored inside an AnonymousFunction, when used from Rust directly
-impl SeriesUdf for NoisePlugin {
+impl ColumnsUdf for NoisePlugin {
     // makes it possible to downcast the AnonymousFunction trait object back to NoiseArgs
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
 
-    fn call_udf(&self, s: &mut [Series]) -> PolarsResult<Option<Series>> {
+    fn call_udf(&self, s: &mut [Column]) -> PolarsResult<Option<Column>> {
         noise_udf(s, self.clone()).map(Some)
-    }
-
-    fn get_output(&self) -> Option<GetOutput> {
-        Some(GetOutput::map_fields(|fields| {
-            noise_plugin_type_udf(fields)
-        }))
     }
 }
 
@@ -109,6 +104,12 @@ impl OpenDPPlugin for NoisePlugin {
             fmt_str: Self::NAME,
             ..Default::default()
         }
+    }
+
+    fn get_output(&self) -> Option<GetOutput> {
+        Some(GetOutput::map_fields(|fields| {
+            noise_plugin_type_udf(fields)
+        }))
     }
 }
 
@@ -157,7 +158,7 @@ pub fn make_expr_noise<MI: 'static + UnboundedMetric, MO: NoiseExprMeasure>(
     input_metric: PartitionDistance<MI>,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<WildExprDomain, Expr, PartitionDistance<MI>, MO>>
+) -> Fallible<Measurement<WildExprDomain, ExprPlan, PartitionDistance<MI>, MO>>
 where
     Expr: StableExpr<PartitionDistance<MI>, MO::Metric>,
     (ExprDomain, MO::Metric): MetricSpace,
@@ -205,7 +206,7 @@ where
         }
     };
 
-    let support = match &middle_domain.column.field.dtype {
+    let support = match &middle_domain.column.dtype() {
         dt if dt.is_integer() => Support::Integer,
         dt if dt.is_float() => Support::Float,
         dt => {
@@ -276,10 +277,11 @@ pub(crate) fn match_noise_shim(
 /// Implementation of the noise expression.
 ///
 /// The Polars engine executes this function over chunks of data.
-fn noise_udf(inputs: &[Series], kwargs: NoisePlugin) -> PolarsResult<Series> {
+fn noise_udf(inputs: &[Column], kwargs: NoisePlugin) -> PolarsResult<Column> {
     let Ok([series]) = <&[_; 1]>::try_from(inputs) else {
         polars_bail!(InvalidOperation: "noise expects a single input expression");
     };
+    let series = series.as_materialized_series();
 
     let NoisePlugin {
         distribution,
@@ -375,7 +377,7 @@ fn noise_udf(inputs: &[Series], kwargs: NoisePlugin) -> PolarsResult<Series> {
             polars_bail!(InvalidOperation: "u8 and u16 not supported in the OpenDP Polars plugin. Please use u32 or u64.")
         }
         dtype => polars_bail!(InvalidOperation: "Expected numeric data type, found {}", dtype),
-    }
+    }.map(|s| s.into_column())
 }
 
 #[cfg(feature = "ffi")]
@@ -392,18 +394,18 @@ pub(crate) fn noise_plugin_type_udf(input_fields: &[Field]) -> PolarsResult<Fiel
         polars_bail!(InvalidOperation: "noise expects a single input field")
     };
     use DataType::*;
-    if matches!(field.data_type(), UInt8 | UInt16) {
+    if matches!(field.dtype(), UInt8 | UInt16) {
         polars_bail!(
             InvalidOperation: "u8 and u16 not supported in the OpenDP Polars plugin. Please use u32 or u64."
         );
     }
     if !matches!(
-        field.data_type(),
+        field.dtype(),
         UInt32 | UInt64 | Int8 | Int16 | Int32 | Int64 | Float32 | Float64
     ) {
         polars_bail!(
             InvalidOperation: "Expected numeric data type, found {:?}",
-            field.data_type()
+            field.dtype()
         );
     }
     Ok(field.clone())
@@ -413,5 +415,7 @@ pub(crate) fn noise_plugin_type_udf(input_fields: &[Field]) -> PolarsResult<Fiel
 #[cfg(feature = "ffi")]
 #[polars_expr(output_type_func=noise_plugin_type_udf)]
 fn noise_plugin(inputs: &[Series], kwargs: NoisePlugin) -> PolarsResult<Series> {
-    noise_udf(inputs, kwargs)
+    let inputs: Vec<Column> = inputs.iter().cloned().map(Column::Series).collect();
+    let out = noise_udf(inputs.as_slice(), kwargs)?;
+    Ok(out.take_materialized_series())
 }

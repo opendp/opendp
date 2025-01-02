@@ -24,18 +24,18 @@ def make_np_sscp(
     dp.assert_features("contrib", "floating-point")
 
     if not str(input_domain).startswith("NPArray2Domain"):
-        raise ValueError("input_domain must be a 2d-numpy array domain")
+        raise ValueError("input_domain must be a 2d-numpy array domain")  # pragma: no cover
 
     input_desc = input_domain.descriptor
     if input_desc.num_columns is None:
-        raise ValueError("num_columns must be known in input_domain")
+        raise ValueError("num_columns must be known in input_domain")  # pragma: no cover
 
     if output_metric.type == "SymmetricDistance":
         stability = lambda d_in: d_in
     elif output_metric.type.origin == "L2Distance":
         norm = input_desc.norm
         if input_desc.p != 2:
-            raise ValueError("rows in input_domain must have bounded L2 norm")
+            raise ValueError("rows in input_domain must have bounded L2 norm")  # pragma: no cover
 
         if input_desc.size is None:
             origin = np.atleast_1d(input_desc.origin)
@@ -46,7 +46,7 @@ def make_np_sscp(
     else:
         raise ValueError(
             "expected an output metric of either type SymmetricDistance or L2Distance<_>"
-        )
+        )  # pragma: no cover
 
     return _make_transformation(
         input_domain,

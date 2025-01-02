@@ -59,6 +59,12 @@ mod expr_sum;
 #[cfg(feature = "contrib")]
 mod expr_to_physical;
 
+#[cfg(feature = "contrib")]
+mod namespace_dt;
+
+#[cfg(feature = "contrib")]
+mod namespace_str;
+
 #[bootstrap(
     features("contrib"),
     arguments(output_metric(c_type = "AnyMetric *", rust_type = b"null")),
@@ -150,12 +156,23 @@ where
             #[cfg(feature = "contrib")]
             Literal(_) => expr_lit::make_expr_lit(input_domain, input_metric, self),
 
-
             #[cfg(feature = "contrib")]
             Function {
                 function: ToPhysical,
                 ..
             } => expr_to_physical::make_expr_to_physical(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Function {
+                function: FunctionExpr::TemporalExpr(_),
+                ..
+            } => namespace_dt::make_namespace_dt(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Function {
+                function: FunctionExpr::StringExpr(_),
+                ..
+            } => namespace_str::make_namespace_str(input_domain, input_metric, self),
 
             expr => fallible!(
                 MakeTransformation,

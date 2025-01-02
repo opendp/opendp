@@ -1,10 +1,8 @@
-use std::sync::Arc;
-
 use polars::datatypes::DataType;
 use polars_plan::dsl::Expr;
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{AtomDomain, ExprDomain, OuterMetric, WildExprDomain};
+use crate::domains::{AtomDomain, ExprDomain, ExprPlan, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::transformations::DatasetMetric;
 
@@ -55,13 +53,19 @@ where
     }
 
     let fill_series = &fill_domain.column;
-    let fill_can_be_nan = match &fill_series.field.dtype {
+    let fill_can_be_nan = match fill_series.dtype() {
         // from the perspective of atom domain, null refers to existence of any missing value.
         // For float types, this is NaN.
         // Therefore if the float domain may be nullable, then the domain includes NaN
         DataType::Float32 => fill_series.atom_domain::<f32>()?.nullable(),
         DataType::Float64 => fill_series.atom_domain::<f64>()?.nullable(),
-        _ => return fallible!(MakeTransformation, "filler data for fill_nan must be float"),
+        i if i.is_numeric() => false,
+        _ => {
+            return fallible!(
+                MakeTransformation,
+                "filler data for fill_nan must be numeric"
+            )
+        }
     };
 
     if fill_can_be_nan {
@@ -77,29 +81,35 @@ where
         );
     }
 
-    let mut output_domain = data_domain.clone();
-    // fill_nan should not change the output context-- just require that its input is row-by-row
-    let series_domain = &mut output_domain.column;
-    series_domain.drop_bounds().ok();
-
-    series_domain.element_domain = match &series_domain.field.dtype {
-        DataType::Float32 => Arc::new(AtomDomain::<f32>::default()),
-        DataType::Float64 => Arc::new(AtomDomain::<f64>::default()),
+    let mut series_domain = data_domain.column.clone();
+    match series_domain.dtype() {
+        DataType::Float32 => series_domain.set_element_domain(AtomDomain::<f32>::new(None, None)),
+        DataType::Float64 => series_domain.set_element_domain(AtomDomain::<f64>::new(None, None)),
         _ => {
             return fallible!(
                 MakeTransformation,
                 "fill_nan may only be applied to float data"
             )
         }
+    }
+    let output_domain = ExprDomain {
+        column: series_domain,
+        // fill_nan should not change the output context-- just require that its input is row-by-row
+        context: input_domain.context.clone(),
     };
 
     Transformation::new(
         input_domain,
         output_domain,
         Function::new_fallible(move |arg| {
-            let expr_data = t_data.invoke(arg)?.1;
-            let expr_fill = t_fill.invoke(arg)?.1;
-            Ok((arg.clone(), expr_data.fill_nan(expr_fill)))
+            let data = t_data.invoke(arg)?;
+            let fill = t_fill.invoke(arg)?;
+
+            Ok(ExprPlan {
+                plan: arg.clone(),
+                expr: data.expr.fill_nan(fill.expr),
+                fill: data.fill.zip(fill.fill).map(|(d, f)| d.fill_nan(f)),
+            })
         }),
         input_metric.clone(),
         input_metric,

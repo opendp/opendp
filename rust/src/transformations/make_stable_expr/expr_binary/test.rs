@@ -58,7 +58,7 @@ macro_rules! test_binary {
                 .with_column(col("L").$op(col("R")))
                 .collect()?
                 .column("L")?,
-            &Series::new("L", $expected),
+            &Column::new("L".into(), $expected),
             "input: {:?}",
             lf.clone().collect()?
         );
@@ -66,7 +66,7 @@ macro_rules! test_binary {
             .$op(col("R"))
             .make_stable(expr_domain.clone(), SymmetricDistance)?;
         let output_series = &t_op.output_domain.column;
-        assert_eq!(&*output_series.field.name, "L");
+        assert_eq!(&*output_series.name, "L");
 
         let out = lf
             .select([col("L").$op(col("R")).alias("out").null_count()])

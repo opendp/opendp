@@ -1,5 +1,5 @@
 [workspace.package]
-version = "0.11.1-dev"
+version = "0.12.0-dev"
 license-file = "../LICENSE"
 readme = "../README.md"
 homepage = "https://opendp.org/"
@@ -33,7 +33,7 @@ rust-version.workspace = true
 exclude = ["windows/*"]
 
 [dependencies]
-opendp_derive = { path = "opendp_derive", version = "0.11.1-dev" }
+opendp_derive = { path = "opendp_derive", version = "0.12.0-dev" }
 rand = "0.7.3"
 num = "0.3.1"
 thiserror = "1.0.24"
@@ -45,18 +45,21 @@ openssl = { version = "0.10.64", features = ["vendored"], optional = true }
 # See https://github.com/openssl/openssl/issues/25366
 openssl-src = "=300.3.1"
 
-opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.11.1-dev" }
+opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.12.0-dev" }
 readonly = "0.2"
 bitvec = "1.0"
 
 # A strict version requirement is necessary to keep the serialization format of LazyFrames stable.
 # If you change the version of Polars, 
 # be sure to also change the Python package version requirement and test binary compatibility.
-polars = { version = "=0.41.3", features = [
+polars = { version = "=0.44.2", features = [
     "lazy",
     "csv",
     "dtype-struct",
     "dtype-array",
+    "dtype-date",
+    "dtype-datetime",
+    "dtype-time",
     "parquet",
     "serde-lazy",
     "streaming",
@@ -65,19 +68,21 @@ polars = { version = "=0.41.3", features = [
     "polars-ops",
     "abs",
     "meta",
-    "cutqcut"
+    "cutqcut",
+    "strings",
+    "repeat_by",
+    "concat_str",
 ], optional = true }
-polars-plan = { version = "=0.41.3", features = [
+polars-plan = { version = "=0.44.2", features = [
     "ffi_plugin",
 ], optional = true }
+# matches the version specified in Polars: 
+#   https://github.com/pola-rs/polars/blob/main/Cargo.toml
+chrono = { version = "0.4.31", default-features = false, features = ["std"], optional = true }
 
-# Temporary fix until Polars is updated.
-# See https://github.com/pola-rs/polars/issues/19063#issuecomment-2397815029
-hashbrown = { version = "=0.14.5", features = ["raw"] }
-
-polars-arrow = { version = "=0.41.3", optional = true }
+polars-arrow = { version = "=0.44.2", optional = true }
 pyo3 = { version = "0.21.2", features = ["abi3-py39", "extension-module"], optional = true }
-pyo3-polars = { version = "=0.15.0", features = ["derive"], optional = true }
+pyo3-polars = { version = "=0.18.0", features = ["derive", "dtype-array", "dtype-categorical", "dtype-struct"], optional = true }
 serde = { version = "1.0", optional = true }
 serde-pickle = { version = "1.1", optional = true }
 ciborium = { version = "0.2.1", optional = true }
@@ -86,7 +91,7 @@ lazy_static = { version = "1.4.0", optional = true }
 vega_lite_4 = { version = "0.6.0", optional = true }
 
 [build-dependencies]
-opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.11.1-dev" }
+opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.12.0-dev" }
 syn = { workspace = true, optional = true }
 proc-macro2 = { workspace = true, optional = true }
 cbindgen = { version = "0.20.0", optional = true }
@@ -108,6 +113,7 @@ polars = [
     "serde",
     "serde-pickle",
     "ciborium",
+    "chrono"
 ]
 use-openssl = ["openssl"]
 
