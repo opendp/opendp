@@ -50,7 +50,7 @@ def test_eigenvector_integration():
 
     np = pytest.importorskip('numpy')
     data = np.random.normal(size=(1000, num_columns))
-    print("TODO: explain: meas(data)", meas(data))
+    print("meas(data)", meas(data))
 
 
 def test_eigenvectors():
@@ -76,4 +76,4 @@ def test_eigenvectors():
     np = pytest.importorskip('numpy')
     data = np.random.normal(size=(1000, num_columns))
     with optional_dependency('randomgen'):
-        print("TODO: explain: meas(data)", meas(data))
+        print("meas(data)", meas(data))

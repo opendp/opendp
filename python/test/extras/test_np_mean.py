@@ -10,5 +10,5 @@ def test_private_np_mean():
         space = dp.numpy.array2_domain(size=1000, T=float), dp.symmetric_distance()
     trans = space >> then_private_np_mean(scale=.001, norm=1.)
     np = pytest.importorskip('numpy')
-    print("TODO: explain: trans(np.random.normal(size=(1000, 4)))", trans(np.random.normal(size=(1000, 4))))
+    print("trans(np.random.normal(size=(1000, 4)))", trans(np.random.normal(size=(1000, 4))))
     assert trans.map(2) == 2

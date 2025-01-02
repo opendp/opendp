@@ -103,12 +103,12 @@ def test_context_init_split_evenly_over():
     )
 
     dp_sum = context.query().clamp((1, 10)).sum().laplace(100.0)  # type: ignore
-    print("TODO: explain: dp_sum.release()", dp_sum.release())
+    print("dp_sum.release()", dp_sum.release())
 
     # this time the scale parameter is omitted, but it is resolved from the context
-    print("TODO: explain: context.query().clamp((1, 10)).sum().laplace().release()", context.query().clamp((1, 10)).sum().laplace().release())  # type: ignore
+    print("context.query().clamp((1, 10)).sum().laplace().release()", context.query().clamp((1, 10)).sum().laplace().release())  # type: ignore
     # where we're headed:
-    # print("TODO: explain: context.query().dp_sum((1, 10)).release()", context.query().dp_sum((1, 10)).release())
+    # print("context.query().dp_sum((1, 10)).release()", context.query().dp_sum((1, 10)).release())
 
 
 
@@ -121,10 +121,10 @@ def test_context_zCDP():
     )
 
     dp_sum = context.query().clamp((1, 10)).sum().gaussian(100.0)  # type: ignore
-    print("TODO: explain: dp_sum.release()", dp_sum.release())
+    print("gaussian(100.0)", dp_sum.release())
 
     dp_sum = context.query().clamp((1, 10)).sum().gaussian()  # type: ignore
-    print("TODO: explain: dp_sum.release()", dp_sum.release())
+    print("gaussian()", dp_sum.release())
 
 
 def test_middle_param():
@@ -269,7 +269,7 @@ def test_rho_to_eps():
 
     dp_sum = context.query().clamp((1, 10)).sum().laplace()  # type: ignore
 
-    print("TODO: explain: dp_sum.release()", dp_sum.release())
+    print("dp_sum.release()", dp_sum.release())
 
 
 def test_approx_to_approx_zCDP():

@@ -134,7 +134,7 @@ def test_function():
     # Exercise postprocessing transformation
     transformation = make_identity(atom_domain(T=float), absolute_distance(T=float))
     mechanism = mechanism >> transformation
-    print("TODO: explain: mechanism(0.0)", mechanism(0.0))
+    print("mechanism(0.0)", mechanism(0.0))
 
 
 def test_privacy_profile():

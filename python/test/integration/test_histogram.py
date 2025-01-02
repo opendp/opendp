@@ -21,7 +21,7 @@ def test_count_by_categories():
 
     data = "\n".join(["a"] * 25 + ["b"] * 25 + ["what?"] * 10)
 
-    print("TODO: explain: noisy_histogram_from_dataframe(data)", noisy_histogram_from_dataframe(data))
+    print("noisy_histogram_from_dataframe(data)", noisy_histogram_from_dataframe(data))
 
 
 def test_count_by_categories_float():
