@@ -525,7 +525,8 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     _type_ = AnyDomain
 
     def member(self, val):
-        '''TODO
+        '''
+        Check if ``val`` is a member of the domain.
         
         :param val:
         '''
@@ -699,7 +700,8 @@ class PrivacyProfile(object):
         self.curve = curve
 
     def delta(self, epsilon):
-        '''TODO
+        '''
+        Returns the delta that corresponds to this epsilon.
         
         :param epsilon:
         '''
@@ -707,7 +709,8 @@ class PrivacyProfile(object):
         return privacy_profile_delta(self.curve, epsilon)
 
     def epsilon(self, delta):
-        '''TODO
+        '''
+        Returns the epsilon that corresponds to this delta.
         
         :param delta:
         '''
