@@ -195,7 +195,9 @@ class PCA(_SKLPCA):
 
     @property
     def n_features(self):
-        '''TODO'''
+        '''
+        Number of features
+        '''
         return self.n_features_in_
 
     # this overrides the scikit-learn method to instead use the opendp-core constructor

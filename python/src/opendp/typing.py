@@ -506,7 +506,7 @@ def get_first(value):
 
 def parse_or_infer(type_name: RuntimeTypeDescriptor | None, example) -> Union[RuntimeType, str]:
     '''
-    TODO
+    Given a ``RuntimeTypeDescriptor``, returns a ``RuntimeType`` or ``str``.
 
     :param type_name:
     :param example:
@@ -523,7 +523,8 @@ def pass_through(value: Any) -> Any:
 
 def get_dependencies(value: Union[Measurement, Transformation, Function]) -> Any:
     '''
-    TODO
+    Returns the dependencies of ``value``.
+    Used extensively by combinators.
 
     :param value:
     '''
@@ -531,7 +532,7 @@ def get_dependencies(value: Union[Measurement, Transformation, Function]) -> Any
 
 def get_dependencies_iterable(value: list[Union[Measurement, Transformation, Function]]) -> list[Any]:
     '''
-    TODO
+    Returns a list with the dependencies of each item in ``value``.
 
     :param value:
     '''
@@ -539,23 +540,23 @@ def get_dependencies_iterable(value: list[Union[Measurement, Transformation, Fun
 
 def get_carrier_type(value: Domain) -> Union[RuntimeType, str]:
     '''
-    TODO
+    Returns the carrier type for a domain.
 
     :param value:
     '''
     return value.carrier_type
 
-def get_type(value):
+def get_type(value: Domain):
     '''
-    TODO
+    Returns the type for a domain.
 
     :param value:
     '''
     return value.type
 
-def get_value_type(type_name):
+def get_value_type(type_name: Union[Metric, Measure]):
     '''
-    TODO
+    Returns the value type for a metric or measure.
 
     :param type_name:
     '''
@@ -563,7 +564,7 @@ def get_value_type(type_name):
 
 def get_distance_type(value: Union[Metric, Measure]) -> Union[RuntimeType, str]:
     '''
-    TODO
+    Returns the distance type for a metric or measure.
 
     :param value:
     '''

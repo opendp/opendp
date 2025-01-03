@@ -131,30 +131,40 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
 
     @property
     def input_domain(self) -> "Domain":
-        '''TODO'''
+        '''
+        Input domain of measurement
+        '''
         from opendp.core import measurement_input_domain
         return measurement_input_domain(self)
     
     @property
     def input_metric(self) -> "Metric":
-        '''TODO'''
+        '''
+        Input metric of measurement
+        '''
         from opendp.core import measurement_input_metric
         return measurement_input_metric(self)
 
     @property
     def input_space(self) -> tuple["Domain", "Metric"]:
-        '''TODO'''
+        '''
+        Input space of measurement
+        '''
         return self.input_domain, self.input_metric
     
     @property
     def output_measure(self) -> "Measure":
-        '''TODO'''
+        '''
+        Output measure of measurement
+        '''
         from opendp.core import measurement_output_measure
         return measurement_output_measure(self)
     
     @property
     def function(self) -> "Function":
-        '''TODO'''
+        '''
+        Function of measurement
+        '''
         from opendp.core import measurement_function
         return measurement_function(self)
     
@@ -347,43 +357,57 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
 
     @property
     def input_domain(self) -> "Domain":
-        '''TODO'''
+        '''
+        Input domain of transformation
+        '''
         from opendp.core import transformation_input_domain
         return transformation_input_domain(self)
     
 
     @property
     def output_domain(self) -> "Domain":
-        '''TODO'''
+        '''
+        Output domain of transformation
+        '''
         from opendp.core import transformation_output_domain
         return transformation_output_domain(self)
     
 
     @property
     def input_metric(self) -> "Metric":
-        '''TODO'''
+        '''
+        Input metric of transformation
+        '''
         from opendp.core import transformation_input_metric
         return transformation_input_metric(self)
     
     @property
     def output_metric(self) -> "Metric":
-        '''TODO'''
+        '''
+        Ouput metric of transformation
+        '''
         from opendp.core import transformation_output_metric
         return transformation_output_metric(self)
     
     @property
     def input_space(self) -> tuple["Domain", "Metric"]:
-        '''TODO'''
+        '''
+        Input space of transformation
+        '''
         return self.input_domain, self.input_metric
     
     @property
     def output_space(self) -> tuple["Domain", "Metric"]:
-        '''TODO'''
+        '''
+        Output space of transformation
+        '''
         return self.output_domain, self.output_metric
     
     @property
     def function(self) -> "Function":
-        '''TODO'''
+        '''
+        Function of transformation
+        '''
         from opendp.core import transformation_function
         return transformation_function(self)
 
@@ -518,21 +542,27 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
 
     @property
     def type(self) -> Union["RuntimeType", str]:
-        '''TODO'''
+        '''
+        Type of domain
+        '''
         from opendp.domains import domain_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(domain_type(self))
     
     @property
     def carrier_type(self) -> Union["RuntimeType", str]:
-        '''TODO'''
+        '''
+        Carrier type of domain
+        '''
         from opendp.domains import domain_carrier_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(domain_carrier_type(self))
     
     @property
     def descriptor(self) -> Any:
-        '''TODO'''
+        '''
+        Descriptor of domain
+        '''
         from opendp.domains import _extrinsic_domain_descriptor
         return _extrinsic_domain_descriptor(self)
 
@@ -575,14 +605,18 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
 
     @property
     def type(self):
-        '''TODO'''
+        '''
+        Type of metric
+        '''
         from opendp.metrics import metric_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(metric_type(self))
     
     @property
     def distance_type(self) -> Union["RuntimeType", str]:
-        '''TODO'''
+        '''
+        Distance type of metric
+        '''
         from opendp.metrics import metric_distance_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(metric_distance_type(self))
@@ -629,14 +663,18 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
 
     @property
     def type(self):
-        '''TODO'''
+        '''
+        Type of measure
+        '''
         from opendp.measures import measure_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(measure_type(self))
     
     @property
     def distance_type(self) -> Union["RuntimeType", str]:
-        '''TODO'''
+        '''
+        Distance type of measure
+        '''
         from opendp.measures import measure_distance_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(measure_distance_type(self))
