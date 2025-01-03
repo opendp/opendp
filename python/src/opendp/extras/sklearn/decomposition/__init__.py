@@ -165,11 +165,13 @@ class PCA():
         n_changes: int = 1,
         whiten: bool = False,
     ) -> None:
-        if self.__class__.__bases__ == (object,):
-            raise ImportError(
-                "The optional install scikit-learn is required for this functionality"
-            )
-        super().__init__(
+        # Error if constructor called without depency installed:
+        import_optional_dependency('sklearn.decomposition')
+        
+        # The zero-argument form of super() does not work,
+        # (I believe) because the type argument is determined lexically,
+        # and it doesn't see our redefinition.
+        super(PCA, self).__init__(
             n_components or n_features,
             whiten=whiten,
         )
