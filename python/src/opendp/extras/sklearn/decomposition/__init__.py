@@ -27,24 +27,6 @@ if TYPE_CHECKING: # pragma: no cover
     import numpy # type: ignore[import-not-found]
 
 
-_decomposition = import_optional_dependency('sklearn.decomposition', False)
-if _decomposition is not None:
-    class _SKLPCA(_decomposition.PCA): # type: ignore[name-defined]
-        '''
-        :meta private:
-        '''
-        pass
-else: # pragma: no cover
-    class _SKLPCA(object): # type: ignore[no-redef]
-        '''
-        :meta private:
-        '''
-        def __init__(*args, **kwargs):
-            raise ImportError(
-                "The optional install scikit-learn is required for this functionality"
-            )
-
-
 class PCAEpsilons(NamedTuple):
     eigvals: float
     eigvecs: Sequence[float]
@@ -170,8 +152,8 @@ def make_private_pca(
 then_private_pca = register_measurement(make_private_pca)
 
 
-class PCA(_SKLPCA):
-    # TODO: If I add a docstring here, it also tries to locate _SKLPCA, and fails
+class PCA():
+    '''TODO'''
     def __init__(
         self,
         *,
@@ -183,6 +165,10 @@ class PCA(_SKLPCA):
         n_changes: int = 1,
         whiten: bool = False,
     ) -> None:
+        if self.__class__.__bases__ == (object,):
+            raise ImportError(
+                "The optional install scikit-learn is required for this functionality"
+            )
         super().__init__(
             n_components or n_features,
             whiten=whiten,
@@ -198,7 +184,7 @@ class PCA(_SKLPCA):
         return self.n_features_in_
 
     # this overrides the scikit-learn method to instead use the opendp-core constructor
-    def _fit(self, X):
+    def fit(self, X):
         return self._prepare_fitter()(X)
 
     def _prepare_fitter(self) -> Measurement:
@@ -289,6 +275,29 @@ class PCA(_SKLPCA):
         pass
 
 
+_decomposition = import_optional_dependency('sklearn.decomposition', False)
+# if _decomposition is not None:
+#     class _SKLPCA(_decomposition.PCA): # type: ignore[name-defined]
+#         '''
+#         :meta private:
+#         '''
+#         pass
+# else: # pragma: no cover
+#     class _SKLPCA(object): # type: ignore[no-redef]
+#         '''
+#         :meta private:
+#         '''
+#         def __init__(*args, **kwargs):
+#             raise ImportError(
+#                 "The optional install scikit-learn is required for this functionality"
+#             )
+# # Redefine PCA, adding _SKLPCA as base class:
+# PCA = type('PCA', (_SKLPCA,), dict(PCA.__dict__)) 
+
+if _decomposition is not None:
+    PCA = type('PCA', (_decomposition.PCA,), dict(PCA.__dict__))
+
+        
 def _smaller(v):
     """returns the next non-negative float closer to zero"""
     np = import_optional_dependency('numpy')
