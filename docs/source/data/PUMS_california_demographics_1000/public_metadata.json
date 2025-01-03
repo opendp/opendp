@@ -1,0 +1,4 @@
+{
+    "column_names": ["age", "sex", "educ", "race", "income", "married"],
+    "row_size": 1000
+}
