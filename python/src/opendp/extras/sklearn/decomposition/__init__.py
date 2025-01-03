@@ -186,7 +186,7 @@ class PCA():
         return self.n_features_in_
 
     # this overrides the scikit-learn method to instead use the opendp-core constructor
-    def fit(self, X):
+    def _fit(self, X):
         return self._prepare_fitter()(X)
 
     def _prepare_fitter(self) -> Measurement:
