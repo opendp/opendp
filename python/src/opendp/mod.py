@@ -478,14 +478,6 @@ class Queryable(object):
     def __call__(self, query):
         from opendp.core import queryable_eval
         return queryable_eval(self.value, query)
-    
-    def eval(self, query):
-        '''TODO
-        
-        :param query:
-        '''
-        from opendp.core import queryable_eval # pragma: no cover
-        return queryable_eval(self.value, query) # pragma: no cover
 
     def __repr__(self) -> str:
         return f"Queryable(Q={self.query_type})"
