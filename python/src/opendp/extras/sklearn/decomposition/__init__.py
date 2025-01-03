@@ -156,9 +156,14 @@ class PCA():
     '''
     DP wrapper for `sklearn's PCA <https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html>`_.
 
-    Trying to create an instance without sklearn installed will raise a ``ImportError``.
+    Trying to create an instance without sklearn installed will raise an ``ImportError``.
     
     See the :ref:`tutorial on diffentially private PCA <dp-pca>` for details.
+
+    :param whiten: Mirrors the corresponding sklearn parameter:
+        When ``True`` (``False`` by default) the ``components_`` vectors are multiplied
+        by the square root of n_samples and then divided by the singular values
+        to ensure uncorrelated outputs with unit component-wise variances.
     '''
     def __init__(
         self,
