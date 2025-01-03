@@ -153,7 +153,13 @@ then_private_pca = register_measurement(make_private_pca)
 
 
 class PCA():
-    '''TODO'''
+    '''
+    DP wrapper for `sklearn's PCA <https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html>`_.
+
+    Trying to create an instance without sklearn installed will raise a ``ImportError``.
+    
+    See the :ref:`tutorial on diffentially private PCA <dp-pca>` for details.
+    '''
     def __init__(
         self,
         *,
