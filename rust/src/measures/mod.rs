@@ -253,8 +253,6 @@ impl Measure for RenyiDivergence {
 
 /// Privacy measure used to define $\eta$-Bounded Range.
 ///
-/// The greatest bounded range divergence between any randomly selected subset of the support.
-///
 /// # Proof Definition
 ///
 /// ### `d`-closeness

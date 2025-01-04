@@ -1,7 +1,8 @@
 # type: ignore
-def make_report_noisy_max_gumbel(
+def make_report_noisy_max(
     input_domain: VectorDomain[AtomDomain[TIA]],
     input_metric: RangeDistance[TIA],
+    output_measure: MO,
     scale: QO, 
     optimize: Union[Literal["max"], Literal["min"]]
 ) -> Measurement:
@@ -11,23 +12,10 @@ def make_report_noisy_max_gumbel(
     if scale < 0:
         raise ValueError("scale must be non-negative")
 
-    if optimize == "max":
-        sign = +1
-    elif optimize == "min":
-        sign = -1
-    else:
-        raise ValueError("must specify optimization")
-
-    scale_frac = Fraction(scale)
+    f_scale = Fraction(scale)
 
     def function(scores: list[TIA]):
-        def map_gumbel(score):
-            return GumbelPSRN(shift=sign * Fraction(score), scale=scale_frac)
-        gumbel_scores = map(map_gumbel, scores)
-
-        def reduce_best(a, b):
-            return a if a[1].greater_than(b[1]) else b
-        return reduce(reduce_best, enumerate(gumbel_scores))[0]
+        return select_score(scores, optimize, f_scale, MO)
 
     def privacy_map(d_in: TIA):
         # convert to range distance
@@ -47,6 +35,6 @@ def make_report_noisy_max_gumbel(
         input_domain=input_domain,
         function=function,
         input_metric=input_metric,
-        output_metric=MaxDivergence(QO),
+        output_measure=output_measure,
         privacy_map=privacy_map,
     )

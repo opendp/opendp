@@ -200,21 +200,40 @@ def test_gaussian():
     input_space = dp.vector_domain(dp.atom_domain(T=float)), dp.l2_distance(T=float)
     (input_space >> dp.m.then_gaussian(1.))([1., 2., 3.])
 
+
 def test_report_noisy_max_gumbel():
     input_domain = dp.vector_domain(dp.atom_domain(T=dp.usize))
 
     input_metric = dp.linf_distance(T=dp.usize)
-    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max_gumbel(1., "max")
-    print(meas(list(range(10))))
+    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max(dp.bounded_range(), 1., "max")
+    # fails with very small probability
+    assert meas([0, 0, 20, 0]) == 2  # because score 2 is by far the greatest
     assert meas.map(2) == 4
 
     input_metric = dp.linf_distance(monotonic=True, T=dp.usize)
-    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max_gumbel(1., "max")
-    print(meas(list(range(10))))
+    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max(dp.bounded_range(), 1., "max")
+    # fails with very small probability
+    assert meas([0, 0, 20, 0]) == 2  # because score 2 is by far the greatest
     assert meas.map(2) == 2
 
     assert dp.c.make_bounded_range_to_pureDP(meas).map(1) == 1
     assert dp.c.make_bounded_range_to_zCDP(meas).map(1) == 1 / 8
+
+
+def test_report_noisy_max_exponential():
+    input_domain = dp.vector_domain(dp.atom_domain(T=dp.usize))
+
+    input_metric = dp.linf_distance(T=dp.usize)
+    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max(dp.max_divergence(), 1., "max")
+    # fails with probability about e^{-20} / 3
+    assert meas([0, 0, 20, 0]) == 2  # because score 2 is by far the greatest
+    assert meas.map(2) == 4
+
+    input_metric = dp.linf_distance(monotonic=True, T=dp.usize)
+    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max(dp.max_divergence(), 1., "max")
+    # fails with probability about e^{-20} / 3
+    assert meas([0, 0, 20, 0]) == 2  # because score 2 is by far the greatest
+    assert meas.map(2) == 2
 
 
 def test_alp_histogram():
