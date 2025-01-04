@@ -1,4 +1,7 @@
-use crate::error::Fallible;
+use crate::{
+    error::Fallible,
+    measures::{MaxDivergence, RangeDivergence},
+};
 
 use super::*;
 
