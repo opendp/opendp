@@ -1,7 +1,5 @@
-use crate::error::Fallible;
-
 use super::{InverseCDF, ODPRound};
-use dashu::{base::Sign, float::FBig, rational::RBig};
+use dashu::{float::FBig, rational::RBig};
 
 #[cfg(test)]
 mod test;
@@ -20,16 +18,8 @@ mod test;
 #[derive(Clone)]
 pub struct ExponentialRV {
     pub shift: FBig,
+    // Must be positive
     pub scale: FBig,
-}
-
-impl ExponentialRV {
-    pub fn new(shift: FBig, scale: FBig) -> Fallible<Self> {
-        if let Sign::Negative = scale.sign() {
-            return fallible!(FailedFunction, "scale ({}) must be non-negative", scale);
-        }
-        Ok(ExponentialRV { shift, scale })
-    }
 }
 
 impl InverseCDF for ExponentialRV {
