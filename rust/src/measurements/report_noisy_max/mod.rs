@@ -1,21 +1,14 @@
 use crate::{
-    core::{Function, Measure, Measurement, PrivacyMap},
+    core::{Function, Measurement},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    measures::{MaxDivergence, RangeDivergence},
     metrics::LInfDistance,
-    traits::{
-        InfCast, InfDiv, Number,
-        samplers::{GumbelRV, InverseCDF, PartialSample, sample_uniform_uint_below},
-    },
+    traits::{InfCast, Number},
 };
 use dashu::float::FBig;
-use num::Zero;
 use opendp_derive::bootstrap;
-use std::fmt::Display;
 
-#[cfg(feature = "polars")]
-use super::expr_report_noisy_max::SelectionDistribution;
+use super::{Optimize, SelectionMeasure, make_report_noisy_top_k};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -54,186 +47,12 @@ where
     FBig: TryFrom<TIA> + TryFrom<f64>,
     f64: InfCast<TIA>,
 {
-    if input_domain.element_domain.nan() {
-        return fallible!(
-            MakeMeasurement,
-            "input_domain member elements must not be nan"
-        );
-    }
-
-    if scale.is_sign_negative() {
-        return fallible!(MakeMeasurement, "scale ({}) must not be negative", scale);
-    }
-
-    let f_scale = FBig::try_from(scale.clone())
-        .map_err(|_| err!(MakeMeasurement, "scale ({}) must be finite", scale))?;
-
-    Measurement::new(
+    make_report_noisy_top_k(
         input_domain,
-        Function::new_fallible(move |x: &Vec<TIA>| {
-            select_score::<TIA, MO::RV>(x, f_scale.clone(), optimize.clone())
-        }),
-        input_metric.clone(),
-        output_measure.clone(),
-        PrivacyMap::new_fallible(move |d_in: &TIA| {
-            // convert L_\infty distance to range distance
-            let d_in = input_metric.range_distance(d_in.clone())?;
-
-            // convert data type to f64
-            let d_in = f64::inf_cast(d_in)?;
-
-            // upper bound the privacy loss in terms of the output measure
-            output_measure.privacy_map(d_in, scale)
-        }),
-    )
-}
-
-pub fn select_score<TIA, RV: SelectionRV>(
-    x: &[TIA],
-    scale: FBig,
-    optimize: Optimize,
-) -> Fallible<usize>
-where
-    TIA: Number,
-    FBig: TryFrom<TIA>,
-{
-    if scale.is_zero() {
-        let cmp = |l: &TIA, r: &TIA| match optimize {
-            Optimize::Max => l > r,
-            Optimize::Min => l < r,
-        };
-        return Ok((x.iter().enumerate())
-            .reduce(|l, r| if cmp(&l.1, &r.1) { l } else { r })
-            .ok_or_else(|| err!(FailedFunction, "there must be at least one candidate"))?
-            .0);
-    }
-
-    // When all scores are same, return a random index.
-    // This is a workaround for slow performance of the samplers
-    // when all scores are the same.
-    if x.windows(2).all(|w| w[0] == w[1]) {
-        return sample_uniform_uint_below(x.len());
-    }
-
-    (x.iter().enumerate())
-        // Cast to FBig and discard failed casts.
-        // Cast only fails on NaN scores, which are not in the input domain but could still be passed by the user.
-        // If the user still passes NaN in the input data, discarding results in graceful failure.
-        .filter_map(|(i, x_i)| Some((i, FBig::try_from(*x_i).ok()?)))
-        // Normalize sign.
-        .map(|(i, x_i)| {
-            let y_i = match optimize {
-                Optimize::Min => -x_i,
-                Optimize::Max => x_i,
-            };
-            (i, y_i)
-        })
-        // Initialize partial sample.
-        .map(|(i, f_shift)| Ok((i, PartialSample::new(RV::new(f_shift, scale.clone())))))
-        // Reduce to the pair with largest sample.
-        .reduce(|l, r| {
-            let (mut l, mut r) = (l?, r?);
-            Ok(if l.1.greater_than(&mut r.1)? { l } else { r })
-        })
-        .ok_or_else(|| err!(FailedFunction, "there must be at least one candidate"))?
-        // Return the index of the largest sample.
-        .map(|v| v.0)
-}
-
-pub trait SelectionRV: InverseCDF {
-    /// # Proof Definition
-    /// `scale` must be non-negative.
-    ///
-    /// Returns a random variable.
-    fn new(shift: FBig, scale: FBig) -> Self;
-}
-
-impl SelectionRV for GumbelRV {
-    fn new(shift: FBig, scale: FBig) -> Self {
-        GumbelRV { shift, scale }
-    }
-}
-impl SelectionRV for ExponentialRV {
-    fn new(shift: FBig, scale: FBig) -> Self {
-        ExponentialRV { shift, scale }
-    }
-}
-/// # Proof Definition
-/// Defines the noise distribution associated with the privacy measure.
-pub trait SelectionMeasure: 'static + Measure<Distance = f64> {
-    type RV: SelectionRV;
-
-    #[cfg(feature = "polars")]
-    const DISTRIBUTION: SelectionDistribution;
-
-    /// # Proof Definition
-    /// Given a mechanism that computes $\mathcal{M}(x) = \mathrm{argmax}_i z_i$,
-    /// where each $z_i \sim \mathrm{random\_variable}(\mathrm{shift}=x_i, \mathrm{scale}=\texttt{scale})$,
-    ///
-    /// the mechanism must satisfy `d_out = self.privacy_map(d_in)`,
-    /// where `d_in` is the sensitivity in terms of the range distance
-    ///
-    /// ```math
-    /// d_{\mathrm{Range}}(x, x') = \max_{ij} |(x_i - x'_i) - (x_j - x'_j)|,
-    /// ```
-    ///
-    /// and `d_out` is the privacy loss parameter in terms of the output measure `Self`.
-    fn privacy_map(&self, d_in: f64, scale: f64) -> Fallible<f64> {
-        if d_in.is_sign_negative() {
-            return fallible!(
-                InvalidDistance,
-                "sensitivity ({}) must be non-negative",
-                d_in
-            );
-        }
-
-        if scale.is_zero() {
-            return Ok(f64::INFINITY);
-        }
-
-        // d_out >= d_in / scale
-        d_in.inf_div(&scale)
-    }
-}
-
-impl SelectionMeasure for RangeDivergence {
-    type RV = GumbelRV;
-
-    #[cfg(feature = "polars")]
-    const DISTRIBUTION: SelectionDistribution = SelectionDistribution::Gumbel;
-}
-
-impl SelectionMeasure for MaxDivergence {
-    type RV = ExponentialRV;
-
-    #[cfg(feature = "polars")]
-    const DISTRIBUTION: SelectionDistribution = SelectionDistribution::Exponential;
-}
-
-#[derive(PartialEq, Clone, Copy, Debug)]
-#[cfg_attr(feature = "polars", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "polars", serde(rename_all = "lowercase"))]
-pub enum Optimize {
-    Min,
-    Max,
-}
-
-impl Display for Optimize {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            Optimize::Min => f.write_str("min"),
-            Optimize::Max => f.write_str("max"),
-        }
-    }
-}
-
-impl TryFrom<&str> for Optimize {
-    type Error = crate::error::Error;
-    fn try_from(s: &str) -> Fallible<Self> {
-        Ok(match s {
-            "min" => Optimize::Min,
-            "max" => Optimize::Max,
-            _ => return fallible!(FailedCast, "optimize must be \"min\" or \"max\""),
-        })
-    }
+        input_metric,
+        output_measure,
+        1,
+        scale,
+        optimize,
+    ) >> Function::new(|arg: &Vec<usize>| arg[0])
 }
