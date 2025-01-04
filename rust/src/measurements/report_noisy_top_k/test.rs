@@ -1,7 +1,4 @@
-use crate::{
-    error::Fallible,
-    measures::{BoundedRange, MaxDivergence},
-};
+use crate::error::Fallible;
 
 use super::*;
 
@@ -9,7 +6,14 @@ use super::*;
 fn test_rnm_gumbel() -> Fallible<()> {
     let input_domain = VectorDomain::new(AtomDomain::default());
     let input_metric = LInfDistance::default();
-    let de = make_report_noisy_max(input_domain, input_metric, BoundedRange, 1., Optimize::Max)?;
+    let de = make_report_noisy_top_k(
+        input_domain,
+        input_metric,
+        BoundedRange,
+        1,
+        1.,
+        Optimize::Max,
+    )?;
     let release = de.invoke(&vec![1., 2., 3., 2., 1.])?;
     println!("{:?}", release);
 
@@ -21,12 +25,13 @@ fn check_rnm_outcome<M: SelectionMeasure>(
     scale: f64,
     optimize: Optimize,
     input: Vec<i32>,
-    expected: usize,
+    expected: Vec<usize>,
 ) -> Fallible<()> {
-    let m_rnm = make_report_noisy_max(
+    let m_rnm = make_report_noisy_top_k(
         VectorDomain::new(AtomDomain::default()),
         LInfDistance::default(),
         measure,
+        expected.len(),
         scale,
         optimize,
     )?;
@@ -36,15 +41,21 @@ fn check_rnm_outcome<M: SelectionMeasure>(
 
 #[test]
 fn test_max_vs_min_gumbel() -> Fallible<()> {
-    check_rnm_outcome(BoundedRange, 0., Optimize::Max, vec![1, 2, 3], 2)?;
-    check_rnm_outcome(BoundedRange, 0., Optimize::Min, vec![1, 2, 3], 0)?;
-    check_rnm_outcome(BoundedRange, 1., Optimize::Max, vec![1, 1, 100_000], 2)?;
+    check_rnm_outcome(BoundedRange, 0., Optimize::Max, vec![1, 2, 3], vec![2])?;
+    check_rnm_outcome(BoundedRange, 0., Optimize::Min, vec![1, 2, 3], vec![0])?;
+    check_rnm_outcome(
+        BoundedRange,
+        1.,
+        Optimize::Max,
+        vec![1, 1, 100_000],
+        vec![2],
+    )?;
     check_rnm_outcome(
         BoundedRange,
         1.,
         Optimize::Min,
         vec![1, 100_000, 100_000],
-        0,
+        vec![0],
     )?;
     Ok(())
 }
@@ -53,7 +64,14 @@ fn test_max_vs_min_gumbel() -> Fallible<()> {
 fn test_rnm_exponential() -> Fallible<()> {
     let input_domain = VectorDomain::new(AtomDomain::default());
     let input_metric = LInfDistance::default();
-    let de = make_report_noisy_max(input_domain, input_metric, MaxDivergence, 1., Optimize::Max)?;
+    let de = make_report_noisy_top_k(
+        input_domain,
+        input_metric,
+        MaxDivergence,
+        2,
+        1.,
+        Optimize::Max,
+    )?;
     let release = de.invoke(&vec![1., 2., 3., 2., 1.])?;
     println!("{:?}", release);
 
@@ -62,15 +80,21 @@ fn test_rnm_exponential() -> Fallible<()> {
 
 #[test]
 fn test_max_vs_min_exponential() -> Fallible<()> {
-    check_rnm_outcome(MaxDivergence, 0., Optimize::Max, vec![1, 2, 3], 2)?;
-    check_rnm_outcome(MaxDivergence, 0., Optimize::Min, vec![1, 2, 3], 0)?;
-    check_rnm_outcome(MaxDivergence, 1., Optimize::Max, vec![1, 1, 100_000], 2)?;
+    check_rnm_outcome(MaxDivergence, 0., Optimize::Max, vec![1, 2, 3], vec![2])?;
+    check_rnm_outcome(MaxDivergence, 0., Optimize::Min, vec![1, 2, 3], vec![0])?;
+    check_rnm_outcome(
+        MaxDivergence,
+        1.,
+        Optimize::Max,
+        vec![1, 1, 100_000],
+        vec![2],
+    )?;
     check_rnm_outcome(
         MaxDivergence,
         1.,
         Optimize::Min,
         vec![1, 100_000, 100_000],
-        0,
+        vec![0],
     )?;
     Ok(())
 }

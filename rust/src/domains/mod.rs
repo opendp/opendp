@@ -24,7 +24,7 @@ use std::hash::Hash;
 use std::marker::PhantomData;
 use std::ops::Bound;
 
-use crate::core::{Domain, MetricSpace};
+use crate::core::Domain;
 use crate::error::Fallible;
 use crate::traits::{CheckAtom, InherentNull, ProductOrd};
 use std::fmt::{Debug, Formatter};
