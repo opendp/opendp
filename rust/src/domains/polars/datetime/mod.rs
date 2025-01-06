@@ -2,6 +2,9 @@ use polars::prelude::{PlSmallStr, TimeUnit};
 
 use crate::{core::Domain, error::Fallible};
 
+#[cfg(feature = "ffi")]
+mod ffi;
+
 /// A domain that represents a datetime.
 /// Number of milli/nano/micro seconds since Unix epoch.
 ///

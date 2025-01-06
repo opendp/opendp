@@ -165,11 +165,18 @@ pub(super) fn find_len_expr(
     (exprs.iter())
         .find_map(|e| is_len_expr(e, name))
         .ok_or_else(|| {
-            err!(
-                MakeMeasurement,
-                "expected exactly one DP length expression with name: {:?}",
-                name
-            )
+            if let Some(name) = name {
+                err!(
+                    MakeMeasurement,
+                    "stable key release expects a DP length expression with name: {:?}",
+                    name
+                )
+            } else {
+                err!(
+                    MakeMeasurement,
+                    "stable key release requires a `dp.len()` expression"
+                )
+            }
         })
 }
 

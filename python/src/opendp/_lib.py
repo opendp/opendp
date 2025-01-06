@@ -1,5 +1,5 @@
 import ctypes
-from typing import MutableMapping
+from typing import MutableMapping, Sequence
 import os
 from pathlib import Path
 import re
@@ -8,7 +8,7 @@ import importlib
 
 
 # list all acceptable alternative types for each default type
-ATOM_EQUIVALENCE_CLASSES: MutableMapping[str, list[str]] = {
+ATOM_EQUIVALENCE_CLASSES: MutableMapping[str, Sequence[str]] = {
     'i32': ['u8', 'u16', 'u32', 'u64', 'i8', 'i16', 'i32', 'i64', 'usize'],
     'f64': ['f32', 'f64'],
     'bool': ['bool'],
@@ -55,8 +55,12 @@ def _load_library():
 lib, lib_path = _load_library()
 
 
+# Key: Optional module name
+# Value: The opendp extra that provides this module,
+#        with the appropriate version pin, if needed
 install_names = {
-    'sklearn': 'scikit-learn'
+    'sklearn': 'scikit-learn',
+    'randomgen': 'numpy',
 }
 
 

@@ -80,7 +80,7 @@ where
         compute_labels(&breaks, left_closed)?
     };
 
-    let element_domain = CategoricalDomain::new_with_encoding(categories)?;
+    let element_domain = CategoricalDomain::new_with_categories(categories)?;
     output_domain.column.set_element_domain(element_domain);
 
     t_prior

@@ -52,13 +52,18 @@ where
         return fallible!(MakeTransformation, "unsupported operator: {:?}. Only binary operations that emit booleans are currently supported.", op);
     }
 
+    let left_series = &t_left.output_domain.column;
+    let right_series = &t_right.output_domain.column;
+
+    if matches!(left_series.dtype(), DataType::Categorical(_, _))
+        || matches!(right_series.dtype(), DataType::Categorical(_, _))
+    {
+        return fallible!(MakeTransformation, "{} cannot be applied to categorical data, because it may trigger a data-dependent CategoricalRemappingWarning in Polars", op);
+    }
+
     let mut data_column =
         SeriesDomain::new(expr_output_name(&expr)?, AtomDomain::<bool>::default());
-
-    let left_nullable = t_left.output_domain.column.nullable;
-    let right_nullable = t_right.output_domain.column.nullable;
-
-    data_column.nullable = left_nullable || right_nullable;
+    data_column.nullable = left_series.nullable || right_series.nullable;
 
     let output_domain = ExprDomain {
         column: data_column,

@@ -1,4 +1,4 @@
-use crate::domains::{LazyFrameDomain, OptionDomain, SeriesDomain};
+use crate::domains::{AtomDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
 use crate::metrics::SymmetricDistance;
 
 use super::*;

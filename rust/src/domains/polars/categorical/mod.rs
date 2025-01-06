@@ -12,7 +12,7 @@ use crate::{core::Domain, error::Fallible};
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct CategoricalDomain {
     /// The encoding used to assign numerical indices to each known possible category.
-    encoding: Option<Vec<PlSmallStr>>,
+    categories: Option<Vec<PlSmallStr>>,
 }
 
 impl CategoricalDomain {
@@ -24,17 +24,17 @@ impl CategoricalDomain {
     ///
     /// An example where this can be happen is for categorical data emitted by the Polars cut expression,
     /// where the categories and encoding are pre-determined by the expression (the bin edges).
-    pub fn new_with_encoding(encoding: Vec<PlSmallStr>) -> Fallible<Self> {
-        if encoding.len() != HashSet::<_>::from_iter(encoding.iter()).len() {
-            return fallible!(MakeDomain, "categories in encoding must be distinct");
+    pub fn new_with_categories(categories: Vec<PlSmallStr>) -> Fallible<Self> {
+        if categories.len() != HashSet::<_>::from_iter(categories.iter()).len() {
+            return fallible!(MakeDomain, "categories must be distinct");
         }
         Ok(CategoricalDomain {
-            encoding: Some(encoding),
+            categories: Some(categories),
         })
     }
 
-    pub fn encoding(&self) -> Option<&Vec<PlSmallStr>> {
-        self.encoding.as_ref()
+    pub fn categories(&self) -> Option<&Vec<PlSmallStr>> {
+        self.categories.as_ref()
     }
 }
 
@@ -45,7 +45,7 @@ impl Domain for CategoricalDomain {
 
     fn member(&self, value: &Self::Carrier) -> Fallible<bool> {
         Ok(self
-            .encoding
+            .categories
             .as_ref()
             .map(|e| e.contains(value))
             .unwrap_or(true))

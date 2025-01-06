@@ -12,7 +12,7 @@ We suggest importing under the conventional name ``dp``:
 '''
 
 import logging
-from typing import Any, Callable, Optional, Union, MutableMapping
+from typing import Any, Callable, Optional, Union, MutableMapping, Sequence
 import importlib
 from inspect import signature
 from functools import partial
@@ -360,7 +360,7 @@ class Context(object):
         accountant: Measurement,
         queryable: Queryable,
         d_in: float,
-        d_mids: Optional[list[float]] = None,
+        d_mids: Optional[Sequence[float]] = None,
         d_out: Optional[float] = None,
         space_override: Optional[tuple[Domain, Metric]] = None, # TODO: Document or add leading underscore and explain that is is for internal use only.
     ):
@@ -384,7 +384,7 @@ class Context(object):
         privacy_unit: tuple[Metric, float],
         privacy_loss: tuple[Measure, Any],
         split_evenly_over: Optional[int] = None,
-        split_by_weights: Optional[list[float]] = None,
+        split_by_weights: Optional[Sequence[float]] = None,
         domain: Optional[Domain] = None,
         margins: Optional[MutableMapping[tuple[str, ...], Margin]] = None,
     ) -> "Context":
@@ -436,7 +436,7 @@ class Context(object):
         """Executes the given query on the context."""
         answer = self.queryable(query)
         if self.d_mids is not None:
-            self.d_mids.pop(0)
+            self.d_mids = self.d_mids[1:]
         return answer
 
     def query(self, **kwargs) -> Union["Query", LazyFrameQuery]:
@@ -625,7 +625,7 @@ class Query(object):
     def compositor(
         self,
         split_evenly_over: Optional[int] = None,
-        split_by_weights: Optional[list[float]] = None,
+        split_by_weights: Optional[Sequence[float]] = None,
         d_out: Optional[float] = None,
         output_measure: Optional[Measure] = None,
         alpha: Optional[float] = None,
@@ -769,8 +769,8 @@ def _sequential_composition_by_weights(
     privacy_unit: tuple[Metric, float],
     privacy_loss: tuple[Measure, float],
     split_evenly_over: Optional[int] = None,
-    split_by_weights: Optional[list[float]] = None,
-) -> tuple[Measurement, list[Any]]:
+    split_by_weights: Optional[Sequence[float]] = None,
+) -> tuple[Measurement, Sequence[Any]]:
     """Constructs a sequential composition measurement
     where the ``d_mids`` are proportional to the weights.
 

@@ -1,3 +1,5 @@
+.. _tabular-data:
+
 Working with Tabular Data
 =========================
 
@@ -124,9 +126,10 @@ Particular examples in the coming sections may require additional parameters,
 and parameters to the compositor may be adjusted slightly.
 See :py:func:`opendp.context.Context.compositor` for more information.
 
-
 .. toctree::
 
   essential-statistics
   grouping
-  counting-queries
+  preparing-microdata
+
+More thorough documentation can be found in the `OpenDP Polars User Guide <../../api/user-guide/polars/index.html>`_.

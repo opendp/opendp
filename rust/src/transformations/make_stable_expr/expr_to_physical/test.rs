@@ -37,7 +37,7 @@ fn assert_expr_to_physical<DI: 'static + SeriesElementDomain, DO: 'static + Seri
 
 #[test]
 fn test_expr_to_physical_categorical() -> Fallible<()> {
-    let in_elem_domain = CategoricalDomain::new_with_encoding(
+    let in_elem_domain = CategoricalDomain::new_with_categories(
         vec!["A", "B", "C", "D"]
             .into_iter()
             .map(PlSmallStr::from)
