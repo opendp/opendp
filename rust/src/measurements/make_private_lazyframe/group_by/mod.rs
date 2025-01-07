@@ -14,10 +14,10 @@ use crate::measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence};
 use crate::metrics::PartitionDistance;
 use crate::traits::{InfAdd, InfMul, InfPowI, InfSub};
 use crate::transformations::traits::UnboundedMetric;
-use crate::transformations::{DatasetMetric, StableDslPlan};
+use crate::transformations::{DatasetMetric, StableDslPlan, StableExpr};
 use dashu::integer::IBig;
 use make_private_expr::PrivateExpr;
-use matching::{find_len_expr, match_grouping_columns};
+use matching::find_len_expr;
 use polars::prelude::{len, JoinType, LazyFrame};
 use polars_plan::dsl::{col, lit, Expr};
 use polars_plan::plans::DslPlan;
@@ -51,14 +51,15 @@ where
     MI: 'static + UnboundedMetric,
     MO: 'static + ApproximateMeasure,
     MO::Distance: Debug,
-    Expr: PrivateExpr<PartitionDistance<MI>, MO>,
+    Expr: PrivateExpr<PartitionDistance<MI>, MO>
+        + StableExpr<PartitionDistance<MI>, PartitionDistance<MI>>,
     DslPlan: StableDslPlan<MS, MI>,
     (DslPlanDomain, MS): MetricSpace,
     (DslPlanDomain, MI): MetricSpace,
 {
     let Some(MatchGroupBy {
         input,
-        keys,
+        group_by,
         aggs,
         mut key_sanitizer,
     }) = match_group_by(plan)?
@@ -69,20 +70,38 @@ where
     let t_prior = input.clone().make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
-    let by = match_grouping_columns(keys.clone())?;
+    // create a transformation for each expression
+    let expr_domain = WildExprDomain {
+        columns: middle_domain.series_domains.clone(),
+        context: Context::RowByRow,
+    };
+    let t_group_by = group_by
+        .iter()
+        .map(|expr| {
+            expr.clone().make_stable(
+                expr_domain.clone(),
+                PartitionDistance(middle_metric.clone()),
+            )
+        })
+        .collect::<Fallible<Vec<_>>>()?;
 
-    by.iter().try_for_each(|name| {
-        let series_domain = middle_domain.series_domain(name.clone())?;
+    t_group_by.iter().try_for_each(|t_group_by| {
+        let series_domain = &t_group_by.output_domain.column;
         let Ok(domain) = series_domain.element_domain::<CategoricalDomain>() else {
             return Ok(())
         };
         if domain.categories().is_none() {
-            return fallible!(MakeMeasurement, "Categories are data-dependent, which may reveal sensitive record ordering. Cast {} to string before grouping.", name);
+            return fallible!(
+                MakeMeasurement,
+                "Categories are data-dependent, which may reveal sensitive record ordering. Cast {} to string before grouping.", 
+                series_domain.name
+            );
         }
         Ok(())
     })?;
+    let group_by_id = group_by.iter().cloned().collect();
 
-    let mut margin = middle_domain.get_margin(&by.clone());
+    let mut margin = middle_domain.get_margin(&group_by_id);
 
     let is_join = if let Some(KeySanitizer::Join { keys, .. }) = key_sanitizer.clone() {
         let num_keys = LazyFrame::from((*keys).clone()).select([len()]).collect()?;
@@ -96,7 +115,7 @@ where
     let expr_domain = WildExprDomain {
         columns: middle_domain.series_domains.clone(),
         context: Context::Grouping {
-            by: by.clone(),
+            by: group_by_id.clone(),
             margin: margin.clone(),
         },
     };
@@ -132,7 +151,7 @@ where
         let (name, noise) = find_len_expr(&dp_exprs, None)?;
         Some((name, noise, threshold_value, true))
     } else {
-        return fallible!(MakeMeasurement, "The key-set of {:?} is private and cannot be released without a filter or join. Please pass a filtering threshold into make_private_lazyframe or conduct a join against a public key-set.", by);
+        return fallible!(MakeMeasurement, "The key-set of {:?} is private and cannot be released without a filter or join. Please pass a filtering threshold into make_private_lazyframe or conduct a join against a public key-set.", group_by_id);
     };
 
     if let Some((name, _, threshold_value, is_present)) = &threshold_info {
@@ -163,7 +182,7 @@ where
         Function::new_fallible(move |arg: &DslPlan| {
             let output = DslPlan::GroupBy {
                 input: Arc::new(arg.clone()),
-                keys: keys.clone(),
+                keys: group_by.clone(),
                 aggs: f_comp.eval(&arg)?.into_iter().map(|p| p.expr).collect(),
                 apply: None,
                 maintain_order: false,
