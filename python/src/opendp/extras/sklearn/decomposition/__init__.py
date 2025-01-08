@@ -27,24 +27,6 @@ if TYPE_CHECKING: # pragma: no cover
     import numpy # type: ignore[import-not-found]
 
 
-_decomposition = import_optional_dependency('sklearn.decomposition', False)
-if _decomposition is not None:
-    class _SKLPCA(_decomposition.PCA): # type: ignore[name-defined]
-        '''
-        :meta private:
-        '''
-        pass
-else: # pragma: no cover
-    class _SKLPCA(object): # type: ignore[no-redef]
-        '''
-        :meta private:
-        '''
-        def __init__(*args, **kwargs):
-            raise ImportError(
-                "The optional install scikit-learn is required for this functionality"
-            )
-
-
 class PCAEpsilons(NamedTuple):
     eigvals: float
     eigvecs: Sequence[float]
@@ -170,8 +152,19 @@ def make_private_pca(
 then_private_pca = register_measurement(make_private_pca)
 
 
-class PCA(_SKLPCA):
-    # TODO: If I add a docstring here, it also tries to locate _SKLPCA, and fails
+class PCA():
+    '''
+    DP wrapper for `sklearn's PCA <https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html>`_.
+
+    Trying to create an instance without sklearn installed will raise an ``ImportError``.
+    
+    See the :ref:`tutorial on diffentially private PCA <dp-pca>` for details.
+
+    :param whiten: Mirrors the corresponding sklearn parameter:
+        When ``True`` (``False`` by default) the ``components_`` vectors are multiplied
+        by the square root of n_samples and then divided by the singular values
+        to ensure uncorrelated outputs with unit component-wise variances.
+    '''
     def __init__(
         self,
         *,
@@ -183,7 +176,17 @@ class PCA(_SKLPCA):
         n_changes: int = 1,
         whiten: bool = False,
     ) -> None:
-        super().__init__(
+        # Error if constructor called without dependency:
+        import_optional_dependency('sklearn.decomposition')
+        
+        # The zero-argument form of super() does not work,
+        # (I believe) because the type argument is determined lexically,
+        # and it doesn't see our redefinition.
+        # Instead, make the type explicit.
+        #
+        # Also because of the class redefinition, mypy has a lot of complaints,
+        # and so there's a lot of "type: ignore" below.
+        super(PCA, self).__init__(  # type: ignore[call-arg]
             n_components or n_features,
             whiten=whiten,
         )
@@ -196,6 +199,18 @@ class PCA(_SKLPCA):
     @property
     def n_features(self):
         return self.n_features_in_
+
+    # This isn't strictly necessary, since we just call the superclass method,
+    # but this lets us document a frequently used method,
+    # and avoids a number of mypy warnings.
+    def fit(self, X, y=None):
+        '''
+        Fit the model with X.
+
+        :param X: Training data, where ``n_samples`` is the number of samples and ``n_features`` is the number of features.
+        :param y: Ignored
+        '''
+        return super(PCA, self).fit(X) # type: ignore[misc]
 
     # this overrides the scikit-learn method to instead use the opendp-core constructor
     def _fit(self, X):
@@ -215,9 +230,9 @@ class PCA(_SKLPCA):
         input_metric = dp.symmetric_distance()
 
         n_estimated_components = (
-            self.n_components
-            if isinstance(self.n_components, int)
-            else self.n_features_in_
+            self.n_components  # type: ignore[attr-defined]
+            if isinstance(self.n_components, int)  # type: ignore[attr-defined]
+            else self.n_features_in_  # type: ignore[attr-defined]
         )
 
         return make_private_pca(
@@ -237,7 +252,7 @@ class PCA(_SKLPCA):
         self.mean_, S, Vt = values
         U = Vt.T
         n_samples, n_features = self.n_samples, self.n_features_in_
-        n_components = self.n_components
+        n_components = self.n_components  # type: ignore[attr-defined]
 
         # CODE BELOW THIS POINT IS FROM SKLEARN
         # flip eigenvectors' sign to enforce deterministic output
@@ -289,6 +304,11 @@ class PCA(_SKLPCA):
         pass
 
 
+_decomposition = import_optional_dependency('sklearn.decomposition', False)
+if _decomposition is not None:
+    PCA = type('PCA', (_decomposition.PCA,), dict(PCA.__dict__))  # type: ignore[assignment,misc]
+
+        
 def _smaller(v):
     """returns the next non-negative float closer to zero"""
     np = import_optional_dependency('numpy')
