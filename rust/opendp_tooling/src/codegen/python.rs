@@ -395,6 +395,8 @@ fn generate_body(module_name: &str, func: &Function, typemap: &HashMap<String, S
 {data_converter}
 {make_call}
 {set_dependencies}
+if callable(output):
+    output.log = {{}}
 return output"#,
         flag_checker = generate_flag_check(&func.features),
         type_arg_formatter = generate_type_arg_formatter(func),
