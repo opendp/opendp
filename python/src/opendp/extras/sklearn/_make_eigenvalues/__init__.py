@@ -1,6 +1,7 @@
 from opendp.extras._utilities import to_then, with_privacy
 from opendp.mod import Domain, Metric, Transformation
 from opendp._lib import import_optional_dependency
+from opendp._internal import _make_transformation
 
 # planning to make this public, but may make more API changes
 
@@ -17,10 +18,10 @@ def make_eigenvalues(input_domain: Domain, input_metric: Metric) -> Transformati
     dp.assert_features("contrib", "floating-point")
 
     if not str(input_domain).startswith("NPSSCPDomain"):
-        raise ValueError("input_domain must be NPSSCPDomain")
+        raise ValueError("input_domain must be NPSSCPDomain")  # pragma: no cover
 
     if input_metric != dp.symmetric_distance():
-        raise ValueError("input metric must be symmetric distance")
+        raise ValueError("input metric must be symmetric distance")  # pragma: no cover
     
     input_desc = input_domain.descriptor
 
@@ -30,9 +31,9 @@ def make_eigenvalues(input_domain: Domain, input_metric: Metric) -> Transformati
         # norm += np.linalg.norm(input_domain.origin, p=2)
         # this is because the addition of one row shifted by the origin 
         #     will not be offset by the removal of another row shifted by the origin
-        raise ValueError("expected sized data")
+        raise ValueError("expected sized data")  # pragma: no cover
 
-    return dp.t.make_user_transformation(
+    return _make_transformation(
         input_domain,
         input_metric,
         dp.vector_domain(dp.atom_domain(T=input_desc.T)),

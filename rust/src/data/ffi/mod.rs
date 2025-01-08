@@ -5,6 +5,7 @@ use std::ffi::{c_void, CString};
 use std::fmt::Formatter;
 use std::hash::Hash;
 use std::os::raw::c_char;
+use std::ptr::null;
 use std::slice;
 
 #[cfg(feature = "polars")]
@@ -21,10 +22,9 @@ mod polars;
 use bitvec::slice::BitSlice;
 
 use crate::core::{FfiError, FfiResult, FfiSlice, Function};
-use crate::data::Column;
 use crate::domains::BitVector;
 use crate::error::Fallible;
-use crate::ffi::any::{AnyMeasurement, AnyObject, AnyQueryable, Downcast};
+use crate::ffi::any::{AnyFunction, AnyMeasurement, AnyObject, AnyQueryable, Downcast};
 use crate::ffi::util::{self, into_c_char_p, AnyDomainPtr, ExtrinsicObject};
 use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents};
 use crate::measures::PrivacyProfile;
@@ -158,6 +158,16 @@ pub extern "C" fn opendp_data__slice_as_object(
         let v2 = util::as_ref(slice[2] as *const T).ok_or_else(new_err)?.clone();
         Ok(AnyObject::new((v0, v1, v2)))
     }
+
+    fn raw_to_function<TI: 'static + Clone, TO>(obj: &FfiSlice) -> Fallible<AnyObject> {
+        let Some(function) = util::as_ref(obj.ptr as *const AnyFunction).cloned() else {
+            return fallible!(FFI, "Function must not be null pointer");
+        };
+        Ok(AnyObject::new(Function::new_fallible(move |x: &TI| {
+            function.eval(&AnyObject::new(x.clone()))?.downcast::<TI>()
+        })))
+    }
+
     fn raw_to_hashmap<K: 'static + Clone + Hash + Eq, V: 'static + Clone>(
         raw: &FfiSlice,
     ) -> Fallible<AnyObject> {
@@ -203,9 +213,9 @@ pub extern "C" fn opendp_data__slice_as_object(
 
             let field = arrow::ffi::import_field_from_c(schema)
                 .map_err(|e| err!(FFI, "failed to import field from c: {}", e.to_string()))?;
-            let array = arrow::ffi::import_array_from_c(array, field.data_type)
+            let array = arrow::ffi::import_array_from_c(array, field.dtype)
                 .map_err(|e| err!(FFI, "failed to import array from c: {}", e.to_string()))?;
-            Series::try_from((name, array))
+            Series::try_from((PlSmallStr::from_str(name), array))
                 .map_err(|e| err!(FFI, "failed to construct Series: {}", e.to_string()))?
         })
     }
@@ -221,8 +231,8 @@ pub extern "C" fn opendp_data__slice_as_object(
         raw: &FfiSlice
     ) -> Fallible<AnyObject> {
         let slices = unsafe { slice::from_raw_parts(raw.ptr as *const *const FfiSlice, raw.len) };
-        let series = slices.iter().map(|&s| raw_to_concrete_series(try_as_ref!(s)))
-        .collect::<Fallible<Vec<Series>>>()?;
+        let series = slices.iter().map(|&s| raw_to_concrete_series(try_as_ref!(s)).map(Column::Series))
+        .collect::<Fallible<Vec<Column>>>()?;
         
         Ok(AnyObject::new(DataFrame::new(series)?))
     }
@@ -248,23 +258,8 @@ pub extern "C" fn opendp_data__slice_as_object(
         Ok(AnyObject::new(LazyFrame::from(deserialize_raw::<DslPlan>(raw, "LazyFrame")?)))
     }
     #[cfg(feature = "polars")]
-    fn raw_to_tuple_lf_expr(
-        raw: &FfiSlice,
-    ) -> Fallible<AnyObject> {
-        if raw.len != 2 {
-            return fallible!(FFI, "Expected a slice length of two, found length of {}", raw.len);
-        }
-        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const FfiSlice, 2) };
-
-        let dsl_ptr = util::as_ref(slice[0])
-            .ok_or_else(|| err!(FFI, "attempted to follow null pointer to LazyFrame"))?;
-        let dsl = deserialize_raw::<DslPlan>(dsl_ptr, "LazyFrame")?;
-
-        let expr_ptr = util::as_ref(slice[1])
-            .ok_or_else(|| err!(FFI, "attempted to follow null pointer to Expr"))?;
-        let expr = deserialize_raw::<Expr>(expr_ptr, "Expr")?;
-        
-        Ok(AnyObject::new((dsl, expr)))
+    fn raw_to_dslplan(raw: &FfiSlice) -> Fallible<AnyObject> {
+        Ok(AnyObject::new(LazyFrame::from(deserialize_raw::<DslPlan>(raw, "LazyFrame")?).logical_plan))
     }
     match T_.contents {
         TypeContents::PLAIN("BitVector") => raw_to_bitvector(raw),
@@ -273,6 +268,8 @@ pub extern "C" fn opendp_data__slice_as_object(
 
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("LazyFrame") => raw_to_lazyframe(raw),
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("DslPlan") => raw_to_dslplan(raw),
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("Expr") => raw_to_expr(raw),
         #[cfg(feature = "polars")]
@@ -306,9 +303,9 @@ pub extern "C" fn opendp_data__slice_as_object(
             match element_ids.len() {
                 // In the inbound direction, we can handle tuples of primitives only.
                 2 => {
-                    #[cfg(feature = "polars")]
-                    if types == vec![Type::of::<DslPlan>(), Type::of::<Expr>()] {
-                        return raw_to_tuple_lf_expr(raw).into();
+
+                    if types == vec![Type::of::<f64>(), Type::of::<ExtrinsicObject>()] {
+                        return raw_to_tuple2::<f64, AnyObject>(raw).into();
                     }
                     dispatch!(raw_to_tuple2, [(types[0], @primitives), (types[1], @primitives)], (raw))
                 },
@@ -319,8 +316,13 @@ pub extern "C" fn opendp_data__slice_as_object(
                 l => return err!(FFI, "Only tuples of length 2 or 3 are supported, found a length of {}", l).into()
             }
         }
-        TypeContents::GENERIC { name, args } => {
-            if name == "HashMap" {
+        TypeContents::GENERIC { name, ref args } => {
+            if name == "Function" {
+                if T_ != Type::of::<Function<f64, f64>>() {
+                    return err!(FFI, "only Renyi-DP curves of type Function<f64, f64> are supported").into()
+                }
+                raw_to_function::<f64, f64>(raw)
+            } else if name == "HashMap" {
                 if args.len() != 2 {
                     return err!(FFI, "HashMaps should have 2 type arguments, but found {}", args.len()).into();
                 }
@@ -432,7 +434,21 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             2,
         ))
     }
-
+    fn option_tuple2_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
+        Ok(
+            if let Some((score, candidate)) = obj.downcast_ref::<Option<(f64, AnyObject)>>()? {
+                FfiSlice::new(
+                    util::into_raw([
+                        score as *const f64 as *const c_void,
+                        candidate as *const AnyObject as *const c_void,
+                    ]) as *mut c_void,
+                    2,
+                )
+            } else {
+                FfiSlice::new(null::<c_void>() as *mut c_void, 0)
+            },
+        )
+    }
     fn tuple3_partition_distance_to_raw<T: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
         let tuple: &(IntDistance, T, T) = obj.downcast_ref()?;
         Ok(FfiSlice::new(
@@ -499,7 +515,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         let columns = frame
             .get_columns()
             .iter()
-            .map(concrete_series_to_raw)
+            .map(concrete_column_to_raw)
             .collect::<Fallible<Vec<FfiSlice>>>()?;
         let slice = FfiSlice {
             ptr: columns.as_ptr() as *mut c_void,
@@ -510,14 +526,16 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
     }
 
     #[cfg(feature = "polars")]
-    fn concrete_series_to_raw(series: &Series) -> Fallible<FfiSlice> {
+    fn concrete_column_to_raw(column: &Column) -> Fallible<FfiSlice> {
         // Rechunk aggregates all chunks to a contiguous array of memory.
         // since we rechunked, we can assume there is only one chunk
-        let array = series.rechunk().to_arrow(0, false);
+
+        let series = column.as_materialized_series();
+        let array = series.rechunk().to_arrow(0, CompatLevel::newest());
 
         let schema = arrow::ffi::export_field_to_c(&ArrowField::new(
-            series.name(),
-            array.data_type().clone(),
+            series.name().clone(),
+            array.dtype().clone(),
             true,
         ));
         let array = arrow::ffi::export_array_to_c(array);
@@ -525,7 +543,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         let buffer = vec![
             util::into_raw(array) as *const c_void,
             util::into_raw(schema) as *const c_void,
-            into_c_char_p(series.name().to_string())? as *const c_void,
+            into_c_char_p(column.name().to_string())? as *const c_void,
         ];
         let slice = FfiSlice {
             ptr: buffer.as_ptr() as *mut c_void,
@@ -537,21 +555,25 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
 
     #[cfg(feature = "polars")]
     fn series_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        concrete_series_to_raw(obj.downcast_ref::<Series>()?)
+        concrete_column_to_raw(&Column::Series(obj.downcast_ref::<Series>()?.clone()))
     }
 
     #[cfg(feature = "polars")]
-    fn tuple_lf_expr_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        let (lp, expr) = obj.downcast_ref::<(DslPlan, Expr)>()?;
+    fn exprplan_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
+        use crate::domains::ExprPlan;
 
-        Ok(FfiSlice::new(
-            util::into_raw([
-                util::into_raw(serialize_obj(lp, "DslPlan")?) as *const c_void,
-                util::into_raw(serialize_obj(expr, "Expr")?) as *const c_void,
-            ]) as *mut c_void,
-            2,
-        ))
+        let expr_plan = obj.downcast_ref::<ExprPlan>()?;
+
+        let plan = util::into_raw(serialize_obj(&expr_plan.plan, "DslPlan")?) as *const c_void;
+        let expr = util::into_raw(serialize_obj(&expr_plan.expr, "Expr")?) as *const c_void;
+        Ok(if let Some(fill) = &expr_plan.fill {
+            let fill = util::into_raw(serialize_obj(&fill, "Expr")?) as *const c_void;
+            FfiSlice::new(util::into_raw([plan, expr, fill]) as *mut c_void, 3)
+        } else {
+            FfiSlice::new(util::into_raw([plan, expr]) as *mut c_void, 2)
+        })
     }
+
     fn tuple_curve_f64_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
         let (curve, delta) = obj.downcast_ref::<(PrivacyProfile, f64)>()?;
 
@@ -572,6 +594,8 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         TypeContents::PLAIN("LazyFrame") => lazyframe_to_raw(obj),
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("Expr") => expr_to_raw(obj),
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("ExprPlan") => exprplan_to_raw(obj),
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("DataFrame") => dataframe_to_raw(obj),
         #[cfg(feature = "polars")]
@@ -595,12 +619,11 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             match element_ids.len() {
                 // In the outbound direction, we can handle tuples of both primitives and AnyObjects.
                 2 => {
-                    #[cfg(feature = "polars")]
-                    if types == vec![Type::of::<DslPlan>(), Type::of::<Expr>()] {
-                        return tuple_lf_expr_to_raw(obj).into();
-                    }
                     if types == vec![Type::of::<PrivacyProfile>(), Type::of::<f64>()] {
                         return tuple_curve_f64_to_raw(obj).into();
+                    }
+                    if types == vec![Type::of::<f64>(), Type::of::<ExtrinsicObject>()] {
+                        return tuple2_to_raw::<f64, AnyObject>(obj).into();
                     }
                     dispatch!(tuple2_to_raw, [(types[0], @primitives_plus), (types[1], @primitives_plus)], (obj))
                 },
@@ -612,7 +635,10 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             }
         }
         TypeContents::GENERIC { name, args } => {
-            if name == &"Function" {
+            if name == &"Option" {
+                if args.len() != 1 { return err!(FFI, "Options should have one argument, found {}", args.len()).into(); };
+                option_tuple2_to_raw(obj)
+            } else if name == &"Function" {
                 let [I, O] = try_!(parse_type_args(args, "Function"));
                 dispatch!(function_to_raw, [(I, @primitives), (O, @primitives)], (obj))
             } else if name == &"HashMap" {
@@ -821,14 +847,9 @@ impl std::fmt::Debug for AnyObject {
         }
         let type_arg = &self.type_;
         f.write_str(dispatch!(monomorphize, [(type_arg, [
-            u32, u64, i32, i64, f32, f64, bool, String, u8, Column,
+            u32, u64, i32, i64, f32, f64, bool, String, u8,
             (f64, f64),
-            Vec<u32>, Vec<u64>, Vec<i32>, Vec<i64>, Vec<f32>, Vec<f64>, Vec<bool>, Vec<String>, Vec<u8>, Vec<Column>, Vec<Vec<String>>,
-            HashMap<String, Column>,
-            // FIXME: The following are for Python demo use of compositions. Need to figure this out!!!
-            (Box<i32>, Box<f64>),
-            (Box<i32>, Box<u32>),
-            (Box<(Box<f64>, Box<f64>)>, Box<f64>),
+            Vec<u32>, Vec<u64>, Vec<i32>, Vec<i64>, Vec<f32>, Vec<f64>, Vec<bool>, Vec<String>, Vec<u8>, Vec<Vec<String>>,
             (AnyObject, AnyObject),
             AnyObject
         ])], (self)).unwrap_or_else(|_| "[Non-debuggable]".to_string()).as_str())
@@ -948,9 +969,8 @@ impl Clone for AnyObject {
                     unimplemented!("AnyObject Clone: unrecognized tuple length")
                 }
 
-                #[cfg(feature = "polars")]
-                if type_ids == &vec![TypeId::of::<DslPlan>(), TypeId::of::<Expr>()] {
-                    return clone_tuple2::<DslPlan, Expr>(self).unwrap();
+                if type_ids == &vec![TypeId::of::<f64>(), TypeId::of::<ExtrinsicObject>()] {
+                    return clone_tuple2::<f64, ExtrinsicObject>(self).unwrap();
                 }
 
                 dispatch!(clone_tuple2, [

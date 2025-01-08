@@ -1,9 +1,9 @@
 matplotlib
-randomgen
+randomgen>=2.0.0
 pandas
 seaborn
 scipy
 scikit-learn
-polars==1.1.0
+polars==1.12.0
 pyarrow
 hvplot

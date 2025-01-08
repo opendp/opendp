@@ -20,8 +20,8 @@ sudo tlmgr install tcolorbox
 sudo tlmgr install environ
 sudo tlmgr install catchfile
 
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv .venv-docs
+source .venv-docs/bin/activate
 pip install -r requirements.txt
 make html
 open build/html/index.html
@@ -90,17 +90,13 @@ Changes should automatically manifest without restarting the server.
 
 Docs are deployed to http://docs.opendp.org using GitHub Actions.
 
-Note that `make html` is replaced with `make versions` to build multiple versions (branches, tags) using the [sphinx-multiversion][] extension.
-Be sure you have installed sphinx-multiversion from the fork in requirements.txt. 
+Note that `make html` is replaced with `make versions` to build multiple versions (branches, tags) using the [`sphinx-multiversion`](https://sphinx-contrib.github.io/multiversion) extension.
+Be sure you have installed `sphinx-multiversion` from the fork in requirements.txt. 
 Otherwise, you will get an error that includes: 
 
     /docs/source/api/index.rst:4:toctree contains reference to nonexisting document 'api/python/index'
 
 
-[sphinx-multiversion]: https://holzhaus.github.io/sphinx-multiversion/
-
 ## Join the Discussion
 
-You are very welcome to join us on [GitHub Discussions][]!
-
-[GitHub Discussions]: https://github.com/opendp/opendp/discussions
+You are very welcome to join us on [GitHub Discussions](https://github.com/opendp/opendp/discussions)!

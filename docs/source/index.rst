@@ -41,13 +41,15 @@ Who is using OpenDP?
 
 Some of the applications of OpenDP in healthcare, government, and tech include:
 
-* The `Swiss Federal Statistical Office <https://www.bfs.admin.ch/bfs/en/home.html>`_ is using OpenDP to `release income statistics <https://www.bfs.admin.ch/bfs/en/home/dscc/blog/2024-02-opendp.html>`_
-* `Oblivious <https://www.oblivious.com>`_ has used OpenDP for major U.N. and telecom pilot projects as part of their `Antigranular <https://docs.antigranular.com/private-python/packages/opendp/>`_ data privacy platform.
-* `OpenMined <https://openmined.org>`_ is using OpenDP as part of PySyft deployments with Microsoft and DailyMotion, with pilots at multiple national statistical organizations.
-* `Microsoft <https://microsoft.com>`_ uses OpenDP and the `SmartNoise SDK <https://github.com/opendp/smartnoise-sdk>`_ (which is based on OpenDP) both internally as well as for several public research projects, including the `United States Broadband Percentages Database <https://github.com/microsoft/USBroadbandUsagePercentages>`_.
-* `Spectus <https://spectus.ai/>`_ is using OpenDP to create `privacy enhanced mobility data <https://spectus.ai/wp-content/uploads/2022/10/Spectus_DPWhitepaper_v01b.pdf>`_
-* `LiveRamp <https://liveramp.com>`_ is using OpenDP to `support COVID research <https://liveramp.com/developers/blog/two-liveramp-engineers-named-harvard-opendp-fellows/>`_
+* The `Swiss Federal Statistical Office <https://www.bfs.admin.ch/bfs/en/home.html>`_ used OpenDP to `release income statistics <https://www.bfs.admin.ch/bfs/en/home/dscc/blog/2024-02-opendp.html>`_ and has built `Lomas <https://github.com/dscc-admin-ch/lomas>`_, a platform for remote data science that integrates with OpenDP.
+* `Oblivious <https://www.oblivious.com>`_ used OpenDP for major U.N. and telecom pilot projects as part of their `Antigranular <https://docs.antigranular.com/private-python/packages/opendp/>`_ data privacy platform.
+* `OpenMined <https://openmined.org>`_ used OpenDP as part of PySyft deployments with Microsoft and DailyMotion, with pilots at multiple national statistical organizations.
+* Researchers at `Microsoft <https://microsoft.com>`_ used OpenDP to construct a `United States Broadband Percentages Database <https://github.com/microsoft/USBroadbandUsagePercentages>`_ and to examine `The New Digital Divide <https://www.nber.org/papers/w32932>`_.
+* `Spectus <https://spectus.ai/>`_ used OpenDP to create `privacy enhanced mobility data <https://spectus.ai/wp-content/uploads/2022/10/Spectus_DPWhitepaper_v01b.pdf>`_.
+* `LiveRamp <https://liveramp.com>`_ used OpenDP to `support COVID research <https://liveramp.com/developers/blog/two-liveramp-engineers-named-harvard-opendp-fellows/>`_.
+* Researchers with the `Christchurch Call Initiative on Algorithmic Outcomes <https://www.christchurchcall.org/christchurch-call-initiative-on-algorithmic-outcomes/>`_ used OpenDP to `audit recommender algorithms <https://www.christchurchcall.org/content/files/2024/11/Christchurch-Call-AI-Transparency-in-Practice-Report-October-2024-1.pdf>`_.
 
+Let us know if you have an example to add!
 
 What next?
 ----------

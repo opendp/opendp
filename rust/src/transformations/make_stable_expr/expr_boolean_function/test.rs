@@ -1,4 +1,4 @@
-use crate::domains::{LazyFrameDomain, OptionDomain, SeriesDomain};
+use crate::domains::{AtomDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
 use crate::metrics::SymmetricDistance;
 
 use super::*;
@@ -29,7 +29,7 @@ macro_rules! is_nullable {
         $col.$op()
             .make_stable($domain.clone(), SymmetricDistance)?
             .output_domain
-            .active_series()?
+            .column
             .nullable
     };
 }

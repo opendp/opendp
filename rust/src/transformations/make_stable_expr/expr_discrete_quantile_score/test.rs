@@ -30,15 +30,17 @@ pub fn get_quantile_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
 #[test]
 fn test_expr_discrete_quantile_score_float() -> Fallible<()> {
     let (lf_domain, lf) = get_quantile_test_data()?;
-    let expr_domain = lf_domain.select();
-    let candidates = Series::new("", [0., 10., 20., 30., 40., 50., 60., 70., 80., 90., 100.]);
+    let candidates = Series::new(
+        "".into(),
+        [0., 10., 20., 30., 40., 50., 60., 70., 80., 90., 100.],
+    );
 
     let m_quant: Transformation<_, _, _, Parallel<LInfDistance<f64>>> = col("cycle_(..101f64)")
         .dp()
         .quantile_score(0.5, candidates)
-        .make_stable(expr_domain, PartitionDistance(SymmetricDistance))?;
+        .make_stable(lf_domain.select(), PartitionDistance(SymmetricDistance))?;
 
-    let dp_expr = m_quant.invoke(&(lf.logical_plan.clone(), all()))?.1;
+    let dp_expr = m_quant.invoke(&lf.logical_plan)?.expr;
 
     let df_actual = lf.clone().select([dp_expr]).collect()?;
     let AnyValue::Array(series, _) = df_actual.column("cycle_(..101f64)")?.get(0)? else {
@@ -61,14 +63,14 @@ fn test_expr_discrete_quantile_score_float() -> Fallible<()> {
 fn test_expr_discrete_quantile_score_int() -> Fallible<()> {
     let (lf_domain, lf) = get_quantile_test_data()?;
     let expr_domain = lf_domain.select();
-    let candidates = Series::new("", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    let candidates = Series::new("".into(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
     let m_quant: Transformation<_, _, _, Parallel<LInfDistance<f64>>> = col("cycle_(..10i32)")
         .dp()
         .quantile_score(0.5, candidates)
         .make_stable(expr_domain, PartitionDistance(SymmetricDistance))?;
 
-    let dp_expr = m_quant.invoke(&(lf.logical_plan.clone(), all()))?.1;
+    let dp_expr = m_quant.invoke(&lf.logical_plan)?.expr;
 
     let df_actual = lf.clone().select([dp_expr]).collect()?;
     let AnyValue::Array(series, _) = df_actual.column("cycle_(..10i32)")?.get(0)? else {

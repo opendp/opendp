@@ -1,4 +1,5 @@
 import ctypes
+from typing import MutableMapping, Sequence
 import os
 from pathlib import Path
 import re
@@ -7,7 +8,7 @@ import importlib
 
 
 # list all acceptable alternative types for each default type
-ATOM_EQUIVALENCE_CLASSES: dict[str, list[str]] = {
+ATOM_EQUIVALENCE_CLASSES: MutableMapping[str, Sequence[str]] = {
     'i32': ['u8', 'u16', 'u32', 'u64', 'i8', 'i16', 'i32', 'i64', 'usize'],
     'f64': ['f32', 'f64'],
     'bool': ['bool'],
@@ -36,7 +37,7 @@ def _load_library():
         ]
         
         if len(lib_dir_file_names) != 1:
-            raise Exception(f"Expected exactly one binary to be present in {lib_dir}. Got: {lib_dir_file_names}")
+            raise Exception(f"Expected exactly one binary to be present in {lib_dir}. Got: {lib_dir_file_names}")  # pragma: no cover
         
         lib_path = lib_dir / lib_dir_file_names[0]
         try:
@@ -48,14 +49,18 @@ def _load_library():
         return None, None
 
     else:
-        raise ValueError("Unable to find lib directory. Consider setting OPENDP_LIB_DIR to a valid directory.")
+        raise ValueError("Unable to find lib directory. Consider setting OPENDP_LIB_DIR to a valid directory.")  # pragma: no cover
     
 
 lib, lib_path = _load_library()
 
 
+# Key: Optional module name
+# Value: The opendp extra that provides this module,
+#        with the appropriate version pin, if needed
 install_names = {
-    'sklearn': 'scikit-learn'
+    'sklearn': 'scikit-learn',
+    'randomgen': 'numpy',
 }
 
 
@@ -171,7 +176,7 @@ class AnyQueryable(ctypes.Structure):
 
 class FfiSlicePtr(ctypes.POINTER(FfiSlice)): # type: ignore[misc]
     _type_ = FfiSlice
-    _dependencies: dict[Any, Any] = {}  # TODO: Tighten this
+    _dependencies: MutableMapping = {}  # TODO: Tighten this
 
     def depends_on(self, *args):
         """Extends the memory lifetime of args to the lifetime of self."""
@@ -223,6 +228,21 @@ class ExtrinsicObjectPtr(ctypes.POINTER(ExtrinsicObject)): # type: ignore[misc]
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
 
+
+# The output type cannot be an `ctypes.POINTER(FfiResult)` due to:
+#   https://bugs.python.org/issue5710#msg85731
+#                                 (output         , input       )
+CallbackFnValue = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr)
+
+class CallbackFn(ctypes.Structure):
+    _fields_ = [
+        ("callback", CallbackFnValue),
+        ("lifeline", ExtrinsicObject)
+    ]
+
+class CallbackFnPtr(ctypes.POINTER(CallbackFn)): # type: ignore[misc]
+    _type_ = CallbackFn
+
 # def _str_to_c_char_p(s: Optional[str]) -> Optional[bytes]:
 #     return s and s.encode("utf-8")
 def _c_char_p_to_str(s: Optional[bytes]) -> Optional[str]:
@@ -251,7 +271,7 @@ def unwrap(result, type_) -> Any:
     backtrace = _c_char_p_to_str(err_contents.backtrace)
 
     if not _error_free(err):
-        raise OpenDPException("Failed to free error.")
+        raise OpenDPException("Failed to free error.")  # pragma: no cover
 
     # Rust stack traces follow from here:
     pl = import_optional_dependency('polars', raise_error=False)
@@ -305,7 +325,7 @@ def make_proof_link(
     absolute_path = os.path.join(source_dir, relative_path)
 
     if not os.path.exists(absolute_path):
-        raise ValueError(f"{absolute_path} does not exist!")
+        raise ValueError(f"{absolute_path} does not exist!")  # pragma: no cover
 
     # link to the pdf, not the tex
     relative_path = relative_path.replace(".tex", ".pdf")

@@ -14,7 +14,7 @@ use crate::{
 };
 
 #[cfg(feature = "polars")]
-use crate::domains::CategoricalDomain;
+use crate::domains::{CategoricalDomain, DatetimeDomain};
 
 use super::{BitVectorDomain, Bounds, Null, OptionDomain};
 
@@ -178,6 +178,16 @@ pub extern "C" fn opendp_domains__atom_domain(
         Some(())
     }
 
+    #[cfg(feature = "polars")]
+    if let Some(_) = dispatch!(in_set, [(T_, [chrono::NaiveDate, chrono::NaiveTime])]) {
+        return dispatch!(
+            monomorphize_simple,
+            [(T_, [chrono::NaiveDate, chrono::NaiveTime])],
+            (bounds, nullable)
+        )
+        .into();
+    };
+
     if let Some(_) = dispatch!(in_set, [(T_, [f32, f64])]) {
         dispatch!(monomorphize_float, [(T_, [f32, f64])], (bounds, nullable))
     } else if let Some(_) = dispatch!(
@@ -231,12 +241,26 @@ pub extern "C" fn opendp_domains__option_domain(
     }
 
     let element_domain = try_as_ref!(element_domain);
-    let T = try_!(try_!(Type::try_from(D)).get_atom());
+    let D = try_!(Type::try_from(D));
+    let T = try_!(D.get_atom());
 
     #[cfg(feature = "polars")]
-    if T == Type::of::<CategoricalDomain>() {
+    if D == Type::of::<CategoricalDomain>() {
         let element_domain = try_!(element_domain.downcast_ref::<CategoricalDomain>()).clone();
         return Ok(AnyDomain::new(option_domain(element_domain))).into();
+    }
+    #[cfg(feature = "polars")]
+    if D == Type::of::<DatetimeDomain>() {
+        let element_domain = try_!(element_domain.downcast_ref::<DatetimeDomain>()).clone();
+        return Ok(AnyDomain::new(option_domain(element_domain))).into();
+    }
+    #[cfg(feature = "polars")]
+    if T == Type::of::<chrono::NaiveDate>() {
+        return monomorphize_atom::<chrono::NaiveDate>(element_domain).into();
+    }
+    #[cfg(feature = "polars")]
+    if T == Type::of::<chrono::NaiveTime>() {
+        return monomorphize_atom::<chrono::NaiveTime>(element_domain).into();
     }
 
     dispatch!(
@@ -285,7 +309,7 @@ pub extern "C" fn opendp_domains__vector_domain(
         user_domain: &AnyDomain,
         size: *const AnyObject,
     ) -> Fallible<AnyDomain> {
-        let user_domain = user_domain.downcast_ref::<UserDomain>()?.clone();
+        let user_domain = user_domain.downcast_ref::<ExtrinsicDomain>()?.clone();
         let mut vector_domain = VectorDomain::new(user_domain);
         if let Some(size) = util::as_ref(size) {
             vector_domain = vector_domain.with_size(*try_!(size.downcast_ref::<i32>()) as usize)
@@ -297,8 +321,8 @@ pub extern "C" fn opendp_domains__vector_domain(
     match atom_domain.type_.contents {
         TypeContents::GENERIC { name: "AtomDomain", .. } => 
             dispatch!(monomorphize_all, [(atom_domain.carrier_type, @primitives)], (atom_domain, size)),
-        TypeContents::PLAIN("UserDomain") => monomorphize_user_domain(atom_domain, size),
-        _ => fallible!(FFI, "VectorDomain constructor only supports AtomDomain or UserDomain inner domains")
+        TypeContents::PLAIN("ExtrinsicDomain") => monomorphize_user_domain(atom_domain, size),
+        _ => fallible!(FFI, "Inner domain of VectorDomain must be AtomDomain or ExtrinsicDomain (created through foreign language bindings)")
     }.into()
 }
 
@@ -348,7 +372,7 @@ pub extern "C" fn opendp_domains__map_domain(
         value_domain: &AnyDomain,
     ) -> Fallible<AnyDomain> {
         let key_domain = key_domain.downcast_ref::<AtomDomain<K>>()?.clone();
-        let value_domain = value_domain.downcast_ref::<UserDomain>()?.clone();
+        let value_domain = value_domain.downcast_ref::<ExtrinsicDomain>()?.clone();
         let map_domain = MapDomain::new(key_domain, value_domain);
         Ok(AnyDomain::new(map_domain))
     }
@@ -358,9 +382,9 @@ pub extern "C" fn opendp_domains__map_domain(
     match (&key_domain.type_.contents, &value_domain.type_.contents) {
         (TypeContents::GENERIC { name: "AtomDomain", .. }, TypeContents::GENERIC { name: "AtomDomain", .. }) => 
             dispatch!(monomorphize, [(key_domain.carrier_type, @hashable), (value_domain.carrier_type, @primitives)], (key_domain, value_domain)),
-        (TypeContents::GENERIC { name: "AtomDomain", .. }, TypeContents::PLAIN("UserDomain")) => 
+        (TypeContents::GENERIC { name: "AtomDomain", .. }, TypeContents::PLAIN("ExtrinsicDomain")) => 
             dispatch!(monomorphize_extrinsic, [(key_domain.carrier_type, @hashable)], (key_domain, value_domain)),
-        _ => fallible!(FFI, "MapDomain constructor only supports AtomDomain or UserDomain inner domains")
+        _ => fallible!(FFI, "Value domain of MapDomain must be AtomDomain or ExtrinsicDomain (created through foreign language bindings)"),
     }.into()
 }
 
@@ -368,9 +392,9 @@ pub extern "C" fn opendp_domains__map_domain(
 /// UserDomain, UserMetric, UserMeasure.
 pub struct ExtrinsicElement {
     /// The name of the element, used for display and partial equality
-    identifier: String,
+    pub identifier: String,
     /// Data stored inside the element native to a foreign (extrinsic) language
-    value: ExtrinsicObject,
+    pub value: ExtrinsicObject,
 }
 
 impl Clone for ExtrinsicElement {
@@ -384,7 +408,7 @@ impl Clone for ExtrinsicElement {
 }
 
 impl ExtrinsicElement {
-    fn new(identifier: String, value: ExtrinsicObject) -> Self {
+    pub fn new(identifier: String, value: ExtrinsicObject) -> Self {
         (value.count)(value.ptr, true);
         ExtrinsicElement { value, identifier }
     }
@@ -414,24 +438,24 @@ unsafe impl Send for ExtrinsicElement {}
 unsafe impl Sync for ExtrinsicElement {}
 
 #[derive(Clone)]
-pub struct UserDomain {
+pub struct ExtrinsicDomain {
     pub element: ExtrinsicElement,
     pub member: Function<ExtrinsicObject, bool>,
 }
 
-impl std::fmt::Debug for UserDomain {
+impl std::fmt::Debug for ExtrinsicDomain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self.element)
     }
 }
 
-impl PartialEq for UserDomain {
+impl PartialEq for ExtrinsicDomain {
     fn eq(&self, other: &Self) -> bool {
         self.element == other.element
     }
 }
 
-impl Domain for UserDomain {
+impl Domain for ExtrinsicDomain {
     type Carrier = ExtrinsicObject;
 
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
@@ -470,32 +494,33 @@ impl Domain for UserDomain {
 #[no_mangle]
 pub extern "C" fn opendp_domains__user_domain(
     identifier: *mut c_char,
-    member: CallbackFn,
+    member: *const CallbackFn,
     descriptor: *mut ExtrinsicObject,
 ) -> FfiResult<*mut AnyDomain> {
     let identifier = try_!(to_str(identifier)).to_string();
     let descriptor = try_as_ref!(descriptor).clone();
     let element = ExtrinsicElement::new(identifier, descriptor);
+    let member = try_as_ref!(member).clone();
     let member = Function::new_fallible(move |arg: &ExtrinsicObject| -> Fallible<bool> {
-        let c_res = member(AnyObject::new_raw(arg.clone()));
+        let c_res = (member.callback)(AnyObject::new_raw(arg.clone()));
         Fallible::from(util::into_owned(c_res)?)?.downcast::<bool>()
     });
 
-    Ok(AnyDomain::new(UserDomain { element, member })).into()
+    Ok(AnyDomain::new(ExtrinsicDomain { element, member })).into()
 }
 
 #[bootstrap(
-    name = "_user_domain_descriptor",
+    name = "_extrinsic_domain_descriptor",
     returns(c_type = "FfiResult<ExtrinsicObject *>")
 )]
-/// Retrieve the descriptor value stored in a user domain.
+/// Retrieve the descriptor value stored in an extrinsic domain.
 ///
 /// # Arguments
-/// * `domain` - The UserDomain to extract the descriptor from
+/// * `domain` - The ExtrinsicDomain to extract the descriptor from
 #[no_mangle]
-pub extern "C" fn opendp_domains___user_domain_descriptor(
+pub extern "C" fn opendp_domains___extrinsic_domain_descriptor(
     domain: *mut AnyDomain,
 ) -> FfiResult<*mut ExtrinsicObject> {
-    let domain = try_!(try_as_ref!(domain).downcast_ref::<UserDomain>()).clone();
+    let domain = try_!(try_as_ref!(domain).downcast_ref::<ExtrinsicDomain>()).clone();
     FfiResult::Ok(util::into_raw(domain.element.value.clone()))
 }

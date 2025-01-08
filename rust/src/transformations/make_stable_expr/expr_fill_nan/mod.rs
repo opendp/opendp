@@ -1,10 +1,8 @@
-use std::sync::Arc;
-
 use polars::datatypes::DataType;
 use polars_plan::dsl::Expr;
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{AtomDomain, ExprContext, ExprDomain, OuterMetric};
+use crate::domains::{AtomDomain, ExprDomain, ExprPlan, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::transformations::DatasetMetric;
 
@@ -20,13 +18,14 @@ mod test;
 /// * `input_metric` - The metric under which neighboring LazyFrames are compared
 /// * `expr` - The fill_nan expression
 pub fn make_expr_fill_nan<M: OuterMetric>(
-    input_domain: ExprDomain,
+    input_domain: WildExprDomain,
     input_metric: M,
     expr: Expr,
-) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>>
+) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
 where
     M::InnerMetric: DatasetMetric,
     M::Distance: Clone,
+    (WildExprDomain, M): MetricSpace,
     (ExprDomain, M): MetricSpace,
     Expr: StableExpr<M, M>,
 {
@@ -34,18 +33,12 @@ where
         return fallible!(MakeTransformation, "expected fill_nan expression");
     };
 
-    let ExprDomain {
-        frame_domain,
-        context,
-    } = input_domain.clone();
-    let rr_domain = ExprDomain::new(frame_domain, ExprContext::RowByRow);
-
     let t_data = data
         .clone()
-        .make_stable(rr_domain.clone(), input_metric.clone())?;
+        .make_stable(input_domain.as_row_by_row(), input_metric.clone())?;
     let t_fill = fill
         .clone()
-        .make_stable(rr_domain.clone(), input_metric.clone())?;
+        .make_stable(input_domain.as_row_by_row(), input_metric.clone())?;
 
     let (data_domain, data_metric) = t_data.output_space();
     let (fill_domain, fill_metric) = t_fill.output_space();
@@ -59,14 +52,20 @@ where
         );
     }
 
-    let fill_series = fill_domain.active_series()?;
-    let fill_can_be_nan = match &fill_series.field.dtype {
+    let fill_series = &fill_domain.column;
+    let fill_can_be_nan = match fill_series.dtype() {
         // from the perspective of atom domain, null refers to existence of any missing value.
         // For float types, this is NaN.
         // Therefore if the float domain may be nullable, then the domain includes NaN
         DataType::Float32 => fill_series.atom_domain::<f32>()?.nullable(),
         DataType::Float64 => fill_series.atom_domain::<f64>()?.nullable(),
-        _ => return fallible!(MakeTransformation, "filler data for fill_nan must be float"),
+        i if i.is_numeric() => false,
+        _ => {
+            return fallible!(
+                MakeTransformation,
+                "filler data for fill_nan must be numeric"
+            )
+        }
     };
 
     if fill_can_be_nan {
@@ -82,30 +81,35 @@ where
         );
     }
 
-    let mut output_domain = data_domain.clone();
-    // fill_nan should not change the output context-- just require that its input is row-by-row
-    output_domain.context = context;
-    let series_domain = output_domain.active_series_mut()?;
-    series_domain.drop_bounds().ok();
-
-    series_domain.element_domain = match &series_domain.field.dtype {
-        DataType::Float32 => Arc::new(AtomDomain::<f32>::default()),
-        DataType::Float64 => Arc::new(AtomDomain::<f64>::default()),
+    let mut series_domain = data_domain.column.clone();
+    match series_domain.dtype() {
+        DataType::Float32 => series_domain.set_element_domain(AtomDomain::<f32>::new(None, None)),
+        DataType::Float64 => series_domain.set_element_domain(AtomDomain::<f64>::new(None, None)),
         _ => {
             return fallible!(
                 MakeTransformation,
                 "fill_nan may only be applied to float data"
             )
         }
+    }
+    let output_domain = ExprDomain {
+        column: series_domain,
+        // fill_nan should not change the output context-- just require that its input is row-by-row
+        context: input_domain.context.clone(),
     };
 
     Transformation::new(
         input_domain,
         output_domain,
         Function::new_fallible(move |arg| {
-            let expr_data = t_data.invoke(arg)?.1;
-            let expr_fill = t_fill.invoke(arg)?.1;
-            Ok((arg.0.clone(), expr_data.fill_nan(expr_fill)))
+            let data = t_data.invoke(arg)?;
+            let fill = t_fill.invoke(arg)?;
+
+            Ok(ExprPlan {
+                plan: arg.clone(),
+                expr: data.expr.fill_nan(fill.expr),
+                fill: data.fill.zip(fill.fill).map(|(d, f)| d.fill_nan(f)),
+            })
         }),
         input_metric.clone(),
         input_metric,

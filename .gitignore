@@ -163,6 +163,7 @@ R/opendp/src/measures.c
 R/opendp/src/metrics.c
 R/opendp/src/transformations.c
 python/src/opendp/_data.py
+python/src/opendp/_internal.py
 python/src/opendp/accuracy.py
 python/src/opendp/combinators.py
 python/src/opendp/core.py

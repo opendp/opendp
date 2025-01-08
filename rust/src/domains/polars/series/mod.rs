@@ -7,9 +7,10 @@ use crate::error::Fallible;
 use crate::transformations::traits::UnboundedMetric;
 use crate::{core::Domain, traits::CheckAtom};
 
+use chrono::{NaiveDate, NaiveTime};
 use polars::prelude::*;
 
-use crate::domains::{AtomDomain, CategoricalDomain, OptionDomain};
+use crate::domains::{AtomDomain, CategoricalDomain, DatetimeDomain, OptionDomain};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -32,24 +33,26 @@ mod test;
 /// ```
 #[derive(Clone)]
 pub struct SeriesDomain {
-    /// The name of the series and type of underlying data.
-    pub field: Field,
+    /// The name of series in the domain.
+    pub name: PlSmallStr,
     /// Domain of each element in the series.
     pub element_domain: Arc<dyn DynSeriesElementDomain>,
-    /// Indicates if data can contain null values.
+    /// Indicates if elements can be null.
     pub nullable: bool,
 }
 
-impl core::cmp::PartialEq for SeriesDomain {
+impl PartialEq for SeriesDomain {
     fn eq(&self, other: &Self) -> bool {
-        self.field.eq(&other.field) && self.element_domain.eq(&self.element_domain)
+        self.name == other.name
+            && self.element_domain.eq(&other.element_domain)
+            && self.nullable == other.nullable
     }
 }
 
 impl Domain for SeriesDomain {
     type Carrier = Series;
     fn member(&self, value: &Self::Carrier) -> Fallible<bool> {
-        if &self.field != &*value.field() {
+        if &self.name != &value.name() {
             return Ok(false);
         }
 
@@ -73,7 +76,7 @@ impl Domain for SeriesDomain {
             }};
         }
 
-        match self.field.dtype {
+        match self.dtype() {
             DataType::UInt8 => atom_member!(u8, UInt8Type),
             DataType::UInt16 => atom_member!(u16, UInt16Type),
             DataType::UInt32 => atom_member!(u32, UInt32Type),
@@ -86,7 +89,7 @@ impl Domain for SeriesDomain {
             DataType::Float64 => atom_member!(f64, Float64Type),
             DataType::Boolean => atom_member!(bool, BooleanType),
             DataType::String => atom_member!(str, StringType),
-            _ => return fallible!(NotImplemented, "unsupported dtype: {:?}", self.field.dtype),
+            _ => return fallible!(NotImplemented, "unsupported dtype: {:?}", self.dtype()),
         }
     }
 }
@@ -95,14 +98,58 @@ impl SeriesDomain {
     /// # Proof Definition
     /// Returns a series domain spanning all series whose name is `name`
     /// and elements of the series are members of `element_domain`.
-    pub fn new<DA: 'static + SeriesElementDomain>(name: &str, element_domain: DA) -> Self {
+    pub fn new<S: Into<PlSmallStr>, DA: 'static + SeriesElementDomain>(
+        name: S,
+        element_domain: DA,
+    ) -> Self {
         SeriesDomain {
-            field: Field::new(name, DA::dtype()),
-            element_domain: Arc::new(element_domain.inner_domain()),
+            name: name.into(),
+            element_domain: Arc::new(element_domain.inner_domain().clone()),
             nullable: DA::NULLABLE,
         }
     }
 
+    /// # Proof Definition
+    /// Returns the datatype of rows in members of `self`.
+    pub fn dtype(&self) -> DataType {
+        self.element_domain.dtype()
+    }
+
+    /// # Proof Definition
+    /// Modifies `self` such that rows of members are members of `element_domain`.
+    pub fn set_element_domain<DA: 'static + SeriesElementDomain<InnerDomain = DA>>(
+        &mut self,
+        element_domain: DA,
+    ) {
+        self.element_domain = Arc::new(element_domain);
+    }
+
+    fn new_element_domain(dtype: DataType) -> Fallible<Arc<dyn DynSeriesElementDomain>> {
+        Ok(match dtype {
+            DataType::Boolean => Arc::new(AtomDomain::<bool>::default()),
+            DataType::UInt32 => Arc::new(AtomDomain::<u32>::default()),
+            DataType::UInt64 => Arc::new(AtomDomain::<u64>::default()),
+            DataType::Int8 => Arc::new(AtomDomain::<i8>::default()),
+            DataType::Int16 => Arc::new(AtomDomain::<i16>::default()),
+            DataType::Int32 => Arc::new(AtomDomain::<i32>::default()),
+            DataType::Int64 => Arc::new(AtomDomain::<i64>::default()),
+            DataType::Float32 => Arc::new(AtomDomain::<f64>::new_nullable()),
+            DataType::Float64 => Arc::new(AtomDomain::<f64>::new_nullable()),
+            DataType::String => Arc::new(AtomDomain::<String>::default()),
+            DataType::Date => Arc::new(AtomDomain::<NaiveDate>::default()),
+            DataType::Datetime(time_unit, time_zone) => Arc::new(DatetimeDomain {
+                time_unit,
+                time_zone,
+            }),
+            DataType::Time => Arc::new(AtomDomain::<NaiveTime>::default()),
+            dtype => return fallible!(MakeDomain, "unsupported type {}", dtype),
+        })
+    }
+
+    pub fn set_dtype(&mut self, dtype: DataType) -> Fallible<()> {
+        self.element_domain = Self::new_element_domain(dtype)?;
+        Ok(())
+    }
     /// Instantiates the broadest possible domain given the limited information available from a field.
     /// The data could have NaNs or nulls, and is not bounded.
     ///
@@ -110,27 +157,10 @@ impl SeriesDomain {
     /// Returns a series domain spanning all series
     /// whose name and data type of elements are specified by `field`.
     pub fn new_from_field(field: Field) -> Fallible<Self> {
-        macro_rules! new_series_domain {
-            ($ty:ty, $func:ident) => {
-                SeriesDomain::new(
-                    field.name.as_str(),
-                    OptionDomain::new(AtomDomain::<$ty>::$func()),
-                )
-            };
-        }
-
-        Ok(match field.data_type() {
-            DataType::Boolean => new_series_domain!(bool, default),
-            DataType::UInt32 => new_series_domain!(u32, default),
-            DataType::UInt64 => new_series_domain!(u64, default),
-            DataType::Int8 => new_series_domain!(i8, default),
-            DataType::Int16 => new_series_domain!(i16, default),
-            DataType::Int32 => new_series_domain!(i32, default),
-            DataType::Int64 => new_series_domain!(i64, default),
-            DataType::Float32 => new_series_domain!(f64, new_nullable),
-            DataType::Float64 => new_series_domain!(f64, new_nullable),
-            DataType::String => new_series_domain!(String, default),
-            dtype => return fallible!(MakeDomain, "unsupported type {}", dtype),
+        Ok(SeriesDomain {
+            name: field.name,
+            element_domain: Self::new_element_domain(field.dtype)?,
+            nullable: true,
         })
     }
 
@@ -155,7 +185,7 @@ impl SeriesDomain {
             }};
         }
 
-        match self.field.dtype {
+        match self.dtype() {
             DataType::UInt32 => drop_bounds!(u32),
             DataType::UInt64 => drop_bounds!(u64),
             DataType::Int8 => drop_bounds!(i8),
@@ -164,13 +194,7 @@ impl SeriesDomain {
             DataType::Int64 => drop_bounds!(i64),
             DataType::Float32 => drop_bounds!(f32),
             DataType::Float64 => drop_bounds!(f64),
-            _ => {
-                return fallible!(
-                    FailedFunction,
-                    "cannot drop bounds on: {:?}",
-                    self.field.dtype
-                )
-            }
+            _ => return fallible!(FailedFunction, "cannot drop bounds on: {:?}", self.dtype()),
         }
         Ok(())
     }
@@ -179,19 +203,22 @@ impl SeriesDomain {
     /// If the domain of elements is of type `AtomDomain<T>`, then returns the domain as that type,
     /// otherwise returns an error.
     pub fn atom_domain<T: 'static + CheckAtom>(&self) -> Fallible<&AtomDomain<T>> {
+        self.element_domain::<AtomDomain<T>>()
+    }
+
+    /// # Proof Definition
+    /// If the domain of elements is of type `D`, then returns the domain as that type,
+    /// otherwise returns an error.
+    pub fn element_domain<D: 'static>(&self) -> Fallible<&D> {
         (self.element_domain.as_any())
-            .downcast_ref::<AtomDomain<T>>()
+            .downcast_ref::<D>()
             .ok_or_else(|| err!(FailedCast, "domain downcast failed"))
     }
 }
 
 impl Debug for SeriesDomain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "SeriesDomain(\"{}\", {})",
-            self.field.name, self.field.dtype
-        )
+        write!(f, "SeriesDomain(\"{}\", {})", self.name, self.dtype())
     }
 }
 
@@ -205,10 +232,10 @@ impl<D: UnboundedMetric> MetricSpace for (SeriesDomain, D) {
 
 /// Common trait for domains that can be used to describe the space of typed elements within a series.
 pub trait SeriesElementDomain: Domain + Send + Sync {
-    type InnerDomain: SeriesElementDomain;
+    type InnerDomain: SeriesElementDomain<InnerDomain = Self::InnerDomain>;
     /// # Proof Definition
     /// Returns the [`DataType`] of elements in the series.
-    fn dtype() -> DataType;
+    fn dtype(&self) -> DataType;
 
     /// # Proof Definition
     /// Returns the domain elements in the physical backing store.
@@ -216,7 +243,7 @@ pub trait SeriesElementDomain: Domain + Send + Sync {
     /// Polars Series represents nullity via a separate validity bit vector,
     /// so that non-null data can be stored contiguously.
     /// This function returns specifically the domain of non-null elements.
-    fn inner_domain(self) -> Self::InnerDomain;
+    fn inner_domain(&self) -> &Self::InnerDomain;
 
     /// # Proof Definition
     /// True if Series domains may contain null elements, otherwise False.
@@ -225,23 +252,23 @@ pub trait SeriesElementDomain: Domain + Send + Sync {
 impl<T: CheckAtom + PrimitiveDataType> SeriesElementDomain for AtomDomain<T> {
     type InnerDomain = Self;
 
-    fn dtype() -> DataType {
+    fn dtype(&self) -> DataType {
         T::dtype()
     }
-    fn inner_domain(self) -> Self {
+    fn inner_domain(&self) -> &Self {
         self
     }
 
     const NULLABLE: bool = false;
 }
-impl<D: SeriesElementDomain> SeriesElementDomain for OptionDomain<D> {
+impl<D: SeriesElementDomain<InnerDomain = D>> SeriesElementDomain for OptionDomain<D> {
     type InnerDomain = D;
 
-    fn dtype() -> DataType {
-        D::dtype()
+    fn dtype(&self) -> DataType {
+        self.inner_domain().dtype()
     }
-    fn inner_domain(self) -> D {
-        self.element_domain
+    fn inner_domain(&self) -> &D {
+        &self.element_domain
     }
 
     const NULLABLE: bool = true;
@@ -250,10 +277,23 @@ impl<D: SeriesElementDomain> SeriesElementDomain for OptionDomain<D> {
 impl SeriesElementDomain for CategoricalDomain {
     type InnerDomain = Self;
 
-    fn dtype() -> DataType {
+    fn dtype(&self) -> DataType {
         DataType::Categorical(None, Default::default())
     }
-    fn inner_domain(self) -> Self {
+    fn inner_domain(&self) -> &Self {
+        self
+    }
+
+    const NULLABLE: bool = false;
+}
+
+impl SeriesElementDomain for DatetimeDomain {
+    type InnerDomain = Self;
+
+    fn dtype(&self) -> DataType {
+        DataType::Datetime(self.time_unit.clone(), self.time_zone.clone())
+    }
+    fn inner_domain(&self) -> &Self {
         self
     }
 
@@ -261,7 +301,11 @@ impl SeriesElementDomain for CategoricalDomain {
 }
 
 /// Object-safe version of [`SeriesElementDomain`].
-pub trait DynSeriesElementDomain: Send + Sync {
+pub trait DynSeriesElementDomain: 'static + Send + Sync {
+    /// # Proof Definition
+    /// Returns the datatype of rows of members in the domain.
+    fn dtype(&self) -> DataType;
+
     /// This method makes it possible to downcast a trait object of Self
     /// (dyn DynSeriesElementDomain) to its concrete type.
     ///
@@ -277,6 +321,9 @@ pub trait DynSeriesElementDomain: Send + Sync {
     fn dyn_partial_eq(&self, other: &dyn DynSeriesElementDomain) -> bool;
 }
 impl<D: 'static + SeriesElementDomain> DynSeriesElementDomain for D {
+    fn dtype(&self) -> DataType {
+        D::dtype(&self)
+    }
     fn as_any(&self) -> &dyn Any {
         self
     }
@@ -341,4 +388,10 @@ impl PrimitiveDataType for bool {
 }
 impl PrimitiveDataType for String {
     type Polars = StringType;
+}
+impl PrimitiveDataType for NaiveDate {
+    type Polars = DateType;
+}
+impl PrimitiveDataType for NaiveTime {
+    type Polars = TimeType;
 }

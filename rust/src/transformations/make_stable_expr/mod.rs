@@ -3,7 +3,7 @@ use polars_plan::dsl::{AggExpr, Expr, FunctionExpr};
 
 use crate::{
     core::{Metric, MetricSpace, Transformation},
-    domains::{ExprDomain, OuterMetric},
+    domains::{ExprDomain, OuterMetric, WildExprDomain},
     error::Fallible,
     metrics::{LInfDistance, LpDistance, Parallel, PartitionDistance},
     polars::get_disabled_features_message,
@@ -33,6 +33,9 @@ mod expr_clip;
 mod expr_col;
 
 #[cfg(feature = "contrib")]
+mod expr_count;
+
+#[cfg(feature = "contrib")]
 mod expr_cut;
 
 #[cfg(feature = "contrib")]
@@ -56,6 +59,12 @@ mod expr_sum;
 #[cfg(feature = "contrib")]
 mod expr_to_physical;
 
+#[cfg(feature = "contrib")]
+mod namespace_dt;
+
+#[cfg(feature = "contrib")]
+mod namespace_str;
+
 #[bootstrap(
     features("contrib"),
     arguments(output_metric(c_type = "AnyMetric *", rust_type = b"null")),
@@ -68,13 +77,13 @@ mod expr_to_physical;
 /// * `input_metric` - How to measure distances between neighboring input data sets.
 /// * `expr` - The expression to be analyzed for stability.
 pub fn make_stable_expr<MI: 'static + Metric, MO: 'static + Metric>(
-    input_domain: ExprDomain,
+    input_domain: WildExprDomain,
     input_metric: MI,
     expr: Expr,
-) -> Fallible<Transformation<ExprDomain, ExprDomain, MI, MO>>
+) -> Fallible<Transformation<WildExprDomain, ExprDomain, MI, MO>>
 where
     Expr: StableExpr<MI, MO>,
-    (ExprDomain, MI): MetricSpace,
+    (WildExprDomain, MI): MetricSpace,
     (ExprDomain, MO): MetricSpace,
 {
     expr.make_stable(input_domain, input_metric)
@@ -83,22 +92,23 @@ where
 pub trait StableExpr<MI: Metric, MO: Metric> {
     fn make_stable(
         self,
-        input_domain: ExprDomain,
+        input_domain: WildExprDomain,
         input_metric: MI,
-    ) -> Fallible<Transformation<ExprDomain, ExprDomain, MI, MO>>;
+    ) -> Fallible<Transformation<WildExprDomain, ExprDomain, MI, MO>>;
 }
 
 impl<M: OuterMetric> StableExpr<M, M> for Expr
 where
     M::InnerMetric: DatasetMetric,
     M::Distance: Clone,
+    (WildExprDomain, M): MetricSpace,
     (ExprDomain, M): MetricSpace,
 {
     fn make_stable(
         self,
-        input_domain: ExprDomain,
+        input_domain: WildExprDomain,
         input_metric: M,
-    ) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>> {
+    ) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>> {
         if expr_fill_nan::match_fill_nan(&self).is_some() {
             return expr_fill_nan::make_expr_fill_nan(input_domain, input_metric, self);
         }
@@ -146,16 +156,27 @@ where
             #[cfg(feature = "contrib")]
             Literal(_) => expr_lit::make_expr_lit(input_domain, input_metric, self),
 
-
             #[cfg(feature = "contrib")]
             Function {
                 function: ToPhysical,
                 ..
             } => expr_to_physical::make_expr_to_physical(input_domain, input_metric, self),
 
+            #[cfg(feature = "contrib")]
+            Function {
+                function: FunctionExpr::TemporalExpr(_),
+                ..
+            } => namespace_dt::make_namespace_dt(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Function {
+                function: FunctionExpr::StringExpr(_),
+                ..
+            } => namespace_str::make_namespace_str(input_domain, input_metric, self),
+
             expr => fallible!(
                 MakeTransformation,
-                "Expr is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
+                "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
                 expr,
                 get_disabled_features_message()
             )
@@ -169,12 +190,18 @@ where
 {
     fn make_stable(
         self,
-        input_domain: ExprDomain,
+        input_domain: WildExprDomain,
         input_metric: PartitionDistance<MI>,
-    ) -> Fallible<Transformation<ExprDomain, ExprDomain, PartitionDistance<MI>, LpDistance<P, f64>>>
-    {
+    ) -> Fallible<
+        Transformation<WildExprDomain, ExprDomain, PartitionDistance<MI>, LpDistance<P, f64>>,
+    > {
         use Expr::*;
         match self {
+            #[cfg(feature = "contrib")]
+            Agg(AggExpr::Count(_, _) | AggExpr::NUnique(_)) | Function { function: FunctionExpr::NullCount, .. } => {
+                expr_count::make_expr_count(input_domain, input_metric, self)
+            }
+
             #[cfg(feature = "contrib")]
             Agg(AggExpr::Sum(_)) => {
                 expr_sum::make_expr_sum(input_domain, input_metric, self)
@@ -185,7 +212,7 @@ where
 
             expr => fallible!(
                 MakeTransformation,
-                "Expr is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
+                "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
                 expr,
                 get_disabled_features_message()
             )
@@ -199,10 +226,15 @@ where
 {
     fn make_stable(
         self,
-        input_domain: ExprDomain,
+        input_domain: WildExprDomain,
         input_metric: PartitionDistance<MI>,
     ) -> Fallible<
-        Transformation<ExprDomain, ExprDomain, PartitionDistance<MI>, Parallel<LInfDistance<f64>>>,
+        Transformation<
+            WildExprDomain,
+            ExprDomain,
+            PartitionDistance<MI>,
+            Parallel<LInfDistance<f64>>,
+        >,
     > {
         if expr_discrete_quantile_score::match_discrete_quantile_score(&self)?.is_some() {
             return expr_discrete_quantile_score::make_expr_discrete_quantile_score(
@@ -214,7 +246,7 @@ where
         match self {
             expr => fallible!(
                 MakeTransformation,
-                "Expr is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
+                "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
                 expr,
                 get_disabled_features_message()
             )

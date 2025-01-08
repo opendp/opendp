@@ -1,11 +1,12 @@
-from opendp.mod import Domain, Metric, Measurement
+from opendp.mod import Domain, Metric, Transformation
 import opendp.prelude as dp
 from opendp.extras._utilities import to_then, with_privacy
+from opendp._internal import _make_transformation
 
 # planning to make this public, but may make more API changes
 
 
-def make_np_count(input_domain: Domain, input_metric: Metric) -> Measurement:
+def make_np_count(input_domain: Domain, input_metric: Metric) -> Transformation:
     """Construct a Transformation that returns the length of axis 0 of a 2-dimensional array.
 
     :param input_domain: instance of `array2_domain(...)`
@@ -15,9 +16,9 @@ def make_np_count(input_domain: Domain, input_metric: Metric) -> Measurement:
     size = input_domain.descriptor.size
 
     if input_metric != dp.symmetric_distance():
-        raise ValueError("input metric must be symmetric distance")
+        raise ValueError("input metric must be symmetric distance")  # pragma: no cover
 
-    return dp.t.make_user_transformation(
+    return _make_transformation(
         input_domain,
         input_metric,
         dp.atom_domain(T=int),

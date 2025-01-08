@@ -41,6 +41,7 @@ __version__ = __get_opendp_version()
 
 from opendp.mod import *
 from opendp.extras import sklearn, numpy, polars
+from opendp.extras.polars import dp_len as len
 import opendp.transformations as t
 import opendp.measurements as m
 import opendp.combinators as c

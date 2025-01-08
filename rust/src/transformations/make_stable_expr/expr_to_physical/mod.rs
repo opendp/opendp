@@ -2,9 +2,8 @@ use polars::prelude::*;
 use polars_plan::dsl::{Expr, FunctionExpr};
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{AtomDomain, CategoricalDomain, ExprDomain, OuterMetric};
+use crate::domains::{AtomDomain, CategoricalDomain, ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
-use crate::polars::ExprFunction;
 use crate::transformations::DatasetMetric;
 
 use super::StableExpr;
@@ -19,13 +18,14 @@ mod test;
 /// * `input_metric` - The metric under which neighboring LazyFrames are compared
 /// * `expr` - The clipping expression
 pub fn make_expr_to_physical<M: OuterMetric>(
-    input_domain: ExprDomain,
+    input_domain: WildExprDomain,
     input_metric: M,
     expr: Expr,
-) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>>
+) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
 where
     M::InnerMetric: DatasetMetric,
     M::Distance: Clone,
+    (WildExprDomain, M): MetricSpace,
     (ExprDomain, M): MetricSpace,
     Expr: StableExpr<M, M>,
 {
@@ -58,37 +58,28 @@ where
 
     let mut output_domain = middle_domain.clone();
 
-    let active_series = output_domain.active_series_mut()?;
+    let active_series = &mut output_domain.column;
 
     use DataType::*;
-    let in_dtype = &active_series.field.dtype;
+    let in_dtype = active_series.dtype();
 
     // this code is written intentionally to fail or change if polars behavior changes
     match (in_dtype.clone(), in_dtype.to_physical()) {
         (in_dtype, out_dtype) if in_dtype == out_dtype => (),
         (Categorical(_, _), UInt32) => {
-            let cat_domain = active_series
-                .element_domain
-                .as_any()
-                .downcast_ref::<CategoricalDomain>()
-                .ok_or_else(|| {
-                    err!(
-                        MakeTransformation,
-                        "to_physical: expected categorical series domain"
-                    )
-                })?;
+            let cat_domain = active_series.element_domain::<CategoricalDomain>()?;
 
-            if cat_domain.encoding().is_none() {
+            if cat_domain.categories().is_none() {
                 return fallible!(MakeTransformation, "to_physical: to prevent potentially revealing information about row ordering, category ordering must be statically known. Convert to String first.");
             }
 
-            active_series.element_domain = Arc::new(AtomDomain::<u32>::default());
+            active_series.set_element_domain(AtomDomain::<u32>::default());
         }
-        (Date, UInt32) => {
-            active_series.element_domain = Arc::new(AtomDomain::<u32>::default());
+        (Date, Int32) => {
+            active_series.set_element_domain(AtomDomain::<u32>::default());
         }
         (Datetime(_, _) | Time | Duration(_), Int64) => {
-            active_series.element_domain = Arc::new(AtomDomain::<i64>::default());
+            active_series.set_element_domain(AtomDomain::<i64>::default());
         }
         (in_dtype, _) => {
             return fallible!(
@@ -98,7 +89,6 @@ where
             )
         }
     };
-    active_series.field.dtype = in_dtype.to_physical();
 
     t_prior
         >> Transformation::new(

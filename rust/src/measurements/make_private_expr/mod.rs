@@ -4,7 +4,7 @@ use polars_plan::dsl::Expr;
 use crate::{
     combinators::{make_approximate, BasicCompositionMeasure},
     core::{Measure, Measurement, Metric, MetricSpace, Transformation},
-    domains::{ExprDomain, MarginPub},
+    domains::{Context, ExprDomain, ExprPlan, MarginPub, WildExprDomain},
     error::Fallible,
     measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
     metrics::PartitionDistance,
@@ -56,15 +56,15 @@ pub(crate) mod expr_report_noisy_max;
 /// # Why honest-but-curious?
 /// The privacy guarantee governs only at most one evaluation of the released expression.
 pub fn make_private_expr<MI: 'static + Metric, MO: 'static + Measure>(
-    input_domain: ExprDomain,
+    input_domain: WildExprDomain,
     input_metric: MI,
     output_measure: MO,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<ExprDomain, Expr, MI, MO>>
+) -> Fallible<Measurement<WildExprDomain, ExprPlan, MI, MO>>
 where
     Expr: PrivateExpr<MI, MO>,
-    (ExprDomain, MI): MetricSpace,
+    (WildExprDomain, MI): MetricSpace,
 {
     expr.make_private(input_domain, input_metric, output_measure, global_scale)
 }
@@ -72,21 +72,21 @@ where
 pub trait PrivateExpr<MI: Metric, MO: Measure> {
     fn make_private(
         self,
-        input_domain: ExprDomain,
+        input_domain: WildExprDomain,
         input_metric: MI,
         output_metric: MO,
         global_scale: Option<f64>,
-    ) -> Fallible<Measurement<ExprDomain, Expr, MI, MO>>;
+    ) -> Fallible<Measurement<WildExprDomain, ExprPlan, MI, MO>>;
 }
 
 impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, MaxDivergence> for Expr {
     fn make_private(
         self,
-        input_domain: ExprDomain,
+        input_domain: WildExprDomain,
         input_metric: PartitionDistance<M>,
         output_measure: MaxDivergence,
         global_scale: Option<f64>,
-    ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<M>, MaxDivergence>> {
+    ) -> Fallible<Measurement<WildExprDomain, ExprPlan, PartitionDistance<M>, MaxDivergence>> {
         if expr_noise::match_noise_shim(&self)?.is_some() {
             return expr_noise::make_expr_noise(input_domain, input_metric, self, global_scale);
         }
@@ -115,12 +115,13 @@ impl<M: 'static + UnboundedMetric> PrivateExpr<PartitionDistance<M>, ZeroConcent
 {
     fn make_private(
         self,
-        input_domain: ExprDomain,
+        input_domain: WildExprDomain,
         input_metric: PartitionDistance<M>,
         output_measure: ZeroConcentratedDivergence,
         global_scale: Option<f64>,
-    ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<M>, ZeroConcentratedDivergence>>
-    {
+    ) -> Fallible<
+        Measurement<WildExprDomain, ExprPlan, PartitionDistance<M>, ZeroConcentratedDivergence>,
+    > {
         if expr_noise::match_noise_shim(&self)?.is_some() {
             return expr_noise::make_expr_noise(input_domain, input_metric, self, global_scale);
         }
@@ -142,11 +143,12 @@ where
 {
     fn make_private(
         self,
-        input_domain: ExprDomain,
+        input_domain: WildExprDomain,
         input_metric: PartitionDistance<MI>,
         output_measure: Approximate<MO>,
         global_scale: Option<f64>,
-    ) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<MI>, Approximate<MO>>> {
+    ) -> Fallible<Measurement<WildExprDomain, ExprPlan, PartitionDistance<MI>, Approximate<MO>>>
+    {
         make_approximate(self.make_private(
             input_domain,
             input_metric,
@@ -160,15 +162,14 @@ fn make_private_measure_agnostic<
     MI: 'static + UnboundedMetric,
     MO: 'static + BasicCompositionMeasure<Distance = f64>,
 >(
-    input_domain: ExprDomain,
+    input_domain: WildExprDomain,
     input_metric: PartitionDistance<MI>,
     output_measure: MO,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<ExprDomain, Expr, PartitionDistance<MI>, MO>>
+) -> Fallible<Measurement<WildExprDomain, ExprPlan, PartitionDistance<MI>, MO>>
 where
     Expr: PrivateExpr<PartitionDistance<MI>, MO>,
-    (ExprDomain, MI): MetricSpace,
 {
     if expr_index_candidates::match_index_candidates(&expr)?.is_some() {
         return expr_index_candidates::make_expr_index_candidates::<PartitionDistance<MI>, _>(
@@ -203,7 +204,7 @@ where
 
         expr => fallible!(
             MakeMeasurement,
-            "Expr is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
+            "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
             expr,
             get_disabled_features_message()
         ),
@@ -219,13 +220,17 @@ where
 /// * one row is added/removed in unbounded-DP
 /// * one row is changed in bounded-DP
 pub(crate) fn approximate_c_stability<MI: UnboundedMetric, MO: Metric>(
-    trans: &Transformation<ExprDomain, ExprDomain, PartitionDistance<MI>, MO>,
+    trans: &Transformation<WildExprDomain, ExprDomain, PartitionDistance<MI>, MO>,
 ) -> Fallible<MO::Distance> {
-    let margin = trans
-        .input_domain
-        .active_margin()
-        .cloned()
-        .unwrap_or_default();
+    let margin = match &trans.input_domain.context {
+        Context::RowByRow { .. } => {
+            return fallible!(
+                MakeTransformation,
+                "c-stability approximation may only be conducted under aggregation"
+            )
+        }
+        Context::Grouping { margin, .. } => margin,
+    };
 
     let d_in = match margin.public_info {
         // smallest valid dataset distance is 2 in bounded-DP

@@ -1,17 +1,21 @@
 use crate::core::{Measure, Metric, MetricSpace};
-use crate::polars::{apply_plugin, literal_value_of, match_plugin, ExprFunction, OpenDPPlugin};
+use crate::domains::{ExprPlan, WildExprDomain};
+use crate::polars::{apply_plugin, literal_value_of, match_plugin, OpenDPPlugin};
 use crate::{
     core::{Function, Measurement},
-    domains::ExprDomain,
     error::Fallible,
 };
 
 use polars::datatypes::{DataType, Field};
+use polars::error::polars_bail;
+#[cfg(feature = "ffi")]
+use polars::error::polars_err;
 use polars::error::PolarsResult;
-use polars::error::{polars_bail, polars_err};
+use polars::prelude::{Column, CompatLevel};
 use polars::series::Series;
-use polars_plan::dsl::{Expr, GetOutput, SeriesUdf};
+use polars_plan::dsl::{ColumnsUdf, Expr, GetOutput};
 use polars_plan::prelude::{ApplyOptions, FunctionOptions};
+#[cfg(feature = "ffi")]
 use pyo3_polars::derive::polars_expr;
 #[cfg(feature = "ffi")]
 use serde::{Deserialize, Serialize};
@@ -29,15 +33,15 @@ mod test;
 /// * `expr` - The expression to which the Laplace noise will be added
 /// * `param` - (Re)scale the noise parameter for the laplace distribution
 pub fn make_expr_index_candidates<MI: 'static + Metric, MO: 'static + Measure>(
-    input_domain: ExprDomain,
+    input_domain: WildExprDomain,
     input_metric: MI,
     output_measure: MO,
     expr: Expr,
     param: Option<f64>,
-) -> Fallible<Measurement<ExprDomain, Expr, MI, MO>>
+) -> Fallible<Measurement<WildExprDomain, ExprPlan, MI, MO>>
 where
     Expr: PrivateExpr<MI, MO>,
-    (ExprDomain, MI): MetricSpace,
+    (WildExprDomain, MI): MetricSpace,
 {
     let (input, IndexCandidatesPlugin { candidates }) =
         match_index_candidates(&expr)?.ok_or_else(|| {
@@ -92,21 +96,17 @@ pub(crate) fn match_index_candidates(
     Ok(Some((input, IndexCandidatesPlugin { candidates })))
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "ffi", derive(Serialize, Deserialize))]
+#[derive(Clone)]
 pub(crate) struct IndexCandidatesShim;
-impl SeriesUdf for IndexCandidatesShim {
+impl ColumnsUdf for IndexCandidatesShim {
     // makes it possible to downcast the AnonymousFunction trait object back to Self
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
 
-    fn call_udf(&self, _: &mut [Series]) -> PolarsResult<Option<Series>> {
+    fn call_udf(&self, _: &mut [Column]) -> PolarsResult<Option<Column>> {
         polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")
-    }
-
-    fn get_output(&self) -> Option<GetOutput> {
-        // dtype is unknown
-        Some(GetOutput::from_type(DataType::Null))
     }
 }
 
@@ -125,6 +125,11 @@ impl OpenDPPlugin for IndexCandidatesShim {
             ..Default::default()
         }
     }
+
+    fn get_output(&self) -> Option<GetOutput> {
+        // dtype is unknown
+        Some(GetOutput::from_type(DataType::Null))
+    }
 }
 
 impl OpenDPPlugin for IndexCandidatesPlugin {
@@ -136,36 +141,36 @@ impl OpenDPPlugin for IndexCandidatesPlugin {
             ..Default::default()
         }
     }
+
+    fn get_output(&self) -> Option<GetOutput> {
+        let dtype = self.candidates.0.dtype().clone();
+        Some(GetOutput::map_field(move |f| {
+            Ok(Field::new(f.name().clone(), dtype.clone()))
+        }))
+    }
 }
 
 // allow the IndexCandidatesArgs struct to be stored inside an AnonymousFunction, when used from Rust directly
-impl SeriesUdf for IndexCandidatesPlugin {
+impl ColumnsUdf for IndexCandidatesPlugin {
     // makes it possible to downcast the AnonymousFunction trait object back to Self
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
 
-    fn call_udf(&self, s: &mut [Series]) -> PolarsResult<Option<Series>> {
+    fn call_udf(&self, s: &mut [Column]) -> PolarsResult<Option<Column>> {
         index_candidates_udf(s, self.clone()).map(Some)
-    }
-
-    fn get_output(&self) -> Option<GetOutput> {
-        let dtype = self.candidates.0.dtype().clone();
-        Some(GetOutput::map_field(move |f| {
-            Ok(Field::new(f.name(), dtype.clone()))
-        }))
     }
 }
 
 /// Implementation of the index_candidates noise expression.
 ///
 /// The Polars engine executes this function over chunks of data.
-fn index_candidates_udf(inputs: &[Series], kwargs: IndexCandidatesPlugin) -> PolarsResult<Series> {
-    let Ok([series]) = <&[_; 1]>::try_from(inputs) else {
+fn index_candidates_udf(inputs: &[Column], kwargs: IndexCandidatesPlugin) -> PolarsResult<Column> {
+    let Ok([column]) = <&[_; 1]>::try_from(inputs) else {
         polars_bail!(InvalidOperation: "{:?} expects a single input field", IndexCandidatesShim::NAME);
     };
-    let selections = kwargs.candidates.0.take(series.u32()?)?;
-    Ok(selections.with_name(series.name()))
+    let selections = kwargs.candidates.0.take(column.u32()?)?;
+    Ok(Column::Series(selections.with_name(column.name().clone())))
 }
 
 // generate the FFI plugin for the index_candidates noise expression
@@ -186,12 +191,12 @@ pub(crate) fn index_candidates_plugin_type_udf(
         polars_bail!(InvalidOperation: "{:?} expects a single input field", IndexCandidatesShim::NAME)
     };
 
-    if field.data_type() != &DataType::UInt32 {
-        polars_bail!(InvalidOperation: "Expected u32 input field, found {:?}", field.data_type())
+    if field.dtype() != &DataType::UInt32 {
+        polars_bail!(InvalidOperation: "Expected u32 input field, found {:?}", field.dtype())
     }
 
     Ok(Field::new(
-        field.name(),
+        field.name().clone(),
         kwargs.candidates.0.dtype().clone(),
     ))
 }
@@ -203,5 +208,7 @@ fn index_candidates_plugin(
     inputs: &[Series],
     kwargs: IndexCandidatesPlugin,
 ) -> PolarsResult<Series> {
-    index_candidates_udf(inputs, kwargs)
+    let inputs: Vec<Column> = inputs.iter().cloned().map(Column::Series).collect();
+    let out = index_candidates_udf(inputs.as_slice(), kwargs)?;
+    Ok(out.take_materialized_series())
 }

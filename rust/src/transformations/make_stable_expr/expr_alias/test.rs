@@ -2,7 +2,7 @@ use polars::{
     df,
     lazy::frame::{IntoLazy, LazyFrame},
 };
-use polars_plan::dsl::{all, col};
+use polars_plan::dsl::col;
 
 use crate::{
     domains::{AtomDomain, LazyFrameDomain, SeriesDomain},
@@ -77,8 +77,8 @@ fn test_alias() -> Fallible<()> {
         .alias("C")
         .make_stable(expr_domain, SymmetricDistance)?;
 
-    let expr_ab = t_ab.invoke(&(lf.clone().logical_plan, all()))?.1;
-    let expr_bc = t_bc.invoke(&(lf.clone().logical_plan, all()))?.1;
+    let expr_ab = t_ab.invoke(&lf.logical_plan)?.expr;
+    let expr_bc = t_bc.invoke(&lf.logical_plan)?.expr;
 
     let actual = lf.with_columns([expr_ab, expr_bc]).collect()?;
     let expect = df!("A" => ints, "B" => ints, "C" => bools)?;

@@ -2,6 +2,7 @@ use std::{env, sync::Arc};
 
 use crate::{
     core::Function,
+    domains::ExprPlan,
     error::Fallible,
     interactive::{Answer, Query, Queryable},
     measurements::{
@@ -12,26 +13,32 @@ use crate::{
     },
     transformations::expr_discrete_quantile_score::DiscreteQuantileScoreShim,
 };
-use polars::{frame::DataFrame, lazy::frame::LazyFrame, prelude::NamedFrom, series::Series};
+use polars::{
+    frame::DataFrame,
+    lazy::frame::LazyFrame,
+    prelude::{DslPlan, GetOutput, LazySerde, NamedFrom},
+    series::Series,
+};
 use polars_plan::{
-    dsl::{len, lit, Expr, FunctionExpr, SeriesUdf, SpecialEq},
+    dsl::{lit, ColumnsUdf, Expr, FunctionExpr, SpecialEq},
     plans::{Literal, LiteralValue, Null},
-    prelude::FunctionOptions,
+    prelude::{FunctionFlags, FunctionOptions},
 };
 use serde::{Deserialize, Serialize};
 
 // this trait is used to make the Deserialize trait bound conditional on the feature flag
 #[cfg(not(feature = "ffi"))]
-pub(crate) trait OpenDPShim: 'static + Clone + SeriesUdf {
+pub(crate) trait OpenDPPlugin: 'static + Clone + ColumnsUdf {
     const NAME: &'static str;
     fn function_options() -> FunctionOptions;
 }
 #[cfg(feature = "ffi")]
 pub(crate) trait OpenDPPlugin:
-    'static + Clone + SeriesUdf + for<'de> Deserialize<'de> + Serialize
+    'static + Clone + ColumnsUdf + for<'de> Deserialize<'de> + Serialize
 {
     const NAME: &'static str;
     fn function_options() -> FunctionOptions;
+    fn get_output(&self) -> Option<GetOutput>;
 }
 
 static OPENDP_LIB_NAME: &str = "opendp";
@@ -53,7 +60,7 @@ where
             ..
         } => {
             // check that the plugin is from the opendp library and the plugin has a matching name
-            if !lib.contains(OPENDP_LIB_NAME) || symbol.as_ref() != KW::NAME {
+            if !lib.contains(OPENDP_LIB_NAME) || symbol.as_str() != KW::NAME {
                 return Ok(None);
             }
 
@@ -66,7 +73,13 @@ where
         Expr::AnonymousFunction {
             input, function, ..
         } => {
-            if function.as_any().downcast_ref::<KW>().is_none() {
+            if function
+                .clone()
+                .materialize()?
+                .as_any()
+                .downcast_ref::<KW>()
+                .is_none()
+            {
                 return Ok(None);
             };
             input
@@ -92,7 +105,7 @@ where
             ..
         } => {
             // check that the plugin is from the opendp library and the plugin has a matching name
-            if !lib.contains(OPENDP_LIB_NAME) || symbol.as_ref() != KW::NAME {
+            if !lib.contains(OPENDP_LIB_NAME) || symbol.as_str() != KW::NAME {
                 return Ok(None);
             }
             let args = serde_pickle::from_slice(kwargs.as_ref(), Default::default())
@@ -102,6 +115,7 @@ where
         Expr::AnonymousFunction {
             input, function, ..
         } => {
+            let function = function.clone().materialize()?;
             let Some(args) = function.as_any().downcast_ref::<KW>() else {
                 return Ok(None);
             };
@@ -114,9 +128,9 @@ where
 /// Augment the input expression to apply the plugin expression.
 ///
 /// # Arguments
-/// * `input_expr` - The input expression to which the Laplace noise will be added
+/// * `input_expr` - The input expression to which the plugin will be applied
 /// * `plugin_expr` - A plugin expression. The input to the plugin is replaced with input_expr.
-/// * `kwargs` - Extra parameters to the plugin
+/// * `kwargs_new` - Extra parameters to the plugin
 pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
     input_expr: Expr,
     plugin_expr: Expr,
@@ -138,7 +152,7 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
             } = &mut function
             {
                 if let Ok(path) = env::var("OPENDP_POLARS_LIB_PATH") {
-                    *lib = Arc::from(path);
+                    *lib = path.into();
                 }
                 *symbol = KW::NAME.into();
                 *kwargs = serde_pickle::to_vec(&kwargs_new, Default::default())
@@ -159,7 +173,7 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
             ..
         } => Expr::AnonymousFunction {
             input: vec![input_expr],
-            function: SpecialEq::new(Arc::new(kwargs_new)),
+            function: LazySerde::Deserialized(SpecialEq::new(Arc::new(kwargs_new))),
             output_type,
             options,
         },
@@ -171,7 +185,7 @@ pub(crate) fn apply_anonymous_function<KW: OpenDPPlugin>(input: Vec<Expr>, kwarg
     Expr::AnonymousFunction {
         input,
         // pass through the constructor to activate the expression
-        function: SpecialEq::new(Arc::new(kwargs.clone())),
+        function: LazySerde::Deserialized(SpecialEq::new(Arc::new(kwargs.clone()))),
         // have no option but to panic in this case, since the polars api does not accept results
         output_type: kwargs
             .get_output()
@@ -227,62 +241,59 @@ impl ExtractValue for String {
     fn extract(literal: LiteralValue) -> Fallible<Option<Self>> {
         Ok(match literal {
             LiteralValue::Null => None,
-            LiteralValue::String(string) => Some(string),
+            LiteralValue::String(string) => Some(string.into_string()),
             _ => return fallible!(FailedFunction, "expected String, found: {:?}", literal),
         })
     }
 }
 
-pub(crate) trait ExprFunction {
-    fn then_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self;
-    fn from_expr(expr: Expr) -> Self;
-}
+impl Function<ExprPlan, ExprPlan> {
+    /// # Proof Definition
+    /// Return a Function that, when passed a plan,
+    /// returns the same plan but with the expression extended via `function`.
+    pub(crate) fn then_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self {
+        Self::new(move |arg: &ExprPlan| arg.then(&function))
+    }
 
-impl<F: Clone> ExprFunction for Function<(F, Expr), (F, Expr)> {
-    fn then_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self {
-        Self::new(move |arg: &(F, Expr)| (arg.0.clone(), function(arg.1.clone())))
-    }
-    fn from_expr(expr: Expr) -> Self {
-        Self::new_fallible(
-            move |(frame, expr_wild): &(F, Expr)| -> Fallible<(F, Expr)> {
-                assert_is_wildcard(expr_wild)?;
-                Ok((frame.clone(), expr.clone()))
-            },
-        )
-    }
-}
-impl<F: Clone> ExprFunction for Function<(F, Expr), Expr> {
-    fn then_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self {
-        Self::new(move |arg: &(F, Expr)| function(arg.1.clone()))
-    }
-    fn from_expr(expr: Expr) -> Self {
-        Self::new_fallible(move |(_, expr_wild): &(F, Expr)| -> Fallible<Expr> {
-            assert_is_wildcard(expr_wild)?;
-            Ok(expr.clone())
+    /// # Proof Definition
+    /// Returns a Function that specifies what the function should return if evaluated on an empty partition.
+    ///
+    /// Polars only keeps non-empty partitions in group-by,
+    /// so this is used to fill missing values after joining with an explicit key set.
+    pub(crate) fn fill_with(self, value: Expr) -> Self {
+        Self::new_fallible(move |arg: &ExprPlan| {
+            let mut plan = self.eval(arg)?;
+            plan.fill = Some(value.clone());
+            Ok(plan)
         })
     }
 }
-
-impl ExprFunction for Function<Expr, Expr> {
-    fn then_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self {
-        Self::new(move |arg: &Expr| function(arg.clone()))
-    }
-    fn from_expr(expr: Expr) -> Self {
-        Self::new_fallible(move |expr_wild: &Expr| -> Fallible<Expr> {
-            assert_is_wildcard(expr_wild)?;
-            Ok(expr.clone())
+impl Function<DslPlan, ExprPlan> {
+    /// # Proof Definition
+    /// Return a Function that, if passed a plan with a wildcard expression,
+    /// returns the same plan but with `expr` expression instead.
+    pub(crate) fn from_expr(expr: Expr) -> Self {
+        Self::new_fallible(move |arg: &DslPlan| -> Fallible<ExprPlan> {
+            Ok(ExprPlan {
+                plan: arg.clone(),
+                expr: expr.clone(),
+                fill: None,
+            })
         })
     }
-}
 
-fn assert_is_wildcard(expr: &Expr) -> Fallible<()> {
-    if expr != &Expr::Wildcard {
-        return fallible!(
-            FailedFunction,
-            "The only valid input expression is all() (denoting that all columns are selected)."
-        );
+    /// # Proof Definition
+    /// Returns a Function that specifies what the function should return if evaluated on an empty partition.
+    ///
+    /// Polars only keeps non-empty partitions in group-by,
+    /// so this is used to fill missing values after joining with an explicit key set.
+    pub(crate) fn fill_with(self, value: Expr) -> Self {
+        Self::new_fallible(move |arg: &DslPlan| {
+            let mut plan = self.eval(arg)?;
+            plan.fill = Some(value.clone());
+            Ok(plan)
+        })
     }
-    Ok(())
 }
 
 /// Helper trait for Rust users to access differentially private expressions.
@@ -339,11 +350,43 @@ impl DPExpr {
         self.noise(Some(Distribution::Gaussian), scale)
     }
 
+    /// Compute the differentially private len (including nulls).
+    ///
+    /// # Arguments
+    /// * `scale` - parameter for the noise distribution
+    pub fn len(self, scale: Option<f64>) -> Expr {
+        self.0.len().dp().noise(None, scale)
+    }
+
+    /// Compute the differentially private count (excluding nulls).
+    ///
+    /// # Arguments
+    /// * `scale` - parameter for the noise distribution
+    pub fn count(self, scale: Option<f64>) -> Expr {
+        self.0.count().dp().noise(None, scale)
+    }
+
+    /// Compute the differentially private null count (exclusively nulls).
+    ///
+    /// # Arguments
+    /// * `scale` - parameter for the noise distribution
+    pub fn null_count(self, scale: Option<f64>) -> Expr {
+        self.0.null_count().dp().noise(None, scale)
+    }
+
+    /// Compute the differentially private count of unique elements (including null).
+    ///
+    /// # Arguments
+    /// * `scale` - parameter for the noise distribution
+    pub fn n_unique(self, scale: Option<f64>) -> Expr {
+        self.0.n_unique().dp().noise(None, scale)
+    }
+
     /// Compute the differentially private sum.
     ///
     /// # Arguments
-    /// * `bounds` - The bounds of the input data.
-    /// * `scale` - Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
+    /// * `bounds` - The bounds of the input data
+    /// * `scale` - parameter for the noise distribution
     pub fn sum<L: Literal>(self, bounds: (L, L), scale: Option<f64>) -> Expr {
         self.0
             .clip(lit(bounds.0), lit(bounds.1))
@@ -354,13 +397,12 @@ impl DPExpr {
 
     /// Compute the differentially private mean.
     ///
-    /// The scale calibrates the amount of noise to be added to the sum.
-    ///
     /// # Arguments
-    /// * `bounds` - The bounds of the input data.
-    /// * `scale` - Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
-    pub fn mean<L: Literal>(self, bounds: (L, L), scale: Option<f64>) -> Expr {
-        self.0.dp().sum(bounds, scale) / len()
+    /// * `bounds` - The bounds of the input data
+    /// * `scales` - parameters for the noise distributions of the numerator and denominator
+    pub fn mean<L: Literal>(self, bounds: (L, L), scales: Option<(f64, f64)>) -> Expr {
+        let (numer, denom) = scales.unzip();
+        self.0.clone().dp().sum(bounds, numer) / self.0.dp().len(denom)
     }
 
     /// Score the utility of each candidate for representing the true quantile.
@@ -416,7 +458,7 @@ impl DPExpr {
             .dp()
             .report_noisy_max_gumbel(Optimize::Min, scale)
             .dp()
-            .index_candidates(Series::new("", candidates))
+            .index_candidates(Series::new("".into(), candidates))
     }
 
     /// Compute a differentially private median.
@@ -491,7 +533,11 @@ impl OnceFrame {
     ///
     /// Requires "honest-but-curious" because the privacy guarantees only apply if:
     /// 1. The LazyFrame (compute plan) is only ever executed once.
-    /// 2. The analyst does not observe ordering of rows in the output. To ensure this, shuffle the output.
+    /// 2. The analyst does not observe ordering of rows in the output.
+    ///    
+    /// To ensure that row ordering is not observed:
+    /// 1. Do not extend the compute plan with order-sensitive computations.
+    /// 2. Shuffle the output once collected ([in Polars sample all, with shuffling enabled](https://docs.rs/polars/latest/polars/frame/struct.DataFrame.html#method.sample_n_literal)).
     #[cfg(feature = "honest-but-curious")]
     pub fn lazyframe(&mut self) -> LazyFrame {
         let answer = self.eval_query(Query::Internal(&ExtractLazyFrame)).unwrap();
@@ -524,4 +570,11 @@ pub(crate) fn get_disabled_features_message() -> String {
             disabled_features.join(", ")
         )
     }
+}
+
+pub(crate) fn function_flags<const L: usize>(flags: [&'static str; L]) -> FunctionFlags {
+    flags
+        .into_iter()
+        .map(|f| FunctionFlags::from_name(f).unwrap())
+        .fold(FunctionFlags::default(), FunctionFlags::intersection)
 }

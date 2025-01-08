@@ -1,5 +1,6 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::Debug;
+use std::hash::Hash;
 use std::marker::PhantomData;
 
 use polars::lazy::dsl::{col, len};
@@ -7,7 +8,7 @@ use polars::prelude::*;
 
 use crate::core::Domain;
 use crate::metrics::{LInfDistance, LpDistance};
-use crate::traits::ProductOrd;
+use crate::traits::{InfMul, ProductOrd};
 use crate::{
     core::MetricSpace, domains::SeriesDomain, error::Fallible, transformations::DatasetMetric,
 };
@@ -18,7 +19,7 @@ use super::NumericDataType;
 mod test;
 
 #[cfg(feature = "ffi")]
-mod ffi;
+pub(crate) mod ffi;
 
 pub trait Frame: Clone + Send + Sync {
     /// # Proof Definition
@@ -87,7 +88,7 @@ impl Frame for DataFrame {
 #[derive(Clone)]
 pub struct FrameDomain<F: Frame> {
     pub series_domains: Vec<SeriesDomain>,
-    pub margins: HashMap<BTreeSet<String>, Margin>,
+    pub margins: HashMap<BTreeSet<PlSmallStr>, Margin>,
     _marker: PhantomData<F>,
 }
 
@@ -124,7 +125,7 @@ impl<F: Frame, const P: usize, T: ProductOrd + NumericDataType> MetricSpace
             .0
             .series_domains
             .iter()
-            .any(|s| s.field.dtype != T::dtype())
+            .any(|s| s.dtype() != T::dtype())
         {
             return fallible!(
                 MetricSpace,
@@ -163,11 +164,11 @@ impl<F: Frame> FrameDomain<F> {
     /// or an error.
     pub(crate) fn new_with_margins(
         series_domains: Vec<SeriesDomain>,
-        margins: HashMap<BTreeSet<String>, Margin>,
+        margins: HashMap<BTreeSet<PlSmallStr>, Margin>,
     ) -> Fallible<Self> {
         let n_unique = series_domains
             .iter()
-            .map(|s| &s.field.name)
+            .map(|s| &s.name)
             .collect::<HashSet<_>>()
             .len();
         if n_unique != series_domains.len() {
@@ -194,7 +195,11 @@ impl<F: Frame> FrameDomain<F> {
     /// # Proof Definition
     /// Return the schema shared by all members of the domain.
     pub fn schema(&self) -> Schema {
-        Schema::from_iter(self.series_domains.iter().map(|s| s.field.clone()))
+        Schema::from_iter(
+            self.series_domains
+                .iter()
+                .map(|s| Field::new(s.name.clone(), s.dtype())),
+        )
     }
 
     /// # Proof Definition
@@ -219,12 +224,84 @@ impl<F: Frame> FrameDomain<F> {
         margin: Margin,
     ) -> Fallible<Self> {
         let grouping_columns =
-            BTreeSet::from_iter(grouping_columns.iter().map(|v| v.as_ref().to_string()));
+            BTreeSet::from_iter(grouping_columns.iter().map(|v| v.as_ref().into()));
         if self.margins.contains_key(&grouping_columns) {
             return fallible!(MakeDomain, "margin already exists");
         }
         self.margins.insert(grouping_columns, margin);
         Ok(self)
+    }
+
+    /// # Proof Definition
+    /// Return margin descriptors about `grouping_columns`
+    /// that can be inferred from `self`.
+    ///
+    /// Best effort is made to derive more restrictive descriptors,
+    /// but optimal inference of descriptors is not guaranteed.
+    pub fn get_margin(&self, grouping_columns: &BTreeSet<PlSmallStr>) -> Margin {
+        let mut margin = self
+            .margins
+            .get(grouping_columns)
+            .cloned()
+            .unwrap_or_default();
+
+        let subset_margins = self
+            .margins
+            .iter()
+            .filter(|(id, _)| id.is_subset(grouping_columns))
+            .collect::<Vec<(&BTreeSet<_>, &Margin)>>();
+
+        // the max_partition_* descriptors can take the minimum known value from any margin on a subset of the grouping columns
+        margin.max_partition_length = (subset_margins.iter())
+            .filter_map(|(_, m)| m.max_partition_length)
+            .min();
+
+        margin.max_partition_contributions = (subset_margins.iter())
+            .filter_map(|(_, m)| m.max_partition_contributions)
+            .min();
+
+        let all_mnps = (self.margins.iter())
+            .filter_map(|(set, m)| Some((set, m.max_num_partitions?)))
+            .collect();
+
+        // in the worst case, the max partition length is the product of the max partition lengths of the cover
+        margin.max_num_partitions = find_min_covering(grouping_columns.clone(), all_mnps)
+            .map(|cover| cover.values().try_fold(1u32, |acc, v| acc.inf_mul(v).ok()))
+            .flatten();
+
+        let all_mips = (self.margins.iter())
+            .filter_map(|(set, m)| Some((set, m.max_influenced_partitions?)))
+            .collect();
+
+        // in the worst case, the max partition contributions is the product of the max partition contributions of the cover
+        margin.max_influenced_partitions = find_min_covering(grouping_columns.clone(), all_mips)
+            .map(|cover| cover.values().try_fold(1u32, |acc, v| acc.inf_mul(v).ok()))
+            .flatten();
+
+        // if keys or lengths are known about any higher-way marginal,
+        // then the same is known about lower-way marginals
+        margin.public_info = (self.margins.iter())
+            .filter(|(id, _)| grouping_columns.is_subset(id))
+            .map(|(_, margin)| margin.public_info)
+            .max()
+            .flatten();
+
+        // with no grouping, the key-set is trivial/public
+        if grouping_columns.is_empty() {
+            margin.public_info.get_or_insert(MarginPub::Keys);
+            margin.max_num_partitions = Some(1);
+            margin.max_influenced_partitions = Some(1);
+        }
+
+        margin
+    }
+
+    pub fn series_domain(&self, name: PlSmallStr) -> Fallible<SeriesDomain> {
+        self.series_domains
+            .iter()
+            .find(|s| s.name == name)
+            .cloned()
+            .ok_or_else(|| err!(MakeTransformation, "unrecognized column: {}", name))
     }
 }
 
@@ -242,7 +319,7 @@ impl<F: Frame> Debug for FrameDomain<F> {
             "FrameDomain({}; margins=[{}])",
             self.series_domains
                 .iter()
-                .map(|s| format!("{}: {}", s.field.name, s.field.dtype))
+                .map(|s| format!("{}: {}", s.name, s.dtype()))
                 .collect::<Vec<_>>()
                 .join(", "),
             margins_debug
@@ -261,7 +338,12 @@ impl<F: Frame> Domain for FrameDomain<F> {
         }
 
         // check if each column is a member of the series domain
-        for (series_domain, series) in self.series_domains.iter().zip(val_df.get_columns().iter()) {
+        for (series_domain, series) in self.series_domains.iter().zip(
+            val_df
+                .get_columns()
+                .iter()
+                .map(|c| c.as_materialized_series()),
+        ) {
             if !series_domain.member(series)? {
                 return Ok(false);
             }
@@ -269,7 +351,11 @@ impl<F: Frame> Domain for FrameDomain<F> {
 
         // check that margins are satisfied
         for (grouping_columns, margin) in self.margins.iter() {
-            let grouping_columns = grouping_columns.iter().map(|c| col(c)).collect::<Vec<_>>();
+            let grouping_columns = grouping_columns
+                .iter()
+                .cloned()
+                .map(col)
+                .collect::<Vec<_>>();
             if !margin.member(val.clone().lazyframe().group_by(grouping_columns))? {
                 return Ok(false);
             }
@@ -303,13 +389,22 @@ pub struct Margin {
     pub public_info: Option<MarginPub>,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Ord)]
 /// Denote how margins interact with the metric.
+///
+/// Order of elements in the enum is significant:
+/// variants are ordered by how restrictive they are as descriptors.
 pub enum MarginPub {
     /// The distance between data sets with different margin keys are is infinite.
     Keys,
     /// The distance between data sets with different margin keys or partition lengths is infinite.
     Lengths,
+}
+
+impl PartialOrd for MarginPub {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        (*self as usize).partial_cmp(&(*other as usize))
+    }
 }
 
 impl Margin {
@@ -342,7 +437,7 @@ impl Margin {
 
     /// # Proof Definition
     /// Only returns `Ok(true)` if the grouped data `value` is consistent with the domain descriptors in `self`.
-    fn member(&self, value: LazyGroupBy) -> Fallible<bool> {
+    pub(crate) fn member(&self, value: LazyGroupBy) -> Fallible<bool> {
         // retrieves the first row/first column from $tgt as type $ty
         macro_rules! item {
             ($tgt:expr, $ty:ident) => {
@@ -388,4 +483,41 @@ impl Margin {
             .unwrap_or(l_1)
             .min(l_1)
     }
+}
+
+/// # Proof Definition
+/// Return a subset of `sets` whose intersection is a superset of `must_cover`.
+///
+/// While this algorithm also tries to minimize the number of sets returned,
+/// finding the optimal smallest set of sets is not a requirement to prove correctness of this algorithm.
+/// In fact, finding the optimal subset of sets is computationally infeasible, as the minimal set covering problem is NP-hard.
+///
+/// # Citation
+/// * A Greedy Heuristic for the Set-Covering Problem, V. Chvatal
+fn find_min_covering<T: Hash + Ord>(
+    mut must_cover: BTreeSet<T>,
+    sets: HashMap<&BTreeSet<T>, u32>,
+) -> Option<HashMap<&BTreeSet<T>, u32>> {
+    let mut covered = HashMap::<&BTreeSet<T>, u32>::new();
+    while !must_cover.is_empty() {
+        let (best_set, weight) = sets
+            .iter()
+            .max_by_key(|(set, len)| {
+                (
+                    // choose the set that covers the most uncovered elements
+                    set.intersection(&must_cover).count(),
+                    // of those, prioritize smaller sets
+                    -(set.len() as i32),
+                    // of those, prioritize lower weight
+                    -(**len as i32),
+                )
+            })
+            .and_then(|(&best_set, weight)| {
+                (!best_set.is_disjoint(&must_cover)).then(|| (best_set, *weight))
+            })?;
+
+        must_cover.retain(|x| !best_set.contains(x));
+        covered.insert(best_set, weight);
+    }
+    Some(covered)
 }

@@ -3,9 +3,8 @@ use polars_plan::plans::LiteralValue;
 use polars_plan::utils::expr_output_name;
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{AtomDomain, DslPlanDomain, ExprDomain, Null, OuterMetric, SeriesDomain};
+use crate::domains::{AtomDomain, ExprDomain, Null, OuterMetric, SeriesDomain, WildExprDomain};
 use crate::error::Fallible;
-use crate::polars::ExprFunction;
 use crate::transformations::DatasetMetric;
 
 #[cfg(test)]
@@ -18,13 +17,14 @@ mod test;
 /// * `input_metric` - The metric under which neighboring LazyFrames are compared.
 /// * `expr` - A literal expression.
 pub fn make_expr_lit<M: OuterMetric>(
-    input_domain: ExprDomain,
+    input_domain: WildExprDomain,
     input_metric: M,
     expr: Expr,
-) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>>
+) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
 where
     M::InnerMetric: DatasetMetric,
     M::Distance: Clone,
+    (WildExprDomain, M): MetricSpace,
     (ExprDomain, M): MetricSpace,
 {
     let Expr::Literal(literal_value) = &expr else {
@@ -35,7 +35,7 @@ where
 
     macro_rules! series_domain {
         ($ty:ty, $null:expr) => {{
-            SeriesDomain::new(name.as_ref(), AtomDomain::<$ty>::new(None, $null))
+            SeriesDomain::new(name, AtomDomain::<$ty>::new(None, $null))
         }};
     }
 
@@ -53,10 +53,10 @@ where
         value => return fallible!(MakeTransformation, "unsupported literal value: {:?}", value),
     };
 
-    let output_domain = ExprDomain::new(
-        DslPlanDomain::new(vec![series_domain])?,
-        input_domain.context.clone(),
-    );
+    let output_domain = ExprDomain {
+        column: series_domain,
+        context: input_domain.context.clone(),
+    };
 
     Transformation::new(
         input_domain,

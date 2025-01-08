@@ -41,17 +41,24 @@ const BLACKLIST: &'static [&'static str] = &[
     "new_queryable",
     "new_privacy_profile",
     "user_domain",
-    "_user_domain_descriptor",
+    "_make_transformation",
+    "_make_measurement",
+    "_new_pure_function",
+    "_extrinsic_domain",
+    "_extrinsic_domain_descriptor",
+    "_extrinsic_distance",
+    "_extrinsic_divergence",
     // polars
     "new_arrow_array",
     "series_domain",
     "categorical_domain",
+    "datetime_domain",
     "arrow_array_free",
     "dataframe_domain",
     "lazyframe_domain",
     "_lazyframe_from_domain",
     "with_margin",
-    "expr_domain",
+    "wild_expr_domain",
     "make_stable_lazyframe",
     "make_stable_expr",
     "make_private_lazyframe",
@@ -71,6 +78,7 @@ pub fn generate_bindings(modules: &HashMap<String, Vec<Function>>) -> HashMap<Pa
 
     let r_bindings = modules
         .into_iter()
+        .filter(|(name, _)| name.as_str() != "internal")
         .map(|(module_name, module)| {
             (
                 PathBuf::from(format!("R/{}.R", module_name)),
@@ -81,6 +89,7 @@ pub fn generate_bindings(modules: &HashMap<String, Vec<Function>>) -> HashMap<Pa
 
     let mut c_bindings = modules
         .into_iter()
+        .filter(|(name, _)| name.as_str() != "internal")
         .map(|(module_name, module)| {
             (
                 PathBuf::from(format!("src/{}.c", module_name)),

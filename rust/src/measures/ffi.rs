@@ -206,7 +206,7 @@ pub extern "C" fn opendp_measures__approximate(
                 MaxDivergence,
                 SmoothedMaxDivergence,
                 ZeroConcentratedDivergence,
-                UserDivergence
+                ExtrinsicDivergence
             ]
         )],
         (measure)
@@ -262,23 +262,23 @@ pub extern "C" fn opendp_measures__renyi_divergence() -> FfiResult<*mut AnyMeasu
 }
 
 #[derive(Clone, Default)]
-pub struct UserDivergence {
+pub struct ExtrinsicDivergence {
     pub descriptor: String,
 }
 
-impl std::fmt::Debug for UserDivergence {
+impl std::fmt::Debug for ExtrinsicDivergence {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "UserDivergence({:?})", self.descriptor)
     }
 }
 
-impl PartialEq for UserDivergence {
+impl PartialEq for ExtrinsicDivergence {
     fn eq(&self, other: &Self) -> bool {
         self.descriptor == other.descriptor
     }
 }
 
-impl Measure for UserDivergence {
+impl Measure for ExtrinsicDivergence {
     type Distance = ExtrinsicObject;
 }
 
@@ -314,7 +314,7 @@ pub extern "C" fn opendp_measures__user_divergence(
     descriptor: *mut c_char,
 ) -> FfiResult<*mut AnyMeasure> {
     let descriptor = try_!(to_str(descriptor)).to_string();
-    Ok(AnyMeasure::new(UserDivergence { descriptor })).into()
+    Ok(AnyMeasure::new(ExtrinsicDivergence { descriptor })).into()
 }
 
 pub struct TypedMeasure<Q> {
@@ -388,16 +388,16 @@ impl<Q> Measure for TypedMeasure<Q> {
 /// * rejects epsilon values that are less than zero or nan
 /// * returns delta values only within [0, 1]
 #[allow(dead_code)]
-fn new_privacy_profile(curve: CallbackFn) -> Fallible<AnyObject> {
+fn new_privacy_profile(curve: *const CallbackFn) -> Fallible<AnyObject> {
     let _ = curve;
     panic!("this signature only exists for code generation")
 }
 
 #[no_mangle]
 pub extern "C" fn opendp_measures__new_privacy_profile(
-    curve: CallbackFn,
+    curve: *const CallbackFn,
 ) -> FfiResult<*mut AnyObject> {
-    let curve = wrap_func(curve);
+    let curve = wrap_func(try_as_ref!(curve).clone());
     FfiResult::Ok(AnyObject::new_raw(PrivacyProfile::new(
         move |epsilon: f64| curve(&AnyObject::new(epsilon))?.downcast::<f64>(),
     )))

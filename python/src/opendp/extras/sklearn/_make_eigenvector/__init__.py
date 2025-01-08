@@ -1,7 +1,10 @@
+from typing import Sequence
+
 from opendp.extras.numpy import _sscp_domain
 from opendp.extras._utilities import to_then
 from opendp._lib import get_np_csprng, import_optional_dependency
 from opendp.mod import Domain, Metric, Transformation, Measurement
+from opendp._internal import _make_measurement, _make_transformation
 
 # planning to make this public, but may make more API changes
 
@@ -24,10 +27,10 @@ def make_private_eigenvector(
     input_desc = input_domain.descriptor
 
     if input_desc.p != 2:
-        raise ValueError("input_domain must have bounded L2-norm")
+        raise ValueError("input_domain must have bounded L2-norm")  # pragma: no cover
 
     if input_metric != dp.symmetric_distance():
-        raise ValueError("expected symmetric distance input metric")
+        raise ValueError("expected symmetric distance input metric")  # pragma: no cover
 
     d = input_desc.num_features
 
@@ -79,7 +82,7 @@ def make_private_eigenvector(
             if np.exp(-u.T @ A @ u) / (M * (u.T @ Omega @ u) ** (d / 2)):
                 return u
 
-    return dp.m.make_user_measurement(
+    return _make_measurement(
         input_domain,
         input_metric,
         dp.max_divergence(),
@@ -115,10 +118,10 @@ def make_np_sscp_projection(
     if input_desc.num_features != P.shape[1]:
         raise ValueError(
             f"projection P (axis-1 size: {P.shape[1]}) does not conform with data in input_domain (num_features: {input_domain.num_features})"
-        )
+        )  # pragma: no cover
 
     kwargs = input_desc._asdict() | {"num_features": P.shape[0]}
-    return dp.t.make_user_transformation(
+    return _make_transformation(
         input_domain,
         input_metric,
         _sscp_domain(**kwargs),
@@ -135,7 +138,7 @@ then_np_sscp_projection = to_then(make_np_sscp_projection)
 
 
 def make_private_eigenvectors(
-    input_domain: Domain, input_metric: Metric, unit_epsilons: list[float]
+    input_domain: Domain, input_metric: Metric, unit_epsilons: Sequence[float]
 ) -> Measurement:
     np = import_optional_dependency('numpy')
     import opendp.prelude as dp
@@ -145,12 +148,12 @@ def make_private_eigenvectors(
 
     input_desc = input_domain.descriptor
     if input_desc.p != 2:
-        raise ValueError("input_domain must have bounded L2 row norm")
+        raise ValueError("input_domain must have bounded L2 row norm")  # pragma: no cover
 
     if len(unit_epsilons) > input_desc.num_features - 1:
         raise ValueError(
             f"must specify at most {input_desc.num_features - 1} unit_epsilons"
-        )
+        )  # pragma: no cover
 
     privacy_measure = dp.max_divergence()
     m_compose = dp.c.make_sequential_composition(
@@ -194,7 +197,7 @@ def make_private_eigenvectors(
 
         return theta.T
 
-    return dp.m.make_user_measurement(
+    return _make_measurement(
         input_domain,
         input_metric,
         m_compose.output_measure,
