@@ -25,11 +25,14 @@ from opendp._lib import ATOM_EQUIVALENCE_CLASSES, import_optional_dependency
 
 
 __all__ = [
-    'ELEMENTARY_TYPES',
+    # TODO: Are these intended to be part of the public interface?
+    # Usage outside this file is rare, and could probably be handled by explicit import.
+    # 'ELEMENTARY_TYPES',
     'INTEGER_TYPES',
     'NUMERIC_TYPES',
-    'HASHABLE_TYPES',
+    # 'HASHABLE_TYPES',
     'PRIMITIVE_TYPES',
+
     'RuntimeTypeDescriptor',
     'set_default_int_type',
     'set_default_float_type',
