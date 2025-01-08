@@ -4,7 +4,7 @@ import opendp.prelude as dp
 from opendp._internal import _extrinsic_domain, _extrinsic_distance, _extrinsic_divergence, _new_pure_function
 
 def test_version():
-    assert dp.__version__
+    assert dp.__version__.startswith('0.')
 
 
 def test_type_getters():
