@@ -3,8 +3,10 @@
 Getting Involved
 ================
 
+
 OpenDP is a community effort and we welcome your contributions!
 OpenDP development takes place on GitHub, so you will need to create a GitHub account to get started.
+
 
 Bug Reports
 -----------
@@ -13,6 +15,7 @@ Guidelines for reporting security issues are `here <https://github.com/opendp/op
 Please `open a new issue <https://github.com/opendp/opendp/issues/new?template=bug-report.md>`__ for any other bug report.
 We also welcome new issues for usability problems!
 We want to know if you've encountered, say, a missing piece of documentation, or a particularly confusing interface.
+
 
 Code and Proof Contributions
 ----------------------------
@@ -75,8 +78,3 @@ Review Pull Requests
 --------------------
 It always helps to have another set of eyes reviewing code.
 This can also be a great way to familiarize yourself with the library internals and development process.
-
-Respond to Discussion Posts
----------------------------
-We want to develop `discussions into a useful community forum <https://github.com/opendp/opendp/discussions>`_.
-Sharing your experience on this public forum would, of course, help make differential privacy more accessible!

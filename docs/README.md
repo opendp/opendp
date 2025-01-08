@@ -96,7 +96,3 @@ Otherwise, you will get an error that includes:
 
     /docs/source/api/index.rst:4:toctree contains reference to nonexisting document 'api/python/index'
 
-
-## Join the Discussion
-
-You are very welcome to join us on [GitHub Discussions](https://github.com/opendp/opendp/discussions)!
