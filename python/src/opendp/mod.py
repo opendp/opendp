@@ -10,12 +10,36 @@ from __future__ import annotations
 import ctypes
 from typing import Any, Literal, Type, TypeVar, Union, Callable, Optional, overload, TYPE_CHECKING, cast
 
-from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction
+from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, get_opendp_version
+
 
 # https://mypy.readthedocs.io/en/stable/runtime_troubles.html#import-cycles
 if TYPE_CHECKING:
     from opendp.typing import RuntimeType # pragma: no cover
 
+
+__all__ = [
+    'Measurement',
+    'Transformation',
+    'Queryable',
+    'Function',
+    'Domain',
+    'Metric',
+    'Measure',
+    'PrivacyProfile',
+    'PartialConstructor',
+    'UnknownTypeException',
+    'OpenDPException',
+    'GLOBAL_FEATURES',
+    'enable_features',
+    'disable_features',
+    'assert_features',
+    'binary_search_chain',
+    'binary_search_param',
+    'binary_search',
+    'exponential_bounds_search',
+    '__version__',
+]
 
 class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     """A differentially private unit of computation.
@@ -1123,3 +1147,6 @@ def exponential_bounds_search(
 
 
 _EXPECTED_POLARS_VERSION = '1.12.0' # Keep in sync with setup.cfg.
+
+
+__version__ = get_opendp_version()
