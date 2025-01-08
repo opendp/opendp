@@ -9,6 +9,8 @@ instances of :py:class:`opendp.mod.Domain` are either inputs or outputs for func
 from __future__ import annotations
 import ctypes
 from typing import Any, Literal, Type, TypeVar, Union, Callable, Optional, overload, TYPE_CHECKING, cast
+import importlib
+import json
 
 from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction
 
@@ -1120,6 +1122,39 @@ def exponential_bounds_search(
     center, sign = binary_search(exception_predicate, bounds=exception_bounds, T=T, return_sign=True)
     at_center = predicate(center)
     return signed_band_search(center, at_center, sign)
+
+
+_TUPLE_FLAG = '__tuple__'
+
+class _Encoder(json.JSONEncoder):
+    def default(self, obj):
+        if hasattr(obj, '__opendp_dict__'):
+            return self.default(obj.__opendp_dict__)
+        if isinstance(obj, dict):
+            return {
+                k: self.default(v)
+                for k, v in obj.items()
+            }
+        if isinstance(obj, tuple):
+            return {_TUPLE_FLAG: obj}
+        if isinstance(obj, (str, int, float, bool, type(None))):
+            return obj
+        raise Exception(f'OpenDP JSON Encoder does not handle {obj}')
+    
+def _deserialization_hook(dp_dict):
+    if 'func' in dp_dict:
+        module = importlib.import_module(f"opendp.{dp_dict['module']}")
+        func = getattr(module, dp_dict["func"])
+        return func(**dp_dict.get("kwargs", {}))
+    if _TUPLE_FLAG in dp_dict:
+        return tuple(dp_dict[_TUPLE_FLAG])
+    return dp_dict
+
+def serialize(dp_obj):
+    return json.dumps(dp_obj, cls=_Encoder)
+
+def deserialize(dp_json):
+    return json.loads(dp_json, object_hook=_deserialization_hook)
 
 
 _EXPECTED_POLARS_VERSION = '1.12.0' # Keep in sync with setup.cfg.
