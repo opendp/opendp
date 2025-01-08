@@ -3,28 +3,6 @@
 Contact
 =======
 
-A great way to get in contact with the OpenDP community is `GitHub Discussions`_.
-
-.. _GitHub Discussions: https://github.com/opendp/opendp/discussions
-
-To subscribe to the `mailing list`_, please use the `sign up form`_.
-
-.. _mailing list: https://groups.google.com/a/g.harvard.edu/g/opendp-community
-
-.. _sign up form: https://harvard.az1.qualtrics.com/jfe/form/SV_3yCVtAEzVsadAfX
-
-Feel free to join our `Slack`_.
-
-.. _Slack: https://join.slack.com/t/opendp/shared_invite/zt-zw7o1k2s-dHg8NQE8WTfAGFnN_cwomA
-
-You can reach OpenDP on Twitter at `@opendp_org`_.
-
-.. _@opendp_org: https://twitter.com/opendp_org
-
-To report bugs, please use the `issue tracker`_.
-
-.. _issue tracker: https://github.com/opendp/opendp/issues
-
-Guidelines for reporting security issues are `here <https://github.com/opendp/opendp/blob/main/SECURITY.md>`_.
-
-For general inquiries, please email info@opendp.org.
+* Report a bug or request a feature on `Github <https://github.com/opendp/opendp/issues>`_.
+* Send general queries to `info@opendp.org <mailto:info@opendp.org>`_, or email `security@opendp.org <mailto:security@opendp.org>`_ if it is related to security.
+* Join the conversation on `Slack <https://join.slack.com/t/opendp/shared_invite/zt-zw7o1k2s-dHg8NQE8WTfAGFnN_cwomA>`_, or the `mailing list <https://groups.google.com/a/g.harvard.edu/g/opendp-community>`_.
