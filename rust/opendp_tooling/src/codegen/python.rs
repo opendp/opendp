@@ -396,8 +396,19 @@ fn generate_body(module_name: &str, func: &Function, typemap: &HashMap<String, S
 {make_call}
 {set_dependencies}
 if callable(output):
-    output.log = {{}}
+    output.log = {{
+        'func': '{func_name}',
+        'module': '{module_name}',
+        'kwargs': {{
+            {func_args}
+        }},
+    }}
 return output"#,
+        func_name = func.name,
+        func_args = func.args.iter()
+            .map(|v| format!(r"'{name}': {name}", name = v.name()))
+            .collect::<Vec<String>>()
+            .join(", "),
         flag_checker = generate_flag_check(&func.features),
         type_arg_formatter = generate_type_arg_formatter(func),
         data_converter = generate_data_converter(func, typemap),
