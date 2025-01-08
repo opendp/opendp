@@ -34,9 +34,6 @@ For example:
     >>> type(dp.c.make_basic_composition)
     <class 'function'>
 '''
-from opendp._lib import get_opendp_version as __get_opendp_version
-
-
 from opendp.mod import *
 from opendp.extras import sklearn, numpy, polars
 from opendp.extras.polars import dp_len as len
