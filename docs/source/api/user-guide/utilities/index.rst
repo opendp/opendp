@@ -8,5 +8,6 @@ There are also binary and exponential search algorithms for finding a free param
 .. toctree::
     :titlesonly:
 
+    serialization
     typing
     parameter-search
