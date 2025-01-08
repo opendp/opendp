@@ -59,6 +59,16 @@ The full documentation for OpenDP is located at https://docs.opendp.org. Here ar
 
 If you're having problems using OpenDP, or want to submit feedback, please reach out! Here are some ways to contact us:
 
+<!--
+    All of these lists should be in sync:
+    - README.md
+    - docs/source/contributing/contact.rst
+    - docs/source/_templates/questions-feedback.html
+    - .github/ISSUE_TEMPLATE/config.yml
+
+    (although office hours are only listed here.)
+-->
+
 * Report a bug or request a feature on [Github](https://github.com/opendp/opendp/issues).
 * Send general queries to [info@opendp.org](mailto:info@opendp.org), or email [security@opendp.org](mailto:security@opendp.org) if it is related to security.
 * Join the conversation on [Slack](https://join.slack.com/t/opendp/shared_invite/zt-zw7o1k2s-dHg8NQE8WTfAGFnN_cwomA), or the [mailing list](https://groups.google.com/a/g.harvard.edu/g/opendp-community).
