@@ -611,8 +611,7 @@ fn set_dependencies(dependencies: &Vec<TypeRecipe>) -> String {
 
 fn generate_serialization(module_name: &str, func: &Function) -> String {
     format!(
-        r#"
-try:
+        r#"try:
     output.__opendp_dict__ = {{
         'func': '{func_name}',
         'module': '{module_name}',
@@ -620,7 +619,7 @@ try:
             {func_args}
         }},
     }}
-except AttributeError:
+except AttributeError:  # pragma: no cover
     pass"#,
         func_name = func.name,
         func_args = func
