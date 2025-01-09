@@ -9,25 +9,72 @@ We suggest importing under the conventional name ``dp``:
 The methods of this module will then be accessible at ``dp.examples``.    
 '''
 
-def _http_get(url: str) -> str:
+import io
+
+__all__ = ['get_california_pums', 'get_france_lfs']
+
+
+def _http_get(url: str) -> bytes:
     '''
     Normally would use the requests library for this, but we want to avoid extra dependencies.
+
+    This only does what we need. Does not handle:
+    - plain http
+    - redirects
+    - url queries
+    - explicit port numbers
     '''
     from urllib.parse import urlparse
     import http.client
     parsed = urlparse(url)
-    conn = http.client.HTTPSConnection(parsed.hostname, port=parsed.port)
+    conn = http.client.HTTPSConnection(parsed.hostname)
     conn.request("GET", parsed.path)
     response = conn.getresponse()
-    assert response.status == 200
-    body = response.read().decode()
+
+    assert response.status == 200, f"{response.status} {response.reason}\n{response.headers}"
+    body = response.read()
     conn.close()
     return body
 
+
 _california_pums = None
 
-def get_california_pums() -> str:
+def get_california_pums() -> io.StringIO:
+    '''
+    Returns a ``StringIO`` wrapper around a CSV derived from a
+    PUMS (Public Use Microdata Sample) file from the US Census.
+    A header row is not included. The columns are:
+    
+    * age
+    * sex
+    * educ
+    * race
+    * income
+    * married
+    '''
     global _california_pums
     if _california_pums is None:
-        _california_pums = _http_get('https://raw.githubusercontent.com/opendp/opendp/main/docs/source/data/PUMS_california_demographics_1000/data.csv')
-    return _california_pums
+        url = 'https://raw.githubusercontent.com/opendp/opendp/main/docs/source/data/PUMS_california_demographics_1000/data.csv'
+        _california_pums = _http_get(url).decode()
+    return io.StringIO(_california_pums)
+
+
+_france_lfs = None
+
+def get_france_lfs() -> io.StringIO:
+    '''
+    Returns a ``StringIO`` wrapper around a CSV derived from the
+    `EU Labor Force Survey <https://ec.europa.eu/eurostat/web/microdata/public-microdata/labour-force-survey>`_. First row contains the column names.
+
+    Code developed to work with a public microdata set like this could also be used with the scientific use files, and we believe that differential privacy would be a good tool to ensure that statistics derived from scientific use files could not inadvertantly reveal personal information.
+
+    To reduce the download size for the tutorial, we've `preprocessed <https://github.com/opendp/dp-test-datasets/blob/main/data/eurostat/README.ipynb>`_ the data by selecting a single country (France), dropping unused columns, sampling a subset of the rows, and concatenating the result into a single CSV. The code we'll present in the tutorials could be run on the original public microdata, or for that matter, the full private scientific use files.
+    '''
+    from zipfile import ZipFile
+    global _france_lfs
+    if _france_lfs is None:
+        url = 'https://raw.githubusercontent.com/opendp/dp-test-datasets/refs/heads/main/data/sample_FR_LFS.csv.zip'
+        france_lfs_bytes = _http_get(url)
+        with ZipFile(io.BytesIO(france_lfs_bytes)) as data_zip:
+            _france_lfs = data_zip.open('sample_FR_LFS.csv').read().decode()
+    return io.StringIO(_france_lfs)
