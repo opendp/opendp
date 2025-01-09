@@ -117,7 +117,10 @@ class Checker():
             if v is not None
         }
         
-        # TODO: Has 17 failures, or 66  w/o "if is_public"; Enable and fill in the docs.
+        # NOTE: Has 17 failures, or 66  w/o "if is_public",
+        # but our sense is that the actual types may not be readable,
+        # so the docs may not / should not be consistent, and that's ok.
+        #
         # if self.is_public:
         #     if doc_type_dict != ast_type_dict:
         #         self.errors.append(
@@ -189,6 +192,7 @@ for code_path in src_dir_path.glob('**/*.py'):
     tree = ast.parse(code)
     for node in ast.walk(tree):
         if not isinstance(node, ast.FunctionDef):
+            # TODO: Also check class docs
             continue
         if ast_ends_with_ellipsis(node):
             continue
