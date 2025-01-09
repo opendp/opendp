@@ -24,7 +24,7 @@ def make_private_np_eigendecomposition(
     :param eigvecs_epsilons: eigvecs ε-expenditures per changed record in the input data
     :param num_components: optional, number of eigenvectors to release. defaults to num_columns from input_domain
 
-    :returns: a Measurement that computes a tuple of (eigvals, eigvecs)
+    :return: a Measurement that computes a tuple of (eigvals, eigvecs)
     """
     import opendp.prelude as dp
 
