@@ -610,7 +610,8 @@ fn set_dependencies(dependencies: &Vec<TypeRecipe>) -> String {
 }
 
 fn generate_serialization(module_name: &str, func: &Function) -> String {
-    format!(r#"
+    format!(
+        r#"
 try:
     output.__opendp_dict__ = {{
         'func': '{func_name}',
@@ -621,15 +622,14 @@ try:
     }}
 except AttributeError:
     pass"#,
-    func_name = func.name,
-    func_args = func
-        .args
-        .iter()
-        .map(|v| format!(r"'{name}': {name}", name = v.name()))
-        .collect::<Vec<String>>()
-        .join(", "),
+        func_name = func.name,
+        func_args = func
+            .args
+            .iter()
+            .map(|v| format!(r"'{name}': {name}", name = v.name()))
+            .collect::<Vec<String>>()
+            .join(", "),
     )
-
 }
 
 impl TypeRecipe {
