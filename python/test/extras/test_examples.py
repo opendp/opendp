@@ -1,5 +1,6 @@
 from pathlib import Path
 import re
+import polars as pl
 
 import pytest
 
@@ -23,3 +24,14 @@ def test_california_pums():
 
 def test_france_lfs():
     assert dp.examples.get_france_lfs().read().startswith('COEFF,QUARTER,REFYEAR,REFWEEK')
+
+def test_context_with_stringio_fails():
+    # TODO: Let this work. https://github.com/opendp/opendp/issues/2230 
+    with pytest.raises(RuntimeError, match='the enum variant ScanSources::Buffers cannot be serialized'):
+        dp.Context.compositor(
+            data=pl.scan_csv(dp.examples.get_france_lfs(), ignore_errors=True),
+            privacy_unit=dp.unit_of(contributions=36),
+            privacy_loss=dp.loss_of(epsilon=1.0),
+            split_evenly_over=10
+        )
+
