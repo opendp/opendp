@@ -1139,7 +1139,7 @@ class _Encoder(json.JSONEncoder):
             return {_TUPLE_FLAG: obj}
         if isinstance(obj, (str, int, float, bool, type(None))):
             return obj
-        raise Exception(f'OpenDP JSON Encoder does not handle {obj}')
+        raise Exception(f'OpenDP JSON Encoder does not handle {obj}')  # pragma: no cover
     
 def _deserialization_hook(dp_dict):
     if 'func' in dp_dict:
