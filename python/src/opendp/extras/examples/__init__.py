@@ -27,6 +27,7 @@ def _http_get(url: str) -> bytes:
     from urllib.parse import urlparse
     import http.client
     parsed = urlparse(url)
+    assert parsed.hostname is not None
     conn = http.client.HTTPSConnection(parsed.hostname)
     conn.request("GET", parsed.path)
     response = conn.getresponse()
