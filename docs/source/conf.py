@@ -114,7 +114,7 @@ nitpick_ignore = [
     # (no comment = single occurrence)
     
     # May be a problem with the stdlib?
-    ('py:class', '_io.StringIO'),
+    ('py:class', 'pathlib.Path'),
 
     # Maybe the quoted name is to prevent a circular reference?
     ('py:class', '"RuntimeType"'),  # 3 occurrences
