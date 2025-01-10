@@ -19,9 +19,9 @@ def test_no_shell_http(ext, cmd):
     assert len(mistakes) == 0, "\n".join(mistakes)
 
 def test_california_pums():
-    assert dp.examples.get_california_pums_path().read().startswith('59,1,9,1,0,1')
+    assert dp.examples.get_california_pums_path().read_text().startswith('59,1,9,1,0,1')
 
 def test_france_lfs():
-    assert dp.examples.get_france_lfs_path().read().startswith('COEFF,QUARTER,REFYEAR,REFWEEK')
+    assert dp.examples.get_france_lfs_path().read_text().startswith('COEFF,QUARTER,REFYEAR,REFWEEK')
 
 
