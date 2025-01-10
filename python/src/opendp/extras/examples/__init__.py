@@ -9,10 +9,7 @@ We suggest importing under the conventional name ``dp``:
 The methods of this module will then be accessible at ``dp.examples``.    
 '''
 
-import io
 from pathlib import Path
-
-__all__ = ['get_california_pums', 'get_france_lfs']
 
 
 def _http_get(url: str) -> bytes:
@@ -68,11 +65,12 @@ def get_france_lfs_path() -> Path:
 
     To reduce the download size for the tutorial, we've `preprocessed <https://github.com/opendp/dp-test-datasets/blob/main/data/eurostat/README.ipynb>`_ the data by selecting a single country (France), dropping unused columns, sampling a subset of the rows, and concatenating the result into a single CSV. The code we'll present in the tutorials could be run on the original public microdata, or for that matter, the full private scientific use files.
     '''
+    from io import BytesIO
     from zipfile import ZipFile
     path = Path(__file__).parent / 'france_lfs.csv'
     if not path.exists():
         url = 'https://raw.githubusercontent.com/opendp/dp-test-datasets/refs/heads/main/data/sample_FR_LFS.csv.zip'
         france_lfs_bytes = _http_get(url)
-        with ZipFile(io.BytesIO(france_lfs_bytes)) as data_zip:
+        with ZipFile(BytesIO(france_lfs_bytes)) as data_zip:
             path.write_text(data_zip.open('sample_FR_LFS.csv').read().decode())
     return path
