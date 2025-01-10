@@ -117,7 +117,7 @@ def space_of(T, M=None, infer: bool = False) -> tuple[Domain, Metric]:
     if M is None:
         if D.origin == "VectorDomain": # type: ignore[union-attr]
             M = ty.SymmetricDistance
-        elif D.origin == "AtomDomain" and ty.get_atom(D) in ty.NUMERIC_TYPES: # type: ignore[union-attr]
+        elif D.origin == "AtomDomain" and ty.get_atom(D) in ty._NUMERIC_TYPES: # type: ignore[union-attr]
             M = ty.AbsoluteDistance
         else:
             raise TypeError(f"no default metric for domain {D}. Please set `M`")  # pragma: no cover
@@ -197,7 +197,7 @@ def domain_of(T, infer: bool = False) -> Domain:
         if T.origin == "Option":
             return option_domain(domain_of(T.args[0]))
 
-    if T in ty.PRIMITIVE_TYPES:
+    if T in ty._PRIMITIVE_TYPES:
         return atom_domain(T=T)
 
     raise TypeError(f"unrecognized carrier type: {T}")  # pragma: no cover

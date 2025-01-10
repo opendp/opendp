@@ -14,7 +14,7 @@ The methods of this module will then be accessible at ``dp.numpy``.
 from __future__ import annotations
 from typing import NamedTuple, Literal
 from opendp.mod import Domain, Metric, Transformation
-from opendp.typing import RuntimeTypeDescriptor, ELEMENTARY_TYPES
+from opendp.typing import RuntimeTypeDescriptor, _ELEMENTARY_TYPES
 from opendp._convert import ATOM_MAP
 from opendp._lib import import_optional_dependency
 from opendp.extras._utilities import register_transformation
@@ -117,7 +117,7 @@ def array2_domain(
     _check_nonnegative_int(num_columns, "num_columns")
 
 
-    T = T or ELEMENTARY_TYPES.get(origin.dtype.type)
+    T = T or _ELEMENTARY_TYPES.get(origin.dtype.type)
     if T is None:
         raise ValueError("must specify T, the type of data in the array")  # pragma: no cover
     T = dp.RuntimeType.parse(T)
@@ -127,7 +127,7 @@ def array2_domain(
     def member(x):
         if not isinstance(x, np.ndarray):
             raise TypeError("must be a numpy ndarray")  # pragma: no cover
-        T_actual = ELEMENTARY_TYPES.get(x.dtype.type)
+        T_actual = _ELEMENTARY_TYPES.get(x.dtype.type)
         if T_actual != T:
             raise TypeError(f"expected data of type {T}, got {T_actual}")  # pragma: no cover
         if x.ndim != 2:
@@ -196,7 +196,7 @@ def _sscp_domain(
     def member(x):
         if not isinstance(x, np.ndarray):
             raise TypeError("must be a numpy ndarray")  # pragma: no cover
-        T_actual = ELEMENTARY_TYPES.get(x.dtype.type)
+        T_actual = _ELEMENTARY_TYPES.get(x.dtype.type)
         if T_actual != T:
             raise TypeError(f"expected data of type {T}, got {T_actual}")
         if x.shape != (num_features,) * 2:

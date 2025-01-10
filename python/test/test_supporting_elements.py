@@ -18,7 +18,7 @@ def test_partition_distance():
     assert trans.map((3, 4, 3)) == (3, 4, 3)
 
 
-@pytest.mark.parametrize("ty", dp.PRIMITIVE_TYPES)
+@pytest.mark.parametrize("ty", dp.typing._PRIMITIVE_TYPES)
 def test_atom_domain(ty):
     # Checks that all primitive types are construct-able over FFI.
     # This ensures that all Polars dtypes can be used in debug builds.
