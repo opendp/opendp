@@ -39,14 +39,6 @@ def _http_get(url: str) -> bytes:
     return body
 
 
-
-def get_california_pums() -> io.StringIO:
-    '''
-    Returns a ``StringIO`` wrapper around the CSV at ``get_california_pums_path()``.
-    '''
-    return io.StringIO(get_california_pums_path().read_text())
-
-
 def get_california_pums_path() -> Path:
     '''
     Returns the path to a CSV derived from a
@@ -60,18 +52,12 @@ def get_california_pums_path() -> Path:
     * income
     * married
     '''
-    cache_path = Path(__file__).parent / 'california_pums.csv'
-    if not cache_path.exists():
+    path = Path(__file__).parent / 'california_pums.csv'
+    if not path.exists():
         url = 'https://raw.githubusercontent.com/opendp/opendp/main/docs/source/data/PUMS_california_demographics_1000/data.csv'
-        cache_path.write_text(_http_get(url).decode())
-    return cache_path
+        path.write_text(_http_get(url).decode())
+    return path
 
-
-def get_france_lfs() -> io.StringIO:
-    '''
-    Returns a ``StringIO`` wrapper around the CSV at ``get_france_lfs_path()``.
-    '''
-    return io.StringIO(get_france_lfs_path().read_text())
 
 def get_france_lfs_path() -> Path:
     '''
@@ -83,10 +69,10 @@ def get_france_lfs_path() -> Path:
     To reduce the download size for the tutorial, we've `preprocessed <https://github.com/opendp/dp-test-datasets/blob/main/data/eurostat/README.ipynb>`_ the data by selecting a single country (France), dropping unused columns, sampling a subset of the rows, and concatenating the result into a single CSV. The code we'll present in the tutorials could be run on the original public microdata, or for that matter, the full private scientific use files.
     '''
     from zipfile import ZipFile
-    cache_path = Path(__file__).parent / 'france_lfs.csv'
-    if not cache_path.exists():
+    path = Path(__file__).parent / 'france_lfs.csv'
+    if not path.exists():
         url = 'https://raw.githubusercontent.com/opendp/dp-test-datasets/refs/heads/main/data/sample_FR_LFS.csv.zip'
         france_lfs_bytes = _http_get(url)
         with ZipFile(io.BytesIO(france_lfs_bytes)) as data_zip:
-            cache_path.write_text(data_zip.open('sample_FR_LFS.csv').read().decode())
-    return cache_path
+            path.write_text(data_zip.open('sample_FR_LFS.csv').read().decode())
+    return path
