@@ -21,7 +21,7 @@ def test_count_by_categories():
 
     data = "\n".join(["a"] * 25 + ["b"] * 25 + ["what?"] * 10)
 
-    print(noisy_histogram_from_dataframe(data))
+    print("noisy_histogram_from_dataframe(data)", noisy_histogram_from_dataframe(data))
 
 
 def test_count_by_categories_float():
@@ -71,8 +71,9 @@ def test_count_by_threshold():
     data = "\n".join(["a"] * 500 + ["b"] * 200 + ["other"] * 100)
 
     assert pre(data) == {"a": 500, "b": 200, "other": 100}
-    print(laplace_histogram_from_dataframe(data))
-    print(scale, threshold)
+    print("laplace_histogram_from_dataframe", laplace_histogram_from_dataframe(data))
+    assert scale == 1.0
+    assert threshold == 18.727533563392424
 
     with pytest.raises(dp.OpenDPException):
         dp.m.make_laplace_threshold(

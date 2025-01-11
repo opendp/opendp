@@ -15,7 +15,7 @@ def test_sequential_composition():
 
     sc_qbl: dp.Queryable = sc_meas([1] * 200)
 
-    print("SeqComp IM:", sc_qbl)
+    print("sc_qbl", sc_qbl)
     sum_query = (
         sc_meas.input_space
         >> dp.t.then_clamp((0, 10))
@@ -23,8 +23,7 @@ def test_sequential_composition():
         >> dp.m.then_laplace(100.0)
     )
 
-    print("evaluating")
-    print(sc_qbl(sum_query))
+    print("sc_qbl(sum_query)", sc_qbl(sum_query))
 
     exact_sum = (
         sc_meas.input_space

@@ -168,7 +168,7 @@ def test_make_count_by_ptr():
         dp.m.then_laplace_threshold(scale=2., threshold=28.)
     )
     print("stability histogram:", meas(["CAT_A"] * 20 + ["CAT_B"] * 10))
-    print(meas.map(1))
+    assert meas.map(1) == (0.5, 6.854795431920434e-07)
     assert meas.check(1, (1.0, 1e-6))
 
 def test_randomized_response():
@@ -205,12 +205,12 @@ def test_report_noisy_max_gumbel():
 
     input_metric = dp.linf_distance(T=dp.usize)
     meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max_gumbel(1., "max")
-    print(meas(list(range(10))))
+    print("should be 8-ish", meas(list(range(10))))
     assert meas.map(2) == 4
 
     input_metric = dp.linf_distance(monotonic=True, T=dp.usize)
     meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max_gumbel(1., "max")
-    print(meas(list(range(10))))
+    print("should be 8-ish", meas(list(range(10))))
     assert meas.map(2) == 2
 
 
@@ -228,10 +228,10 @@ def test_alp_histogram():
 
     alp_qbl = alp_meas(["A"] * 20 + ["B"] * 10)
 
-    print(alp_qbl("A"))
-    print(alp_qbl("B"))
-    print(alp_qbl("C"))
-    print(alp_meas.map(1))
+    print("Should be high-ish", alp_qbl("A"))
+    print("Should be mid-ish", alp_qbl("B"))
+    print("Should be low-ish", alp_qbl("C"))
+    assert alp_meas.map(1) == 1
 
 def test_randomized_response_bitvec():
     np = pytest.importorskip('numpy')
@@ -248,7 +248,7 @@ def test_randomized_response_bitvec():
     # roundtrip: bytes -> mech -> numpy
     release = np.frombuffer(m_rr(data), dtype=np.uint8)
 
-    print(np.unpackbits(data), np.unpackbits(release))
+    print("np.unpackbits: data vs. release", np.unpackbits(data), np.unpackbits(release))
     # epsilon is 2 * m * ln((2 - f) / f)
     # where m = 4 and f = .95
     assert m_rr.map(1) == 0.8006676684558611
