@@ -1,0 +1,93 @@
+# Generates the Latex -> PDF files for a channel, then pushes them to the opendp/artifacts repo.
+# (This should eventually be merged with latex.yml.)
+#
+# INPUTS
+# * channel:  The release channel
+name: Latex Build (Release)
+on:
+  workflow_call:
+    inputs:
+      channel:
+        type: string
+        required: true
+    secrets:
+      ARTIFACTS_REPO_TOKEN:
+        required: true
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Target Channel
+        type: choice
+        options:
+          - nightly
+          - beta
+          - stable
+        required: true
+        default: nightly
+
+jobs:
+  credential-check:
+    uses: ./.github/workflows/credential-check.yml
+    with:
+      ref: ${{ inputs.channel }}
+      assert_version: ${{ inputs.channel != 'dev' }}
+
+  latex:
+    needs: credential-check
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.channel }}
+
+      - name: Collect file listing
+        id: collect
+        env:
+          CHANNEL: ${{ inputs.channel }}
+        run: |
+          files=$(find . -type f -name "*.tex")
+
+          # using syntax from: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
+          # construct list of .tex files
+          echo "tex<<EOF" >> $GITHUB_OUTPUT
+          echo "$files" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          # construct list of .pdf files
+          echo "pdf<<EOF" >> $GITHUB_OUTPUT
+          echo "${files//$'.tex'/.pdf}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          # name the version
+          case "$CHANNEL" in
+              stable)         VERSION="v$(cat VERSION)" ;;
+              beta|nightly)   VERSION=$CHANNEL ;;
+              *)              echo "Unknown channel $CHANNEL" >&2 ; exit 1 ;;
+          esac
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Compile LaTeX documents
+        uses: xu-cheng/latex-action@v2
+        with:
+          root_file: ${{ steps.collect.outputs.tex }}
+          # so that cwd is relative to .tex file, not repository root
+          work_in_root_file_dir: true
+          # so that shell commands run in .tex files
+          latexmk_shell_escape: true
+          # git is necessary for some shell commands to run
+          extra_system_packages: git
+          # give permissions for git commands to run
+          pre_compile: git config --global --add safe.directory /github/workspace
+
+      - name: Push to artifacts repo
+        uses: opendp/pull-request-artifacts@main
+        with:
+          commit: ${{ github.sha }}
+          artifacts: ${{ steps.collect.outputs.pdf }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          artifacts-token: ${{ secrets.ARTIFACTS_REPO_TOKEN }}
+          artifacts-repo: opendp/artifacts
+          artifacts-dir: release/${{ steps.collect.outputs.version }}
+          inter-link: false
+          post-comment: false
