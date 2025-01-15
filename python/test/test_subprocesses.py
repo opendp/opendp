@@ -7,6 +7,10 @@ tests = {
     'flake8 linting': 'cd .. && flake8 . --count --show-source --statistics',
     # Had non-reproducible errors between local runs, so disable caching.
     'mypy type checking': 'mypy . --cache-dir=/dev/null',
+    # Looking for cases where first character is not `'`, `"`, or `f`
+    # (for f-string). Negative lookahead would be more precise.
+    '"print" in test/ should be explained': "! egrep 'print\\(([^\"'\"'\"'f]' -r test",
+    '"print" in src/ should be log instead': "! egrep '^\\s+print\\(' -r src",
 }
 
 @pytest.mark.skipif(sys.version_info < (3, 11), reason='mypy will fail on 3.9')
