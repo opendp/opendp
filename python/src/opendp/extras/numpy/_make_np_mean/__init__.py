@@ -39,7 +39,7 @@ def make_private_np_mean(
     input_desc = input_domain.descriptor
     size = input_desc.size
     if size is None:
-        raise ValueError("input_domain must consist of sized data")
+        raise ValueError("input_domain must consist of sized data")  # pragma: no cover
 
     privacy_measure = {
         1: dp.max_divergence(),

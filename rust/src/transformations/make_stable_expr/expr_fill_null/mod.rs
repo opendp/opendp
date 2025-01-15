@@ -2,7 +2,7 @@ use polars::prelude::DataType;
 use polars_plan::dsl::{Expr, FunctionExpr};
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{ExprContext, ExprDomain, OuterMetric};
+use crate::domains::{ExprDomain, ExprPlan, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::transformations::DatasetMetric;
 
@@ -18,13 +18,14 @@ mod test;
 /// * `input_metric` - The metric under which neighboring LazyFrames are compared
 /// * `expr` - The fill_null expression
 pub fn make_expr_fill_null<M: OuterMetric>(
-    input_domain: ExprDomain,
+    input_domain: WildExprDomain,
     input_metric: M,
     expr: Expr,
-) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>>
+) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
 where
     M::InnerMetric: DatasetMetric,
     M::Distance: Clone,
+    (WildExprDomain, M): MetricSpace,
     (ExprDomain, M): MetricSpace,
     Expr: StableExpr<M, M>,
 {
@@ -41,18 +42,12 @@ where
         return fallible!(MakeTransformation, "fill_null expects 2 arguments");
     };
 
-    let ExprDomain {
-        frame_domain,
-        context,
-    } = input_domain.clone();
-    let rr_domain = ExprDomain::new(frame_domain, ExprContext::RowByRow);
-
     let t_data = data
         .clone()
-        .make_stable(rr_domain.clone(), input_metric.clone())?;
+        .make_stable(input_domain.as_row_by_row(), input_metric.clone())?;
     let t_fill = fill
         .clone()
-        .make_stable(rr_domain.clone(), input_metric.clone())?;
+        .make_stable(input_domain.as_row_by_row(), input_metric.clone())?;
 
     let (data_domain, data_metric) = t_data.output_space();
     let (fill_domain, fill_metric) = t_fill.output_space();
@@ -66,35 +61,31 @@ where
         );
     }
 
-    if matches!(
-        data_domain.active_series()?.field.dtype,
-        DataType::Categorical(_, _)
-    ) {
+    if matches!(data_domain.column.dtype(), DataType::Categorical(_, _)) {
         return fallible!(MakeTransformation, "fill_null cannot be applied to categorical data, because it may trigger a data-dependent CategoricalRemappingWarning in Polars");
     }
 
-    if fill_domain.active_series()?.nullable {
+    if fill_domain.column.nullable {
         return fallible!(MakeTransformation, "fill expression must not be nullable");
     }
 
     let mut output_domain = data_domain.clone();
-    // fill_null should not change the output context-- just require that its input is row-by-row
-    output_domain.context = context;
-
-    let series_domain = output_domain.active_series_mut()?;
-    series_domain.drop_bounds().ok();
-    series_domain.nullable = false;
+    output_domain.column.drop_bounds().ok();
+    output_domain.column.nullable = false;
+    output_domain.context = input_domain.context.clone();
 
     Transformation::new(
         input_domain,
         output_domain,
         Function::new_fallible(move |arg| {
-            let expr_data = t_data.invoke(arg)?.1;
-            let expr_fill = t_fill.invoke(arg)?.1;
+            let data = t_data.invoke(arg)?;
+            let fill = t_fill.invoke(arg)?;
 
-            let expr_impute = expr_data.fill_null(expr_fill);
-
-            Ok((arg.0.clone(), expr_impute))
+            Ok(ExprPlan {
+                plan: arg.clone(),
+                expr: data.expr.fill_null(fill.expr),
+                fill: data.fill.zip(fill.fill).map(|(d, f)| d.fill_null(f)),
+            })
         }),
         input_metric.clone(),
         input_metric,

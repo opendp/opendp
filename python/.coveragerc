@@ -20,6 +20,5 @@ skip_covered = True
 fail_under = 100
 exclude_also =
   # TODO: Improve coverage and shorten this list!
-  ^\s*raise\b
   os\.environ
   ^\s*\.\.\.\s*$

@@ -8,7 +8,7 @@ use std::fmt::Debug;
 use crate::{
     combinators::{make_approximate, BasicCompositionMeasure},
     core::{Function, Measure, Measurement, Metric, MetricSpace},
-    domains::{DslPlanDomain, ExprDomain, LazyFrameDomain},
+    domains::{DslPlanDomain, LazyFrameDomain},
     error::Fallible,
     measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
     metrics::PartitionDistance,
@@ -23,10 +23,7 @@ mod ffi;
 
 #[cfg(feature = "contrib")]
 mod group_by;
-pub(crate) use group_by::is_threshold_predicate;
-
-#[cfg(feature = "contrib")]
-mod postprocess;
+pub(crate) use group_by::{is_threshold_predicate, match_group_by, KeySanitizer, MatchGroupBy};
 
 #[cfg(feature = "contrib")]
 mod select;
@@ -46,8 +43,6 @@ where
     MO::Distance: Debug,
     Expr: PrivateExpr<PartitionDistance<MS>, MO>,
     DslPlan: StableDslPlan<MS, MS>,
-    (DslPlanDomain, MS): MetricSpace,
-    (ExprDomain, MS): MetricSpace,
 {
     #[cfg(feature = "contrib")]
     if group_by::match_group_by(plan.clone())?.is_some() {
@@ -146,13 +141,12 @@ pub trait PrivateDslPlan<MI: Metric, MO: Measure> {
     ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MI, MO>>;
 }
 
+const SORT_ERR_MSG: &'static str = "Found sort in query plan. To conceal row ordering in the original dataset, the output dataset is shuffled. Therefore, sorting the data before release (that shuffles) is wasted computation.";
+
 impl<MS> PrivateDslPlan<MS, MaxDivergence> for DslPlan
 where
-    MS: 'static + UnboundedMetric + DatasetMetric,
-    Expr: PrivateExpr<PartitionDistance<MS>, MaxDivergence>,
+    MS: 'static + UnboundedMetric,
     DslPlan: StableDslPlan<MS, MS>,
-    (DslPlanDomain, MS): MetricSpace,
-    (ExprDomain, MS): MetricSpace,
 {
     fn make_private(
         self,
@@ -162,15 +156,8 @@ where
         global_scale: Option<f64>,
         threshold: Option<u32>,
     ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, MaxDivergence>> {
-        if let Some(meas) = postprocess::match_postprocess(
-            input_domain.clone(),
-            input_metric.clone(),
-            output_measure.clone(),
-            self.clone(),
-            global_scale,
-            threshold,
-        )? {
-            return Ok(meas);
+        if matches!(self, DslPlan::Sort { .. }) {
+            return fallible!(MakeMeasurement, "{}", SORT_ERR_MSG);
         }
 
         make_private_aggregation::<MS, MS, _>(
@@ -186,11 +173,8 @@ where
 
 impl<MS> PrivateDslPlan<MS, ZeroConcentratedDivergence> for DslPlan
 where
-    MS: 'static + UnboundedMetric + DatasetMetric,
-    Expr: PrivateExpr<PartitionDistance<MS>, ZeroConcentratedDivergence>,
+    MS: 'static + UnboundedMetric,
     DslPlan: StableDslPlan<MS, MS>,
-    (DslPlanDomain, MS): MetricSpace,
-    (ExprDomain, MS): MetricSpace,
 {
     fn make_private(
         self,
@@ -200,15 +184,8 @@ where
         global_scale: Option<f64>,
         threshold: Option<u32>,
     ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, ZeroConcentratedDivergence>> {
-        if let Some(meas) = postprocess::match_postprocess(
-            input_domain.clone(),
-            input_metric.clone(),
-            output_measure.clone(),
-            self.clone(),
-            global_scale,
-            threshold,
-        )? {
-            return Ok(meas);
+        if matches!(self, DslPlan::Sort { .. }) {
+            return fallible!(MakeMeasurement, "{}", SORT_ERR_MSG);
         }
 
         make_private_aggregation::<MS, MS, _>(
@@ -224,15 +201,12 @@ where
 
 impl<MS, MO> PrivateDslPlan<MS, Approximate<MO>> for DslPlan
 where
-    MS: 'static + UnboundedMetric + DatasetMetric,
+    MS: 'static + UnboundedMetric,
     MO: 'static + BasicCompositionMeasure,
     Approximate<MO>: 'static + ApproximateMeasure,
     <Approximate<MO> as Measure>::Distance: Debug,
-    Expr: PrivateExpr<PartitionDistance<MS>, MO>
-        + PrivateExpr<PartitionDistance<MS>, Approximate<MO>>,
+    Expr: PrivateExpr<PartitionDistance<MS>, Approximate<MO>>,
     DslPlan: StableDslPlan<MS, MS> + PrivateDslPlan<MS, MO>,
-    (DslPlanDomain, MS): MetricSpace,
-    (ExprDomain, MS): MetricSpace,
 {
     fn make_private(
         self,
@@ -242,15 +216,8 @@ where
         global_scale: Option<f64>,
         threshold: Option<u32>,
     ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, Approximate<MO>>> {
-        if let Some(meas) = postprocess::match_postprocess::<MS, Approximate<MO>>(
-            input_domain.clone(),
-            input_metric.clone(),
-            output_measure.clone(),
-            self.clone(),
-            global_scale,
-            threshold,
-        )? {
-            return Ok(meas);
+        if matches!(self, DslPlan::Sort { .. }) {
+            return fallible!(MakeMeasurement, "{}", SORT_ERR_MSG);
         }
 
         if let Ok(meas) = make_private_aggregation::<MS, MS, _>(

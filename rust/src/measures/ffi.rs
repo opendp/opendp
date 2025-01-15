@@ -13,7 +13,7 @@ use crate::{
     measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
 };
 
-use super::{PrivacyProfile, SmoothedMaxDivergence};
+use super::{PrivacyProfile, RenyiDivergence, SmoothedMaxDivergence};
 
 #[bootstrap(
     name = "_measure_free",
@@ -206,7 +206,7 @@ pub extern "C" fn opendp_measures__approximate(
                 MaxDivergence,
                 SmoothedMaxDivergence,
                 ZeroConcentratedDivergence,
-                UserDivergence
+                ExtrinsicDivergence
             ]
         )],
         (measure)
@@ -236,24 +236,49 @@ pub extern "C" fn opendp_measures__zero_concentrated_divergence() -> FfiResult<*
     Ok(AnyMeasure::new(ZeroConcentratedDivergence)).into()
 }
 
+#[bootstrap(name = "renyi_divergence")]
+/// Privacy measure used to define $\epsilon(\alpha)$-Rényi differential privacy.
+///
+/// In the following proof definition, $d$ corresponds to an RDP curve when also quantified over all adjacent datasets.
+/// That is, an RDP curve $\epsilon(\alpha)$ is no smaller than $d(\alpha)$ for any possible choices of $\alpha$,
+/// and over all pairs of adjacent datasets $x, x'$ where $Y \sim M(x)$, $Y' \sim M(x')$.
+/// $M(\cdot)$ is a measurement (commonly known as a mechanism).
+/// The measurement's input metric defines the notion of adjacency,
+/// and the measurement's input domain defines the set of possible datasets.
+///
+/// # Proof Definition
+///
+/// For any two distributions $Y, Y'$ and any curve $d$,
+/// $Y, Y'$ are $d$-close under the Rényi divergence measure if,
+/// for any given $\alpha \in (1, \infty)$,
+///
+/// $D_\alpha(Y, Y') = \frac{1}{1 - \alpha} \mathbb{E}_{x \sim Y'} \Big[\ln \left( \dfrac{\Pr[Y = x]}{\Pr[Y' = x]} \right)^\alpha \Big] \leq d(\alpha)$
+///
+/// Note that this $\epsilon$ and $\alpha$ are not privacy parameters $\epsilon$ and $\alpha$ until quantified over all adjacent datasets,
+/// as is done in the definition of a measurement.
+#[no_mangle]
+pub extern "C" fn opendp_measures__renyi_divergence() -> FfiResult<*mut AnyMeasure> {
+    Ok(AnyMeasure::new(RenyiDivergence)).into()
+}
+
 #[derive(Clone, Default)]
-pub struct UserDivergence {
+pub struct ExtrinsicDivergence {
     pub descriptor: String,
 }
 
-impl std::fmt::Debug for UserDivergence {
+impl std::fmt::Debug for ExtrinsicDivergence {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "UserDivergence({:?})", self.descriptor)
     }
 }
 
-impl PartialEq for UserDivergence {
+impl PartialEq for ExtrinsicDivergence {
     fn eq(&self, other: &Self) -> bool {
         self.descriptor == other.descriptor
     }
 }
 
-impl Measure for UserDivergence {
+impl Measure for ExtrinsicDivergence {
     type Distance = ExtrinsicObject;
 }
 
@@ -265,9 +290,6 @@ impl Measure for UserDivergence {
 /// Privacy measure with meaning defined by an OpenDP Library user (you).
 ///
 /// Any two instances of UserDivergence are equal if their string descriptors are equal.
-///
-/// "honest-but-curious" is required because your definition of the measure
-/// must have the property of closure under postprocessing.
 ///
 /// # Proof definition
 ///
@@ -281,12 +303,18 @@ impl Measure for UserDivergence {
 ///
 /// # Arguments
 /// * `descriptor` - A string description of the privacy measure.
+///
+/// # Why honest-but-curious?
+/// The essential requirement of a privacy measure is that it is closed under postprocessing.
+/// Your privacy measure `D` must satisfy that, for any pure function `f` and any two distributions `Y, Y'`, then $D(Y, Y') \ge D(f(Y), f(Y'))$.
+///
+/// Beyond this, you should also consider whether your privacy measure can be used to provide meaningful privacy guarantees to your privacy units.
 #[no_mangle]
 pub extern "C" fn opendp_measures__user_divergence(
     descriptor: *mut c_char,
 ) -> FfiResult<*mut AnyMeasure> {
     let descriptor = try_!(to_str(descriptor)).to_string();
-    Ok(AnyMeasure::new(UserDivergence { descriptor })).into()
+    Ok(AnyMeasure::new(ExtrinsicDivergence { descriptor })).into()
 }
 
 pub struct TypedMeasure<Q> {
@@ -351,25 +379,25 @@ impl<Q> Measure for TypedMeasure<Q> {
 )]
 /// Construct a PrivacyProfile from a user-defined callback.
 ///
-/// Requires "honest-but-curious" because the privacy profile should implement a well-defined $\delta(\epsilon)$ curve.
+/// # Arguments
+/// * `curve` - A privacy curve mapping epsilon to delta
 ///
+/// # Why honest-but-curious?
+/// The privacy profile should implement a well-defined $\delta(\epsilon)$ curve:
 /// * monotonically decreasing
 /// * rejects epsilon values that are less than zero or nan
 /// * returns delta values only within [0, 1]
-///
-/// # Arguments
-/// * `curve` - A privacy curve mapping epsilon to delta
 #[allow(dead_code)]
-fn new_privacy_profile(curve: CallbackFn) -> Fallible<AnyObject> {
+fn new_privacy_profile(curve: *const CallbackFn) -> Fallible<AnyObject> {
     let _ = curve;
     panic!("this signature only exists for code generation")
 }
 
 #[no_mangle]
 pub extern "C" fn opendp_measures__new_privacy_profile(
-    curve: CallbackFn,
+    curve: *const CallbackFn,
 ) -> FfiResult<*mut AnyObject> {
-    let curve = wrap_func(curve);
+    let curve = wrap_func(try_as_ref!(curve).clone());
     FfiResult::Ok(AnyObject::new_raw(PrivacyProfile::new(
         move |epsilon: f64| curve(&AnyObject::new(epsilon))?.downcast::<f64>(),
     )))

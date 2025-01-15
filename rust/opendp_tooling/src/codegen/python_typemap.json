@@ -46,6 +46,6 @@
     "const FfiError *": "ctypes.POINTER(FfiError)",
     "ExtrinsicObject *": "ExtrinsicObjectPtr",
     "FfiResult": "FfiResult",
-    "CallbackFn": "CallbackFn",
+    "CallbackFn": "CallbackFnPtr",
     "TransitionFn": "TransitionFn"
 }

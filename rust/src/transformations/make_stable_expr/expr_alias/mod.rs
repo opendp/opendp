@@ -1,13 +1,8 @@
-use std::collections::BTreeSet;
-use std::mem::replace;
-
 use polars_plan::dsl::Expr;
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{ExprDomain, OuterMetric};
+use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
-use crate::polars::ExprFunction;
-use crate::transformations::DatasetMetric;
 
 use super::StableExpr;
 
@@ -21,13 +16,13 @@ mod test;
 /// * `input_metric` - The metric under which neighboring LazyFrames are compared
 /// * `expr` - The alias expression
 pub fn make_expr_alias<M: OuterMetric>(
-    input_domain: ExprDomain,
+    input_domain: WildExprDomain,
     input_metric: M,
     expr: Expr,
-) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>>
+) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
 where
-    M::InnerMetric: DatasetMetric,
     M::Distance: Clone,
+    (WildExprDomain, M): MetricSpace,
     (ExprDomain, M): MetricSpace,
     Expr: StableExpr<M, M>,
 {
@@ -42,35 +37,12 @@ where
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let mut output_domain = middle_domain.clone();
-    let old_name = replace(
-        &mut output_domain.active_series_mut()?.field.name,
-        name.as_ref().into(),
-    );
-
-    // only keep margins with as many unique grouping keys as there were before
-    // if the number of unique grouping keys drops after aliasing,
-    //    then one of the grouping keys is shadowing another grouping key
-    output_domain.frame_domain.margins = (output_domain.frame_domain.margins)
-        .into_iter()
-        .filter_map(|(k, v)| {
-            let old_len = k.len();
-            let new_k: BTreeSet<_> = (k.into_iter())
-                .map(|col| {
-                    if col == old_name {
-                        name.to_string()
-                    } else {
-                        col
-                    }
-                })
-                .collect();
-            (new_k.len() == old_len).then_some((new_k, v))
-        })
-        .collect();
+    output_domain.column.name = name.clone();
 
     let t_alias = Transformation::new(
         middle_domain.clone(),
         output_domain,
-        Function::then_expr(move |expr| expr.alias(name.as_ref())),
+        Function::then_expr(move |expr| expr.alias(name.clone())),
         middle_metric.clone(),
         middle_metric,
         StabilityMap::new(Clone::clone),

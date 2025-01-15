@@ -1,5 +1,5 @@
 use polars::df;
-use polars_plan::dsl::{all, lit};
+use polars_plan::dsl::lit;
 
 use crate::{
     measurements::{make_private_lazyframe, PrivateExpr},
@@ -22,8 +22,8 @@ fn test_make_expr_private_lit() -> Fallible<()> {
         None,
     )?;
 
-    let actual = m_lit.invoke(&(lf.logical_plan.clone(), all()))?;
-    assert_eq!(actual, lit(1));
+    let actual = m_lit.invoke(&lf.logical_plan)?;
+    assert_eq!(actual.expr, lit(1));
     Ok(())
 }
 
@@ -35,10 +35,7 @@ fn test_make_expr_private_lit_groupby() -> Fallible<()> {
         lf_domain.cast_carrier(),
         SymmetricDistance,
         MaxDivergence::default(),
-        lf.clone()
-            .group_by(["chunk_2_bool"])
-            .agg([lit(1)])
-            .sort(["chunk_2_bool"], Default::default()),
+        lf.clone().group_by(["chunk_2_bool"]).agg([lit(1)]),
         None,
         None,
     )?;
@@ -48,6 +45,6 @@ fn test_make_expr_private_lit_groupby() -> Fallible<()> {
         "chunk_2_bool" => [false, true],
         "literal" => [1, 1]
     )?;
-    assert_eq!(actual.sort(&["chunk_2_bool"], Default::default())?, expect);
+    assert_eq!(actual.sort(["chunk_2_bool"], Default::default())?, expect);
     Ok(())
 }

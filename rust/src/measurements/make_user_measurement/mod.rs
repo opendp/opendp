@@ -40,13 +40,23 @@ use crate::{
 ///
 /// # Generics
 /// * `TO` - The data type of outputs from the function.
+///
+/// # Why honest-but-curious?
+/// This constructor only returns a valid measurement if for every pair of elements $x, x'$ in `input_domain`,
+/// and for every pair `(d_in, d_out)`,
+/// where `d_in` has the associated type for `input_metric` and `d_out` has the associated type for `output_measure`,
+/// if $x, x'$ are `d_in`-close under `input_metric`, `privacy_map(d_in)` does not raise an exception,
+/// and `privacy_map(d_in) <= d_out`,
+/// then `function(x), function(x')` are d_out-close under `output_measure`.
+///
+/// In addition, `function` must not have side-effects, and `privacy_map` must be a pure function.
 #[allow(dead_code)]
 fn make_user_measurement<TO>(
     input_domain: AnyDomain,
     input_metric: AnyMetric,
     output_measure: AnyMeasure,
-    function: CallbackFn,
-    privacy_map: CallbackFn,
+    function: *const CallbackFn,
+    privacy_map: *const CallbackFn,
 ) -> Fallible<Measurement<AnyDomain, AnyObject, AnyMetric, AnyMeasure>> {
     let _ = (
         input_domain,
@@ -63,17 +73,17 @@ pub extern "C" fn opendp_measurements__make_user_measurement(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
     output_measure: *const AnyMeasure,
-    function: CallbackFn,
-    privacy_map: CallbackFn,
+    function: *const CallbackFn,
+    privacy_map: *const CallbackFn,
     TO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
     let _TO = TO;
     Measurement::new(
         try_as_ref!(input_domain).clone(),
-        Function::new_fallible(wrap_func(function)),
+        Function::new_fallible(wrap_func(try_as_ref!(function).clone())),
         try_as_ref!(input_metric).clone(),
         try_as_ref!(output_measure).clone(),
-        PrivacyMap::new_fallible(wrap_func(privacy_map)),
+        PrivacyMap::new_fallible(wrap_func(try_as_ref!(privacy_map).clone())),
     )
     .into()
 }

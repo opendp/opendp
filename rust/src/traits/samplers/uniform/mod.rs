@@ -30,7 +30,7 @@ impl_from_bytes!(u8 u16 u32 u64 u128 usize i8 i16 i32 i64 i128 isize);
 /// # Proof Definition
 /// Return either `Err(e)` if there is insufficient system entropy,
 /// or `Some(sample)`, where `sample` is a value of type T filled with uniformly random bits.
-fn sample_from_uniform_bytes<T: FromBytes<N>, const N: usize>() -> Fallible<T> {
+pub fn sample_from_uniform_bytes<T: FromBytes<N>, const N: usize>() -> Fallible<T> {
     let mut buffer = [0; N];
     fill_bytes(&mut buffer)?;
     Ok(T::from_ne_bytes(buffer))

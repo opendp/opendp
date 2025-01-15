@@ -34,8 +34,8 @@ def test_make_user_transformation():
         >> dp.m.then_laplace(1.0)
     )
 
-    print(trans(["0", "1", "2", "3"]))
-    print(trans.map(1))
+    print('trans(["0", "1", "2", "3"])', trans(["0", "1", "2", "3"]))
+    print("trans.map(1)", trans.map(1))
 
 
 def test_make_custom_transformation_error():
@@ -75,7 +75,7 @@ def make_postprocess_frac():
 
 def test_make_user_postprocessor():
     mech = make_postprocess_frac()
-    print(mech([12., 100.]))
+    assert mech([12., 100.]) == 0.12
 
 
 def test_user_constructors():

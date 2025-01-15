@@ -231,23 +231,23 @@ pub extern "C" fn opendp_metrics__linf_distance(
     )
 }
 #[derive(Clone, Default)]
-pub struct UserDistance {
+pub struct ExtrinsicDistance {
     pub descriptor: String,
 }
 
-impl std::fmt::Debug for UserDistance {
+impl std::fmt::Debug for ExtrinsicDistance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "UserDistance({:?})", self.descriptor)
     }
 }
 
-impl PartialEq for UserDistance {
+impl PartialEq for ExtrinsicDistance {
     fn eq(&self, other: &Self) -> bool {
         self.descriptor == other.descriptor
     }
 }
 
-impl Metric for UserDistance {
+impl Metric for ExtrinsicDistance {
     type Distance = ExtrinsicObject;
 }
 
@@ -261,12 +261,19 @@ impl Metric for UserDistance {
 ///
 /// # Arguments
 /// * `descriptor` - A string description of the metric.
+///
+/// # Why honest-but-curious?
+/// Your definition of `d` must satisfy the requirements of a pseudo-metric:
+/// 1. for any $x$, $d(x, x) = 0$
+/// 2. for any $x, y$, $d(x, y) \ge 0$ (non-negativity)
+/// 3. for any $x, y$, $d(x, y) = d(y, x)$ (symmetry)
+/// 4. for any $x, y, z$, $d(x, z) \le d(x, y) + d(y, z)$ (triangle inequality)
 #[no_mangle]
 pub extern "C" fn opendp_metrics__user_distance(
     descriptor: *mut c_char,
 ) -> FfiResult<*mut AnyMetric> {
     let descriptor = try_!(to_str(descriptor)).to_string();
-    Ok(AnyMetric::new(UserDistance { descriptor })).into()
+    Ok(AnyMetric::new(ExtrinsicDistance { descriptor })).into()
 }
 
 pub struct TypedMetric<Q> {

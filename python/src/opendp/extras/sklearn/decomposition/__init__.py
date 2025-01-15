@@ -1,5 +1,5 @@
 '''
-This module requires extra installs: ``pip install opendp[scikit-learn]``
+This module requires extra installs: ``pip install 'opendp[scikit-learn]'``
 
 For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
 We suggest importing under the conventional name ``dp``:
@@ -14,39 +14,22 @@ See also our :ref:`tutorial on diffentially private PCA <dp-pca>`.
 '''
 
 from __future__ import annotations
-from typing import NamedTuple, Optional, TYPE_CHECKING
+from typing import NamedTuple, Optional, TYPE_CHECKING, Sequence
 from opendp.extras.numpy import then_np_clamp
 from opendp.extras._utilities import register_measurement, to_then
 from opendp.extras.numpy._make_np_mean import make_private_np_mean
 from opendp.extras.sklearn._make_eigendecomposition import then_private_np_eigendecomposition
 from opendp.mod import Domain, Measurement, Metric
 from opendp._lib import import_optional_dependency
+from opendp._internal import _make_measurement, _make_transformation
 
 if TYPE_CHECKING: # pragma: no cover
     import numpy # type: ignore[import-not-found]
 
 
-_decomposition = import_optional_dependency('sklearn.decomposition', False)
-if _decomposition is not None:
-    class _SKLPCA(_decomposition.PCA): # type: ignore[name-defined]
-        '''
-        :meta private:
-        '''
-        pass
-else: # pragma: no cover
-    class _SKLPCA(object): # type: ignore[no-redef]
-        '''
-        :meta private:
-        '''
-        def __init__(*args, **kwargs):
-            raise ImportError(
-                "The optional install scikit-learn is required for this functionality"
-            )
-
-
 class PCAEpsilons(NamedTuple):
     eigvals: float
-    eigvecs: list[float]
+    eigvecs: Sequence[float]
     mean: Optional[float]
 
 
@@ -79,16 +62,16 @@ def make_private_pca(
 
     input_desc = input_domain.descriptor
     if input_desc.size is None:
-        raise ValueError("input_domain's size must be known")
+        raise ValueError("input_domain's size must be known")  # pragma: no cover
 
     if input_desc.num_columns is None:
-        raise ValueError("input_domain's num_columns must be known")
+        raise ValueError("input_domain's num_columns must be known")  # pragma: no cover
 
     if input_desc.p not in {None, 2}:
-        raise ValueError("input_domain's norm must be an L2 norm")
+        raise ValueError("input_domain's norm must be an L2 norm")  # pragma: no cover
 
     if input_desc.num_columns < 1:
-        raise ValueError("input_domain's num_columns must be >= 1")
+        raise ValueError("input_domain's num_columns must be >= 1")  # pragma: no cover
 
     num_components = (
         input_desc.num_columns if num_components is None else num_components
@@ -101,7 +84,7 @@ def make_private_pca(
         )
 
     if not isinstance(unit_epsilon, PCAEpsilons):
-        raise ValueError("epsilon must be a float or instance of PCAEpsilons")
+        raise ValueError("epsilon must be a float or instance of PCAEpsilons")  # pragma: no cover
 
     eigvals_epsilon, eigvecs_epsilons, mean_epsilon = unit_epsilon
 
@@ -120,12 +103,12 @@ def make_private_pca(
 
     if input_desc.norm is not None:
         if mean_epsilon is not None:
-            raise ValueError("mean_epsilon should be zero because origin is known")
+            raise ValueError("mean_epsilon should be zero because origin is known")  # pragma: no cover
         norm = input_desc.norm if norm is None else norm
         norm = min(input_desc.norm, norm)
         return make_eigdecomp(norm, input_desc.origin)
     elif norm is None:
-        raise ValueError("must have either bounded `input_domain` or specify `norm`")
+        raise ValueError("must have either bounded `input_domain` or specify `norm`")  # pragma: no cover
 
 
     # make releases under the assumption that d_in is 2.
@@ -156,7 +139,7 @@ def make_private_pca(
         # make full release
         return qbl(make_eigdecomp(norm, origin))
 
-    return dp.m.make_user_measurement(
+    return _make_measurement(
         input_domain,
         input_metric,
         compositor.output_measure,
@@ -169,8 +152,19 @@ def make_private_pca(
 then_private_pca = register_measurement(make_private_pca)
 
 
-class PCA(_SKLPCA):
-    # TODO: If I add a docstring here, it also tries to locate _SKLPCA, and fails
+class PCA():
+    '''
+    DP wrapper for `sklearn's PCA <https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html>`_.
+
+    Trying to create an instance without sklearn installed will raise an ``ImportError``.
+    
+    See the :ref:`tutorial on diffentially private PCA <dp-pca>` for details.
+
+    :param whiten: Mirrors the corresponding sklearn parameter:
+        When ``True`` (``False`` by default) the ``components_`` vectors are multiplied
+        by the square root of n_samples and then divided by the singular values
+        to ensure uncorrelated outputs with unit component-wise variances.
+    '''
     def __init__(
         self,
         *,
@@ -182,7 +176,17 @@ class PCA(_SKLPCA):
         n_changes: int = 1,
         whiten: bool = False,
     ) -> None:
-        super().__init__(
+        # Error if constructor called without dependency:
+        import_optional_dependency('sklearn.decomposition')
+        
+        # The zero-argument form of super() does not work,
+        # (I believe) because the type argument is determined lexically,
+        # and it doesn't see our redefinition.
+        # Instead, make the type explicit.
+        #
+        # Also because of the class redefinition, mypy has a lot of complaints,
+        # and so there's a lot of "type: ignore" below.
+        super(PCA, self).__init__(  # type: ignore[call-arg]
             n_components or n_features,
             whiten=whiten,
         )
@@ -196,6 +200,18 @@ class PCA(_SKLPCA):
     def n_features(self):
         return self.n_features_in_
 
+    # This isn't strictly necessary, since we just call the superclass method,
+    # but this lets us document a frequently used method,
+    # and avoids a number of mypy warnings.
+    def fit(self, X, y=None):
+        '''
+        Fit the model with X.
+
+        :param X: Training data, where ``n_samples`` is the number of samples and ``n_features`` is the number of features.
+        :param y: Ignored
+        '''
+        return super(PCA, self).fit(X) # type: ignore[misc]
+
     # this overrides the scikit-learn method to instead use the opendp-core constructor
     def _fit(self, X):
         return self._prepare_fitter()(X)
@@ -206,7 +222,7 @@ class PCA(_SKLPCA):
         import opendp.prelude as dp
 
         if hasattr(self, "components_"):
-            raise ValueError("DP-PCA model has already been fitted")
+            raise ValueError("DP-PCA model has already been fitted")  # pragma: no cover
 
         input_domain = dp.numpy.array2_domain(
             num_columns=self.n_features_in_, size=self.n_samples, T=float
@@ -214,9 +230,9 @@ class PCA(_SKLPCA):
         input_metric = dp.symmetric_distance()
 
         n_estimated_components = (
-            self.n_components
-            if isinstance(self.n_components, int)
-            else self.n_features_in_
+            self.n_components  # type: ignore[attr-defined]
+            if isinstance(self.n_components, int)  # type: ignore[attr-defined]
+            else self.n_features_in_  # type: ignore[attr-defined]
         )
 
         return make_private_pca(
@@ -236,7 +252,7 @@ class PCA(_SKLPCA):
         self.mean_, S, Vt = values
         U = Vt.T
         n_samples, n_features = self.n_samples, self.n_features_in_
-        n_components = self.n_components
+        n_components = self.n_components  # type: ignore[attr-defined]
 
         # CODE BELOW THIS POINT IS FROM SKLEARN
         # flip eigenvectors' sign to enforce deterministic output
@@ -288,12 +304,17 @@ class PCA(_SKLPCA):
         pass
 
 
+_decomposition = import_optional_dependency('sklearn.decomposition', False)
+if _decomposition is not None:
+    PCA = type('PCA', (_decomposition.PCA,), dict(PCA.__dict__))  # type: ignore[assignment,misc]
+
+        
 def _smaller(v):
     """returns the next non-negative float closer to zero"""
     np = import_optional_dependency('numpy')
 
     if v < 0:
-        raise ValueError("expected non-negative value")
+        raise ValueError("expected non-negative value")  # pragma: no cover
     return v if v == 0 else np.nextafter(v, -1)
 
 
@@ -319,7 +340,7 @@ def _make_center(input_domain, input_metric):
     input_desc = input_domain.descriptor
 
     kwargs = input_desc._asdict() | {"origin": np.zeros(input_desc.num_columns)}
-    return dp.t.make_user_transformation(
+    return _make_transformation(
         input_domain,
         input_metric,
         dp.numpy.array2_domain(**kwargs),

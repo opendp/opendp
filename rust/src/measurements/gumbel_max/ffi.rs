@@ -1,5 +1,7 @@
 use std::ffi::c_char;
 
+use dashu::float::FBig;
+
 use crate::{
     core::{FfiResult, IntoAnyMeasurementFfiResultExt},
     domains::{AtomDomain, VectorDomain},
@@ -35,6 +37,7 @@ pub extern "C" fn opendp_measurements__make_report_noisy_max_gumbel(
     where
         TIA: Clone + CheckNull + Number + CastInternalRational,
         f64: DistanceConstant<TIA>,
+        FBig: TryFrom<TIA>,
     {
         let input_domain = input_domain
             .downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?

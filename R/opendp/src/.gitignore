@@ -7,3 +7,4 @@ opendp.so
 libopendp.a
 
 rust/
+opendp.h

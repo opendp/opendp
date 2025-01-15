@@ -1,7 +1,7 @@
 import pytest
 
 import opendp.prelude as dp
-
+from opendp._internal import _extrinsic_domain, _extrinsic_distance, _extrinsic_divergence, _new_pure_function
 
 
 def test_type_getters():
@@ -98,26 +98,26 @@ def test_supporting_elements():
     input_metric = symmetric_distance()
 
     clamper = make_clamp(input_domain, input_metric, (0, 2))
-    print(clamper.input_domain)
-    print(clamper.input_domain.carrier_type)
-    print(clamper.output_domain)
-    print(clamper.output_domain.carrier_type)
-    print(clamper.input_metric)
-    print(clamper.input_metric.distance_type)
-    print(clamper.output_metric)
-    print(clamper.output_metric.distance_type)
+    assert str(clamper.input_domain) == 'VectorDomain(AtomDomain(T=i32))'
+    assert str(clamper.input_domain.carrier_type) == 'Vec<i32>'
+    assert str(clamper.output_domain) == 'VectorDomain(AtomDomain(bounds=[0, 2], T=i32))'
+    assert str(clamper.output_domain.carrier_type) == 'Vec<i32>'
+    assert str(clamper.input_metric) == 'SymmetricDistance()'
+    assert str(clamper.input_metric.distance_type) == 'u32'
+    assert str(clamper.output_metric) == 'SymmetricDistance()'
+    assert str(clamper.output_metric.distance_type) == 'u32'
 
     from opendp.measurements import make_laplace
     from opendp.domains import atom_domain
     from opendp.metrics import absolute_distance
 
     mechanism = make_laplace(atom_domain(T=float), absolute_distance(T=float), 1.0)
-    print(mechanism.input_domain)
-    print(mechanism.input_domain.carrier_type)
-    print(mechanism.input_metric)
-    print(mechanism.input_metric.distance_type)
-    print(mechanism.output_measure)
-    print(mechanism.output_measure.distance_type)
+    assert str(mechanism.input_domain) == 'AtomDomain(T=f64)'
+    assert str(mechanism.input_domain.carrier_type) == 'f64'
+    assert str(mechanism.input_metric) == 'AbsoluteDistance(f64)'
+    assert str(mechanism.input_metric.distance_type) == 'f64'
+    assert str(mechanism.output_measure) == 'MaxDivergence'
+    assert str(mechanism.output_measure.distance_type) == 'f64'
 
 
 def test_function():
@@ -134,7 +134,7 @@ def test_function():
     # Exercise postprocessing transformation
     transformation = make_identity(atom_domain(T=float), absolute_distance(T=float))
     mechanism = mechanism >> transformation
-    print(mechanism(0.0))
+    print("mechanism(0.0)", mechanism(0.0))
 
 
 def test_privacy_profile():
@@ -171,46 +171,52 @@ def test_new_domain():
 
     domain = atom_domain(T=dp.i32)
     assert domain.member(3)
+    assert str(domain) == 'AtomDomain(T=i32)'
+
     domain = atom_domain(T=dp.f64)
     assert not domain.member(float("nan"))
+    assert str(domain) == 'AtomDomain(T=f64)'
 
     domain = atom_domain((1, 2))
     assert domain.member(2)
     assert not domain.member(3)
-    print(domain)
+    assert str(domain) == 'AtomDomain(bounds=[1, 2], T=i32)'
 
     domain = vector_domain(atom_domain(T=dp.i32))
     assert domain.member([2])
-    print(domain)
+    assert str(domain) == 'VectorDomain(AtomDomain(T=i32))'
+
     domain = vector_domain(atom_domain((2, 3)))
     assert domain.member([2])
     assert not domain.member([2, 4])
-    print(domain)
+    assert str(domain) == 'VectorDomain(AtomDomain(bounds=[2, 3], T=i32))'
 
     domain = vector_domain(atom_domain(T=dp.i32), 10)
     assert domain.member([1] * 10)
-    print(domain)
+    assert str(domain) == 'VectorDomain(AtomDomain(T=i32), size=10)'
+
     domain = vector_domain(atom_domain((2.0, 7.0)), 10)
     assert domain.member([3.0] * 10)
     assert not domain.member([1.0] * 10)
-    print(domain)
+    assert str(domain) == 'VectorDomain(AtomDomain(bounds=[2.0, 7.0], T=f64), size=10)'
 
     null_domain = atom_domain(nullable=True, T=float)
-    print(null_domain)
+    assert str(null_domain) == 'AtomDomain(nullable=true, T=f64)'
     assert null_domain.member(float("nan"))
 
     not_null_domain = atom_domain(nullable=False, T=float)
-    print(not_null_domain)
+    assert str(not_null_domain) == 'AtomDomain(T=f64)'
     assert not not_null_domain.member(float("nan"))
 
 
-def test_user_domain():
+@pytest.mark.parametrize("new_domain", [dp.user_domain, _extrinsic_domain])
+def test_custom_domain(new_domain):
     from datetime import datetime
 
     def datetime_domain(months):
         """The domain of datetimes, restricted by user-defined months"""
         assert isinstance(months, set)
-        return dp.user_domain(
+        return new_domain(
             identifier=f"DatetimeDomain(months={months})",
             member=lambda x: isinstance(x, datetime) and x.month in months,
             descriptor=months,
@@ -251,6 +257,11 @@ def test_user_domain():
 
 def test_extrinsic_free():
     space = dp.user_domain("anything", lambda _: True), dp.symmetric_distance()
+    query = space >> dp.m.then_user_measurement(
+        dp.max_divergence(),
+        lambda x: x,
+        lambda _: 0.0,
+    )
 
     sc_meas = space >> dp.c.then_sequential_composition(
         dp.max_divergence(),
@@ -263,12 +274,6 @@ def test_extrinsic_free():
     # at this point []'s refcount is zero, but has not been freed yet, because the gc has not run
     # however, a pointer to [] is stored inside qbl
 
-    query = space >> dp.m.then_user_measurement(
-        dp.max_divergence(),
-        lambda x: x,
-        lambda _: 0.0,
-    )
-
     import gc
 
     # frees the memory behind [] (if the refcount is zero)
@@ -280,13 +285,14 @@ def test_extrinsic_free():
     # this test will pass if Queryable extends the lifetime of [] by holding a reference to it
 
 
-def test_user_distance():
+@pytest.mark.parametrize("new_distance,new_divergence", zip([dp.user_distance, _extrinsic_distance], [dp.user_divergence, _extrinsic_divergence]))
+def test_custom_distance(new_distance, new_divergence):
     from datetime import datetime, timedelta
 
     # create custom transformation
     trans = dp.t.make_user_transformation(
         dp.vector_domain(dp.user_domain("DatetimeDomain()", lambda x: isinstance(x, datetime))),
-        dp.user_distance("sum of millisecond distances"),
+        new_distance("sum of millisecond distances"),
         dp.atom_domain(T=float),
         dp.absolute_distance(T=float),
         lambda arg: sum(datetime.timestamp(x) for x in arg),
@@ -304,7 +310,7 @@ def test_user_distance():
     meas = dp.m.make_user_measurement(
         dp.atom_domain(T=float),
         dp.absolute_distance(T=float),
-        dp.user_divergence("tCDP"),
+        new_divergence("tCDP"),
         lambda _: 0.0,
         # clearly not actually tCDP
         lambda d_in: lambda omega: d_in * omega * 2,
@@ -312,6 +318,11 @@ def test_user_distance():
 
     assert meas(2.0) == 0.0
     assert meas.map(2.0)(3.0) == 12.0
+
+
+def test_pure_function():
+    fun = _new_pure_function(lambda x: x + 1, TO="i32")
+    assert fun(1) == 2
 
 
 def test_pointer_classes_dont_iter():
@@ -328,4 +339,8 @@ def test_pointer_classes_dont_iter():
     # We override __iter__ so as to make this infinite loop/lock impossible to accidentally trigger
     with pytest.raises(ValueError):
         [*dp.atom_domain(T=bool)]
-    
+
+
+def test_erfc():
+    from opendp._data import erfc
+    assert erfc(0.5) == 0.4795001222363462

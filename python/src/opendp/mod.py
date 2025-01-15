@@ -119,7 +119,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
 
         if not isinstance(other, Function):
             if not callable(other):
-                raise ValueError(f'Expected a callable instead of {other}')
+                raise ValueError(f'Expected a callable instead of {other}')  # pragma: no cover
             from opendp.core import new_function
             other = new_function(other, TO="ExtrinsicObject")
 
@@ -205,7 +205,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     def __iter__(self):
         # this overrides the implementation of __iter__ on POINTER, 
         # which yields infinitely on zero-sized types
-        raise ValueError("Measurement does not support iteration")
+        raise ValueError("Measurement does not support iteration")  # pragma: no cover
 
 
 class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
@@ -331,7 +331,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         if isinstance(other, PartialChain):
             return PartialChain(lambda x: self >> other.partial(x))
 
-        raise ValueError(f"rshift expected a measurement or transformation, got {other}")
+        raise ValueError(f"rshift expected a measurement or transformation, got {other}")  # pragma: no cover
 
 
     @property
@@ -423,7 +423,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     output_metric  = {self.output_metric})"""
     
     def __iter__(self):
-        raise ValueError("Transformation does not support iteration")
+        raise ValueError("Transformation does not support iteration")  # pragma: no cover
 
 
 Transformation = cast(Type[Transformation], Transformation) # type: ignore[misc]
@@ -474,7 +474,7 @@ class Function(ctypes.POINTER(AnyFunction)): # type: ignore[misc]
             pass
 
     def __iter__(self):
-        raise ValueError("Function does not support iteration")
+        raise ValueError("Function does not support iteration")  # pragma: no cover
 
 
 class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
@@ -504,8 +504,8 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     
     @property
     def descriptor(self) -> Any:
-        from opendp.domains import _user_domain_descriptor
-        return _user_domain_descriptor(self)
+        from opendp.domains import _extrinsic_domain_descriptor
+        return _extrinsic_domain_descriptor(self)
 
     def __repr__(self) -> str:
         from opendp.domains import domain_debug
@@ -577,7 +577,7 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
         return hash(str(self))
     
     def __iter__(self):
-        raise ValueError("Metric does not support iteration")
+        raise ValueError("Metric does not support iteration")  # pragma: no cover
 
 
 class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
@@ -628,7 +628,7 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
         return hash(str(self))
     
     def __iter__(self):
-        raise ValueError("Measure does not support iteration")
+        raise ValueError("Measure does not support iteration")  # pragma: no cover
 
 
 class PrivacyProfile(object):
@@ -661,7 +661,7 @@ class PartialConstructor(object):
     def __rrshift__(self, other):
         if isinstance(other, tuple) and list(map(type, other)) == [Domain, Metric]:
             return self(other[0], other[1])
-        raise TypeError(f"Cannot chain {type(self)} with {type(other)}")
+        raise TypeError(f"Cannot chain {type(self)} with {type(other)}")  # pragma: no cover
 
 
 class UnknownTypeException(Exception):
@@ -981,10 +981,10 @@ def binary_search(
         bounds = exponential_bounds_search(predicate, T) # type: ignore
 
     if bounds is None:
-        raise ValueError("unable to infer bounds")
+        raise ValueError("unable to infer bounds")  # pragma: no cover
 
     if len(set(map(type, bounds))) != 1:
-        raise TypeError("bounds must share the same type")
+        raise TypeError("bounds must share the same type")  # pragma: no cover
     lower, upper = sorted(bounds)
 
     maximize = predicate(lower)  # if the lower bound passes, we should maximize
@@ -999,7 +999,7 @@ def binary_search(
         tolerance = 1  # the lower and upper bounds never meet due to int truncation
         half = lambda x: x // 2
     else:
-        raise TypeError("bounds must be either float or int")
+        raise TypeError("bounds must be either float or int")  # pragma: no cover
 
     mid = lower
     while upper - lower > tolerance:
@@ -1058,7 +1058,7 @@ def exponential_bounds_search(
         elif check_type(0):
             T = int
         else:
-            raise TypeError("unable to infer type `T`; pass the type `T` or bounds")
+            raise TypeError("unable to infer type `T`; pass the type `T` or bounds")  # pragma: no cover
 
     # core search functionality
     def signed_band_search(center, at_center, sign):
@@ -1077,7 +1077,7 @@ def exponential_bounds_search(
             #    only check k in [0, 8). Set your own bounds if this is not sufficient
             bands = [center, *(center + sign * 2. ** k ** 2 for k in range(1024 // 32 // 4))]
         else:
-            raise TypeError(f"unknown type {T}. Must be one of int, float")
+            raise TypeError(f"unknown type {T}. Must be one of int, float")  # pragma: no cover
 
         for i in range(1, len(bands)):
             # looking for a change in sign that indicates the decision boundary is within this band
@@ -1122,4 +1122,4 @@ def exponential_bounds_search(
     return signed_band_search(center, at_center, sign)
 
 
-_EXPECTED_POLARS_VERSION = '1.1.0' # Keep in sync with setup.cfg.
+_EXPECTED_POLARS_VERSION = '1.12.0' # Keep in sync with setup.cfg.

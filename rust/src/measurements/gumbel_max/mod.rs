@@ -3,7 +3,7 @@ mod ffi;
 
 use std::fmt::Display;
 
-use dashu::rational::RBig;
+use dashu::float::FBig;
 use num::Zero;
 use opendp_derive::bootstrap;
 
@@ -13,10 +13,13 @@ use crate::{
     error::Fallible,
     measures::MaxDivergence,
     metrics::LInfDistance,
-    traits::{InfAdd, InfCast, InfDiv, Number},
+    traits::{samplers::PartialSample, InfAdd, InfCast, InfDiv, Number},
 };
 
-use crate::traits::{samplers::GumbelPSRN, CastInternalRational, DistanceConstant};
+use crate::traits::{samplers::GumbelRV, DistanceConstant};
+
+#[cfg(test)]
+mod test;
 
 #[derive(PartialEq, Clone, Copy, Debug)]
 #[cfg_attr(feature = "polars", derive(serde::Serialize, serde::Deserialize))]
@@ -68,8 +71,9 @@ pub fn make_report_noisy_max_gumbel<TIA>(
     optimize: Optimize,
 ) -> Fallible<Measurement<VectorDomain<AtomDomain<TIA>>, usize, LInfDistance<TIA>, MaxDivergence>>
 where
-    TIA: Number + CastInternalRational,
+    TIA: Number,
     f64: DistanceConstant<TIA>,
+    FBig: TryFrom<TIA> + TryFrom<f64>,
 {
     if input_domain.element_domain.nullable() {
         return fallible!(MakeMeasurement, "input domain must be non-nullable");
@@ -79,7 +83,8 @@ where
         return fallible!(MakeMeasurement, "scale must not be negative");
     }
 
-    let scale_frac = scale.clone().into_rational()?;
+    let scale_frac = FBig::try_from(scale.clone())
+        .map_err(|_| err!(MakeMeasurement, "scale parameter must be finite"))?;
 
     Measurement::new(
         input_domain,
@@ -123,10 +128,11 @@ where
 pub fn select_score<TIA>(
     iter: impl Iterator<Item = TIA>,
     optimize: Optimize,
-    scale: RBig,
+    scale: FBig,
 ) -> Fallible<usize>
 where
-    TIA: Number + CastInternalRational,
+    TIA: PartialOrd,
+    FBig: TryFrom<TIA>,
 {
     if scale.is_zero() {
         let cmp = |l: &TIA, r: &TIA| match optimize {
@@ -141,12 +147,16 @@ where
     }
 
     (iter.enumerate())
-        .map(|(i, v)| {
-            let mut shift = v.into_rational()?;
+        // skip NaN scores. These should not be in the input domain, but this results in graceful failure
+        .filter_map(|(i, v)| Some((i, FBig::try_from(v).ok()?)))
+        .map(|(i, mut shift)| {
+            // normalize sign
             if optimize == Optimize::Min {
                 shift = -shift;
             }
-            Ok((i, GumbelPSRN::new(shift, scale.clone())))
+
+            // create a partial sample
+            Ok((i, PartialSample::new(GumbelRV::new(shift, scale.clone())?)))
         })
         .reduce(|l, r| {
             let (mut l, mut r) = (l?, r?);
@@ -155,7 +165,3 @@ where
         .ok_or_else(|| err!(FailedFunction, "there must be at least one candidate"))?
         .map(|v| v.0)
 }
-
-#[cfg(feature = "floating-point")]
-#[cfg(test)]
-mod test;

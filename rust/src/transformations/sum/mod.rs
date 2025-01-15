@@ -12,8 +12,12 @@ use crate::core::{Metric, MetricSpace, Transformation};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::*;
 use crate::metrics::{AbsoluteDistance, InsertDeleteDistance, SymmetricDistance};
-use crate::traits::{CheckAtom, ProductOrd};
+use crate::traits::CheckAtom;
 use crate::transformations::{make_ordered_random, make_unordered};
+use int::signs_agree;
+
+#[cfg(all(test, feature = "partials"))]
+mod test;
 
 #[bootstrap(features("contrib"), generics(MI(suppress), T(suppress)))]
 /// Make a Transformation that computes the sum of bounded data.
@@ -53,11 +57,15 @@ where
 // make_(sized_)?bounded_float_(checked|ordered)_sum
 
 #[doc(hidden)]
-pub trait MakeSum<MI: Metric>: Sized + CheckAtom + Clone + ProductOrd
+pub trait MakeSum<MI: Metric>: CheckAtom
 where
     (VectorDomain<AtomDomain<Self>>, MI): MetricSpace,
     (AtomDomain<Self>, AbsoluteDistance<Self>): MetricSpace,
 {
+    /// # Proof Definition
+    /// For any given input domain and input metric,
+    /// returns `Ok(out)` where `out` is a valid transformation,
+    /// or `Err(e)`.
     fn make_sum(
         input_domain: VectorDomain<AtomDomain<Self>>,
         input_metric: MI,
@@ -83,11 +91,11 @@ macro_rules! impl_make_sum_int {
                     .get_closed()?;
 
                 if let Some(size) = input_domain.size {
-                    if !Self::int_sum_can_overflow(size, bounds)? {
+                    if !can_int_sum_overflow(size, bounds) {
                         // 1. if the sum can't overflow, don't need to worry about saturation arithmetic
                         make_sized_bounded_int_checked_sum(size, bounds)
 
-                    } else if Self::is_monotonic(bounds) {
+                    } else if signs_agree(bounds) {
                         // 2. a monotonic sum is less efficient due to saturation arithmetic
                         make_sized_bounded_int_monotonic_sum(size, bounds)
 
@@ -97,7 +105,7 @@ macro_rules! impl_make_sum_int {
                     }
                 } else {
                     // data size unknown, so checked sum is not applicable
-                    if Self::is_monotonic(bounds.clone()) {
+                    if signs_agree(bounds) {
                         // 1. if bounds share sign, then a simple saturating addition is associative
                         make_bounded_int_monotonic_sum(bounds)
 
@@ -118,10 +126,10 @@ macro_rules! impl_make_sum_int {
                     .get_closed()?;
 
                 if let Some(size) = input_domain.size {
-                    if !Self::int_sum_can_overflow(size, bounds)? {
+                    if !can_int_sum_overflow(size, bounds) {
                         // 1. if the sum can't overflow,
                         //    then do a no-op unordering and use a more computationally efficient sum without saturation arithmetic
-                        let domain = VectorDomain::new(AtomDomain::new_closed(bounds.clone())?).with_size(size);
+                        let domain = VectorDomain::new(AtomDomain::new_closed(bounds)?).with_size(size);
                         make_unordered(domain, input_metric)? >> make_sized_bounded_int_checked_sum(size, bounds)?
 
                     } else {
@@ -157,7 +165,7 @@ macro_rules! impl_make_sum_float {
                     .get_closed()?;
 
                 if let Some(size) = input_domain.size {
-                    if !Pairwise::<Self>::float_sum_can_overflow(size, bounds)? {
+                    if !Pairwise::<Self>::can_float_sum_overflow(size, bounds)? {
                         // 1. try the checked sum first, as floats are unlikely to overflow
                         make_sized_bounded_float_checked_sum::<Pairwise<_>>(size, bounds)
 
@@ -166,7 +174,7 @@ macro_rules! impl_make_sum_float {
                         make_ordered_random(input_domain, input_metric)? >> make_sized_bounded_float_ordered_sum::<Pairwise<_>>(size, bounds)?
                     }
                 } else {
-                    if !Pairwise::<Self>::float_sum_can_overflow(DEFAULT_SIZE_LIMIT, bounds)? {
+                    if !Pairwise::<Self>::can_float_sum_overflow(DEFAULT_SIZE_LIMIT, bounds)? {
                         // 1. if the sum can't overflow, then use a more computationally efficient sum without saturation arithmetic
                         make_bounded_float_checked_sum::<Pairwise<_>>(DEFAULT_SIZE_LIMIT, bounds)
 
@@ -188,7 +196,7 @@ macro_rules! impl_make_sum_float {
                     .get_closed()?;
 
                 if let Some(size) = input_domain.size {
-                    if !Pairwise::<Self>::float_sum_can_overflow(size, bounds)? {
+                    if !Pairwise::<Self>::can_float_sum_overflow(size, bounds)? {
                         // 1. if the sum can't overflow,
                         //    then do a no-op unordering and use a more computationally efficient sum without saturation arithmetic
                         make_unordered(input_domain, input_metric)? >> make_sized_bounded_float_checked_sum::<Pairwise<_>>(size, bounds)?
@@ -198,7 +206,7 @@ macro_rules! impl_make_sum_float {
                         make_sized_bounded_float_ordered_sum::<Pairwise<_>>(size, bounds)
                     }
                 } else {
-                    if !Pairwise::<Self>::float_sum_can_overflow(DEFAULT_SIZE_LIMIT, bounds)? {
+                    if !Pairwise::<Self>::can_float_sum_overflow(DEFAULT_SIZE_LIMIT, bounds)? {
                         // 1. if the sum can't overflow,
                         //    then do a no-op unordering and use a more computationally efficient sum without saturation arithmetic
                         make_unordered(input_domain, input_metric)? >> make_bounded_float_checked_sum::<Pairwise<_>>(DEFAULT_SIZE_LIMIT, bounds)?
@@ -213,6 +221,3 @@ macro_rules! impl_make_sum_float {
     };
 }
 impl_make_sum_float! { f32 f64 }
-
-#[cfg(all(test, feature = "partials"))]
-mod test;

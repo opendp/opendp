@@ -13,18 +13,17 @@ use crate::{
 #[test]
 fn test_make_expr_puredp() -> Fallible<()> {
     let (lf_domain, lf) = get_test_data()?;
-    let expr_domain = lf_domain.select();
     let scale: f64 = 0.0;
 
     let m_quant = make_private_expr(
-        expr_domain,
-        PartitionDistance(SymmetricDistance),
+        lf_domain.select(),
+        PartitionDistance(InsertDeleteDistance),
         MaxDivergence::default(),
         col("const_1f64").dp().sum((0., 1.), Some(scale)),
         None,
     )?;
 
-    let dp_expr = m_quant.invoke(&(lf.logical_plan.clone(), all()))?;
+    let dp_expr = m_quant.invoke(&lf.logical_plan)?.expr;
     let df_actual = lf.select([dp_expr]).collect()?;
 
     assert_eq!(df_actual, df!("const_1f64" => [1000.0])?);
@@ -35,18 +34,17 @@ fn test_make_expr_puredp() -> Fallible<()> {
 #[test]
 fn test_make_expr_zcdp() -> Fallible<()> {
     let (lf_domain, lf) = get_test_data()?;
-    let expr_domain = lf_domain.select();
     let scale: f64 = 0.0;
 
     let m_quant = make_private_expr(
-        expr_domain,
-        PartitionDistance(SymmetricDistance),
+        lf_domain.select(),
+        PartitionDistance(InsertDeleteDistance),
         ZeroConcentratedDivergence::default(),
         col("const_1f64").dp().sum((0., 1.), Some(scale)),
         None,
     )?;
 
-    let dp_expr = m_quant.invoke(&(lf.logical_plan.clone(), all()))?;
+    let dp_expr = m_quant.invoke(&lf.logical_plan)?.expr;
     let df_actual = lf.select([dp_expr]).collect()?;
 
     assert_eq!(df_actual, df!("const_1f64" => [1000.0])?);
@@ -57,12 +55,11 @@ fn test_make_expr_zcdp() -> Fallible<()> {
 #[test]
 fn test_fail_make_expr_wrong_distribution() -> Fallible<()> {
     let (lf_domain, _) = get_test_data()?;
-    let expr_domain = lf_domain.select();
     let scale: f64 = 0.0;
 
     let variant = make_private_expr(
-        expr_domain,
-        PartitionDistance(SymmetricDistance),
+        lf_domain.select(),
+        PartitionDistance(InsertDeleteDistance),
         MaxDivergence::default(),
         col("const_1f64")
             .clip(lit(0.), lit(1.))
@@ -83,18 +80,17 @@ fn test_fail_make_expr_wrong_distribution() -> Fallible<()> {
 #[test]
 fn test_make_expr_gaussian() -> Fallible<()> {
     let (lf_domain, lf) = get_test_data()?;
-    let expr_domain = lf_domain.select();
     let scale: f64 = 0.0;
 
     let m_quant = make_private_expr(
-        expr_domain,
-        PartitionDistance(SymmetricDistance),
+        lf_domain.select(),
+        PartitionDistance(InsertDeleteDistance),
         ZeroConcentratedDivergence::default(),
         col("const_1f64").dp().sum((0., 1.), Some(scale)),
         None,
     )?;
 
-    let dp_expr = m_quant.invoke(&(lf.logical_plan.clone(), all()))?;
+    let dp_expr = m_quant.invoke(&lf.logical_plan)?.expr;
     let df_actual = lf.select([dp_expr]).collect()?;
 
     assert_eq!(df_actual, df!("const_1f64" => [1000.0])?);
@@ -141,9 +137,8 @@ fn check_autocalibration(
     bounds: (u32, u32),
     d_in: (u32, u32, u32),
 ) -> Fallible<()> {
-    let lf_domain =
-        LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?
-            .with_margin::<&str>(&[], margin)?;
+    let series_domain = SeriesDomain::new("A", AtomDomain::<i32>::default());
+    let lf_domain = LazyFrameDomain::new(vec![series_domain])?.with_margin::<&str>(&[], margin)?;
     let expr_domain = lf_domain.select();
 
     // Get resulting sum (expression result)
@@ -155,7 +150,7 @@ fn check_autocalibration(
         .make_private(
             expr_domain,
             PartitionDistance(InsertDeleteDistance),
-            MaxDivergence::default(),
+            MaxDivergence,
             Some(1.),
         )?;
 
@@ -171,7 +166,7 @@ fn check_autocalibration(
 #[test]
 fn test_sum_unbounded_dp_autocalibration() -> Fallible<()> {
     check_autocalibration(
-        Margin::new().with_max_partition_length(100),
+        Margin::default().with_max_partition_length(100),
         (4, 7),
         (1, 1, 1),
     )
@@ -180,7 +175,7 @@ fn test_sum_unbounded_dp_autocalibration() -> Fallible<()> {
 #[test]
 fn test_sum_bounded_dp_autocalibration() -> Fallible<()> {
     check_autocalibration(
-        Margin::new()
+        Margin::default()
             .with_max_partition_length(100)
             .with_public_lengths(),
         (4, 7),

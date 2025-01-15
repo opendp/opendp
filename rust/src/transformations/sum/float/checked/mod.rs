@@ -65,7 +65,7 @@ where
     S: UncheckedSum,
     S::Item: 'static + Float,
 {
-    if S::float_sum_can_overflow(size_limit, bounds)? {
+    if S::can_float_sum_overflow(size_limit, bounds)? {
         return fallible!(
             MakeTransformation,
             "potential for overflow when computing function. You could resolve this by choosing tighter clipping bounds."
@@ -149,7 +149,7 @@ where
     S: UncheckedSum,
     S::Item: 'static + Float,
 {
-    if S::float_sum_can_overflow(size, bounds)? {
+    if S::can_float_sum_overflow(size, bounds)? {
         return fallible!(
             MakeTransformation,
             "potential for overflow when computing function. You could resolve this by choosing tighter clipping bounds."
@@ -204,11 +204,11 @@ impl<T: Float> UncheckedSum for Pairwise<T> {
 
 #[doc(hidden)]
 pub trait CanFloatSumOverflow: SumRelaxation {
-    fn float_sum_can_overflow(size: usize, bounds: (Self::Item, Self::Item)) -> Fallible<bool>;
+    fn can_float_sum_overflow(size: usize, bounds: (Self::Item, Self::Item)) -> Fallible<bool>;
 }
 
 impl<T: Float> CanFloatSumOverflow for Sequential<T> {
-    fn float_sum_can_overflow(size: usize, (lower, upper): (T, T)) -> Fallible<bool> {
+    fn can_float_sum_overflow(size: usize, (lower, upper): (T, T)) -> Fallible<bool> {
         let _2 = T::one() + T::one();
         let size_ = T::inf_cast(size)?;
         let mag = lower.alerting_abs()?.total_max(upper)?;
@@ -238,7 +238,7 @@ impl<T: Float> CanFloatSumOverflow for Sequential<T> {
 }
 
 impl<T: Float> CanFloatSumOverflow for Pairwise<T> {
-    fn float_sum_can_overflow(size: usize, (lower, upper): (T, T)) -> Fallible<bool> {
+    fn can_float_sum_overflow(size: usize, (lower, upper): (T, T)) -> Fallible<bool> {
         let _2 = T::one() + T::one();
         let size_ = T::inf_cast(size)?;
         let mag = lower.alerting_abs()?.total_max(upper)?;

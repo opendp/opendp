@@ -2,9 +2,8 @@ use polars::prelude::*;
 use polars_plan::dsl::{Expr, FunctionExpr};
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{CategoricalDomain, ExprDomain, OuterMetric};
+use crate::domains::{CategoricalDomain, ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
-use crate::polars::ExprFunction;
 use crate::transformations::DatasetMetric;
 
 use super::StableExpr;
@@ -19,13 +18,14 @@ mod test;
 /// * `input_metric` - The metric under which neighboring LazyFrames are compared
 /// * `expr` - The clipping expression
 pub fn make_expr_cut<M: OuterMetric>(
-    input_domain: ExprDomain,
+    input_domain: WildExprDomain,
     input_metric: M,
     expr: Expr,
-) -> Fallible<Transformation<ExprDomain, ExprDomain, M, M>>
+) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
 where
     M::InnerMetric: DatasetMetric,
     M::Distance: Clone,
+    (WildExprDomain, M): MetricSpace,
     (ExprDomain, M): MetricSpace,
     Expr: StableExpr<M, M>,
 {
@@ -79,9 +79,9 @@ where
     } else {
         compute_labels(&breaks, left_closed)?
     };
-    let series_domain = output_domain.active_series_mut()?;
-    series_domain.element_domain = Arc::new(CategoricalDomain::new_with_encoding(categories)?);
-    series_domain.field.dtype = DataType::Categorical(None, Default::default());
+
+    let element_domain = CategoricalDomain::new_with_categories(categories)?;
+    output_domain.column.set_element_domain(element_domain);
 
     t_prior
         >> Transformation::new(

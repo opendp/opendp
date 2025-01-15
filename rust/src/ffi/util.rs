@@ -7,13 +7,15 @@ use std::ffi::{CStr, IntoStringError, NulError};
 use std::os::raw::c_char;
 use std::str::Utf8Error;
 
-use crate::domains::ffi::UserDomain;
-use crate::domains::{AtomDomain, BitVector, CategoricalDomain, OptionDomain, VectorDomain};
+use crate::core::Function;
+use crate::domains::ffi::ExtrinsicDomain;
+use crate::domains::{AtomDomain, BitVector, OptionDomain, VectorDomain};
 use crate::error::*;
 use crate::ffi::any::{AnyObject, AnyQueryable};
-use crate::measures::ffi::UserDivergence;
+use crate::measures::ffi::ExtrinsicDivergence;
 use crate::measures::{
-    Approximate, MaxDivergence, PrivacyProfile, SmoothedMaxDivergence, ZeroConcentratedDivergence,
+    Approximate, MaxDivergence, PrivacyProfile, RenyiDivergence, SmoothedMaxDivergence,
+    ZeroConcentratedDivergence,
 };
 use crate::metrics::{
     AbsoluteDistance, ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance,
@@ -40,32 +42,13 @@ pub struct Pairwise<T>(PhantomData<T>);
 
 // If polars is not enabled, then these structs don't exist.
 #[cfg(feature = "polars")]
-use crate::domains::{ExprDomain, LazyFrameDomain, SeriesDomain};
+use crate::domains::{
+    CategoricalDomain, DatetimeDomain, ExprDomain, ExprPlan, LazyFrameDomain, SeriesDomain,
+};
+#[cfg(feature = "polars")]
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 #[cfg(feature = "polars")]
 use polars::prelude::{DataFrame, DslPlan, Expr, LazyFrame, Series};
-
-#[cfg(not(feature = "polars"))]
-struct LazyFrame;
-#[cfg(not(feature = "polars"))]
-struct DataFrame;
-#[cfg(not(feature = "polars"))]
-struct DslPlan;
-#[cfg(not(feature = "polars"))]
-struct Series;
-#[cfg(not(feature = "polars"))]
-struct Expr;
-#[cfg(not(feature = "polars"))]
-struct SeriesDomain;
-#[cfg(not(feature = "polars"))]
-struct ExprDomain;
-#[cfg(not(feature = "polars"))]
-struct LazyFrameDomain;
-#[cfg(not(feature = "polars"))]
-struct OnceFrame;
-#[cfg(not(feature = "polars"))]
-struct OnceFrameAnswer;
-#[cfg(not(feature = "polars"))]
-struct OnceFrameQuery;
 
 pub type RefCountFn = extern "C" fn(*const c_void, bool) -> bool;
 
@@ -310,6 +293,24 @@ lazy_static! {
     /// The set of registered types. We don't need everything here, just the ones that will be looked up by descriptor
     /// (i.e., the ones that appear in FFI function generic args).
     static ref TYPES: Vec<Type> = {
+        #[cfg(feature = "polars")]
+        let polars_types = vec![
+            type_vec![DataFrame, LazyFrame, DslPlan, Series, Expr, ExprPlan, OnceFrame, OnceFrameQuery, OnceFrameAnswer],
+            type_vec![ExprDomain, LazyFrameDomain, SeriesDomain],
+
+            type_vec![NaiveDate, NaiveTime, NaiveDateTime],
+            type_vec![AtomDomain, <NaiveDate, NaiveTime>],
+            type_vec![[OptionDomain AtomDomain], <NaiveDate, NaiveTime>],
+
+            type_vec![CategoricalDomain, DatetimeDomain],
+            type_vec![OptionDomain, <CategoricalDomain, DatetimeDomain>],
+
+            vec![t!((DslPlan, Expr))],
+            type_vec![Vec, <(DslPlan, Expr), SeriesDomain, Expr>],
+        ];
+        #[cfg(not(feature = "polars"))]
+        let polars_types = Vec::new();
+
         let types: Vec<Type> = vec![
             // data types
             vec![t!(())],
@@ -326,13 +327,12 @@ lazy_static! {
             // these are used by PartitionDistance. The latter two values are the dtype of the inner metric
             vec![t!((u32, u32, u32)), t!((u32, u64, u64)), t!((u32, i32, i32)), t!((u32, i64, i64))],
             vec![t!((u32, usize, usize)), t!((u32, f32, f32)), t!((u32, f64, f64))],
-            type_vec![DataFrame, LazyFrame, DslPlan, Series, Expr, OnceFrame, OnceFrameQuery, OnceFrameAnswer],
-            vec![t!((DslPlan, Expr))],
-            type_vec![Vec, <(DslPlan, Expr)>],
-            type_vec![Vec<Expr>],
+            vec![t!(Option<(f64, AnyObject)>), t!(Option<(f64, ExtrinsicObject)>)],
+            vec![t!((f64, AnyObject)), t!((f64, ExtrinsicObject))],
+            vec![t!(Function<f64, f64>)],
 
             type_vec![AnyMeasurementPtr, AnyTransformationPtr, AnyQueryable, AnyMeasurement],
-            type_vec![Vec, <AnyMeasurementPtr, AnyTransformationPtr, SeriesDomain>],
+            type_vec![Vec, <AnyMeasurementPtr, AnyTransformationPtr>],
 
             // sum algorithms
             type_vec![Sequential, <f32, f64>],
@@ -343,11 +343,8 @@ lazy_static! {
             type_vec![[OptionDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
             type_vec![[VectorDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
             type_vec![[VectorDomain OptionDomain AtomDomain], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String>],
-            type_vec![UserDomain],
+            type_vec![ExtrinsicDomain],
             type_vec![DataFrameDomain, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>],
-            type_vec![ExprDomain, LazyFrameDomain, SeriesDomain],
-            type_vec![CategoricalDomain],
-            type_vec![OptionDomain, <CategoricalDomain>],
 
             // metrics
             type_vec![ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance],
@@ -357,13 +354,13 @@ lazy_static! {
             type_vec![L2Distance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
 
             // measures
-            type_vec![MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence, UserDivergence],
-            type_vec![Approximate, <MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence, UserDivergence>],
+            type_vec![MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence, RenyiDivergence, ExtrinsicDivergence],
+            type_vec![Approximate, <MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence, RenyiDivergence, ExtrinsicDivergence>],
 
             // measure distances
             type_vec![PrivacyProfile],
             vec![t!((PrivacyProfile, f64))]
-        ].into_iter().flatten().collect();
+        ].into_iter().chain(polars_types).flatten().collect();
         let descriptors: HashSet<_> = types.iter().map(|e| &e.descriptor).collect();
         assert_eq!(descriptors.len(), types.len(), "detected duplicate TYPES");
         types

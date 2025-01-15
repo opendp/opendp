@@ -1,8 +1,8 @@
-from typing import Sequence, Union, cast
+from typing import Sequence, Union, cast, MutableMapping
 from inspect import signature
 
 from opendp._lib import *
-from opendp.mod import Domain, UnknownTypeException, Transformation, Measurement, PrivacyProfile, Queryable
+from opendp.mod import Domain, UnknownTypeException, Transformation, Measurement, PrivacyProfile, Queryable, Function
 from opendp.typing import RuntimeType, RuntimeTypeDescriptor, Vec
 
 ATOM_MAP = {
@@ -78,7 +78,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
     if isinstance(value, c_type):
         return value
 
-    if c_type == CallbackFn:
+    if c_type == CallbackFnPtr:
         return _wrap_py_func(value, type_name)
     
     if c_type == TransitionFn:
@@ -100,7 +100,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
 
     if c_type == ctypes.c_void_p:
         if type_name is None:
-            raise ValueError("type_name must be known")
+            raise ValueError("type_name must be known")  # pragma: no cover
 
         rust_type = str(type_name)
         
@@ -112,7 +112,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
         if rust_type == "String":
             return ctypes.c_char_p(value.encode())
 
-        raise UnknownTypeException(rust_type)
+        raise UnknownTypeException(rust_type)  # pragma: no cover
 
     if c_type == AnyObjectPtr:
         from opendp._data import slice_as_object
@@ -120,7 +120,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
 
     if c_type == FfiSlicePtr:
         if type_name is None:
-            raise ValueError("type_name must be known")
+            raise ValueError("type_name must be known")  # pragma: no cover
         return _py_to_slice(value, RuntimeType.parse(type_name))
 
     if isinstance(value, RuntimeType):
@@ -133,7 +133,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
         # throw an error if the value is already a c_type, but the wrong one
         # (like passing a Metric into an argument expecting a Domain)
         if hasattr(value, "_type_"):
-            raise ValueError(f"Cannot convert {value} to {c_type}")
+            raise ValueError(f"Cannot convert {value} to {c_type}")  # pragma: no cover
         value = c_type(value)
 
     return value
@@ -226,18 +226,27 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
         
         if type_name == "Expr":
             return _slice_to_expr(raw)
+        
+        if type_name == "ExprPlan":
+            return _slice_to_exprplan(raw)
 
     if isinstance(type_name, RuntimeType):
         if type_name.origin == "Vec":
             return _slice_to_vector(raw, type_name)
+        
+        if type_name.origin == "Function":
+            return _slice_to_function(raw)
 
         if type_name.origin == "HashMap":
             return _slice_to_hashmap(raw)
 
         if type_name.origin == "Tuple":
             return _slice_to_tuple(raw, type_name)
+        
+        if type_name.origin == "Option":
+            return _slice_to_option(raw, type_name)
 
-    raise UnknownTypeException(type_name)
+    raise UnknownTypeException(type_name)  # pragma: no cover
 
 
 def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
@@ -268,7 +277,7 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
         if type_name == "Series":
             return _series_to_slice(value)
         
-        if type_name == "LazyFrame":
+        if type_name in {"LazyFrame", "DslPlan"}:
             return _lazyframe_to_slice(value)
         
         if type_name == "DataFrame":
@@ -283,11 +292,14 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
 
         if type_name.origin == "HashMap":
             return _hashmap_to_slice(value, type_name)
+        
+        if type_name.origin == "Function":
+            return _function_to_slice(value, type_name)
 
         if type_name.origin == "Tuple":
             return _tuple_to_slice(value, type_name)
 
-    raise UnknownTypeException(type_name)
+    raise UnknownTypeException(type_name)  # pragma: no cover
 
 
 def _scalar_to_slice(val, type_name: str) -> FfiSlicePtr:
@@ -340,7 +352,7 @@ def _bitvector_to_slice(val: Sequence[Any]) -> FfiSlicePtr:
         val = val.tobytes()
     
     if not isinstance(val, (bytes, bytearray)):
-        raise TypeError("Expected type is BitVector but input data is not bytes or bytearray.")
+        raise TypeError("Expected type is BitVector but input data is not bytes or bytearray.")  # pragma: no cover
 
     array = (ctypes.c_uint8 * len(val)).from_buffer_copy(val) # type: ignore[operator]
     return _wrap_in_slice(array, len(val) * 8)
@@ -356,7 +368,7 @@ def _slice_to_bitvector(raw: FfiSlicePtr) -> bytes:
 
 def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
     if type_name.origin != 'Vec' or len(type_name.args) != 1:
-        raise ValueError("type_name must be a Vec<_>")
+        raise ValueError("type_name must be a Vec<_>")  # pragma: no cover
 
     inner_type_name = type_name.args[0]
     # when input is numpy array
@@ -400,15 +412,15 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
         return _wrap_in_slice(array, len(val))
 
     if inner_type_name not in ATOM_MAP:
-        raise TypeError(f"Members must be one of {tuple(ATOM_MAP.keys())}. Found {inner_type_name}.")
+        raise TypeError(f"Members must be one of {tuple(ATOM_MAP.keys())}. Found {inner_type_name}.")  # pragma: no cover
 
     array = (ATOM_MAP[inner_type_name] * len(val))(*val) # type: ignore[operator]
     return _wrap_in_slice(array, len(val))
 
 
-def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> list[Any]:
+def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> Sequence[Any]:
     if type_name.origin != 'Vec' or len(type_name.args) != 1:
-        raise ValueError("type_name must be a Vec<_>")
+        raise ValueError("type_name must be a Vec<_>")  # pragma: no cover
     
     inner_type_name = type_name.args[0]
 
@@ -439,22 +451,25 @@ def _tuple_to_slice(val: tuple[Any, ...], type_name: Union[RuntimeType, str]) ->
     type_name = cast(RuntimeType, type_name)
     inner_type_names = type_name.args
     if not isinstance(val, tuple):
-        raise TypeError("Cannot coerce a non-tuple type to a tuple")
+        raise TypeError("Cannot coerce a non-tuple type to a tuple")  # pragma: no cover
 
     if len(inner_type_names) != len(val):
-        raise TypeError("type_name members must have same length as tuple")
+        raise TypeError("type_name members must have same length as tuple")  # pragma: no cover
 
-    if inner_type_names == ['DslPlan', 'Expr']:
-        lf_slice = _lazyframe_to_slice(val[0])
-        expr_slice = _expr_to_slice(val[1])
-        array = (ctypes.c_void_p * len(val))(ctypes.cast(lf_slice, ctypes.c_void_p), ctypes.cast(expr_slice, ctypes.c_void_p))
-        out = _wrap_in_slice(ctypes.pointer(array), 2)
-        out.depends_on(lf_slice, expr_slice)
-        return out
+    if inner_type_names == ['f64', 'ExtrinsicObject']:
+        score_ptr = ctypes.pointer(ctypes.c_double(val[0]))
+        ext_obj = ctypes.pointer(ExtrinsicObject(ctypes.py_object(val[1]), c_counter))
+
+        cand_ptr = py_to_c(ext_obj, c_type=AnyObjectPtr, type_name="ExtrinsicObject")
+        array = (ctypes.c_void_p * 2)(
+            ctypes.cast(score_ptr, ctypes.c_void_p), 
+            ctypes.cast(cand_ptr, ctypes.c_void_p), 
+        )
+        return _wrap_in_slice(ctypes.pointer(array), 2)
 
     for t in inner_type_names:
         if t not in ATOM_MAP:
-            raise TypeError(f"Tuple members must be one of {ATOM_MAP.keys()}. Got {t}")
+            raise TypeError(f"Tuple members must be one of {ATOM_MAP.keys()}. Got {t}")  # pragma: no cover
 
     # check that actual type can be represented by the inner_type_name
     val = tuple(
@@ -478,25 +493,33 @@ def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]
     # list of void*
     ptr_data = void_array_ptr[0:raw.contents.len]
 
-    if inner_type_names == ['DslPlan', 'Expr']:
-        lp_slice = ctypes.cast(ptr_data[0], FfiSlicePtr)
-        expr_slice = ctypes.cast(ptr_data[1], FfiSlicePtr)
-        return _slice_to_lazyframe(lp_slice), _slice_to_expr(expr_slice)
-    
     if inner_type_names == ['PrivacyProfile', 'f64']:
         curve = ctypes.cast(ptr_data[0], AnyObjectPtr)
         delta = ctypes.cast(ptr_data[1], ctypes.POINTER(ctypes.c_double))
         return PrivacyProfile(curve), delta.contents.value
+    
+    if inner_type_names == ['f64', 'AnyObject']:
+        score = ctypes.cast(ptr_data[0], ctypes.POINTER(ctypes.c_double))
+        candidate_obj = ctypes.cast(ptr_data[1], AnyObjectPtr)
+        candidate = c_to_py(c_to_py(candidate_obj))
+        candidate_obj.__class__ = ctypes.POINTER(AnyObject) # type: ignore[assignment]
+        return score.contents.value, candidate
     
     # tuple of instances of Python types
     return tuple(ctypes.cast(void_p, ctypes.POINTER(ATOM_MAP[name])).contents.value # type: ignore[index,attr-defined]
                  for void_p, name in zip(ptr_data, inner_type_names))
 
 
-def _hashmap_to_slice(val: dict[Any, Any], type_name: RuntimeType) -> FfiSlicePtr:
+def _slice_to_option(raw: FfiSlicePtr, type_name: RuntimeType) -> Optional[Any]:
+    if raw.contents.len == 0:
+        return None
+    return _slice_to_py(raw, type_name.args[0])
+
+
+def _hashmap_to_slice(val: MutableMapping, type_name: RuntimeType) -> FfiSlicePtr:
     key_type, val_type = type_name.args
-    if not isinstance(val, dict):
-        raise TypeError(f"Expected type is {type_name} but input data is not a dict.")
+    if not isinstance(val, MutableMapping):
+        raise TypeError(f"Expected type is {type_name} but input data is not a dict.")  # pragma: no cover
 
     val = {
         _check_and_cast_scalar(key_type, k):
@@ -515,7 +538,21 @@ def _hashmap_to_slice(val: dict[Any, Any], type_name: RuntimeType) -> FfiSlicePt
     return ffislice
 
 
-def _slice_to_hashmap(raw: FfiSlicePtr) -> dict[Any, Any]:
+def _slice_to_function(raw: FfiSlicePtr) -> Function:
+    # for ε(α)-RDP curves
+    function = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyFunction)).contents
+    # put the contents behind a new, python pointer
+    return ctypes.cast(ctypes.pointer(function), Function)
+
+
+def _function_to_slice(raw: Function, type_name: RuntimeType) -> FfiSlicePtr:
+    if not isinstance(raw, Function):
+        from opendp.core import new_function
+        raw = new_function(raw, TO=type_name.args[1])
+    return _wrap_in_slice(raw, 1)
+
+
+def _slice_to_hashmap(raw: FfiSlicePtr) -> MutableMapping:
     slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyObjectPtr))
     keys: AnyObjectPtr = slice_array[0]
     vals: AnyObjectPtr = slice_array[1]
@@ -530,6 +567,10 @@ def _slice_to_hashmap(raw: FfiSlicePtr) -> dict[Any, Any]:
 
 
 def _lazyframe_to_slice(val) -> FfiSlicePtr:
+    pl = import_optional_dependency('polars')
+    if not isinstance(val, pl.LazyFrame):
+        raise ValueError("expected Polars LazyFrame")
+    
     state = val.__getstate__()
     raw = _wrap_in_slice(state, len(state))
     raw.depends_on(state)
@@ -545,6 +586,10 @@ def _slice_to_lazyframe(raw: FfiSlicePtr):
 
 
 def _expr_to_slice(val) -> FfiSlicePtr:
+    pl = import_optional_dependency('polars')
+    if not isinstance(val, pl.Expr):
+        raise ValueError("expected Polars Expr")
+    
     state = val.__getstate__()
     raw = _wrap_in_slice(state, len(state))
     raw.depends_on(state)
@@ -558,7 +603,27 @@ def _slice_to_expr(raw: FfiSlicePtr):
     expr.__setstate__(bytes(slice_array[0:raw.contents.len]))
     return expr
 
+
+def _slice_to_exprplan(raw: FfiSlicePtr):
+    # typed pointer
+    void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
+    # list of void*
+    ptr_data = void_array_ptr[0:raw.contents.len]
+
+    plan = _slice_to_lazyframe(ctypes.cast(ptr_data[0], FfiSlicePtr))
+    expr = _slice_to_expr(ctypes.cast(ptr_data[1], FfiSlicePtr))
+    fill = _slice_to_expr(ctypes.cast(ptr_data[2], FfiSlicePtr)) if raw.contents.len == 3 else None
+
+    from collections import namedtuple
+
+    ExprPlan = namedtuple("ExprPlan", ["plan", "expr", "fill"])
+    return ExprPlan(plan, expr, fill)
+
 def _dataframe_to_slice(val) -> FfiSlicePtr:
+    pl = import_optional_dependency('polars')
+    if not isinstance(val, pl.DataFrame):
+        raise ValueError("expected Polars DataFrame")  # pragma: no cover
+    
     slices = list(_series_to_slice(s) for s in val.get_columns())
     raw = _wrap_in_slice(ctypes.pointer((FfiSlicePtr * val.width)(*slices)), val.width)
     # extend the lifetime of each series' slice to that of the frame slice
@@ -574,6 +639,10 @@ def _slice_to_dataframe(raw: FfiSlicePtr):
 
 def _series_to_slice(val) -> FfiSlicePtr:
     from opendp._data import new_arrow_array, arrow_array_free
+
+    pl = import_optional_dependency('polars')
+    if not isinstance(val, pl.Series):
+        raise ValueError("expected Polars Series")
 
     raw = new_arrow_array(val.name)
     slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
@@ -615,11 +684,6 @@ def _wrap_in_slice(ptr, len_: int) -> FfiSlicePtr:
     return FfiSlicePtr(FfiSlice(ctypes.cast(ptr, ctypes.c_void_p), len_))
 
 
-# The output type cannot be an `ctypes.POINTER(FfiResult)` due to:
-#   https://bugs.python.org/issue5710#msg85731
-#                            (output         , input       )
-CallbackFn = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr)
-
 def _wrap_py_func(func, TO):
     from opendp._convert import c_to_py, py_to_c
 
@@ -652,7 +716,10 @@ def _wrap_py_func(func, TO):
                 ctypes.c_char_p(traceback.format_exc().encode()),
             )
 
-    return CallbackFn(wrapper_func)
+    c_wrapper_func = CallbackFnValue(wrapper_func)
+    lifeline = ExtrinsicObject(ctypes.py_object(c_wrapper_func), c_counter)
+
+    return ctypes.pointer(CallbackFn(c_wrapper_func, lifeline))
 
 
 # The output type cannot be an `ctypes.POINTER(FfiResult)` due to:

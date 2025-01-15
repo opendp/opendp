@@ -19,6 +19,8 @@
         if (TYPEOF(s) != EXTPTRSXP ||                                     \
             R_ExternalPtrTag(s) != AnyTransformation_tag)                 \
             error("expected a transformation, but got a different type"); \
+        if (!R_ExternalPtrAddr(s))                                        \
+            error("Got null pointer. Reusing a transformation from a previous session is not supported."); \
     } while (0)
 
 AnyTransformation *sexp_to_anytransformationptr(SEXP value)
@@ -75,6 +77,8 @@ SEXP anytransformationptr_to_sexp(AnyTransformation *input, SEXP log)
         if (TYPEOF(s) != EXTPTRSXP ||                                  \
             R_ExternalPtrTag(s) != AnyMeasurement_tag)                 \
             error("expected a measurement, but got a different type"); \
+        if (!R_ExternalPtrAddr(s))                                     \
+            error("Got null pointer. Reusing a measurement from a previous session is not supported."); \
     } while (0)
 
 AnyMeasurement *sexp_to_anymeasurementptr(SEXP value)
@@ -131,6 +135,8 @@ SEXP anymeasurementptr_to_sexp(AnyMeasurement *input, SEXP log)
         if (TYPEOF(s) != EXTPTRSXP ||                             \
             R_ExternalPtrTag(s) != AnyDomain_tag)                 \
             error("expected a domain, but got a different type"); \
+        if (!R_ExternalPtrAddr(s))                                \
+            error("Got null pointer. Reusing a domain from a previous session is not supported."); \
     } while (0)
 
 AnyDomain *sexp_to_anydomainptr(SEXP value)
@@ -187,6 +193,8 @@ SEXP anydomainptr_to_sexp(AnyDomain *input, SEXP log)
         if (TYPEOF(s) != EXTPTRSXP ||                             \
             R_ExternalPtrTag(s) != AnyMetric_tag)                 \
             error("expected a metric, but got a different type"); \
+        if (!R_ExternalPtrAddr(s))                                \
+            error("Got null pointer. Reusing a metric from a previous session is not supported."); \
     } while (0)
 
 AnyMetric *sexp_to_anymetricptr(SEXP value)
@@ -244,6 +252,8 @@ SEXP anymetricptr_to_sexp(AnyMetric *input, SEXP log)
         if (TYPEOF(s) != EXTPTRSXP ||                              \
             R_ExternalPtrTag(s) != AnyMeasure_tag)                 \
             error("expected a measure, but got a different type"); \
+        if (!R_ExternalPtrAddr(s))                                 \
+            error("Got null pointer. Reusing a measure from a previous session is not supported."); \
     } while (0)
 
 AnyMeasure *sexp_to_anymeasureptr(SEXP value)
@@ -301,6 +311,8 @@ SEXP anymeasureptr_to_sexp(AnyMeasure *input, SEXP log)
         if (TYPEOF(s) != EXTPTRSXP ||                               \
             R_ExternalPtrTag(s) != AnyFunction_tag)                 \
             error("expected a function, but got a different type"); \
+        if (!R_ExternalPtrAddr(s))                                  \
+            error("Got null pointer. Reusing an OpenDP function from a previous session is not supported."); \
     } while (0)
 
 AnyFunction *sexp_to_anyfunctionptr(SEXP value)
@@ -358,6 +370,8 @@ SEXP anyfunctionptr_to_sexp(AnyFunction *input, SEXP log)
         if (TYPEOF(s) != EXTPTRSXP ||                                 \
             R_ExternalPtrTag(s) != AnyObject_tag)                     \
             error("expected an AnyObject, but got a different type"); \
+        if (!R_ExternalPtrAddr(s))                                    \
+            error("Got null pointer. Reusing an AnyObject from a previous session is not supported."); \
     } while (0)
 
 void odp_AnyObject_finalizer(SEXP XPtr)

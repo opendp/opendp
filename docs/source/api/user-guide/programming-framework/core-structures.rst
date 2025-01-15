@@ -60,7 +60,7 @@ Let's assume we have a transformation called ``trans``:
     output = trans(input)
     d_out = trans.map(d_in)
 
-The tranformation ``trans`` can be called as if it were a function: this just evaluates the function field.
+The transformation ``trans`` can be called as if it were a function: this just evaluates the function field.
 We'll say that "``trans`` is (``d_in``, ``d_out``)-stable"
 if outputs of ``trans`` are ``d_out``-close when inputs are ``d_in``-close.
 

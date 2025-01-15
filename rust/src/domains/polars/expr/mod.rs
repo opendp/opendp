@@ -1,6 +1,6 @@
 use polars::lazy::dsl::Expr;
 use polars::prelude::*;
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use std::fmt::{Debug, Formatter};
 
 use crate::core::{Metric, MetricSpace};
@@ -12,7 +12,7 @@ use crate::traits::ProductOrd;
 use crate::transformations::DatasetMetric;
 use crate::{core::Domain, error::Fallible};
 
-use super::{DslPlanDomain, Frame, FrameDomain, Margin, NumericDataType, SeriesDomain};
+use super::{Frame, FrameDomain, LazyFrameDomain, Margin, SeriesDomain};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -22,13 +22,13 @@ mod ffi;
 /// Expressions used in the Polars API fall into four categories:
 ///
 /// 1. Not useful on their own for DP (shift)
-/// 2. Must be leaf nodes, like only col or lit (impute, group by or join keys, explode)
-/// 3. Must be row-by-row (sorting by, filter, with column, top/bottom k)
-/// 4. Aggregates (select, aggregate)
+/// 2. Leaf nodes, like only col or lit (impute, group by or join keys, explode)
+/// 3. Row-by-row (sorting by, filter, with column, top/bottom k)
+/// 4. Grouping (select, aggregate)
 ///
 /// Specifying the expression context is not necessary for categories one or two, leaving only row-by-row and aggregates.
 #[derive(Clone, PartialEq, Debug)]
-pub enum ExprContext {
+pub enum Context {
     /// Requires that the expression applied to the data frame is row-by-row, i.e. the expression is applied to each row independently.
     ///
     /// Rows cannot be added or removed, and the order of rows cannot be changed.
@@ -37,149 +37,189 @@ pub enum ExprContext {
     ///
     /// `.agg(exprs)` is the general case where there are grouping columns.
     /// `.select(exprs)` is the special case where there are no grouping columns.
-    Aggregate { grouping_columns: BTreeSet<String> },
+    Grouping {
+        by: BTreeSet<PlSmallStr>,
+        margin: Margin,
+    },
 }
 
-impl ExprContext {
-    fn get_plan(&self, val: &(DslPlan, Expr)) -> DslPlan {
-        let (lp, expr) = val.clone();
-        let frame = LazyFrame::from(lp);
+impl Context {
+    /// # Proof Definition
+    /// Return the grouping columns and margin specified by `self` if in a grouping context,
+    /// otherwise return an error.
+    pub fn grouping(&self, operation: &str) -> Fallible<(BTreeSet<PlSmallStr>, Margin)> {
         match self {
-            ExprContext::RowByRow => frame.select([expr]),
-            ExprContext::Aggregate { grouping_columns } => frame
-                .group_by(
-                    &grouping_columns
-                        .iter()
-                        .map(AsRef::as_ref)
-                        .map(col)
-                        .collect::<Vec<_>>(),
-                )
-                .agg([expr]),
-        }
-        .logical_plan
-    }
-
-    pub fn grouping_columns(&self) -> Fallible<BTreeSet<String>> {
-        match self {
-            // ExprContext::Aggregate serves both `select` and `group_by/agg`
-            ExprContext::Aggregate { grouping_columns } => Ok(grouping_columns.clone()),
-            ExprContext::RowByRow => {
-                fallible!(FailedFunction, "RowByRow context has no grouping columns")
-            }
+            Context::RowByRow { .. } => fallible!(
+                MakeDomain,
+                "{} is only allowed within `.agg(...)` or `.select(...)`",
+                operation
+            ),
+            Context::Grouping { by, margin } => Ok((by.clone(), margin.clone())),
         }
     }
+}
 
-    pub fn break_alignment(&self) -> Fallible<()> {
-        if !matches!(self, ExprContext::Aggregate { .. }) {
-            return fallible!(
-                MakeMeasurement,
-                "record alignment can only be broken in a selection or aggregation"
-            );
+#[derive(Clone, PartialEq, Debug)]
+pub struct WildExprDomain {
+    /// Domains for each column.
+    pub columns: Vec<SeriesDomain>,
+    /// The context in which a frame resides.
+    pub context: Context,
+}
+
+impl Domain for WildExprDomain {
+    type Carrier = DslPlan;
+
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+        self.clone()
+            .to_frame_domain()?
+            .member(&LazyFrame::from(val.clone()))
+    }
+}
+
+impl WildExprDomain {
+    pub fn as_row_by_row(&self) -> Self {
+        Self {
+            columns: self.columns.clone(),
+            context: Context::RowByRow,
         }
-        Ok(())
+    }
+
+    fn to_frame_domain<F: Frame>(self) -> Fallible<FrameDomain<F>> {
+        FrameDomain::new_with_margins(
+            self.columns,
+            match self.context {
+                Context::RowByRow => HashMap::default(),
+                Context::Grouping { by, margin } => {
+                    let by = BTreeSet::from_iter(by);
+                    HashMap::from([(by, margin)])
+                }
+            },
+        )
     }
 }
 
 /// # Proof Definition
-/// `ExprDomain` is the domain of data frames that can be constructed by applying a given expression to a given data frame.
-///
-/// # Example
-/// ```
-/// use polars::prelude::*;
-/// use opendp::domains::{AtomDomain, SeriesDomain, LazyFrameDomain, ExprDomain, ExprContext};
-/// let lf_domain = LazyFrameDomain::new(vec![
-///     SeriesDomain::new("A", AtomDomain::<i32>::default()),
-///     SeriesDomain::new("B", AtomDomain::<f64>::default()),
-/// ])?;
-///
-/// let expr_domain = ExprDomain::new(lf_domain, ExprContext::RowByRow);
-/// # opendp::error::Fallible::Ok(())
-/// ```
-#[derive(Clone, PartialEq)]
+/// `ExprDomain` is the domain of series that can be constructed by applying an expression to a data frame.
+#[derive(Clone, PartialEq, Debug)]
 pub struct ExprDomain {
     /// The domain that materialized data frames are a member of.
-    pub frame_domain: DslPlanDomain,
-    /// Denotes how an expression must be applied to materialize a member of the domain.
-    pub context: ExprContext,
+    pub column: SeriesDomain,
+    /// Context-specific descriptors.
+    pub context: Context,
 }
 
-impl ExprDomain {
-    pub fn new<F: Frame>(frame_domain: FrameDomain<F>, context: ExprContext) -> ExprDomain {
-        Self {
-            frame_domain: frame_domain.cast_carrier(),
-            context,
+impl LazyFrameDomain {
+    pub fn select(self) -> WildExprDomain {
+        self.aggregate::<String, 0>([])
+    }
+
+    pub fn aggregate<S: AsRef<str>, const P: usize>(self, by: [S; P]) -> WildExprDomain {
+        let by: BTreeSet<_> = by.iter().map(|s| s.as_ref().into()).collect();
+        let margin = self.get_margin(&by);
+        WildExprDomain {
+            columns: self.series_domains,
+            context: Context::Grouping { by, margin },
         }
     }
 
-    pub fn active_series(&self) -> Fallible<&SeriesDomain> {
-        self.check_one_column()?;
-        Ok(&self.frame_domain.series_domains[0])
-    }
-
-    pub fn active_series_mut(&mut self) -> Fallible<&mut SeriesDomain> {
-        self.check_one_column()?;
-        Ok(&mut self.frame_domain.series_domains[0])
-    }
-
-    pub fn active_margin(&self) -> Fallible<&Margin> {
-        let grouping_columns = self.context.grouping_columns()?;
-        self.frame_domain
-            .margins
-            .get(&grouping_columns)
-            .ok_or_else(|| err!(FailedFunction, "No known margin for {:?}", grouping_columns))
-    }
-
-    pub fn check_one_column(&self) -> Fallible<()> {
-        let series_domains = &self.frame_domain.series_domains;
-        if series_domains.len() != 1 {
-            return fallible!(
-                FailedFunction,
-                "expression must span exactly one column, but expression spans {} columns",
-                series_domains.len()
-            );
+    pub fn row_by_row(self) -> WildExprDomain {
+        WildExprDomain {
+            columns: self.series_domains,
+            context: Context::RowByRow,
         }
-        Ok(())
     }
 }
 
-#[cfg(test)]
-impl<F: Frame> FrameDomain<F> {
-    pub fn row_by_row(&self) -> ExprDomain {
-        ExprDomain::new(self.clone(), ExprContext::RowByRow)
-    }
-    pub fn aggregate<E: AsRef<[IE]>, IE: AsRef<str>>(&self, by: E) -> ExprDomain {
-        let by = BTreeSet::from_iter(by.as_ref().iter().map(|s| s.as_ref().to_string()));
-        ExprDomain::new(
-            self.clone(),
-            ExprContext::Aggregate {
-                grouping_columns: by,
-            },
-        )
-    }
-    pub fn select(&self) -> ExprDomain {
-        self.aggregate::<_, &str>([])
-    }
+#[derive(Clone)]
+pub struct ExprPlan {
+    pub plan: DslPlan,
+    pub expr: Expr,
+    pub fill: Option<Expr>,
 }
 
-impl Domain for ExprDomain {
-    type Carrier = (DslPlan, Expr);
-
-    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
-        let frame = self.context.get_plan(val);
-        self.frame_domain.member(&frame)
-    }
-}
-
-impl Debug for ExprDomain {
+impl Debug for ExprPlan {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ExprDomain")
-            .field("lazy_frame_domain", &self.frame_domain)
+        f.debug_struct("ExprPlan")
+            .field("expr", &self.expr)
+            .field("default", &self.fill.is_some())
             .finish()
     }
 }
 
+impl ExprPlan {
+    /// # Proof Definition
+    /// Return a compute plan where the expression and fill expression in `self` are extended by `function`.
+    pub fn then(&self, function: impl Fn(Expr) -> Expr) -> Self {
+        Self {
+            plan: self.plan.clone(),
+            expr: function(self.expr.clone()),
+            fill: self.fill.clone().map(function),
+        }
+    }
+}
+
+impl From<DslPlan> for ExprPlan {
+    fn from(value: DslPlan) -> Self {
+        ExprPlan {
+            plan: value,
+            expr: all(),
+            fill: None,
+        }
+    }
+}
+
+impl From<LazyFrame> for ExprPlan {
+    fn from(value: LazyFrame) -> Self {
+        ExprPlan::from(value.logical_plan)
+    }
+}
+
+impl Domain for ExprDomain {
+    type Carrier = ExprPlan;
+
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+        let (plan, expr) = (LazyFrame::from(val.plan.clone()), val.expr.clone());
+        let frame = match &self.context {
+            Context::RowByRow { .. } => plan.select([expr]),
+            Context::Grouping { by, .. } => plan
+                .group_by(&by.iter().map(|s| s.as_str()).collect::<Vec<_>>())
+                .agg([expr.clone()]),
+        }
+        .collect()?;
+
+        let series = frame.column(&self.column.name)?.as_materialized_series();
+        if !(self.column).member(series)? {
+            return Ok(false);
+        }
+
+        match &self.context {
+            Context::RowByRow => (),
+            Context::Grouping { margin, by } => {
+                if !margin.member(
+                    frame
+                        .lazy()
+                        .group_by(&by.iter().map(|s| s.as_str()).collect::<Vec<_>>()),
+                )? {
+                    return Ok(false);
+                }
+            }
+        }
+        Ok(true)
+    }
+}
+
+/// OuterMetric encodes the relationship between
+/// the metric on data that may be grouped vs the metric on individual groups.
 pub trait OuterMetric: 'static + Metric + Send + Sync {
+    /// # Proof Definition
+    /// Type of metric used to measure distances between each group.
     type InnerMetric: Metric + Send + Sync;
+
+    /// # Proof Definition
+    /// Returns the inner metric of `self`.
+    ///
+    /// This is the metric used to measure distances between non-grouped datasets.
     fn inner_metric(&self) -> Self::InnerMetric;
 }
 
@@ -196,29 +236,55 @@ macro_rules! impl_expr_metric_select {
 }
 impl_expr_metric_select!(InsertDeleteDistance SymmetricDistance HammingDistance ChangeOneDistance);
 
-impl<const P: usize, Q: 'static + Send + Sync> OuterMetric for LpDistance<P, Q> {
-    type InnerMetric = Self;
-    fn inner_metric(&self) -> Self::InnerMetric {
-        self.clone()
-    }
-}
-impl<Q: 'static + Send + Sync> OuterMetric for LInfDistance<Q> {
-    type InnerMetric = Self;
-    fn inner_metric(&self) -> Self::InnerMetric {
-        self.clone()
-    }
-}
 impl<M: 'static + Metric> OuterMetric for PartitionDistance<M> {
     type InnerMetric = M;
+
     fn inner_metric(&self) -> Self::InnerMetric {
         self.0.clone()
     }
 }
 
-impl<M: DatasetMetric> MetricSpace for (ExprDomain, M) {
+impl<M: 'static + Metric> OuterMetric for Parallel<M> {
+    type InnerMetric = M;
+
+    fn inner_metric(&self) -> Self::InnerMetric {
+        self.0.clone()
+    }
+}
+
+impl<const P: usize, Q: 'static> OuterMetric for LpDistance<P, Q> {
+    type InnerMetric = AbsoluteDistance<Q>;
+
+    fn inner_metric(&self) -> Self::InnerMetric {
+        AbsoluteDistance::default()
+    }
+}
+
+impl<M: DatasetMetric> MetricSpace for (WildExprDomain, M) {
     fn check_space(&self) -> Fallible<()> {
         let (expr_domain, metric) = self;
-        (expr_domain.frame_domain.clone(), metric.clone()).check_space()
+        (
+            expr_domain.clone().to_frame_domain::<DslPlan>()?,
+            metric.clone(),
+        )
+            .check_space()
+    }
+}
+
+impl<M: DatasetMetric> MetricSpace for (WildExprDomain, PartitionDistance<M>) {
+    fn check_space(&self) -> Fallible<()> {
+        let (expr_domain, PartitionDistance(inner_metric)) = self;
+        (
+            expr_domain.clone().to_frame_domain::<DslPlan>()?,
+            inner_metric.clone(),
+        )
+            .check_space()
+    }
+}
+
+impl<M: DatasetMetric> MetricSpace for (ExprDomain, M) {
+    fn check_space(&self) -> Fallible<()> {
+        Ok(())
     }
 }
 
@@ -246,20 +312,6 @@ impl<Q: ProductOrd> MetricSpace for (ExprDomain, Parallel<LInfDistance<Q>>) {
 
 impl<M: DatasetMetric> MetricSpace for (ExprDomain, PartitionDistance<M>) {
     fn check_space(&self) -> Fallible<()> {
-        let (expr_domain, PartitionDistance(inner_metric)) = self;
-        (expr_domain.frame_domain.clone(), inner_metric.clone()).check_space()
-    }
-}
-
-impl<Q: ProductOrd + NumericDataType> MetricSpace for (ExprDomain, AbsoluteDistance<Q>) {
-    fn check_space(&self) -> Fallible<()> {
-        if self.0.active_series()?.field.dtype != Q::dtype() {
-            return fallible!(
-                MetricSpace,
-                "selected column must be of type {}",
-                Q::dtype()
-            );
-        }
         Ok(())
     }
 }

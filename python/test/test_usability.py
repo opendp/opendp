@@ -84,7 +84,7 @@ def test_query_dir():
     assert 'count' in query_dir
     assert 'laplace' in query_dir
 
-@pytest.mark.xfail(raises=dp.OpenDPException)
+
 def test_string_instead_of_tuple_for_margin_key():
     pl = pytest.importorskip("polars")
 
@@ -93,23 +93,38 @@ def test_string_instead_of_tuple_for_margin_key():
         schema={"a_column": pl.Int32},
     )
 
-    context = dp.Context.compositor(
-        data=lf,
-        privacy_unit=dp.unit_of(contributions=1),
-        privacy_loss=dp.loss_of(epsilon=1.0),
-        split_evenly_over=1,
-        margins={
-            # To reproduce failure, the column name must be multiple characters.
-            # TODO: We want to fail earlier because the key is not a tuple.
-            # (mypy does catch this, so we need "type: ignore", but we can't rely on users running mypy.)
-            ("a_column"): dp.polars.Margin(public_info="keys", max_partition_length=5), # type: ignore
-        },
-    )
+    with pytest.raises(ValueError, match="('a_column',)"):
+        dp.Context.compositor(
+            data=lf,
+            privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(epsilon=1.0),
+            split_evenly_over=1,
+            margins={
+                # To reproduce failure, the column name must be multiple characters.
+                # TODO: We want to fail earlier because the key is not a tuple.
+                # (mypy does catch this, so we need "type: ignore", but we can't rely on users running mypy.)
+                ("a_column"): dp.polars.Margin(public_info="keys", max_partition_length=5), # type: ignore
+            },
+        )
 
-    counts = (
-        context.query()
-        .group_by("a_column")
-        .agg(pl.len().dp.noise())
-    )
-    counts.summarize()
-    # counts.release().collect()
+
+@pytest.mark.parametrize(
+    "domain", [dp.lazyframe_domain([]), dp.series_domain("A", dp.atom_domain(T=bool))])
+def test_polars_data_loader_error_is_human_readable(domain):
+    pytest.importorskip("polars")
+    overall_pipeline = dp.c.make_sequential_composition(
+        domain, dp.symmetric_distance(), dp.max_divergence(), d_in=1,
+        d_mids=[1.])
+    with pytest.raises(ValueError, match="expected Polars *"):
+        overall_pipeline("I'm not the right type!")
+
+
+def test_polars_expr_loader_error_is_human_readable():
+    pl = pytest.importorskip("polars")
+    with pytest.raises(ValueError, match="expected Polars Expr"):
+        dp.m.make_private_expr(
+            dp.wild_expr_domain([]),
+            dp.symmetric_distance(),
+            dp.max_divergence(),
+            pl.LazyFrame({}),
+        )

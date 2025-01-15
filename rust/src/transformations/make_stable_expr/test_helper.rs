@@ -12,13 +12,13 @@ pub fn get_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
     ])?
     .with_margin::<&str>(
         &[],
-        Margin::new()
+        Margin::default()
             .with_public_lengths()
             .with_max_partition_length(1000),
     )?
     .with_margin(
         &["chunk_2_bool"],
-        Margin::new()
+        Margin::default()
             .with_public_lengths()
             .with_max_partition_length(500)
             .with_max_num_partitions(2)
@@ -26,13 +26,13 @@ pub fn get_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
     )?
     .with_margin(
         &["chunk_2_bool", "cycle_5_alpha"],
-        Margin::new()
+        Margin::default()
             .with_public_keys()
             .with_max_partition_length(200),
     )?
     .with_margin(
         &["chunk_(..10u32)"],
-        Margin::new()
+        Margin::default()
             .with_public_keys()
             .with_max_partition_length(100),
     )?;
