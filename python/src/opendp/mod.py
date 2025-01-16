@@ -712,7 +712,7 @@ class PrivacyProfile(object):
         '''
         Returns the epsilon that corresponds to this delta.
         
-        :param epsilon: Allowance for an additive difference between the distributions of releases on adjacent datasets
+        :param delta: Allowance for an additive difference between the distributions of releases on adjacent datasets
         '''
         from opendp._data import privacy_profile_epsilon
         return privacy_profile_epsilon(self.curve, delta)
