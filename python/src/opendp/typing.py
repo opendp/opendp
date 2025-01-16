@@ -369,7 +369,7 @@ class RuntimeType(object):
 
     def substitute(self: Union["RuntimeType", str], **kwargs):
         '''
-        TODO
+        Substitutes any generic type parameters according to the passed keyword arguments
         
         :param kwargs:
         '''

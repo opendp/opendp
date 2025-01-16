@@ -295,7 +295,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     def map(self, d_in):
         """Map an input distance `d_in` to an output distance.
         
-        :param d_in: Input distance
+        :param d_in: Input distance. An upper bound on how far apart neighboring datasets can be with respect to the input metric
         """
         from opendp.core import transformation_map
         return transformation_map(self, d_in)
@@ -528,7 +528,7 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
         '''
         Check if ``val`` is a member of the domain.
         
-        :param val:
+        :param val: a value to be checked for membership in `self`
         '''
         from opendp.domains import member
         return member(self, val)
@@ -554,7 +554,7 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     @property
     def descriptor(self) -> Any:
         '''
-        Descriptor of domain
+        Descriptor of domain. Used to retrieve the descriptor associated with domains defined in Python 
         '''
         from opendp.domains import _extrinsic_domain_descriptor
         return _extrinsic_domain_descriptor(self)
@@ -703,7 +703,7 @@ class PrivacyProfile(object):
         '''
         Returns the delta that corresponds to this epsilon.
         
-        :param epsilon:
+        :param epsilon: Allowance for a multiplicative difference, or max divergence, in the distributions of releases on adjacent datasets
         '''
         from opendp._data import privacy_profile_delta
         return privacy_profile_delta(self.curve, epsilon)
@@ -712,7 +712,7 @@ class PrivacyProfile(object):
         '''
         Returns the epsilon that corresponds to this delta.
         
-        :param delta:
+        :param epsilon: Allowance for an additive difference between the distributions of releases on adjacent datasets
         '''
         from opendp._data import privacy_profile_epsilon
         return privacy_profile_epsilon(self.curve, delta)

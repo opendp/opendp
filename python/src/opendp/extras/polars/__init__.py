@@ -855,8 +855,8 @@ try:
             """
             Shorthand to join with an explicit key-set.
 
-            :param keys:
-            :param on:
+            :param keys: lazyframe containing a key-set whose columns correspond to the grouping keys
+            :param on: optional, the names of columns to join on. Useful if the key dataframe contains extra columns
             """
             # Motivation for adding this new API:
             # 1. Writing a left join is more difficult in the context API: 
@@ -1004,7 +1004,8 @@ try:
             """
             Compute aggregations for each group of a group by operation.
 
-            :param named_aggs:
+            :param aggs: expressions to apply in the aggregation context
+            :param named_aggs: named/aliased expressions to apply in the aggregation context
             """
             lf_plan = self._lgb_plan.agg(*aggs, **named_aggs)
             return LazyFrameQuery(lf_plan, self._query)
@@ -1031,7 +1032,7 @@ except ImportError:  # pragma: no cover
         def summarize(self, alpha: float | None = None):
             """Summarize the statistics released by this query.
             
-            :param alpha:
+            :param alpha: optional. A value in [0, 1] denoting the statistical significance.
             """
             raise ImportError(ERR_MSG)
 

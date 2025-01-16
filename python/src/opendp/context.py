@@ -545,7 +545,8 @@ class Query(object):
 
             This function will be called when the user calls ``query.{name}(...)``.
 
-            :param kwargs:
+            :param args: arguments for the constructor function
+            :param kwargs: keyword arguments for the constructor function
             """
             constructor, is_partial = constructors[name]
 
@@ -576,8 +577,8 @@ class Query(object):
     def new_with(self, *, chain: Chain, wrap_release=None) -> "Query":
         """Convenience constructor that creates a new query with a different chain.
         
-        :param chain:
-        :param wrap_release:
+        :param chain: the prior query. Either a metric space or transformation
+        :param wrap_release: a function to apply to apply to releases
         """
         return Query(
             chain=chain,
