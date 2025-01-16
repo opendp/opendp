@@ -933,7 +933,7 @@ try:
         def summarize(self, alpha: float | None = None):
             """Summarize the statistics released by this query.
 
-            :param alpha: optional. A value in [0, 1] denoting the statistical significance.
+            :param alpha: optional. A value in [0, 1] denoting the statistical significance. For the corresponding confidence level, subtract from from 1: for 95% confidence, use 0.05 for alpha.
 
             If ``alpha`` is passed, the resulting data frame includes an ``accuracy`` column.
 
@@ -1032,7 +1032,7 @@ except ImportError:  # pragma: no cover
         def summarize(self, alpha: float | None = None):
             """Summarize the statistics released by this query.
             
-            :param alpha: optional. A value in [0, 1] denoting the statistical significance.
+            :param alpha: optional. A value in [0, 1] denoting the statistical significance. For the corresponding confidence level, subtract from from 1: for 95% confidence, use 0.05 for alpha.
             """
             raise ImportError(ERR_MSG)
 
