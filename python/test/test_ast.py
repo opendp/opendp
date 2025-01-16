@@ -59,6 +59,8 @@ class Checker():
             + args.args
             + args.kwonlyargs
         )
+        if args.vararg is not None:
+            self.all_ast_args.append(args.vararg)
         if args.kwarg is not None:
             self.all_ast_args.append(args.kwarg)
         if len(self.all_ast_args) and self.all_ast_args[0].arg in ['self', 'cls']:
