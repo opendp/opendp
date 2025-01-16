@@ -165,8 +165,11 @@ class Checker():
         self._check_params()
         self._check_types()
         self._check_return()
-        if self.errors:
-            return '; '.join(f'({i+1}) {e}' for i, e in enumerate(self.errors))
+        return '; '.join(
+            self.errors
+            if len(self.errors) == 1
+            else [f'({i+1}) {e}' for i, e in enumerate(self.errors)]
+        )
 
 
 PUBLIC = 'public'
