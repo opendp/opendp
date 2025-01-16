@@ -31,6 +31,7 @@ use serde::{Deserialize, Serialize};
 pub(crate) trait OpenDPPlugin: 'static + Clone + ColumnsUdf {
     const NAME: &'static str;
     fn function_options() -> FunctionOptions;
+    fn get_output(&self) -> Option<GetOutput>;
 }
 #[cfg(feature = "ffi")]
 pub(crate) trait OpenDPPlugin:
