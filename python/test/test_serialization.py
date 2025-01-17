@@ -3,15 +3,30 @@ import pytest
 import opendp.prelude as dp
 
 
+atom = dp.atom_domain(bounds=(0, 10))
+
 @pytest.mark.parametrize(
     "_,dp_obj",  # Unused parameter gives us a readable test name.
     [
         (str(obj), obj)
         for obj in [
-            dp.atom_domain(bounds=(0, 10)),
+            # Domains:
+            atom,
             dp.categorical_domain(['A', 'B', 'C']),
-            dp.series_domain('A', dp.atom_domain(bounds=(0, 10))),
-            dp.lazyframe_domain([dp.series_domain('A', dp.atom_domain(bounds=(0, 10)))]),
+            dp.series_domain('A', atom),
+            dp.lazyframe_domain([dp.series_domain('A', atom)]),
+            dp.wild_expr_domain([]),
+            # Metrics:
+            dp.absolute_distance("int"),
+            dp.change_one_distance(),
+            dp.linf_distance("float", True),
+            dp.user_distance("user_distance"),
+            # Measures:
+            dp.m.max_divergence(),
+            dp.m.approximate(dp.m.max_divergence()),
+            dp.m.user_divergence("user_divergence"),
+            # Measurments:
+            dp.m.make_gaussian(atom, dp.absolute_distance(int), 1),
         ]
     ],
 )
@@ -28,6 +43,7 @@ def test_serializable(_, dp_obj):
         (str(obj), obj)
         for obj in [
             dp.user_domain("trivial_user_domain", lambda: True),
+            dp.m.new_privacy_profile(lambda x: x),
         ]
     ],
 )
