@@ -25,7 +25,7 @@ atom = dp.atom_domain(bounds=(0, 10))
             dp.m.max_divergence(),
             dp.m.approximate(dp.m.max_divergence()),
             dp.m.user_divergence("user_divergence"),
-            # Measurments:
+            # Measurements:
             dp.m.make_gaussian(atom, dp.absolute_distance(int), 1),
         ]
     ],
