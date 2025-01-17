@@ -209,6 +209,8 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         # which yields infinitely on zero-sized types
         raise ValueError("Measurement does not support iteration")  # pragma: no cover
 
+    def __eq__(self, other):
+        return str(self) == str(other)
 
 class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     """A non-differentially private unit of computation.
