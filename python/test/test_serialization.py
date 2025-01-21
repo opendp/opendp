@@ -6,7 +6,7 @@ import opendp.prelude as dp
 atom = dp.atom_domain(bounds=(0, 10))
 
 @pytest.mark.parametrize(
-    "_,dp_obj",  # Unused parameter gives us a readable test name.
+    "_readable_name,dp_obj",
     [
         (str(obj), obj)
         for obj in [
@@ -27,10 +27,11 @@ atom = dp.atom_domain(bounds=(0, 10))
             dp.m.user_divergence("user_divergence"),
             # Measurements:
             dp.m.make_gaussian(atom, dp.absolute_distance(int), 1),
+            dp.m.then_gaussian(1),
         ]
     ],
 )
-def test_serializable(_, dp_obj):
+def test_serializable(_readable_name, dp_obj):
     serialized = dp.serialize(dp_obj)
     deserialized = dp.deserialize(serialized)
     assert dp_obj == deserialized
@@ -38,7 +39,7 @@ def test_serializable(_, dp_obj):
 
 
 @pytest.mark.parametrize(
-    "_,dp_obj",  # Unused parameter gives us a readable test name.
+    "_readable_name,dp_obj",
     [
         (str(obj), obj)
         for obj in [
@@ -47,6 +48,6 @@ def test_serializable(_, dp_obj):
         ]
     ],
 )
-def test_not_serializable(_, dp_obj):
+def test_not_serializable(_readable_name, dp_obj):
     with pytest.raises(Exception, match="OpenDP JSON Encoder does not handle"):
         dp.serialize(dp_obj)

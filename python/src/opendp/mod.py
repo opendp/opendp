@@ -667,6 +667,9 @@ class PartialConstructor(object):
             return self(other[0], other[1])
         raise TypeError(f"Cannot chain {type(self)} with {type(other)}")  # pragma: no cover
 
+    def __eq__(self, other):
+        return self.__opendp_dict__ == self.__opendp_dict__
+
 
 class UnknownTypeException(Exception):
     pass
