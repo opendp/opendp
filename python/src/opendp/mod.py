@@ -655,6 +655,7 @@ class PrivacyProfile(object):
 class PartialConstructor(object):
     def __init__(self, constructor):
         self.constructor = constructor
+        self.__opendp_dict__ = {}
     
     def __call__(self, input_domain: Domain, input_metric: Metric):
         return self.constructor(input_domain, input_metric)

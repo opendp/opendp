@@ -200,8 +200,16 @@ def {then_name}(
 
 {doc_params}{example}
     """
-    return PartialConstructor(lambda {dom_met}: {name}(
+    output = PartialConstructor(lambda {dom_met}: {name}(
 {args}))
+    output.__opendp_dict__ = {{
+            'func': '{then_name}',
+            'module': 'measurements',
+            'kwargs': {{
+                {func_args}
+            }},
+        }}
+    return output
 "#,
             func_name = func.name,
             doc_params = tab_py(
@@ -225,7 +233,14 @@ def {then_name}(
                     .map(|arg| format!("{name}={name}", name = arg.name()))
                     .collect::<Vec<_>>()
                     .join(",\n")
-            ))
+            )),
+            func_args = func
+                .args
+                .iter()
+                .skip(2)
+                .map(|v| format!(r"'{name}': {name}", name = v.name()))
+                .collect::<Vec<String>>()
+                .join(", "),
         )
     } else {
         String::new()
