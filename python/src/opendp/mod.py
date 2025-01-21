@@ -210,7 +210,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         raise ValueError("Measurement does not support iteration")  # pragma: no cover
 
     def __eq__(self, other):
-        return str(self) == str(other)
+        return type(self) is type(other) and str(self) == str(other)
 
 class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     """A non-differentially private unit of computation.
@@ -446,7 +446,7 @@ class Queryable(object):
         }
     
     def __eq__(self, other):
-        return self.__opendp_dict__ == other.__opendp_dict__
+        return type(self) is type(other) and self.__opendp_dict__ == other.__opendp_dict__
 
     def __call__(self, query):
         from opendp.core import queryable_eval
@@ -537,7 +537,7 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
-        return str(self) == str(other)
+        return type(self) is type(other) and str(self) == str(other)
     
     def __hash__(self) -> int:
         return hash(str(self))
@@ -586,7 +586,7 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
     
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
-        return str(self) == str(other)
+        return type(self) is type(other) and str(self) == str(other)
     
     def __hash__(self) -> int:
         return hash(str(self))
@@ -637,7 +637,7 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
             pass
 
     def __eq__(self, other):
-        return str(self) == str(other)
+        return type(self) is type(other) and str(self) == str(other)
     
     def __hash__(self) -> int:
         return hash(str(self))
@@ -680,7 +680,7 @@ class PartialConstructor(object):
         raise TypeError(f"Cannot chain {type(self)} with {type(other)}")  # pragma: no cover
 
     def __eq__(self, other):
-        return self.__opendp_dict__ == other.__opendp_dict__
+        return type(self) is type(other) and self.__opendp_dict__ == other.__opendp_dict__
 
 
 class UnknownTypeException(Exception):

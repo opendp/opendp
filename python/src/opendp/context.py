@@ -381,7 +381,7 @@ class Context(object):
         }
 
     def __eq__(self, other):
-        return self.__opendp_dict__ == other.__opendp_dict__
+        return type(self) is type(other) and self.__opendp_dict__ == other.__opendp_dict__
 
     def __repr__(self) -> str:
         return f"""Context(
