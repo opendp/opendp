@@ -28,6 +28,17 @@ atom = dp.atom_domain(bounds=(0, 10))
             # Measurements:
             dp.m.make_gaussian(atom, dp.absolute_distance(int), 1),
             dp.m.then_gaussian(1),
+            # Compositions:
+            (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
+            >> dp.t.then_clamp((0, 10))
+            >> dp.t.then_sum()
+            >> dp.m.then_laplace(scale=5.0),
+            dp.Context.compositor(
+                data=[5.0] * 100,
+                privacy_unit=dp.unit_of(contributions=1),
+                privacy_loss=dp.loss_of(epsilon=1.0),
+                split_evenly_over=1,
+            )
         ]
     ],
 )

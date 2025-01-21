@@ -367,6 +367,21 @@ class Context(object):
         self.d_mids = d_mids
         self.d_out = d_out
         self.space_override = space_override
+        self.__opendp_dict__ = {
+            'func': 'Context',
+            'module': 'context',
+            'kwargs': {
+                'accountant': accountant,
+                'queryable': queryable,
+                'd_in': d_in,
+                'd_mids': d_mids,
+                'd_out': d_out,
+                'space_override': space_override,
+            },
+        }
+
+    def __eq__(self, other):
+        return self.__opendp_dict__ == other.__opendp_dict__
 
     def __repr__(self) -> str:
         return f"""Context(

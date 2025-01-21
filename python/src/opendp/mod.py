@@ -1139,7 +1139,7 @@ class _Encoder(json.JSONEncoder):
             return self.default(obj.__opendp_dict__)
         if isinstance(obj, dict):
             return {
-                k: self.default(v)
+                self.default(k): self.default(v)
                 for k, v in obj.items()
             }
         if isinstance(obj, tuple):
@@ -1163,6 +1163,8 @@ def _deserialization_hook(dp_dict):
     pl = import_optional_dependency('polars', raise_error=False)
     if pl is not None and _POLARS_FLAG in dp_dict:
         from io import StringIO
+        # TODO: update the references to the binary to point
+        # to the correct location in this environment.
         return pl.Expr.deserialize(StringIO(dp_dict[_POLARS_FLAG]), format="json")
     return dp_dict
 
