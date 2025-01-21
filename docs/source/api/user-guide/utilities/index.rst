@@ -1,12 +1,11 @@
 Utilities
 =========
 
-Aside from the constructors, there are very few remaining library interfaces.
-The typing module aids in managing the data types used at each step in the computation chain.
-There are also binary and exponential search algorithms for finding a free parameter in a computation chain.
+There are few utilities that can be useful.
 
 .. toctree::
-    :titlesonly:
+    :maxdepth: 1
 
-    typing
-    parameter-search
+    Use the typing module to manage the data types in the computation chain <typing>
+    Use the search functions to find free parameters in a computation chain <parameter-search>
+    Use the serialization functions to transformation OpenDP objects into strings <serialization>
