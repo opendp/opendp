@@ -12,7 +12,7 @@ from typing import Any, Literal, Type, TypeVar, Union, Callable, Optional, overl
 import importlib
 import json
 
-from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction
+from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, import_optional_dependency
 
 # https://mypy.readthedocs.io/en/stable/runtime_troubles.html#import-cycles
 if TYPE_CHECKING:
@@ -669,7 +669,7 @@ class PartialConstructor(object):
         raise TypeError(f"Cannot chain {type(self)} with {type(other)}")  # pragma: no cover
 
     def __eq__(self, other):
-        return self.__opendp_dict__ == self.__opendp_dict__
+        return self.__opendp_dict__ == other.__opendp_dict__
 
 
 class UnknownTypeException(Exception):
@@ -1131,6 +1131,7 @@ def exponential_bounds_search(
 
 
 _TUPLE_FLAG = '__tuple__'
+_POLARS_FLAG = '__polars__'
 
 class _Encoder(json.JSONEncoder):
     def default(self, obj):
@@ -1147,6 +1148,9 @@ class _Encoder(json.JSONEncoder):
             return obj
         if isinstance(obj, list):
             return [self.default(value) for value in obj]
+        pl = import_optional_dependency('polars', raise_error=False)
+        if pl is not None and isinstance(obj, pl.Expr):
+            return {_POLARS_FLAG: obj.meta.serialize(format="json")}
         raise Exception(f'OpenDP JSON Encoder does not handle {obj}')  # pragma: no cover
     
 def _deserialization_hook(dp_dict):
@@ -1156,6 +1160,10 @@ def _deserialization_hook(dp_dict):
         return func(**dp_dict.get("kwargs", {}))
     if _TUPLE_FLAG in dp_dict:
         return tuple(dp_dict[_TUPLE_FLAG])
+    pl = import_optional_dependency('polars', raise_error=False)
+    if pl is not None and _POLARS_FLAG in dp_dict:
+        from io import StringIO
+        return pl.Expr.deserialize(StringIO(dp_dict[_POLARS_FLAG]), format="json")
     return dp_dict
 
 def serialize(dp_obj):

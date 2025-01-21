@@ -37,6 +37,26 @@ def test_serializable(_readable_name, dp_obj):
     assert dp_obj == deserialized
 
 
+@pytest.mark.parametrize(
+    "_readable_name,dp_obj",
+    [
+        (str(obj), obj)
+        for obj in [
+            dp.m.make_private_expr(
+                dp.wild_expr_domain([], by=[]),
+                dp.partition_distance(dp.symmetric_distance()),
+                dp.max_divergence(),
+                dp.len(scale=1.0)
+            ),
+        ]
+    ],
+)
+def test_serializable_polars(_readable_name, dp_obj):
+    pytest.importorskip("polars")
+    serialized = dp.serialize(dp_obj)
+    deserialized = dp.deserialize(serialized)
+    assert dp_obj == deserialized
+
 
 @pytest.mark.parametrize(
     "_readable_name,dp_obj",
