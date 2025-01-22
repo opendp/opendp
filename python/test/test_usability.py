@@ -99,12 +99,12 @@ def test_string_instead_of_tuple_for_margin_key():
             privacy_unit=dp.unit_of(contributions=1),
             privacy_loss=dp.loss_of(epsilon=1.0),
             split_evenly_over=1,
-            margins={
+            margins=[
                 # To reproduce failure, the column name must be multiple characters.
                 # TODO: We want to fail earlier because the key is not a tuple.
                 # (mypy does catch this, so we need "type: ignore", but we can't rely on users running mypy.)
-                ("a_column"): dp.polars.Margin(public_info="keys", max_partition_length=5), # type: ignore
-            },
+                dp.polars.Margin(by=("a_column"), public_info="keys", max_partition_length=5), # type: ignore
+            ],
         )
 
 

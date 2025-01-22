@@ -330,7 +330,7 @@ class DPExpr(object):
         ...     privacy_unit=dp.unit_of(contributions=1),
         ...     privacy_loss=dp.loss_of(epsilon=1.),
         ...     split_evenly_over=1,
-        ...     margins={(): dp.polars.Margin(max_partition_length=5)}
+        ...     margins=[dp.polars.Margin(by=(), max_partition_length=5)]
         ... )
         >>> query = context.query().select(pl.col("visits").fill_null(0).dp.sum((0, 1)))
         >>> query.release().collect()
@@ -368,7 +368,7 @@ class DPExpr(object):
         ...     privacy_unit=dp.unit_of(contributions=1),
         ...     privacy_loss=dp.loss_of(epsilon=1.),
         ...     split_evenly_over=1,
-        ...     margins={(): dp.polars.Margin(max_partition_length=5)}
+        ...     margins=[dp.polars.Margin(by=(), max_partition_length=5)]
         ... )
         >>> query = context.query().select(pl.col("visits").fill_null(0).dp.mean((0, 1)))
         >>> with pl.Config(float_precision=0): # just to prevent doctest from failing
@@ -463,7 +463,7 @@ class DPExpr(object):
         ...     privacy_unit=dp.unit_of(contributions=1),
         ...     privacy_loss=dp.loss_of(epsilon=1.),
         ...     split_evenly_over=1,
-        ...     margins={(): dp.polars.Margin(max_partition_length=100)}
+        ...     margins=[dp.polars.Margin(by=[], max_partition_length=100)]
         ... )
         >>> candidates = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
         >>> query = context.query().select(pl.col("age").fill_null(0).dp.quantile(0.25, candidates))
@@ -501,7 +501,7 @@ class DPExpr(object):
         ...     privacy_unit=dp.unit_of(contributions=1),
         ...     privacy_loss=dp.loss_of(epsilon=1.),
         ...     split_evenly_over=1,
-        ...     margins={(): dp.polars.Margin(max_partition_length=100)}
+        ...     margins=[dp.polars.Margin(by=(), max_partition_length=100)]
         ... )
         >>> candidates = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
         >>> query = context.query().select(pl.col("age").fill_null(0).dp.quantile(0.5, candidates))
@@ -914,7 +914,7 @@ class LazyFrameQuery():
         ...     privacy_unit=dp.unit_of(contributions=1),
         ...     privacy_loss=dp.loss_of(epsilon=1.0),
         ...     split_evenly_over=1,
-        ...     margins={(): dp.polars.Margin(max_partition_length=1000)},
+        ...     margins=[dp.polars.Margin(by=(), max_partition_length=1000)],
         ... )
         >>>
         >>> query = context.query().select(
@@ -985,6 +985,9 @@ class Margin(object):
 
     Instances of this class are used by :py:func:`opendp.context.Context.compositor`.
     """
+
+    by: Sequence | None = None
+    """Polars expressions describing the grouping columns."""
 
     public_info: Literal["keys"] | Literal["lengths"] | None = None
     """Identifies properties of grouped data that are considered public information.
