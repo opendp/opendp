@@ -78,7 +78,7 @@ If you have not used Polars before, please familiarize yourself with the
 query syntax by reading `Polars’ Getting
 Started <https://docs.pola.rs/user-guide/getting-started/>`__. OpenDP
 specifically targets the `lazy API, not the eager
-API <https://docs.pola.rs/user-guide/concepts/lazy-vs-eager/>`__.
+API <https://docs.pola.rs/user-guide/concepts/lazy-api/>`__.
 
 You can retrieve information about the noise scale and mechanism before
 committing to a release:

@@ -90,13 +90,10 @@ inputs <https://github.com/pola-rs/polars/issues/19928>`__.
             ...     .group_by("YEAR")
             ...     .agg(dp.len())
             ... )
-            >>> query.release()
-            Traceback (most recent call last):
-            ...
-            opendp.mod.OpenDPException:
-              MakeMeasurement("Nanoseconds are not currently supported due to potential panics when parsing inputs. Please open an issue on the OpenDP repository if you would find this functionality useful. Otherwise, consider parsing into micro- or millisecond datetimes instead.")
-            Predicate in binary search always raises an exception. This exception is raised when the predicate is evaluated at 0.0.
+            >>> try:
+            ...     query.release()
+            ... except dp.OpenDPException as e:
+            ...     print(str(e).strip())
+            MakeMeasurement("Nanoseconds are not currently supported due to potential panics when parsing inputs. Please open an issue on the OpenDP repository if you would find this functionality useful. Otherwise, consider parsing into micro- or millisecond datetimes instead.")
 
-
-Parsed data can then be manipulated with `temporal
-expressions <temporal.ipynb>`__.
+Parsed data can then be manipulated with `temporal expressions <temporal.ipynb>`__.
