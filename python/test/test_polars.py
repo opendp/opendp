@@ -55,7 +55,6 @@ def example_lf(margin=None, **kwargs):
 
 def test_expr_domain():
     series_domains, _ = example_series()
-    dp.wild_expr_domain(series_domains)
 
     pl = pytest.importorskip("polars")
     by = [pl.col("A"), pl.col("B")]
@@ -327,10 +326,10 @@ def test_polars_context():
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0),
         split_evenly_over=2,
-        margins={
-            (): dp.polars.Margin(max_partition_length=5),
-            ("B",): dp.polars.Margin(public_info="keys"),
-        },
+        margins=[
+            dp.polars.Margin(by=(), max_partition_length=5),
+            dp.polars.Margin(by=("B",), public_info="keys"),
+        ],
     )
 
     (
@@ -362,7 +361,7 @@ def test_polars_describe():
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0),
         split_evenly_over=2,
-        margins={
+        margins={ # type: ignore[arg-type]
             ("B",): dp.polars.Margin(public_info="keys", max_partition_length=5),
         },
     )
@@ -410,9 +409,9 @@ def test_polars_accuracy_threshold():
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=2,
-        margins={
-            ("B",): dp.polars.Margin(max_partition_length=5),
-        },
+        margins=[
+            dp.polars.Margin(by=("B",), max_partition_length=5),
+        ],
     )
 
     expected = pl.DataFrame(
@@ -490,9 +489,9 @@ def test_polars_threshold_epsilon():
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=2,
-        margins={
-            ("A",): dp.polars.Margin(public_info="keys"),
-        },
+        margins=[
+            dp.polars.Margin(by=("A",), public_info="keys"),
+        ],
     )
 
     actual = (
@@ -719,7 +718,7 @@ def test_cut():
             privacy_unit=dp.unit_of(contributions=1),
             privacy_loss=dp.loss_of(epsilon=10000.0),
             split_evenly_over=1,
-            margins=[(by, dp.polars.Margin(public_info="keys"))],
+            margins=[dp.polars.Margin(by=by, public_info="keys")],
         )
     actual = (
         context.query()
