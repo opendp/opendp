@@ -20,7 +20,7 @@ def run_command(cmd, debug=False):
     RUN: echo "hello!"
     'hello!\\n'
 
-    >>> try: # doctest: +ELLIPSIS
+    >>> try:
     ...     run_command('bad-command')
     ... except Exception as e:
     ...     print(e)

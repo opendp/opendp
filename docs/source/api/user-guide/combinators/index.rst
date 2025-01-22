@@ -247,7 +247,7 @@ The resulting measurement expects the size of the input dataset to be 10.
 
         >>> input_space = dp.vector_domain(dp.atom_domain(bounds=(0., 10.)), size=10), dp.symmetric_distance()
         >>> meas = input_space >> dp.t.then_mean() >> dp.m.then_laplace(scale=0.5)
-        >>> print("standard mean:", meas([1.] * 10)) # -> 1.03 # doctest: +ELLIPSIS
+        >>> print("standard mean:", meas([1.] * 10)) # -> 1.03
         standard mean: ...
 
 We can now use the amplification combinator to construct an amplified measurement.
@@ -260,7 +260,7 @@ The function on the amplified measurement is identical to the standard measureme
     .. code:: python
       
         >>> amplified = dp.c.make_population_amplification(meas, population_size=100)
-        >>> print("amplified mean:", amplified([1.] * 10)) # -> .97 # doctest: +ELLIPSIS
+        >>> print("amplified mean:", amplified([1.] * 10)) # -> .97
         amplified mean: ...
 
 The privacy relation on the amplified measurement takes into account that the input dataset of size 10

@@ -106,7 +106,7 @@ been transformed in a way that changes the number of rows.
             │ --- ┆ ---    ┆ ---     │
             │ i64 ┆ u32    ┆ u32     │
             ╞═════╪════════╪═════════╡
-            ...
+            │ ... ┆ ...    ┆ ...     │
             └─────┴────────┴─────────┘
 
 
@@ -244,8 +244,8 @@ The noise scale dropped from 360 to 180…
             │ ---             ┆ ---    │
             │ bool            ┆ u32    │
             ╞═════════════════╪════════╡
-            │ false           ┆ ...
-            │ true            ┆ ...
+            │ false           ┆ ...    |
+            │ true            ┆ ...    |
             └─────────────────┴────────┘
 
 …but we still get answers to all of the same queries!

@@ -49,7 +49,7 @@ It's only at this point that we need to introduce the private data.
 ...     schema=['grade', 'pet_count'], orient="row")
 >>> lf = pl.LazyFrame(df)
 >>> results = dp_sum_pets_by_grade(lf).collect()
->>> print(results.sort("grade")) # doctest: +ELLIPSIS
+>>> print(results.sort("grade"))
 shape: (3, 2)
 ┌───────┬───────────┐
 │ grade ┆ pet_count │
