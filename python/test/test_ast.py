@@ -74,7 +74,8 @@ class Checker():
             self.errors.append(f'unknown directives: {", ".join(unknown_directives)}')
         
         order = ''.join(re.sub(r':$', '', d) for d in directives)
-        # TODO: Require ":return" if ":rtype" is given: "(:return(:rtype)?)?"
+        # TODO: Has 139 failures if we require ":return" if ":rtype" is given:
+        # canonical_order = r'^(:param(:type)?)*(:return(:rtype)?)?(:raises)*(:example)?$'
         canonical_order = r'^(:param(:type)?)*(:return)?(:rtype)?(:raises)*(:example)?$'
         if not re.search(canonical_order, order):
             short_order = re.sub(r'[:$^]', '', canonical_order)
@@ -84,11 +85,11 @@ class Checker():
 
     def _check_params(self):
         doc_param_dict = dict(re.findall(r':param (\w+): *(.*)', self.docstring))
-        # TODO: Has 34 failures for public, 68 for all functions; Enable and fill in the docs
-        # if self.is_public:
-        #     k_missing_v = [k for k, v in doc_param_dict.items() if not v]
-        #     if k_missing_v:
-        #         self.errors.append(f'params missing descriptions: {", ".join(k_missing_v)}')
+        # TODO: Check even if private function.
+        if self.is_public:
+            k_missing_v = [k for k, v in doc_param_dict.items() if not v]
+            if k_missing_v:
+                self.errors.append(f'params missing descriptions: {", ".join(k_missing_v)}')
 
         ast_arg_names = {arg.arg for arg in self.all_ast_args}
         if doc_param_dict or is_public:
