@@ -239,7 +239,7 @@ impl<F: Frame> FrameDomain<F> {
             .iter()
             .find(|m| &m.by == by)
             .cloned()
-            .unwrap_or_default();
+            .unwrap_or_else(|| Margin::by(by.iter().cloned().collect::<Vec<_>>()));
 
         let subset_margins = self
             .margins
@@ -367,7 +367,7 @@ impl<F: Frame> Domain for FrameDomain<F> {
 
 /// A restriction on the unique values in the margin, as well as possibly their counts,
 /// over a set of columns in a LazyFrame.
-#[derive(Clone, PartialEq, Default, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Margin {
     /// The columns to group by to form the margin.
     pub by: HashSet<Expr>,
@@ -410,10 +410,18 @@ impl PartialOrd for MarginPub {
 }
 
 impl Margin {
+    pub fn select() -> Margin {
+        Self::by::<&[Expr], Expr>(&[])
+    }
+
     pub fn by<E: AsRef<[IE]>, IE: Into<Expr> + Clone>(by: E) -> Self {
         Self {
             by: by.as_ref().iter().cloned().map(Into::into).collect(),
-            ..Default::default()
+            max_partition_length: None,
+            max_num_partitions: None,
+            max_partition_contributions: None,
+            max_influenced_partitions: None,
+            public_info: None,
         }
     }
 
