@@ -1,3 +1,5 @@
+.. _aggregation:
+
 Aggregation
 ===========
 
@@ -5,8 +7,7 @@ Aggregation
 Documentation <https://docs.pola.rs/api/python/stable/reference/expressions/aggregation.html>`__]
 
 The most common aggregators like length, sum, mean, median and quantile
-are covered in `essential
-statistics <../../../../getting-started/tabular-data/essential-statistics.ipynb>`__.
+are covered in :ref:`Essential Statistics <essential-statistics>`.
 
 In addition to these aggregators, OpenDP also supports other variations
 of counting queries. A counting query tells you how many rows in a

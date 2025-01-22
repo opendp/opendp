@@ -1,3 +1,5 @@
+.. _essential-statistics:
+
 Essential Statistics
 ====================
 
@@ -18,8 +20,8 @@ essential statistical measures with `Polars <https://docs.pola.rs/>`__.
 
    -  Median (``.median(candidates)``)
 
-We will use `sample
-data <https://github.com/opendp/dp-test-datasets/blob/main/data/eurostat/README.ipynb>`__
+We will use sample data
+(:py:func:`opendp.extras.examples.get_france_lfs_path`)
 from the Labour Force Survey in France.
 
 .. tab-set::
@@ -148,8 +150,8 @@ release the query:
             >>> print('DP release:', query_num_responses.release().collect().item())
             DP release: ...
 
-Other variations of counting queries are discussed in the `Aggregation
-section <../../api/user-guide/polars/expressions/aggregation.ipynb>`__.
+Other variations of counting queries are discussed in the :ref:`aggregation
+section <aggregation>`.
 
 Sum
 ---
