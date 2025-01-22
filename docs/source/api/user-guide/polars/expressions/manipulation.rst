@@ -79,13 +79,13 @@ scale to satisfy the same level of privacy.
 
             >>> context.query().select(pl.col.HWUSUAL.cast(int).fill_null(0).dp.sum((0, 100))).summarize()
             shape: (1, 4)
-            ┌─────────┬───────────┬─────────────────┬───────────────┐
-            │ column  ┆ aggregate ┆ distribution    ┆ scale         │
-            │ ---     ┆ ---       ┆ ---             ┆ ---           │
-            │ str     ┆ str       ┆ str             ┆ f64           │
-            ╞═════════╪═══════════╪═════════════════╪═══════════════╡
-            │ HWUSUAL ┆ Sum       ┆ Integer Laplace ┆ 14400         │
-            └─────────┴───────────┴─────────────────┴───────────────┘
+            ┌─────────┬───────────┬─────────────────┬─────────┐
+            │ column  ┆ aggregate ┆ distribution    ┆ scale   │
+            │ ---     ┆ ---       ┆ ---             ┆ ---     │
+            │ str     ┆ str       ┆ str             ┆ f64     │
+            ╞═════════╪═══════════╪═════════════════╪═════════╡
+            │ HWUSUAL ┆ Sum       ┆ Integer Laplace ┆ 14400.0 │
+            └─────────┴───────────┴─────────────────┴─────────┘
 
 
 The OpenDP Library forces that failed casts do not throw a
@@ -122,19 +122,14 @@ broken apart into different data processing phases.
             ...     .select(pl.col.HWUSUAL.sum().dp.noise())
             ...     .summarize()
             ... )
-            
-
-.. raw:: html
-
-    <div><style>
-    .dataframe > thead > tr,
-    .dataframe > tbody > tr {
-      text-align: right;
-      white-space: pre-wrap;
-    }
-    </style>
-    <small>shape: (1, 4)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Sum&quot;</td><td>&quot;Integer Laplace&quot;</td><td>14400.0</td></tr></tbody></table></div>
-
+            shape: (1, 4)
+            ┌─────────┬───────────┬─────────────────┬─────────┐
+            │ column  ┆ aggregate ┆ distribution    ┆ scale   │
+            │ ---     ┆ ---       ┆ ---             ┆ ---     │
+            │ str     ┆ str       ┆ str             ┆ f64     │
+            ╞═════════╪═══════════╪═════════════════╪═════════╡
+            │ HWUSUAL ┆ Sum       ┆ Integer Laplace ┆ 14400.0 │
+            └─────────┴───────────┴─────────────────┴─────────┘
 
 
 Cut
@@ -160,19 +155,16 @@ individuals working each hour range.
             ...     .agg(dp.len())
             ... )
             >>> query.release().collect().sort("HWUSUAL")
-            
+            shape: (4, 2)
+            ┌───────────┬────────┐
+            │ HWUSUAL   ┆ len    │
+            │ ---       ┆ ---    │
+            │ cat       ┆ u32    │
+            ╞═══════════╪════════╡
+            │ ...       ┆ ...    │
+            └───────────┴────────┘
 
-.. raw:: html
-
-    <div><style>
-    .dataframe > thead > tr,
-    .dataframe > tbody > tr {
-      text-align: right;
-      white-space: pre-wrap;
-    }
-    </style>
-    <small>shape: (4, 2)</small><table border="1" class="dataframe"><thead><tr><th>HWUSUAL</th><th>len</th></tr><tr><td>cat</td><td>u32</td></tr></thead><tbody><tr><td>&quot;(0, 20]&quot;</td><td>6546</td></tr><tr><td>&quot;(20, 40]&quot;</td><td>53980</td></tr><tr><td>&quot;(40, 60]&quot;</td><td>15430</td></tr><tr><td>&quot;(98, inf]&quot;</td><td>119890</td></tr></tbody></table></div>
-
+        .. Different sets of buckets are returns on successive runs.
 
 
 In this setting it is not necessary to spend an additional
@@ -201,20 +193,14 @@ construct an explicit key set based on the bin labels from grouping:
             ...     .with_keys(pl.LazyFrame([labels]))
             ... )
             >>> query.summarize()
-            
-
-.. raw:: html
-
-    <div><style>
-    .dataframe > thead > tr,
-    .dataframe > tbody > tr {
-      text-align: right;
-      white-space: pre-wrap;
-    }
-    </style>
-    <small>shape: (1, 4)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;len&quot;</td><td>&quot;Frame Length&quot;</td><td>&quot;Integer Laplace&quot;</td><td>144.0</td></tr></tbody></table></div>
-
-
+            shape: (1, 4)
+            ┌────────┬──────────────┬─────────────────┬───────┐
+            │ column ┆ aggregate    ┆ distribution    ┆ scale │
+            │ ---    ┆ ---          ┆ ---             ┆ ---   │
+            │ str    ┆ str          ┆ str             ┆ f64   │
+            ╞════════╪══════════════╪═════════════════╪═══════╡
+            │ len    ┆ Frame Length ┆ Integer Laplace ┆ 144.0 │
+            └────────┴──────────────┴─────────────────┴───────┘
 
 .. tab-set::
 
@@ -224,19 +210,20 @@ construct an explicit key set based on the bin labels from grouping:
         .. code:: python
 
             >>> query.release().collect().sort("HWUSUAL")
-            
-
-.. raw:: html
-
-    <div><style>
-    .dataframe > thead > tr,
-    .dataframe > tbody > tr {
-      text-align: right;
-      white-space: pre-wrap;
-    }
-    </style>
-    <small>shape: (7, 2)</small><table border="1" class="dataframe"><thead><tr><th>HWUSUAL</th><th>len</th></tr><tr><td>cat</td><td>u32</td></tr></thead><tbody><tr><td>&quot;(-inf, 0]&quot;</td><td>288</td></tr><tr><td>&quot;(0, 20]&quot;</td><td>6216</td></tr><tr><td>&quot;(20, 40]&quot;</td><td>54219</td></tr><tr><td>&quot;(40, 60]&quot;</td><td>15574</td></tr><tr><td>&quot;(60, 80]&quot;</td><td>2448</td></tr><tr><td>&quot;(80, 98]&quot;</td><td>100</td></tr><tr><td>&quot;(98, inf]&quot;</td><td>120004</td></tr></tbody></table></div>
-
+                shape: (7, 2)
+                ┌───────────┬────────┐
+                │ HWUSUAL   ┆ len    │
+                │ ---       ┆ ---    │
+                │ cat       ┆ u32    │
+                ╞═══════════╪════════╡
+                │ (-inf, 0] ┆ ...    │
+                │ (0, 20]   ┆ ...    │
+                │ (20, 40]  ┆ ...    │
+                │ (40, 60]  ┆ ...    │
+                │ (60, 80]  ┆ ...    │
+                │ (80, 98]  ┆ ...    │
+                │ (98, inf] ┆ ...    │
+                └───────────┴────────┘
 
 
 The output type is categorical, but with a data-independent encoding,
@@ -269,19 +256,14 @@ simply a single scalar, but more complicated expressions are valid:
             ...     .select(pl.col.HWUSUAL.dp.sum((0, 100)))
             ...     .summarize()
             ... )
-            
-
-.. raw:: html
-
-    <div><style>
-    .dataframe > thead > tr,
-    .dataframe > tbody > tr {
-      text-align: right;
-      white-space: pre-wrap;
-    }
-    </style>
-    <small>shape: (1, 4)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Sum&quot;</td><td>&quot;Float Laplace&quot;</td><td>843177.046991</td></tr></tbody></table></div>
-
+            shape: (1, 4)
+            ┌─────────┬───────────┬───────────────┬───────────────┐
+            │ column  ┆ aggregate ┆ distribution  ┆ scale         │
+            │ ---     ┆ ---       ┆ ---           ┆ ---           │
+            │ str     ┆ str       ┆ str           ┆ f64           │
+            ╞═════════╪═══════════╪═══════════════╪═══════════════╡
+            │ HWUSUAL ┆ Sum       ┆ Float Laplace ┆ 843177.046991 │
+            └─────────┴───────────┴───────────────┴───────────────┘
 
 
 At this time ``.fill_nan`` always drops data bounds, so make sure your
@@ -321,20 +303,15 @@ simply a single scalar, but more complicated expressions are valid:
             ...     .select(pl.col.HWUSUAL.dp.sum((0, 100)))
             ...     .summarize()
             ... )
+            shape: (1, 4)
+            ┌─────────┬───────────┬─────────────────┬─────────┐
+            │ column  ┆ aggregate ┆ distribution    ┆ scale   │
+            │ ---     ┆ ---       ┆ ---             ┆ ---     │
+            │ str     ┆ str       ┆ str             ┆ f64     │
+            ╞═════════╪═══════════╪═════════════════╪═════════╡
+            │ HWUSUAL ┆ Sum       ┆ Integer Laplace ┆ 14400.0 │
+            └─────────┴───────────┴─────────────────┴─────────┘
             
-
-.. raw:: html
-
-    <div><style>
-    .dataframe > thead > tr,
-    .dataframe > tbody > tr {
-      text-align: right;
-      white-space: pre-wrap;
-    }
-    </style>
-    <small>shape: (1, 4)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Sum&quot;</td><td>&quot;Integer Laplace&quot;</td><td>14400.0</td></tr></tbody></table></div>
-
-
 
 At this time ``.fill_null`` always drops data bounds, so make sure your
 data is non-null before running ``.clip``.
@@ -370,19 +347,20 @@ expression.
             ...     .with_keys(pl.LazyFrame([labels]))
             ... )
             >>> query.release().collect().sort("HWUSUAL")
-            
-
-.. raw:: html
-
-    <div><style>
-    .dataframe > thead > tr,
-    .dataframe > tbody > tr {
-      text-align: right;
-      white-space: pre-wrap;
-    }
-    </style>
-    <small>shape: (7, 2)</small><table border="1" class="dataframe"><thead><tr><th>HWUSUAL</th><th>len</th></tr><tr><td>u32</td><td>u32</td></tr></thead><tbody><tr><td>0</td><td>366</td></tr><tr><td>1</td><td>6292</td></tr><tr><td>2</td><td>54002</td></tr><tr><td>3</td><td>15308</td></tr><tr><td>4</td><td>2492</td></tr><tr><td>5</td><td>0</td></tr><tr><td>6</td><td>119904</td></tr></tbody></table></div>
-
+            shape: (7, 2)
+            ┌─────────┬────────┐
+            │ HWUSUAL ┆ len    │
+            │ ---     ┆ ---    │
+            │ u32     ┆ u32    │
+            ╞═════════╪════════╡
+            │ 0       ┆ ...    │
+            │ 1       ┆ ...    │
+            │ 2       ┆ ...    │
+            │ 3       ┆ ...    │
+            │ 4       ┆ ...    │
+            │ 5       ┆ ...    │
+            │ 6       ┆ ...    │
+            └─────────┴────────┘
 
 
 In the case of categorical data types, OpenDP only allows this

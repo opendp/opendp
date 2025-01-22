@@ -75,18 +75,6 @@ adds those columns to the data.
             │ (98, inf] ┆ ...    │
             └───────────┴────────┘
 
-.. raw:: html
-
-    <div><style>
-    .dataframe > thead > tr,
-    .dataframe > tbody > tr {
-      text-align: right;
-      white-space: pre-wrap;
-    }
-    </style>
-    <small>shape: (4, 2)</small><table border="1" class="dataframe"><thead><tr><th>HWUSUAL</th><th>len</th></tr><tr><td>cat</td><td>u32</td></tr></thead><tbody><tr><td>&quot;(0, 20]&quot;</td><td>6407</td></tr><tr><td>&quot;(20, 40]&quot;</td><td>54209</td></tr><tr><td>&quot;(40, 60]&quot;</td><td>15472</td></tr><tr><td>&quot;(98, inf]&quot;</td><td>119814</td></tr></tbody></table></div>
-
-
 
 To ensure that the privacy unit remains meaningful, expressions passed
 into ``.with_columns`` must be row-by-row, meaning that the expression

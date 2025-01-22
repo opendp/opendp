@@ -228,7 +228,7 @@ the privacy expenditure of this release.
             >>> # ...and then release
             >>> count_release = dp_count(data)
             >>> print("DP count:", count_release)
-            DP count: 1000
+            DP count: ...
 
 Private Sum
 ~~~~~~~~~~~
@@ -293,7 +293,7 @@ Or more succinctly…
             
             >>> # ...and make our 1-epsilon DP release
             >>> print("DP sum:", dp_sum(data))
-            DP sum: 30633527
+            DP sum: ...
 
 Private Mean
 ~~~~~~~~~~~~
@@ -318,20 +318,16 @@ Putting the previous sections together, our bounded mean age is:
 
         .. code:: python
 
-            >>> try:
-            ...     mean_age_preprocessor = (
-            ...         # Convert data into a dataframe of string columns
-            ...         dp.t.make_split_dataframe(separator=",", col_names=col_names) >>
-            ...         # Selects a column of df, Vec<str>
-            ...         dp.t.make_select_column(key="age", TOA=str) >>
-            ...         # Cast the column as Vec<float>, and fill nulls with the default value, 0.
-            ...         dp.t.then_cast_default(TOA=float) >>
-            ...         # Clamp age values
-            ...         dp.t.then_clamp(bounds=age_bounds)
-            ...     )
-            >>> except TypeError as err:
-            ...     assert str(err).startswith("inferred type is") # type: ignore
-            ...     print(err)
+            ... mean_age_preprocessor = (
+            ...     # Convert data into a dataframe of string columns
+            ...     dp.t.make_split_dataframe(separator=",", col_names=col_names) >>
+            ...     # Selects a column of df, Vec<str>
+            ...     dp.t.make_select_column(key="age", TOA=str) >>
+            ...     # Cast the column as Vec<float>, and fill nulls with the default value, 0.
+            ...     dp.t.then_cast_default(TOA=float) >>
+            ...     # Clamp age values
+            ...     dp.t.then_clamp(bounds=age_bounds)
+            ... )
             inferred type is i32, expected f64. See https://github.com/opendp/opendp/discussions/298
 
 Wait a second! The types don’t match? In this case, we casted to
@@ -370,6 +366,7 @@ the bounds and trying again.
             
             >>> mean_release = dp_mean(data)
             >>> print("DP mean:", mean_release)
+            DP mean: ...
             
 
 Depending on your use-case, you may find greater utility separately
@@ -410,7 +407,7 @@ budget of .05 rho.
             ...     d_in=max_influence, d_out=.05)
             
             >>> print("DP variance:", dp_variance(data))
-            DP variance: 45.154334857855616
+            DP variance: ...
 
 Measure Casting
 ~~~~~~~~~~~~~~~
@@ -484,7 +481,7 @@ We can compose multiple measurements into one measurement with
 
             >>> composed = dp.c.make_basic_composition([dp_sum, dp_mean])
             >>> composed(data)
-            [30419934, 44.75968544038662]
+            [..., ...]
 
 In order to compose, all measurements must share the same input domain,
 input metric and output measure. We can still use the privacy map to see

@@ -149,12 +149,12 @@ underlying data and are able to set plausible lower/upper bounds on
             >>> print('Accuracy interval (with accuracy value {0}) contains the true mean on D_tilde with probability {1}'.format(
             ...     round(accuracy, 4),
             ...     np.mean([(D_tilde_mean_age >= val - accuracy) & (D_tilde_mean_age <= val + accuracy) for val in releases])))
-            Accuracy interval (with accuracy value 0.2996) contains the true mean on D_tilde with probability 0.95
+            Accuracy interval (with accuracy value 0.2996) contains the true mean on D_tilde with probability ...
             
             >>> print('Accuracy interval (with accuracy value {0}) contains the true mean on D with probability {1}'.format(
             ...     round(accuracy, 4),
             ...     np.mean([(D_mean_age >= val - accuracy) & (D_mean_age <= val + accuracy) for val in releases])))
-            Accuracy interval (with accuracy value 0.2996) contains the true mean on D with probability 0.93
+            Accuracy interval (with accuracy value 0.2996) contains the true mean on D with probability ...
 
 This performance is as expected. :math:`D` and :math:`\tilde{D}` are
 actually the exact same data (the maximum age in the raw data is 93, so
@@ -198,12 +198,12 @@ epsilon.
             ...     round(accuracy, 4),
             ...     np.mean([(D_tilde_mean >= dp_mean - accuracy) & (D_tilde_mean <= dp_mean + accuracy)
             ...              for dp_mean in releases])))
-            Accuracy interval (with accuracy value 0.2853) contains the true mean on D_tilde with probability 0.97
+            Accuracy interval (with accuracy value 0.2853) contains the true mean on D_tilde with probability ...
 
             >>> print('Accuracy interval (with accuracy value {0}) contains the true mean on D with probability {1}'.format(
             ...     round(accuracy, 4),
             ...     np.mean([(D_mean_age >= dp_mean - accuracy) & (D_mean_age <= dp_mean + accuracy) for dp_mean in releases])))
-            Accuracy interval (with accuracy value 0.2853) contains the true mean on D with probability 0.65
+            Accuracy interval (with accuracy value 0.2853) contains the true mean on D with probability ...
 
 The accuracy guarantee still holds on :math:`\tilde{D}` (as it should),
 but we now see much worse performance relative to the true underlying
