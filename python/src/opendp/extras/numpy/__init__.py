@@ -121,8 +121,8 @@ def array2_domain(
     if T is None:
         raise ValueError("must specify T, the type of data in the array")  # pragma: no cover
     T = dp.RuntimeType.parse(T)
-    if T not in ATOM_MAP:
-        raise ValueError("T must be in an elementary type")  # pragma: no cover
+    if str(T) not in ATOM_MAP:
+        raise ValueError("T must be an elementary type")  # pragma: no cover
 
     def _member(x):
         if not isinstance(x, np.ndarray):
@@ -191,7 +191,7 @@ def _sscp_domain(
     if T is None:
         raise ValueError("must specify T, the type of data in the array")  # pragma: no cover
     T = dp.RuntimeType.parse(T)
-    if T not in {dp.f32, dp.f64}:
+    if str(T) not in {"f32", "f64"}:
         raise ValueError("T must be a float type")
 
     def _member(x):

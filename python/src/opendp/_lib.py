@@ -442,3 +442,8 @@ def indent(text):
     spaces = ' ' * 4
     indented_rest = [f'\n{spaces}{line}' for line in rest]
     return first + ''.join(indented_rest)
+
+
+def depends_on(value, *dependencies):
+    if hasattr(value, "_depends_on"):
+        value._depends_on(dependencies)

@@ -303,7 +303,6 @@ pub extern "C" fn opendp_data__slice_as_object(
             match element_ids.len() {
                 // In the inbound direction, we can handle tuples of primitives only.
                 2 => {
-
                     if types == vec![Type::of::<f64>(), Type::of::<ExtrinsicObject>()] {
                         return raw_to_tuple2::<f64, AnyObject>(raw).into();
                     }
@@ -434,8 +433,17 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             2,
         ))
     }
-    fn option_tuple2_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        Ok(
+    fn option_to_raw(obj: &AnyObject, args: &Vec<TypeId>) -> Fallible<FfiSlice> {
+        let [T] = try_!(parse_type_args(args, "Option"));
+
+        Ok(if T == Type::of::<AnyObject>() {
+            if let Some(value) = obj.downcast_ref::<Option<AnyObject>>()? {
+                FfiSlice::new(util::into_raw(value.clone()) as *mut c_void, 1)
+                // FfiSlice::new(value as *const AnyObject as *mut c_void, 1)
+            } else {
+                FfiSlice::new(null::<c_void>() as *mut c_void, 0)
+            }
+        } else if T == Type::of::<(f64, AnyObject)>() {
             if let Some((score, candidate)) = obj.downcast_ref::<Option<(f64, AnyObject)>>()? {
                 FfiSlice::new(
                     util::into_raw([
@@ -446,8 +454,10 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
                 )
             } else {
                 FfiSlice::new(null::<c_void>() as *mut c_void, 0)
-            },
-        )
+            }
+        } else {
+            return fallible!(FFI, "unsupported object type: Option<{}>", T.to_string());
+        })
     }
     fn tuple3_partition_distance_to_raw<T: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
         let tuple: &(IntDistance, T, T) = obj.downcast_ref()?;
@@ -636,8 +646,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         }
         TypeContents::GENERIC { name, args } => {
             if name == &"Option" {
-                if args.len() != 1 { return err!(FFI, "Options should have one argument, found {}", args.len()).into(); };
-                option_tuple2_to_raw(obj)
+                option_to_raw(obj, args)
             } else if name == &"Function" {
                 let [I, O] = try_!(parse_type_args(args, "Function"));
                 dispatch!(function_to_raw, [(I, @primitives), (O, @primitives)], (obj))

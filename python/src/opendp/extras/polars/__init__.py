@@ -18,7 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import os
 from typing import Any, Iterable, Literal, Sequence
-from opendp._lib import lib_path
+from opendp._lib import AnyObjectPtr, lib_path
 from opendp.mod import (
     Domain,
     Measurement,
@@ -33,6 +33,11 @@ from opendp.domains import (
     atom_domain,
     categorical_domain,
     datetime_domain,
+    _margin_get_max_influenced_partitions,
+    _margin_get_max_num_partitions,
+    _margin_get_max_partition_contributions,
+    _margin_get_max_partition_length,
+    _margin_get_public_info,
 )
 from opendp.measurements import make_private_lazyframe
 
@@ -46,7 +51,7 @@ class DPExpr(object):
     See the full example there for more information.
 
     In addition to the DP-specific methods here, many Polars ``Expr`` methods are also supported,
-    and are documented in the :ref:`API User Guide <expression-index>`.    
+    and are documented in the :ref:`API User Guide <expression-index>`.
 
     This class is typically not used directly by users:
     Instead its methods are registered under the ``dp`` namespace of Polars expressions.
@@ -590,8 +595,8 @@ class OnceFrame(object):
 
         Requires "honest-but-curious" because the privacy guarantees only apply if:
         1. The LazyFrame (compute plan) is only ever executed once.
-        2. The analyst does not observe ordering of rows in the output. 
-        
+        2. The analyst does not observe ordering of rows in the output.
+
         To ensure that row ordering is not observed:
         1. Do not extend the compute plan with order-sensitive computations.
         2. Shuffle the output once collected `(in Polars sample all, with shuffle enabled) <https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.sample.html>`_.
@@ -859,15 +864,15 @@ try:
             :param on: optional, the names of columns to join on. Useful if the key dataframe contains extra columns
             """
             # Motivation for adding this new API:
-            # 1. Writing a left join is more difficult in the context API: 
-            #   see the complexity of this implementation, where you have to go under the hood. 
+            # 1. Writing a left join is more difficult in the context API:
+            #   see the complexity of this implementation, where you have to go under the hood.
             #   This gives an easier shorthand to write a left join.
             # 2. Left joins are more likely to be supported by database backends.
             # 3. Easier to use; with the Polars API the key set needs to be lazy, user must specify they want a right join and the join keys.
 
             if isinstance(keys, _DataFrame):
                 keys = keys.lazy()
-            
+
             if on is None:
                 on = keys.collect_schema().names()
 
@@ -1077,3 +1082,13 @@ class Margin(object):
 
     max_influenced_partitions: int | None = None
     """The greatest number of partitions any one individual can contribute to."""
+
+    @staticmethod
+    def _from_anyobject(obj: AnyObjectPtr) -> Margin:
+        return Margin(
+            public_info=_margin_get_public_info(obj),
+            max_partition_length=_margin_get_max_partition_length(obj),
+            max_num_partitions=_margin_get_max_num_partitions(obj),
+            max_partition_contributions=_margin_get_max_partition_contributions(obj),
+            max_influenced_partitions=_margin_get_max_influenced_partitions(obj),
+        )

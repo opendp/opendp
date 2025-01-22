@@ -756,7 +756,8 @@ pub extern "C" fn opendp_core___function_free(this: *mut AnyFunction) -> FfiResu
     arguments(
         queryable(rust_type = b"null"),
         query(rust_type = "$queryable_query_type(queryable)")
-    )
+    ),
+    dependencies("query")
 )]
 /// Invoke the `queryable` with `query`. Returns a differentially private release.
 ///
