@@ -64,6 +64,10 @@ where
 /// # Citations
 /// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
 ///
+/// # Arguments
+/// * `input_domain` - Domain of input data
+/// * `input_metric` - Metric on input domain
+/// 
 /// # Generics
 /// * `TIA` - Atomic Input Type. Input data is expected to be of the form `Vec<TIA>`.
 /// * `TO` - Output Type. Must be numeric.
@@ -123,6 +127,8 @@ impl<const P: usize, Q: One> CountByCategoriesConstant<Q> for LpDistance<P, Q> {
 /// * [BV17 Differential Privacy on Finite Computers](https://arxiv.org/abs/1709.05396)
 ///
 /// # Arguments
+/// * `input_domain` - Domain of input data
+/// * `input_metric` - Metric on input domain
 /// * `categories` - The set of categories to compute counts for.
 /// * `null_category` - Include a count of the number of elements that were not in the category set at the end of the vector.
 ///
@@ -219,6 +225,10 @@ impl<const P: usize, Q: One> CountByConstant<Q> for LpDistance<P, Q> {
 /// # Citations
 /// * [BV17 Differential Privacy on Finite Computers](https://arxiv.org/abs/1709.05396)
 ///
+/// # Arguments
+/// * `input_domain` - Domain of input data
+/// * `input_metric` - Metric on input domain
+/// 
 /// # Generics
 /// * `MO` - Output Metric.
 /// * `TK` - Type of Key. Categorical/hashable input data type. Input data must be `Vec<TK>`.

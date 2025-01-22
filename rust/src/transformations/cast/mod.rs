@@ -17,6 +17,10 @@ use super::DatasetMetric;
 ///
 /// Can be chained with `make_impute_constant` or `make_drop_null` to handle nullity.
 ///
+/// # Arguments
+/// * `input_domain` - Domain of input data
+/// * `input_metric` - Metric on input domain
+/// 
 /// # Generics
 /// * `TIA` - Atomic Input Type to cast from
 /// * `TOA` - Atomic Output Type to cast into
@@ -73,6 +77,10 @@ where
 /// | string | `""`             |
 /// | bool   | `false`          |
 ///
+/// # Arguments
+/// * `input_domain` - Domain of input data
+/// * `input_metric` - Metric on input domain
+/// 
 /// # Generics
 /// * `TIA` - Atomic Input Type to cast from
 /// * `TOA` - Atomic Output Type to cast into
@@ -99,6 +107,10 @@ where
 /// | `TIA`  | `TIA::default()` |
 /// | ------ | ---------------- |
 /// | float  | NaN              |
+///
+/// # Arguments
+/// * `input_domain` - Domain of input data
+/// * `input_metric` - Metric on input domain
 ///
 /// # Generics
 /// * `TIA` - Atomic Input Type to cast from

@@ -361,6 +361,8 @@ where
 /// * [ALP21 Differentially Private Sparse Vectors with Low Error, Optimal Space, and Fast Access](https://arxiv.org/abs/2106.10068) Algorithm 4
 ///
 /// # Arguments
+/// * `input_domain` - Domain of input data
+/// * `input_metric` - Metric on input domain
 /// * `scale` - Privacy loss parameter. This is equal to epsilon/sensitivity.
 /// * `value_limit` - Upper bound on individual values (referred to as β). Entries above β are clamped.
 /// * `total_limit` - Either the true value or an upper bound estimate of the sum of all values in the input.

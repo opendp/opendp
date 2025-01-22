@@ -141,6 +141,10 @@ where
 /// then the resulting Transformation won't be chainable with any valid Transformation,
 /// so it cannot be used to introduce an invalid metric space into a chain of valid Transformations.
 ///
+/// # Arguments
+/// * `domain` - Domain of input data
+/// * `metric` - Metric on input domain
+/// 
 /// # Generics
 /// * `D` - Domain of the identity function. Must be `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 /// * `M` - Metric. Must be a dataset metric if D is a VectorDomain or a sensitivity metric if D is an AtomDomain
@@ -184,6 +188,8 @@ where
 /// Make a Transformation that checks if each element is equal to `value`.
 ///
 /// # Arguments
+/// * `input_domain` - Domain of input data
+/// * `input_metric` - Metric on input domain
 /// * `value` - value to check against
 ///
 /// # Generics
@@ -210,6 +216,10 @@ where
 #[bootstrap(features("contrib"), generics(DIA(suppress), M(suppress)))]
 /// Make a Transformation that checks if each element in a vector is null.
 ///
+/// # Arguments
+/// * `input_domain` - Domain of input data
+/// * `input_metric` - Metric on input domain
+/// 
 /// # Generics
 /// * `DIA` - Atomic Input Domain. Can be any domain for which the carrier type has a notion of nullity.
 pub fn make_is_null<M, DIA>(
