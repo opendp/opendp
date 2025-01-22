@@ -16,9 +16,10 @@ The methods of this module will then be accessible at ``dp.polars``.
 
 from __future__ import annotations
 from dataclasses import dataclass
+import dataclasses
 import os
 from typing import Any, Literal, Sequence
-from opendp._lib import lib_path, import_optional_dependency
+from opendp._lib import AnyObjectPtr, lib_path, import_optional_dependency
 from opendp.mod import (
     Domain,
     Measurement,
@@ -48,7 +49,7 @@ class DPExpr(object):
     See the full example there for more information.
 
     In addition to the DP-specific methods here, many Polars ``Expr`` methods are also supported,
-    and are documented in the :ref:`API User Guide <expression-index>`.    
+    and are documented in the :ref:`API User Guide <expression-index>`.
 
     This class is typically not used directly by users:
     Instead its methods are registered under the ``dp`` namespace of Polars expressions.
@@ -523,7 +524,7 @@ class DPExpr(object):
         return self.expr.dp.quantile(0.5, candidates, scale)
 
 
-pl = import_optional_dependency('polars', raise_error=False)
+pl = import_optional_dependency("polars", raise_error=False)
 if pl is not None:
     pl.api.register_expr_namespace("dp")(DPExpr)
 
@@ -570,6 +571,7 @@ class OnceFrame(object):
     Differentially private guarantees on a given LazyFrame require the LazyFrame to be evaluated at most once.
     The purpose of this class is to protect against repeatedly evaluating the LazyFrame.
     """
+
     def __init__(self, queryable):
         self.queryable = queryable
 
@@ -589,10 +591,10 @@ class OnceFrame(object):
         Requires "honest-but-curious" because the privacy guarantees only apply if:
 
         1. The LazyFrame (compute plan) is only ever executed once.
-        2. The analyst does not observe ordering of rows in the output. 
-        
+        2. The analyst does not observe ordering of rows in the output.
+
         To ensure that row ordering is not observed:
-        
+
         1. Do not extend the compute plan with order-sensitive computations.
         2. Shuffle the output once collected `(in Polars sample all, with shuffle enabled) <https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.sample.html>`_.
         """
@@ -659,7 +661,7 @@ _LAZY_EXECUTION_METHODS = {
 }
 
 
-class LazyFrameQuery():
+class LazyFrameQuery:
     """
     A ``LazyFrameQuery`` may be returned by :py:func:`opendp.context.Context.query`.
     It mimics a `Polars LazyFrame <https://docs.pola.rs/api/python/stable/reference/lazyframe/index.html>`_,
@@ -800,13 +802,13 @@ class LazyFrameQuery():
     def join(  # type: ignore[empty-body]
         self,
         other,
-        on = None,
-        how = "inner",
+        on=None,
+        how="inner",
         *,
-        left_on = None,
-        right_on = None,
+        left_on=None,
+        right_on=None,
         suffix: str = "_right",
-        validate = "m:m",
+        validate="m:m",
         join_nulls: bool = False,
         coalesce: bool | None = None,
         allow_parallel: bool = True,
@@ -829,8 +831,8 @@ class LazyFrameQuery():
         :param on: optional, the names of columns to join on. Useful if the key dataframe contains extra columns
         """
         # Motivation for adding this new API:
-        # 1. Writing a left join is more difficult in the context API: 
-        #   see the complexity of this implementation, where you have to go under the hood. 
+        # 1. Writing a left join is more difficult in the context API:
+        #   see the complexity of this implementation, where you have to go under the hood.
         #   This gives an easier shorthand to write a left join.
         # 2. Left joins are more likely to be supported by database backends.
         # 3. Easier to use; with the Polars API the key set needs to be lazy, user must specify they want a right join and the join keys.
@@ -838,7 +840,7 @@ class LazyFrameQuery():
         if pl is not None:
             if isinstance(keys, pl.dataframe.frame.DataFrame):
                 keys = keys.lazy()
-        
+
         if on is None:
             on = keys.collect_schema().names()
 
@@ -957,7 +959,8 @@ class LazyFrameQuery():
 
         return summarize_polars_measurement(self.resolve(), alpha)
 
-class LazyGroupByQuery():
+
+class LazyGroupByQuery:
     """
     A ``LazyGroupByQuery`` is returned by :py:func:`opendp.extras.polars.LazyFrameQuery.group_by`.
     It mimics a `Polars LazyGroupBy <https://docs.pola.rs/api/python/stable/reference/lazyframe/group_by.html>`_,
@@ -983,7 +986,7 @@ class LazyGroupByQuery():
 
 
 @dataclass
-class Margin(object):
+class Margin:
     """
     The ``Margin`` class is used to describe what information is known publicly about a grouped dataset:
     like the values you might expect to find in the margins of a table.
@@ -1025,3 +1028,36 @@ class Margin(object):
 
     max_influenced_partitions: int | None = None
     """The greatest number of partitions any one individual can contribute to."""
+
+    @staticmethod
+    def _from_anyobject(obj: AnyObjectPtr) -> Margin:   
+        return Margin(
+            by=_margin_get_by(obj),
+            public_info=_margin_get_public_info(obj),
+            max_partition_length=_margin_get_max_partition_length(obj),
+            max_num_partitions=_margin_get_max_num_partitions(obj),
+            max_partition_contributions=_margin_get_max_partition_contributions(obj),
+            max_influenced_partitions=_margin_get_max_influenced_partitions(obj),
+        )
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Margin):
+            return False
+
+        # special logic for by, which is considered a set (order and dupes don't matter)
+        # and may contain expressions that do not have a boolean equality operator
+        def serialize(by):
+            if isinstance(by, str):
+                by = pl.col(by)
+            return by.meta.serialize()
+
+        self_by = {serialize(col) for col in self.by or []}
+        other_by = {serialize(col) for col in other.by or []}
+        if self_by != other_by:
+            return False
+
+        return all(
+            getattr(self, attr.name) == getattr(other, attr.name)
+            for attr in dataclasses.fields(self)
+            if attr.name != "by"
+        )

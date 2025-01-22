@@ -11,7 +11,7 @@ pub fn get_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
         SeriesDomain::new("cycle_(..100i32)", AtomDomain::<i32>::default()),
     ])?
     .with_margin(
-        Margin::default()
+        Margin::select()
             .with_public_lengths()
             .with_max_partition_length(1000),
     )?

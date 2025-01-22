@@ -115,8 +115,6 @@ pub struct BootType {
     pub hint: Option<String>,
     pub default: Option<Value>,
     #[darling(default)]
-    pub generics: DefaultGenerics,
-    #[darling(default)]
     pub do_not_convert: bool,
     pub example: Option<TypeRecipe>,
     #[darling(default)]

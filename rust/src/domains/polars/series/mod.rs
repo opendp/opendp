@@ -21,7 +21,7 @@ mod ffi;
 mod test;
 
 /// # Proof Definition
-/// `SeriesDomain` describes a set of polars `Series`.
+/// `SeriesDomain` describes the domain of all polars `Series`.
 ///
 /// # Example
 /// ```

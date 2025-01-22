@@ -276,9 +276,9 @@ get_first <- function(x) {
   }
 }
 
-parse_or_infer <- function(type_name, public_example) {
+parse_or_infer <- function(type_name, public_example, generics = list()) {
   if (!is.null(type_name)) {
-    return(rt_parse(type_name))
+    return(rt_parse(type_name, generics))
   }
   if (!is.null(public_example)) {
     return(rt_infer(public_example))

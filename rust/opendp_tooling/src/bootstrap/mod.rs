@@ -133,7 +133,6 @@ fn reconcile_arguments(
                         }
                     }
                 }),
-                generics: Vec::new(),
                 description: doc_comments.remove(&name),
                 hint: boot_type.hint,
                 default: boot_type.default,
@@ -166,7 +165,6 @@ fn reconcile_generics(
                 description: doc_comments.remove(&name),
                 hint: boot_type.hint,
                 default: boot_type.default,
-                generics: boot_type.generics.0,
                 is_type: true,
                 example: boot_type.example,
                 ..Default::default()
@@ -190,6 +188,7 @@ fn reconcile_return(
         rust_type: boot_type.rust_type,
         description: doc_comment,
         do_not_convert: boot_type.do_not_convert,
+        hint: boot_type.hint,
         ..Default::default()
     })
 }

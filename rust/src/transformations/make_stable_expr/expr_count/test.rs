@@ -129,7 +129,7 @@ fn test_expr_count_public_info() -> Fallible<()> {
     // this transformation should refuse to build in a row-by-row context like `with_columns`
     let series_domain = SeriesDomain::new("data", AtomDomain::<i32>::default());
     let lf_domain = LazyFrameDomain::new(vec![series_domain])?
-        .with_margin(Margin::default().with_public_lengths())?;
+        .with_margin(Margin::select().with_public_lengths())?;
 
     let t_count: Transformation<_, _, _, L2Distance<f64>> = col("data").count().make_stable(
         lf_domain.clone().select(),

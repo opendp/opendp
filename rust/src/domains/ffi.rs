@@ -51,6 +51,24 @@ pub extern "C" fn opendp_domains__member(
 }
 
 #[bootstrap(
+    name = "_domain_equal",
+    returns(c_type = "FfiResult<bool *>", hint = "bool")
+)]
+/// Check whether two domains are equal.
+///
+/// # Arguments
+/// * `left` - Domain to compare.
+/// * `right` - Domain to compare.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_domains___domain_equal(
+    left: *mut AnyDomain,
+    right: *const AnyDomain,
+) -> FfiResult<*mut c_bool> {
+    let status = try_as_ref!(left) == try_as_ref!(right);
+    FfiResult::Ok(util::into_raw(util::from_bool(status)))
+}
+
+#[bootstrap(
     name = "domain_debug",
     arguments(this(rust_type = b"null")),
     returns(c_type = "FfiResult<char *>")
@@ -109,7 +127,7 @@ pub extern "C" fn opendp_domains__domain_carrier_type(
         nullable(rust_type = "bool", c_type = "bool", default = false)
     ),
     generics(T(example = "$get_first(bounds)")),
-    returns(c_type = "FfiResult<AnyDomain *>")
+    returns(c_type = "FfiResult<AnyDomain *>", hint = "AtomDomain")
 )]
 /// Construct an instance of `AtomDomain`.
 ///
@@ -220,9 +238,73 @@ pub extern "C" fn opendp_domains__atom_domain(
 }
 
 #[bootstrap(
+    arguments(domain(rust_type = b"null")),
+    generics(T(suppress)),
+    returns(c_type = "FfiResult<AnyObject *>")
+)]
+/// Retrieve bounds from an AtomDomain<T>
+///
+/// # Generics
+/// * `T` - The type of the atom.
+fn _atom_domain_get_bounds_closed<T: CheckAtom>(
+    domain: &AtomDomain<T>,
+) -> Fallible<Option<(T, T)>> {
+    domain.bounds.as_ref().map(|b| b.get_closed()).transpose()
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_domains___atom_domain_get_bounds_closed(
+    domain: *const AnyDomain,
+) -> FfiResult<*mut AnyObject> {
+    fn monomorphize<T: 'static + CheckAtom>(domain: &AnyDomain) -> Fallible<AnyObject> {
+        let domain = domain.downcast_ref::<AtomDomain<T>>()?;
+        _atom_domain_get_bounds_closed(domain).map(|v| AnyObject::new(v.map(AnyObject::new)))
+    }
+    let domain = try_as_ref!(domain);
+    let T = try_!(domain.type_.get_atom());
+    dispatch!(
+        monomorphize,
+        [(T, @numbers)],
+        (domain)
+    )
+    .into()
+}
+
+#[bootstrap(
+    arguments(domain(rust_type = b"null")),
+    generics(T(suppress)),
+    returns(c_type = "FfiResult<AnyObject *>")
+)]
+/// Retrieve nullability of an AtomDomain<T>
+///
+/// # Generics
+/// * `T` - The type of the atom.
+fn _atom_domain_get_nullable<T: CheckAtom>(domain: &AtomDomain<T>) -> Fallible<bool> {
+    Ok(domain.nullable())
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_domains___atom_domain_get_nullable(
+    domain: *const AnyDomain,
+) -> FfiResult<*mut AnyObject> {
+    fn monomorphize<T: 'static + CheckAtom>(domain: &AnyDomain) -> Fallible<AnyObject> {
+        let domain = domain.downcast_ref::<AtomDomain<T>>()?;
+        _atom_domain_get_nullable(domain).map(AnyObject::new)
+    }
+    let domain = try_as_ref!(domain);
+    let T = try_!(domain.type_.get_atom());
+    dispatch!(
+        monomorphize,
+        [(T, @floats)],
+        (domain)
+    )
+    .into()
+}
+
+#[bootstrap(
     arguments(element_domain(c_type = "AnyDomain *")),
     generics(D(example = "element_domain")),
-    returns(c_type = "FfiResult<AnyDomain *>")
+    returns(c_type = "FfiResult<AnyDomain *>", hint = "OptionDomain")
 )]
 /// Construct an instance of `OptionDomain`.
 ///
@@ -291,13 +373,68 @@ pub extern "C" fn opendp_domains__option_domain(
     .into()
 }
 
+#[bootstrap(name = "_option_domain_get_element_domain")]
+/// Retrieve the element domain of the option domain.
+///
+/// # Arguments
+/// * `option_domain` - The option domain from which to retrieve the element domain
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_domains___option_domain_get_element_domain(
+    option_domain: *const AnyDomain,
+) -> FfiResult<*mut AnyDomain> {
+    fn monomorphize_atom<T: 'static + CheckAtom>(option_domain: &AnyDomain) -> Fallible<AnyDomain> {
+        let option_domain = option_domain
+            .downcast_ref::<OptionDomain<AtomDomain<T>>>()?
+            .clone();
+        Ok(AnyDomain::new(option_domain.element_domain.clone()))
+    }
+
+    let option_domain = try_as_ref!(option_domain);
+    let D = option_domain.type_.clone();
+    let T = try_!(D.get_atom());
+
+    #[cfg(feature = "polars")]
+    if T == Type::of::<CategoricalDomain>() {
+        let option_domain =
+            try_!(option_domain.downcast_ref::<OptionDomain<CategoricalDomain>>()).clone();
+        return Ok(AnyDomain::new(option_domain.element_domain)).into();
+    }
+    #[cfg(feature = "polars")]
+    if T == Type::of::<DatetimeDomain>() {
+        let option_domain =
+            try_!(option_domain.downcast_ref::<OptionDomain<DatetimeDomain>>()).clone();
+        return Ok(AnyDomain::new(option_domain.element_domain)).into();
+    }
+    #[cfg(feature = "polars")]
+    if T == Type::of::<chrono::NaiveDate>() {
+        return monomorphize_atom::<chrono::NaiveDate>(option_domain).into();
+    }
+    #[cfg(feature = "polars")]
+    if T == Type::of::<chrono::NaiveTime>() {
+        return monomorphize_atom::<chrono::NaiveTime>(option_domain).into();
+    }
+
+    dispatch!(
+        monomorphize_atom,
+        [(
+            T,
+            [
+                u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize, f32, f64, bool,
+                String
+            ]
+        )],
+        (option_domain)
+    )
+    .into()
+}
+
 #[bootstrap(
     name = "vector_domain",
     arguments(
         atom_domain(c_type = "AnyDomain *", rust_type = b"null"),
         size(rust_type = "Option<i32>", default = b"null")
     ),
-    returns(c_type = "FfiResult<AnyDomain *>")
+    returns(c_type = "FfiResult<AnyDomain *>", hint = "VectorDomain")
 )]
 /// Construct an instance of `VectorDomain`.
 ///
@@ -338,6 +475,86 @@ pub extern "C" fn opendp_domains__vector_domain(
         TypeContents::PLAIN("ExtrinsicDomain") => monomorphize_user_domain(atom_domain, size),
         _ => fallible!(FFI, "Inner domain of VectorDomain must be AtomDomain or ExtrinsicDomain (created through foreign language bindings)")
     }.into()
+}
+
+#[bootstrap(name = "_vector_domain_get_element_domain")]
+/// Retrieve the element domain of the vector domain.
+///
+/// # Arguments
+/// * `vector_domain` - The vector domain from which to retrieve the element domain
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_domains___vector_domain_get_element_domain(
+    vector_domain: *const AnyDomain,
+) -> FfiResult<*mut AnyDomain> {
+    let vector_domain = try_as_ref!(vector_domain);
+    let D = vector_domain.type_.clone();
+    let T = try_!(D.get_atom());
+
+    if T == Type::of::<ExtrinsicDomain>() {
+        let vector_domain =
+            try_!(vector_domain.downcast_ref::<VectorDomain<ExtrinsicDomain>>()).clone();
+        return Ok(AnyDomain::new(vector_domain.element_domain)).into();
+    }
+
+    fn monomorphize_atom<T: 'static + CheckAtom>(vector_domain: &AnyDomain) -> Fallible<AnyDomain> {
+        let option_domain = vector_domain
+            .downcast_ref::<VectorDomain<AtomDomain<T>>>()?
+            .clone();
+        Ok(AnyDomain::new(option_domain.element_domain.clone()))
+    }
+
+    dispatch!(
+        monomorphize_atom,
+        [(
+            T,
+            [
+                u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize, f32, f64, bool,
+                String
+            ]
+        )],
+        (vector_domain)
+    )
+    .into()
+}
+
+#[bootstrap(name = "_vector_domain_get_size")]
+/// Retrieve the size of vectors in the vector domain.
+///
+/// # Arguments
+/// * `vector_domain` - The vector domain from which to retrieve the size
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_domains___vector_domain_get_size(
+    vector_domain: *const AnyDomain,
+) -> FfiResult<*mut AnyObject> {
+    let vector_domain = try_as_ref!(vector_domain);
+    let D = vector_domain.type_.clone();
+    let T = try_!(D.get_atom());
+
+    if T == Type::of::<ExtrinsicDomain>() {
+        let vector_domain =
+            try_!(vector_domain.downcast_ref::<VectorDomain<ExtrinsicDomain>>()).clone();
+        return Ok(AnyObject::new(vector_domain.size.map(AnyObject::new))).into();
+    }
+
+    fn monomorphize_atom<T: 'static + CheckAtom>(vector_domain: &AnyDomain) -> Fallible<AnyObject> {
+        let option_domain = vector_domain
+            .downcast_ref::<VectorDomain<AtomDomain<T>>>()?
+            .clone();
+        Ok(AnyObject::new(option_domain.size.map(AnyObject::new)))
+    }
+
+    dispatch!(
+        monomorphize_atom,
+        [(
+            T,
+            [
+                u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize, f32, f64, bool,
+                String
+            ]
+        )],
+        (vector_domain)
+    )
+    .into()
 }
 
 #[bootstrap(

@@ -13,7 +13,7 @@ pub fn get_quantile_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
         SeriesDomain::new("cycle_(..10i32)", AtomDomain::<f64>::default()),
     ])?
     .with_margin(
-        Margin::default()
+        Margin::select()
             .with_max_partition_length(1000)
             .with_public_keys(),
     )?

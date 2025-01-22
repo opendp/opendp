@@ -2,8 +2,21 @@ from typing import Sequence, Union, cast, MutableMapping
 from inspect import signature
 
 from opendp._lib import *
-from opendp.mod import Domain, UnknownTypeException, Transformation, Measurement, PrivacyProfile, Queryable, Function
-from opendp.typing import RuntimeType, RuntimeTypeDescriptor, Vec
+from opendp.mod import (
+    Domain,
+    LazyFrameDomain,
+    SeriesDomain,
+    UnknownTypeException,
+    Transformation,
+    Measurement,
+    PrivacyProfile,
+    Queryable,
+    Function,
+    AtomDomain,
+    OptionDomain,
+    VectorDomain,
+)
+from opendp.typing import RuntimeType, RuntimeTypeDescriptor
 
 ATOM_MAP = {
     'f32': ctypes.c_float,
@@ -153,6 +166,10 @@ def c_to_py(value: Any) -> Any:
         if "PrivacyProfile" == obj_type:
             return PrivacyProfile(value)
         
+        if "Margin" == obj_type:
+            from opendp.extras.polars import Margin
+            return Margin._from_anyobject(value)
+        
         if "Queryable" in obj_type:
             from opendp.core import queryable_query_type
             query_type = RuntimeType.parse(queryable_query_type(value))
@@ -184,6 +201,23 @@ def c_to_py(value: Any) -> Any:
 
     if isinstance(value, ctypes.POINTER(ExtrinsicObject)):
         return value.contents.ptr
+
+    if isinstance(value, Domain):
+        from opendp.domains import domain_type
+        rt_type = RuntimeType.parse(domain_type(value))
+
+        if isinstance(rt_type, RuntimeType):
+            if rt_type.origin == "OptionDomain":
+                value = ctypes.cast(value, OptionDomain)
+            elif rt_type.origin == "AtomDomain":
+                value = ctypes.cast(value, AtomDomain)
+            elif rt_type.origin == "VectorDomain":
+                value = ctypes.cast(value, VectorDomain)
+        else:
+            if rt_type == "SeriesDomain":
+                value = ctypes.cast(value, SeriesDomain)
+            elif rt_type == "LazyFrameDomain":
+                value = ctypes.cast(value, LazyFrameDomain)
 
     if isinstance(value, ctypes.c_void_p):
         # returned void pointers are interpreted as None
@@ -229,6 +263,9 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
         
         if type_name == "ExprPlan":
             return _slice_to_exprplan(raw)
+        
+        if type_name == "AnyObject":
+            return _slice_to_anyobject(raw)
 
     if isinstance(type_name, RuntimeType):
         if type_name.origin == "Vec":
@@ -396,6 +433,13 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
         ffi_slice.depends_on(c_repr)
         return ffi_slice
 
+    if inner_type_name == "SeriesDomain":
+        # define the ctype of an array of domains
+        domain_array_type = (Domain * len(val)) # type: ignore[operator]
+        # create an instance of a ctype array of domains
+        array = domain_array_type(*val) # type: ignore[operator]
+        return _wrap_in_slice(array, len(val))
+    
     val = [_check_and_cast_scalar(inner_type_name, v) for v in val]
 
     if inner_type_name == "String":
@@ -404,13 +448,6 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
         array = (ctypes.c_char_p * len(val))(*map(str_to_slice, val))
         return _wrap_in_slice(array, len(val))
     
-    if inner_type_name == "SeriesDomain":
-        # define the ctype of an array of domains
-        domain_array_type = (Domain * len(val)) # type: ignore[operator]
-        # create an instance of a ctype array of domains
-        array = domain_array_type(*val) # type: ignore[operator]
-        return _wrap_in_slice(array, len(val))
-
     if inner_type_name not in ATOM_MAP:
         raise TypeError(f"Members must be one of {tuple(ATOM_MAP.keys())}. Found {inner_type_name}.")  # pragma: no cover
 
@@ -424,7 +461,7 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> Sequence[Any]:
     
     inner_type_name = type_name.args[0]
 
-    if inner_type_name == 'AnyObject':
+    if inner_type_name in {'AnyObject', 'Expr'}:
         from opendp._data import ffislice_of_anyobjectptrs
         raw = ffislice_of_anyobjectptrs(raw)
         array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyObjectPtr))[0:raw.contents.len]
@@ -443,7 +480,7 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> Sequence[Any]:
         array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_char_p))[0:raw.contents.len]
         return list(map(lambda v: v.decode(), array))
 
-    assert isinstance(inner_type_name, str)
+    assert isinstance(inner_type_name, str), f"inner type must be string, found {inner_type_name} of type {type(inner_type_name)}"
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))[0:raw.contents.len]
 
 
@@ -469,7 +506,7 @@ def _tuple_to_slice(val: tuple[Any, ...], type_name: Union[RuntimeType, str]) ->
 
     for t in inner_type_names:
         if t not in ATOM_MAP:
-            raise TypeError(f"Tuple members must be one of {ATOM_MAP.keys()}. Got {t}")  # pragma: no cover
+            raise TypeError(f"Tuple members must be one of {set(ATOM_MAP.keys())}. Got {t}")  # pragma: no cover
 
     # check that actual type can be represented by the inner_type_name
     val = tuple(
@@ -527,8 +564,8 @@ def _hashmap_to_slice(val: MutableMapping, type_name: RuntimeType) -> FfiSlicePt
         for k, v in val.items()
     }
     
-    keys: AnyObjectPtr = py_to_c(list(val.keys()), type_name=Vec[key_type], c_type=AnyObjectPtr)
-    vals: AnyObjectPtr = py_to_c(list(val.values()), type_name=Vec[val_type], c_type=AnyObjectPtr)
+    keys: AnyObjectPtr = py_to_c(list(val.keys()), type_name=f"Vec<{key_type}>", c_type=AnyObjectPtr)
+    vals: AnyObjectPtr = py_to_c(list(val.values()), type_name=f"Vec<{val_type}>", c_type=AnyObjectPtr)
     ffislice = _wrap_in_slice(ctypes.pointer((AnyObjectPtr * 2)(keys, vals)), 2) # type: ignore[operator]
 
     # The __del__ destructor on `keys` and `vals` is called and memory freed when their refcounts go to zero.
@@ -587,6 +624,9 @@ def _slice_to_lazyframe(raw: FfiSlicePtr):
 
 def _expr_to_slice(val) -> FfiSlicePtr:
     pl = import_optional_dependency('polars')
+    if isinstance(val, str):
+        val = pl.col(val)
+        
     if not isinstance(val, pl.Expr):
         raise ValueError("expected Polars Expr")
     
@@ -678,6 +718,19 @@ def _slice_to_series(raw: FfiSlicePtr):
     if name_bytes is not None:
         series = series.rename(name_bytes.decode())
     return series
+
+
+def _slice_to_anyobject(raw: FfiSlicePtr):
+    """Unpack an AnyObject from a slice.
+    
+    Used to return an Option<AnyObject> from Rust to Python.
+    """
+
+    obj = ctypes.cast(raw.contents.ptr, AnyObjectPtr)
+    ret = c_to_py(obj)
+    obj.__class__ = ctypes.POINTER(AnyObject) # type: ignore[assignment]
+    
+    return ret
 
 
 def _wrap_in_slice(ptr, len_: int) -> FfiSlicePtr:

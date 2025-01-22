@@ -201,6 +201,8 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
                 i if i == "LazyFrame" => "AnyObject *".to_string(),
                 i if i == "Expr" => "AnyObject *".to_string(),
                 i if i == "LazyFrameDomain" => "AnyDomain *".to_string(),
+                i if i == "AtomDomain" => "AnyDomain *".to_string(),
+                i if i == "SeriesDomain" => "AnyDomain *".to_string(),
                 i if i == "FfiSlice" => "FfiSlice *".to_string(),
                 i if i == "Transformation" => "AnyTransformation *".to_string(),
                 i if i == "ExtrinsicObject" => "ExtrinsicObject *".to_string(),

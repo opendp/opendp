@@ -8,7 +8,7 @@ instances of :py:class:`opendp.mod.Domain` are either inputs or outputs for func
 '''
 from __future__ import annotations
 import ctypes
-from typing import Any, Literal, Type, TypeVar, Union, Callable, Optional, overload, TYPE_CHECKING, cast
+from typing import Any, Literal, Sequence, Type, TypeVar, Union, Callable, Optional, overload, TYPE_CHECKING, cast
 import importlib
 import json
 
@@ -26,6 +26,11 @@ __all__ = [
     'Queryable',
     'Function',
     'Domain',
+    'AtomDomain',
+    'OptionDomain',
+    'VectorDomain',
+    'SeriesDomain',
+    'LazyFrameDomain',
     'Metric',
     'Measure',
     'PrivacyProfile',
@@ -598,8 +603,12 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
             pass
     
     def __eq__(self, other) -> bool:
-        # TODO: consider adding ffi equality
-        return type(self) is type(other) and str(self) == str(other)
+        from opendp.domains import _domain_equal
+
+        if not issubclass(type(other), Domain):
+            return False
+        
+        return _domain_equal(self, other)
     
     def __hash__(self) -> int:
         return hash(str(self))
@@ -607,6 +616,128 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     def __iter__(self):
         raise ValueError("Domain does not support iteration")
 
+
+class AtomDomain(Domain):
+    '''`AtomDomain` is the domain of all values of an atomic type `T`.
+
+    If bounds are set, then the domain is restricted to the bounds.
+    If nullable is set, then null value(s) are included in the domain.
+    '''
+
+    _type_ = AnyDomain
+    
+    @property
+    def bounds(self) -> tuple[float, float] | None:
+        '''Bounds of the domain, if they exist'''
+        from opendp.domains import _atom_domain_get_bounds_closed
+        return _atom_domain_get_bounds_closed(self)
+    
+    @property
+    def nullable(self) -> bool:
+        '''Whether the domain includes null values'''
+        from opendp.domains import _atom_domain_get_nullable
+        return _atom_domain_get_nullable(self)
+    
+    def __del__(self):
+        # this is to avoid a double-free, as the Domain.__del__ will, suprisingly, still be called
+        pass
+
+class OptionDomain(Domain):
+    '''A domain that represents nullity via the Option type.
+
+    The element domain is the domain of non-null values.
+    '''
+
+    _type_ = AnyDomain
+
+    @property
+    def element_domain(self) -> Domain:
+        '''Domain of non-null values'''
+        from opendp.domains import _option_domain_get_element_domain
+        return _option_domain_get_element_domain(self)
+    
+    def __del__(self):
+        # this is to avoid a double-free, as the Domain.__del__ will, suprisingly, still be called
+        pass
+
+
+class VectorDomain(Domain):
+    '''`VectorDomain` describes the domain of all vectors whose elements are memebers of a given domain'''
+    _type_ = AnyDomain
+
+    @property
+    def element_domain(self) -> Domain:
+        '''Domain of elements in the vector'''
+        from opendp.domains import _vector_domain_get_element_domain
+        return _vector_domain_get_element_domain(self)
+    
+    @property
+    def size(self) -> Optional[int]:
+        '''Size of vectors in the domain, if it is fixed'''
+        from opendp.domains import _vector_domain_get_size
+        return _vector_domain_get_size(self)
+    
+    def __del__(self):
+        # this is to avoid a double-free, as the Domain.__del__ will, suprisingly, still be called
+        pass
+
+
+class SeriesDomain(Domain):
+    '''`SeriesDomain` describes the domain of all polars Series'''
+    _type_ = AnyDomain
+
+    @property
+    def name(self) -> str:
+        '''Name of series in the domain'''
+        from opendp.domains import _series_domain_get_name
+        return _series_domain_get_name(self)
+    
+    @property
+    def element_domain(self) -> Domain:
+        '''Domain of non-null elements in the series'''
+        from opendp.domains import _series_domain_get_element_domain
+        return _series_domain_get_element_domain(self)
+    
+    @property
+    def nullable(self) -> bool:
+        '''Whether series in the domain may include null values'''
+        from opendp.domains import _series_domain_get_nullable
+        return _series_domain_get_nullable(self)
+    
+    def __del__(self):
+        # this is to avoid a double-free, as the Domain.__del__ will, suprisingly, still be called
+        pass
+    
+class LazyFrameDomain(Domain):
+    '''`LazyFrameDomain` describes the domain of all polars LazyFrames'''
+    _type_ = AnyDomain
+
+    @property
+    def columns(self) -> list[str]:
+        '''List of column names in the frame'''
+        from opendp.domains import _lazyframe_domain_get_columns
+        return _lazyframe_domain_get_columns(self)
+
+    def series_domain(self, name: str) -> SeriesDomain:
+        '''Retrieve the series domain with the given name'''
+        from opendp.domains import _lazyframe_domain_get_series_domain
+        return _lazyframe_domain_get_series_domain(self, name)
+    
+    def get_margin(self, by: Sequence[Any]):
+        '''Get the margin descriptor of the frame when grouped by the given columns'''
+        from opendp.domains import _lazyframe_domain_get_margin
+        pl = import_optional_dependency("polars")
+
+        if not isinstance(by, Sequence) or isinstance(by, str):
+            raise ValueError(f"by ({by}) must be a collection")
+
+        by_exprs = [col if isinstance(col, pl.Expr) else pl.col(col) for col in by]
+
+        return _lazyframe_domain_get_margin(self, by_exprs)
+
+    def __del__(self):
+        # this is to avoid a double-free, as the Domain.__del__ will, suprisingly, still be called
+        pass
 
 class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
     '''
@@ -649,8 +780,12 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
             pass
     
     def __eq__(self, other) -> bool:
-        # TODO: consider adding ffi equality
-        return type(self) is type(other) and str(self) == str(other)
+        from opendp.metrics import _metric_equal
+
+        if not issubclass(type(other), Metric):
+            return False
+        
+        return _metric_equal(self, other)
     
     def __hash__(self) -> int:
         return hash(str(self))
@@ -707,7 +842,12 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
             pass
 
     def __eq__(self, other):
-        return type(self) is type(other) and str(self) == str(other)
+        from opendp.measures import _measure_equal
+
+        if not issubclass(type(other), Measure):
+            return False
+        
+        return _measure_equal(self, other)
     
     def __hash__(self) -> int:
         return hash(str(self))
@@ -761,7 +901,7 @@ class _PartialConstructor(object):
         return _PartialConstructor(lambda input_domain, input_metric: self(input_domain, input_metric) >> other) # pragma: no cover
 
     def __rrshift__(self, other):
-        if isinstance(other, tuple) and list(map(type, other)) == [Domain, Metric]:
+        if isinstance(other, tuple) and isinstance(other[0], Domain) and isinstance(other[1], Metric):
             return self(other[0], other[1])
         raise TypeError(f"Cannot chain {type(self)} with {type(other)}")  # pragma: no cover
 

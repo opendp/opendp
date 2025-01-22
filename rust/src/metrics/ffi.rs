@@ -29,6 +29,24 @@ pub extern "C" fn opendp_metrics___metric_free(this: *mut AnyMetric) -> FfiResul
 }
 
 #[bootstrap(
+    name = "_metric_equal",
+    returns(c_type = "FfiResult<bool *>", hint = "bool")
+)]
+/// Check whether two metrics are equal.
+///
+/// # Arguments
+/// * `left` - Metric to compare.
+/// * `right` - Metric to compare.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_metrics___metric_equal(
+    left: *mut AnyMetric,
+    right: *const AnyMetric,
+) -> FfiResult<*mut c_bool> {
+    let status = try_as_ref!(left) == try_as_ref!(right);
+    FfiResult::Ok(util::into_raw(util::from_bool(status)))
+}
+
+#[bootstrap(
     name = "metric_debug",
     arguments(this(rust_type = b"null")),
     returns(c_type = "FfiResult<char *>")
