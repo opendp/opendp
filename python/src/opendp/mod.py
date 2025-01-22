@@ -44,9 +44,9 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         output_measure = MaxDivergence)
 
     >>> # invoke the measurement (invoke and __call__ are equivalent)
-    >>> print('explicit: ', laplace.invoke(100))  # -> 101   # doctest: +ELLIPSIS
+    >>> print('explicit: ', laplace.invoke(100))  # -> 101  
     explicit: ...
-    >>> print('concise: ', laplace(100))  # -> 99            # doctest: +ELLIPSIS
+    >>> print('concise: ', laplace(100))  # -> 99           
     concise: ...
     >>> # check the measurement's relation at
     >>> #     (1, 0.5): (AbsoluteDistance<u32>, MaxDivergence)
@@ -60,7 +60,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     ... )
 
     >>> # the resulting measurement has the same features
-    >>> print('dp count: ', chained([1, 2, 3]))  # -> 4     # doctest: +ELLIPSIS
+    >>> print('dp count: ', chained([1, 2, 3]))  # -> 4    
     dp count: ...
 
     >>> # check the chained measurement's relation at
