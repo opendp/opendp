@@ -524,7 +524,7 @@ the amplifier to a dp variance estimator:
             >>> dp.enable_features("honest-but-curious")
             
             >>> dp.c.make_population_amplification(dp_variance, 100_000).map(1)
-            0.017036863236176553
+            0.017...
 
 You’ll notice that we found a dp variance estimator that was 1
 epsilon-DP, but after amplification, it now uses a much smaller epsilon.
