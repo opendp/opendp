@@ -560,7 +560,7 @@ def get_value_type(value: Union[Metric, Measure]):
 
     :param value: Metric or measure
     '''
-    return RuntimeType.parse(type_name).args[1] # type: ignore[union-attr]
+    return RuntimeType.parse(value).args[1] # type: ignore[union-attr]
 
 def get_distance_type(value: Union[Metric, Measure]) -> Union[RuntimeType, str]:
     '''
