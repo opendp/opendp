@@ -1143,6 +1143,7 @@ def exponential_bounds_search(
 
 _TUPLE_FLAG = '__tuple__'
 _POLARS_FLAG = '__polars__'
+_BYTES_FLAG = '__bytes__'
 
 class _Encoder(json.JSONEncoder):
     def default(self, obj):
@@ -1157,11 +1158,15 @@ class _Encoder(json.JSONEncoder):
             return {_TUPLE_FLAG: obj}
         if isinstance(obj, (str, int, float, bool, type(None))):
             return obj
+        if isinstance(obj, bytes):
+            from base64 import b64encode
+            ascii_bytes = b64encode(obj)
+            return {_BYTES_FLAG: ascii_bytes.decode()}
         if isinstance(obj, list):
             return [self.default(value) for value in obj]
         pl = import_optional_dependency('polars', raise_error=False)
         if pl is not None and isinstance(obj, pl.Expr):
-            return {_POLARS_FLAG: obj.meta.serialize(format="json")}
+            return {_POLARS_FLAG: obj.meta.serialize()}
         raise Exception(f'OpenDP JSON Encoder does not handle {obj}')  # pragma: no cover
     
 def _deserialization_hook(dp_dict):
@@ -1171,12 +1176,15 @@ def _deserialization_hook(dp_dict):
         return func(**dp_dict.get("kwargs", {}))
     if _TUPLE_FLAG in dp_dict:
         return tuple(dp_dict[_TUPLE_FLAG])
+    if _BYTES_FLAG in dp_dict:
+        from base64 import b64decode
+        return b64decode(dp_dict[_BYTES_FLAG])
     pl = import_optional_dependency('polars', raise_error=False)
     if pl is not None and _POLARS_FLAG in dp_dict:
-        from io import StringIO
+        from io import BytesIO
         # TODO: update the references to the binary to point
         # to the correct location in this environment.
-        return pl.Expr.deserialize(StringIO(dp_dict[_POLARS_FLAG]), format="json")
+        return pl.Expr.deserialize(BytesIO(dp_dict[_POLARS_FLAG]))
     return dp_dict
 
 def serialize(dp_obj):
