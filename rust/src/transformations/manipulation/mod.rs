@@ -144,7 +144,7 @@ where
 /// # Arguments
 /// * `domain` - Domain of input data
 /// * `metric` - Metric on input domain
-/// 
+///
 /// # Generics
 /// * `D` - Domain of the identity function. Must be `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 /// * `M` - Metric. Must be a dataset metric if D is a VectorDomain or a sensitivity metric if D is an AtomDomain
@@ -219,7 +219,7 @@ where
 /// # Arguments
 /// * `input_domain` - Domain of input data
 /// * `input_metric` - Metric on input domain
-/// 
+///
 /// # Generics
 /// * `DIA` - Atomic Input Domain. Can be any domain for which the carrier type has a notion of nullity.
 pub fn make_is_null<M, DIA>(

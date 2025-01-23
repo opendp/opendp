@@ -26,7 +26,7 @@ pub(crate) mod traits;
 /// # Arguments
 /// * `input_domain` - Domain of input data
 /// * `input_metric` - Metric on input domain
-/// 
+///
 /// # Generics
 /// * `D` - Domain
 /// * `MI` - Input Metric
@@ -67,7 +67,7 @@ where
 /// # Arguments
 /// * `input_domain` - Domain of input data
 /// * `input_metric` - Metric on input domain
-/// 
+///
 /// # Generics
 /// * `D` - Domain
 /// * `MI` - Input Metric

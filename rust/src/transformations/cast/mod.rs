@@ -20,7 +20,7 @@ use super::DatasetMetric;
 /// # Arguments
 /// * `input_domain` - Domain of input data
 /// * `input_metric` - Metric on input domain
-/// 
+///
 /// # Generics
 /// * `TIA` - Atomic Input Type to cast from
 /// * `TOA` - Atomic Output Type to cast into
@@ -80,7 +80,7 @@ where
 /// # Arguments
 /// * `input_domain` - Domain of input data
 /// * `input_metric` - Metric on input domain
-/// 
+///
 /// # Generics
 /// * `TIA` - Atomic Input Type to cast from
 /// * `TOA` - Atomic Output Type to cast into

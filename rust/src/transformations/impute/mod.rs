@@ -216,7 +216,7 @@ impl<T: CheckAtom + InherentNull + Clone> DropNullDomain for AtomDomain<T> {
 /// # Arguments
 /// * `input_domain` - Domain of input data
 /// * `input_metric` - Metric on input domain
-/// 
+///
 /// # Generics
 /// * `M` - Dataset Metric.
 /// * `DIA` - atomic domain of input data that contains nulls.

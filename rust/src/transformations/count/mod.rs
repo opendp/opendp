@@ -67,7 +67,7 @@ where
 /// # Arguments
 /// * `input_domain` - Domain of input data
 /// * `input_metric` - Metric on input domain
-/// 
+///
 /// # Generics
 /// * `TIA` - Atomic Input Type. Input data is expected to be of the form `Vec<TIA>`.
 /// * `TO` - Output Type. Must be numeric.
@@ -228,7 +228,7 @@ impl<const P: usize, Q: One> CountByConstant<Q> for LpDistance<P, Q> {
 /// # Arguments
 /// * `input_domain` - Domain of input data
 /// * `input_metric` - Metric on input domain
-/// 
+///
 /// # Generics
 /// * `MO` - Output Metric.
 /// * `TK` - Type of Key. Categorical/hashable input data type. Input data must be `Vec<TK>`.
