@@ -204,7 +204,7 @@ def {then_name}(
 {args}))
     output.__opendp_dict__ = {{
             'func': '{then_name}',
-            'module': 'measurements',
+            'module': '{module_name}',
             'kwargs': {{
                 {func_args}
             }},

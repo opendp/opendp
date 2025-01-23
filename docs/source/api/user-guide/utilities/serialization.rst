@@ -16,13 +16,13 @@ Most OpenDP objects can be serialized for persistence, or to share objects betwe
         ...     >> dp.t.then_sum()
         ...     >> dp.m.then_laplace(scale=5.0)
         ... )
-        >>> serialization = dp.serialize(dp_obj)
+        >>> serialized = dp.serialize(dp_obj)
         >>> serialization[:24]
         '{"func": "make_chain_mt"'
 
 
 While the serialization format is JSON, we do not guarantee any stability between versions,
-and we discourge users from writing their own JSON.
+and we discourage users from writing their own JSON.
 If this is something you need, please reach out so that we can understand your use case.
 
 .. tab-set::
@@ -38,7 +38,7 @@ If this is something you need, please reach out so that we can understand your u
         <class 'opendp.mod.Measurement'>
 
 
-Some objects, typically those which are created with a user defined function, are not currently serializable:
+Some objects, typically those which are created via the plugin API, are not currently serializable:
 
 .. tab-set::
 
@@ -46,7 +46,7 @@ Some objects, typically those which are created with a user defined function, ar
 
     .. code:: python
 
-        >>> dp_obj = dp.user_domain("trivial_user_domain", lambda: True)
+        >>> dp_obj = dp.user_domain("trivial_user_domain", lambda _: True)
         >>> dp.serialize(dp_obj)
         Traceback (most recent call last):
         ...
