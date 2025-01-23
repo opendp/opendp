@@ -17,7 +17,7 @@ Most OpenDP objects can be serialized for persistence, or to share objects betwe
         ...     >> dp.m.then_laplace(scale=5.0)
         ... )
         >>> serialized = dp.serialize(dp_obj)
-        >>> serialization[:24]
+        >>> serialized[:24]
         '{"func": "make_chain_mt"'
 
 
@@ -31,7 +31,7 @@ If this is something you need, please reach out so that we can understand your u
 
     .. code:: python
 
-        >>> new_obj = dp.deserialize(serialization)
+        >>> new_obj = dp.deserialize(serialized)
         >>> type(dp_obj)
         <class 'opendp.mod.Measurement'>
         >>> type(new_obj)
