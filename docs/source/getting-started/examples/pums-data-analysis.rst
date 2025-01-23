@@ -494,8 +494,8 @@ the epsilon usage of this new measurement:
 
         .. code:: python
 
-            >>> composed.map(max_influence)
-            1.100...
+            >>> print('epsilon:', composed.map(max_influence))
+            epsilon: ...
 
 Population Amplification
 ~~~~~~~~~~~~~~~~~~~~~~~~
