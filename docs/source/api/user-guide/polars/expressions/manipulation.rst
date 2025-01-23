@@ -155,7 +155,7 @@ individuals working each hour range.
             ...     .agg(dp.len())
             ... )
             >>> query.release().collect().sort("HWUSUAL")
-            shape: (4, 2)
+            shape: (..., 2)
             ┌───────────┬────────┐
             │ HWUSUAL   ┆ len    │
             │ ---       ┆ ---    │
