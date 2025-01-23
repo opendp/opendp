@@ -12,12 +12,38 @@ from typing import Any, Literal, Type, TypeVar, Union, Callable, Optional, overl
 import importlib
 import json
 
-from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, import_optional_dependency
+from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, import_optional_dependency, get_opendp_version
+
 
 # https://mypy.readthedocs.io/en/stable/runtime_troubles.html#import-cycles
 if TYPE_CHECKING:
     from opendp.typing import RuntimeType # pragma: no cover
 
+
+__all__ = [
+    'Measurement',
+    'Transformation',
+    'Queryable',
+    'Function',
+    'Domain',
+    'Metric',
+    'Measure',
+    'PrivacyProfile',
+    'PartialConstructor',
+    'UnknownTypeException',
+    'OpenDPException',
+    'GLOBAL_FEATURES',
+    'enable_features',
+    'disable_features',
+    'assert_features',
+    'binary_search_chain',
+    'binary_search_param',
+    'binary_search',
+    'exponential_bounds_search',
+    'serialize',
+    'deserialize',
+    '__version__',
+]
 
 class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     """A differentially private unit of computation.
@@ -1143,7 +1169,6 @@ def exponential_bounds_search(
 
 _TUPLE_FLAG = '__tuple__'
 _POLARS_FLAG = '__polars__'
-_BYTES_FLAG = '__bytes__'
 
 class _Encoder(json.JSONEncoder):
     def default(self, obj):
@@ -1201,3 +1226,6 @@ def deserialize(dp_json):
 
 
 _EXPECTED_POLARS_VERSION = '1.12.0' # Keep in sync with setup.cfg.
+
+
+__version__ = get_opendp_version()

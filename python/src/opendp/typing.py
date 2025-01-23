@@ -24,7 +24,7 @@ from opendp.mod import Function, UnknownTypeException, Measurement, Transformati
 from opendp._lib import ATOM_EQUIVALENCE_CLASSES, import_optional_dependency
 
 
-ELEMENTARY_TYPES: dict[Any, str] = {
+_ELEMENTARY_TYPES: dict[Any, str] = {
     int: 'i32',
     float: 'f64',
     str: 'String',
@@ -35,7 +35,7 @@ ELEMENTARY_TYPES: dict[Any, str] = {
 try:
     np = import_optional_dependency('numpy')
     # https://numpy.org/doc/stable/reference/arrays.scalars.html#sized-aliases
-    ELEMENTARY_TYPES.update({
+    _ELEMENTARY_TYPES.update({
         # np.bytes_: '&[u8]',  # np.string_ # not used in OpenDP
         np.str_: 'String',  # np.unicode_
         np.bool_: 'bool',  # np.bool_
@@ -58,10 +58,10 @@ try:
 except ImportError: # pragma: no cover
     np = None # type: ignore[assignment]
 
-INTEGER_TYPES = {"i8", "i16", "i32", "i64", "i128", "u8", "u16", "u32", "u64", "u128", "usize"}
-NUMERIC_TYPES = INTEGER_TYPES | {"f32", "f64"}
-HASHABLE_TYPES = INTEGER_TYPES | {"bool", "String"}
-PRIMITIVE_TYPES = NUMERIC_TYPES | {"bool", "String"}
+_INTEGER_TYPES = {"i8", "i16", "i32", "i64", "i128", "u8", "u16", "u32", "u64", "u128", "usize"}
+_NUMERIC_TYPES = _INTEGER_TYPES | {"f32", "f64"}
+_HASHABLE_TYPES = _INTEGER_TYPES | {"bool", "String"}
+_PRIMITIVE_TYPES = _NUMERIC_TYPES | {"bool", "String"}
 
 
 # all ways of providing type information
@@ -85,12 +85,12 @@ def set_default_int_type(T: RuntimeTypeDescriptor) -> None:
     :params T: must be one of [u8, u16, u32, u64, usize, i8, i16, i32, i64]
     :type T: :ref:`RuntimeTypeDescriptor`
     """
-    equivalence_class = ATOM_EQUIVALENCE_CLASSES[ELEMENTARY_TYPES[int]]
+    equivalence_class = ATOM_EQUIVALENCE_CLASSES[_ELEMENTARY_TYPES[int]]
     T = RuntimeType.parse(T)
     assert T in equivalence_class, f"T must be one of {equivalence_class}"
 
-    ATOM_EQUIVALENCE_CLASSES[T] = ATOM_EQUIVALENCE_CLASSES.pop(ELEMENTARY_TYPES[int]) # type: ignore[index]
-    ELEMENTARY_TYPES[int] = T # type: ignore[assignment]
+    ATOM_EQUIVALENCE_CLASSES[T] = ATOM_EQUIVALENCE_CLASSES.pop(_ELEMENTARY_TYPES[int]) # type: ignore[index]
+    _ELEMENTARY_TYPES[int] = T # type: ignore[assignment]
 
 
 def set_default_float_type(T: RuntimeTypeDescriptor) -> None:
@@ -104,12 +104,12 @@ def set_default_float_type(T: RuntimeTypeDescriptor) -> None:
     :type T: :ref:`RuntimeTypeDescriptor`
     """
 
-    equivalence_class = ATOM_EQUIVALENCE_CLASSES[ELEMENTARY_TYPES[float]]
+    equivalence_class = ATOM_EQUIVALENCE_CLASSES[_ELEMENTARY_TYPES[float]]
     T = RuntimeType.parse(T)
     assert T in equivalence_class, f"T must be a float type in {equivalence_class}"
 
-    ATOM_EQUIVALENCE_CLASSES[T] = ATOM_EQUIVALENCE_CLASSES.pop(ELEMENTARY_TYPES[float]) # type: ignore[index]
-    ELEMENTARY_TYPES[float] = T # type: ignore[assignment]
+    ATOM_EQUIVALENCE_CLASSES[T] = ATOM_EQUIVALENCE_CLASSES.pop(_ELEMENTARY_TYPES[float]) # type: ignore[index]
+    _ELEMENTARY_TYPES[float] = T # type: ignore[assignment]
 
 
 class RuntimeType(object):
@@ -234,13 +234,13 @@ class RuntimeType(object):
                 return RuntimeType(origin, args=cls._parse_args(type_name[start + 1: end], generics=generics))
             if start == end < 0:
                 if type_name == "int":
-                    return ELEMENTARY_TYPES[int]
+                    return _ELEMENTARY_TYPES[int]
                 if type_name == "float":
-                    return ELEMENTARY_TYPES[float]
+                    return _ELEMENTARY_TYPES[float]
                 return type_name
 
-        if isinstance(type_name, Hashable) and type_name in ELEMENTARY_TYPES:
-            return ELEMENTARY_TYPES[type_name]
+        if isinstance(type_name, Hashable) and type_name in _ELEMENTARY_TYPES:
+            return _ELEMENTARY_TYPES[type_name]
 
         if type_name == tuple:
             raise UnknownTypeException("non-parameterized argument")  # pragma: no cover
@@ -278,8 +278,8 @@ class RuntimeType(object):
         ...
         opendp.mod.UnknownTypeException: Cannot infer atomic type when empty
         """
-        if type(public_example) in ELEMENTARY_TYPES:
-            return ELEMENTARY_TYPES[type(public_example)]
+        if type(public_example) in _ELEMENTARY_TYPES:
+            return _ELEMENTARY_TYPES[type(public_example)]
         
         if isinstance(public_example, (Domain, Metric, Measure)):
             return RuntimeType.parse(public_example.type)
@@ -320,7 +320,7 @@ class RuntimeType(object):
                 return cls.infer(public_example.item(), py_object)
 
             if public_example.ndim == 1:
-                inner_type = ELEMENTARY_TYPES.get(public_example.dtype.type)
+                inner_type = _ELEMENTARY_TYPES.get(public_example.dtype.type)
                 if inner_type is None:
                     raise UnknownTypeException(f"Unknown numpy array dtype: {public_example.dtype.type}")  # pragma: no cover
                 return RuntimeType('Vec', [inner_type])
