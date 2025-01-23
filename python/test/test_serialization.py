@@ -10,6 +10,8 @@ atom = dp.atom_domain(bounds=(0, 10))
     [
         (str(obj), obj)
         for obj in [
+            # Python objects:
+            ('nested', ('tuple', ('containing', ('domain', (atom,))))),
             # Domains:
             atom,
             dp.categorical_domain(['A', 'B', 'C']),

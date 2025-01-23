@@ -1155,18 +1155,18 @@ class _Encoder(json.JSONEncoder):
                 for k, v in obj.items()
             }
         if isinstance(obj, tuple):
-            return {_TUPLE_FLAG: obj}
+            return {_TUPLE_FLAG: [self.default(el) for el in obj]}
         if isinstance(obj, (str, int, float, bool, type(None))):
             return obj
-        if isinstance(obj, bytes):
-            from base64 import b64encode
-            ascii_bytes = b64encode(obj)
-            return {_BYTES_FLAG: ascii_bytes.decode()}
         if isinstance(obj, list):
             return [self.default(value) for value in obj]
         pl = import_optional_dependency('polars', raise_error=False)
         if pl is not None and isinstance(obj, pl.Expr):
-            return {_POLARS_FLAG: obj.meta.serialize()}
+            from base64 import b64encode
+            polars_bytes = obj.meta.serialize()
+            polars_b64_bytes = b64encode(polars_bytes)
+            polars_ascii_str = polars_b64_bytes.decode()
+            return {_POLARS_FLAG: polars_ascii_str}
         raise Exception(f'OpenDP JSON Encoder does not handle {obj}')  # pragma: no cover
     
 def _deserialization_hook(dp_dict):
@@ -1176,19 +1176,25 @@ def _deserialization_hook(dp_dict):
         return func(**dp_dict.get("kwargs", {}))
     if _TUPLE_FLAG in dp_dict:
         return tuple(dp_dict[_TUPLE_FLAG])
-    if _BYTES_FLAG in dp_dict:
-        from base64 import b64decode
-        return b64decode(dp_dict[_BYTES_FLAG])
     pl = import_optional_dependency('polars', raise_error=False)
     if pl is not None and _POLARS_FLAG in dp_dict:
+        from base64 import b64decode
+        polars_ascii_str = dp_dict[_POLARS_FLAG]
+        polars_b64_bytes = polars_ascii_str.encode()
+        polars_bytes = b64decode(polars_b64_bytes)
         from io import BytesIO
-        # TODO: update the references to the binary to point
-        # to the correct location in this environment.
-        return pl.Expr.deserialize(BytesIO(dp_dict[_POLARS_FLAG]))
+        return pl.Expr.deserialize(BytesIO(polars_bytes))
     return dp_dict
 
 def serialize(dp_obj):
-    return json.dumps(dp_obj, cls=_Encoder)
+    # The conventional pattern would be
+    # 
+    #   json.dumps(dp_obj, cls=_Encoder)
+    # 
+    # but that only calls default() for objects which can't be handled otherwise.
+    # In particular, it makes tuples into lists,
+    # even when special handling is specified in default().
+    return json.dumps(_Encoder().default(dp_obj))
 
 def deserialize(dp_json):
     return json.loads(dp_json, object_hook=_deserialization_hook)

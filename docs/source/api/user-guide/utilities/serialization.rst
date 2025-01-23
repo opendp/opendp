@@ -38,7 +38,9 @@ If this is something you need, please reach out so that we can understand your u
         <class 'opendp.mod.Measurement'>
 
 
-Some objects, typically those which are created via the plugin API, are not currently serializable:
+Some objects, including those which are created via the plugin API,
+and those which have an internal state not reflected in their constructor,
+are not currently serializable:
 
 .. tab-set::
 
