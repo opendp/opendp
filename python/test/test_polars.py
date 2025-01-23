@@ -176,7 +176,7 @@ def test_cast():
     m_lf = dp.t.make_stable_lazyframe(
         lf_domain,
         dp.symmetric_distance(),
-        lf.with_columns(pl.col("A").cast(int)),
+        lf.select(pl.col("A").cast(int)),
     )
 
     assert m_lf(lf).collect()["A"].dtype == pl.Int64
@@ -824,7 +824,7 @@ def test_categorical_context():
     print('output should be two columns ("B" and "len") with two rows (1, ~500)')
     release = (
         context.query()
-        .with_columns(pl.col.B.cast(str))
+        .select(pl.col.B.cast(str))
         .group_by("B")
         .agg(dp.len())
         .release()
