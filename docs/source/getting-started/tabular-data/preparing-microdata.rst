@@ -75,7 +75,6 @@ adds those columns to the data.
             │ (98, inf] ┆ ...    │
             └───────────┴────────┘
 
-
 To ensure that the privacy unit remains meaningful, expressions passed
 into ``.with_columns`` must be row-by-row, meaning that the expression
 could be represented as a function applied to each row in the data. The
@@ -87,6 +86,16 @@ Another consideration is that any new columns added by ``.with_columns``
 do not (currently) have margin descriptors. For instance, in the above
 query, any margin descriptors related to ``HWUSUAL`` would no longer
 apply to the new, shadowing, ``HWUSUAL`` column after ``.with_columns``.
+
+Select
+------
+
+[`Polars
+Documentation <https://docs.pola.rs/user-guide/concepts/expressions-and-contexts/#select>`__]
+
+``.select`` resolves each passed expression to a column and then returns
+those columns. The behavior is the same as ``.with_columns``, but only
+the columns specified in expressions will remain.
 
 Filter
 ------
@@ -127,5 +136,3 @@ invariants invalid.
 
 Otherwise, filtering preserves all other margin descriptors, because
 filtering only ever removes rows.
-
-

@@ -22,6 +22,9 @@ mod filter;
 #[cfg(feature = "contrib")]
 mod h_stack;
 
+#[cfg(feature = "contrib")]
+mod select;
+
 #[bootstrap(
     features("contrib"),
     arguments(output_metric(c_type = "AnyMetric *", rust_type = b"null")),
@@ -87,6 +90,9 @@ impl StableDslPlan<SymmetricDistance, SymmetricDistance> for DslPlan {
             }
             DslPlan::HStack { .. } => {
                 h_stack::make_h_stack(input_domain, input_metric, self)
+            }
+            DslPlan::Select { .. } => {
+                select::make_select(input_domain, input_metric, self)
             }
             dsl => fallible!(
                 MakeTransformation,
