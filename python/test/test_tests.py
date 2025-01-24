@@ -3,7 +3,7 @@ import opendp.prelude as dp
 
 def test_number_of_tests_found(request):
     tests_found = len(request.session.items)
-    assert tests_found >= 304
+    assert tests_found >= 835
 
 
 def test_TODOs():
