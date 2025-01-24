@@ -235,9 +235,6 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         # which yields infinitely on zero-sized types
         raise ValueError("Measurement does not support iteration")  # pragma: no cover
 
-    def __eq__(self, other):
-        return type(self) is type(other) and str(self) == str(other)
-
 class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     """A non-differentially private unit of computation.
     A transformation contains a function and a stability relation.
@@ -693,9 +690,6 @@ class PartialConstructor(object):
         if isinstance(other, tuple) and list(map(type, other)) == [Domain, Metric]:
             return self(other[0], other[1])
         raise TypeError(f"Cannot chain {type(self)} with {type(other)}")  # pragma: no cover
-
-    def __eq__(self, other):
-        return type(self) is type(other) and self.__opendp_dict__ == other.__opendp_dict__
 
 
 class UnknownTypeException(Exception):
