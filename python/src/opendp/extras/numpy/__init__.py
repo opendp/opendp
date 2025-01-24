@@ -124,7 +124,7 @@ def array2_domain(
     if T not in ATOM_MAP:
         raise ValueError("T must be in an elementary type")  # pragma: no cover
 
-    def member(x):
+    def _member(x):
         if not isinstance(x, np.ndarray):
             raise TypeError("must be a numpy ndarray")  # pragma: no cover
         T_actual = ELEMENTARY_TYPES.get(x.dtype.type)
@@ -161,7 +161,7 @@ def array2_domain(
         T=T,
     )
 
-    return _extrinsic_domain(f"NPArray2Domain({_fmt_attrs(desc)})", member, desc)
+    return _extrinsic_domain(f"NPArray2Domain({_fmt_attrs(desc)})", _member, desc)
 
 
 def _sscp_domain(
@@ -179,6 +179,7 @@ def _sscp_domain(
     :param p: designates L`p` norm
     :param size: number of rows in data
     :param num_features: number of rows/columns in the matrix
+    :param T: the type of data elements in the array
     """
     import opendp.prelude as dp
     np = import_optional_dependency('numpy')
@@ -193,7 +194,7 @@ def _sscp_domain(
     if T not in {dp.f32, dp.f64}:
         raise ValueError("T must be a float type")
 
-    def member(x):
+    def _member(x):
         if not isinstance(x, np.ndarray):
             raise TypeError("must be a numpy ndarray")  # pragma: no cover
         T_actual = ELEMENTARY_TYPES.get(x.dtype.type)
@@ -218,7 +219,7 @@ def _sscp_domain(
         T=T,
     )
 
-    return _extrinsic_domain(f"NPSSCPDomain({_fmt_attrs(desc)})", member, desc)
+    return _extrinsic_domain(f"NPSSCPDomain({_fmt_attrs(desc)})", _member, desc)
 
 
 def make_np_clamp(
@@ -246,7 +247,7 @@ def make_np_clamp(
     if origin is None:
         origin = 0.0
 
-    def function(arg):
+    def _function(arg):
         arg = arg.copy()
         arg -= origin
 
@@ -269,7 +270,7 @@ def make_np_clamp(
         input_metric,
         dp.numpy.array2_domain(**kwargs),
         input_metric,
-        function,
+        _function,
         lambda d_in: d_in,
     )
 
