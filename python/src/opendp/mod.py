@@ -1225,10 +1225,10 @@ class _Encoder(json.JSONEncoder):
         raise Exception(f'OpenDP JSON Encoder does not handle {obj}')
 
 def _check_version(dp_dict):
-    from logging import warning
+    from warnings import warn
     serialized_version = dp_dict['__version__']
     if serialized_version != __version__:
-        warning(
+        warn(
             f'OpenDP version in serialized object ({serialized_version}) '
             f'!= this version ({__version__})')
 
@@ -1251,12 +1251,12 @@ def _deserialization_hook(dp_dict):
     return dp_dict
 
 def serialize(dp_obj):
-    # The conventional pattern would be
+    # The usual pattern would be
     # 
     #   json.dumps(dp_obj, cls=_Encoder)
     # 
     # but that only calls default() for objects which can't be handled otherwise.
-    # In particular, it makes tuples into lists,
+    # In particular, it makes top-level tuples into lists,
     # even when special handling is specified in default().
     return json.dumps(_Encoder().default(dp_obj))
 

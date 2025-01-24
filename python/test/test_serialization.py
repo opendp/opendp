@@ -1,3 +1,6 @@
+import json
+import re
+
 import pytest
 
 import opendp.prelude as dp
@@ -51,6 +54,9 @@ def test_serializable(_readable_name, dp_obj):
     assert serialized == dp.serialize(deserialized)
 
 
+# Would normally put the conditional inside the test,
+# but since we need polars at test collection time,
+# in this case it needs to wrap the test.
 pl = import_optional_dependency('polars', raise_error=False)
 if pl is not None:
     lf = pl.LazyFrame(schema={"A": pl.Int32, "B": pl.String})
@@ -135,3 +141,18 @@ def test_not_currently_serializable(_readable_name, dp_obj):
 def test_not_json_serializable(_readable_name, dp_obj):
     with pytest.raises(Exception, match=r"keys must be str, int, float, bool or None, not tuple"):
         dp.serialize(dp_obj)
+
+
+def test_version_mismatch_warning():
+    bad_serialized = json.dumps({
+        "__function__": "atom_domain",
+        "__module__": "domains",
+        "__kwargs__": {
+            "bounds": {"__tuple__": [0, 10]}, 
+            "nullable": False, 
+            "T": "i32"
+        },
+        "__version__": "bad-version"
+    })
+    with pytest.warns(UserWarning, match=re.escape('(bad-version) != this version')):
+        dp.deserialize(bad_serialized)
