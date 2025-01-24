@@ -1139,7 +1139,7 @@ def exponential_bounds_search(
         """Identify which band (of eight) the decision boundary lies in.
 
         :param center: Start here
-        :param at_center:
+        :param at_center: How the predicate evaluates at `center`. Search terminates when predicate changes
         :param sign: Search in this direction
         """
 
