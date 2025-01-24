@@ -75,9 +75,9 @@ def fake_function(
 
     try:
         output.__opendp_dict__ = {
-            'func': 'fake_function',
-            'module': 'fake_module',
-            'kwargs': {
+            '__function__': 'fake_function',
+            '__module__': 'fake_module',
+            '__kwargs__': {
                 'fake_argument': fake_argument
             },
         }

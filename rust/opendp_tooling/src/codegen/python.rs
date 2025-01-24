@@ -203,9 +203,9 @@ def {then_name}(
     output = PartialConstructor(lambda {dom_met}: {name}(
 {args}))
     output.__opendp_dict__ = {{
-            'func': '{then_name}',
-            'module': '{module_name}',
-            'kwargs': {{
+            '__function__': '{then_name}',
+            '__module__': '{module_name}',
+            '__kwargs__': {{
                 {func_args}
             }},
         }}
@@ -628,9 +628,9 @@ fn generate_serialization(module_name: &str, func: &Function) -> String {
     format!(
         r#"try:
     output.__opendp_dict__ = {{
-        'func': '{func_name}',
-        'module': '{module_name}',
-        'kwargs': {{
+        '__function__': '{func_name}',
+        '__module__': '{module_name}',
+        '__kwargs__': {{
             {func_args}
         }},
     }}

@@ -17,8 +17,8 @@ Most OpenDP objects can be serialized for persistence, or to share objects betwe
         ...     >> dp.m.then_laplace(scale=5.0)
         ... )
         >>> serialized = dp.serialize(dp_obj)
-        >>> serialized[:24]
-        '{"func": "make_chain_mt"'
+        >>> serialized[:32]
+        '{"__function__": "make_chain_mt"'
 
 
 While the serialization format is JSON, we do not guarantee any stability between versions,
@@ -74,3 +74,7 @@ is to use `Polars serialization <https://docs.pola.rs/api/python/dev/reference/e
         <class 'polars.expr.expr.Expr'>
         >>> type(new_expr)
         <class 'polars.expr.expr.Expr'>
+
+Note that serialized Polars objects will include the path of the local binary.
+These paths can be overridden at load time with the ``OPENDP_POLARS_LIB_PATH``
+:ref:`environment variable <envvars>` .
