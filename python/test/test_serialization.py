@@ -47,7 +47,11 @@ atom = dp.atom_domain(bounds=(0, 10))
 def test_serializable(_readable_name, dp_obj):
     serialized = dp.serialize(dp_obj)
     deserialized = dp.deserialize(serialized)
-    assert dp_obj == deserialized
+    # We don't want to define __eq__ just for the sake of testing,
+    # so check the serializations before and after.
+    # (We should remember that if the first serialization
+    #  dropped some detail, this test wouldn't catch it.)
+    assert serialized == dp.serialize(deserialized)
 
 
 def test_serializable_polars():
