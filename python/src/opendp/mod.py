@@ -1168,10 +1168,23 @@ def exponential_bounds_search(
 
 
 _TUPLE_FLAG = '__tuple__'
-_POLARS_FLAG = '__polars__'
+_EXPR_FLAG = '__expr__'
+_LAZY_FLAG = '__lazyframe__'
 _FUNCTION_FLAG = '__function__'
 _MODULE_FLAG = '__module__'
 _KWARGS_FLAG = '__kwargs__'
+
+def _bytes_to_b64_str(serialized_polars):
+    from base64 import b64encode
+    b64_bytes = b64encode(serialized_polars)
+    return b64_bytes.decode()
+
+def _b64_str_to_bytes(b64_str):
+    from base64 import b64decode
+    from io import BytesIO
+    b64_bytes = b64_str.encode()
+    serialized_polars = b64decode(b64_bytes)
+    return BytesIO(serialized_polars)
 
 class _Encoder(json.JSONEncoder):
     def default(self, obj):
@@ -1196,12 +1209,11 @@ class _Encoder(json.JSONEncoder):
             return self.default(obj.__opendp_dict__)
 
         pl = import_optional_dependency('polars', raise_error=False)
-        if pl is not None and isinstance(obj, pl.Expr):
-            from base64 import b64encode
-            polars_bytes = obj.meta.serialize()
-            polars_b64_bytes = b64encode(polars_bytes)
-            polars_ascii_str = polars_b64_bytes.decode()
-            return {_POLARS_FLAG: polars_ascii_str}
+        if pl is not None:
+            if isinstance(obj, pl.Expr):
+                return {_EXPR_FLAG: _bytes_to_b64_str(obj.meta.serialize())}
+            if isinstance(obj, pl.LazyFrame):
+                return {_LAZY_FLAG: _bytes_to_b64_str(obj.serialize())}
 
         # Exceptions:
         from opendp.context import Context
@@ -1220,13 +1232,11 @@ def _deserialization_hook(dp_dict):
     if _TUPLE_FLAG in dp_dict:
         return tuple(dp_dict[_TUPLE_FLAG])
     pl = import_optional_dependency('polars', raise_error=False)
-    if pl is not None and _POLARS_FLAG in dp_dict:
-        from base64 import b64decode
-        polars_ascii_str = dp_dict[_POLARS_FLAG]
-        polars_b64_bytes = polars_ascii_str.encode()
-        polars_bytes = b64decode(polars_b64_bytes)
-        from io import BytesIO
-        return pl.Expr.deserialize(BytesIO(polars_bytes))
+    if pl is not None:
+        if _EXPR_FLAG in dp_dict:
+            return pl.Expr.deserialize(_b64_str_to_bytes(dp_dict[_EXPR_FLAG]))
+        if _LAZY_FLAG in dp_dict:
+            return pl.LazyFrame.deserialize(_b64_str_to_bytes(dp_dict[_LAZY_FLAG]))
     return dp_dict
 
 def serialize(dp_obj):

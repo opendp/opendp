@@ -64,13 +64,13 @@ if pl is not None:
             for obj in [
                 lf_domain,
                 lf_domain_with_margin,
-                # dp.m.make_private_lazyframe(
-                #     lf_domain_with_margin,
-                #     dp.symmetric_distance(),
-                #     dp.max_divergence(),
-                #     lf.select([dp.len(), pl.col("A").dp.sum((0, 1))]),
-                #     global_scale=1.0
-                # ),
+                dp.m.make_private_lazyframe(
+                    lf_domain_with_margin,
+                    dp.symmetric_distance(),
+                    dp.max_divergence(),
+                    lf.select([dp.len(), pl.col("A").dp.sum((0, 1))]),
+                    global_scale=1.0
+                ),
                 dp.m.make_private_expr(
                     dp.wild_expr_domain([], by=[]),
                     dp.partition_distance(dp.symmetric_distance()),
