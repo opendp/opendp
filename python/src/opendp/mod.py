@@ -1181,7 +1181,7 @@ class _Encoder(json.JSONEncoder):
         if isinstance(obj, list):
             return [self.default(value) for value in obj]
         if isinstance(obj, tuple):
-            return {_TUPLE_FLAG: [self.default(el) for el in obj]}
+            return {_TUPLE_FLAG: [self.default(value) for value in obj]}
         if isinstance(obj, dict):
             return {
                 # Dict keys must be hashable,

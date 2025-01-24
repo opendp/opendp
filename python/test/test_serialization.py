@@ -1,7 +1,7 @@
 import pytest
 
 import opendp.prelude as dp
-
+from opendp._lib import import_optional_dependency
 
 atom = dp.atom_domain(bounds=(0, 10))
 
@@ -49,17 +49,26 @@ def test_serializable(_readable_name, dp_obj):
     assert serialized == dp.serialize(deserialized)
 
 
-def test_serializable_polars():
-    pytest.importorskip("polars")
-    dp_obj = dp.m.make_private_expr(
-        dp.wild_expr_domain([], by=[]),
-        dp.partition_distance(dp.symmetric_distance()),
-        dp.max_divergence(),
-        dp.len(scale=1.0)
+pl = import_optional_dependency('polars', raise_error=False)
+if pl is not None:
+    @pytest.mark.parametrize(
+        "_readable_name,dp_obj",
+        [
+            (str(obj), obj)
+            for obj in [
+                dp.m.make_private_expr(
+                    dp.wild_expr_domain([], by=[]),
+                    dp.partition_distance(dp.symmetric_distance()),
+                    dp.max_divergence(),
+                    dp.len(scale=1.0)
+                ),
+            ]
+        ],
     )
-    serialized = dp.serialize(dp_obj)
-    deserialized = dp.deserialize(serialized)
-    assert dp_obj == deserialized
+    def test_serializable_polars(_readable_name, dp_obj):
+        serialized = dp.serialize(dp_obj)
+        deserialized = dp.deserialize(serialized)
+        assert serialized == dp.serialize(deserialized)
 
 
 @pytest.mark.parametrize(
