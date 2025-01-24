@@ -51,11 +51,26 @@ def test_serializable(_readable_name, dp_obj):
 
 pl = import_optional_dependency('polars', raise_error=False)
 if pl is not None:
+    lf = pl.LazyFrame(schema={"A": pl.Int32, "B": pl.String})
+    lf_domain = dp.lazyframe_domain([
+        dp.series_domain("A", dp.atom_domain(T="i32")), 
+        dp.series_domain("B", dp.atom_domain(T=str))
+    ])
+    lf_domain_with_margin = dp.with_margin(lf_domain, by=[], max_partition_length=1000)
     @pytest.mark.parametrize(
         "_readable_name,dp_obj",
         [
             (str(obj), obj)
             for obj in [
+                lf_domain,
+                lf_domain_with_margin,
+                # dp.m.make_private_lazyframe(
+                #     lf_domain_with_margin,
+                #     dp.symmetric_distance(),
+                #     dp.max_divergence(),
+                #     lf.select([dp.len(), pl.col("A").dp.sum((0, 1))]),
+                #     global_scale=1.0
+                # ),
                 dp.m.make_private_expr(
                     dp.wild_expr_domain([], by=[]),
                     dp.partition_distance(dp.symmetric_distance()),
