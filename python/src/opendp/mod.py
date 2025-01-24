@@ -1195,6 +1195,11 @@ class _Encoder(json.JSONEncoder):
             polars_b64_bytes = b64encode(polars_bytes)
             polars_ascii_str = polars_b64_bytes.decode()
             return {_POLARS_FLAG: polars_ascii_str}
+        from opendp.context import Context
+        if isinstance(obj, (Context,)):
+            raise Exception(
+                f"OpenDP JSON Encoder currently does not handle instances of {type(obj)}: "
+                f"It may have state which is not set by the constructor. Error on: {obj}")
         raise Exception(f'OpenDP JSON Encoder does not handle {obj}')  # pragma: no cover
     
 def _deserialization_hook(dp_dict):

@@ -35,12 +35,6 @@ atom = dp.atom_domain(bounds=(0, 10))
             >> dp.t.then_clamp((0, 10))
             >> dp.t.then_sum()
             >> dp.m.then_laplace(scale=5.0),
-            dp.Context.compositor(
-                data=[5.0] * 100,
-                privacy_unit=dp.unit_of(contributions=1),
-                privacy_loss=dp.loss_of(epsilon=1.0),
-                split_evenly_over=1,
-            )
         ]
     ],
 )
@@ -77,6 +71,25 @@ def test_serializable_polars():
         ]
     ],
 )
-def test_not_serializable(_readable_name, dp_obj):
-    with pytest.raises(Exception, match="OpenDP JSON Encoder does not handle"):
+def test_not_ever_serializable(_readable_name, dp_obj):
+    with pytest.raises(Exception, match=r"OpenDP JSON Encoder does not handle"):
+        dp.serialize(dp_obj)
+
+
+@pytest.mark.parametrize(
+    "_readable_name,dp_obj",
+    [
+        (str(obj), obj)
+        for obj in [
+            dp.Context.compositor(
+                data=[5.0] * 100,
+                privacy_unit=dp.unit_of(contributions=1),
+                privacy_loss=dp.loss_of(epsilon=1.0),
+                split_evenly_over=1,
+            ),
+        ]
+    ],
+)
+def test_not_currently_serializable(_readable_name, dp_obj):
+    with pytest.raises(Exception, match=r"OpenDP JSON Encoder currently does not handle"):
         dp.serialize(dp_obj)
