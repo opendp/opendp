@@ -463,9 +463,9 @@ class Queryable(object):
         self.value = value
         self.query_type = query_type
         self.__opendp_dict__ = {
-            'func': 'Queryable',
-            'module': 'mod',
-            'kwargs': {
+            '__function__': 'Queryable',
+            '__module__': 'mod',
+            '__kwargs__': {
                 'value': value,
                 'query_type': query_type,
             },
@@ -1169,6 +1169,9 @@ def exponential_bounds_search(
 
 _TUPLE_FLAG = '__tuple__'
 _POLARS_FLAG = '__polars__'
+_FUNCTION_FLAG = '__function__'
+_MODULE_FLAG = '__module__'
+_KWARGS_FLAG = '__kwargs__'
 
 class _Encoder(json.JSONEncoder):
     def default(self, obj):
@@ -1195,10 +1198,10 @@ class _Encoder(json.JSONEncoder):
         raise Exception(f'OpenDP JSON Encoder does not handle {obj}')  # pragma: no cover
     
 def _deserialization_hook(dp_dict):
-    if 'func' in dp_dict:
-        module = importlib.import_module(f"opendp.{dp_dict['module']}")
-        func = getattr(module, dp_dict["func"])
-        return func(**dp_dict.get("kwargs", {}))
+    if _FUNCTION_FLAG in dp_dict:
+        module = importlib.import_module(f"opendp.{dp_dict[_MODULE_FLAG]}")
+        func = getattr(module, dp_dict[_FUNCTION_FLAG])
+        return func(**dp_dict.get(_KWARGS_FLAG, {}))
     if _TUPLE_FLAG in dp_dict:
         return tuple(dp_dict[_TUPLE_FLAG])
     pl = import_optional_dependency('polars', raise_error=False)

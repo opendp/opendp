@@ -368,9 +368,9 @@ class Context(object):
         self.d_out = d_out
         self.space_override = space_override
         self.__opendp_dict__ = {
-            'func': 'Context',
-            'module': 'context',
-            'kwargs': {
+            '__function__': 'Context',
+            '__module__': 'context',
+            '__kwargs__': {
                 'accountant': accountant,
                 'queryable': queryable,
                 'd_in': d_in,
