@@ -5,6 +5,8 @@ from opendp._lib import import_optional_dependency
 
 atom = dp.atom_domain(bounds=(0, 10))
 
+# TODO: Make a fake serialization, and check version mismatch.
+
 @pytest.mark.parametrize(
     "_readable_name,dp_obj",
     [

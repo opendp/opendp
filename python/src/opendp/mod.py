@@ -1226,9 +1226,10 @@ class _Encoder(json.JSONEncoder):
 
 def _check_version(dp_dict):
     from logging import warning
-    if dp_dict['__version__'] != __version__:
+    serialized_version = dp_dict['__version__']
+    if serialized_version != __version__:
         warning(
-            f'OpenDP version in serialized object ({dp_dict['__version__']}) '
+            f'OpenDP version in serialized object ({serialized_version}) '
             f'!= this version ({__version__})')
 
 def _deserialization_hook(dp_dict):
