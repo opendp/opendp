@@ -719,7 +719,7 @@ try:
             # any callable attributes (like .with_columns or .select) will now also wrap their outputs in a LazyFrameQuery
             if callable(attr):
 
-                def wrap(*args, **kwargs):
+                def _wrap(*args, **kwargs):
                     out = attr(*args, **kwargs)
 
                     # re-wrap any lazy outputs to keep the conveniences afforded by this class
@@ -731,7 +731,7 @@ try:
 
                     return out
 
-                return wrap
+                return _wrap
             return attr
 
         # These definitions are primarily for mypy:
@@ -854,6 +854,9 @@ try:
         ) -> LazyFrameQuery:
             """
             Shorthand to join with an explicit key-set.
+
+            :param keys: lazyframe containing a key-set whose columns correspond to the grouping keys
+            :param on: optional, the names of columns to join on. Useful if the key dataframe contains extra columns
             """
             # Motivation for adding this new API:
             # 1. Writing a left join is more difficult in the context API: 
@@ -882,7 +885,7 @@ try:
             input_domain, input_metric = query._chain
             d_in, d_out = query._d_in, query._d_out
 
-            def make(scale, threshold=None):
+            def _make(scale, threshold=None):
                 return make_private_lazyframe(
                     input_domain=input_domain,
                     input_metric=input_metric,
@@ -898,28 +901,28 @@ try:
                 # search for a scale parameter. Solve for epsilon first,
                 # setting threshold to u32::MAX so as not to interfere with the search for a suitable scale parameter
                 scale = binary_search(
-                    lambda s: make(s, threshold=2**32 - 1).map(d_in)[0] < d_out[0],  # type: ignore[index]
+                    lambda s: _make(s, threshold=2**32 - 1).map(d_in)[0] < d_out[0],  # type: ignore[index]
                     T=float,
                 )
 
                 # attempt to return without setting a threshold
                 try:
-                    return make(scale, threshold=None)
+                    return _make(scale, threshold=None)
                 except OpenDPException:
                     pass
 
                 # now that scale has been solved, find a suitable threshold
                 threshold = binary_search(
-                    lambda t: make(scale, t).map(d_in)[1] < d_out[1],  # type: ignore[index]
+                    lambda t: _make(scale, t).map(d_in)[1] < d_out[1],  # type: ignore[index]
                     T=int,
                 )
 
                 # return a measurement with the discovered scale and threshold
-                return make(scale, threshold)
+                return _make(scale, threshold)
 
             # when no delta parameter is involved,
             # finding a suitable measurement just comes down to finding scale
-            return binary_search_chain(make, d_in, d_out, T=float)
+            return binary_search_chain(_make, d_in, d_out, T=float)
 
         def release(self) -> OnceFrame:
             """Release the query. The query must be part of a context."""
@@ -929,6 +932,8 @@ try:
 
         def summarize(self, alpha: float | None = None):
             """Summarize the statistics released by this query.
+
+            :param alpha: optional. A value in [0, 1] denoting the statistical significance. For the corresponding confidence level, subtract from from 1: for 95% confidence, use 0.05 for alpha.
 
             If ``alpha`` is passed, the resulting data frame includes an ``accuracy`` column.
 
@@ -976,8 +981,6 @@ try:
             ...     )
             ...
             >>> interpret_accuracy("Integer Laplace", 2.0, 6.429605, alpha=.05) # doctest:+SKIP
-
-            :param alpha: optional. A value in [0, 1] denoting the statistical significance.
             """
             from opendp.accuracy import summarize_polars_measurement
 
@@ -1000,6 +1003,9 @@ try:
         ) -> LazyFrameQuery:
             """
             Compute aggregations for each group of a group by operation.
+
+            :param aggs: expressions to apply in the aggregation context
+            :param named_aggs: named/aliased expressions to apply in the aggregation context
             """
             lf_plan = self._lgb_plan.agg(*aggs, **named_aggs)
             return LazyFrameQuery(lf_plan, self._query)
@@ -1024,7 +1030,10 @@ except ImportError:  # pragma: no cover
             raise ImportError(ERR_MSG)
 
         def summarize(self, alpha: float | None = None):
-            """Summarize the statistics released by this query."""
+            """Summarize the statistics released by this query.
+            
+            :param alpha: optional. A value in [0, 1] denoting the statistical significance. For the corresponding confidence level, subtract from from 1: for 95% confidence, use 0.05 for alpha.
+            """
             raise ImportError(ERR_MSG)
 
 
