@@ -6,7 +6,9 @@ import pytest
 import opendp.prelude as dp
 from opendp._lib import import_optional_dependency
 
-atom = dp.atom_domain(bounds=(0, 10))
+atom = dp.atom_domain(bounds=(0., 10.))
+input_space = dp.vector_domain(atom, size=10), dp.symmetric_distance()
+chained = input_space >> dp.t.then_mean() >> dp.m.then_laplace(scale=0.5)
 
 # TODO: Make a fake serialization, and check version mismatch.
 
@@ -18,6 +20,7 @@ atom = dp.atom_domain(bounds=(0, 10))
             # Python objects:
             ('nested', ('tuple', ('containing', ('domain', (atom,))))),
             {'dict key': atom},
+            input_space,
             # Domains:
             atom,
             dp.categorical_domain(['A', 'B', 'C']),
@@ -34,9 +37,11 @@ atom = dp.atom_domain(bounds=(0, 10))
             dp.m.approximate(dp.m.max_divergence()),
             dp.m.user_divergence("user_divergence"),
             # Measurements:
-            dp.m.make_gaussian(atom, dp.absolute_distance(int), 1),
+            dp.m.make_gaussian(atom, dp.absolute_distance(float), 1),
             dp.m.then_gaussian(1),
             # Compositions:
+            chained,
+            dp.c.make_population_amplification(chained, population_size=100),
             (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
             >> dp.t.then_clamp((0, 10))
             >> dp.t.then_sum()
