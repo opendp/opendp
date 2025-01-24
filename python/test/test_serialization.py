@@ -42,10 +42,6 @@ chained = input_space >> dp.t.then_mean() >> dp.m.then_laplace(scale=0.5)
             # Compositions:
             chained,
             dp.c.make_population_amplification(chained, population_size=100),
-            (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
-            >> dp.t.then_clamp((0, 10))
-            >> dp.t.then_sum()
-            >> dp.m.then_laplace(scale=5.0),
         ]
     ],
 )
