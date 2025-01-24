@@ -1191,8 +1191,18 @@ class _Encoder(json.JSONEncoder):
         if hasattr(obj, '__opendp_dict__'):
             return self.default({**obj.__opendp_dict__, '__version__': __version__})
 
+        stateful_error_msg = (
+            f"OpenDP JSON Encoder currently does not handle instances of {type(obj)}: "
+            f"It may have state which is not set by the constructor. Error on: {obj}"
+        )
+
         pl = import_optional_dependency('polars', raise_error=False)
         if pl is not None:
+            from opendp.extras.polars import LazyFrameQuery
+            if isinstance(obj, LazyFrameQuery):
+                # Error out early, instead of falling through to pl.LazyFrame,
+                # which *could* be serialized!
+                raise Exception(stateful_error_msg)
             if isinstance(obj, pl.Expr):
                 return {_EXPR_FLAG: _bytes_to_b64_str(obj.meta.serialize()), '__version__': __version__}
             if isinstance(obj, pl.LazyFrame):
@@ -1201,9 +1211,7 @@ class _Encoder(json.JSONEncoder):
         # Exceptions:
         from opendp.context import Context
         if isinstance(obj, (Context, Queryable,)):
-            raise Exception(
-                f"OpenDP JSON Encoder currently does not handle instances of {type(obj)}: "
-                f"It may have state which is not set by the constructor. Error on: {obj}")
+            raise Exception(stateful_error_msg)
 
         raise Exception(f'OpenDP JSON Encoder does not handle {obj}')
 

@@ -140,7 +140,6 @@ if pl is not None:
                     dp.max_divergence(),
                     dp.len(scale=1.0)
                 ),
-                query, # TODO: Should not be serializable, because it has internal state.
             ]
         ],
     )
@@ -157,6 +156,7 @@ if pl is not None:
             for obj in [
                 context,
                 dp.Queryable('value', 'query_type'),
+                query
             ]
         ],
     )
