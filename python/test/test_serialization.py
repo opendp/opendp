@@ -57,6 +57,7 @@ if pl is not None:
         dp.series_domain("B", dp.atom_domain(T=str))
     ])
     lf_domain_with_margin = dp.with_margin(lf_domain, by=[], max_partition_length=1000)
+
     @pytest.mark.parametrize(
         "_readable_name,dp_obj",
         [
