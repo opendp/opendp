@@ -462,14 +462,6 @@ class Queryable(object):
     def __init__(self, value, query_type):
         self.value = value
         self.query_type = query_type
-        self.__opendp_dict__ = {
-            '__function__': 'Queryable',
-            '__module__': 'mod',
-            '__kwargs__': {
-                'value': value,
-                'query_type': query_type,
-            },
-        }
     
     def __eq__(self, other):
         return type(self) is type(other) and self.__opendp_dict__ == other.__opendp_dict__
@@ -1217,7 +1209,7 @@ class _Encoder(json.JSONEncoder):
 
         # Exceptions:
         from opendp.context import Context
-        if isinstance(obj, (Context,)):
+        if isinstance(obj, (Context, Queryable,)):
             raise Exception(
                 f"OpenDP JSON Encoder currently does not handle instances of {type(obj)}: "
                 f"It may have state which is not set by the constructor. Error on: {obj}")

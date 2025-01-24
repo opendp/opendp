@@ -121,6 +121,7 @@ def test_not_ever_serializable(_readable_name, dp_obj):
                 privacy_loss=dp.loss_of(epsilon=1.0),
                 split_evenly_over=1,
             ),
+            dp.Queryable('value', 'query_type'),
         ]
     ],
 )
