@@ -1175,19 +1175,26 @@ _KWARGS_FLAG = '__kwargs__'
 
 class _Encoder(json.JSONEncoder):
     def default(self, obj):
-        if hasattr(obj, '__opendp_dict__'):
-            return self.default(obj.__opendp_dict__)
-        if isinstance(obj, dict):
-            return {
-                self.default(k): self.default(v)
-                for k, v in obj.items()
-            }
-        if isinstance(obj, tuple):
-            return {_TUPLE_FLAG: [self.default(el) for el in obj]}
+        # Basic types:
         if isinstance(obj, (str, int, float, bool, type(None))):
             return obj
         if isinstance(obj, list):
             return [self.default(value) for value in obj]
+        if isinstance(obj, tuple):
+            return {_TUPLE_FLAG: [self.default(el) for el in obj]}
+        if isinstance(obj, dict):
+            return {
+                # Dict keys must be hashable,
+                # and with the JSON serialization we can't use tuple keys either,
+                # so no need to recurse on the key.
+                k: self.default(v)
+                for k, v in obj.items()
+            }
+
+        # OpenDP specific:
+        if hasattr(obj, '__opendp_dict__'):
+            return self.default(obj.__opendp_dict__)
+
         pl = import_optional_dependency('polars', raise_error=False)
         if pl is not None and isinstance(obj, pl.Expr):
             from base64 import b64encode
@@ -1195,12 +1202,15 @@ class _Encoder(json.JSONEncoder):
             polars_b64_bytes = b64encode(polars_bytes)
             polars_ascii_str = polars_b64_bytes.decode()
             return {_POLARS_FLAG: polars_ascii_str}
+
+        # Exceptions:
         from opendp.context import Context
         if isinstance(obj, (Context,)):
             raise Exception(
                 f"OpenDP JSON Encoder currently does not handle instances of {type(obj)}: "
                 f"It may have state which is not set by the constructor. Error on: {obj}")
-        raise Exception(f'OpenDP JSON Encoder does not handle {obj}')  # pragma: no cover
+
+        raise Exception(f'OpenDP JSON Encoder does not handle {obj}')
     
 def _deserialization_hook(dp_dict):
     if _FUNCTION_FLAG in dp_dict:

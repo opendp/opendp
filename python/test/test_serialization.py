@@ -12,6 +12,7 @@ atom = dp.atom_domain(bounds=(0, 10))
         for obj in [
             # Python objects:
             ('nested', ('tuple', ('containing', ('domain', (atom,))))),
+            {'dict key': atom},
             # Domains:
             atom,
             dp.categorical_domain(['A', 'B', 'C']),
@@ -92,4 +93,18 @@ def test_not_ever_serializable(_readable_name, dp_obj):
 )
 def test_not_currently_serializable(_readable_name, dp_obj):
     with pytest.raises(Exception, match=r"OpenDP JSON Encoder currently does not handle"):
+        dp.serialize(dp_obj)
+
+
+@pytest.mark.parametrize(
+    "_readable_name,dp_obj",
+    [
+        (str(obj), obj)
+        for obj in [
+            {('tuple', 'key'): 'value'},
+        ]
+    ],
+)
+def test_not_json_serializable(_readable_name, dp_obj):
+    with pytest.raises(Exception, match=r"keys must be str, int, float, bool or None, not tuple"):
         dp.serialize(dp_obj)
