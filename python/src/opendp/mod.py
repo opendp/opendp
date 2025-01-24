@@ -1206,14 +1206,14 @@ class _Encoder(json.JSONEncoder):
 
         # OpenDP specific:
         if hasattr(obj, '__opendp_dict__'):
-            return self.default(obj.__opendp_dict__)
+            return self.default({**obj.__opendp_dict__, '__version__': __version__})
 
         pl = import_optional_dependency('polars', raise_error=False)
         if pl is not None:
             if isinstance(obj, pl.Expr):
-                return {_EXPR_FLAG: _bytes_to_b64_str(obj.meta.serialize())}
+                return {_EXPR_FLAG: _bytes_to_b64_str(obj.meta.serialize()), '__version__': __version__}
             if isinstance(obj, pl.LazyFrame):
-                return {_LAZY_FLAG: _bytes_to_b64_str(obj.serialize())}
+                return {_LAZY_FLAG: _bytes_to_b64_str(obj.serialize()), '__version__': __version__}
 
         # Exceptions:
         from opendp.context import Context
@@ -1223,9 +1223,17 @@ class _Encoder(json.JSONEncoder):
                 f"It may have state which is not set by the constructor. Error on: {obj}")
 
         raise Exception(f'OpenDP JSON Encoder does not handle {obj}')
-    
+
+def _check_version(dp_dict):
+    from logging import warning
+    if dp_dict['__version__'] != __version__:
+        warning(
+            f'OpenDP version in serialized object ({dp_dict['__version__']}) '
+            f'!= this version ({__version__})')
+
 def _deserialization_hook(dp_dict):
     if _FUNCTION_FLAG in dp_dict:
+        _check_version(dp_dict)
         module = importlib.import_module(f"opendp.{dp_dict[_MODULE_FLAG]}")
         func = getattr(module, dp_dict[_FUNCTION_FLAG])
         return func(**dp_dict.get(_KWARGS_FLAG, {}))
@@ -1234,8 +1242,10 @@ def _deserialization_hook(dp_dict):
     pl = import_optional_dependency('polars', raise_error=False)
     if pl is not None:
         if _EXPR_FLAG in dp_dict:
+            _check_version(dp_dict)
             return pl.Expr.deserialize(_b64_str_to_bytes(dp_dict[_EXPR_FLAG]))
         if _LAZY_FLAG in dp_dict:
+            _check_version(dp_dict)
             return pl.LazyFrame.deserialize(_b64_str_to_bytes(dp_dict[_LAZY_FLAG]))
     return dp_dict
 
