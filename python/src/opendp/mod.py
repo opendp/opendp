@@ -462,9 +462,6 @@ class Queryable(object):
     def __init__(self, value, query_type):
         self.value = value
         self.query_type = query_type
-    
-    def __eq__(self, other):
-        return type(self) is type(other) and self.__opendp_dict__ == other.__opendp_dict__
 
     def __call__(self, query):
         from opendp.core import queryable_eval
