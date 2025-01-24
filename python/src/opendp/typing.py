@@ -494,15 +494,15 @@ def get_atom_or_infer(type_name: Union[RuntimeType, str], example):
     return get_atom(type_name) or RuntimeType.infer(example)
 
 
-def get_first(iterable):
+def get_first(value):
     '''
     Get first value from iterable.
     
-    :param iterable: An iterable
+    :param value: An iterable
     '''
-    if iterable is None or not len(iterable):
+    if value is None or not len(value):
         return None
-    return next(iter(iterable))
+    return next(iter(value))
 
 def parse_or_infer(type_name: RuntimeTypeDescriptor | None, example) -> Union[RuntimeType, str]:
     '''
