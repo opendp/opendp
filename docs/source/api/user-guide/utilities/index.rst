@@ -1,11 +1,16 @@
 Utilities
 =========
 
-There are few utilities that can be useful.
+There are few utilities that may be useful.
+
+* Use the :doc:`typing` module to manage the data types in the computation chain
+* Use :doc:`parameter-search` to find free parameters in a computation chain
+* Use :doc:`serialization` to transformation OpenDP objects into strings, and back to objects
+
 
 .. toctree::
-    :maxdepth: 1
+    :hidden:
 
-    Use the typing module to manage the data types in the computation chain <typing>
-    Use the search functions to find free parameters in a computation chain <parameter-search>
-    Use the serialization functions to transformation OpenDP objects into strings <serialization>
+    typing
+    parameter-search
+    serialization
