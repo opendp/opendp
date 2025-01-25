@@ -55,26 +55,6 @@ are not currently serializable:
         Exception: OpenDP JSON Encoder does not handle <function <lambda> at ...>
 
 
-Another option to consider, if you are using the Polars interface,
-is to use `Polars serialization <https://docs.pola.rs/api/python/dev/reference/expressions/api/polars.Expr.meta.serialize.html#polars.Expr.meta.serialize>`_ directly:
-
-.. tab-set::
-
-  .. tab-item:: Python
-
-    .. code:: python
-
-        >>> import polars as pl
-        >>> import io
-
-        >>> expr = dp.len(scale=1.0)
-        >>> bytes = expr.meta.serialize()
-        >>> new_expr = pl.Expr.deserialize(bytes)
-        >>> type(expr)
-        <class 'polars.expr.expr.Expr'>
-        >>> type(new_expr)
-        <class 'polars.expr.expr.Expr'>
-
-Note that serialized Polars objects will include the path of the local binary.
+Note that serialized embedded Polars objects will include the path of the local binary.
 These paths can be overridden at load time with the ``OPENDP_POLARS_LIB_PATH``
 :ref:`environment variable <envvars>` .
