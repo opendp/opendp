@@ -1023,7 +1023,7 @@ def test_replace():
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=4,
-        margins=[dp.polars.Margin(by=(), max_partition_length=5)],
+        margins=[dp.polars.Margin(by=(), max_partition_length=300)],
     )
     
     # replace multiple input values with one output value    
@@ -1054,4 +1054,30 @@ def test_replace():
         .release()
         .collect()["alpha"].sort(), 
         pl.Series("alpha", ["C", "D", "E"])
+    )
+
+
+def test_replace_strict():
+    pl = pytest.importorskip("polars")
+
+    # this triggers construction of a lazyframe domain from the schema
+    context = dp.Context.compositor(
+        data=pl.LazyFrame(pl.Series("alpha", ["A", "B", "C"] * 100)),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=1,
+        margins=[dp.polars.Margin(by=(), max_partition_length=300)],
+    )
+
+    # replace multiple input values with one output value    
+    assert isinstance(
+        context.query()
+        .select(
+            pl.col("alpha")
+            .replace_strict(["A", "B"], [1, 2], default=0, return_dtype=pl.Int64)
+            .dp.sum((0, 2))
+        )
+        .release()
+        .collect()["alpha"][0],
+        int
     )

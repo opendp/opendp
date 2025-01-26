@@ -75,7 +75,7 @@ where
     if is_cast_fallible(&old_dtype, &dtype) || is_cast_fallible(&new_dtype, &dtype) {
         return fallible!(
             MakeTransformation,
-            "replace: old datatype ({}) and new datatype ({}) must share the same data type as input ({}) or null",
+            "replace: old datatype ({}) and new datatype ({}) must be consistent with the input datatype ({})",
             old_dtype,
             new_dtype,
             dtype
@@ -88,10 +88,10 @@ where
     output_domain.column.set_dtype(dtype)?;
 
     // if replacement can introduce nulls, then set nullable
-    output_domain.column.nullable |= literal_is_null(new_lit);
+    output_domain.column.nullable |= literal_is_nullable(new_lit);
 
     // if old has null and new does not, then there is a non-null null replacement
-    if literal_is_null(old_lit) && !literal_is_null(new_lit) {
+    if literal_is_nullable(old_lit) && !literal_is_nullable(new_lit) {
         output_domain.column.nullable = false;
     }
 
@@ -112,7 +112,7 @@ where
 
 /// # Proof Definition
 /// Returns the length of a literal value.
-fn literal_len(literal: &LiteralValue) -> Fallible<i64> {
+pub(crate) fn literal_len(literal: &LiteralValue) -> Fallible<i64> {
     Ok(match literal {
         LiteralValue::Range { low, high, .. } => high.saturating_sub(*low),
         LiteralValue::Series(s) => s.len() as i64,
@@ -128,7 +128,7 @@ fn literal_len(literal: &LiteralValue) -> Fallible<i64> {
 
 /// # Proof Definition
 /// Returns whether a literal value contains null.
-fn literal_is_null(literal: &LiteralValue) -> bool {
+pub(crate) fn literal_is_nullable(literal: &LiteralValue) -> bool {
     match literal {
         LiteralValue::Series(new_series) => new_series.has_nulls(),
         LiteralValue::Null => true,
@@ -138,7 +138,7 @@ fn literal_is_null(literal: &LiteralValue) -> bool {
 
 /// # Proof Definition
 /// Returns whether casting is fallible between two data types.
-fn is_cast_fallible(from: &DataType, to: &DataType) -> bool {
+pub(crate) fn is_cast_fallible(from: &DataType, to: &DataType) -> bool {
     if let DataType::Null = from {
         return false;
     }
