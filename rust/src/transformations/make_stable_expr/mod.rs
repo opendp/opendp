@@ -54,7 +54,10 @@ mod expr_len;
 mod expr_lit;
 
 #[cfg(feature = "contrib")]
-mod expr_replace;
+pub(crate) mod expr_replace;
+
+#[cfg(feature = "contrib")]
+mod expr_replace_strict;
 
 #[cfg(feature = "contrib")]
 mod expr_sum;
@@ -170,6 +173,12 @@ where
                 function: Replace,
                 ..
             } => expr_replace::make_expr_replace(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Function {
+                function: ReplaceStrict { .. },
+                ..
+            } => expr_replace_strict::make_expr_replace_strict(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
             Function {
