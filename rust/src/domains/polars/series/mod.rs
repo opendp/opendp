@@ -152,11 +152,11 @@ impl SeriesDomain {
                     .into_series();
                 Arc::new(EnumDomain::new(categories)?)
             }
-            DataType::Array(dtype, length) => {
+            DataType::Array(dtype, size) => {
                 let element_domain = Self::new_element_domain(*dtype)?;
                 Arc::new(ArrayDomain {
                     element_domain,
-                    width: length,
+                    size,
                 })
             }
             dtype => return fallible!(MakeDomain, "unsupported type {}", dtype),
@@ -354,7 +354,7 @@ impl SeriesElementDomain for ArrayDomain {
     type InnerDomain = Self;
 
     fn dtype(&self) -> DataType {
-        DataType::Array(Box::new(self.element_domain.dtype()), self.width)
+        DataType::Array(Box::new(self.element_domain.dtype()), self.size)
     }
     fn inner_domain(&self) -> &Self {
         self

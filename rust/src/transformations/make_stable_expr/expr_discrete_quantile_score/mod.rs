@@ -106,8 +106,7 @@ where
 
     let output_domain = ExprDomain {
         column: output_domain,
-        context: Context::Grouping {
-            by,
+        context: Context::Aggregation {
             margin: Margin {
                 max_partition_length: Some(1),
                 max_partition_contributions: None,
