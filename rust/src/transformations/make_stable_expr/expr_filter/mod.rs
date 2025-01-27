@@ -34,7 +34,7 @@ where
         return fallible!(MakeTransformation, "expected filter expression");
     };
 
-    let (group_by, margin) = input_domain.context.grouping("filter")?;
+    let margin = input_domain.context.aggregation("filter")?;
 
     let t_input = input
         .as_ref()
@@ -69,8 +69,7 @@ where
     // However, the partition length is not preserved.
     let output_domain = ExprDomain {
         column: t_input.output_domain.column.clone(),
-        context: Context::Grouping {
-            by: group_by,
+        context: Context::Aggregation {
             margin: Margin {
                 public_info: margin.public_info.map(|_| MarginPub::Keys),
                 ..margin
