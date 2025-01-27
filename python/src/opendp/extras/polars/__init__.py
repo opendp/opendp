@@ -22,7 +22,6 @@ from opendp._lib import lib_path, import_optional_dependency
 from opendp.mod import (
     Domain,
     Measurement,
-    OpenDPException,
     binary_search,
     binary_search_chain,
 )
@@ -868,12 +867,6 @@ class LazyFrameQuery():
                 T=float,
             )
 
-            # attempt to return without setting a threshold
-            try:
-                return _make(scale, threshold=None)
-            except OpenDPException:
-                pass
-
             # now that scale has been solved, find a suitable threshold
             threshold = binary_search(
                 lambda t: _make(scale, t).map(d_in)[1] < d_out[1],  # type: ignore[index]
@@ -972,7 +965,6 @@ class LazyGroupByQuery():
         """
         lf_plan = self._lgb_plan.agg(*aggs, **named_aggs)
         return LazyFrameQuery(lf_plan, self._query)
-
 
 
 @dataclass

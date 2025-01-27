@@ -48,7 +48,7 @@ We chose this dataset for a few reasons:
 
 For this tutorial, we sampled a total of 200,000 rows from the public microdata of France across all study years. 
 
-The `User Guide <https://ec.europa.eu/eurostat/documents/1978984/6037342/EULFS-Database-UserGuide.pdf>`_ describes many variables. Our examples will use just a few. (Descriptions are copied from the User Guide.) 
+The `User Guide <https://www.gesis.org/missy/files/documents/EU-LFS/EULFS_Database_UserGuide_2021-3.pdf>`_ describes many variables. Our examples will use just a few. (Descriptions are copied from the User Guide.) 
 
 .. list-table:: 
    :header-rows: 1
