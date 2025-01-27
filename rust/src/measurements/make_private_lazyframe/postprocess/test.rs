@@ -1,6 +1,4 @@
-use std::collections::HashSet;
-
-use polars::{df, lazy::frame::IntoLazy};
+use polars::{df, lazy::frame::IntoLazy, prelude::LazyFrame};
 use polars_plan::dsl::col;
 
 use crate::{
@@ -14,24 +12,28 @@ use crate::{
 
 use super::*;
 
-#[test]
-fn test_make_private_lazyframe_post_valid() -> Fallible<()> {
+fn lazyframe_select_postprocess_query() -> Fallible<(LazyFrameDomain, LazyFrame)> {
     let s1 = SeriesDomain::new("A", AtomDomain::new_closed((0, 1))?);
     let s2 = SeriesDomain::new("B", AtomDomain::<bool>::default());
 
     let lf_domain = LazyFrameDomain::new(vec![s1, s2])?.with_margin(
-        HashSet::from([col("B")]),
-        Margin::default()
+        Margin::by(["B"])
             .with_public_lengths()
             .with_max_partition_length(5),
     )?;
-    let lf = df!("A" => [0, 1, 1], "B" => [true, false, true])?.lazy();
-
-    let query = lf
+    let lf = df!("A" => [0, 1, 1], "B" => [true, false, true])?
+        .lazy()
         .group_by([col("B")])
-        .agg([col("A").dp().sum((0, 1), Some(1.))])
-        .with_column(col("A").alias("C"))
-        .select([col("C")]);
+        .agg([col("A").dp().sum((0, 1), Some(1.))]);
+
+    Ok((lf_domain, lf))
+}
+
+#[test]
+fn test_make_private_lazyframe_post_valid() -> Fallible<()> {
+    let (lf_domain, lf) = lazyframe_select_postprocess_query()?;
+
+    let query = lf.with_column(col("A").alias("C")).select([col("C")]);
 
     make_private_lazyframe(
         lf_domain,
@@ -47,21 +49,8 @@ fn test_make_private_lazyframe_post_valid() -> Fallible<()> {
 
 #[test]
 fn test_make_private_lazyframe_post_invalid() -> Fallible<()> {
-    let s1 = SeriesDomain::new("A", AtomDomain::new_closed((0, 1))?);
-    let s2 = SeriesDomain::new("B", AtomDomain::<bool>::default());
-
-    let lf_domain = LazyFrameDomain::new(vec![s1, s2])?.with_margin(
-        HashSet::from([col("B")]),
-        Margin::default()
-            .with_public_lengths()
-            .with_max_partition_length(5),
-    )?;
-    let lf = df!("A" => [0, 1, 1], "B" => [true, false, true])?.lazy();
-
-    let query = lf
-        .group_by([col("B")])
-        .agg([col("A").dp().sum((0, 1), Some(1.))])
-        .select([col("A").head(None)]);
+    let (lf_domain, lf) = lazyframe_select_postprocess_query()?;
+    let query = lf.select([col("A").head(None)]);
 
     assert_eq!(
         make_private_lazyframe(
