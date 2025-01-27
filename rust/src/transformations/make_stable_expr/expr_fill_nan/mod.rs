@@ -36,8 +36,16 @@ where
     // only enforce row-by-row context if the fill expression is not broadcastable
     let expr_domain = if fill.clone().meta().root_names().len() > 0 {
         input_domain.as_row_by_row()
-    } else {
+    } else if let Expr::Literal(value) = fill.clone() {
+        if !value.is_scalar() {
+            return fallible!(MakeTransformation, "fill expression must be broadcastable");
+        }
         input_domain.clone()
+    } else {
+        return fallible!(
+            MakeTransformation,
+            "fill expression must be a column or scalar"
+        );
     };
 
     let t_data = data

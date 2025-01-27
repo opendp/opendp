@@ -40,7 +40,7 @@ where
 
     let op_name = function.to_string();
 
-    let (group_by, margin) = input_domain.context.grouping(op_name.as_str())?;
+    let margin = input_domain.context.aggregation(op_name.as_str())?;
 
     let [input] = <[Expr; 1]>::try_from(input)
         .map_err(|_| err!(MakeTransformation, "{} takes one input", op_name.as_str()))?;
@@ -65,8 +65,7 @@ where
     // However, the partition length is not preserved.
     let output_domain = ExprDomain {
         column: series_domain,
-        context: Context::Grouping {
-            by: group_by,
+        context: Context::Aggregation {
             margin: Margin {
                 public_info: margin.public_info.map(|_| MarginPub::Keys),
                 ..margin
