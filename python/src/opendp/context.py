@@ -101,7 +101,7 @@ def space_of(T, M=None, infer: bool = False) -> tuple[Domain, Metric]:
     >>> dp.space_of(list[int])
     (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())
     >>> # the verbose form allows greater control:
-    >>> (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.symmetric_distance())
+    >>> (dp.vector_domain(dp.atom_domain(T="i32")), dp.symmetric_distance())
     (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())
 
     :param T: carrier type (the type of members in the domain)
@@ -153,7 +153,7 @@ def domain_of(T, infer: bool = False) -> Domain:
     >>> dp.domain_of('Option<int>')  # Python's `Optional` is not supported.
     OptionDomain(AtomDomain(T=i32))
     
-    >>> dp.domain_of(dp.i32)
+    >>> dp.domain_of("i32")
     AtomDomain(T=i32)
 
     More complex types are not supported:
@@ -197,7 +197,7 @@ def domain_of(T, infer: bool = False) -> Domain:
         if T.origin == "Option":
             return option_domain(domain_of(T.args[0]))
 
-    if T in ty.PRIMITIVE_TYPES:
+    if str(T) in ty.PRIMITIVE_TYPES:
         return atom_domain(T=T)
 
     raise TypeError(f"unrecognized carrier type: {T}")  # pragma: no cover

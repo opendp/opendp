@@ -13,7 +13,7 @@ def test_unit_of():
 
     # For the rest, "ordered=True" is not allowed:
 
-    assert dp.unit_of(absolute=3) == (dp.absolute_distance(dp.i32), 3)
+    assert dp.unit_of(absolute=3) == (dp.absolute_distance("i32"), 3)
     with pytest.raises(ValueError):
         dp.unit_of(absolute=3, ordered=True)
 
@@ -180,12 +180,12 @@ def test_subcontext_changes_metric():
     subcontext = context.query().clamp((0, 1)).sum().compositor(split_evenly_over=1).release()
 
     # This still corresponds to the top-level context:
-    assert subcontext.accountant.input_domain == dp.vector_domain(dp.atom_domain(T=dp.i32))
+    assert subcontext.accountant.input_domain == dp.vector_domain(dp.atom_domain(T="i32"))
 
     # TODO: Is there a good way to make this assertion through the public API?
     assert subcontext.query()._chain == (
-        dp.atom_domain(T=dp.i32),
-        dp.absolute_distance(dp.i32)
+        dp.atom_domain(T="i32"),
+        dp.absolute_distance("i32")
     )
 
 
@@ -295,6 +295,9 @@ def test_approx_to_approx_zCDP():
 
     assert release == [1, 2, 3]
 
+
+dp.enable_features("contrib")
+test_approx_to_approx_zCDP()
 
 def test_agg_input():
     context = dp.Context.compositor(

@@ -19,7 +19,7 @@ use polars::prelude::*;
 #[bootstrap(
     name = "lazyframe_domain",
     arguments(series_domains(rust_type = "Vec<SeriesDomain>")),
-    returns(c_type = "FfiResult<AnyDomain *>")
+    returns(c_type = "FfiResult<AnyDomain *>", hint = "LazyFrameDomain")
 )]
 /// Construct an instance of `LazyFrameDomain`.
 ///
@@ -32,6 +32,159 @@ pub extern "C" fn opendp_domains__lazyframe_domain(
     Ok(AnyDomain::new(try_!(LazyFrameDomain::new(try_!(
         unpack_series_domains(series_domains)
     )))))
+    .into()
+}
+
+#[bootstrap(
+    name = "_lazyframe_domain_get_series_domain",
+    returns(c_type = "FfiResult<AnyDomain *>")
+)]
+/// Retrieve the series domain at index `column`.
+///
+/// # Arguments
+/// * `lazyframe_domain` - Domain to retrieve the SeriesDomain from
+/// * `column` - Index of the SeriesDomain
+#[no_mangle]
+pub extern "C" fn opendp_domains___lazyframe_domain_get_series_domain(
+    lazyframe_domain: *const AnyDomain,
+    column: u32,
+) -> FfiResult<*mut AnyDomain> {
+    let lazyframe_domain = try_!(try_as_ref!(lazyframe_domain).downcast_ref::<LazyFrameDomain>());
+    let series_domain = try_!(lazyframe_domain
+        .series_domains
+        .get(column as usize)
+        .ok_or_else(|| err!(FFI, "column {column} does not exist in the dataframe")));
+    Ok(AnyDomain::new(series_domain.clone())).into()
+}
+
+#[bootstrap(
+    name = "_lazyframe_domain_get_margin",
+    arguments(by(rust_type = "Vec<String>")),
+    returns(c_type = "FfiResult<AnyObject *>")
+)]
+/// Retrieve the series domain at index 'column`.
+///
+/// # Arguments
+/// * `lazyframe_domain` - Domain to retrieve the SeriesDomain from
+/// * `by` - grouping columns
+#[no_mangle]
+pub extern "C" fn opendp_domains___lazyframe_domain_get_margin(
+    lazyframe_domain: *const AnyDomain,
+    by: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    let lazyframe_domain = try_!(try_as_ref!(lazyframe_domain).downcast_ref::<LazyFrameDomain>());
+    let by = try_!(try_as_ref!(by).downcast_ref::<Vec<String>>());
+    let by = by.iter().map(|v| PlSmallStr::from(v)).collect();
+    let margin = lazyframe_domain.get_margin(&by);
+    Ok(AnyObject::new(margin)).into()
+}
+
+#[bootstrap(
+    name = "_margin_get_max_partition_length",
+    arguments(margin(rust_type = "Margin")),
+    returns(c_type = "FfiResult<AnyObject *>")
+)]
+/// Retrieve the max partition length from a margin
+///
+/// # Arguments
+/// * `margin` - Margin to introspect
+#[no_mangle]
+pub extern "C" fn opendp_domains___margin_get_max_partition_length(
+    margin: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    let margin = try_!(try_as_ref!(margin).downcast_ref::<Margin>());
+    Ok(AnyObject::new(
+        margin.max_partition_length.clone().map(AnyObject::new),
+    ))
+    .into()
+}
+
+#[bootstrap(
+    name = "_margin_get_max_num_partitions",
+    arguments(margin(rust_type = "Margin")),
+    returns(c_type = "FfiResult<AnyObject *>")
+)]
+/// Retrieve the max num partitions from a margin
+///
+/// # Arguments
+/// * `margin` - Margin to introspect
+#[no_mangle]
+pub extern "C" fn opendp_domains___margin_get_max_num_partitions(
+    margin: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    let margin = try_!(try_as_ref!(margin).downcast_ref::<Margin>());
+    Ok(AnyObject::new(
+        margin.max_num_partitions.clone().map(AnyObject::new),
+    ))
+    .into()
+}
+
+#[bootstrap(
+    name = "_margin_get_max_partition_contributions",
+    arguments(margin(rust_type = "Margin")),
+    returns(c_type = "FfiResult<AnyObject *>")
+)]
+/// Retrieve the max partition contributions from a margin
+///
+/// # Arguments
+/// * `margin` - Margin to introspect
+#[no_mangle]
+pub extern "C" fn opendp_domains___margin_get_max_partition_contributions(
+    margin: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    let margin = try_!(try_as_ref!(margin).downcast_ref::<Margin>());
+    Ok(AnyObject::new(
+        margin
+            .max_partition_contributions
+            .clone()
+            .map(AnyObject::new),
+    ))
+    .into()
+}
+
+#[bootstrap(
+    name = "_margin_get_max_influenced_partitions",
+    arguments(margin(rust_type = "Margin")),
+    returns(c_type = "FfiResult<AnyObject *>")
+)]
+/// Retrieve the max influenced partitions from a margin
+///
+/// # Arguments
+/// * `margin` - Margin to introspect
+#[no_mangle]
+pub extern "C" fn opendp_domains___margin_get_max_influenced_partitions(
+    margin: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    let margin = try_!(try_as_ref!(margin).downcast_ref::<Margin>());
+    Ok(AnyObject::new(
+        margin.max_influenced_partitions.clone().map(AnyObject::new),
+    ))
+    .into()
+}
+
+#[bootstrap(
+    name = "_margin_get_public_info",
+    arguments(margin(rust_type = "Margin")),
+    returns(c_type = "FfiResult<AnyObject *>")
+)]
+/// Retrieve the public info invariant from a margin.
+///
+/// # Arguments
+/// * `margin` - Margin to introspect
+#[no_mangle]
+pub extern "C" fn opendp_domains___margin_get_public_info(
+    margin: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    let margin = try_!(try_as_ref!(margin).downcast_ref::<Margin>());
+    Ok(AnyObject::new(
+        margin
+            .public_info
+            .map(|info| match info {
+                MarginPub::Keys => "keys".to_string(),
+                MarginPub::Lengths => "lengths".to_string(),
+            })
+            .map(AnyObject::new),
+    ))
     .into()
 }
 
@@ -85,7 +238,7 @@ pub(crate) fn unpack_series_domains(
         max_influenced_partitions(c_type = "void *", rust_type = "Option<u32>", default = b"null"),
         public_info(rust_type = "Option<String>", default = b"null")
     ),
-    returns(c_type = "FfiResult<AnyDomain *>")
+    returns(c_type = "FfiResult<AnyDomain *>", hint = "LazyFrameDomain")
 )]
 #[no_mangle]
 pub extern "C" fn opendp_domains__with_margin(

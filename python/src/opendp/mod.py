@@ -8,7 +8,7 @@ instances of :py:class:`opendp.mod.Domain` are either inputs or outputs for func
 '''
 from __future__ import annotations
 import ctypes
-from typing import Any, Literal, Type, TypeVar, Union, Callable, Optional, overload, TYPE_CHECKING, cast
+from typing import Any, Literal, Sequence, Type, TypeVar, Union, Callable, Optional, overload, TYPE_CHECKING, cast
 
 from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction
 
@@ -587,6 +587,98 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
         raise ValueError("Domain does not support iteration")
 
 
+class AtomDomain(Domain):
+    _type_ = AnyDomain
+    
+    @property
+    def bounds(self) -> tuple[float, float] | None:
+        from opendp.domains import _atom_domain_get_bounds_closed
+        return _atom_domain_get_bounds_closed(self)
+    
+    @property
+    def nullable(self) -> bool:
+        from opendp.domains import _atom_domain_get_nullable
+        return _atom_domain_get_nullable(self)
+    
+    def __del__(self):
+        pass
+
+class OptionDomain(Domain):
+    _type_ = AnyDomain
+
+    @property
+    def element_domain(self) -> Domain:
+        from opendp.domains import _option_domain_get_element_domain
+        return _option_domain_get_element_domain(self)
+    
+    def __del__(self):
+        pass
+
+
+class VectorDomain(Domain):
+    _type_ = AnyDomain
+
+    @property
+    def element_domain(self) -> Domain:
+        from opendp.domains import _vector_domain_get_element_domain
+        return _vector_domain_get_element_domain(self)
+    
+    @property
+    def size(self) -> Domain:
+        from opendp.domains import _vector_domain_get_size
+        return _vector_domain_get_size(self)
+    
+    def __del__(self):
+        pass
+
+
+class SeriesDomain(Domain):
+    _type_ = AnyDomain
+
+    @property
+    def name(self) -> bool:
+        from opendp.domains import _series_domain_get_name
+        return _series_domain_get_name(self)
+    
+    @property
+    def element_domain(self) -> Domain:
+        from opendp.domains import _series_domain_get_element_domain
+        return _series_domain_get_element_domain(self)
+    
+    @property
+    def nullable(self) -> bool:
+        from opendp.domains import _series_domain_get_nullable
+        return _series_domain_get_nullable(self)
+    
+    def __del__(self):
+        pass
+    
+class LazyFrameDomain(Domain):
+    _type_ = AnyDomain
+
+    def series_domain(self, i: int) -> SeriesDomain:
+        from opendp.domains import _lazyframe_domain_get_series_domain
+        return _lazyframe_domain_get_series_domain(self, i)
+    
+    @property
+    def series_domains(self) -> list[SeriesDomain]:
+        domains: list[SeriesDomain] = []
+        while True:
+            try:
+                domains.append(self.series_domain(len(domains)))
+            except OpenDPException:
+                break
+        return domains
+
+    def get_margin(self, by: Sequence[str]):
+        from opendp.domains import _lazyframe_domain_get_margin
+        if isinstance(by, str):
+            raise ValueError(f"expected by ({by}) to be a list of strings")
+        return _lazyframe_domain_get_margin(self, list(by))
+
+    def __del__(self):
+        pass
+
 class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
     '''
     See the `Metric <../../api/user-guide/programming-framework/supporting-elements.html#metric>`_
@@ -733,7 +825,7 @@ class PartialConstructor(object):
         return PartialConstructor(lambda input_domain, input_metric: self(input_domain, input_metric) >> other) # pragma: no cover
 
     def __rrshift__(self, other):
-        if isinstance(other, tuple) and list(map(type, other)) == [Domain, Metric]:
+        if isinstance(other, tuple) and isinstance(other[0], Domain) and isinstance(other[1], Metric):
             return self(other[0], other[1])
         raise TypeError(f"Cannot chain {type(self)} with {type(other)}")  # pragma: no cover
 

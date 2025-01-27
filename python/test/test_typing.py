@@ -18,11 +18,11 @@ def test_typing_infer_to_string():
     # Currently these return actual strings, which we test with `is`.
     # The plan is to change the response type to be consistent:
     # https://github.com/opendp/opendp/issues/1665
-    assert RuntimeType.infer(23) is 'i32' # noqa: F632
-    assert RuntimeType.infer(12.) is 'f64' # noqa: F632
-    assert RuntimeType.infer('hello') is 'String' # noqa: F632
-    assert RuntimeType.infer(lambda: True) is 'CallbackFn' # noqa: F632    
-    assert RuntimeType.infer(object(), py_object=True) is 'ExtrinsicObject' # noqa: F632
+    assert RuntimeType.infer(23) == 'i32' # noqa: F632
+    assert RuntimeType.infer(12.) == 'f64' # noqa: F632
+    assert RuntimeType.infer('hello') == 'String' # noqa: F632
+    assert RuntimeType.infer(lambda: True) == 'CallbackFn' # noqa: F632    
+    assert RuntimeType.infer(object(), py_object=True) == 'ExtrinsicObject' # noqa: F632
     
 
 def test_typing_infer_to_object():

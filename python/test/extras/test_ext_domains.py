@@ -47,7 +47,7 @@ def test_sscp_domain():
     np = pytest.importorskip('numpy')
     domain.member(np.random.normal(size=(4, 4)))
 
-    domain = _sscp_domain(num_features=4, T=dp.f32)
+    domain = _sscp_domain(num_features=4, T="f32")
     domain.member(np.random.normal(size=(4, 4)).astype(np.float32))
 
     with pytest.raises(dp.OpenDPException):
