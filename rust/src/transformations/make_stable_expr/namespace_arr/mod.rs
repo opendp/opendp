@@ -8,6 +8,9 @@ use crate::transformations::DatasetMetric;
 
 use super::StableExpr;
 
+#[cfg(test)]
+mod test;
+
 /// Make a Transformation that returns an expression under the `arr` namespace.
 ///
 /// # Arguments
