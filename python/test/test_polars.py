@@ -1145,3 +1145,6 @@ def test_array_domain():
 
     # check that domain is as expected
     assert observed == expected
+
+    # this is broken until https://github.com/pola-rs/polars/issues/20162 is fixed
+    # context.query().with_columns(pl.col.alpha.explode()).select(dp.len()).release().collect()
