@@ -49,6 +49,8 @@ def test_function_docs(file, name, node):
     )
     if node.args.kwarg is not None:
         args.append(node.args.kwarg)
+    if node.args.vararg is not None:
+        args.append(node.args.vararg)
     arg_names = {arg.arg for arg in args} - {'self'} - {'cls'} # TODO: Check that it really is a class method.
 
     assert param_names == arg_names, f'In {file}, function {name}, line {node.lineno}, docstring params ({", ".join(param_names)}) != function signature ({", ".join(arg_names)})'
