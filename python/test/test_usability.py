@@ -93,7 +93,7 @@ def test_string_instead_of_tuple_for_margin_key():
         schema={"a_column": pl.Int32},
     )
 
-    with pytest.raises(ValueError, match="('a_column',)"):
+    with pytest.raises(ValueError, match="Margin keys must be a sequence"):
         dp.Context.compositor(
             data=lf,
             privacy_unit=dp.unit_of(contributions=1),
