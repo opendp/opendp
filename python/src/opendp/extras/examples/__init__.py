@@ -12,7 +12,7 @@ The methods of this module will then be accessible at ``dp.examples``.
 from pathlib import Path
 
 
-def _http_get(url: str) -> bytes:
+def _http_get(url: str) -> bytes: # pragma: no cover
     '''
     Normally would use the requests library for this, but we want to avoid extra dependencies.
 
@@ -50,7 +50,7 @@ def get_california_pums_path() -> Path:
     * married
     '''
     path = Path(__file__).parent / 'california_pums.csv'
-    if not path.exists():
+    if not path.exists(): # pragma: no cover
         url = 'https://raw.githubusercontent.com/opendp/opendp/main/docs/source/data/PUMS_california_demographics_1000/data.csv'
         path.write_text(_http_get(url).decode())
     return path
@@ -68,7 +68,7 @@ def get_france_lfs_path() -> Path:
     from io import BytesIO
     from zipfile import ZipFile
     path = Path(__file__).parent / 'v2_france_lfs.csv'
-    if not path.exists():
+    if not path.exists(): # pragma: no cover
         url = 'https://raw.githubusercontent.com/opendp/dp-test-datasets/refs/heads/main/data/eurostat/V2_FR_LFS.csv.zip'
         france_lfs_bytes = _http_get(url)
         with ZipFile(BytesIO(france_lfs_bytes)) as data_zip:

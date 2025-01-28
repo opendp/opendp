@@ -710,9 +710,13 @@ class Query(object):
             d_mid = self._d_in
         elif isinstance(self._chain, Transformation):
             d_mid = self._chain.map(self._d_in)
-        else:
+        elif isinstance(self._chain, PartialChain):
             raise ValueError(
-                "The canonical noise mechanism may only be applied to fully-specified transformations. You may be missing an argument in your query."
+                "Canonical noise requires all arguments in the input query to be specified."
+            )
+        else:
+            raise ValueError( # pragma: no cover
+                f"Canonical noise expects a metric space or transformation as the prior query, found {self._chain}"
             )
 
         return self.new_with(chain=self._chain >> then(d_mid, self._d_out))
