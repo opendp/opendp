@@ -172,13 +172,13 @@ def test_twoside_pvalue():
 def test_1s_ump_basic():
     pytest.importorskip("scipy")
     result = one_sided_uniformly_most_powerful_tests(
-        theta=0.5, d_in=1.0, d_out=(0.1, 1e-7), size=10, alpha=0.05, tail="left"
+        d_in=1.0, d_out=(0.1, 1e-7), size=10, theta=0.5, alpha=0.05, tail="left"
     )
     # tail should be monotonically increasing
     assert (np.diff(result) > 0).sum() == len(result) - 1
 
     result = one_sided_uniformly_most_powerful_tests(
-        theta=0.5, d_in=1.0, d_out=(0.1, 1e-7), size=10, alpha=0.05, tail="right"
+        d_in=1.0, d_out=(0.1, 1e-7), size=10, theta=0.5, alpha=0.05, tail="right"
     )
     # tail should be monotonically increasing
     assert (np.diff(result) < 0).sum() == len(result) - 1
@@ -221,6 +221,6 @@ def test_canonical_context_with_partial_transformation():
     )
 
     with pytest.raises(
-        ValueError, match="You may be missing an argument in your query."
+        ValueError, match="Canonical noise requires all arguments in the input query to be specified."
     ):
         context.query().resize(constant=1.0).clamp((0.0, 1.0)).sum().canonical_noise()
