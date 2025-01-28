@@ -27,10 +27,20 @@ pub struct EnumDomain {
 impl EnumDomain {
     pub fn new(categories: Series) -> Fallible<Self> {
         if !categories.dtype().is_string() {
-            return fallible!(MakeDomain, "categories must be strings");
+            return fallible!(
+                MakeDomain,
+                "categories dtype ({}) must be string",
+                categories.dtype()
+            );
         }
-        if categories.len() != categories.n_unique()? {
-            return fallible!(MakeDomain, "categories must be distinct");
+
+        let n_duplicates = categories.len() - categories.n_unique()?;
+        if n_duplicates != 0 {
+            return fallible!(
+                MakeDomain,
+                "categories must be distinct. Found {:?} duplicates.",
+                n_duplicates
+            );
         }
         Ok(EnumDomain { categories })
     }
