@@ -414,8 +414,7 @@ class Context(object):
             pl = import_optional_dependency("polars")
             for margin in margins:
                 if not isinstance(margin.by, Sequence) or isinstance(margin.by, str):
-                    msg = margin.by if isinstance(margin.by, str) else "your-column"
-                    raise ValueError(f"Margin keys must be tuples. For single-valued tuples include a trailing comma, ie: `('{msg}',)`")
+                    raise ValueError("Margin keys must be a sequence")
 
                 by_exprs = [col if isinstance(col, pl.Expr) else pl.col(col) for col in margin.by]
                 domain = with_margin(domain, **asdict(replace(margin, by=by_exprs)))
