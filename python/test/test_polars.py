@@ -1104,7 +1104,6 @@ def test_cast_enum():
         .release()
         .collect()["alpha"]
         .sort()
-        # TODO: why is this collecting to categorical?
         .cast(enum_dtype), 
         pl.Series("alpha", ["A", "B", "C"], enum_dtype)
     )
