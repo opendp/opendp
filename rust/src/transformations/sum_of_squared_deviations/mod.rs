@@ -39,6 +39,8 @@ use super::UncheckedSum;
 /// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
 ///
 /// # Arguments
+/// * `input_domain` - Domain of input data
+/// * `input_metric` - Metric on input domain
 /// * `size` - Number of records in input data.
 /// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
 ///

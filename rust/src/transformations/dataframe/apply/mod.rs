@@ -85,6 +85,8 @@ where
 /// | bool   | `false`          |
 ///
 /// # Arguments
+/// * `input_domain` - Domain of input data
+/// * `input_metric` - Metric on input domain
 /// * `column_name` - column name to be transformed
 ///
 /// # Generics
@@ -130,6 +132,8 @@ where
 /// Make a Transformation that checks if each element in a column in a dataframe is equivalent to `value`.
 ///
 /// # Arguments
+/// * `input_domain` - Domain of input data
+/// * `input_metric` - Metric on input domain
 /// * `column_name` - Column name to be transformed
 /// * `value` - Value to check for equality
 ///

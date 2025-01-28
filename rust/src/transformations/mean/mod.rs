@@ -21,6 +21,8 @@ use super::{
 /// Use `make_clamp` to bound data and `make_resize` to establish dataset size.
 ///
 /// # Arguments
+/// * `input_domain` - Domain of input data
+/// * `input_metric` - Metric on input domain
 /// * `size` - Number of records in input data.
 /// * `bounds` - Tuple of inclusive lower and upper bounds.
 ///

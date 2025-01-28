@@ -18,6 +18,8 @@ use opendp_derive::bootstrap;
 /// where each branch is the sum of its `b` immediate children.
 ///
 /// # Arguments
+/// * `input_domain` - Domain of input data
+/// * `input_metric` - Metric on input domain
 /// * `leaf_count` - The number of leaf nodes in the b-ary tree.
 /// * `branching_factor` - The number of children on each branch of the resulting tree. Larger branching factors result in shallower trees.
 ///

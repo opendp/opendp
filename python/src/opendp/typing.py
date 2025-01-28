@@ -474,7 +474,7 @@ MapDomain: DomainDescriptor = DomainDescriptor('MapDomain')
 def get_atom(type_name):
     '''Parse type name and return the contained atomic type.
     
-    :param type_name:
+    :param type_name: Rust type name
     '''
     type_name = RuntimeType.parse(type_name)
     while isinstance(type_name, RuntimeType):
@@ -488,8 +488,8 @@ def get_atom_or_infer(type_name: Union[RuntimeType, str], example):
     '''Parse type name and return the contained atomic type,
     or infer from example.
     
-    :param type_name:
-    :param example:
+    :param type_name: Rust type name
+    :param example: Public example whose type will be inferred
     '''
     return get_atom(type_name) or RuntimeType.infer(example)
 
@@ -498,7 +498,7 @@ def get_first(value):
     '''
     Get first value from iterable.
     
-    :param value:
+    :param value: An iterable
     '''
     if value is None or not len(value):
         return None
@@ -508,8 +508,8 @@ def parse_or_infer(type_name: RuntimeTypeDescriptor | None, example) -> Union[Ru
     '''
     Given a ``RuntimeTypeDescriptor``, returns a ``RuntimeType`` or ``str``.
 
-    :param type_name:
-    :param example:
+    :param type_name: Rust type name
+    :param example: Public example whose type will be inferred
     '''
     return RuntimeType.parse_or_infer(type_name, example)
 
@@ -517,55 +517,55 @@ def pass_through(value: Any) -> Any:
     '''
     No-op
 
-    :param value:
+    :param value: Value to pass through
     '''
     return value
 
-def get_dependencies(value: Union[Measurement, Transformation, Function]) -> Any:
+def get_dependencies(opendp_obj: Union[Measurement, Transformation, Function]) -> Any:
     '''
-    Returns the dependencies of ``value``.
+    Returns the dependencies of ``opendp_obj``.
     Used extensively by combinators.
 
-    :param value:
+    :param opendp_obj: Return the dependencies for this object
     '''
-    return getattr(value, "_dependencies", None)
+    return getattr(opendp_obj, "_dependencies", None)
 
-def get_dependencies_iterable(value: Sequence[Union[Measurement, Transformation, Function]]) -> Sequence[Any]:
+def get_dependencies_iterable(opendp_objs: Sequence[Union[Measurement, Transformation, Function]]) -> Sequence[Any]:
     '''
     Returns a list with the dependencies of each item in ``value``.
 
-    :param value:
+    :param opendp_objs: Return the dependencies for all of these objects
     '''
-    return list(map(get_dependencies, value))
+    return list(map(get_dependencies, opendp_objs))
 
-def get_carrier_type(value: Domain) -> Union[RuntimeType, str]:
+def get_carrier_type(domain: Domain) -> Union[RuntimeType, str]:
     '''
     Returns the carrier type for a domain.
 
-    :param value:
+    :param domain: A domain
     '''
-    return value.carrier_type
+    return domain.carrier_type
 
-def get_type(value: Domain):
+def get_type(domain: Domain):
     '''
     Returns the type for a domain.
 
-    :param value:
+    :param domain: A domain
     '''
-    return value.type
+    return domain.type
 
-def get_value_type(type_name: Union[Metric, Measure]):
+def get_value_type(value: Union[Metric, Measure]):
     '''
     Returns the value type for a metric or measure.
 
-    :param type_name:
+    :param value: Metric or measure
     '''
-    return RuntimeType.parse(type_name).args[1] # type: ignore[union-attr]
+    return RuntimeType.parse(value).args[1] # type: ignore[union-attr]
 
 def get_distance_type(value: Union[Metric, Measure]) -> Union[RuntimeType, str]:
     '''
     Returns the distance type for a metric or measure.
 
-    :param value:
+    :param value: Metric or measure
     '''
     return value.distance_type
