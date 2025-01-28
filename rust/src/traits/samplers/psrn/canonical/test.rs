@@ -7,33 +7,33 @@ use crate::{
 use super::*;
 
 #[test]
-fn test_sample_tulap_interval_progression() -> Fallible<()> {
+fn test_sample_cnd_interval_progression() -> Fallible<()> {
     let (tradeoff, c) = approximate_to_tradeoff((1.0, 1e-6))?;
     let scale = &RBig::ONE;
-    let mut tulap = PartialSample::new(CanonicalRV {
+    let mut cnd = PartialSample::new(CanonicalRV {
         shift: RBig::ZERO,
         scale: &scale,
         tradeoff: &tradeoff,
         fixed_point: &c,
     });
-    let (l, r) = assert_ordered_progression(&mut tulap, 20);
+    let (l, r) = assert_ordered_progression(&mut cnd, 20);
     let (l, r) = (l.to_f64().value(), r.to_f64().value());
-    println!("{l:?}, {r:?}, {}", tulap.refinements);
+    println!("{l:?}, {r:?}, {}", cnd.refinements);
     Ok(())
 }
 
 #[test]
-fn test_tulap_psrn() -> Fallible<()> {
+fn test_cnd_psrn() -> Fallible<()> {
     let (tradeoff, c) = approximate_to_tradeoff((1.0, 1e-6))?;
     let scale = &RBig::ONE;
-    let tulap = CanonicalRV {
+    let cnd = CanonicalRV {
         shift: RBig::ZERO,
         scale: &scale,
         tradeoff: &tradeoff,
         fixed_point: &c,
     };
     let samples = (0..1000)
-        .map(|_| PartialSample::new(tulap.clone()).value())
+        .map(|_| PartialSample::new(cnd.clone()).value())
         .collect::<Fallible<Vec<f64>>>()?;
     println!("{:?}", samples);
     Ok(())
