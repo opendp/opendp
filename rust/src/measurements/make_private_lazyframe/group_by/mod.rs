@@ -114,8 +114,7 @@ where
 
     let expr_domain = WildExprDomain {
         columns: middle_domain.series_domains.clone(),
-        context: Context::Grouping {
-            by: group_by_id.clone(),
+        context: Context::Aggregation {
             margin: margin.clone(),
         },
     };

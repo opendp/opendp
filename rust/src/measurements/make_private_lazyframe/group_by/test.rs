@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use crate::domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain};
 use crate::error::ErrorVariant::MakeMeasurement;
 use crate::error::*;
@@ -19,10 +17,7 @@ fn test_aggregate() -> Fallible<()> {
         SeriesDomain::new("B", AtomDomain::<f64>::default()),
         SeriesDomain::new("C", AtomDomain::<i32>::default()),
     ])?
-    .with_margin(
-        HashSet::from([col("A"), col("C")]),
-        Margin::default().with_public_keys(),
-    )?;
+    .with_margin(Margin::by(["A", "C"]).with_public_keys())?;
 
     let lf = df!(
         "A" => &[1i32, 2, 2],

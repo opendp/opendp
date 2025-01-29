@@ -81,15 +81,15 @@ impl Frame for DataFrame {
 ///     SeriesDomain::new("A", AtomDomain::<i32>::default()),
 ///     SeriesDomain::new("B", AtomDomain::<String>::default()),
 /// ])?
-///         .with_margin(HashSet::from([col("A")]), Margin::default().with_public_keys())?
-///         .with_margin(HashSet::from([col("B")]), Margin::default().with_public_lengths())?;
+///         .with_margin(Margin::by(["A"]).with_public_keys())?
+///         .with_margin(Margin::by(["B"]).with_public_lengths())?;
 ///
 /// # opendp::error::Fallible::Ok(())
 /// ```
 #[derive(Clone)]
 pub struct FrameDomain<F: Frame> {
     pub series_domains: Vec<SeriesDomain>,
-    pub margins: Vec<(HashSet<Expr>, Margin)>,
+    pub margins: Vec<Margin>,
     _marker: PhantomData<F>,
 }
 
@@ -110,7 +110,7 @@ impl<F: Frame, M: DatasetMetric> MetricSpace for (FrameDomain<F>, M) {
                 .0
                 .margins
                 .iter()
-                .all(|(_, m)| m.public_info != Some(MarginPub::Lengths))
+                .all(|m| m.public_info != Some(MarginPub::Lengths))
         {
             return fallible!(MetricSpace, "bounded dataset metric must have known size");
         }
@@ -165,7 +165,7 @@ impl<F: Frame> FrameDomain<F> {
     /// or an error.
     pub(crate) fn new_with_margins(
         series_domains: Vec<SeriesDomain>,
-        margins: Vec<(HashSet<Expr>, Margin)>,
+        margins: Vec<Margin>,
     ) -> Fallible<Self> {
         let n_unique = series_domains
             .iter()
@@ -219,11 +219,11 @@ impl<F: Frame> FrameDomain<F> {
     /// when grouped by `by`, observes those descriptors in `margin`,
     /// or an error.
     #[must_use]
-    pub fn with_margin(mut self, by: HashSet<Expr>, margin: Margin) -> Fallible<Self> {
-        if self.margins.iter().find(|(k, _)| k == &by).is_some() {
-            return fallible!(MakeDomain, "margin already exists: {by:?}");
+    pub fn with_margin(mut self, margin: Margin) -> Fallible<Self> {
+        if self.margins.iter().find(|m| m.by == margin.by).is_some() {
+            return fallible!(MakeDomain, "margin already exists: {:?}", margin.by);
         }
-        self.margins.push((by, margin));
+        self.margins.push(margin);
         Ok(self)
     }
 
@@ -237,28 +237,27 @@ impl<F: Frame> FrameDomain<F> {
         let mut margin = self
             .margins
             .iter()
-            .find(|(k, _)| k == by)
-            .map(|(_, v)| v)
+            .find(|m| &m.by == by)
             .cloned()
             .unwrap_or_default();
 
         let subset_margins = self
             .margins
             .iter()
-            .filter(|(id, _)| id.is_subset(by))
-            .collect::<Vec<&(HashSet<_>, Margin)>>();
+            .filter(|m| m.by.is_subset(by))
+            .collect::<Vec<&Margin>>();
 
         // the max_partition_* descriptors can take the minimum known value from any margin on a subset of the grouping columns
         margin.max_partition_length = (subset_margins.iter())
-            .filter_map(|(_, m)| m.max_partition_length)
+            .filter_map(|m| m.max_partition_length)
             .min();
 
         margin.max_partition_contributions = (subset_margins.iter())
-            .filter_map(|(_, m)| m.max_partition_contributions)
+            .filter_map(|m| m.max_partition_contributions)
             .min();
 
         let all_mnps = (self.margins.iter())
-            .filter_map(|(set, m)| Some((set, m.max_num_partitions?)))
+            .filter_map(|m| Some((&m.by, m.max_num_partitions?)))
             .collect();
 
         // in the worst case, the max partition length is the product of the max partition lengths of the cover
@@ -271,7 +270,7 @@ impl<F: Frame> FrameDomain<F> {
             .flatten();
 
         let all_mips = (self.margins.iter())
-            .filter_map(|(set, m)| Some((set, m.max_influenced_partitions?)))
+            .filter_map(|m| Some((&m.by, m.max_influenced_partitions?)))
             .collect();
 
         // in the worst case, the max partition contributions is the product of the max partition contributions of the cover
@@ -286,8 +285,8 @@ impl<F: Frame> FrameDomain<F> {
         // if keys or lengths are known about any higher-way marginal,
         // then the same is known about lower-way marginals
         margin.public_info = (self.margins.iter())
-            .filter(|(id, _)| by.is_subset(id))
-            .map(|(_, margin)| margin.public_info)
+            .filter(|m| by.is_subset(&m.by))
+            .map(|m| m.public_info)
             .max()
             .flatten();
 
@@ -315,7 +314,7 @@ impl<F: Frame> Debug for FrameDomain<F> {
         let margins_debug = self
             .margins
             .iter()
-            .map(|(id, _)| format!("{:?}", id))
+            .map(|m| format!("{:?}", m.by))
             .collect::<Vec<_>>()
             .join(", ");
 
@@ -355,8 +354,8 @@ impl<F: Frame> Domain for FrameDomain<F> {
         }
 
         // check that margins are satisfied
-        for (by, margin) in self.margins.iter() {
-            let by = by.iter().cloned().collect::<Vec<_>>();
+        for margin in self.margins.iter() {
+            let by = margin.by.iter().cloned().collect::<Vec<_>>();
             if !margin.member(val.clone().lazyframe().group_by(by))? {
                 return Ok(false);
             }
@@ -370,6 +369,8 @@ impl<F: Frame> Domain for FrameDomain<F> {
 /// over a set of columns in a LazyFrame.
 #[derive(Clone, PartialEq, Default, Debug)]
 pub struct Margin {
+    /// The columns to group by to form the margin.
+    pub by: HashSet<Expr>,
     /// The greatest number of records that can be present in any one partition.
     pub max_partition_length: Option<u32>,
     /// The greatest number of partitions that can be present.
@@ -409,6 +410,13 @@ impl PartialOrd for MarginPub {
 }
 
 impl Margin {
+    pub fn by<E: AsRef<[IE]>, IE: Into<Expr> + Clone>(by: E) -> Self {
+        Self {
+            by: by.as_ref().iter().cloned().map(Into::into).collect(),
+            ..Default::default()
+        }
+    }
+
     pub fn with_max_partition_length(mut self, value: u32) -> Self {
         self.max_partition_length = Some(value);
         self

@@ -36,8 +36,9 @@ where
         return fallible!(MakeTransformation, "expected len expression");
     };
 
-    let (by, old_margin) = input_domain.context.grouping("len")?;
+    let old_margin = input_domain.context.aggregation("len")?;
     let margin = Margin {
+        by: old_margin.by,
         max_partition_length: Some(1),
         max_num_partitions: Some(1),
         max_partition_contributions: old_margin.max_partition_contributions,
@@ -48,9 +49,8 @@ where
     // build output domain
     let output_domain = ExprDomain {
         column: SeriesDomain::new("len", AtomDomain::<u32>::default()),
-        context: Context::Grouping {
+        context: Context::Aggregation {
             margin: margin.clone(),
-            by,
         },
     };
 
