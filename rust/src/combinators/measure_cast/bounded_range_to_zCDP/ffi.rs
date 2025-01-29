@@ -1,10 +1,10 @@
 use crate::{
     core::{FfiResult, PrivacyMap},
     ffi::any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast},
-    measures::BoundedRange,
+    measures::RangeDivergence,
 };
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_combinators__make_bounded_range_to_zCDP(
     measurement: *const AnyMeasurement,
 ) -> FfiResult<*mut AnyMeasurement> {
@@ -15,7 +15,7 @@ pub extern "C" fn opendp_combinators__make_bounded_range_to_zCDP(
         try_!(measurement
             .output_measure
             .clone()
-            .downcast::<BoundedRange>()),
+            .downcast::<RangeDivergence>()),
         PrivacyMap::new_fallible(move |d_in: &AnyObject| privacy_map.eval(d_in)?.downcast::<f64>()),
     ));
 

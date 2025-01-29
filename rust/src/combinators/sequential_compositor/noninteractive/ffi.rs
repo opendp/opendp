@@ -8,7 +8,8 @@ use crate::{
         util::AnyMeasurementPtr,
     },
     measures::{
-        Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence, ffi::TypedMeasure,
+        ffi::TypedMeasure, Approximate, MaxDivergence, RangeDivergence, RenyiDivergence,
+        ZeroConcentratedDivergence,
     },
 };
 
@@ -60,7 +61,7 @@ impl BasicCompositionMeasure for AnyMeasure {
             self_.downcast_ref::<M>()?.concurrent()
         }
         dispatch!(monomorphize, [
-            (self.type_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>])
+            (self.type_, [MaxDivergence, Approximate<MaxDivergence>, RangeDivergence, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>])
         ], (self))
     }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
@@ -81,7 +82,7 @@ impl BasicCompositionMeasure for AnyMeasure {
                 .map(AnyObject::new)
         }
         dispatch!(monomorphize, [
-            (self.type_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>, RenyiDivergence])
+            (self.type_, [MaxDivergence, Approximate<MaxDivergence>, RangeDivergence, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>, RenyiDivergence])
         ], (self, d_i))
     }
 }
