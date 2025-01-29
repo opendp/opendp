@@ -73,6 +73,16 @@ def fake_function(
 
     output = c_to_py(lib_function(c_fake_argument))
 
+    try:
+        output.__opendp_dict__ = {
+            '__function__': 'fake_function',
+            '__module__': 'fake_module',
+            '__kwargs__': {
+                'fake_argument': fake_argument
+            },
+        }
+    except AttributeError:  # pragma: no cover
+        pass
     return output
 ";
     assert_eq!(actual_code, expected_code);

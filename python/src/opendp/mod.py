@@ -9,13 +9,41 @@ instances of :py:class:`opendp.mod.Domain` are either inputs or outputs for func
 from __future__ import annotations
 import ctypes
 from typing import Any, Literal, Type, TypeVar, Union, Callable, Optional, overload, TYPE_CHECKING, cast
+import importlib
+import json
 
-from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction
+from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, import_optional_dependency, get_opendp_version
+
 
 # https://mypy.readthedocs.io/en/stable/runtime_troubles.html#import-cycles
 if TYPE_CHECKING:
     from opendp.typing import RuntimeType # pragma: no cover
 
+
+__all__ = [
+    'Measurement',
+    'Transformation',
+    'Queryable',
+    'Function',
+    'Domain',
+    'Metric',
+    'Measure',
+    'PrivacyProfile',
+    'PartialConstructor',
+    'UnknownTypeException',
+    'OpenDPException',
+    'GLOBAL_FEATURES',
+    'enable_features',
+    'disable_features',
+    'assert_features',
+    'binary_search_chain',
+    'binary_search_param',
+    'binary_search',
+    'exponential_bounds_search',
+    'serialize',
+    'deserialize',
+    '__version__',
+]
 
 class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     """A differentially private unit of computation.
@@ -224,7 +252,6 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         # this overrides the implementation of __iter__ on POINTER, 
         # which yields infinitely on zero-sized types
         raise ValueError("Measurement does not support iteration")  # pragma: no cover
-
 
 class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     """A non-differentially private unit of computation.
@@ -574,7 +601,7 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
-        return str(self) == str(other)
+        return type(self) is type(other) and str(self) == str(other)
     
     def __hash__(self) -> int:
         return hash(str(self))
@@ -629,7 +656,7 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
     
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
-        return str(self) == str(other)
+        return type(self) is type(other) and str(self) == str(other)
     
     def __hash__(self) -> int:
         return hash(str(self))
@@ -686,7 +713,7 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
             pass
 
     def __eq__(self, other):
-        return str(self) == str(other)
+        return type(self) is type(other) and str(self) == str(other)
     
     def __hash__(self) -> int:
         return hash(str(self))
@@ -725,6 +752,7 @@ class PrivacyProfile(object):
 class PartialConstructor(object):
     def __init__(self, constructor):
         self.constructor = constructor
+        self.__opendp_dict__ = {}  # Not needed at runtime, but the definition prevents mypy errors.
     
     def __call__(self, input_domain: Domain, input_metric: Metric):
         return self.constructor(input_domain, input_metric)
@@ -1200,4 +1228,112 @@ def exponential_bounds_search(
     return signed_band_search(center, at_center, sign)
 
 
+_TUPLE_FLAG = '__tuple__'
+_EXPR_FLAG = '__expr__'
+_LAZY_FLAG = '__lazyframe__'
+_FUNCTION_FLAG = '__function__'
+_MODULE_FLAG = '__module__'
+_KWARGS_FLAG = '__kwargs__'
+
+def _bytes_to_b64_str(serialized_polars):
+    from base64 import b64encode
+    b64_bytes = b64encode(serialized_polars)
+    return b64_bytes.decode()
+
+def _b64_str_to_bytes(b64_str):
+    from base64 import b64decode
+    from io import BytesIO
+    b64_bytes = b64_str.encode()
+    serialized_polars = b64decode(b64_bytes)
+    return BytesIO(serialized_polars)
+
+class _Encoder(json.JSONEncoder):
+    def default(self, obj):
+        # Basic types:
+        if isinstance(obj, (str, int, float, bool, type(None))):
+            return obj
+        if isinstance(obj, list):
+            return [self.default(value) for value in obj]
+        if isinstance(obj, tuple):
+            return {_TUPLE_FLAG: [self.default(value) for value in obj]}
+        if isinstance(obj, dict):
+            return {
+                # Dict keys must be hashable,
+                # and with the JSON serialization we can't use tuple keys either,
+                # so no need to recurse on the key.
+                k: self.default(v)
+                for k, v in obj.items()
+            }
+
+        # OpenDP specific:
+        if hasattr(obj, '__opendp_dict__'):
+            return self.default({**obj.__opendp_dict__, '__version__': __version__})
+
+        stateful_error_msg = (
+            f"OpenDP JSON Encoder currently does not handle instances of {type(obj)}: "
+            f"It may have state which is not set by the constructor. Error on: {obj}"
+        )
+
+        pl = import_optional_dependency('polars', raise_error=False)
+        if pl is not None:
+            from opendp.extras.polars import LazyFrameQuery
+            if isinstance(obj, LazyFrameQuery):
+                # Error out early, instead of falling through to pl.LazyFrame,
+                # which *could* be serialized!
+                raise Exception(stateful_error_msg)
+            if isinstance(obj, pl.Expr):
+                return {_EXPR_FLAG: _bytes_to_b64_str(obj.meta.serialize()), '__version__': __version__}
+            if isinstance(obj, pl.LazyFrame):
+                return {_LAZY_FLAG: _bytes_to_b64_str(obj.serialize()), '__version__': __version__}
+
+        # Exceptions:
+        from opendp.context import Context
+        if isinstance(obj, (Context, Queryable,)):
+            raise Exception(stateful_error_msg)
+
+        raise Exception(f'OpenDP JSON Encoder does not handle {obj}')
+
+def _check_version(dp_dict):
+    from warnings import warn
+    serialized_version = dp_dict['__version__']
+    if serialized_version != __version__:
+        warn(
+            f'OpenDP version in serialized object ({serialized_version}) '
+            f'!= this version ({__version__})')
+
+def _deserialization_hook(dp_dict):
+    if _FUNCTION_FLAG in dp_dict:
+        _check_version(dp_dict)
+        module = importlib.import_module(f"opendp.{dp_dict[_MODULE_FLAG]}")
+        func = getattr(module, dp_dict[_FUNCTION_FLAG])
+        return func(**dp_dict.get(_KWARGS_FLAG, {}))
+    if _TUPLE_FLAG in dp_dict:
+        return tuple(dp_dict[_TUPLE_FLAG])
+    pl = import_optional_dependency('polars', raise_error=False)
+    if pl is not None:
+        if _EXPR_FLAG in dp_dict:
+            _check_version(dp_dict)
+            return pl.Expr.deserialize(_b64_str_to_bytes(dp_dict[_EXPR_FLAG]))
+        if _LAZY_FLAG in dp_dict:
+            _check_version(dp_dict)
+            return pl.LazyFrame.deserialize(_b64_str_to_bytes(dp_dict[_LAZY_FLAG]))
+    return dp_dict
+
+def serialize(dp_obj):
+    # The usual pattern would be
+    # 
+    #   json.dumps(dp_obj, cls=_Encoder)
+    # 
+    # but that only calls default() for objects which can't be handled otherwise.
+    # In particular, it makes top-level tuples into lists,
+    # even when special handling is specified in default().
+    return json.dumps(_Encoder().default(dp_obj))
+
+def deserialize(dp_json):
+    return json.loads(dp_json, object_hook=_deserialization_hook)
+
+
 _EXPECTED_POLARS_VERSION = '1.12.0' # Keep in sync with setup.cfg.
+
+
+__version__ = get_opendp_version()

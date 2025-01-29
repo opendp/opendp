@@ -6,6 +6,7 @@
 >>> # For demonstration purposes-- construct a measurement that releases
 >>> # a tuple with a differentially private score and value.
 >>> # The tuple released must satisfy the privacy guarantee from the map.
+>>> import numpy as np
 >>> m_mock = space >> dp.m.then_user_measurement(
 ...     dp.max_divergence(),
 ...     lambda x: (np.random.laplace(loc=x), "arbitrary candidate"),

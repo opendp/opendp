@@ -324,6 +324,8 @@ Release Process
 Our `release process <https://github.com/opendp/opendp/tree/main/.github/workflows#making-a-release>`_
 uses github workflows.
 
+.. _envvars:
+
 Environment Variables
 ---------------------
 

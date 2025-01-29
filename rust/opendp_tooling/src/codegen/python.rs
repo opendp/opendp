@@ -200,8 +200,16 @@ def {then_name}(
 
 {doc_params}{example}
     """
-    return PartialConstructor(lambda {dom_met}: {name}(
+    output = PartialConstructor(lambda {dom_met}: {name}(
 {args}))
+    output.__opendp_dict__ = {{
+            '__function__': '{then_name}',
+            '__module__': '{module_name}',
+            '__kwargs__': {{
+                {func_args}
+            }},
+        }}
+    return output
 "#,
             func_name = func.name,
             doc_params = tab_py(
@@ -225,7 +233,14 @@ def {then_name}(
                     .map(|arg| format!("{name}={name}", name = arg.name()))
                     .collect::<Vec<_>>()
                     .join(",\n")
-            ))
+            )),
+            func_args = func
+                .args
+                .iter()
+                .skip(2)
+                .map(|v| format!(r"'{name}': {name}", name = v.name()))
+                .collect::<Vec<String>>()
+                .join(", "),
         )
     } else {
         String::new()
@@ -395,7 +410,9 @@ fn generate_body(module_name: &str, func: &Function, typemap: &HashMap<String, S
 {data_converter}
 {make_call}
 {set_dependencies}
+{serialization}
 return output"#,
+        serialization = generate_serialization(module_name, func),
         flag_checker = generate_flag_check(&func.features),
         type_arg_formatter = generate_type_arg_formatter(func),
         data_converter = generate_data_converter(func, typemap),
@@ -605,6 +622,28 @@ fn set_dependencies(dependencies: &Vec<TypeRecipe>) -> String {
             .join(", ");
         format!("output._depends_on({dependencies})")
     }
+}
+
+fn generate_serialization(module_name: &str, func: &Function) -> String {
+    format!(
+        r#"try:
+    output.__opendp_dict__ = {{
+        '__function__': '{func_name}',
+        '__module__': '{module_name}',
+        '__kwargs__': {{
+            {func_args}
+        }},
+    }}
+except AttributeError:  # pragma: no cover
+    pass"#,
+        func_name = func.name,
+        func_args = func
+            .args
+            .iter()
+            .map(|v| format!(r"'{name}': {name}", name = v.name()))
+            .collect::<Vec<String>>()
+            .join(", "),
+    )
 }
 
 impl TypeRecipe {
