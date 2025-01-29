@@ -229,7 +229,7 @@ pub(crate) fn approximate_c_stability<MI: UnboundedMetric, MO: Metric>(
                 "c-stability approximation may only be conducted under aggregation"
             )
         }
-        Context::Grouping { margin, .. } => margin,
+        Context::Aggregation { margin, .. } => margin,
     };
 
     let d_in = match margin.public_info {

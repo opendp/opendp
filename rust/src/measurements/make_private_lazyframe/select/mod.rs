@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use crate::combinators::{make_basic_composition, BasicCompositionMeasure};
@@ -49,12 +49,11 @@ where
         .make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
-    let margin = middle_domain.get_margin(&BTreeSet::new());
+    let margin = middle_domain.get_margin(&HashSet::new());
 
     let expr_domain = WildExprDomain {
         columns: middle_domain.series_domains.clone(),
-        context: Context::Grouping {
-            by: BTreeSet::new(),
+        context: Context::Aggregation {
             margin: margin.clone(),
         },
     };

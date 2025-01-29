@@ -58,7 +58,7 @@ where
 
     let mut output_domain = middle_domain.clone();
 
-    output_domain.margins.values_mut().for_each(|m| {
+    output_domain.margins.iter_mut().for_each(|m| {
         // After filtering you no longer know partition lengths or keys.
         m.public_info = None;
     });

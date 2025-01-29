@@ -1,5 +1,5 @@
 use crate::{
-    domains::{AtomDomain, LazyFrameDomain, Margin, OptionDomain, SeriesDomain},
+    domains::{AtomDomain, LazyFrameDomain, OptionDomain, SeriesDomain},
     metrics::SymmetricDistance,
     transformations::make_stable_lazyframe,
 };

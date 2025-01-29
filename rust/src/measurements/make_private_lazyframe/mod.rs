@@ -38,15 +38,15 @@ fn make_private_aggregation<MS, MI, MO>(
 ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, MO>>
 where
     MS: 'static + UnboundedMetric + DatasetMetric,
-    MI: Metric,
+    MI: 'static + UnboundedMetric,
     MO: 'static + ApproximateMeasure,
     MO::Distance: Debug,
-    Expr: PrivateExpr<PartitionDistance<MS>, MO>,
-    DslPlan: StableDslPlan<MS, MS>,
+    Expr: PrivateExpr<PartitionDistance<MI>, MO>,
+    DslPlan: StableDslPlan<MS, MI>,
 {
     #[cfg(feature = "contrib")]
     if group_by::match_group_by(plan.clone())?.is_some() {
-        return group_by::make_private_group_by(
+        return group_by::make_private_group_by::<MS, MI, MO>(
             input_domain,
             input_metric,
             output_measure,
@@ -57,7 +57,7 @@ where
     }
     match plan {
         #[cfg(feature = "contrib")]
-        plan if matches!(plan, DslPlan::Select { .. }) => select::make_private_select(
+        plan if matches!(plan, DslPlan::Select { .. }) => select::make_private_select::<MS, MI, MO>(
             input_domain,
             input_metric,
             output_measure,

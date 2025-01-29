@@ -1,6 +1,7 @@
-use std::{ffi::c_char, os::raw::c_void};
+use std::{collections::HashSet, ffi::c_char, os::raw::c_void};
 
 use opendp_derive::bootstrap;
+use polars::prelude::Expr;
 
 use crate::{
     core::{FfiResult, Metric, MetricSpace},
@@ -21,11 +22,7 @@ use super::{Context, ExprDomain, WildExprDomain};
     features("contrib"),
     arguments(
         columns(rust_type = "Vec<SeriesDomain>"),
-        by(
-            rust_type = "Option<Vec<String>>",
-            default = b"null",
-            hint = "list[str]"
-        ),
+        by(rust_type = "Option<Vec<Expr>>", default = b"null", hint = "list[Any]"),
         max_partition_length(c_type = "void *", rust_type = "Option<u32>", default = b"null"),
         max_num_partitions(c_type = "void *", rust_type = "Option<u32>", default = b"null"),
         max_partition_contributions(
@@ -55,10 +52,10 @@ pub extern "C" fn opendp_domains__wild_expr_domain(
     let columns = try_!(unpack_series_domains(columns));
 
     let context = if let Some(by) = util::as_ref(by) {
-        let by = try_!(by.downcast_ref::<Vec<String>>()).clone();
-        let by = by.into_iter().map(|s| s.into()).collect();
+        let by = HashSet::from_iter(try_!(by.downcast_ref::<Vec<Expr>>()).clone());
 
         let margin = Margin {
+            by,
             max_partition_length: util::as_ref(max_partition_length as *const u32).cloned(),
             max_num_partitions: util::as_ref(max_num_partitions as *const u32).cloned(),
             max_partition_contributions: util::as_ref(max_partition_contributions as *const u32)
@@ -72,7 +69,7 @@ pub extern "C" fn opendp_domains__wild_expr_domain(
                 _ => return err!(FFI, "public_info must be one of 'keys' or 'lengths'").into(),
             },
         };
-        Context::Grouping { by, margin }
+        Context::Aggregation { margin }
     } else {
         Context::RowByRow
     };
