@@ -20,7 +20,7 @@ mod ffi;
 use crate::{
     core::{Function, Measure},
     error::Fallible,
-    measures::{Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence},
+    measures::{Approximate, MaxDivergence, RangeDivergence, RenyiDivergence, ZeroConcentratedDivergence},
     traits::InfAdd,
 };
 
@@ -62,6 +62,18 @@ impl CompositionMeasure for MaxDivergence {
     }
     fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
         d_mids.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))
+    }
+}
+
+impl CompositionMeasure for RangeDivergence {
+    fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composability> {
+        if matches!(adaptivity, Adaptivity::FullyAdaptive) {
+            return fallible!(FailedFunction, "bounded-range doesn't support fully adaptive composition")
+        }
+        Ok(Composability::Sequential)
+    }
+    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+        d_i.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))
     }
 }
 
