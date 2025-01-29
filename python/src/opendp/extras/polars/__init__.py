@@ -17,7 +17,7 @@ The methods of this module will then be accessible at ``dp.polars``.
 from __future__ import annotations
 from dataclasses import dataclass
 import os
-from typing import Any, Iterable, Literal, Sequence
+from typing import Any, Literal, Sequence
 from opendp._lib import lib_path, import_optional_dependency
 from opendp.mod import (
     Domain,
@@ -688,12 +688,13 @@ class LazyFrameQuery():
             def _wrap(*args, **kwargs):
                 out = attr(*args, **kwargs)
 
-                # re-wrap any lazy outputs to keep the conveniences afforded by this class
-                if isinstance(out, _LazyFrame):
-                    return LazyFrameQuery(out, query)
+                if pl is not None:
+                    # re-wrap any lazy outputs to keep the conveniences afforded by this class
+                    if isinstance(out, pl.lazyframe.frame.LazyFrame):
+                        return LazyFrameQuery(out, query)
 
-                if isinstance(out, _LazyGroupBy):
-                    return LazyGroupByQuery(out, query)
+                    if isinstance(out, pl.lazyframe.group_by.LazyGroupBy):
+                        return LazyGroupByQuery(out, query)
 
                 return out
 
@@ -752,7 +753,7 @@ class LazyFrameQuery():
         self,
         *by,
         maintain_order: bool = False,
-        **named_by: IntoExpr,
+        **named_by,
     ) -> LazyGroupByQuery:
         """
         Start a group by operation.
@@ -825,8 +826,9 @@ class LazyFrameQuery():
         # 2. Left joins are more likely to be supported by database backends.
         # 3. Easier to use; with the Polars API the key set needs to be lazy, user must specify they want a right join and the join keys.
 
-        if isinstance(keys, _DataFrame):
-            keys = keys.lazy()
+        if pl is not None:
+            if isinstance(keys, pl.dataframe.frame.DataFrame):
+                keys = keys.lazy()
         
         if on is None:
             on = keys.collect_schema().names()
