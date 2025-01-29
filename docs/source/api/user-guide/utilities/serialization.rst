@@ -47,7 +47,10 @@ are not currently serializable:
 
     .. code:: python
 
-        .. TODO: New example
+        >>> dp.serialize(dp.Queryable('value', 'query_type'))
+        Traceback (most recent call last):
+        ...
+        Exception: OpenDP JSON Encoder currently does not handle instances of <class 'opendp.mod.Queryable'>: It may have state which is not set by the constructor. Error on: Queryable(Q=query_type)
 
 
 Note that serialized embedded Polars objects will include the path of the local binary.
