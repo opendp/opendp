@@ -10,7 +10,6 @@ atom = dp.atom_domain(bounds=(0., 10.))
 input_space = dp.vector_domain(atom, size=10), dp.symmetric_distance()
 chained = input_space >> dp.t.then_mean() >> dp.m.then_laplace(scale=0.5)
 
-# TODO: Make a fake serialization, and check version mismatch.
 
 @pytest.mark.parametrize(
     "_readable_name,dp_obj",
