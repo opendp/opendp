@@ -154,3 +154,11 @@ def test_make_fixed_approxDP_to_approxDP():
 
     assert adp_meas.map(1.).epsilon(delta=1e-7) == 0.1
 
+def test_range_divergence():
+    m_rdp = dp.m.make_user_measurement(
+        dp.atom_domain(T=bool), dp.absolute_distance(T=float),
+        dp.range_divergence(),
+        lambda x: x,
+        lambda d_in: d_in / 2.0
+    )
+    assert m_rdp.map(1.0) == 0.5

@@ -9,7 +9,9 @@ use crate::{
     core::{Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
     interactive::wrap,
-    measures::{Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence},
+    measures::{
+        Approximate, MaxDivergence, RangeDivergence, RenyiDivergence, ZeroConcentratedDivergence,
+    },
     traits::InfAdd,
 };
 
@@ -120,6 +122,15 @@ impl BasicCompositionMeasure for MaxDivergence {
 impl BasicCompositionMeasure for ZeroConcentratedDivergence {
     fn concurrent(&self) -> Fallible<bool> {
         Ok(true)
+    }
+    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+        d_i.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))
+    }
+}
+
+impl BasicCompositionMeasure for RangeDivergence {
+    fn concurrent(&self) -> Fallible<bool> {
+        Ok(false)
     }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
         d_i.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))

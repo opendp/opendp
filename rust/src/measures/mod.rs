@@ -253,21 +253,20 @@ impl Measure for RenyiDivergence {
 
 /// Privacy measure used to define $\eta$-Bounded Range.
 ///
-/// The greatest bounded range divergence between any randomly selected subset of the support.
+/// The range divergence between two distributions $Y$ and $Y'$.
 ///
 /// # Proof Definition
 ///
 /// ### `d`-closeness
 /// For any two distributions $Y, Y'$ and any non-negative $d$ ($\eta$),
-/// $Y, Y'$ are $d$-close under the bounded-range privacy measure whenever,
-/// there exists some choice of $t \in \mathbb{R}$ such that
+/// $Y, Y'$ are $d$-close under the range divergence privacy measure whenever
 ///
 /// ```math
-/// D_{\mathrm{BR}}(Y, Y') = \max_{y \in \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y = s]}{\Pr[Y' = s]} \Big] \in [t, t + d].
+/// D_{\mathrm{BR}}(Y, Y') = \max_{y_0, y_1 \in \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y = y_0]}{\Pr[Y' = y_0]} \Big] - \Big[\ln \dfrac{\Pr[Y = y_1]}{\Pr[Y' = y_1]} \Big]
 /// ```
 #[derive(Default, Clone, Debug, PartialEq)]
-pub struct BoundedRange;
+pub struct RangeDivergence;
 
-impl Measure for BoundedRange {
+impl Measure for RangeDivergence {
     type Distance = f64;
 }
