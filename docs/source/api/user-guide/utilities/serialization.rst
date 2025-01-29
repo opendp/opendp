@@ -54,7 +54,7 @@ are not currently serializable:
 
 Plugins with user defined functions are serializable,
 but ``honest-but-curious`` must be enabled,
-and due to limitations of python's pickle, ``lambda`` will not work.
+and due to limitations of Python's pickle, ``lambda`` will not work.
 
 .. We can't provide an example of UDFs in a doctest,
 .. because pickle is unable to locate the function definition in this context.
