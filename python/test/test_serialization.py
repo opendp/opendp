@@ -43,15 +43,8 @@ def privacy_profile_function(x):
             dp.m.max_divergence(),
             dp.m.approximate(dp.m.max_divergence()),
             dp.m.user_divergence("user_divergence"),
-            # Measurements:
-            #dp.m.make_gaussian(atom, dp.absolute_distance(float), 1),
-            #dp.m.then_gaussian(1),
-            # Compositions:
-            #chained,
-            #dp.c.make_population_amplification(chained, population_size=100),
             # UDFs:
             dp.user_domain("trivial_user_domain", user_domain_function),
-            #dp.m.new_privacy_profile(privacy_profile_function),
         ]
     ],
 )
@@ -84,6 +77,14 @@ def test_serializable_not_equal(_readable_name, dp_obj):
     # A weaker test (the first serialization could drop something important)
     # but we don't want want to support __eq__ everwhere:
     assert dp.serialize(dp_obj) == dp.serialize(deserialized)
+
+
+def test_deserialized_object_actually_works():
+    dp_obj = dp.user_domain("trivial_user_domain", user_domain_function)
+    serialized = dp.serialize(dp_obj)
+    deserialized = dp.deserialize(serialized)
+    assert dp_obj.member(1) == deserialized.member(1)
+
 
 @pytest.mark.parametrize(
     "_readable_name,dp_obj",
