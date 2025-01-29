@@ -79,11 +79,20 @@ def test_serializable_not_equal(_readable_name, dp_obj):
     assert dp.serialize(dp_obj) == dp.serialize(deserialized)
 
 
-def test_deserialized_object_actually_works():
-    dp_obj = dp.user_domain("trivial_user_domain", user_domain_function)
+@pytest.mark.parametrize(
+    "_readable_name,dp_obj,helper",
+    [
+        (str(obj), obj, helper)
+        for obj, helper in [
+            (dp.user_domain("trivial_user_domain", user_domain_function),
+             lambda dp_obj: dp_obj.member(1))
+        ]
+    ],
+)
+def test_deserialized_object_actually_works(_readable_name, dp_obj, helper):
     serialized = dp.serialize(dp_obj)
     deserialized = dp.deserialize(serialized)
-    assert dp_obj.member(1) == deserialized.member(1)
+    assert helper(dp_obj) == helper(deserialized)
 
 
 @pytest.mark.parametrize(
