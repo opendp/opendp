@@ -81,16 +81,16 @@ where
     let t_prior = input.make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
-    let (by, margin) = middle_domain.context.grouping("count")?;
+    let margin = middle_domain.context.aggregation("count")?;
 
     let output_domain = ExprDomain {
         column: SeriesDomain::new(
             middle_domain.column.name.as_str(),
             AtomDomain::<u32>::default(),
         ),
-        context: Context::Grouping {
-            by: by.clone(),
+        context: Context::Aggregation {
             margin: Margin {
+                by: margin.by,
                 max_partition_length: Some(1),
                 max_num_partitions: margin.max_num_partitions,
                 max_partition_contributions: None,

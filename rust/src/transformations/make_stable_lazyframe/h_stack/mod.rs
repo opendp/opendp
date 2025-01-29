@@ -80,8 +80,8 @@ where
         .map(|series_domain| col(series_domain.name.clone()))
         .collect();
     let margins = (middle_domain.margins.iter())
-        .filter(|(k, _)| k.is_disjoint(&new_series_names))
-        .map(|(k, v)| (k.clone(), v.clone()))
+        .filter(|m| m.by.is_disjoint(&new_series_names))
+        .cloned()
         .collect();
 
     // instead of using the public APIs that check invariants, directly populate the struct entries

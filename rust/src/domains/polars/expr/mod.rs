@@ -1,6 +1,5 @@
 use polars::lazy::dsl::Expr;
 use polars::prelude::*;
-use std::collections::HashSet;
 use std::fmt::{Debug, Formatter};
 
 use crate::core::{Metric, MetricSpace};
@@ -37,21 +36,21 @@ pub enum Context {
     ///
     /// `.agg(exprs)` is the general case where there are grouping columns.
     /// `.select(exprs)` is the special case where there are no grouping columns.
-    Grouping { by: HashSet<Expr>, margin: Margin },
+    Aggregation { margin: Margin },
 }
 
 impl Context {
     /// # Proof Definition
-    /// Return the grouping columns and margin specified by `self` if in a grouping context,
+    /// Return the grouping columns and margin specified by `self` if in an aggregation context,
     /// otherwise return an error.
-    pub fn grouping(&self, operation: &str) -> Fallible<(HashSet<Expr>, Margin)> {
+    pub fn aggregation(&self, operation: &str) -> Fallible<Margin> {
         match self {
             Context::RowByRow { .. } => fallible!(
                 MakeDomain,
                 "{} is only allowed within `.agg(...)` or `.select(...)`",
                 operation
             ),
-            Context::Grouping { by, margin } => Ok((by.clone(), margin.clone())),
+            Context::Aggregation { margin } => Ok(margin.clone()),
         }
     }
 }
@@ -87,8 +86,8 @@ impl WildExprDomain {
             self.columns,
             match self.context {
                 Context::RowByRow => Vec::new(),
-                Context::Grouping { by, margin } => {
-                    vec![(by, margin)]
+                Context::Aggregation { margin } => {
+                    vec![margin]
                 }
             },
         )
@@ -115,7 +114,7 @@ impl LazyFrameDomain {
         let margin = self.get_margin(&by);
         WildExprDomain {
             columns: self.series_domains,
-            context: Context::Grouping { by, margin },
+            context: Context::Aggregation { margin },
         }
     }
 
@@ -178,8 +177,8 @@ impl Domain for ExprDomain {
         let (plan, expr) = (LazyFrame::from(val.plan.clone()), val.expr.clone());
         let frame = match &self.context {
             Context::RowByRow { .. } => plan.select([expr]),
-            Context::Grouping { by, .. } => plan
-                .group_by(by.iter().cloned().collect::<Vec<_>>())
+            Context::Aggregation { margin } => plan
+                .group_by(margin.by.iter().cloned().collect::<Vec<_>>())
                 .agg([expr.clone()]),
         }
         .collect()?;
@@ -191,8 +190,8 @@ impl Domain for ExprDomain {
 
         match &self.context {
             Context::RowByRow => (),
-            Context::Grouping { margin, by } => {
-                if !margin.member(frame.lazy().group_by(&Vec::from_iter(by.clone())))? {
+            Context::Aggregation { margin } => {
+                if !margin.member(frame.lazy().group_by(&Vec::from_iter(margin.by.clone())))? {
                     return Ok(false);
                 }
             }

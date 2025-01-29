@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use super::*;
 use polars::prelude::*;
 
@@ -10,15 +8,20 @@ use crate::{
 };
 
 pub fn get_quantile_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
-    let pub_keys_margin = Margin::default()
-        .with_max_partition_length(1000)
-        .with_public_keys();
     let lf_domain = LazyFrameDomain::new(vec![
         SeriesDomain::new("cycle_(..101f64)", AtomDomain::<i32>::default()),
         SeriesDomain::new("cycle_(..10i32)", AtomDomain::<f64>::default()),
     ])?
-    .with_margin(HashSet::new(), pub_keys_margin.clone())?
-    .with_margin(HashSet::from([col("cycle_(..10i32)")]), pub_keys_margin)?;
+    .with_margin(
+        Margin::default()
+            .with_max_partition_length(1000)
+            .with_public_keys(),
+    )?
+    .with_margin(
+        Margin::by(["cycle_(..10i32)"])
+            .with_max_partition_length(1000)
+            .with_public_keys(),
+    )?;
 
     let lf = df!(
         "cycle_(..101f64)" => (0..1010).map(|i| (i % 101) as f64).collect::<Vec<_>>(),

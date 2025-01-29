@@ -413,10 +413,11 @@ class Context(object):
             
             pl = import_optional_dependency("polars")
             for margin in margins:
-                if not isinstance(margin.by, Sequence) or isinstance(margin.by, str):
+                by = margin.by or []
+                if not isinstance(by, Sequence) or isinstance(by, str):
                     raise ValueError("Margin keys must be a sequence")
 
-                by_exprs = [col if isinstance(col, pl.Expr) else pl.col(col) for col in margin.by]
+                by_exprs = [col if isinstance(col, pl.Expr) else pl.col(col) for col in by]
                 domain = with_margin(domain, **asdict(replace(margin, by=by_exprs)))
 
         accountant, d_mids = _sequential_composition_by_weights(

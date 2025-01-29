@@ -55,6 +55,7 @@ pub extern "C" fn opendp_domains__wild_expr_domain(
         let by = HashSet::from_iter(try_!(by.downcast_ref::<Vec<Expr>>()).clone());
 
         let margin = Margin {
+            by,
             max_partition_length: util::as_ref(max_partition_length as *const u32).cloned(),
             max_num_partitions: util::as_ref(max_num_partitions as *const u32).cloned(),
             max_partition_contributions: util::as_ref(max_partition_contributions as *const u32)
@@ -68,7 +69,7 @@ pub extern "C" fn opendp_domains__wild_expr_domain(
                 _ => return err!(FFI, "public_info must be one of 'keys' or 'lengths'").into(),
             },
         };
-        Context::Grouping { by, margin }
+        Context::Aggregation { margin }
     } else {
         Context::RowByRow
     };

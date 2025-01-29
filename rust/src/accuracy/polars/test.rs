@@ -1,5 +1,4 @@
 use core::f64;
-use std::collections::HashSet;
 
 use polars::{
     df,
@@ -27,7 +26,6 @@ fn test_summarize_polars_measurement_basic() -> Fallible<()> {
         SeriesDomain::new("B", AtomDomain::<f64>::default()),
     ])?
     .with_margin(
-        HashSet::new(),
         Margin::default()
             .with_public_keys()
             .with_max_partition_length(10),
@@ -75,7 +73,6 @@ fn test_summarize_polars_measurement_mean() -> Fallible<()> {
         SeriesDomain::new("B", AtomDomain::<f64>::default()),
     ])?
     .with_margin(
-        HashSet::new(),
         Margin::default()
             .with_public_lengths()
             .with_max_partition_length(10),
@@ -121,7 +118,6 @@ fn test_summarize_polars_measurement_quantile() -> Fallible<()> {
     let lf_domain =
         LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?
             .with_margin(
-                HashSet::new(),
                 Margin::default()
                     .with_public_lengths()
                     .with_max_partition_length(100),

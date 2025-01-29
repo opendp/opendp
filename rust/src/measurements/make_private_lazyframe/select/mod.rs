@@ -53,8 +53,7 @@ where
 
     let expr_domain = WildExprDomain {
         columns: middle_domain.series_domains.clone(),
-        context: Context::Grouping {
-            by: HashSet::new(),
+        context: Context::Aggregation {
             margin: margin.clone(),
         },
     };

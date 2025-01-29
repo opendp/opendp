@@ -37,10 +37,7 @@ fn test_select_no_margin() -> Fallible<()> {
 fn test_select() -> Fallible<()> {
     let lf_domain =
         LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?
-            .with_margin(
-                HashSet::new(),
-                Margin::default().with_max_partition_length(10),
-            )?;
+            .with_margin(Margin::default().with_max_partition_length(10))?;
 
     let lf = df!("A" => &[1i32, 2, 2])?.lazy();
 

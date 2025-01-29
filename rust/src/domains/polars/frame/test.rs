@@ -22,8 +22,7 @@ fn test_margin() -> Fallible<()> {
         SeriesDomain::new("B", AtomDomain::<String>::default()),
     ])?
     .with_margin(
-        HashSet::from([col("A")]),
-        Margin::default()
+        Margin::by(["A"])
             .with_max_partition_length(1)
             .with_max_num_partitions(2),
     )?;
@@ -61,8 +60,7 @@ fn test_get_margin_max_partition_descriptors() -> Fallible<()> {
         SeriesDomain::new("B", AtomDomain::<i32>::default()),
     ])?
     .with_margin(
-        HashSet::from([col("A")]),
-        Margin::default()
+        Margin::by(["A"])
             .with_max_partition_length(10)
             .with_max_partition_contributions(3),
     )?;
@@ -91,14 +89,12 @@ fn test_get_margin_covering_small_to_large() -> Fallible<()> {
         SeriesDomain::new("C", AtomDomain::<i32>::default()),
     ])?
     .with_margin(
-        HashSet::from([col("A")]),
-        Margin::default()
+        Margin::by(["A"])
             .with_max_num_partitions(10)
             .with_max_influenced_partitions(3),
     )?
     .with_margin(
-        HashSet::from([col("B")]),
-        Margin::default()
+        Margin::by(["B"])
             .with_max_num_partitions(11)
             .with_max_influenced_partitions(4),
     )?;
@@ -118,8 +114,7 @@ fn test_get_margin_covering_large_to_small() -> Fallible<()> {
         SeriesDomain::new("C", AtomDomain::<i32>::default()),
     ])?
     .with_margin(
-        HashSet::from([col("A"), col("B")]),
-        Margin::default()
+        Margin::by(["A", "B"])
             .with_max_num_partitions(10)
             .with_max_influenced_partitions(3),
     )?;
@@ -137,10 +132,7 @@ fn test_get_margin_public_info() -> Fallible<()> {
         SeriesDomain::new("A", AtomDomain::<i32>::default()),
         SeriesDomain::new("B", AtomDomain::<i32>::default()),
     ])?
-    .with_margin(
-        HashSet::from([col("A"), col("B")]),
-        Margin::default().with_public_lengths(),
-    )?;
+    .with_margin(Margin::by(["A", "B"]).with_public_lengths())?;
 
     // nothing is known when grouping not in margins
     let margin_abc = lf_domain.get_margin(&HashSet::from(["A".into(), "B".into(), "C".into()]));

@@ -327,8 +327,8 @@ def test_polars_context():
         privacy_loss=dp.loss_of(epsilon=1.0),
         split_evenly_over=2,
         margins=[
-            dp.polars.Margin(by=(), max_partition_length=5),
-            dp.polars.Margin(by=("B",), public_info="keys"),
+            dp.polars.Margin(max_partition_length=5),
+            dp.polars.Margin(by=["B"], public_info="keys"),
         ],
     )
 
@@ -410,7 +410,7 @@ def test_polars_accuracy_threshold():
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=2,
         margins=[
-            dp.polars.Margin(by=("B",), max_partition_length=5),
+            dp.polars.Margin(by=["B"], max_partition_length=5),
         ],
     )
 
@@ -490,7 +490,7 @@ def test_polars_threshold_epsilon():
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=2,
         margins=[
-            dp.polars.Margin(by=("A",), public_info="keys"),
+            dp.polars.Margin(by=["A"], public_info="keys"),
         ],
     )
 
@@ -711,7 +711,7 @@ def test_cut():
     pl_testing = pytest.importorskip("polars.testing")
 
     data = pl.LazyFrame({"x": [0.4, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5]})
-    by = (pl.col("x").cut([1.0, 2.0, 3.0]).to_physical(),)
+    by = [pl.col("x").cut([1.0, 2.0, 3.0]).to_physical()]
     with warnings.catch_warnings():
         context = dp.Context.compositor(
             data=data,

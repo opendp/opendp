@@ -101,6 +101,7 @@ pub extern "C" fn opendp_domains__with_margin(
     let by = HashSet::from_iter(try_!(try_as_ref!(by).downcast_ref::<Vec<Expr>>()).clone());
 
     let margin = Margin {
+        by,
         max_partition_length: util::as_ref(max_partition_length as *const u32).cloned(),
         max_num_partitions: util::as_ref(max_num_partitions as *const u32).cloned(),
         max_partition_contributions: util::as_ref(max_partition_contributions as *const u32)
@@ -127,19 +128,15 @@ pub extern "C" fn opendp_domains__with_margin(
         }
     };
 
-    fn monomorphize<F: 'static + Frame>(
-        domain: &AnyDomain,
-        by: HashSet<Expr>,
-        margin: Margin,
-    ) -> Fallible<AnyDomain> {
+    fn monomorphize<F: 'static + Frame>(domain: &AnyDomain, margin: Margin) -> Fallible<AnyDomain> {
         let domain = domain.downcast_ref::<FrameDomain<F>>()?.clone();
-        Ok(AnyDomain::new(domain.with_margin(by, margin)?))
+        Ok(AnyDomain::new(domain.with_margin(margin)?))
     }
 
     dispatch!(
         monomorphize,
         [(F_, [DataFrame, LazyFrame])],
-        (domain, by, margin)
+        (domain, margin)
     )
     .into()
 }
