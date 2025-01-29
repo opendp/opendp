@@ -72,6 +72,7 @@ polars = { version = "=0.44.2", features = [
     "strings",
     "repeat_by",
     "concat_str",
+    "replace",
 ], optional = true }
 polars-plan = { version = "=0.44.2", features = [
     "ffi_plugin",
