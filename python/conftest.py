@@ -18,9 +18,9 @@ class CustomOutputChecker(doctest.OutputChecker):
             # A replacement string has special behavior with backslashes,
             # but the value returned by a lambda does not.
             number_re = lambda _: r'-?\d+(\.\d*)?'
-            # Replace each number with a regex representing any possible number.
+            # Replace each tilde-number with a regex representing any possible number.
             want_re = re.sub(r'\\~(\\-)?\d+(\\\.\d*)?', number_re, re.escape(want.strip()))
             return bool(re.search(want_re, got))
         return super().check_output(want, got, optionflags)
 
-doctest.OutputChecker = CustomOutputChecker
+doctest.OutputChecker = CustomOutputChecker  # type: ignore
