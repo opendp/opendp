@@ -1,3 +1,5 @@
+import pytest
+
 import opendp.prelude as dp
 
 
@@ -25,3 +27,14 @@ def test_TODOs():
     dp.t.then_ordered_random()
     dp.t.then_quantile_score_candidates([], 0.5)
     dp.t.then_sum_of_squared_deviations()
+
+
+def test_fuzzy_doctests():
+    '''
+    >>> 2+2 # doctest: +FUZZY
+    ~-5
+
+    >>> print(f'[{2+2}]') # doctest: +FUZZY
+    [~4.1]
+    '''
+    pass
