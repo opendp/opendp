@@ -5,7 +5,7 @@ use crate::{
     Argument, Function, TypeRecipe, Value,
 };
 
-use super::BLACKLIST;
+use super::BLOCKLIST;
 
 static ATOM_TYPES: &'static [&'static str] = &[
     "u32", "u64", "i32", "i64", "f32", "f64", "usize", "bool", "String",
@@ -21,7 +21,7 @@ pub fn generate_r_module(
     let body = module
         .into_iter()
         .filter(|func| func.has_ffi)
-        .filter(|func| !BLACKLIST.contains(&func.name.as_str()))
+        .filter(|func| !BLOCKLIST.contains(&func.name.as_str()))
         .map(|func| generate_r_function(module_name, &func, hierarchy))
         .collect::<Vec<String>>()
         .join("\n");

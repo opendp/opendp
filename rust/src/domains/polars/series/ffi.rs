@@ -5,10 +5,12 @@ use opendp_derive::bootstrap;
 
 use crate::{
     core::{FfiResult, MetricSpace},
-    domains::{AtomDomain, CategoricalDomain, DatetimeDomain, OptionDomain, PrimitiveDataType},
+    domains::{
+        AtomDomain, CategoricalDomain, DatetimeDomain, EnumDomain, OptionDomain, PrimitiveDataType,
+    },
     error::Fallible,
     ffi::{
-        any::{AnyDomain, AnyMetric, AnyObject, Downcast},
+        any::{AnyDomain, AnyMetric, Downcast},
         util::{self, Type},
     },
     traits::CheckAtom,
@@ -50,6 +52,11 @@ pub extern "C" fn opendp_domains__series_domain(
                 try_!(element_domain.downcast_ref::<OptionDomain<CategoricalDomain>>()).clone();
             return Ok(AnyDomain::new(series_domain(name, element_domain))).into();
         }
+        if T == Type::of::<EnumDomain>() {
+            let element_domain =
+                try_!(element_domain.downcast_ref::<OptionDomain<EnumDomain>>()).clone();
+            return Ok(AnyDomain::new(series_domain(name, element_domain))).into();
+        }
         if T == Type::of::<DatetimeDomain>() {
             let element_domain =
                 try_!(element_domain.downcast_ref::<OptionDomain<DatetimeDomain>>()).clone();
@@ -82,6 +89,10 @@ pub extern "C" fn opendp_domains__series_domain(
             let element_domain = try_!(element_domain.downcast_ref::<CategoricalDomain>()).clone();
             return Ok(AnyDomain::new(series_domain(name, element_domain))).into();
         }
+        if T == Type::of::<EnumDomain>() {
+            let element_domain = try_!(element_domain.downcast_ref::<EnumDomain>()).clone();
+            return Ok(AnyDomain::new(series_domain(name, element_domain))).into();
+        }
 
         if T == Type::of::<DatetimeDomain>() {
             let element_domain = try_!(element_domain.downcast_ref::<DatetimeDomain>()).clone();
@@ -105,33 +116,6 @@ pub extern "C" fn opendp_domains__series_domain(
         )
         .into()
     }
-}
-
-#[bootstrap(
-    name = "categorical_domain",
-    arguments(categories(rust_type = "Option<Vec<String>>", default = b"null")),
-    returns(c_type = "FfiResult<AnyDomain *>")
-)]
-/// Construct an instance of `CategoricalDomain`.
-/// Can be used as an argument to a Polars series domain.
-///
-/// # Arguments
-/// * `categories` - Optional ordered set of valid string categories
-#[no_mangle]
-pub extern "C" fn opendp_domains__categorical_domain(
-    categories: *const AnyObject,
-) -> FfiResult<*mut AnyDomain> {
-    let domain = if let Some(categories) = util::as_ref(categories) {
-        let categories = try_!(categories.downcast_ref::<Vec<String>>())
-            .into_iter()
-            .map(|s| s.into())
-            .collect();
-        try_!(CategoricalDomain::new_with_categories(categories))
-    } else {
-        CategoricalDomain::default()
-    };
-
-    Ok(AnyDomain::new(domain)).into()
 }
 
 impl MetricSpace for (SeriesDomain, AnyMetric) {

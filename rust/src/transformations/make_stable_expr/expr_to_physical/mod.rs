@@ -75,6 +75,9 @@ where
 
             active_series.set_element_domain(AtomDomain::<u32>::default());
         }
+        (Enum(_, _), UInt32) => {
+            active_series.set_element_domain(AtomDomain::<u32>::default());
+        }
         (Date, Int32) => {
             active_series.set_element_domain(AtomDomain::<u32>::default());
         }

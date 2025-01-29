@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    codegen::{r::BLACKLIST, tab_c},
+    codegen::{r::BLOCKLIST, tab_c},
     Argument, Function, TypeRecipe,
 };
 
@@ -18,7 +18,7 @@ pub fn generate_lib_c(modules: &HashMap<String, Vec<Function>>) -> String {
         module.iter()
         .filter(|func| func.has_ffi)
         // don't register functions on the blacklist
-        .filter(|func| !BLACKLIST.contains(&func.name.as_str()))
+        .filter(|func| !BLOCKLIST.contains(&func.name.as_str()))
         // R wants to know the name and number of arguments of each function
         .map(|func| {
             // takes into account extra type arguments used when converting R data to C
@@ -84,7 +84,7 @@ pub fn generate_Ropendp_h(modules: &HashMap<String, Vec<Function>>) -> String {
         .map(|(module_name, module)| {
             (module.iter())
                 .filter(|func| func.has_ffi)
-                .filter(|func| !BLACKLIST.contains(&func.name.as_str()))
+                .filter(|func| !BLOCKLIST.contains(&func.name.as_str()))
                 .map(|func| {
                     let args = (flatten_args_for_c(func).iter())
                         .map(|arg| format!("{}, ", generate_c_input_argument(arg)))
@@ -128,7 +128,7 @@ pub fn generate_c_module(module_name: &str, module: &Vec<Function>) -> String {
     let funcs = module
         .into_iter()
         .filter(|func| func.has_ffi)
-        .filter(|func| !BLACKLIST.contains(&func.name.as_str()))
+        .filter(|func| !BLOCKLIST.contains(&func.name.as_str()))
         .map(|func| generate_c_function(module_name, &func))
         .collect::<Vec<String>>()
         .join("\n");
