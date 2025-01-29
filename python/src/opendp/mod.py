@@ -1234,6 +1234,7 @@ _LAZY_FLAG = '__lazyframe__'
 _FUNCTION_FLAG = '__function__'
 _MODULE_FLAG = '__module__'
 _KWARGS_FLAG = '__kwargs__'
+_PICKLE_FLAG = '__pickle__'
 
 def _bytes_to_b64_str(serialized_polars):
     from base64 import b64encode
@@ -1290,6 +1291,10 @@ class _Encoder(json.JSONEncoder):
         from opendp.context import Context
         if isinstance(obj, (Context, Queryable,)):
             raise Exception(stateful_error_msg)
+
+        if callable(obj):
+            from pickle import dumps
+            return {_PICKLE_FLAG: _bytes_to_b64_str(dumps(obj))}
 
         raise Exception(f'OpenDP JSON Encoder does not handle {obj}')
 

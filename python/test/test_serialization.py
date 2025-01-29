@@ -11,6 +11,14 @@ input_space = dp.vector_domain(atom, size=10), dp.symmetric_distance()
 chained = input_space >> dp.t.then_mean() >> dp.m.then_laplace(scale=0.5)
 
 
+def user_domain_function(_):
+    return True 
+
+def privacy_profile_function(x):
+    return x
+
+
+
 @pytest.mark.parametrize(
     "_readable_name,dp_obj",
     [
@@ -41,6 +49,9 @@ chained = input_space >> dp.t.then_mean() >> dp.m.then_laplace(scale=0.5)
             # Compositions:
             chained,
             dp.c.make_population_amplification(chained, population_size=100),
+            # UDFs:
+            dp.user_domain("trivial_user_domain", user_domain_function),
+            dp.m.new_privacy_profile(privacy_profile_function),
         ]
     ],
 )
@@ -64,9 +75,12 @@ def test_serializable(_readable_name, dp_obj):
         ]
     ],
 )
-def test_not_ever_serializable(_readable_name, dp_obj):
-    with pytest.raises(Exception, match=r"OpenDP JSON Encoder does not handle"):
+def test_lambda_not_serializable(_readable_name, dp_obj):
+    with pytest.raises(Exception, match=r"Can't pickle <function <lambda>"):
         dp.serialize(dp_obj)
+
+
+# TODO: Test "OpenDP JSON Encoder does not handle"
 
 
 @pytest.mark.parametrize(
