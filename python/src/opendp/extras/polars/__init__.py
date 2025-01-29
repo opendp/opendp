@@ -18,7 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import os
 from typing import Any, Iterable, Literal, Sequence
-from opendp._lib import lib_path
+from opendp._lib import lib_path, import_optional_dependency
 from opendp.mod import (
     Domain,
     Measurement,
@@ -522,12 +522,9 @@ class DPExpr(object):
         return self.expr.dp.quantile(0.5, candidates, scale)
 
 
-try:
-    from polars.api import register_expr_namespace  # type: ignore[import-not-found]
-
-    register_expr_namespace("dp")(DPExpr)
-except ImportError:  # pragma: no cover
-    pass
+pl = import_optional_dependency('polars', raise_error=False)
+if pl is not None:
+    pl.api.register_expr_namespace("dp")(DPExpr)
 
 
 def dp_len(scale: float | None = None):
