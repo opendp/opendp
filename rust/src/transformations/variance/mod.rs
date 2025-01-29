@@ -30,6 +30,8 @@ use super::{
 /// * [DHK15 Differential Privacy for Social Science Inference](http://hona.kr/papers/files/DOrazioHonakerKingPrivacy.pdf)
 ///
 /// # Arguments
+/// * `input_domain` - Domain of input data
+/// * `input_metric` - Metric on input domain
 /// * `size` - Number of records in input data.
 /// * `bounds` - Tuple of lower and upper bounds for data in the input domain.
 /// * `ddof` - Delta degrees of freedom. Set to 0 if not a sample, 1 for sample estimate.

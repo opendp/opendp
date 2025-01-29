@@ -23,6 +23,10 @@ pub(crate) mod traits;
 /// | SymmetricDistance | InsertDeleteDistance |
 /// | ChangeOneDistance | HammingDistance      |
 ///
+/// # Arguments
+/// * `input_domain` - Domain of input data
+/// * `input_metric` - Metric on input domain
+///
 /// # Generics
 /// * `D` - Domain
 /// * `MI` - Input Metric
@@ -60,6 +64,10 @@ where
 /// | InsertDeleteDistance | SymmetricDistance     |
 /// | HammingDistance      | ChangeOneDistance     |
 ///
+/// # Arguments
+/// * `input_domain` - Domain of input data
+/// * `input_metric` - Metric on input domain
+///
 /// # Generics
 /// * `D` - Domain
 /// * `MI` - Input Metric
@@ -94,6 +102,8 @@ where
 /// | HammingDistance   | InsertDeleteDistance  |
 ///
 /// # Arguments
+/// * `input_domain` - Domain of input data
+/// * `input_metric` - Metric on input domain
 /// * `size` - Number of records in input data.
 ///
 /// # Generics
@@ -138,6 +148,8 @@ where
 /// | InsertDeleteDistance | HammingDistance     |
 ///
 /// # Arguments
+/// * `input_domain` - Domain of input data
+/// * `input_metric` - Metric on input domain
 /// * `size` - Number of records in input data.
 ///
 /// # Generics

@@ -94,7 +94,7 @@ impl_make_geometric_int!(i8 i16 i32 i64 i128 isize u8 u16 u32 u64 u128 usize);
 /// * `scale` - Noise scale parameter for the distribution. `scale` == standard_deviation / sqrt(2).
 /// * `bounds` - Set bounds on the count to make the algorithm run in constant-time.
 ///
-/// # Arguments
+/// # Generics
 /// * `D` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 pub fn make_geometric<D: 'static + GeometricDomain>(
     input_domain: D,
