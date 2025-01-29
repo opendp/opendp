@@ -38,8 +38,7 @@ If this is something you need, please reach out so that we can understand your u
         <class 'opendp.mod.Measurement'>
 
 
-Some objects, including those which are created via the plugin API,
-and those which have an internal state not reflected in their constructor,
+Objects which have an internal state not reflected in their constructor
 are not currently serializable:
 
 .. tab-set::
@@ -48,11 +47,7 @@ are not currently serializable:
 
     .. code:: python
 
-        >>> dp_obj = dp.user_domain("trivial_user_domain", lambda _: True)
-        >>> dp.serialize(dp_obj)
-        Traceback (most recent call last):
-        ...
-        Exception: OpenDP JSON Encoder does not handle <function <lambda> at ...>
+        .. TODO: New example
 
 
 Note that serialized embedded Polars objects will include the path of the local binary.

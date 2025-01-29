@@ -44,26 +44,46 @@ def privacy_profile_function(x):
             dp.m.approximate(dp.m.max_divergence()),
             dp.m.user_divergence("user_divergence"),
             # Measurements:
+            #dp.m.make_gaussian(atom, dp.absolute_distance(float), 1),
+            #dp.m.then_gaussian(1),
+            # Compositions:
+            #chained,
+            #dp.c.make_population_amplification(chained, population_size=100),
+            # UDFs:
+            dp.user_domain("trivial_user_domain", user_domain_function),
+            #dp.m.new_privacy_profile(privacy_profile_function),
+        ]
+    ],
+)
+def test_serializable_equal(_readable_name, dp_obj):
+    serialized = dp.serialize(dp_obj)
+    deserialized = dp.deserialize(serialized)
+    assert dp_obj == deserialized
+
+
+@pytest.mark.parametrize(
+    "_readable_name,dp_obj",
+    [
+        (str(obj), obj)
+        for obj in [
+            # Measurements:
             dp.m.make_gaussian(atom, dp.absolute_distance(float), 1),
             dp.m.then_gaussian(1),
             # Compositions:
             chained,
             dp.c.make_population_amplification(chained, population_size=100),
             # UDFs:
-            dp.user_domain("trivial_user_domain", user_domain_function),
             dp.m.new_privacy_profile(privacy_profile_function),
         ]
     ],
 )
-def test_serializable(_readable_name, dp_obj):
+def test_serializable_not_equal(_readable_name, dp_obj):
     serialized = dp.serialize(dp_obj)
     deserialized = dp.deserialize(serialized)
-    # We don't want to define __eq__ just for the sake of testing,
-    # so check the serializations before and after.
-    # (We should remember that if the first serialization
-    #  dropped some detail, this test wouldn't catch it.)
-    assert serialized == dp.serialize(deserialized)
-
+    assert dp_obj != deserialized
+    # A weaker test (the first serialization could drop something important)
+    # but we don't want want to support __eq__ everwhere:
+    assert dp.serialize(dp_obj) == dp.serialize(deserialized)
 
 @pytest.mark.parametrize(
     "_readable_name,dp_obj",
