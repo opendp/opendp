@@ -201,7 +201,7 @@ if pl is not None:
             ]
         ],
     )
-    def test_serializable_polars(_readable_name, dp_obj):
+    def test_polars_serializable(_readable_name, dp_obj):
         serialized = dp.serialize(dp_obj)
         deserialized = dp.deserialize(serialized)
         assert serialized == dp.serialize(deserialized)
@@ -218,6 +218,6 @@ if pl is not None:
             ]
         ],
     )
-    def test_not_currently_serializable(_readable_name, dp_obj):
+    def test_polars_not_currently_serializables(_readable_name, dp_obj):
         with pytest.raises(Exception, match=r"OpenDP JSON Encoder currently does not handle"):
             dp.serialize(dp_obj)
