@@ -80,19 +80,23 @@ def test_serializable_not_equal(_readable_name, dp_obj):
 
 
 @pytest.mark.parametrize(
-    "_readable_name,dp_obj,helper",
+    "_readable_name,dp_obj,helper,expected",
     [
-        (str(obj), obj, helper)
-        for obj, helper in [
+        (str(obj), obj, helper, expected)
+        for obj, helper, expected in [
             (dp.user_domain("trivial_user_domain", user_domain_function),
-             lambda dp_obj: dp_obj.member(1))
+             lambda dp_obj: dp_obj.member(1),
+             True),
+            (dp.m.new_privacy_profile(privacy_profile_function),
+             lambda dp_obj: dp_obj.epsilon(delta=1),
+             0),
         ]
     ],
 )
-def test_deserialized_object_actually_works(_readable_name, dp_obj, helper):
+def test_deserialized_object_actually_works(_readable_name, dp_obj, helper, expected):
     serialized = dp.serialize(dp_obj)
     deserialized = dp.deserialize(serialized)
-    assert helper(dp_obj) == helper(deserialized)
+    assert helper(dp_obj) == helper(deserialized) == expected
 
 
 @pytest.mark.parametrize(
@@ -110,7 +114,18 @@ def test_lambda_not_serializable(_readable_name, dp_obj):
         dp.serialize(dp_obj)
 
 
-# TODO: Test "OpenDP JSON Encoder does not handle"
+@pytest.mark.parametrize(
+    "_readable_name,dp_obj",
+    [
+        (str(obj), obj)
+        for obj in [
+            re, # An arbitrary module should not serialize!
+        ]
+    ],
+)
+def test_encoder_does_not_handle(_readable_name, dp_obj):
+    with pytest.raises(Exception, match=r"OpenDP JSON Encoder does not handle"):
+        dp.serialize(dp_obj)
 
 
 @pytest.mark.parametrize(
