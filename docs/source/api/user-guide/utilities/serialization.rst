@@ -52,6 +52,12 @@ are not currently serializable:
         ...
         Exception: OpenDP JSON Encoder currently does not handle instances of <class 'opendp.mod.Queryable'>: It may have state which is not set by the constructor. Error on: Queryable(Q=query_type)
 
+Plugins with user defined functions are serializable,
+but ``honest-but-curious`` must be enabled,
+and due to limitations of python's pickle, ``lambda`` will not work.
+
+.. We can't provide an example of UDFs in a doctest,
+.. because pickle is unable to locate the function definition in this context.
 
 Note that serialized embedded Polars objects will include the path of the local binary.
 These paths can be overridden at load time with the ``OPENDP_POLARS_LIB_PATH``
