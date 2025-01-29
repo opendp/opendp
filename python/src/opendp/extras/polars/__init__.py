@@ -658,7 +658,7 @@ class LazyFrameQuery():
 
     # Keep this docstring in sync with the docstring below for the dummy class.
 
-    def __init__(self, lf_plan: _LazyFrame, query):
+    def __init__(self, lf_plan, query):
         self._lf_plan = lf_plan
         self._query = query
         # do not initialize super() because inheritance is only used to mimic the API surface
@@ -706,8 +706,8 @@ class LazyFrameQuery():
 
     def sort(  # type: ignore[empty-body]
         self,
-        by: IntoExpr | Iterable[IntoExpr],
-        *more_by: IntoExpr,
+        by,
+        *more_by,
         descending: bool | Sequence[bool] = False,
         nulls_last: bool | Sequence[bool] = False,
         maintain_order: bool = False,
@@ -718,13 +718,7 @@ class LazyFrameQuery():
 
     def filter(  # type: ignore[empty-body]
         self,
-        *predicates: (
-            IntoExprColumn
-            | Iterable[IntoExprColumn]
-            | bool
-            | list[bool]
-            | np.ndarray[Any, Any]
-        ),
+        *predicates,
         **constraints: Any,
     ) -> LazyFrameQuery:
         """
@@ -735,7 +729,7 @@ class LazyFrameQuery():
         ...
 
     def select(  # type: ignore[empty-body]
-        self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
+        self, *exprs, **named_exprs
     ) -> LazyFrameQuery:
         """
         Select columns from this ``LazyFrame``.
@@ -745,7 +739,7 @@ class LazyFrameQuery():
         ...
 
     def select_seq(  # type: ignore[empty-body]
-        self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
+        self, *exprs, **named_exprs
     ) -> LazyFrameQuery:
         """
         Select columns from this ``LazyFrame``.
@@ -756,7 +750,7 @@ class LazyFrameQuery():
 
     def group_by(  # type: ignore[empty-body]
         self,
-        *by: IntoExpr | Iterable[IntoExpr],
+        *by,
         maintain_order: bool = False,
         **named_by: IntoExpr,
     ) -> LazyGroupByQuery:
@@ -769,8 +763,8 @@ class LazyFrameQuery():
 
     def with_columns(  # type: ignore[empty-body]
         self,
-        *exprs: IntoExpr | Iterable[IntoExpr],
-        **named_exprs: IntoExpr,
+        *exprs,
+        **named_exprs,
     ) -> LazyFrameQuery:
         """
         Add columns to this ``LazyFrame``.
@@ -782,8 +776,8 @@ class LazyFrameQuery():
 
     def with_columns_seq(  # type: ignore[empty-body]
         self,
-        *exprs: IntoExpr | Iterable[IntoExpr],
-        **named_exprs: IntoExpr,
+        *exprs,
+        **named_exprs,
     ) -> LazyFrameQuery:
         """
         Add columns to this ``LazyFrame``.
@@ -795,14 +789,14 @@ class LazyFrameQuery():
 
     def join(  # type: ignore[empty-body]
         self,
-        other: _LazyFrame,
-        on: str | _Expr | Sequence[str | _Expr] | None = None,
-        how: JoinStrategy = "inner",
+        other,
+        on = None,
+        how = "inner",
         *,
-        left_on: str | _Expr | Sequence[str | _Expr] | None = None,
-        right_on: str | _Expr | Sequence[str | _Expr] | None = None,
+        left_on = None,
+        right_on = None,
         suffix: str = "_right",
-        validate: JoinValidation = "m:m",
+        validate = "m:m",
         join_nulls: bool = False,
         coalesce: bool | None = None,
         allow_parallel: bool = True,
@@ -815,7 +809,7 @@ class LazyFrameQuery():
 
     def with_keys(
         self,
-        keys: _LazyFrame,
+        keys,
         on: list[str] | None = None,
     ) -> LazyFrameQuery:
         """
@@ -952,20 +946,20 @@ class LazyFrameQuery():
 
         return summarize_polars_measurement(self.resolve(), alpha)
 
-class LazyGroupByQuery(_LazyGroupBy):
+class LazyGroupByQuery():
     """
     A ``LazyGroupByQuery`` is returned by :py:func:`opendp.extras.polars.LazyFrameQuery.group_by`.
     It mimics a `Polars LazyGroupBy <https://docs.pola.rs/api/python/stable/reference/lazyframe/group_by.html>`_,
     but only supports APIs documented below."""
 
-    def __init__(self, lgb_plan: _LazyGroupBy, query):
+    def __init__(self, lgb_plan, query):
         self._lgb_plan = lgb_plan
         self._query = query
 
     def agg(
         self,
-        *aggs: IntoExpr | Iterable[IntoExpr],
-        **named_aggs: IntoExpr,
+        *aggs,
+        **named_aggs,
     ) -> LazyFrameQuery:
         """
         Compute aggregations for each group of a group by operation.
