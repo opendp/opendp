@@ -1315,6 +1315,7 @@ def _deserialization_hook(dp_dict):
     if _TUPLE_FLAG in dp_dict:
         return tuple(dp_dict[_TUPLE_FLAG])
     if _PICKLE_FLAG in dp_dict:
+        assert_features("honest-but-curious")
         from pickle import loads
         return loads(_b64_str_to_bytes(dp_dict[_PICKLE_FLAG]).read())
     pl = import_optional_dependency('polars', raise_error=False)
