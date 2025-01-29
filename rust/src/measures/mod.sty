@@ -1,0 +1,48 @@
+
+\newcommand{\defPrivacyLoss}{
+  \begin{definition}[Privacy Loss]
+    \label{defPrivacyLoss}
+    The \emph{privacy loss} of an outcome $y$ with respect to random variables $Y$ and $Y'$ is defined as
+    \begin{equation}
+      \mathcal{L}_{Y, Y'}(y) = \ln\left(\frac{\mathbb{P}[Y = y]}{\mathbb{P}[Y' = y]}\right).
+    \end{equation}
+    If $y$ is not in the support of $Y'$ then we define the privacy loss as infinite.
+    The \emph{privacy loss random variable} $Z$ is distributed according to $\mathcal{L}_{Y, Y'}(y)$ 
+    where $y$ is obtained by sampling $y \sim Y$.
+  \end{definition}
+}
+
+
+\newcommand{\defDpPlrv}{
+  \begin{definition}[Max Divergence Privacy Loss Random Variable]
+    \label{defDpPlrv}
+    For a privacy loss random variable $Z$ with respect to two distributions $Y$, $Y'$ and any non-negative $d$,
+    $Y$, $Y'$ are $d$-close under the max divergence measure if $|Z| \le d$.
+  \end{definition}
+}
+
+\newcommand{\defZcdpPlrv}{
+  \begin{definition}[zero-Concentrated Divergence Privacy Loss Random Variable]
+    \label{defZcdpPlrv}
+    For a privacy loss random variable $Z$ with respect to two distributions $Y$, $Y'$ and any non-negative $d$,
+    $Y$, $Y'$ are $d$-close under the zero-concentrated divergence measure if,
+    for every possible choice of $\alpha \in (1, \infty)$,
+
+    \begin{equation}
+        \mathbb{E}[\exp(\alpha Z)] \le \exp(\alpha (\alpha + 1) d)
+    \end{equation}
+  \end{definition}
+}
+
+\newcommand{\defRangeDivergence}{
+  \begin{definition}[Range Divergence]
+    \label{defRangeDivergence}
+    For any two distributions $Y, Y'$ and any non-negative $d$,
+    $Y, Y'$ are $d$-close under the bounded-range privacy measure whenever
+  
+    \begin{equation}
+      D_{\mathrm{BR}}(Y, Y') = \sup_{y_0, y_1 \in \textrm{Supp}(Y)} 
+      \mathcal{L}_{Y, Y'}(y_0) - \mathcal{L}_{Y, Y'}(y_1)
+    \end{equation}
+  \end{definition}
+}

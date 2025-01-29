@@ -145,5 +145,12 @@ def test_make_pureDP_to_zCDP():
     # (1/10)^2 / 2 + 1 / 10^2 / 2
     assert meas.map(1.) == 0.010000000000000002
 
-if __name__ == "__main__":
-    test_make_approximate()
+
+def test_range_divergence():
+    m_rdp = dp.m.make_user_measurement(
+        dp.atom_domain(T=bool), dp.absolute_distance(T=float),
+        dp.range_divergence(),
+        lambda x: x,
+        lambda d_in: d_in / 2.0
+    )
+    assert m_rdp.map(1.0) == 0.5

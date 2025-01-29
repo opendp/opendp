@@ -4,7 +4,7 @@ use opendp_derive::bootstrap;
 use crate::{
     core::{Domain, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    measures::{BoundedRange, ZeroConcentratedDivergence},
+    measures::{RangeDivergence, ZeroConcentratedDivergence},
     traits::{InfDiv, InfPowI},
 };
 
@@ -17,30 +17,30 @@ mod ffi;
     generics(DI(suppress), TO(suppress), MI(suppress))
 )]
 /// Constructs a new output measurement where the output measure
-/// is casted from `BoundedRange` to `ZeroConcentratedDivergence`.
+/// is converted from `BoundedRange` to `ZeroConcentratedDivergence`.
 ///
 /// For more details, see: https://differentialprivacy.org/exponential-mechanism-bounded-range/
 ///
 /// # Arguments
-/// * `meas` - a measurement with a privacy measure to be casted
+/// * `meas` - a measurement with a privacy measure to be converted
 ///
 /// # Generics
 /// * `DI` - Input Domain
-/// * `DO` - Output Domain
+/// * `TO` - Output Type
 /// * `MI` - Input Metric
 pub fn make_bounded_range_to_zCDP<DI, TO, MI>(
-    meas: Measurement<DI, TO, MI, BoundedRange>,
+    meas: Measurement<DI, TO, MI, RangeDivergence>,
 ) -> Fallible<Measurement<DI, TO, MI, ZeroConcentratedDivergence>>
 where
     DI: Domain,
     MI: 'static + Metric,
     (DI, MI): MetricSpace,
 {
-    let privacy_map: PrivacyMap<MI, BoundedRange> = meas.privacy_map.clone();
+    let privacy_map: PrivacyMap<MI, RangeDivergence> = meas.privacy_map.clone();
 
     meas.with_map(
         meas.input_metric.clone(),
-        ZeroConcentratedDivergence::default(),
+        ZeroConcentratedDivergence,
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             privacy_map.eval(d_in)?.inf_powi(ibig!(2))?.inf_div(&8.0)
         }),
