@@ -1314,6 +1314,9 @@ def _deserialization_hook(dp_dict):
         return func(**dp_dict.get(_KWARGS_FLAG, {}))
     if _TUPLE_FLAG in dp_dict:
         return tuple(dp_dict[_TUPLE_FLAG])
+    if _PICKLE_FLAG in dp_dict:
+        from pickle import loads
+        return loads(_b64_str_to_bytes(dp_dict[_PICKLE_FLAG]).read())
     pl = import_optional_dependency('polars', raise_error=False)
     if pl is not None:
         if _EXPR_FLAG in dp_dict:
