@@ -141,12 +141,9 @@ class Checker():
             doc_type = doc_type_dict.get(k)
             ast_type = ast_type_dict.get(k)
 
-            # TODO: Has 70 failures if we don't ignore missing docstring types
-            if doc_type is None:
-                continue
-
-            # TODO: Has 8 failures if we don't ignore missing signature types
-            if ast_type is None:
+            # TODO: Ignoring private functions, there are still 56 functions where 
+            # either the documentation type or the annotation type is missing.
+            if doc_type is None or ast_type is None:
                 continue
 
             if doc_type != ast_type:
@@ -159,7 +156,7 @@ class Checker():
     def _check_return(self):
         has_return_statement = ast_has_return(self.tree)
         has_return_doc = ':return' in self.docstring or ':rtype' in self.docstring
-        # TODO: Has 68 failures if we require code with "return" statements to document what is returned
+        # TODO: Has 68 failures if "return" statements require either ":return" or ":rtype".
         # if self.is_public and has_return_statement and not has_return_doc:
         #     self.errors.append('return statement, but no :return or :rtype in docstring')
         if has_return_doc and not has_return_statement:
