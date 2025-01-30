@@ -4,7 +4,7 @@ Measurements
 ============
 
 This section gives a high-level overview of the measurements that are available in the library.
-Refer to the :ref:`section on measurments <measurements-user-guide>` in the discussion of core structures
+Refer to the :ref:`section on measurements <measurements-user-guide>` in the discussion of core structures
 for a defintion of "measurement" in OpenDP.
 
 The intermediate domains and metrics need to match when chaining.
