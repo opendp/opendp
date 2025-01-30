@@ -46,7 +46,8 @@ def ast_return_type(tree):
 
 
 class Checker():
-    def __init__(self, tree, docstring, is_public, is_verbose):
+    def __init__(self, name, tree, docstring, is_public, is_verbose):
+        self.name = name
         self.tree = tree
         self.docstring = docstring
         self.is_public = is_public
@@ -140,11 +141,11 @@ class Checker():
             doc_type = doc_type_dict.get(k)
             ast_type = ast_type_dict.get(k)
 
-            # TODO: Has 70 failures if we don't skip missing docstring types
+            # TODO: Has 70 failures if we don't ignore missing docstring types
             if doc_type is None:
                 continue
 
-            # TODO: Has 8 failures if we don't skip missing signature types
+            # TODO: Has 8 failures if we don't ignore missing signature types
             if ast_type is None:
                 continue
 
@@ -157,12 +158,11 @@ class Checker():
 
     def _check_return(self):
         has_return_statement = ast_has_return(self.tree)
-        has_return_directive = ':return:' in self.docstring
-        # TODO: Has 142 failures; Enable and fill in the docs.
-        # if self.is_public:
-        #     if has_return_statement and not has_return_directive:
-        #         self.errors.append('return statement, but no :return: in docstring')
-        if has_return_directive and not has_return_statement:
+        has_return_doc = ':return' in self.docstring or ':rtype' in self.docstring
+        # TODO: Has 68 failures if we require code with "return" statements to document what is returned
+        # if self.is_public and has_return_statement and not has_return_doc:
+        #     self.errors.append('return statement, but no :return or :rtype in docstring')
+        if has_return_doc and not has_return_statement:
             self.errors.append(':return: directive, but no return statement')
 
         rtype_match = re.search(r':rtype:(.*)', self.docstring)
@@ -249,6 +249,7 @@ def test_function_docs(file, name, tree, visibility, pytestconfig):
     assert docstring is not None, f'{where}: add docstring or make private'
 
     errors = Checker(
+        name=name,
         tree=tree,
         docstring=docstring,
         is_public=is_public,
