@@ -74,8 +74,16 @@ class Checker():
             self.errors.append(f'unknown directives: {", ".join(unknown_directives)}')
         
         order = ''.join(re.sub(r':$', '', d) for d in directives)
+        # TODO: Has 169 failures if we require ":return" and ":rtype" together:
+        # canonical_order = r'^(:param(:type)?)*(:return:rtype)?(:raises)*(:example)?$'
+
         # TODO: Has 139 failures if we require ":return" if ":rtype" is given:
+        # (Low priority: from the type and the function name, the return may be clear enough)
         # canonical_order = r'^(:param(:type)?)*(:return(:rtype)?)?(:raises)*(:example)?$'
+
+        # TODO: Has 28 failures if we require ":rtype" if ":return" is given:
+        # canonical_order = r'^(:param(:type)?)*((:return)?:rtype)?(:raises)*(:example)?$'
+        
         canonical_order = r'^(:param(:type)?)*(:return)?(:rtype)?(:raises)*(:example)?$'
         if not re.search(canonical_order, order):
             short_order = re.sub(r'[:$^]', '', canonical_order)
@@ -108,15 +116,16 @@ class Checker():
             for k, v in re.findall(r':type (\w+): *(.*)', self.docstring)
         }
 
-        ast_node_dict = {
+        ast_arg_node_dict = {
             arg.arg: getattr(arg, 'annotation', None)
             for arg in self.all_ast_args
         }
         ast_type_dict = {
             # TODO: Has 32 failures where "Optional" not specified
+            # k: ast.unparse(v)
             k: re.sub(r'Optional\[(.+)\]', r'\1', ast.unparse(v))
-            for k, v in ast_node_dict.items()
-            # TODO: Has 154 failures w/o this exclusion.
+            for k, v in ast_arg_node_dict.items()
+            # TODO: What does it mean if v is None?
             if v is not None
         }
         
