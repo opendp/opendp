@@ -46,10 +46,11 @@ def ast_return_type(tree):
 
 
 class Checker():
-    def __init__(self, tree, docstring, is_public):
+    def __init__(self, tree, docstring, is_public, is_verbose):
         self.tree = tree
         self.docstring = docstring
         self.is_public = is_public
+        self.is_verbose = is_verbose
 
         self.errors = []
 
@@ -110,42 +111,47 @@ class Checker():
                 )
 
     def _check_types(self):
-        doc_type_dict = {
-            # TODO: Pick either ":py:ref:" or ":ref:"
-            k: re.sub(r'(?::py)?:ref:`(\w+)`', r'\1', v)
-            for k, v in re.findall(r':type (\w+): *(.*)', self.docstring)
-        }
+        doc_type_dict = (
+            # Get all documented parameters, even if there aren't types...
+            {name: None for name in re.findall(r':param (\w+):', self.docstring)}
+            | {
+                # ... and then add types, where documented.
+                # Allow either ":py:ref:" or ":ref:".
+                # No reason to impose a standard if both work with the tools.
+                k: re.sub(r'(?::py)?:ref:`(\w+)`', r'\1', v)
+                for k, v in re.findall(r':type (\w+): *(.*)', self.docstring)
+            }
+        )
 
-        ast_arg_node_dict = {
+        ast_arg_annotation_dict = {
             arg.arg: getattr(arg, 'annotation', None)
             for arg in self.all_ast_args
         }
         ast_type_dict = {
-            # TODO: Has 32 failures where "Optional" not specified
-            # k: ast.unparse(v)
-            k: re.sub(r'Optional\[(.+)\]', r'\1', ast.unparse(v))
-            for k, v in ast_arg_node_dict.items()
-            # TODO: What does it mean if v is None?
-            if v is not None
+            # "v and ..." ensures that None is passed through.
+            # TODO: Has 32 failures if we require parameters with "Optional" types
+            # to also have "Optional" in the  docstring.
+            # k: v and ast.unparse(v)
+            k: v and re.sub(r'Optional\[(.+)\]', r'\1', ast.unparse(v))
+            for k, v in ast_arg_annotation_dict.items()
         }
         
-        # NOTE: Has 17 failures, or 66  w/o "if is_public",
-        # but our sense is that the actual types may not be readable,
-        # so the docs may not / should not be consistent, and that's ok.
-        #
-        # if self.is_public:
-        #     if doc_type_dict != ast_type_dict:
-        #         self.errors.append(
-        #             f'docstring types ({doc_type_dict}) '
-        #             f'!= function signature ({ast_type_dict})'
-        #         )
-        
-        for k, v in doc_type_dict.items():
-            # TODO: "k in ast_type_dict" only needed in CI?
-            if k in ast_type_dict and ast_type_dict[k] != v:
+        for k in doc_type_dict.keys() | ast_type_dict.keys():
+            doc_type = doc_type_dict.get(k)
+            ast_type = ast_type_dict.get(k)
+
+            # TODO: Has 70 failures if we don't skip missing docstring types
+            if doc_type is None:
+                continue
+
+            # TODO: Has 8 failures if we don't skip missing signature types
+            if ast_type is None:
+                continue
+
+            if doc_type != ast_type:
                 self.errors.append(
-                    f'docstring type ({doc_type_dict[k]}) '
-                    f'!= function signature ({ast_type_dict[k]}) '
+                    f'docstring type ({doc_type}) '
+                    f'!= function signature types ({ast_type}) '
                     f'for {k}'
                 )
 
@@ -177,6 +183,12 @@ class Checker():
         self._check_params()
         self._check_types()
         self._check_return()
+        if not self.errors:
+            return
+        if self.is_verbose:
+            # split across multiple lines for readability:
+            return '\n' + '\n'.join(self.errors)
+        # else all on one line, though it may be truncated:
         return '; '.join(
             self.errors
             if len(self.errors) == 1
@@ -227,7 +239,7 @@ assert len(functions) > 100
 
 
 @pytest.mark.parametrize("file,name,tree,visibility", functions)
-def test_function_docs(file, name, tree, visibility):
+def test_function_docs(file, name, tree, visibility, pytestconfig):
     where = f'In {file}, line {tree.lineno}, def {name}'
     is_public = visibility == PUBLIC
 
@@ -239,7 +251,8 @@ def test_function_docs(file, name, tree, visibility):
     errors = Checker(
         tree=tree,
         docstring=docstring,
-        is_public=is_public
+        is_public=is_public,
+        is_verbose=pytestconfig.getoption("verbose") > 0
     ).get_errors()
     if errors:
         pytest.fail(f'{where}: {errors}')
