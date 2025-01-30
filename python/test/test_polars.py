@@ -182,6 +182,19 @@ def test_cast():
     assert m_lf(lf).collect()["A"].dtype == pl.Int64
 
 
+def test_when_then_otherwise():
+    pl = pytest.importorskip("polars")
+    lf_domain, lf = example_lf()
+    # m_lf = 
+    dp.t.make_stable_lazyframe(
+        lf_domain,
+        dp.symmetric_distance(),
+        lf.select(pl.when(pl.col("A") == 1).then(1).otherwise(0)),
+    )
+
+    # assert m_lf(lf).collect()["A"].dtype == pl.Int64
+
+
 def test_stable_expr():
     pl = pytest.importorskip("polars")
     domain = dp.wild_expr_domain(example_series()[0])
