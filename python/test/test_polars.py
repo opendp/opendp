@@ -197,8 +197,6 @@ def test_when_then_otherwise():
     assert results['fifty'].item() == 50
     assert results['zero'].item() == 0
 
-    # assert m_lf(lf).collect()["A"].dtype == pl.Int64
-
 
 def test_stable_expr():
     pl = pytest.importorskip("polars")
