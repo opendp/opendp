@@ -185,12 +185,17 @@ def test_cast():
 def test_when_then_otherwise():
     pl = pytest.importorskip("polars")
     lf_domain, lf = example_lf()
-    # m_lf = 
-    dp.t.make_stable_lazyframe(
+    m_lf = dp.t.make_stable_lazyframe(
         lf_domain,
         dp.symmetric_distance(),
-        lf.select(pl.when(pl.col("A") == 1).then(1).otherwise(0)),
+        lf.select(
+            pl.when(pl.col("A") == 1).then(1).otherwise(0).alias('fifty'),
+            pl.when(pl.col("A") == 0).then(1).otherwise(0).alias('zero'),
+        ),
     )
+    results = m_lf(lf).collect().sum()
+    assert results['fifty'].item() == 50
+    assert results['zero'].item() == 0
 
     # assert m_lf(lf).collect()["A"].dtype == pl.Int64
 
