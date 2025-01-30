@@ -174,6 +174,9 @@ where
                 ..
             } => namespace_str::make_namespace_str(input_domain, input_metric, self),
 
+            // TODO: alias is placeholder
+            Expr::Ternary { predicate: _, truthy: _, falsy: _ } => expr_alias::make_expr_alias(input_domain, input_metric, self),
+
             expr => fallible!(
                 MakeTransformation,
                 "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
