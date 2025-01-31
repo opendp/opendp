@@ -57,7 +57,6 @@ class DPExpr(object):
     """
 
     def __init__(self, expr):
-        """Apply a differentially private plugin to a Polars expression."""
         self.expr = expr
 
     def noise(

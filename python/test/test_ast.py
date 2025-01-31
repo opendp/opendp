@@ -68,6 +68,9 @@ class Checker():
         if len(self.all_ast_args) and self.all_ast_args[0].arg in ['self', 'cls']:
             # TODO: Confirm that this is a method in a class.
             self.all_ast_args.pop(0)
+        
+        if self.name == '__init__' and self.docstring:
+            self.errors.append('Move docstring up to class')
 
     def _check_docstring(self):
         directives = re.findall(r'^\s*(\:\w+:?)', self.docstring, re.MULTILINE)
