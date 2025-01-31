@@ -562,14 +562,14 @@ def dp_len(scale: float | None = None):
 
 
 class OnceFrame(object):
+    """OnceFrame is a Polars LazyFrame that may only be collected into a DataFrame once.
+
+    The APIs on this class mimic those that can be found in Polars.
+
+    Differentially private guarantees on a given LazyFrame require the LazyFrame to be evaluated at most once.
+    The purpose of this class is to protect against repeatedly evaluating the LazyFrame.
+    """
     def __init__(self, queryable):
-        """OnceFrame is a Polars LazyFrame that may only be collected into a DataFrame once.
-
-        The APIs on this class mimic those that can be found in Polars.
-
-        Differentially private guarantees on a given LazyFrame require the LazyFrame to be evaluated at most once.
-        The purpose of this class is to protect against repeatedly evaluating the LazyFrame.
-        """
         self.queryable = queryable
 
     def collect(self):
