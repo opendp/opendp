@@ -82,7 +82,7 @@ These paths can be overridden at load time with the ``OPENDP_POLARS_LIB_PATH``
 :ref:`environment variable <envvars>` .
 
 
-Other objects, including those which are created via the plugin API,
+Some objects, including those which are created via the plugin API,
 and those which have an internal state not reflected in their constructor,
 are not currently serializable:
 
