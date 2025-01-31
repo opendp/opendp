@@ -105,7 +105,7 @@ Sequential composition relaxes the basic compositor, allowing for
 queries to be submitted interactively. That is, you can make submit a
 query, view the output, and then submit another query that uses the
 information gained from the prior release. However, this API still
-requires ``sequentiality``, which we’ll discuss in more detail later.
+requires `sequentiality`, which we’ll discuss in more detail below.
 
 The API for interactive compositors is more verbose than in the
 non-interactive case because you must explicitly pass the input domain,
