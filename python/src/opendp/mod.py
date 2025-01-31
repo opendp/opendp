@@ -727,6 +727,13 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
 
 
 class PrivacyProfile(object):
+    '''
+    Given a profile function provided by the user,
+    gives the epsilon corresponding to a given delta, and vice versa.
+
+    :py:func:`new_privacy_profile <opendp.measures.new_privacy_profile>`
+    should be used to create new instances.
+    '''
     def __init__(self, curve):
         self.curve = curve
 
