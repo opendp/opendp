@@ -23,6 +23,7 @@ IGNORE = doctest.register_optionflag('IGNORE')
 def _norm_df(df):
     df = re.sub(r'╞.*', '', df, flags=re.DOTALL)
     df = re.sub(r'\s+', ' ', df)
+    df = re.sub(r'─+', '─', df)  # Special character used in box
     df = re.sub(r'shape: \(\d+,', 'shape: (#', df)
     return df
 

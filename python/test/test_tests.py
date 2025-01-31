@@ -63,3 +63,27 @@ def test_doctest_fuzzy(capsys):
 
     with pytest.raises(Exception, match='FUZZY can not be used with other flags'):
         assert_doctest_pass('>>> 2+2', capsys, {'FUZZY', 'NUMBER'})
+
+
+# Include "polars" in name to filter out in smoke-test.yml.
+def test_doctest_fuzzy_polars(capsys):
+    doctest = '''
+    >>> import polars as pl
+    >>> pl.DataFrame({'col': ['value']})
+    shape: (2, 1)
+    ┌───────────┐
+    │ col       │
+    │ ---       │
+    │ str       │
+    ╞═══════════╡
+    │ value     │
+    │ surprise! │
+    └───────────┘
+    '''
+    assert_doctest_fail(doctest, capsys)
+    assert_doctest_fail(doctest, capsys, {'FUZZY'})
+    assert_doctest_pass(doctest, capsys, {'FUZZY_DF'})
+    assert_doctest_fail(doctest.replace('1)', '100)'), capsys, {'FUZZY_DF'})
+
+    with pytest.raises(Exception, match='FUZZY_DF can not be used with other flags'):
+        assert_doctest_pass(doctest, capsys, {'FUZZY_DF', 'NUMBER'})
