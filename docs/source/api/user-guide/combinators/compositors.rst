@@ -190,7 +190,11 @@ when the analyst may still interact with the first queryable. This is
 the subject of a further line of research on concurrent compositors,
 which we hope to make available in the next library release.
 
-An example of this constraint is demonstrated in the “Nesting” section
+.. TODO: With "concurrent composition" merged
+.. https://github.com/opendp/opendp/issues/681
+.. should we update this? Or link to an issue?
+
+An example of this constraint is demonstrated in the `Nesting`_ section
 below.
 
 Chaining
