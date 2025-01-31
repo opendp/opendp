@@ -98,6 +98,8 @@ The privacy map simply sums the constituent output distances.
             >>> mean_fraction_meas.map(1)
             3.0
 
+.. _sequential-composition:
+
 Sequential Composition
 ----------------------
 

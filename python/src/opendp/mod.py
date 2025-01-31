@@ -498,6 +498,9 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
 Transformation = cast(Type[Transformation], Transformation) # type: ignore[misc]
 
 class Queryable(object):
+    '''
+    Queryables are used for :ref:`sequential composition <sequential-composition>`.
+    '''
     def __init__(self, value, query_type):
         self.value = value
         self.query_type = query_type
