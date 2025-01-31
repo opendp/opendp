@@ -44,7 +44,7 @@ from opendp.mod import (
     Domain,
     Measurement,
     Metric,
-    PartialConstructor,
+    _PartialConstructor,
     Queryable,
     Transformation,
     Measure,
@@ -739,9 +739,9 @@ class PartialChain(object):
         chain.param = param
         return chain
 
-    def __rshift__(self, other: Union[Transformation, Measurement, PartialConstructor]):
+    def __rshift__(self, other: Union[Transformation, Measurement, _PartialConstructor]):
         # partials may be chained with other transformations or measurements to form a new partial
-        if isinstance(other, (Transformation, Measurement, PartialConstructor)):
+        if isinstance(other, (Transformation, Measurement, _PartialConstructor)):
             return PartialChain(lambda x: self(x) >> other)
 
         raise ValueError("At most one parameter may be missing at a time")  # pragma: no cover
