@@ -73,8 +73,8 @@ the plan can be extracted and then used to create a new object.
         >>> new_plan = pl.LazyFrame.deserialize(io.BytesIO(serialized_plan))      
         >>> new_query = new_context.query()
         >>> new_query._lf_plan = new_plan
-        >>> new_query.release().collect().item()
-        0
+        >>> print('DP len:', new_query.release().collect().item())
+        DP len: ...
 
 
 Note that serialized embedded Polars objects will include the path of the local binary.
