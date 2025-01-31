@@ -256,7 +256,7 @@ interactive compositors. In this example, we nest a zCDP sequential
 compositor inside an approximate-DP sequential compositor.
 
 We first make the approximate-DP sequential compositor, accepting two
-queries. The first query must be (2, 10^-6)-DP, and the
+queries. The first query must be $(2, 10^{-6})$-DP, and the
 second (1, 0)-DP.
 
 .. tab-set::
@@ -277,7 +277,7 @@ second (1, 0)-DP.
             
 
 The first query to the approximate-DP sequential compositor must be an
-approximate-DP measurement that satisfies (2, 10^{-6})-DP.
+approximate-DP measurement that satisfies $(2, 10^{-6})$-DP.
 We will now use the library to find a set of :math:`\rho` parameters
 that will satisfy this level of privacy, under a given set of weights.
 
