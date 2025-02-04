@@ -37,10 +37,12 @@ If this is something you need, please reach out so that we can understand your u
         >>> type(new_obj)
         <class 'opendp.mod.Measurement'>
 
+.. _lazyframe-serialization:
 
 :py:class:`LazyFrameQuery <opendp.extras.polars.LazyFrameQuery>` is a special case.
 Although we do not support serialization of the whole object,
-the plan can be extracted and then used to create a new object.
+the plan can be extracted and then used to create a new object,
+perhaps on a remote server.
 
 .. tab-set::
 
@@ -55,24 +57,23 @@ the plan can be extracted and then used to create a new object.
         ...     privacy_unit=dp.unit_of(contributions=1),
         ...     privacy_loss=dp.loss_of(epsilon=1.0),
         ...     split_evenly_over=1,
-        ... ) # TODO: What's the benefit of creating this whole context, if the only thing that is serialized is the Expr?
+        ... )
         >>> query = context.query().select(dp.len())
-        >>> plan = query._lf_plan  # TODO: Rename to ".opendp_plan"?
-        >>> serialized_plan = plan.serialize()
-        
-        The serialized plan could be sent from a client to a server,
-        where it is then deserialized:
 
-        >>> import io
-        >>> new_context = dp.Context.compositor(
-        ...     data=pl.LazyFrame({}),  # The server would specify real, sensitive data here.
+        >>> dp.serialize(query) # Directly serializing the query is not supported:
+        Traceback (most recent call last):
+        ...
+        Exception: OpenDP JSON Encoder ...
+
+        >>> serialized_plan = query.polars_plan.serialize() # But this will work!
+
+        >>> new_context = dp.Context.compositor( # Then, on the server...
+        ...     data=pl.LazyFrame({}),  # real, sensitive data here.
         ...     privacy_unit=dp.unit_of(contributions=1),
         ...     privacy_loss=dp.loss_of(epsilon=1.0),
         ...     split_evenly_over=1,
-        ... ) # Do we want to be able to provide serialized_plan when creating the context? Maybe a new kwarg?
-        >>> new_plan = pl.LazyFrame.deserialize(io.BytesIO(serialized_plan))      
-        >>> new_query = new_context.query()
-        >>> new_query._lf_plan = new_plan
+        ... )
+        >>> new_query = new_context.deserialize_polars_plan(serialized_plan)
         >>> print('DP len:', new_query.release().collect().item())
         DP len: ...
 
