@@ -78,7 +78,7 @@ where
                     truthy: Arc::new(truthy.expr),
                     falsy: Arc::new(falsy.expr),
                 },
-                fill: None, // TODO
+                fill: None, // Ternary is run before aggregation, so there's no empty group that needs a default filled in.
             })
         }),
         input_metric.clone(),
