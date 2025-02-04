@@ -477,8 +477,8 @@ class Context(object):
             from opendp.domains import _lazyframe_from_domain
 
             # creates an empty lazyframe to hold the query plan
-            lf_plan = _lazyframe_from_domain(self.accountant.input_domain)
-            return LazyFrameQuery(lf_plan, query)
+            polars_plan = _lazyframe_from_domain(self.accountant.input_domain)
+            return LazyFrameQuery(polars_plan, query)
 
         return query
 
