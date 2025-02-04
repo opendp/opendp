@@ -30,7 +30,9 @@ where
     if &input_domain.schema() != schema.as_ref() {
         return fallible!(
             MakeTransformation,
-            "Schema mismatch. LazyFrame schema must match the schema from the input domain."
+            "Schema mismatch. LazyFrame schema must match the schema from the input domain. {:?} != {:?}",
+            &input_domain.schema(),
+            schema.as_ref()
         );
     }
 

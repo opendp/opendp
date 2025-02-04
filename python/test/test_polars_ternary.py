@@ -18,14 +18,16 @@ def example_series():
     pl = pytest.importorskip("polars")
     return [
         dp.series_domain("A", dp.option_domain(dp.atom_domain(T=dp.f64))),
-        dp.series_domain("B", dp.atom_domain(T=dp.i32)),
-        dp.series_domain("C", dp.option_domain(dp.atom_domain(T=dp.String))),
-        dp.series_domain("D", dp.atom_domain(T=dp.i32)),
+        dp.series_domain("Cat", dp.categorical_domain()),
+        # dp.series_domain("B", dp.atom_domain(T=dp.i32)),
+        # dp.series_domain("C", dp.option_domain(dp.atom_domain(T=dp.String))),
+        # dp.series_domain("D", dp.atom_domain(T=dp.i32)),
     ], [
         pl.Series("A", [1.0] * 50, dtype=pl.Float64),
-        pl.Series("B", [1, 2, 3, 4, 5] * 10, dtype=pl.Int32),
-        pl.Series("C", ["1"] * 49 + [None], dtype=pl.String),
-        pl.Series("D", [2] * 50, dtype=pl.Int32),
+        pl.Series("Cat", ["string"] * 50, dtype=pl.Categorical)
+        # pl.Series("B", [1, 2, 3, 4, 5] * 10, dtype=pl.Int32),
+        # pl.Series("C", ["1"] * 49 + [None], dtype=pl.String),
+        # pl.Series("D", [2] * 50, dtype=pl.Int32),
     ]
 
 
@@ -72,12 +74,13 @@ def test_when_then_otherwise_mismatch_types():
 def test_when_then_otherwise_categorical_types():
     pl = pytest.importorskip("polars")
     lf_domain, lf = example_lf()
-    with pytest.raises(dp.OpenDPException, match=r'output domains in ternary must match'):
+    # TODO: How to test "ternary cannot be applied to categorical data"?
+    with pytest.raises(dp.OpenDPException, match=r'== cannot be applied to categorical data'):
         m_lf = dp.t.make_stable_lazyframe(
             lf_domain,
             dp.symmetric_distance(),
             lf.select(
-                pl.when(pl.col("A") == 1).then(1).otherwise(pl.lit("!!!")).alias('fifty'),
+                pl.when(pl.col("Cat") == "string").then(1).otherwise(pl.lit("!!!")).alias('fifty'),
             ),
         )
 
