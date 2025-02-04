@@ -378,6 +378,15 @@ class Context(object):
     d_mids     = {self.d_mids})"""
     # TODO: Add "d_out" when filters are implemented.
 
+    def deserialize_polars_plan(self, serialized_plan: bytes):
+        import io
+        pl = import_optional_dependency('polars')
+        
+        new_plan = pl.LazyFrame.deserialize(io.BytesIO(serialized_plan))
+        new_query = self.query()
+        new_query.polars_plan = new_plan
+        return new_query
+
     @staticmethod
     def compositor(
         data: Any,
