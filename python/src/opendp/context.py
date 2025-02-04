@@ -378,12 +378,21 @@ class Context(object):
     d_mids     = {self.d_mids})"""
     # TODO: Add "d_out" when filters are implemented.
 
-    def deserialize_polars_plan(self, serialized_plan: bytes):
+    def deserialize_polars_plan(self, serialized_plan: bytes) -> "LazyFrameQuery":
+        '''
+        Given a serialized Polars plan, wraps it with a LazyFrameQuery.
+        See the :ref:`serialization documentation <lazyframe-serialization>`
+        for context and full example.
+
+        :param serialized_plan: A plan like that returned by ``query.polars_plan.serialize()``
+        '''
         import io
         pl = import_optional_dependency('polars')
         
         new_plan = pl.LazyFrame.deserialize(io.BytesIO(serialized_plan))
         new_query = self.query()
+        assert isinstance(new_query, LazyFrameQuery) # Lets us tighten the output type.
+
         new_query.polars_plan = new_plan
         return new_query
 
