@@ -52,8 +52,16 @@ where
         .make_stable(input_domain.as_row_by_row(), input_metric.clone())?;
 
     let (truthy_domain, _truthy_metric) = t_truthy.output_space();
-    // let (falsy_domain, _falsy_metric) = t_falsy.output_space();
+    let (falsy_domain, _falsy_metric) = t_falsy.output_space();
 
+    if truthy_domain != falsy_domain {
+        return fallible!(
+            MakeTransformation,
+            "output domains in ternary must match, instead found {:?} and {:?}",
+            truthy_domain,
+            falsy_domain
+        );
+    }
     // TODO: Check domain/metric match?
     // TODO: Check categorical?
 

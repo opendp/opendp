@@ -213,16 +213,14 @@ def test_when_then_otherwise_strings():
 def test_when_then_otherwise_mismatch_types():
     pl = pytest.importorskip("polars")
     lf_domain, lf = example_lf()
-    m_lf = dp.t.make_stable_lazyframe(
-        lf_domain,
-        dp.symmetric_distance(),
-        lf.select(
-            pl.when(pl.col("A") == 1).then(1).otherwise(pl.lit("!!!")).alias('fifty'),
-            pl.when(pl.col("A") == 0).then(1).otherwise(pl.lit("!!!")).alias('zero'),
-        ),
-    )
-    m_lf(lf).collect()
-    # TODO: Should the type mismatch between then and otherwise be an error?
+    with pytest.raises(dp.OpenDPException, match=r'output domains in ternary must match'):
+        m_lf = dp.t.make_stable_lazyframe(
+            lf_domain,
+            dp.symmetric_distance(),
+            lf.select(
+                pl.when(pl.col("A") == 1).then(1).otherwise(pl.lit("!!!")).alias('fifty'),
+            ),
+        )
 
 def test_when_then_otherwise_incomplete():
     pl = pytest.importorskip("polars")
