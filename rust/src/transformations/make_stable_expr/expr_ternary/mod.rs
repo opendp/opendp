@@ -62,8 +62,10 @@ where
             falsy_domain
         );
     }
-    // TODO: Check domain/metric match?
-    // TODO: Check categorical?
+
+    if matches!(truthy_domain.column.dtype(), DataType::Categorical(_, _)) {
+        return fallible!(MakeTransformation, "ternary cannot be applied to categorical data, because it may trigger a data-dependent CategoricalRemappingWarning in Polars");
+    }
 
     let mut output_domain = truthy_domain.clone();
     // TODO: Cleanup output_domain?
