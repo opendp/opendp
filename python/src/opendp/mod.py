@@ -563,7 +563,7 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
             return member(self, val)
         except Exception as e:
             from warnings import warn
-            warn(f'Value ({val}) does not belong to carrier type of {type(self)}. Details: {e}')
+            warn(f'Value ({val}) does not belong to carrier type of {self}. Details: {e}')
             return False
 
 

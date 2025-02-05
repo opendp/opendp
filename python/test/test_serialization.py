@@ -44,7 +44,7 @@ chained = input_space >> dp.t.then_mean() >> dp.m.then_laplace(scale=0.5)
         ]
     ],
 )
-def test_serializable(_readable_name, dp_obj):
+def test_serializable_equal(_readable_name, dp_obj):
     serialized = dp.serialize(dp_obj)
     deserialized = dp.deserialize(serialized)
     # We don't want to define __eq__ just for the sake of testing,
@@ -104,6 +104,38 @@ def test_version_mismatch_warning():
 # in this case it needs to wrap the tests.
 pl = import_optional_dependency('polars', raise_error=False)
 if pl is not None:
+    # member() will warn if instance is not even of the carrier type,
+    # but that behavior is tested elsewhere, and can be ignored here.
+    @pytest.mark.filterwarnings("ignore::UserWarning")
+    @pytest.mark.parametrize(
+        "_readable_name,dp_obj,in_value,out_value",
+        [
+            (str(obj), obj, in_value, out_value)
+            for obj, in_value, out_value in [
+                # Domains:
+                (atom, 10, 100),
+                # TODO: Might not be specifying categorical values correctly, 
+                # but shouldn't error, regardless.
+                # https://github.com/opendp/opendp/issues/2264
+                # (dp.categorical_domain(['A', 'B', 'C']),
+                #  pl.lit("A", dtype=pl.Categorical),
+                #  pl.lit("Z", dtype=pl.Categorical)
+                # ),
+                (dp.series_domain('name', atom),  pl.Series("name", [1.0, 2.0, 3.0]), pl.Series("name", ['a', 'b', 'c'], dtype=pl.String))
+            ]
+        ],
+    )
+    def test_serializable_domain(_readable_name, dp_obj, in_value, out_value):
+        assert dp_obj.member(in_value)
+        assert not dp_obj.member(out_value)
+
+        serialized = dp.serialize(dp_obj)
+        deserialized = dp.deserialize(serialized)
+
+        assert deserialized.member(in_value)
+        assert not deserialized.member(out_value)
+
+
     lf = pl.LazyFrame(schema={"A": pl.Int32, "B": pl.String})
     lf_domain = dp.lazyframe_domain([
         dp.series_domain("A", dp.atom_domain(T="i32")), 
