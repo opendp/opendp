@@ -44,7 +44,7 @@ chained = input_space >> dp.t.then_mean() >> dp.m.then_laplace(scale=0.5)
         ]
     ],
 )
-def test_serializable(_readable_name, dp_obj):
+def test_serializable_equal(_readable_name, dp_obj):
     serialized = dp.serialize(dp_obj)
     deserialized = dp.deserialize(serialized)
     # We don't want to define __eq__ just for the sake of testing,
@@ -52,6 +52,26 @@ def test_serializable(_readable_name, dp_obj):
     # (We should remember that if the first serialization
     #  dropped some detail, this test wouldn't catch it.)
     assert serialized == dp.serialize(deserialized)
+
+
+@pytest.mark.parametrize(
+    "_readable_name,dp_obj,true_check,false_check",
+    [
+        (str(obj), obj, true_check, false_check)
+        for obj, true_check, false_check in [
+            # Domains:
+            (atom, lambda obj: obj.member(5), lambda obj: obj.member(100)),
+            # (dp.categorical_domain(['A', 'B', 'C']), lambda obj: obj.member('A'), lambda obj: obj.member('Z')),
+        ]
+    ],
+)
+def test_serializable_works(_readable_name, dp_obj, true_check, false_check):
+    assert true_check(dp_obj)
+    assert not false_check(dp_obj)
+    serialized = dp.serialize(dp_obj)
+    deserialized = dp.deserialize(serialized)
+    assert true_check(deserialized)
+    assert not false_check(deserialized)
 
 
 @pytest.mark.parametrize(
