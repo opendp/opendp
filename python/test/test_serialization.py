@@ -108,11 +108,10 @@ if pl is not None:
     # but that behavior is tested elsewhere, and can be ignored here.
     @pytest.mark.filterwarnings("ignore::UserWarning")
     @pytest.mark.parametrize(
-        "_readable_name,dp_obj,in_value,out_value",
+        "_readable_name,dp_domain,in_value,out_value",
         [
-            (str(obj), obj, in_value, out_value)
-            for obj, in_value, out_value in [
-                # Domains:
+            (str(dp_domain), dp_domain, in_value, out_value)
+            for dp_domain, in_value, out_value in [
                 (atom, 10, 100),
                 # TODO: Might not be specifying categorical values correctly, 
                 # but shouldn't error, regardless.
@@ -134,15 +133,45 @@ if pl is not None:
             ]
         ],
     )
-    def test_serializable_domain(_readable_name, dp_obj, in_value, out_value):
-        assert dp_obj.member(in_value)
-        assert not dp_obj.member(out_value)
+    def test_serializable_domain(_readable_name, dp_domain, in_value, out_value):
+        assert dp_domain.member(in_value)
+        assert not dp_domain.member(out_value)
 
-        serialized = dp.serialize(dp_obj)
+        serialized = dp.serialize(dp_domain)
         deserialized = dp.deserialize(serialized)
 
         assert deserialized.member(in_value)
         assert not deserialized.member(out_value)
+
+    # @pytest.mark.parametrize(
+    #     "_readable_name,dp_metric,a,b,dist",
+    #     [
+    #         (str(dp_metric), dp_metric, a, b, dist)
+    #         for dp_metric, a, b, dist in [
+    #             (dp.absolute_distance('int'), 0, 1, 1),
+    #         ]
+    #     ],
+    # )
+    # def test_serializable_metric(_readable_name, dp_metric, a, b, dist):
+    #     assert dp_metric(a, b) == dist
+
+    #     serialized = dp.serialize(dp_metric)
+    #     deserialized = dp.deserialize(serialized)
+
+    #     assert deserialized(a, b) == dist
+
+    @pytest.mark.parametrize(
+        "_readable_name,dp_measurement,value,output_type",
+        [
+            (str(dp_measurement), dp_measurement, value, output_type)
+            for dp_measurement, value, output_type in [
+                (dp.m.make_gaussian(atom, dp.absolute_distance(float), 1), 0, float),
+            ]
+        ],
+    )
+    def test_serializable_measurement(_readable_name, dp_measurement, value, output_type):
+        assert isinstance(dp_measurement(value), output_type)
+        
 
 
     lf = pl.LazyFrame(schema={"A": pl.Int32, "B": pl.String})
