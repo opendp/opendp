@@ -121,7 +121,16 @@ if pl is not None:
                 #  pl.lit("A", dtype=pl.Categorical),
                 #  pl.lit("Z", dtype=pl.Categorical)
                 # ),
-                (dp.series_domain('name', atom),  pl.Series("name", [1.0, 2.0, 3.0]), pl.Series("name", ['a', 'b', 'c'], dtype=pl.String))
+                (
+                    dp.series_domain('name', atom),
+                    pl.Series("name", [1.0, 2.0, 3.0]),
+                    pl.Series("name", ['a', 'b', 'c'])
+                ),
+                (
+                    dp.lazyframe_domain([dp.series_domain('A', atom)]),
+                    pl.LazyFrame({'A': [1.0, 2.0, 3.0]}),
+                    pl.LazyFrame({'A': ['a', 'b', 'c']})
+                )
             ]
         ],
     )
