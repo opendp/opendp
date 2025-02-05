@@ -557,8 +557,15 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
         
         :param val: a value to be checked for membership in `self`
         '''
-        from opendp.domains import member
-        return member(self, val)
+        try:
+            # TODO: Should we rename the import to "_member"?
+            from opendp.domains import member
+            return member(self, val)
+        except Exception as e:
+            from warnings import warn
+            warn(str(e))
+            return False
+
 
     @property
     def type(self) -> Union["RuntimeType", str]:
