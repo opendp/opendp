@@ -551,7 +551,7 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     '''
     _type_ = AnyDomain
 
-    def member(self, val):
+    def member(self, val) -> bool:
         '''
         Check if ``val`` is a member of the domain.
         
@@ -563,7 +563,7 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
             return member(self, val)
         except Exception as e:
             from warnings import warn
-            warn(str(e))
+            warn(f'Value ({val}) does not belong to carrier type of {type(self)}. Details: {e}')
             return False
 
 
