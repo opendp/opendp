@@ -907,7 +907,7 @@ class LazyFrameQuery():
 
         >>> import polars as pl
         >>> data = pl.LazyFrame([pl.Series("convicted", [0, 1, 1, 0, 1] * 50, dtype=pl.Int32)])
-
+        >>>
         >>> context = dp.Context.compositor(
         ...     data=data,
         ...     privacy_unit=dp.unit_of(contributions=1),
@@ -915,12 +915,12 @@ class LazyFrameQuery():
         ...     split_evenly_over=1,
         ...     margins={(): dp.polars.Margin(max_partition_length=1000)},
         ... )
-
+        >>>
         >>> query = context.query().select(
         ...     dp.len(),
         ...     pl.col("convicted").fill_null(0).dp.sum((0, 1))
         ... )
-
+        >>>
         >>> query.summarize(alpha=.05)  # type: ignore[union-attr]
         shape: (2, 5)
         ┌───────────┬──────────────┬─────────────────┬───────┬──────────┐

@@ -106,6 +106,23 @@ class Checker():
                 directives_started = True
             elif directives_started:
                 directives_ended = True
+        
+        in_code = False
+        after_code = False
+        for line in self.docstring.split('\n'):
+            line = line.strip()
+            if line.startswith('>>>'):
+                if after_code:
+                    self.errors.append(f'Code sample should not be split by empty line above: {line}')
+                    break
+                in_code = True
+            elif in_code:
+                if not line:
+                    in_code = False
+                    after_code = True
+            elif line:
+                after_code = False
+
 
 
     def _check_params(self):
