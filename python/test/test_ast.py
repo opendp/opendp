@@ -44,6 +44,91 @@ def ast_return_type(tree):
     if type_node is not None:
         return ast.unparse(type_node)
 
+def check_directive_order(docstring):
+    '''
+    >>> check_directive_order("""
+    ...     :param abc: The input
+    ...     :paran xyz: Typo!
+    ... """)
+    'Unknown directives: :paran'
+    
+    >>> check_directive_order("""
+    ...     :return: The output
+    ...     :param xyz: The input
+    ... """)
+    'Directives :return:param are not in canonical order: (param(type)?)*(return)?(rtype)?(raises)*(example)?'
+    '''
+    directives = re.findall(r'^\s*(\:\w+:?)', docstring, re.MULTILINE)
+    unknown_directives = set(directives) - {':param', ':rtype:', ':type', ':raises', ':example:', ':return:'}
+    if unknown_directives:
+        return(f'Unknown directives: {", ".join(unknown_directives)}')
+    
+    order = ''.join(re.sub(r':$', '', d) for d in directives)
+    # TODO: Has 169 failures if we require ":return" and ":rtype" together:
+    # canonical_order = r'^(:param(:type)?)*(:return:rtype)?(:raises)*(:example)?$'
+
+    # TODO: Has 139 failures if we require ":return" if ":rtype" is given:
+    # (Low priority: from the type and the function name, the return may be clear enough)
+    # canonical_order = r'^(:param(:type)?)*(:return(:rtype)?)?(:raises)*(:example)?$'
+
+    # TODO: Has 28 failures if we require ":rtype" if ":return" is given:
+    # canonical_order = r'^(:param(:type)?)*((:return)?:rtype)?(:raises)*(:example)?$'
+    
+    canonical_order = r'^(:param(:type)?)*(:return)?(:rtype)?(:raises)*(:example)?$'
+    if not re.search(canonical_order, order):
+        short_order = re.sub(r'[:$^]', '', canonical_order)
+        return(f'Directives {order} are not in canonical order: {short_order}')
+
+
+def check_directive_continuity(docstring):
+    '''
+    >>> check_directive_continuity("""
+    ...     :param xyz: The input
+    ...     Surprise!
+    ...     :return: The output
+    ... """)
+    'Found another directive after non-directive: :return: The output'
+    '''
+    directives_started = False
+    directives_ended = False
+    for line in docstring.split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+        if line.startswith(':'):
+            if directives_ended:
+                return f'Found another directive after non-directive: {line}'
+            directives_started = True
+        elif directives_started:
+            directives_ended = True
+
+
+def check_doctest_continutity(docstring):
+    '''
+    >>> check_doctest_continutity("""
+    ...     >>> 1 + 1
+    ...     2
+    ...     
+    ...     >>> 2 + 2
+    ...     4
+    ... """)
+    'Doctest should not be split by empty line above: >>> 2 + 2'
+    '''
+    in_code = False
+    after_code = False
+    for line in docstring.split('\n'):
+        line = line.strip()
+        if line.startswith('>>>'):
+            if after_code:
+                return f'Doctest should not be split by empty line above: {line}'
+            in_code = True
+        elif in_code:
+            if not line:
+                in_code = False
+                after_code = True
+        elif line:
+            after_code = False
+
 
 class Checker():
     def __init__(self, name, tree, docstring, is_public, is_verbose):
@@ -70,60 +155,10 @@ class Checker():
             self.all_ast_args.pop(0)
 
     def _check_docstring(self):
-        directives = re.findall(r'^\s*(\:\w+:?)', self.docstring, re.MULTILINE)
-        unknown_directives = set(directives) - {':param', ':rtype:', ':type', ':raises', ':example:', ':return:'}
-        if unknown_directives:
-            self.errors.append(f'unknown directives: {", ".join(unknown_directives)}')
-        
-        order = ''.join(re.sub(r':$', '', d) for d in directives)
-        # TODO: Has 169 failures if we require ":return" and ":rtype" together:
-        # canonical_order = r'^(:param(:type)?)*(:return:rtype)?(:raises)*(:example)?$'
-
-        # TODO: Has 139 failures if we require ":return" if ":rtype" is given:
-        # (Low priority: from the type and the function name, the return may be clear enough)
-        # canonical_order = r'^(:param(:type)?)*(:return(:rtype)?)?(:raises)*(:example)?$'
-
-        # TODO: Has 28 failures if we require ":rtype" if ":return" is given:
-        # canonical_order = r'^(:param(:type)?)*((:return)?:rtype)?(:raises)*(:example)?$'
-        
-        canonical_order = r'^(:param(:type)?)*(:return)?(:rtype)?(:raises)*(:example)?$'
-        if not re.search(canonical_order, order):
-            short_order = re.sub(r'[:$^]', '', canonical_order)
-            self.errors.append(
-                f'Directives {order} are not in canonical order: {short_order}'
-            )
-        
-        directives_started = False
-        directives_ended = False
-        for line in self.docstring.split('\n'):
-            line = line.strip()
-            if not line:
-                continue
-            if line.startswith(':'):
-                if directives_ended:
-                    self.errors.append(f'Found another directive after non-directive: {line}')
-                    break
-                directives_started = True
-            elif directives_started:
-                directives_ended = True
-        
-        in_code = False
-        after_code = False
-        for line in self.docstring.split('\n'):
-            line = line.strip()
-            if line.startswith('>>>'):
-                if after_code:
-                    self.errors.append(f'Code sample should not be split by empty line above: {line}')
-                    break
-                in_code = True
-            elif in_code:
-                if not line:
-                    in_code = False
-                    after_code = True
-            elif line:
-                after_code = False
-
-
+        for check in [check_directive_order, check_directive_continuity, check_doctest_continutity]:
+            error = check(self.docstring)
+            if error:
+                self.errors.append(error)
 
     def _check_params(self):
         doc_param_dict = dict(re.findall(r':param (\w+): *(.*)', self.docstring))
