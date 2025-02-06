@@ -92,6 +92,21 @@ class Checker():
             self.errors.append(
                 f'Directives {order} are not in canonical order: {short_order}'
             )
+        
+        directives_started = False
+        directives_ended = False
+        for line in self.docstring.split('\n'):
+            line = line.strip()
+            if not line:
+                continue
+            if line.startswith(':'):
+                if directives_ended:
+                    self.errors.append(f'Found another directive after non-directive: {line}')
+                    break
+                directives_started = True
+            elif directives_started:
+                directives_ended = True
+
 
     def _check_params(self):
         doc_param_dict = dict(re.findall(r':param (\w+): *(.*)', self.docstring))

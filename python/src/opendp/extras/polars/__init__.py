@@ -895,13 +895,13 @@ class LazyFrameQuery():
     def summarize(self, alpha: float | None = None):
         """Summarize the statistics released by this query.
 
-        :param alpha: optional. A value in [0, 1] denoting the statistical significance. For the corresponding confidence level, subtract from from 1: for 95% confidence, use 0.05 for alpha.
-
         If ``alpha`` is passed, the resulting data frame includes an ``accuracy`` column.
 
         If a threshold is configured for censoring small/sensitive partitions,
         a threshold column will be included,
         containing the cutoff for the respective count query being thresholded.
+
+        :param alpha: optional. A value in [0, 1] denoting the statistical significance. For the corresponding confidence level, subtract from from 1: for 95% confidence, use 0.05 for alpha.
 
         :example:
 
