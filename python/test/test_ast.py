@@ -61,7 +61,7 @@ def check_directive_order(docstring):
     directives = re.findall(r'^\s*(\:\w+:?)', docstring, re.MULTILINE)
     unknown_directives = set(directives) - {':param', ':rtype:', ':type', ':raises', ':example:', ':return:'}
     if unknown_directives:
-        return(f'Unknown directives: {", ".join(unknown_directives)}')
+        return f'Unknown directives: {", ".join(unknown_directives)}'
     
     order = ''.join(re.sub(r':$', '', d) for d in directives)
     # TODO: Has 169 failures if we require ":return" and ":rtype" together:
@@ -77,7 +77,7 @@ def check_directive_order(docstring):
     canonical_order = r'^(:param(:type)?)*(:return)?(:rtype)?(:raises)*(:example)?$'
     if not re.search(canonical_order, order):
         short_order = re.sub(r'[:$^]', '', canonical_order)
-        return(f'Directives {order} are not in canonical order: {short_order}')
+        return f'Directives {order} are not in canonical order: {short_order}'
 
 
 def check_directive_continuity(docstring):
