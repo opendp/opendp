@@ -25,7 +25,6 @@ impl Function {
     pub fn from_ast(
         attr_args: AttributeArgs,
         item_fn: ItemFn,
-        module: Option<&str>,
     ) -> Result<Function> {
         // Parse the proc bootstrap macro args
         let arguments = BootstrapArguments::from_attribute_args(&attr_args)?;
@@ -33,22 +32,11 @@ impl Function {
         // Parse the signature
         let signature = BootstrapSignature::from_syn(item_fn.sig.clone())?;
 
-        // Parse the docstring
-        let path = if arguments.name.is_none() {
-            module.map(|module| {
-                let name = arguments.name.as_ref().unwrap_or(&signature.name).as_str();
-                (module, name)
-            })
-        } else {
-            None
-        };
-
         let name = arguments.name.clone().unwrap_or(signature.name.clone());
         let docstring = BootstrapDocstring::from_attrs(
             &name,
             item_fn.attrs,
             &item_fn.sig.output,
-            path,
             arguments.features.0.clone(),
         )?;
 

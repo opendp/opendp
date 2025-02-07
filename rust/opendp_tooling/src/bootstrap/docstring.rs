@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf};
 
 use darling::{Error, FromMeta, Result};
 use proc_macro2::{Literal, Punct, Spacing, TokenStream, TokenTree};
@@ -35,7 +35,6 @@ impl BootstrapDocstring {
         name: &String,
         attrs: Vec<Attribute>,
         output: &ReturnType,
-        path: Option<(&str, &str)>,
         features: Vec<String>,
     ) -> Result<BootstrapDocstring> {
         // look for this attr:
@@ -93,12 +92,6 @@ impl BootstrapDocstring {
                 .collect::<Vec<_>>()
                 .join(", ");
             description.push(format!("\n\nRequired features: {features_list}"));
-        }
-
-        // add a link to rust documentation (with a gap line)
-        if let Some((module, name)) = &path {
-            description.push(String::new());
-            description.push(make_rustdoc_link(module, name)?)
         }
 
         let mut add_section_to_description = |section_name: &str| {
@@ -425,27 +418,4 @@ fn new_comment_attribute(comment: &str) -> Attribute {
             .into_iter(),
         ),
     }
-}
-
-pub fn make_rustdoc_link(module: &str, name: &str) -> Result<String> {
-    // link from foreign library docs to rust docs
-    let proof_uri = if let Ok(rustdoc_port) = std::env::var("OPENDP_RUSTDOC_PORT") {
-        format!("http://localhost:{rustdoc_port}")
-    } else {
-        // find the docs uri
-        let docs_uri =
-            env::var("OPENDP_REMOTE_RUSTDOC_URI").unwrap_or_else(|_| "https://docs.rs".to_string());
-
-        // find the version
-        let mut version = env!("CARGO_PKG_VERSION");
-        if version.ends_with("-dev") {
-            version = "latest";
-        };
-
-        format!("{docs_uri}/opendp/{version}")
-    };
-
-    Ok(format!(
-        "[`{name}` in Rust documentation.]({proof_uri}/opendp/{module}/fn.{name}.html)"
-    ))
 }

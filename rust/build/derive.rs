@@ -123,7 +123,7 @@ fn parse_file_tree(
 
                 let mut contents = String::new();
                 File::open(&path)?.read_to_string(&mut contents)?;
-                if let Some(funcs) = parse_file(contents, &proof_paths, module_name) {
+                if let Some(funcs) = parse_file(contents, &proof_paths) {
                     matches.extend(funcs);
                 } else {
                     return Ok(None);
@@ -137,8 +137,7 @@ fn parse_file_tree(
 /// Search a file for bootstrap macro invocations
 fn parse_file(
     text: String,
-    proof_paths: &HashMap<String, Option<String>>,
-    module_name: &str,
+    proof_paths: &HashMap<String, Option<String>>
 ) -> Option<Vec<Function>> {
     // ignore files that fail to parse so as not to break IDE tooling
     let ts = TokenStream::from_str(&text).ok()?;
@@ -187,7 +186,7 @@ fn parse_file(
             }
 
             // use the bootstrap crate to parse a Function
-            Function::from_ast(attr_args, item_fn, Some(module_name)).ok()
+            Function::from_ast(attr_args, item_fn).ok()
         })
         .collect()
 }
