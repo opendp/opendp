@@ -586,10 +586,12 @@ class OnceFrame(object):
         To remain DP at the advertised privacy level, only collect the ``LazyFrame`` once.
 
         Requires "honest-but-curious" because the privacy guarantees only apply if:
+
         1. The LazyFrame (compute plan) is only ever executed once.
         2. The analyst does not observe ordering of rows in the output. 
         
         To ensure that row ordering is not observed:
+        
         1. Do not extend the compute plan with order-sensitive computations.
         2. Shuffle the output once collected `(in Polars sample all, with shuffle enabled) <https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.sample.html>`_.
         """

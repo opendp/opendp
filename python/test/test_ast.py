@@ -44,6 +44,7 @@ def ast_return_type(tree):
     if type_node is not None:
         return ast.unparse(type_node)
 
+
 def check_directive_order(docstring):
     '''
     >>> check_directive_order("""
@@ -146,6 +147,32 @@ def check_doctest_continuity(docstring):
             in_text = False
 
 
+def check_list_space(docstring):
+    '''
+    >>> check_list_space("""
+    ...     Add a blank line after this one!
+    ...     1. One thing
+    ...     2. After another
+    ... """)
+    'Add a blank line above list that begins with: 1. One thing'
+
+    >>> check_list_space("""
+    ...     >>> 5.0 - 4.0
+    ...     1.0
+    ...
+    ...     That should pass
+    ...     1. but this should not!
+    ... """)
+    'Add a blank line above list that begins with: 1. but this should not!'
+    '''
+    prev_is_text = False
+    for line in docstring.split('\n'):
+        line = line.strip()
+        if prev_is_text and line.startswith('1.'):
+            return f'Add a blank line above list that begins with: {line}'
+        prev_is_text = line and not line.startswith('>>>') and not line.startswith('...')
+
+
 class Checker():
     def __init__(self, name, tree, docstring, is_public, is_verbose):
         self.name = name
@@ -171,7 +198,13 @@ class Checker():
             self.all_ast_args.pop(0)
 
     def _check_docstring(self):
-        for check in [check_directive_order, check_directive_continuity, check_doctest_continuity]:
+        checks = [
+            check_directive_order,
+            check_directive_continuity,
+            check_doctest_continuity,
+            check_list_space,
+        ]
+        for check in checks:
             error = check(self.docstring)
             if error:
                 self.errors.append(error)
