@@ -164,13 +164,26 @@ def check_list_space(docstring):
     ...     1. but this should not!
     ... """)
     'Add a blank line above list that begins with: 1. but this should not!'
+
+    >>> check_list_space("""
+    ...     * This
+    ...     * is fine,
+    ...
+    ...     but this is
+    ...     * not ok!
+    ... """)
+    'Add a blank line above list that begins with: * not ok!'
     '''
     prev_is_text = False
     for line in docstring.split('\n'):
         line = line.strip()
-        if prev_is_text and line.startswith('1.'):
+        if prev_is_text and (line.startswith('1.') or line.startswith('* ')):
             return f'Add a blank line above list that begins with: {line}'
-        prev_is_text = line and not line.startswith('>>>') and not line.startswith('...')
+        prev_is_text = line and not (
+            line.startswith('>>>')
+            or line.startswith('...')
+            or line.startswith('* ')
+        )
 
 
 class Checker():
