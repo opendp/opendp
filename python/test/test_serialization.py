@@ -143,23 +143,6 @@ if pl is not None:
         assert deserialized.member(in_value)
         assert not deserialized.member(out_value)
 
-    # @pytest.mark.parametrize(
-    #     "_readable_name,dp_metric,a,b,dist",
-    #     [
-    #         (str(dp_metric), dp_metric, a, b, dist)
-    #         for dp_metric, a, b, dist in [
-    #             (dp.absolute_distance('int'), 0, 1, 1),
-    #         ]
-    #     ],
-    # )
-    # def test_serializable_metric(_readable_name, dp_metric, a, b, dist):
-    #     assert dp_metric(a, b) == dist
-
-    #     serialized = dp.serialize(dp_metric)
-    #     deserialized = dp.deserialize(serialized)
-
-    #     assert deserialized(a, b) == dist
-
     @pytest.mark.parametrize(
         "_readable_name,dp_measurement,value,output_type",
         [

@@ -559,6 +559,7 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
         '''
         try:
             # TODO: Should we rename the import to "_member"?
+            # https://github.com/opendp/opendp/issues/2268
             from opendp.domains import member
             return member(self, val)
         except Exception as e:
