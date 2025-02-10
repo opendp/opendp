@@ -7,9 +7,9 @@ repos:
     - id: trailing-whitespace
   - repo: local
     hooks:
-      - id: rustfmt
-        name: rustfmt
-        description: Check if all files follow the rustfmt style
-        entry: cargo fmt --all -- --check --color always
+      - id: cargo-fmt
+        name: Format Rust
+        description: Reformat Rust code as needed
+        entry: bash -c 'cd rust && cargo fmt'
         language: system
         pass_filenames: false
