@@ -22,10 +22,7 @@ use self::{
 mod test;
 
 impl Function {
-    pub fn from_ast(
-        attr_args: AttributeArgs,
-        item_fn: ItemFn,
-    ) -> Result<Function> {
+    pub fn from_ast(attr_args: AttributeArgs, item_fn: ItemFn) -> Result<Function> {
         // Parse the proc bootstrap macro args
         let arguments = BootstrapArguments::from_attribute_args(&attr_args)?;
 

@@ -137,7 +137,7 @@ fn parse_file_tree(
 /// Search a file for bootstrap macro invocations
 fn parse_file(
     text: String,
-    proof_paths: &HashMap<String, Option<String>>
+    proof_paths: &HashMap<String, Option<String>>,
 ) -> Option<Vec<Function>> {
     // ignore files that fail to parse so as not to break IDE tooling
     let ts = TokenStream::from_str(&text).ok()?;
