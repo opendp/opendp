@@ -68,8 +68,8 @@ where
     //     t_truthy.clone()
     // });
 
-    let (truthy_domain, _truthy_metric) = t_truthy.output_space();
-    let (falsy_domain, _falsy_metric) = t_falsy.output_space();
+    let (truthy_domain, truthy_metric) = t_truthy.output_space();
+    let (falsy_domain, falsy_metric) = t_falsy.output_space();
 
     if truthy_domain != falsy_domain {
         return fallible!(
@@ -77,6 +77,16 @@ where
             "output domains in ternary must match, instead found {:?} and {:?}",
             truthy_domain,
             falsy_domain
+        );
+    }
+
+    // TODO: How to exercise this? Is there a way to specify a user_distance should be used?
+    if truthy_metric != falsy_metric {
+        return fallible!(
+            MakeTransformation,
+            "output metrics in ternary must match, instead found {:?} and {:?}",
+            truthy_metric,
+            falsy_metric
         );
     }
 
