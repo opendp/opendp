@@ -68,6 +68,7 @@ def test_when_then_otherwise_mismatch_types():
 def test_when_then_otherwise_incomplete():
     pl = pytest.importorskip("polars")
     lf_domain, lf = example_lf()
+    # TODO: Shouldn't error. More notes in rust code.
     with pytest.raises(Exception, match=r'unsupported literal value: null'):
         dp.t.make_stable_lazyframe(
             lf_domain,
@@ -76,4 +77,3 @@ def test_when_then_otherwise_incomplete():
                 pl.when(pl.col("A") == 1).then(1).alias('fifty'),
             ),
         )
-    # TODO: Should there be a better error message?

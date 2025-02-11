@@ -51,6 +51,23 @@ where
         .clone()
         .make_stable(input_domain.as_row_by_row(), input_metric.clone())?;
 
+    // TODO: How to check if falsy is null, ie, "otherwise" is missing?
+    // Something better than this:
+    //
+    // let t_falsy = (if falsy.to_string() != "null" {
+    //     falsy
+    //         .as_ref()
+    //         .clone()
+    //         .make_stable(input_domain.as_row_by_row(), input_metric.clone())?
+
+    // TODO: If it is null, what is the transformation that should be used instead?
+    // Or is a fix needed in make_stable?
+    // (Using t_truthy can pass a test, but is probably wrong.)
+    //
+    // } else {
+    //     t_truthy.clone()
+    // });
+
     let (truthy_domain, _truthy_metric) = t_truthy.output_space();
     let (falsy_domain, _falsy_metric) = t_falsy.output_space();
 
