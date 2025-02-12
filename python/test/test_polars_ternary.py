@@ -67,6 +67,7 @@ def test_when_then_otherwise_col():
     
     # Would prefer not to depend on string for assertions,
     # but I don't think the iternals are exposed in another way.
+    # TODO: Shouldn't this be optional? Should we be able to see that here?
     assert str(m_lf.output_domain) == 'FrameDomain(twos: f64; margins=[])'
 
     df = m_lf(lf).collect()
