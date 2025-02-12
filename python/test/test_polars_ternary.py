@@ -90,7 +90,20 @@ def test_when_then_otherwise_strings():
     assert m_lf(lf).collect()['literal'][0] == 'one'
 
 
-def test_when_then_otherwise_mismatch_types():
+def test_when_then_otherwise_int_float_mismatch():
+    pl = pytest.importorskip("polars")
+    lf_domain, lf = example_lf()
+    with pytest.raises(dp.OpenDPException, match=r'output dtypes in ternary must match'):
+        m_lf = dp.t.make_stable_lazyframe(
+            lf_domain,
+            dp.symmetric_distance(),
+            lf.select(
+                # TODO: Should we suport this, by casting the int to float?
+                pl.when(pl.col("ones") == 1).then(1).otherwise(1.0),
+            ),
+        )
+
+def test_when_then_otherwise_num_str_mismatch():
     pl = pytest.importorskip("polars")
     lf_domain, lf = example_lf()
     with pytest.raises(dp.OpenDPException, match=r'output dtypes in ternary must match'):
