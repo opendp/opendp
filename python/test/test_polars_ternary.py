@@ -38,6 +38,7 @@ def test_when_then_otherwise_const():
             pl.when(pl.col("ones") == 0).then(1).otherwise(0).alias('zero'),
         ),
     )
+    assert m_lf.map(1) == 1
     results = m_lf(lf).collect().sum()
     assert results['fifty'].item() == 50
     assert results['zero'].item() == 0
@@ -90,6 +91,7 @@ def test_when_then_otherwise_strings():
     assert m_lf(lf).collect()['literal'][0] == 'one'
 
 
+# TODO: Should we support this, by casting the int to float?
 def test_when_then_otherwise_int_float_mismatch():
     pl = pytest.importorskip("polars")
     lf_domain, lf = example_lf()
@@ -98,10 +100,10 @@ def test_when_then_otherwise_int_float_mismatch():
             lf_domain,
             dp.symmetric_distance(),
             lf.select(
-                # TODO: Should we suport this, by casting the int to float?
                 pl.when(pl.col("ones") == 1).then(1).otherwise(1.0),
             ),
         )
+
 
 def test_when_then_otherwise_num_str_mismatch():
     pl = pytest.importorskip("polars")
@@ -116,15 +118,15 @@ def test_when_then_otherwise_num_str_mismatch():
         )
 
 
+# TODO: Shouldn't error. More notes in rust code.
+@pytest.mark.xfail(raises=dp.OpenDPException)
 def test_when_then_otherwise_incomplete():
     pl = pytest.importorskip("polars")
     lf_domain, lf = example_lf()
-    # TODO: Shouldn't error. More notes in rust code.
-    with pytest.raises(Exception, match=r'unsupported literal value: null'):
-        dp.t.make_stable_lazyframe(
-            lf_domain,
-            dp.symmetric_distance(),
-            lf.select(
-                pl.when(pl.col("ones") == 1).then(1).alias('fifty'),
-            ),
-        )
+    dp.t.make_stable_lazyframe(
+        lf_domain,
+        dp.symmetric_distance(),
+        lf.select(
+            pl.when(pl.col("ones") == 1).then(1).alias('fifty'),
+        ),
+    )
