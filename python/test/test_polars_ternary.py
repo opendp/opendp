@@ -76,7 +76,7 @@ def test_when_then_otherwise_strings():
 def test_when_then_otherwise_mismatch_types():
     pl = pytest.importorskip("polars")
     lf_domain, lf = example_lf()
-    with pytest.raises(dp.OpenDPException, match=r'output domains in ternary must match'):
+    with pytest.raises(dp.OpenDPException, match=r'output dtypes in ternary must match'):
         dp.t.make_stable_lazyframe(
             lf_domain,
             dp.symmetric_distance(),

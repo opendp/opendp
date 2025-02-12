@@ -62,7 +62,7 @@ where
 
     // TODO: If it is null, what is the transformation that should be used instead?
     // Or is a fix needed in make_stable?
-    // (Using t_truthy can pass a test, but is probably wrong.)
+    // (Using t_truthy can pass a test, but is wrong.)
     //
     // } else {
     //     t_truthy.clone()
@@ -71,16 +71,18 @@ where
     let (truthy_domain, truthy_metric) = t_truthy.output_space();
     let (falsy_domain, falsy_metric) = t_falsy.output_space();
 
-    if truthy_domain != falsy_domain {
+    let truthy_dtype = truthy_domain.column.dtype();
+    let falsy_dtype = falsy_domain.column.dtype();
+    if truthy_dtype != falsy_dtype {
         return fallible!(
             MakeTransformation,
-            "output domains in ternary must match, instead found {:?} and {:?}",
+            "output dtypes in ternary must match, instead found {:?} and {:?}",
             truthy_domain,
             falsy_domain
         );
     }
 
-    // TODO: How to exercise this? Is there a way to specify a user_distance should be used?
+    // TODO: How to exercise this? Is there a way to specify a user_distance that should be used?
     if truthy_metric != falsy_metric {
         return fallible!(
             MakeTransformation,
