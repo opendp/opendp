@@ -17,9 +17,9 @@ def example_lf(margin=None, **kwargs):
 def example_series():
     pl = pytest.importorskip("polars")
     return [
-        dp.series_domain("A", dp.option_domain(dp.atom_domain(T=dp.f64))),
+        dp.series_domain("ones", dp.option_domain(dp.atom_domain(T=dp.f64))),
     ], [
-        pl.Series("A", [1.0] * 50, dtype=pl.Float64),
+        pl.Series("ones", [1.0] * 50, dtype=pl.Float64),
     ]
 
 
@@ -30,8 +30,8 @@ def test_when_then_otherwise():
         lf_domain,
         dp.symmetric_distance(),
         lf.select(
-            pl.when(pl.col("A") == 1).then(1).otherwise(0).alias('fifty'),
-            pl.when(pl.col("A") == 0).then(1).otherwise(0).alias('zero'),
+            pl.when(pl.col("ones") == 1).then(1).otherwise(0).alias('fifty'),
+            pl.when(pl.col("ones") == 0).then(1).otherwise(0).alias('zero'),
         ),
     )
     results = m_lf(lf).collect().sum()
@@ -46,7 +46,7 @@ def test_when_then_otherwise_strings():
         lf_domain,
         dp.symmetric_distance(),
         lf.select(
-            pl.when(pl.col("A") == 1).then(pl.lit("one")).otherwise(pl.lit("other")),
+            pl.when(pl.col("ones") == 1).then(pl.lit("one")).otherwise(pl.lit("other")),
         ),
     )
     assert m_lf(lf).collect()['literal'][0] == 'one'
@@ -60,7 +60,7 @@ def test_when_then_otherwise_mismatch_types():
             lf_domain,
             dp.symmetric_distance(),
             lf.select(
-                pl.when(pl.col("A") == 1).then(1).otherwise(pl.lit("!!!")).alias('fifty'),
+                pl.when(pl.col("ones") == 1).then(1).otherwise(pl.lit("!!!")).alias('fifty'),
             ),
         )
 
@@ -74,6 +74,6 @@ def test_when_then_otherwise_incomplete():
             lf_domain,
             dp.symmetric_distance(),
             lf.select(
-                pl.when(pl.col("A") == 1).then(1).alias('fifty'),
+                pl.when(pl.col("ones") == 1).then(1).alias('fifty'),
             ),
         )
