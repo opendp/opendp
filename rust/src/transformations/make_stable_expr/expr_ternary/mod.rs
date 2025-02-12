@@ -101,7 +101,10 @@ where
     }
 
     let mut output_domain = truthy_domain.clone();
-    output_domain.column.drop_bounds().ok();
+    output_domain
+        .column
+        .set_dtype(output_domain.column.dtype())?;
+    // TODO: If the line above gives us the loosest definition, is this still necessary?
     output_domain.column.nullable |= falsy_domain.column.nullable;
     output_domain.context = input_domain.context.clone();
 

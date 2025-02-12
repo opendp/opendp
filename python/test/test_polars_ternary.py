@@ -64,7 +64,10 @@ def test_when_then_otherwise_col():
             .otherwise(pl.col("optional"))
         ),
     )
-    results = m_lf(lf).collect().sum()
+
+    df = m_lf(lf).collect()
+    assert df.schema[expected_name].to_python() == float
+    results = df.sum()
     assert results[expected_name].item() == 100
 
 
