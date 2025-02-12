@@ -64,9 +64,14 @@ def test_when_then_otherwise_col():
             .otherwise(pl.col("optional"))
         ),
     )
+    
+    # Would prefer not to depend on string for assertions,
+    # but I don't think the iternals are exposed in another way.
+    assert str(m_lf.output_domain) == 'FrameDomain(twos: f64; margins=[])'
 
     df = m_lf(lf).collect()
     assert df.schema[expected_name].to_python() == float
+
     results = df.sum()
     assert results[expected_name].item() == 100
 
