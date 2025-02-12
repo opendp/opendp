@@ -92,6 +92,8 @@ where
         );
     }
 
+    // We've already checked that the dtypes are equal,
+    // so we don't need to check the falsy_domain.
     if matches!(truthy_domain.column.dtype(), DataType::Categorical(_, _)) {
         // Since literal categorical values aren't possible,
         // not clear if this is actually reachable.
@@ -100,7 +102,7 @@ where
 
     let mut output_domain = truthy_domain.clone();
     output_domain.column.drop_bounds().ok();
-    output_domain.column.nullable = false;
+    output_domain.column.nullable |= falsy_domain.column.nullable;
     output_domain.context = input_domain.context.clone();
 
     Transformation::new(

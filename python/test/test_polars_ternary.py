@@ -5,6 +5,19 @@ import pytest
 import opendp.prelude as dp
 
 
+def example_series():
+    pl = pytest.importorskip("polars")
+    return [
+        dp.series_domain("ones", dp.atom_domain(T=dp.f64)),
+        dp.series_domain("twos", dp.atom_domain(T=dp.f64, bounds=(0, 10))),
+        dp.series_domain("optional", dp.option_domain(dp.atom_domain(T=dp.f64))),
+    ], [
+        pl.Series("ones", [1.0] * 50, dtype=pl.Float64),
+        pl.Series("twos", [2.0] * 50, dtype=pl.Float64),
+        pl.Series("optional", [3.0, None] * 25, dtype=pl.Float64),
+    ]
+
+
 def example_lf(margin=None, **kwargs):
     pl = pytest.importorskip("polars")
     domains, series = example_series()
@@ -12,19 +25,6 @@ def example_lf(margin=None, **kwargs):
     if margin is not None:
         lf_domain = dp.with_margin(lf_domain, by=margin, **kwargs)
     return lf_domain, lf
-
-
-def example_series():
-    pl = pytest.importorskip("polars")
-    return [
-        dp.series_domain("ones", dp.atom_domain(T=dp.f64)),
-        dp.series_domain("twos", dp.atom_domain(T=dp.f64)),
-        dp.series_domain("threes", dp.atom_domain(T=dp.f64)),
-    ], [
-        pl.Series("ones", [1.0] * 50, dtype=pl.Float64),
-        pl.Series("twos", [2.0] * 50, dtype=pl.Float64),
-        pl.Series("threes", [3.0] * 50, dtype=pl.Float64),
-    ]
 
 
 def test_when_then_otherwise_const():
@@ -46,18 +46,26 @@ def test_when_then_otherwise_const():
 def test_when_then_otherwise_col():
     pl = pytest.importorskip("polars")
     lf_domain, lf = example_lf()
+
+    non_dp = lf.select(
+        pl.when(pl.col("ones") == 1)
+        .then(pl.col("twos"))
+        .otherwise(pl.col("optional"))
+    )
+    expected_name = non_dp.collect().columns[0]
+    assert expected_name == "twos"
+
     m_lf = dp.t.make_stable_lazyframe(
         lf_domain,
         dp.symmetric_distance(),
         lf.select(
             pl.when(pl.col("ones") == 1)
             .then(pl.col("twos"))
-            .otherwise(pl.col("threes"))
-            .alias('hundred'),
+            .otherwise(pl.col("optional"))
         ),
     )
     results = m_lf(lf).collect().sum()
-    assert results['hundred'].item() == 100
+    assert results[expected_name].item() == 100
 
 
 def test_when_then_otherwise_strings():
