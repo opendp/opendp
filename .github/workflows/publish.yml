@@ -56,7 +56,7 @@ jobs:
 
   publish-python:
     needs: credential-check
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       # twine doesn't support dry-runs, so if that's what we're doing, simulate it by using TestPyPI instead of PyPI
       PYPI_API_TOKEN: ${{ inputs.dry_run && secrets.TEST_PYPI_API_TOKEN || secrets.PYPI_API_TOKEN }}
@@ -100,7 +100,7 @@ jobs:
   publish-r:
     if: 
     needs: credential-check
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -131,7 +131,7 @@ jobs:
 
   publish-rust:
     needs: publish-python
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
     steps:
@@ -154,7 +154,7 @@ jobs:
 
   publish-github:
     needs: publish-rust
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
