@@ -96,7 +96,7 @@ def test_when_then_otherwise_int_float_mismatch():
     pl = pytest.importorskip("polars")
     lf_domain, lf = example_lf()
     with pytest.raises(dp.OpenDPException, match=r'output dtypes in ternary must match'):
-        m_lf = dp.t.make_stable_lazyframe(
+        dp.t.make_stable_lazyframe(
             lf_domain,
             dp.symmetric_distance(),
             lf.select(
@@ -116,6 +116,24 @@ def test_when_then_otherwise_num_str_mismatch():
                 pl.when(pl.col("ones") == 1).then(1).otherwise(pl.lit("!!!")).alias('fifty'),
             ),
         )
+
+
+def test_when_then_otherwise_chain():
+    pl = pytest.importorskip("polars")
+    lf_domain, lf = example_lf()
+    m_lf = dp.t.make_stable_lazyframe(
+        lf_domain,
+        dp.symmetric_distance(),
+        lf.select(
+            pl.when(pl.col("ones") == 0)
+            .then(pl.lit("zero"))
+            .when(pl.col("ones") == 1)
+            .then(pl.lit("one"))
+            .otherwise(pl.lit("other")),
+        ),
+    )
+    assert m_lf(lf).collect()['literal'][0] == 'one'
+
 
 
 # TODO: Shouldn't error. More notes in rust code.
