@@ -17,13 +17,17 @@ def example_lf(margin=None, **kwargs):
 def example_series():
     pl = pytest.importorskip("polars")
     return [
-        dp.series_domain("ones", dp.option_domain(dp.atom_domain(T=dp.f64))),
+        dp.series_domain("ones", dp.atom_domain(T=dp.f64)),
+        dp.series_domain("twos", dp.atom_domain(T=dp.f64)),
+        dp.series_domain("threes", dp.atom_domain(T=dp.f64)),
     ], [
         pl.Series("ones", [1.0] * 50, dtype=pl.Float64),
+        pl.Series("twos", [2.0] * 50, dtype=pl.Float64),
+        pl.Series("threes", [3.0] * 50, dtype=pl.Float64),
     ]
 
 
-def test_when_then_otherwise():
+def test_when_then_otherwise_const():
     pl = pytest.importorskip("polars")
     lf_domain, lf = example_lf()
     m_lf = dp.t.make_stable_lazyframe(
@@ -37,6 +41,23 @@ def test_when_then_otherwise():
     results = m_lf(lf).collect().sum()
     assert results['fifty'].item() == 50
     assert results['zero'].item() == 0
+
+
+def test_when_then_otherwise_col():
+    pl = pytest.importorskip("polars")
+    lf_domain, lf = example_lf()
+    m_lf = dp.t.make_stable_lazyframe(
+        lf_domain,
+        dp.symmetric_distance(),
+        lf.select(
+            pl.when(pl.col("ones") == 1)
+            .then(pl.col("twos"))
+            .otherwise(pl.col("threes"))
+            .alias('hundred'),
+        ),
+    )
+    results = m_lf(lf).collect().sum()
+    assert results['hundred'].item() == 100
 
 
 def test_when_then_otherwise_strings():
