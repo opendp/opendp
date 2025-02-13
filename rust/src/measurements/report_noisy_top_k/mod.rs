@@ -11,7 +11,7 @@ use crate::{
 };
 use dashu::float::FBig;
 use num::Zero;
-use opendp_derive::bootstrap;
+use opendp_derive::{bootstrap, proven};
 use std::{cmp::Ordering, fmt::Display};
 use Ordering::*;
 
@@ -106,6 +106,7 @@ where
     )
 }
 
+#[proven]
 /// # Proof Definition
 /// Returns a noninteractive function with no side-effects that,
 /// when given a vector of non-null scores $x_i$,
@@ -128,6 +129,7 @@ fn function_report_top_k<TIA: Number>(
     }
 }
 
+#[proven]
 /// # Proof Definition
 /// `scale` must be positive.
 ///
@@ -175,6 +177,7 @@ where
     }
 }
 
+#[proven]
 /// Returns the top k elements from the iterator, using a heap to track the top k elements.
 /// Optimized for the case where k is small compared to the number of elements in the iterator.
 ///
@@ -210,6 +213,7 @@ fn top<T>(
     })
 }
 
+#[proven]
 /// # Proof Definition
 /// `x` must be partitioned by `pred`.
 /// `pred` may mutate its argument, but not change its true value used for comparisons.
@@ -223,6 +227,7 @@ pub fn partition_point_mut<T>(
     binary_search_by_mut(x, |x_i| Ok(if pred(x_i)? { Less } else { Greater }))
 }
 
+#[proven]
 /// # Proof Definition
 /// `f` may mutate its argument, but not change its true value used for comparisons.
 ///
@@ -308,6 +313,7 @@ pub trait SelectionMeasure: 'static + Measure<Distance = f64> {
     }
 }
 
+#[proven(proof_path = "measurements/report_noisy_top_k/SelectionMeasure_RangeDivergence.tex")]
 impl SelectionMeasure for RangeDivergence {
     const ONE_SHOT: bool = true;
 
@@ -318,6 +324,7 @@ impl SelectionMeasure for RangeDivergence {
     }
 }
 
+#[proven(proof_path = "measurements/report_noisy_top_k/SelectionMeasure_MaxDivergence.tex")]
 impl SelectionMeasure for MaxDivergence {
     const ONE_SHOT: bool = false;
 
