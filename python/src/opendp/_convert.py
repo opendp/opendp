@@ -81,7 +81,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
     if c_type == CallbackFnPtr:
         return _wrap_py_func(value, type_name)
     
-    if c_type == TransitionFn:
+    if c_type == TransitionFnPtr:
         return _wrap_py_transition(value, type_name)
 
     if c_type == ExtrinsicObjectPtr:
@@ -724,8 +724,18 @@ def _wrap_py_func(func, TO):
 
 # The output type cannot be an `ctypes.POINTER(FfiResult)` due to:
 #   https://bugs.python.org/issue5710#msg85731
-#                              (answer         , query       , is_internal  )
-TransitionFn = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr, ctypes.c_bool)
+#                                   (answer         , query       , is_internal  )
+TransitionFnValue = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr, ctypes.c_bool)
+
+class TransitionFn(ctypes.Structure):
+    _fields_ = [
+        ("callback", TransitionFnValue),
+        ("lifeline", ExtrinsicObject)
+    ]
+
+class TransitionFnPtr(ctypes.POINTER(TransitionFn)): # type: ignore[misc]
+    _type_ = TransitionFn
+
 
 def _wrap_py_transition(py_transition, A):
     from opendp._convert import c_to_py, py_to_c
@@ -764,5 +774,8 @@ def _wrap_py_transition(py_transition, A):
                 ctypes.c_char_p("Continued stack trace from Exception in user-defined function".encode()),
                 ctypes.c_char_p(traceback.format_exc().encode()),
             )
+        
+    c_wrapper_func = TransitionFnValue(wrapper_func)
+    lifeline = ExtrinsicObject(ctypes.py_object(c_wrapper_func), c_counter)
 
-    return TransitionFn(wrapper_func)
+    return ctypes.pointer(TransitionFn(c_wrapper_func, lifeline))

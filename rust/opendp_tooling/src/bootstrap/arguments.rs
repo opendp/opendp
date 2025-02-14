@@ -25,8 +25,6 @@ pub struct BootstrapArguments {
     pub arguments: BootTypeHashMap,
     pub derived_types: Option<DerivedTypes>,
     pub returns: Option<BootType>,
-    #[darling(default)]
-    pub dependencies: Dependencies,
 }
 
 impl BootstrapArguments {
@@ -207,18 +205,5 @@ impl FromMeta for DefaultGenerics {
         } else {
             Err(Error::custom("expected string").with_span(lit))
         }
-    }
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct Dependencies(pub Vec<TypeRecipe>);
-
-impl FromMeta for Dependencies {
-    fn from_list(items: &[NestedMeta]) -> Result<Self> {
-        items
-            .iter()
-            .map(TypeRecipe::from_nested_meta)
-            .collect::<Result<Vec<_>>>()
-            .map(Dependencies)
     }
 }

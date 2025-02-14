@@ -31,14 +31,7 @@ use self::util::to_str;
         function(rust_type = "$pass_through(TO)"),
         privacy_map(rust_type = "$measure_distance_type(output_measure)"),
     ),
-    generics(TO(default = "ExtrinsicObject")),
-    dependencies(
-        "input_domain",
-        "input_metric",
-        "output_measure",
-        "c_function",
-        "c_privacy_map"
-    )
+    generics(TO(default = "ExtrinsicObject"))
 )]
 /// Construct a Measurement from user-defined callbacks.
 /// This is meant for internal use, as it does not require "honest-but-curious",
@@ -102,14 +95,6 @@ pub extern "C" fn opendp_internal___make_measurement(
         output_metric(hint = "Metric"),
         function(rust_type = "$domain_carrier_type(output_domain)"),
         stability_map(rust_type = "$metric_distance_type(output_metric)"),
-    ),
-    dependencies(
-        "input_domain",
-        "input_metric",
-        "output_domain",
-        "output_metric",
-        "c_function",
-        "c_stability_map"
     )
 )]
 /// Construct a Transformation from user-defined callbacks.
@@ -151,8 +136,7 @@ pub extern "C" fn opendp_internal___make_transformation(
         identifier(c_type = "char *", rust_type = b"null"),
         member(rust_type = "bool"),
         descriptor(default = b"null", rust_type = "ExtrinsicObject")
-    ),
-    dependencies("c_member")
+    )
 )]
 /// Construct a new ExtrinsicDomain.
 /// This is meant for internal use, as it does not require "honest-but-curious",
@@ -223,8 +207,7 @@ pub extern "C" fn opendp_internal___extrinsic_distance(
 
 #[bootstrap(
     features("contrib"),
-    arguments(function(rust_type = "$pass_through(TO)")),
-    dependencies("c_function")
+    arguments(function(rust_type = "$pass_through(TO)"))
 )]
 /// Construct a Function from a user-defined callback.
 /// This is meant for internal use, as it does not require "honest-but-curious",
