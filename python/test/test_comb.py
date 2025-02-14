@@ -103,6 +103,7 @@ def test_cast_azcdp_approxdp():
 
 
 def test_renyidp():
+    import gc
     m_rdp = dp.m.make_user_measurement(
         dp.atom_domain(T=bool), dp.absolute_distance(T=float),
         dp.renyi_divergence(),
@@ -110,6 +111,9 @@ def test_renyidp():
         lambda d_in: (lambda alpha: d_in * alpha / 2.0)
     )
     rdp_curve = m_rdp.map(1.0)
+    # this used to cause a use-after free, 
+    # as the ε(α) curve created by the map would not be kept alive
+    gc.collect()
     assert rdp_curve(4.) == 2.0
 
 

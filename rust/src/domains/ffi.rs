@@ -500,12 +500,17 @@ pub extern "C" fn opendp_domains__user_domain(
     let identifier = try_!(to_str(identifier)).to_string();
     let descriptor = try_as_ref!(descriptor).clone();
     let element = ExtrinsicElement::new(identifier, descriptor);
-    let member = wrap_func(try_as_ref!(member).clone());
-    let member = Function::new_fallible(move |arg: &ExtrinsicObject| -> Fallible<bool> {
-        member(&AnyObject::new(arg.clone()))?.downcast::<bool>()
+
+    let member_closure = wrap_func(try_as_ref!(member).clone());
+    let member_function = Function::new_fallible(move |arg: &ExtrinsicObject| -> Fallible<bool> {
+        member_closure(&AnyObject::new(arg.clone()))?.downcast::<bool>()
     });
 
-    Ok(AnyDomain::new(ExtrinsicDomain { element, member })).into()
+    Ok(AnyDomain::new(ExtrinsicDomain {
+        element,
+        member: member_function,
+    }))
+    .into()
 }
 
 #[bootstrap(
