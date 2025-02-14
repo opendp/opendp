@@ -10,10 +10,6 @@ use crate::ffi::any::{AnyFunction, AnyMeasurement, AnyTransformation};
     arguments(
         measurement1(rust_type = b"null"),
         transformation0(rust_type = b"null")
-    ),
-    dependencies(
-        "$get_dependencies(measurement1)",
-        "$get_dependencies(transformation0)"
     )
 )]
 /// Construct the functional composition (`measurement1` ○ `transformation0`).
@@ -44,10 +40,6 @@ pub extern "C" fn opendp_combinators__make_chain_mt(
     arguments(
         transformation1(rust_type = b"null"),
         transformation0(rust_type = b"null")
-    ),
-    dependencies(
-        "$get_dependencies(transformation1)",
-        "$get_dependencies(transformation0)"
     )
 )]
 /// Construct the functional composition (`transformation1` ○ `transformation0`).
@@ -74,8 +66,7 @@ pub extern "C" fn opendp_combinators__make_chain_tt(
 
 #[bootstrap(
     features("contrib"),
-    arguments(postprocess1(rust_type = b"null"), measurement0(rust_type = b"null")),
-    dependencies("$get_dependencies(postprocess1)", "$get_dependencies(measurement0)")
+    arguments(postprocess1(rust_type = b"null"), measurement0(rust_type = b"null"))
 )]
 /// Construct the functional composition (`postprocess1` ○ `measurement0`).
 /// Returns a Measurement that when invoked, computes `postprocess1(measurement0(x))`.

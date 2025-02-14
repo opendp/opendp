@@ -10,8 +10,8 @@ use crate::ffi::any::{
     wrap_func, AnyDomain, AnyFunction, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject,
     AnyQueryable, AnyTransformation, CallbackFn, Downcast, QueryType,
 };
-use crate::ffi::util::into_c_char_p;
 use crate::ffi::util::{self, c_bool, Type};
+use crate::ffi::util::{into_c_char_p, ExtrinsicObject};
 use crate::interactive::{Answer, Query, Queryable};
 use crate::{try_, try_as_ref};
 
@@ -674,8 +674,7 @@ pub extern "C" fn opendp_core__measurement_output_distance_type(
 
 #[bootstrap(
     features("contrib", "honest-but-curious"),
-    arguments(function(rust_type = "$pass_through(TO)")),
-    dependencies("c_function")
+    arguments(function(rust_type = "$pass_through(TO)"))
 )]
 /// Construct a Function from a user-defined callback.
 /// Can be used to build a post-processor.
@@ -793,7 +792,12 @@ pub extern "C" fn opendp_core__queryable_query_type(
     FfiResult::Ok(try_!(into_c_char_p(answer.descriptor.to_string())))
 }
 
-type TransitionFn = extern "C" fn(*const AnyObject, c_bool) -> *mut FfiResult<*mut AnyObject>;
+#[repr(C)]
+#[derive(Clone)]
+pub struct TransitionFn {
+    pub(crate) callback: extern "C" fn(*const AnyObject, c_bool) -> *mut FfiResult<*mut AnyObject>,
+    pub(crate) lifeline: ExtrinsicObject,
+}
 
 // wrap a TransitionFn in a closure, so that it can be used in Queryables
 fn wrap_transition(
@@ -801,7 +805,7 @@ fn wrap_transition(
     Q: Type,
 ) -> impl FnMut(&AnyQueryable, Query<AnyObject>) -> Fallible<Answer<AnyObject>> {
     fn eval(transition: &TransitionFn, q: &AnyObject, is_internal: bool) -> Fallible<AnyObject> {
-        util::into_owned(transition(
+        util::into_owned((transition.callback)(
             q as *const AnyObject,
             util::from_bool(is_internal),
         ))?
@@ -809,6 +813,9 @@ fn wrap_transition(
     }
 
     move |_self: &AnyQueryable, arg: Query<AnyObject>| -> Fallible<Answer<AnyObject>> {
+        // extends the lifetime of transition.callback to the lifetime of this closure
+        let _ = &transition.lifeline;
+
         Ok(match arg {
             Query::External(q) => Answer::External(eval(&transition, q, false)?),
             Query::Internal(q) => {
@@ -829,8 +836,7 @@ fn wrap_transition(
     name = "new_queryable",
     features("contrib"),
     arguments(transition(rust_type = "$pass_through(A)")),
-    generics(Q(default = "ExtrinsicObject"), A(default = "ExtrinsicObject")),
-    dependencies("c_transition")
+    generics(Q(default = "ExtrinsicObject"), A(default = "ExtrinsicObject"))
 )]
 /// Construct a queryable from a user-defined transition function.
 ///
@@ -841,17 +847,18 @@ fn wrap_transition(
 /// * `Q` - Query Type
 /// * `A` - Output Type
 #[allow(dead_code)]
-fn new_queryable<Q, A>(transition: TransitionFn) -> Fallible<AnyObject> {
+fn new_queryable<Q, A>(transition: *const TransitionFn) -> Fallible<AnyObject> {
     let _ = transition;
     panic!("this signature only exists for code generation")
 }
 
 #[no_mangle]
 pub extern "C" fn opendp_core__new_queryable(
-    transition: TransitionFn,
+    transition: *const TransitionFn,
     Q: *const c_char,
     A: *const c_char,
 ) -> FfiResult<*mut AnyObject> {
+    let transition = try_as_ref!(transition).clone();
     let Q = try_!(Type::try_from(Q));
     let _A = A;
     FfiResult::Ok(util::into_raw(AnyObject::new(try_!(Queryable::new(

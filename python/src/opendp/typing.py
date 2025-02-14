@@ -20,7 +20,7 @@ from typing import Optional, Union, Any, Type, Sequence, _GenericAlias # type: i
 from types import GenericAlias
 import re
 
-from opendp.mod import Function, UnknownTypeException, Measurement, Transformation, Domain, Metric, Measure
+from opendp.mod import UnknownTypeException, Measurement, Transformation, Domain, Metric, Measure
 from opendp._lib import ATOM_EQUIVALENCE_CLASSES, import_optional_dependency
 
 
@@ -520,23 +520,6 @@ def pass_through(value: Any) -> Any:
     :param value: Value to pass through
     '''
     return value
-
-def get_dependencies(opendp_obj: Union[Measurement, Transformation, Function]) -> Any:
-    '''
-    Returns the dependencies of ``opendp_obj``.
-    Used extensively by combinators.
-
-    :param opendp_obj: Return the dependencies for this object
-    '''
-    return getattr(opendp_obj, "_dependencies", None)
-
-def get_dependencies_iterable(opendp_objs: Sequence[Union[Measurement, Transformation, Function]]) -> Sequence[Any]:
-    '''
-    Returns a list with the dependencies of each item in ``value``.
-
-    :param opendp_objs: Return the dependencies for all of these objects
-    '''
-    return list(map(get_dependencies, opendp_objs))
 
 def get_carrier_type(domain: Domain) -> Union[RuntimeType, str]:
     '''

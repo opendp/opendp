@@ -16,8 +16,7 @@ use super::BasicCompositionMeasure;
 
 #[bootstrap(
     features("contrib"),
-    arguments(measurements(rust_type = "Vec<AnyMeasurementPtr>")),
-    dependencies("$get_dependencies_iterable(measurements)")
+    arguments(measurements(rust_type = "Vec<AnyMeasurementPtr>"))
 )]
 /// Construct the DP composition \[`measurement0`, `measurement1`, ...\].
 /// Returns a Measurement that when invoked, computes `[measurement0(x), measurement1(x), ...]`
