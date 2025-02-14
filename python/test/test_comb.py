@@ -101,6 +101,7 @@ def test_cast_azcdp_approxdp():
     m_adp = dp.c.make_fix_delta(m_asdp, delta=1e-6)
     assert m_adp.map(1.) == (curve.epsilon(1e-6 - 1e-7), 1e-6)
 
+
 def test_renyidp():
     m_rdp = dp.m.make_user_measurement(
         dp.atom_domain(T=bool), dp.absolute_distance(T=float),

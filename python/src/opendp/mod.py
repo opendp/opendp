@@ -229,10 +229,6 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         from opendp.typing import RuntimeType
         return RuntimeType.parse(measurement_input_carrier_type(self))
 
-    def _depends_on(self, *args):
-        """Extends the memory lifetime of args to the lifetime of self."""
-        setattr(self, "_dependencies", args)
-
     def __del__(self):
         try:
             from opendp.core import _measurement_free
@@ -471,10 +467,6 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         from opendp.typing import RuntimeType
         return RuntimeType.parse(transformation_input_carrier_type(self))
 
-    def _depends_on(self, *args):
-        """Extends the memory lifetime of args to the lifetime of self."""
-        setattr(self, "_dependencies", args)
-
     def __del__(self):
         try:
             from opendp.core import _transformation_free
@@ -509,10 +501,6 @@ class Queryable(object):
     def __repr__(self) -> str:
         return f"Queryable(Q={self.query_type})"
 
-    def _depends_on(self, *args):
-        """Extends the memory lifetime of args to the lifetime of self."""
-        setattr(self, "_dependencies", args)
-        
 
 class Function(ctypes.POINTER(AnyFunction)): # type: ignore[misc]
     '''
@@ -524,10 +512,6 @@ class Function(ctypes.POINTER(AnyFunction)): # type: ignore[misc]
     def __call__(self, arg):
         from opendp.core import function_eval
         return function_eval(self, arg)
-    
-    def _depends_on(self, *args):
-        """Extends the memory lifetime of args to the lifetime of self."""
-        setattr(self, "_dependencies", args)
     
     def __del__(self):
         try:
@@ -606,10 +590,6 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     def __hash__(self) -> int:
         return hash(str(self))
     
-    def _depends_on(self, *args):
-        """Extends the memory lifetime of args to the lifetime of self."""
-        setattr(self, "_dependencies", args)
-
     def __iter__(self):
         raise ValueError("Domain does not support iteration")
 
@@ -744,10 +724,6 @@ class PrivacyProfile(object):
         from opendp._data import privacy_profile_epsilon
         return privacy_profile_epsilon(self.curve, delta)
     
-    def _depends_on(self, *args):
-        """Extends the memory lifetime of args to the lifetime of self."""
-        setattr(self, "_dependencies", args)
-
 
 class PartialConstructor(object):
     def __init__(self, constructor):

@@ -28,7 +28,6 @@ fn make_function(parameter_argument: Argument, return_argument: Argument) -> Fun
         args: vec![parameter_argument],
         derived_types: vec![],
         ret: return_argument,
-        dependencies: vec![],
         supports_partial: false,
         has_ffi: true,
         deprecation: Some(Deprecation {
@@ -72,7 +71,6 @@ def fake_function(
     lib_function.restype = ctypes.c_double
 
     output = c_to_py(lib_function(c_fake_argument))
-
     try:
         output.__opendp_dict__ = {
             '__function__': 'fake_function',

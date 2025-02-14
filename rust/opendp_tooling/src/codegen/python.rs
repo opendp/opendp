@@ -409,14 +409,12 @@ fn generate_body(module_name: &str, func: &Function, typemap: &HashMap<String, S
         r#"{flag_checker}{type_arg_formatter}
 {data_converter}
 {make_call}
-{set_dependencies}
 {serialization}
 return output"#,
         serialization = generate_serialization(module_name, func),
         flag_checker = generate_flag_check(&func.features),
         type_arg_formatter = generate_type_arg_formatter(func),
         data_converter = generate_data_converter(func, typemap),
-        set_dependencies = set_dependencies(&func.dependencies),
         make_call = generate_call(module_name, func, typemap)
     )
 }
@@ -609,19 +607,6 @@ output = {call}"#,
         ctype_restype = ctype_restype,
         call = call
     )
-}
-
-fn set_dependencies(dependencies: &Vec<TypeRecipe>) -> String {
-    if dependencies.is_empty() {
-        String::new()
-    } else {
-        let dependencies = dependencies
-            .iter()
-            .map(|dep| dep.to_python())
-            .collect::<Vec<String>>()
-            .join(", ");
-        format!("output._depends_on({dependencies})")
-    }
 }
 
 fn generate_serialization(module_name: &str, func: &Function) -> String {
