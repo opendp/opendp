@@ -58,6 +58,9 @@ pub struct ExtrinsicObject {
     pub(crate) count: RefCountFn,
 }
 
+unsafe impl Send for ExtrinsicObject {}
+unsafe impl Sync for ExtrinsicObject {}
+
 impl Clone for ExtrinsicObject {
     fn clone(&self) -> Self {
         (self.count)(self.ptr, true);

@@ -7,7 +7,7 @@ use crate::{
     domains::{type_name, AtomDomain, MapDomain, VectorDomain},
     error::Fallible,
     ffi::{
-        any::{AnyDomain, AnyObject, CallbackFn, Downcast},
+        any::{wrap_func, AnyDomain, AnyObject, CallbackFn, Downcast},
         util::{self, c_bool, into_c_char_p, to_str, ExtrinsicObject, Type, TypeContents},
     },
     traits::{CheckAtom, Float, Hashable, Integer, Primitive},
@@ -470,8 +470,7 @@ impl Domain for ExtrinsicDomain {
         identifier(c_type = "char *", rust_type = b"null"),
         member(rust_type = "bool"),
         descriptor(default = b"null", rust_type = "ExtrinsicObject")
-    ),
-    dependencies("c_member")
+    )
 )]
 /// Construct a new UserDomain.
 /// Any two instances of an UserDomain are equal if their string descriptors are equal.
@@ -501,10 +500,9 @@ pub extern "C" fn opendp_domains__user_domain(
     let identifier = try_!(to_str(identifier)).to_string();
     let descriptor = try_as_ref!(descriptor).clone();
     let element = ExtrinsicElement::new(identifier, descriptor);
-    let member = try_as_ref!(member).clone();
+    let member = wrap_func(try_as_ref!(member).clone());
     let member = Function::new_fallible(move |arg: &ExtrinsicObject| -> Fallible<bool> {
-        let c_res = (member.callback)(AnyObject::new_raw(arg.clone()));
-        Fallible::from(util::into_owned(c_res)?)?.downcast::<bool>()
+        member(&AnyObject::new(arg.clone()))?.downcast::<bool>()
     });
 
     Ok(AnyDomain::new(ExtrinsicDomain { element, member })).into()
