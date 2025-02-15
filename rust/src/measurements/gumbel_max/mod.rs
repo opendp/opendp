@@ -11,7 +11,7 @@ use crate::{
     core::{Function, Measurement, PrivacyMap},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    measures::MaxDivergence,
+    measures::RangeDivergence,
     metrics::LInfDistance,
     traits::{samplers::PartialSample, InfAdd, InfCast, InfDiv, Number},
 };
@@ -69,7 +69,7 @@ pub fn make_report_noisy_max_gumbel<TIA>(
     input_metric: LInfDistance<TIA>,
     scale: f64,
     optimize: Optimize,
-) -> Fallible<Measurement<VectorDomain<AtomDomain<TIA>>, usize, LInfDistance<TIA>, MaxDivergence>>
+) -> Fallible<Measurement<VectorDomain<AtomDomain<TIA>>, usize, LInfDistance<TIA>, RangeDivergence>>
 where
     TIA: Number,
     f64: DistanceConstant<TIA>,
@@ -92,7 +92,7 @@ where
             select_score(arg.iter().cloned(), optimize.clone(), scale_frac.clone())
         }),
         input_metric.clone(),
-        MaxDivergence::default(),
+        RangeDivergence,
         PrivacyMap::new_fallible(report_noisy_max_gumbel_map(scale, input_metric)),
     )
 }
@@ -108,8 +108,6 @@ where
     move |d_in: &QI| {
         // convert L_\infty distance to range distance
         let d_in = input_metric.range_distance(d_in.clone())?;
-
-        // convert data type to QO
         let d_in = f64::inf_cast(d_in)?;
 
         if d_in.is_sign_negative() {

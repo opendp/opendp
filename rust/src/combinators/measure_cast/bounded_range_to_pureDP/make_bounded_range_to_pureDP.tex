@@ -1,0 +1,74 @@
+\documentclass{article}
+\input{../../../lib.sty}
+\input{../../../measures/mod.sty}
+
+
+\title{\texttt{fn make\_bounded\_range\_to\_pureDP}}
+\author{Tudor Cebere}
+
+\begin{document}
+\maketitle
+
+\contrib
+Proves soundness of \texttt{fn make\_bounded\_range\_to\_pureDP}. % in \asOfCommit{mod.rs}{0b8f4222}.
+This proof is an adaptation of Lemma 2 \href{https://differentialprivacy.org/exponential-mechanism-bounded-range/}{here}, 
+which proves the conversion between bounded range \cite{durfee2019practical} and pure DP.
+
+\section{Hoare Triple}
+\subsection*{Preconditions}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Variable \texttt{meas} is a valid measurement of type \texttt{Measurement<DI, TO, MI, RangeDivergence>}
+    \item Generic \texttt{DI} (input domain) is a type with trait \rustdoc{core/trait}{Domain}. 
+    \item Generic \texttt{MI} (input metric) is a type with trait \rustdoc{core/trait}{Metric}.
+    \item \rustdoc{core/trait}{MetricSpace} is implemented for \texttt{(DI, MI)}. Therefore \texttt{MI} is a valid metric on \texttt{DI}.
+\end{itemize}
+
+\subsubsection*{User-verified}
+None
+
+\subsection*{Pseudocode}
+
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_bounded_range_to_pureDP.py}
+
+\subsection*{Postcondition}
+
+\begin{theorem}[Postcondition]
+    \label{postcondition}
+    \validMeasurement{\texttt{(meas, DI, TO, MI)\\}}{\texttt{make\_bounded\_range\_to\_pureDP}}
+\end{theorem}
+
+To prove the postcondition, we will need to establish the following definitions and theorem.
+
+\defRangeDivergence
+\defPrivacyLoss
+\defDpPlrv
+
+\begin{theorem}[Range Divergence implies Max Divergence]
+    \label{thm:br_to_dp}
+    If two random variables $Y$ and $Y'$ are $\eta$-close under range divergence,
+    then they are also $\eta$-close under max divergence.
+\end{theorem}
+
+\begin{proof}
+    Claimed in Corollary~4.2 of \cite{durfee2019practical}.
+    A proof is provided here for completeness.
+    Since the support must include zero, and the range divergence measures the width of the support,
+    then $|Z| \le \eta$.
+    By Definition~\ref{defDpPlrv} this implies that $Y, Y'$ are $\eta$-close under max divergence.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{postcondition}]
+    By the postcondition of \texttt{Measurement.with\_map}, on line~\ref{with_map}, 
+    \\\texttt{make\_bounded\_range\_to\_pureDP} returns a measurement with the same input metric, 
+    output metric \\\rustdoc{measures/struct}{MaxDivergence}, 
+    and logically equivalent privacy map.
+    The privacy guarantee holds by the precondition that \texttt{meas} is valid measurement,
+    together with Theorem~\ref{thm:br_to_dp}.
+    Therefore the returned measurement is a valid measurement.
+\end{proof}
+
+\bibliographystyle{alpha}
+\bibliography{mod}
+
+\end{document}
