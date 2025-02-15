@@ -98,6 +98,8 @@ The privacy map simply sums the constituent output distances.
             >>> mean_fraction_meas.map(1)
             3.0
 
+.. _sequential-composition:
+
 Sequential Composition
 ----------------------
 
@@ -105,7 +107,7 @@ Sequential composition relaxes the basic compositor, allowing for
 queries to be submitted interactively. That is, you can make submit a
 query, view the output, and then submit another query that uses the
 information gained from the prior release. However, this API still
-requires ``sequentiality``, which we’ll discuss in more detail later.
+requires `sequentiality`, which we’ll discuss in more detail below.
 
 The API for interactive compositors is more verbose than in the
 non-interactive case because you must explicitly pass the input domain,
@@ -153,7 +155,7 @@ returns a *queryable*.
         .. code:: python
 
             >>> int_dataset = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-            >>> sc_qbl = sc_meas(int_dataset)
+            >>> sc_queryable = sc_meas(int_dataset)
             
 
 A queryable is like a state machine: it takes an input query, updates
@@ -172,9 +174,9 @@ sum and count:
 
         .. code:: python
 
-            >>> print("dp sum:", sc_qbl(sum_meas))
+            >>> print("dp sum:", sc_queryable(sum_meas))
             dp sum: ...
-            >>> print("dp count:", sc_qbl(count_meas))
+            >>> print("dp count:", sc_queryable(count_meas))
             dp count: ...
 
 Now, why is this compositor named *sequential*? In order to prove that
@@ -190,7 +192,11 @@ when the analyst may still interact with the first queryable. This is
 the subject of a further line of research on concurrent compositors,
 which we hope to make available in the next library release.
 
-An example of this constraint is demonstrated in the “Nesting” section
+.. TODO: With "concurrent composition" merged
+.. https://github.com/opendp/opendp/issues/681
+.. should we update this? Or link to an issue?
+
+An example of this constraint is demonstrated in the `Nesting`_ section
 below.
 
 Chaining
@@ -209,8 +215,8 @@ support chaining.
             >>> str_space = dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()
             >>> str_sc_meas = str_space >> dp.t.then_cast_default(int) >> sc_meas
             
-            >>> str_sc_qbl = str_sc_meas(["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"])
-            >>> str_sc_qbl(sum_meas), str_sc_qbl(count_meas)
+            >>> str_sc_queryable = str_sc_meas(["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"])
+            >>> str_sc_queryable(sum_meas), str_sc_queryable(count_meas)
             (..., ...)
 
 ``str_sc_meas`` is invoked with a string dataset, but returns a
@@ -252,7 +258,7 @@ interactive compositors. In this example, we nest a zCDP sequential
 compositor inside an approximate-DP sequential compositor.
 
 We first make the approximate-DP sequential compositor, accepting two
-queries. The first query must be (2, 10^-6)-DP, and the
+queries. The first query must be $(2, 10^{-6})$-DP, and the
 second (1, 0)-DP.
 
 .. tab-set::
@@ -269,11 +275,11 @@ second (1, 0)-DP.
             ...     d_in=1,
             ...     d_mids=[(2., 1e-6), (1., 0.)]
             ... )
-            >>> adp_sc_qbl = sc_meas(int_dataset)
+            >>> adp_sc_queryable = sc_meas(int_dataset)
             
 
 The first query to the approximate-DP sequential compositor must be an
-approximate-DP measurement that satisfies (2, 10^{-6})-DP.
+approximate-DP measurement that satisfies $(2, 10^{-6})$-DP.
 We will now use the library to find a set of :math:`\rho` parameters
 that will satisfy this level of privacy, under a given set of weights.
 
@@ -308,7 +314,7 @@ that will satisfy this level of privacy, under a given set of weights.
             >>> zcdp_compositor = make_zcdp_sc(zcdp_compositor_scale)
             
             >>> # query the root approx-DP compositor queryable to get a child zCDP queryable
-            >>> zcdp_sc_qbl = adp_sc_qbl(zcdp_compositor)
+            >>> zcdp_sc_queryable = adp_sc_queryable(zcdp_compositor)
             
             >>> rho_1, rho_2 = scale_weights(zcdp_compositor_scale, weights)
             >>> rho_1, rho_2
@@ -334,15 +340,15 @@ release:
             
             
             >>> dg_scale = dp.binary_search_param(make_zcdp_sum_query, d_in=1, d_out=rho_1)
-            >>> print('zcdp:', zcdp_sc_qbl(make_zcdp_sum_query(dg_scale)))
+            >>> print('zcdp:', zcdp_sc_queryable(make_zcdp_sum_query(dg_scale)))
             zcdp: ...
 
 At this point, we can either submit a second query to the root approx-DP
-compositor queryable (``adp_sc_qbl``), or to the child zCDP compositor
-queryable (``zcdp_sc_qbl``).
+compositor queryable (``adp_sc_queryable``), or to the child zCDP compositor
+queryable (``zcdp_sc_queryable``).
 
-However, if you submit a query to ``adp_sc_qbl`` first, then to preserve
-sequentiality, ``zcdp_sc_qbl`` becomes locked.
+However, if you submit a query to ``adp_sc_queryable`` first, then to preserve
+sequentiality, ``zcdp_sc_queryable`` becomes locked.
 
 .. tab-set::
 
@@ -355,7 +361,7 @@ sequentiality, ``zcdp_sc_qbl`` becomes locked.
             >>> adp_count_meas = dp.c.make_approximate(count_meas)
             
             >>> # submit the count measurement to the root approx-DP compositor queryable
-            >>> print('adp:', adp_sc_qbl(adp_count_meas))
+            >>> print('adp:', adp_sc_queryable(adp_count_meas))
             adp: ...
 
 We’ve now exhausted the privacy budget of the root approx-DP queryable,
@@ -369,13 +375,13 @@ any more queries.
 
         .. code:: python
 
-            >>> zcdp_sc_qbl(make_zcdp_sum_query(dg_scale))
+            >>> zcdp_sc_queryable(make_zcdp_sum_query(dg_scale))
             Traceback (most recent call last):
             ...
             opendp.mod.OpenDPException: 
               FailedFunction("insufficient budget for query: 0.0734... > 0.0146...")
 
-            >>> adp_sc_qbl(adp_count_meas)
+            >>> adp_sc_queryable(adp_count_meas)
             Traceback (most recent call last):
             ...
             opendp.mod.OpenDPException: 
