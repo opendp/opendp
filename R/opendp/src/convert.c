@@ -560,6 +560,14 @@ char *rt_to_string(SEXP type_name)
     return (char *)sexp_to_charptr(string_type_name);
 }
 
+FfiSlice *sexp_to_ffisliceptr(SEXP data, SEXP type_name)
+{
+    FfiSlice *slice = malloc(sizeof(FfiSlice));
+    *slice = sexp_to_slice(data, type_name);
+    return slice;
+}
+
+
 AnyObject *sexp_to_anyobjectptr(SEXP data, SEXP type_name)
 {
     // Convert arguments to c types.
