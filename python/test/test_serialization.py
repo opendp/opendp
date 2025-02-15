@@ -44,7 +44,7 @@ chained = input_space >> dp.t.then_mean() >> dp.m.then_laplace(scale=0.5)
         ]
     ],
 )
-def test_serializable(_readable_name, dp_obj):
+def test_serializable_equal(_readable_name, dp_obj):
     serialized = dp.serialize(dp_obj)
     deserialized = dp.deserialize(serialized)
     # We don't want to define __eq__ just for the sake of testing,
@@ -104,6 +104,59 @@ def test_version_mismatch_warning():
 # in this case it needs to wrap the tests.
 pl = import_optional_dependency('polars', raise_error=False)
 if pl is not None:
+    # member() will warn if instance is not even of the carrier type,
+    # but that behavior is tested elsewhere, and can be ignored here.
+    @pytest.mark.filterwarnings("ignore::UserWarning")
+    @pytest.mark.parametrize(
+        "_readable_name,dp_domain,in_value,out_value",
+        [
+            (str(dp_domain), dp_domain, in_value, out_value)
+            for dp_domain, in_value, out_value in [
+                (atom, 10, 100),
+                # TODO: Might not be specifying categorical values correctly, 
+                # but shouldn't error, regardless.
+                # https://github.com/opendp/opendp/issues/2264
+                # (dp.categorical_domain(['A', 'B', 'C']),
+                #  pl.lit("A", dtype=pl.Categorical),
+                #  pl.lit("Z", dtype=pl.Categorical)
+                # ),
+                (
+                    dp.series_domain('name', atom),
+                    pl.Series("name", [1.0, 2.0, 3.0]),
+                    pl.Series("name", ['a', 'b', 'c'])
+                ),
+                (
+                    dp.lazyframe_domain([dp.series_domain('A', atom)]),
+                    pl.LazyFrame({'A': [1.0, 2.0, 3.0]}),
+                    pl.LazyFrame({'A': ['a', 'b', 'c']})
+                )
+            ]
+        ],
+    )
+    def test_serializable_domain(_readable_name, dp_domain, in_value, out_value):
+        assert dp_domain.member(in_value)
+        assert not dp_domain.member(out_value)
+
+        serialized = dp.serialize(dp_domain)
+        deserialized = dp.deserialize(serialized)
+
+        assert deserialized.member(in_value)
+        assert not deserialized.member(out_value)
+
+    @pytest.mark.parametrize(
+        "_readable_name,dp_measurement,value,output_type",
+        [
+            (str(dp_measurement), dp_measurement, value, output_type)
+            for dp_measurement, value, output_type in [
+                (dp.m.make_gaussian(atom, dp.absolute_distance(float), 1), 0, float),
+            ]
+        ],
+    )
+    def test_serializable_measurement(_readable_name, dp_measurement, value, output_type):
+        assert isinstance(dp_measurement(value), output_type)
+        
+
+
     lf = pl.LazyFrame(schema={"A": pl.Int32, "B": pl.String})
     lf_domain = dp.lazyframe_domain([
         dp.series_domain("A", dp.atom_domain(T="i32")), 
