@@ -139,13 +139,14 @@ where
 /// # Proof Definition
 /// For any setting of the input parameters,
 /// where `prob` is within $[0, 1]$,
-/// returns `Err(e)` if there is a lack of system entropy,
+/// returns `Err(e)` only if there is a lack of system entropy,
 /// or `Ok(out)` where `out` is `true` with probability `prob`, otherwise `false`.
 pub fn sample_bernoulli_rational(prob: RBig) -> Fallible<bool> {
     let (numer, denom) = prob.into_parts();
     let (Sign::Positive, numer) = numer.into_parts() else {
         return fallible!(FailedFunction, "numerator must not be negative");
     };
+    #[cfg(debug_assertions)]
     if numer > denom {
         return fallible!(FailedFunction, "prob must not be greater than one");
     }
