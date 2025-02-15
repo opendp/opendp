@@ -1,4 +1,5 @@
 First, create a measurement with the Polars API:
+
 >>> import opendp.prelude as dp
 >>> import polars as pl
 >>> dp.enable_features("contrib")
@@ -18,6 +19,7 @@ First, create a measurement with the Polars API:
 ... )
 
 This function extracts utility information about each aggregate in the resulting data frame:
+
 >>> dp.summarize_polars_measurement(meas)
 shape: (2, 4)
 ┌────────┬──────────────┬─────────────────┬───────┐
@@ -30,6 +32,7 @@ shape: (2, 4)
 └────────┴──────────────┴─────────────────┴───────┘
 
 If you pass an alpha argument, then you also get accuracy estimates:
+
 >>> dp.summarize_polars_measurement(meas, alpha=.05)
 shape: (2, 5)
 ┌────────┬──────────────┬─────────────────┬───────┬──────────┐

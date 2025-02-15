@@ -272,7 +272,7 @@ class RuntimeType(object):
         Vec<String>
         >>> dp.RuntimeType.infer((12., True, "A"))
         (f64, bool, String)
-        
+        >>>
         >>> dp.RuntimeType.infer([])
         Traceback (most recent call last):
         ...

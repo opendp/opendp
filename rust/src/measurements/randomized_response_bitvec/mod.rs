@@ -80,14 +80,13 @@ pub fn make_randomized_response_bitvec(
 #[bootstrap(features("contrib"))]
 /// Convert a vector of randomized response bitvec responses to a frequency estimate
 ///
+/// Computes the sum of the answers into a $k$-length vector $Y$ and returns
+/// $Y\frac{Y-\frac{f}{2}}{1-f}$
+///
 /// # Arguments
 /// * `answers` - A vector of BitVectors with consistent size
 /// * `f` - The per bit flipping probability used to encode `answers`
 ///
-/// Computes the sum of the answers into a $k$-length vector $Y$ and returns
-/// ```math
-/// Y\frac{Y-\frac{f}{2}}{1-f}
-/// ```
 pub fn debias_randomized_response_bitvec(answers: Vec<BitVector>, f: f64) -> Fallible<Vec<f64>> {
     if answers.len() == 0 {
         return fallible!(FailedFunction, "No answers provided");

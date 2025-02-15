@@ -152,7 +152,6 @@ def domain_of(T, infer: bool = False) -> Domain:
 
     >>> dp.domain_of('Option<int>')  # Python's `Optional` is not supported.
     OptionDomain(AtomDomain(T=i32))
-    
     >>> dp.domain_of(dp.i32)
     AtomDomain(T=i32)
 

@@ -446,6 +446,7 @@ pub fn make_rustdoc_link(module: &str, name: &str) -> Result<String> {
     };
 
     Ok(format!(
-        "[`{name}` in Rust documentation.]({proof_uri}/opendp/{module}/fn.{name}.html)"
+        // RST does not support nested markup, so do not try `{name}`!
+        "[{name} in Rust documentation.]({proof_uri}/opendp/{module}/fn.{name}.html)"
     ))
 }
