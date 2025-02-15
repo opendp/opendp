@@ -122,7 +122,10 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Test
+      - name: Test (default)
+        run: cargo test --verbose
+
+      - name: Test (all-features)
         run: cargo test --verbose --all-features
 
       - name: Run docs example
