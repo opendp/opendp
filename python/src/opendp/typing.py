@@ -202,7 +202,7 @@ class RuntimeType(object):
         if isinstance(type_name, str):
             type_name = type_name.strip()
             if type_name in generics:
-                return GenericType(type_name)
+                return _GenericType(type_name)
             if type_name.startswith('(') and type_name.endswith(')'):
                 return RuntimeType('Tuple', cls._parse_args(type_name[1:-1], generics=generics))
             start, end = type_name.find('<'), type_name.rfind('>')
@@ -373,14 +373,14 @@ class RuntimeType(object):
         
         :param kwargs:
         '''
-        if isinstance(self, GenericType):
+        if isinstance(self, _GenericType):
             return kwargs.get(self.origin, self)
         if isinstance(self, RuntimeType):
             return RuntimeType(self.origin, self.args and [RuntimeType.substitute(arg, **kwargs) for arg in self.args])
         return self
     
 
-class GenericType(RuntimeType):
+class _GenericType(RuntimeType):
     def __repr__(self):
         raise UnknownTypeException(f"attempted to create a type_name with an unknown generic: {self.origin}")  # pragma: no cover
 
@@ -478,7 +478,7 @@ def get_atom(type_name):
     '''
     type_name = RuntimeType.parse(type_name)
     while isinstance(type_name, RuntimeType):
-        if isinstance(type_name, GenericType):
+        if isinstance(type_name, _GenericType):
             return
         type_name = type_name.args[0]
     return type_name
