@@ -3,19 +3,24 @@ use crate::{
     transformations::test_helper::get_test_data,
 };
 
+use polars::prelude::when;
+
 use super::*;
 
 #[test]
 fn test_ternary() -> Fallible<()> {
     let (lf_domain, lf) = get_test_data()?;
 
-    // TODO: This doesn't work:
-    //   no method named `when` found for enum `polars::prelude::Expr` in the current scope
-    let t_sum: Transformation<_, _, _, L2Distance<f64>> = col("const_1f64")
-        .when(col("const_1f64").eq(lit(1)))
+    // 1. had problems finding when in Expr:
+    // https://docs.rs/polars/latest/polars/prelude/enum.Expr.html
+    // 2. searched in their docs for when, found this:
+    // https://docs.rs/polars/latest/polars/prelude/fn.when.html
+    // 3. updated below to use when function instead of method
+
+    let t_sum: Transformation<_, _, _, InsertDeleteDistance> = when(col("const_1f64").eq(lit(1)))
         .then(lit(1))
         .otherwise(lit(0))
-        .make_stable(lf_domain, PartitionDistance(InsertDeleteDistance))?;
+        .make_stable(lf_domain.row_by_row(), InsertDeleteDistance)?;
 
     // TODO: Make some assertions: This is just copy-paste from sum.
 
