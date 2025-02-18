@@ -29,7 +29,7 @@ __all__ = [
     'Metric',
     'Measure',
     'PrivacyProfile',
-    'PartialConstructor',
+    '_PartialConstructor',
     'UnknownTypeException',
     'OpenDPException',
     'GLOBAL_FEATURES',
@@ -360,10 +360,10 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         ...
 
     @overload
-    def __rshift__(self, other: "PartialConstructor") -> "PartialConstructor":
+    def __rshift__(self, other: "_PartialConstructor") -> "_PartialConstructor":
         ...
 
-    def __rshift__(self, other: Union["Measurement", "Transformation", "PartialConstructor"]) -> Union["Measurement", "Transformation", "PartialConstructor", "PartialChain"]:  # type: ignore[name-defined] # noqa F821
+    def __rshift__(self, other: Union["Measurement", "Transformation", "_PartialConstructor"]) -> Union["Measurement", "Transformation", "_PartialConstructor", "PartialChain"]:  # type: ignore[name-defined] # noqa F821
         if isinstance(other, Measurement):
             from opendp.combinators import make_chain_mt
             return make_chain_mt(other, self)
@@ -372,7 +372,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
             from opendp.combinators import make_chain_tt
             return make_chain_tt(other, self)
         
-        if isinstance(other, PartialConstructor):
+        if isinstance(other, _PartialConstructor):
             return self >> other(self.output_domain, self.output_metric) # type: ignore[call-arg]
 
         from opendp.context import PartialChain
@@ -498,6 +498,10 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
 Transformation = cast(Type[Transformation], Transformation) # type: ignore[misc]
 
 class Queryable(object):
+    '''
+    See also the API docs for :py:func:`make_sequential_composition <opendp.combinators.make_sequential_composition>`
+    and :py:func:`new_queryable <opendp.core.new_queryable>`.
+    '''
     def __init__(self, value, query_type):
         self.value = value
         self.query_type = query_type
@@ -723,6 +727,13 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
 
 
 class PrivacyProfile(object):
+    '''
+    Given a profile function provided by the user,
+    gives the epsilon corresponding to a given delta, and vice versa.
+
+    :py:func:`new_privacy_profile <opendp.measures.new_privacy_profile>`
+    should be used to create new instances.
+    '''
     def __init__(self, curve):
         self.curve = curve
 
@@ -749,7 +760,10 @@ class PrivacyProfile(object):
         setattr(self, "_dependencies", args)
 
 
-class PartialConstructor(object):
+class _PartialConstructor(object):
+    '''
+
+    '''
     def __init__(self, constructor):
         self.constructor = constructor
         self.__opendp_dict__ = {}  # Not needed at runtime, but the definition prevents mypy errors.
@@ -758,7 +772,7 @@ class PartialConstructor(object):
         return self.constructor(input_domain, input_metric)
     
     def __rshift__(self, other):
-        return PartialConstructor(lambda input_domain, input_metric: self(input_domain, input_metric) >> other) # pragma: no cover
+        return _PartialConstructor(lambda input_domain, input_metric: self(input_domain, input_metric) >> other) # pragma: no cover
 
     def __rrshift__(self, other):
         if isinstance(other, tuple) and list(map(type, other)) == [Domain, Metric]:

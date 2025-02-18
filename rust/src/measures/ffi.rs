@@ -383,6 +383,7 @@ impl<Q> Measure for TypedMeasure<Q> {
 /// * `curve` - A privacy curve mapping epsilon to delta
 ///
 /// # Why honest-but-curious?
+///
 /// The privacy profile should implement a well-defined $\delta(\epsilon)$ curve:
 ///
 /// * monotonically decreasing

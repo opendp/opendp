@@ -209,6 +209,9 @@ class Checker():
         if len(self.all_ast_args) and self.all_ast_args[0].arg in ['self', 'cls']:
             # TODO: Confirm that this is a method in a class.
             self.all_ast_args.pop(0)
+        
+        if self.name == '__init__' and self.docstring:
+            self.errors.append('Move docstring up to class')
 
     def _check_docstring(self):
         checks = [
@@ -325,13 +328,14 @@ class Checker():
 PUBLIC = 'public'
 PRIVATE = 'private'
 
-class Function(NamedTuple):
+class CodeObj(NamedTuple):
     file: str
     name: str
     tree: ast.AST
     visibility: str  # str rather than bool so the pytest report is more readable.
 
 
+classes = []
 functions = []
 
 src_dir_path = Path(__file__).parent.parent / 'src'
@@ -344,21 +348,23 @@ for code_path in src_dir_path.glob('**/*.py'):
     code = code_path.read_text()
     tree = ast.parse(code)
     for node in ast.walk(tree):
-        if not isinstance(node, ast.FunctionDef):
-            # TODO: Also check class docs
+        if not isinstance(node, (ast.FunctionDef, ast.ClassDef)):
             continue
         if ast_ends_with_ellipsis(node):
             continue
         if node.name.startswith('_'):
             is_public = False
 
-        function = Function(
+        code_obj = CodeObj(
             file=f'{code_path.parent.name}/{code_path.name}',
             name=node.name,
             tree=node,
             visibility=PUBLIC if is_public else PRIVATE,
         )
-        functions.append(function)
+        if isinstance(node, ast.FunctionDef):
+            functions.append(code_obj)
+        if isinstance(node, ast.ClassDef):
+            classes.append(code_obj)
 
 # Typo check:
 assert len(functions) > 100
@@ -383,3 +389,13 @@ def test_function_docs(file, name, tree, visibility, pytestconfig):
     ).get_errors()
     if errors:
         pytest.fail(f'{where}: {errors}')
+
+@pytest.mark.parametrize("file,name,tree,visibility", classes)
+def test_class_docs(file, name, tree, visibility):
+    where = f'In {file}, line {tree.lineno}, class {name}'
+    is_public = visibility == PUBLIC
+
+    docstring = ast.get_docstring(tree)
+    if not is_public and docstring is None:
+        return
+    assert docstring is not None, f'{where}: add docstring or make private'

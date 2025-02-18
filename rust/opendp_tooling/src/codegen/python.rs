@@ -200,7 +200,7 @@ def {then_name}(
 
 {doc_params}{example}
     """
-    output = PartialConstructor(lambda {dom_met}: {name}(
+    output = _PartialConstructor(lambda {dom_met}: {name}(
 {args}))
     output.__opendp_dict__ = {{
             '__function__': '{then_name}',
