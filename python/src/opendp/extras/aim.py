@@ -1,4 +1,5 @@
 import opendp.prelude as dp
+import opendp.measurements as dpm
 import itertools
 import numpy as np
 import math
@@ -184,11 +185,16 @@ class AIM_Mechanism:
             ]
 
             # select r_t in candidate_queries from q_r using expo mechanism
-            # does opendp have built in expo mechanism i can use instead?
-            sensitivity = max(w_array)
-            exp_scores = np.exp((self.epsilon[self.t]/(2 * sensitivity)) * np.array(q_array))
-            probs = exp_scores / np.sum(exp_scores)
-            r_t = np.random.choice(candidate_queries, p = probs)
+            # is it valid to use the gumbel report noisy max here?
+            gumbel_scale = 2 * max(w_array) / self.epsilon[self.new_t]
+            this_expo_mechanism = dpm.make_report_noisy_max_gumbel(
+                input_domain = dp.vector_domain(dp.atom_domain(float)),
+                input_metric = dp.linf_distance(float),
+                scale = gumbel_scale,
+                optimize = "max"
+            )
+            r_t_index = this_expo_mechanism(q_array)
+            r_t = candidate_queries[r_t_index]
 
             # measure the marginal
             y_t = self.measure_marginal(r_t, self.new_sigma[self.new_t])
