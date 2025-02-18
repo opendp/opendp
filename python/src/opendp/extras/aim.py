@@ -1,6 +1,4 @@
 import opendp.prelude as dp
-# from opendp.mod import enable_features
-# from opendp.measurements import make_gaussian # why is this saying there's no such thing?
 import itertools
 import numpy as np
 import math
@@ -65,7 +63,7 @@ class AIM_Mechanism:
     
     def get_approximate_marginal(self, r):
         '''approximate marginals M_r(p hat)'''
-        # TODO: implement this
+        # TODO: implement this; domain confusion
         return 0
 
     def measure_marginal(self, r, scale):
@@ -118,8 +116,11 @@ class AIM_Mechanism:
     
     def get_quality_weight(self, r):
         '''return w_r in line 8 of algo 2'''
-        #TODO: implement this
-        return 0
+        w_r = 0
+        for i, query in enumerate(self.queries):
+            overlap = len(set(r) & set(query))
+            w_r += self.query_weights[i] * overlap
+        return w_r
     
     def JT_SIZE(self, r_t):
         '''calculates size of the junction tree for the queries in the array self.already_selected_queries plus r_t'''
@@ -133,6 +134,26 @@ class AIM_Mechanism:
         n_r = 0 # TODO: how do you calculate n_r? --> related to domain question
         q_r = w_r * (marginal_difference - math.sqrt(2/math.pi) * self.new_sigma[self.new_t] * n_r)
         return q_r
+
+    def anneal(self, r_t):
+        '''update epsilon and new_sigma'''
+        left_expr = np.linalg.norm(self.get_real_marginal(r_t) - self.get_approximate_marginal(r_t), ord = 1)
+        n_rt = 0 # TODO: how to calculate n_rt?
+        right_expr = math.sqrt(2 / math.pi) * self.new_sigma[self.new_t] * n_rt
+
+        if left_expr <= right_expr:
+            self.epsilon.append(2 * self.epsilon[-1])
+            self.new_sigma.append(self.new_sigma[-1] / 2)
+        else:
+            self.epsilon.append(self.epsilon[-1])
+            self.new_sigma.append(self.new_sigma[-1])
+        
+        budget_remaining = self.rho - self.rho_used
+        upper_lim_budget = 1/(2* self.new_sigma[-1]**2) + 1/8 * self.epsilon[-1]**2
+        if (budget_remaining) <= 2 * upper_lim_budget:
+            self.epsilon[-1] = math.sqrt(8 * (1 - self.alpha) * budget_remaining)
+            self.new_sigma[-1] = math.sqrt(1/(2 * self.alpha * budget_remaining))
+
 
     def select_measure_estimate(self):
         self.distribution_estimate = self.initialize_distribution_estimate()
@@ -163,7 +184,11 @@ class AIM_Mechanism:
             ]
 
             # select r_t in candidate_queries from q_r using expo mechanism
-            ## ADD IT HERE
+            # does opendp have built in expo mechanism i can use instead?
+            sensitivity = max(w_array)
+            exp_scores = np.exp((self.epsilon[self.t]/(2 * sensitivity)) * np.array(q_array))
+            probs = exp_scores / np.sum(exp_scores)
+            r_t = np.random.choice(candidate_queries, p = probs)
 
             # measure the marginal
             y_t = self.measure_marginal(r_t, self.new_sigma[self.new_t])
@@ -172,13 +197,11 @@ class AIM_Mechanism:
             # estimate new data distribution
             self.distribution_estimate = self.estimate_distribution()
 
+            # anneal eps[new_t + 1], new_sigma[new_t + 1]
+            self.anneal(r_t)
+
             self.new_t += 1
-
-
-
-
-        
-        
-
-
-
+            
+        # TODO: generate synth data using private-PGM
+        synthetic_data = 0
+        return synthetic_data
