@@ -28,6 +28,9 @@ if TYPE_CHECKING: # pragma: no cover
 
 
 class PCAEpsilons(NamedTuple):
+    '''
+    Tuple used to describe the ε-expenditure per changed record in the input data
+    '''
     eigvals: float
     eigvecs: Sequence[float]
     mean: Optional[float]

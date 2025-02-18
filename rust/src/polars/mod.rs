@@ -533,10 +533,12 @@ impl OnceFrame {
     /// Extract the compute plan with the private data.
     ///
     /// Requires "honest-but-curious" because the privacy guarantees only apply if:
+    ///
     /// 1. The LazyFrame (compute plan) is only ever executed once.
     /// 2. The analyst does not observe ordering of rows in the output.
     ///    
     /// To ensure that row ordering is not observed:
+    ///
     /// 1. Do not extend the compute plan with order-sensitive computations.
     /// 2. Shuffle the output once collected ([in Polars sample all, with shuffling enabled](https://docs.rs/polars/latest/polars/frame/struct.DataFrame.html#method.sample_n_literal)).
     #[cfg(feature = "honest-but-curious")]

@@ -1,11 +1,18 @@
 Resources List
 ==============
 
-Background
-----------
+Foundations
+-----------
 
 * `Differential privacy: A primer for a non-technical audience <https://salil.seas.harvard.edu/publications/differential-privacy-primer-non-technical-audience>`_
 * `The Algorithmic Foundations of Differential Privacy <https://www.cis.upenn.edu/~aaroth/Papers/privacybook.pdf>`_
+
+
+Applying Differential Privacy
+-----------------------------
+* `The Privacy Deployments Registry <https://registry.oblivious.com/>`_ provides examples of the privacy budgets chosen by real-world deployments.
+* `DP Wizard <https://pypi.org/project/dp_wizard/>`_ produces Jupyter notebooks that demonstrate the OpenDP API on your own data.
+
 
 Learning About Differential Privacy
 -----------------------------------
@@ -14,8 +21,9 @@ Learning About Differential Privacy
 * `Designing Access with Differential Privacy <https://admindatahandbook.mit.edu/book/latest/diffpriv.html>`_
 * `Programming Differential Privacy <https://programming-dp.com/>`_
 * `Privacy and Confidentiality Protection Overview <https://www2.census.gov/cac/nac/meetings/2019-05/garfinkel-privacy-confidentiality-protection.pdf>`_
-* `Hand-On Differential Privacy <https://www.oreilly.com/library/view/hands-on-differential-privacy/9781492097730/>`_ is co-authored by the OpenDP Library architect
+* `Hands-On Differential Privacy <https://www.oreilly.com/library/view/hands-on-differential-privacy/9781492097730/>`_ is co-authored by the OpenDP Library architect
 * A short list of `Educational Resources <https://opendp.github.io/learning/>`_ maintained by the community
+
 
 Papers
 ------

@@ -1,8 +1,11 @@
-import pytest
+import re
 from typing import List, Tuple, Any
+
+import pytest
 
 from opendp.mod import *
 from opendp.typing import *
+from opendp.typing import _INTEGER_TYPES
 
 
 def test_numpy_function():
@@ -112,7 +115,7 @@ def test_runtime_type_hash():
 
 disallowed_int_default_types = set([i128, u128, isize])
 
-@pytest.mark.parametrize('integer_type', set(INTEGER_TYPES) - disallowed_int_default_types)
+@pytest.mark.parametrize('integer_type', set(_INTEGER_TYPES) - disallowed_int_default_types)
 def test_default_int_type(integer_type):
     assert RuntimeType.parse(int) == i32
 

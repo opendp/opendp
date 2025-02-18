@@ -489,6 +489,7 @@ impl Domain for ExtrinsicDomain {
 /// which can violate transformation stability.
 ///
 /// In addition, the member function must:
+///
 /// 1. be a pure function
 /// 2. be sound (only return true if its input is a member of the domain).
 #[no_mangle]
