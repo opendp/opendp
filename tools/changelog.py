@@ -3,22 +3,20 @@ import subprocess
 import re
 from collections import defaultdict
 from pathlib import Path
+from channel_tool import first_match
 
 
 def get_prev_version():
-    return (Path(__file__).parent.parent / 'VERSION').read_text().strip()
+    changelog_path = (Path(__file__).parent.parent / 'CHANGELOG.md')
+    lines = changelog_path.read_text().splitlines()
+    url_base = "https://github.com/opendp/opendp/compare/"
+    i, match = first_match(lines, fr"^## \[(\d+\.\d+\.\d+(?:-\S+)?)\]\({re.escape(url_base)}(\S+)\.\.\.\S+\) - \S+$")
+    return match.group(2)
 
 
 def log_until(match):
-    lines = subprocess.check_output(['git', 'log', '--oneline'], text=True).splitlines()
-    if match is None:
-        return lines
-    head = []
-    for line in lines:
-        if match in line:
-            break
-        head.append(line)
-    return head
+    return subprocess.check_output(['git', 'log', f"{match}..HEAD", '--oneline'], text=True).splitlines()
+    
 
 
 def get_changelog_update(lines):
