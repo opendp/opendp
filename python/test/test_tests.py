@@ -55,16 +55,6 @@ def test_doctest_ignore(capsys):
         assert_doctest_pass('>>> 2+2', capsys, {'IGNORE', 'NUMBER'})
 
 
-def test_doctest_fuzzy(capsys):
-    assert_doctest_pass('>>> 2+2\n4', capsys)
-    assert_doctest_fail('>>> 2+2\n5', capsys)
-    assert_doctest_pass('>>> 2+2\n~5', capsys, {'FUZZY'})
-    assert_doctest_fail('>>> 2+2\n~5 extra!', capsys, {'FUZZY'})
-
-    with pytest.raises(Exception, match='FUZZY can not be used with other flags'):
-        assert_doctest_pass('>>> 2+2', capsys, {'FUZZY', 'NUMBER'})
-
-
 # Include "polars" in name to filter out in smoke-test.yml.
 def test_doctest_fuzzy_polars(capsys):
     doctest = '''

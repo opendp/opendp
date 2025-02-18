@@ -10,7 +10,6 @@ def add_dp(doctest_namespace):
     doctest_namespace['dp'] = dp
 
 
-FUZZY = doctest.register_optionflag('FUZZY')
 FUZZY_DF = doctest.register_optionflag('FUZZY_DF')
 IGNORE = doctest.register_optionflag('IGNORE')
 
@@ -19,25 +18,18 @@ IGNORE = doctest.register_optionflag('IGNORE')
 #   Floating-point numbers only need to match as far as the precision you have written in the expected doctest output
 # - SKIP (https://docs.python.org/3/library/doctest.html#doctest.SKIP)
 #   Do not run the example at all
+# - FUZZY (https://github.com/opendp/opendp/pull/2249#issuecomment-2667132750)
+#   Just ignores a number preceded by "~", while still checking the rest of the output.
 
 def _norm_df(df):
-    df = re.sub(r'╞.*', '', df, flags=re.DOTALL)
-    df = re.sub(r'\s+', ' ', df)
-    df = re.sub(r'─+', '─', df)  # Special character used in box
+    df = re.sub(r'╞.*', '', df, flags=re.DOTALL)  # Ignore everything after the header.
+    df = re.sub(r'\s+', ' ', df)  # Data in the table can change width of columns, so ignore whitespace.
+    df = re.sub(r'─+', '─', df)  # Similarly, ignore changes in the special character used in box.
     df = re.sub(r'shape: \(\d+,', 'shape: (#', df)
     return df
 
 class CustomOutputChecker(doctest.OutputChecker):
     def check_output(self, want, got, optionflags):
-        if FUZZY & optionflags:
-            if optionflags - FUZZY:
-                raise Exception('FUZZY can not be used with other flags')
-            # A replacement string has special behavior with backslashes,
-            # but the value returned by a lambda does not.
-            number_re = lambda _: r'-?\d+(\.\d*)?'
-            # Replace each tilde-number with a regex representing any possible number.
-            want_re = re.sub(r'\\~(\\-)?\d+(\\\.\d*)?', number_re, re.escape(want.strip()))
-            return bool(re.search(want_re, got))
         if FUZZY_DF & optionflags:
             if optionflags - FUZZY_DF:
                 raise Exception('FUZZY_DF can not be used with other flags')
