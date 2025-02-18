@@ -1047,7 +1047,7 @@ def binary_search(
     5.0
     >>> dp.binary_search(lambda x: x <= 5.)
     5.0
-
+    >>>
     >>> dp.binary_search(lambda x: x > 5, T=int)
     6
     >>> dp.binary_search(lambda x: x < 5, T=int)

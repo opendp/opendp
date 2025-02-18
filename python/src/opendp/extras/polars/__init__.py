@@ -586,10 +586,12 @@ class OnceFrame(object):
         To remain DP at the advertised privacy level, only collect the ``LazyFrame`` once.
 
         Requires "honest-but-curious" because the privacy guarantees only apply if:
+
         1. The LazyFrame (compute plan) is only ever executed once.
         2. The analyst does not observe ordering of rows in the output. 
         
         To ensure that row ordering is not observed:
+        
         1. Do not extend the compute plan with order-sensitive computations.
         2. Shuffle the output once collected `(in Polars sample all, with shuffle enabled) <https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.sample.html>`_.
         """
@@ -895,19 +897,19 @@ class LazyFrameQuery():
     def summarize(self, alpha: float | None = None):
         """Summarize the statistics released by this query.
 
-        :param alpha: optional. A value in [0, 1] denoting the statistical significance. For the corresponding confidence level, subtract from from 1: for 95% confidence, use 0.05 for alpha.
-
         If ``alpha`` is passed, the resulting data frame includes an ``accuracy`` column.
 
         If a threshold is configured for censoring small/sensitive partitions,
         a threshold column will be included,
         containing the cutoff for the respective count query being thresholded.
 
+        :param alpha: optional. A value in [0, 1] denoting the statistical significance. For the corresponding confidence level, subtract from from 1: for 95% confidence, use 0.05 for alpha.
+
         :example:
 
         >>> import polars as pl
         >>> data = pl.LazyFrame([pl.Series("convicted", [0, 1, 1, 0, 1] * 50, dtype=pl.Int32)])
-
+        >>>
         >>> context = dp.Context.compositor(
         ...     data=data,
         ...     privacy_unit=dp.unit_of(contributions=1),
@@ -915,12 +917,12 @@ class LazyFrameQuery():
         ...     split_evenly_over=1,
         ...     margins={(): dp.polars.Margin(max_partition_length=1000)},
         ... )
-
+        >>>
         >>> query = context.query().select(
         ...     dp.len(),
         ...     pl.col("convicted").fill_null(0).dp.sum((0, 1))
         ... )
-
+        >>>
         >>> query.summarize(alpha=.05)  # type: ignore[union-attr]
         shape: (2, 5)
         ┌───────────┬──────────────┬─────────────────┬───────┬──────────┐
