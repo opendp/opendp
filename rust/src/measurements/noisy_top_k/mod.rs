@@ -4,14 +4,14 @@ use crate::{
     core::{Function, Measure, Measurement, PrivacyMap},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    measurements::{exponential::noisy_top_k_exponential, gumbel::noisy_top_k_gumbel},
+    measurements::{exponential::noisy_top_k_exponential, gumbel::gumbel_top_k},
     measures::{MaxDivergence, ZeroConcentratedDivergence},
     metrics::LInfDistance,
     traits::{CastInternalRational, InfCast, InfDiv, InfMul, InfPowI, Number},
 };
 use dashu::{float::FBig, ibig, rational::RBig};
 use num::Zero;
-use opendp_derive::bootstrap;
+use opendp_derive::{bootstrap, proven};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -114,6 +114,7 @@ pub trait TopKMeasure: Measure<Distance = f64> + 'static {
     fn privacy_map(d_in: f64, scale: f64) -> Fallible<f64>;
 }
 
+#[proven(proof_path = "measurements/noisy_top_k/TopKMeasure_MaxDivergence.tex")]
 impl TopKMeasure for MaxDivergence {
     #[cfg(feature = "polars")]
     const DISTRIBUTION: TopKDistribution = TopKDistribution::Exponential;
@@ -133,6 +134,7 @@ impl TopKMeasure for MaxDivergence {
     }
 }
 
+#[proven(proof_path = "measurements/noisy_top_k/TopKMeasure_ZeroConcentratedDivergence.tex")]
 impl TopKMeasure for ZeroConcentratedDivergence {
     #[cfg(feature = "polars")]
     const DISTRIBUTION: TopKDistribution = TopKDistribution::Gumbel;
@@ -143,7 +145,7 @@ impl TopKMeasure for ZeroConcentratedDivergence {
         f64: InfCast<TIA> + InfCast<usize>,
         FBig: TryFrom<TIA> + TryFrom<f64>,
     {
-        noisy_top_k_gumbel(x, FBig::try_from(scale)?, k, negate)
+        gumbel_top_k(x, FBig::try_from(scale)?, k, negate)
     }
 
     fn privacy_map(d_in: f64, scale: f64) -> Fallible<f64> {

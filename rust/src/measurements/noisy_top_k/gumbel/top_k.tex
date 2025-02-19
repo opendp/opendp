@@ -1,8 +1,8 @@
 \documentclass{article} 
-\input{../../lib.sty} 
+\input{../../../lib.sty} 
 \allowdisplaybreaks
 
-\title{\texttt{fn top}} 
+\title{\texttt{fn top\_k}} 
 \author{Michael Shoemate} 
 \begin{document}  
 \maketitle 
@@ -21,7 +21,7 @@ Types consistent with pseudocode.
 
 \subsection*{Pseudocode} 
 \label{sec:python-pseudocode} 
-\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/top.py} 
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/top_k.py} 
  
 \subsection*{Postcondition} 
 
@@ -53,8 +53,8 @@ Types consistent with pseudocode.
     By the precondition that \texttt{greater\_than} forms a total order,
     then \texttt{heap} is partitioned by the predicate function.
     Also, by the precondition on mutability of elements in \texttt{iter}, 
-    the precondition for \rustdoc{measurements/report\_noisy\_top\_k/fn}{partition\_point\_mut} is satisfied.
-    Since the preconditions for \rustdoc{measurements/report\_noisy\_top\_k/fn}{partition\_point\_mut} are met,
+    the precondition for \rustdoc{measurements/noisy\_top\_k/fn}{partition\_point\_mut} is satisfied.
+    Since the preconditions for \rustdoc{measurements/noisy\_top\_k/fn}{partition\_point\_mut} are met,
     the postcondition provides the index of the first element in the heap that is less than \texttt{value}.
     Therefore, upon insertion on line \ref{fn-insert}, the heap will remain sorted in descending order.
 

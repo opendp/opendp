@@ -1,15 +1,15 @@
 \documentclass{article} 
-\input{../../lib.sty} 
+\input{../../../lib.sty} 
 \allowdisplaybreaks
 
-\title{\texttt{fn make\_report\_noisy\_top\_k}} 
+\title{\texttt{fn make\_noisy\_top\_k}} 
 \author{Michael Shoemate} 
 \begin{document}  
 \maketitle 
  
-Proves soundness of \rustdoc{measurements/fn}{make\_report\_noisy\_top\_k}  
+Proves soundness of \rustdoc{measurements/fn}{make\_noisy\_top\_k}  
 in \asOfCommit{mod.rs}{f5bb719}.\\ 
-\texttt{make\_report\_noisy\_top\_k} returns a Measurement that  
+\texttt{make\_noisy\_top\_k} returns a Measurement that  
 noisily selects the index of the greatest score from a vector of input scores. 
 This released index can be later be used to index into a public candidate set (postprocessing). 
  
@@ -49,7 +49,7 @@ A precise definition of $\Delta$ will come later and is captured by the metrics 
 When $\dout$ increases, temperature decreases, and candidates become more distinguishable from each other. 
 We also divide scores by their global sensitivity to normalize the sensitivity to one. 
 In the differential privacy literature for the exponential mechanism, the sensitivity is often multiplied by two. 
-In OpenDP's \texttt{make\_report\_noisy\_top\_k} this factor is bundled into the $\Delta$ term, which is expressed in terms of a metric that captures monotonicity. 
+In OpenDP's \texttt{make\_noisy\_top\_k} this factor is bundled into the $\Delta$ term, which is expressed in terms of a metric that captures monotonicity. 
  
 \subsection{Sampling Vulnerabilities} 
  
@@ -75,9 +75,9 @@ is equivalent in distribution to the following mechanism:
 where each $g_i \sim \mathrm{Gumbel}(\mu = s_i, \beta = \tau)$.
  
 \subsection{Noise Distribution} 
-\texttt{make\_report\_noisy\_top\_k} can also be configured to satisfy 
-either \rustdoc{measures/struct}{MaxDivergence} or \rustdoc{measures/struct}{RangeDivergence}.
-Gumbel noise is used when \texttt{output\_measure} is \texttt{RangeDivergence},
+\texttt{make\_noisy\_top\_k} can also be configured to satisfy 
+either \rustdoc{measures/struct}{MaxDivergence} or \rustdoc{measures/struct}{ZeroConcentratedDivergence}.
+Gumbel noise is used when \texttt{output\_measure} is \texttt{ZeroConcentratedDivergence},
 and exponential noise is used when \texttt{output\_measure} is \texttt{MaxDivergence}.
 These choices of noise distributions minimize the necessary noise variance for their respective privacy measures.
 
@@ -85,7 +85,7 @@ These choices of noise distributions minimize the necessary noise variance for t
 \subsection*{Precondition} 
 \subsubsection*{Compiler-verified}
 \begin{itemize} 
-    \item \texttt{MO} is a type with trait \rustdoc{measurements/make\_report\_noisy\_top\_k/trait}{SelectionMeasure}
+    \item \texttt{MO} is a type with trait \rustdoc{measurements/make\_noisy\_top\_k/trait}{TopKMeasure}
     \item \texttt{TIA} (atomic input type) is a type with trait \rustdoc{traits/trait}{Number}
 \end{itemize} 
 
@@ -100,7 +100,7 @@ None
  
 \begin{theorem}
     \label{postcondition}
-    \validMeasurement{\texttt{input\_domain, input\_metric, output\_measure, k, scale, optimize, MO, TIA}}{\texttt{make\_report\_noisy\_top\_k}}  
+    \validMeasurement{\texttt{input\_domain, input\_metric, output\_measure, k, scale, optimize, MO, TIA}}{\texttt{make\_noisy\_top\_k}}  
 \end{theorem}
  
 \section{Proof} 
@@ -144,11 +144,11 @@ The data-independent runtime error requirement is otherwise satisfied.
 \begin{proof}[Proof of Theorem~\ref{fn-implementation-equivalence}]
     By line~\ref{check-non-negative-scale} the scale is non-negative.
 
-    If scale is zero, then since the preconditions for \rustdoc{measurements/noisy_top_k/fn}{function\_report\_top\_k} are met,
+    If scale is zero, then since the preconditions for \rustdoc{measurements/noisy_top_k/fn}{function\_top\_k} are met,
     then by its postcondition, since scale is zero, \function is equivalent to $\mathcal{M}_\mathrm{RV}(x)$ as defined in \ref{def:mechanism}.
     This is because RV is from a location-scale family of distributions, and the scale parameter is zero.
 
-    If scale is positive, then since the preconditions for \rustdoc{measurements/report_noisy_top_k/fn}{function\_report\_noisy\_top\_k} are met,
+    If scale is positive, then since the preconditions for \rustdoc{measurements/noisy_top_k/fn}{function\_noisy\_top\_k} are met,
     then by its postcondition, since scale is positive, \function is equivalent to $\mathcal{M}_\mathrm{RV}(x)$.
 
     Therefore, \function is equivalent to $\mathcal{M}_\mathrm{RV}(x)$.
@@ -161,13 +161,10 @@ The data-independent runtime error requirement is otherwise satisfied.
     and on line \ref{fn-inf-cast} the distance type is conservatively casted to float.
 
     By Theorem~\ref{fn-implementation-equivalence}, \function implements $\mathcal{M}_\mathrm{RV}$,
-    where RV denotes the associated noise distribution of \texttt{output\_measure} as defined in \rustdoc{measurements/make\_report\_noisy\_top\_k/trait}{SelectionMeasure}.
+    where RV denotes the associated noise distribution of \texttt{output\_measure} as defined in \rustdoc{measurements/make\_noisy\_top\_k/trait}{TopKMeasure}.
     Since \din denotes the range distance, and \function implements $\mathcal{M}_\mathrm{RV}$,
-    then the preconditions for \rustdoc{measurements/make\_report\_noisy\_top\_k/trait}{SelectionMeasure}\texttt{.privacy\_map} on line \ref{fn-privacy-map-call} are met.
+    then the preconditions for \rustdoc{measurements/make\_noisy\_top\_k/trait}{TopKMeasure}\texttt{.privacy\_map} on line \ref{fn-privacy-map-call} are met.
     The postcondition on the value returned is then consistent with the privacy guarantee of the mechanism.
 \end{proof} 
- 
-\bibliographystyle{plain} 
-\bibliography{references.bib} 
  
 \end{document} 

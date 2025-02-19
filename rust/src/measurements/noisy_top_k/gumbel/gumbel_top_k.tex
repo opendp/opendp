@@ -1,8 +1,8 @@
 \documentclass{article} 
-\input{../../lib.sty} 
+\input{../../../lib.sty} 
 \allowdisplaybreaks
 
-\title{\texttt{fn report\_noisy\_top\_k}} 
+\title{\texttt{fn gumbel\_top\_k}} 
 \author{Michael Shoemate} 
 \begin{document}  
 \maketitle 
@@ -13,7 +13,7 @@
 Types consistent with pseudocode.
 
 \begin{itemize}
-    \item Generic \texttt{RV} implements \rustdoc{measurements/report_noisy_top_k/trait}{SelectionRV}.
+    \item Generic \texttt{T} implements \rustdoc{traits/trait}{Number}.
 \end{itemize}
 
 \subsubsection*{Caller-verified}
@@ -24,7 +24,7 @@ Types consistent with pseudocode.
  
 \subsection*{Pseudocode} 
 \label{sec:python-pseudocode} 
-\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/report_noisy_top_k.py} 
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/gumbel_top_k.py} 
  
 \subsection*{Postcondition} 
 
@@ -53,7 +53,7 @@ Types consistent with pseudocode.
     Then \texttt{max\_sample} on line \ref{fn-max-sample-exact} defines a total ordering on the scores.
 
     Since the score vector is finite, and \texttt{max\_sample} defines a total ordering,
-    then the preconditions for \rustdoc{measurements/report_noisy_top_k/fn}{top} are met.
+    then the preconditions for \rustdoc{measurements/noisy_top_k/fn}{top} are met.
     Therefore on line \ref{fn-top-exact} \texttt{top} returns the pairs with the top $k$ scores.
     Line \ref{fn-top} then discards the scores, returning only the indices,
     which is the desired output.
@@ -94,7 +94,7 @@ Types consistent with pseudocode.
 
     The algorithm proceeds to line \ref{fn-init-sample}.
     The output measure has an associated noise distribution that is encoded into the Rust type system via
-    \rustdoc{measurements/report\_noisy\_top\_k/trait}{SelectionMeasure}.
+    \rustdoc{measurements/noisy\_top\_k/trait}{TopKMeasure}.
     \texttt{MO.random\_variable} on line \ref{fn-rv} creates a random variable \texttt{rv} 
     distributed according to \texttt{MO::RV} and parameterized by \texttt{shift} (the score), and \texttt{scale}.
 

@@ -1,6 +1,6 @@
 # type: ignore
-def report_noisy_top_k(
-    x: list[TIA], k: usize, scale: FBig, optimize: Literal["min", "max"],
+def gumbel_top_k(
+    x: list[TIA], k: usize, scale: FBig, negate: bool,
 ) -> list[usize]:
     if scale.is_zero():
         if optimize == "max":  # |\label{fn-optimize}|

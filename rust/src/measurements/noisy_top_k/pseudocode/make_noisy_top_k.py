@@ -5,10 +5,10 @@ def make_noisy_top_k(
     privacy_measure: MO,
     k: int,
     scale: f64,
-    optimize: Literal["max", "min"],
+    negate: bool,
 ) -> Measurement:
-    if input_domain.element_domain.nullable:  # |\label{check-non-null}|
-        raise ValueError("input domain must be non-nullable")
+    if input_domain.element_domain.nan():  # |\label{check-non-null}|
+        raise ValueError("input domain must be non-nan")
 
     if input_domain.size is not None:
         if k > input_domain.size:
