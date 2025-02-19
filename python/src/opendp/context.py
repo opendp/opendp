@@ -390,8 +390,8 @@ class Context(object):
         
         new_plan = pl.LazyFrame.deserialize(io.BytesIO(serialized_plan))
         new_query = self.query()
-	if not isinstance(new_query, LazyFrameQuery):
-		raise ValueError("deserialize_polars_plan may only be used when data is a LazyFrame")
+        if not isinstance(new_query, LazyFrameQuery):
+            raise ValueError("deserialize_polars_plan may only be used when data is a LazyFrame")
 
         new_query.polars_plan = new_plan
         return new_query
