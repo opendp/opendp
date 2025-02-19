@@ -39,16 +39,17 @@ perhaps on a remote server.
         DP len: ...
 
 
-Note that serialized embedded Polars objects will include the path of the local binary.
-These paths can be overridden at load time with the ``OPENDP_POLARS_LIB_PATH``
-:ref:`environment variable <envvars>` .
+Note that the ``polars_plan`` is really just a Polars ``LazyFrame``, and ``deserialize_polars_plan`` is a convenience method for `Polars binary serialization <https://docs.pola.rs/api/python/stable/reference/lazyframe/api/polars.LazyFrame.serialize.html#polars.LazyFrame.serialize>`_.
+
+Polars serializations will include the path of the local binary.
+These paths can be overridden at load time with the ``OPENDP_POLARS_LIB_PATH`` :ref:`environment variable <envvars>`.
 
 
 Context Serialization
 ---------------------
 
-``LazyFrameQuery`` serialization is a special case of context serialization.
-In other cases, instead of ``query.polars_plan`` we'll use ``query.resolve()``.
+``LazyFrameQuery`` serialization is a special case.
+Where Context is used without Polars, we have ``query.resolve()`` instead of ``query.polars_plan``.
 
 .. tab-set::
 
@@ -98,7 +99,7 @@ any object from the Framework API can also be serialized and deserialized the sa
         '{"__function__": "vector_domain"'
 
 
-While the serialization format is JSON, we do not guarantee any stability between versions,
+While the serialization format is JSON, we do not guarantee stability between versions,
 and we discourage users from writing their own JSON.
 If this is something you need, please reach out so that we can understand your use case.
 
@@ -123,4 +124,4 @@ Objects created with the plugin API and context objects, discussed above, are no
         >>> dp.serialize(context)
         Traceback (most recent call last):
         ...
-        Exception: OpenDP JSON Encoder currently does not handle instances of <class 'opendp.context.Context'>...
+        Exception: OpenDP JSON Encoder does not handle instances of <class 'opendp.context.Context'>...

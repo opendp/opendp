@@ -160,5 +160,5 @@ if pl is not None:
         ],
     )
     def test_not_currently_serializable(_readable_name, dp_obj):
-        with pytest.raises(Exception, match=r"OpenDP JSON Encoder currently does not handle"):
+        with pytest.raises(Exception, match=r"OpenDP JSON Encoder does not handle"):
             dp.serialize(dp_obj)
