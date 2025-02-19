@@ -10,6 +10,13 @@ from debmutate.control import ControlEditor
 
 from utils import get_current_branch, get_python_version, get_r_version, get_version, infer_channel, log, run_command, semver, sys
 
+CHANGELOG_PATH = (Path(__file__).parent.parent / 'CHANGELOG.md')
+URL_BASE = "https://github.com/opendp/opendp/compare/"
+
+
+def get_changelog_lines():
+    return CHANGELOG_PATH.read_text().splitlines()
+
 
 def ensure_branch(branch):
     # GH checkout action doesn't fetch all branches unless you force it, in which case main seems to be omitted.
@@ -140,7 +147,8 @@ def configure(args):
     update_version(version)
 
 
-def first_match(lines, pattern):
+def match_first_changelog_header(lines):
+    pattern = fr"^## \[(\d+\.\d+\.\d+(?:-\S+)?)\]\({re.escape(URL_BASE)}(\S+)\.\.\.\S+\) - \S+$"
     matcher = re.compile(pattern)
     for i, line in enumerate(lines):
         match = matcher.match(line)
@@ -156,10 +164,8 @@ def changelog(args):
     date = args.date or datetime.date.today()
 
     log("Reading CHANGELOG")
-    changelog_path = (Path(__file__).parent.parent / 'CHANGELOG.md')
-    lines = changelog_path.read_text().splitlines()
-    url_base = "https://github.com/opendp/opendp/compare/"
-    i, match = first_match(lines, fr"^## \[(\d+\.\d+\.\d+(?:-\S+)?)\]\({re.escape(url_base)}(\S+)\.\.\.\S+\) - \S+$")
+    changelog_lines = get_changelog_lines()
+    i, match = match_first_changelog_header(changelog_lines)
     heading_version = semver.Version.parse(match.group(1))
     diff_source = match.group(2)
 
@@ -181,14 +187,14 @@ def changelog(args):
             date = "TBD"
 
     log(f"Updating heading to {new_heading_version}, {diff_source}...{diff_target}, {date}")
-    lines[i] = f"## [{new_heading_version}]({url_base}{diff_source}...{diff_target}) - {date}\n"
+    changelog_lines[i] = f"## [{new_heading_version}]({URL_BASE}{diff_source}...{diff_target}) - {date}\n"
     if args.prepend:
         # Prepend a new heading for the current version.
         diff_source = diff_target
         log(f"Prepending new heading for {version}")
-        lines[i:i] = [f"## [{version}]({url_base}{diff_source}...HEAD) - TBD\n", "\n", "\n"]
+        changelog_lines[i:i] = [f"## [{version}]({URL_BASE}{diff_source}...HEAD) - TBD\n", "\n", "\n"]
 
-    changelog_path.write_text('\n'.join(lines))
+    CHANGELOG_PATH.write_text('\n'.join(changelog_lines))
 
 
 def bump_version(args):

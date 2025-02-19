@@ -11,6 +11,7 @@ showing the source changes from the previous version.
 
 - Replace _dependencies with lifelines [#2278](https://github.com/opendp/opendp/pull/2278)
 - Compatibility with r lintr 3.2 [#2279](https://github.com/opendp/opendp/issues/2279)
+- Make sure default `cargo test` also passes [#2275](https://github.com/opendp/opendp/pull/2275)
 - Reported broken links [#2241](https://github.com/opendp/opendp/pull/2241)
 - Docs.rs build [#2212](https://github.com/opendp/opendp/pull/2212)
 - Two links [#2191](https://github.com/opendp/opendp/pull/2191)
@@ -21,6 +22,8 @@ showing the source changes from the previous version.
 
 ### Docs
 
+- Check for docstrings on classes [#2260](https://github.com/opendp/opendp/pull/2260)
+- Add AST checks on the formatting of the docstring [#2267](https://github.com/opendp/opendp/pull/2267)
 - Better 404 page + better docs links [#2252](https://github.com/opendp/opendp/pull/2252)
 - Check that every parameter has a brief description [#2242](https://github.com/opendp/opendp/pull/2242)
 - Checking docstrings, continued [#2182](https://github.com/opendp/opendp/pull/2182)
@@ -41,11 +44,12 @@ showing the source changes from the previous version.
 
 ### Dev
 
+- update ubuntu to 22.04 [#2277](https://github.com/opendp/opendp/pull/2277)
 - Warn about bare `print` [#2172](https://github.com/opendp/opendp/pull/2172)
 - List -> sequence [#2177](https://github.com/opendp/opendp/pull/2177)
 
 
-## [0.12.0](https://github.com/opendp/opendp/compare/v0.11.1...v0.12.0) - 2025-02-18
+## [0.12.0](https://github.com/opendp/opendp/compare/v0.11.1...v0.12.0) - 2024-12-19
 
 
 ### Added
