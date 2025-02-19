@@ -36,30 +36,53 @@ def capture_doctest_result(doctest, capsys, options={}):
     run_docstring_examples(doctest, {}, optionflags=optionflags)
     return capsys.readouterr().out
 
-def assert_doctest_pass(doctest, capsys, options={}):
+def assert_pass(doctest, capsys, options={}):
     result = capture_doctest_result(doctest, capsys, options)
     assert 'Failed example' not in result
 
-def assert_doctest_fail(doctest, capsys, options={}):
+# Use caps-lock just so it's easier to read the tests and see the differences.
+def assert_FAIL(doctest, capsys, options={}):
     result = capture_doctest_result(doctest, capsys, options)
     assert 'Failed example' in result
 
 
 def test_doctest_ignore(capsys):
-    assert_doctest_fail('>>> 1/0', capsys)
-    assert_doctest_pass('>>> 1/0', capsys, {'SKIP'})
-    assert_doctest_fail('>>> 1/0', capsys, {'IGNORE'})
-    assert_doctest_pass('>>> 2+2\nextra!', capsys, {'IGNORE'})
+    assert_FAIL('>>> 1/0', capsys)
+    assert_pass('>>> 1/0', capsys, {'SKIP'})
+    assert_FAIL('>>> 1/0', capsys, {'IGNORE'})
+
+    assert_FAIL('>>> 2+2', capsys)
+    assert_pass('>>> 2+2', capsys, {'SKIP'})
+    assert_pass('>>> 2+2', capsys, {'IGNORE'})
+
+    assert_pass('>>> 2+2\n4', capsys)
+    assert_pass('>>> 2+2\n4', capsys, {'SKIP'})
+    assert_pass('>>> 2+2\n4', capsys, {'IGNORE'})
+
+    assert_FAIL('>>> 2+2\nextra!', capsys)
+    assert_pass('>>> 2+2\nextra!', capsys, {'SKIP'})
+    assert_pass('>>> 2+2\nextra!', capsys, {'IGNORE'})
 
     with pytest.raises(Exception, match='IGNORE can not be used with other flags'):
-        assert_doctest_pass('>>> 2+2', capsys, {'IGNORE', 'NUMBER'})
+        assert_pass('>>> 2+2', capsys, {'IGNORE', 'NUMBER'})
 
 
 # Include "polars" in name to filter out in smoke-test.yml.
 def test_doctest_fuzzy_polars(capsys):
-    doctest = '''
+    doctest_in = '''
     >>> import polars as pl
-    >>> pl.DataFrame({'col': ['value']})
+    >>> pl.DataFrame({'col': ['value']})'''
+    doctest_out = '''
+    shape: (1, 1)
+    ┌───────┐
+    │ col   │
+    │ ---   │
+    │ str   │
+    ╞═══════╡
+    │ value │
+    └───────┘
+    '''
+    doctest_out_rows = '''
     shape: (2, 1)
     ┌───────────┐
     │ col       │
@@ -70,10 +93,31 @@ def test_doctest_fuzzy_polars(capsys):
     │ surprise! │
     └───────────┘
     '''
-    assert_doctest_fail(doctest, capsys)
-    assert_doctest_fail(doctest, capsys, {'FUZZY'})
-    assert_doctest_pass(doctest, capsys, {'FUZZY_DF'})
-    assert_doctest_fail(doctest.replace('1)', '100)'), capsys, {'FUZZY_DF'})
+    doctest_out_cols = '''
+    shape: (1, 100)
+    ┌───────┐
+    │ col   │
+    │ ---   │
+    │ str   │
+    ╞═══════╡
+    │ value │
+    └───────┘
+    '''
+    assert_FAIL(doctest_in, capsys)
+    assert_pass(doctest_in, capsys, {'SKIP'})
+    assert_FAIL(doctest_in, capsys, {'FUZZY_DF'})
 
+    assert_pass(doctest_in + doctest_out, capsys)
+    assert_pass(doctest_in + doctest_out, capsys, {'SKIP'})
+    assert_pass(doctest_in + doctest_out, capsys, {'FUZZY_DF'})
+
+    assert_FAIL(doctest_in + doctest_out_rows, capsys)
+    assert_pass(doctest_in + doctest_out_rows, capsys, {'SKIP'})
+    assert_pass(doctest_in + doctest_out_rows, capsys, {'FUZZY_DF'})
+
+    assert_FAIL(doctest_in + doctest_out_cols, capsys)
+    assert_pass(doctest_in + doctest_out_cols, capsys, {'SKIP'})
+    assert_FAIL(doctest_in + doctest_out_cols, capsys, {'FUZZY_DF'})
+    
     with pytest.raises(Exception, match='FUZZY_DF can not be used with other flags'):
-        assert_doctest_pass(doctest, capsys, {'FUZZY_DF', 'NUMBER'})
+        assert_pass(doctest_in, capsys, {'FUZZY_DF', 'NUMBER'})
