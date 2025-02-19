@@ -37,7 +37,7 @@ class CustomOutputChecker(doctest.OutputChecker):
         if IGNORE & optionflags:
             if optionflags - IGNORE:
                 raise Exception('IGNORE can not be used with other flags')
-            return 'Traceback' not in got
+            return 'Traceback' not in got and bool(len(want)) == bool(len(got))
         return super().check_output(want, got, optionflags)
 
 doctest.OutputChecker = CustomOutputChecker  # type: ignore

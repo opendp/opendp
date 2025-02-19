@@ -53,7 +53,7 @@ def test_doctest_ignore(capsys):
 
     assert_FAIL('>>> 2+2', capsys)
     assert_pass('>>> 2+2', capsys, {'SKIP'})
-    assert_pass('>>> 2+2', capsys, {'IGNORE'})
+    assert_FAIL('>>> 2+2', capsys, {'IGNORE'})
 
     assert_pass('>>> 2+2\n4', capsys)
     assert_pass('>>> 2+2\n4', capsys, {'SKIP'})
