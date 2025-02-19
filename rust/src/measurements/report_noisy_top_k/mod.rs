@@ -1,5 +1,3 @@
-#[cfg(feature = "polars")]
-use crate::measurements::expr_report_noisy_max::SelectionDistribution;
 use crate::{
     combinators::make_bounded_range_to_zCDP,
     core::{Measure, Measurement},
@@ -11,7 +9,10 @@ use crate::{
     traits::{CastInternalRational, InfCast, Number},
 };
 use dashu::float::FBig;
-use opendp_derive::bootstrap;
+use opendp_derive::{bootstrap, proven};
+
+#[cfg(feature = "polars")]
+use super::expr_report_noisy_max::SelectionDistribution;
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -75,6 +76,7 @@ pub trait SelectionMeasure: Measure<Distance = f64> + 'static {
         f64: InfCast<TIA> + InfCast<usize>;
 }
 
+#[proven(proof_path = "measurements/report_noisy_top_k/SelectionMeasure_RangeDivergence.tex")]
 impl SelectionMeasure for RangeDivergence {
     #[cfg(feature = "polars")]
     const DISTRIBUTION: SelectionDistribution = SelectionDistribution::Gumbel;
@@ -123,6 +125,7 @@ impl SelectionMeasure for ZeroConcentratedDivergence {
     }
 }
 
+#[proven(proof_path = "measurements/report_noisy_top_k/SelectionMeasure_MaxDivergence.tex")]
 impl SelectionMeasure for MaxDivergence {
     #[cfg(feature = "polars")]
     const DISTRIBUTION: SelectionDistribution = SelectionDistribution::Exponential;
