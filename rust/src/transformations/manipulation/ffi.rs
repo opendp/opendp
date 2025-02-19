@@ -7,7 +7,7 @@ use crate::err;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::{Type, TypeContents};
-use crate::traits::{CheckAtom, InherentNull, Primitive};
+use crate::traits::{CheckAtom, HasNull, Primitive};
 use crate::transformations::{DatasetMetric, make_is_equal, make_is_null};
 
 #[cfg(feature = "honest-but-curious")]
@@ -108,7 +108,7 @@ pub extern "C" fn opendp_transformations__make_is_null(
                 input_metric: &AnyMetric,
             ) -> Fallible<AnyTransformation>
             where
-                TIA: 'static + CheckAtom + InherentNull,
+                TIA: 'static + CheckAtom + HasNull,
                 M: 'static + DatasetMetric,
                 (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
                 (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
@@ -169,7 +169,7 @@ mod tests {
     #[test]
     fn test_make_is_null() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_is_null(
-            AnyDomain::new_raw(VectorDomain::new(AtomDomain::<f64>::new_nullable())),
+            AnyDomain::new_raw(VectorDomain::new(AtomDomain::<f64>::default())),
             AnyMetric::new_raw(SymmetricDistance::default()),
         ))?;
         let arg = AnyObject::new_raw(vec![1., 2., f64::NAN]);

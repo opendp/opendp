@@ -12,7 +12,7 @@ use super::*;
 
 #[test]
 fn make_expr_drop_nan_standard() -> Fallible<()> {
-    let series_domain = SeriesDomain::new("", AtomDomain::<f32>::new_nullable());
+    let series_domain = SeriesDomain::new("", AtomDomain::<f32>::default());
     let lf_domain = LazyFrameDomain::new(vec![series_domain])?
         .with_margin(Margin::select().with_max_partition_length(5))?;
     let lf = df!("" => &[1.0, f32::NAN])?.lazy();

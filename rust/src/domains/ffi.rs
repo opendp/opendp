@@ -8,7 +8,7 @@ use crate::{
     error::Fallible,
     ffi::{
         any::{AnyDomain, AnyObject, CallbackFn, Downcast, wrap_func},
-        util::{self, ExtrinsicObject, Type, TypeContents, c_bool, into_c_char_p, to_str},
+        util::{self, ExtrinsicObject, Type, TypeContents, as_ref, c_bool, into_c_char_p, to_str},
     },
     traits::{CheckAtom, Float, Hashable, Integer, Primitive},
 };
@@ -16,7 +16,7 @@ use crate::{
 #[cfg(feature = "polars")]
 use crate::domains::{ArrayDomain, CategoricalDomain, DatetimeDomain, EnumDomain};
 
-use super::{BitVectorDomain, Bounds, Null, OptionDomain};
+use super::{BitVectorDomain, Bounds, NaN, OptionDomain};
 
 #[bootstrap(
     name = "_domain_free",
@@ -124,31 +124,35 @@ pub extern "C" fn opendp_domains__domain_carrier_type(
             c_type = "AnyObject *",
             default = b"null"
         ),
-        nullable(rust_type = "bool", c_type = "bool", default = false)
+        nan(rust_type = "Option<bool>", c_type = "AnyObject *", default = b"null")
     ),
     generics(T(example = "$get_first(bounds)")),
     returns(c_type = "FfiResult<AnyDomain *>", hint = "AtomDomain")
 )]
 /// Construct an instance of `AtomDomain`.
 ///
+/// The domain defaults to unbounded if `bounds` is `None`,
+/// If `T` is float, `nan` defaults to `true`.
+///
+/// # Arguments
+/// * `bounds` - Optional bounds of elements in the domain, if the data type is numeric.
+/// * `nan` - Whether the domain may contain NaN, if the data type is float.
+///
 /// # Generics
 /// * `T` - The type of the atom.
-fn atom_domain<T: CheckAtom>(
-    bounds: Option<Bounds<T>>,
-    nullable: Option<Null<T>>,
-) -> AtomDomain<T> {
-    AtomDomain::<T>::new(bounds, nullable)
+fn atom_domain<T: CheckAtom>(bounds: Option<Bounds<T>>, nan: Option<NaN<T>>) -> AtomDomain<T> {
+    AtomDomain::<T>::new(bounds, nan)
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__atom_domain(
     bounds: *const AnyObject,
-    nullable: c_bool,
+    nan: *const AnyObject,
     T: *const c_char,
 ) -> FfiResult<*mut AnyDomain> {
     fn monomorphize_float<T: 'static + Float>(
         bounds: *const AnyObject,
-        nullable: bool,
+        nan: Option<bool>,
     ) -> Fallible<AnyDomain> {
         let bounds = if let Some(bounds) = util::as_ref(bounds) {
             let tuple = *bounds.downcast_ref::<(T, T)>()?;
@@ -156,13 +160,12 @@ pub extern "C" fn opendp_domains__atom_domain(
         } else {
             None
         };
-
-        let nullable = nullable.then_some(Null::new());
-        Ok(AnyDomain::new(atom_domain::<T>(bounds, nullable)))
+        let nan = nan.unwrap_or(true).then_some(NaN::new());
+        Ok(AnyDomain::new(atom_domain::<T>(bounds, nan)))
     }
     fn monomorphize_integer<T: 'static + Integer>(
         bounds: *const AnyObject,
-        nullable: bool,
+        nan: Option<bool>,
     ) -> Fallible<AnyDomain> {
         let bounds = if let Some(bounds) = util::as_ref(bounds) {
             let tuple = *bounds.downcast_ref::<(T, T)>()?;
@@ -170,25 +173,29 @@ pub extern "C" fn opendp_domains__atom_domain(
         } else {
             None
         };
-        if nullable {
-            return fallible!(FFI, "integers cannot be null");
+        if nan.unwrap_or_default() {
+            return fallible!(FFI, "integers cannot represent nullity");
         }
         Ok(AnyDomain::new(atom_domain::<T>(bounds, None)))
     }
     fn monomorphize_simple<T: 'static + CheckAtom>(
         bounds: *const AnyObject,
-        nullable: bool,
+        nan: Option<bool>,
     ) -> Fallible<AnyDomain> {
         if util::as_ref(bounds).is_some() {
             return fallible!(FFI, "{} cannot be bounded", type_name!(T));
         }
-        if nullable {
-            return fallible!(FFI, "{} cannot be null", type_name!(T));
+        if nan.unwrap_or_default() {
+            return fallible!(FFI, "{} cannot be NaN", type_name!(T));
         }
         Ok(AnyDomain::new(atom_domain::<T>(None, None)))
     }
     let T_ = try_!(Type::try_from(T));
-    let nullable = util::to_bool(nullable);
+    let nan = if let Some(nan) = as_ref(nan) {
+        Some(*try_!(nan.downcast_ref::<bool>()))
+    } else {
+        None
+    };
 
     // This is used to check if the type is in a dispatch set,
     // without constructing an expensive backtrace upon failed match
@@ -201,13 +208,13 @@ pub extern "C" fn opendp_domains__atom_domain(
         return dispatch!(
             monomorphize_simple,
             [(T_, [chrono::NaiveDate, chrono::NaiveTime])],
-            (bounds, nullable)
+            (bounds, nan)
         )
         .into();
     };
 
     if let Some(_) = dispatch!(in_set, [(T_, [f32, f64])]) {
-        dispatch!(monomorphize_float, [(T_, [f32, f64])], (bounds, nullable))
+        dispatch!(monomorphize_float, [(T_, [f32, f64])], (bounds, nan))
     } else if let Some(_) = dispatch!(
         in_set,
         [(
@@ -225,14 +232,10 @@ pub extern "C" fn opendp_domains__atom_domain(
                     u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize
                 ]
             )],
-            (bounds, nullable)
+            (bounds, nan)
         )
     } else {
-        dispatch!(
-            monomorphize_simple,
-            [(T_, [bool, String])],
-            (bounds, nullable)
-        )
+        dispatch!(monomorphize_simple, [(T_, [bool, String])], (bounds, nan))
     }
     .into()
 }
@@ -275,21 +278,21 @@ pub extern "C" fn opendp_domains___atom_domain_get_bounds_closed(
     generics(T(suppress)),
     returns(c_type = "FfiResult<AnyObject *>")
 )]
-/// Retrieve nullability of an AtomDomain<T>
+/// Retrieve whether members of AtomDomain<T> may be NaN.
 ///
 /// # Generics
 /// * `T` - The type of the atom.
-fn _atom_domain_get_nullable<T: CheckAtom>(domain: &AtomDomain<T>) -> Fallible<bool> {
-    Ok(domain.nullable())
+fn _atom_domain_nan<T: CheckAtom>(domain: &AtomDomain<T>) -> Fallible<bool> {
+    Ok(domain.nan())
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_domains___atom_domain_get_nullable(
+pub extern "C" fn opendp_domains___atom_domain_nan(
     domain: *const AnyDomain,
 ) -> FfiResult<*mut AnyObject> {
     fn monomorphize<T: 'static + CheckAtom>(domain: &AnyDomain) -> Fallible<AnyObject> {
         let domain = domain.downcast_ref::<AtomDomain<T>>()?;
-        _atom_domain_get_nullable(domain).map(AnyObject::new)
+        _atom_domain_nan(domain).map(AnyObject::new)
     }
     let domain = try_as_ref!(domain);
     let T = try_!(domain.type_.get_atom());

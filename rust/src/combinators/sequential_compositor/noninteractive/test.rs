@@ -42,7 +42,7 @@ fn test_make_basic_composition() -> Fallible<()> {
 
 #[test]
 fn test_make_basic_composition_2() -> Fallible<()> {
-    let input_domain = AtomDomain::default();
+    let input_domain = AtomDomain::new_non_nan();
     let input_metric = AbsoluteDistance::default();
     let laplace = make_laplace(input_domain, input_metric, 1.0f64, None)?;
     let measurements = vec![laplace; 2];
@@ -61,7 +61,7 @@ fn test_make_basic_composition_2() -> Fallible<()> {
 #[test]
 fn test_rdp_composition() -> Fallible<()> {
     let m_gauss = Measurement::new(
-        AtomDomain::default(),
+        AtomDomain::new_non_nan(),
         Function::new(|arg| *arg),
         AbsoluteDistance::default(),
         RenyiDivergence,

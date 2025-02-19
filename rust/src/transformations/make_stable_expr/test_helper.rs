@@ -6,7 +6,7 @@ pub fn get_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
     let lf_domain = LazyFrameDomain::new(vec![
         SeriesDomain::new("chunk_2_bool", AtomDomain::<bool>::default()),
         SeriesDomain::new("cycle_5_alpha", AtomDomain::<String>::default()),
-        SeriesDomain::new("const_1f64", AtomDomain::<f64>::default()),
+        SeriesDomain::new("const_1f64", AtomDomain::<f64>::new_non_nan()),
         SeriesDomain::new("chunk_(..10u32)", AtomDomain::<u32>::default()),
         SeriesDomain::new("cycle_(..100i32)", AtomDomain::<i32>::default()),
     ])?

@@ -57,7 +57,7 @@ impl TryFrom<&str> for Optimize {
 /// Make a Measurement that takes a vector of scores and privately selects the index of the highest score.
 ///
 /// # Arguments
-/// * `input_domain` - Domain of the input vector. Must be a non-nullable VectorDomain.
+/// * `input_domain` - Domain of the input vector. Must be a non-nan VectorDomain.
 /// * `input_metric` - Metric on the input domain. Must be LInfDistance
 /// * `scale` - Higher scales are more private.
 /// * `optimize` - Indicate whether to privately return the "max" or "min"
@@ -75,8 +75,8 @@ where
     f64: DistanceConstant<TIA>,
     FBig: TryFrom<TIA> + TryFrom<f64>,
 {
-    if input_domain.element_domain.nullable() {
-        return fallible!(MakeMeasurement, "input domain must be non-nullable");
+    if input_domain.element_domain.nan() {
+        return fallible!(MakeMeasurement, "input domain must be non-nan");
     }
 
     if scale.is_sign_negative() {

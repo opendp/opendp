@@ -10,10 +10,7 @@ use crate::error::Fallible;
 use crate::metrics::{AbsoluteDistance, SymmetricDistance};
 use crate::traits::{AlertingSub, ExactIntCast, Float, InfDiv, InfMul, InfPowI, InfSub};
 
-use super::{
-    LipschitzMulFloatDomain, LipschitzMulFloatMetric, Pairwise, UncheckedSum,
-    make_lipschitz_float_mul, make_sum_of_squared_deviations,
-};
+use super::{Pairwise, UncheckedSum, make_lipschitz_float_mul, make_sum_of_squared_deviations};
 
 #[bootstrap(
     features("contrib"),
@@ -53,8 +50,6 @@ pub fn make_variance<S>(
 where
     S: UncheckedSum,
     S::Item: 'static + Float,
-    AtomDomain<S::Item>: LipschitzMulFloatDomain<Atom = S::Item>,
-    AbsoluteDistance<S::Item>: LipschitzMulFloatMetric<Distance = S::Item>,
 {
     let size = (input_domain.size).ok_or_else(|| {
         err!(
@@ -86,7 +81,12 @@ where
         .inf_mul(&size_)?;
 
     make_sum_of_squared_deviations::<Pairwise<_>>(input_domain, input_metric)?
-        >> make_lipschitz_float_mul(constant, (S::Item::zero(), upper_var_bound))?
+        >> make_lipschitz_float_mul(
+            AtomDomain::new_non_nan(),
+            AbsoluteDistance::default(),
+            constant,
+            (S::Item::zero(), upper_var_bound),
+        )?
 }
 
 #[cfg(test)]
