@@ -48,7 +48,7 @@ Context Serialization
 ---------------------
 
 ``LazyFrameQuery`` serialization is a special case of context serialization.
-Instead of ``query.polars_plan`` we'll use ``query.resolve()``.
+In other cases, instead of ``query.polars_plan`` we'll use ``query.resolve()``.
 
 .. tab-set::
 
@@ -119,3 +119,8 @@ Objects created with the plugin API and context objects, discussed above, are no
         Traceback (most recent call last):
         ...
         Exception: OpenDP JSON Encoder does not handle <function <lambda> at ...>
+
+        >>> dp.serialize(context)
+        Traceback (most recent call last):
+        ...
+        Exception: OpenDP JSON Encoder currently does not handle instances of <class 'opendp.context.Context'>...
