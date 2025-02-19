@@ -122,7 +122,10 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
           restore-keys: ${{ runner.os }}-cargo-
 
-      - name: Test
+      - name: Test (default)
+        run: cargo test --verbose
+
+      - name: Test (all-features)
         run: cargo test --verbose --all-features
 
       - name: Run docs example
@@ -352,6 +355,7 @@ jobs:
         run: python tools/r_doc_examples.py
 
       - name: Lint sphinx examples
+        # When lintr updates, this may start to fail due to new linting rules.
         run: Rscript -e 'lintr::lint_dir("docs/source")'
 
       - name: Document

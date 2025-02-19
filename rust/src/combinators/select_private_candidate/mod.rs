@@ -17,8 +17,7 @@ mod test;
 #[bootstrap(
     features("contrib"),
     arguments(measurement(rust_type = "AnyMeasurement"),),
-    generics(DI(suppress), MI(suppress), TO(suppress)),
-    dependencies("$get_dependencies(measurement)")
+    generics(DI(suppress), MI(suppress), TO(suppress))
 )]
 /// Select a private candidate whose score is above a threshold.
 ///

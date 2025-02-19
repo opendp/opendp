@@ -8,11 +8,7 @@ use crate::{
     measures::{Approximate, SmoothedMaxDivergence},
 };
 
-#[bootstrap(
-    features("contrib"),
-    arguments(measurement(rust_type = b"null"),),
-    dependencies("$get_dependencies(measurement)")
-)]
+#[bootstrap(features("contrib"), arguments(measurement(rust_type = b"null"),))]
 /// Fix the delta parameter in the privacy map of a `measurement` with a SmoothedMaxDivergence output measure.
 ///
 /// # Arguments

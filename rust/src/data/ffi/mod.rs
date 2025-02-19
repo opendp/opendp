@@ -50,8 +50,7 @@ use opendp_derive::bootstrap;
 /// * `T` - The type of the data in the slice.
 /// 
 /// # Returns
-/// An AnyObject that contains the data in `slice`.
-/// The AnyObject also captures rust type information.
+/// An AnyObject that contains the data in `slice`. The AnyObject also captures rust type information.
 #[no_mangle]
 #[rustfmt::skip]
 pub extern "C" fn opendp_data__slice_as_object(
