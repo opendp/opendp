@@ -6,7 +6,7 @@ Serialization
 LazyFrameQuery Serialization
 ----------------------------
 
-For :py:class:`LazyFrameQuery <opendp.extras.polars.LazyFrameQuery>`,
+For a :py:class:`LazyFrameQuery <opendp.extras.polars.LazyFrameQuery>`,
 the plan can be extracted and then used to create a new object,
 perhaps on a remote server.
 
@@ -63,8 +63,8 @@ Instead of ``query.polars_plan`` we'll use ``query.resolve()``.
       ...     split_evenly_over=1,
       ... )
       >>> query = context.query().clamp((0, 10)).sum().laplace()
-      >>> measure = query.resolve()
-      >>> serialized_measure = dp.serialize(measure)
+      >>> measurement = query.resolve()
+      >>> serialized_measurement = dp.serialize(measurement)
 
       >>> new_context = dp.Context.compositor(
       ...     data=[1, 2, 3],  # sensitive, real data on the server
@@ -73,14 +73,15 @@ Instead of ``query.polars_plan`` we'll use ``query.resolve()``.
       ...     split_evenly_over=1,
       ... )
       >>> new_query = new_context.query()
-      >>> new_query.chain = dp.deserialize(serialized_measure)
+      >>> new_query.chain = dp.deserialize(serialized_measurement)
 
 
 Framework API Serialization
 ---------------------------
 
-At a lower level, Framework API objects can be serialized and deserialized
-with ``dp.serialize()`` and ``dp.deserialize()``.
+While the serialization of measurements is more likely to be useful,
+any object from the Framework API can also be serialized and deserialized the same way.
+(In fact, the serialization of a measurement relies on recursively serializing its components.)
 
 .. tab-set::
 
@@ -88,33 +89,18 @@ with ``dp.serialize()`` and ``dp.deserialize()``.
 
     .. code:: python
 
-        >>> import opendp.prelude as dp
-        >>> dp.enable_features('contrib')
-        >>> dp_obj = ((dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
-        ...     >> dp.t.then_clamp((0, 10))
-        ...     >> dp.t.then_sum()
-        ...     >> dp.m.then_laplace(scale=5.0)
-        ... )
-        >>> serialized = dp.serialize(dp_obj)
-        >>> serialized[:32]
-        '{"__function__": "make_chain_mt"'
+        >>> domain = dp.vector_domain(dp.atom_domain(T=int))
+        >>> serialized_domain = dp.serialize(domain)
+        >>> new_domain = dp.deserialize(serialized_domain)
+        >>> assert type(domain) == type(new_domain)
+
+        >>> serialized_domain[:32]
+        '{"__function__": "vector_domain"'
 
 
 While the serialization format is JSON, we do not guarantee any stability between versions,
 and we discourage users from writing their own JSON.
 If this is something you need, please reach out so that we can understand your use case.
-
-.. tab-set::
-
-  .. tab-item:: Python
-
-    .. code:: python
-
-        >>> new_obj = dp.deserialize(serialized)
-        >>> type(dp_obj)
-        <class 'opendp.mod.Measurement'>
-        >>> type(new_obj)
-        <class 'opendp.mod.Measurement'>
 
 
 Limitations
