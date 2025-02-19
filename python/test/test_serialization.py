@@ -7,7 +7,7 @@ import pytest
 import opendp.prelude as dp
 from opendp._lib import import_optional_dependency
 
-atom = dp.atom_domain(bounds=(0., 10.))
+atom = dp.atom_domain(bounds=(0., 10.), nan=False)
 input_space = dp.vector_domain(atom, size=10), dp.symmetric_distance()
 chained = input_space >> dp.t.then_mean() >> dp.m.then_laplace(scale=0.5)
 
@@ -84,7 +84,7 @@ def test_version_mismatch_warning():
         "__module__": "domains",
         "__kwargs__": {
             "bounds": {"__tuple__": [0, 10]}, 
-            "nullable": False, 
+            "nan": False, 
             "T": "i32"
         },
         "__version__": "bad-version"

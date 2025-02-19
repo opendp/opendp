@@ -5,11 +5,11 @@ use num::{One, Zero};
 fn test_all() -> Fallible<()> {
     macro_rules! test_laplace_with_ty {
         ($($ty:ty),+) => {$(
-            let meas = make_laplace(AtomDomain::<$ty>::default(), Default::default(), 1., None)?;
+            let meas = make_laplace(AtomDomain::<$ty>::new_non_nan(), Default::default(), 1., None)?;
             meas.invoke(&<$ty>::zero())?;
             meas.map(&<$ty>::one())?;
 
-            let meas = make_laplace(VectorDomain::new(AtomDomain::<$ty>::default()), Default::default(), 1., None)?;
+            let meas = make_laplace(VectorDomain::new(AtomDomain::<$ty>::new_non_nan()), Default::default(), 1., None)?;
             meas.invoke(&vec![<$ty>::zero()])?;
             meas.map(&<$ty>::one())?;
         )+}

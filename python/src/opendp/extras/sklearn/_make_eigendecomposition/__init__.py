@@ -49,9 +49,7 @@ def make_private_np_eigendecomposition(
     # if number of components is not specified, default to num_columns
     num_components = num_components or input_desc.num_columns
 
-    t_sscp = make_np_sscp(
-        input_domain, input_metric, dp.symmetric_distance()
-    )
+    t_sscp = make_np_sscp(input_domain, input_metric)
 
     t_eigvals = t_sscp.output_space >> then_eigenvalues()
     m_eigvals = dp.binary_search_chain(  # type: ignore[misc]

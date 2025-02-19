@@ -99,7 +99,7 @@ where
             (bounds_0.1, bounds_1.1),
         ))?)
         .with_size(size),
-        AtomDomain::default(),
+        AtomDomain::new_non_nan(),
         Function::new(enclose!(_size, move |arg: &Vec<(S::Item, S::Item)>| {
             let (l, r): (Vec<S::Item>, Vec<S::Item>) = arg.iter().copied().unzip();
             let (sum_l, sum_r) = (S::unchecked_sum(&l), S::unchecked_sum(&r));

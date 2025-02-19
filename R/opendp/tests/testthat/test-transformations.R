@@ -102,7 +102,7 @@ test_that("test_cast_default", {
 
 test_that("test_impute_uniform", {
   caster <- make_impute_uniform_float(
-    vector_domain(atom_domain(.T = f64, nullable = TRUE)),
+    vector_domain(atom_domain(.T = f64, nan = TRUE)),
     symmetric_distance(),
     bounds = c(-1., 2.)
   )

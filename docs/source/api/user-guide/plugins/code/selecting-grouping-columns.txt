@@ -26,7 +26,7 @@
 ...             "PandasDomain", member=lambda x: isinstance(x, pd.DataFrame)
 ...         ),
 ...         input_metric=dp.symmetric_distance(),
-...         output_domain=dp.vector_domain(dp.atom_domain(T=float)),
+...         output_domain=dp.vector_domain(dp.atom_domain(T=float, nan=False)),
 ...         output_metric=dp.linf_distance(T=float, monotonic=True),
 ...         function=lambda x: [score(x, c) for c in candidates],
 ...         # the mechanism is 1-stable under the l-infinity distance,

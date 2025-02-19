@@ -76,7 +76,7 @@ def test_type_hinting():
 
 def test_bisect_chain():
     pre = (
-        (dp.vector_domain(dp.atom_domain(T=float)), dp.symmetric_distance())
+        (dp.vector_domain(dp.atom_domain(T=float, nan=False)), dp.symmetric_distance())
         >> dp.t.then_clamp(bounds=(0.0, 1.0))
         >> dp.t.then_resize(size=10, constant=0.0)
         >> dp.t.then_mean()
@@ -114,7 +114,7 @@ def test_supporting_elements():
     from opendp.domains import atom_domain
     from opendp.metrics import absolute_distance
 
-    mechanism = make_laplace(atom_domain(T=float), absolute_distance(T=float), 1.0)
+    mechanism = make_laplace(atom_domain(T=float, nan=False), absolute_distance(T=float), 1.0)
     assert str(mechanism.input_domain) == 'AtomDomain(T=f64)'
     assert str(mechanism.input_domain.carrier_type) == 'f64'
     assert str(mechanism.input_metric) == 'AbsoluteDistance(f64)'
@@ -129,13 +129,13 @@ def test_function():
     from opendp.metrics import absolute_distance
     from opendp.transformations import make_identity
 
-    mechanism = make_laplace(atom_domain(T=float), absolute_distance(T=float), 1.0)
+    mechanism = make_laplace(atom_domain(T=float, nan=False), absolute_distance(T=float), 1.0)
     pow = 4  # add noise 2^pow times
     for _ in range(pow):
         mechanism = mechanism >> mechanism.function
 
     # Exercise postprocessing transformation
-    transformation = make_identity(atom_domain(T=float), absolute_distance(T=float))
+    transformation = make_identity(atom_domain(T=float, nan=False), absolute_distance(T=float))
     mechanism = mechanism >> transformation
     print("mechanism(0.0)", mechanism(0.0))
 
@@ -173,7 +173,7 @@ def test_member():
     from opendp.domains import atom_domain
     from opendp.metrics import absolute_distance
 
-    mechanism = make_laplace(atom_domain(T=float), absolute_distance(T=float), 1.0)
+    mechanism = make_laplace(atom_domain(T=float, nan=False), absolute_distance(T=float), 1.0)
     assert not mechanism.input_domain.member(float("NaN"))
 
 
@@ -184,7 +184,7 @@ def test_new_domain():
     assert domain.member(3)
     assert str(domain) == 'AtomDomain(T=i32)'
 
-    domain = atom_domain(T=dp.f64)
+    domain = atom_domain(T=dp.f64, nan=False)
     assert not domain.member(float("nan"))
     assert str(domain) == 'AtomDomain(T=f64)'
 
@@ -209,13 +209,13 @@ def test_new_domain():
     domain = vector_domain(atom_domain((2.0, 7.0)), 10)
     assert domain.member([3.0] * 10)
     assert not domain.member([1.0] * 10)
-    assert str(domain) == 'VectorDomain(AtomDomain(bounds=[2.0, 7.0], T=f64), size=10)'
+    assert str(domain) == 'VectorDomain(AtomDomain(bounds=[2.0, 7.0], nan=true, T=f64), size=10)'
 
-    null_domain = atom_domain(nullable=True, T=float)
-    assert str(null_domain) == 'AtomDomain(nullable=true, T=f64)'
+    null_domain = atom_domain(nan=True, T=float)
+    assert str(null_domain) == 'AtomDomain(nan=true, T=f64)'
     assert null_domain.member(float("nan"))
 
-    not_null_domain = atom_domain(nullable=False, T=float)
+    not_null_domain = atom_domain(nan=False, T=float)
     assert str(not_null_domain) == 'AtomDomain(T=f64)'
     assert not not_null_domain.member(float("nan"))
 

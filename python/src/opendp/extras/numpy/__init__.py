@@ -12,13 +12,13 @@ The methods of this module will then be accessible at ``dp.numpy``.
 '''
 
 from __future__ import annotations
-from typing import NamedTuple, Literal
-from opendp.mod import Domain, Metric, Transformation
+from typing import NamedTuple, Literal, Optional
+from opendp.mod import Domain
 from opendp.typing import RuntimeTypeDescriptor, _ELEMENTARY_TYPES, _PRIMITIVE_TYPES
 from opendp._lib import import_optional_dependency
-from opendp.extras._utilities import register_transformation
-from opendp._internal import _make_transformation, _extrinsic_domain
+from opendp._internal import _extrinsic_domain
 import typing
+from opendp.extras.numpy._make_np_clamp import make_np_clamp, then_np_clamp # noqa: F401
 
 if typing.TYPE_CHECKING: # pragma: no cover
     import numpy # type: ignore[import-not-found]
@@ -59,6 +59,7 @@ def array2_domain(
     origin=None,
     size: int | None = None,
     num_columns: int | None = None,
+    nan: Optional[bool] = None,
     T: RuntimeTypeDescriptor | None = None,
 ) -> Domain:
     """Construct a Domain representing 2-dimensional numpy arrays.
@@ -68,6 +69,7 @@ def array2_domain(
     :param origin: center of the norm region. Assumed to be at zero
     :param size: number of rows in data
     :param num_columns: number of columns in the data
+    :param nan: whether NaN values are allowed
     :param T: atom type
     """
     np = import_optional_dependency('numpy')
@@ -133,6 +135,10 @@ def array2_domain(
             raise ValueError("Expected 2-dimensional array")  # pragma: no cover
         if num_columns is not None and x.shape[1] != num_columns:
             raise ValueError(f"must have {num_columns} columns")  # pragma: no cover
+        
+        if T in {"f32", "f64"} and nan and np.isnan(x).any():
+            raise ValueError("array contains NaN values")  # pragma: no cover
+
         if origin is not None:
             x = x - origin
         if norm is not None:
@@ -149,6 +155,7 @@ def array2_domain(
         p: Literal[1, 2, None]
         size: int | None
         num_columns: int | None
+        nan: bool
         T: str | dp.RuntimeType
 
     desc = NPArray2Descriptor(
@@ -157,6 +164,7 @@ def array2_domain(
         p=p,
         size=size,
         num_columns=num_columns,
+        nan=nan,
         T=T,
     )
 
@@ -173,6 +181,8 @@ def _sscp_domain(
 ) -> Domain:
     """The domain of sums of squares and cross products matrices formed by computing x^Tx,
     for some dataset x.
+
+    Elements are non-nan.
 
     :param norm: each row in x is bounded by the norm
     :param p: designates L`p` norm
@@ -219,61 +229,3 @@ def _sscp_domain(
     )
 
     return _extrinsic_domain(f"NPSSCPDomain({_fmt_attrs(desc)})", _member, desc)
-
-
-def make_np_clamp(
-    input_domain: Domain, input_metric: Metric, norm, p, origin=None
-) -> Transformation:
-    """Construct a Transformation that clamps the norm of input data.
-
-    :param input_domain: instance of `array2_domain(...)`
-    :param input_metric: instance of `symmetric_distance()`
-    :param norm: clamp each row to this norm. Required if data is not already bounded
-    :param p: designates L`p` norm
-    :param origin: norm clamping is centered on this point. Defaults to zero
-    """
-    import opendp.prelude as dp
-    np = import_optional_dependency('numpy')
-
-    dp.assert_features("contrib")
-
-    norm = float(norm)
-    if norm < 0.0:
-        raise ValueError("norm must not be negative")  # pragma: no cover
-    if p not in {1, 2}:
-        raise ValueError("order p must be 1 or 2")  # pragma: no cover
-
-    if origin is None:
-        origin = 0.0
-
-    def _function(arg):
-        arg = arg.copy()
-        arg -= origin
-
-        # may have to run multiple times due to FP rounding
-        current_norm = np.linalg.norm(arg, ord=p, axis=1, keepdims=True)
-        while current_norm.max() > norm:
-            arg /= np.maximum(current_norm / norm, 1)
-            current_norm = np.linalg.norm(arg, ord=p, axis=1, keepdims=True)
-
-        arg += origin
-        return arg
-
-    kwargs = input_domain.descriptor._asdict() | {
-        "norm": norm,
-        "p": p,
-        "origin": origin,
-    }
-    return _make_transformation(
-        input_domain,
-        input_metric,
-        dp.numpy.array2_domain(**kwargs),
-        input_metric,
-        _function,
-        lambda d_in: d_in,
-    )
-
-
-# generate then variant of the constructor
-# TODO: Show this in the API Reference?
-then_np_clamp = register_transformation(make_np_clamp)

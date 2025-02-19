@@ -153,7 +153,8 @@ In other words, it transforms a categorical data vector to a vector of numeric i
     .. code:: python
 
         >>> binner = dp.t.make_find_bin(
-        ...     dp.vector_domain(dp.atom_domain(T=float)), dp.symmetric_distance(),
+        ...     dp.vector_domain(dp.atom_domain(T=float, nan=False)), 
+        ...     dp.symmetric_distance(),
         ...     edges=[1., 2., 10.])
         >>> binner([0., 1., 3., 15.])
         [0, 1, 2, 3]

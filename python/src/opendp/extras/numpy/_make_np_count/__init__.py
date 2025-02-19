@@ -13,6 +13,10 @@ def make_np_count(input_domain: Domain, input_metric: Metric) -> Transformation:
     :param input_metric: instance of `symmetric_distance()`
     """
     dp.assert_features("contrib")
+
+    if not str(input_domain).startswith("NPArray2Domain"):
+        raise ValueError("input_domain must be NPArray2Domain")  # pragma: no cover
+    
     size = input_domain.descriptor.size
 
     if input_metric != dp.symmetric_distance():

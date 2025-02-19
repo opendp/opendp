@@ -80,7 +80,7 @@ where
 
     Transformation::new(
         VectorDomain::new(AtomDomain::new_closed(bounds)?),
-        AtomDomain::default(),
+        AtomDomain::new_non_nan(),
         Function::new_fallible(move |arg: &Vec<S::Item>| {
             let mut data = arg.clone();
             if arg.len() > size_limit {
@@ -162,7 +162,7 @@ where
 
     Transformation::new(
         VectorDomain::new(AtomDomain::new_closed(bounds)?).with_size(size),
-        AtomDomain::default(),
+        AtomDomain::new_non_nan(),
         // Under the assumption that the input data is in input domain, then an unchecked sum is safe.
         Function::new(move |arg: &Vec<S::Item>| S::unchecked_sum(arg)),
         SymmetricDistance::default(),

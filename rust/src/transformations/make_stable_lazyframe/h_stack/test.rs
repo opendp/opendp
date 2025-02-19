@@ -46,7 +46,7 @@ fn test_with_column() -> Fallible<()> {
 fn test_fill_nan() -> Fallible<()> {
     let lf = df!("f64" => [1f64, f64::NAN])?.lazy();
 
-    let series_domain = SeriesDomain::new("f64", AtomDomain::<f64>::new_nullable());
+    let series_domain = SeriesDomain::new("f64", AtomDomain::<f64>::default());
     let lf_domain = LazyFrameDomain::new(vec![series_domain])?;
 
     let t_with_column = make_stable_lazyframe(

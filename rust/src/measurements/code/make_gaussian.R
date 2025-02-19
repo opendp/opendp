@@ -1,13 +1,13 @@
 library(opendp)
 enable_features("contrib")
 gaussian <- make_gaussian(
-  atom_domain(.T = f64),
+  atom_domain(.T = f64, nan = FALSE),
   absolute_distance(.T = f64),
   scale = 1.0)
 gaussian(arg = 100.0)
 
 # Or, more readably, define the space and then chain:
-space <- c(atom_domain(.T = f64), absolute_distance(.T = f64))
+space <- c(atom_domain(.T = f64, nan = FALSE), absolute_distance(.T = f64))
 gaussian <- space |> then_gaussian(scale = 1.0)
 gaussian(arg = 100.0)
 

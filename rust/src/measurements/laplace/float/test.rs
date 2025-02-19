@@ -7,7 +7,7 @@ fn test_chain_laplace() -> Fallible<()> {
         VectorDomain::new(AtomDomain::new_closed((10., 12.))?).with_size(3),
         SymmetricDistance::default(),
     )? >> make_scalar_float_laplace(
-        AtomDomain::default(),
+        AtomDomain::new_non_nan(),
         AbsoluteDistance::default(),
         1.0,
         None,
@@ -19,7 +19,7 @@ fn test_chain_laplace() -> Fallible<()> {
 #[test]
 fn test_big_laplace() -> Fallible<()> {
     let chain = make_scalar_float_laplace(
-        AtomDomain::default(),
+        AtomDomain::new_non_nan(),
         AbsoluteDistance::default(),
         f64::MAX,
         None,
@@ -31,7 +31,7 @@ fn test_big_laplace() -> Fallible<()> {
 #[test]
 fn test_make_laplace_mechanism() -> Fallible<()> {
     let measurement = make_scalar_float_laplace(
-        AtomDomain::default(),
+        AtomDomain::new_non_nan(),
         AbsoluteDistance::default(),
         1.0,
         None,
@@ -45,7 +45,7 @@ fn test_make_laplace_mechanism() -> Fallible<()> {
 #[test]
 fn test_make_vector_laplace_mechanism() -> Fallible<()> {
     let measurement = make_vector_float_laplace(
-        VectorDomain::new(AtomDomain::default()),
+        VectorDomain::new(AtomDomain::new_non_nan()),
         L1Distance::default(),
         1.0,
         None,

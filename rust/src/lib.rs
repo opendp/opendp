@@ -39,7 +39,7 @@
 //!
 //! #[cfg(all(feature = "untrusted", feature = "partials"))]
 //! pub fn example() -> Fallible<()> {
-//!     use opendp::transformations::{make_split_lines, then_cast_default, make_cast_default, then_clamp, then_sum};
+//!     use opendp::transformations::{make_split_lines, then_cast_default, make_cast_default, then_impute_constant, then_clamp, then_sum};
 //!     use opendp::combinators::{make_chain_tt, make_chain_mt};
 //!     use opendp::measurements::then_laplace;
 //!
@@ -63,7 +63,7 @@
 //!     // You can use the more convenient `>>` notation to chain instead.
 //!     // When you use the `then_` version of the constructor,
 //!     //     the `>>` operator will automatically fill the input domain and metric from the previous transformation.
-//!     let load_and_clamp = load_numbers >> then_clamp(bounds);
+//!     let load_and_clamp = load_numbers >> then_impute_constant(0.0) >> then_clamp(bounds);
 //!     
 //!     // After chaining, the resulting transformation is wrapped in a `Result`.
 //!     let load_and_sum = (load_and_clamp >> then_sum())?;
@@ -75,6 +75,7 @@
 //!     let noisy_sum = (
 //!         make_split_lines()? >>
 //!         then_cast_default() >>
+//!         then_impute_constant(0.0) >>
 //!         then_clamp(bounds) >>
 //!         then_sum() >>
 //!         then_laplace(sigma, None)

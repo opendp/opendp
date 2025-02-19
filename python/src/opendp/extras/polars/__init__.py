@@ -646,7 +646,7 @@ def _domain_from_dtype(dtype) -> Domain:
     if T is None:
         raise ValueError(f"unrecognized dtype: {dtype}")  # pragma: no cover
 
-    return atom_domain(T=T, nullable=T in {"f32", "f64"})
+    return atom_domain(T=T)
 
 _LAZY_EXECUTION_METHODS = {
     "collect",
