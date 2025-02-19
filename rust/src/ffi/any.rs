@@ -354,6 +354,9 @@ pub struct CallbackFn {
 // wrap a CallbackFn in a closure, so that it can be used in transformations and measurements
 pub fn wrap_func(func: CallbackFn) -> impl Fn(&AnyObject) -> Fallible<AnyObject> {
     move |arg: &AnyObject| -> Fallible<AnyObject> {
+        // extends the lifetime of func.callback to the lifetime of this closure
+        let _ = &func.lifeline;
+
         into_owned((func.callback)(arg as *const AnyObject))?.into()
     }
 }
