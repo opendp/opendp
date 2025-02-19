@@ -44,7 +44,7 @@ from opendp.mod import (
     Domain,
     Measurement,
     Metric,
-    PartialConstructor,
+    _PartialConstructor,
     Queryable,
     Transformation,
     Measure,
@@ -152,7 +152,6 @@ def domain_of(T, infer: bool = False) -> Domain:
 
     >>> dp.domain_of('Option<int>')  # Python's `Optional` is not supported.
     OptionDomain(AtomDomain(T=i32))
-    
     >>> dp.domain_of(dp.i32)
     AtomDomain(T=i32)
 
@@ -505,7 +504,18 @@ Chain = Union[tuple[Domain, Metric], Transformation, Measurement, "PartialChain"
 
 
 class Query(object):
-    """A helper API to build a measurement."""
+    """Initializes the query with the given chain and output measure.
+
+    It is more convenient to use the ``context.query()`` constructor than this one.
+    However, this can be used stand-alone to help build a transformation/measurement that is not part of a context.
+
+    :param chain: an initial metric space (tuple of domain and metric) or transformation
+    :param output_measure: how privacy will be measured on the output of the query
+    :param d_in: an upper bound on the distance between adjacent datasets
+    :param d_out: an upper bound on the overall privacy loss
+    :param context: if specified, then when the query is released, the chain will be submitted to this context
+    :param _wrap_release: for internal use only
+    """
 
     _chain: Chain
     """The current chain of transformations and measurements."""
@@ -526,18 +536,6 @@ class Query(object):
         context: "Context" = None, # type: ignore[assignment]
         _wrap_release=None,
     ) -> None:
-        """Initializes the query with the given chain and output measure.
-
-        It is more convenient to use the ``context.query()`` constructor than this one.
-        However, this can be used stand-alone to help build a transformation/measurement that is not part of a context.
-
-        :param chain: an initial metric space (tuple of domain and metric) or transformation
-        :param output_measure: how privacy will be measured on the output of the query
-        :param d_in: an upper bound on the distance between adjacent datasets
-        :param d_out: an upper bound on the overall privacy loss
-        :param context: if specified, then when the query is released, the chain will be submitted to this context
-        :param _wrap_release: for internal use only
-        """
         self._chain = chain
         self._output_measure = output_measure
         self._d_in = d_in
@@ -757,9 +755,9 @@ class PartialChain(object):
         chain.param = param
         return chain
 
-    def __rshift__(self, other: Union[Transformation, Measurement, PartialConstructor]):
+    def __rshift__(self, other: Union[Transformation, Measurement, _PartialConstructor]):
         # partials may be chained with other transformations or measurements to form a new partial
-        if isinstance(other, (Transformation, Measurement, PartialConstructor)):
+        if isinstance(other, (Transformation, Measurement, _PartialConstructor)):
             return PartialChain(lambda x: self(x) >> other)
 
         raise ValueError("At most one parameter may be missing at a time")  # pragma: no cover

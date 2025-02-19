@@ -111,7 +111,7 @@ fake_function <- function(
   assert_features(\"fake_feature\")
 
   # No type arguments to standardize.
-  log <- new_constructor_log(\"fake_function\", \"fake_module\", new_hashtab(
+  log_ <- new_constructor_log(\"fake_function\", \"fake_module\", new_hashtab(
     list(\"fake_argument\"),
     list(unbox2(fake_argument))
   ))
@@ -123,7 +123,7 @@ fake_function <- function(
   output <- .Call(
     \"fake_module__fake_function\",
     fake_argument,
-    log, PACKAGE = \"opendp\")
+    log_, PACKAGE = \"opendp\")
   output
 }
 ";

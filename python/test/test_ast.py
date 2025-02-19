@@ -45,11 +45,154 @@ def ast_return_type(tree):
         return ast.unparse(type_node)
 
 
+def check_directive_order(docstring):
+    '''
+    >>> check_directive_order("""
+    ...     :param abc: The input
+    ...     :paran xyz: Typo!
+    ... """)
+    'Unknown directives: :paran'
+    
+    >>> check_directive_order("""
+    ...     :return: The output
+    ...     :param xyz: The input
+    ... """)
+    'Directives :return:param are not in canonical order: (param(type)?)*(return)?(rtype)?(raises)*(example)?'
+    '''
+    directives = re.findall(r'^\s*(\:\w+:?)', docstring, re.MULTILINE)
+    unknown_directives = set(directives) - {':param', ':rtype:', ':type', ':raises', ':example:', ':return:'}
+    if unknown_directives:
+        return f'Unknown directives: {", ".join(unknown_directives)}'
+    
+    order = ''.join(re.sub(r':$', '', d) for d in directives)
+    # TODO: Has 169 failures if we require ":return" and ":rtype" together:
+    # canonical_order = r'^(:param(:type)?)*(:return:rtype)?(:raises)*(:example)?$'
+
+    # TODO: Has 139 failures if we require ":return" if ":rtype" is given:
+    # (Low priority: from the type and the function name, the return may be clear enough)
+    # canonical_order = r'^(:param(:type)?)*(:return(:rtype)?)?(:raises)*(:example)?$'
+
+    # TODO: Has 28 failures if we require ":rtype" if ":return" is given:
+    # canonical_order = r'^(:param(:type)?)*((:return)?:rtype)?(:raises)*(:example)?$'
+    
+    canonical_order = r'^(:param(:type)?)*(:return)?(:rtype)?(:raises)*(:example)?$'
+    if not re.search(canonical_order, order):
+        short_order = re.sub(r'[:$^]', '', canonical_order)
+        return f'Directives {order} are not in canonical order: {short_order}'
+
+
+def check_directive_continuity(docstring):
+    '''
+    >>> check_directive_continuity("""
+    ...     :param xyz: The input
+    ...     Surprise!
+    ...     :return: The output
+    ... """)
+    'Found another directive after non-directive: :return: The output'
+    '''
+    directives_started = False
+    directives_ended = False
+    for line in docstring.split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+        if line.startswith(':'):
+            if directives_ended:
+                return f'Found another directive after non-directive: {line}'
+            directives_started = True
+        elif directives_started:
+            directives_ended = True
+
+
+def check_doctest_continuity(docstring):
+    '''
+    >>> check_doctest_continuity("""
+    ...     >>> 1 + 1
+    ...     2
+    ...     
+    ...     >>> 2 + 2
+    ...     4
+    ... """)
+    'Doctest should not be split by empty line above: >>> 2 + 2'
+
+    >>> check_doctest_continuity("""
+    ...     >>> assert True
+    ...     
+    ...     And then:
+    ...     >>> print('hello!')
+    ...     hello!
+    ... """)
+    "Doctest should have blank line above: >>> print('hello!')"
+    '''
+    in_code = False
+    after_code = False
+    in_text = False
+    for line in docstring.split('\n'):
+        line = line.strip()
+        if line.startswith('>>>'):
+            if after_code:
+                return f'Doctest should not be split by empty line above: {line}'
+            if in_text:
+                return f'Doctest should have blank line above: {line}'
+            in_code = True
+            in_text = False
+        elif in_code:
+            if not line:
+                in_code = False
+                after_code = True
+        elif line:
+            after_code = False
+            in_text = True
+        else:
+            in_text = False
+
+
+def check_list_space(docstring):
+    '''
+    >>> check_list_space("""
+    ...     Add a blank line after this one!
+    ...     1. One thing
+    ...     2. After another
+    ... """)
+    'Add a blank line above list that begins with: 1. One thing'
+
+    >>> check_list_space("""
+    ...     >>> 5.0 - 4.0
+    ...     1.0
+    ...
+    ...     That should pass
+    ...     1. but this should not!
+    ... """)
+    'Add a blank line above list that begins with: 1. but this should not!'
+
+    >>> check_list_space("""
+    ...     * This
+    ...     * is fine,
+    ...
+    ...     but this is
+    ...     * not ok!
+    ... """)
+    'Add a blank line above list that begins with: * not ok!'
+    '''
+    prev_is_text = False
+    for line in docstring.split('\n'):
+        line = line.strip()
+        if prev_is_text and (line.startswith('1.') or line.startswith('* ')):
+            return f'Add a blank line above list that begins with: {line}'
+        prev_is_text = line and not (
+            line.startswith('>>>')
+            or line.startswith('...')
+            or line.startswith('* ')
+        )
+
+
 class Checker():
-    def __init__(self, tree, docstring, is_public):
+    def __init__(self, name, tree, docstring, is_public, is_verbose):
+        self.name = name
         self.tree = tree
         self.docstring = docstring
         self.is_public = is_public
+        self.is_verbose = is_verbose
 
         self.errors = []
 
@@ -66,22 +209,21 @@ class Checker():
         if len(self.all_ast_args) and self.all_ast_args[0].arg in ['self', 'cls']:
             # TODO: Confirm that this is a method in a class.
             self.all_ast_args.pop(0)
+        
+        if self.name == '__init__' and self.docstring:
+            self.errors.append('Move docstring up to class')
 
     def _check_docstring(self):
-        directives = re.findall(r'^\s*(\:\w+:?)', self.docstring, re.MULTILINE)
-        unknown_directives = set(directives) - {':param', ':rtype:', ':type', ':raises', ':example:', ':return:'}
-        if unknown_directives:
-            self.errors.append(f'unknown directives: {", ".join(unknown_directives)}')
-        
-        order = ''.join(re.sub(r':$', '', d) for d in directives)
-        # TODO: Has 139 failures if we require ":return" if ":rtype" is given:
-        # canonical_order = r'^(:param(:type)?)*(:return(:rtype)?)?(:raises)*(:example)?$'
-        canonical_order = r'^(:param(:type)?)*(:return)?(:rtype)?(:raises)*(:example)?$'
-        if not re.search(canonical_order, order):
-            short_order = re.sub(r'[:$^]', '', canonical_order)
-            self.errors.append(
-                f'Directives {order} are not in canonical order: {short_order}'
-            )
+        checks = [
+            check_directive_order,
+            check_directive_continuity,
+            check_doctest_continuity,
+            check_list_space,
+        ]
+        for check in checks:
+            error = check(self.docstring)
+            if error:
+                self.errors.append(error)
 
     def _check_params(self):
         doc_param_dict = dict(re.findall(r':param (\w+): *(.*)', self.docstring))
@@ -102,52 +244,54 @@ class Checker():
                 )
 
     def _check_types(self):
-        doc_type_dict = {
-            # TODO: Pick either ":py:ref:" or ":ref:"
-            k: re.sub(r'(?::py)?:ref:`(\w+)`', r'\1', v)
-            for k, v in re.findall(r':type (\w+): *(.*)', self.docstring)
-        }
+        doc_type_dict = (
+            # Get all documented parameters, even if there aren't types...
+            {name: None for name in re.findall(r':param (\w+):', self.docstring)}
+            | {
+                # ... and then add types, where documented.
+                # Allow either ":py:ref:" or ":ref:".
+                # No reason to impose a standard if both work with the tools.
+                k: re.sub(r'(?::py)?:ref:`(\w+)`', r'\1', v)
+                for k, v in re.findall(r':type (\w+): *(.*)', self.docstring)
+            }
+        )
 
-        ast_node_dict = {
+        ast_arg_annotation_dict = {
             arg.arg: getattr(arg, 'annotation', None)
             for arg in self.all_ast_args
         }
         ast_type_dict = {
-            # TODO: Has 32 failures where "Optional" not specified
-            k: re.sub(r'Optional\[(.+)\]', r'\1', ast.unparse(v))
-            for k, v in ast_node_dict.items()
-            # TODO: Has 154 failures w/o this exclusion.
-            if v is not None
+            # "v and ..." ensures that None is passed through.
+            # TODO: Has 32 failures if we require parameters with "Optional" types
+            # to also have "Optional" in the  docstring.
+            # k: v and ast.unparse(v)
+            k: v and re.sub(r'Optional\[(.+)\]', r'\1', ast.unparse(v))
+            for k, v in ast_arg_annotation_dict.items()
         }
         
-        # NOTE: Has 17 failures, or 66  w/o "if is_public",
-        # but our sense is that the actual types may not be readable,
-        # so the docs may not / should not be consistent, and that's ok.
-        #
-        # if self.is_public:
-        #     if doc_type_dict != ast_type_dict:
-        #         self.errors.append(
-        #             f'docstring types ({doc_type_dict}) '
-        #             f'!= function signature ({ast_type_dict})'
-        #         )
-        
-        for k, v in doc_type_dict.items():
-            # TODO: "k in ast_type_dict" only needed in CI?
-            if k in ast_type_dict and ast_type_dict[k] != v:
+        for k in doc_type_dict.keys() | ast_type_dict.keys():
+            doc_type = doc_type_dict.get(k)
+            ast_type = ast_type_dict.get(k)
+
+            # TODO: Ignoring private functions, there are still 56 functions where 
+            # either the documentation type or the annotation type is missing.
+            if doc_type is None or ast_type is None:
+                continue
+
+            if doc_type != ast_type:
                 self.errors.append(
-                    f'docstring type ({doc_type_dict[k]}) '
-                    f'!= function signature ({ast_type_dict[k]}) '
+                    f'docstring type ({doc_type}) '
+                    f'!= function signature types ({ast_type}) '
                     f'for {k}'
                 )
 
     def _check_return(self):
         has_return_statement = ast_has_return(self.tree)
-        has_return_directive = ':return:' in self.docstring
-        # TODO: Has 142 failures; Enable and fill in the docs.
-        # if self.is_public:
-        #     if has_return_statement and not has_return_directive:
-        #         self.errors.append('return statement, but no :return: in docstring')
-        if has_return_directive and not has_return_statement:
+        has_return_doc = ':return' in self.docstring or ':rtype' in self.docstring
+        # TODO: Has 68 failures if "return" statements require either ":return" or ":rtype".
+        # if self.is_public and has_return_statement and not has_return_doc:
+        #     self.errors.append('return statement, but no :return or :rtype in docstring')
+        if has_return_doc and not has_return_statement:
             self.errors.append(':return: directive, but no return statement')
 
         rtype_match = re.search(r':rtype:(.*)', self.docstring)
@@ -168,6 +312,12 @@ class Checker():
         self._check_params()
         self._check_types()
         self._check_return()
+        if not self.errors:
+            return
+        if self.is_verbose:
+            # split across multiple lines for readability:
+            return '\n' + '\n'.join(self.errors)
+        # else all on one line, though it may be truncated:
         return '; '.join(
             self.errors
             if len(self.errors) == 1
@@ -178,13 +328,14 @@ class Checker():
 PUBLIC = 'public'
 PRIVATE = 'private'
 
-class Function(NamedTuple):
+class CodeObj(NamedTuple):
     file: str
     name: str
     tree: ast.AST
     visibility: str  # str rather than bool so the pytest report is more readable.
 
 
+classes = []
 functions = []
 
 src_dir_path = Path(__file__).parent.parent / 'src'
@@ -197,28 +348,30 @@ for code_path in src_dir_path.glob('**/*.py'):
     code = code_path.read_text()
     tree = ast.parse(code)
     for node in ast.walk(tree):
-        if not isinstance(node, ast.FunctionDef):
-            # TODO: Also check class docs
+        if not isinstance(node, (ast.FunctionDef, ast.ClassDef)):
             continue
         if ast_ends_with_ellipsis(node):
             continue
         if node.name.startswith('_'):
             is_public = False
 
-        function = Function(
+        code_obj = CodeObj(
             file=f'{code_path.parent.name}/{code_path.name}',
             name=node.name,
             tree=node,
             visibility=PUBLIC if is_public else PRIVATE,
         )
-        functions.append(function)
+        if isinstance(node, ast.FunctionDef):
+            functions.append(code_obj)
+        if isinstance(node, ast.ClassDef):
+            classes.append(code_obj)
 
 # Typo check:
 assert len(functions) > 100
 
 
 @pytest.mark.parametrize("file,name,tree,visibility", functions)
-def test_function_docs(file, name, tree, visibility):
+def test_function_docs(file, name, tree, visibility, pytestconfig):
     where = f'In {file}, line {tree.lineno}, def {name}'
     is_public = visibility == PUBLIC
 
@@ -228,9 +381,21 @@ def test_function_docs(file, name, tree, visibility):
     assert docstring is not None, f'{where}: add docstring or make private'
 
     errors = Checker(
+        name=name,
         tree=tree,
         docstring=docstring,
-        is_public=is_public
+        is_public=is_public,
+        is_verbose=pytestconfig.getoption("verbose") > 0
     ).get_errors()
     if errors:
         pytest.fail(f'{where}: {errors}')
+
+@pytest.mark.parametrize("file,name,tree,visibility", classes)
+def test_class_docs(file, name, tree, visibility):
+    where = f'In {file}, line {tree.lineno}, class {name}'
+    is_public = visibility == PUBLIC
+
+    docstring = ast.get_docstring(tree)
+    if not is_public and docstring is None:
+        return
+    assert docstring is not None, f'{where}: add docstring or make private'

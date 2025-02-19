@@ -65,7 +65,7 @@ rt_infer <- function(public_example) {
     return(new_runtime_type("Option", list(new_runtime_type(is_unknown = TRUE))))
   }
 
-  stop("unrecognized type: ", class(public_example))
+  stop("unrecognized type: ", class(public_example), call. = FALSE)
 }
 
 # nolint start: cyclocomp_linter
@@ -74,7 +74,7 @@ rt_parse <- function(type_name, generics = list()) {
     return(type_name)
   }
   if (!is.character(type_name) || length(type_name) != 1) {
-    stop("type_name must be a character string")
+    stop("type_name must be a character string", call. = FALSE)
   }
 
   type_name <- trimws(type_name)
@@ -85,8 +85,8 @@ rt_parse <- function(type_name, generics = list()) {
 
   # parsing for (A, B, C) tuples
   if (startsWith(type_name, "(") && endsWith(type_name, ")")) {
-    args <- parse_args_(substring(type_name, 2, nchar(type_name) - 1), generics)
-    return(new_runtime_type("Tuple", args))
+    type_args <- parse_args_(substring(type_name, 2, nchar(type_name) - 1), generics)
+    return(new_runtime_type("Tuple", type_args))
   }
 
   # parsing for A<B, C> generics
@@ -109,39 +109,39 @@ rt_parse <- function(type_name, generics = list()) {
     } else {
       type_name
     }
-    args <- parse_args_(substring(type_name, left + 1, right - 1), generics)
-    new_runtime_type(origin, args)
+    type_args <- parse_args_(substring(type_name, left + 1, right - 1), generics)
+    new_runtime_type(origin, type_args)
   })
 }
 # nolint end
 
 parse_args_ <- function(args, generics = list()) {
-  args <- strsplit(args, ",\\s*(?![^()<>]*\\))", perl = TRUE)
-  return(lapply(args[[1]], function(x) rt_parse(x, generics))) # nolint: unnecessary_lambda_linter.
+  type_args <- strsplit(args, ",\\s*(?![^()<>]*\\))", perl = TRUE)
+  return(lapply(type_args[[1]], function(x) rt_parse(x, generics))) # nolint: unnecessary_lambda_linter.
 }
 
 new_runtime_type <- function(origin = NULL, args = NULL, is_generic = FALSE, is_unknown = FALSE) {
-  rt <- list(origin = origin, args = args, is_generic = is_generic, is_unknown = is_unknown)
-  class(rt) <- "runtime_type"
-  rt
+  rtype <- list(origin = origin, args = args, is_generic = is_generic, is_unknown = is_unknown)
+  class(rtype) <- "runtime_type"
+  rtype
 }
 
-rt_to_string <- function(rt) {
-  if (is.character(rt)) {
-    return(rt)
+rt_to_string <- function(rtype) {
+  if (is.character(rtype)) {
+    return(rtype)
   }
-  if (rt$is_generic) {
-    return(paste0(".", rt$origin))
+  if (rtype$is_generic) {
+    return(paste0(".", rtype$origin))
   }
-  if (rt$is_unknown) {
+  if (rtype$is_unknown) {
     return("?")
   }
 
-  if (is.null(rt$args)) {
-    return(rt$origin)
+  if (is.null(rtype$args)) {
+    return(rtype$origin)
   }
 
-  args <- toString(lapply(rt$args, function(v) {
+  type_args <- toString(lapply(rtype$args, function(v) {
     if (is.list(v)) {
       rt_to_string(v)
     } else {
@@ -149,10 +149,10 @@ rt_to_string <- function(rt) {
     }
   }))
 
-  if (rt$origin == "Tuple") {
-    return(paste0("(", args, ")"))
+  if (rtype$origin == "Tuple") {
+    return(paste0("(", type_args, ")"))
   }
-  paste0(rt$origin, "<", args, ">")
+  paste0(rtype$origin, "<", type_args, ">")
 }
 
 #' @export
@@ -190,12 +190,12 @@ rt_assert_is_similar <- function(expected, inferred) {
 
     if (inferred$origin %in% names(ATOM_EQUIVALENCE_CLASSES)) {
       if (!(expected$origin %in% ATOM_EQUIVALENCE_CLASSES[[inferred$origin]])) {
-        stop(paste0("inferred type is ", rt_to_string(inferred), ", expected ", rt_to_string(expected), ". See ", ERROR_URL_298))
+        stop(paste0("inferred type is ", rt_to_string(inferred), ", expected ", rt_to_string(expected), ". See ", ERROR_URL_298), call. = FALSE)
       }
     } else if (expected$origin == inferred$origin) {
       return()
     } else {
-      stop(paste0("inferred type is ", rt_to_string(inferred), ", expected ", rt_to_string(expected), ". See ", ERROR_URL_298))
+      stop(paste0("inferred type is ", rt_to_string(inferred), ", expected ", rt_to_string(expected), ". See ", ERROR_URL_298), call. = FALSE)
     }
   } else if (!is.null(expected$args) && !is.null(inferred$args)) {
     if (expected$origin == "Vec" && inferred$origin == "Tuple") {
@@ -211,10 +211,10 @@ rt_assert_is_similar <- function(expected, inferred) {
       }
     }
     if (expected$origin != inferred$origin) {
-      stop(paste0("inferred type is ", inferred$origin, ", expected ", expected$origin, ". See ", ERROR_URL_298))
+      stop(paste0("inferred type is ", inferred$origin, ", expected ", expected$origin, ". See ", ERROR_URL_298), call. = FALSE)
     }
     if (length(expected$args) != length(inferred$args)) {
-      stop(paste0("inferred type has ", length(inferred$args), " arg(s), expected ", length(expected$args), " arg(s). See ", ERROR_URL_298))
+      stop(paste0("inferred type has ", length(inferred$args), " arg(s), expected ", length(expected$args), " arg(s). See ", ERROR_URL_298), call. = FALSE)
     }
 
     for (pair in mapply(list, expected$args, inferred$args, SIMPLIFY = FALSE)) {
@@ -222,7 +222,7 @@ rt_assert_is_similar <- function(expected, inferred) {
     }
   } else {
     # inferred type differs in structure
-    stop(paste0("inferred type is ", rt_to_string(inferred), ", expected ", rt_to_string(expected), ". See ", ERROR_URL_298))
+    stop(paste0("inferred type is ", rt_to_string(inferred), ", expected ", rt_to_string(expected), ". See ", ERROR_URL_298), call. = FALSE)
   }
 }
 # nolint end
@@ -241,8 +241,8 @@ rt_substitute <- function(rt, ...) {
     return(rt)
   }
 
-  args <- lapply(rt$args, function(arg) rt_substitute(arg, ...)) # nolint: unnecessary_lambda_linter.
-  new_runtime_type(rt$origin, args)
+  type_args <- lapply(rt$args, function(arg) rt_substitute(arg, ...)) # nolint: unnecessary_lambda_linter.
+  new_runtime_type(rt$origin, type_args)
 }
 
 get_atom <- function(type_name) {
@@ -284,7 +284,7 @@ parse_or_infer <- function(type_name, public_example) {
     return(rt_infer(public_example))
   }
 
-  stop("either type_name or public_example must be passed")
+  stop("either type_name or public_example must be passed", call. = FALSE)
 }
 
 pass_through <- function(x) x
