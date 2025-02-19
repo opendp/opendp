@@ -53,7 +53,7 @@ perhaps on a remote server.
         >>> import polars as pl
 
         >>> context = dp.Context.compositor(
-        ...     data=pl.LazyFrame({}),
+        ...     data=pl.LazyFrame({}), # dummy data here on the client
         ...     privacy_unit=dp.unit_of(contributions=1),
         ...     privacy_loss=dp.loss_of(epsilon=1.0),
         ...     split_evenly_over=1,
