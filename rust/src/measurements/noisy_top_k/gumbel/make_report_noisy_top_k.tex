@@ -161,9 +161,9 @@ The data-independent runtime error requirement is otherwise satisfied.
     and on line \ref{fn-inf-cast} the distance type is conservatively casted to float.
 
     By Theorem~\ref{fn-implementation-equivalence}, \function implements $\mathcal{M}_\mathrm{RV}$,
-    where RV denotes the associated noise distribution of \texttt{output\_measure} as defined in \rustdoc{measurements/make\_noisy\_top\_k/trait}{SelectionMeasure}.
+    where RV denotes the associated noise distribution of \texttt{output\_measure} as defined in \rustdoc{measurements/make\_noisy\_top\_k/trait}{TopKMeasure}.
     Since \din denotes the range distance, and \function implements $\mathcal{M}_\mathrm{RV}$,
-    then the preconditions for \rustdoc{measurements/make\_noisy\_top\_k/trait}{SelectionMeasure}\texttt{.privacy\_map} on line \ref{fn-privacy-map-call} are met.
+    then the preconditions for \rustdoc{measurements/make\_noisy\_top\_k/trait}{TopKMeasure}\texttt{.privacy\_map} on line \ref{fn-privacy-map-call} are met.
     The postcondition on the value returned is then consistent with the privacy guarantee of the mechanism.
 \end{proof} 
  

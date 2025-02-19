@@ -1,4 +1,5 @@
 use dashu::float::FBig;
+use opendp_derive::proven;
 
 use crate::{
     error::Fallible,
@@ -14,6 +15,7 @@ use std::cmp::Ordering::{self, *};
 #[cfg(test)]
 mod test;
 
+#[proven]
 /// # Proof Definition
 /// `scale` must be non-negative.
 ///
@@ -80,6 +82,7 @@ where
     Ok(k_pairs.into_iter().map(|(i, _)| i).collect())
 }
 
+#[proven]
 /// Returns the top k elements from the iterator, using a heap to track the top k elements.
 /// Optimized for the case where k is small compared to the number of elements in the iterator.
 ///
@@ -115,6 +118,7 @@ pub(crate) fn top<T>(
     })
 }
 
+#[proven]
 /// # Proof Definition
 /// `x` must be partitioned by `pred`.
 /// `pred` may mutate its argument, but not change its true value used for comparisons.
@@ -128,6 +132,7 @@ pub fn partition_point_mut<T>(
     binary_search_by_mut(x, |x_i| Ok(if pred(x_i)? { Less } else { Greater }))
 }
 
+#[proven]
 /// # Proof Definition
 /// `f` may mutate its argument, but not change its true value used for comparisons.
 ///

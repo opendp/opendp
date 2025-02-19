@@ -1,5 +1,5 @@
 # type: ignore
-class ZeroConcentratedDivergence(SelectionMeasure):
+class RangeDivergence(TopKMeasure):
     ONE_SHOT = True
     RV = GumbelRV
 
