@@ -27,31 +27,37 @@ pub trait CheckAtom: CheckNull + Sized + Clone + PartialEq + Debug + Send + Sync
     fn is_bounded(&self, _bounds: Bounds<Self>) -> Fallible<bool> {
         fallible!(FailedFunction, "bounds check is not implemented")
     }
-    fn check_member(&self, bounds: Option<Bounds<Self>>, nullable: bool) -> Fallible<bool> {
+    fn check_member(&self, bounds: Option<Bounds<Self>>, nan: bool) -> Fallible<bool> {
         if let Some(bounds) = bounds {
             if !self.is_bounded(bounds)? {
                 return Ok(false);
             }
         }
-        if !nullable && self.is_null() {
+        if !nan && self.is_null() {
             return Ok(false);
         }
         Ok(true)
     }
 }
 
-/// Checks if a value is null.
+/// Checks if a value is nan.
 ///
 /// Since [`crate::domains::AtomDomain`] may or may not contain null values,
 /// this trait is necessary for its member check.
 pub trait CheckNull {
     /// # Proof Definition
-    /// For any `value` of type `Self`, returns true if is null, otherwise false.
-    fn is_null(&self) -> bool;
+    /// A constant that is true if the type can represent null values.
+    const NULLABLE: bool;
+
+    /// # Proof Definition
+    /// For any `self` of type `Self`, returns true if null.
+    fn is_null(&self) -> bool {
+        Self::NULLABLE
+    }
 }
 
-/// Defines an example null value inherent to `Self`.
-pub trait InherentNull: CheckNull {
+/// Defines an example NaN value inherent to `Self`.
+pub trait HasNull: CheckNull {
     /// # Proof Definition
     /// NULL is a constant such that `Self::is_null(Self::NULL)` is true.
     const NULL: Self;
@@ -261,29 +267,31 @@ macro_rules! impl_CheckAtom_simple {
 }
 impl_CheckAtom_simple!(bool String char &str);
 
-macro_rules! impl_CheckNull_for_non_nullable {
+macro_rules! impl_CheckNull_for_non_null_able {
     ($($ty:ty),+) => {
         $(impl CheckNull for $ty {
-            #[inline]
-            fn is_null(&self) -> bool {false}
+            const NULLABLE: bool = false;
         })+
     }
 }
-impl_CheckNull_for_non_nullable!(
+impl_CheckNull_for_non_null_able!(
     u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, bool, String, &str, char, usize, isize
 );
 
 #[cfg(feature = "polars")]
-impl_CheckNull_for_non_nullable!(chrono::NaiveDate);
+impl_CheckNull_for_non_null_able!(chrono::NaiveDate);
 #[cfg(feature = "polars")]
-impl_CheckNull_for_non_nullable!(chrono::NaiveTime);
+impl_CheckNull_for_non_null_able!(chrono::NaiveTime);
 
 impl<T1: CheckNull, T2: CheckNull> CheckNull for (T1, T2) {
+    const NULLABLE: bool = T1::NULLABLE || T2::NULLABLE;
     fn is_null(&self) -> bool {
         self.0.is_null() || self.1.is_null()
     }
 }
 impl<T: CheckNull> CheckNull for Option<T> {
+    const NULLABLE: bool = true;
+
     #[inline]
     fn is_null(&self) -> bool {
         if let Some(v) = self {
@@ -296,33 +304,28 @@ impl<T: CheckNull> CheckNull for Option<T> {
 macro_rules! impl_CheckNull_for_float {
     ($($ty:ty),+) => {
         $(impl CheckNull for $ty {
+            const NULLABLE: bool = true;
+
             #[inline]
-            fn is_null(&self) -> bool {self.is_nan()}
+            fn is_null(&self) -> bool {<$ty>::is_nan(*self)}
         })+
     }
 }
 impl_CheckNull_for_float!(f64, f32);
 impl CheckNull for RBig {
-    fn is_null(&self) -> bool {
-        self.denominator().is_zero()
-    }
+    const NULLABLE: bool = false;
 }
 impl CheckNull for IBig {
-    fn is_null(&self) -> bool {
-        false
-    }
+    const NULLABLE: bool = false;
 }
 #[cfg(feature = "contrib")]
 impl<Q, A> CheckNull for Queryable<Q, A> {
-    #[inline]
-    fn is_null(&self) -> bool {
-        false
-    }
+    const NULLABLE: bool = false;
 }
 
 // TRAIT InherentNull
 macro_rules! impl_inherent_null_float {
-    ($($ty:ty),+) => ($(impl InherentNull for $ty {
+    ($($ty:ty),+) => ($(impl HasNull for $ty {
         const NULL: Self = Self::NAN;
     })+)
 }

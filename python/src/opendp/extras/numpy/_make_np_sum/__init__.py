@@ -20,6 +20,12 @@ def make_np_sum(input_domain: Domain, input_metric: Metric) -> Transformation:
 
     dp.assert_features("contrib", "floating-point")
 
+    if not str(input_domain).startswith("NPArray2Domain"):
+        raise ValueError("input_domain must be NPArray2Domain")  # pragma: no cover
+    
+    if input_domain.descriptor.nan:
+        raise ValueError("input_domain must not permit NaN elements")  # pragma: no cover
+
     input_desc = input_domain.descriptor
     norm = input_desc.norm
     if norm is None:
@@ -37,7 +43,7 @@ def make_np_sum(input_domain: Domain, input_metric: Metric) -> Transformation:
     return _make_transformation(
         input_domain,
         input_metric,
-        dp.vector_domain(dp.atom_domain(T=input_desc.T)),
+        dp.vector_domain(dp.atom_domain(T=input_desc.T, nan=False)),
         output_metric(T=input_desc.T),
         lambda arg: arg.sum(axis=0),
         stability,

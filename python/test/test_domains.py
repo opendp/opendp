@@ -17,19 +17,19 @@ def test_atom_domain():
     assert atom_domain.carrier_type == dp.i32
     assert atom_domain.bounds == (1, 2)
 
-    atom_domain = dp.atom_domain(T=float, nullable=True)
+    atom_domain = dp.atom_domain(T=float, nan=True)
     assert atom_domain != str(atom_domain)
-    assert atom_domain.nullable
+    assert atom_domain.nan
 
 
 def test_option_domain():
-    atom_domain = dp.atom_domain(bounds=(1.0, 2.0), nullable=True)
+    atom_domain = dp.atom_domain(bounds=(1.0, 2.0), nan=True)
     option_domain = dp.option_domain(atom_domain)
     assert option_domain.element_domain == atom_domain
 
 
 def test_series_domain():
-    atom_domain = dp.atom_domain(bounds=(1.0, 2.0), nullable=True)
+    atom_domain = dp.atom_domain(bounds=(1.0, 2.0), nan=True)
     series_domain = dp.series_domain("A", atom_domain)
     assert series_domain.name == "A"
     assert series_domain.element_domain == atom_domain
@@ -37,7 +37,7 @@ def test_series_domain():
 
 
 def test_lazyframe_domain_series():
-    atom_domain = dp.atom_domain(bounds=(1.0, 2.0), nullable=True)
+    atom_domain = dp.atom_domain(bounds=(1.0, 2.0), nan=True)
     series_domain = dp.series_domain("A", atom_domain)
     frame_domain = dp.lazyframe_domain([series_domain])
 
@@ -47,7 +47,7 @@ def test_lazyframe_domain_series():
 
 def test_lazyframe_domain_margins():
     import_optional_dependency("polars")
-    atom_domain = dp.atom_domain(bounds=(1.0, 2.0), nullable=True)
+    atom_domain = dp.atom_domain(bounds=(1.0, 2.0), nan=True)
     series_domain = dp.series_domain("A", atom_domain)
     frame_domain = dp.with_margin(
         dp.lazyframe_domain([series_domain]),
@@ -88,7 +88,7 @@ def test_lazyframe_domain_margins():
 
 
 def test_vector_domain():
-    atom_domain = dp.atom_domain(bounds=(1.0, 2.0), nullable=True)
+    atom_domain = dp.atom_domain(bounds=(1.0, 2.0), nan=True)
     vector_domain = dp.vector_domain(atom_domain, size=10)
     assert vector_domain.size == 10
     assert vector_domain.element_domain == atom_domain

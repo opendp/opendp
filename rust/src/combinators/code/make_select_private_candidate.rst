@@ -1,7 +1,7 @@
 >>> import opendp.prelude as dp
 >>> dp.enable_features("contrib")
 >>> threshold = 23
->>> space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+>>> space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
 ...
 >>> # For demonstration purposes-- construct a measurement that releases
 >>> # a tuple with a differentially private score and value.

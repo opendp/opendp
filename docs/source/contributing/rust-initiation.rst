@@ -46,7 +46,7 @@ Transformations are structs (`see chapter
        pub function: Function<DI, DO>,
        pub input_metric: MI,
        pub output_metric: MO,
-       pub stability_relation: StabilityRelation<MI, MO>,
+       pub stability_map: StabilityMap<MI, MO>,
    }
 
 This struct has four generics (`see chapter
@@ -82,7 +82,7 @@ We now take a closer look at each of the struct members.
        ...
 
 The input and output domains strictly define the set of permissible
-input and output values. Examples of metrics are ``AtomDomain``,
+input and output values. Examples of domains are ``AtomDomain``,
 ``VectorDomain``, ``MapDomain`` and ``DataFrameDomain``. When you
 attempt to chain any two transformations, the output domain of the first
 transformation must match the input domain of the second transformation
@@ -159,7 +159,7 @@ Invoking this function triggers a similar process as the function did:
             3
 
 When any two compatible transformations are chained, the resulting
-transformation contains a functional composition of the relations.
+transformation contains a functional composition of the maps.
 
 Ultimately, all pieces are used to construct the new transformation:
 
@@ -174,7 +174,7 @@ Ultimately, all pieces are used to construct the new transformation:
 | input_metric_1       | output_metric_1 ==   | output_metric_2      |
 |                      | input_metric_2       |                      |
 +----------------------+----------------------+----------------------+
-| stability_relation_1 | composed with        | stability_relation_2 |
+| stability_map_1      | composed with        | stability_map_2      |
 +----------------------+----------------------+----------------------+
 
 As you’ve seen above, when we want to create a transformation, we use
@@ -216,7 +216,7 @@ provided. I’ll break it down into three parts.
                arg.iter().map(|v| TOA::round_cast(v.clone()).unwrap_or_default()).collect()),
            input_metric.clone(),
            input_metric,
-           StabilityRelation::new_from_constant(1))
+           StabilityMap::new_from_constant(1))
    }
 
 The first part is the function signature:
@@ -294,7 +294,7 @@ returns a Transformation struct.
                arg.iter().map(|v| TOA::round_cast(v.clone()).unwrap_or_default()).collect()),
            input_metric.clone(),
            input_metric,
-           StabilityRelation::new_from_constant(1))
+           StabilityMap::new_from_constant(1))
    }
 
 Each argument corresponds to a struct member. To make the ``Function``,
@@ -310,7 +310,7 @@ chapter
 13.2 <https://doc.rust-lang.org/stable/book/ch13-02-iterators.html>`__).
 
 We also take advantage of a convenient constructor for building
-``c``-stable relations. Since the cast function is row-by-row, it is
+a stability map representing a ``c``-stable relation. Since the cast function is row-by-row, it is
 1-stable.
 
 Measurement Structure

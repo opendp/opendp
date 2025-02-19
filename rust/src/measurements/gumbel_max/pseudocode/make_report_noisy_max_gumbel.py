@@ -5,8 +5,8 @@ def make_report_noisy_max_gumbel(
     scale: QO, 
     optimize: Union[Literal["max"], Literal["min"]]
 ) -> Measurement:
-    if input_domain.element_domain.nullable:
-        raise ValueError("input domain must be non-nullable")
+    if input_domain.element_domain.nan:
+        raise ValueError("input domain must be non-nan")
 
     if scale < 0:
         raise ValueError("scale must be non-negative")

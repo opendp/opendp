@@ -26,7 +26,7 @@ fn test_lit() -> Fallible<()> {
     assert_eq!(actual, expect);
 
     let series_domain = &t_const.output_domain.column;
-    assert_eq!(series_domain.atom_domain::<f64>()?.nullable(), false);
+    assert_eq!(series_domain.atom_domain::<f64>()?.nan(), false);
     assert_eq!(series_domain.nullable, false);
 
     Ok(())

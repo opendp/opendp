@@ -65,7 +65,7 @@ where
     f64: InfCast<TV>,
     (MapDomain<AtomDomain<TK>, AtomDomain<TV>>, L1Distance<TV>): MetricSpace,
 {
-    if input_domain.value_domain.nullable() {
+    if input_domain.value_domain.nan() {
         return fallible!(FailedFunction, "values must be non-null");
     }
 

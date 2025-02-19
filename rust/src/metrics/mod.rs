@@ -347,8 +347,8 @@ impl<T: CheckAtom, const P: usize, Q> MetricSpace
     for (VectorDomain<AtomDomain<T>>, LpDistance<P, Q>)
 {
     fn check_space(&self) -> Fallible<()> {
-        if self.0.element_domain.nullable() {
-            fallible!(MetricSpace, "LpDistance requires non-nullable elements")
+        if self.0.element_domain.nan() {
+            fallible!(MetricSpace, "LpDistance requires non-nan elements")
         } else {
             Ok(())
         }
@@ -360,8 +360,8 @@ where
     K: Eq + Hash,
 {
     fn check_space(&self) -> Fallible<()> {
-        if self.0.value_domain.nullable() {
-            return fallible!(MetricSpace, "LpDistance requires non-nullable elements");
+        if self.0.value_domain.nan() {
+            return fallible!(MetricSpace, "LpDistance requires non-nan elements");
         } else {
             Ok(())
         }
@@ -420,11 +420,8 @@ impl<Q> Metric for AbsoluteDistance<Q> {
 }
 impl<T: CheckAtom, Q> MetricSpace for (AtomDomain<T>, AbsoluteDistance<Q>) {
     fn check_space(&self) -> Fallible<()> {
-        if self.0.nullable() {
-            fallible!(
-                MetricSpace,
-                "AbsoluteDistance requires non-nullable elements"
-            )
+        if self.0.nan() {
+            fallible!(MetricSpace, "AbsoluteDistance requires non-nan elements")
         } else {
             Ok(())
         }
@@ -510,11 +507,8 @@ impl<T: CheckAtom> MetricSpace
     )
 {
     fn check_space(&self) -> Fallible<()> {
-        if self.0.element_domain.nullable() {
-            fallible!(
-                MetricSpace,
-                "PartitionDistance requires non-nullable elements"
-            )
+        if self.0.element_domain.nan() {
+            fallible!(MetricSpace, "PartitionDistance requires non-nan elements")
         } else {
             Ok(())
         }
@@ -643,8 +637,8 @@ impl<Q> Metric for LInfDistance<Q> {
 
 impl<T: CheckAtom> MetricSpace for (VectorDomain<AtomDomain<T>>, LInfDistance<T>) {
     fn check_space(&self) -> Fallible<()> {
-        if self.0.element_domain.nullable() {
-            fallible!(MetricSpace, "LInfDistance requires non-nullable elements")
+        if self.0.element_domain.nan() {
+            fallible!(MetricSpace, "LInfDistance requires non-nan elements")
         } else {
             Ok(())
         }

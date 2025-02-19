@@ -646,7 +646,7 @@ def _series_domain_from_field(field) -> Domain:
     if T is None:
         raise ValueError(f"unrecognized dtype: {dtype}")  # pragma: no cover
 
-    element_domain = option_domain(atom_domain(T=T, nullable=T in {"f32", "f64"}))
+    element_domain = option_domain(atom_domain(T=T))
     return series_domain(name, element_domain)
 
 
