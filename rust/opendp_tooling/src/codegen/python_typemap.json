@@ -47,5 +47,5 @@
     "ExtrinsicObject *": "ExtrinsicObjectPtr",
     "FfiResult": "FfiResult",
     "CallbackFn": "CallbackFnPtr",
-    "TransitionFn": "TransitionFn"
+    "TransitionFn": "TransitionFnPtr"
 }

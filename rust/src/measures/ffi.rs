@@ -374,8 +374,7 @@ impl<Q> Measure for TypedMeasure<Q> {
     name = "new_privacy_profile",
     features("contrib", "honest-but-curious"),
     arguments(curve(rust_type = "f64")),
-    returns(rust_type = "PrivacyProfile"),
-    dependencies("c_curve")
+    returns(rust_type = "PrivacyProfile")
 )]
 /// Construct a PrivacyProfile from a user-defined callback.
 ///

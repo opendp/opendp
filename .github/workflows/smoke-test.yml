@@ -355,6 +355,7 @@ jobs:
         run: python tools/r_doc_examples.py
 
       - name: Lint sphinx examples
+        # When lintr updates, this may start to fail due to new linting rules.
         run: Rscript -e 'lintr::lint_dir("docs/source")'
 
       - name: Document
