@@ -8,7 +8,7 @@ use crate::{
     measures::{Approximate, ZeroConcentratedDivergence},
 };
 
-#[bootstrap(features("contrib"), dependencies("$get_dependencies(measurement)"))]
+#[bootstrap(features("contrib"))]
 /// Constructs a new output measurement where the output measure
 /// is casted from `ZeroConcentratedDivergence` to `SmoothedMaxDivergence`.
 ///

@@ -270,17 +270,6 @@ fn generate_c_call(module_name: &str, func: &Function) -> String {
     )
 }
 
-// fn set_dependencies(
-//     dependencies: &Vec<TypeRecipe>
-// ) -> String {
-//     if dependencies.is_empty() {
-//         String::new()
-//     } else {
-//         let dependencies = dependencies.iter().map(|dep| dep.to_r()).collect::<Vec<String>>().join(", ");
-//         format!("output._depends_on({dependencies})")
-//     }
-// }
-
 /// Generate code to convert an SEXP to OpenDP Library C FFI representation.
 ///
 /// Reads the type information in `arg` to know which hand-written C function to call to perform the data conversion.
