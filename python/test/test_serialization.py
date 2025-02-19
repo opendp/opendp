@@ -108,32 +108,30 @@ if pl is not None:
     # but that behavior is tested elsewhere, and can be ignored here.
     @pytest.mark.filterwarnings("ignore::UserWarning")
     @pytest.mark.parametrize(
-        "_readable_name,dp_domain,in_value,out_value",
+        "dp_domain,in_value,out_value",
         [
-            (str(dp_domain), dp_domain, in_value, out_value)
-            for dp_domain, in_value, out_value in [
-                (atom, 10, 100),
-                # TODO: Might not be specifying categorical values correctly, 
-                # but shouldn't error, regardless.
-                # https://github.com/opendp/opendp/issues/2264
-                # (dp.categorical_domain(['A', 'B', 'C']),
-                #  pl.lit("A", dtype=pl.Categorical),
-                #  pl.lit("Z", dtype=pl.Categorical)
-                # ),
-                (
-                    dp.series_domain('name', atom),
-                    pl.Series("name", [1.0, 2.0, 3.0]),
-                    pl.Series("name", ['a', 'b', 'c'])
-                ),
-                (
-                    dp.lazyframe_domain([dp.series_domain('A', atom)]),
-                    pl.LazyFrame({'A': [1.0, 2.0, 3.0]}),
-                    pl.LazyFrame({'A': ['a', 'b', 'c']})
-                )
-            ]
+            (atom, 10, 100),
+            # TODO: Might not be specifying categorical values correctly, 
+            # but shouldn't error, regardless.
+            # https://github.com/opendp/opendp/issues/2264
+            # (dp.categorical_domain(['A', 'B', 'C']),
+            #  pl.lit("A", dtype=pl.Categorical),
+            #  pl.lit("Z", dtype=pl.Categorical)
+            # ),
+            (
+                dp.series_domain('name', atom),
+                pl.Series("name", [1.0, 2.0, 3.0]),
+                pl.Series("name", ['a', 'b', 'c'])
+            ),
+            (
+                dp.lazyframe_domain([dp.series_domain('A', atom)]),
+                pl.LazyFrame({'A': [1.0, 2.0, 3.0]}),
+                pl.LazyFrame({'A': ['a', 'b', 'c']})
+            )
         ],
+        ids=lambda arg: str(arg)
     )
-    def test_serializable_domain(_readable_name, dp_domain, in_value, out_value):
+    def test_serializable_domain(dp_domain, in_value, out_value):
         assert dp_domain.member(in_value)
         assert not dp_domain.member(out_value)
 
