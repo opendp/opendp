@@ -1,0 +1,49 @@
+\documentclass{article} 
+\input{../../lib.sty} 
+\allowdisplaybreaks
+
+\title{\texttt{fn function\_report\_top\_k}} 
+\author{Michael Shoemate} 
+\begin{document}  
+\maketitle 
+ 
+\section{Hoare Triple} 
+\subsection*{Precondition} 
+\subsubsection*{Compiler-verified}
+Types consistent with pseudocode.
+
+\subsubsection*{Caller-verified}
+None
+ 
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/function_report_top_k.py} 
+ 
+\subsection*{Postcondition} 
+
+\begin{theorem}
+    Returns a noninteractive function with no side-effects that, when given a vector of scores $x_i$,
+    returns the indices of the top k $y_i$,
+    where each $y_i = -x_i$ if \texttt{optimize} is \texttt{min}, else $y_i = x_i$.
+
+    The returned function will only error if there are no non-null scores.
+\end{theorem}
+
+\begin{proof}
+    The comparator on line \ref{fn-optimize} effectively flips the sign of the scores if \texttt{optimize} is \texttt{min},
+    therefore each $y_i = -x_i$ if \texttt{optimize} is \texttt{min}, else $y_i = x_i$.
+    This is done to avoid the negation of a signed integer.
+
+    Assume the scores are non-null, as required by the returned function precondition.
+    Then \texttt{max\_sample} on line \ref{fn-max-sample} defines a total ordering on the scores.
+
+    Since the score vector is finite, and \texttt{max\_sample} defines a total ordering,
+    then the preconditions for \rustdoc{measurements/report_noisy_top_k/fn}{top} are met.
+    Therefore on line \ref{fn-top} \texttt{top} returns the pairs with the top $k$ scores.
+    Line \ref{fn-top} then discards the scores, returning only the indices,
+    which is the desired output.
+
+    There is one source of error in the function,
+    when there are no non-null scores in the input vector.
+\end{proof}
+ 
+\end{document} 
