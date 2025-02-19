@@ -3,14 +3,12 @@ import subprocess
 import re
 from collections import defaultdict
 from pathlib import Path
-from channel_tool import first_match
+from channel_tool import match_first_changelog_header, get_changelog_lines
 
 
 def get_prev_version():
-    changelog_path = (Path(__file__).parent.parent / 'CHANGELOG.md')
-    lines = changelog_path.read_text().splitlines()
-    url_base = "https://github.com/opendp/opendp/compare/"
-    i, match = first_match(lines, fr"^## \[(\d+\.\d+\.\d+(?:-\S+)?)\]\({re.escape(url_base)}(\S+)\.\.\.\S+\) - \S+$")
+    # retrieve previous version from the dev changelog entry
+    _, match = match_first_changelog_header(get_changelog_lines())
     return match.group(2)
 
 

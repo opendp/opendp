@@ -45,7 +45,7 @@ showing the source changes from the previous version.
 - List -> sequence [#2177](https://github.com/opendp/opendp/pull/2177)
 
 
-## [0.12.0](https://github.com/opendp/opendp/compare/v0.11.1...v0.12.0) - 2025-02-18
+## [0.12.0](https://github.com/opendp/opendp/compare/v0.11.1...v0.12.0) - 2024-12-19
 
 
 ### Added
