@@ -18,7 +18,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field, replace
 import os
 from typing import Any, Literal, Sequence
-from opendp._lib import lib_path, import_optional_dependency
+from opendp._lib import AnyObjectPtr, lib_path, import_optional_dependency
 from opendp.mod import (
     ChangeOneIdDistance,
     Domain,

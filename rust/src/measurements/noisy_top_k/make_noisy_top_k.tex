@@ -1,5 +1,5 @@
 \documentclass{article} 
-\input{../../../lib.sty} 
+\input{../../lib.sty} 
 \allowdisplaybreaks
 
 \title{\texttt{fn make\_noisy\_top\_k}} 
@@ -10,9 +10,8 @@
 Proves soundness of \rustdoc{measurements/fn}{make\_noisy\_top\_k}  
 in \asOfCommit{mod.rs}{f5bb719}.\\ 
 \texttt{make\_noisy\_top\_k} returns a Measurement that  
-noisily selects the index of the greatest score from a vector of input scores. 
-This released index can be later be used to index into a public candidate set (postprocessing). 
- 
+noisily selects the indices of the greatest scores from a vector of input scores. 
+
 \section{Background}
 This mechanism fulfills the same purpose as the exponential mechanism, 
 where the release is the best candidate's index from a finite set.
@@ -35,7 +34,7 @@ As a candidate's score $s_k$ increases, the candidate becomes exponentially more
  
 This equation introduces a new temperature parameter, $\tau$, 
 which calibrates how distinguishable scores are from each other. 
-As temperature increases, the categorical output distribution tends towards higher entropy/uniformity and becomes more privacy preserving. 
+As temperature increases, the categorical output distribution tends towards higher entropy/uniformity and becomes more privacy-preserving. 
 As temperature decreases, the categorical distribution tends towards a one-hot vector 
 (where each candidate has zero probability, except for the candidate with the maximum score, which has probability one), 
 becoming less private. 
@@ -81,6 +80,19 @@ Gumbel noise is used when \texttt{output\_measure} is \texttt{ZeroConcentratedDi
 and exponential noise is used when \texttt{output\_measure} is \texttt{MaxDivergence}.
 These choices of noise distributions minimize the necessary noise variance for their respective privacy measures.
 
+Since the permute-and-flip mechanism is equivalent to report noisy max exponential,
+and it can be implemented with discrete distributions,
+the permute-and-flip mechanism is used instead.
+
+\subsection{Top K} 
+In the case of Gumbel noise, the distribution of the top k indices is equivalent to adding gumbel noise once,
+and then returning the top k indices.
+This one-shot mechanism avoids needing to peel the selected candidate from the candidate set and re-run the mechanism.
+
+However, this peeling routine is still used for the permute-and-flip mechanism,
+to release the top k elements.
+The privacy argument proceeds via composition.
+
 \section{Hoare Triple} 
 \subsection*{Precondition} 
 \subsubsection*{Compiler-verified}
@@ -100,74 +112,28 @@ None
  
 \begin{theorem}
     \label{postcondition}
-    \validMeasurement{\texttt{input\_domain, input\_metric, output\_measure, k, scale, optimize, MO, TIA}}{\texttt{make\_noisy\_top\_k}}  
-\end{theorem}
- 
-\section{Proof} 
-
-\subsection{Data-independent runtime errors.}
-There are two sources of runtime errors in the function:
-
-\texttt{greater\_than}, which can in turn only occur due to lack of system entropy.
-This kind of failure is generally considered data-independent, where a lack of system entropy would occur regardless of the choice of input datasets.
-However, failure due to lack of entropy can be data-dependent in this case.
-
-An input score vector with all the same scores 
-is expected to require more draws from the random number generator,
-as the candidates will be very competitive, 
-as compared to a score vector with widely different scores. 
-This technically results in input datasets with more homogeneity being more likely to exhaust entropy and raise an error,
-violating the data-independent runtime error requirement.
-This is an unlikely exploit in practice, due to the difficulty of exhausting the RNG's entropy.
-
-The data-independent runtime error requirement is otherwise satisfied.
-
-\subsection{Privacy Guarantee} 
-
-\begin{definition}
-    \label{def:mechanism}
-    $\mathcal{M}_{\mathrm{RV}}(x)$ is a noninteractive mechanism that,
-    when passed a vector of non-null scores,
-    returns the indices of the top $k$ noisy processed scores $z_i$,
-    where each $z_i \sim \mathrm{RV}(\mathrm{shift}=y_i, \mathrm{scale}=\texttt{scale})$,
-    and each $y_i = -x_i$ if \texttt{optimize} is \texttt{min}, else $y_i = x_i$.
-\end{definition}
- 
-\begin{theorem}
-    \label{fn-implementation-equivalence}
-    \function implements $\mathcal{M}$.
-
-    \function will return a data-dependent error if entropy is exhausted.
-    Otherwise the returned function will only error if there are no non-null scores.
+    \validMeasurement{\texttt{input\_domain, input\_metric, output\_measure, k, scale, negate, MO, TIA}}{\texttt{make\_noisy\_top\_k}}  
 \end{theorem}
 
-\begin{proof}[Proof of Theorem~\ref{fn-implementation-equivalence}]
-    By line~\ref{check-non-negative-scale} the scale is non-negative.
+\begin{proof}[Proof of data-independent errors.]
+    By the postcondition of \rustdoc{measurements/noisy_top_k/trait}{TopKMeasure}\texttt{noisy\_top\_k},
+    the only source of error is due to entropy exhaustion, which could be data-dependent, 
+    due to differing number of expected random draws depending on the input dataset.
 
-    If scale is zero, then since the preconditions for \rustdoc{measurements/noisy_top_k/fn}{function\_top\_k} are met,
-    then by its postcondition, since scale is zero, \function is equivalent to $\mathcal{M}_\mathrm{RV}(x)$ as defined in \ref{def:mechanism}.
-    This is because RV is from a location-scale family of distributions, and the scale parameter is zero.
-
-    If scale is positive, then since the preconditions for \rustdoc{measurements/report_noisy_top_k/fn}{function\_noisy\_top\_k} are met,
-    then by its postcondition, since scale is positive, \function is equivalent to $\mathcal{M}_\mathrm{RV}(x)$.
-
-    Therefore, \function is equivalent to $\mathcal{M}_\mathrm{RV}(x)$.
+    Therefore, the mechanism only satisfies the requirement for data-independent errors conditioned on entropy not being exhausted.
 \end{proof}
 
-\begin{proof}[Proof for \ref{postcondition} Privacy Guarantee]
-    The privacy map is defined on line \ref{fn-privacy-map}.
-    \din denotes the greatest distance between adjacent score vectors in terms of the \rustdoc{metrics/struct}{LInfDistance} metric.
-    By the postcondition of \rustdoc{metrics/struct}{LInfDistance}\texttt{.range\_distance}, \texttt{d\_in} is converted to the range distance,
-    and on line \ref{fn-inf-cast} the distance type is conservatively casted to float.
+\begin{proof}[Proof of privacy guarantee.]
+    When \din\ is zero, by line~\ref{din-non-zero}, the privacy loss is zero, satisfying the postcondition.
+    Otherwise when scale is zero, by line~\ref{scale-zero}, the privacy loss is infinite, also satisfying the postcondition.
 
-    By Theorem~\ref{fn-implementation-equivalence}, \function implements $\mathcal{M}_\mathrm{RV}$,
-    where RV denotes the associated noise distribution of \texttt{output\_measure} as defined in \rustdoc{measurements/make\_noisy\_top\_k/trait}{SelectionMeasure}.
-    Since \din denotes the range distance, and \function implements $\mathcal{M}_\mathrm{RV}$,
-    then the preconditions for \rustdoc{measurements/make\_noisy\_top\_k/trait}{SelectionMeasure}\texttt{.privacy\_map} on line \ref{fn-privacy-map-call} are met.
-    The postcondition on the value returned is then consistent with the privacy guarantee of the mechanism.
-\end{proof} 
- 
-\bibliographystyle{plain} 
-\bibliography{references.bib} 
- 
+    By the checks on lines~\ref{check-non-nan} and \ref{check-non-negative-scale}, 
+    the preconditions for \rustdoc{measurements/noisy_top_k/trait}{TopKMeasure}\texttt{noisy\_top\_k} are satisfied.
+    Additionally by the checks on lines~\ref{din-non-neg}, \ref{din-non-zero} and \ref{scale-zero}, 
+    the preconditions for \rustdoc{measurements/noisy_top_k/trait}{TopKMeasure}\texttt{privacy\_map} are satisfied.
+
+    By the postcondition of \rustdoc{measurements/noisy_top_k/trait}{TopKMeasure} and adaptive composition,
+    the \dout on line~\ref{fn-privacy-map-call} satisfies the postcondition.
+\end{proof}
+
 \end{document} 

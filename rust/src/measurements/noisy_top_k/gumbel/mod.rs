@@ -1,4 +1,5 @@
 use dashu::float::FBig;
+use opendp_derive::proven;
 
 use crate::{
     error::Fallible,
@@ -14,35 +15,33 @@ use std::cmp::Ordering::{self, *};
 #[cfg(test)]
 mod test;
 
+#[proven]
 /// # Proof Definition
 /// `scale` must be non-negative.
 ///
-/// Returns a noninteractive function with no side-effects that,
-/// when given a vector of non-null scores,
-/// returns the indices of the top k $z_i$,
-/// where each $z_i \sim RV(\mathrm{shift}=y_i, \mathrm{scale}=\texttt{scale})$,
-/// and each $y_i = -x_i$ if \texttt{optimize} is \texttt{min}, else $y_i = x_i$.
+/// Returns the index of the top element $z_i$,
+/// where each $z_i \sim \mathrm{Gumbel}(\mathrm{shift}=y_i, \mathrm{scale}=\texttt{scale})$,
+/// and each $y_i = -x_i$ if \texttt{negate}, else $y_i = x_i$,
+/// $k$ times with removal.
 ///
-/// The returned function will only return an error if entropy is exhausted.
+/// Each $x_i$ must be non-null.
+///
+/// The function will only return an error if entropy is exhausted.
 /// If an error is returned, the error is data-dependent.
-pub fn noisy_top_k_gumbel<TIA: Number>(
-    x: &[TIA],
-    scale: FBig,
-    k: usize,
-    negate: bool,
-) -> Fallible<Vec<usize>>
+pub fn gumbel_top_k<T: Number>(x: &[T], scale: f64, k: usize, negate: bool) -> Fallible<Vec<usize>>
 where
-    FBig: TryFrom<TIA>,
+    FBig: TryFrom<T> + TryFrom<f64>,
 {
+    let scale = FBig::try_from(scale)?;
     if scale.is_zero() {
         // If scale is zero, we can just return the top k indices.
         // This is a special case that avoids the need to sample.
         let cmp = match negate {
-            false => |l: &mut (usize, &TIA), r: &mut (usize, &TIA)| Ok(l.1 > r.1),
-            true => |l: &mut (usize, &TIA), r: &mut (usize, &TIA)| Ok(l.1 < r.1),
+            false => |l: &mut (usize, &T), r: &mut (usize, &T)| Ok(l.1 > r.1),
+            true => |l: &mut (usize, &T), r: &mut (usize, &T)| Ok(l.1 < r.1),
         };
 
-        let x_top = top(x.iter().enumerate(), k, cmp)?;
+        let x_top = top_k(x.iter().enumerate(), k, cmp)?;
         return Ok(x_top.into_iter().map(|(i, _)| i).collect());
     }
 
@@ -74,12 +73,13 @@ where
         });
 
     // Reduce to the k pairs with largest samples.
-    let k_pairs = top(iter, k, |l, r| l.1.greater_than(&mut r.1))?;
+    let k_pairs = top_k(iter, k, |l, r| l.1.greater_than(&mut r.1))?;
 
     // Discard samples, keep indices.
     Ok(k_pairs.into_iter().map(|(i, _)| i).collect())
 }
 
+#[proven]
 /// Returns the top k elements from the iterator, using a heap to track the top k elements.
 /// Optimized for the case where k is small compared to the number of elements in the iterator.
 ///
@@ -89,7 +89,7 @@ where
 /// Returns the top k elements from the iterator in sorted order.
 ///
 /// Only returns an error if `greater_than` returns an error.
-pub(crate) fn top<T>(
+pub(crate) fn top_k<T>(
     mut iter: impl Iterator<Item = T>,
     k: usize,
     greater_than: impl Fn(&mut T, &mut T) -> Fallible<bool>,
@@ -115,6 +115,7 @@ pub(crate) fn top<T>(
     })
 }
 
+#[proven]
 /// # Proof Definition
 /// `x` must be partitioned by `pred`.
 /// `pred` may mutate its argument, but not change its true value used for comparisons.
@@ -128,6 +129,7 @@ pub fn partition_point_mut<T>(
     binary_search_by_mut(x, |x_i| Ok(if pred(x_i)? { Less } else { Greater }))
 }
 
+#[proven]
 /// # Proof Definition
 /// `f` may mutate its argument, but not change its true value used for comparisons.
 ///

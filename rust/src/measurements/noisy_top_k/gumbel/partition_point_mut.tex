@@ -1,5 +1,5 @@
 \documentclass{article} 
-\input{../../lib.sty} 
+\input{../../../lib.sty} 
 \allowdisplaybreaks
 
 \title{\texttt{fn partition\_point\_mut}} 
@@ -30,7 +30,7 @@ Types consistent with pseudocode.
 \end{theorem}
 
 \begin{proof}
-    By the postcondition of \rustdoc{measurements/report\_noisy\_top\_k/fn}{binary\_search\_by\_mut},
+    By the postcondition of \rustdoc{measurements/noisy\_top\_k/fn}{binary\_search\_by\_mut},
     the return value is the index of the first element that changes the comparison from \texttt{Less} to \texttt{Greater}.
 
     By the definition of the comparator, this is also the index of the first element of the second partition.

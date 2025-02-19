@@ -463,13 +463,13 @@ set candidates to whole numbers between 20 and 60:
             ... )
             >>> query_median_hours.summarize(alpha=0.05)
             shape: (1, 5)
-            ┌─────────┬──────────────┬──────────────┬───────┬──────────┐
-            │ column  ┆ aggregate    ┆ distribution ┆ scale ┆ accuracy │
-            │ ---     ┆ ---          ┆ ---          ┆ ---   ┆ ---      │
-            │ str     ┆ str          ┆ str          ┆ f64   ┆ f64      │
-            ╞═════════╪══════════════╪══════════════╪═══════╪══════════╡
-            │ HWUSUAL ┆ 0.5-Quantile ┆ GumbelMin    ┆ 360.0 ┆ null     │
-            └─────────┴──────────────┴──────────────┴───────┴──────────┘
+            ┌─────────┬──────────────┬────────────────┬───────┬──────────┐
+            │ column  ┆ aggregate    ┆ distribution   ┆ scale ┆ accuracy │
+            │ ---     ┆ ---          ┆ ---            ┆ ---   ┆ ---      │
+            │ str     ┆ str          ┆ str            ┆ f64   ┆ f64      │
+            ╞═════════╪══════════════╪════════════════╪═══════╪══════════╡
+            │ HWUSUAL ┆ 0.5-Quantile ┆ ExponentialMin ┆ 360.0 ┆ null     │
+            └─────────┴──────────────┴────────────────┴───────┴──────────┘
 
 
 The ``aggregate`` value shows “0.5-Quantile” because ``.dp.median``
@@ -524,15 +524,15 @@ hours:
             ... )
             >>> query_multi_quantiles.summarize()
             shape: (3, 4)
-            ┌───────────────┬───────────────┬──────────────┬────────┐
-            │ column        ┆ aggregate     ┆ distribution ┆ scale  │
-            │ ---           ┆ ---           ┆ ---          ┆ ---    │
-            │ str           ┆ str           ┆ str          ┆ f64    │
-            ╞═══════════════╪═══════════════╪══════════════╪════════╡
-            │ 0.25-Quantile ┆ 0.25-Quantile ┆ GumbelMin    ┆ 3240.0 │
-            │ 0.5-Quantile  ┆ 0.5-Quantile  ┆ GumbelMin    ┆ 1080.0 │
-            │ 0.75-Quantile ┆ 0.75-Quantile ┆ GumbelMin    ┆ 3240.0 │
-            └───────────────┴───────────────┴──────────────┴────────┘
+            ┌───────────────┬───────────────┬────────────────┬────────┐
+            │ column        ┆ aggregate     ┆ distribution   ┆ scale  │
+            │ ---           ┆ ---           ┆ ---            ┆ ---    │
+            │ str           ┆ str           ┆ str            ┆ f64    │
+            ╞═══════════════╪═══════════════╪════════════════╪════════╡
+            │ 0.25-Quantile ┆ 0.25-Quantile ┆ ExponentialMin ┆ 3240.0 │
+            │ 0.5-Quantile  ┆ 0.5-Quantile  ┆ ExponentialMin ┆ 1080.0 │
+            │ 0.75-Quantile ┆ 0.75-Quantile ┆ ExponentialMin ┆ 3240.0 │
+            └───────────────┴───────────────┴────────────────┴────────┘
 
 When you do not set the scale parameter yourself, the privacy budget is
 distributed evenly across each statistic. Judging from the scale

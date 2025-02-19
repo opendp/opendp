@@ -26,7 +26,7 @@ use crate::{
     core::{Domain, Metric, MetricSpace},
     domains::{AtomDomain, BitVectorDomain, MapDomain, VectorDomain, type_name},
     error::Fallible,
-    traits::{CheckAtom, InfAdd},
+    traits::CheckAtom,
 };
 #[cfg(feature = "contrib")]
 use crate::{traits::Hashable, transformations::DataFrameDomain};
@@ -652,29 +652,6 @@ impl<Q> LInfDistance<Q> {
         LInfDistance {
             monotonic,
             _marker: PhantomData,
-        }
-    }
-}
-
-impl<Q: InfAdd> LInfDistance<Q> {
-    /// Translate a distance bound `d_in` wrt the $L_\infty$ metric to a distance bound wrt the range metric.
-    ///
-    /// ```math
-    /// d_{\mathrm{Range}}(x, x') = max_{ij} |(x_i - x'_i) - (x_j - x'_j)|
-    /// ```
-    ///
-    /// The range distance is bounded above by twice the $L_\infty$ distance:
-    /// ```math
-    /// d_{\mathrm{Range}}(x, x') \le \begin{cases}
-    ///     d_\mathrm{\infty}(x, x') & \text{if \texttt{monotonic}} \\
-    ///     2 \cdot d_\mathrm{\infty}(x, x') & \text{otherwise} \\
-    /// \end{cases}
-    /// ```
-    pub fn range_distance(&self, d_in: Q) -> Fallible<Q> {
-        if self.monotonic {
-            Ok(d_in)
-        } else {
-            d_in.inf_add(&d_in)
         }
     }
 }
