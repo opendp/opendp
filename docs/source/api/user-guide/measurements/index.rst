@@ -161,12 +161,13 @@ Refer to :ref:`measure-casting` to convert to approximate DP.
      - ``Approximate<ZeroConcentratedDivergence>``
 
 
-Report Noisy Max
-----------------
+Noisy Top K and Noisy Max
+-------------------------
 
-The report noisy max mechanism is used to privately release the index of the maximum value in a vector.
-This is useful for private selection, and is one instance of the exponential mechanism.
-
+The report noisy top-k mechanism is used to privately release the indices of the maximum k values in a vector.
+This is useful for private selection, and overlaps with the exponential mechanism.
+Exponential noise is added to scores when the output measure is ``MaxDivergence``,
+and Gumbel noise is added when the output measure is ``ZeroConcentratedDivergence``. 
 
 .. list-table::
    :header-rows: 1
@@ -175,21 +176,16 @@ This is useful for private selection, and is one instance of the exponential mec
      - Input Domain
      - Input Metric
      - Output Measure
+   * - :func:`opendp.measurements.make_noisy_top_k`
+     - ``VectorDomain<AtomDomain<T>>``
+     - ``LInfDistance<T>``
+     - ``MaxDivergence`` or ``ZeroConcentratedDivergence``
    * - :func:`opendp.measurements.make_noisy_max`
      - ``VectorDomain<AtomDomain<T>>``
-     - ``LInfDistance<QI>``
-     - ``MaxDivergence``or ``ZeroConcentratedDivergence``
-   * - :func:`opendp.measurements.make_private_quantile`
-     - ``VectorDomain<AtomDomain<T>>``
-     - ``SymmetricDistance`` or ``InsertDeleteDistance``
+     - ``LInfDistance<T>``
      - ``MaxDivergence`` or ``ZeroConcentratedDivergence``
 
-The private quantile mechanism uses the :py:func:`opendp.transformations.make_quantile_score_candidates` scoring function,
-releases the approximate index of the quantile candidate with the best score via the report noisy max mechanism,
-and then returns the corresponding candidate.
-
-Internally, exponential noise is added to scores when the output measure is ``MaxDivergence``,
-and Gumbel noise is added when the output measure is ``ZeroConcentratedDivergence``. 
+Report noisy max is a special case of noisy top k when k equals one.
 
 Randomized Response
 -------------------

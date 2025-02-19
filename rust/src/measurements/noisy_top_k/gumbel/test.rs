@@ -3,35 +3,35 @@ use super::*;
 #[test]
 fn test_top() -> Fallible<()> {
     // Basic test cases
-    let res = top(vec![1, 2, 3].into_iter(), 2, |a, b| Ok(a > b))?;
+    let res = top_k(vec![1, 2, 3].into_iter(), 2, |a, b| Ok(a > b))?;
     assert_eq!(res, vec![3, 2]);
 
     // Test empty input
-    let res: Vec<i32> = top(vec![].into_iter(), 2, |a, b| Ok(a > b))?;
+    let res: Vec<i32> = top_k(vec![].into_iter(), 2, |a, b| Ok(a > b))?;
     assert_eq!(res, Vec::<i32>::new());
 
     // Test k=0
-    let res: Vec<i32> = top(vec![1, 2, 3].into_iter(), 0, |a, b| Ok(a > b))?;
+    let res: Vec<i32> = top_k(vec![1, 2, 3].into_iter(), 0, |a, b| Ok(a > b))?;
     assert_eq!(res, Vec::<i32>::new());
 
     // Test k larger than input
-    let res = top(vec![1, 2].into_iter(), 3, |a, b| Ok(a > b))?;
+    let res = top_k(vec![1, 2].into_iter(), 3, |a, b| Ok(a > b))?;
     assert_eq!(res, vec![2, 1]);
 
     // Test with duplicates
-    let res = top(vec![3, 2, 3, 1, 3].into_iter(), 2, |a, b| Ok(a > b))?;
+    let res = top_k(vec![3, 2, 3, 1, 3].into_iter(), 2, |a, b| Ok(a > b))?;
     assert_eq!(res, vec![3, 3]);
 
     // Test with negative numbers
-    let res = top(vec![-1, -2, -3].into_iter(), 1, |a, b| Ok(a > b))?;
+    let res = top_k(vec![-1, -2, -3].into_iter(), 1, |a, b| Ok(a > b))?;
     assert_eq!(res, vec![-1]);
 
     // Test min instead of max
-    let res = top(vec![1, 2, 3].into_iter(), 2, |a, b| Ok(a < b))?;
+    let res = top_k(vec![1, 2, 3].into_iter(), 2, |a, b| Ok(a < b))?;
     assert_eq!(res, vec![1, 2]);
 
     // Terminates when equal
-    let res = top(vec![1, 2, 2].into_iter(), 2, |a, b| Ok(a > b))?;
+    let res = top_k(vec![1, 2, 2].into_iter(), 2, |a, b| Ok(a > b))?;
     assert_eq!(res, vec![2, 2]);
 
     Ok(())

@@ -212,8 +212,8 @@ def test_noisy_max(measure, d_out):
     input_metric = dp.linf_distance(T=dp.usize)
     meas = (input_domain, input_metric) >> dp.m.then_noisy_max(measure, 1.)
     # fails with very small probability
-    assert meas([0, 0, 20, 40]) == d_out  # because score 3 is by far the greatest
-
+    assert meas([0, 0, 20, 40]) == 3  # because score 3 is by far the greatest
+    assert meas.map(1) == d_out
 
 
 @pytest.mark.parametrize("measure,d_out", [

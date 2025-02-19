@@ -1,14 +1,14 @@
-\documentclass{article} 
-\input{../../lib.sty} 
+\documentclass{article}
+\input{../../../lib.sty}
 \allowdisplaybreaks
 
-\title{\texttt{fn partition\_point\_mut}} 
-\author{Michael Shoemate} 
-\begin{document}  
-\maketitle 
- 
-\section{Hoare Triple} 
-\subsection*{Precondition} 
+\title{\texttt{fn partition\_point\_mut}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle
+
+\section{Hoare Triple}
+\subsection*{Precondition}
 \subsubsection*{Compiler-verified}
 Types consistent with pseudocode.
 
@@ -18,11 +18,11 @@ Types consistent with pseudocode.
     \item \texttt{pred} may mutate its argument, but not change its true value used for comparisons.
 \end{itemize}
 
-\subsection*{Pseudocode} 
-\label{sec:python-pseudocode} 
-\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/partition_point_mut.py} 
- 
-\subsection*{Postcondition} 
+\subsection*{Pseudocode}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/partition_point_mut.py}
+
+\subsection*{Postcondition}
 
 \begin{theorem}
     Returns the index of the partition point according to the given predicate (the index of the first element of the second partition),
@@ -30,10 +30,10 @@ Types consistent with pseudocode.
 \end{theorem}
 
 \begin{proof}
-    By the postcondition of \rustdoc{measurements/report\_noisy\_top\_k/fn}{binary\_search\_by\_mut},
+    By the postcondition of \rustdoc{measurements/noisy\_top\_k/fn}{binary\_search\_by\_mut},
     the return value is the index of the first element that changes the comparison from \texttt{Less} to \texttt{Greater}.
 
     By the definition of the comparator, this is also the index of the first element of the second partition.
 \end{proof}
 
-\end{document} 
+\end{document}

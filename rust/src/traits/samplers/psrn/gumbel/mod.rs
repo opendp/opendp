@@ -5,6 +5,16 @@ use dashu::{float::FBig, rational::RBig};
 mod test;
 
 /// A Gumbel random variable.
+/// Initializes to span all reals.
+///
+/// A random variable follows the Gumbel distribution if it has density
+///
+/// ```math
+/// f(x) = \frac{1}{\beta} e^{-e^{-z} - z}
+/// ```
+///
+/// where $z = \frac{x - \mu}{\beta}$,
+/// $\mu$ is the shift (location) parameter and $\beta$ is the scale parameter.
 #[derive(Clone)]
 pub struct GumbelRV {
     /// finite

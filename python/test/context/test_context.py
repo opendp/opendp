@@ -3,7 +3,6 @@ import pytest
 import logging
 import opendp.prelude as dp
 from opendp._internal import _make_measurement
-import re
 
 def test_unit_of():
     assert dp.unit_of(contributions=3) == (dp.symmetric_distance(), 3)

@@ -1,13 +1,13 @@
 # type: ignore
-def report_noisy_top_k(
-    x: list[TIA], k: usize, scale: FBig, optimize: Literal["min", "max"],
+def gumbel_top_k(
+    x: list[TIA], k: usize, scale: FBig, negate: bool,
 ) -> list[usize]:
     if scale.is_zero():
-        if optimize == "max":  # |\label{fn-optimize}|
-            cmp = lambda a, b: a > b
-        else:
+        if negate:  # |\label{fn-optimize}|
             cmp = lambda a, b: a < b
-
+        else:
+            cmp = lambda a, b: a > b
+        
         def max_sample(a, b):  # |\label{fn-max-sample-exact}|
             return a if cmp(a[1], b[1]) else b
 
@@ -30,11 +30,11 @@ def report_noisy_top_k(
     x = ((i, x_i) for i, x_i in x if x_i is not None)
 
     # Normalize sign.  # |\label{fn-normalize-sign}|
-    y = ((i, -x_i if optimize == "min" else x_i) for i, x_i in x)
+    y = ((i, -x_i if negate else x_i) for i, x_i in x)
 
     # Initialize partial sample.  # |\label{fn-init-sample}|
     def partial_sample(shift):
-        rv = RV(shift, scale)  # |\label{fn-rv}|
+        rv = Gumbel(shift, scale)  # |\label{fn-rv}|
         return PartialSample.new(rv)  # |\label{fn-partial-sample}|
 
     y = ((i, partial_sample(y_i)) for i, y_i in y)

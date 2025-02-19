@@ -1,16 +1,16 @@
-\documentclass{article} 
-\input{../../lib.sty} 
+\documentclass{article}
+\input{../../../lib.sty}
 \allowdisplaybreaks
 
-\title{\texttt{fn binary\_search\_by\_mut}} 
-\author{Michael Shoemate} 
-\begin{document}  
-\maketitle 
- 
-\section{Hoare Triple} 
-\subsection*{Precondition} 
+\title{\texttt{fn binary\_search\_by\_mut}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle
+
+\section{Hoare Triple}
+\subsection*{Precondition}
 \subsubsection*{Compiler-verified}
-Types consistent with pseudocode.
+\textit{Types consistent with pseudocode.}
 
 \subsubsection*{Caller-verified}
 \begin{itemize}
@@ -18,11 +18,11 @@ Types consistent with pseudocode.
     \item \texttt{pred} may mutate its argument, but not change its true value used for comparisons.
 \end{itemize}
 
-\subsection*{Pseudocode} 
-\label{sec:python-pseudocode} 
-\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/binary_search_by_mut.py} 
- 
-\subsection*{Postcondition} 
+\subsection*{Pseudocode}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/binary_search_by_mut.py}
+
+\subsection*{Postcondition}
 
 \begin{theorem}
     Returns the index $i$ of the first element in $x$ that is less than $f(x_i)$,
@@ -32,9 +32,9 @@ Types consistent with pseudocode.
 \begin{proof}
     Let \( n \) be the length of the list \texttt{x}.
 
-    We perform a binary search on \texttt{x} using the comparator \texttt{f}. 
-    The binary search algorithm works by repeatedly dividing the search interval in half. 
-    If the value of the comparator at the midpoint is less, we narrow the interval to the lower half; 
+    We perform a binary search on \texttt{x} using the comparator \texttt{f}.
+    The binary search algorithm works by repeatedly dividing the search interval in half.
+    If the value of the comparator at the midpoint is less, we narrow the interval to the lower half;
     otherwise, we narrow it to the upper half.
 
     On line~\ref{fn-zero-size}, the algorithm terminates early if the list is empty, to avoid an out-of-bounds error.
@@ -49,7 +49,7 @@ Types consistent with pseudocode.
             \end{itemize}
         \item \textbf{Loop Invariant}:
             \begin{itemize}
-                \item At the start of each iteration, \texttt{base} is the smallest index 
+                \item At the start of each iteration, \texttt{base} is the smallest index
                 such that all indices $i$ before \texttt{base} satisfy \texttt{f(x[i]) == "less"}.
                 \item At the start of each iteration, \texttt{base + size} is the smallest index
                 such that all indices $i$ from \texttt{base + size} onwards satisfy \texttt{f(x[i]) != "less"}.
@@ -62,4 +62,4 @@ Types consistent with pseudocode.
     By the loop invariant, the index returned is the first element in the list that satisfies the predicate \texttt{f(x[i]) == "less"}.
 \end{proof}
 
-\end{document} 
+\end{document}

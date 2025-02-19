@@ -1,29 +1,29 @@
-\documentclass{article} 
-\input{../../lib.sty} 
+\documentclass{article}
+\input{../../../lib.sty}
 \allowdisplaybreaks
 
-\title{\texttt{fn top}} 
-\author{Michael Shoemate} 
-\begin{document}  
-\maketitle 
- 
-\section{Hoare Triple} 
-\subsection*{Precondition} 
+\title{\texttt{fn top\_k}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle
+
+\section{Hoare Triple}
+\subsection*{Precondition}
 \subsubsection*{Compiler-verified}
 Types consistent with pseudocode.
 
 \subsubsection*{Caller-verified}
 
 \begin{itemize}
-    \item \texttt{iter} must be finite 
+    \item \texttt{iter} must be finite
     \item \texttt{greater\_than} must form a total order
 \end{itemize}
 
-\subsection*{Pseudocode} 
-\label{sec:python-pseudocode} 
-\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/top.py} 
- 
-\subsection*{Postcondition} 
+\subsection*{Pseudocode}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/top_k.py}
+
+\subsection*{Postcondition}
 
 \begin{theorem}
     Returns the top $k$ elements from the iterator in sorted order.
@@ -52,9 +52,9 @@ Types consistent with pseudocode.
     Next, the heap will always be sorted in descending order.
     By the precondition that \texttt{greater\_than} forms a total order,
     then \texttt{heap} is partitioned by the predicate function.
-    Also, by the precondition on mutability of elements in \texttt{iter}, 
-    the precondition for \rustdoc{measurements/report\_noisy\_top\_k/fn}{partition\_point\_mut} is satisfied.
-    Since the preconditions for \rustdoc{measurements/report\_noisy\_top\_k/fn}{partition\_point\_mut} are met,
+    Also, by the precondition on mutability of elements in \texttt{iter},
+    the precondition for \rustdoc{measurements/noisy\_top\_k/fn}{partition\_point\_mut} is satisfied.
+    Since the preconditions for \rustdoc{measurements/noisy\_top\_k/fn}{partition\_point\_mut} are met,
     the postcondition provides the index of the first element in the heap that is less than \texttt{value}.
     Therefore, upon insertion on line \ref{fn-insert}, the heap will remain sorted in descending order.
 
@@ -63,4 +63,4 @@ Types consistent with pseudocode.
     the heap will always contain the top $k$ elements in sorted order.
 \end{proof}
 
-\end{document} 
+\end{document}

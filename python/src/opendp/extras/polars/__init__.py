@@ -585,11 +585,7 @@ class OnceFrame(object):
         """Collects a DataFrame from a OnceFrame, exhausting the OnceFrame."""
         from opendp._data import onceframe_collect
 
-        cls = self.queryable.__class__
-        self.queryable.__class__ = AnyObjectPtr
-        df = onceframe_collect(self.queryable)
-        self.queryable.__class__ = cls
-        return df
+        return onceframe_collect(self.queryable)
 
     def lazy(self):
         """Extracts a ``LazyFrame`` from a ``OnceFrame``,

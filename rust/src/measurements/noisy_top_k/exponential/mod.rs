@@ -9,25 +9,40 @@ use crate::{
 };
 use dashu::base::Sign;
 use dashu::rational::RBig;
+use opendp_derive::proven;
 
 #[cfg(test)]
 mod test;
 
-pub(crate) fn noisy_top_k_exponential<TIA: Clone + CastInternalRational>(
+#[proven]
+/// # Proof Definition
+/// Each value in $x$ must be finite.
+///
+/// Returns the index of the max element $z_i$,
+/// where each $z_i \sim \mathrm{Exp}(\mathrm{shift}=y_i, \mathrm{scale}=\texttt{scale})$,
+/// and each $y_i = -x_i$ if \texttt{negate}, else $y_i = x_i$,
+/// $k$ times with removal.
+pub(crate) fn exponential_top_k<TIA: Clone + CastInternalRational>(
     x: &[TIA],
-    scale: RBig,
+    scale: f64,
     k: usize,
     negate: bool,
 ) -> Fallible<Vec<usize>> {
     let sign = Sign::from(negate);
+    let scale = scale.into_rational()?;
 
-    let x = (x.into_iter().cloned())
+    let y = (x.into_iter().cloned())
         .map(|x_i| x_i.into_rational().map(|x_i| x_i * sign))
         .collect::<Fallible<_>>()?;
 
-    peel_permute_and_flip(x, scale, k)
+    peel_permute_and_flip(y, scale, k)
 }
 
+#[proven]
+/// # Proof Definition
+/// Returns the index of the max element $z_i$,
+/// where each $z_i \sim \mathrm{Exp}(\mathrm{shift}=x_i, \mathrm{scale}=\texttt{scale})$,
+/// $k$ times with removal.
 fn peel_permute_and_flip(mut x: Vec<RBig>, scale: RBig, k: usize) -> Fallible<Vec<usize>> {
     let mut natural_order = Vec::new();
     let mut sorted_order = BTreeSet::new();
@@ -47,6 +62,10 @@ fn peel_permute_and_flip(mut x: Vec<RBig>, scale: RBig, k: usize) -> Fallible<Ve
     Ok(natural_order)
 }
 
+#[proven]
+/// # Proof Definition
+/// Returns the index of the max element $z_i$,
+/// where each $z_i \sim \mathrm{Exp}(\mathrm{shift}=x_i, \mathrm{scale}=\texttt{scale})$.
 fn permute_and_flip(x: &[RBig], scale: &RBig) -> Fallible<usize> {
     let x_is_empty = || err!(FailedFunction, "x is empty");
 
