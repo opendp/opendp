@@ -1,7 +1,7 @@
 assert_features <- function(...) {
   for (feature in list(...)) {
     if (!feature %in% getOption("opendp_features")) {
-      stop("Attempted to use function that requires ", feature, " but ", feature, " is not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features(\"", feature, "\")")
+      stop("Attempted to use function that requires ", feature, " but ", feature, " is not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features(\"", feature, "\")", call. = FALSE)
     }
   }
 }
@@ -40,7 +40,7 @@ output_domain <- function(x) {
     return(x[[1]])
   }
 
-  stop("expected a transformation or metric space. Got ", class(x))
+  stop("expected a transformation or metric space. Got ", class(x), call. = FALSE)
 }
 
 output_metric <- function(x) {
@@ -52,7 +52,7 @@ output_metric <- function(x) {
     return(x[[2]])
   }
 
-  stop("expected a transformation or metric space")
+  stop("expected a transformation or metric space", call. = FALSE)
 }
 
 make_chain_dyn <- function(rhs, lhs, log) {
@@ -71,7 +71,7 @@ make_chain_dyn <- function(rhs, lhs, log) {
   if (inherits(rhs, "opendp_function")) {
     return(new_measurement(make_chain_pm(rhs, lhs)("ptr"), log))
   }
-  stop("cannot chain lhs and rhs: ", class(lhs), ", ", class(rhs))
+  stop("cannot chain lhs and rhs: ", class(lhs), ", ", class(rhs), call. = FALSE)
 }
 
 #' new transformation
@@ -82,18 +82,16 @@ make_chain_dyn <- function(rhs, lhs, log) {
 new_transformation <- function(ptr, log) {
   transformation <- function(attr, arg, d_in, d_out) {
     if (missing(attr) + missing(arg) + missing(d_in) != 2) {
-      stop("expected exactly one of attr, arg or d_in")
+      stop("expected exactly one of attr, arg or d_in", call. = FALSE)
     }
     if (missing(d_in)) {
       if (!missing(d_out)) {
-        stop("expected d_in when d_out is specified")
+        stop("expected d_in when d_out is specified", call. = FALSE)
       }
+    } else if (missing(d_out)) {
+      return(transformation_map(ptr, d_in))
     } else {
-      if (missing(d_out)) {
-        return(transformation_map(ptr, d_in))
-      } else {
-        return(transformation_check(ptr, d_in, d_out))
-      }
+      return(transformation_check(ptr, d_in, d_out))
     }
     if (!missing(arg)) {
       return(transformation_invoke(ptr, arg))
@@ -108,7 +106,7 @@ new_transformation <- function(ptr, log) {
       json = jsonlite::toJSON(to_ast(log), pretty = TRUE),
       ptr = ptr,
       log = log,
-      stop("unrecognized attribute")
+      stop("unrecognized attribute", call. = FALSE)
     )
   }
   class(transformation) <- "transformation"
@@ -142,24 +140,22 @@ print.transformation <- function(x, ...) {
 new_measurement <- function(ptr, log) {
   measurement <- function(attr, arg, d_in, d_out) {
     if (missing(attr) + missing(arg) + missing(d_in) != 2) {
-      stop("expected exactly one of attr, arg or d_in")
+      stop("expected exactly one of attr, arg or d_in", call. = FALSE)
     }
     if (missing(d_in)) {
       if (!missing(d_out)) {
-        stop("expected d_in when d_out is specified")
+        stop("expected d_in when d_out is specified", call. = FALSE)
       }
+    } else if (missing(d_out)) {
+      return(measurement_map(ptr, d_in))
     } else {
-      if (missing(d_out)) {
-        return(measurement_map(ptr, d_in))
-      } else {
-        return(measurement_check(ptr, d_in, d_out))
-      }
+      return(measurement_check(ptr, d_in, d_out))
     }
     if (!missing(arg)) {
       return(measurement_invoke(ptr, arg))
     }
     if (is.numeric(attr)) {
-      stop("numeric attr not allowed; Did you mean 'arg='?")
+      stop("numeric attr not allowed; Did you mean 'arg='?", call. = FALSE)
     }
     switch(attr,
       input_domain = measurement_input_domain(ptr),
@@ -169,7 +165,7 @@ new_measurement <- function(ptr, log) {
       json = jsonlite::toJSON(to_ast(log), pretty = TRUE),
       ptr = ptr,
       log = log,
-      stop("unrecognized attribute")
+      stop("unrecognized attribute", call. = FALSE)
     )
   }
   class(measurement) <- "measurement"
@@ -202,7 +198,7 @@ print.measurement <- function(x, ...) {
 new_domain <- function(ptr, log) {
   domain <- function(attr, member) {
     if (missing(attr) + missing(member) != 1) {
-      stop("expected exactly one of attr or member")
+      stop("expected exactly one of attr or member", call. = FALSE)
     }
 
     if (!missing(member)) {
@@ -216,7 +212,7 @@ new_domain <- function(ptr, log) {
       json = jsonlite::toJSON(to_ast(log), pretty = TRUE),
       ptr = ptr,
       log = log,
-      stop("unrecognized attribute")
+      stop("unrecognized attribute", call. = FALSE)
     )
   }
   class(domain) <- "domain"
@@ -249,7 +245,7 @@ new_metric <- function(ptr, log) {
       json = jsonlite::toJSON(to_ast(log), pretty = TRUE),
       ptr = ptr,
       log = log,
-      stop("unrecognized attribute")
+      stop("unrecognized attribute", call. = FALSE)
     )
   }
   class(metric) <- "metric"
@@ -282,7 +278,7 @@ new_measure <- function(ptr, log) {
       json = jsonlite::toJSON(to_ast(log), pretty = TRUE),
       ptr = ptr,
       log = log,
-      stop("unrecognized attribute")
+      stop("unrecognized attribute", call. = FALSE)
     )
   }
   class(measure) <- "measure"
@@ -309,7 +305,7 @@ print.measure <- function(x, ...) {
 new_function <- function(ptr, log) {
   opendp_function <- function(attr, arg) {
     if (missing(attr) + missing(arg) != 1) {
-      stop("expected exactly one of attr or arg")
+      stop("expected exactly one of attr or arg", call. = FALSE)
     }
 
     if (!missing(arg)) {
@@ -320,7 +316,7 @@ new_function <- function(ptr, log) {
       json = jsonlite::toJSON(to_ast(log), pretty = TRUE),
       ptr = ptr,
       log = log,
-      stop("unrecognized attribute")
+      stop("unrecognized attribute", call. = FALSE)
     )
   }
   class(opendp_function) <- "opendp_function"
@@ -334,7 +330,7 @@ new_function <- function(ptr, log) {
 new_privacy_profile <- function(ptr) {
   privacy_profile <- function(attr, epsilon, delta) {
     if (missing(attr) + missing(epsilon) + missing(delta) != 2) {
-      stop("expected exactly one of attr, epsilon or delta")
+      stop("expected exactly one of attr, epsilon or delta", call. = FALSE)
     }
 
     if (!missing(epsilon)) {
@@ -347,7 +343,7 @@ new_privacy_profile <- function(ptr) {
 
     switch(attr,
       ptr = ptr,
-      stop("unrecognized attribute")
+      stop("unrecognized attribute", call. = FALSE)
     )
   }
   class(privacy_profile) <- "privacy_profile"
@@ -361,7 +357,7 @@ new_privacy_profile <- function(ptr) {
 new_queryable <- function(ptr) {
   queryable <- function(attr, query) {
     if (missing(attr) + missing(query) != 1) {
-      stop("expected exactly one of attr or query")
+      stop("expected exactly one of attr or query", call. = FALSE)
     }
 
     if (!missing(query)) {
@@ -370,7 +366,7 @@ new_queryable <- function(ptr) {
 
     switch(attr,
       ptr = ptr,
-      stop("unrecognized attribute")
+      stop("unrecognized attribute", call. = FALSE)
     )
   }
   class(queryable) <- "queryable"
@@ -385,10 +381,10 @@ new_queryable <- function(ptr) {
 #' @export
 hashitems <- function(data, type_name) {
   if (!inherits(data, "hashtab")) {
-    stop("Expected hashtab data, got ", class(data))
+    stop("Expected hashtab data, got ", class(data), call. = FALSE)
   }
   if (type_name$origin != "HashMap") {
-    stop("Expected HashMap type_name, got ", type_name$origin)
+    stop("Expected HashMap type_name, got ", type_name$origin, call. = FALSE)
   }
 
   keys <- vector(RUST_TO_R[[type_name$args[[1]]$origin]], utils::numhash(data))
@@ -409,7 +405,7 @@ hashitems <- function(data, type_name) {
 #' @param vals a vector of values
 #' @export
 new_hashtab <- function(keys, vals) {
-  if (length(keys) != length(vals)) stop("keys and vals must have the same length")
+  if (length(keys) != length(vals)) stop("keys and vals must have the same length", call. = FALSE)
   h <- utils::hashtab()
   mapply(function(k, v) utils::sethash(h, k, v), keys, vals, SIMPLIFY = FALSE)
   h
@@ -438,7 +434,7 @@ to_str.hashtab <- function(x, depth = 0L) {
     val <<- c(val, paste0(spacer, "  ", k, ": ", to_str(v, depth = depth + 1), ",\n"))
   })
   val <- c(val, spacer, ")")
-  paste0(val, collapse = "")
+  paste0(val, collapse = "") # nolint: paste_linter
 }
 
 CONSTRUCTOR_LOG_KEYS <- list("_type", "name", "module", "kwargs")
@@ -470,11 +466,11 @@ to_ast <- function(item) {
     unbox2(rt_to_string(item))
   } else if (utils::is.hashtab(item)) {
     # TODO: can jsonlite even write non-string keys?
-    data <- list()
+    out <- list()
     utils::maphash(item, function(k, v) {
-      data[[k]] <<- to_ast(v)
+      out[[k]] <<- to_ast(v)
     })
-    data
+    out
   } else if (is.list(item)) {
     lapply(item, to_ast)
   } else if (inherits(item, c("numeric", "character", "integer", "logical"))) {
@@ -559,7 +555,7 @@ binary_search <- function(predicate, bounds = NULL, .T = NULL, return_sign = FAL
   }
 
   if (is.null(bounds)) {
-    stop("unable to infer bounds")
+    stop("unable to infer bounds", call. = FALSE)
   }
 
   tmp <- sort(bounds)
@@ -569,23 +565,17 @@ binary_search <- function(predicate, bounds = NULL, .T = NULL, return_sign = FAL
   maximize <- predicate(lower) # if the lower bound passes, we should maximize
   minimize <- predicate(upper) # if the upper bound passes, we should minimize
   if (maximize == minimize) {
-    stop("the decision boundary of the predicate is outside the bounds")
+    stop("the decision boundary of the predicate is outside the bounds", call. = FALSE)
   }
 
   if (inherits(lower, "numeric")) {
     tolerance <- 0.
-    half <- function(x) {
-      return(x / 2.)
-    }
+    half <- function(x) x / 2.
+  } else if (inherits(lower, "integer")) {
+    tolerance <- 1L # the lower and upper bounds never meet due to int truncation
+    half <- function(x) x %/% 2L
   } else {
-    if (inherits(lower, "integer")) {
-      tolerance <- 1L # the lower and upper bounds never meet due to int truncation
-      half <- function(x) {
-        return(x %/% 2L)
-      }
-    } else {
-      stop("bounds must be either float or int")
-    }
+    stop("bounds must be either float or int", call. = FALSE)
   }
 
   mid <- lower
@@ -632,7 +622,7 @@ exponential_bounds_search <- function(predicate, .T) {
       if (check_type(0L)) {
         .T <- "int"
       } else {
-        stop("unable to infer type `.T`; pass the type `.T` or bounds")
+        stop("unable to infer type `.T`; pass the type `.T` or bounds", call. = FALSE)
       }
     }
   }
@@ -688,7 +678,7 @@ exponential_bounds_search <- function(predicate, .T) {
 
   if (is.null(exception_bounds)) {
     msg <- "Predicate always fails. Example error at %s: %s"
-    stop(sprintf(msg, center, try(predicate(center), TRUE)))
+    stop(sprintf(msg, center, try(predicate(center), TRUE)), call. = FALSE)
   }
 
   tmp <- binary_search(exception_predicate, bounds = exception_bounds, .T = .T, return_sign = TRUE)

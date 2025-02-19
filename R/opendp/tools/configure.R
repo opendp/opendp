@@ -28,7 +28,7 @@ USE_UCRT        <- identical(R.version$crt, "ucrt")
 get_desc_field <- function(field, prefix = DESC_FIELD_PREFIX, optional = TRUE) {
   field <- paste0(prefix, field)
   if (length(field) != 1) {
-    stop("Field must be length one of character vector")
+    stop("Field must be length one of character vector", call. = FALSE)
   }
 
   # `read.dcf()` always succeeds even when the field is missing.
@@ -36,7 +36,7 @@ get_desc_field <- function(field, prefix = DESC_FIELD_PREFIX, optional = TRUE) {
   x <- read.dcf("DESCRIPTION", fields = field)[[1]]
 
   if (isTRUE(is.na(x)) && !isTRUE(optional)) {
-    stop("Failed to get the field ", field, " from DESCRIPTION")
+    stop("Failed to get the field ", field, " from DESCRIPTION", call. = FALSE)
   }
 
   x
@@ -82,7 +82,7 @@ check_cargo <- function() {
   res_version <- safe_system2(cargo_cmd, cargo_args)
 
   if (!isTRUE(res_version$success)) {
-    stop(errorCondition("cargo command is not available", class = c("opendp_error_cargo_check", "error")))
+    stop(errorCondition("cargo command is not available", class = c("opendp_error_cargo_check", "error")), call. = FALSE)
   }
 
   ### Check the version ###
@@ -98,12 +98,12 @@ check_cargo <- function() {
     m <- regmatches(version, regexec(ptn, version))[[1]]
 
     if (length(m) != 2) {
-      stop(errorCondition("cargo version returned unexpected result", class = c("opendp_error_cargo_check", "error")))
+      stop(errorCondition("cargo version returned unexpected result", class = c("opendp_error_cargo_check", "error")), call. = FALSE)
     }
 
     if (package_version(m[2]) < package_version(msrv)) {
       msg <- sprintf("The installed version of cargo (%s) is older than the requirement (%s)", m[2], msrv)
-      stop(errorCondition(msg, class = c("opendp_error_cargo_check", "error")))
+      stop(errorCondition(msg, class = c("opendp_error_cargo_check", "error")), call. = FALSE)
     }
   }
 
@@ -122,7 +122,7 @@ check_cargo <- function() {
 
     if (!isTRUE("x86_64-pc-windows-gnu" %in% targets$output)) {
       msg <- "The required target x86_64-pc-windows-gnu is not installed"
-      stop(errorCondition(msg, class = c("opendp_error_cargo_check", "error")))
+      stop(errorCondition(msg, class = c("opendp_error_cargo_check", "error")), call. = FALSE)
     }
   }
 
