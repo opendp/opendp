@@ -179,25 +179,26 @@ sum and count:
             >>> print("dp count:", sc_queryable(count_meas))
             dp count: ...
 
-Now, why is this compositor named *sequential*? In order to prove that
-the privacy properties of this compositor hold in the interactive
-setting, the compositor must lock, or freeze, any queryable it has
-previously spawned when a new query arrives.
+The compositor is *sequential* in the sense that multiple queries are sequentially released on the same dataset.
 
-This is an artifact of how non-interactive composition results have been
-extended to work in the interactive setting. Namely, that the second
-query can be viewed as a postprocessing of the first query.
-Unfortunately, this postprocessing argument doesn’t necessarily hold
-when the analyst may still interact with the first queryable. This is
-the subject of a further line of research on concurrent compositors,
-which we hope to make available in the next library release.
+.. note::
 
-.. TODO: With "concurrent composition" merged
-.. https://github.com/opendp/opendp/issues/681
-.. should we update this? Or link to an issue?
+    The sequential compositor API makes another distinction 
+    between adaptive composition and concurrent composition,
+    which varies based on the choice of privacy measure.
 
-An example of this constraint is demonstrated in the `Nesting`_ section
-below.
+    Adaptive composition is subject to the limitation that 
+    only one queryable is active at any point in time.
+    To satisfy adaptive composition, the compositor locks, or freezes, 
+    any queryable it has previously spawned when a new query arrives.
+    This is because the postprocessing argument doesn't necessarily 
+    hold when the analyst may still interact with earlier queryables.
+
+    Concurrent composition lifts this limitation for measures of privacy 
+    where we have been able to prove that postprocessing still holds.
+    In OpenDP, all privacy measures support concurrent composition,
+    except for approximate zCDP and approximate Renyi-DP.
+
 
 Chaining
 --------
