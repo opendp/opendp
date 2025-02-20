@@ -173,6 +173,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
 
+      - name: Double-check precommit hooks
+        run: pre-commit run --all-files
+
       - name: Download dynamic lib
         uses: actions/download-artifact@v4
         with:
