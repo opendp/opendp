@@ -1,6 +1,6 @@
 {
     "column_names": [
-        "name", "sex", "age", "maritalStatus", "hasChildren", "highestEducationLevel", 
+        "name", "sex", "age", "maritalStatus", "hasChildren", "highestEducationLevel",
         "sourceOfStress", "smoker", "optimism", "lifeSatisfaction", "selfEsteem"
     ],
     "column_metadata": {
@@ -19,7 +19,7 @@
         "maritalStatus": {
             "keys": ["1", "2", "3", "4", "5", "6", "7", "8"],
             "key_labels": [
-                "Single", "Steady Relationship", "Living with partner", "Married first time", 
+                "Single", "Steady Relationship", "Living with partner", "Married first time",
                 "Remarried", "Separated", "Divorced", "Widowed"
             ]
         },
@@ -30,14 +30,14 @@
         "highestEducationLevel": {
             "keys": [1, 2, 3, 4, 5, 6],
             "key_labels": [
-                "Primary", "Some secondary", "Completed high school", "Some additional training", 
+                "Primary", "Some secondary", "Completed high school", "Some additional training",
                 "Completed undergraduate", "Postgraduate completed"
             ]
         },
         "sourceOfStress": {
             "keys": [1, 2, 3, 4, 5, 6, 7, 8, 9],
             "key_labels": [
-                "Work", "Spouse or partner", "Relationships", "Children", "Family", "Health/Illness", 
+                "Work", "Spouse or partner", "Relationships", "Children", "Family", "Health/Illness",
                 "Life in general", "Money/finances", "Time (lack of time, too much to do)"
             ]
         },

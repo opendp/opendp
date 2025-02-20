@@ -22,14 +22,14 @@ def make_eigenvalues(input_domain: Domain, input_metric: Metric) -> Transformati
 
     if input_metric != dp.symmetric_distance():
         raise ValueError("input metric must be symmetric distance")  # pragma: no cover
-    
+
     input_desc = input_domain.descriptor
 
     if input_desc.size is None:
         # implementation assumes dataset size is known
-        # to loosen this limitation, when size is unknown, do: 
+        # to loosen this limitation, when size is unknown, do:
         # norm += np.linalg.norm(input_domain.origin, p=2)
-        # this is because the addition of one row shifted by the origin 
+        # this is because the addition of one row shifted by the origin
         #     will not be offset by the removal of another row shifted by the origin
         raise ValueError("expected sized data")  # pragma: no cover
 

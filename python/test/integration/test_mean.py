@@ -37,5 +37,3 @@ def test_dp_mean():
     )
     res = preprocessor(data)
     assert isinstance(res, float)
-
-

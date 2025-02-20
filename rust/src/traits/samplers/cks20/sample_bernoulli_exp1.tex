@@ -25,7 +25,7 @@ This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsec
 \end{itemize}
 
 
-\subsection*{Pseudocode}        
+\subsection*{Pseudocode}
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_bernoulli_exp1.py}
 
 \subsection*{Postcondition}
@@ -43,7 +43,7 @@ Assume the preconditions are met.
 \end{lemma}
 
 \begin{proof}
-    In all usages of \rustdoc{traits/samplers/bernoulli/trait}{SampleBernoulli}, the argument passed satisfies its definition preconditions, 
+    In all usages of \rustdoc{traits/samplers/bernoulli/trait}{SampleBernoulli}, the argument passed satisfies its definition preconditions,
     by the preconditions on \texttt{x} and function logic.
     Thus, by its definition, \texttt{sample\_bernoulli\_rational} only returns an error when there is a lack of system entropy.
     The only source of errors in \texttt{sample\_bernoulli\_exp1} is from the invocation of \texttt{sample\_bernoulli\_rational}.

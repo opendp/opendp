@@ -35,7 +35,7 @@ def make_quantile_score_candidates(
     return Transformation(
         input_domain=input_domain,
         output_domain=VectorDomain(
-            element_domain=AtomDomain(T=usize), 
+            element_domain=AtomDomain(T=usize),
             size=len(candidates)),
         function=function,
         input_metric=input_metric,

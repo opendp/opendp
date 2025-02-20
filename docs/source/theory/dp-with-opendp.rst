@@ -32,7 +32,7 @@ us if you are interested in proof-writing. Thank you!
 
             >>> import opendp.prelude as dp
             >>> dp.enable_features("contrib")
-            
+
 
 The Laplace Mechanism
 ---------------------
@@ -85,11 +85,11 @@ can find it under ``dp.m``:
 
             >>> # call the constructor to produce the measurement `base_lap`
             >>> base_lap = dp.m.make_laplace(
-            ...     dp.atom_domain(T=float), 
-            ...     dp.absolute_distance(T=float), 
+            ...     dp.atom_domain(T=float),
+            ...     dp.absolute_distance(T=float),
             ...     scale=5.
             ... )
-            
+
 
 The supporting elements on this transformation match those described
 above:
@@ -200,7 +200,7 @@ it under ``dp.t``:
             >>> # notice that `make_sum` expects an input domain consisting of bounded data:
             >>> input_domain = dp.vector_domain(dp.atom_domain(bounds=(0., 5.)))
             >>> bounded_sum = dp.t.make_sum(input_domain, dp.symmetric_distance())
-            
+
 
 According to the documentation, this transformation expects a vector of
 data with non-null elements bounded between ``0.`` and ``5.``. We now
@@ -291,10 +291,10 @@ links:
 
             >>> input_domain = dp.vector_domain(dp.atom_domain(T=float))
             >>> input_metric = dp.symmetric_distance()
-            
+
             >>> # call the constructor to produce the transformation `clamp`
             >>> clamp = dp.t.make_clamp(input_domain, input_metric, bounds=(0., 5.))
-            
+
             >>> # `clamp` expects vectors of non-null, unbounded elements
             >>> mock_dataset = [1.3, 7.8, -2.5, 7.0]
             >>> # `clamp` emits data that is suitable for `bounded_sum`
@@ -377,11 +377,11 @@ chain all of these primitives to form a new compound measurement:
         .. code:: python
 
             >>> dp_sum = clamp >> bounded_sum >> base_lap
-            
+
             >>> # compute the DP sum of a dataset of bounded elements
             >>> print("DP sum:", dp_sum(mock_dataset))
             DP sum: ...
-            
+
             >>> # evaluate the privacy loss of the dp_sum, when an individual can contribute at most 2 records
             >>> print("epsilon:", dp_sum.map(d_in=max_contributions))
             epsilon: ...
@@ -402,14 +402,14 @@ can breeze through an entire release:
             >>> # establish public info
             >>> max_contributions = 2
             >>> bounds = (0., 5.)
-            
+
             >>> # construct the measurement
             >>> dp_sum = (
-            ...     dp.t.make_clamp(dp.vector_domain(dp.atom_domain(T=float)), dp.symmetric_distance(), bounds) >> 
-            ...     dp.t.make_sum(dp.vector_domain(dp.atom_domain(bounds=bounds)), dp.symmetric_distance()) >> 
+            ...     dp.t.make_clamp(dp.vector_domain(dp.atom_domain(T=float)), dp.symmetric_distance(), bounds) >>
+            ...     dp.t.make_sum(dp.vector_domain(dp.atom_domain(bounds=bounds)), dp.symmetric_distance()) >>
             ...     dp.m.make_laplace(dp.atom_domain(T=float), dp.absolute_distance(T=float), 5.)
             ... )
-            
+
             >>> # evaluate the privacy expenditure and make a DP release
             >>> mock_dataset = [0.7, -0.3, 1., -1.]
             >>> print("epsilon:", dp_sum.map(max_contributions))
@@ -440,7 +440,7 @@ the ``input_domain`` and ``input_metric`` arguments. We can rewrite
             ...     dp.t.then_sum() >>
             ...     dp.m.then_laplace(5.)
             ... )
-            
+
 
 You’ll notice that the start of the chain is special: We provide a tuple
 to specify the ``input_domain`` and ``input_metric`` for ``then_clamp``.

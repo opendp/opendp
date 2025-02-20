@@ -137,7 +137,7 @@ def domain_of(T, infer: bool = False) -> Domain:
     >>> import opendp.prelude as dp
     >>> dp.domain_of(list[int])
     VectorDomain(AtomDomain(T=i32))
-    
+
     As well as strings representing types in the underlying Rust syntax:
 
     >>> dp.domain_of('Vec<int>')
@@ -147,7 +147,7 @@ def domain_of(T, infer: bool = False) -> Domain:
 
     >>> dp.domain_of(dict[str, int])
     MapDomain { key_domain: AtomDomain(T=String), value_domain: AtomDomain(T=i32) }
-    
+
     .. TODO: Support python syntax for Option: https://github.com/opendp/opendp/issues/1389
 
     >>> dp.domain_of('Option<int>')  # Python's `Optional` is not supported.
@@ -204,7 +204,7 @@ def domain_of(T, infer: bool = False) -> Domain:
 
 def metric_of(M) -> Metric:
     """Constructs an instance of a metric from metric type ``M``.
-    
+
     :param M: Metric type
     """
     import opendp.typing as ty
@@ -266,7 +266,7 @@ def loss_of(
 
     if [rho is None, epsilon is None].count(True) != 1:
         raise ValueError("Either epsilon or rho must be specified, and they are mutually exclusive.")  # pragma: no cover
-    
+
     if epsilon is not None:
         _range_warning('epsilon', epsilon, 1, 5)
         measure, loss = max_divergence(), epsilon
@@ -274,7 +274,7 @@ def loss_of(
     if rho is not None:
         _range_warning('rho', rho, 0.25, 0.5)
         measure, loss = zero_concentrated_divergence(), rho
-    
+
     if delta is None:
         return measure, loss
     else:
@@ -292,7 +292,7 @@ def unit_of(
     ordered: bool = False,
     U=None,
 ) -> tuple[Metric, float]:
-    """Constructs a unit of privacy, consisting of a metric and a dataset distance. 
+    """Constructs a unit of privacy, consisting of a metric and a dataset distance.
     The parameters are mutually exclusive.
 
     >>> import opendp.prelude as dp
@@ -349,7 +349,7 @@ class Context(object):
 
     accountant: Measurement  # union Odometer once merged
     """The accountant is the measurement used to spawn the queryable.
-    It contains information about the queryable, 
+    It contains information about the queryable,
     such as the input domain, input metric, and output measure expected of measurement queries sent to the queryable."""
     queryable: Queryable
     """The queryable executes the queries and tracks the privacy expenditure."""
@@ -470,7 +470,7 @@ class Context(object):
             d_out=d_query,
             context=self,
         )
-        
+
         # return a LazyFrameQuery when dealing with Polars data, to better mimic the Polars API
         if chain[0].type == "LazyFrameDomain":
             from opendp.domains import _lazyframe_from_domain
@@ -506,7 +506,7 @@ class Query(object):
     _context: Optional["Context"]
     """The context that the query is part of. ``query.release()`` submits ``_chain`` to ``_context``."""
     _wrap_release: Optional[Callable[[Any], Any]]
-    """For internal use. A function that wraps the release of the query. 
+    """For internal use. A function that wraps the release of the query.
     Used to wrap the response of compositor/odometer queries in another ``Analysis``."""
 
     def __init__(
@@ -574,7 +574,7 @@ class Query(object):
 
     def new_with(self, *, chain: Chain, wrap_release=None) -> "Query":
         """Convenience constructor that creates a new query with a different chain.
-        
+
         :param chain: the prior query. Either a metric space or transformation
         :param wrap_release: a function to apply to apply to releases
         """
@@ -726,12 +726,12 @@ class PartialChain(object):
         if output_measure == fixed_smoothed_max_divergence():
             def _predicate(param):
                 meas = _cast_measure(self(param), output_measure, d_out)
-                return meas.map(d_in)[0] <= d_out[0] # type: ignore[index] 
+                return meas.map(d_in)[0] <= d_out[0] # type: ignore[index]
         else:
             def _predicate(param):
                 meas = _cast_measure(self(param), output_measure, d_out)
                 return meas.check(d_in, d_out)
-        
+
         param = binary_search(_predicate)
         chain = self.partial(param)
         chain.param = param
@@ -743,17 +743,17 @@ class PartialChain(object):
             return PartialChain(lambda x: self(x) >> other)
 
         raise ValueError("At most one parameter may be missing at a time")  # pragma: no cover
-    
+
     def __rrshift__(self, other: Union[tuple[Domain, Metric], Transformation, Measurement]):
         if isinstance(other, (tuple, Transformation, Measurement)):
             return PartialChain(lambda x: other >> self(x))
-        
+
         raise ValueError("At most one parameter may be missing at a time")  # pragma: no cover
 
     @classmethod
     def wrap(cls, f):
         """Wraps a constructor for a transformation or measurement to return a partial chain instead.
-        
+
         :param f: function to wrap
         """
 
@@ -839,7 +839,7 @@ def _cast_measure(chain, to_measure: Optional[Measure] = None, d_to=None):
 
     if from_to == ("MaxDivergence", "Approximate<MaxDivergence>"):
         return make_approximate(chain)
-    
+
     if from_to == ("ZeroConcentratedDivergence", "Approximate<ZeroConcentratedDivergence>"):
         return make_approximate(chain)
 
@@ -854,7 +854,7 @@ def _cast_measure(chain, to_measure: Optional[Measure] = None, d_to=None):
         "Approximate<MaxDivergence>",
     ):
         return make_fix_delta(make_zCDP_to_approxDP(chain), d_to[1])
-    
+
     raise ValueError(f"Unable to cast measure from {from_to[0]} to {from_to[1]}")  # pragma: no cover
 
 
@@ -905,7 +905,7 @@ def _translate_measure_distance(d_from, from_measure: Measure, to_measure: Measu
             T=float,
         )
         return make_gaussian(*space, scale).map(constant)
-    
+
     if from_to == (
         "Approximate<MaxDivergence>",
         "Approximate<ZeroConcentratedDivergence>",
@@ -917,6 +917,6 @@ def _translate_measure_distance(d_from, from_measure: Measure, to_measure: Measu
 
         rho = _translate_measure_distance((epsilon, delta_zCDP), from_measure, zero_concentrated_divergence())
         return rho, delta_inf
-        
+
 
     raise ValueError(f"Unable to translate distance from {from_to[0]} to {from_to[1]}")  # pragma: no cover

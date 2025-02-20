@@ -28,7 +28,7 @@ This example mocks the typical API of the OpenDP library to make the *most priva
         ...     """Constructs a Measurement that only returns a constant value."""
         ...     def function(_arg: int):
         ...         return constant
-        ... 
+        ...
         ...     def privacy_map(d_in: int) -> float:
         ...         return 0.0
         ...
@@ -40,7 +40,7 @@ This example mocks the typical API of the OpenDP library to make the *most priva
         ...         privacy_map=privacy_map,
         ...         TO=type(constant),  # the expected type of the output
         ...     )
-    
+
 The resulting Measurement may be used interchangeably with those constructed via the library:
 
 .. tab-set::
@@ -60,6 +60,6 @@ The resulting Measurement may be used interchangeably with those constructed via
         >>> meas.map(1) # computes epsilon, because the output measure is max divergence
         0.0
 
-While this mechanism clearly has no utility, 
-the code snip may form a basis for you to create own measurements, 
+While this mechanism clearly has no utility,
+the code snip may form a basis for you to create own measurements,
 or even incorporate mechanisms from other libraries.

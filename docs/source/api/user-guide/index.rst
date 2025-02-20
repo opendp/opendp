@@ -38,7 +38,7 @@ Features can be enabled via the following syntax:
       .. code-block:: toml
 
          opendp = { features = ["contrib"] }
-      
+
 
 Features that are available from Python and R:
 

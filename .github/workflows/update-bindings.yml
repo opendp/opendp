@@ -44,7 +44,7 @@ jobs:
         with:
           name: r_bindings
           path: R/opendp/
-      
+
       - name: Push changes
         run: |
           git add --force . # Generated files are git-ignored, so we need --force.

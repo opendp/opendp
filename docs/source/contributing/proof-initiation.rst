@@ -48,7 +48,7 @@ Let’s imagine we wanted to add a new function to
 .. code:: rust
 
    /// # Proof Definition
-   /// For any setting of the input parameters, 
+   /// For any setting of the input parameters,
    /// returns either `Ok(out)` where $out \ge |a - b|$, or `Err(e)`.
    fn absolute_distance<T: InfSub + AlertingAbs>(a: T, b: T) -> Fallible<T> {
        a.inf_sub(&b)?.alerting_abs()
@@ -171,7 +171,7 @@ If you use VSCode, the “Development Environment” documentation contains
 some advice for integrating this with the LaTex-Workshop extension.
 
 These options emit the build artifacts to ./out, which is configured to
-be ignored by git. **This is intentional, you should only include the** 
+be ignored by git. **This is intentional, you should only include the**
 ``.tex`` **file when committing to OpenDP!** A bot will attempt to build
 and link generated ``.pdf`` files from your PR.
 
@@ -271,7 +271,7 @@ We now use these definitions to prove the postcondition:
 .. code:: latex
 
    \begin{align*}
-       \texttt{out} 
+       \texttt{out}
        &= a.inf_sub(b).alerting_abs() \\
        &= max(a.inf_sub(b), -a.inf_sub(b)) && \text{by \texttt{AlertingAbs}} \\
        &\ge max(a - b, -a.inf_sub(b)) && \text{by \texttt{InfSub}} \\

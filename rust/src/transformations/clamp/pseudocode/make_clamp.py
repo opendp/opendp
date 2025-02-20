@@ -1,7 +1,7 @@
 # type: ignore
 def make_clamp(
-    input_domain: VectorDomain[AtomDomain[TA]], 
-    input_metric: M, 
+    input_domain: VectorDomain[AtomDomain[TA]],
+    input_metric: M,
     bounds: tuple[TA, TA]
 ): # |\label{line:def}|
     input_domain.element_domain.assert_non_null() # |\label{line:assert-non-null}|
@@ -12,10 +12,10 @@ def make_clamp(
 
     def clamper(value: TA) -> TA: # |\label{line:clamper}|
         return value.total_clamp(bounds[0], bounds[1])
-    
+
     return make_row_by_row_fallible( # |\label{line:row-by-row}|
-        input_domain, 
-        input_metric, 
-        output_row_domain, 
+        input_domain,
+        input_metric,
+        output_row_domain,
         clamper
     )

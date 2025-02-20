@@ -53,7 +53,7 @@ Now run ``cargo build`` in the ``rust`` subdirectory of the repo:
     cd rust
     cargo build --all-features
 
-This will compile a debug build of the OpenDP shared library, placing it in the directory ``opendp/rust/target/debug``. 
+This will compile a debug build of the OpenDP shared library, placing it in the directory ``opendp/rust/target/debug``.
 (The specific name of the library file will vary depending on your platform.)
 
 Substitute ``cargo build`` with ``cargo test`` to test, or ``cargo check`` to check syntax.
@@ -66,7 +66,7 @@ Setting a feature changes how the crate compiles.
 
 .. dropdown:: Comprehensive Rust Feature List
 
-    
+
    .. list-table::
       :widths: 25 75
       :header-rows: 1
@@ -90,7 +90,7 @@ Setting a feature changes how the crate compiles.
       * - ``derive``
         - Enable to support code generation and links to proofs in documentation.
       * - ``bindings``
-        - Enable to generate Python and R source code. Also enables the ``ffi`` and ``derive`` features. 
+        - Enable to generate Python and R source code. Also enables the ``ffi`` and ``derive`` features.
       * - ``partials``
         - Enabled by default. When enabled, ``then_*`` functions are generated from ``make_*`` functions. Also enables the ``derive`` feature.
       * - ``use-openssl``
@@ -102,7 +102,7 @@ To make the crate compile faster, FFI functions in debug builds support a reduce
 Release-mode builds support the full set of primitive types and undergo compiler optimizations, but take longer to compile.
 You can compile a release build by adding the ``--release`` flag.
 In contrast to debug builds, release builds are located in ``opendp/rust/target/release``.
-To use a release-mode binary from the Python bindings, 
+To use a release-mode binary from the Python bindings,
 set the environment variable ``OPENDP_TEST_RELEASE=1`` before importing OpenDP.
 
 For more on our Rust programming patterns:
@@ -131,7 +131,7 @@ If you only need to regenerate the Python bindings, this is sufficient:
 
 If you have not already, install `Python version 3.9 or higher <https://www.python.org>`_.
 
-You can install a local Python package that uses your new OpenDP binary. 
+You can install a local Python package that uses your new OpenDP binary.
 
 .. dropdown:: Optional Virtual Environment
 
@@ -158,7 +158,7 @@ Change to the ``python`` directory, install dependencies, and then install the P
 ``requirement-dev.txt`` is compiled from ``requirements-dev.in``:
 To update dependencies, follow the directions in that file.
 
-In the second line, the ``-e`` flag is significant! 
+In the second line, the ``-e`` flag is significant!
 It stands for "editable", meaning you only have to run this command once.
 That is, you do not need to reinstall the OpenDP Python package if changes are made in the ``/python/src`` folder or to the library binary,
 but you should restart the Python interpreter or kernel.
@@ -173,20 +173,20 @@ At this point, you should be able import OpenDP as a locally installed package:
 .. note::
 
     If you encounter the following error on import:
-    
+
     .. code-block::
 
         OSError: dlopen ... (mach-o file, but is an incompatible architecture)
-    
+
     You should check that the architecture from ``rustc -vV`` matches your Python architecture.
     This can occur if you are on a Mac M1 and have an x86_64 Python install.
-    
+
 
 Python Tests
 ^^^^^^^^^^^^
 
 You can test that things are working by running OpenDP's Python test suite, using ``pytest``.
-Run the tests from the ``python`` directory. 
+Run the tests from the ``python`` directory.
 
 .. code-block:: bash
 
@@ -200,7 +200,7 @@ If everything has gone well, you'll see a bunch of output, then a line similar t
 
 If pytest is not found, don't forget to activate your virtual environment!
 
-This is just a quick overview of building OpenDP. 
+This is just a quick overview of building OpenDP.
 
 Python Documentation
 ^^^^^^^^^^^^^^^^^^^^
@@ -283,7 +283,7 @@ Run tests (tests are located in ``R/opendp/tests/``):
 R also has a built-in check function that runs tests and checks for common errors:
 
 .. code-block:: R
-    
+
     devtools::check("R/opendp")
 
 To run the same check manually, use:
@@ -293,7 +293,7 @@ To run the same check manually, use:
     R CMD build R/opendp
     R CMD check opendp_*.tar.gz --as-cran
 
-It is important ``R CMD check`` is run on the ``.tar.gz``, not on ``R/opendp``, 
+It is important ``R CMD check`` is run on the ``.tar.gz``, not on ``R/opendp``,
 because ``check`` depends on some of the changes ``build`` makes within the ``.tar.gz``.
 
 
@@ -337,8 +337,8 @@ Environment Variables
    * - Name
      - Description
    * - ``OPENDP_LIB_DIR``
-     - Overrides the directory in which the OpenDP language binding looks for the OpenDP Library binary.  
-       See example in :ref:`r-setup`. 
+     - Overrides the directory in which the OpenDP language binding looks for the OpenDP Library binary.
+       See example in :ref:`r-setup`.
    * - ``OPENDP_POLARS_LIB_PATH``
      - Each OpenDP Polars plugin contains a path to the OpenDP Library binary.
        When OpenDP is used as a query server, library paths in queries submitted by clients are stale (local to the client).
@@ -349,16 +349,16 @@ Environment Variables
      - Used by CI. When ``true``, The Python ``opendp`` package will import without the presence of the OpenDP Library binary.
    * - ``OPENDP_SPHINX_PORT`` and ``OPENDP_SPHINX_URI``
      - When configured, links to proof documents hosted by Sphinx point to the URI and port.
-       The URI defaults to localhost. 
+       The URI defaults to localhost.
        Allows for a local documentation site.
        Start the server from ``docs/`` with ``make sphinx-server``.
    * - ``OPENDP_RUSTDOC_PORT`` and ``OPENDP_RUSTDOC_URI``
-     - When configured, links in proof documents to Rustdocs include the URI and port. 
-       The URI defaults to localhost. 
+     - When configured, links in proof documents to Rustdocs include the URI and port.
+       The URI defaults to localhost.
        Allows for a local documentation site.
-       Start the server from ``docs/`` with ``make rustdoc-server``. 
+       Start the server from ``docs/`` with ``make rustdoc-server``.
    * - ``OPENDP_TEST_RELEASE``
-     - When ``true``, and ``OPENDP_LIB_DIR`` is set, 
+     - When ``true``, and ``OPENDP_LIB_DIR`` is set,
        the library will attempt to load the ``release`` binary instead of the ``debug`` binary.
 
 Developer Tooling

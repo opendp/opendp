@@ -55,7 +55,7 @@ def get_changelog_update(lines):
         for line in v:
             output_lines.append(f'- {line}')
         output_lines.append('')
-    
+
     return '\n'.join(output_lines)
 
 

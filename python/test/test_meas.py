@@ -23,7 +23,7 @@ def test_gaussian_curve():
         profile.epsilon(delta=-0.0)
     with pytest.raises(dp.OpenDPException):
         profile.delta(epsilon=-0.0)
-        
+
     profile = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 0.)).map(d_in=1.0)
     assert profile.epsilon(delta=0.0) == float('inf')
     assert profile.epsilon(delta=0.1) == float('inf')
@@ -164,7 +164,7 @@ def test_make_count_by_ptr():
     input_space = dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()
     meas = (
         input_space >>
-        dp.t.then_count_by(MO=dp.L1Distance[float], TV=float) >> 
+        dp.t.then_count_by(MO=dp.L1Distance[float], TV=float) >>
         dp.m.then_laplace_threshold(scale=2., threshold=28.)
     )
     print("stability histogram:", meas(["CAT_A"] * 20 + ["CAT_B"] * 10))

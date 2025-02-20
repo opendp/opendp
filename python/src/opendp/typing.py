@@ -81,7 +81,7 @@ def set_default_int_type(T: RuntimeTypeDescriptor) -> None:
     When you build a computation chain, any unspecified integer types default to this int type.
 
     The default int type is i32.
-    
+
     :param T: must be one of [u8, u16, u32, u64, usize, i8, i16, i32, i64]
     :type T: :ref:`RuntimeTypeDescriptor`
     """
@@ -138,7 +138,7 @@ class RuntimeType(object):
         if self.args:
             result += f'<{", ".join(map(str, self.args))}>'
         return result
-    
+
     def __hash__(self) -> int:
         return hash(str(self))
 
@@ -181,7 +181,7 @@ class RuntimeType(object):
             hinted_type = typing.get_origin(type_name), typing.get_args(type_name)
         if isinstance(type_name, GenericAlias): # type: ignore[attr-defined]
             hinted_type = type_name.__origin__, type_name.__args__ # type: ignore[attr-defined]
-    
+
         if hinted_type:
             origin, args = hinted_type
             args = [RuntimeType.parse(v, generics=generics) for v in args] or None # type: ignore[assignment]
@@ -191,7 +191,7 @@ class RuntimeType(object):
                 origin = 'Vec'
             elif origin == dict:
                 origin = 'HashMap'
-            
+
             return RuntimeType(RuntimeType.parse(origin, generics=generics), args)
 
         # parse a tuple of types-- (int, "f64"); (Sequence[int], (int, bool))
@@ -280,21 +280,21 @@ class RuntimeType(object):
         """
         if type(public_example) in _ELEMENTARY_TYPES:
             return _ELEMENTARY_TYPES[type(public_example)]
-        
+
         if isinstance(public_example, (Domain, Metric, Measure)):
             return RuntimeType.parse(public_example.type)
-        
+
         pl = import_optional_dependency("polars", raise_error=False)
         if pl is not None:
             if isinstance(public_example, pl.LazyFrame):
                 return LazyFrame
-            
+
             if isinstance(public_example, pl.DataFrame):
                 return DataFrame
-            
+
             if isinstance(public_example, pl.Series):
                 return Series
-            
+
             if isinstance(public_example, pl.Expr):
                 return Expr
 
@@ -311,7 +311,7 @@ class RuntimeType(object):
             if py_object:
                 return "ExtrinsicObject"
             raise TypeError(f"elements must be homogeneously typed. Found {types}")
-        
+
         if isinstance(public_example, list):
             return RuntimeType('Vec', [_infer_homogeneous(public_example)])
 
@@ -335,7 +335,7 @@ class RuntimeType(object):
 
         if public_example is None:
             raise UnknownTypeException("Type of Option cannot be inferred from None")
-        
+
         if callable(public_example):
             return "CallbackFn"
 
@@ -370,7 +370,7 @@ class RuntimeType(object):
     def substitute(self: Union["RuntimeType", str], **kwargs):
         '''
         Substitutes any generic type parameters according to the passed keyword arguments
-        
+
         :param kwargs:
         '''
         if isinstance(self, _GenericType):
@@ -378,7 +378,7 @@ class RuntimeType(object):
         if isinstance(self, RuntimeType):
             return RuntimeType(self.origin, self.args and [RuntimeType.substitute(arg, **kwargs) for arg in self.args])
         return self
-    
+
 
 class _GenericType(RuntimeType):
     def __repr__(self):
@@ -473,7 +473,7 @@ MapDomain: DomainDescriptor = DomainDescriptor('MapDomain')
 
 def get_atom(type_name):
     '''Parse type name and return the contained atomic type.
-    
+
     :param type_name: Rust type name
     '''
     type_name = RuntimeType.parse(type_name)
@@ -487,7 +487,7 @@ def get_atom(type_name):
 def get_atom_or_infer(type_name: Union[RuntimeType, str], example):
     '''Parse type name and return the contained atomic type,
     or infer from example.
-    
+
     :param type_name: Rust type name
     :param example: Public example whose type will be inferred
     '''
@@ -497,7 +497,7 @@ def get_atom_or_infer(type_name: Union[RuntimeType, str], example):
 def get_first(value):
     '''
     Get first value from iterable.
-    
+
     :param value: An iterable
     '''
     if value is None or not len(value):

@@ -26,9 +26,9 @@ In this example, we mock the typical API of the OpenDP library to make a transfo
         ...     """Constructs a Transformation that duplicates each record `multiplicity` times"""
         ...     def function(arg: list[int]) -> list[int]:
         ...         return arg * multiplicity
-        ... 
+        ...
         ...     def stability_map(d_in: int) -> int:
-        ...         # if a user could influence at most `d_in` records before, 
+        ...         # if a user could influence at most `d_in` records before,
         ...         # they can now influence `d_in` * `multiplicity` records
         ...         return d_in * multiplicity
         ...
@@ -40,7 +40,7 @@ In this example, we mock the typical API of the OpenDP library to make a transfo
         ...         function=function,
         ...         stability_map=stability_map,
         ...     )
-    
+
 The resulting Transformation may be used interchangeably with those constructed via the library:
 
 .. tab-set::
@@ -62,5 +62,5 @@ The resulting Transformation may be used interchangeably with those constructed 
         >>> trans.map(1) # computes epsilon
         4.0
 
-The code snip may form a basis for you to create your own data transformations, 
+The code snip may form a basis for you to create your own data transformations,
 and mix them into an OpenDP analysis.

@@ -9,7 +9,7 @@ def test_proven(monkeypatch):
 
         [(Proof Document)](url-is-replaced.tex)
         '''
-    
+
     # Proof doc does not actually exist, so fake it:
     monkeypatch.setattr(os.path, 'exists', lambda _: True)
 

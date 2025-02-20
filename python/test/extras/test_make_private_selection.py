@@ -84,4 +84,3 @@ def test_private_selection_no_answer():
 
     assert m_private_selection(20) is None
     assert m_private_selection.map(1) == 2 * m_plugin.map(1)
-

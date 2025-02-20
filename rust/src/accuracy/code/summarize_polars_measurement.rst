@@ -3,10 +3,10 @@ First, create a measurement with the Polars API:
 >>> import opendp.prelude as dp
 >>> import polars as pl
 >>> dp.enable_features("contrib")
-... 
+...
 >>> lf = pl.LazyFrame(schema={"A": pl.Int32, "B": pl.String})
 >>> lf_domain = dp.lazyframe_domain([
-...     dp.series_domain("A", dp.atom_domain(T="i32")), 
+...     dp.series_domain("A", dp.atom_domain(T="i32")),
 ...     dp.series_domain("B", dp.atom_domain(T=str))
 ... ])
 >>> lf_domain = dp.with_margin(lf_domain, by=[], max_partition_length=1000)

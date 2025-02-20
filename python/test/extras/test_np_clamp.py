@@ -12,4 +12,3 @@ def test_clamp():
     np = pytest.importorskip('numpy')
     data = np.random.normal(size=(100_000, 10))
     assert trans.output_domain.member(trans(data))
-

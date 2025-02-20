@@ -44,7 +44,7 @@ To ensure the correctness of the output, we require the following preconditions:
 
 \begin{proof}
     \label{lemma:row-by-row-precondition}
-    The preconditions of \texttt{make\_is\_equal} and pseudocode definition (line \ref{line:def}) ensure that the type preconditions of \texttt{make\_row\_by\_row} are satisfied. 
+    The preconditions of \texttt{make\_is\_equal} and pseudocode definition (line \ref{line:def}) ensure that the type preconditions of \texttt{make\_row\_by\_row} are satisfied.
     The remaining preconditions of \texttt{make\_row\_by\_row} are:
     \begin{itemize}
         \item \texttt{row\_function} has no side-effects.
@@ -53,7 +53,7 @@ To ensure the correctness of the output, we require the following preconditions:
 
     The first precondition is satisfied by the definition of \texttt{is\_equal} (line \ref{line:function}) in the pseudocode.
 
-    For the second precondition, assume the input is a member of \texttt{input\_domain}'s row domain. 
+    For the second precondition, assume the input is a member of \texttt{input\_domain}'s row domain.
     By the definition of \texttt{PartialEq}, the output of \texttt{is\_equal} is boolean, and \texttt{AtomDomain<bool>} includes all booleans.
     Therefore, the output is a member of \texttt{output\_row\_domain}.
 \end{proof}

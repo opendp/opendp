@@ -11,7 +11,7 @@ This document contains materials associated with \rustdoc{accuracy/fn}{discrete\
 
 \begin{definition}
     Let $z$ be the true value of the statistic and $X$ be the random variable the noisy release is drawn from.
-    Define $Y = |X - z|$, the distribution of DP errors. 
+    Define $Y = |X - z|$, the distribution of DP errors.
     Then for any statistical significance level \texttt{alpha}, denoted $\alpha \in [0, 1]$, and \texttt{accuracy}, denoted $a \ge 0$,
     \begin{equation}
         \alpha = P[Y \ge a]
@@ -19,7 +19,7 @@ This document contains materials associated with \rustdoc{accuracy/fn}{discrete\
 \end{definition}
 
 \begin{theorem}
-    For any $\texttt{scale} \ge 0$ denoted $s$, when $X \sim \mathcal{L}_\mathbb{Z}(z, s)$, 
+    For any $\texttt{scale} \ge 0$ denoted $s$, when $X \sim \mathcal{L}_\mathbb{Z}(z, s)$,
     \begin{equation}
         a = s \cdot ln(2 / (\alpha (e^{1/s} + 1))) + 1
     \end{equation}

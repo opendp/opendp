@@ -46,7 +46,7 @@ class DPExpr(object):
     See the full example there for more information.
 
     In addition to the DP-specific methods here, many Polars ``Expr`` methods are also supported,
-    and are documented in the :ref:`API User Guide <expression-index>`.    
+    and are documented in the :ref:`API User Guide <expression-index>`.
 
     This class is typically not used directly by users:
     Instead its methods are registered under the ``dp`` namespace of Polars expressions.
@@ -587,10 +587,10 @@ class OnceFrame(object):
         Requires "honest-but-curious" because the privacy guarantees only apply if:
 
         1. The LazyFrame (compute plan) is only ever executed once.
-        2. The analyst does not observe ordering of rows in the output. 
-        
+        2. The analyst does not observe ordering of rows in the output.
+
         To ensure that row ordering is not observed:
-        
+
         1. Do not extend the compute plan with order-sensitive computations.
         2. Shuffle the output once collected `(in Polars sample all, with shuffle enabled) <https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.sample.html>`_.
         """
@@ -821,8 +821,8 @@ class LazyFrameQuery():
         :param on: optional, the names of columns to join on. Useful if the key dataframe contains extra columns
         """
         # Motivation for adding this new API:
-        # 1. Writing a left join is more difficult in the context API: 
-        #   see the complexity of this implementation, where you have to go under the hood. 
+        # 1. Writing a left join is more difficult in the context API:
+        #   see the complexity of this implementation, where you have to go under the hood.
         #   This gives an easier shorthand to write a left join.
         # 2. Left joins are more likely to be supported by database backends.
         # 3. Easier to use; with the Polars API the key set needs to be lazy, user must specify they want a right join and the join keys.
@@ -830,7 +830,7 @@ class LazyFrameQuery():
         if pl is not None:
             if isinstance(keys, pl.dataframe.frame.DataFrame):
                 keys = keys.lazy()
-        
+
         if on is None:
             on = keys.collect_schema().names()
 
@@ -988,7 +988,7 @@ class Margin(object):
 
     public_info: Literal["keys"] | Literal["lengths"] | None = None
     """Identifies properties of grouped data that are considered public information.
-    
+
     * ``"keys"`` designates that keys are not protected
     * ``"lengths"`` designates that both keys and partition lengths are not protected
     """
@@ -1008,7 +1008,7 @@ class Margin(object):
 
     max_partition_contributions: int | None = None
     """The greatest number of records an individual may contribute to any one partition.
-    
+
     This can significantly reduce the sensitivity of grouped queries under zero-Concentrated DP.
     """
 

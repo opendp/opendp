@@ -114,7 +114,7 @@ def update_version(version):
     def dump_python_config(config, f):
         config.write(f)
     update_file("python/setup.cfg", load_python_config, munge_python_config, dump_python_config)
-    
+
     # R Package
     log("Updating R/opendp/DESCRIPTION")
     with ControlEditor(path='R/opendp/DESCRIPTION') as control:

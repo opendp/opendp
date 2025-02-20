@@ -141,7 +141,7 @@ pub(crate) fn sample_geometric_exp_fast(x: RBig) -> Fallible<UBig> {
 ///
 /// Specifically, the probability of returning any `x` of type [`IBig`] is
 /// ```math
-/// \forall x \in \mathbb{Z}, \quad  
+/// \forall x \in \mathbb{Z}, \quad
 /// P[X = x] = \frac{e^{-1/scale} - 1}{e^{-1/scale} + 1} e^{-|x|/scale}, \quad
 /// \text{where } X \sim \mathcal{L}_\mathbb{Z}(0, scale)
 /// ```
@@ -175,7 +175,7 @@ pub fn sample_discrete_laplace(scale: RBig) -> Fallible<IBig> {
 ///
 /// Specifically, the probability of returning any `x` of type [`IBig`] is
 /// ```math
-/// \forall x \in \mathbb{Z}, \quad  
+/// \forall x \in \mathbb{Z}, \quad
 /// P[X = x] = \frac{e^{-\frac{x^2}{2\sigma^2}}}{\sum_{y\in\mathbb{Z}}e^{-\frac{y^2}{2\sigma^2}}}, \quad
 /// \text{where } X \sim \mathcal{N}_\mathbb{Z}(0, \sigma^2)
 /// ```

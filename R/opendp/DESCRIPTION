@@ -32,7 +32,7 @@ Config/testthat/edition: 3
 Config/opendp/MSRV: 1.64.0
 Config/Needs/website:
     pkgdown
-Collate: 
+Collate:
     'mod.R'
     'typing.R'
     'accuracy.R'

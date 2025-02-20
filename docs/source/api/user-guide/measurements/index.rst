@@ -43,7 +43,7 @@ You can choose whether to construct scalar or vector-valued versions by setting 
 Laplacian Noise
 ***************
 
-These algorithms accept sensitivities in terms of the absolute or L2 metrics and measure privacy in terms of epsilon. 
+These algorithms accept sensitivities in terms of the absolute or L2 metrics and measure privacy in terms of epsilon.
 Use the :func:`opendp.accuracy.laplacian_scale_to_accuracy` and :func:`opendp.accuracy.accuracy_to_laplacian_scale` functions to convert to/from accuracy estimates.
 
 .. list-table::
@@ -66,7 +66,7 @@ Use the :func:`opendp.accuracy.laplacian_scale_to_accuracy` and :func:`opendp.ac
 Gaussian Noise
 **************
 
-These algorithms accept sensitivities in terms of the absolute or L2 metrics and measure privacy in terms of rho (zero-concentrated differential privacy). 
+These algorithms accept sensitivities in terms of the absolute or L2 metrics and measure privacy in terms of rho (zero-concentrated differential privacy).
 Use the :func:`opendp.accuracy.gaussian_scale_to_accuracy` and :func:`opendp.accuracy.accuracy_to_gaussian_scale` functions to convert to/from accuracy estimates.
 Refer to :ref:`measure-casting` to convert to approximate DP.
 

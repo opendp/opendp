@@ -40,7 +40,7 @@ To ensure the correctness of the output, we require the following preconditions:
 
 \begin{proof}
     \label{lemma:row-by-row-precondition}
-    The preconditions of \texttt{make\_clamp} and pseudocode definition (line \ref{line:def}) ensure that the type preconditions of \texttt{make\_row\_by\_row\_fallible} are satisfied. 
+    The preconditions of \texttt{make\_clamp} and pseudocode definition (line \ref{line:def}) ensure that the type preconditions of \texttt{make\_row\_by\_row\_fallible} are satisfied.
     The remaining preconditions of \texttt{make\_row\_by\_row\_fallible} are:
     \begin{itemize}
         \item \texttt{row\_function} has no side-effects.
@@ -49,7 +49,7 @@ To ensure the correctness of the output, we require the following preconditions:
 
     The first precondition is satisfied by the definition of \texttt{clamper} (line \ref{line:clamper}) in the pseudocode.
 
-    For the second precondition, assume the input is a member of \texttt{input\_domain}'s row domain. 
+    For the second precondition, assume the input is a member of \texttt{input\_domain}'s row domain.
     Therefore, by \ref{line:assert-non-null}, the input is non-null.
     In addition, since \texttt{Bounds.new\_closed} did not raise an exception, then by the definition of \texttt{Bounds.new\_closed}, the bounds are non-null.
     Thus, by the definition of \rustdoc{traits/trait}{ProductOrd}, the preconditions of \texttt{total\_clamp} are satisfied, so the output is within the bounds.

@@ -61,7 +61,7 @@ def text_to_temp(text, file_suffix, debug=False):
 
 
 # Ugly regexes:
-        
+
 
 def clean_rst(rst_text, prefix):
     '''
@@ -72,7 +72,7 @@ def clean_rst(rst_text, prefix):
     ... The start
     ...
     ... .. tab-set::
-    ... 
+    ...
     ...     .. tab-item:: Context API
     ...         :sync: context
     ...
@@ -108,7 +108,7 @@ def clean_rst(rst_text, prefix):
 
     # Clear unneeded tags:
     rst_text = sub(r'\.\. tab-set::', '', rst_text)
-    rst_text = sub(r'\.\. tab-item::.*', '', rst_text) 
+    rst_text = sub(r'\.\. tab-item::.*', '', rst_text)
     rst_text = sub(r':sync:.*', '', rst_text)
     rst_text = sub(r':language: python', '', rst_text)
 
@@ -171,7 +171,7 @@ def clean_md(md_text):
     ``` code
     # 2 + 2
     ```
-    
+
     '''
     md_text = re.sub(r'``` \{.*?\}', '``` code', md_text, flags=re.DOTALL)
     md_text = re.sub(r'(``` code)(.*?)(```)', undoctest, md_text, flags=re.DOTALL)

@@ -16,13 +16,13 @@ jobs:
         id: "diffs"
         run: |
           files=$(git --no-pager diff --diff-filter=d --name-only origin/${{ github.event.pull_request.base.ref }} -- '*.tex')
-          
+
           # using syntax from: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
           # construct list of .tex files
           echo "tex<<EOF" >> $GITHUB_OUTPUT
           echo "$files" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-    
+
           # construct list of .pdf files
           echo "pdf<<EOF" >> $GITHUB_OUTPUT
           echo "${files//$'.tex'/.pdf}" >> $GITHUB_OUTPUT
@@ -34,7 +34,7 @@ jobs:
      tex: ${{ steps.diffs.outputs.tex }}
      pdf: ${{ steps.diffs.outputs.pdf }}
 
-      
+
   latex-build:
     needs: [pre-latex-build]
     if: ${{ needs.pre-latex-build.outputs.tex != '' }}

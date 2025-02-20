@@ -10,7 +10,7 @@
             * {
                 font-family: -apple-system, BlinkMacSystemFont, Segoe UI, "Helvetica Neue", Arial, sans-serif;
             }
-            
+
         </style>
     </head>
     <body>
@@ -21,7 +21,7 @@
         <script>
             (function(){
                 const url = document.location.toString();
-    
+
                 const pairs = Object.entries({
                     // Check longer, more precise patterns first:
 
@@ -40,7 +40,7 @@
                     '/resources/index.html': '/theory/resources.html',
                     '/examples/attacks/': '/theory/attacks/',
                 });
-                
+
                 for ([old_fragment, new_fragment] of pairs) {
                     if (url.includes(old_fragment)) {
                         const new_url = url.replace(old_fragment, new_fragment)

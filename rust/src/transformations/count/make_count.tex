@@ -14,7 +14,7 @@ Proves soundness of \rustdoc{transformations/fn}{make\_count} in \asOfCommit{mod
 
 \texttt{make\_count} returns a Transformation that computes a count of the number of records in a vector.
 The length of the vector, of type \texttt{usize}, is exactly casted to a user specified output type \texttt{TO}.
-If the length is too large to be represented exactly by \texttt{TO}, 
+If the length is too large to be represented exactly by \texttt{TO},
 the cast saturates at the maximum value of type \texttt{TO}.
 
 \subsection*{Vetting History}
@@ -39,7 +39,7 @@ the cast saturates at the maximum value of type \texttt{TO}.
         \begin{itemize}
             \item \rustdoc{traits/trait}{ExactIntBounds}, which gives the \texttt{MAX\_CONSECUTIVE} value of type \texttt{TO}
         \end{itemize}
-        
+
         \item \texttt{One} provides a way to retrieve \texttt{TO}'s representation of 1
         \item \rustdoc{traits/trait}{DistanceConstant} to satisfy the preconditions of \texttt{new\_stability\_map\_from\_constant}
     \end{itemize}
@@ -64,14 +64,14 @@ Before proceeding with proving the validity of the stability map, we provide a c
 
 \begin{lemma}
     \label{dsym-sens}
-    $|\function(u) - \function(v)| \leq |\texttt{len(u)} - \texttt{len(v)}|$, 
+    $|\function(u) - \function(v)| \leq |\texttt{len(u)} - \texttt{len(v)}|$,
     where \texttt{len} is an alias for \\ \texttt{input\_domain.size}.
 \end{lemma}
 
 \begin{proof}
-    By \rustdoc{domains/trait}{CollectionDomain}, we know \texttt{size} on line \ref{line:size} is of type \texttt{usize}, 
+    By \rustdoc{domains/trait}{CollectionDomain}, we know \texttt{size} on line \ref{line:size} is of type \texttt{usize},
     so it is non-negative and integral.
-    Therefore, by the definition of \texttt{ExactIntCast}, 
+    Therefore, by the definition of \texttt{ExactIntCast},
     the invocation of \texttt{TO.exact\_int\_cast} on line \ref{line:exact-int-cast} can only fail if the argument is greater than \texttt{TO.MAX\_CONSECUTIVE}.
     In this case, the value is replaced with \texttt{TO.MAX\_CONSECUTIVE}.
     Therefore, $\function(u) = min(\texttt{len(u)}, c)$, where $c = \texttt{TO.MAX\_CONSECUTIVE}$.
@@ -89,22 +89,22 @@ Before proceeding with proving the validity of the stability map, we provide a c
 \end{lemma}
 
 \begin{proof}
-    Every element $\ell \in v$ is drawn from domain $\mathcal{X}$, so summing over all $z\in \mathcal{X}$ will sum over every element $\ell\in x$. 
+    Every element $\ell \in v$ is drawn from domain $\mathcal{X}$, so summing over all $z\in \mathcal{X}$ will sum over every element $\ell\in x$.
     Recall that the definition of \texttt{SymmetricDistance} states that $h_v(z)$ will return the number of occurrences of value $z$ in vector $v$.
-    Therefore, $\sum_{z\in\mathcal{X}} h_v(z)$ is the sum of the number of occurrences of each unique value; 
-    this is equivalent to the total number of items in the vector. 
+    Therefore, $\sum_{z\in\mathcal{X}} h_v(z)$ is the sum of the number of occurrences of each unique value;
+    this is equivalent to the total number of items in the vector.
 
-    Since \rustdoc{domains/trait}{CollectionDomain} is implemented for \texttt{VectorDomain<AtomDomain<TIA>>}, 
-    we depend on the correctness of the implementation 
+    Since \rustdoc{domains/trait}{CollectionDomain} is implemented for \texttt{VectorDomain<AtomDomain<TIA>>},
+    we depend on the correctness of the implementation
     Conditioned on the correctness of the implementation of \texttt{CollectionDomain} for \texttt{VectorDomain<AtomDomain<TIA>>},
     the variable \texttt{size} is of type \texttt{usize} containing the number of elements in \texttt{arg}.
     Therefore, $\sum_{z\in\mathcal{X}} h_v(z)$ is equivalent to \texttt{size}.
 \end{proof}
 
-\begin{proof} \textbf{(Part 2 -- stability map).} 
-    Take any two elements $u, v$ in the \\\texttt{input\_domain} and any pair $(\din, \dout)$, 
+\begin{proof} \textbf{(Part 2 -- stability map).}
+    Take any two elements $u, v$ in the \\\texttt{input\_domain} and any pair $(\din, \dout)$,
     where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \texttt{output\_metric}.
-    Assume $u, v$ are \din-close under \texttt{input\_metric} and that $\texttt{stability\_map}(\din) \leq \dout$. 
+    Assume $u, v$ are \din-close under \texttt{input\_metric} and that $\texttt{stability\_map}(\din) \leq \dout$.
     These assumptions are used to establish the following inequality:
     \begin{align*}
         |\function(u) - \function(v)| &\leq |\texttt{len(u)} - \texttt{len(v)}| &&\text{by }\ref{dsym-sens} \\

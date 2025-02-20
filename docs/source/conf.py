@@ -36,10 +36,10 @@ extensions = [
 
 # convert markdown to rst when rendering with sphinx
 markdown_modules = {
-    "accuracy", 
-    "combinators", 
+    "accuracy",
+    "combinators",
     "core",
-    "measurements", 
+    "measurements",
     "transformations",
     "domains",
     "metrics",
@@ -61,7 +61,7 @@ def docstring(app, what, name, obj, options, lines):
         # split docstring into description and params
         param_index = next((i for i, line in enumerate(lines) if is_rst(line)), len(lines))
         description, params = lines[:param_index], lines[param_index:]
-        
+
         # rust documentation is markdown, convert to rst
         rst = pypandoc.convert_text('\n'.join(description), 'rst', format='md')
 
@@ -112,7 +112,7 @@ release = str(semver_version)
 nitpicky = True
 nitpick_ignore = [
     # (no comment = single occurrence)
-    
+
     # May be a problem with the stdlib?
     ('py:class', 'pathlib.Path'),
 

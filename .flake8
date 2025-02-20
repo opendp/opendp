@@ -57,7 +57,7 @@ per-file-ignores =
 
     # Pseudocode necessarily has a lot of undefined names. No fixes needed!
     # F821: undefined name '...'
-    # TODO: Move cdp_epsilon.py to a pseudocode directory? 
+    # TODO: Move cdp_epsilon.py to a pseudocode directory?
     */cdp_epsilon.py:F821
     */pseudocode/*:F821
 

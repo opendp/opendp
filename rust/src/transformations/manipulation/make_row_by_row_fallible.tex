@@ -24,11 +24,11 @@ The function is permitted to return a data-independent error.
 \subsection*{Precondition}
 \begin{itemize}
 
-    \item \texttt{DI} (input domain) is a type with trait \rustdoc{transformations/trait}{RowByRowDomain}\texttt{<DO>}. 
+    \item \texttt{DI} (input domain) is a type with trait \rustdoc{transformations/trait}{RowByRowDomain}\texttt{<DO>}.
         This trait provides a way to apply a map function to each record in the input dataset to retrieve a dataset that is a member of the output domain, of type \texttt{DO}. The trait further implies that \texttt{DatasetDomain} is also implemented for \texttt{DI}.
-    \item \texttt{DO} (output domain) is a type with trait \rustdoc{transformations/trait}{DatasetDomain}. 
+    \item \texttt{DO} (output domain) is a type with trait \rustdoc{transformations/trait}{DatasetDomain}.
         \texttt{DatasetDomain} is used to define the type of the row domain.
-    \item \texttt{M} (metric) is a type with trait \rustdoc{transformations/trait}{DatasetMetric}. 
+    \item \texttt{M} (metric) is a type with trait \rustdoc{transformations/trait}{DatasetMetric}.
         \texttt{DatasetMetric} is used to restrict the set of valid metrics to those which measure distances between datasets.
     \item \rustdoc{core/trait}{MetricSpace} is implemented for \texttt{(DI, M)}. Therefore \texttt{M} is a valid metric on \texttt{DI}.
     \item \rustdoc{core/trait}{MetricSpace} is implemented for \texttt{(DO, M)}.
@@ -55,7 +55,7 @@ Before proceeding with proving the validity of the stability map, we first provi
 
 \begin{lemma}
     \label{f-sim}
-    Let $f$ denote the \texttt{row\_function}. 
+    Let $f$ denote the \texttt{row\_function}.
     For any choice $u, v$ of input arguments in the input domain, and any choice \texttt{M} for which \texttt{DatasetMetric} is implemented for,
     $d_{M}([f(u_1), f(u_2), ...], [f(v_1), f(v_2), ...]) \le d_{M}([u_1, u_2, ...], [v_1, v_2, ...])$.
 \end{lemma}
@@ -63,7 +63,7 @@ Before proceeding with proving the validity of the stability map, we first provi
 \begin{proof}
     Assume WLOG that any source of randomness is fixed when $f$ is computed on $u$ vs $v$.
     Given this assumption, and the precondition that $f$ has no side-effects,
-    if $u_i = v_i$, then $f(u_i) = f(v_i)$. 
+    if $u_i = v_i$, then $f(u_i) = f(v_i)$.
     That is, the row function cannot increase the distance between corresponding rows in any adjacent dataset.
     On the other hand, it is possible for $f(u_i) = f(v_i)$, even if $u_i \neq v_i$.
     For example, if $f$ is a constant function, then $f(u_i) = f(v_i)$ for all $i$.
@@ -71,11 +71,11 @@ Before proceeding with proving the validity of the stability map, we first provi
     $f$ can only make datasets more similar.
 \end{proof}
 
-\begin{proof} \textbf{(Part 2 -- stability map).} 
-    Take any two elements $u, v$ in the \\\texttt{input\_domain} and any pair $(\din, \dout)$, 
+\begin{proof} \textbf{(Part 2 -- stability map).}
+    Take any two elements $u, v$ in the \\\texttt{input\_domain} and any pair $(\din, \dout)$,
     where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \texttt{output\_metric}.
-    Assume $u, v$ are \din-close under \texttt{input\_metric} and that $\texttt{stability\_map}(\din) \leq \dout$. 
-    
+    Assume $u, v$ are \din-close under \texttt{input\_metric} and that $\texttt{stability\_map}(\din) \leq \dout$.
+
     \begin{align*}
         d_{M}(\function(u), \function(v)) &= d_{M}([f(u_1), f(u_2), ...], [f(v_1), f(v_2), ...])  && \text{since \texttt{DO} is a }\texttt{DatasetDomain}\\
         &\le d_{M}([u_1, u_2, ...], [v_1, v_2, ...]) && \texttt{by } \ref{f-sim} \\

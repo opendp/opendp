@@ -59,12 +59,12 @@
 //!
 //!     // Since the domain and metric conforms, these two transformations may be chained.
 //!     let load_numbers = make_chain_tt(&cast, &split_lines)?;
-//!      
+//!
 //!     // You can use the more convenient `>>` notation to chain instead.
 //!     // When you use the `then_` version of the constructor,
 //!     //     the `>>` operator will automatically fill the input domain and metric from the previous transformation.
 //!     let load_and_clamp = load_numbers >> then_clamp(bounds);
-//!     
+//!
 //!     // After chaining, the resulting transformation is wrapped in a `Result`.
 //!     let load_and_sum = (load_and_clamp >> then_sum())?;
 //!

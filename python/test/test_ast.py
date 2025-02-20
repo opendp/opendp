@@ -52,7 +52,7 @@ def check_directive_order(docstring):
     ...     :paran xyz: Typo!
     ... """)
     'Unknown directives: :paran'
-    
+
     >>> check_directive_order("""
     ...     :return: The output
     ...     :param xyz: The input
@@ -63,7 +63,7 @@ def check_directive_order(docstring):
     unknown_directives = set(directives) - {':param', ':rtype:', ':type', ':raises', ':example:', ':return:'}
     if unknown_directives:
         return f'Unknown directives: {", ".join(unknown_directives)}'
-    
+
     order = ''.join(re.sub(r':$', '', d) for d in directives)
     # TODO: Has 169 failures if we require ":return" and ":rtype" together:
     # canonical_order = r'^(:param(:type)?)*(:return:rtype)?(:raises)*(:example)?$'
@@ -74,7 +74,7 @@ def check_directive_order(docstring):
 
     # TODO: Has 28 failures if we require ":rtype" if ":return" is given:
     # canonical_order = r'^(:param(:type)?)*((:return)?:rtype)?(:raises)*(:example)?$'
-    
+
     canonical_order = r'^(:param(:type)?)*(:return)?(:rtype)?(:raises)*(:example)?$'
     if not re.search(canonical_order, order):
         short_order = re.sub(r'[:$^]', '', canonical_order)
@@ -109,7 +109,7 @@ def check_doctest_continuity(docstring):
     >>> check_doctest_continuity("""
     ...     >>> 1 + 1
     ...     2
-    ...     
+    ...
     ...     >>> 2 + 2
     ...     4
     ... """)
@@ -117,7 +117,7 @@ def check_doctest_continuity(docstring):
 
     >>> check_doctest_continuity("""
     ...     >>> assert True
-    ...     
+    ...
     ...     And then:
     ...     >>> print('hello!')
     ...     hello!
@@ -209,7 +209,7 @@ class Checker():
         if len(self.all_ast_args) and self.all_ast_args[0].arg in ['self', 'cls']:
             # TODO: Confirm that this is a method in a class.
             self.all_ast_args.pop(0)
-        
+
         if self.name == '__init__' and self.docstring:
             self.errors.append('Move docstring up to class')
 
@@ -268,12 +268,12 @@ class Checker():
             k: v and re.sub(r'Optional\[(.+)\]', r'\1', ast.unparse(v))
             for k, v in ast_arg_annotation_dict.items()
         }
-        
+
         for k in doc_type_dict.keys() | ast_type_dict.keys():
             doc_type = doc_type_dict.get(k)
             ast_type = ast_type_dict.get(k)
 
-            # TODO: Ignoring private functions, there are still 56 functions where 
+            # TODO: Ignoring private functions, there are still 56 functions where
             # either the documentation type or the annotation type is missing.
             if doc_type is None or ast_type is None:
                 continue

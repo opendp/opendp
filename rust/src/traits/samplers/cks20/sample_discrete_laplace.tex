@@ -21,7 +21,7 @@ This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsec
 \subsection*{Precondition}
 $\texttt{scale} \in \mathbb{Q} \land \texttt{scale} > 0$
 
-\subsection*{Pseudocode}        
+\subsection*{Pseudocode}
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_discrete_laplace.py}
 
 \subsection*{Postcondition}
@@ -32,8 +32,8 @@ or \texttt{Ok(out)}, where \texttt{out} is distributed as $\mathcal{L}_\mathbb{Z
 
 \section{Proof}
 \begin{definition} \cite{BV17}
-    (Discrete Laplace). Let $\mu, \sigma \in \mathbb{R}$ with $\sigma > 0$. 
-    The discrete laplace distribution with location $\mu$ and scale $s$ is denoted $\mathcal{L}_\mathbb{Z}(\mu, s)$. 
+    (Discrete Laplace). Let $\mu, \sigma \in \mathbb{R}$ with $\sigma > 0$.
+    The discrete laplace distribution with location $\mu$ and scale $s$ is denoted $\mathcal{L}_\mathbb{Z}(\mu, s)$.
     It is a probability distribution supported on the integers and defined by
     \begin{equation*}
         \forall x \in \mathbb{Z} \quad  P[X = x] = \frac{e^{1/s} - 1}{e^{1/s} + 1} e^{-|x|/s} \quad \text{where } X \sim \mathcal{L}_\mathbb{Z}(\mu, s)
@@ -50,7 +50,7 @@ Assume the preconditions are met.
 \begin{proof}
     By the non-negativity precondition on \texttt{scale},
     the precondition on \rustdoc{traits/samplers/cks20/fn}{sample\_geometric\_exp\_fast} is met.
-    By the definitions of \texttt{sample\_geometric\_exp\_fast} and \texttt{sample\_standard\_bernoulli}, 
+    By the definitions of \texttt{sample\_geometric\_exp\_fast} and \texttt{sample\_standard\_bernoulli},
     an error is only returned when there is a lack of system entropy.
     The only source of errors is from the invocation of these functions,
     therefore \texttt{sample\_discrete\_gaussian} only returns \texttt{Err(e)} when there is a lack of system entropy.
@@ -58,7 +58,7 @@ Assume the preconditions are met.
 
 We now condition on not returning an error, and establish some helpful lemmas.
 \begin{lemma}\cite{CKS20}\label{P_B_Y_ne_T_0}
-    Let $B \sim Bernoulli(1/2)$ and $Y \sim Geometric(1 - e^{-1/s})$ for some $s > 0$. 
+    Let $B \sim Bernoulli(1/2)$ and $Y \sim Geometric(1 - e^{-1/s})$ for some $s > 0$.
     Then $P[(B, Y) \neq (\top, 0)] = \frac{1}{2} (e^{-1/s} + 1)$.
 \end{lemma}
 
@@ -72,8 +72,8 @@ We now condition on not returning an error, and establish some helpful lemmas.
 \end{proof}
 
 \begin{lemma}\cite{CKS20}\label{P_Lx_BY_ne_T0}
-    Given random variables $B \sim Bernoulli(1/2)$ and $Y \sim Geometric(1 - e^{-1/s})$, define $X|_{B=\top} = Y$, and $X|_{B=\bot} = -Y$. 
-    If $(B, Y) \neq (\top, 0)$, then $X \sim \mathcal{L}_\mathbb{Z}(0, scale)$. 
+    Given random variables $B \sim Bernoulli(1/2)$ and $Y \sim Geometric(1 - e^{-1/s})$, define $X|_{B=\top} = Y$, and $X|_{B=\bot} = -Y$.
+    If $(B, Y) \neq (\top, 0)$, then $X \sim \mathcal{L}_\mathbb{Z}(0, scale)$.
     That is, $P[X = x | (B, Y) \neq (\top, 0)] = \frac{e^{1/s} - 1}{e^{1/s} + 1} e^{-|x|/s}$ for any $x \in \mathbb{Z}$.
 \end{lemma}
 
@@ -89,7 +89,7 @@ P[X = x | (B, Y) \neq (\top, 0)] &= \frac{P[X = x, (B, Y) \neq (\top, 0)]}{P[(B,
 \end{proof}
 
 \begin{lemma}\label{ok-out}
-    If the outcome of \texttt{sample\_discrete\_laplace} is \texttt{Ok(out)}, 
+    If the outcome of \texttt{sample\_discrete\_laplace} is \texttt{Ok(out)},
     then \texttt{out} is distributed as $\mathcal{L}_\mathbb{Z}(0, scale)$.
 \end{lemma}
 

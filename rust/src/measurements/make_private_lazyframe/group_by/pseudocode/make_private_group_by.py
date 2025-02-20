@@ -60,7 +60,7 @@ def make_private_group_by(
             final_predicate = threshold_expr
     else:
         final_predicate = predicate
-    
+
     # prepare supporting elements
     def function(arg):  # |\label{line:function}|
         output = DslPlan.GroupBy(
@@ -77,7 +77,7 @@ def make_private_group_by(
                 predicate=final_predicate,
             )
         return output
-    
+
     def privacy_map(d_in):  # |\label{line:privacy-map}|
         mip = margin.get("max_influenced_partitions", default=d_in)
         mnp = margin.get("max_num_partitions", default=d_in)

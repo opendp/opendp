@@ -20,7 +20,7 @@ def for_each(glob, template):
         else:
             print(f'FAIL: {cmd}')
             fails.append(str(file))
-    
+
     print(f'{success}/{total} for "{template}"')
     if len(fails) != 0:
         print('These failed:')

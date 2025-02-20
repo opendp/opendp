@@ -57,7 +57,7 @@ A domain describes the set of all possible input values of a function, or all po
 Transformations have both an ``input_domain`` and ``output_domain``, while measurements only have an ``input_domain``.
 
 A commonly-used domain is ``atom_domain(T)``, which describes the set of all possible non-null values of type ``T``.
-The following example creates a domain consisting of all possible non-null 64-bit floats, 
+The following example creates a domain consisting of all possible non-null 64-bit floats,
 and checks that 1.0 is a member of the domain, but NaN is not.
 
 .. tab-set::
@@ -123,13 +123,13 @@ Let's look at the Transformation returned from :py:func:`make_sum() <opendp.tran
 
       >>> dp.enable_features('contrib')
       >>> bounded_sum = dp.t.make_sum(
-      ...     input_domain=dp.vector_domain(dp.atom_domain(bounds=(0, 1))), 
+      ...     input_domain=dp.vector_domain(dp.atom_domain(bounds=(0, 1))),
       ...     input_metric=dp.symmetric_distance(),
       ... )
       >>> bounded_sum.input_domain
       VectorDomain(AtomDomain(bounds=[0, 1], T=i32))
 
-We see that the input domain is the same as we passed in: 
+We see that the input domain is the same as we passed in:
 "the set of all vectors of 32-bit signed integers bounded between 0 and 1."
 
 .. tab-set::
@@ -172,7 +172,7 @@ This is used to count the fewest number of additions or removals to convert one 
 
 Each metric is bundled together with a domain, and :math:`A` and :math:`B` are members of that domain.
 Since the symmetric distance metric is often paired with a ``VectorDomain<D>``, :math:`A` and :math:`B` are often vectors.
-If we had a dataset where each user can influence at most k records, we would say that the symmetric distance is bounded by `k`, so ``d_in=k`` 
+If we had a dataset where each user can influence at most k records, we would say that the symmetric distance is bounded by `k`, so ``d_in=k``
 (where ``d_in`` denotes an upper bound on the distance between adjacent inputs).
 
 Another example metric is ``AbsoluteDistance<f64>``.
@@ -263,7 +263,7 @@ If the relation check passes, then it tells you that, for all ``x``, ``x'`` in t
 * if ``d_X(x, x') <= d_in`` (if neighboring datasets are at most ``d_in``-close)
 * then ``d_Y(f(x), f(x')) <= d_out`` (then the distance between function outputs is no greater than ``d_out``)
 
-Notice that if the relation passes at ``d_out``, it will pass for any value greater than ``d_out`` 
+Notice that if the relation passes at ``d_out``, it will pass for any value greater than ``d_out``
 (so long as the relation doesn't throw an error due to numerical overflow).
 The usefulness of this property is shown in the :ref:`parameter-search` section.
 
@@ -284,8 +284,8 @@ The ``input_metric`` of Measurements is initially only some kind of global sensi
 However, once you chain the Measurement with a Transformation, the resulting Measurement will have whatever ``input_metric`` was on the Transformation.
 The ``output_measure`` of Measurements is some kind of privacy measure like :ref:`MaxDivergence <max-divergence>` or :ref:`SmoothedMaxDivergence <smoothed-max-divergence>`.
 
-In some cases, distances may not form a total order. 
-For example, in :math:`(\epsilon, \delta)`-DP, :math:`(\epsilon_1, \delta_1) = (1.5, 1e-6)` is incomparable to :math:`(\epsilon_2, \delta_2) = (1.0, 1e-7)`, 
+In some cases, distances may not form a total order.
+For example, in :math:`(\epsilon, \delta)`-DP, :math:`(\epsilon_1, \delta_1) = (1.5, 1e-6)` is incomparable to :math:`(\epsilon_2, \delta_2) = (1.0, 1e-7)`,
 so neither :math:`(\epsilon_1, \delta_1) \ge (\epsilon_2, \delta_2)` nor :math:`(\epsilon_2, \delta_2) \ge (\epsilon_1, \delta_1)` holds.
 However, :math:`(1.5, 1e-6) \ge (1.0, 1e-6)` would still hold, as both elements compare greater than or equal.
 

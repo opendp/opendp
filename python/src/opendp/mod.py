@@ -104,8 +104,8 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     def invoke(self, arg):
         """Create a differentially-private release with `arg`.
 
-        If `self` is (d_in, d_out)-close, then each invocation of this function is a d_out-DP release. 
-        
+        If `self` is (d_in, d_out)-close, then each invocation of this function is a d_out-DP release.
+
         :param arg: Input to the measurement.
         :return: differentially-private release
         :raises OpenDPException: packaged error from the core OpenDP library
@@ -115,7 +115,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
 
     def map(self, d_in):
         """Map an input distance `d_in` to an output distance.
-        
+
         :param d_in: Input distance
         """
         from opendp.core import measurement_map
@@ -125,7 +125,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         """Check if the measurement is (`d_in`, `d_out`)-close.
         If true, implies that if the distance between inputs is at most `d_in`, then the privacy usage is at most `d_out`.
         See also :func:`~Transformation.check`, a similar check for transformations.
-        
+
         :param d_in: Distance in terms of the input metric.
         :param d_out: Distance in terms of the output measure.
         :param debug: Enable to raise Exceptions to help identify why the privacy relation failed.
@@ -164,7 +164,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         '''
         from opendp.core import measurement_input_domain
         return measurement_input_domain(self)
-    
+
     @property
     def input_metric(self) -> "Metric":
         '''
@@ -179,7 +179,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         Input space of measurement
         '''
         return self.input_domain, self.input_metric
-    
+
     @property
     def output_measure(self) -> "Measure":
         '''
@@ -187,7 +187,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         '''
         from opendp.core import measurement_output_measure
         return measurement_output_measure(self)
-    
+
     @property
     def function(self) -> "Function":
         '''
@@ -195,12 +195,12 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         '''
         from opendp.core import measurement_function
         return measurement_function(self)
-    
+
     @property
     def input_distance_type(self) -> Union["RuntimeType", str]:
         """Retrieve the distance type of the input metric.
         This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.
-        
+
         :return: distance type
         """
         from opendp.core import measurement_input_distance_type
@@ -211,7 +211,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     def output_distance_type(self) -> Union["RuntimeType", str]:
         """Retrieve the distance type of the output measure.
         This is the type that the budget is expressed in.
-        
+
         :return: distance type
         """
         from opendp.core import measurement_output_distance_type
@@ -222,7 +222,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     def input_carrier_type(self) -> Union["RuntimeType", str]:
         """Retrieve the carrier type of the input domain.
         Any member of the input domain is a member of the carrier type.
-        
+
         :return: carrier type
         """
         from opendp.core import measurement_input_carrier_type
@@ -237,7 +237,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
-    
+
     def __repr__(self) -> str:
         return f"""Measurement(
     input_domain   = {self.input_domain},
@@ -245,7 +245,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     output_measure = {self.output_measure})"""
 
     def __iter__(self):
-        # this overrides the implementation of __iter__ on POINTER, 
+        # this overrides the implementation of __iter__ on POINTER,
         # which yields infinitely on zero-sized types
         raise ValueError("Measurement does not support iteration")  # pragma: no cover
 
@@ -277,7 +277,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
 
     >>> count.input_space
     (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())
-    
+
     >>> # invoke the transformation (invoke and __call__ are equivalent)
     >>> count.invoke([1, 2, 3])
     3
@@ -309,7 +309,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         :raises OpenDPException: packaged error from the core OpenDP library
         """
         from opendp.core import transformation_invoke
-        return transformation_invoke(self, arg) 
+        return transformation_invoke(self, arg)
 
     def __call__(self, arg):
         from opendp.core import transformation_invoke
@@ -317,7 +317,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
 
     def map(self, d_in):
         """Map an input distance `d_in` to an output distance.
-        
+
         :param d_in: Input distance. An upper bound on how far apart neighboring datasets can be with respect to the input metric
         """
         from opendp.core import transformation_map
@@ -367,7 +367,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         if isinstance(other, Transformation):
             from opendp.combinators import make_chain_tt
             return make_chain_tt(other, self)
-        
+
         if isinstance(other, _PartialConstructor):
             return self >> other(self.output_domain, self.output_metric) # type: ignore[call-arg]
 
@@ -385,7 +385,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         '''
         from opendp.core import transformation_input_domain
         return transformation_input_domain(self)
-    
+
 
     @property
     def output_domain(self) -> "Domain":
@@ -394,7 +394,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         '''
         from opendp.core import transformation_output_domain
         return transformation_output_domain(self)
-    
+
 
     @property
     def input_metric(self) -> "Metric":
@@ -403,7 +403,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         '''
         from opendp.core import transformation_input_metric
         return transformation_input_metric(self)
-    
+
     @property
     def output_metric(self) -> "Metric":
         '''
@@ -411,21 +411,21 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         '''
         from opendp.core import transformation_output_metric
         return transformation_output_metric(self)
-    
+
     @property
     def input_space(self) -> tuple["Domain", "Metric"]:
         '''
         Input space of transformation
         '''
         return self.input_domain, self.input_metric
-    
+
     @property
     def output_space(self) -> tuple["Domain", "Metric"]:
         '''
         Output space of transformation
         '''
         return self.output_domain, self.output_metric
-    
+
     @property
     def function(self) -> "Function":
         '''
@@ -455,7 +455,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         from opendp.core import transformation_output_distance_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(transformation_output_distance_type(self))
-    
+
     @property
     def input_carrier_type(self) -> Union["RuntimeType", str]:
         """Retrieve the carrier type of the input domain.
@@ -482,7 +482,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     output_domain  = {self.output_domain},
     input_metric   = {self.input_metric},
     output_metric  = {self.output_metric})"""
-    
+
     def __iter__(self):
         raise ValueError("Transformation does not support iteration")  # pragma: no cover
 
@@ -516,7 +516,7 @@ class Function(ctypes.POINTER(AnyFunction)): # type: ignore[misc]
     def __call__(self, arg):
         from opendp.core import function_eval
         return function_eval(self, arg)
-    
+
     def __del__(self):
         try:
             from opendp.core import _function_free
@@ -542,7 +542,7 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     def member(self, val):
         '''
         Check if ``val`` is a member of the domain.
-        
+
         :param val: a value to be checked for membership in `self`
         '''
         from opendp.domains import member
@@ -556,7 +556,7 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
         from opendp.domains import domain_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(domain_type(self))
-    
+
     @property
     def carrier_type(self) -> Union["RuntimeType", str]:
         '''
@@ -565,11 +565,11 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
         from opendp.domains import domain_carrier_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(domain_carrier_type(self))
-    
+
     @property
     def descriptor(self) -> Any:
         '''
-        Descriptor of domain. Used to retrieve the descriptor associated with domains defined in Python 
+        Descriptor of domain. Used to retrieve the descriptor associated with domains defined in Python
         '''
         from opendp.domains import _extrinsic_domain_descriptor
         return _extrinsic_domain_descriptor(self)
@@ -577,7 +577,7 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     def __repr__(self) -> str:
         from opendp.domains import domain_debug
         return domain_debug(self)
-    
+
     def __del__(self):
         try:
             from opendp.domains import _domain_free
@@ -586,14 +586,14 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
-    
+
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
         return type(self) is type(other) and str(self) == str(other)
-    
+
     def __hash__(self) -> int:
         return hash(str(self))
-    
+
     def __iter__(self):
         raise ValueError("Domain does not support iteration")
 
@@ -615,7 +615,7 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
         from opendp.metrics import metric_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(metric_type(self))
-    
+
     @property
     def distance_type(self) -> Union["RuntimeType", str]:
         '''
@@ -628,7 +628,7 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
     def __repr__(self) -> str:
         from opendp.metrics import metric_debug
         return metric_debug(self)
-    
+
     def __del__(self):
         try:
             from opendp.metrics import _metric_free
@@ -637,14 +637,14 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
             # an example error that this catches:
             #   ImportError: sys.meta_path is None, Python is likely shutting down
             pass
-    
+
     def __eq__(self, other) -> bool:
         # TODO: consider adding ffi equality
         return type(self) is type(other) and str(self) == str(other)
-    
+
     def __hash__(self) -> int:
         return hash(str(self))
-    
+
     def __iter__(self):
         raise ValueError("Metric does not support iteration")  # pragma: no cover
 
@@ -673,7 +673,7 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
         from opendp.measures import measure_type
         from opendp.typing import RuntimeType
         return RuntimeType.parse(measure_type(self))
-    
+
     @property
     def distance_type(self) -> Union["RuntimeType", str]:
         '''
@@ -686,7 +686,7 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
     def __repr__(self):
         from opendp.measures import measure_debug
         return measure_debug(self)
-    
+
     def __del__(self):
         try:
             from opendp.measures import _measure_free
@@ -698,10 +698,10 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
 
     def __eq__(self, other):
         return type(self) is type(other) and str(self) == str(other)
-    
+
     def __hash__(self) -> int:
         return hash(str(self))
-    
+
     def __iter__(self):
         raise ValueError("Measure does not support iteration")  # pragma: no cover
 
@@ -720,7 +720,7 @@ class PrivacyProfile(object):
     def delta(self, epsilon):
         '''
         Returns the delta that corresponds to this epsilon.
-        
+
         :param epsilon: Allowance for a multiplicative difference, or max divergence, in the distributions of releases on adjacent datasets
         '''
         from opendp._data import privacy_profile_delta
@@ -729,12 +729,12 @@ class PrivacyProfile(object):
     def epsilon(self, delta):
         '''
         Returns the epsilon that corresponds to this delta.
-        
+
         :param delta: Allowance for an additive difference between the distributions of releases on adjacent datasets
         '''
         from opendp._data import privacy_profile_epsilon
         return privacy_profile_epsilon(self.curve, delta)
-    
+
 
 class _PartialConstructor(object):
     '''
@@ -743,10 +743,10 @@ class _PartialConstructor(object):
     def __init__(self, constructor):
         self.constructor = constructor
         self.__opendp_dict__ = {}  # Not needed at runtime, but the definition prevents mypy errors.
-    
+
     def __call__(self, input_domain: Domain, input_metric: Metric):
         return self.constructor(input_domain, input_metric)
-    
+
     def __rshift__(self, other):
         return _PartialConstructor(lambda input_domain, input_metric: self(input_domain, input_metric) >> other) # pragma: no cover
 
@@ -779,7 +779,7 @@ class OpenDPException(Exception):
     def _raw_frames(self):
         import re
         return re.split(r"\s*[0-9]+: ", self.raw_traceback or "")
-    
+
     def _frames(self):
         def _format_frame(frame):
             return "\n  ".join(line.strip() for line in frame.split("\n"))
@@ -819,7 +819,7 @@ class OpenDPException(Exception):
 
         if self.message:
             response += f'("{self.message}")'
-            
+
         return response
 
 
@@ -858,7 +858,7 @@ def binary_search_chain(
         bounds: tuple[float, float] | None = None,
         T=None) -> M:
     """Find the highest-utility (`d_in`, `d_out`)-close Transformation or Measurement.
-    
+
     Searches for the numeric parameter to `make_chain` that results in a computation
     that most tightly satisfies `d_out` when datasets differ by at most `d_in`,
     then returns the Transformation or Measurement corresponding to said parameter.
@@ -894,7 +894,7 @@ def binary_search_chain(
     >>> # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain nearest the decision boundary.
     >>> # The lambda function returns the complete computation chain when given a single numeric parameter.
     >>> chain = dp.binary_search_chain(
-    ...     lambda s: pre >> dp.m.then_laplace(scale=s), 
+    ...     lambda s: pre >> dp.m.then_laplace(scale=s),
     ...     d_in=1, d_out=1.)
     ...
     >>> # The resulting computation chain is always (`d_in`, `d_out`)-close, but we can still double-check:
@@ -922,7 +922,7 @@ def binary_search_param(
         bounds: tuple[float, float] | None = None,
         T=None) -> float:
     """Solve for the ideal constructor argument to `make_chain`.
-    
+
     Optimizes a parameterized chain `make_chain` within float or integer `bounds`,
     subject to the chained relation being (`d_in`, `d_out`)-close.
 
@@ -952,10 +952,10 @@ def binary_search_param(
     >>> # Constructing the same chain with the discovered parameter will always be (0.1, 1.)-close.
     >>> assert make_fixed_laplace(scale).check(0.1, 1.)
 
-    A policy research organization wants to know the smallest sample size necessary to release an "accurate" epsilon=1 DP mean income. 
-    Determine the smallest dataset size such that, with 95% confidence, 
-    the DP release differs from the clipped dataset's mean by no more than 1000. 
-    Assume that neighboring datasets have a symmetric distance at most 2. 
+    A policy research organization wants to know the smallest sample size necessary to release an "accurate" epsilon=1 DP mean income.
+    Determine the smallest dataset size such that, with 95% confidence,
+    the DP release differs from the clipped dataset's mean by no more than 1000.
+    Assume that neighboring datasets have a symmetric distance at most 2.
     Also assume a clipping bound of 500,000.
 
     >>> # we first work out the necessary noise scale to satisfy the above constraints.
@@ -965,19 +965,19 @@ def binary_search_param(
     >>> def make_mean(data_size):
     ...    return (
     ...        (dp.vector_domain(dp.atom_domain(bounds=(0., 500_000.)), data_size), dp.symmetric_distance()) >>
-    ...        dp.t.then_mean() >> 
+    ...        dp.t.then_mean() >>
     ...        dp.m.then_laplace(necessary_scale)
     ...    )
     ...
     >>> # solve for the smallest dataset size that admits a (2 neighboring, 1. epsilon)-close measurement
     >>> dp.binary_search_param(
-    ...     make_mean, 
+    ...     make_mean,
     ...     d_in=2, d_out=1.,
     ...     bounds=(1, 1000000))
     1498
     """
 
-    # one might think running scipy.optimize.brent* would be better, but 
+    # one might think running scipy.optimize.brent* would be better, but
     # 1. benchmarking showed no difference or minor regressions
     # 2. brentq is more complicated
 
@@ -1021,7 +1021,7 @@ def binary_search(
     """Find the closest passing value to the decision boundary of `predicate`.
 
     If bounds are not passed, conducts an exponential search.
-    
+
     :param predicate: a monotonic unary function from a number to a boolean
     :param bounds: a 2-tuple of the lower and upper bounds to the input of `predicate`
     :param T: type of argument to `predicate`, one of {float, int}
@@ -1049,12 +1049,12 @@ def binary_search(
     >>> # build a histogram that emits float counts
     >>> input_space = dp.vector_domain(dp.atom_domain(bounds=(0., 100.)), 1000), dp.symmetric_distance()
     >>> dp_mean = dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(
-    ...     input_space >> dp.t.then_mean() >> dp.m.then_gaussian(1.)), 
+    ...     input_space >> dp.t.then_mean() >> dp.m.then_gaussian(1.)),
     ...     1e-8
     ... )
     ...
     >>> dp.binary_search(
-    ...     lambda d_out: dp_mean.check(3, (d_out, 1e-8)), 
+    ...     lambda d_out: dp_mean.check(3, (d_out, 1e-8)),
     ...     bounds = (0., 1.))
     0.5235561269546629
 
@@ -1065,7 +1065,7 @@ def binary_search(
     ...     categories=["a"], MO=dp.L2Distance[int])
     ...
     >>> dp.binary_search(
-    ...     lambda d_out: histogram.check(3, d_out), 
+    ...     lambda d_out: histogram.check(3, d_out),
     ...     bounds = (0, 100))
     3
     """
@@ -1113,18 +1113,18 @@ def binary_search(
     # optionally return sign
     if return_sign:
         return value, 1 if minimize else -1 # type: ignore
-    
+
     return value
 
 
 def exponential_bounds_search(
-        predicate: Callable[[float], bool], 
+        predicate: Callable[[float], bool],
         T: Optional[Type[float]]) -> Optional[tuple[float, float]]:
     """Determine bounds for a binary search via an exponential search,
     in large bands of [2^((k - 1)^2), 2^(k^2)] for k in [0, 8).
-    Will attempt to recover once if `predicate` throws an exception, 
+    Will attempt to recover once if `predicate` throws an exception,
     by searching bands on the ok side of the exception boundary.
-    
+
 
     :param predicate: a monotonic unary function from a number to a boolean
     :param T: type of argument to predicate, one of {float, int}
@@ -1144,7 +1144,7 @@ def exponential_bounds_search(
                 if "No match for concrete type" in (e.message or ""):
                     return False # pragma: no cover
             return True
-        
+
         if _check_type(0.):
             T = float
         elif _check_type(0):
@@ -1180,7 +1180,7 @@ def exponential_bounds_search(
             if at_center != predicate(bands[i]):
                 # return the band
                 return tuple(sorted(bands[i - 1:i + 1]))
-        
+
         # No band found!
         return None
 
@@ -1211,7 +1211,7 @@ def exponential_bounds_search(
             if hasattr(e, "add_note"):
                 e.add_note(f"Predicate in binary search always raises an exception. This exception is raised when the predicate is evaluated at {center}.")
             raise
-    
+
 
     center, sign = binary_search(_exception_predicate, bounds=exception_bounds, T=T, return_sign=True)
     at_center = predicate(center)
@@ -1311,9 +1311,9 @@ def _deserialization_hook(dp_dict):
 
 def serialize(dp_obj):
     # The usual pattern would be
-    # 
+    #
     #   json.dumps(dp_obj, cls=_Encoder)
-    # 
+    #
     # but that only calls default() for objects which can't be handled otherwise.
     # In particular, it makes top-level tuples into lists,
     # even when special handling is specified in default().

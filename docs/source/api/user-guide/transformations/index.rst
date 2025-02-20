@@ -26,7 +26,7 @@ You will need to choose the proper transformations from the sections below in or
 The sections below are in the order you would typically chain transformations together,
 but you may want to peek at the aggregator section at the end first,
 to identify the input domain that you'll need to preprocess to.
-     
+
 
 Casting
 -------
@@ -222,13 +222,13 @@ Only chain with a clamp transformation if the aggregator you intend to use needs
 Dataset Ordering
 ----------------
 Most dataset-to-dataset transformations are not sensitive to the order of elements within the dataset.
-This includes all row-by-row transformations. 
+This includes all row-by-row transformations.
 These transformations are written to operate with symmetric distances.
 
 Transformations that are sensitive to the order of elements in the dataset use the InsertDeleteDistance metric instead.
 It is common for aggregators to be sensitive to the dataset ordering.
 
-The following transformations are used to relate dataset metrics that are not sensitive to ordering (``SymmetricDistance`` and ``ChangeOneDistance``) 
+The following transformations are used to relate dataset metrics that are not sensitive to ordering (``SymmetricDistance`` and ``ChangeOneDistance``)
 to metrics that are sensitive to ordering (``InsertDeleteDistance`` and ``HammingDistance`` respectively).
 
 .. list-table::
@@ -252,7 +252,7 @@ Bounded Metrics
 You may be more familiar with "bounded" differential privacy, where dataset distances are expressed in terms of the number of changed rows.
 Expressing dataset distances in this manner is more restrictive, as edit distances are only valid for datasets with a fixed size.
 Generally speaking, if a dataset differs from a neighboring dataset by no more than ``k`` edits, then they differ by no more than ``2k`` additions and removals.
-We therefore write all transformations in terms of the more general "unbounded"-dp metrics ``SymmetricDistance`` and ``InsertDeleteDistance``, 
+We therefore write all transformations in terms of the more general "unbounded"-dp metrics ``SymmetricDistance`` and ``InsertDeleteDistance``,
 and provide the following constructors to convert to/from "bounded"-dp metrics ``ChangeOneDistance`` and ``HammingDistance`` respectively.
 
 .. list-table::
@@ -407,15 +407,15 @@ Should you need it, the following constructors give greater control over the sum
   * ``ordered`` can be used when the input metric is ``InsertDeleteDistance``.
   * ``split`` separately sums positive and negative numbers, and then adds these sums together.
 
-  .. ``monotonic``, ``ordered`` and ``split`` are implemented with saturation arithmetic. 
+  .. ``monotonic``, ``ordered`` and ``split`` are implemented with saturation arithmetic.
   .. ``checked``, ``monotonic`` and ``split`` protect against underestimating sensitivity by preserving associativity.
 
   All four algorithms are valid for integers, but only ``checked`` and ``ordered`` are available for floats.
   There are separate constructors for integers and floats, because floats additionally need a dataset truncation and a slightly larger sensitivity.
-  The increase in float sensitivity accounts for inexact floating-point arithmetic, and is calibrated according to the length of the mantissa and underlying summation algorithm. 
+  The increase in float sensitivity accounts for inexact floating-point arithmetic, and is calibrated according to the length of the mantissa and underlying summation algorithm.
 
   Floating-point summation may be further configured to either ``Sequential<T>`` or ``Pairwise<T>`` (default).
-  Sequential summation results in an ``O(n^2 / 2^k)`` increase in sensitivity, while pairwise summation results only in a ``O(log_2(n)n / 2^k))`` increase, 
+  Sequential summation results in an ``O(n^2 / 2^k)`` increase in sensitivity, while pairwise summation results only in a ``O(log_2(n)n / 2^k))`` increase,
   where ``k`` is the bit length of the mantissa in the floating-point numbers used.
 
 
@@ -458,7 +458,7 @@ Should you need it, the following constructors give greater control over the sum
     * - :func:`opendp.transformations.make_sized_bounded_float_ordered_sum`
       - ``VectorDomain<AtomDomain<T>>`` (with size and bounds)
       - ``InsertDeleteDistance``
-  
+
 
 Quantiles via Trees
 -------------------

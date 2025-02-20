@@ -514,7 +514,7 @@ Testing:
     - for example, all data preprocessors now also work under bounded DP
 
 ### Changed
-- Changed constructor names: 
+- Changed constructor names:
     - `make_base_laplace`, `make_base_discrete_laplace` -> `make_laplace` [#736](https://github.com/opendp/opendp/pull/736)
     - `make_base_gaussian`, `make_base_discrete_gaussian` -> `make_gaussian` [#800](https://github.com/opendp/opendp/pull/800)
     - `make_sized_bounded_sum`, `make_bounded_sum` -> `make_sum` [#801](https://github.com/opendp/opendp/pull/801)
@@ -525,7 +525,7 @@ Testing:
     - `dp.c.make_user_postprocessor` -> `dp.new_function` [#884](https://github.com/opendp/opendp/pull/884)
     - `make_base_ptr` -> `make_base_laplace_threshold` [#849](https://github.com/opendp/opendp/pull/849)
         - changed the privacy map to emit fixed (ε, δ) pairs
-- Reordered arguments to `make_user_transformation` and `make_user_measurement` 
+- Reordered arguments to `make_user_transformation` and `make_user_measurement`
     - `input_domain` and `input_metric` now leading to enable `then_*` variants
 - `make_identity` is now `honest-but-curious` in Python, but is general over all choices of domains/metrics [#814](https://github.com/opendp/opendp/pull/814)
 - (Rust-only) sparse histogram APIs have been updated to prepare for Python [#756](https://github.com/opendp/opendp/pull/756)
@@ -627,7 +627,7 @@ Testing:
     - `make_consistent_b_ary_tree` to retrieve consistent leaf node counts
     - `make_quantiles_from_counts` to retrieve quantile estimates
     - `make_cdf` to estimate a discretized cumulative distribution function
-- `make_subset_by`, `make_df_is_equal` and `make_df_cast_default` transformations 
+- `make_subset_by`, `make_df_is_equal` and `make_df_cast_default` transformations
     - used for simple dataframe subsetting
 - `make_chain_tm` combinator for postprocessing
 - Updates for proof-writing:
@@ -667,7 +667,7 @@ Testing:
     - Output measure is now always `ZeroConcentratedDivergence<Q>`, and output distance is in terms of rho
 - Add combinator to cast a measurement's output measure from `ZeroConcentratedDivergence<Q>` to `SmoothedMaxDivergence<Q>`
     - `meas_smd = opendp.comb.make_zCDP_to_approxDP(meas_zcd)`
-- The `SmoothedMaxDivergence<Q>` measure represents distances as an `ε(δ)` privacy curve: 
+- The `SmoothedMaxDivergence<Q>` measure represents distances as an `ε(δ)` privacy curve:
     - Can construct a curve by invoking the map: `curve = meas_smd.map(d_in)`
     - Can evaluate a curve at a given delta `epsilon = curve.epsilon(delta)`
 - Add `make_fix_delta` combinator to fix the delta parameter in a `SmoothedMaxDivergence<Q>` measure
@@ -716,7 +716,7 @@ Testing:
 ### Migration
 - `make_base_gaussian`'s output measure is now ZeroConcentratedDivergence.
     - This means the output distance is now a single scalar, rho (it used to be an (ε, δ) tuple)
-    - Use `adp_meas = opendp.comb.make_zCDP_to_approxDP(zcdp_meas)` to convert to an ε(δ) curve. 
+    - Use `adp_meas = opendp.comb.make_zCDP_to_approxDP(zcdp_meas)` to convert to an ε(δ) curve.
     - Use `fadp_meas = opendp.comb.make_fix_delta(adp_meas)` to change output distance from an ε(δ) curve to an (ε, δ) tuple
         - `fadp_meas.check(d_in, (ε, δ))` is equivalent to the check on `make_base_gaussian` in 0.4
 - replace `make_base_analytic_gaussian` with `make_base_gaussian`
@@ -730,7 +730,7 @@ Testing:
 
 ### Added
 - `make_randomized_response_bool` and `make_randomized_response` for local differential privacy.
-- `make_base_analytic_gaussian` for a tighter, analytic calibration of the gaussian mechanism.  
+- `make_base_analytic_gaussian` for a tighter, analytic calibration of the gaussian mechanism.
 - `make_population_amplification` combinator for privacy amplification by subsampling.
 - `make_drop_null` transformation for dropping null values in nullish data.
 - `make_find`, `make_find_bin` and `make_index` transformations for categorical relabeling and binning.
@@ -807,7 +807,7 @@ Testing:
 - Binary search utilities in Python
 - `Vec<String>` and `HashMap<K, V>` data loaders
 - Resize transformation for making `VectorDomain<D>` sized
-- TotalOrd trait for consistency with proofs 
+- TotalOrd trait for consistency with proofs
 
 ### Changed
 - General renaming of library interfaces. [See issue #181](https://github.com/opendp/opendp/issues/181).
@@ -843,6 +843,6 @@ just add it by copying from those below.
 ### Security
 ### Migration
 
-When a new version is released, a script will turn the Unreleased heading into a new heading with appropriate values for the version, date, and link. 
+When a new version is released, a script will turn the Unreleased heading into a new heading with appropriate values for the version, date, and link.
 Then the script will generate a new Unreleased section for future work.
 Please keep the existing dummy heading and link as they are, so that things operate correctly. Thanks!

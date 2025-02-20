@@ -20,7 +20,7 @@ This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsec
 \subsection*{Precondition}
 $\texttt{x} \in \mathbb{Q} \land \texttt{x} > 0$
 
-\subsection*{Pseudocode}        
+\subsection*{Pseudocode}
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_geometric_exp_slow.py}
 
 \subsection*{Postcondition}\label{postcondition}
@@ -43,14 +43,14 @@ Assume the preconditions are met.
 \end{proof}
 
 \begin{theorem} \label{ok-out} \cite{CKS20}
-    If the outcome of \texttt{sample\_geometric\_exp\_slow} is \texttt{Ok(out)}, 
-    then \texttt{out} is distributed as $Geometric(1 - exp(-x))$. That is, $P[\texttt{out} = k] = exp(-x) (1 - exp(-x))^{k}$ 
+    If the outcome of \texttt{sample\_geometric\_exp\_slow} is \texttt{Ok(out)},
+    then \texttt{out} is distributed as $Geometric(1 - exp(-x))$. That is, $P[\texttt{out} = k] = exp(-x) (1 - exp(-x))^{k}$
 \end{theorem}
 
 \begin{proof}
     The distribution of the $i^{th}$ boolean returned on line \ref{line:B} is $B_i \sim Bernoulli(exp(x))$,
     because the preconditions on \texttt{x} satisfy the preconditions for \texttt{sample\_bernoulli\_exp}.
-    
+
     \begin{align*}
         P[\texttt{out} = k] &= P[B_1 = B_2 = ... = B_k = \bot \land B_{k + 1} = \top] \\
         &= P[B_{k + 1} = \top] \prod_{i=1}^{k} P[B_i = \bot] && \text{All $B_i$ are independent.} \\

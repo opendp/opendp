@@ -26,7 +26,7 @@ def python(args):
     # https://pypi.org/help/#apitoken
     os.environ["TWINE_USERNAME"] = "__token__"
     os.environ["TWINE_PASSWORD"] = os.environ["PYPI_API_TOKEN"]
-    
+
     run_command("Publishing opendp package", f"python -m twine upload -r {args.repository} --verbose python/dist/*")
     # Unfortunately, twine doesn't have an option to block until the index is propagated. Polling the index is unreliable,
     # because often the new item will appear, but installs will still fail (probably because of stale caches).

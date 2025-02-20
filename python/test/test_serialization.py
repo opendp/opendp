@@ -88,8 +88,8 @@ def test_version_mismatch_warning():
         "__function__": "atom_domain",
         "__module__": "domains",
         "__kwargs__": {
-            "bounds": {"__tuple__": [0, 10]}, 
-            "nullable": False, 
+            "bounds": {"__tuple__": [0, 10]},
+            "nullable": False,
             "T": "i32"
         },
         "__version__": "bad-version"
@@ -106,7 +106,7 @@ pl = import_optional_dependency('polars', raise_error=False)
 if pl is not None:
     lf = pl.LazyFrame(schema={"A": pl.Int32, "B": pl.String})
     lf_domain = dp.lazyframe_domain([
-        dp.series_domain("A", dp.atom_domain(T="i32")), 
+        dp.series_domain("A", dp.atom_domain(T="i32")),
         dp.series_domain("B", dp.atom_domain(T=str))
     ])
     lf_domain_with_margin = dp.with_margin(lf_domain, by=[], max_partition_length=1000)

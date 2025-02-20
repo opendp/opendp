@@ -5,7 +5,7 @@ Typing
 
 (See also :py:mod:`opendp.typing` in the API reference.)
 
-OpenDP computations are always strict about the types being used. 
+OpenDP computations are always strict about the types being used.
 Integers and floats are never treated interchangeably and there is never implicit casting between types.
 In fact, OpenDP is particular about the bit-depth of data types, as it can impact the choice of constants in the privacy analysis.
 
@@ -68,12 +68,12 @@ OpenDP supports the following atomic data types:
 
 * i8 (8-bit signed integer)
 * i16 (16-bit signed integer)
-* i32 
+* i32
 * i64
 * i128
 * u8 (8-bit unsigned integer)
 * u16 (16-bit unsigned integer)
-* u32 
+* u32
 * u64
 * u128
 * f32 (32-bit single-precision float)
@@ -122,4 +122,4 @@ It can be more convenient to denote types in terms of Python types, so we've add
 You can change the default type for floats and ints via :py:func:`opendp.typing.set_default_float_type` and :py:func:`opendp.typing.set_default_int_type`, respectively.
 These functions make it easy to set the default bit depth throughout your code, all at once.
 
-This can be particularly useful when working with NumPy arrays which default to `i64`, or when working with deep learning libraries that default to single-precision floats. 
+This can be particularly useful when working with NumPy arrays which default to `i64`, or when working with deep learning libraries that default to single-precision floats.

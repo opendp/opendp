@@ -19,4 +19,3 @@ def test_thens_are_documented(module, function):
 
     assert function.__doc__ is not None, 'missing documentation'
     assert f':py:func:`{m_name}.{make_name}`' in function.__doc__, f'no link to {make_name}'
-

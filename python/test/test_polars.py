@@ -368,9 +368,9 @@ def test_polars_describe():
             "column": ["len", "A", "B"],
             "aggregate": ["Frame Length", "Sum", "Sum"],
             "distribution": ["Integer Laplace", "Integer Laplace", "Integer Laplace"],
-            # * sensitivity of the count is 1 (adding/removing one row changes the count by at most one), 
-            # * sensitivity of each sum is 3 (adding/removing one row with value as big as three...) 
-            # Therefore the noise scale of the sum query should be 3x greater 
+            # * sensitivity of the count is 1 (adding/removing one row changes the count by at most one),
+            # * sensitivity of each sum is 3 (adding/removing one row with value as big as three...)
+            # Therefore the noise scale of the sum query should be 3x greater
             # in order to consume the same amount of budget as the count.
             "scale": [6.0, 18.0, 18.0],
         }
@@ -581,18 +581,18 @@ def test_polars_threshold_rho():
         # probability of a partition with a unique individual being present in outcome must be at most 1e-7
         # since d_in = 1, only at most one partition may change
         # (when d_in is greater, then must consider union bound over up to L0 partitions)
-        # 
-        # probability of returning an unstable partition 
+        #
+        # probability of returning an unstable partition
         # is the probability that noise added to the count in the unstable partition exceeds the threshold
         # therefore we must limit probability of sampling noise values greater than t to at most delta
-        # 
+        #
         # mass of discrete gaussian tail greater than t is bounded above by mass of continuous gaussian tail gte t
         # mass of continuous gaussian tail gte t is:
         # erfc(t / scale / sqrt(2)) / 2
-        # 
+        #
         # if you let t = 7, then mass is 3.7e-7 (too heavy by a factor of ~3.7)
         # if you let t = 8, then mass is 7.7e-9 (sufficiently unlikely enough)
-        # 
+        #
         # noise added to a true count d_in of 1 results in a threshold of 9
         "threshold": [9]
     }, schema_overrides={"threshold": pl.UInt32})
@@ -608,7 +608,7 @@ def test_polars_threshold_rho():
 
 
 @pytest.mark.skipif(
-    os.getenv('FORCE_TEST_REPLACE_BINARY_PATH') != "1", 
+    os.getenv('FORCE_TEST_REPLACE_BINARY_PATH') != "1",
     reason="setting OPENDP_POLARS_LIB_PATH interferes with the execution of other tests"
 )
 def test_replace_binary_path():
@@ -725,7 +725,7 @@ def test_cut():
         .sort("x")
     )
     expected = pl.DataFrame(
-        {"x": [0, 1, 2, 3], "len": [2, 2, 2, 1]}, 
+        {"x": [0, 1, 2, 3], "len": [2, 2, 2, 1]},
         schema={"x": pl.UInt32, "len": pl.UInt32},
     )
 
@@ -764,7 +764,7 @@ def test_categorical_domain_no_mapping():
 
     lf = pl.LazyFrame([pl.Series("A", ["Texas", "New York", None], dtype=pl.Categorical)])
 
-    # query should be rejected even when data is known to be non-null, 
+    # query should be rejected even when data is known to be non-null,
     # because Polars will still raise a warning if the fill value is not in the encoding
     for element_domain in [
         dp.option_domain(dp.categorical_domain()),
@@ -791,7 +791,7 @@ def test_categorical_domain_with_mapping(wrap_with_option):
     element_domain = dp.categorical_domain(categories)
     if wrap_with_option:
         element_domain = dp.option_domain(element_domain)
-    
+
     lf_domain = dp.lazyframe_domain([dp.series_domain("A", element_domain)])
     assert str(lf_domain) == "FrameDomain(A: cat; margins=[])"
     # checks that categorical grouping keys can be released if encoding is public
@@ -952,7 +952,7 @@ def test_explicit_grouping_keys_context():
     keys = pl.DataFrame(pl.Series("B", [2, 3, 4, 5, 6], dtype=pl.Int32))
     query = context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys)
     observed = query.release().collect().sort("B")
-    
+
     expected = pl.DataFrame(
         [
             pl.Series("B", list(range(2, 7)), dtype=pl.Int32),

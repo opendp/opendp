@@ -98,7 +98,7 @@ jobs:
           python tools/publish_tool.py python -r $REPOSITORY
 
   publish-r:
-    if: 
+    if:
     needs: credential-check
     runs-on: ubuntu-22.04
     steps:
@@ -165,7 +165,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: python_bindings
-          path: python/src/opendp/          
+          path: python/src/opendp/
 
       - name: Download R bindings
         uses: actions/download-artifact@v4
@@ -186,4 +186,3 @@ jobs:
         run: |
           pip install -r tools/requirements-tools.txt
           python tools/publish_tool.py github -d ${{ inputs.date }} $DRY_RUN_FLAG
-  

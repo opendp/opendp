@@ -4,7 +4,7 @@ def make_randomized_response_bool(prob: QO, constant_time: bool):
     output_domain = AtomDomain(bool)
     input_metric = DiscreteMetric()
     output_measure = MaxDivergence(QO)
-    
+
     if (prob < 0.5 or prob >= 1):  # |\label{line:range}|
         raise Exception("probability must be in [0.5, 1)")
 
@@ -19,5 +19,5 @@ def make_randomized_response_bool(prob: QO, constant_time: bool):
         sample = not sample_bernoulli_float(prob, constant_time)
 
         return arg ^ sample
-    
+
     return Measurement(input_domain, output_domain, function, input_metric, output_measure, privacy_map)

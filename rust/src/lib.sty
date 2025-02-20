@@ -8,7 +8,7 @@
 \usepackage{xcolor}
 \usepackage{xr}
 
-\usepackage{enumerate} 
+\usepackage{enumerate}
 \usepackage{physics}
 \usepackage{fancyhdr}
 \usepackage{hyperref}
@@ -28,8 +28,8 @@
 % \contrib macro to indicate inclusion in "contrib".
 \usepackage{tcolorbox}
 \newtcolorbox{warn_box}{colback=red!5!white,colframe=red!75!black}
-\newcommand{\contrib}{{\begin{warn_box}This proof resides in \textbf{``contrib''} because it has not completed the vetting process.\end{warn_box}}} 
-\newcommand{\floatingPoint}{{\begin{warn_box}This implementation is susceptible to floating-point vulnerabilities.\end{warn_box}}} 
+\newcommand{\contrib}{{\begin{warn_box}This proof resides in \textbf{``contrib''} because it has not completed the vetting process.\end{warn_box}}}
+\newcommand{\floatingPoint}{{\begin{warn_box}This implementation is susceptible to floating-point vulnerabilities.\end{warn_box}}}
 
 % asOfCommit macro to version a code dependency. Arguments:
 %    #1: relative path to file you are dependent on
@@ -100,21 +100,21 @@
 \definecolor{backcolour}{rgb}{0.95,0.95,0.92}
 
 \lstdefinestyle{mystyle}{
-    backgroundcolor=\color{backcolour},   
+    backgroundcolor=\color{backcolour},
     commentstyle=\color{codegreen},
     keywordstyle=\color{magenta},
     numberstyle=\tiny\color{codegray},
     stringstyle=\color{codepurple},
     basicstyle=\ttfamily\footnotesize,
-    breakatwhitespace=false,         
-    breaklines=true,                 
-    captionpos=b,                    
-    keepspaces=true,                 
-    numbers=left,                    
-    numbersep=5pt,                  
-    showspaces=false,                
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
     showstringspaces=false,
-    showtabs=false,                  
+    showtabs=false,
     tabsize=2
 }
 
@@ -158,14 +158,14 @@
   For every setting of the input parameters #1 to #2 such that the given preconditions
   hold, #2 raises an exception (at compile time or run time) or returns a valid transformation. A valid transformation has the following properties:
   \begin{enumerate}
-      \item \textup{(Appropriate output domain).} 
+      \item \textup{(Appropriate output domain).}
       For every element $x$ in \texttt{input\_domain}, $\function(x)$ is in \texttt{output\_domain} or raises a data-independent runtime exception.
-      
-      \item \textup{(Stability guarantee).} 
-      For every pair of elements $x, x'$ in \texttt{input\_domain} and for every pair $(\din, \dout)$, 
-      where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \\ \texttt{output\_metric}, 
+
+      \item \textup{(Stability guarantee).}
+      For every pair of elements $x, x'$ in \texttt{input\_domain} and for every pair $(\din, \dout)$,
+      where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \\ \texttt{output\_metric},
       if $x, x'$ are \din-close under \texttt{input\_metric}, $\texttt{stability\_map}(\din)$ does not raise an exception,
-      and $\texttt{stability\_map}(\din) \leq \dout$, 
+      and $\texttt{stability\_map}(\din) \leq \dout$,
       then $\function(x), \function(x')$ are $\dout$-close under \texttt{output\_metric}.
   \end{enumerate}
   \end{theorem}

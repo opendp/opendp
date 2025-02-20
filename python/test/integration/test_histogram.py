@@ -38,7 +38,7 @@ def test_count_by_categories_float():
         >> dp.t.then_count_by_categories(cats, MO=dp.L1Distance[float], TOA=float)
         >> dp.m.then_laplace(0.0)
     )(data) == [5.0, 20.0, 10.0, 5.0]
-    
+
     assert (
         load
         >> dp.t.then_count_by_categories(cats, MO=dp.L2Distance[float], TOA=float)
