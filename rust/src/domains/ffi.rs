@@ -319,7 +319,7 @@ pub extern "C" fn opendp_domains__vector_domain(
     let atom_domain = try_as_ref!(atom_domain);
 
     match atom_domain.type_.contents {
-        TypeContents::GENERIC { name: "AtomDomain", .. } => 
+        TypeContents::GENERIC { name: "AtomDomain", .. } =>
             dispatch!(monomorphize_all, [(atom_domain.carrier_type, @primitives)], (atom_domain, size)),
         TypeContents::PLAIN("ExtrinsicDomain") => monomorphize_user_domain(atom_domain, size),
         _ => fallible!(FFI, "Inner domain of VectorDomain must be AtomDomain or ExtrinsicDomain (created through foreign language bindings)")
@@ -380,9 +380,9 @@ pub extern "C" fn opendp_domains__map_domain(
     let value_domain = try_as_ref!(value_domain);
 
     match (&key_domain.type_.contents, &value_domain.type_.contents) {
-        (TypeContents::GENERIC { name: "AtomDomain", .. }, TypeContents::GENERIC { name: "AtomDomain", .. }) => 
+        (TypeContents::GENERIC { name: "AtomDomain", .. }, TypeContents::GENERIC { name: "AtomDomain", .. }) =>
             dispatch!(monomorphize, [(key_domain.carrier_type, @hashable), (value_domain.carrier_type, @primitives)], (key_domain, value_domain)),
-        (TypeContents::GENERIC { name: "AtomDomain", .. }, TypeContents::PLAIN("ExtrinsicDomain")) => 
+        (TypeContents::GENERIC { name: "AtomDomain", .. }, TypeContents::PLAIN("ExtrinsicDomain")) =>
             dispatch!(monomorphize_extrinsic, [(key_domain.carrier_type, @hashable)], (key_domain, value_domain)),
         _ => fallible!(FFI, "Value domain of MapDomain must be AtomDomain or ExtrinsicDomain (created through foreign language bindings)"),
     }.into()

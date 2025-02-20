@@ -14,7 +14,7 @@ us if you are interested in proof-writing. Thank you!
 
             >>> import opendp.prelude as dp
             >>> dp.enable_features("contrib")
-            
+
 
 Known Dataset Size
 ------------------
@@ -46,7 +46,7 @@ where :math:`//` denotes integer division with truncation.
 
         .. code:: python
 
-            >>> # since we are in the bounded-DP model, d_in should be a multiple of 2, 
+            >>> # since we are in the bounded-DP model, d_in should be a multiple of 2,
             >>> # because it takes one removal and one addition to change one record
             >>> sb_mean_trans.map(2)
             1.0000000000000169
@@ -104,22 +104,22 @@ the dataset with a resize transformation.
 
             >>> data = [5.] * 10
             >>> bounds = (0., 10.)
-            
+
             >>> input_space = dp.vector_domain(dp.atom_domain(T=float)), dp.symmetric_distance()
-            
+
             >>> # (where TIA stands for Atomic Input Type)
             >>> count_meas = input_space >> dp.t.then_count() >> dp.m.then_laplace(1.)
-            
+
             >>> dp_count = count_meas(data)
-            
+
             >>> mean_meas = (
             ...     input_space >>
             ...     dp.t.then_clamp(bounds) >>
-            ...     dp.t.then_resize(dp_count, constant=5.) >> 
+            ...     dp.t.then_resize(dp_count, constant=5.) >>
             ...     dp.t.then_mean() >>
             ...     dp.m.then_laplace(1.)
             ... )
-            
+
             >>> print('dp mean:', mean_meas(data))
             dp mean: ...
 
@@ -148,9 +148,9 @@ postprocess the output.
 
             >>> dp_sum = input_space >> dp.t.then_clamp(bounds) >> dp.t.then_sum() >> dp.m.then_laplace(10.)
             >>> dp_count = input_space >> dp.t.then_count() >> dp.m.then_laplace(1.)
-            
+
             >>> dp_fraction_meas = dp.c.make_basic_composition([dp_sum, dp_count])
-            
+
             >>> dp_sum, dp_count = dp_fraction_meas(data)
             >>> print("dp mean:", dp_sum / dp_count)
             dp mean: ...

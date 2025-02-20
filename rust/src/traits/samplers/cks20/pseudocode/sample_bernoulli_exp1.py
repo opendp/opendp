@@ -4,5 +4,5 @@ def sample_bernoulli_exp1(x) -> bool:
     while True:
         if sample_bernoulli_rational(x / k, false): # |\label{line:B_i}|
             k += 1
-        else: 
+        else:
             return is_odd(k) # |\label{line:K}|

@@ -24,9 +24,9 @@ def test_typing_infer_to_string():
     assert RuntimeType.infer(23) is 'i32' # noqa: F632
     assert RuntimeType.infer(12.) is 'f64' # noqa: F632
     assert RuntimeType.infer('hello') is 'String' # noqa: F632
-    assert RuntimeType.infer(lambda: True) is 'CallbackFn' # noqa: F632    
+    assert RuntimeType.infer(lambda: True) is 'CallbackFn' # noqa: F632
     assert RuntimeType.infer(object(), py_object=True) is 'ExtrinsicObject' # noqa: F632
-    
+
 
 def test_typing_infer_to_object():
     # With py_object=True, it can fall back to a more general type:
@@ -45,7 +45,7 @@ def test_typing_infer_to_object():
 
     with pytest.raises(UnknownTypeException, match=re.escape("<class 'object'>")):
         RuntimeType.infer(object())
-    
+
     with pytest.raises(UnknownTypeException, match=re.escape("Type of Option cannot be inferred from None")):
         RuntimeType.infer(None)
     with pytest.raises(UnknownTypeException, match=re.escape('Cannot infer atomic type when empty')):

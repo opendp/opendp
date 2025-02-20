@@ -42,7 +42,7 @@ def test_stuck():
         bounds=(0.0, real_v * 2.0),
         d_out=epsilon)
     assert discovered_scale == 192307694098.69745
-    
+
 def test_binary_search():
     assert dp.binary_search(lambda x: x <= -5, T=int) == -5
     assert dp.binary_search(lambda x: x <= 5, T=int) == 5
@@ -53,19 +53,18 @@ def test_binary_search():
 def test_type_inference():
     def chainer(b):
         return dp.t.make_sum(
-            dp.vector_domain(dp.atom_domain(bounds=(-b, b)), size=1000), 
+            dp.vector_domain(dp.atom_domain(bounds=(-b, b)), size=1000),
             dp.symmetric_distance())
     assert dp.binary_search_param(chainer, 2, 100) == pytest.approx(50)
 
     def mean_chainer_n(n):
         return dp.t.make_mean(
-            dp.vector_domain(dp.atom_domain(bounds=(-20., 20.)), size=n), 
+            dp.vector_domain(dp.atom_domain(bounds=(-20., 20.)), size=n),
             dp.symmetric_distance())
     assert dp.binary_search_param(mean_chainer_n, 2, 1.) == 41
 
     def mean_chainer_b(b):
         return dp.t.make_mean(
-            dp.vector_domain(dp.atom_domain(bounds=(-b, b)), size=1000), 
+            dp.vector_domain(dp.atom_domain(bounds=(-b, b)), size=1000),
             dp.symmetric_distance())
     assert 499.999 < dp.binary_search_param(mean_chainer_b, 2, 1.) < 500.
-

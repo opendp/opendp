@@ -50,7 +50,7 @@ readonly = "0.2"
 bitvec = "1.0"
 
 # A strict version requirement is necessary to keep the serialization format of LazyFrames stable.
-# If you change the version of Polars, 
+# If you change the version of Polars,
 # be sure to also change the Python package version requirement and test binary compatibility.
 polars = { version = "=0.44.2", features = [
     "lazy",
@@ -76,7 +76,7 @@ polars = { version = "=0.44.2", features = [
 polars-plan = { version = "=0.44.2", features = [
     "ffi_plugin",
 ], optional = true }
-# matches the version specified in Polars: 
+# matches the version specified in Polars:
 #   https://github.com/pola-rs/polars/blob/main/Cargo.toml
 chrono = { version = "0.4.31", default-features = false, features = ["std"], optional = true }
 
@@ -142,7 +142,7 @@ features = ["use-openssl", "derive", "untrusted", "polars"]
 rustdoc-args = [
     # so that latex renders
     "--html-in-header", "katex.html",
-    
+
     # so that proof documents are visible
     "--document-private-items"
 ]

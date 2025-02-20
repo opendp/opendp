@@ -129,7 +129,7 @@ def test_numpy_trans():
     np = pytest.importorskip('numpy')
     import opendp.prelude as dp
     assert dp.t.make_sum(
-        dp.vector_domain(dp.atom_domain(bounds=(0, 10))), 
+        dp.vector_domain(dp.atom_domain(bounds=(0, 10))),
         dp.symmetric_distance(),
     )(np.array([1, 2, 3], dtype=np.int32)) == 6
 
@@ -141,7 +141,7 @@ def test_overflow():
 
     with pytest.raises(ValueError):
         py_to_c(256, AnyObjectPtr, u8)
-  
+
     with pytest.raises(ValueError):
         py_to_c(-129, AnyObjectPtr, i8)
 
@@ -184,26 +184,26 @@ def test_check_and_cast_scalar():
     # Floats cannot be cast to ints:
     with pytest.raises(TypeError, match="inferred type is f64, expected i32."):
         _check_and_cast_scalar('i32', 1.0)
-    
+
     # Bools can only cast to bools:
     assert _check_and_cast_scalar('bool', True)
 
     # Bools cannot cast to ints:
     with pytest.raises(TypeError, match="inferred type is bool, expected u8."):
         _check_and_cast_scalar('u8', True)
-    
+
     # Bools cannot cast to floats:
     with pytest.raises(TypeError, match="inferred type is bool, expected f64."):
         _check_and_cast_scalar('f64', True)
-    
+
     with pytest.raises(TypeError, match="inferred type is i32, expected bool."):
         _check_and_cast_scalar('bool', 1)
-    
+
     with pytest.raises(TypeError, match="inferred type is i32, expected fake."):
         _check_and_cast_scalar('fake', 1)
 
 def test_bitvec():
-    np = pytest.importorskip('numpy') 
+    np = pytest.importorskip('numpy')
 
     for i in range(1, 20):
         data = np.packbits([1] * i)

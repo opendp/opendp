@@ -8,7 +8,7 @@ We suggest importing under the conventional name ``dp``:
 
     >>> import opendp.prelude as dp
 
-The methods of this module will then be accessible at ``dp.sklearn.decomposition``.    
+The methods of this module will then be accessible at ``dp.sklearn.decomposition``.
 
 See also our :ref:`tutorial on diffentially private PCA <dp-pca>`.
 '''
@@ -160,7 +160,7 @@ class PCA():
     DP wrapper for `sklearn's PCA <https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html>`_.
 
     Trying to create an instance without sklearn installed will raise an ``ImportError``.
-    
+
     See the :ref:`tutorial on diffentially private PCA <dp-pca>` for details.
 
     :param whiten: Mirrors the corresponding sklearn parameter:
@@ -181,7 +181,7 @@ class PCA():
     ) -> None:
         # Error if constructor called without dependency:
         import_optional_dependency('sklearn.decomposition')
-        
+
         # The zero-argument form of super() does not work,
         # (I believe) because the type argument is determined lexically,
         # and it doesn't see our redefinition.
@@ -270,7 +270,7 @@ class PCA():
         explained_variance_ = (S**2) / (n_samples - 1)
         total_var = np.sum(explained_variance_)
         explained_variance_ratio_ = explained_variance_ / total_var
-        singular_values_ = S # Store the singular values. 
+        singular_values_ = S # Store the singular values.
 
         # Postprocess the number of components required
         if n_components == "mle":
@@ -314,7 +314,7 @@ _decomposition = import_optional_dependency('sklearn.decomposition', False)
 if _decomposition is not None:
     PCA = type('PCA', (_decomposition.PCA,), dict(PCA.__dict__))  # type: ignore[assignment,misc]
 
-        
+
 def _smaller(v):
     """returns the next non-negative float closer to zero"""
     np = import_optional_dependency('numpy')

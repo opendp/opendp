@@ -12,7 +12,7 @@ def test_make_bounded_int_monotonic_sum():
     assert sum_trans([1, 2, 4]) == 7
     with pytest.raises(Exception):
         dp.t.make_bounded_int_monotonic_sum((-1, 1))
-    
+
 def test_make_sized_bounded_int_monotonic_sum():
     sum_trans = dp.t.make_sized_bounded_int_monotonic_sum(3, (0, 10))
     assert sum_trans([1, 2, 4]) == 7
@@ -30,7 +30,7 @@ def test_make_sized_bounded_int_ordered_sum():
 def test_make_bounded_int_split_sum():
     sum_trans = dp.t.make_bounded_int_split_sum((0, 10))
     assert sum_trans([1, 2, 4]) == 7
-    
+
 def test_make_sized_bounded_int_split_sum():
     sum_trans = dp.t.make_sized_bounded_int_split_sum(3, (0, 10))
     assert sum_trans([1, 2, 4]) == 7

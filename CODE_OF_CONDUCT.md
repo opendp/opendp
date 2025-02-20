@@ -12,4 +12,4 @@ Thank you for helping make OpenDP a positive, friendly community for all.
 
 You can report violations of the Code of Conduct, or any concerns about the environment of OpenDP, to anyone on the [Executive Committee](mailto:info@opendp.org).
 
-To learn more about Harvard University’s Sexual and Gender-Based Harassment Policy and related resources, including other reporting mechanisms, you can visit the [Harvard SEAS Title IX / Sexual Harassment page](https://seas.harvard.edu/office-human-resources/employee-concerns/title-ix-sexual-harassment/). 
+To learn more about Harvard University’s Sexual and Gender-Based Harassment Policy and related resources, including other reporting mechanisms, you can visit the [Harvard SEAS Title IX / Sexual Harassment page](https://seas.harvard.edu/office-human-resources/employee-concerns/title-ix-sexual-harassment/).

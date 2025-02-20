@@ -23,5 +23,3 @@ def test_california_pums():
 
 def test_france_lfs():
     assert dp.examples.get_france_lfs_path().read_text().startswith('COEFF,QUARTER,REFYEAR,REFWEEK')
-
-

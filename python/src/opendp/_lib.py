@@ -31,14 +31,14 @@ def _load_library():
         suffixes = EXTENSION_SUFFIXES + [".dylib"]
 
         lib_dir_file_names = [
-            str(p.name) for p in lib_dir.iterdir() 
+            str(p.name) for p in lib_dir.iterdir()
             if "opendp" in p.name and "derive" not in p.name
             and any(p.name.endswith(suffix) for suffix in suffixes)
         ]
-        
+
         if len(lib_dir_file_names) != 1:
             raise Exception(f"Expected exactly one binary to be present in {lib_dir}. Got: {lib_dir_file_names}")  # pragma: no cover
-        
+
         lib_path = lib_dir / lib_dir_file_names[0]
         try:
             return ctypes.cdll.LoadLibrary(str(lib_path)), lib_path
@@ -50,7 +50,7 @@ def _load_library():
 
     else:
         raise ValueError("Unable to find lib directory. Consider setting OPENDP_LIB_DIR to a valid directory.")  # pragma: no cover
-    
+
 
 lib, lib_path = _load_library()
 
@@ -362,7 +362,7 @@ def unmangle_py_version(py_version):
     Python mangles pre-release versions like "X.Y.Z-nightly.NNN.M" into "X.Y.ZaNNN00M", but the docs use
     the original format, so we need to unmangle for links to work.
     There are more variations possible, but we only need to handle X.Y.Z-dev0, X.Y.Z-aNNN00M, X.Y.Z-bNNN00M, X.Y.Z
-    
+
     >>> unmangle_py_version('0.9.0')
     '0.9.0'
     >>> unmangle_py_version('0.9.0.dev0')

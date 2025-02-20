@@ -36,7 +36,7 @@ rust_build:
 		echo "expected either a src/binary.tar.xz, src/source.tar.xz (run bash tools/r_stage.sh) or OPENDP_LIB_DIR to be set"; \
 		exit 1; \
 	fi
-	    
+
 
 
 clean:

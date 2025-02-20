@@ -14,7 +14,7 @@ us if you are interested in proof-writing. Thank you!
 
             >>> import opendp.prelude as dp
             >>> dp.enable_features("contrib")
-            
+
 
 Define a few queries you might want to run up-front:
 
@@ -27,7 +27,7 @@ Define a few queries you might want to run up-front:
 
             >>> # define the dataset space and how distances are measured
             >>> input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
-            
+
             >>> count_meas = input_space >> dp.t.then_count() >> dp.m.then_laplace(scale=1.0)
             >>> sum_meas = (
             ...     input_space
@@ -35,7 +35,7 @@ Define a few queries you might want to run up-front:
             ...     >> dp.t.then_sum()
             ...     >> dp.m.then_laplace(scale=5.0)
             ... )
-            
+
 
 Notice that both of these measurements share the same input domain,
 input metric, and output measure:
@@ -78,7 +78,7 @@ batch.
         .. code:: python
 
             >>> mean_fraction_meas = dp.c.make_basic_composition([sum_meas, count_meas])
-            
+
             >>> int_dataset = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
             >>> dp_sum, dp_count = mean_fraction_meas(int_dataset)
             >>> print("dp sum:", dp_sum)
@@ -127,7 +127,7 @@ distances (``d_in``), and the privacy consumption allowed for each query
             ...     d_in=1,
             ...     d_mids=[2., 1.]
             ... )
-            
+
 
 Given this information, we know the privacy consumption of the entire
 composition:
@@ -154,7 +154,7 @@ returns a *queryable*.
 
             >>> int_dataset = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
             >>> sc_qbl = sc_meas(int_dataset)
-            
+
 
 A queryable is like a state machine: it takes an input query, updates
 its internal state, and returns an answer. For sequential compositors,
@@ -208,7 +208,7 @@ support chaining.
 
             >>> str_space = dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()
             >>> str_sc_meas = str_space >> dp.t.then_cast_default(int) >> sc_meas
-            
+
             >>> str_sc_qbl = str_sc_meas(["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"])
             >>> str_sc_qbl(sum_meas), str_sc_qbl(count_meas)
             (..., ...)
@@ -236,7 +236,7 @@ the output distance from the previous transformation:
             ...     d_in=sum_trans.map(max_contributions),
             ...     d_mids=[2., 1.]
             ... )
-            
+
 
 In this code snip, we used the supporting elements and map from the
 transformation to fill in arguments to the sequential compositor
@@ -270,7 +270,7 @@ second (1, 0)-DP.
             ...     d_mids=[(2., 1e-6), (1., 0.)]
             ... )
             >>> adp_sc_qbl = sc_meas(int_dataset)
-            
+
 
 The first query to the approximate-DP sequential compositor must be an
 approximate-DP measurement that satisfies (2, 10^{-6})-DP.
@@ -284,14 +284,14 @@ that will satisfy this level of privacy, under a given set of weights.
 
         .. code:: python
 
-            >>> # find ρ_1, ρ_2 such that ρ_1 + ρ_2 = ρ <= (2, 1e-6), 
+            >>> # find ρ_1, ρ_2 such that ρ_1 + ρ_2 = ρ <= (2, 1e-6),
             >>> #    and ρ_1 is 5 times larger than ρ_2
             >>> weights = [5., 1.]
-            
-            
+
+
             >>> def scale_weights(scale, weights):
             ...     return [scale * w for w in weights]
-            
+
             >>> def make_zcdp_sc(scale):
             ...     return dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.c.make_sequential_composition(
             ...         input_domain=dp.vector_domain(dp.atom_domain(T=int)),
@@ -300,16 +300,16 @@ that will satisfy this level of privacy, under a given set of weights.
             ...         d_in=1,
             ...         d_mids=scale_weights(scale, weights)
             ...     )), delta=1e-6)
-            
+
             >>> # find a scale parameter for the d_mids that makes the overall compositor satisfy (2., 1e-6)-approxDP
             >>> zcdp_compositor_scale = dp.binary_search_param(make_zcdp_sc, d_in=1, d_out=(2., 1e-6), T=float)
-            
+
             >>> # construct a zCDP sequential compositor that satisfies (2., 1e-6)-approxDP
             >>> zcdp_compositor = make_zcdp_sc(zcdp_compositor_scale)
-            
+
             >>> # query the root approx-DP compositor queryable to get a child zCDP queryable
             >>> zcdp_sc_qbl = adp_sc_qbl(zcdp_compositor)
-            
+
             >>> rho_1, rho_2 = scale_weights(zcdp_compositor_scale, weights)
             >>> rho_1, rho_2
             (0.0734..., 0.0146...)
@@ -331,8 +331,8 @@ release:
             ...         >> dp.t.then_sum()
             ...         >> dp.m.then_gaussian(scale)
             ...     )
-            
-            
+
+
             >>> dg_scale = dp.binary_search_param(make_zcdp_sum_query, d_in=1, d_out=rho_1)
             >>> print('zcdp:', zcdp_sc_qbl(make_zcdp_sum_query(dg_scale)))
             zcdp: ...
@@ -353,7 +353,7 @@ sequentiality, ``zcdp_sc_qbl`` becomes locked.
 
             >>> # convert the pure-DP count measurement to a approx-DP count measurement (where δ=0.)
             >>> adp_count_meas = dp.c.make_approximate(count_meas)
-            
+
             >>> # submit the count measurement to the root approx-DP compositor queryable
             >>> print('adp:', adp_sc_qbl(adp_count_meas))
             adp: ...
@@ -372,13 +372,13 @@ any more queries.
             >>> zcdp_sc_qbl(make_zcdp_sum_query(dg_scale))
             Traceback (most recent call last):
             ...
-            opendp.mod.OpenDPException: 
+            opendp.mod.OpenDPException:
               FailedFunction("insufficient budget for query: 0.0734... > 0.0146...")
 
             >>> adp_sc_qbl(adp_count_meas)
             Traceback (most recent call last):
             ...
-            opendp.mod.OpenDPException: 
+            opendp.mod.OpenDPException:
               FailedFunction("out of queries")
 
 In conclusion, OpenDP provides several compositors with different

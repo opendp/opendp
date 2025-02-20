@@ -86,7 +86,7 @@ def get_python_version(version):
 
 
 def get_r_version(version):
-    # r versions cannot represent pre-releases. 
+    # r versions cannot represent pre-releases.
     # Can only use . or -, and both are treated interchangeably
     # This means a "prerelease" named like 0.1.0.202308141 is considered greater than 0.1.0
     # Therefore the pre-release designation is just removed completely

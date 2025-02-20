@@ -40,7 +40,7 @@ In the following example we chain :py:func:`opendp.measurements.make_laplace` wi
         ...
         >>> # call a constructor to produce a transformation
         >>> sum_trans = dp.t.make_sum(
-        ...     dp.vector_domain(dp.atom_domain(bounds=(0, 1))), 
+        ...     dp.vector_domain(dp.atom_domain(bounds=(0, 1))),
         ...     dp.symmetric_distance()
         ... )
         >>> # call a constructor to produce a measurement
@@ -57,8 +57,8 @@ In the following example we chain :py:func:`opendp.measurements.make_laplace` wi
         >>> release = noisy_sum(dataset)
 
 In practice, these chainers are used so frequently that we've written a shorthand (``>>``).
-The syntax automatically chooses between :func:`make_chain_mt <opendp.combinators.make_chain_mt>`, 
-:func:`make_chain_tt <opendp.combinators.make_chain_tt>`, 
+The syntax automatically chooses between :func:`make_chain_mt <opendp.combinators.make_chain_mt>`,
+:func:`make_chain_tt <opendp.combinators.make_chain_tt>`,
 and :func:`make_chain_pm <opendp.combinators.make_chain_pm>`.
 
 .. tab-set::
@@ -88,13 +88,13 @@ In the below example, the adjustment is subtle, but the bounds were adjusted to 
 
         >>> # call a constructor to produce a transformation, but this time with float bounds
         >>> sum_trans = dp.t.make_sum(
-        ...     dp.vector_domain(dp.atom_domain(bounds=(0., 1.))), 
+        ...     dp.vector_domain(dp.atom_domain(bounds=(0., 1.))),
         ...     dp.symmetric_distance()
         ... )
         >>> sum_trans >> lap_meas
         Traceback (most recent call last):
         ...
-        opendp.mod.OpenDPException: 
+        opendp.mod.OpenDPException:
           DomainMismatch("Intermediate domains don't match. See https://github.com/opendp/opendp/discussions/297
             output_domain: AtomDomain(T=f64)
             input_domain:  AtomDomain(T=i32)
@@ -104,7 +104,7 @@ Note that ``noisy_sum_trans``'s input domain and input metric come from ``sum_tr
 This is intended to enable further chaining with preprocessors such as:
 * :py:func:`make_cast <opendp.transformations.make_cast>`
 * :py:func:`make_impute_constant <opendp.transformations.make_impute_constant>`
-* :py:func:`make_clamp <opendp.transformations.make_clamp>` 
+* :py:func:`make_clamp <opendp.transformations.make_clamp>`
 * :py:func:`make_resize <opendp.transformations.make_resize>`.
 See the section on :ref:`transformations-user-guide` for more information on how to preprocess data in OpenDP.
 
@@ -258,7 +258,7 @@ The function on the amplified measurement is identical to the standard measureme
   .. tab-item:: Python
 
     .. code:: python
-      
+
         >>> amplified = dp.c.make_population_amplification(meas, population_size=100)
         >>> print("amplified mean:", amplified([1.] * 10)) # -> .97 # doctest: +ELLIPSIS
         amplified mean: ...
@@ -279,4 +279,3 @@ is a simple sample of individuals from a theoretical larger dataset that capture
         >>> assert amplified.check(2, .4941)
 
 The efficacy of this combinator improves as n gets larger.
-

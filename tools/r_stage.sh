@@ -2,7 +2,7 @@
 
 # copies rust sources into R package
 # (but not target)
-# 
+#
 # vendors dependencies
 # zips contents to avoid paths being too long, which can cause issues in R CMD check
 
@@ -95,14 +95,14 @@ function docs() {
 }
 
 function dummydocs() {
-  # builds the documentation without running 
+  # builds the documentation without running
   clean
 
   log "***** DUMMY DOCS *****"
 
-  # We don't directly expose any APIs from compiled code, 
+  # We don't directly expose any APIs from compiled code,
   # so we don't actually have to build the binary in order to build docs.
-  # To avoid the overhead of building the binary, 
+  # To avoid the overhead of building the binary,
   # stage the docs build in a separate package where binaries are stripped out.
 
   log "stage docs version of package in R/opendp-docs"
