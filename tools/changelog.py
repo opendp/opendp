@@ -12,8 +12,8 @@ def get_prev_version():
     return match.group(2)
 
 
-def log_until(match):
-    return subprocess.check_output(['git', 'log', f"{match}..HEAD", '--oneline'], text=True).splitlines()
+def log_until(tag):
+    return subprocess.check_output(['git', 'log', f"{tag}..HEAD", '--oneline'], text=True).splitlines()
     
 
 
