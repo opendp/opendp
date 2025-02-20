@@ -143,10 +143,11 @@ on github, or with the `gh` command line tool. Parameters:
 
         ```shell
         python channel_tool.py changelog
+
+        git fetch --tags
         python changelog.py
         ```
-        Additional manual edits will be useful to arrange individual commits thematically,
-        and to add a new release header.
+        Additional manual edits will be useful to arrange individual commits thematically.
 
     1. Update `VERSION` file on the `main` branch to match the version you want to release.
 
@@ -156,7 +157,7 @@ on github, or with the `gh` command line tool. Parameters:
 
     1. Commit your updates
 
-        ```
+        ```shell
         git commit -m 'version bump and changelog'
         git push
         ```
@@ -189,6 +190,12 @@ on github, or with the `gh` command line tool. Parameters:
 
     ```shell
     python tools/channel_tool.py bump_version --position patch
+    ```
+
+1. Increment changelog.
+
+    ```shell
+    python tools/channel_tool.py changelog --prepend
     ```
 
 
