@@ -6,7 +6,7 @@ use crate::{
     traits::{InfAdd, InfCast, InfDiv, InfExp, NextFloat},
 };
 
-#[cfg(test)]
+#[cfg(all(test, feature = "contrib"))]
 mod test;
 
 /// Computes the probability of sampling a value greater than `t` from the discrete laplace distribution.

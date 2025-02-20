@@ -68,7 +68,7 @@ pub(crate) fn generate_r_function(
   make_chain_dyn(
     {name}({pre_args_nl}{args}),
     lhs,
-    log)
+    log_)
 }}"#,
             then_docs = generate_then_doc_block(module_name, func, hierarchy),
             then_name = func.name.replacen("make_", "then_", 1),
@@ -481,7 +481,7 @@ fn generate_assert_is_similar(func: &Function) -> String {
     }
 }
 
-// generates the `log <- ...` code that tracks arguments
+// generates the `log_ <- ...` code that tracks arguments
 fn generate_logger(module_name: &str, func: &Function, then: bool) -> String {
     let func_name = if then {
         func.name.replacen("make_", "then_", 1)
@@ -506,7 +506,7 @@ fn generate_logger(module_name: &str, func: &Function, then: bool) -> String {
 
     format!(
         r#"
-log <- new_constructor_log("{func_name}", "{module_name}", new_hashtab(
+log_ <- new_constructor_log("{func_name}", "{module_name}", new_hashtab(
   list({keys}),
   list({vals})
 ))
@@ -550,7 +550,7 @@ fn generate_wrapper_call(module_name: &str, func: &Function) -> String {
     let call = format!(
         r#".Call(
   "{module_name}__{name}",{args_str}
-  log, PACKAGE = "opendp")"#,
+  log_, PACKAGE = "opendp")"#,
         name = func.name
     );
     format!(

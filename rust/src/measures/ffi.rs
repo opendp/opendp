@@ -374,8 +374,7 @@ impl<Q> Measure for TypedMeasure<Q> {
     name = "new_privacy_profile",
     features("contrib", "honest-but-curious"),
     arguments(curve(rust_type = "f64")),
-    returns(rust_type = "PrivacyProfile"),
-    dependencies("c_curve")
+    returns(rust_type = "PrivacyProfile")
 )]
 /// Construct a PrivacyProfile from a user-defined callback.
 ///
@@ -383,7 +382,9 @@ impl<Q> Measure for TypedMeasure<Q> {
 /// * `curve` - A privacy curve mapping epsilon to delta
 ///
 /// # Why honest-but-curious?
+///
 /// The privacy profile should implement a well-defined $\delta(\epsilon)$ curve:
+///
 /// * monotonically decreasing
 /// * rejects epsilon values that are less than zero or nan
 /// * returns delta values only within [0, 1]

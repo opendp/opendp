@@ -29,7 +29,7 @@ __all__ = [
     'Metric',
     'Measure',
     'PrivacyProfile',
-    'PartialConstructor',
+    '_PartialConstructor',
     'UnknownTypeException',
     'OpenDPException',
     'GLOBAL_FEATURES',
@@ -229,10 +229,6 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         from opendp.typing import RuntimeType
         return RuntimeType.parse(measurement_input_carrier_type(self))
 
-    def _depends_on(self, *args):
-        """Extends the memory lifetime of args to the lifetime of self."""
-        setattr(self, "_dependencies", args)
-
     def __del__(self):
         try:
             from opendp.core import _measurement_free
@@ -360,10 +356,10 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         ...
 
     @overload
-    def __rshift__(self, other: "PartialConstructor") -> "PartialConstructor":
+    def __rshift__(self, other: "_PartialConstructor") -> "_PartialConstructor":
         ...
 
-    def __rshift__(self, other: Union["Measurement", "Transformation", "PartialConstructor"]) -> Union["Measurement", "Transformation", "PartialConstructor", "PartialChain"]:  # type: ignore[name-defined] # noqa F821
+    def __rshift__(self, other: Union["Measurement", "Transformation", "_PartialConstructor"]) -> Union["Measurement", "Transformation", "_PartialConstructor", "PartialChain"]:  # type: ignore[name-defined] # noqa F821
         if isinstance(other, Measurement):
             from opendp.combinators import make_chain_mt
             return make_chain_mt(other, self)
@@ -372,7 +368,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
             from opendp.combinators import make_chain_tt
             return make_chain_tt(other, self)
         
-        if isinstance(other, PartialConstructor):
+        if isinstance(other, _PartialConstructor):
             return self >> other(self.output_domain, self.output_metric) # type: ignore[call-arg]
 
         from opendp.context import PartialChain
@@ -471,10 +467,6 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         from opendp.typing import RuntimeType
         return RuntimeType.parse(transformation_input_carrier_type(self))
 
-    def _depends_on(self, *args):
-        """Extends the memory lifetime of args to the lifetime of self."""
-        setattr(self, "_dependencies", args)
-
     def __del__(self):
         try:
             from opendp.core import _transformation_free
@@ -500,8 +492,9 @@ Transformation = cast(Type[Transformation], Transformation) # type: ignore[misc]
 class Queryable(object):
     '''
     Queryables are used for interactive mechanisms like :ref:`sequential composition <sequential-composition>`.
-    See also the API docs for :py:func:`make_sequential_composition <opendp.combinators.make_sequential_composition>`
-    and :py:func:`new_queryable <opendp.core.new_queryable>`.
+
+    Queryables can be created with :py:func:`make_sequential_composition <opendp.combinators.make_sequential_composition>`
+    or :py:func:`new_queryable <opendp.core.new_queryable>`.
     '''
     def __init__(self, value, query_type):
         self.value = value
@@ -514,10 +507,6 @@ class Queryable(object):
     def __repr__(self) -> str:
         return f"Queryable(Q={self.query_type})"
 
-    def _depends_on(self, *args):
-        """Extends the memory lifetime of args to the lifetime of self."""
-        setattr(self, "_dependencies", args)
-        
 
 class Function(ctypes.POINTER(AnyFunction)): # type: ignore[misc]
     '''
@@ -529,10 +518,6 @@ class Function(ctypes.POINTER(AnyFunction)): # type: ignore[misc]
     def __call__(self, arg):
         from opendp.core import function_eval
         return function_eval(self, arg)
-    
-    def _depends_on(self, *args):
-        """Extends the memory lifetime of args to the lifetime of self."""
-        setattr(self, "_dependencies", args)
     
     def __del__(self):
         try:
@@ -611,10 +596,6 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     def __hash__(self) -> int:
         return hash(str(self))
     
-    def _depends_on(self, *args):
-        """Extends the memory lifetime of args to the lifetime of self."""
-        setattr(self, "_dependencies", args)
-
     def __iter__(self):
         raise ValueError("Domain does not support iteration")
 
@@ -728,6 +709,13 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
 
 
 class PrivacyProfile(object):
+    '''
+    Given a profile function provided by the user,
+    gives the epsilon corresponding to a given delta, and vice versa.
+
+    :py:func:`new_privacy_profile <opendp.measures.new_privacy_profile>`
+    should be used to create new instances.
+    '''
     def __init__(self, curve):
         self.curve = curve
 
@@ -749,12 +737,11 @@ class PrivacyProfile(object):
         from opendp._data import privacy_profile_epsilon
         return privacy_profile_epsilon(self.curve, delta)
     
-    def _depends_on(self, *args):
-        """Extends the memory lifetime of args to the lifetime of self."""
-        setattr(self, "_dependencies", args)
 
+class _PartialConstructor(object):
+    '''
 
-class PartialConstructor(object):
+    '''
     def __init__(self, constructor):
         self.constructor = constructor
         self.__opendp_dict__ = {}  # Not needed at runtime, but the definition prevents mypy errors.
@@ -763,7 +750,7 @@ class PartialConstructor(object):
         return self.constructor(input_domain, input_metric)
     
     def __rshift__(self, other):
-        return PartialConstructor(lambda input_domain, input_metric: self(input_domain, input_metric) >> other) # pragma: no cover
+        return _PartialConstructor(lambda input_domain, input_metric: self(input_domain, input_metric) >> other) # pragma: no cover
 
     def __rrshift__(self, other):
         if isinstance(other, tuple) and list(map(type, other)) == [Domain, Metric]:
@@ -1052,7 +1039,7 @@ def binary_search(
     5.0
     >>> dp.binary_search(lambda x: x <= 5.)
     5.0
-
+    >>>
     >>> dp.binary_search(lambda x: x > 5, T=int)
     6
     >>> dp.binary_search(lambda x: x < 5, T=int)

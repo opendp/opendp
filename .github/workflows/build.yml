@@ -54,7 +54,7 @@ jobs:
 
   bindings:
     needs: credential-check
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Free disk space
         uses: jlumbroso/free-disk-space@v1.3.1
@@ -203,7 +203,7 @@ jobs:
   
   python-aarch64:
     needs: bindings
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       DOCKER_IMAGE: messense/manylinux_2_24-cross:aarch64
       TARGET: aarch64-unknown-linux-gnu
@@ -311,7 +311,7 @@ jobs:
 
   r:
     needs: bindings
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

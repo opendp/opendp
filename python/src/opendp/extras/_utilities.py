@@ -1,12 +1,12 @@
 from typing import Callable, Union
-from opendp.mod import Domain, Metric, PartialConstructor, Measurement, Transformation
+from opendp.mod import Domain, Metric, _PartialConstructor, Measurement, Transformation
 
 
-def to_then(constructor) -> Callable[..., PartialConstructor]:
+def to_then(constructor) -> Callable[..., _PartialConstructor]:
     """Convert any `make_` constructor to a `then_` constructor"""
 
     def then_func(*args, **kwargs):
-        return PartialConstructor(
+        return _PartialConstructor(
             lambda input_domain, input_metric: constructor(
                 input_domain, input_metric, *args, **kwargs
             )
@@ -17,7 +17,7 @@ def to_then(constructor) -> Callable[..., PartialConstructor]:
     return then_func
 
 
-def _register(module_name, constructor) -> Callable[..., PartialConstructor]:  # type: ignore[return]
+def _register(module_name, constructor) -> Callable[..., _PartialConstructor]:  # type: ignore[return]
     import importlib
     import inspect
 
@@ -37,19 +37,19 @@ def _register(module_name, constructor) -> Callable[..., PartialConstructor]:  #
 
 def register_transformation(
     constructor: Callable[..., Transformation]
-) -> Callable[..., PartialConstructor]:
+) -> Callable[..., _PartialConstructor]:
     return _register("transformations", constructor)
 
 
 def register_measurement(
     constructor: Callable[..., Measurement]
-) -> Callable[..., PartialConstructor]:
+) -> Callable[..., _PartialConstructor]:
     return _register("measurements", constructor)
 
 
 def register_combinator(
     constructor: Callable[..., Union[Transformation, Measurement]],
-) -> Callable[..., PartialConstructor]:
+) -> Callable[..., _PartialConstructor]:
     return _register("combinators", constructor)  # pragma: no cover
 
 

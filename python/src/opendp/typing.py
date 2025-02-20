@@ -20,7 +20,7 @@ from typing import Optional, Union, Any, Type, Sequence, _GenericAlias # type: i
 from types import GenericAlias
 import re
 
-from opendp.mod import Function, UnknownTypeException, Measurement, Transformation, Domain, Metric, Measure
+from opendp.mod import UnknownTypeException, Measurement, Transformation, Domain, Metric, Measure
 from opendp._lib import ATOM_EQUIVALENCE_CLASSES, import_optional_dependency
 
 
@@ -202,7 +202,7 @@ class RuntimeType(object):
         if isinstance(type_name, str):
             type_name = type_name.strip()
             if type_name in generics:
-                return GenericType(type_name)
+                return _GenericType(type_name)
             if type_name.startswith('(') and type_name.endswith(')'):
                 return RuntimeType('Tuple', cls._parse_args(type_name[1:-1], generics=generics))
             start, end = type_name.find('<'), type_name.rfind('>')
@@ -272,7 +272,7 @@ class RuntimeType(object):
         Vec<String>
         >>> dp.RuntimeType.infer((12., True, "A"))
         (f64, bool, String)
-        
+        >>>
         >>> dp.RuntimeType.infer([])
         Traceback (most recent call last):
         ...
@@ -373,14 +373,14 @@ class RuntimeType(object):
         
         :param kwargs:
         '''
-        if isinstance(self, GenericType):
+        if isinstance(self, _GenericType):
             return kwargs.get(self.origin, self)
         if isinstance(self, RuntimeType):
             return RuntimeType(self.origin, self.args and [RuntimeType.substitute(arg, **kwargs) for arg in self.args])
         return self
     
 
-class GenericType(RuntimeType):
+class _GenericType(RuntimeType):
     def __repr__(self):
         raise UnknownTypeException(f"attempted to create a type_name with an unknown generic: {self.origin}")  # pragma: no cover
 
@@ -478,7 +478,7 @@ def get_atom(type_name):
     '''
     type_name = RuntimeType.parse(type_name)
     while isinstance(type_name, RuntimeType):
-        if isinstance(type_name, GenericType):
+        if isinstance(type_name, _GenericType):
             return
         type_name = type_name.args[0]
     return type_name
@@ -520,23 +520,6 @@ def pass_through(value: Any) -> Any:
     :param value: Value to pass through
     '''
     return value
-
-def get_dependencies(opendp_obj: Union[Measurement, Transformation, Function]) -> Any:
-    '''
-    Returns the dependencies of ``opendp_obj``.
-    Used extensively by combinators.
-
-    :param opendp_obj: Return the dependencies for this object
-    '''
-    return getattr(opendp_obj, "_dependencies", None)
-
-def get_dependencies_iterable(opendp_objs: Sequence[Union[Measurement, Transformation, Function]]) -> Sequence[Any]:
-    '''
-    Returns a list with the dependencies of each item in ``value``.
-
-    :param opendp_objs: Return the dependencies for all of these objects
-    '''
-    return list(map(get_dependencies, opendp_objs))
 
 def get_carrier_type(domain: Domain) -> Union[RuntimeType, str]:
     '''
