@@ -499,7 +499,7 @@ Transformation = cast(Type[Transformation], Transformation) # type: ignore[misc]
 
 class Queryable(object):
     '''
-    Queryables are used for :ref:`sequential composition <sequential-composition>`.
+    Queryables are used for interactive mechanisms like :ref:`sequential composition <sequential-composition>`.
     See also the API docs for :py:func:`make_sequential_composition <opendp.combinators.make_sequential_composition>`
     and :py:func:`new_queryable <opendp.core.new_queryable>`.
     '''
