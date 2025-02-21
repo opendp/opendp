@@ -10,7 +10,7 @@ NULL
 #'
 #' Required features: `contrib`
 #'
-#' [choose_branching_factor in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.choose_branching_factor.html)
+#' [choose_branching_factor in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.choose_branching_factor.html)
 #'
 #' **Citations:**
 #'
@@ -51,7 +51,7 @@ choose_branching_factor <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_b_ary_tree in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_b_ary_tree.html)
+#' [make_b_ary_tree in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_b_ary_tree.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -146,7 +146,7 @@ then_b_ary_tree <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_bounded_float_checked_sum in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_bounded_float_checked_sum.html)
+#' [make_bounded_float_checked_sum in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_bounded_float_checked_sum.html)
 #'
 #' **Citations:**
 #'
@@ -251,7 +251,7 @@ then_bounded_float_checked_sum <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_bounded_float_ordered_sum in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_bounded_float_ordered_sum.html)
+#' [make_bounded_float_ordered_sum in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_bounded_float_ordered_sum.html)
 #'
 #' **Citations:**
 #'
@@ -342,7 +342,7 @@ then_bounded_float_ordered_sum <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_bounded_int_monotonic_sum in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_bounded_int_monotonic_sum.html)
+#' [make_bounded_int_monotonic_sum in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_bounded_int_monotonic_sum.html)
 #'
 #' **Citations:**
 #'
@@ -425,7 +425,7 @@ then_bounded_int_monotonic_sum <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_bounded_int_ordered_sum in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_bounded_int_ordered_sum.html)
+#' [make_bounded_int_ordered_sum in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_bounded_int_ordered_sum.html)
 #'
 #' **Citations:**
 #'
@@ -508,7 +508,7 @@ then_bounded_int_ordered_sum <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_bounded_int_split_sum in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_bounded_int_split_sum.html)
+#' [make_bounded_int_split_sum in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_bounded_int_split_sum.html)
 #'
 #' **Citations:**
 #'
@@ -593,7 +593,7 @@ then_bounded_int_split_sum <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_cast in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_cast.html)
+#' [make_cast in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_cast.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -676,7 +676,7 @@ then_cast <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_cast_default in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_cast_default.html)
+#' [make_cast_default in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_cast_default.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -757,7 +757,7 @@ then_cast_default <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_cast_inherent in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_cast_inherent.html)
+#' [make_cast_inherent in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_cast_inherent.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -831,7 +831,7 @@ then_cast_inherent <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_cdf in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_cdf.html)
+#' [make_cdf in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_cdf.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -900,7 +900,7 @@ then_cdf <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_clamp in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_clamp.html)
+#' [make_clamp in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_clamp.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -911,7 +911,7 @@ then_cdf <- function(
 #'
 #' **Proof Definition:**
 #'
-#' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/transformations/clamp/make_clamp.pdf)
+#' [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/transformations/clamp/make_clamp.pdf)
 #'
 #' @concept transformations
 #' @param input_domain Domain of input data.
@@ -989,7 +989,7 @@ then_clamp <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_consistent_b_ary_tree in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_consistent_b_ary_tree.html)
+#' [make_consistent_b_ary_tree in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_consistent_b_ary_tree.html)
 #'
 #' **Citations:**
 #'
@@ -1073,7 +1073,7 @@ then_consistent_b_ary_tree <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_count in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_count.html)
+#' [make_count in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_count.html)
 #'
 #' **Citations:**
 #'
@@ -1088,7 +1088,7 @@ then_consistent_b_ary_tree <- function(
 #'
 #' **Proof Definition:**
 #'
-#' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/transformations/count/make_count.pdf)
+#' [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/transformations/count/make_count.pdf)
 #'
 #' @concept transformations
 #' @param input_domain Domain of the data type to be privatized.
@@ -1156,7 +1156,7 @@ then_count <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_count_by in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_count_by.html)
+#' [make_count_by in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_count_by.html)
 #'
 #' **Citations:**
 #'
@@ -1241,7 +1241,7 @@ then_count_by <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_count_by_categories in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_count_by_categories.html)
+#' [make_count_by_categories in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_count_by_categories.html)
 #'
 #' **Citations:**
 #'
@@ -1342,7 +1342,7 @@ then_count_by_categories <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_count_distinct in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_count_distinct.html)
+#' [make_count_distinct in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_count_distinct.html)
 #'
 #' **Citations:**
 #'
@@ -1420,7 +1420,7 @@ then_count_distinct <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_create_dataframe in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_create_dataframe.html)
+#' [make_create_dataframe in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_create_dataframe.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -1507,7 +1507,7 @@ then_create_dataframe <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_df_cast_default in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_df_cast_default.html)
+#' [make_df_cast_default in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_df_cast_default.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -1598,7 +1598,7 @@ then_df_cast_default <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_df_is_equal in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_df_is_equal.html)
+#' [make_df_is_equal in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_df_is_equal.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -1695,7 +1695,7 @@ then_df_is_equal <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_drop_null in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_drop_null.html)
+#' [make_drop_null in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_drop_null.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -1767,7 +1767,7 @@ then_drop_null <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_find in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_find.html)
+#' [make_find in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_find.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -1853,7 +1853,7 @@ then_find <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_find_bin in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_find_bin.html)
+#' [make_find_bin in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_find_bin.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -1936,7 +1936,7 @@ then_find_bin <- function(
 #'
 #' Required features: `contrib`, `honest-but-curious`
 #'
-#' [make_identity in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_identity.html)
+#' [make_identity in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_identity.html)
 #'
 #' **Why honest-but-curious?:**
 #'
@@ -2020,7 +2020,7 @@ then_identity <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_impute_constant in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_impute_constant.html)
+#' [make_impute_constant in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_impute_constant.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -2097,7 +2097,7 @@ then_impute_constant <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_impute_uniform_float in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_impute_uniform_float.html)
+#' [make_impute_uniform_float in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_impute_uniform_float.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -2175,7 +2175,7 @@ then_impute_uniform_float <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_index in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_index.html)
+#' [make_index in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_index.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -2264,7 +2264,7 @@ then_index <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_is_equal in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_is_equal.html)
+#' [make_is_equal in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_is_equal.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -2275,7 +2275,7 @@ then_index <- function(
 #'
 #' **Proof Definition:**
 #'
-#' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/transformations/manipulation/make_is_equal.pdf)
+#' [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/transformations/manipulation/make_is_equal.pdf)
 #'
 #' @concept transformations
 #' @param input_domain Domain of input data
@@ -2346,7 +2346,7 @@ then_is_equal <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_is_null in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_is_null.html)
+#' [make_is_null in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_is_null.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -2416,7 +2416,7 @@ then_is_null <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_lipschitz_float_mul in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_lipschitz_float_mul.html)
+#' [make_lipschitz_float_mul in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_lipschitz_float_mul.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -2511,7 +2511,7 @@ then_lipschitz_float_mul <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_mean in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_mean.html)
+#' [make_mean in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_mean.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -2588,7 +2588,7 @@ then_mean <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_metric_bounded in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_metric_bounded.html)
+#' [make_metric_bounded in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_metric_bounded.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -2662,7 +2662,7 @@ then_metric_bounded <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_metric_unbounded in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_metric_unbounded.html)
+#' [make_metric_unbounded in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_metric_unbounded.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -2736,7 +2736,7 @@ then_metric_unbounded <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_ordered_random in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_ordered_random.html)
+#' [make_ordered_random in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_ordered_random.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -2804,7 +2804,7 @@ then_ordered_random <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_quantile_score_candidates in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_quantile_score_candidates.html)
+#' [make_quantile_score_candidates in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_quantile_score_candidates.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -2815,7 +2815,7 @@ then_ordered_random <- function(
 #'
 #' **Proof Definition:**
 #'
-#' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/transformations/quantile_score_candidates/make_quantile_score_candidates.pdf)
+#' [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/transformations/quantile_score_candidates/make_quantile_score_candidates.pdf)
 #'
 #' @concept transformations
 #' @param input_domain Uses a tighter sensitivity when the size of vectors in the input domain is known.
@@ -2892,7 +2892,7 @@ then_quantile_score_candidates <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_quantiles_from_counts in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_quantiles_from_counts.html)
+#' [make_quantiles_from_counts in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_quantiles_from_counts.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -2987,7 +2987,7 @@ then_quantiles_from_counts <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_resize in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_resize.html)
+#' [make_resize in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_resize.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -3076,7 +3076,7 @@ then_resize <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_select_column in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_select_column.html)
+#' [make_select_column in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_select_column.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -3172,7 +3172,7 @@ then_select_column <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_sized_bounded_float_checked_sum in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_sized_bounded_float_checked_sum.html)
+#' [make_sized_bounded_float_checked_sum in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_sized_bounded_float_checked_sum.html)
 #'
 #' **Citations:**
 #'
@@ -3277,7 +3277,7 @@ then_sized_bounded_float_checked_sum <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_sized_bounded_float_ordered_sum in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_sized_bounded_float_ordered_sum.html)
+#' [make_sized_bounded_float_ordered_sum in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_sized_bounded_float_ordered_sum.html)
 #'
 #' **Citations:**
 #'
@@ -3368,7 +3368,7 @@ then_sized_bounded_float_ordered_sum <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_sized_bounded_int_checked_sum in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_sized_bounded_int_checked_sum.html)
+#' [make_sized_bounded_int_checked_sum in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_sized_bounded_int_checked_sum.html)
 #'
 #' **Citations:**
 #'
@@ -3457,7 +3457,7 @@ then_sized_bounded_int_checked_sum <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_sized_bounded_int_monotonic_sum in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_sized_bounded_int_monotonic_sum.html)
+#' [make_sized_bounded_int_monotonic_sum in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_sized_bounded_int_monotonic_sum.html)
 #'
 #' **Citations:**
 #'
@@ -3548,7 +3548,7 @@ then_sized_bounded_int_monotonic_sum <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_sized_bounded_int_ordered_sum in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_sized_bounded_int_ordered_sum.html)
+#' [make_sized_bounded_int_ordered_sum in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_sized_bounded_int_ordered_sum.html)
 #'
 #' **Citations:**
 #'
@@ -3639,7 +3639,7 @@ then_sized_bounded_int_ordered_sum <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_sized_bounded_int_split_sum in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_sized_bounded_int_split_sum.html)
+#' [make_sized_bounded_int_split_sum in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_sized_bounded_int_split_sum.html)
 #'
 #' **Citations:**
 #'
@@ -3728,7 +3728,7 @@ then_sized_bounded_int_split_sum <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_split_dataframe in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_split_dataframe.html)
+#' [make_split_dataframe in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_split_dataframe.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -3811,7 +3811,7 @@ then_split_dataframe <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_split_lines in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_split_lines.html)
+#' [make_split_lines in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_split_lines.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -3874,7 +3874,7 @@ then_split_lines <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_split_records in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_split_records.html)
+#' [make_split_records in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_split_records.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -3940,7 +3940,7 @@ then_split_records <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_subset_by in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_subset_by.html)
+#' [make_subset_by in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_subset_by.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -4027,7 +4027,7 @@ then_subset_by <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_sum in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_sum.html)
+#' [make_sum in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_sum.html)
 #'
 #' **Citations:**
 #'
@@ -4114,7 +4114,7 @@ then_sum <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_sum_of_squared_deviations in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_sum_of_squared_deviations.html)
+#' [make_sum_of_squared_deviations in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_sum_of_squared_deviations.html)
 #'
 #' **Citations:**
 #'
@@ -4201,7 +4201,7 @@ then_sum_of_squared_deviations <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_unordered in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_unordered.html)
+#' [make_unordered in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_unordered.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -4272,7 +4272,7 @@ then_unordered <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_variance in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/transformations/fn.make_variance.html)
+#' [make_variance in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/transformations/fn.make_variance.html)
 #'
 #' **Citations:**
 #'
