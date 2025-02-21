@@ -81,7 +81,7 @@ def approximate(
     The measurement's input metric defines the notion of adjacency,
     and the measurement's input domain defines the set of possible datasets.
 
-    [approximate in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/measures/fn.approximate.html)
+    [approximate in Rust documentation.](https://docs.rs/opendp/0.12.1/opendp/measures/fn.approximate.html)
 
     **Proof Definition:**
 
