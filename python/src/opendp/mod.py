@@ -229,10 +229,6 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         from opendp.typing import RuntimeType
         return RuntimeType.parse(measurement_input_carrier_type(self))
 
-    def _depends_on(self, *args):
-        """Extends the memory lifetime of args to the lifetime of self."""
-        setattr(self, "_dependencies", args)
-
     def __del__(self):
         try:
             from opendp.core import _measurement_free
@@ -471,10 +467,6 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         from opendp.typing import RuntimeType
         return RuntimeType.parse(transformation_input_carrier_type(self))
 
-    def _depends_on(self, *args):
-        """Extends the memory lifetime of args to the lifetime of self."""
-        setattr(self, "_dependencies", args)
-
     def __del__(self):
         try:
             from opendp.core import _transformation_free
@@ -499,8 +491,10 @@ Transformation = cast(Type[Transformation], Transformation) # type: ignore[misc]
 
 class Queryable(object):
     '''
-    See also the API docs for :py:func:`make_sequential_composition <opendp.combinators.make_sequential_composition>`
-    and :py:func:`new_queryable <opendp.core.new_queryable>`.
+    Queryables are used for interactive mechanisms like :ref:`sequential composition <sequential-composition>`.
+
+    Queryables can be created with :py:func:`make_sequential_composition <opendp.combinators.make_sequential_composition>`
+    or :py:func:`new_queryable <opendp.core.new_queryable>`.
     '''
     def __init__(self, value, query_type):
         self.value = value
@@ -513,10 +507,6 @@ class Queryable(object):
     def __repr__(self) -> str:
         return f"Queryable(Q={self.query_type})"
 
-    def _depends_on(self, *args):
-        """Extends the memory lifetime of args to the lifetime of self."""
-        setattr(self, "_dependencies", args)
-        
 
 class Function(ctypes.POINTER(AnyFunction)): # type: ignore[misc]
     '''
@@ -528,10 +518,6 @@ class Function(ctypes.POINTER(AnyFunction)): # type: ignore[misc]
     def __call__(self, arg):
         from opendp.core import function_eval
         return function_eval(self, arg)
-    
-    def _depends_on(self, *args):
-        """Extends the memory lifetime of args to the lifetime of self."""
-        setattr(self, "_dependencies", args)
     
     def __del__(self):
         try:
@@ -555,14 +541,22 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     '''
     _type_ = AnyDomain
 
-    def member(self, val):
+    def member(self, val) -> bool:
         '''
         Check if ``val`` is a member of the domain.
         
         :param val: a value to be checked for membership in `self`
         '''
-        from opendp.domains import member
-        return member(self, val)
+        try:
+            # TODO: Should we rename the import to "_member"?
+            # https://github.com/opendp/opendp/issues/2268
+            from opendp.domains import member
+            return member(self, val)
+        except Exception as e:
+            from warnings import warn
+            warn(f'Value ({val}) does not belong to carrier type of {self}. Details: {e}')
+            return False
+
 
     @property
     def type(self) -> Union["RuntimeType", str]:
@@ -610,10 +604,6 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     def __hash__(self) -> int:
         return hash(str(self))
     
-    def _depends_on(self, *args):
-        """Extends the memory lifetime of args to the lifetime of self."""
-        setattr(self, "_dependencies", args)
-
     def __iter__(self):
         raise ValueError("Domain does not support iteration")
 
@@ -755,10 +745,6 @@ class PrivacyProfile(object):
         from opendp._data import privacy_profile_epsilon
         return privacy_profile_epsilon(self.curve, delta)
     
-    def _depends_on(self, *args):
-        """Extends the memory lifetime of args to the lifetime of self."""
-        setattr(self, "_dependencies", args)
-
 
 class _PartialConstructor(object):
     '''
