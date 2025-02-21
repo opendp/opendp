@@ -281,7 +281,7 @@ def _new_pure_function(
 
     Required features: `contrib`
 
-    [_new_pure_function in Rust documentation.](https://docs.rs/opendp/0.12.1-nightly.20250220.1/opendp/internal/fn._new_pure_function.html)
+    [_new_pure_function in Rust documentation.](https://docs.rs/opendp/0.12.1-beta.20250220.1/opendp/internal/fn._new_pure_function.html)
 
     :param function: A function mapping data to a value of type `TO`
     :param TO: Output Type
