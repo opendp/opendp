@@ -1,6 +1,5 @@
 use polars::lazy::dsl::Expr;
 use polars::prelude::*;
-use std::collections::{BTreeSet, HashMap};
 use std::fmt::{Debug, Formatter};
 
 use crate::core::{Metric, MetricSpace};
@@ -37,24 +36,21 @@ pub enum Context {
     ///
     /// `.agg(exprs)` is the general case where there are grouping columns.
     /// `.select(exprs)` is the special case where there are no grouping columns.
-    Grouping {
-        by: BTreeSet<PlSmallStr>,
-        margin: Margin,
-    },
+    Aggregation { margin: Margin },
 }
 
 impl Context {
     /// # Proof Definition
-    /// Return the grouping columns and margin specified by `self` if in a grouping context,
+    /// Return the grouping columns and margin specified by `self` if in an aggregation context,
     /// otherwise return an error.
-    pub fn grouping(&self, operation: &str) -> Fallible<(BTreeSet<PlSmallStr>, Margin)> {
+    pub fn aggregation(&self, operation: &str) -> Fallible<Margin> {
         match self {
             Context::RowByRow { .. } => fallible!(
                 MakeDomain,
                 "{} is only allowed within `.agg(...)` or `.select(...)`",
                 operation
             ),
-            Context::Grouping { by, margin } => Ok((by.clone(), margin.clone())),
+            Context::Aggregation { margin } => Ok(margin.clone()),
         }
     }
 }
@@ -89,10 +85,9 @@ impl WildExprDomain {
         FrameDomain::new_with_margins(
             self.columns,
             match self.context {
-                Context::RowByRow => HashMap::default(),
-                Context::Grouping { by, margin } => {
-                    let by = BTreeSet::from_iter(by);
-                    HashMap::from([(by, margin)])
+                Context::RowByRow => Vec::new(),
+                Context::Aggregation { margin } => {
+                    vec![margin]
                 }
             },
         )
@@ -111,15 +106,15 @@ pub struct ExprDomain {
 
 impl LazyFrameDomain {
     pub fn select(self) -> WildExprDomain {
-        self.aggregate::<String, 0>([])
+        self.aggregate::<Expr, 0>([])
     }
 
-    pub fn aggregate<S: AsRef<str>, const P: usize>(self, by: [S; P]) -> WildExprDomain {
-        let by: BTreeSet<_> = by.iter().map(|s| s.as_ref().into()).collect();
+    pub fn aggregate<S: Into<Expr>, const P: usize>(self, by: [S; P]) -> WildExprDomain {
+        let by = by.map(|s| s.into()).into();
         let margin = self.get_margin(&by);
         WildExprDomain {
             columns: self.series_domains,
-            context: Context::Grouping { by, margin },
+            context: Context::Aggregation { margin },
         }
     }
 
@@ -182,8 +177,8 @@ impl Domain for ExprDomain {
         let (plan, expr) = (LazyFrame::from(val.plan.clone()), val.expr.clone());
         let frame = match &self.context {
             Context::RowByRow { .. } => plan.select([expr]),
-            Context::Grouping { by, .. } => plan
-                .group_by(&by.iter().map(|s| s.as_str()).collect::<Vec<_>>())
+            Context::Aggregation { margin } => plan
+                .group_by(margin.by.iter().cloned().collect::<Vec<_>>())
                 .agg([expr.clone()]),
         }
         .collect()?;
@@ -195,12 +190,8 @@ impl Domain for ExprDomain {
 
         match &self.context {
             Context::RowByRow => (),
-            Context::Grouping { margin, by } => {
-                if !margin.member(
-                    frame
-                        .lazy()
-                        .group_by(&by.iter().map(|s| s.as_str()).collect::<Vec<_>>()),
-                )? {
+            Context::Aggregation { margin } => {
+                if !margin.member(frame.lazy().group_by(&Vec::from_iter(margin.by.clone())))? {
                     return Ok(false);
                 }
             }

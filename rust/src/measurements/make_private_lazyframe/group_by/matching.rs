@@ -28,7 +28,7 @@ pub enum KeySanitizer {
 
 pub(crate) struct MatchGroupBy {
     pub input: DslPlan,
-    pub keys: Vec<Expr>,
+    pub group_by: Vec<Expr>,
     pub aggs: Vec<Expr>,
     pub key_sanitizer: Option<KeySanitizer>,
 }
@@ -129,7 +129,7 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
 
     Ok(Some(MatchGroupBy {
         input: Arc::unwrap_or_clone(input),
-        keys,
+        group_by: keys,
         aggs,
         key_sanitizer,
     }))
