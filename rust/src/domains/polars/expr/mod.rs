@@ -32,7 +32,7 @@ pub enum Context {
     ///
     /// Rows cannot be added or removed, and the order of rows cannot be changed.
     RowByRow,
-    /// Allows for aggregation operations that break row alignment, such as `group_by/agg` and `select`.
+    /// Allows for aggregation operations that break row alignment, such as `agg` and `select`.
     ///
     /// `.agg(exprs)` is the general case where there are grouping columns.
     /// `.select(exprs)` is the special case where there are no grouping columns.
@@ -47,7 +47,7 @@ impl Context {
         match self {
             Context::RowByRow { .. } => fallible!(
                 MakeDomain,
-                "{} is only allowed within `.agg(...)` or `.select(...)`",
+                "{} is not allowed in a row-by-row context",
                 operation
             ),
             Context::Aggregation { margin } => Ok(margin.clone()),

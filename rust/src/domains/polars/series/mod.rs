@@ -214,6 +214,26 @@ impl SeriesDomain {
             .downcast_ref::<D>()
             .ok_or_else(|| err!(FailedCast, "domain downcast failed"))
     }
+
+    pub fn set_non_nan(&mut self) -> Fallible<()> {
+        match self.dtype() {
+            DataType::Float64 => {
+                let atom_domain = self.atom_domain::<f64>()?.clone();
+                self.set_element_domain(AtomDomain::<f64>::new(atom_domain.bounds, None));
+            }
+            DataType::Float32 => {
+                let atom_domain = self.atom_domain::<f32>()?.clone();
+                self.set_element_domain(AtomDomain::<f32>::new(atom_domain.bounds, None));
+            }
+            _ => {
+                return fallible!(
+                    MakeTransformation,
+                    "only floating point types can be made non-NaN"
+                )
+            }
+        }
+        Ok(())
+    }
 }
 
 impl Debug for SeriesDomain {
