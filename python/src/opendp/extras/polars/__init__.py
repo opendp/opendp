@@ -34,6 +34,7 @@ from opendp.domains import (
     categorical_domain,
     datetime_domain,
     enum_domain,
+    array_domain,
 )
 from opendp.measurements import make_private_lazyframe
 
@@ -609,16 +610,22 @@ def _lazyframe_domain_from_schema(schema) -> Domain:
 
 def _series_domain_from_field(field) -> Domain:
     """Builds the broadest possible SeriesDomain that matches a given field."""
+    name, dtype = field
+    return series_domain(name, option_domain(_domain_from_dtype(dtype)))
+
+
+def _domain_from_dtype(dtype) -> Domain:
+    """Builds the broadest possible Domain that matches a given dtype."""
     import polars as pl
 
-    name, dtype = field
     if dtype == pl.Categorical:
-        return series_domain(name, option_domain(categorical_domain()))
+        return categorical_domain()
     if dtype == pl.Enum:
-        return series_domain(name, option_domain(enum_domain(dtype.categories)))
+        return enum_domain(dtype.categories)
     if dtype == pl.Datetime:
-        dt_domain = datetime_domain(dtype.time_unit, dtype.time_zone)
-        return series_domain(name, option_domain(dt_domain))
+        return datetime_domain(dtype.time_unit, dtype.time_zone)
+    if dtype == pl.Array:
+        return array_domain(_domain_from_dtype(dtype.inner), dtype.size)
 
     T = {
         pl.UInt32: "u32",
@@ -638,9 +645,7 @@ def _series_domain_from_field(field) -> Domain:
     if T is None:
         raise ValueError(f"unrecognized dtype: {dtype}")  # pragma: no cover
 
-    element_domain = option_domain(atom_domain(T=T, nullable=T in {"f32", "f64"}))
-    return series_domain(name, element_domain)
-
+    return atom_domain(T=T, nullable=T in {"f32", "f64"})
 
 _LAZY_EXECUTION_METHODS = {
     "collect",
