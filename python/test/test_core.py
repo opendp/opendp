@@ -152,6 +152,14 @@ def test_member():
     from opendp.domains import atom_domain, vector_domain
     from opendp.metrics import symmetric_distance
 
+    int_10_domain = atom_domain(T=int, bounds=(0, 10))
+    assert int_10_domain.member(0)
+    assert not int_10_domain.member(100)
+    with pytest.warns(UserWarning, match=r'inferred type is f64, expected i32'):
+        assert not int_10_domain.member(0.0)
+    with pytest.warns(UserWarning, match=r'inferred type is f64, expected i32'):
+        assert not int_10_domain.member(100.0)
+
     input_domain = vector_domain(atom_domain(T=int))
     input_metric = symmetric_distance()
 

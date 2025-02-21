@@ -12,39 +12,37 @@ chained = input_space >> dp.t.then_mean() >> dp.m.then_laplace(scale=0.5)
 
 
 @pytest.mark.parametrize(
-    "_readable_name,dp_obj",
+    "dp_obj",
     [
-        (str(obj), obj)
-        for obj in [
-            # Python objects:
-            ('nested', ('tuple', ('containing', ('domain', (atom,))))),
-            {'dict key': atom},
-            input_space,
-            # Domains:
-            atom,
-            dp.categorical_domain(['A', 'B', 'C']),
-            dp.series_domain('A', atom),
-            dp.lazyframe_domain([dp.series_domain('A', atom)]),
-            dp.wild_expr_domain([]),
-            # Metrics:
-            dp.absolute_distance("int"),
-            dp.change_one_distance(),
-            dp.linf_distance("float", True),
-            dp.user_distance("user_distance"),
-            # Measures:
-            dp.m.max_divergence(),
-            dp.m.approximate(dp.m.max_divergence()),
-            dp.m.user_divergence("user_divergence"),
-            # Measurements:
-            dp.m.make_gaussian(atom, dp.absolute_distance(float), 1),
-            dp.m.then_gaussian(1),
-            # Compositions:
-            chained,
-            dp.c.make_population_amplification(chained, population_size=100),
-        ]
+        # Python objects:
+        ('nested', ('tuple', ('containing', ('domain', (atom,))))),
+        {'dict key': atom},
+        input_space,
+        # Domains:
+        atom,
+        dp.categorical_domain(['A', 'B', 'C']),
+        dp.series_domain('A', atom),
+        dp.lazyframe_domain([dp.series_domain('A', atom)]),
+        dp.wild_expr_domain([]),
+        # Metrics:
+        dp.absolute_distance("int"),
+        dp.change_one_distance(),
+        dp.linf_distance("float", True),
+        dp.user_distance("user_distance"),
+        # Measures:
+        dp.m.max_divergence(),
+        dp.m.approximate(dp.m.max_divergence()),
+        dp.m.user_divergence("user_divergence"),
+        # Measurements:
+        dp.m.make_gaussian(atom, dp.absolute_distance(float), 1),
+        dp.m.then_gaussian(1),
+        # Compositions:
+        chained,
+        dp.c.make_population_amplification(chained, population_size=100),
     ],
+    ids=lambda arg: str(arg)
 )
-def test_serializable(_readable_name, dp_obj):
+def test_serializable_equal(dp_obj):
     serialized = dp.serialize(dp_obj)
     deserialized = dp.deserialize(serialized)
     # We don't want to define __eq__ just for the sake of testing,
@@ -55,30 +53,26 @@ def test_serializable(_readable_name, dp_obj):
 
 
 @pytest.mark.parametrize(
-    "_readable_name,dp_obj",
+    "dp_obj",
     [
-        (str(obj), obj)
-        for obj in [
-            dp.user_domain("trivial_user_domain", lambda: True),
-            dp.m.new_privacy_profile(lambda x: x),
-        ]
+        dp.user_domain("trivial_user_domain", lambda: True),
+        dp.m.new_privacy_profile(lambda x: x),
     ],
+    ids=lambda arg: str(arg)
 )
-def test_not_ever_serializable(_readable_name, dp_obj):
+def test_not_ever_serializable(dp_obj):
     with pytest.raises(Exception, match=r"OpenDP JSON Encoder does not handle"):
         dp.serialize(dp_obj)
 
 
 @pytest.mark.parametrize(
-    "_readable_name,dp_obj",
+    "dp_obj",
     [
-        (str(obj), obj)
-        for obj in [
-            {('tuple', 'key'): 'value'},
-        ]
+        {('tuple', 'key'): 'value'},
     ],
+    ids=lambda arg: str(arg)
 )
-def test_not_json_serializable(_readable_name, dp_obj):
+def test_not_json_serializable(dp_obj):
     with pytest.raises(Exception, match=r"keys must be str, int, float, bool or None, not tuple"):
         dp.serialize(dp_obj)
 
@@ -104,6 +98,55 @@ def test_version_mismatch_warning():
 # in this case it needs to wrap the tests.
 pl = import_optional_dependency('polars', raise_error=False)
 if pl is not None:
+    # member() will warn if instance is not even of the carrier type,
+    # but that behavior is tested elsewhere, and can be ignored here.
+    @pytest.mark.filterwarnings("ignore::UserWarning")
+    @pytest.mark.parametrize(
+        "dp_domain,in_value,out_value",
+        [
+            (atom, 10, 100),
+            # TODO: Might not be specifying categorical values correctly, 
+            # but shouldn't error, regardless.
+            # https://github.com/opendp/opendp/issues/2264
+            # (dp.categorical_domain(['A', 'B', 'C']),
+            #  pl.lit("A", dtype=pl.Categorical),
+            #  pl.lit("Z", dtype=pl.Categorical)
+            # ),
+            (
+                dp.series_domain('name', atom),
+                pl.Series("name", [1.0, 2.0, 3.0]),
+                pl.Series("name", ['a', 'b', 'c'])
+            ),
+            (
+                dp.lazyframe_domain([dp.series_domain('A', atom)]),
+                pl.LazyFrame({'A': [1.0, 2.0, 3.0]}),
+                pl.LazyFrame({'A': ['a', 'b', 'c']})
+            )
+        ],
+        ids=lambda arg: str(arg)
+    )
+    def test_serializable_domain(dp_domain, in_value, out_value):
+        assert dp_domain.member(in_value)
+        assert not dp_domain.member(out_value)
+
+        serialized = dp.serialize(dp_domain)
+        deserialized = dp.deserialize(serialized)
+
+        assert deserialized.member(in_value)
+        assert not deserialized.member(out_value)
+
+    @pytest.mark.parametrize(
+        "dp_measurement,value,output_type",
+        [
+            (dp.m.make_gaussian(atom, dp.absolute_distance(float), 1), 0, float),
+        ],
+        ids=lambda arg: str(arg)
+    )
+    def test_serializable_measurement(dp_measurement, value, output_type):
+        assert isinstance(dp_measurement(value), output_type)
+        
+
+
     lf = pl.LazyFrame(schema={"A": pl.Int32, "B": pl.String})
     lf_domain = dp.lazyframe_domain([
         dp.series_domain("A", dp.atom_domain(T="i32")), 
@@ -120,45 +163,41 @@ if pl is not None:
     query = context.query().select(dp.len())
 
     @pytest.mark.parametrize(
-        "_readable_name,dp_obj",
+        "dp_obj",
         [
-            (str(obj), obj)
-            for obj in [
-                lf_domain,
+            lf_domain,
+            lf_domain_with_margin,
+            dp.m.make_private_lazyframe(
                 lf_domain_with_margin,
-                dp.m.make_private_lazyframe(
-                    lf_domain_with_margin,
-                    dp.symmetric_distance(),
-                    dp.max_divergence(),
-                    lf.select([dp.len(), pl.col("A").dp.sum((0, 1))]),
-                    global_scale=1.0
-                ),
-                dp.m.make_private_expr(
-                    dp.wild_expr_domain([], by=[]),
-                    dp.partition_distance(dp.symmetric_distance()),
-                    dp.max_divergence(),
-                    dp.len(scale=1.0)
-                ),
-            ]
+                dp.symmetric_distance(),
+                dp.max_divergence(),
+                lf.select([dp.len(), pl.col("A").dp.sum((0, 1))]),
+                global_scale=1.0
+            ),
+            dp.m.make_private_expr(
+                dp.wild_expr_domain([], by=[]),
+                dp.partition_distance(dp.symmetric_distance()),
+                dp.max_divergence(),
+                dp.len(scale=1.0)
+            ),
         ],
+        ids=lambda arg: str(arg)
     )
-    def test_serializable_polars(_readable_name, dp_obj):
+    def test_serializable_polars(dp_obj):
         serialized = dp.serialize(dp_obj)
         deserialized = dp.deserialize(serialized)
         assert serialized == dp.serialize(deserialized)
 
 
     @pytest.mark.parametrize(
-        "_readable_name,dp_obj",
+        "dp_obj",
         [
-            (str(obj), obj)
-            for obj in [
-                context,
-                dp.Queryable('value', 'query_type'),
-                query
-            ]
+            context,
+            dp.Queryable('value', 'query_type'),
+            query
         ],
+        ids=lambda arg: str(arg)
     )
-    def test_not_currently_serializable(_readable_name, dp_obj):
+    def test_not_currently_serializable(dp_obj):
         with pytest.raises(Exception, match=r"OpenDP JSON Encoder currently does not handle"):
             dp.serialize(dp_obj)
