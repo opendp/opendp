@@ -357,7 +357,7 @@ fn generate_docstring(
 """"#,
         description = description,
         doc_args = doc_args,
-        ret_arg = generate_docstring_return_arg(&func.ret, hierarchy),
+        ret_arg = generate_docstring_return_arg(&func.ret),
         raises = raises
     )
 }
@@ -382,16 +382,10 @@ fn generate_docstring_arg(arg: &Argument, hierarchy: &HashMap<String, Vec<String
 }
 
 /// generate the part of a docstring corresponding to a return argument
-fn generate_docstring_return_arg(
-    arg: &Argument,
-    hierarchy: &HashMap<String, Vec<String>>,
-) -> String {
+fn generate_docstring_return_arg(arg: &Argument) -> String {
     let mut ret = Vec::new();
     if let Some(description) = &arg.description {
         ret.push(format!(":return: {description}", description = description));
-    }
-    if let Some(type_) = arg.python_type_hint(hierarchy) {
-        ret.push(format!(":rtype: {type_}", type_ = type_));
     }
     if !ret.is_empty() {
         ret.insert(0, String::new());
@@ -439,7 +433,7 @@ fn generate_flag_check(features: &Vec<String>) -> String {
 fn generate_public_example(func: &Function, type_arg: &Argument) -> Option<String> {
     // the json has supplied explicit instructions to find an example
     if let Some(example) = &type_arg.example {
-        return Some(example.to_python());
+        return Some(example.to_python(&func.var_names()));
     }
 
     let type_name = type_arg.name.as_ref().unwrap();
@@ -481,14 +475,16 @@ fn generate_public_example(func: &Function, type_arg: &Argument) -> Option<Strin
 
 /// the generated code ensures every type arg is a RuntimeType, and constructs derived RuntimeTypes
 fn generate_type_arg_formatter(func: &Function) -> String {
+    let type_names = func.type_names();
     let type_arg_formatter: String = func.args.iter()
         .filter(|arg| arg.is_type)
         .map(|type_arg| {
             let name = type_arg.name.as_ref().expect("type args must be named");
-            let generics = if type_arg.generics.is_empty() {
+            let generics = type_arg.generics(&type_names);
+            let generics = if generics.is_empty() {
                 "".to_string()
             } else {
-                format!(", generics=[{}]", type_arg.generics.iter()
+                format!(", generics=[{}]", generics.iter()
                     .map(|v| format!("\"{}\"", v))
                     .collect::<Vec<_>>().join(", "))
             };
@@ -503,13 +499,13 @@ fn generate_type_arg_formatter(func: &Function) -> String {
             .map(|type_spec|
                 format!("{name} = {derivation} # type: ignore",
                         name = type_spec.name(),
-                        derivation = type_spec.rust_type.as_ref().unwrap().to_python())))
+                        derivation = type_spec.rust_type.as_ref().unwrap().to_python(&func.var_names()))))
         .chain(func.args.iter()
-            .filter(|arg| !arg.generics.is_empty())
+            .filter(|arg| arg.is_type && !arg.generics(&type_names).is_empty())
             .map(|arg|
-                format!("{name} = {name}.substitute({args}) # type: ignore",
+                format!("{name} = substitute({name}, {args}) # type: ignore",
                         name=arg.name.as_ref().unwrap(),
-                        args=arg.generics.iter()
+                        args=arg.generics(&type_names).iter()
                             .map(|generic| format!("{generic}={generic}", generic = generic))
                             .collect::<Vec<_>>().join(", "))))
         .collect::<Vec<_>>()
@@ -529,6 +525,7 @@ fn generate_type_arg_formatter(func: &Function) -> String {
 
 /// the generated code ensures that all arguments have been converted to their c representations
 fn generate_data_converter(func: &Function, typemap: &HashMap<String, String>) -> String {
+    let var_names = func.var_names();
     let data_converter: String = func
         .args
         .iter()
@@ -543,7 +540,7 @@ fn generate_data_converter(func: &Function, typemap: &HashMap<String, String>) -
                 rust_type_arg = arg
                     .rust_type
                     .as_ref()
-                    .map(|r_type| format!(", type_name={}", r_type.to_python()))
+                    .map(|r_type| format!(", type_name={}", r_type.to_python(&var_names)))
                     .unwrap_or_else(|| "".to_string())
             )
         })
@@ -609,6 +606,17 @@ output = {call}"#,
     )
 }
 
+impl Function {
+    /// Get the names of all variables in the function.
+    /// These names will not be strings in the generated code.
+    pub fn var_names(&self) -> Vec<String> {
+        (self.args.iter())
+            .map(|arg| arg.name())
+            .chain(self.derived_types.iter().map(Argument::name))
+            .collect()
+    }
+}
+
 fn generate_serialization(module_name: &str, func: &Function) -> String {
     format!(
         r#"try:
@@ -632,16 +640,24 @@ except AttributeError:  # pragma: no cover
 }
 
 impl TypeRecipe {
-    /// translate the abstract derived_types info into python RuntimeType constructors
-    pub fn to_python(&self) -> String {
+    /// translate the abstract derived_types info into python RuntimeType constructors.
+    ///
+    /// All names/leaf nodes are assumed to be strings, unless they are in `variables`.
+    pub fn to_python(&self, variables: &Vec<String>) -> String {
         match self {
-            Self::Name(name) => name.clone(),
+            Self::Name(name) => {
+                if variables.contains(name) {
+                    name.clone()
+                } else {
+                    format!("\"{}\"", name.clone())
+                }
+            }
             Self::Function { function, params } => format!(
                 "{function}({params})",
                 function = function,
                 params = params
                     .iter()
-                    .map(|v| v.to_python())
+                    .map(|v| v.to_python(variables))
                     .collect::<Vec<_>>()
                     .join(", ")
             ),
@@ -650,7 +666,7 @@ impl TypeRecipe {
                 origin = origin,
                 args = args
                     .iter()
-                    .map(|arg| arg.to_python())
+                    .map(|arg| arg.to_python(variables))
                     .collect::<Vec<_>>()
                     .join(", ")
             ),

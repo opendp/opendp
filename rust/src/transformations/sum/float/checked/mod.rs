@@ -20,7 +20,7 @@ mod ffi;
 #[bootstrap(
     features("contrib"),
     arguments(bounds(rust_type = "(T, T)")),
-    generics(S(default = "Pairwise<T>", generics = "T")),
+    generics(S(default = "Pairwise<T>")),
     returns(c_type = "FfiResult<AnyTransformation *>"),
     derived_types(T = "$get_atom_or_infer(S, get_first(bounds))")
 )]
@@ -105,7 +105,7 @@ where
 #[bootstrap(
     features("contrib"),
     arguments(bounds(rust_type = "(T, T)")),
-    generics(S(default = "Pairwise<T>", generics = "T")),
+    generics(S(default = "Pairwise<T>")),
     returns(c_type = "FfiResult<AnyTransformation *>"),
     derived_types(T = "$get_atom_or_infer(S, get_first(bounds))")
 )]

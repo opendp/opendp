@@ -15,7 +15,7 @@ use super::UncheckedSum;
 #[bootstrap(
     features("contrib"),
     arguments(bounds(rust_type = "(T, T)")),
-    generics(S(default = "Pairwise<T>", generics = "T")),
+    generics(S(default = "Pairwise<T>")),
     derived_types(T = "$get_atom(get_type(input_domain))")
 )]
 /// Make a Transformation that computes the sum of squared deviations of bounded data.
