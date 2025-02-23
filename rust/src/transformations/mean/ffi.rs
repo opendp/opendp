@@ -5,11 +5,9 @@ use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast};
-use crate::metrics::{AbsoluteDistance, InsertDeleteDistance, SymmetricDistance};
+use crate::metrics::{InsertDeleteDistance, SymmetricDistance};
 use crate::traits::{ExactIntCast, Float, InfMul};
-use crate::transformations::{
-    make_mean, LipschitzMulFloatDomain, LipschitzMulFloatMetric, MakeSum,
-};
+use crate::transformations::{make_mean, MakeSum};
 
 #[no_mangle]
 pub extern "C" fn opendp_transformations__make_mean(
@@ -23,8 +21,6 @@ pub extern "C" fn opendp_transformations__make_mean(
     where
         MI: 'static + Metric,
         T: 'static + MakeSum<MI> + ExactIntCast<usize> + Float + InfMul,
-        AtomDomain<T>: LipschitzMulFloatDomain<Atom = T>,
-        AbsoluteDistance<T>: LipschitzMulFloatMetric<Distance = T>,
         (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
         IBig: From<T::Bits>,
     {

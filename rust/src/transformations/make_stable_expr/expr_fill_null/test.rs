@@ -34,10 +34,7 @@ fn test_make_expr_fill_null() -> Fallible<()> {
 
 #[test]
 fn test_make_expr_fill_null_expr() -> Fallible<()> {
-    let f64_null = SeriesDomain::new(
-        "f64_null",
-        OptionDomain::new(AtomDomain::<f64>::new_nullable()),
-    );
+    let f64_null = SeriesDomain::new("f64_null", OptionDomain::new(AtomDomain::<f64>::default()));
     let f64_nonnull = SeriesDomain::new("f64_nonnull", AtomDomain::<f64>::default());
     let lf_domain = LazyFrameDomain::new(vec![f64_null, f64_nonnull])?;
 
@@ -67,10 +64,7 @@ fn test_make_expr_fill_null_expr() -> Fallible<()> {
 
 #[test]
 fn test_make_expr_fill_null_expr_filter_fail() -> Fallible<()> {
-    let f64_null = SeriesDomain::new(
-        "f64_null",
-        OptionDomain::new(AtomDomain::<f64>::new_nullable()),
-    );
+    let f64_null = SeriesDomain::new("f64_null", OptionDomain::new(AtomDomain::<f64>::default()));
     let f64_nonnull = SeriesDomain::new("f64_nonnull", AtomDomain::<f64>::default());
     let lf_domain = LazyFrameDomain::new(vec![f64_null, f64_nonnull])?;
 

@@ -3,7 +3,7 @@ import opendp.prelude as dp
 
 
 def test_gaussian_curve():
-    input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
     meas = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 4.))
     profile = meas.map(d_in=1.)
     assert profile.epsilon(delta=0.) == float('inf')
@@ -39,7 +39,7 @@ def test_gaussian_curve():
 
 
 def test_gaussian_search():
-    input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
 
     def make_approx_gauss(scale, delta):
         return dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, scale)), delta)
@@ -55,21 +55,21 @@ def test_gaussian_search():
 
 
 def test_laplace():
-    input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
     meas = dp.m.make_laplace(*input_space, 10.5)
     print("base laplace:", meas(100.))
     print("epsilon", meas.map(1.))
     assert meas.check(1., .096)
 
 def test_vector_laplace():
-    input_space = dp.vector_domain(dp.atom_domain(T=float)), dp.l1_distance(T=float)
+    input_space = dp.vector_domain(dp.atom_domain(T=float, nan=False)), dp.l1_distance(T=float)
     meas = dp.m.make_laplace(*input_space, scale=10.5)
     print("base laplace:", meas([80., 90., 100.]))
     assert meas.check(1., 1.3)
 
 
 def test_gaussian_smoothed_max_divergence():
-    input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
     meas = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, scale=10.5))
     print("base gaussian:", meas(100.))
 
@@ -79,7 +79,7 @@ def test_gaussian_smoothed_max_divergence():
 
 
 def test_gaussian_zcdp():
-    input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
     meas = input_space >> dp.m.then_gaussian(scale=1.5, MO=dp.ZeroConcentratedDivergence)
     print("base gaussian:", meas(100.))
 
@@ -90,7 +90,7 @@ def test_gaussian_zcdp():
 
 def test_vector_gaussian():
     delta = .000001
-    input_space = dp.vector_domain(dp.atom_domain(T=float)), dp.l2_distance(T=float)
+    input_space = dp.vector_domain(dp.atom_domain(T=float, nan=False)), dp.l2_distance(T=float)
     meas = dp.c.make_fix_delta(
         dp.c.make_zCDP_to_approxDP(
             dp.m.make_gaussian(*input_space, scale=10.5)), delta)
@@ -191,13 +191,13 @@ def test_gaussian():
     input_space = dp.atom_domain(T=int), dp.absolute_distance(T=float)
     (input_space >> dp.m.then_gaussian(1.))(1)
 
-    input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
     (input_space >> dp.m.then_gaussian(1.))(1.)
 
     input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.l2_distance(T=float)
     (input_space >> dp.m.then_gaussian(1.))([1, 2, 3])
 
-    input_space = dp.vector_domain(dp.atom_domain(T=float)), dp.l2_distance(T=float)
+    input_space = dp.vector_domain(dp.atom_domain(T=float, nan=False)), dp.l2_distance(T=float)
     (input_space >> dp.m.then_gaussian(1.))([1., 2., 3.])
 
 def test_report_noisy_max_gumbel():

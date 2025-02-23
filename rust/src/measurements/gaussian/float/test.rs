@@ -5,7 +5,7 @@ use super::*;
 #[test]
 fn test_make_scalar_float_gaussian() -> Fallible<()> {
     let measurement = make_scalar_float_gaussian::<ZeroConcentratedDivergence, _>(
-        AtomDomain::default(),
+        AtomDomain::new_non_nan(),
         AbsoluteDistance::default(),
         1.0f64,
         None,
@@ -20,7 +20,7 @@ fn test_make_scalar_float_gaussian() -> Fallible<()> {
 #[test]
 fn test_make_vector_float_gaussian() -> Fallible<()> {
     let measurement = make_vector_float_gaussian::<ZeroConcentratedDivergence, _>(
-        VectorDomain::new(AtomDomain::default()),
+        VectorDomain::new(AtomDomain::new_non_nan()),
         L2Distance::default(),
         1.0f64,
         None,

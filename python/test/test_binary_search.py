@@ -10,7 +10,7 @@ def test_binary_search_fail():
 
 def test_binary_search_overflow():
 
-    input_domain = dp.vector_domain(dp.atom_domain(T=float))
+    input_domain = dp.vector_domain(dp.atom_domain(T=float, nan=False))
     input_metric = dp.symmetric_distance()
 
     d_in = 1
@@ -26,7 +26,7 @@ def test_binary_search_overflow():
     )
 
 def test_stuck():
-    input_space = dp.vector_domain(dp.atom_domain(T=float)), dp.symmetric_distance()
+    input_space = dp.vector_domain(dp.atom_domain(T=float, nan=False)), dp.symmetric_distance()
 
     epsilon = 1.3
     sens = 500_000.0 * 500_000.0

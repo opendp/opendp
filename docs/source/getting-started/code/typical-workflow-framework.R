@@ -4,7 +4,7 @@ enable_features("contrib")
 
 d_in <- 1L # neighboring data set distance is at most d_in...
 input_metric <- symmetric_distance() # ...in terms of additions/removals
-input_domain <- vector_domain(atom_domain(.T = f64))
+input_domain <- vector_domain(atom_domain(.T = f64, nan = FALSE))
 
 # /unit-of-privacy
 

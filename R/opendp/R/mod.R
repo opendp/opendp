@@ -509,7 +509,7 @@ unbox2 <- function(x) {
 #' @examples
 #' enable_features("contrib")
 #' # create a sum transformation over the space of float vectors
-#' s_vec <- c(vector_domain(atom_domain(.T = "float")), symmetric_distance())
+#' s_vec <- c(vector_domain(atom_domain(.T = "float", nan = FALSE)), symmetric_distance())
 #' t_sum <- s_vec |> then_clamp(c(0., 1.)) |> then_sum()
 #'
 #' # find a measurement that satisfies epsilon = 1 when datasets differ by at most one record

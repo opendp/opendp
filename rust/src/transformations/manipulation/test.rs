@@ -26,7 +26,7 @@ fn test_is_equal() -> Fallible<()> {
 
 #[test]
 fn test_is_null_inherent() -> Fallible<()> {
-    let input_domain = VectorDomain::new(AtomDomain::new_nullable());
+    let input_domain = VectorDomain::new(AtomDomain::default());
     let input_metric = SymmetricDistance;
     let is_equal = make_is_null(input_domain, input_metric)?;
     let arg = vec![1., 2., f64::NAN];
@@ -39,7 +39,7 @@ fn test_is_null_inherent() -> Fallible<()> {
 
 #[test]
 fn test_is_null_option() -> Fallible<()> {
-    let input_domain = VectorDomain::new(OptionDomain::new(AtomDomain::new_nullable()));
+    let input_domain = VectorDomain::new(OptionDomain::new(AtomDomain::default()));
     let input_metric = SymmetricDistance;
     let is_equal = make_is_null(input_domain, input_metric)?;
     let arg = vec![Some(1.), None, Some(f64::NAN)];

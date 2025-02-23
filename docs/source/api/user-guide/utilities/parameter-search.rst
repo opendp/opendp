@@ -43,7 +43,7 @@ This is extremely powerful!
 
   .. code:: python
 
-    >>> input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    >>> input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
     >>> dp.binary_search_param(lambda s: dp.m.make_gaussian(*input_space, scale=s), d_in=1., d_out=1.)
     0.7071067811865477
   

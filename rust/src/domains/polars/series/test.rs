@@ -26,8 +26,8 @@ fn test_series_bounded() -> Fallible<()> {
 }
 
 #[test]
-fn test_series_non_nullable() -> Fallible<()> {
-    // option domain with non-nullable type
+fn test_series_non_nan() -> Fallible<()> {
+    // option domain with non-nan type
     let series_domain = SeriesDomain::new("A", OptionDomain::new(AtomDomain::<bool>::default()));
 
     let series = Series::new("A".into(), vec![Some(true), Some(false), None]);
@@ -37,9 +37,9 @@ fn test_series_non_nullable() -> Fallible<()> {
 }
 
 #[test]
-fn test_series_nullable_without_option() -> Fallible<()> {
-    // nullable type without options
-    let series_domain = SeriesDomain::new("A", AtomDomain::<f64>::new_nullable());
+fn test_series_nan_without_option() -> Fallible<()> {
+    // nan type without options
+    let series_domain = SeriesDomain::new("A", AtomDomain::<f64>::default());
 
     let series_with_none = Series::new("A".into(), vec![Some(1.), Some(f64::NAN), None]);
     assert!(!series_domain.member(&series_with_none)?);
@@ -56,10 +56,9 @@ fn test_series_nullable_without_option() -> Fallible<()> {
 }
 
 #[test]
-fn test_series_nullable_with_option() -> Fallible<()> {
+fn test_series_nan_with_option() -> Fallible<()> {
     // permit both kinds of nullity
-    let series_domain =
-        SeriesDomain::new("A", OptionDomain::new(AtomDomain::<f64>::new_nullable()));
+    let series_domain = SeriesDomain::new("A", OptionDomain::new(AtomDomain::<f64>::default()));
 
     // None and NaN are both ok
     let series_with_none = Series::new("A".into(), vec![Some(1.), Some(f64::NAN), None]);

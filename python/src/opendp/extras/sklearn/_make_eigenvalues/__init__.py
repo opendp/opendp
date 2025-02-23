@@ -36,7 +36,7 @@ def make_eigenvalues(input_domain: Domain, input_metric: Metric) -> Transformati
     return _make_transformation(
         input_domain,
         input_metric,
-        dp.vector_domain(dp.atom_domain(T=input_desc.T)),
+        dp.vector_domain(dp.atom_domain(T=input_desc.T, nan=False)),
         dp.l1_distance(T=input_desc.T),
         np.linalg.eigvalsh,
         # http://amin.kareemx.com/pubs/DPCovarianceEstimation.pdf#page=12
