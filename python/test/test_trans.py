@@ -397,10 +397,9 @@ def test_lipschitz_b_ary_tree():
 
 def test_quantile_score_candidates():
 
-    input_domain = dp.vector_domain(dp.atom_domain(T=int))
-    input_metric = dp.symmetric_distance()
-    trans = dp.t.make_quantile_score_candidates(input_domain, input_metric, [20, 33, 40, 50, 72, 100], alpha=0.5)
+    input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
+    trans = input_space >> dp.t.then_quantile_score_candidates([0, 25, 50, 75, 100], alpha=0.5)
     scores = trans(list(range(101)))
     # score works out to 2 * |50 - cand|
-    assert scores == [60, 34, 20, 0, 44, 100]
+    assert scores == [100, 50, 0, 50, 100]
     assert trans.map(1) == 1
