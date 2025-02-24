@@ -161,6 +161,56 @@ Refer to :ref:`measure-casting` to convert to approximate DP.
      - ``Approximate<ZeroConcentratedDivergence>``
 
 
+Report Noisy Max
+----------------
+
+The report noisy max mechanism is used to privately release the index of the maximum value in a vector.
+This is useful for private selection, and is equivalent to the exponential mechanism.
+
+
+.. list-table::
+   :header-rows: 1
+
+   * - Measurement
+     - Input Domain
+     - Input Metric
+     - Output Measure
+   * - :func:`opendp.measurements.make_report_noisy_max_gumbel`
+     - ``VectorDomain<AtomDomain<T>>``
+     - ``LInfDistance<QI>``
+     - ``RangeDistance``
+   * - :func:`opendp.measurements.make_private_quantile`
+     - ``VectorDomain<AtomDomain<T>>``
+     - ``SymmetricDistance``
+     - ``RangeDistance``
+   * - :func:`opendp.measurements.make_private_quantile`
+     - ``VectorDomain<AtomDomain<T>>``
+     - ``InsertDeleteDistance``
+     - ``RangeDistance``
+
+The private quantile mechanism uses the :py:func:`opendp.transformations.make_quantile_score_candidates` scoring function,
+releases the approximate index of the quantile candidate with the best score via the report noisy max mechanism,
+and then returns the corresponding candidate.
+
+Notice that the privacy guarantee is in terms of Bounded-Range (``RangeDistance``).
+The following combinators can be used to convert to other privacy definitions:
+
+
+.. list-table::
+   :header-rows: 1
+
+   * - Measurement
+     - Inner Measure
+     - Output Measure
+   * - :func:`opendp.combinators.make_bounded_range_to_pureDP`
+     - ``RangeDistance`` (Bounded-Range)
+     - ``MaxDivergence`` (Pure-DP)
+   * - :func:`opendp.combinators.make_bounded_range_to_zCDP`
+     - ``RangeDistance`` (Bounded-Range)
+     - ``ZeroConcentratedDivergence`` (zCDP)
+
+See :ref:`measure-casting` for more information on converting between privacy definitions.
+
 Randomized Response
 -------------------
 These measurements are used to randomize an individual's response to a query in the local-DP model.
