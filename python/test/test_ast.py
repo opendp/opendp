@@ -45,6 +45,27 @@ def ast_return_type(tree):
         return ast.unparse(type_node)
 
 
+def check_backticks(docstring):
+    '''
+    >>> check_backticks("Plain `italics` are fine.")
+
+    >>> check_backticks("But `this_one` looks like code.")
+    'Add double backticks around ``this_one``'
+    >>> check_backticks("So does `ThisOne`.")
+    'Add double backticks around ``ThisOne``'
+
+    >>> check_backticks("`at_the_start` works")
+    'Add double backticks around ``at_the_start``'
+    >>> check_backticks("so does `at_the_end`")
+    'Add double backticks around ``at_the_end``'
+    '''
+    match = re.search(r'(?:[^`:]|^)`(\w+)`(?:[^`]|$)', docstring)
+    if match:
+        name = match.group(1)
+        if '_' in name or re.search(r'[a-z][A-Z]', name):
+            return f'Add double backticks around ``{name}``'
+
+
 def check_directive_order(docstring):
     '''
     >>> check_directive_order("""
@@ -187,13 +208,14 @@ def check_list_space(docstring):
 
 
 class Checker():
-    def __init__(self, name, tree, docstring, is_public, is_verbose):
+    def __init__(self, name, tree, docstring, is_public, is_generated, is_verbose):
         self.name = name
         self.tree = tree
         self.docstring = docstring
         self.is_public = is_public
+        self.is_generated = is_generated
         self.is_verbose = is_verbose
-
+        
         self.errors = []
 
         args = self.tree.args
@@ -220,6 +242,9 @@ class Checker():
             check_doctest_continuity,
             check_list_space,
         ]
+
+        if self.is_public and not self.is_generated:
+            checks.append(check_backticks)
         for check in checks:
             error = check(self.docstring)
             if error:
@@ -327,12 +352,17 @@ class Checker():
 
 PUBLIC = 'public'
 PRIVATE = 'private'
+GENERATED = 'generated'
+BY_HAND = 'by-hand'
+
 
 class CodeObj(NamedTuple):
     file: str
     name: str
     tree: ast.AST
-    visibility: str  # str rather than bool so the pytest report is more readable.
+    # These are str rather than bool so the pytest report is more readable:
+    visibility: str
+    generated: str
 
 
 classes = []
@@ -345,6 +375,17 @@ for code_path in src_dir_path.glob('**/*.py'):
         is_public = False
     if code_path.name.startswith('_') and code_path.name != '__init__.py':
         is_public = False
+    is_generated = code_path.stem in {
+        "accuracy", 
+        "combinators", 
+        "core",
+        "measurements", 
+        "transformations",
+        "domains",
+        "metrics",
+        "measures"
+    }
+
     code = code_path.read_text()
     tree = ast.parse(code)
     for node in ast.walk(tree):
@@ -360,6 +401,7 @@ for code_path in src_dir_path.glob('**/*.py'):
             name=node.name,
             tree=node,
             visibility=PUBLIC if is_public else PRIVATE,
+            generated=GENERATED if is_generated else BY_HAND,
         )
         if isinstance(node, ast.FunctionDef):
             functions.append(code_obj)
@@ -370,10 +412,11 @@ for code_path in src_dir_path.glob('**/*.py'):
 assert len(functions) > 100
 
 
-@pytest.mark.parametrize("file,name,tree,visibility", functions)
-def test_function_docs(file, name, tree, visibility, pytestconfig):
+@pytest.mark.parametrize("file,name,tree,visibility,generated", functions)
+def test_function_docs(file, name, tree, visibility, generated, pytestconfig):
     where = f'In {file}, line {tree.lineno}, def {name}'
     is_public = visibility == PUBLIC
+    is_generated = generated == GENERATED
 
     docstring = ast.get_docstring(tree)
     if not is_public and docstring is None:
@@ -385,13 +428,14 @@ def test_function_docs(file, name, tree, visibility, pytestconfig):
         tree=tree,
         docstring=docstring,
         is_public=is_public,
+        is_generated=is_generated,
         is_verbose=pytestconfig.getoption("verbose") > 0
     ).get_errors()
     if errors:
         pytest.fail(f'{where}: {errors}')
 
-@pytest.mark.parametrize("file,name,tree,visibility", classes)
-def test_class_docs(file, name, tree, visibility):
+@pytest.mark.parametrize("file,name,tree,visibility,_generated", classes)
+def test_class_docs(file, name, tree, visibility, _generated):
     where = f'In {file}, line {tree.lineno}, class {name}'
     is_public = visibility == PUBLIC
 
