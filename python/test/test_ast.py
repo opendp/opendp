@@ -59,6 +59,11 @@ def check_backticks(docstring):
     >>> check_backticks("so does `at_the_end`")
     'Add double backticks around ``at_the_end``'
     '''
+    # About this expression:
+    #   [^`:]
+    # Not a problem if
+    # - It's a double backtick
+    # - or it's a RST directive
     match = re.search(r'(?:[^`:]|^)`(\w+)`(?:[^`]|$)', docstring)
     if match:
         name = match.group(1)
