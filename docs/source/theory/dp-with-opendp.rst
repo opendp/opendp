@@ -83,7 +83,7 @@ can find it under ``dp.m``:
 
         .. code:: python
 
-            >>> # call the constructor to produce the measurement `base_lap`
+            >>> # call the constructor to produce the measurement "base_lap"
             >>> base_lap = dp.m.make_laplace(
             ...     dp.atom_domain(T=float), 
             ...     dp.absolute_distance(T=float), 

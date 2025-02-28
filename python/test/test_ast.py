@@ -448,3 +448,12 @@ def test_class_docs(file, name, tree, visibility, _generated):
     if not is_public and docstring is None:
         return
     assert docstring is not None, f'{where}: add docstring or make private'
+
+
+doc_paths = (Path(__file__).parent.parent.parent / 'docs').glob('**/*.rst')
+
+
+@pytest.mark.parametrize("doc_path", doc_paths, ids=lambda path: str(path))
+def test_rst_docs(doc_path):
+    rst = doc_path.read_text()
+    assert check_backticks(rst) is None

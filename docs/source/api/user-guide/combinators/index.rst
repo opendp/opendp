@@ -192,7 +192,7 @@ The combinator can also be used on measurements with a ``ZeroConcentratedDiverge
     .. code:: python
 
         >>> meas_zCDP = input_space >> dp.m.then_gaussian(scale=0.5)
-        >>> # convert the output measure to `SmoothedMaxDivergence`
+        >>> # convert the output measure to "SmoothedMaxDivergence"
         >>> meas_approxDP = dp.c.make_zCDP_to_approxDP(meas_zCDP)
         ...
         >>> # SmoothedMaxDivergence distances are privacy profiles (ε(δ) curves)
