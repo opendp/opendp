@@ -407,7 +407,6 @@ class Context(object):
             domain = domain_of(data, infer=True)
 
         if margins:
-
             # allows dictionaries of {[by]: [margin]}
             if isinstance(margins, MutableMapping):
                 from warnings import warn

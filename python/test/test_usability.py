@@ -123,7 +123,7 @@ def test_margins_dict_instead_of_list():
             privacy_unit=dp.unit_of(contributions=1),
             privacy_loss=dp.loss_of(epsilon=1.0),
             split_evenly_over=1,
-            margins={
+            margins={ # type: ignore[arg-type]
                 ('col',): dp.polars.Margin(public_info="keys", max_partition_length=5),
             }
         )
