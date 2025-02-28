@@ -407,8 +407,11 @@ class Context(object):
             domain = domain_of(data, infer=True)
 
         if margins:
+
             # allows dictionaries of {[by]: [margin]}
             if isinstance(margins, MutableMapping):
+                from warnings import warn
+                warn('Margin dicts should be replaced with lists, with the key supplied as the "by" kwarg', DeprecationWarning)
                 margins = [replace(margin, by=by) for by, margin in margins.items()]
             
             pl = import_optional_dependency("polars")

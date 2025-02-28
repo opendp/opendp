@@ -1,3 +1,4 @@
+import re
 import pytest
 import opendp.prelude as dp
 
@@ -116,15 +117,16 @@ def test_margins_dict_instead_of_list():
         schema={"col": pl.Int32},
     )
 
-    dp.Context.compositor(
-        data=lf,
-        privacy_unit=dp.unit_of(contributions=1),
-        privacy_loss=dp.loss_of(epsilon=1.0),
-        split_evenly_over=1,
-        margins={
-            ('col',): dp.polars.Margin(public_info="keys", max_partition_length=5),
-        }
-    )
+    with pytest.warns(DeprecationWarning, match=re.escape('Margin dicts should be replaced with lists, with the key supplied as the "by" kwarg')):
+        dp.Context.compositor(
+            data=lf,
+            privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(epsilon=1.0),
+            split_evenly_over=1,
+            margins={
+                ('col',): dp.polars.Margin(public_info="keys", max_partition_length=5),
+            }
+        )
 
 
 @pytest.mark.parametrize(
