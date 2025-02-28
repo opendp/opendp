@@ -108,6 +108,25 @@ def test_string_instead_of_tuple_for_margin_key():
         )
 
 
+def test_margins_dict_instead_of_list():
+    pl = pytest.importorskip("polars")
+
+    lf = pl.LazyFrame(
+        {"col": [1, 2, 3, 4]},
+        schema={"col": pl.Int32},
+    )
+
+    dp.Context.compositor(
+        data=lf,
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+        margins={
+            ('col',): dp.polars.Margin(public_info="keys", max_partition_length=5),
+        }
+    )
+
+
 @pytest.mark.parametrize(
     "domain", [dp.lazyframe_domain([]), dp.series_domain("A", dp.atom_domain(T=bool))])
 def test_polars_data_loader_error_is_human_readable(domain):
