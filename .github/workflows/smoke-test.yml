@@ -90,6 +90,8 @@ jobs:
 
   rust-test:
     needs: rust-build
+    # TODO: Upgrade to ubuntu-latest.
+    # https://github.com/opendp/opendp/issues/2305
     runs-on: ubuntu-22.04
     defaults:
       run:
