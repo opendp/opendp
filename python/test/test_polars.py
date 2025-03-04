@@ -1126,3 +1126,29 @@ def test_enum_domain():
 
     # check that domain is as expected
     assert observed == expected
+
+
+def test_mul():
+    pl = pytest.importorskip("polars")
+
+    context = dp.Context.compositor(
+        data=pl.LazyFrame({
+            "data": [1, 2, 3] * 100,
+            "weights": [0.2, 0.5, 0.7] * 100,
+        }),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+        margins=[dp.polars.Margin(by=(), max_partition_length=300)],
+    )
+
+    observed = (
+        context.query()
+        .select((pl.col.data * pl.col.weights).fill_null(0).fill_nan(0).dp.sum((0, 5)))
+        # .select((pl.col.data.clip(0, 5) * pl.col.weights.clip(0, 1)).sum().dp.noise())
+        .release()
+        .collect()["data"][0]
+    )
+
+    # expectation is 330.0
+    assert 260 < observed < 400
