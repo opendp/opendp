@@ -1,5 +1,7 @@
 use crate::domains::{LazyFrameDomain, OptionDomain, SeriesDomain};
 use crate::metrics::SymmetricDistance;
+use core::f64;
+use std::ops::{Add, Div, Mul, Sub};
 
 use super::*;
 
@@ -28,6 +30,21 @@ fn get_f64_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
     Ok((lf_domain, lf))
 }
 
+fn get_i32_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
+    let lf_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("L", AtomDomain::<i32>::default()),
+        SeriesDomain::new("R", OptionDomain::new(AtomDomain::<i32>::default())),
+    ])?;
+
+    let lf = df!(
+        "L" => [Some(1), Some(1), Some(1)],
+        "R" => [Some(0), Some(1), None],
+    )?
+    .lazy();
+
+    Ok((lf_domain, lf))
+}
+
 fn get_bool_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
     let lf_domain = LazyFrameDomain::new(vec![
         SeriesDomain::new("L", AtomDomain::<bool>::default()),
@@ -49,7 +66,23 @@ fn get_bool_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
     Ok((lf_domain, lf))
 }
 
+fn get_string_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
+    let lf_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("L", AtomDomain::<String>::default()),
+        SeriesDomain::new("R", OptionDomain::new(AtomDomain::<String>::default())),
+    ])?;
+
+    let lf = df!(
+        "L" => ["".to_string(), "A".to_string()],
+        "R" => [Some("1".to_string()), None],
+    )?
+    .lazy();
+
+    Ok((lf_domain, lf))
+}
+
 macro_rules! test_binary {
+    // (the function to call to get the data, the operation to test, the expected data output)
     ($get:ident, $op:ident, $expected:expr) => {{
         let (lf_domain, lf) = $get()?;
         let expr_domain = lf_domain.row_by_row();
@@ -60,7 +93,9 @@ macro_rules! test_binary {
                 .column("L")?,
             &Column::new("L".into(), $expected),
             "input: {:?}",
-            lf.clone().collect()?
+            lf.clone()
+                .with_columns([col("L").$op(col("R")).alias("O")])
+                .collect()?
         );
         let t_op = col("L")
             .$op(col("R"))
@@ -77,7 +112,7 @@ macro_rules! test_binary {
             .unwrap();
 
         assert!(output_series.nullable == (out > 0));
-        Ok(())
+        Fallible::Ok(())
     }};
 }
 
@@ -284,4 +319,105 @@ fn test_xor() -> Fallible<()> {
             None
         ]
     )
+}
+
+#[test]
+fn test_add() -> Fallible<()> {
+    test_binary!(
+        get_f64_data,
+        add,
+        [
+            Some(0.),
+            Some(1.),
+            Some(f64::NAN),
+            Some(f64::NAN),
+            None,
+            None,
+            Some(f64::INFINITY),
+            Some(f64::INFINITY)
+        ]
+    )?;
+    test_binary!(get_i32_data, add, [Some(1), Some(2), None])?;
+    test_binary!(get_string_data, add, [Some("1".to_string()), None])?;
+    Ok(())
+}
+
+#[test]
+fn test_sub() -> Fallible<()> {
+    test_binary!(
+        get_f64_data,
+        sub,
+        [
+            Some(0.),
+            Some(1.),
+            Some(f64::NAN),
+            Some(f64::NAN),
+            None,
+            None,
+            Some(f64::NAN),
+            Some(-f64::INFINITY)
+        ]
+    )?;
+    test_binary!(get_i32_data, sub, [Some(1), Some(0), None])?;
+    Ok(())
+}
+
+#[test]
+fn test_mul() -> Fallible<()> {
+    test_binary!(
+        get_f64_data,
+        mul,
+        [
+            Some(0.),
+            Some(0.),
+            Some(f64::NAN),
+            Some(f64::NAN),
+            None,
+            None,
+            Some(f64::INFINITY),
+            Some(f64::NAN)
+        ]
+    )?;
+    test_binary!(get_i32_data, mul, [Some(0), Some(1), None])?;
+    Ok(())
+}
+
+#[test]
+fn test_div() -> Fallible<()> {
+    test_binary!(
+        get_f64_data,
+        div,
+        [
+            Some(f64::NAN),
+            Some(f64::INFINITY),
+            Some(f64::NAN),
+            Some(f64::NAN),
+            None,
+            None,
+            Some(f64::NAN),
+            Some(0.)
+        ]
+    )?;
+    test_binary!(get_i32_data, div, [None, Some(1), None])?;
+    Ok(())
+}
+
+#[test]
+fn test_floor_div() -> Fallible<()> {
+    test_binary!(
+        get_f64_data,
+        floor_div,
+        [
+            Some(f64::NAN),
+            Some(f64::INFINITY),
+            Some(f64::NAN),
+            Some(f64::NAN),
+            None,
+            None,
+            Some(f64::NAN),
+            Some(0.)
+        ]
+    )?;
+    test_binary!(get_i32_data, floor_div, [None, Some(1), None])?;
+    Ok(())
 }
