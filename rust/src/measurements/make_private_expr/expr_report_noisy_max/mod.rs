@@ -101,6 +101,26 @@ where
         );
     }
 
+    let DataType::Array(elem_dtype, _) = middle_domain.column.dtype() else {
+        return fallible!(
+            MakeMeasurement,
+            "{} requires array input",
+            ReportNoisyMaxPlugin::NAME
+        );
+    };
+
+    use DataType::*;
+    if !matches!(
+        elem_dtype.as_ref(),
+        UInt32 | UInt64 | Int8 | Int16 | Int32 | Int64 | Float32 | Float64
+    ) {
+        return fallible!(
+            MakeMeasurement,
+            "{} requires numeric array input",
+            ReportNoisyMaxPlugin::NAME
+        );
+    }
+
     t_prior
         >> Measurement::<_, _, Parallel<LInfDistance<f64>>, _>::new(
             middle_domain,
