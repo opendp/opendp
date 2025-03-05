@@ -22,6 +22,8 @@ from opendp.combinators import (
     make_pureDP_to_zCDP,
     make_sequential_composition,
     make_zCDP_to_approxDP,
+    make_bounded_range_to_pureDP,
+    make_bounded_range_to_zCDP,
 )
 from opendp.domains import atom_domain, vector_domain, with_margin
 from opendp.extras._utilities import supports_partial, to_then
@@ -962,6 +964,12 @@ def _cast_measure(chain, to_measure: Optional[Measure] = None, d_to=None):
 
     from_to = str(chain.output_measure.type), str(to_measure.type)
 
+    if from_to == ("RangeDivergence", "MaxDivergence"):
+        return make_bounded_range_to_pureDP(chain)
+    
+    if from_to == ("RangeDivergence", "ZeroConcentratedDivergence"):
+        return make_bounded_range_to_zCDP(chain)
+
     if from_to == ("MaxDivergence", "Approximate<MaxDivergence>"):
         return make_approximate(chain)
 
@@ -1008,6 +1016,13 @@ def _translate_measure_distance(
     from_to = str(from_measure.type), str(to_measure.type)
 
     constant = 1.0  # the choice of constant doesn't matter
+
+    if from_to == ("MaxDivergence", "RangeDivergence"):
+        return d_from
+    
+    if from_to == ("ZeroConcentratedDivergence", "RangeDivergence"):
+        from math import sqrt
+        return sqrt(d_from / 8)
 
     if from_to == ("MaxDivergence", "Approximate<MaxDivergence>"):
         return (d_from, 0.0)
