@@ -8,8 +8,8 @@ use crate::{
         util::AnyMeasurementPtr,
     },
     measures::{
-        ffi::TypedMeasure, Approximate, MaxDivergence, RangeDivergence, RenyiDivergence,
-        ZeroConcentratedDivergence,
+        Approximate, MaxDivergence, RangeDivergence, RenyiDivergence, ZeroConcentratedDivergence,
+        ffi::TypedMeasure,
     },
 };
 
