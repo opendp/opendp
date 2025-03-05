@@ -9,7 +9,7 @@ use crate::{
     polars::get_disabled_features_message,
 };
 
-use super::{traits::UnboundedMetric, DatasetMetric};
+use super::traits::UnboundedMetric;
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -42,16 +42,28 @@ mod expr_cut;
 pub(crate) mod expr_discrete_quantile_score;
 
 #[cfg(feature = "contrib")]
+pub(crate) mod expr_drop_nan_or_null;
+
+#[cfg(feature = "contrib")]
 mod expr_fill_nan;
 
 #[cfg(feature = "contrib")]
 mod expr_fill_null;
 
 #[cfg(feature = "contrib")]
+mod expr_filter;
+
+#[cfg(feature = "contrib")]
 mod expr_len;
 
 #[cfg(feature = "contrib")]
 mod expr_lit;
+
+#[cfg(feature = "contrib")]
+pub(crate) mod expr_replace;
+
+#[cfg(feature = "contrib")]
+mod expr_replace_strict;
 
 #[cfg(feature = "contrib")]
 mod expr_sum;
@@ -99,7 +111,7 @@ pub trait StableExpr<MI: Metric, MO: Metric> {
 
 impl<M: OuterMetric> StableExpr<M, M> for Expr
 where
-    M::InnerMetric: DatasetMetric,
+    M::InnerMetric: UnboundedMetric,
     M::Distance: Clone,
     (WildExprDomain, M): MetricSpace,
     (ExprDomain, M): MetricSpace,
@@ -140,9 +152,18 @@ where
 
             #[cfg(feature = "contrib")]
             Function {
+                function: DropNans | DropNulls,
+                ..
+            } => expr_drop_nan_or_null::make_expr_drop_nan_or_null(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Function {
                 function: FillNull { .. },
                 ..
             } => expr_fill_null::make_expr_fill_null(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Filter { .. } => expr_filter::make_expr_filter(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
             Column(_) => expr_col::make_expr_col(input_domain, input_metric, self),
@@ -161,6 +182,18 @@ where
                 function: ToPhysical,
                 ..
             } => expr_to_physical::make_expr_to_physical(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Function {
+                function: Replace,
+                ..
+            } => expr_replace::make_expr_replace(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Function {
+                function: ReplaceStrict { .. },
+                ..
+            } => expr_replace_strict::make_expr_replace_strict(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
             Function {

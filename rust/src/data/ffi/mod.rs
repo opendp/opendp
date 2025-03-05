@@ -282,6 +282,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         }
         TypeContents::VEC(element_id) => {
             let element = try_!(Type::of_id(&element_id));
+
             match element.descriptor.as_str() {
                 "String" => raw_to_vec_string(raw),
                 "AnyMeasurementPtr" => raw_to_vec::<AnyMeasurementPtr>(raw),
@@ -290,6 +291,8 @@ pub extern "C" fn opendp_data__slice_as_object(
                 "(f32, f32)" => raw_to_vec_obj::<(f32, f32)>(raw),
                 "(f64, f64)" => raw_to_vec_obj::<(f64, f64)>(raw),
                 "SeriesDomain" => raw_to_vec::<AnyDomainPtr>(raw),
+                #[cfg(feature = "polars")]
+                "Expr" => raw_to_vec_obj::<Expr>(raw),
                 _ => dispatch!(raw_to_vec, [(element, @primitives)], (raw)),
             }
         }

@@ -491,8 +491,10 @@ Transformation = cast(Type[Transformation], Transformation) # type: ignore[misc]
 
 class Queryable(object):
     '''
-    See also the API docs for :py:func:`make_sequential_composition <opendp.combinators.make_sequential_composition>`
-    and :py:func:`new_queryable <opendp.core.new_queryable>`.
+    Queryables are used for interactive mechanisms like :ref:`sequential composition <sequential-composition>`.
+
+    Queryables can be created with :py:func:`make_sequential_composition <opendp.combinators.make_sequential_composition>`
+    or :py:func:`new_queryable <opendp.core.new_queryable>`.
     '''
     def __init__(self, value, query_type):
         self.value = value
@@ -539,14 +541,22 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     '''
     _type_ = AnyDomain
 
-    def member(self, val):
+    def member(self, val) -> bool:
         '''
         Check if ``val`` is a member of the domain.
 
         :param val: a value to be checked for membership in `self`
         '''
-        from opendp.domains import member
-        return member(self, val)
+        try:
+            # TODO: Should we rename the import to "_member"?
+            # https://github.com/opendp/opendp/issues/2268
+            from opendp.domains import member
+            return member(self, val)
+        except Exception as e:
+            from warnings import warn
+            warn(f'Value ({val}) does not belong to carrier type of {self}. Details: {e}')
+            return False
+
 
     @property
     def type(self) -> Union["RuntimeType", str]:

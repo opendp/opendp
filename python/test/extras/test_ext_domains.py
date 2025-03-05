@@ -41,16 +41,15 @@ def test_array2_domain():
 
 
 def test_sscp_domain():
-    with optional_dependency('numpy'):
-        domain = _sscp_domain(num_features=4, T=float)
-
     np = pytest.importorskip('numpy')
-    domain.member(np.random.normal(size=(4, 4)))
+
+    domain = _sscp_domain(num_features=4, T=float)
+    assert domain.member(np.random.normal(size=(4, 4)))
 
     domain = _sscp_domain(num_features=4, T=dp.f32)
-    domain.member(np.random.normal(size=(4, 4)).astype(np.float32))
+    assert domain.member(np.random.normal(size=(4, 4)).astype(np.float32))
 
-    with pytest.raises(dp.OpenDPException):
+    with pytest.warns(UserWarning, match=r'does not belong to carrier type'):
         domain.member(np.random.normal(size=(4, 4)))
 
     with pytest.raises(ValueError):
