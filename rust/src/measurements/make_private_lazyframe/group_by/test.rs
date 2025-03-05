@@ -17,7 +17,7 @@ fn test_aggregate() -> Fallible<()> {
         SeriesDomain::new("B", AtomDomain::<f64>::default()),
         SeriesDomain::new("C", AtomDomain::<i32>::default()),
     ])?
-    .with_margin(&["A", "C"], Margin::default().with_public_keys())?;
+    .with_margin(Margin::by(["A", "C"]).with_public_keys())?;
 
     let lf = df!(
         "A" => &[1i32, 2, 2],

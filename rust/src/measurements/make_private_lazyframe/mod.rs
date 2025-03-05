@@ -26,6 +26,9 @@ mod group_by;
 pub(crate) use group_by::{is_threshold_predicate, match_group_by, KeySanitizer, MatchGroupBy};
 
 #[cfg(feature = "contrib")]
+mod postprocess;
+
+#[cfg(feature = "contrib")]
 mod select;
 
 fn make_private_aggregation<MS, MI, MO>(
@@ -38,15 +41,15 @@ fn make_private_aggregation<MS, MI, MO>(
 ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, MO>>
 where
     MS: 'static + UnboundedMetric + DatasetMetric,
-    MI: Metric,
+    MI: 'static + UnboundedMetric,
     MO: 'static + ApproximateMeasure,
     MO::Distance: Debug,
-    Expr: PrivateExpr<PartitionDistance<MS>, MO>,
-    DslPlan: StableDslPlan<MS, MS>,
+    Expr: PrivateExpr<PartitionDistance<MI>, MO>,
+    DslPlan: StableDslPlan<MS, MI>,
 {
     #[cfg(feature = "contrib")]
     if group_by::match_group_by(plan.clone())?.is_some() {
-        return group_by::make_private_group_by(
+        return group_by::make_private_group_by::<MS, MI, MO>(
             input_domain,
             input_metric,
             output_measure,
@@ -57,7 +60,7 @@ where
     }
     match plan {
         #[cfg(feature = "contrib")]
-        plan if matches!(plan, DslPlan::Select { .. }) => select::make_private_select(
+        plan if matches!(plan, DslPlan::Select { .. }) => select::make_private_select::<MS, MI, MO>(
             input_domain,
             input_metric,
             output_measure,
@@ -160,6 +163,17 @@ where
             return fallible!(MakeMeasurement, "{}", SORT_ERR_MSG);
         }
 
+        if let Some(meas) = postprocess::match_postprocess(
+            input_domain.clone(),
+            input_metric.clone(),
+            output_measure.clone(),
+            self.clone(),
+            global_scale,
+            threshold,
+        )? {
+            return Ok(meas);
+        }
+
         make_private_aggregation::<MS, MS, _>(
             input_domain,
             input_metric,
@@ -186,6 +200,17 @@ where
     ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, ZeroConcentratedDivergence>> {
         if matches!(self, DslPlan::Sort { .. }) {
             return fallible!(MakeMeasurement, "{}", SORT_ERR_MSG);
+        }
+
+        if let Some(meas) = postprocess::match_postprocess(
+            input_domain.clone(),
+            input_metric.clone(),
+            output_measure.clone(),
+            self.clone(),
+            global_scale,
+            threshold,
+        )? {
+            return Ok(meas);
         }
 
         make_private_aggregation::<MS, MS, _>(
@@ -218,6 +243,17 @@ where
     ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, Approximate<MO>>> {
         if matches!(self, DslPlan::Sort { .. }) {
             return fallible!(MakeMeasurement, "{}", SORT_ERR_MSG);
+        }
+
+        if let Some(meas) = postprocess::match_postprocess::<MS, Approximate<MO>>(
+            input_domain.clone(),
+            input_metric.clone(),
+            output_measure.clone(),
+            self.clone(),
+            global_scale,
+            threshold,
+        )? {
+            return Ok(meas);
         }
 
         if let Ok(meas) = make_private_aggregation::<MS, MS, _>(

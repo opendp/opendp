@@ -48,16 +48,19 @@ def example_lf(margin=None, **kwargs):
     domains, series = example_series()
     lf_domain, lf = dp.lazyframe_domain(domains), pl.LazyFrame(series)
     if margin is not None:
+        margin = [col if isinstance(col, pl.Expr) else pl.col(col) for col in margin]
         lf_domain = dp.with_margin(lf_domain, by=margin, **kwargs)
     return lf_domain, lf
 
 
 def test_expr_domain():
     series_domains, _ = example_series()
-    dp.wild_expr_domain(series_domains)
-    dp.wild_expr_domain(series_domains, by=["A", "B"])
-    dp.wild_expr_domain(series_domains, by=["A", "B"], max_num_partitions=10)
-    dp.wild_expr_domain(series_domains, by=["A", "B"], public_info="keys")
+
+    pl = pytest.importorskip("polars")
+    by = [pl.col("A"), pl.col("B")]
+    dp.wild_expr_domain(series_domains, by=by)
+    dp.wild_expr_domain(series_domains, by=by, max_num_partitions=10)
+    dp.wild_expr_domain(series_domains, by=by, public_info="keys")
 
 
 def test_domains():
@@ -323,10 +326,10 @@ def test_polars_context():
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0),
         split_evenly_over=2,
-        margins={
-            (): dp.polars.Margin(max_partition_length=5),
-            ("B",): dp.polars.Margin(public_info="keys"),
-        },
+        margins=[
+            dp.polars.Margin(max_partition_length=5),
+            dp.polars.Margin(by=["B"], public_info="keys"),
+        ],
     )
 
     (
@@ -358,7 +361,7 @@ def test_polars_describe():
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0),
         split_evenly_over=2,
-        margins={
+        margins={ # type: ignore[arg-type]
             ("B",): dp.polars.Margin(public_info="keys", max_partition_length=5),
         },
     )
@@ -406,9 +409,9 @@ def test_polars_accuracy_threshold():
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=2,
-        margins={
-            ("B",): dp.polars.Margin(max_partition_length=5),
-        },
+        margins=[
+            dp.polars.Margin(by=["B"], max_partition_length=5),
+        ],
     )
 
     expected = pl.DataFrame(
@@ -486,9 +489,9 @@ def test_polars_threshold_epsilon():
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=2,
-        margins={
-            ("A",): dp.polars.Margin(public_info="keys"),
-        },
+        margins=[
+            dp.polars.Margin(by=["A"], public_info="keys"),
+        ],
     )
 
     actual = (
@@ -708,17 +711,18 @@ def test_cut():
     pl_testing = pytest.importorskip("polars.testing")
 
     data = pl.LazyFrame({"x": [0.4, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5]})
+    by = [pl.col("x").cut([1.0, 2.0, 3.0]).to_physical()]
     with warnings.catch_warnings():
         context = dp.Context.compositor(
-            data=data.with_columns(pl.col("x").cut([1.0, 2.0, 3.0]).to_physical()),
+            data=data,
             privacy_unit=dp.unit_of(contributions=1),
             privacy_loss=dp.loss_of(epsilon=10000.0),
             split_evenly_over=1,
-            margins={("x",): dp.polars.Margin(public_info="keys")},
+            margins=[dp.polars.Margin(by=by, public_info="keys")],
         )
     actual = (
         context.query()
-        .group_by("x")
+        .group_by(*by)
         .agg(dp.len())
         .release()
         .collect()
@@ -847,11 +851,12 @@ def test_to_physical_unordered():
 
 
 def test_float_sum_with_unlimited_reorderable_partitions():
+    pl = pytest.importorskip("polars")
     lf_domain = dp.lazyframe_domain([
         dp.series_domain("region", dp.atom_domain(T=dp.i64)),
         dp.series_domain("income", dp.atom_domain(T=dp.f64))
     ])
-    lf_domain = dp.with_margin(lf_domain, by=["region"], public_info="lengths", max_partition_length=6)
+    lf_domain = dp.with_margin(lf_domain, by=[pl.col("region")], public_info="lengths", max_partition_length=6)
 
     from opendp.domains import _lazyframe_from_domain
     lf = _lazyframe_from_domain(lf_domain)
@@ -977,8 +982,8 @@ def test_datetime(dtype):
     )
     query = (
         context.query()
-        .with_columns(pl.col.x.str.strptime(format=r"%Y-%m-%dT%H:%M:%S", dtype=dtype))
-        .group_by("x").agg(dp.len())
+        .group_by(pl.col.x.str.strptime(format=r"%Y-%m-%dT%H:%M:%S", dtype=dtype))
+        .agg(dp.len())
     )
     observed = query.release().collect()
     assert observed["x"].dtype == dtype
@@ -1003,6 +1008,120 @@ def test_temporal_domain():
         dp.series_domain("date", dp.option_domain(dp.atom_domain(T="NaiveDate"))),
         dp.series_domain("time", dp.option_domain(dp.atom_domain(T="NaiveTime"))),
         dp.series_domain("datetime", dp.option_domain(dp.datetime_domain(time_unit="us"))),
+    ])
+
+    # check that domain is as expected
+    assert observed == expected
+
+def test_replace():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    # this triggers construction of a lazyframe domain from the schema
+    context = dp.Context.compositor(
+        data=pl.LazyFrame(pl.Series("alpha", ["A", "B", "C"] * 100)),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=4,
+        margins=[dp.polars.Margin(by=(), max_partition_length=300)],
+    )
+    
+    # replace multiple input values with one output value    
+    pl_testing.assert_series_equal(
+        context.query()
+        .group_by(pl.col.alpha.replace(["A", "B"], "D"))
+        .agg(dp.len())
+        .release()
+        .collect()["alpha"].sort(), 
+        pl.Series("alpha", ["C", "D"])
+    )
+
+    # replace multiple input values with respective output values (lists)
+    pl_testing.assert_series_equal(
+        context.query()
+        .group_by(pl.col.alpha.replace(["A", "B"], ["D", "E"]))
+        .agg(dp.len())
+        .release()
+        .collect()["alpha"].sort(), 
+        pl.Series("alpha", ["C", "D", "E"])
+    )
+
+    # replace multiple input values with respective output values (dict)
+    pl_testing.assert_series_equal(
+        context.query()
+        .group_by(pl.col.alpha.replace({"A": "D", "B": "E"}))
+        .agg(dp.len())
+        .release()
+        .collect()["alpha"].sort(), 
+        pl.Series("alpha", ["C", "D", "E"])
+    )
+
+
+def test_replace_strict():
+    pl = pytest.importorskip("polars")
+
+    # this triggers construction of a lazyframe domain from the schema
+    context = dp.Context.compositor(
+        data=pl.LazyFrame(pl.Series("alpha", ["A", "B", "C"] * 100)),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=1,
+        margins=[dp.polars.Margin(by=(), max_partition_length=300)],
+    )
+
+    # replace multiple input values with one output value    
+    assert isinstance(
+        context.query()
+        .select(
+            pl.col("alpha")
+            .replace_strict(["A", "B"], [1, 2], default=0, return_dtype=pl.Int64)
+            .dp.sum((0, 2))
+        )
+        .release()
+        .collect()["alpha"][0],
+        int
+    )
+
+def test_cast_enum():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+    # this triggers construction of a lazyframe domain from the schema
+    context = dp.Context.compositor(
+        data=pl.LazyFrame(pl.Series("alpha", ["A", "B", "C"] * 100)),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=1,
+        margins=[dp.polars.Margin(by=(), max_partition_length=300)],
+    )
+
+    enum_dtype = pl.Enum(["A", "B", "C"])
+
+    pl_testing.assert_series_equal(
+        context.query()
+        .with_columns(pl.col.alpha.cast(enum_dtype))
+        .group_by(pl.col.alpha)
+        .agg(dp.len())
+        .release()
+        .collect()["alpha"]
+        .sort()
+        .cast(enum_dtype), 
+        pl.Series("alpha", ["A", "B", "C"], enum_dtype)
+    )
+
+def test_enum_domain():
+    pl = pytest.importorskip("polars")
+
+    enum_dtype = pl.Enum(["A", "B", "C"])
+    # this triggers construction of a lazyframe domain from the schema
+    context = dp.Context.compositor(
+        data=pl.LazyFrame(pl.Series("alpha", ["A", "B", "C"] * 100, dtype=enum_dtype)),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=1,
+    )
+    observed = context.accountant.input_domain
+    expected = dp.lazyframe_domain([
+        dp.series_domain("alpha", dp.option_domain(dp.enum_domain(enum_dtype.categories))),
     ])
 
     # check that domain is as expected

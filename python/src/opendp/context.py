@@ -12,7 +12,7 @@ We suggest importing under the conventional name ``dp``:
 '''
 
 import logging
-from typing import Any, Callable, Optional, Union, MutableMapping, Sequence
+from typing import Any, Callable, Optional, Sequence, Union, MutableMapping
 import importlib
 from inspect import signature
 from functools import partial
@@ -54,8 +54,7 @@ from opendp.mod import (
 from opendp.typing import RuntimeType
 from opendp._lib import indent, import_optional_dependency
 from opendp.extras.polars import LazyFrameQuery, Margin
-from dataclasses import asdict
-
+from dataclasses import asdict, replace
 
 __all__ = [
     'space_of',
@@ -404,7 +403,7 @@ class Context(object):
         split_evenly_over: Optional[int] = None,
         split_by_weights: Optional[Sequence[float]] = None,
         domain: Optional[Domain] = None,
-        margins: Optional[MutableMapping[tuple[str, ...], Margin]] = None,
+        margins: Optional[Sequence[Margin]] = None,
     ) -> "Context":
         """Constructs a new context containing a sequential compositor with the given weights.
 
@@ -413,22 +412,32 @@ class Context(object):
 
         ``split_evenly_over`` and ``split_by_weights`` are mutually exclusive.
 
+        When ``data`` is a Polars LazyFrame, queries are specified as a Polars compute plan.
+        In addition, ``margins`` may be specified, which contain descriptors for the data under grouping.
+
         :param data: The data to be analyzed.
         :param privacy_unit: The privacy unit of the compositor.
         :param privacy_loss: The privacy loss of the compositor.
         :param split_evenly_over: The number of parts to evenly distribute the privacy loss.
         :param split_by_weights: A list of weights for each intermediate privacy loss.
         :param domain: The domain of the data.
-        :param margins: A dictionary where the keys are grouping columns and values describe known properties of the respective margins."""
+        :param margins: Descriptors for grouped data."""
         if domain is None:
             domain = domain_of(data, infer=True)
 
         if margins:
-            for by, margin in margins.items():
-                if not isinstance(by, tuple):
-                    msg = by if isinstance(by, str) else "your-column"
-                    raise ValueError(f"Margin keys must be tuples. For single-valued tuples include a trailing comma, ie: `('{msg}',)`")
-                domain = with_margin(domain, by=list(by), **asdict(margin))
+            # allows dictionaries of {[by]: [margin]}
+            if isinstance(margins, MutableMapping):
+                margins = [replace(margin, by=by) for by, margin in margins.items()]
+            
+            pl = import_optional_dependency("polars")
+            for margin in margins:
+                by = margin.by or []
+                if not isinstance(by, Sequence) or isinstance(by, str):
+                    raise ValueError("Margin keys must be a sequence")
+
+                by_exprs = [col if isinstance(col, pl.Expr) else pl.col(col) for col in by]
+                domain = with_margin(domain, **asdict(replace(margin, by=by_exprs)))
 
         accountant, d_mids = _sequential_composition_by_weights(
             domain, privacy_unit, privacy_loss, split_evenly_over, split_by_weights

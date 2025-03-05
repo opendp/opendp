@@ -14,7 +14,7 @@ fn test_with_column() -> Fallible<()> {
         "chunk_2_null",
         OptionDomain::new(AtomDomain::<i64>::default()),
     )])?
-    .with_margin(&["chunk_2_null"], Margin::default().with_public_keys())?;
+    .with_margin(Margin::by(["chunk_2_null"]).with_public_keys())?;
 
     let t_with_column = make_stable_lazyframe(
         lf_domain.clone(),

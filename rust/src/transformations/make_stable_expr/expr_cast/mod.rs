@@ -3,7 +3,7 @@ use polars::prelude::*;
 use polars_plan::dsl::Expr;
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{ExprDomain, OuterMetric, SeriesDomain, WildExprDomain};
+use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::transformations::DatasetMetric;
 
@@ -54,12 +54,11 @@ where
 
     let mut output_domain = middle_domain.clone();
     let data_column = &mut output_domain.column;
-    let name = data_column.name.clone();
 
     // it is possible to tighten this:
     // in cases where casting will never fail, the nullable and/or nan bits can be left false
     // in the meantime, users will need to impute
-    *data_column = SeriesDomain::new_from_field(Field::new(name, to_type.clone()))?;
+    data_column.set_dtype(to_type.clone())?;
 
     t_prior
         >> Transformation::new(

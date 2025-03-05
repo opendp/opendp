@@ -85,7 +85,7 @@ where
         }
     }?;
 
-    let margin = middle_domain.context.grouping("count")?.1;
+    let margin = middle_domain.context.aggregation("count")?;
 
     let mpl = margin
         .max_partition_length
