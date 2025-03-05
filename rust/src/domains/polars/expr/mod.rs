@@ -127,9 +127,16 @@ impl LazyFrameDomain {
 }
 
 #[derive(Clone)]
+/// Used internally as we wrap built-in Polars expressions
 pub struct ExprPlan {
+    /// This can just be cloned.
     pub plan: DslPlan,
+    /// Typically we will pull the fields out of an incoming expression,
+    /// process them, and then create a new equivalent expression.
     pub expr: Expr,
+    /// For expressions before aggregation in the chain, this should be None.
+    /// If this *is* an aggregation, it should be a literal.
+    /// After an aggregation, this should just duplicate `expr`.
     pub fill: Option<Expr>,
 }
 
