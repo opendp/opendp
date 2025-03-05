@@ -5,7 +5,7 @@ use crate::{
     error::Fallible,
     ffi::any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast},
     measures::{
-        ffi::ExtrinsicDivergence, MaxDivergence, RangeDivergence, ZeroConcentratedDivergence,
+        MaxDivergence, RangeDivergence, ZeroConcentratedDivergence, ffi::ExtrinsicDivergence,
     },
 };
 
