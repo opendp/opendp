@@ -165,7 +165,7 @@ Report Noisy Max
 ----------------
 
 The report noisy max mechanism is used to privately release the index of the maximum value in a vector.
-This is useful for private selection, and is equivalent to the exponential mechanism.
+This is useful for private selection, and is one instance of the exponential mechanism.
 
 
 .. list-table::

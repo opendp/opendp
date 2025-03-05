@@ -252,10 +252,19 @@ def test_measure_cast():
         data=[1, 2, 3],
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0),
-        split_evenly_over=2,
+        split_evenly_over=1,
         domain=dp.vector_domain(dp.atom_domain(T=int)),
     )
-    context.query().compositor(split_evenly_over=1) # TODO: Exercise different output_measure params
+    context.query().compositor(split_evenly_over=1, output_measure=dp.range_divergence()).release()
+
+    context = dp.Context.compositor(
+        data=[1, 2, 3],
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(rho=0.5),
+        split_evenly_over=1,
+        domain=dp.vector_domain(dp.atom_domain(T=int)),
+    )
+    context.query().compositor(split_evenly_over=1, output_measure=dp.range_divergence()).release()
 
 
 def test_split_by_weights_ints():
