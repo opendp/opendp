@@ -21,7 +21,7 @@ Proves soundness of \rustdoc{measurements/fn}{make\_randomized\_response\_bitvec
 \section{Introduction}
 This is a randomizer in the local model of differential privacy, which is a simplification of the RAPPOR protocol~\cite{rappor}. Under local differential privacy each user is guaranteed $\varepsilon$-DP for their response. RAPPOR achieves local differentially private frequency estimation by flipping each bit of an input vector with fixed probability. Because the noise is added mechanically we can efficiently post-process a set of outputs from this randomizer with the function \rustdoc{measurements/fn}{debias\_randomized\_response\_bitvec}, which sums and normalises a vector of private outputs to account for the bias introduced. The input to this function are elements from a \rustdoc{domains/struct}{BitVectorDomain} with fixed $\texttt{max\_weight}$, setting this value is necessary in order to bound the sensitivity of the function. we detail two use cases below to explain two possible settings of $\texttt{max\_weight}$, which we will denote $m$.
 
-Frequency estimation is the problem of generating a histogram of the empirical frequencies of categorical elements. Any categorical domain of size $k$ can be mapped to the set $[k]=\{0,1,\ldots,k-1\}$, and we can represent any element $j\in[k]$ as the $j$'th standard basis vector so that $m=1$. In cases where the domain is extremely large or even unbounded (such as a set of strings) we can hash the domain elements using a bloom filter with $m$ hash functions. In order to decode a set of outputs generated in this fashion we must perform a regression against the bloom filter representations of a set of candidate elements, neither bloom filters nor the regression tools required for this are implemented here, but details can be found in the original RAPPOR paper. We will require that $2m+1<k$, but $m$ should be much less than $k$ in order to preserve utility. As we will prove in~\ref{thm:privacy-parameter} privacy degrades linearly with $m$. 
+Frequency estimation is the problem of generating a histogram of the empirical frequencies of categorical elements. Any categorical domain of size $k$ can be mapped to the set $[k]=\{0,1,\ldots,k-1\}$, and we can represent any element $j\in[k]$ as the $j$'th standard basis vector so that $m=1$. In cases where the domain is extremely large or even unbounded (such as a set of strings) we can hash the domain elements using a bloom filter with $m$ hash functions. In order to decode a set of outputs generated in this fashion we must perform a regression against the bloom filter representations of a set of candidate elements, neither bloom filters nor the regression tools required for this are implemented here, but details can be found in the original RAPPOR paper. We will require that $2m+1<k$, but $m$ should be much less than $k$ in order to preserve utility. As we will prove in~\ref{thm:privacy-parameter} privacy degrades linearly with $m$.
 
 \section{Hoare Triple}
 \subsection{Preconditions}
@@ -48,15 +48,15 @@ Frequency estimation is the problem of generating a histogram of the empirical f
 \begin{note}[Proof relies on correctness of Bernoulli sampler]
 The following proof makes use of the following lemma that asserts the correctness of the Bernoulli sampler function.
     \begin{lemma}
-    If system entropy is not sufficient, \texttt{sample\_bernoulli} raises an error. 
-    Otherwise, \texttt{sample\_bernoulli(f/2, constant\_time)}, the Bernoulli sampler function used in \texttt{make\_randomized\_response\_bool}, 
+    If system entropy is not sufficient, \texttt{sample\_bernoulli} raises an error.
+    Otherwise, \texttt{sample\_bernoulli(f/2, constant\_time)}, the Bernoulli sampler function used in \texttt{make\_randomized\_response\_bool},
     returns \texttt{true} with probability (\texttt{prob}) and returns  \texttt{false} with probability (1 - \texttt{f/2}).
     \end{lemma}
 \end{note}
 \end{tcolorbox}
 \begin{theorem}[\cite{rappor}]
 \label{thm:privacy-parameter}
-	The program \rustdoc{measurements/fn}{make\_randomized\_response\_bitvec} satisfies $\varepsilon$-DP, where 
+	The program \rustdoc{measurements/fn}{make\_randomized\_response\_bitvec} satisfies $\varepsilon$-DP, where
 	\begin{equation*}
 		\varepsilon = 2m\log\left(\frac{2-f}{f}\right).
 	\end{equation*}
@@ -66,8 +66,8 @@ The following proof makes use of the following lemma that asserts the correctnes
 	\begin{align}
 		\mathbb{P}[y_j = 1~|~x_j=1] &= 1 - \frac{1}{2}f\\
 		\mathbb{P}[y_j = 1~|~x_j=0] &=\frac{1}{2}f
-	\end{align} 
-	The probability of observing any given report $Y$ is $\mathbb{P}[Y=y | X=x]$. Suppose $x=(x,\ldots,x_k)$ is a single Boolean vector with at most $m$ ones. 
+	\end{align}
+	The probability of observing any given report $Y$ is $\mathbb{P}[Y=y | X=x]$. Suppose $x=(x,\ldots,x_k)$ is a single Boolean vector with at most $m$ ones.
 	Without loss of generality, as the probabilities are invariant under permutation, assume that $x^*=(x=1,\ldots,x_m=1,x_{m+1}=0,\ldots,x_k=0)$, then we have
 	\begin{align*}
 		\mathbb{P}[Y=y~|~X=x^*] &=%
@@ -116,12 +116,12 @@ The following proof makes use of the following lemma that asserts the correctnes
 \label{thm:unbiased-estimator}
 	The program \rustdoc{measurements/fn}{debias\_randomized\_response\_bitvec} is an unbiased frequency estimator.
 \end{theorem}
-\begin{proof} 
+\begin{proof}
 By independence we can focus on the contribution of one message. Given an input $\bar{x}=(x_1,\ldots,x_j,\ldots,x_k)$, denote the output of \rustdoc{measurements/fn}{make\_randomized\_response\_bitvec} on this input as $\bar{y}$. Assume each $x_j$ was drawn from a distribution with probability $p(x_j)$, we can replace this assumption with the true frequency of $x_j$ later. Each coordinate of $\bar{y}$ is therefore given as follows,
 \begin{equation*}
     y_j = \text{Bern}\left(1-\frac{1}{2}f\right)x_j + \text{Bern}\left(\frac{1}{2}f\right) (1-x_j).
 \end{equation*}
-And the expectation of $\bar{y}_j$ is 
+And the expectation of $\bar{y}_j$ is
 \begin{align}
     \mathbb{E}\left[y_j\right] &= (1-\frac{1}{2}f)p(x_j) + \frac{1}{2}f(1-p(x_j))\nonumber\\
         &= (1-f)p(x_j) + \frac{1}{2}f\label{eq:expect-y}

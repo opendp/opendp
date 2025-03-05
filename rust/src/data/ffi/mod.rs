@@ -48,7 +48,7 @@ use opendp_derive::bootstrap;
 /// # Arguments
 /// * `raw` - A pointer to the slice with data.
 /// * `T` - The type of the data in the slice.
-/// 
+///
 /// # Returns
 /// An AnyObject that contains the data in `slice`. The AnyObject also captures rust type information.
 #[no_mangle]
@@ -232,7 +232,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         let slices = unsafe { slice::from_raw_parts(raw.ptr as *const *const FfiSlice, raw.len) };
         let series = slices.iter().map(|&s| raw_to_concrete_series(try_as_ref!(s)).map(Column::Series))
         .collect::<Fallible<Vec<Column>>>()?;
-        
+
         Ok(AnyObject::new(DataFrame::new(series)?))
     }
 

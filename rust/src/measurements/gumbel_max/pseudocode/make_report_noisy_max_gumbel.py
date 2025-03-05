@@ -2,7 +2,7 @@
 def make_report_noisy_max_gumbel(
     input_domain: VectorDomain[AtomDomain[TIA]],
     input_metric: RangeDistance[TIA],
-    scale: QO, 
+    scale: QO,
     optimize: Union[Literal["max"], Literal["min"]]
 ) -> Measurement:
     if input_domain.element_domain.nullable:

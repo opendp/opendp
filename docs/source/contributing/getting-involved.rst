@@ -43,7 +43,7 @@ Feel free to ask clarifying questions!
 
 Documentation
 -------------
-We need your help to make OpenDP more accessible through documentation, 
+We need your help to make OpenDP more accessible through documentation,
 either by giving feedback, making revisions or writing your own additions.
 
 There are many forms of documentation!

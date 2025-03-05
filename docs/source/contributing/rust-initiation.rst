@@ -22,12 +22,12 @@ commonly in the OpenDP library.
             >>> # we'll use this Python snip to demonstrate concepts later...
             >>> import opendp.prelude as dp
             >>> dp.enable_features("contrib")
-            
+
             >>> input_domain = dp.vector_domain(dp.atom_domain(T=str))
             >>> input_metric = dp.symmetric_distance()
-            
+
             >>> default_cast_trans = dp.t.make_cast_default(input_domain, input_metric, TOA=int)
-            
+
 
 Transformation Structure
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -196,13 +196,13 @@ provided. I’ll break it down into three parts.
    )
        -> Fallible<
            Transformation<
-               VectorDomain<AtomDomain<TIA>>, 
-               VectorDomain<AtomDomain<TOA>>, 
-               M, 
+               VectorDomain<AtomDomain<TIA>>,
+               VectorDomain<AtomDomain<TOA>>,
+               M,
                M>>
 
        // 2.
-       where TIA: 'static + Clone + CheckNull, 
+       where TIA: 'static + Clone + CheckNull,
              TOA: 'static + RoundCast<TIA> + Default + CheckNull,
              M: DatasetMetric,
              (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
@@ -229,9 +229,9 @@ The first part is the function signature:
    )
        -> Fallible<
            Transformation<
-               VectorDomain<AtomDomain<TIA>>, 
-               VectorDomain<AtomDomain<TOA>>, 
-               M, 
+               VectorDomain<AtomDomain<TIA>>,
+               VectorDomain<AtomDomain<TOA>>,
+               M,
                M>>
        ...
 
@@ -257,7 +257,7 @@ The second part is the where clause:
 .. code:: rust
 
        ...
-       where TIA: 'static + Clone + CheckNull, 
+       where TIA: 'static + Clone + CheckNull,
            TOA: 'static + RoundCast<TIA> + Default + CheckNull,
            M: DatasetMetric,
            (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,

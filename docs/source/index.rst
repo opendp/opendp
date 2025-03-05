@@ -8,7 +8,7 @@ Differential privacy is a rigorous mathematical definition of privacy.
 Consider an algorithm that analyzes a dataset and releases statistics:
 The algorithm is differentially private if by looking at the output,
 you cannot tell whether any individual's data was included in the original dataset or not.
-Differential privacy achieves this by carefully injecting random noise into the released statistics to hide the effects of each individual. 
+Differential privacy achieves this by carefully injecting random noise into the released statistics to hide the effects of each individual.
 
 For more background on differential privacy and its applications:
 

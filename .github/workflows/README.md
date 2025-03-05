@@ -120,7 +120,7 @@ on github, or with the `gh` command line tool. Parameters:
 1. Update the changelog and version
 
     1. Create (if you haven't already) and activate `.venv-tools`
-        
+
         ```shell
         cd tools
         python -m venv .venv-tools
@@ -135,7 +135,7 @@ on github, or with the `gh` command line tool. Parameters:
         git pull
         git branch -D version-changelog
         git checkout -b version-changelog
-        ``` 
+        ```
 
     1. Update `robots.txt`: Add the new version to the `Disallow` list.
 

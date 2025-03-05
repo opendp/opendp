@@ -14,7 +14,7 @@ def get_prev_version():
 
 def log_until(tag):
     return subprocess.check_output(['git', 'log', f"{tag}..HEAD", '--oneline'], text=True).splitlines()
-    
+
 
 
 def get_changelog_update(lines):
@@ -51,7 +51,7 @@ def get_changelog_update(lines):
         for line in v:
             output_lines.append(f'- {line}')
         output_lines.append('')
-    
+
     return '\n'.join(output_lines)
 
 

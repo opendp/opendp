@@ -76,7 +76,7 @@ jobs:
           python --version
           python -m venv .venv-docs
           source .venv-docs/bin/activate
-          
+
           echo "Upgrade pip and install requirements."
           python -m pip install --upgrade pip
           pip install -r requirements.txt
@@ -91,19 +91,19 @@ jobs:
 
           # create brand new history each time
           git checkout --orphan gh-pages
-          
+
           # sudo to have sufficient permission to delete files created by the docker user while compiling .tex
           sudo rm -rf *
           echo docs.opendp.org > CNAME
           echo "for underscore directories" > .nojekyll
           cp -r /tmp/build/html/* .
-      
+
       - name: Download R Docs
         uses: actions/download-artifact@v4
         with:
           name: r_docs
           path: en/stable/api/r
-      
+
       - name: Checkout artifacts
         uses: actions/checkout@v4
         with:
@@ -124,7 +124,7 @@ jobs:
               mv "$source"/* "$target"
             fi
           done
-          
+
           # discard unused pdfs
           rm -r artifacts
 

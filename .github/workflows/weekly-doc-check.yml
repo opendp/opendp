@@ -48,7 +48,7 @@ jobs:
 
       - name: Build
         run: cargo check --verbose --features bindings,untrusted
-  
+
       - name: Upload Python bindings
         uses: actions/upload-artifact@v4
         with:

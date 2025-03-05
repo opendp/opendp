@@ -16,7 +16,7 @@ these are documented under :py:class:`opendp.extras.polars.DPExpr`.
 
 .. toctree::
   :maxdepth: 1
-  
+
   aggregation
   boolean
   columns

@@ -12,6 +12,7 @@ coverage
 mypy
 pip-tools==7.3.0
 types-Deprecated
+pre-commit
 
 # Just needed for examples in documentation:
 pandas

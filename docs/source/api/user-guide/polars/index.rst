@@ -13,4 +13,3 @@ If you haven't already, please review :ref:`tabular-data` in "Getting Started" b
   gaussian-noise
   data-types
   expressions/index
-

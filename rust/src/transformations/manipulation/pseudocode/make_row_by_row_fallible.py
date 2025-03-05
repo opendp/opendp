@@ -1,12 +1,12 @@
 # type: ignore
 def make_row_by_row_fallible(
-    input_domain: DI, 
-    input_metric: M, 
-    output_row_domain: DO, 
+    input_domain: DI,
+    input_metric: M,
+    output_row_domain: DO,
     # a function from input domain's row type to output domain's row type
     row_function: Callable([[DI_RowDomain_Carrier], DO_RowDomain_Carrier])
 ) -> Transformation:
-    
+
     # where .translate is defined by the RowByRowDomain trait
     output_domain = input_domain.translate(output_row_domain)
 

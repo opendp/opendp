@@ -6,12 +6,20 @@
 #
 build==1.2.1
     # via pip-tools
+cfgv==3.4.0
+    # via pre-commit
 click==8.1.7
     # via pip-tools
 coverage==7.6.1
     # via -r requirements-dev.in
+distlib==0.3.9
+    # via virtualenv
+filelock==3.17.0
+    # via virtualenv
 flake8==7.1.1
     # via -r requirements-dev.in
+identify==2.6.7
+    # via pre-commit
 iniconfig==2.0.0
     # via pytest
 mccabe==0.7.0
@@ -20,6 +28,8 @@ mypy==1.11.1
     # via -r requirements-dev.in
 mypy-extensions==1.0.0
     # via mypy
+nodeenv==1.9.1
+    # via pre-commit
 numpy==2.0.1
     # via pandas
 packaging==24.1
@@ -30,8 +40,12 @@ pandas==2.2.2
     # via -r requirements-dev.in
 pip-tools==7.3.0
     # via -r requirements-dev.in
+platformdirs==4.3.6
+    # via virtualenv
 pluggy==1.5.0
     # via pytest
+pre-commit==4.1.0
+    # via -r requirements-dev.in
 pycodestyle==2.12.1
     # via flake8
 pyflakes==3.2.0
@@ -44,6 +58,8 @@ python-dateutil==2.9.0.post0
     # via pandas
 pytz==2024.1
     # via pandas
+pyyaml==6.0.2
+    # via pre-commit
 six==1.16.0
     # via python-dateutil
 types-deprecated==1.2.9.20240311
@@ -52,6 +68,8 @@ typing-extensions==4.12.2
     # via mypy
 tzdata==2024.1
     # via pandas
+virtualenv==20.29.2
+    # via pre-commit
 wheel==0.44.0
     # via
     #   -r requirements-dev.in

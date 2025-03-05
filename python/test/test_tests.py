@@ -118,6 +118,6 @@ def test_doctest_fuzzy_polars(capsys):
     assert_FAIL(doctest_in + doctest_out_cols, capsys)
     assert_pass(doctest_in + doctest_out_cols, capsys, {'SKIP'})
     assert_FAIL(doctest_in + doctest_out_cols, capsys, {'FUZZY_DF'})
-    
+
     with pytest.raises(Exception, match='FUZZY_DF can not be used with other flags'):
         assert_pass(doctest_in, capsys, {'FUZZY_DF', 'NUMBER'})
