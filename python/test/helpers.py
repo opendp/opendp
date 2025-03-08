@@ -22,13 +22,13 @@ def optional_dependency(name):
       so we can catch any preceding indirect usages.
 
     If "optional_dependency('numpy')" and "pytest.importorskip('numpy')"
-    are used in the same test, it is redundant, but doesn't do any harm. 
+    are used in the same test, it is redundant, but doesn't do any harm.
     '''
     # Proceed normally if installed:
-    if name in sys.modules: 
+    if name in sys.modules:
         yield
         return
-    
+
     # Otherwise, confirm that expected error is raised...:
     root_name = name.split(".")[0]
     install_name = install_names.get(root_name) or root_name

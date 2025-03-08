@@ -25,4 +25,3 @@ def test_make_sized_bounded_float_ordered_sum():
     sum_trans = make_sized_bounded_float_ordered_sum(3, (0., 10.))
     assert sum_trans([1., 2., 4.]) == 7
     make_sized_bounded_float_ordered_sum(3, (0., 10.), "Sequential<T>")
-

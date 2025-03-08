@@ -122,7 +122,7 @@ impl<T> Primitive for T where
 /// fn test_func<T: Hashable>(value: T) {
 ///     // can be debugged, as Hashable inherits all traits from Primitive
 ///     println!("{value:?}");
-///     
+///
 ///     // can be used in hash sets and in the keys of hashmaps
 ///     let mut hashset = HashSet::new();
 ///     hashset.insert(value);
@@ -149,7 +149,7 @@ impl<T> Hashable for T where T: Primitive + Eq + Hash {}
 /// fn test_func<T: Number>(value: T) {
 ///     // can be debugged, as Number inherits all traits from Primitive:
 ///     println!("{value:?}");
-///     
+///
 ///     // supports basic arithmetic and numerical properties
 ///     assert_eq!(T::zero().inf_mul(&value).ok(), Some(T::zero()));
 /// }
@@ -239,7 +239,7 @@ impl<T> Number for T where
 ///
 ///     // supports arithmetic and has numerical properties
 ///     assert_eq!(T::zero().inf_mul(&value).ok(), Some(T::zero()));
-///     
+///
 ///     // can be used in hash sets and in the keys of hashmaps:
 ///     let mut hashset = HashSet::new();
 ///     hashset.insert(value);

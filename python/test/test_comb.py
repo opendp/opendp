@@ -28,18 +28,18 @@ def test_make_basic_composition():
     input_space = (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
     composed = dp.c.make_basic_composition([
         input_space >> dp.t.then_count() >> dp.c.make_basic_composition([
-            dp.space_of(int) >> dp.m.then_laplace(scale=2.), 
+            dp.space_of(int) >> dp.m.then_laplace(scale=2.),
             dp.space_of(int) >> dp.m.then_laplace(scale=200.)
         ]),
-        input_space >> dp.t.then_cast_default(bool) >> dp.t.then_cast_default(int) >> dp.t.then_count() >> dp.m.then_laplace(scale=2.), 
-        input_space >> dp.t.then_cast_default(float) >> dp.t.then_clamp((0., 10.)) >> dp.t.then_sum() >> dp.m.then_laplace(scale=2.), 
+        input_space >> dp.t.then_cast_default(bool) >> dp.t.then_cast_default(int) >> dp.t.then_count() >> dp.m.then_laplace(scale=2.),
+        input_space >> dp.t.then_cast_default(float) >> dp.t.then_clamp((0., 10.)) >> dp.t.then_sum() >> dp.m.then_laplace(scale=2.),
 
         dp.c.make_basic_composition([
-            input_space >> dp.t.then_count() >> dp.m.then_laplace(scale=2.), 
+            input_space >> dp.t.then_count() >> dp.m.then_laplace(scale=2.),
             input_space >> dp.t.then_count(TO=float) >> dp.m.then_laplace(scale=2.),
             (
-                input_space >> dp.t.then_cast_default(str) >> 
-                dp.t.then_count_by_categories(categories=["0", "12", "22"]) >> 
+                input_space >> dp.t.then_cast_default(str) >>
+                dp.t.then_count_by_categories(categories=["0", "12", "22"]) >>
                 dp.m.then_laplace(scale=2.)
             )
         ])
@@ -85,7 +85,7 @@ def test_cast_zcdp_approxdp():
 
     approx_gaussian = dp.c.make_zCDP_to_approxDP(base_gaussian)
     assert approx_gaussian.map(1.).epsilon(1e-6) == 0.4299414688369494
-    
+
 def test_cast_azcdp_approxdp():
     m_azcdp = dp.m.make_user_measurement(
         dp.atom_domain(T=bool), dp.absolute_distance(T=float),
@@ -97,7 +97,7 @@ def test_cast_azcdp_approxdp():
     m_asdp = dp.c.make_zCDP_to_approxDP(m_azcdp)
     curve, delta = m_asdp.map(1.)
     assert delta == 1e-7
-    
+
     m_adp = dp.c.make_fix_delta(m_asdp, delta=1e-6)
     assert m_adp.map(1.) == (curve.epsilon(1e-6 - 1e-7), 1e-6)
 
@@ -111,7 +111,7 @@ def test_renyidp():
         lambda d_in: (lambda alpha: d_in * alpha / 2.0)
     )
     rdp_curve = m_rdp.map(1.0)
-    # this used to cause a use-after free, 
+    # this used to cause a use-after free,
     # as the ε(α) curve created by the map would not be kept alive
     gc.collect()
     assert rdp_curve(4.) == 2.0

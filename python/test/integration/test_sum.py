@@ -43,7 +43,7 @@ def test_sized_bounded_float_sum():
 
 def test_sized_bounded_int_sum():
     """known-n bounded int sum (assuming n is public)"""
-    
+
     size = 200
     bounds = (0, 20)
 
@@ -133,4 +133,3 @@ def test_bounded_int_sum():
     data = "\n".join(["1"] * 100)
 
     print("noisy_sum_from_dataframe(data)", noisy_sum_from_dataframe(data))
-

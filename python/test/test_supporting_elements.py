@@ -12,7 +12,7 @@ def test_partition_distance():
         function=lambda x: x,
         stability_map=lambda d_in: d_in
     )
-    
+
     assert trans.map((3, 4, 3)) == (3, 4, 3)
 
 

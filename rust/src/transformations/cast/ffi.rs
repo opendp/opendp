@@ -42,7 +42,7 @@ pub extern "C" fn opendp_transformations__make_cast(
     }
     dispatch!(monomorphize, [
         (M_, @dataset_metrics),
-        (TIA_, @primitives), 
+        (TIA_, @primitives),
         (TOA_, @primitives)
     ], (input_domain, input_metric))
     .into()
@@ -79,7 +79,7 @@ pub extern "C" fn opendp_transformations__make_cast_default(
     }
     dispatch!(monomorphize, [
         (M_, @dataset_metrics),
-        (TIA_, @primitives), 
+        (TIA_, @primitives),
         (TOA_, @primitives)
     ], (input_domain, input_metric))
     .into()
@@ -116,7 +116,7 @@ pub extern "C" fn opendp_transformations__make_cast_inherent(
     }
     dispatch!(monomorphize, [
         (M_, @dataset_metrics),
-        (TIA_, @primitives), 
+        (TIA_, @primitives),
         (TOA_, @floats)
     ], (input_domain, input_metric))
     .into()

@@ -9,9 +9,9 @@
 
 \contrib
 
-This document proves that the implementation of \rustdoc{traits/samplers/uniform/fn}{sample\_uniform\_ubig\_below} in \asOfCommit{mod.rs}{f5bb719} 
+This document proves that the implementation of \rustdoc{traits/samplers/uniform/fn}{sample\_uniform\_ubig\_below} in \asOfCommit{mod.rs}{f5bb719}
 satisfies its definition.
-This algorithm uses the same algorithm and argument as used for unsigned native integers, 
+This algorithm uses the same algorithm and argument as used for unsigned native integers,
 but this time the bit depth is dynamically chosen to fill the last byte of a series of bytes long enough to hold \texttt{upper}.
 
 \subsection*{PR History}
@@ -42,13 +42,13 @@ For any setting of the input parameter \texttt{upper},
 
 \section{Proof}
 \begin{proof}
-\texttt{byte\_len} is the fewest number of bytes necessary to represent \texttt{upper}, 
+\texttt{byte\_len} is the fewest number of bytes necessary to represent \texttt{upper},
 which works out to $\mathrm{ceil}(\mathrm{ceil}(\log_2(\texttt{upper})) / 8)$.
 Let \texttt{max} denote the largest integer representable in this many bytes ($2^{\texttt{byte\_len}} - 1$).
 We can sample uniformly from $[0, \texttt{max})$ by filling this many bytes with bits uniformly at random.
 
 You could (naively) sample from $[0, \texttt{upper})$ by rejecting any \texttt{sample} greater than or equal to \texttt{upper}.
-To reduce the probability of rejecting (and improve computational performance), 
+To reduce the probability of rejecting (and improve computational performance),
 partition the numbers into two sets:\
 
 \begin{itemize}
@@ -65,8 +65,3 @@ then $\texttt{threshold} = \texttt{max} - (\texttt{max} \mod \texttt{upper})$.
 \end{proof}
 
 \end{document}
-
-
-
-
-

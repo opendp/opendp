@@ -7,7 +7,7 @@ In most of our notebooks we begin with:
     >>> import opendp.prelude as dp
     >>> dp.enable_features("contrib")
 
-After that we can refer to members of 
+After that we can refer to members of
 :py:mod:`mod <opendp.mod>`,
 :py:mod:`domains <opendp.domains>`,
 :py:mod:`metrics <opendp.metrics>`,

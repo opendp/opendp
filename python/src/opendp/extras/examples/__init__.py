@@ -6,7 +6,7 @@ We suggest importing under the conventional name ``dp``:
 
     >>> import opendp.prelude as dp
 
-The methods of this module will then be accessible at ``dp.examples``.    
+The methods of this module will then be accessible at ``dp.examples``.
 '''
 
 from pathlib import Path
@@ -41,7 +41,7 @@ def get_california_pums_path() -> Path:
     Returns the path to a CSV derived from a
     PUMS (Public Use Microdata Sample) file from the US Census.
     A header row is not included. The columns are:
-    
+
     * age
     * sex
     * educ
