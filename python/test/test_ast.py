@@ -1,3 +1,50 @@
+'''
+These checks have grown over time, and off-the-shelf tools have been improving at the same time:
+Now that our docs are cleaner, and the tools are also better, it might make sense to drop test_ast.py.
+Sphinx/RST isn't supported by all tools, but we still have a couple good options.
+Either Docsig and Pydoclint could be used as a flake8 plugin.
+
+
+# Worth another look!
+
+## Docsig
+- https://pypi.org/project/docsig/
+- `docsig src`
+- Started in 2022.
+
+## Pydoclint
+- https://github.com/jsh9/pydoclint
+- `pydoclint src --style=sphinx`
+- Only started in 2023, so it wasn't always an option for us.
+
+
+# Not for us
+
+## Ruff
+- Does not yet support Sphinx: https://github.com/astral-sh/ruff/issues/6606
+
+## Pydoctest
+- Doesn't run out of the box: "No module named '_gdbm'"
+- Limited configurability
+- Small user base
+
+## Pydocstyle
+- https://www.pydocstyle.org/en/stable/
+- `pydocstyle src`
+- This is more about the style of the text: Capitalization, punctuataion, etc.
+- Too prescriptive for us.
+
+## flake8-docstrings-complete
+- https://pypi.org/project/flake8-docstrings-complete/
+- Doesn't support Sphinx
+
+## darglint2
+- https://github.com/akaihola/darglint2
+- The package itself says that newer tools are better
+- but it does have a good survey of the other tools!
+'''
+
+
 from pathlib import Path
 import ast
 import re
