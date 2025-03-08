@@ -252,3 +252,12 @@ def test_randomized_response_bitvec():
     # epsilon is 2 * m * ln((2 - f) / f)
     # where m = 4 and f = .95
     assert m_rr.map(1) == 0.8006676684558611
+
+
+def test_canonical_noise():
+    space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    m_cnd = space >> dp.m.then_canonical_noise(d_in=1., d_out=(1., 1e-6))
+
+    assert m_cnd.map(1.) == (1.0, 1e-6)
+    # just check that it runs
+    assert isinstance(m_cnd(0.), float)
