@@ -86,13 +86,12 @@ pub trait ProductOrd: PartialOrd + Sized {
     }
 
     /// # Proof Definition
-    /// For any three values `self`, `min` and `max` of type `Self`, returns `Ok(out)` or `Err(e)`.
+    /// For any three values `self`, `min` and `max` of type `Self`, where `min <= max`, returns `Ok(out)` or `Err(e)`.
     /// The implementation returns `Err(e)` if any of `self`, `min` or `max` are null.
     /// Otherwise returns `Some(out)` where `out` is `min` if $self \lt min$, `max` if $self \gt max$, or else `self`.
+    ///
+    /// This function has no side-effects.
     fn total_clamp(self, min: Self, max: Self) -> Fallible<Self> {
-        if min > max {
-            return fallible!(FailedFunction, "min cannot be greater than max");
-        }
         Ok(if let Ordering::Less = self.total_cmp(&min)? {
             min
         } else if let Ordering::Greater = self.total_cmp(&max)? {
