@@ -11,7 +11,6 @@ fn make_argument() -> Argument {
         hint: None,
         description: Some("fake description".to_string()),
         default: Some(Value::Float(99.9)),
-        generics: vec![],
         is_type: false,
         do_not_convert: false,
         example: None,
@@ -63,7 +62,7 @@ def fake_function(
 
     # No type arguments to standardize.
     # Convert arguments to c types.
-    c_fake_argument = py_to_c(fake_argument, c_type=ctypes.c_double, type_name=f64)
+    c_fake_argument = py_to_c(fake_argument, c_type=ctypes.c_double, type_name=\"f64\")
 
     # Call library function.
     lib_function = lib.opendp_fake_module__fake_function

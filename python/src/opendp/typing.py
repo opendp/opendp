@@ -221,15 +221,6 @@ class RuntimeType(object):
                     return closeness[cls._parse_args(type_name[start + 1: end], generics=generics)[0]]
                 return closeness
 
-            domain = {
-                'AtomDomain': AtomDomain,
-                'VectorDomain': VectorDomain,
-                'MapDomain': MapDomain,
-                'OptionDomain': OptionDomain,
-            }.get(origin)
-            if domain is not None:
-                return domain[cls._parse_args(type_name[start + 1: end], generics=generics)[0]]
-
             if 0 < start < end < len(type_name):
                 return RuntimeType(origin, args=cls._parse_args(type_name[start + 1: end], generics=generics))
             if start == end < 0:
@@ -237,6 +228,8 @@ class RuntimeType(object):
                     return _ELEMENTARY_TYPES[int]
                 if type_name == "float":
                     return _ELEMENTARY_TYPES[float]
+                if type_name == "str":
+                    return _ELEMENTARY_TYPES[str]
                 return type_name
 
         if isinstance(type_name, Hashable) and type_name in _ELEMENTARY_TYPES:
@@ -249,7 +242,6 @@ class RuntimeType(object):
 
     @classmethod
     def _parse_args(cls, args, generics: Optional[Sequence[str]] = None):
-        import re
         return [cls.parse(v, generics=generics) for v in re.split(r",\s*(?![^()<>]*\))", args)]
 
     @classmethod
@@ -287,16 +279,16 @@ class RuntimeType(object):
         pl = import_optional_dependency("polars", raise_error=False)
         if pl is not None:
             if isinstance(public_example, pl.LazyFrame):
-                return LazyFrame
+                return "LazyFrame"
             
             if isinstance(public_example, pl.DataFrame):
-                return DataFrame
+                return "DataFrame"
             
             if isinstance(public_example, pl.Series):
-                return Series
+                return "Series"
             
             if isinstance(public_example, pl.Expr):
-                return Expr
+                return "Expr"
 
         if isinstance(public_example, tuple):
             return RuntimeType('Tuple', [cls.infer(e, py_object) for e in public_example])
@@ -367,17 +359,18 @@ class RuntimeType(object):
             return cls.infer(public_example)
         raise UnknownTypeException("either type_name or public_example must be passed")  # pragma: no cover
 
-    def substitute(self: Union["RuntimeType", str], **kwargs):
-        '''
-        Substitutes any generic type parameters according to the passed keyword arguments
-        
-        :param kwargs:
-        '''
-        if isinstance(self, _GenericType):
-            return kwargs.get(self.origin, self)
-        if isinstance(self, RuntimeType):
-            return RuntimeType(self.origin, self.args and [RuntimeType.substitute(arg, **kwargs) for arg in self.args])
-        return self
+def substitute(value: Union["RuntimeType", str], **kwargs):
+    '''
+    Substitutes any generic type parameters according to the passed keyword arguments
+    
+    :param value: The type to apply substitutions to
+    :param kwargs: The substitutions to apply
+    '''
+    if isinstance(value, _GenericType):
+        return kwargs.get(value.origin, value)
+    if isinstance(value, RuntimeType):
+        return RuntimeType(value.origin, value.args and [substitute(arg, **kwargs) for arg in value.args])
+    return value
     
 
 class _GenericType(RuntimeType):
@@ -442,33 +435,6 @@ Series: str = 'Series'
 Expr: str = 'Expr'
 AnyMeasurementPtr: str = 'AnyMeasurementPtr'
 AnyTransformationPtr: str = 'AnyTransformationPtr'
-LazyFrameDomain: str = 'LazyFrame'
-SeriesDomain: str = 'SeriesDomain'
-
-class DomainDescriptor(RuntimeType):
-    def __getitem__(self, subdomain):
-        if not isinstance(subdomain, tuple):
-            subdomain = (subdomain,)
-        return DomainDescriptor(self.origin, [self.parse(type_name=sub_i) for sub_i in subdomain])
-
-    def __call__(self, *args, **kwargs):
-        '''
-        >>> FakeDomain = DomainDescriptor('FakeDomain')
-        >>> FakeDomain(int)
-        Traceback (most recent call last):
-        ...
-        Exception: Use dp.fake_domain to construst a new FakeDomain
-        '''
-        # https://stackoverflow.com/a/12867228/10727889
-        lc_name = re.sub('(?!^)([A-Z])', r'_\1', self.origin).lower()
-        raise Exception(f'Use dp.{lc_name} to construst a new {self.origin}')
-
-
-AtomDomain: DomainDescriptor = DomainDescriptor('AtomDomain')
-VectorDomain: DomainDescriptor = DomainDescriptor('VectorDomain')
-OptionDomain: DomainDescriptor = DomainDescriptor('OptionDomain')
-SizedDomain: DomainDescriptor = DomainDescriptor('SizedDomain')
-MapDomain: DomainDescriptor = DomainDescriptor('MapDomain')
 
 
 def get_atom(type_name):
