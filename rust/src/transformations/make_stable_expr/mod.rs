@@ -72,6 +72,9 @@ mod expr_sum;
 mod expr_to_physical;
 
 #[cfg(feature = "contrib")]
+mod expr_ternary;
+
+#[cfg(feature = "contrib")]
 mod namespace_dt;
 
 #[cfg(feature = "contrib")]
@@ -206,6 +209,9 @@ where
                 function: FunctionExpr::StringExpr(_),
                 ..
             } => namespace_str::make_namespace_str(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Expr::Ternary { .. } => expr_ternary::make_expr_ternary(input_domain, input_metric, self),
 
             expr => fallible!(
                 MakeTransformation,
