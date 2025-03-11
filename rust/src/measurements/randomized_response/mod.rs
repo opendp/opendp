@@ -50,8 +50,8 @@ pub fn make_randomized_response_bool(
         Function::new_fallible(move |arg: &bool| {
             Ok(arg ^ !sample_bernoulli_float(prob, constant_time)?)
         }),
-        DiscreteDistance::default(),
-        MaxDivergence::default(),
+        DiscreteDistance,
+        MaxDivergence,
         PrivacyMap::new(move |d_in| if *d_in == 0 { 0.0 } else { privacy_constant }),
     )
 }
@@ -121,8 +121,8 @@ pub fn make_randomized_response<T: Hashable>(
             let is_member = index.is_some();
             Ok(if be_honest && is_member { truth } else { lie }.clone())
         }),
-        DiscreteDistance::default(),
-        MaxDivergence::default(),
+        DiscreteDistance,
+        MaxDivergence,
         PrivacyMap::new(move |d_in| if *d_in == 0 { 0.0 } else { privacy_constant }),
     )
 }

@@ -14,24 +14,23 @@ pub fn get_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
         Margin::select()
             .with_public_lengths()
             .with_max_partition_length(1000),
-    )?
+    )
     .with_margin(
         Margin::by(["chunk_2_bool"])
             .with_public_lengths()
             .with_max_partition_length(500)
-            .with_max_num_partitions(2)
-            .with_max_partition_contributions(1),
-    )?
+            .with_max_num_partitions(2),
+    )
     .with_margin(
         Margin::by(["chunk_2_bool", "cycle_5_alpha"])
             .with_public_keys()
             .with_max_partition_length(200),
-    )?
+    )
     .with_margin(
         Margin::by(["cycle_(..100i32)"])
             .with_public_keys()
             .with_max_partition_length(100),
-    )?;
+    );
 
     let lf = df!(
         "chunk_2_bool" => [[false; 500], [true; 500]].concat(),

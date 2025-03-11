@@ -93,8 +93,6 @@ where
                 by: margin.by,
                 max_partition_length: Some(1),
                 max_num_partitions: margin.max_num_partitions,
-                max_partition_contributions: None,
-                max_influenced_partitions: margin.max_influenced_partitions,
                 public_info: margin.public_info.clone(),
             },
         },
