@@ -15,8 +15,8 @@ use crate::{
         any::{AnyDomain, AnyMetric, AnyObject, Downcast},
         util::{self, Type},
     },
+    metrics::EventLevelMetric,
     traits::CheckAtom,
-    transformations::DatasetMetric,
 };
 
 use super::{SeriesDomain, SeriesElementDomain};
@@ -196,7 +196,7 @@ impl MetricSpace for (SeriesDomain, AnyMetric) {
     fn check_space(&self) -> Fallible<()> {
         let (domain, metric) = self;
 
-        fn monomorphize_dataset<M: 'static + DatasetMetric>(
+        fn monomorphize_dataset<M: 'static + EventLevelMetric>(
             domain: &SeriesDomain,
             metric: &AnyMetric,
         ) -> Fallible<()>

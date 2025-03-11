@@ -1,18 +1,16 @@
 use std::convert::TryFrom;
 use std::os::raw::c_char;
 
+use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
 use crate::error::Fallible;
-#[allow(deprecated)]
-use crate::transformations::{
-    DataFrameDomain, DatasetMetric, make_df_cast_default, make_df_is_equal,
-};
-
-use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
+use crate::metrics::EventLevelMetric;
 use crate::traits::{Hashable, Primitive, RoundCast};
+#[allow(deprecated)]
+use crate::transformations::{DataFrameDomain, make_df_cast_default, make_df_is_equal};
 
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_df_cast_default(
@@ -31,7 +29,7 @@ pub extern "C" fn opendp_transformations__make_df_cast_default(
         TK: Hashable,
         TIA: Primitive,
         TOA: Primitive + RoundCast<TIA>,
-        M: 'static + DatasetMetric,
+        M: 'static + EventLevelMetric,
         (DataFrameDomain<TK>, M): MetricSpace,
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
@@ -81,7 +79,7 @@ pub extern "C" fn opendp_transformations__make_df_is_equal(
     where
         TK: Hashable,
         TIA: Primitive,
-        M: 'static + DatasetMetric,
+        M: 'static + EventLevelMetric,
         (DataFrameDomain<TK>, M): MetricSpace,
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
@@ -132,7 +130,7 @@ mod tests {
     fn test_df_cast_default() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_df_cast_default(
             AnyDomain::new_raw(DataFrameDomain::<String>::new()),
-            AnyMetric::new_raw(SymmetricDistance::default()),
+            AnyMetric::new_raw(SymmetricDistance),
             AnyObject::new_raw("A".to_string()),
             "String".to_char_p(),
             "bool".to_char_p(),
@@ -154,7 +152,7 @@ mod tests {
     fn test_df_is_equal() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_df_is_equal(
             AnyDomain::new_raw(DataFrameDomain::<String>::new()),
-            AnyMetric::new_raw(SymmetricDistance::default()),
+            AnyMetric::new_raw(SymmetricDistance),
             AnyObject::new_raw("A".to_string()),
             AnyObject::new_raw("yes".to_string()),
             "String".to_char_p(),

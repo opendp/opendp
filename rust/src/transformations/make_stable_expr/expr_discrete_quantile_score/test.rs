@@ -16,12 +16,12 @@ pub fn get_quantile_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
         Margin::select()
             .with_max_partition_length(1000)
             .with_public_keys(),
-    )?
+    )
     .with_margin(
         Margin::by(["cycle_(..10i32)"])
             .with_max_partition_length(1000)
             .with_public_keys(),
-    )?;
+    );
 
     let lf = df!(
         "cycle_(..101f64)" => (0..1010).map(|i| (i % 101) as f64).collect::<Vec<_>>(),

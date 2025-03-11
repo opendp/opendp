@@ -5,7 +5,7 @@ use crate::metrics::SymmetricDistance;
 fn test_find() -> Fallible<()> {
     let find = make_find(
         VectorDomain::default(),
-        SymmetricDistance::default(),
+        SymmetricDistance,
         vec!["1", "3", "4"],
     )?;
     assert_eq!(
@@ -17,11 +17,7 @@ fn test_find() -> Fallible<()> {
 
 #[test]
 fn test_bin() -> Fallible<()> {
-    let bin = make_find_bin(
-        Default::default(),
-        SymmetricDistance::default(),
-        vec![2, 3, 5],
-    )?;
+    let bin = make_find_bin(Default::default(), SymmetricDistance, vec![2, 3, 5])?;
     assert_eq!(
         bin.invoke(&(1..10).collect())?,
         vec![0, 1, 2, 2, 3, 3, 3, 3, 3]
@@ -33,7 +29,7 @@ fn test_bin() -> Fallible<()> {
 fn test_index() -> Fallible<()> {
     let index = make_index(
         VectorDomain::default(),
-        SymmetricDistance::default(),
+        SymmetricDistance,
         vec!["A", "B", "C"],
         "NA",
     )?;

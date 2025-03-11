@@ -11,8 +11,8 @@ pub fn make_test_measurement<T: 'static + Clone + CheckAtom>()
     Measurement::new(
         VectorDomain::new(AtomDomain::default()),
         Function::new(|arg: &Vec<T>| arg[0].clone()),
-        SymmetricDistance::default(),
-        MaxDivergence::default(),
+        SymmetricDistance,
+        MaxDivergence,
         PrivacyMap::new(|d_in| *d_in as f64 + 1.),
     )
 }
@@ -29,8 +29,8 @@ pub fn make_test_transformation<T: Clone + CheckAtom>() -> Fallible<
         VectorDomain::new(AtomDomain::default()),
         VectorDomain::new(AtomDomain::default()),
         Function::new(|arg: &Vec<T>| arg.clone()),
-        SymmetricDistance::default(),
-        SymmetricDistance::default(),
+        SymmetricDistance,
+        SymmetricDistance,
         StabilityMap::new_from_constant(1),
     )
 }

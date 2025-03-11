@@ -52,7 +52,7 @@ pub fn make_resize<TA, MI, MO>(
 where
     TA: 'static + Clone + CheckAtom,
     MI: IsMetricOrdered<Distance = IntDistance>,
-    MO: IsMetricOrdered<Distance = IntDistance>,
+    MO: IsMetricOrdered<Distance = IntDistance> + Default,
     (VectorDomain<AtomDomain<TA>>, MI): MetricSpace,
     (VectorDomain<AtomDomain<TA>>, MO): MetricSpace,
 {
