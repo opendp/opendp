@@ -80,6 +80,12 @@ const BLOCKLIST: &'static [&'static str] = &[
     "onceframe_collect",
     "onceframe_lazy",
     "summarize_polars_measurement",
+    "change_one_id_distance",
+    "_change_one_id_distance_get_identifier",
+    "symmetric_id_distance",
+    "_symmetric_id_distance_get_identifier",
+    "multi_distance",
+    "_multi_distance_get_inner_metric",
 ];
 
 /// Top-level function to generate R bindings, including all modules.

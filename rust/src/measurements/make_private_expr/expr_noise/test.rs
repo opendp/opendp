@@ -5,7 +5,7 @@ use crate::{
     domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain},
     error::ErrorVariant,
     measurements::{PrivateExpr, make_private_expr, make_private_lazyframe},
-    metrics::{InsertDeleteDistance, PartitionDistance, SymmetricDistance},
+    metrics::{InsertDeleteDistance, Multi, PartitionDistance, SymmetricDistance},
     polars::PrivacyNamespace,
     transformations::test_helper::get_test_data,
 };
@@ -18,7 +18,7 @@ fn test_make_expr_puredp() -> Fallible<()> {
     let m_quant = make_private_expr(
         lf_domain.select(),
         PartitionDistance(InsertDeleteDistance),
-        MaxDivergence::default(),
+        MaxDivergence,
         col("const_1f64").dp().sum((0., 1.), Some(scale)),
         None,
     )?;
@@ -60,7 +60,7 @@ fn test_fail_make_expr_wrong_distribution() -> Fallible<()> {
     let variant = make_private_expr(
         lf_domain.select(),
         PartitionDistance(InsertDeleteDistance),
-        MaxDivergence::default(),
+        MaxDivergence,
         col("const_1f64")
             .clip(lit(0.), lit(1.))
             .sum()
@@ -110,8 +110,8 @@ fn test_make_laplace_grouped() -> Fallible<()> {
         .laplace(None);
     let m_lap = make_private_lazyframe(
         lf_domain,
-        SymmetricDistance,
-        MaxDivergence::default(),
+        Multi(SymmetricDistance),
+        MaxDivergence,
         lf.clone().group_by(["chunk_2_bool"]).agg([expr_exp]),
         Some(scale),
         None,

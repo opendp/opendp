@@ -323,13 +323,13 @@ impl<Q, A> CheckNull for Queryable<Q, A> {
     const NULLABLE: bool = false;
 }
 
-// TRAIT InherentNull
-macro_rules! impl_inherent_null_float {
+// TRAIT HasNull
+macro_rules! impl_HasNull_float {
     ($($ty:ty),+) => ($(impl HasNull for $ty {
         const NULL: Self = Self::NAN;
     })+)
 }
-impl_inherent_null_float!(f64, f32);
+impl_HasNull_float!(f64, f32);
 
 // TRAIT ProductOrd
 macro_rules! impl_ProductOrd_for_ord {

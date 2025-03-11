@@ -1,6 +1,6 @@
 use crate::{
     domains::{AtomDomain, LazyFrameDomain, Margin, OptionDomain, SeriesDomain},
-    metrics::SymmetricDistance,
+    metrics::{Multi, SymmetricDistance},
     transformations::make_stable_lazyframe,
 };
 
@@ -18,7 +18,7 @@ fn test_with_column() -> Fallible<()> {
 
     let t_with_column = make_stable_lazyframe(
         lf_domain.clone(),
-        SymmetricDistance,
+        Multi(SymmetricDistance),
         lf.clone().with_column(lit(2).gt(col("chunk_2_null"))),
     )?;
 
@@ -51,7 +51,7 @@ fn test_fill_nan() -> Fallible<()> {
 
     let t_with_column = make_stable_lazyframe(
         lf_domain.clone(),
-        SymmetricDistance,
+        Multi(SymmetricDistance),
         lf.clone().fill_nan(lit(2.)),
     )?;
 

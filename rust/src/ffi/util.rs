@@ -23,6 +23,9 @@ use crate::metrics::{
 };
 
 #[cfg(feature = "polars")]
+use crate::metrics::{ChangeOneIdDistance, GroupBound, GroupBounds, Multi, SymmetricIdDistance};
+
+#[cfg(feature = "polars")]
 use crate::polars::{OnceFrame, OnceFrameAnswer, OnceFrameQuery};
 
 use crate::transformations::DataFrameDomain;
@@ -309,6 +312,14 @@ lazy_static! {
             type_vec![CategoricalDomain, DatetimeDomain, EnumDomain, ArrayDomain],
             type_vec![OptionDomain, <CategoricalDomain, DatetimeDomain, EnumDomain, ArrayDomain>],
             type_vec![Margin],
+
+            // metrics
+            type_vec![SymmetricIdDistance, ChangeOneIdDistance],
+            type_vec![Multi, <SymmetricDistance, InsertDeleteDistance, SymmetricIdDistance>],
+
+            // metric distances
+            type_vec![GroupBound, GroupBounds],
+            type_vec![Vec, <GroupBound>],
 
             vec![t!((DslPlan, Expr))],
             type_vec![Vec, <(DslPlan, Expr), SeriesDomain, Expr>],

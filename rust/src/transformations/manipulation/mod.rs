@@ -6,9 +6,7 @@ use opendp_derive::bootstrap;
 use crate::core::{Domain, Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::*;
-use crate::metrics::{
-    ChangeOneDistance, HammingDistance, InsertDeleteDistance, IntDistance, SymmetricDistance,
-};
+use crate::metrics::EventLevelMetric;
 use crate::traits::{CheckAtom, CheckNull};
 
 /// A [`Domain`] representing a dataset.
@@ -26,28 +24,6 @@ pub trait DatasetDomain: Domain {
 
 impl<D: Domain> DatasetDomain for VectorDomain<D> {
     type ElementDomain = D;
-}
-
-pub trait DatasetMetric: Metric<Distance = IntDistance> {
-    const ORDERED: bool;
-    const SIZED: bool;
-}
-
-impl DatasetMetric for SymmetricDistance {
-    const ORDERED: bool = false;
-    const SIZED: bool = false;
-}
-impl DatasetMetric for InsertDeleteDistance {
-    const ORDERED: bool = true;
-    const SIZED: bool = false;
-}
-impl DatasetMetric for ChangeOneDistance {
-    const ORDERED: bool = false;
-    const SIZED: bool = true;
-}
-impl DatasetMetric for HammingDistance {
-    const ORDERED: bool = true;
-    const SIZED: bool = false;
 }
 
 pub trait RowByRowDomain<DO: DatasetDomain>: DatasetDomain {
@@ -94,7 +70,7 @@ pub(crate) fn make_row_by_row<DI, DO, M>(
 where
     DI: RowByRowDomain<DO>,
     DO: DatasetDomain,
-    M: DatasetMetric<Distance = IntDistance>,
+    M: EventLevelMetric,
     (DI, M): MetricSpace,
     (DO, M): MetricSpace,
 {
@@ -117,7 +93,7 @@ pub(crate) fn make_row_by_row_fallible<DI, DO, M>(
 where
     DI: RowByRowDomain<DO>,
     DO: DatasetDomain,
-    M: DatasetMetric<Distance = IntDistance>,
+    M: EventLevelMetric,
     (DI, M): MetricSpace,
     (DO, M): MetricSpace,
 {
@@ -203,7 +179,7 @@ pub fn make_is_equal<TIA, M>(
 ) -> Fallible<Transformation<VectorDomain<AtomDomain<TIA>>, VectorDomain<AtomDomain<bool>>, M, M>>
 where
     TIA: 'static + PartialEq + CheckAtom,
-    M: DatasetMetric,
+    M: EventLevelMetric,
     (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
     (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
 {
@@ -232,7 +208,7 @@ pub fn make_is_null<M, DIA>(
 where
     DIA: Domain,
     DIA::Carrier: 'static + CheckNull,
-    M: DatasetMetric,
+    M: EventLevelMetric,
     (VectorDomain<DIA>, M): MetricSpace,
     (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
 {

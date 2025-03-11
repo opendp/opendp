@@ -7,7 +7,7 @@ fn test_cast() -> Fallible<()> {
     let data = vec![1., 1e10, 0.5, f64::NAN, f64::NEG_INFINITY, f64::INFINITY];
     let caster = make_cast::<_, f64, i64>(
         VectorDomain::new(AtomDomain::default()),
-        InsertDeleteDistance::default(),
+        InsertDeleteDistance,
     )?;
     assert_eq!(
         caster.invoke(&data)?,
@@ -16,7 +16,7 @@ fn test_cast() -> Fallible<()> {
 
     let caster = make_cast::<_, f64, u8>(
         VectorDomain::new(AtomDomain::default()).with_size(4),
-        HammingDistance::default(),
+        HammingDistance,
     )?;
     assert_eq!(
         caster.invoke(&vec![-1., f64::NAN, f64::NEG_INFINITY, f64::INFINITY])?,
@@ -31,12 +31,12 @@ fn test_cast_combinations() -> Fallible<()> {
         ($from:ty, $to:ty) => {
             let caster = make_cast::<_, $from, $to>(
                 VectorDomain::new(AtomDomain::default()),
-                SymmetricDistance::default(),
+                SymmetricDistance,
             )?;
             caster.invoke(&vec![<$from>::default()])?;
             let caster = make_cast::<_, $from, $to>(
                 VectorDomain::new(AtomDomain::default()),
-                SymmetricDistance::default(),
+                SymmetricDistance,
             )?;
             caster.invoke(&vec![<$from>::default()])?;
         };
@@ -66,7 +66,7 @@ fn test_cast_combinations() -> Fallible<()> {
 
 #[test]
 fn test_cast_default_unsigned() -> Fallible<()> {
-    let caster = make_cast_default::<_, f64, u8>(Default::default(), SymmetricDistance::default())?;
+    let caster = make_cast_default::<_, f64, u8>(Default::default(), SymmetricDistance)?;
     assert_eq!(caster.invoke(&vec![-1.])?, vec![u8::default()]);
     Ok(())
 }
@@ -80,15 +80,13 @@ fn test_cast_default_parse() -> Fallible<()> {
         "".to_string(),
     ];
 
-    let caster =
-        make_cast_default::<_, String, u8>(Default::default(), SymmetricDistance::default())?;
+    let caster = make_cast_default::<_, String, u8>(Default::default(), SymmetricDistance)?;
     assert_eq!(
         caster.invoke(&data)?,
         vec![2, 3, u8::default(), u8::default()]
     );
 
-    let caster =
-        make_cast_default::<_, String, f64>(Default::default(), SymmetricDistance::default())?;
+    let caster = make_cast_default::<_, String, f64>(Default::default(), SymmetricDistance)?;
     assert_eq!(
         caster.invoke(&data)?,
         vec![2., 3., f64::default(), f64::default()]
@@ -99,14 +97,13 @@ fn test_cast_default_parse() -> Fallible<()> {
 #[test]
 fn test_cast_default_floats() -> Fallible<()> {
     let data = vec![f64::NAN, f64::NEG_INFINITY, f64::INFINITY];
-    let caster =
-        make_cast_default::<_, f64, String>(Default::default(), SymmetricDistance::default())?;
+    let caster = make_cast_default::<_, f64, String>(Default::default(), SymmetricDistance)?;
     assert_eq!(
         caster.invoke(&data)?,
         vec!["NaN".to_string(), "-inf".to_string(), "inf".to_string()]
     );
 
-    let caster = make_cast_default::<_, f64, u8>(Default::default(), SymmetricDistance::default())?;
+    let caster = make_cast_default::<_, f64, u8>(Default::default(), SymmetricDistance)?;
     assert_eq!(
         caster.invoke(&vec![f64::NAN, f64::NEG_INFINITY, f64::INFINITY])?,
         vec![u8::default(), u8::default(), u8::default()]
@@ -125,8 +122,7 @@ fn test_cast_default_floats() -> Fallible<()> {
     .into_iter()
     .map(|v| v.to_string())
     .collect();
-    let caster =
-        make_cast_default::<_, String, f64>(Default::default(), SymmetricDistance::default())?;
+    let caster = make_cast_default::<_, String, f64>(Default::default(), SymmetricDistance)?;
     assert!(caster.invoke(&data)?.into_iter().all(|v| v == 100.));
     Ok(())
 }
@@ -134,10 +130,7 @@ fn test_cast_default_floats() -> Fallible<()> {
 #[test]
 fn test_cast_inherent() -> Fallible<()> {
     let data = vec!["abc".to_string(), "1".to_string(), "1.".to_string()];
-    let caster = make_cast_inherent::<_, String, f64>(
-        VectorDomain::default(),
-        SymmetricDistance::default(),
-    )?;
+    let caster = make_cast_inherent::<_, String, f64>(VectorDomain::default(), SymmetricDistance)?;
     let res = caster.invoke(&data)?;
     assert!(res[0].is_nan());
     assert_eq!(res[1..], vec![1., 1.]);

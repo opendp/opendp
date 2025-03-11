@@ -1,20 +1,20 @@
-use std::fmt::Debug;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use crate::accuracy::{
     conservative_discrete_gaussian_tail_to_alpha, conservative_discrete_laplacian_tail_to_alpha,
 };
 use crate::combinators::{BasicCompositionMeasure, make_basic_composition};
-use crate::core::{Function, Measurement, MetricSpace, PrivacyMap};
-use crate::domains::{CategoricalDomain, Context, DslPlanDomain, WildExprDomain};
+use crate::core::{Function, Measurement, PrivacyMap};
+use crate::domains::{CategoricalDomain, Context, DslPlanDomain, WildExprDomain, option_min};
 use crate::error::*;
 use crate::measurements::expr_noise::Distribution;
 use crate::measurements::make_private_expr;
 use crate::measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence};
-use crate::metrics::PartitionDistance;
+use crate::metrics::{GroupBounds, Multi, PartitionDistance};
 use crate::traits::{InfAdd, InfMul, InfPowI, InfSub};
 use crate::transformations::traits::UnboundedMetric;
-use crate::transformations::{DatasetMetric, StableDslPlan, StableExpr};
+use crate::transformations::{StableDslPlan, StableExpr};
 use dashu::integer::IBig;
 use make_private_expr::PrivateExpr;
 use matching::find_len_expr;
@@ -38,24 +38,21 @@ use polars_plan::prelude::ProjectionOptions;
 /// * `plan` - The LazyFrame to transform.
 /// * `global_scale` - The parameter for the measurement.
 /// * `threshold` - Only keep groups with length greater than threshold
-pub fn make_private_group_by<MS, MI, MO>(
+pub fn make_private_group_by<MI, MO>(
     input_domain: DslPlanDomain,
-    input_metric: MS,
+    input_metric: Multi<MI>,
     output_measure: MO,
     plan: DslPlan,
     global_scale: Option<f64>,
     threshold: Option<u32>,
-) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, MO>>
+) -> Fallible<Measurement<DslPlanDomain, DslPlan, Multi<MI>, MO>>
 where
-    MS: 'static + DatasetMetric,
     MI: 'static + UnboundedMetric,
+    MI::EventMetric: UnboundedMetric,
     MO: 'static + ApproximateMeasure,
-    MO::Distance: Debug,
-    Expr: PrivateExpr<PartitionDistance<MI>, MO>
-        + StableExpr<PartitionDistance<MI>, PartitionDistance<MI>>,
-    DslPlan: StableDslPlan<MS, MI>,
-    (DslPlanDomain, MS): MetricSpace,
-    (DslPlanDomain, MI): MetricSpace,
+    Expr: PrivateExpr<PartitionDistance<MI::EventMetric>, MO>
+        + StableExpr<PartitionDistance<MI::EventMetric>, PartitionDistance<MI::EventMetric>>,
+    DslPlan: StableDslPlan<Multi<MI>, Multi<MI::EventMetric>>,
 {
     let Some(MatchGroupBy {
         input,
@@ -80,7 +77,7 @@ where
         .map(|expr| {
             expr.clone().make_stable(
                 expr_domain.clone(),
-                PartitionDistance(middle_metric.clone()),
+                PartitionDistance(middle_metric.0.clone()),
             )
         })
         .collect::<Fallible<Vec<_>>>()?;
@@ -124,7 +121,7 @@ where
             .map(|expr| {
                 make_private_expr(
                     expr_domain.clone(),
-                    PartitionDistance(middle_metric.clone()),
+                    PartitionDistance(middle_metric.0.clone()),
                     output_measure.clone(),
                     expr,
                     global_scale,
@@ -229,15 +226,31 @@ where
         }),
         middle_metric,
         output_measure.clone(),
-        PrivacyMap::new_fallible(move |&d_in| {
-            let mip = margin.max_influenced_partitions.unwrap_or(d_in);
-            let mnp = margin.max_num_partitions.unwrap_or(d_in);
-            let mpc = margin.max_partition_contributions.unwrap_or(d_in);
-            let mpl = margin.max_partition_length.unwrap_or(d_in);
+        PrivacyMap::new_fallible(move |d_in: &GroupBounds| {
+            let bound = d_in.get_bound(&group_by_id);
+            let mip = bound.max_influenced_partitions;
+            let mpc = bound.max_partition_contributions;
 
-            let l0 = mip.min(mnp).min(d_in);
-            let li = mpc.min(mpl).min(d_in);
-            let l1 = l0.inf_mul(&li)?.min(d_in);
+            let mnp = margin.max_num_partitions;
+            let mpl = margin.max_partition_length;
+
+            // incorporate all information into optional bounds
+            let l0 = option_min(mip, mnp);
+            let li = option_min(mpc, mpl);
+            let l1 = d_in.get_bound(&HashSet::new()).max_partition_contributions;
+
+            // reduce optional bounds to concrete bounds
+            let (l0, l1, li) = match (l0, l1, li) {
+                (Some(l0), Some(l1), Some(li)) => (l0, l1, li),
+                (l0, Some(l1), li) => (l0.unwrap_or(l1), l1, li.unwrap_or(l1)),
+                (Some(l0), None, Some(li)) => (l0, l0.inf_mul(&li)?, li),
+                _ => {
+                    return fallible!(
+                        FailedMap,
+                        "l0, l1, l∞ bounds ({l0:?}, {l1:?}, {li:?}) are not well-defined. Either truncate, or set max_influenced_partitions and max_partition_contributions."
+                    );
+                }
+            };
 
             let mut d_out = privacy_map.eval(&(l0, l1, li))?;
 

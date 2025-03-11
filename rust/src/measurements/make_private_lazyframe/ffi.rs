@@ -2,8 +2,8 @@ use polars::lazy::frame::LazyFrame;
 use polars_plan::plans::DslPlan;
 
 use crate::{
-    core::{FfiResult, IntoAnyMeasurementFfiResultExt, Measure},
-    domains::LazyFrameDomain,
+    core::{FfiResult, IntoAnyMeasurementFfiResultExt, Measure, Metric, MetricSpace},
+    domains::{DslPlanDomain, LazyFrameDomain},
     error::Fallible,
     ffi::{
         any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, Downcast},
@@ -11,7 +11,10 @@ use crate::{
     },
     measurements::PrivateDslPlan,
     measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
-    metrics::SymmetricDistance,
+    metrics::{
+        ChangeOneDistance, ChangeOneIdDistance, HammingDistance, InsertDeleteDistance, Multi,
+        SymmetricDistance, SymmetricIdDistance,
+    },
 };
 
 use super::make_private_lazyframe;
@@ -26,8 +29,9 @@ pub extern "C" fn opendp_measurements__make_private_lazyframe(
     threshold: *const AnyObject,
 ) -> FfiResult<*mut AnyMeasurement> {
     let input_domain = try_!(try_as_ref!(input_domain).downcast_ref::<LazyFrameDomain>()).clone();
-    let input_metric = try_!(try_as_ref!(input_metric).downcast_ref::<SymmetricDistance>()).clone();
+    let input_metric = try_as_ref!(input_metric);
     let output_measure = try_as_ref!(output_measure);
+    let MI_ = input_metric.type_.clone();
     let MO_ = output_measure.type_.clone();
 
     let lazyframe = try_!(try_as_ref!(lazyframe).downcast_ref::<LazyFrame>()).clone();
@@ -44,17 +48,20 @@ pub extern "C" fn opendp_measurements__make_private_lazyframe(
         None
     };
 
-    fn monomorphize<MO: 'static + Measure>(
+    fn monomorphize<MI: 'static + Metric, MO: 'static + Measure>(
         input_domain: LazyFrameDomain,
-        input_metric: SymmetricDistance,
+        input_metric: &AnyMetric,
         output_measure: &AnyMeasure,
         lazyframe: LazyFrame,
         global_scale: Option<f64>,
         threshold: Option<u32>,
     ) -> Fallible<AnyMeasurement>
     where
-        DslPlan: PrivateDslPlan<SymmetricDistance, MO>,
+        DslPlan: PrivateDslPlan<MI, MO>,
+        (LazyFrameDomain, MI): MetricSpace,
+        (DslPlanDomain, MI): MetricSpace,
     {
+        let input_metric = input_metric.downcast_ref::<MI>()?.clone();
         let output_measure = output_measure.downcast_ref::<MO>()?.clone();
         Ok(make_private_lazyframe(
             input_domain,
@@ -71,7 +78,13 @@ pub extern "C" fn opendp_measurements__make_private_lazyframe(
 
     dispatch!(
         monomorphize,
-        [(MO_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>])],
+        [
+            (MI_, [
+                SymmetricDistance, SymmetricIdDistance, InsertDeleteDistance,
+                ChangeOneDistance, HammingDistance, ChangeOneIdDistance,
+                Multi<SymmetricDistance>, Multi<SymmetricIdDistance>, Multi<InsertDeleteDistance>
+            ]),
+            (MO_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>])],
         (
             input_domain,
             input_metric,

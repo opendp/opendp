@@ -1,5 +1,6 @@
 use super::*;
 use crate::domains::{AtomDomain, OptionDomain};
+use crate::metrics::SymmetricDistance;
 
 #[cfg(feature = "honest-but-curious")]
 #[test]

@@ -7,7 +7,7 @@ fn test_df_cast_default() -> Fallible<()> {
     #[allow(deprecated)]
     let trans = make_df_cast_default::<String, i32, bool, _>(
         Default::default(),
-        SymmetricDistance::default(),
+        SymmetricDistance,
         "filter".to_string(),
     )?;
 
@@ -30,12 +30,7 @@ fn test_df_cast_default() -> Fallible<()> {
 #[test]
 fn test_df_is_equal() -> Fallible<()> {
     #[allow(deprecated)]
-    let trans = make_df_is_equal(
-        Default::default(),
-        SymmetricDistance::default(),
-        0,
-        "true".to_string(),
-    )?;
+    let trans = make_df_is_equal(Default::default(), SymmetricDistance, 0, "true".to_string())?;
 
     let mut df = DataFrame::new();
     df.insert(

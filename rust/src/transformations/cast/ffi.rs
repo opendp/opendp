@@ -7,9 +7,9 @@ use crate::err;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
-use crate::metrics::IntDistance;
+use crate::metrics::EventLevelMetric;
 use crate::traits::{CheckAtom, HasNull, RoundCast};
-use crate::transformations::{DatasetMetric, make_cast, make_cast_default, make_cast_inherent};
+use crate::transformations::{make_cast, make_cast_default, make_cast_inherent};
 
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_cast(
@@ -28,7 +28,7 @@ pub extern "C" fn opendp_transformations__make_cast(
         input_metric: &AnyMetric,
     ) -> Fallible<AnyTransformation>
     where
-        M: 'static + DatasetMetric<Distance = IntDistance>,
+        M: EventLevelMetric,
         TIA: 'static + Clone + CheckAtom,
         TOA: 'static + RoundCast<TIA> + CheckAtom,
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
@@ -65,7 +65,7 @@ pub extern "C" fn opendp_transformations__make_cast_default(
         input_metric: &AnyMetric,
     ) -> Fallible<AnyTransformation>
     where
-        M: 'static + DatasetMetric,
+        M: EventLevelMetric,
         TIA: 'static + Clone + CheckAtom,
         TOA: 'static + RoundCast<TIA> + Default + CheckAtom,
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
@@ -102,7 +102,7 @@ pub extern "C" fn opendp_transformations__make_cast_inherent(
         input_metric: &AnyMetric,
     ) -> Fallible<AnyTransformation>
     where
-        M: 'static + DatasetMetric,
+        M: EventLevelMetric,
         TIA: 'static + Clone + CheckAtom,
         TOA: 'static + RoundCast<TIA> + HasNull + CheckAtom,
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
@@ -136,7 +136,7 @@ mod tests {
     fn test_make_cast() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_cast(
             AnyDomain::new_raw(VectorDomain::new(AtomDomain::<i32>::default())),
-            AnyMetric::new_raw(SymmetricDistance::default()),
+            AnyMetric::new_raw(SymmetricDistance),
             "f64".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(vec![1, 2, 3]);
@@ -150,7 +150,7 @@ mod tests {
     fn test_make_cast_default() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_cast_default(
             AnyDomain::new_raw(VectorDomain::new(AtomDomain::<String>::default())),
-            AnyMetric::new_raw(SymmetricDistance::default()),
+            AnyMetric::new_raw(SymmetricDistance),
             "i32".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(vec!["a".to_string(), "1".to_string()]);
@@ -164,7 +164,7 @@ mod tests {
     fn test_make_cast_inherent() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_cast_inherent(
             AnyDomain::new_raw(VectorDomain::new(AtomDomain::<String>::default())),
-            AnyMetric::new_raw(SymmetricDistance::default()),
+            AnyMetric::new_raw(SymmetricDistance),
             "f64".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(vec!["a".to_string(), "1".to_string()]);

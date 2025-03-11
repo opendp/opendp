@@ -19,8 +19,7 @@ pub fn get_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
         Margin::by(["chunk_2_bool"])
             .with_public_lengths()
             .with_max_partition_length(500)
-            .with_max_num_partitions(2)
-            .with_max_partition_contributions(1),
+            .with_max_num_partitions(2),
     )?
     .with_margin(
         Margin::by(["chunk_2_bool", "cycle_5_alpha"])

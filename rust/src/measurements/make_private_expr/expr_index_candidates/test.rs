@@ -42,7 +42,7 @@ fn test_index_candidates_expr() -> Fallible<()> {
         .make_private(
             lf_domain.select(),
             PartitionDistance(SymmetricDistance),
-            MaxDivergence::default(),
+            MaxDivergence,
             None,
         )?;
 

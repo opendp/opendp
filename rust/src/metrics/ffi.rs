@@ -17,6 +17,7 @@ use super::{
     ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance, LInfDistance,
     PartitionDistance, SymmetricDistance,
 };
+
 #[bootstrap(
     name = "_metric_free",
     arguments(this(do_not_convert = true)),
@@ -102,7 +103,7 @@ pub extern "C" fn opendp_metrics__metric_distance_type(
 /// Construct an instance of the `SymmetricDistance` metric.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__symmetric_distance() -> FfiResult<*mut AnyMetric> {
-    FfiResult::Ok(util::into_raw(AnyMetric::new(SymmetricDistance::default())))
+    FfiResult::Ok(util::into_raw(AnyMetric::new(SymmetricDistance)))
 }
 
 #[bootstrap(
@@ -112,9 +113,7 @@ pub extern "C" fn opendp_metrics__symmetric_distance() -> FfiResult<*mut AnyMetr
 /// Construct an instance of the `InsertDeleteDistance` metric.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__insert_delete_distance() -> FfiResult<*mut AnyMetric> {
-    FfiResult::Ok(util::into_raw(AnyMetric::new(
-        InsertDeleteDistance::default(),
-    )))
+    FfiResult::Ok(util::into_raw(AnyMetric::new(InsertDeleteDistance)))
 }
 
 #[bootstrap(
@@ -131,7 +130,7 @@ pub extern "C" fn opendp_metrics__change_one_distance() -> FfiResult<*mut AnyMet
 /// Construct an instance of the `HammingDistance` metric.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__hamming_distance() -> FfiResult<*mut AnyMetric> {
-    FfiResult::Ok(util::into_raw(AnyMetric::new(HammingDistance::default())))
+    FfiResult::Ok(util::into_raw(AnyMetric::new(HammingDistance)))
 }
 
 #[bootstrap(returns(c_type = "FfiResult<AnyMetric *>"))]
@@ -190,7 +189,7 @@ pub extern "C" fn opendp_metrics__l2_distance(T: *const c_char) -> FfiResult<*mu
 /// Construct an instance of the `DiscreteDistance` metric.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__discrete_distance() -> FfiResult<*mut AnyMetric> {
-    FfiResult::Ok(util::into_raw(AnyMetric::new(DiscreteDistance::default())))
+    FfiResult::Ok(util::into_raw(AnyMetric::new(DiscreteDistance)))
 }
 
 #[bootstrap(
