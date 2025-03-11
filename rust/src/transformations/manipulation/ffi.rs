@@ -7,8 +7,9 @@ use crate::err;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::{Type, TypeContents};
+use crate::metrics::EventLevelMetric;
 use crate::traits::{CheckAtom, HasNull, Primitive};
-use crate::transformations::{DatasetMetric, make_is_equal, make_is_null};
+use crate::transformations::{make_is_equal, make_is_null};
 
 #[cfg(feature = "honest-but-curious")]
 #[unsafe(no_mangle)]
@@ -41,7 +42,7 @@ pub extern "C" fn opendp_transformations__make_is_equal(
     ) -> Fallible<AnyTransformation>
     where
         TIA: Primitive,
-        M: 'static + DatasetMetric,
+        M: EventLevelMetric,
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
     {
@@ -90,7 +91,7 @@ pub extern "C" fn opendp_transformations__make_is_null(
             ) -> Fallible<AnyTransformation>
             where
                 TIA: 'static + CheckAtom,
-                M: 'static + DatasetMetric,
+                M: EventLevelMetric,
                 (VectorDomain<OptionDomain<AtomDomain<TIA>>>, M): MetricSpace,
                 (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
             {
@@ -109,7 +110,7 @@ pub extern "C" fn opendp_transformations__make_is_null(
             ) -> Fallible<AnyTransformation>
             where
                 TIA: 'static + CheckAtom + HasNull,
-                M: 'static + DatasetMetric,
+                M: EventLevelMetric,
                 (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
                 (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
             {
@@ -143,7 +144,7 @@ mod tests {
     fn test_make_identity() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_identity(
             AnyDomain::new_raw(VectorDomain::new(AtomDomain::<i32>::default())),
-            AnyMetric::new_raw(SymmetricDistance::default()),
+            AnyMetric::new_raw(SymmetricDistance),
         ))?;
         let arg = AnyObject::new_raw(vec![123]);
         let res = core::opendp_core__transformation_invoke(&transformation, arg);
@@ -156,7 +157,7 @@ mod tests {
     fn test_make_is_equal() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_is_equal(
             AnyDomain::new_raw(VectorDomain::new(AtomDomain::<i32>::default())),
-            AnyMetric::new_raw(SymmetricDistance::default()),
+            AnyMetric::new_raw(SymmetricDistance),
             AnyObject::new_raw(1) as *const AnyObject,
         ))?;
         let arg = AnyObject::new_raw(vec![1, 2, 3]);
@@ -170,7 +171,7 @@ mod tests {
     fn test_make_is_null() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_is_null(
             AnyDomain::new_raw(VectorDomain::new(AtomDomain::<f64>::default())),
-            AnyMetric::new_raw(SymmetricDistance::default()),
+            AnyMetric::new_raw(SymmetricDistance),
         ))?;
         let arg = AnyObject::new_raw(vec![1., 2., f64::NAN]);
         let res = core::opendp_core__transformation_invoke(&transformation, arg);

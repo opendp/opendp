@@ -18,7 +18,7 @@ fn test_make_count_expr_grouped() -> Fallible<()> {
     let m_lap = len().make_private(
         expr_domain,
         PartitionDistance(SymmetricDistance),
-        MaxDivergence::default(),
+        MaxDivergence,
         None,
     )?;
 
@@ -48,7 +48,7 @@ fn test_make_count_expr_no_length() -> Fallible<()> {
         .make_private(
             expr_domain,
             PartitionDistance(SymmetricDistance),
-            MaxDivergence::default(),
+            MaxDivergence,
             None,
         )
         .map(|_| ())

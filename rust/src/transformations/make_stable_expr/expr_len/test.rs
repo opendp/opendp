@@ -3,7 +3,7 @@ use polars_plan::dsl::len;
 
 use crate::{
     core::Transformation,
-    metrics::{InsertDeleteDistance, L2Distance, PartitionDistance},
+    metrics::{InsertDeleteDistance, L2Distance, Multi, PartitionDistance},
     transformations::{StableExpr, test_helper::get_test_data},
 };
 
@@ -80,8 +80,8 @@ fn test_select_make_expr_len_row_by_row() -> Fallible<()> {
 
     assert!(
         len()
-            .make_stable(expr_domain, InsertDeleteDistance)
-            .map(|_: Transformation<_, _, _, InsertDeleteDistance>| ())
+            .make_stable(expr_domain, Multi(InsertDeleteDistance))
+            .map(|_: Transformation<_, _, _, Multi<InsertDeleteDistance>>| ())
             .is_err()
     );
 

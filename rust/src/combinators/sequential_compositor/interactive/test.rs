@@ -11,8 +11,8 @@ fn test_sequential_composition() -> Fallible<()> {
     // construct sequential compositor IM
     let root = make_sequential_composition::<_, Box<dyn Any>, _, _>(
         AtomDomain::default(),
-        DiscreteDistance::default(),
-        MaxDivergence::default(),
+        DiscreteDistance,
+        MaxDivergence,
         1,
         vec![0.1, 0.1, 0.3, 0.5],
     )?;
@@ -38,8 +38,8 @@ fn test_sequential_composition() -> Fallible<()> {
     // This compositor expects all outputs are concretely-typed (bool)
     let sc_query_3 = make_sequential_composition::<_, bool, _, _>(
         AtomDomain::<bool>::default(),
-        DiscreteDistance::default(),
-        MaxDivergence::default(),
+        DiscreteDistance,
+        MaxDivergence,
         1,
         vec![0.1, 0.1],
     )?
@@ -60,8 +60,8 @@ fn test_sequential_composition() -> Fallible<()> {
     println!("\nbuild a dyn sequential composition IM and then convert to poly");
     let sc_query_4 = make_sequential_composition::<_, Box<dyn Any>, _, _>(
         AtomDomain::<bool>::default(),
-        DiscreteDistance::default(),
-        MaxDivergence::default(),
+        DiscreteDistance,
+        MaxDivergence,
         1,
         vec![0.2, 0.3],
     )?

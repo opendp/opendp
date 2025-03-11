@@ -114,7 +114,7 @@ where
 
             ssd / (_size - _ddof)
         })),
-        SymmetricDistance::default(),
+        SymmetricDistance,
         AbsoluteDistance::default(),
         // d_in / 2 * sensitivity + relaxation
         StabilityMap::new_fallible(move |d_in| {

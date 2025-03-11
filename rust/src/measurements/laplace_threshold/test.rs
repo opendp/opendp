@@ -14,7 +14,7 @@ fn test_count_by_ptr() -> Fallible<()> {
 
     let measurement = (make_count_by(
         VectorDomain::new(AtomDomain::new_non_nan()),
-        SymmetricDistance::default(),
+        SymmetricDistance,
     )? >> then_laplace_threshold(scale, threshold, None))?;
     let ret = measurement.invoke(&vec!['a', 'b', 'a', 'a', 'a', 'a', 'b', 'a', 'a', 'a', 'a'])?;
     println!("stability eval: {:?}", ret);

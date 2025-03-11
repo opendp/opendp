@@ -59,7 +59,7 @@ where
             })
         },
         input_metric,
-        MaxDivergence::default(),
+        MaxDivergence,
         PrivacyMap::new_fallible(laplace_puredp_map(scale, 0.0)),
     )
 }
@@ -114,7 +114,7 @@ where
             })
         },
         input_metric,
-        MaxDivergence::default(),
+        MaxDivergence,
         PrivacyMap::new_fallible(laplace_puredp_map(scale, 0.0)),
     )
 }

@@ -106,7 +106,7 @@ pub extern "C" fn opendp_transformations__make_count_by_categories(
             null_category: bool,
         ) -> Fallible<AnyTransformation>
         where
-            MO: 'static + Metric + CountByCategoriesConstant<MO::Distance>,
+            MO: 'static + Metric + CountByCategoriesConstant<MO::Distance> + Default,
             MO::Distance: Number,
             TI: Hashable,
             TO: Number,
@@ -166,7 +166,7 @@ pub extern "C" fn opendp_transformations__make_count_by(
             input_metric: &AnyMetric,
         ) -> Fallible<AnyTransformation>
         where
-            MO: 'static + Metric + CountByConstant<MO::Distance>,
+            MO: 'static + Metric + CountByConstant<MO::Distance> + Default,
             MO::Distance: Number,
             TK: Hashable,
             TV: Number,

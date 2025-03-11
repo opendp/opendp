@@ -34,6 +34,9 @@ __all__ = [
     'LazyFrameDomain',
     'ExtrinsicDomain',
     'Metric',
+    'SymmetricIdDistance',
+    'ChangeOneIdDistance',
+    'MultiDistance',
     'Measure',
     'PrivacyProfile',
     '_PartialConstructor',
@@ -798,6 +801,50 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
     def __iter__(self):
         raise ValueError("Metric does not support iteration")  # pragma: no cover
 
+class MultiDistance(Metric):
+    '''`MultiDistance` is a higher-order metric with multiple distance types for grouped data.'''
+
+    _type_ = AnyMetric
+    
+    @property
+    def inner_metric(self) -> Metric | None:
+        '''Bounds of the domain, if they exist'''
+        from opendp.metrics import _multi_distance_get_inner_metric
+        return _multi_distance_get_inner_metric(self)
+    
+    def __del__(self):
+        # this is to avoid a double-free, as the Domain.__del__ will, suprisingly, still be called
+        pass
+
+class SymmetricIdDistance(Metric):
+    '''`SymmetricIdDistance` is a metric for measuring the distance between the identifiers of two datasets.'''
+
+    _type_ = AnyMetric
+    
+    @property
+    def identifier(self):
+        '''The name of the column storing identifiers'''
+        from opendp.metrics import _symmetric_id_distance_get_identifier
+        return _symmetric_id_distance_get_identifier(self)
+    
+    def __del__(self):
+        # this is to avoid a double-free, as the Domain.__del__ will, suprisingly, still be called
+        pass
+
+class ChangeOneIdDistance(Metric):
+    '''`ChangeOneIdDistance` is a metric for measuring the distance between the identifiers of two datasets.'''
+
+    _type_ = AnyMetric
+    
+    @property
+    def identifier(self):
+        '''The name of the column storing identifiers'''
+        from opendp.metrics import _change_one_id_distance_get_identifier
+        return _change_one_id_distance_get_identifier(self)
+    
+    def __del__(self):
+        # this is to avoid a double-free, as the Domain.__del__ will, suprisingly, still be called
+        pass
 
 class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
     '''

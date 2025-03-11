@@ -57,10 +57,8 @@ def test_lazyframe_domain_margins():
     series_domain = dp.series_domain("A", atom_domain)
     frame_domain = dp.with_margin(
         dp.lazyframe_domain([series_domain]),
-        Margin(
+        dp.polars.Margin(
             by=["A"],
-            max_influenced_partitions=10,
-            max_partition_contributions=2,
             max_num_partitions=20,
             max_partition_length=1000,
             public_info="keys"
@@ -72,13 +70,11 @@ def test_lazyframe_domain_margins():
     assert dp.polars.Margin(by=[]) != "not a margin"
     assert dp.polars.Margin(by=[]) != dp.polars.Margin(by=["A"])
     assert frame_domain.get_margin([]) == dp.polars.Margin(
-        by=[], max_influenced_partitions=1, max_num_partitions=1, public_info="keys"
+        by=[], max_num_partitions=1, public_info="keys"
     )
 
     assert frame_domain.get_margin(["A"]) == dp.polars.Margin(
         by=["A"],
-        max_influenced_partitions=10,
-        max_partition_contributions=2,
         max_num_partitions=20,
         max_partition_length=1000,
         public_info="keys",
@@ -86,7 +82,6 @@ def test_lazyframe_domain_margins():
 
     assert frame_domain.get_margin(["A", "B"]) == dp.polars.Margin(
         by=["A", "B"],
-        max_partition_contributions=2,
         max_partition_length=1000,
     )
 
@@ -95,8 +90,6 @@ def test_lazyframe_domain_margins():
         frame_domain,
         Margin(
             by=["B"],
-            max_influenced_partitions=10,
-            max_partition_contributions=3,
             max_num_partitions=20,
             max_partition_length=500,
             public_info="keys"
@@ -105,10 +98,8 @@ def test_lazyframe_domain_margins():
 
     assert frame_domain.get_margin(["A", "B"]) == dp.polars.Margin(
         by=["A", "B"],
-        max_partition_contributions=2, # from A
         max_partition_length=500,  # from B
         max_num_partitions=400, # 20 * 20
-        max_influenced_partitions=100, # 10 * 10
     )
 
     with pytest.raises(ValueError, match="must be a sequence type; Did you mean [\"A\"]?"):

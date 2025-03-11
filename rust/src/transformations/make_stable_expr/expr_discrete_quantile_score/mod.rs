@@ -120,7 +120,6 @@ where
         context: Context::Aggregation {
             margin: Margin {
                 max_partition_length: Some(1),
-                max_partition_contributions: None,
                 ..margin
             },
         },

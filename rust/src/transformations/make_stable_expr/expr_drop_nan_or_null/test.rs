@@ -5,7 +5,7 @@ use polars::series::Series;
 use crate::domains::{AtomDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
 use crate::measurements::make_private_lazyframe;
 use crate::measures::MaxDivergence;
-use crate::metrics::SymmetricDistance;
+use crate::metrics::{Multi, SymmetricDistance};
 use crate::polars::PrivacyNamespace;
 
 use super::*;
@@ -23,7 +23,7 @@ fn make_expr_drop_nan_standard() -> Fallible<()> {
 
     let m_obs = make_private_lazyframe(
         lf_domain,
-        SymmetricDistance,
+        Multi(SymmetricDistance),
         MaxDivergence,
         lf_filter,
         Some(0.0),
@@ -51,7 +51,7 @@ fn make_expr_drop_null_standard() -> Fallible<()> {
 
     let m_obs = make_private_lazyframe(
         lf_domain,
-        SymmetricDistance,
+        Multi(SymmetricDistance),
         MaxDivergence,
         lf_filter,
         Some(0.0),

@@ -28,9 +28,9 @@ fn test_aggregate() -> Fallible<()> {
         "C" => &[8i32, 9, 10],)?
     .lazy();
 
-    let error_variant_res = make_private_group_by::<_, SymmetricDistance, _>(
+    let error_variant_res = make_private_group_by::<_, _>(
         lf_domain,
-        SymmetricDistance,
+        Multi(SymmetricDistance),
         MaxDivergence,
         lf.group_by(&[col("A"), col("C")])
             .agg(&[col("B").sum()])
@@ -56,7 +56,7 @@ fn test_stable_keys_puredp() -> Fallible<()> {
 
     let meas = make_private_lazyframe(
         lf_domain,
-        SymmetricDistance,
+        Multi(SymmetricDistance),
         Approximate(MaxDivergence),
         lf.clone()
             .group_by(&[col("A")])
@@ -66,7 +66,7 @@ fn test_stable_keys_puredp() -> Fallible<()> {
     )?;
 
     let counts = meas.invoke(&lf)?;
-    let params = meas.map(&1)?;
+    let params = meas.map(&1.into())?;
 
     println!("counts {}", counts.collect()?);
     println!("params {:?}", params);
@@ -83,7 +83,7 @@ fn test_stable_keys_zCDP() -> Fallible<()> {
 
     let meas = make_private_lazyframe(
         lf_domain,
-        SymmetricDistance,
+        Multi(SymmetricDistance),
         Approximate(ZeroConcentratedDivergence),
         lf.clone()
             .group_by(&[col("A")])
@@ -93,7 +93,7 @@ fn test_stable_keys_zCDP() -> Fallible<()> {
     )?;
 
     let counts = meas.invoke(&lf)?;
-    let params = meas.map(&1)?;
+    let params = meas.map(&1.into())?;
 
     println!("counts {}", counts.collect()?);
     println!("params {:?}", params);

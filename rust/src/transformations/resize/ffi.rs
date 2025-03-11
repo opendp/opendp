@@ -36,7 +36,7 @@ pub extern "C" fn opendp_transformations__make_resize(
     ) -> Fallible<AnyTransformation>
     where
         MI: 'static + IsMetricOrdered<Distance = IntDistance>,
-        MO: 'static + IsMetricOrdered<Distance = IntDistance>,
+        MO: 'static + IsMetricOrdered<Distance = IntDistance> + Default,
         (VectorDomain<AtomDomain<TA>>, MI): MetricSpace,
         (VectorDomain<AtomDomain<TA>>, MO): MetricSpace,
     {
@@ -69,7 +69,7 @@ mod tests {
     fn test_make_resize() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_resize(
             AnyDomain::new_raw(VectorDomain::new(AtomDomain::<i32>::default())),
-            AnyMetric::new_raw(SymmetricDistance::default()),
+            AnyMetric::new_raw(SymmetricDistance),
             4 as c_uint,
             AnyObject::new_raw(0i32),
             "SymmetricDistance".to_char_p(),
@@ -87,7 +87,7 @@ mod tests {
             AnyDomain::new_raw(VectorDomain::new(AtomDomain::<i32>::new_closed((
                 0i32, 10,
             ))?)),
-            AnyMetric::new_raw(SymmetricDistance::default()),
+            AnyMetric::new_raw(SymmetricDistance),
             4 as c_uint,
             AnyObject::new_raw(0i32),
             "SymmetricDistance".to_char_p(),

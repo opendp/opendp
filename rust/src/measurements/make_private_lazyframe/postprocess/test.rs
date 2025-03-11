@@ -6,7 +6,7 @@ use crate::{
     error::ErrorVariant,
     measurements::make_private_lazyframe,
     measures::MaxDivergence,
-    metrics::SymmetricDistance,
+    metrics::{Multi, SymmetricDistance},
     polars::PrivacyNamespace,
 };
 
@@ -37,8 +37,8 @@ fn test_make_private_lazyframe_post_valid() -> Fallible<()> {
 
     make_private_lazyframe(
         lf_domain,
-        SymmetricDistance,
-        MaxDivergence::default(),
+        Multi(SymmetricDistance),
+        MaxDivergence,
         query,
         None,
         None,
@@ -55,7 +55,7 @@ fn test_make_private_lazyframe_post_invalid() -> Fallible<()> {
     assert_eq!(
         make_private_lazyframe(
             lf_domain,
-            SymmetricDistance,
+            Multi(SymmetricDistance),
             MaxDivergence,
             query,
             None,

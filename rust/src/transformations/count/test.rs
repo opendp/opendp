@@ -6,7 +6,7 @@ use super::*;
 #[test]
 fn test_make_count() -> Fallible<()> {
     let input_domain = VectorDomain::new(AtomDomain::default());
-    let input_metric = SymmetricDistance::default();
+    let input_metric = SymmetricDistance;
     let transformation = make_count::<_, i32>(input_domain, input_metric)?;
     let arg = vec![1, 2, 3, 4, 5];
     let ret = transformation.invoke(&arg)?;
@@ -17,10 +17,8 @@ fn test_make_count() -> Fallible<()> {
 
 #[test]
 fn test_make_count_distinct() -> Fallible<()> {
-    let transformation = make_count_distinct::<_, i32>(
-        VectorDomain::new(AtomDomain::default()),
-        SymmetricDistance::default(),
-    )?;
+    let transformation =
+        make_count_distinct::<_, i32>(VectorDomain::new(AtomDomain::default()), SymmetricDistance)?;
     let arg = vec![1, 1, 3, 4, 4];
     let ret = transformation.invoke(&arg)?;
     let expected = 3;
@@ -32,7 +30,7 @@ fn test_make_count_distinct() -> Fallible<()> {
 fn test_make_count_by_categories() {
     let transformation = make_count_by_categories::<L2Distance<f64>, i64, i8>(
         VectorDomain::new(AtomDomain::default()),
-        SymmetricDistance::default(),
+        SymmetricDistance,
         vec![2, 1, 3],
         true,
     )
@@ -53,7 +51,7 @@ fn test_make_count_by() -> Fallible<()> {
     ];
     let transformation = make_count_by::<L2Distance<f64>, bool, i8>(
         VectorDomain::new(AtomDomain::default()),
-        SymmetricDistance::default(),
+        SymmetricDistance,
     )?;
     let ret = transformation.invoke(&arg)?;
     let mut expected = HashMap::new();

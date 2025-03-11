@@ -6,10 +6,10 @@ use crate::err;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::{Type, TypeContents};
+use crate::metrics::EventLevelMetric;
 use crate::traits::{CheckAtom, Float, HasNull};
 use crate::transformations::{
-    DatasetMetric, ImputeConstantDomain, make_drop_null, make_impute_constant,
-    make_impute_uniform_float,
+    ImputeConstantDomain, make_drop_null, make_impute_constant, make_impute_uniform_float,
 };
 
 #[unsafe(no_mangle)]
@@ -31,7 +31,7 @@ pub extern "C" fn opendp_transformations__make_impute_uniform_float(
     ) -> Fallible<AnyTransformation>
     where
         TA: Float + SampleUniform,
-        M: 'static + DatasetMetric,
+        M: 'static + EventLevelMetric,
         (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
     {
         let input_domain = input_domain
@@ -86,7 +86,7 @@ pub extern "C" fn opendp_transformations__make_impute_constant(
             where
                 OptionDomain<AtomDomain<TA>>: ImputeConstantDomain<Imputed = TA>,
                 TA: 'static + Clone + CheckAtom,
-                M: 'static + DatasetMetric,
+                M: 'static + EventLevelMetric,
                 (VectorDomain<OptionDomain<AtomDomain<TA>>>, M): MetricSpace,
                 (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
             {
@@ -109,7 +109,7 @@ pub extern "C" fn opendp_transformations__make_impute_constant(
             where
                 AtomDomain<TA>: ImputeConstantDomain<Imputed = TA>,
                 TA: 'static + HasNull + Clone + CheckAtom,
-                M: 'static + DatasetMetric,
+                M: 'static + EventLevelMetric,
                 (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
             {
                 let input_domain = input_domain
@@ -172,7 +172,7 @@ pub extern "C" fn opendp_transformations__make_drop_null(
             where
                 OptionDomain<AtomDomain<TA>>: ImputeConstantDomain<Imputed = TA>,
                 TA: 'static + Clone + CheckAtom,
-                M: 'static + DatasetMetric,
+                M: 'static + EventLevelMetric,
                 (VectorDomain<OptionDomain<AtomDomain<TA>>>, M): MetricSpace,
                 (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
             {
@@ -193,7 +193,7 @@ pub extern "C" fn opendp_transformations__make_drop_null(
             where
                 AtomDomain<TA>: ImputeConstantDomain<Imputed = TA>,
                 TA: 'static + HasNull + Clone + CheckAtom,
-                M: 'static + DatasetMetric,
+                M: 'static + EventLevelMetric,
                 (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
             {
                 let input_domain = input_domain

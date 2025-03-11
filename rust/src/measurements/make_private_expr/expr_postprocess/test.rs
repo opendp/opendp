@@ -18,7 +18,7 @@ fn test_postprocess_alias() -> Fallible<()> {
     let m_expr = expr.clone().make_private(
         lf_domain.aggregate(["chunk_2_bool"]),
         PartitionDistance(SymmetricDistance),
-        MaxDivergence::default(),
+        MaxDivergence,
         Some(0.),
     )?;
 
@@ -45,7 +45,7 @@ fn test_postprocess_binary() -> Fallible<()> {
     let m_expr = expr.clone().make_private(
         lf_domain.aggregate(["chunk_2_bool"]),
         PartitionDistance(SymmetricDistance),
-        MaxDivergence::default(),
+        MaxDivergence,
         Some(0.),
     )?;
 
