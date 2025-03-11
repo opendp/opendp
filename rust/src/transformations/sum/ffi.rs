@@ -51,7 +51,7 @@ mod tests {
     fn test_make_sum_ffi() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_sum(
             AnyDomain::new_raw(VectorDomain::new(AtomDomain::new_closed((0., 10.))?)),
-            AnyMetric::new_raw(SymmetricDistance::default()),
+            AnyMetric::new_raw(SymmetricDistance),
         ))?;
         let arg = AnyObject::new_raw(vec![1.0, 2.0, 3.0]);
         let res = core::opendp_core__transformation_invoke(&transformation, arg);
@@ -64,7 +64,7 @@ mod tests {
     fn test_make_sized_sum_ffi() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_sum(
             AnyDomain::new_raw(VectorDomain::new(AtomDomain::new_closed((0., 10.))?).with_size(3)),
-            AnyMetric::new_raw(SymmetricDistance::default()),
+            AnyMetric::new_raw(SymmetricDistance),
         ))?;
         let arg = AnyObject::new_raw(vec![1.0, 2.0, 3.0]);
         let res = core::opendp_core__transformation_invoke(&transformation, arg);

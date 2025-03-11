@@ -41,8 +41,6 @@ where
         by: old_margin.by,
         max_partition_length: Some(1),
         max_num_partitions: Some(1),
-        max_partition_contributions: old_margin.max_partition_contributions,
-        max_influenced_partitions: old_margin.max_influenced_partitions,
         public_info: old_margin.public_info,
     };
 
