@@ -9,6 +9,8 @@ use std::ptr::null;
 use std::slice;
 
 #[cfg(feature = "polars")]
+use crate::metrics::{GroupBound, GroupBounds};
+#[cfg(feature = "polars")]
 use ::polars::export::arrow;
 #[cfg(feature = "polars")]
 use ::polars::prelude::*;
@@ -69,7 +71,7 @@ pub extern "C" fn opendp_data__slice_as_object(
                 raw.len
             );
         }
-        let plain = util::as_ref(raw.ptr as *const T)
+        let plain = as_ref(raw.ptr as *const T)
             .ok_or_else(|| {
                 err!(
                     FFI,
@@ -99,7 +101,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         Ok(AnyObject::new(BitVector::from_bitslice(&bitslice[..raw.len])))
     }
     fn raw_to_string(raw: &FfiSlice) -> Fallible<AnyObject> {
-        let str_ptr = *util::as_ref(raw.ptr as *const *const c_char).ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create a string"))?;
+        let str_ptr = *as_ref(raw.ptr as *const *const c_char).ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create a string"))?;
         let string = util::to_str(str_ptr)?.to_owned();
         Ok(AnyObject::new(string))
     }
@@ -124,7 +126,7 @@ pub extern "C" fn opendp_data__slice_as_object(
     fn raw_to_vec_obj<T: 'static + Clone>(raw: &FfiSlice) -> Fallible<AnyObject> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const AnyObject, raw.len) };
         let vec = slice.iter()
-            .map(|v| util::as_ref(*v)
+            .map(|v| as_ref(*v)
                 .ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create a vector"))
                 .and_then(|v| v.downcast_ref::<T>())
                 .map(Clone::clone))
@@ -139,9 +141,9 @@ pub extern "C" fn opendp_data__slice_as_object(
         }
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, 2) };
 
-        let tuple = util::as_ref(slice[0] as *const T0)
+        let tuple = as_ref(slice[0] as *const T0)
             .cloned()
-            .zip(util::as_ref(slice[1] as *const T1).cloned())
+            .zip(as_ref(slice[1] as *const T1).cloned())
             .ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create a tuple"))?;
         Ok(AnyObject::new(tuple))
     }
@@ -154,14 +156,14 @@ pub extern "C" fn opendp_data__slice_as_object(
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, 3) };
 
         let new_err = || err!(FFI, "Tuple contains null pointer");
-        let v0 = util::as_ref(slice[0] as *const IntDistance).ok_or_else(new_err)?.clone();
-        let v1 = util::as_ref(slice[1] as *const T).ok_or_else(new_err)?.clone();
-        let v2 = util::as_ref(slice[2] as *const T).ok_or_else(new_err)?.clone();
+        let v0 = as_ref(slice[0] as *const IntDistance).ok_or_else(new_err)?.clone();
+        let v1 = as_ref(slice[1] as *const T).ok_or_else(new_err)?.clone();
+        let v2 = as_ref(slice[2] as *const T).ok_or_else(new_err)?.clone();
         Ok(AnyObject::new((v0, v1, v2)))
     }
 
     fn raw_to_function<TI: 'static + Clone, TO>(obj: &FfiSlice) -> Fallible<AnyObject> {
-        let Some(function) = util::as_ref(obj.ptr as *const AnyFunction).cloned() else {
+        let Some(function) = as_ref(obj.ptr as *const AnyFunction).cloned() else {
             return fallible!(FFI, "Function must not be null pointer");
         };
         Ok(AnyObject::new(Function::new_fallible(move |x: &TI| {
@@ -267,7 +269,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         use std::collections::HashSet;
         use crate::domains::{Margin, MarginPub};
 
-        if raw.len != 6 {
+        if raw.len != 4 {
             return fallible!(FFI, "Margin FfiSlice must have length 6, found a length of {}", raw.len);
         }
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, raw.len) };
@@ -281,9 +283,29 @@ pub extern "C" fn opendp_data__slice_as_object(
                 None => None,
                 _ => return fallible!(FFI, "public_info must be None, 'keys' or 'lengths'"),
             },
-            max_partition_contributions: as_ref(slice[4] as *const u32).cloned(),
-            max_influenced_partitions: as_ref(slice[5] as *const u32).cloned(),
         })).into()
+    }
+
+    #[cfg(feature = "polars")]
+    fn raw_to_group_bound(raw: &FfiSlice) -> Fallible<AnyObject> {
+        use std::collections::HashSet;
+        if raw.len != 3 {
+            return fallible!(FFI, "GroupBound FfiSlice must have length 3, found a length of {}", raw.len);
+        }
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, raw.len) };
+        Ok(AnyObject::new(GroupBound {
+            by: HashSet::from_iter(try_!(try_as_ref!(slice[0] as *const AnyObject).downcast_ref::<Vec<Expr>>()).clone()),
+            max_partition_contributions: as_ref(slice[1] as *const u32).cloned(),
+            max_influenced_partitions: as_ref(slice[2] as *const u32).cloned(),
+        })).into()
+    }
+    #[cfg(feature = "polars")]
+    fn raw_to_group_bounds(raw: &FfiSlice) -> Fallible<AnyObject> {
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const AnyObject, raw.len) };
+        let vec = slice.iter()
+            .map(|b| try_as_ref!(*b).downcast_ref::<GroupBound>().cloned())
+            .collect::<Fallible<Vec<GroupBound>>>()?;
+        Ok(AnyObject::new(GroupBounds(vec)))
     }
     match T_.contents {
         TypeContents::PLAIN("BitVector") => raw_to_bitvector(raw),
@@ -302,6 +324,10 @@ pub extern "C" fn opendp_data__slice_as_object(
         TypeContents::PLAIN("Series") => raw_to_series(raw),
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("Margin") => raw_to_margin(raw),
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("GroupBound") => raw_to_group_bound(raw),
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("GroupBounds") => raw_to_group_bounds(raw),
 
         TypeContents::SLICE(element_id) => {
             let element = try_!(Type::of_id(&element_id));
@@ -320,6 +346,8 @@ pub extern "C" fn opendp_data__slice_as_object(
                 "SeriesDomain" => raw_to_vec::<AnyDomainPtr>(raw),
                 #[cfg(feature = "polars")]
                 "Expr" => raw_to_vec_obj::<Expr>(raw),
+                #[cfg(feature = "polars")]
+                "GroupBound" => raw_to_vec_obj::<GroupBound>(raw),
                 _ => dispatch!(raw_to_vec, [(element, @primitives)], (raw)),
             }
         }
@@ -652,8 +680,6 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
                     .unwrap() as *const c_void
                 })
                 .unwrap_or_else(null),
-            to_ptr(margin.max_partition_contributions),
-            to_ptr(margin.max_influenced_partitions),
         ];
         let slice = FfiSlice {
             ptr: buffer.as_ptr() as *mut c_void,
@@ -661,6 +687,42 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         };
         util::into_raw(buffer);
         Ok(slice)
+    }
+
+    #[cfg(feature = "polars")]
+    fn group_bound_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
+        let group_bound = obj.downcast_ref::<GroupBound>()?;
+
+        let buffer = vec![
+            AnyObject::new_raw(group_bound.by.iter().cloned().collect::<Vec<_>>()) as *const c_void,
+            group_bound
+                .max_partition_contributions
+                .map(|v| util::into_raw(v) as *const c_void)
+                .unwrap_or_else(null),
+            group_bound
+                .max_influenced_partitions
+                .map(|v| util::into_raw(v) as *const c_void)
+                .unwrap_or_else(null),
+        ];
+        let slice = FfiSlice {
+            ptr: buffer.as_ptr() as *mut c_void,
+            len: buffer.len(),
+        };
+        util::into_raw(buffer);
+        Ok(slice)
+    }
+
+    #[cfg(feature = "polars")]
+    fn group_bounds_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
+        let bounds = obj
+            .downcast_ref::<GroupBounds>()?
+            .0
+            .iter()
+            .map(|b| AnyObject::new(b.clone()))
+            .collect::<Vec<_>>();
+        let (ptr, len) = (bounds.as_ptr() as *mut c_void, bounds.len());
+        util::into_raw(bounds);
+        Ok(FfiSlice::new(ptr, len))
     }
 
     fn tuple_curve_f64_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
@@ -691,6 +753,10 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         TypeContents::PLAIN("Series") => series_to_raw(obj),
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("Margin") => margin_to_raw(obj),
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("GroupBound") => group_bound_to_raw(obj),
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("GroupBounds") => group_bounds_to_raw(obj),
 
         TypeContents::SLICE(element_id) => {
             let element = try_!(Type::of_id(element_id));
@@ -702,6 +768,8 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             #[cfg(feature = "polars")]
             if element.descriptor == "Expr" {
                 return vec_expr_to_raw(obj).into();
+            } else if element.descriptor == "GroupBound" {
+                return vec_to_raw::<GroupBound>(obj).into();
             }
 
             if element.descriptor == "String" {
@@ -1030,7 +1098,10 @@ impl Clone for AnyObject {
                 #[cfg(feature = "polars")]
                 if let Ok(clone) = dispatch!(
                     clone_plain,
-                    [(self.type_, [LazyFrame, DataFrame, Series])],
+                    [(
+                        self.type_,
+                        [LazyFrame, DataFrame, Series, GroupBound, GroupBounds]
+                    )],
                     (self)
                 ) {
                     return clone;
@@ -1098,6 +1169,11 @@ impl Clone for AnyObject {
                 }
             }
             TypeContents::VEC(type_id) => {
+                #[cfg(feature = "polars")]
+                if let Ok(clone) = dispatch!(clone_plain, [(self.type_, [GroupBound])], (self)) {
+                    return clone;
+                }
+
                 dispatch!(
                     clone_vec,
                     [(
@@ -1337,7 +1413,7 @@ mod tests {
         let res = opendp_data__object_as_slice(obj);
         let res = Fallible::from(res)?;
         assert_eq!(res.len, 1);
-        assert_eq!(util::as_ref(res.ptr as *const i32).unwrap_test(), &999);
+        assert_eq!(as_ref(res.ptr as *const i32).unwrap_test(), &999);
         Ok(())
     }
 
@@ -1348,7 +1424,7 @@ mod tests {
         let res = Fallible::from(res)?;
         assert_eq!(res.len, 1);
         assert_eq!(
-            util::into_string(*util::as_ref(res.ptr as *mut *mut c_char).unwrap())?,
+            util::into_string(*as_ref(res.ptr as *mut *mut c_char).unwrap())?,
             "Hello"
         );
         Ok(())
@@ -1360,10 +1436,7 @@ mod tests {
         let res = opendp_data__object_as_slice(obj);
         let res = Fallible::from(res)?;
         assert_eq!(res.len, 3);
-        assert_eq!(
-            util::as_ref(res.ptr as *const [i32; 3]).unwrap_test(),
-            &[1, 2, 3]
-        );
+        assert_eq!(as_ref(res.ptr as *const [i32; 3]).unwrap_test(), &[1, 2, 3]);
         Ok(())
     }
 
@@ -1373,11 +1446,11 @@ mod tests {
         let res = opendp_data__object_as_slice(obj);
         let res = Fallible::from(res)?;
         assert_eq!(res.len, 2);
-        let res_ptr = util::as_ref(res.ptr as *const [*mut i32; 2]).unwrap_test();
+        let res_ptr = as_ref(res.ptr as *const [*mut i32; 2]).unwrap_test();
         assert_eq!(
             (
-                util::as_ref(res_ptr[0]).unwrap_test(),
-                util::as_ref(res_ptr[1]).unwrap_test()
+                as_ref(res_ptr[0]).unwrap_test(),
+                as_ref(res_ptr[1]).unwrap_test()
             ),
             (&999, &-999)
         );
@@ -1390,11 +1463,11 @@ mod tests {
         let res = opendp_data__object_as_slice(obj);
         let res = Fallible::from(res)?;
         assert_eq!(res.len, 2);
-        let res_ptr = util::as_ref(res.ptr as *const [*mut AnyObject; 2]).unwrap_test();
+        let res_ptr = as_ref(res.ptr as *const [*mut AnyObject; 2]).unwrap_test();
         assert_eq!(
             (
-                util::as_ref(res_ptr[0]).unwrap_test().downcast_ref()?,
-                util::as_ref(res_ptr[1]).unwrap_test().downcast_ref()?
+                as_ref(res_ptr[0]).unwrap_test().downcast_ref()?,
+                as_ref(res_ptr[1]).unwrap_test().downcast_ref()?
             ),
             (&999, &999.0)
         );
