@@ -6,7 +6,7 @@ use super::*;
 fn test_impute_uniform() -> Fallible<()> {
     let imputer = make_impute_uniform_float(
         VectorDomain::new(AtomDomain::default()),
-        SymmetricDistance::default(),
+        SymmetricDistance,
         (2.0, 3.0),
     )?;
     assert!(!imputer.output_domain.element_domain.nan());
@@ -23,7 +23,7 @@ fn test_impute_uniform() -> Fallible<()> {
 fn test_impute_constant_option() -> Fallible<()> {
     let imputer = make_impute_constant(
         VectorDomain::new(OptionDomain::new(AtomDomain::default())),
-        SymmetricDistance::default(),
+        SymmetricDistance,
         "IMPUTED".to_string(),
     )?;
     assert!(!imputer.output_domain.element_domain.nan());
@@ -39,7 +39,7 @@ fn test_impute_constant_option() -> Fallible<()> {
 fn test_impute_constant_inherent() -> Fallible<()> {
     let imputer = make_impute_constant(
         VectorDomain::new(AtomDomain::default()),
-        SymmetricDistance::default(),
+        SymmetricDistance,
         12.,
     )?;
 
@@ -54,7 +54,7 @@ fn test_impute_constant_inherent() -> Fallible<()> {
 fn test_impute_drop_option() -> Fallible<()> {
     let imputer = make_drop_null(
         VectorDomain::new(OptionDomain::default()),
-        SymmetricDistance::default(),
+        SymmetricDistance,
     )?;
 
     assert!(!imputer.output_domain.element_domain.nan());
@@ -67,10 +67,7 @@ fn test_impute_drop_option() -> Fallible<()> {
 }
 #[test]
 fn test_impute_drop_inherent() -> Fallible<()> {
-    let imputer = make_drop_null(
-        VectorDomain::new(AtomDomain::default()),
-        SymmetricDistance::default(),
-    )?;
+    let imputer = make_drop_null(VectorDomain::new(AtomDomain::default()), SymmetricDistance)?;
     assert!(!imputer.output_domain.element_domain.nan());
 
     let result = imputer.invoke(&vec![f64::NAN, 23.])?;

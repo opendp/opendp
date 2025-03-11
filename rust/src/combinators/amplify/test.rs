@@ -9,7 +9,7 @@ use crate::transformations::make_mean;
 fn test_amplifier() -> Fallible<()> {
     let meas = (make_mean(
         VectorDomain::new(AtomDomain::new_closed((0., 10.))?).with_size(10),
-        SymmetricDistance::default(),
+        SymmetricDistance,
     ) >> then_laplace(0.5, None))?;
     let amp = make_population_amplification(&meas, 100)?;
     amp.function.eval(&vec![1.; 10])?;

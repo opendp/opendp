@@ -673,12 +673,12 @@ mod tests {
 
     #[test]
     fn test_any_metric() -> Fallible<()> {
-        let metric1 = SymmetricDistance::default();
-        let metric2 = SymmetricDistance::default();
+        let metric1 = SymmetricDistance;
+        let metric2 = SymmetricDistance;
         assert_eq!(metric1, metric2);
 
-        let metric1 = AnyMetric::new(SymmetricDistance::default());
-        let metric2 = AnyMetric::new(SymmetricDistance::default());
+        let metric1 = AnyMetric::new(SymmetricDistance);
+        let metric2 = AnyMetric::new(SymmetricDistance);
         let metric3 = AnyMetric::new(ChangeOneDistance::default());
         assert_eq!(metric1, metric2);
         assert_ne!(metric1, metric3);

@@ -9,10 +9,9 @@ use opendp_derive::bootstrap;
 use crate::core::{MetricSpace, Transformation};
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::error::Fallible;
+use crate::metrics::EventLevelMetric;
 use crate::traits::{Hashable, Number, Primitive};
 use crate::transformations::make_row_by_row;
-
-use super::DatasetMetric;
 
 #[bootstrap(
     features("contrib"),
@@ -47,7 +46,7 @@ pub fn make_find<M, TIA>(
 >
 where
     TIA: Hashable,
-    M: DatasetMetric,
+    M: EventLevelMetric,
     (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
     (VectorDomain<OptionDomain<AtomDomain<usize>>>, M): MetricSpace,
 {
@@ -97,7 +96,7 @@ pub fn make_find_bin<M, TIA>(
 ) -> Fallible<Transformation<VectorDomain<AtomDomain<TIA>>, VectorDomain<AtomDomain<usize>>, M, M>>
 where
     TIA: Number,
-    M: DatasetMetric,
+    M: EventLevelMetric,
     (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
     (VectorDomain<AtomDomain<usize>>, M): MetricSpace,
 {
@@ -139,7 +138,7 @@ pub fn make_index<M, TOA>(
 ) -> Fallible<Transformation<VectorDomain<AtomDomain<usize>>, VectorDomain<AtomDomain<TOA>>, M, M>>
 where
     TOA: Primitive,
-    M: DatasetMetric,
+    M: EventLevelMetric,
     (VectorDomain<AtomDomain<usize>>, M): MetricSpace,
     (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
 {

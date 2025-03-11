@@ -205,7 +205,7 @@ pub(crate) fn apply_anonymous_function<KW: OpenDPPlugin>(input: Vec<Expr>, kwarg
 
 pub(crate) fn literal_value_of<T: ExtractValue>(expr: &Expr) -> Fallible<Option<T>> {
     let Expr::Literal(literal) = expr else {
-        return fallible!(FailedFunction);
+        return fallible!(FailedFunction, "Expected literal, found: {:?}", expr);
     };
 
     T::extract(literal.clone())

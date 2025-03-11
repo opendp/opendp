@@ -136,7 +136,7 @@ where
                 )
             }),
             middle_metric.clone(),
-            MaxDivergence::default(),
+            MaxDivergence,
             PrivacyMap::new_fallible(move |(l0, li): &(IntDistance, f64)| {
                 let linf_metric = middle_metric.0.clone();
                 let epsilon = report_noisy_max_gumbel_map(scale, linf_metric)(li)?;

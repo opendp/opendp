@@ -20,9 +20,12 @@ import os
 from typing import Any, Literal, Sequence
 from opendp._lib import lib_path, import_optional_dependency
 from opendp.mod import (
+    ChangeOneIdDistance,
     Domain,
     Measurement,
+    MultiDistance,
     OpenDPException,
+    SymmetricIdDistance,
     binary_search,
     binary_search_chain,
 )
@@ -848,6 +851,26 @@ class LazyFrameQuery:
             self._query,
         )
 
+    def truncate(
+        self,
+        k: int,
+        over: list[Any] | None = None,
+    ) -> LazyFrameQuery:
+        """
+        Truncate the data to keep at most `k` rows for each identifier.
+
+        :param k: the number of rows to keep for each identifier
+        :param over: optional, other columns to group by
+        """
+        input_metric = self._query._chain[1]
+        
+        if isinstance(input_metric, MultiDistance):
+            input_metric = input_metric.inner_metric
+        if not isinstance(input_metric, (SymmetricIdDistance, ChangeOneIdDistance)):
+            raise ValueError(f"truncation is only supported for identifier distances, found {input_metric}")
+
+        return self.filter(pl.int_range(pl.len()).over(input_metric.identifier, *over or []) < k)
+
     def resolve(self) -> Measurement:
         """Resolve the query into a measurement."""
 
@@ -1043,5 +1066,44 @@ class Margin:
         other_by = {serialize(col) for col in other.by or []}
         if self_by != other_by:
             return False
-        
+
         return asdict(replace(self, by=None)) == asdict(replace(other, by=None))
+
+
+@dataclass
+class GroupBound(object):
+    """
+    The ``GroupBound`` class is used to describe bounds on the number of contributions an individual may make,
+    and the number of partitions an individual may influence.
+    """
+
+    by: Sequence
+    """Polars expressions describing the grouping columns."""
+
+    max_partition_contributions: int | None = None
+    """The greatest number of records an individual may contribute to any one partition.
+    
+    This can significantly reduce the sensitivity of grouped queries under zero-Concentrated DP.
+    """
+
+    max_influenced_partitions: int | None = None
+    """The greatest number of partitions any one individual can contribute to."""
+
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, GroupBound):
+            return False
+
+        # special logic for by, which is considered a set (order and dupes don't matter)
+        # and may contain expressions that do not have a boolean equality operator
+        def serialize(by):
+            if isinstance(by, str):
+                by = pl.col(by)
+            return by.meta.serialize()
+
+        self_by = {serialize(col) for col in self.by or []}
+        other_by = {serialize(col) for col in other.by or []}
+        if self_by != other_by:
+            return False
+
+        return asdict(replace(self, by=None)) == asdict(replace(other, by=None)) # type: ignore[arg-type]

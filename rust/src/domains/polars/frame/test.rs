@@ -43,14 +43,9 @@ fn assert_row_descriptors<F: Frame>(
     domain: &FrameDomain<F>,
     by: &[&str],
     max_partition_length: Option<u32>,
-    max_partition_contributions: Option<u32>,
 ) {
     let margin = domain.get_margin(&by.iter().map(|s| (*s).into()).collect());
     assert_eq!(margin.max_partition_length, max_partition_length);
-    assert_eq!(
-        margin.max_partition_contributions,
-        max_partition_contributions
-    );
 }
 
 #[test]
@@ -59,14 +54,10 @@ fn test_get_margin_max_partition_descriptors() -> Fallible<()> {
         SeriesDomain::new("A", AtomDomain::<i32>::default()),
         SeriesDomain::new("B", AtomDomain::<i32>::default()),
     ])?
-    .with_margin(
-        Margin::by(["A"])
-            .with_max_partition_length(10)
-            .with_max_partition_contributions(3),
-    )?;
+    .with_margin(Margin::by(["A"]).with_max_partition_length(10))?;
 
-    assert_row_descriptors(&lf_domain, &["A", "B"], Some(10), Some(3));
-    assert_row_descriptors(&lf_domain, &["B"], None, None);
+    assert_row_descriptors(&lf_domain, &["A", "B"], Some(10));
+    assert_row_descriptors(&lf_domain, &["B"], None);
     Ok(())
 }
 
@@ -74,11 +65,9 @@ fn assert_partition_descriptors<F: Frame>(
     domain: &FrameDomain<F>,
     by: &[&str],
     max_num_partitions: Option<u32>,
-    max_influenced_partitions: Option<u32>,
 ) {
     let margin = domain.get_margin(&by.iter().map(|s| (*s).into()).collect());
     assert_eq!(margin.max_num_partitions, max_num_partitions);
-    assert_eq!(margin.max_influenced_partitions, max_influenced_partitions);
 }
 
 #[test]
@@ -88,21 +77,13 @@ fn test_get_margin_covering_small_to_large() -> Fallible<()> {
         SeriesDomain::new("B", AtomDomain::<i32>::default()),
         SeriesDomain::new("C", AtomDomain::<i32>::default()),
     ])?
-    .with_margin(
-        Margin::by(["A"])
-            .with_max_num_partitions(10)
-            .with_max_influenced_partitions(3),
-    )?
-    .with_margin(
-        Margin::by(["B"])
-            .with_max_num_partitions(11)
-            .with_max_influenced_partitions(4),
-    )?;
+    .with_margin(Margin::by(["A"]).with_max_num_partitions(10))?
+    .with_margin(Margin::by(["B"]).with_max_num_partitions(11))?;
 
-    assert_partition_descriptors(&lf_domain, &["A", "B"], Some(110), Some(12));
-    assert_partition_descriptors(&lf_domain, &["B"], Some(11), Some(4));
-    assert_partition_descriptors(&lf_domain, &[], Some(1), Some(1));
-    assert_partition_descriptors(&lf_domain, &["C"], None, None);
+    assert_partition_descriptors(&lf_domain, &["A", "B"], Some(110));
+    assert_partition_descriptors(&lf_domain, &["B"], Some(11));
+    assert_partition_descriptors(&lf_domain, &[], Some(1));
+    assert_partition_descriptors(&lf_domain, &["C"], None);
     Ok(())
 }
 
@@ -113,16 +94,12 @@ fn test_get_margin_covering_large_to_small() -> Fallible<()> {
         SeriesDomain::new("B", AtomDomain::<i32>::default()),
         SeriesDomain::new("C", AtomDomain::<i32>::default()),
     ])?
-    .with_margin(
-        Margin::by(["A", "B"])
-            .with_max_num_partitions(10)
-            .with_max_influenced_partitions(3),
-    )?;
+    .with_margin(Margin::by(["A", "B"]).with_max_num_partitions(10))?;
 
-    assert_partition_descriptors(&lf_domain, &["A"], Some(10), Some(3));
-    assert_partition_descriptors(&lf_domain, &["B"], Some(10), Some(3));
-    assert_partition_descriptors(&lf_domain, &[], Some(1), Some(1));
-    assert_partition_descriptors(&lf_domain, &["C"], None, None);
+    assert_partition_descriptors(&lf_domain, &["A"], Some(10));
+    assert_partition_descriptors(&lf_domain, &["B"], Some(10));
+    assert_partition_descriptors(&lf_domain, &[], Some(1));
+    assert_partition_descriptors(&lf_domain, &["C"], None);
     Ok(())
 }
 

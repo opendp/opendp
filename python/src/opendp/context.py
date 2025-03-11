@@ -35,11 +35,14 @@ from opendp.measures import (
 from opendp.metrics import (
     absolute_distance,
     change_one_distance,
+    change_one_id_distance,
     hamming_distance,
     insert_delete_distance,
     l1_distance,
     l2_distance,
+    multi_distance,
     symmetric_distance,
+    symmetric_id_distance,
 )
 from opendp.mod import (
     Domain,
@@ -54,7 +57,7 @@ from opendp.mod import (
 )
 from opendp.typing import RuntimeType
 from opendp._lib import indent, import_optional_dependency
-from opendp.extras.polars import LazyFrameQuery, Margin
+from opendp.extras.polars import GroupBound, LazyFrameQuery, Margin
 from dataclasses import asdict, replace
 
 __all__ = [
@@ -328,15 +331,16 @@ def loss_of(
 
 def unit_of(
     *,
-    contributions: Optional[int] = None,
+    contributions: Optional[Union[int, list[Union[int, GroupBound]]]] = None,
     changes: Optional[int] = None,
     absolute: Optional[float] = None,
     l1: Optional[float] = None,
     l2: Optional[float] = None,
+    identifier: Optional[str] = None,
     ordered: bool = False,
     U=None,
-) -> tuple[Metric, float]:
-    """Constructs a unit of privacy, consisting of a metric and a dataset distance.
+) -> tuple[Metric, Union[float, list[Union[int, GroupBound]]]]:
+    """Constructs a unit of privacy, consisting of a metric and a dataset distance. 
     The parameters are mutually exclusive.
 
     >>> import opendp.prelude as dp
@@ -350,6 +354,7 @@ def unit_of(
     :param absolute: Greatest absolute distance a privacy unit can influence a scalar aggregate data set
     :param l1: Greatest l1 distance a privacy unit can influence a vector aggregate data set
     :param l2: Greatest l2 distance a privacy unit can influence a vector aggregate data set
+    :param identifier: Name of the column that contains identifiers
     :param ordered: Set to ``True`` to use ``InsertDeleteDistance`` instead of ``SymmetricDistance``, or ``HammingDistance`` instead of ``ChangeOneDistance``.
     :param U: The type of the dataset distance."""
 
@@ -357,17 +362,34 @@ def unit_of(
         raise ValueError('"ordered" is only valid with "changes" or "contributions"')
 
     def _is_distance(p, v):
-        return p not in ["ordered", "U", "_is_distance"] and v is not None
+        return p not in ["ordered", "U", "_is_distance", "identifier"] and v is not None
 
     if sum(1 for p, v in locals().items() if _is_distance(p, v)) != 1:
         raise ValueError("Must specify exactly one distance.")  # pragma: no cover
 
     if contributions is not None:
-        metric = insert_delete_distance() if ordered else symmetric_distance()
+        if identifier is None:
+            metric = insert_delete_distance() if ordered else symmetric_distance()
+        else:
+            if ordered:
+                raise ValueError('When "identifier" is set, "ordered" must be False') # pragma: no cover
+            metric = symmetric_id_distance(identifier)
+        
+        if isinstance(contributions, Sequence):
+            metric = multi_distance(metric)
+            
         return metric, contributions
+    
     if changes is not None:
-        metric = hamming_distance() if ordered else change_one_distance()
+        if identifier is None:
+            metric = hamming_distance() if ordered else change_one_distance()
+        else:
+            if ordered:
+                raise ValueError('When "identifier" is set, "ordered" must be False') # pragma: no cover
+            metric = change_one_id_distance(identifier)
+    
         return metric, changes
+    
     if absolute is not None:
         metric = absolute_distance(T=RuntimeType.parse_or_infer(U, absolute))
         return metric, absolute
@@ -377,7 +399,8 @@ def unit_of(
     if l2 is not None:
         metric = l2_distance(T=RuntimeType.parse_or_infer(U, l2))
         return metric, l2
-    raise Exception("No matching metric found")  # pragma: no cover
+    
+    raise Exception('No matching metric found')  # pragma: no cover
 
 
 class Context(object):
@@ -402,7 +425,7 @@ class Context(object):
         self,
         accountant: Measurement,
         queryable: Queryable,
-        d_in: float,
+        d_in: Union[float, list[Union[int, GroupBound]]],
         d_mids: Optional[Sequence[float]] = None,
         d_out: Optional[float] = None,
         space_override: Optional[
@@ -446,7 +469,7 @@ class Context(object):
     @staticmethod
     def compositor(
         data: Any,
-        privacy_unit: tuple[Metric, float],
+        privacy_unit: tuple[Metric, Union[float, list[Union[int, GroupBound]]]],
         privacy_loss: tuple[Measure, Any],
         split_evenly_over: Optional[int] = None,
         split_by_weights: Optional[Sequence[float]] = None,
@@ -596,8 +619,8 @@ class Query(object):
     def __init__(
         self,
         chain: Chain,
-        output_measure: Measure = None,  # type: ignore[assignment]
-        d_in: Optional[float] = None,
+        output_measure: Measure = None, # type: ignore[assignment]
+        d_in: Optional[Union[float, list[Union[int, GroupBound]]]] = None,
         d_out: Optional[float] = None,
         context: "Context" = None,  # type: ignore[assignment]
         _wrap_release=None,
@@ -805,13 +828,7 @@ class PartialChain(object):
         """Returns the transformation or measurement with the given parameter."""
         return self.partial(v)
 
-    def fix(
-        self,
-        d_in: float,
-        d_out: float,
-        output_measure: Optional[Measure] = None,
-        T=None,
-    ):
+    def fix(self, d_in: Union[float, list[Union[int, GroupBound]]], d_out: float, output_measure: Optional[Measure] = None, T=None):
         """Returns the closest transformation or measurement that satisfies the given stability or privacy constraint.
 
         The discovered parameter is assigned to the param attribute of the returned transformation or measurement.
@@ -876,7 +893,7 @@ class PartialChain(object):
 
 def _sequential_composition_by_weights(
     domain: Domain,
-    privacy_unit: tuple[Metric, float],
+    privacy_unit: tuple[Metric, Union[float, list[Union[int, GroupBound]]]],
     privacy_loss: tuple[Measure, float],
     split_evenly_over: Optional[int] = None,
     split_by_weights: Optional[Sequence[float]] = None,

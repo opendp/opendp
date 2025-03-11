@@ -6,10 +6,9 @@ use opendp_derive::bootstrap;
 use crate::core::{MetricSpace, Transformation};
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::error::Fallible;
+use crate::metrics::EventLevelMetric;
 use crate::traits::{CheckAtom, HasNull, RoundCast};
 use crate::transformations::make_row_by_row;
-
-use super::DatasetMetric;
 
 #[bootstrap(features("contrib"), generics(M(suppress), TIA(suppress)))]
 /// Make a Transformation that casts a vector of data from type `TIA` to type `TOA`.
@@ -36,7 +35,7 @@ pub fn make_cast<M, TIA, TOA>(
     >,
 >
 where
-    M: DatasetMetric,
+    M: EventLevelMetric,
     TIA: 'static + Clone + CheckAtom,
     TOA: 'static + RoundCast<TIA> + CheckAtom,
     (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
@@ -89,7 +88,7 @@ pub fn make_cast_default<M, TIA, TOA>(
     input_metric: M,
 ) -> Fallible<Transformation<VectorDomain<AtomDomain<TIA>>, VectorDomain<AtomDomain<TOA>>, M, M>>
 where
-    M: DatasetMetric,
+    M: EventLevelMetric,
     TIA: 'static + Clone + CheckAtom,
     TOA: 'static + RoundCast<TIA> + Default + CheckAtom,
     (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
@@ -120,7 +119,7 @@ pub fn make_cast_inherent<M, TIA, TOA>(
     input_metric: M,
 ) -> Fallible<Transformation<VectorDomain<AtomDomain<TIA>>, VectorDomain<AtomDomain<TOA>>, M, M>>
 where
-    M: DatasetMetric,
+    M: EventLevelMetric,
     TIA: 'static + Clone + CheckAtom,
     TOA: 'static + RoundCast<TIA> + HasNull + CheckAtom,
     (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,

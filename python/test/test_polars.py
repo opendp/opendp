@@ -1,4 +1,4 @@
-from opendp.extras.polars import Margin
+from opendp.extras.polars import Margin, GroupBound
 import pytest
 import opendp.prelude as dp
 import warnings
@@ -72,8 +72,6 @@ def test_domains():
         public_info="lengths",
         max_partition_length=50,
         max_num_partitions=3,
-        max_partition_contributions=2,
-        max_influenced_partitions=1,
     )
 
 
@@ -104,7 +102,10 @@ def test_private_lazyframe_explicit_sum(measure):
     pl_testing = pytest.importorskip("polars.testing")
 
     lf_domain, lf = example_lf(
-        margin=["B"], public_info="keys", max_partition_length=50, max_num_partitions=10,
+        margin=["B"],
+        public_info="keys",
+        max_partition_length=50,
+        max_num_partitions=10,
     )
 
     expr = pl.col("A").fill_nan(0.0).fill_null(0.0).clip(0.0, 1.0).sum().dp.noise(0.0)
@@ -131,7 +132,10 @@ def test_private_lazyframe_sum(measure):
     pl_testing = pytest.importorskip("polars.testing")
 
     lf_domain, lf = example_lf(
-        margin=["B"], public_info="keys", max_partition_length=50, max_num_partitions=10,
+        margin=["B"],
+        public_info="keys",
+        max_partition_length=50,
+        max_num_partitions=10,
     )
     expr = pl.col("A").fill_nan(0.0).fill_null(0.0).dp.sum((1.0, 2.0), scale=0.0)
     plan = seed(lf.collect_schema()).group_by("B").agg(expr)
@@ -156,7 +160,10 @@ def test_private_lazyframe_mean(measure):
     pl_testing = pytest.importorskip("polars.testing")
 
     lf_domain, lf = example_lf(
-        margin=["B"], public_info="lengths", max_partition_length=50, max_num_partitions=10,
+        margin=["B"],
+        public_info="lengths",
+        max_partition_length=50,
+        max_num_partitions=10,
     )
 
     expr = pl.col("A").fill_nan(0.0).fill_null(0.0).dp.mean((1.0, 2.0), scale=(0.0, 0.0))
@@ -188,7 +195,7 @@ def test_cast():
 
 def test_stable_expr():
     domain = dp.wild_expr_domain([dp.series_domain("A", dp.atom_domain(T=float))])
-    dp.t.make_stable_expr(domain, dp.symmetric_distance(), "A")
+    dp.t.make_stable_expr(domain, dp.multi_distance(dp.symmetric_distance()), "A")
 
 
 def test_private_expr():
@@ -198,7 +205,7 @@ def test_private_expr():
         dp.wild_expr_domain([], dp.polars.Margin(by=[])),
         dp.partition_distance(dp.symmetric_distance()),
         dp.max_divergence(),
-        dp.len(scale=1.0)
+        dp.len(scale=1.0),
     )
 
     e_plan = m_len(pl.LazyFrame(dict()))
@@ -220,7 +227,11 @@ def test_private_lazyframe_median():
     expr = pl.col("B").dp.median(candidates, 1.0)
     plan = seed(lf.collect_schema()).group_by("A").agg(expr)
     m_lf = dp.m.make_private_lazyframe(
-        lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan, 0.0
+        lf_domain,
+        dp.symmetric_distance(),
+        dp.max_divergence(),
+        plan,
+        0.0,
     )
     expect = pl.DataFrame(
         [pl.Series("A", [1.0], dtype=pl.Float64), pl.Series("B", [3], dtype=pl.Int64)]
@@ -307,7 +318,11 @@ def test_wrong_mechanism():
     plan = seed(lf.collect_schema()).select(pl.len().dp.gaussian(0.0))
     with pytest.raises(dp.OpenDPException) as err:
         dp.m.make_private_lazyframe(
-            lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan, 0.0
+            lf_domain,
+            dp.symmetric_distance(),
+            dp.max_divergence(),
+            plan,
+            0.0,
         )
     assert "expected Laplace distribution, found Gaussian" in (err.value.message or "")
 
@@ -370,9 +385,9 @@ def test_polars_describe():
             "column": ["len", "A", "B"],
             "aggregate": ["Frame Length", "Sum", "Sum"],
             "distribution": ["Integer Laplace", "Integer Laplace", "Integer Laplace"],
-            # * sensitivity of the count is 1 (adding/removing one row changes the count by at most one), 
-            # * sensitivity of each sum is 3 (adding/removing one row with value as big as three...) 
-            # Therefore the noise scale of the sum query should be 3x greater 
+            # * sensitivity of the count is 1 (adding/removing one row changes the count by at most one),
+            # * sensitivity of each sum is 3 (adding/removing one row with value as big as three...)
+            # Therefore the noise scale of the sum query should be 3x greater
             # in order to consume the same amount of budget as the count.
             "scale": [6.0, 18.0, 18.0],
         }
@@ -380,11 +395,7 @@ def test_polars_describe():
 
     summer = pl.col("A").fill_null(2).dp.sum((0, 3))
 
-    query = (
-        context.query()
-        .group_by("B")
-        .agg(dp.len(), summer, summer.alias("B"))
-    )
+    query = context.query().group_by("B").agg(dp.len(), summer, summer.alias("B"))
 
     actual = query.summarize()
     pl_testing.assert_frame_equal(expected, actual)
@@ -392,7 +403,7 @@ def test_polars_describe():
     accuracy = [
         dp.discrete_laplacian_scale_to_accuracy(6.0, 0.05),
         dp.discrete_laplacian_scale_to_accuracy(18.0, 0.05),
-        dp.discrete_laplacian_scale_to_accuracy(18.0, 0.05)
+        dp.discrete_laplacian_scale_to_accuracy(18.0, 0.05),
     ]
     expected = expected.hstack([pl.Series("accuracy", accuracy)])
     actual = query.summarize(alpha=0.05)
@@ -419,9 +430,9 @@ def test_polars_accuracy_threshold():
             "aggregate": ["Frame Length", "Sum"],
             "distribution": ["Integer Laplace", "Integer Laplace"],
             "scale": [4.000000000000001, 12.000000000000004],
-            "threshold": [65, None]
+            "threshold": [65, None],
         },
-        schema_overrides={"threshold": pl.UInt32}
+        schema_overrides={"threshold": pl.UInt32},
     )
 
     query = (
@@ -452,7 +463,7 @@ def test_polars_non_wrapping():
 
     # serialize/deserialize roundtrip
     query = context.query().select(dp.len())
-    serde_plan = pl.LazyFrame.deserialize(io.BytesIO(query.serialize())) # type: ignore
+    serde_plan = pl.LazyFrame.deserialize(io.BytesIO(query.serialize()))  # type: ignore
     assert query.serialize() == serde_plan.serialize()
 
 
@@ -493,60 +504,43 @@ def test_polars_threshold_epsilon():
         ],
     )
 
-    actual = (
-        context.query()
-        .group_by("A")
-        .agg(dp.len())
-        .summarize()
-    )
+    actual = context.query().group_by("A").agg(dp.len()).summarize()
 
-    expected = pl.DataFrame({
-        "column": ["len"],
-        "aggregate": ["Frame Length"],
-        "distribution": ["Integer Laplace"],
-        "scale": [2.0]
-    })
+    expected = pl.DataFrame(
+        {
+            "column": ["len"],
+            "aggregate": ["Frame Length"],
+            "distribution": ["Integer Laplace"],
+            "scale": [2.0],
+        }
+    )
 
     # check that no threshold is set when keys are known
     pl_testing.assert_frame_equal(actual, expected)
 
     # check that query runs.
     print('output should be two columns ("A" and "len") with one row (1, ~1000)')
-    print(
-        context.query()
-        .group_by("A")
-        .agg(dp.len())
-        .release()
-        .collect()
-    )
+    print(context.query().group_by("A").agg(dp.len()).release().collect())
 
-    actual = (
-        context.query()
-        .group_by("B")
-        .agg(dp.len())
-        .summarize()
-    )
+    actual = context.query().group_by("B").agg(dp.len()).summarize()
 
-    expected = pl.DataFrame({
-        "column": ["len"],
-        "aggregate": ["Frame Length"],
-        "distribution": ["Integer Laplace"],
-        "scale": [2.0],
-        "threshold": [33]
-    }, schema_overrides={"threshold": pl.UInt32})
+    expected = pl.DataFrame(
+        {
+            "column": ["len"],
+            "aggregate": ["Frame Length"],
+            "distribution": ["Integer Laplace"],
+            "scale": [2.0],
+            "threshold": [33],
+        },
+        schema_overrides={"threshold": pl.UInt32},
+    )
 
     # threshold should work out to 33
     pl_testing.assert_frame_equal(actual, expected)
 
     # check that query runs.
     print('output should be two columns ("B" and "len") with two rows (1, ~500) each')
-    print(
-        context.query()
-        .group_by("B")
-        .agg(dp.len())
-        .release()
-        .collect()
-    )
+    print(context.query().group_by("B").agg(dp.len()).release().collect())
 
 
 def test_polars_threshold_rho():
@@ -562,42 +556,41 @@ def test_polars_threshold_rho():
         data=lf,
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(rho=0.5, delta=1e-7),
-        split_evenly_over=2
+        split_evenly_over=2,
     )
 
-    query = (
-        context.query()
-        .group_by("B")
-        .agg(dp.len())
-    )
+    query = context.query().group_by("B").agg(dp.len())
 
     actual = query.summarize()
-    expected = pl.DataFrame({
-        "column": ["len"],
-        "aggregate": ["Frame Length"],
-        "distribution": ["Integer Gaussian"],
-        # rho = .5, split over two queries, so rho_0 = 0.25.
-        # gaussian formula is rho_0 = (d_in / scale)^2 / 2, now solve for scale:
-        # scale = 1 / sqrt(2 * rho_0) = sqrt(2) ~= 1.414
-        "scale": [1.4142135623730954],
-        # probability of a partition with a unique individual being present in outcome must be at most 1e-7
-        # since d_in = 1, only at most one partition may change
-        # (when d_in is greater, then must consider union bound over up to L0 partitions)
-        # 
-        # probability of returning an unstable partition 
-        # is the probability that noise added to the count in the unstable partition exceeds the threshold
-        # therefore we must limit probability of sampling noise values greater than t to at most delta
-        # 
-        # mass of discrete gaussian tail greater than t is bounded above by mass of continuous gaussian tail gte t
-        # mass of continuous gaussian tail gte t is:
-        # erfc(t / scale / sqrt(2)) / 2
-        # 
-        # if you let t = 7, then mass is 3.7e-7 (too heavy by a factor of ~3.7)
-        # if you let t = 8, then mass is 7.7e-9 (sufficiently unlikely enough)
-        # 
-        # noise added to a true count d_in of 1 results in a threshold of 9
-        "threshold": [9]
-    }, schema_overrides={"threshold": pl.UInt32})
+    expected = pl.DataFrame(
+        {
+            "column": ["len"],
+            "aggregate": ["Frame Length"],
+            "distribution": ["Integer Gaussian"],
+            # rho = .5, split over two queries, so rho_0 = 0.25.
+            # gaussian formula is rho_0 = (d_in / scale)^2 / 2, now solve for scale:
+            # scale = 1 / sqrt(2 * rho_0) = sqrt(2) ~= 1.414
+            "scale": [1.4142135623730954],
+            # probability of a partition with a unique individual being present in outcome must be at most 1e-7
+            # since d_in = 1, only at most one partition may change
+            # (when d_in is greater, then must consider union bound over up to L0 partitions)
+            #
+            # probability of returning an unstable partition
+            # is the probability that noise added to the count in the unstable partition exceeds the threshold
+            # therefore we must limit probability of sampling noise values greater than t to at most delta
+            #
+            # mass of discrete gaussian tail greater than t is bounded above by mass of continuous gaussian tail gte t
+            # mass of continuous gaussian tail gte t is:
+            # erfc(t / scale / sqrt(2)) / 2
+            #
+            # if you let t = 7, then mass is 3.7e-7 (too heavy by a factor of ~3.7)
+            # if you let t = 8, then mass is 7.7e-9 (sufficiently unlikely enough)
+            #
+            # noise added to a true count d_in of 1 results in a threshold of 9
+            "threshold": [9],
+        },
+        schema_overrides={"threshold": pl.UInt32},
+    )
 
     # threshold should work out to 9
     pl_testing.assert_frame_equal(actual, expected)
@@ -610,13 +603,14 @@ def test_polars_threshold_rho():
 
 
 @pytest.mark.skipif(
-    os.getenv('FORCE_TEST_REPLACE_BINARY_PATH') != "1", 
-    reason="setting OPENDP_POLARS_LIB_PATH interferes with the execution of other tests"
+    os.getenv("FORCE_TEST_REPLACE_BINARY_PATH") != "1",
+    reason="setting OPENDP_POLARS_LIB_PATH interferes with the execution of other tests",
 )
 def test_replace_binary_path():
     import os
+
     pl = pytest.importorskip("polars")
-    expr = dp.len(scale=1.)
+    expr = dp.len(scale=1.0)
 
     # check that the library overwrites paths
     os.environ["OPENDP_POLARS_LIB_PATH"] = "testing!"
@@ -627,11 +621,11 @@ def test_replace_binary_path():
         dp.max_divergence(),
         expr,
     )
-    assert 'testing!' in str(m_expr(pl.LazyFrame(dict())).expr)
+    assert "testing!" in str(m_expr(pl.LazyFrame(dict())).expr)
 
     # check that local paths in new expressions get overwritten
     os.environ["OPENDP_POLARS_LIB_PATH"] = __file__
-    assert str(dp.len(scale=1.)) == f"len().{__file__}:noise([null, dyn float: 1.0])"
+    assert str(dp.len(scale=1.0)) == f"len().{__file__}:noise([null, dyn float: 1.0])"
 
     # cleanup
     del os.environ["OPENDP_POLARS_LIB_PATH"]
@@ -647,7 +641,7 @@ def test_pickle_bomb():
     import pickle
 
     # modified from https://intoli.com/blog/dangerous-pickles/
-    poison_binary = b'c__builtin__\neval\n(V1 / 0\ntR.'
+    poison_binary = b"c__builtin__\neval\n(V1 / 0\ntR."
 
     # poison_binary raises a ZeroDivisionError if it is ever unpickled
     with pytest.raises(ZeroDivisionError):
@@ -655,7 +649,9 @@ def test_pickle_bomb():
 
     # craft an expression that contains a poisoned pickle binary
 
-    py_exprs = parse_into_list_of_expressions((pl.len(), pl.lit("Laplace"), pl.lit(0.7)))
+    py_exprs = parse_into_list_of_expressions(
+        (pl.len(), pl.lit("Laplace"), pl.lit(0.7))
+    )
 
     # Replicates parts of register_plugin_function from Polars,
     # to allow injection of the specially-crafted pickle binary
@@ -719,16 +715,9 @@ def test_cut():
             split_evenly_over=1,
             margins=[dp.polars.Margin(by=by, public_info="keys")],
         )
-    actual = (
-        context.query()
-        .group_by(*by)
-        .agg(dp.len())
-        .release()
-        .collect()
-        .sort("x")
-    )
+    actual = context.query().group_by(*by).agg(dp.len()).release().collect().sort("x")
     expected = pl.DataFrame(
-        {"x": [0, 1, 2, 3], "len": [2, 2, 2, 1]}, 
+        {"x": [0, 1, 2, 3], "len": [2, 2, 2, 1]},
         schema={"x": pl.UInt32, "len": pl.UInt32},
     )
 
@@ -746,13 +735,13 @@ def test_csv_bad_encoding_loading():
     pl_testing = pytest.importorskip("polars.testing")
     import tempfile
 
-    name = 'André'
-    name_b = name.encode('iso-8859-1') # Polars only handles 'utf-8'.
+    name = "André"
+    name_b = name.encode("iso-8859-1")  # Polars only handles 'utf-8'.
 
     with tempfile.NamedTemporaryFile(delete=False) as fp:
         # By default, would delete file on "close()";
         # With "delete=False", clean up when exiting "with" instead.
-        fp.write(b'name\n' + name_b)
+        fp.write(b"name\n" + name_b)
         fp.close()
         observed = pl.scan_csv(fp.name, encoding="utf8-lossy")
         expected = pl.LazyFrame(
@@ -765,9 +754,11 @@ def test_csv_bad_encoding_loading():
 def test_categorical_domain_no_mapping():
     pl = pytest.importorskip("polars")
 
-    lf = pl.LazyFrame([pl.Series("A", ["Texas", "New York", None], dtype=pl.Categorical)])
+    lf = pl.LazyFrame(
+        [pl.Series("A", ["Texas", "New York", None], dtype=pl.Categorical)]
+    )
 
-    # query should be rejected even when data is known to be non-null, 
+    # query should be rejected even when data is known to be non-null,
     # because Polars will still raise a warning if the fill value is not in the encoding
     for element_domain in [
         dp.option_domain(dp.categorical_domain()),
@@ -778,8 +769,9 @@ def test_categorical_domain_no_mapping():
         match_msg = re.escape("fill_null cannot be applied to categorical data")
         with pytest.raises(dp.OpenDPException, match=match_msg):
             dp.t.make_stable_lazyframe(
-                lf_domain, dp.symmetric_distance(),
-                lf.with_columns(pl.col("A").fill_null("A"))
+                lf_domain,
+                dp.symmetric_distance(),
+                lf.with_columns(pl.col("A").fill_null("A")),
             )
 
 
@@ -794,14 +786,16 @@ def test_categorical_domain_with_mapping(wrap_with_option):
     element_domain = dp.categorical_domain(categories)
     if wrap_with_option:
         element_domain = dp.option_domain(element_domain)
-    
+
     lf_domain = dp.lazyframe_domain([dp.series_domain("A", element_domain)])
     assert str(lf_domain) == "FrameDomain(A: cat; margins=[])"
     # checks that categorical grouping keys can be released if encoding is public
     dp.m.make_private_lazyframe(
-        lf_domain, dp.symmetric_distance(), dp.max_divergence(),
+        lf_domain,
+        dp.symmetric_distance(),
+        dp.max_divergence(),
         lf.group_by("A").agg(dp.len()).join(keys, how="right", on=["A"]),
-        global_scale=1.0
+        global_scale=1.0,
     )
 
 
@@ -820,7 +814,7 @@ def test_categorical_context():
         split_evenly_over=1,
     )
 
-    with pytest.raises(dp.OpenDPException, match=r'Categories are data-dependent'):
+    with pytest.raises(dp.OpenDPException, match=r"Categories are data-dependent"):
         context.query().group_by("B").agg(dp.len()).release()
 
     # check that query runs.
@@ -844,31 +838,42 @@ def test_to_physical_unordered():
     # check that row ordering is protected
     with pytest.raises(dp.OpenDPException, match=re.escape("to_physical: to prevent")):
         dp.t.make_stable_lazyframe(
-            lf_domain, dp.symmetric_distance(),
-            lf.with_columns(pl.col("A").to_physical())
+            lf_domain,
+            dp.symmetric_distance(),
+            lf.with_columns(pl.col("A").to_physical()),
         )
 
 
 def test_float_sum_with_unlimited_reorderable_partitions():
     pl = pytest.importorskip("polars")
-    lf_domain = dp.lazyframe_domain([
-        dp.series_domain("region", dp.atom_domain(T=dp.i64)),
-        dp.series_domain("income", dp.atom_domain(T=dp.f64))
-    ])
-    lf_domain = dp.with_margin(lf_domain, Margin(by=[pl.col("region")], public_info="lengths", max_partition_length=6))
+    lf_domain = dp.lazyframe_domain(
+        [
+            dp.series_domain("region", dp.atom_domain(T=dp.i64)),
+            dp.series_domain("income", dp.atom_domain(T=dp.f64)),
+        ]
+    )
+    lf_domain = dp.with_margin(
+        lf_domain, dp.polars.Margin(by=[pl.col("region")], public_info="lengths", max_partition_length=6)
+    )
 
     from opendp.domains import _lazyframe_from_domain
+
     lf = _lazyframe_from_domain(lf_domain)
 
     # sum of income per region, add noise with scale of 1.0
-    pl = pytest.importorskip('polars')
-    plan = lf.group_by("region").agg([
-        pl.col("income").fill_nan(0.0).dp.sum(bounds=(1_000, 100_000), scale=1.0)
-    ])
+    pl = pytest.importorskip("polars")
+    plan = lf.group_by("region").agg(
+        [pl.col("income").fill_nan(0.0).dp.sum(bounds=(1_000, 100_000), scale=1.0)]
+    )
 
     # since there are an unknown number of partitions, and each partition has non-zero sensitivity, sensitivity is undefined
-    with pytest.raises(dp.OpenDPException, match='max_num_partitions must be known when the metric is not sensitive to ordering'):
-        dp.m.make_private_lazyframe(lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan)
+    with pytest.raises(
+        dp.OpenDPException,
+        match="max_num_partitions must be known when the metric is not sensitive to ordering",
+    ):
+        dp.m.make_private_lazyframe(
+            lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan
+        )
 
 
 def test_sort_usability():
@@ -885,33 +890,40 @@ def test_sort_usability():
 
 
 def test_count_queries():
-    pl = pytest.importorskip('polars')
+    pl = pytest.importorskip("polars")
     pl_testing = pytest.importorskip("polars.testing")
 
-    lf_domain = dp.lazyframe_domain([
-        dp.series_domain("data", dp.atom_domain(T=dp.i64))
-    ])
+    lf_domain = dp.lazyframe_domain(
+        [dp.series_domain("data", dp.atom_domain(T=dp.i64))]
+    )
 
     from opendp.domains import _lazyframe_from_domain
+
     lf = _lazyframe_from_domain(lf_domain)
 
     # sum of income per region, add noise with scale of 1.0
-    plan = lf.select([
-        pl.col("data").dp.len(scale=0).alias("len"),
-        pl.col("data").dp.count(scale=0).alias("count"),
-        pl.col("data").dp.n_unique(scale=0).alias("n_unique"),
-        pl.col("data").dp.null_count(scale=0).alias("null_count"),
-    ])
+    plan = lf.select(
+        [
+            pl.col("data").dp.len(scale=0).alias("len"),
+            pl.col("data").dp.count(scale=0).alias("count"),
+            pl.col("data").dp.n_unique(scale=0).alias("n_unique"),
+            pl.col("data").dp.null_count(scale=0).alias("null_count"),
+        ]
+    )
 
-    m_counts = dp.m.make_private_lazyframe(lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan)
+    m_counts = dp.m.make_private_lazyframe(
+        lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan
+    )
 
     release = m_counts(pl.LazyFrame({"data": [1, 1, 1, None]})).collect()
-    expected = pl.DataFrame({
-        "len": [4],
-        "count": [3],
-        "n_unique": [2],
-        "null_count": [1],
-    }).cast({pl.Int64: pl.UInt32})
+    expected = pl.DataFrame(
+        {
+            "len": [4],
+            "count": [3],
+            "n_unique": [2],
+            "null_count": [1],
+        }
+    ).cast({pl.Int64: pl.UInt32})
     pl_testing.assert_frame_equal(release, expected)
 
 
@@ -921,7 +933,9 @@ def test_explicit_grouping_keys():
 
     lf_domain, lf = example_lf(margin=["B"], max_partition_length=100)
 
-    plan_right = seed(lf.collect_schema()).group_by("B").agg(pl.col("D").dp.sum((0, 10)))
+    plan_right = (
+        seed(lf.collect_schema()).group_by("B").agg(pl.col("D").dp.sum((0, 10)))
+    )
     labels = pl.LazyFrame(pl.Series("B", [2, 3, 4, 5, 6], dtype=pl.Int32))
     plan = labels.join(plan_right, on="B", how="left")
     m_lf = dp.m.make_private_lazyframe(
@@ -948,15 +962,17 @@ def test_explicit_grouping_keys_context():
     context = dp.Context.compositor(
         data=lf,
         privacy_unit=dp.unit_of(contributions=1),
-        privacy_loss=dp.loss_of(epsilon=1.),
+        privacy_loss=dp.loss_of(epsilon=1.0),
         split_evenly_over=1,
         domain=lf_domain,
     )
 
     keys = pl.DataFrame(pl.Series("B", [2, 3, 4, 5, 6], dtype=pl.Int32))
-    query = context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys)
+    query = (
+        context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys)
+    )
     observed = query.release().collect().sort("B")
-    
+
     expected = pl.DataFrame(
         [
             pl.Series("B", list(range(2, 7)), dtype=pl.Int32),
@@ -977,7 +993,7 @@ def test_datetime(dtype):
         data=pl.LazyFrame([pl.Series("x", ["2000-01-02T03:04:05"])]),
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
-        split_evenly_over=1
+        split_evenly_over=1,
     )
     query = (
         context.query()
@@ -993,24 +1009,31 @@ def test_temporal_domain():
 
     # this triggers construction of a lazyframe domain from the schema
     context = dp.Context.compositor(
-        data=pl.LazyFrame([
-            pl.Series("date", [date(2000, 1, 1)]),
-            pl.Series("time", [time(7, 8, 9)]),
-            pl.Series("datetime", [datetime(2000, 1, 1, 7, 8, 9)]),
-        ]),
+        data=pl.LazyFrame(
+            [
+                pl.Series("date", [date(2000, 1, 1)]),
+                pl.Series("time", [time(7, 8, 9)]),
+                pl.Series("datetime", [datetime(2000, 1, 1, 7, 8, 9)]),
+            ]
+        ),
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
-        split_evenly_over=1
+        split_evenly_over=1,
     )
     observed = context.accountant.input_domain
-    expected = dp.lazyframe_domain([
-        dp.series_domain("date", dp.option_domain(dp.atom_domain(T="NaiveDate"))),
-        dp.series_domain("time", dp.option_domain(dp.atom_domain(T="NaiveTime"))),
-        dp.series_domain("datetime", dp.option_domain(dp.datetime_domain(time_unit="us"))),
-    ])
+    expected = dp.lazyframe_domain(
+        [
+            dp.series_domain("date", dp.option_domain(dp.atom_domain(T="NaiveDate"))),
+            dp.series_domain("time", dp.option_domain(dp.atom_domain(T="NaiveTime"))),
+            dp.series_domain(
+                "datetime", dp.option_domain(dp.datetime_domain(time_unit="us"))
+            ),
+        ]
+    )
 
     # check that domain is as expected
     assert observed == expected
+
 
 def test_replace():
     pl = pytest.importorskip("polars")
@@ -1024,15 +1047,16 @@ def test_replace():
         split_evenly_over=4,
         margins=[dp.polars.Margin(by=(), max_partition_length=300)],
     )
-    
-    # replace multiple input values with one output value    
+
+    # replace multiple input values with one output value
     pl_testing.assert_series_equal(
         context.query()
         .group_by(pl.col.alpha.replace(["A", "B"], "D"))
         .agg(dp.len())
         .release()
-        .collect()["alpha"].sort(), 
-        pl.Series("alpha", ["C", "D"])
+        .collect()["alpha"]
+        .sort(),
+        pl.Series("alpha", ["C", "D"]),
     )
 
     # replace multiple input values with respective output values (lists)
@@ -1041,8 +1065,9 @@ def test_replace():
         .group_by(pl.col.alpha.replace(["A", "B"], ["D", "E"]))
         .agg(dp.len())
         .release()
-        .collect()["alpha"].sort(), 
-        pl.Series("alpha", ["C", "D", "E"])
+        .collect()["alpha"]
+        .sort(),
+        pl.Series("alpha", ["C", "D", "E"]),
     )
 
     # replace multiple input values with respective output values (dict)
@@ -1051,8 +1076,9 @@ def test_replace():
         .group_by(pl.col.alpha.replace({"A": "D", "B": "E"}))
         .agg(dp.len())
         .release()
-        .collect()["alpha"].sort(), 
-        pl.Series("alpha", ["C", "D", "E"])
+        .collect()["alpha"]
+        .sort(),
+        pl.Series("alpha", ["C", "D", "E"]),
     )
 
 
@@ -1068,7 +1094,7 @@ def test_replace_strict():
         margins=[dp.polars.Margin(by=(), max_partition_length=300)],
     )
 
-    # replace multiple input values with one output value    
+    # replace multiple input values with one output value
     assert isinstance(
         context.query()
         .select(
@@ -1078,8 +1104,9 @@ def test_replace_strict():
         )
         .release()
         .collect()["alpha"][0],
-        int
+        int,
     )
+
 
 def test_cast_enum():
     pl = pytest.importorskip("polars")
@@ -1103,9 +1130,10 @@ def test_cast_enum():
         .release()
         .collect()["alpha"]
         .sort()
-        .cast(enum_dtype), 
-        pl.Series("alpha", ["A", "B", "C"], enum_dtype)
+        .cast(enum_dtype),
+        pl.Series("alpha", ["A", "B", "C"], enum_dtype),
     )
+
 
 def test_enum_domain():
     pl = pytest.importorskip("polars")
@@ -1119,9 +1147,13 @@ def test_enum_domain():
         split_evenly_over=1,
     )
     observed = context.accountant.input_domain
-    expected = dp.lazyframe_domain([
-        dp.series_domain("alpha", dp.option_domain(dp.enum_domain(enum_dtype.categories))),
-    ])
+    expected = dp.lazyframe_domain(
+        [
+            dp.series_domain(
+                "alpha", dp.option_domain(dp.enum_domain(enum_dtype.categories))
+            ),
+        ]
+    )
 
     # check that domain is as expected
     assert observed == expected
@@ -1152,7 +1184,7 @@ def test_arithmetic():
         }),
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0),
-        split_evenly_over=1,
+                split_evenly_over=1,
         margins=[dp.polars.Margin(by=(), max_partition_length=300)],
     )
 
@@ -1167,3 +1199,89 @@ def test_arithmetic():
 
     # expectation is 330.0
     assert 260 < observed < 400
+
+def test_truncation():
+    pl = pytest.importorskip("polars")
+
+    context = dp.Context.compositor(
+        data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100}),
+        privacy_unit=dp.unit_of(contributions=1, identifier="id"),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=1,
+    )
+
+    truncation_predicate = pl.int_range(pl.len()).over("id") < 3
+    query = context.query().filter(truncation_predicate).select(dp.len())
+    assert query.summarize()["scale"][0] == 3.0000000000000004  # type: ignore[index]
+
+    query = context.query().truncate(k=2).select(dp.len())
+    assert query.summarize()["scale"][0] == 2.0000000000000004  # type: ignore[index]
+
+    context = dp.Context.compositor(
+        data=pl.LazyFrame({"alpha": ["A", "B", "C", "D"] * 100, "id": list(range(100)) * 4}),
+        privacy_unit=dp.unit_of(
+            contributions=[
+                GroupBound(
+                    by=["alpha"],
+                    max_influenced_partitions=1,
+                    max_partition_contributions=1,
+                )
+            ],
+            identifier="id",
+        ),
+        privacy_loss=dp.loss_of(rho=0.5, delta=1e-7),
+        split_evenly_over=1,
+    )
+
+    truncation_predicate = pl.int_range(pl.len()).over("id", "alpha") < 3
+    query = context.query().filter(truncation_predicate).group_by("alpha").agg(dp.len())
+    assert query.summarize()["scale"][0] == 3.0000000000000004  # type: ignore[index]
+
+    query = context.query().truncate(k=2, over=["alpha"]).group_by("alpha").agg(dp.len())
+    assert query.summarize()["scale"][0] == 2.0000000000000004  # type: ignore[index]
+
+
+@pytest.mark.parametrize("privacy_unit", [dp.unit_of(changes=1), dp.unit_of(changes=1, ordered=True)])
+def test_private_lazyframe_bounded_dp(privacy_unit):
+    pl = pytest.importorskip("polars")
+
+    context = dp.Context.compositor(
+        data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100}),
+        privacy_unit=privacy_unit,
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=1,
+        margins=[dp.polars.Margin(by=(), max_partition_length=300)],
+    )
+
+    query = context.query().select(pl.col.id.fill_null(0).dp.sum((0, 3)))
+    assert query.summarize()["scale"][0] == 3.000000000000001  # type: ignore[index]
+
+def test_lazyframe_bounded_dp_truncation():
+    pl = pytest.importorskip("polars")
+
+    context = dp.Context.compositor(
+        data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100}),
+        privacy_unit=dp.unit_of(changes=1, identifier="id"),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=1,
+    )
+
+    # the unused with_columns is for test coverage of .truncate, 
+    # which retrieves input domain from prior query
+    query = context.query().with_columns(x=pl.lit(10)).truncate(3).select(dp.len())
+    assert query.summarize()["scale"][0] == 6.000000000000001  # type: ignore[index]
+
+
+def test_unnecessary_lazyframe_truncation():
+    pl = pytest.importorskip("polars")
+
+    context = dp.Context.compositor(
+        data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100}),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=1,
+        margins=[dp.polars.Margin(by=(), max_partition_length=300)],
+    )
+
+    with pytest.raises(ValueError, match="truncation is only supported for"):
+        context.query().truncate(3)

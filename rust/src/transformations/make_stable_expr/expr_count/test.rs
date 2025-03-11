@@ -2,7 +2,7 @@ use super::*;
 
 use crate::{
     domains::{LazyFrameDomain, Margin, OptionDomain},
-    metrics::{InsertDeleteDistance, L1Distance, L2Distance, SymmetricDistance},
+    metrics::{InsertDeleteDistance, L1Distance, L2Distance, Multi, SymmetricDistance},
 };
 
 use polars::{
@@ -116,8 +116,8 @@ fn test_select_make_expr_count_row_by_row() -> Fallible<()> {
     assert!(
         col("data")
             .count()
-            .make_stable(expr_domain, InsertDeleteDistance)
-            .map(|_: Transformation<_, _, _, InsertDeleteDistance>| ())
+            .make_stable(expr_domain, Multi(InsertDeleteDistance))
+            .map(|_: Transformation<_, _, _, Multi<InsertDeleteDistance>>| ())
             .is_err()
     );
 
