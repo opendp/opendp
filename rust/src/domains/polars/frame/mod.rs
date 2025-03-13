@@ -321,7 +321,13 @@ impl<F: Frame> FrameDomain<F> {
             .iter()
             .find(|s| s.name == name)
             .cloned()
-            .ok_or_else(|| err!(MakeTransformation, "unrecognized column: {}", name))
+            .ok_or_else(|| {
+                err!(
+                    MakeTransformation,
+                    "unrecognized column in series domain: {}",
+                    name
+                )
+            })
     }
 }
 
