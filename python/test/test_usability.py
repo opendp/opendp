@@ -181,11 +181,11 @@ def test_without_max_partition_length():
     config = pl.col("A").fill_null(0).dp.mean((0, 10))
 
     plain_query = context_wo_margin.query().select(config)
-    with pytest.raises(dp.OpenDPException, match=r"must specify 'max_length' in margin with by=\[\]"):
+    with pytest.raises(dp.OpenDPException, match=r"must specify 'max_length' in a margin with by=\[\]"):
         plain_query.release()
 
     agg_query = context_wo_margin.query().group_by(["B"]).agg(config)
-    with pytest.raises(dp.OpenDPException, match=r"must specify 'max_length' in margin with by=\[\]"):
+    with pytest.raises(dp.OpenDPException, match=r"must specify 'max_length' in a margin with by=\[\]"):
         agg_query.release()
     
     
