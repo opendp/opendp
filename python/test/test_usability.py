@@ -167,24 +167,79 @@ def test_unrecognized_column():
     with pytest.raises(dp.OpenDPException, match=r"unrecognized column 'X' in output domain; expected one of: A, B"):
         plain_query.release()
 
-def test_max_partition_length_message():
+def test_without_max_partition_length():
     pl = pytest.importorskip("polars")
 
-    context = dp.Context.compositor(
-        data=pl.LazyFrame(
-            {"a_column": [1, 2, 3, 4]},
-        ),
+    context_wo_margin = dp.Context.compositor(
+        data=pl.LazyFrame({"A": [1, 2, 3, 4], "B": [5, 6, 7, 8]}),
         privacy_unit=dp.unit_of(contributions=1),
-        privacy_loss=dp.loss_of(epsilon=1, delta=1e-7),
-        split_evenly_over=1,
+        privacy_loss=dp.loss_of(epsilon=1),
+        split_evenly_over=2,
         margins=[],
     )
 
-    hw_number_config = (
-        pl.col("a_column")
-        .fill_null(0)
-        .dp.mean((5, 15))
+    config = pl.col("A").fill_null(0).dp.mean((0, 10))
+
+    plain_query = context_wo_margin.query().select(config)
+    with pytest.raises(dp.OpenDPException, match=r"must specify 'max_length' in margin with by=\[\]"):
+        plain_query.release()
+
+    agg_query = context_wo_margin.query().group_by(["B"]).agg(config)
+    with pytest.raises(dp.OpenDPException, match=r"must specify 'max_length' in margin with by=\[\]"):
+        agg_query.release()
+    
+    
+# Add a margin and try the same queries again:
+def test_with_max_partition_length():
+    pl = pytest.importorskip("polars")
+
+    context_w_margin = dp.Context.compositor(
+        data=pl.LazyFrame({"A": [1, 2, 3, 4], "B": [5, 6, 7, 8]}),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1),
+        split_evenly_over=2,
+        margins=[dp.polars.Margin(
+            by=[],
+            max_partition_length=1
+        )],
     )
-    hw_number_query = context.query().select(hw_number_config)
-    with pytest.raises(dp.OpenDPException, match=r"must specify 'max_partition_length' in margin with by=\[\]"):
-        hw_number_query.release().collect()
+
+    config = pl.col("A").fill_null(0).dp.mean((0, 10))
+
+    plain_query = context_w_margin.query().select(config)
+    plain_query.release()
+
+    agg_query = context_w_margin.query().group_by(["B"]).agg(config)
+    with pytest.raises(dp.OpenDPException, match=re.escape('The key-set of {col("B")} is private')):
+        agg_query.release()
+
+
+# Add a public key set:
+def test_with_max_partition_length_and_public_keys():
+    pl = pytest.importorskip("polars")
+    
+    context_w_public_keys = dp.Context.compositor(
+        data=pl.LazyFrame({"A": [1, 2, 3, 4], "B": [5, 6, 7, 8]}),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1),
+        split_evenly_over=2,
+        margins=[
+            dp.polars.Margin(
+                by=[],
+                max_partition_length=1
+            ),
+            dp.polars.Margin(
+                by=['B'],
+                max_partition_length=1,
+                public_info='keys',
+            ),
+        ],
+    )
+
+    config = pl.col("A").fill_null(0).dp.mean((0, 10))
+
+    plain_query = context_w_public_keys.query().select(config)
+    plain_query.release()
+
+    agg_query = context_w_public_keys.query().group_by(["B"]).agg(config)
+    agg_query.release()
