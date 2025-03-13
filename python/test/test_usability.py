@@ -128,3 +128,26 @@ def test_polars_expr_loader_error_is_human_readable():
             dp.max_divergence(),
             pl.LazyFrame({}),
         )
+
+
+def test_max_partition_length_message():
+    pl = pytest.importorskip("polars")
+
+    context = dp.Context.compositor(
+        data=pl.LazyFrame(
+            {"a_column": [1, 2, 3, 4]},
+        ),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1, delta=1e-7),
+        split_evenly_over=1,
+        margins=[],
+    )
+
+    hw_number_config = (
+        pl.col("a_column")
+        .fill_null(0)
+        .dp.mean((5, 15))
+    )
+    hw_number_query = context.query().select(hw_number_config)
+    with pytest.raises(dp.OpenDPException, match=r"must specify 'max_partition_length' in margin with by=\[\]"):
+        hw_number_query.release().collect()
