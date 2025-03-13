@@ -151,7 +151,12 @@ where
     let invariant = margin.invariant;
 
     let max_size = usize::exact_int_cast(margin.max_length.ok_or_else(|| {
-        let margin_by = margin.by.iter().map(|expr| expr.to_string()).collect::<Vec<_>>().join(", ");
+        let margin_by = margin
+            .by
+            .iter()
+            .map(|expr| expr.to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
         err!(
             MakeTransformation,
             "must specify 'max_length' in a margin with by=[{margin_by}]"
