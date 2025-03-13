@@ -153,9 +153,10 @@ where
     let public_info = margin.public_info;
 
     let max_size = usize::exact_int_cast(margin.max_partition_length.ok_or_else(|| {
+        let margin_by = margin.by.iter().map(|expr| expr.to_string()).collect::<Vec<_>>().join(", ");
         err!(
             MakeTransformation,
-            "must specify max_partition_length in margin"
+            "must specify 'max_partition_length' in a margin with by=[{margin_by}]"
         )
     })?)?;
 
