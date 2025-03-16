@@ -1,5 +1,6 @@
 import opendp  # So we can access the private _PRIMITIVE_TYPES
 from opendp._lib import import_optional_dependency
+from opendp.extras.polars import Margin
 import opendp.prelude as dp
 import pytest
 
@@ -11,13 +12,18 @@ def test_atom_domain_primitive_types(ty):
     dp.option_domain(dp.atom_domain(T=ty))
 
 
-def test_atom_domain():
+def test_atom_domain_bounds():
     atom_domain = dp.atom_domain(T=int, bounds=(1, 2))
     assert str(atom_domain) == "AtomDomain(bounds=[1, 2], T=i32)"
     assert atom_domain.carrier_type == dp.i32
     assert atom_domain.bounds == (1, 2)
+    assert atom_domain != str(atom_domain)
+    assert not atom_domain.nullable
 
+def test_atom_domain_nullable():
     atom_domain = dp.atom_domain(T=float, nullable=True)
+    assert atom_domain.carrier_type == dp.f64
+    assert atom_domain.bounds == None
     assert atom_domain != str(atom_domain)
     assert atom_domain.nullable
 
@@ -41,7 +47,7 @@ def test_lazyframe_domain_series():
     series_domain = dp.series_domain("A", atom_domain)
     frame_domain = dp.lazyframe_domain([series_domain])
 
-    assert frame_domain.series_domain("A") == series_domain
+    assert frame_domain.get_series_domain("A") == series_domain
     assert frame_domain.columns == ["A"]
 
 
@@ -51,19 +57,20 @@ def test_lazyframe_domain_margins():
     series_domain = dp.series_domain("A", atom_domain)
     frame_domain = dp.with_margin(
         dp.lazyframe_domain([series_domain]),
-        by=["A"],
-        max_influenced_partitions=10,
-        max_partition_contributions=2,
-        max_num_partitions=20,
-        max_partition_length=1000,
-        public_info="keys",
+        Margin(
+            by=["A"],
+            max_influenced_partitions=10,
+            max_partition_contributions=2,
+            max_num_partitions=20,
+            max_partition_length=1000,
+            public_info="keys"
+        ),
     )
-    assert frame_domain.series_domain("A") == series_domain
+    assert frame_domain.get_series_domain("A") == series_domain
 
     # for coverage
     assert dp.polars.Margin(by=[]) != "not a margin"
     assert dp.polars.Margin(by=[]) != dp.polars.Margin(by=["A"])
-
     assert frame_domain.get_margin([]) == dp.polars.Margin(
         by=[], max_influenced_partitions=1, max_num_partitions=1, public_info="keys"
     )
@@ -83,8 +90,32 @@ def test_lazyframe_domain_margins():
         max_partition_length=1000,
     )
 
+    # now add a margin for column B
+    frame_domain = dp.with_margin(
+        frame_domain,
+        Margin(
+            by=["B"],
+            max_influenced_partitions=10,
+            max_partition_contributions=3,
+            max_num_partitions=20,
+            max_partition_length=500,
+            public_info="keys"
+        ),
+    )
+
+    assert frame_domain.get_margin(["A", "B"]) == dp.polars.Margin(
+        by=["A", "B"],
+        max_partition_contributions=2, # from A
+        max_partition_length=500,  # from B
+        max_num_partitions=400, # 20 * 20
+        max_influenced_partitions=100, # 10 * 10
+    )
+
     with pytest.raises(ValueError, match="must be a collection"):
         frame_domain.get_margin("A")
+
+    with pytest.raises(ValueError, match="must be a collection"):
+        frame_domain.get_margin(2) # type: ignore[arg-type]
 
 
 def test_vector_domain():

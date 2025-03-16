@@ -1,10 +1,10 @@
-use std::{any::TypeId, collections::HashSet, ffi::c_char, os::raw::c_void};
+use std::{any::TypeId, collections::HashSet, ffi::c_char};
 
 use opendp_derive::bootstrap;
 
 use crate::{
     core::{FfiResult, MetricSpace},
-    domains::{Margin, MarginPub, SeriesDomain},
+    domains::{Margin, SeriesDomain},
     error::Fallible,
     ffi::{
         any::{AnyDomain, AnyMetric, AnyObject, Downcast},
@@ -95,135 +95,6 @@ pub extern "C" fn opendp_domains___lazyframe_domain_get_margin(
     Ok(AnyObject::new(margin)).into()
 }
 
-#[bootstrap(
-    name = "_margin_get_by",
-    arguments(margin(rust_type = "Margin")),
-    returns(c_type = "FfiResult<AnyObject *>")
-)]
-/// Retrieve the columns a margin is grouped by.
-///
-/// # Arguments
-/// * `margin` - Margin to introspect
-#[unsafe(no_mangle)]
-pub extern "C" fn opendp_domains___margin_get_by(
-    margin: *const AnyObject,
-) -> FfiResult<*mut AnyObject> {
-    let margin = try_!(try_as_ref!(margin).downcast_ref::<Margin>());
-    Ok(AnyObject::new(
-        margin.by.iter().cloned().collect::<Vec<_>>(),
-    ))
-    .into()
-}
-
-#[bootstrap(
-    name = "_margin_get_max_partition_length",
-    arguments(margin(rust_type = "Margin")),
-    returns(c_type = "FfiResult<AnyObject *>")
-)]
-/// Retrieve the max partition length from a margin
-///
-/// # Arguments
-/// * `margin` - Margin to introspect
-#[unsafe(no_mangle)]
-pub extern "C" fn opendp_domains___margin_get_max_partition_length(
-    margin: *const AnyObject,
-) -> FfiResult<*mut AnyObject> {
-    let margin = try_!(try_as_ref!(margin).downcast_ref::<Margin>());
-    Ok(AnyObject::new(
-        margin.max_partition_length.clone().map(AnyObject::new),
-    ))
-    .into()
-}
-
-#[bootstrap(
-    name = "_margin_get_max_num_partitions",
-    arguments(margin(rust_type = "Margin")),
-    returns(c_type = "FfiResult<AnyObject *>")
-)]
-/// Retrieve the max num partitions from a margin
-///
-/// # Arguments
-/// * `margin` - Margin to introspect
-#[unsafe(no_mangle)]
-pub extern "C" fn opendp_domains___margin_get_max_num_partitions(
-    margin: *const AnyObject,
-) -> FfiResult<*mut AnyObject> {
-    let margin = try_!(try_as_ref!(margin).downcast_ref::<Margin>());
-    Ok(AnyObject::new(
-        margin.max_num_partitions.clone().map(AnyObject::new),
-    ))
-    .into()
-}
-
-#[bootstrap(
-    name = "_margin_get_max_partition_contributions",
-    arguments(margin(rust_type = "Margin")),
-    returns(c_type = "FfiResult<AnyObject *>")
-)]
-/// Retrieve the max partition contributions from a margin
-///
-/// # Arguments
-/// * `margin` - Margin to introspect
-#[unsafe(no_mangle)]
-pub extern "C" fn opendp_domains___margin_get_max_partition_contributions(
-    margin: *const AnyObject,
-) -> FfiResult<*mut AnyObject> {
-    let margin = try_!(try_as_ref!(margin).downcast_ref::<Margin>());
-    Ok(AnyObject::new(
-        margin
-            .max_partition_contributions
-            .clone()
-            .map(AnyObject::new),
-    ))
-    .into()
-}
-
-#[bootstrap(
-    name = "_margin_get_max_influenced_partitions",
-    arguments(margin(rust_type = "Margin")),
-    returns(c_type = "FfiResult<AnyObject *>")
-)]
-/// Retrieve the max influenced partitions from a margin
-///
-/// # Arguments
-/// * `margin` - Margin to introspect
-#[unsafe(no_mangle)]
-pub extern "C" fn opendp_domains___margin_get_max_influenced_partitions(
-    margin: *const AnyObject,
-) -> FfiResult<*mut AnyObject> {
-    let margin = try_!(try_as_ref!(margin).downcast_ref::<Margin>());
-    Ok(AnyObject::new(
-        margin.max_influenced_partitions.clone().map(AnyObject::new),
-    ))
-    .into()
-}
-
-#[bootstrap(
-    name = "_margin_get_public_info",
-    arguments(margin(rust_type = "Margin")),
-    returns(c_type = "FfiResult<AnyObject *>")
-)]
-/// Retrieve the public info invariant from a margin.
-///
-/// # Arguments
-/// * `margin` - Margin to introspect
-#[unsafe(no_mangle)]
-pub extern "C" fn opendp_domains___margin_get_public_info(
-    margin: *const AnyObject,
-) -> FfiResult<*mut AnyObject> {
-    let margin = try_!(try_as_ref!(margin).downcast_ref::<Margin>());
-    Ok(AnyObject::new(
-        margin
-            .public_info
-            .map(|info| match info {
-                MarginPub::Keys => "keys".to_string(),
-                MarginPub::Lengths => "lengths".to_string(),
-            })
-            .map(AnyObject::new),
-    ))
-    .into()
-}
-
 #[bootstrap()]
 /// Construct an empty LazyFrame with the same schema as in the LazyFrameDomain.
 ///
@@ -261,48 +132,16 @@ pub(crate) fn unpack_series_domains(
 
 #[bootstrap(
     name = "with_margin",
-    arguments(
-        frame_domain(rust_type = b"null"),
-        by(rust_type = "Vec<Expr>"),
-        max_partition_length(c_type = "void *", rust_type = "Option<u32>", default = b"null"),
-        max_num_partitions(c_type = "void *", rust_type = "Option<u32>", default = b"null"),
-        max_partition_contributions(
-            c_type = "void *",
-            rust_type = "Option<u32>",
-            default = b"null"
-        ),
-        max_influenced_partitions(c_type = "void *", rust_type = "Option<u32>", default = b"null"),
-        public_info(rust_type = "Option<String>", default = b"null")
-    ),
+    arguments(frame_domain(rust_type = b"null"), margin(rust_type = "Margin")),
     returns(c_type = "FfiResult<AnyDomain *>", hint = "LazyFrameDomain")
 )]
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__with_margin(
     frame_domain: *mut AnyDomain,
-    by: *mut AnyObject,
-    max_partition_length: *mut c_void,
-    max_num_partitions: *mut c_void,
-    max_partition_contributions: *mut c_void,
-    max_influenced_partitions: *mut c_void,
-    public_info: *mut c_char,
+    margin: *mut AnyObject,
 ) -> FfiResult<*mut AnyDomain> {
     let domain = try_as_ref!(frame_domain);
-    let by = HashSet::from_iter(try_!(try_as_ref!(by).downcast_ref::<Vec<Expr>>()).clone());
-
-    let margin = Margin {
-        by,
-        max_partition_length: util::as_ref(max_partition_length as *const u32).cloned(),
-        max_num_partitions: util::as_ref(max_num_partitions as *const u32).cloned(),
-        max_partition_contributions: util::as_ref(max_partition_contributions as *const u32)
-            .cloned(),
-        max_influenced_partitions: util::as_ref(max_influenced_partitions as *const u32).cloned(),
-        public_info: match try_!(util::to_option_str(public_info)) {
-            Some("keys") => Some(MarginPub::Keys),
-            Some("lengths") => Some(MarginPub::Lengths),
-            None => None,
-            _ => return err!(FFI, "public_info must be one of 'keys' or 'lengths'").into(),
-        },
-    };
+    let margin = try_!(try_as_ref!(margin).downcast_ref::<Margin>()).clone();
 
     let frame_domain = try_as_ref!(frame_domain);
     let F_ = match frame_domain.type_.id {

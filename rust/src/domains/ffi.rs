@@ -295,7 +295,7 @@ pub extern "C" fn opendp_domains___atom_domain_get_nullable(
     let T = try_!(domain.type_.get_atom());
     dispatch!(
         monomorphize,
-        [(T, @floats)],
+        [(T, @primitives)],
         (domain)
     )
     .into()

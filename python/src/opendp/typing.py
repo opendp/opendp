@@ -228,7 +228,7 @@ class RuntimeType(object):
                     return _ELEMENTARY_TYPES[int]
                 if type_name == "float":
                     return _ELEMENTARY_TYPES[float]
-                if type_name == "str":
+                if type_name == "str": # "str" translates to "String"
                     return _ELEMENTARY_TYPES[str]
                 return type_name
 
@@ -279,16 +279,16 @@ class RuntimeType(object):
         pl = import_optional_dependency("polars", raise_error=False)
         if pl is not None:
             if isinstance(public_example, pl.LazyFrame):
-                return "LazyFrame"
+                return LazyFrame
             
             if isinstance(public_example, pl.DataFrame):
-                return "DataFrame"
+                return DataFrame
             
             if isinstance(public_example, pl.Series):
-                return "Series"
+                return Series
             
             if isinstance(public_example, pl.Expr):
-                return "Expr"
+                return Expr
 
         if isinstance(public_example, tuple):
             return RuntimeType('Tuple', [cls.infer(e, py_object) for e in public_example])
@@ -359,7 +359,7 @@ class RuntimeType(object):
             return cls.infer(public_example)
         raise UnknownTypeException("either type_name or public_example must be passed")  # pragma: no cover
 
-def substitute(value: Union["RuntimeType", str], **kwargs):
+def _substitute(value: Union["RuntimeType", str], **kwargs):
     '''
     Substitutes any generic type parameters according to the passed keyword arguments
     
@@ -369,7 +369,7 @@ def substitute(value: Union["RuntimeType", str], **kwargs):
     if isinstance(value, _GenericType):
         return kwargs.get(value.origin, value)
     if isinstance(value, RuntimeType):
-        return RuntimeType(value.origin, value.args and [substitute(arg, **kwargs) for arg in value.args])
+        return RuntimeType(value.origin, value.args and [_substitute(arg, **kwargs) for arg in value.args])
     return value
     
 

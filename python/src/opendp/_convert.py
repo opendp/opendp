@@ -166,10 +166,6 @@ def c_to_py(value: Any) -> Any:
         if "PrivacyProfile" == obj_type:
             return PrivacyProfile(value)
         
-        if "Margin" == obj_type:
-            from opendp.extras.polars import Margin
-            return Margin._from_anyobject(value)
-        
         if "Queryable" in obj_type:
             from opendp.core import queryable_query_type
             query_type = RuntimeType.parse(queryable_query_type(value))
@@ -208,16 +204,17 @@ def c_to_py(value: Any) -> Any:
 
         if isinstance(rt_type, RuntimeType):
             if rt_type.origin == "OptionDomain":
-                value = ctypes.cast(value, OptionDomain)
+                value.__class__ = OptionDomain
             elif rt_type.origin == "AtomDomain":
-                value = ctypes.cast(value, AtomDomain)
+                value.__class__ = AtomDomain
             elif rt_type.origin == "VectorDomain":
-                value = ctypes.cast(value, VectorDomain)
+                value.__class__ = VectorDomain
         else:
             if rt_type == "SeriesDomain":
-                value = ctypes.cast(value, SeriesDomain)
+                value.__class__ = SeriesDomain
             elif rt_type == "LazyFrameDomain":
-                value = ctypes.cast(value, LazyFrameDomain)
+                value.__class__ = LazyFrameDomain
+        # otherwise falls through to the default case, where isinstance(value, Domain) 
 
     if isinstance(value, ctypes.c_void_p):
         # returned void pointers are interpreted as None
@@ -263,6 +260,9 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
         
         if type_name == "ExprPlan":
             return _slice_to_exprplan(raw)
+        
+        if type_name == "Margin":
+            return _slice_to_margin(raw)
         
         if type_name == "AnyObject":
             return _slice_to_anyobject(raw)
@@ -319,6 +319,9 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
         
         if type_name == "DataFrame":
             return _dataframe_to_slice(value)
+        
+        if type_name == "Margin":
+            return _margin_to_slice(value)
             
         if type_name == "Expr":
             return _expr_to_slice(value)
@@ -440,6 +443,7 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
         array = domain_array_type(*val) # type: ignore[operator]
         return _wrap_in_slice(array, len(val))
     
+    # remaining inner types should be atomic
     val = [_check_and_cast_scalar(inner_type_name, v) for v in val]
 
     if inner_type_name == "String":
@@ -659,6 +663,60 @@ def _slice_to_exprplan(raw: FfiSlicePtr):
     ExprPlan = namedtuple("ExprPlan", ["plan", "expr", "fill"])
     return ExprPlan(plan, expr, fill)
 
+
+def _slice_to_margin(raw: FfiSlicePtr):
+    from opendp.extras.polars import Margin
+
+    # typed pointer
+    void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
+    # list of void*
+    ptr_data = void_array_ptr[0 : raw.contents.len]
+
+    def optional_u32(ptr):
+        u32_ptr = ctypes.cast(ptr, ctypes.POINTER(ctypes.c_uint32))
+        return u32_ptr[0] if u32_ptr else None
+
+    public_info = ctypes.cast(ptr_data[3], ctypes.c_char_p)
+    return Margin(
+        by=c_to_py(ctypes.cast(ptr_data[0], AnyObjectPtr)),
+        max_partition_length=optional_u32(ptr_data[1]),
+        max_num_partitions=optional_u32(ptr_data[2]),
+        public_info=public_info.value.decode() if public_info.value else None, # type: ignore[arg-type]
+        max_partition_contributions=optional_u32(ptr_data[4]),
+        max_influenced_partitions=optional_u32(ptr_data[5]),
+    )
+
+
+def _margin_to_slice(val) -> FfiSlicePtr:
+    pl = import_optional_dependency("polars")
+
+    if not isinstance(val.by, Sequence) or isinstance(val.by, str):
+        raise ValueError(f"by must be a sequence, found {val.by}")  # pragma: no cover
+
+    by_exprs = [col if isinstance(col, pl.Expr) else pl.col(col) for col in val.by]
+    by = ctypes.cast(py_to_c(by_exprs, c_type=AnyObjectPtr, type_name="Vec<Expr>"), ctypes.c_void_p)
+
+    def optional_u32(v):
+        if v is None:
+            return
+        check_c_int_cast(v, "u32")
+        return ctypes.cast(ctypes.pointer(ctypes.c_uint32(v)), ctypes.c_void_p)
+    
+    mpl = optional_u32(val.max_partition_length)
+    mnp = optional_u32(val.max_num_partitions)
+    mpc = optional_u32(val.max_partition_contributions)
+    mip = optional_u32(val.max_influenced_partitions)
+
+    public_info = None
+    if val.public_info:
+        public_info_char = ctypes.c_char_p(val.public_info.encode())
+        public_info = ctypes.cast(public_info_char, ctypes.c_void_p)
+
+    array = (ctypes.c_void_p * 6)(by, mpl, mnp, public_info, mpc, mip)
+    return _wrap_in_slice(ctypes.pointer(array), 6)
+
+
+
 def _dataframe_to_slice(val) -> FfiSlicePtr:
     pl = import_optional_dependency('polars')
     if not isinstance(val, pl.DataFrame):
@@ -728,6 +786,8 @@ def _slice_to_anyobject(raw: FfiSlicePtr):
 
     obj = ctypes.cast(raw.contents.ptr, AnyObjectPtr)
     ret = c_to_py(obj)
+    # don't free obj, because it is owned by Rust
+    # c_to_py cares that the type is AnyObject, so this needs to happen after c_to_py
     obj.__class__ = ctypes.POINTER(AnyObject) # type: ignore[assignment]
     
     return ret

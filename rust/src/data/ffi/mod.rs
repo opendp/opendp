@@ -25,8 +25,10 @@ use crate::core::{FfiError, FfiResult, FfiSlice, Function};
 use crate::domains::BitVector;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyFunction, AnyMeasurement, AnyObject, AnyQueryable, Downcast};
-use crate::ffi::util::{self, AnyDomainPtr, ExtrinsicObject, into_c_char_p};
-use crate::ffi::util::{AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents, c_bool};
+use crate::ffi::util::{
+    self, as_ref, into_c_char_p, into_raw, to_option_str, AnyDomainPtr, ExtrinsicObject,
+};
+use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents};
 use crate::measures::PrivacyProfile;
 use crate::metrics::IntDistance;
 use crate::traits::ProductOrd;
@@ -260,6 +262,29 @@ pub extern "C" fn opendp_data__slice_as_object(
     fn raw_to_dslplan(raw: &FfiSlice) -> Fallible<AnyObject> {
         Ok(AnyObject::new(LazyFrame::from(deserialize_raw::<DslPlan>(raw, "LazyFrame")?).logical_plan))
     }
+    #[cfg(feature = "polars")]
+    fn raw_to_margin(raw: &FfiSlice) -> Fallible<AnyObject> {
+        use std::collections::HashSet;
+        use crate::domains::{Margin, MarginPub};
+
+        if raw.len != 6 {
+            return fallible!(FFI, "Margin FfiSlice must have length 6, found a length of {}", raw.len);
+        }
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, raw.len) };
+        Ok(AnyObject::new(Margin {
+            by: HashSet::from_iter(try_!(try_as_ref!(slice[0] as *const AnyObject).downcast_ref::<Vec<Expr>>()).clone()),
+            max_partition_length: as_ref(slice[1] as *const u32).cloned(),
+            max_num_partitions: as_ref(slice[2] as *const u32).cloned(),
+            public_info: match to_option_str(slice[3] as *const c_char)? {
+                Some("keys") => Some(MarginPub::Keys),
+                Some("lengths") => Some(MarginPub::Lengths),
+                None => None,
+                _ => return fallible!(FFI, "public_info must be None, 'keys' or 'lengths'"),
+            },
+            max_partition_contributions: as_ref(slice[4] as *const u32).cloned(),
+            max_influenced_partitions: as_ref(slice[5] as *const u32).cloned(),
+        })).into()
+    }
     match T_.contents {
         TypeContents::PLAIN("BitVector") => raw_to_bitvector(raw),
         TypeContents::PLAIN("String") => raw_to_string(raw),
@@ -275,6 +300,8 @@ pub extern "C" fn opendp_data__slice_as_object(
         TypeContents::PLAIN("DataFrame") => raw_to_dataframe(raw),
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("Series") => raw_to_series(raw),
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("Margin") => raw_to_margin(raw),
 
         TypeContents::SLICE(element_id) => {
             let element = try_!(Type::of_id(&element_id));
@@ -598,6 +625,44 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         })
     }
 
+    #[cfg(feature = "polars")]
+    fn margin_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
+        use crate::domains::{Margin, MarginPub};
+
+        let margin = obj.downcast_ref::<Margin>()?;
+
+        fn to_ptr<T>(v: Option<T>) -> *const c_void {
+            v.map(|v| into_raw(v) as *const c_void).unwrap_or_else(null)
+        }
+
+        let buffer = vec![
+            AnyObject::new_raw(margin.by.iter().cloned().collect::<Vec<_>>()) as *const c_void,
+            to_ptr(margin.max_partition_length),
+            to_ptr(margin.max_num_partitions),
+            margin
+                .public_info
+                .map(|v| {
+                    into_c_char_p(
+                        match v {
+                            MarginPub::Keys => "keys",
+                            MarginPub::Lengths => "lengths",
+                        }
+                        .to_string(),
+                    )
+                    .unwrap() as *const c_void
+                })
+                .unwrap_or_else(null),
+            to_ptr(margin.max_partition_contributions),
+            to_ptr(margin.max_influenced_partitions),
+        ];
+        let slice = FfiSlice {
+            ptr: buffer.as_ptr() as *mut c_void,
+            len: buffer.len(),
+        };
+        util::into_raw(buffer);
+        Ok(slice)
+    }
+
     fn tuple_curve_f64_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
         let (curve, delta) = obj.downcast_ref::<(PrivacyProfile, f64)>()?;
 
@@ -624,6 +689,8 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         TypeContents::PLAIN("DataFrame") => dataframe_to_raw(obj),
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("Series") => series_to_raw(obj),
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("Margin") => margin_to_raw(obj),
 
         TypeContents::SLICE(element_id) => {
             let element = try_!(Type::of_id(element_id));

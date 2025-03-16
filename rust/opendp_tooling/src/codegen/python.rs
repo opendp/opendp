@@ -146,6 +146,7 @@ from opendp._convert import *
 from opendp._lib import *
 from opendp.mod import *
 from opendp.typing import *
+from opendp.typing import _substitute
 {extra_imports}
 __all__ = [
 {all}
@@ -481,7 +482,7 @@ fn generate_type_arg_formatter(func: &Function) -> String {
         .map(|type_arg| {
             let name = type_arg.name.as_ref().expect("type args must be named");
             let generics = type_arg.generics(&type_names);
-            let generics = if generics.is_empty() {
+            let generics_str = if generics.is_empty() {
                 "".to_string()
             } else {
                 format!(", generics=[{}]", generics.iter()
@@ -489,9 +490,9 @@ fn generate_type_arg_formatter(func: &Function) -> String {
                     .collect::<Vec<_>>().join(", "))
             };
             if let Some(example) = generate_public_example(func, type_arg) {
-                format!(r#"{name} = RuntimeType.parse_or_infer(type_name={name}, public_example={example}{generics})"#)
+                format!(r#"{name} = RuntimeType.parse_or_infer(type_name={name}, public_example={example}{generics_str})"#)
             } else {
-                format!(r#"{name} = RuntimeType.parse(type_name={name}{generics})"#)
+                format!(r#"{name} = RuntimeType.parse(type_name={name}{generics_str})"#)
             }
         })
         // additional types that are constructed by introspecting existing types
@@ -503,7 +504,7 @@ fn generate_type_arg_formatter(func: &Function) -> String {
         .chain(func.args.iter()
             .filter(|arg| arg.is_type && !arg.generics(&type_names).is_empty())
             .map(|arg|
-                format!("{name} = substitute({name}, {args}) # type: ignore",
+                format!("{name} = _substitute({name}, {args}) # type: ignore",
                         name=arg.name.as_ref().unwrap(),
                         args=arg.generics(&type_names).iter()
                             .map(|generic| format!("{generic}={generic}", generic = generic))
@@ -608,10 +609,12 @@ output = {call}"#,
 
 impl Function {
     /// Get the names of all variables in the function.
+    /// This includes arguments, type arguments and derived types.
     /// These names will not be strings in the generated code.
     pub fn var_names(&self) -> Vec<String> {
         (self.args.iter())
             .map(|arg| arg.name())
+            // include type names derived from other arguments
             .chain(self.derived_types.iter().map(Argument::name))
             .collect()
     }

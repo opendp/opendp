@@ -420,7 +420,7 @@ class Context(object):
                     raise ValueError("Margin keys must be a sequence")
 
                 by_exprs = [col if isinstance(col, pl.Expr) else pl.col(col) for col in by]
-                domain = with_margin(domain, **asdict(replace(margin, by=by_exprs)))
+                domain = with_margin(domain, Margin(**asdict(replace(margin, by=by_exprs))))
 
         accountant, d_mids = _sequential_composition_by_weights(
             domain, privacy_unit, privacy_loss, split_evenly_over, split_by_weights

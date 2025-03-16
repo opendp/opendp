@@ -8,6 +8,7 @@ instances of :py:class:`opendp.mod.Domain` are either inputs or outputs for func
 '''
 from __future__ import annotations
 import ctypes
+from dataclasses import asdict
 from typing import Any, Literal, Sequence, Type, TypeVar, Union, Callable, Optional, overload, TYPE_CHECKING, cast
 import importlib
 import json
@@ -544,6 +545,8 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
 
     Functions for creating domains are in :py:mod:`opendp.domains`.
     '''
+    
+    # for documentation see https://docs.python.org/3/library/ctypes.html#ctypes._Pointer._type_
     _type_ = AnyDomain
 
     def member(self, val) -> bool:
@@ -605,7 +608,7 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     def __eq__(self, other) -> bool:
         from opendp.domains import _domain_equal
 
-        if not issubclass(type(other), Domain):
+        if not isinstance(other, Domain):
             return False
         
         return _domain_equal(self, other)
@@ -618,7 +621,11 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
 
 
 class AtomDomain(Domain):
-    '''`AtomDomain` is the domain of all values of an atomic type `T`.
+    '''The domain of all values of a given atomic type.
+
+    Create an instance of this domain with :py:func:`opendp.domains.atom_domain`.
+
+    If nullable is ``True``, then null value(s) are included in the domain.
 
     If bounds are set, then the domain is restricted to the bounds.
     If nullable is set, then null value(s) are included in the domain.
@@ -638,12 +645,11 @@ class AtomDomain(Domain):
         from opendp.domains import _atom_domain_get_nullable
         return _atom_domain_get_nullable(self)
     
-    def __del__(self):
-        # this is to avoid a double-free, as the Domain.__del__ will, suprisingly, still be called
-        pass
 
 class OptionDomain(Domain):
-    '''A domain that represents nullity via the Option type.
+    '''A domain whose members are either members of the ``element_domain``, or ``None``.
+
+    Create an instance of this domain with :py:func:`opendp.domains.option_domain`.
 
     The element domain is the domain of non-null values.
     '''
@@ -655,16 +661,15 @@ class OptionDomain(Domain):
         '''Domain of non-null values'''
         from opendp.domains import _option_domain_get_element_domain
         return _option_domain_get_element_domain(self)
-    
-    def __del__(self):
-        # this is to avoid a double-free, as the Domain.__del__ will, suprisingly, still be called
-        pass
 
 
 class VectorDomain(Domain):
-    '''`VectorDomain` describes the domain of all vectors whose elements are memebers of a given domain'''
+    '''``VectorDomain`` describes the domain of all vectors whose elements are members of a given domain.
+    
+    Create an instance of this domain with :py:func:`opendp.domains.vector_domain`.
+    '''
     _type_ = AnyDomain
-
+    
     @property
     def element_domain(self) -> Domain:
         '''Domain of elements in the vector'''
@@ -676,14 +681,13 @@ class VectorDomain(Domain):
         '''Size of vectors in the domain, if it is fixed'''
         from opendp.domains import _vector_domain_get_size
         return _vector_domain_get_size(self)
-    
-    def __del__(self):
-        # this is to avoid a double-free, as the Domain.__del__ will, suprisingly, still be called
-        pass
 
 
 class SeriesDomain(Domain):
-    '''`SeriesDomain` describes the domain of all polars Series'''
+    '''``SeriesDomain`` describes the domain of all polars Series.
+    
+    Create an instance of this domain with :py:func:`opendp.domains.series_domain`.
+    '''
     _type_ = AnyDomain
 
     @property
@@ -704,12 +708,11 @@ class SeriesDomain(Domain):
         from opendp.domains import _series_domain_get_nullable
         return _series_domain_get_nullable(self)
     
-    def __del__(self):
-        # this is to avoid a double-free, as the Domain.__del__ will, suprisingly, still be called
-        pass
-    
 class LazyFrameDomain(Domain):
-    '''`LazyFrameDomain` describes the domain of all polars LazyFrames'''
+    '''``LazyFrameDomain`` describes the domain of all polars LazyFrames.
+    
+    Create an instance of this domain with :py:func:`opendp.domains.lazyframe_domain`.
+    '''
     _type_ = AnyDomain
 
     @property
@@ -718,7 +721,7 @@ class LazyFrameDomain(Domain):
         from opendp.domains import _lazyframe_domain_get_columns
         return _lazyframe_domain_get_columns(self)
 
-    def series_domain(self, name: str) -> SeriesDomain:
+    def get_series_domain(self, name: str) -> SeriesDomain:
         '''Retrieve the series domain with the given name'''
         from opendp.domains import _lazyframe_domain_get_series_domain
         return _lazyframe_domain_get_series_domain(self, name)
@@ -728,16 +731,16 @@ class LazyFrameDomain(Domain):
         from opendp.domains import _lazyframe_domain_get_margin
         pl = import_optional_dependency("polars")
 
-        if not isinstance(by, Sequence) or isinstance(by, str):
+        if not isinstance(by, Sequence):
             raise ValueError(f"by ({by}) must be a collection")
+        
+        if isinstance(by, str):
+            raise ValueError(f"by ({by}) must be a collection; Did you mean [\"{by}\"]?")
 
         by_exprs = [col if isinstance(col, pl.Expr) else pl.col(col) for col in by]
 
         return _lazyframe_domain_get_margin(self, by_exprs)
 
-    def __del__(self):
-        # this is to avoid a double-free, as the Domain.__del__ will, suprisingly, still be called
-        pass
 
 class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
     '''
@@ -782,7 +785,7 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
     def __eq__(self, other) -> bool:
         from opendp.metrics import _metric_equal
 
-        if not issubclass(type(other), Metric):
+        if not isinstance(other, Metric):
             return False
         
         return _metric_equal(self, other)
@@ -844,7 +847,7 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
     def __eq__(self, other):
         from opendp.measures import _measure_equal
 
-        if not issubclass(type(other), Measure):
+        if not isinstance(other, Measure):
             return False
         
         return _measure_equal(self, other)
@@ -901,8 +904,11 @@ class _PartialConstructor(object):
         return _PartialConstructor(lambda input_domain, input_metric: self(input_domain, input_metric) >> other) # pragma: no cover
 
     def __rrshift__(self, other):
-        if isinstance(other, tuple) and isinstance(other[0], Domain) and isinstance(other[1], Metric):
-            return self(other[0], other[1])
+        if isinstance(other, tuple):  
+            domain, metric = other
+            if isinstance(domain, Domain) and isinstance(metric, Metric):  
+                return self(domain, metric)  
+            
         raise TypeError(f"Cannot chain {type(self)} with {type(other)}")  # pragma: no cover
 
 
@@ -1371,6 +1377,7 @@ def exponential_bounds_search(
 _TUPLE_FLAG = '__tuple__'
 _EXPR_FLAG = '__expr__'
 _LAZY_FLAG = '__lazyframe__'
+_MARGIN_FLAG = '__margin__'
 _FUNCTION_FLAG = '__function__'
 _MODULE_FLAG = '__module__'
 _KWARGS_FLAG = '__kwargs__'
@@ -1404,6 +1411,10 @@ class _Encoder(json.JSONEncoder):
                 k: self.default(v)
                 for k, v in obj.items()
             }
+        
+        from opendp.extras.polars import Margin
+        if isinstance(obj, Margin):
+            return {_MARGIN_FLAG: self.default(asdict(obj))}
 
         # OpenDP specific:
         if hasattr(obj, '__opendp_dict__'):
@@ -1457,6 +1468,11 @@ def _deserialization_hook(dp_dict):
         if _LAZY_FLAG in dp_dict:
             _check_version(dp_dict)
             return pl.LazyFrame.deserialize(_b64_str_to_bytes(dp_dict[_LAZY_FLAG]))
+        if _MARGIN_FLAG in dp_dict:
+            from opendp.extras.polars import Margin
+
+            by = [deserialize(v) for v in dp_dict[_MARGIN_FLAG].get('by', [])]
+            return Margin(**{**dp_dict[_MARGIN_FLAG], "by": by})
     return dp_dict
 
 def serialize(dp_obj):

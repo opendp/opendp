@@ -15,7 +15,7 @@ The methods of this module will then be accessible at ``dp.polars``.
 """
 
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, replace
 import dataclasses
 import os
 from typing import Any, Literal, Sequence
@@ -1029,17 +1029,6 @@ class Margin:
     max_influenced_partitions: int | None = None
     """The greatest number of partitions any one individual can contribute to."""
 
-    @staticmethod
-    def _from_anyobject(obj: AnyObjectPtr) -> Margin:   
-        return Margin(
-            by=_margin_get_by(obj),
-            public_info=_margin_get_public_info(obj),
-            max_partition_length=_margin_get_max_partition_length(obj),
-            max_num_partitions=_margin_get_max_num_partitions(obj),
-            max_partition_contributions=_margin_get_max_partition_contributions(obj),
-            max_influenced_partitions=_margin_get_max_influenced_partitions(obj),
-        )
-
     def __eq__(self, other) -> bool:
         if not isinstance(other, Margin):
             return False
@@ -1055,9 +1044,5 @@ class Margin:
         other_by = {serialize(col) for col in other.by or []}
         if self_by != other_by:
             return False
-
-        return all(
-            getattr(self, attr.name) == getattr(other, attr.name)
-            for attr in dataclasses.fields(self)
-            if attr.name != "by"
-        )
+        
+        return asdict(replace(self, by=None)) == asdict(replace(other, by=None))
