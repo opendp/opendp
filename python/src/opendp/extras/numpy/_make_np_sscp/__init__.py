@@ -20,19 +20,19 @@ def make_np_sscp(input_domain: Domain, input_metric: Metric) -> Transformation:
 
     if not str(input_domain).startswith("NPArray2Domain"):
         raise ValueError(
-            "input_domain must be a 2d-numpy array domain"
+            f"input_domain ({input_domain}) must be a 2d-numpy array domain"
         )  # pragma: no cover
 
     if input_metric != dp.symmetric_distance():
-        raise ValueError("input metric must be symmetric distance")  # pragma: no cover
+        raise ValueError(f"input_metric ({input_metric}) must be symmetric distance")  # pragma: no cover
     
     input_desc = input_domain.descriptor
 
     if input_desc.nan:
-        raise ValueError("input_domain must not contain NaN values")  # pragma: no cover
+        raise ValueError(f"input_domain ({input_domain}) must not contain NaN values")  # pragma: no cover
 
     if input_desc.num_columns is None:
-        raise ValueError("input_domain must have known num_columns")  # pragma: no cover
+        raise ValueError(f"input_domain ({input_domain}) must have known num_columns")  # pragma: no cover
 
     return _make_transformation(
         input_domain,

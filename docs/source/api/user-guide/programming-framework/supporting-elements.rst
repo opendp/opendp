@@ -22,7 +22,9 @@ To use the function, the Transformation or Measurement can be called directly:
 
       >>> import opendp.prelude as dp
       >>> dp.enable_features("contrib")
+      >>> # input data consists of vectors of non-null floats
       >>> input_domain = dp.vector_domain(dp.atom_domain(T=float, nan=False))
+      >>> # adjacent datasets differ by the addition or removal of records
       >>> input_metric = dp.symmetric_distance()
       >>> clamp = dp.t.make_clamp(input_domain, input_metric, bounds=(0., 5.))
       >>> type(clamp)

@@ -635,6 +635,7 @@ class AtomDomain(Domain):
         """Whether the domain includes NaN values
         
         Only relevant when the carrier type is a floating point type.
+        All other types will always return ``False``.
         """
         from opendp.domains import _atom_domain_nan
         return _atom_domain_nan(self)
