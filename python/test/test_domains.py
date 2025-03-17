@@ -23,7 +23,7 @@ def test_atom_domain_bounds():
 def test_atom_domain_nullable():
     atom_domain = dp.atom_domain(T=float, nullable=True)
     assert atom_domain.carrier_type == dp.f64
-    assert atom_domain.bounds == None
+    assert atom_domain.bounds is None
     assert atom_domain != str(atom_domain)
     assert atom_domain.nullable
 

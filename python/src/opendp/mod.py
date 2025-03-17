@@ -32,6 +32,7 @@ __all__ = [
     'VectorDomain',
     'SeriesDomain',
     'LazyFrameDomain',
+    'ExtrinsicDomain',
     'Metric',
     'Measure',
     'PrivacyProfile',
@@ -584,14 +585,6 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
         from opendp.typing import RuntimeType
         return RuntimeType.parse(domain_carrier_type(self))
     
-    @property
-    def descriptor(self) -> Any:
-        '''
-        Descriptor of domain. Used to retrieve the descriptor associated with domains defined in Python 
-        '''
-        from opendp.domains import _extrinsic_domain_descriptor
-        return _extrinsic_domain_descriptor(self)
-
     def __repr__(self) -> str:
         from opendp.domains import domain_debug
         return domain_debug(self)
@@ -740,6 +733,20 @@ class LazyFrameDomain(Domain):
         by_exprs = [col if isinstance(col, pl.Expr) else pl.col(col) for col in by]
 
         return _lazyframe_domain_get_margin(self, by_exprs)
+
+
+class ExtrinsicDomain(Domain):
+    '''A user-defined domain.'''
+
+    _type_ = AnyDomain
+        
+    @property
+    def descriptor(self) -> Any:
+        '''
+        Descriptor of domain. Used to retrieve the descriptor associated with domains defined in Python 
+        '''
+        from opendp.domains import _extrinsic_domain_descriptor
+        return _extrinsic_domain_descriptor(self)
 
 
 class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]

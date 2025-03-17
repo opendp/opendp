@@ -16,10 +16,9 @@ The methods of this module will then be accessible at ``dp.polars``.
 
 from __future__ import annotations
 from dataclasses import asdict, dataclass, replace
-import dataclasses
 import os
 from typing import Any, Literal, Sequence
-from opendp._lib import AnyObjectPtr, lib_path, import_optional_dependency
+from opendp._lib import lib_path, import_optional_dependency
 from opendp.mod import (
     Domain,
     Measurement,

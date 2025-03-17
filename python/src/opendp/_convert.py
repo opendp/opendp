@@ -4,6 +4,7 @@ from inspect import signature
 from opendp._lib import *
 from opendp.mod import (
     Domain,
+    ExtrinsicDomain,
     LazyFrameDomain,
     SeriesDomain,
     UnknownTypeException,
@@ -214,6 +215,8 @@ def c_to_py(value: Any) -> Any:
                 value.__class__ = SeriesDomain
             elif rt_type == "LazyFrameDomain":
                 value.__class__ = LazyFrameDomain
+            elif rt_type == "ExtrinsicDomain":
+                value.__class__ = ExtrinsicDomain
         # otherwise falls through to the default case, where isinstance(value, Domain) 
 
     if isinstance(value, ctypes.c_void_p):
@@ -670,7 +673,7 @@ def _slice_to_margin(raw: FfiSlicePtr):
     # typed pointer
     void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
     # list of void*
-    ptr_data = void_array_ptr[0 : raw.contents.len]
+    ptr_data = void_array_ptr[0: raw.contents.len]
 
     def optional_u32(ptr):
         u32_ptr = ctypes.cast(ptr, ctypes.POINTER(ctypes.c_uint32))

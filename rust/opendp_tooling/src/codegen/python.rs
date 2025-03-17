@@ -146,7 +146,7 @@ from opendp._convert import *
 from opendp._lib import *
 from opendp.mod import *
 from opendp.typing import *
-from opendp.typing import _substitute
+from opendp.typing import _substitute # noqa: F401
 {extra_imports}
 __all__ = [
 {all}
