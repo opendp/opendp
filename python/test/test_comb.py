@@ -147,7 +147,7 @@ def test_make_pureDP_to_zCDP():
 
 
 def test_make_fixed_approxDP_to_approxDP():
-    input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
     fadp_meas = dp.c.make_approximate(dp.m.make_laplace(*input_space, 10.))
 
     adp_meas = dp.c.make_fixed_approxDP_to_approxDP(fadp_meas)

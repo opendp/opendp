@@ -127,26 +127,24 @@ def array2_domain(
 
     def _member(x):
         if not isinstance(x, np.ndarray):
-            raise TypeError("must be a numpy ndarray")  # pragma: no cover
+            raise TypeError("must be a numpy ndarray")
         T_actual = _ELEMENTARY_TYPES.get(x.dtype.type)
         if T_actual != T:
-            raise TypeError(f"expected data of type {T}, got {T_actual}")  # pragma: no cover
+            raise TypeError(f"must have data of type {T}, got {T_actual}")
         if x.ndim != 2:
-            raise ValueError("Expected 2-dimensional array")  # pragma: no cover
+            raise ValueError("must be a 2-dimensional array")
         if num_columns is not None and x.shape[1] != num_columns:
-            raise ValueError(f"must have {num_columns} columns")  # pragma: no cover
+            raise ValueError(f"must have {num_columns} columns")
         
-        if T in {"f32", "f64"} and nan and np.isnan(x).any():
-            raise ValueError("array contains NaN values")  # pragma: no cover
+        if T in {"f32", "f64"} and not nan and np.isnan(x).any():
+            raise ValueError("must not contain NaN values")
 
         if origin is not None:
             x = x - origin
-        if norm is not None:
-            max_norm = np.linalg.norm(x, ord=p, axis=1).max()
-            if max_norm > norm:
-                raise ValueError(f"row norm is too large. {max_norm} > {norm}")  # pragma: no cover
+        if norm is not None and np.linalg.norm(x, ord=p, axis=1).max() > norm:
+            raise ValueError(f"must have row norm at most {norm}")
         if size is not None and len(x) != size:
-            raise ValueError(f"expected exactly {size} rows")  # pragma: no cover
+            raise ValueError(f"must have exactly {size} rows")
         return True
 
     class NPArray2Descriptor(NamedTuple):
@@ -182,7 +180,7 @@ def _sscp_domain(
     """The domain of sums of squares and cross products matrices formed by computing x^Tx,
     for some dataset x.
 
-    Elements are non-nan.
+    Elements are finite, members are square symmetric positive semi-definite matrices.
 
     :param norm: each row in x is bounded by the norm
     :param p: designates L`p` norm
@@ -197,20 +195,26 @@ def _sscp_domain(
     _check_nonnegative_int(size, "size")
     _check_nonnegative_int(num_features, "num_features")
 
-    if T is None:
-        raise ValueError("must specify T, the type of data in the array")  # pragma: no cover
     T = dp.RuntimeType.parse(T)
     if T not in {dp.f32, dp.f64}:
         raise ValueError("T must be a float type")
 
     def _member(x):
         if not isinstance(x, np.ndarray):
-            raise TypeError("must be a numpy ndarray")  # pragma: no cover
+            raise TypeError("must be a numpy ndarray")
         T_actual = _ELEMENTARY_TYPES.get(x.dtype.type)
         if T_actual != T:
-            raise TypeError(f"expected data of type {T}, got {T_actual}")
-        if x.shape != (num_features,) * 2:
-            raise ValueError(f"expected a square array with {num_features} features")  # pragma: no cover
+            raise TypeError(f"must have data of type {T}, got {T_actual}")
+        if x.shape != (x.shape[0], x.shape[0]):
+            raise ValueError("must be a square array")
+        if num_features is not None and x.shape[0] != num_features:
+            raise ValueError(f"must have {num_features} features")
+        if (~np.isfinite(x)).any():
+            raise ValueError("must have finite values")
+        if np.any(x != x.T):
+            raise ValueError("must be symmetric")
+        if np.any(np.linalg.eigvals(x) < 0):
+            raise ValueError("must be positive semi-definite")
         return True
 
     class NPSSCPDescriptor(NamedTuple):

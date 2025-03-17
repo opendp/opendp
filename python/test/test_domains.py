@@ -18,7 +18,7 @@ def test_atom_domain_bounds():
     assert atom_domain.carrier_type == dp.i32
     assert atom_domain.bounds == (1, 2)
     assert atom_domain != str(atom_domain)
-    assert not atom_domain.nullable
+    assert not atom_domain.nan
 
 def test_atom_domain_nullable():
     atom_domain = dp.atom_domain(T=float, nan=True)
