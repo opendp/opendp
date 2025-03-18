@@ -2,7 +2,7 @@ use opendp_derive::bootstrap;
 
 use crate::{
     core::{FfiResult, Metric, MetricSpace},
-    domains::{Margin, MarginPub, polars::ffi::unpack_series_domains},
+    domains::{Margin, polars::ffi::unpack_series_domains},
     error::Fallible,
     ffi::{
         any::{AnyDomain, AnyMetric, AnyObject, Downcast},

@@ -9,7 +9,7 @@ use std::str::Utf8Error;
 
 use crate::core::Function;
 use crate::domains::ffi::ExtrinsicDomain;
-use crate::domains::{ArrayDomain, AtomDomain, BitVector, OptionDomain, VectorDomain};
+use crate::domains::{AtomDomain, BitVector, OptionDomain, VectorDomain};
 use crate::error::*;
 use crate::ffi::any::{AnyObject, AnyQueryable};
 use crate::measures::ffi::ExtrinsicDivergence;
@@ -43,8 +43,8 @@ pub struct Pairwise<T>(PhantomData<T>);
 // If polars is not enabled, then these structs don't exist.
 #[cfg(feature = "polars")]
 use crate::domains::{
-    CategoricalDomain, DatetimeDomain, EnumDomain, ExprDomain, ExprPlan, LazyFrameDomain, Margin,
-    SeriesDomain,
+    ArrayDomain, CategoricalDomain, DatetimeDomain, EnumDomain, ExprDomain, ExprPlan,
+    LazyFrameDomain, Margin, SeriesDomain,
 };
 #[cfg(feature = "polars")]
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};

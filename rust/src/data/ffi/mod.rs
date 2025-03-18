@@ -26,9 +26,9 @@ use crate::domains::BitVector;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyFunction, AnyMeasurement, AnyObject, AnyQueryable, Downcast};
 use crate::ffi::util::{
-    self, as_ref, into_c_char_p, into_raw, to_option_str, AnyDomainPtr, ExtrinsicObject,
+    self, AnyDomainPtr, ExtrinsicObject, as_ref, into_c_char_p, into_raw, to_option_str,
 };
-use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents};
+use crate::ffi::util::{AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents, c_bool};
 use crate::measures::PrivacyProfile;
 use crate::metrics::IntDistance;
 use crate::traits::ProductOrd;

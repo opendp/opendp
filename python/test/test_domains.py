@@ -111,10 +111,10 @@ def test_lazyframe_domain_margins():
         max_influenced_partitions=100, # 10 * 10
     )
 
-    with pytest.raises(ValueError, match="must be a collection"):
+    with pytest.raises(ValueError, match="must be a sequence type; Did you mean [\"A\"]?"):
         frame_domain.get_margin("A")
 
-    with pytest.raises(ValueError, match="must be a collection"):
+    with pytest.raises(ValueError, match="must be a sequence type"):
         frame_domain.get_margin(2) # type: ignore[arg-type]
 
 

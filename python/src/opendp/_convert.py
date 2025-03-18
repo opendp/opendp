@@ -414,14 +414,12 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
         raise ValueError("type_name must be a Vec<_>")  # pragma: no cover
 
     inner_type_name = type_name.args[0]
-    # when input is numpy array
-    # TODO: can we use the underlying buffer directly?
-    np = import_optional_dependency('numpy', raise_error=False)
-    if np is not None and isinstance(val, np.ndarray):
-        val = val.tolist()
-
+    # TODO: can we use underlying numpy buffers directly?
     if not isinstance(val, list):
-        raise TypeError(f"Expected type is {type_name} but input data is not a list.")
+        try:
+            val = list(val)
+        except TypeError:
+            raise TypeError(f"Expected type is {type_name} but input data is not a list.")
 
     inner_type_name = type_name.args[0]
 
@@ -532,10 +530,8 @@ def _tuple_to_slice(val: tuple[Any, ...], type_name: Union[RuntimeType, str]) ->
 
 def _slice_to_tuple(raw: FfiSlicePtr, type_name: RuntimeType) -> tuple[Any, ...]:
     inner_type_names = type_name.args
-    # typed pointer
     void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
-    # list of void*
-    ptr_data = void_array_ptr[0:raw.contents.len]
+    ptr_data: list[ctypes.c_void_p] = void_array_ptr[0:raw.contents.len]
 
     if inner_type_names == ['PrivacyProfile', 'f64']:
         curve = ctypes.cast(ptr_data[0], AnyObjectPtr)
@@ -652,10 +648,8 @@ def _slice_to_expr(raw: FfiSlicePtr):
 
 
 def _slice_to_exprplan(raw: FfiSlicePtr):
-    # typed pointer
     void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
-    # list of void*
-    ptr_data = void_array_ptr[0:raw.contents.len]
+    ptr_data: list[ctypes.c_void_p] = void_array_ptr[0:raw.contents.len]
 
     plan = _slice_to_lazyframe(ctypes.cast(ptr_data[0], FfiSlicePtr))
     expr = _slice_to_expr(ctypes.cast(ptr_data[1], FfiSlicePtr))
@@ -670,10 +664,8 @@ def _slice_to_exprplan(raw: FfiSlicePtr):
 def _slice_to_margin(raw: FfiSlicePtr):
     from opendp.extras.polars import Margin
 
-    # typed pointer
     void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
-    # list of void*
-    ptr_data = void_array_ptr[0: raw.contents.len]
+    ptr_data: list[ctypes.c_void_p] = void_array_ptr[0: raw.contents.len]
 
     def optional_u32(ptr):
         u32_ptr = ctypes.cast(ptr, ctypes.POINTER(ctypes.c_uint32))
@@ -689,15 +681,17 @@ def _slice_to_margin(raw: FfiSlicePtr):
         max_influenced_partitions=optional_u32(ptr_data[5]),
     )
 
+def _check_polars_by(by):
+    if isinstance(by, str):
+        raise ValueError(f"by ({by}) must be a sequence type; Did you mean [\"{by}\"]?")
+    
+    if not isinstance(by, Sequence):
+        raise ValueError(f"by ({by}) must be a sequence type")
+
 
 def _margin_to_slice(val) -> FfiSlicePtr:
-    pl = import_optional_dependency("polars")
-
-    if not isinstance(val.by, Sequence) or isinstance(val.by, str):
-        raise ValueError(f"by must be a sequence, found {val.by}")  # pragma: no cover
-
-    by_exprs = [col if isinstance(col, pl.Expr) else pl.col(col) for col in val.by]
-    by = ctypes.cast(py_to_c(by_exprs, c_type=AnyObjectPtr, type_name="Vec<Expr>"), ctypes.c_void_p)
+    _check_polars_by(val.by)
+    by = ctypes.cast(py_to_c(val.by, c_type=AnyObjectPtr, type_name="Vec<Expr>"), ctypes.c_void_p)
 
     def optional_u32(v):
         if v is None:
@@ -710,10 +704,10 @@ def _margin_to_slice(val) -> FfiSlicePtr:
     mpc = optional_u32(val.max_partition_contributions)
     mip = optional_u32(val.max_influenced_partitions)
 
-    public_info = None
-    if val.public_info:
-        public_info_char = ctypes.c_char_p(val.public_info.encode())
-        public_info = ctypes.cast(public_info_char, ctypes.c_void_p)
+    def str_to_nullptr(s):
+        return ctypes.cast(ctypes.c_char_p(s.encode()), ctypes.c_void_p)
+
+    public_info = str_to_nullptr(val.public_info) if val.public_info else None
 
     array = (ctypes.c_void_p * 6)(by, mpl, mnp, public_info, mpc, mip)
     return _wrap_in_slice(ctypes.pointer(array), 6)

@@ -1,7 +1,6 @@
 from opendp.extras.numpy import _sscp_domain
 import opendp.prelude as dp
 import pytest
-from ..helpers import optional_dependency
 
 
 
@@ -9,8 +8,7 @@ def test_array2_domain():
     np = pytest.importorskip('numpy')
     # missing norm
     with pytest.raises(ValueError):
-        with optional_dependency('numpy'):
-            dp.numpy.array2_domain(p=2, T=float)
+        dp.numpy.array2_domain(p=2, T=float)
     # origin is wrong type
     with pytest.raises(ValueError):
         dp.numpy.array2_domain(norm=1, p=2, origin="a", T=float)
@@ -25,6 +23,9 @@ def test_array2_domain():
     # origin array dtype must be numeric
     with pytest.raises(ValueError):
         dp.numpy.array2_domain(norm=1, p=2, origin=np.array([True, False]))
+    
+    with pytest.raises(ValueError):
+        dp.numpy.array2_domain(norm=1, p=2, T="AnyTransformation")
 
     # origin defaults to zero
     assert dp.numpy.array2_domain(norm=1, p=2, T=float).descriptor.origin == 0

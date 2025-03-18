@@ -618,8 +618,6 @@ class AtomDomain(Domain):
 
     Create an instance of this domain with :py:func:`opendp.domains.atom_domain`.
 
-    If nullable is ``True``, then null value(s) are included in the domain.
-
     If bounds are set, then the domain is restricted to the bounds.
     If nullable is set, then null value(s) are included in the domain.
     '''
@@ -722,17 +720,10 @@ class LazyFrameDomain(Domain):
     def get_margin(self, by: Sequence[Any]):
         '''Get the margin descriptor of the frame when grouped by the given columns'''
         from opendp.domains import _lazyframe_domain_get_margin
-        pl = import_optional_dependency("polars")
+        from opendp._convert import _check_polars_by
+        _check_polars_by(by)
 
-        if not isinstance(by, Sequence):
-            raise ValueError(f"by ({by}) must be a collection")
-        
-        if isinstance(by, str):
-            raise ValueError(f"by ({by}) must be a collection; Did you mean [\"{by}\"]?")
-
-        by_exprs = [col if isinstance(col, pl.Expr) else pl.col(col) for col in by]
-
-        return _lazyframe_domain_get_margin(self, by_exprs)
+        return _lazyframe_domain_get_margin(self, by)
 
 
 class ExtrinsicDomain(Domain):

@@ -14,8 +14,7 @@ The methods of this module will then be accessible at ``dp.numpy``.
 from __future__ import annotations
 from typing import NamedTuple, Literal
 from opendp.mod import Domain, Metric, Transformation
-from opendp.typing import RuntimeTypeDescriptor, _ELEMENTARY_TYPES
-from opendp._convert import ATOM_MAP
+from opendp.typing import RuntimeTypeDescriptor, _ELEMENTARY_TYPES, _PRIMITIVE_TYPES
 from opendp._lib import import_optional_dependency
 from opendp.extras._utilities import register_transformation
 from opendp._internal import _make_transformation, _extrinsic_domain
@@ -121,8 +120,8 @@ def array2_domain(
     if T is None:
         raise ValueError("must specify T, the type of data in the array")  # pragma: no cover
     T = dp.RuntimeType.parse(T)
-    if T not in ATOM_MAP:
-        raise ValueError(f"T ({T}) must be an elementary type")  # pragma: no cover
+    if T not in _PRIMITIVE_TYPES:
+        raise ValueError(f"T ({T}) must be a primitive type")
 
     def _member(x):
         if not isinstance(x, np.ndarray):

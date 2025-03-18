@@ -1,7 +1,7 @@
 use std::{ffi::c_char, fmt::Debug, marker::PhantomData};
 
 use crate::ffi::{
-    any::{wrap_func, AnyObject, CallbackFn, Downcast},
+    any::{AnyObject, CallbackFn, Downcast, wrap_func},
     util::c_bool,
 };
 use opendp_derive::bootstrap;
