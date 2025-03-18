@@ -25,7 +25,7 @@ fn make_chain_mt(
     super::make_chain_mt(measurement1, transformation0)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_combinators__make_chain_mt(
     measurement1: *const AnyMeasurement,
     transformation0: *const AnyTransformation,
@@ -54,7 +54,7 @@ fn make_chain_tt(
 ) -> Fallible<AnyTransformation> {
     super::make_chain_tt(transformation1, transformation0)
 }
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_combinators__make_chain_tt(
     transformation1: *const AnyTransformation,
     transformation0: *const AnyTransformation,
@@ -82,7 +82,7 @@ fn make_chain_pm(
     super::make_chain_pm(postprocess1, measurement0)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_combinators__make_chain_pm(
     postprocess1: *const AnyFunction,
     measurement0: *const AnyMeasurement,

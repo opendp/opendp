@@ -15,7 +15,7 @@ use crate::{
 ///
 /// # Arguments
 /// * `onceframe` - The queryable holding a LazyFrame.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__onceframe_collect(
     onceframe: *mut AnyObject,
 ) -> FfiResult<*mut AnyObject> {
@@ -52,7 +52,7 @@ pub extern "C" fn opendp_data__onceframe_collect(
 ///
 /// 1. Do not extend the compute plan with order-sensitive computations.
 /// 2. Shuffle the output once collected ([in Polars sample all, with shuffling enabled](https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.sample.html)).
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__onceframe_lazy(
     onceframe: *mut AnyObject,
 ) -> FfiResult<*mut AnyObject> {

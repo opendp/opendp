@@ -34,9 +34,7 @@ where
     let name = expr_output_name(&expr)?;
 
     macro_rules! series_domain {
-        ($ty:ty, $null:expr) => {{
-            SeriesDomain::new(name, AtomDomain::<$ty>::new(None, $null))
-        }};
+        ($ty:ty, $null:expr) => {{ SeriesDomain::new(name, AtomDomain::<$ty>::new(None, $null)) }};
     }
 
     let series_domain = match literal_value.clone().materialize() {

@@ -37,7 +37,11 @@ pub(crate) fn mismatch_error<T: Debug>(variant: ErrorVariant, struct1: &T, struc
     };
 
     let explanation = if str1 == str2 {
-        format!("\n    The structure of the intermediate {mode}s are the same, but the parameters differ.\n    shared_{mode}: {str1}\n", mode=mode, str1=str1)
+        format!(
+            "\n    The structure of the intermediate {mode}s are the same, but the parameters differ.\n    shared_{mode}: {str1}\n",
+            mode = mode,
+            str1 = str1
+        )
     } else {
         format!(
             "\n    output_{mode}: {struct1}\n    input_{mode}:  {struct2}\n",

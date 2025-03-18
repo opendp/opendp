@@ -51,7 +51,10 @@ where
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     if strptime_options.format.is_none() {
-        return fallible!(MakeTransformation, "format must be specified; otherwise Polars will attempt to infer the format from the data, resulting in an unstable transformation");
+        return fallible!(
+            MakeTransformation,
+            "format must be specified; otherwise Polars will attempt to infer the format from the data, resulting in an unstable transformation"
+        );
     }
 
     if matches!(to_type, DataType::Time) && !strptime_options.exact {
@@ -87,7 +90,10 @@ where
     if matches!(to_type, DataType::Datetime(TimeUnit::Nanoseconds, _)) {
         // Nanoseconds are not supported due to this issue:
         // https://github.com/pola-rs/polars/issues/19928
-        return fallible!(MakeMeasurement, "Nanoseconds are not currently supported due to potential panics when parsing inputs. Please open an issue on the OpenDP repository if you would find this functionality useful. Otherwise, consider parsing into micro- or millisecond datetimes instead.");
+        return fallible!(
+            MakeMeasurement,
+            "Nanoseconds are not currently supported due to potential panics when parsing inputs. Please open an issue on the OpenDP repository if you would find this functionality useful. Otherwise, consider parsing into micro- or millisecond datetimes instead."
+        );
     }
 
     if !matches!(

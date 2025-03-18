@@ -3,11 +3,11 @@ use std::convert::TryFrom;
 use dashu::{
     base::Approximation,
     float::{
-        round::{
-            mode::{Down, HalfEven, Up},
-            Round, Rounding,
-        },
         FBig,
+        round::{
+            Round, Rounding,
+            mode::{Down, HalfEven, Up},
+        },
     },
     integer::{IBig, UBig},
     rational::RBig,
@@ -216,7 +216,9 @@ macro_rules! impl_inf_cast_exact {
     };
 }
 cartesian!(
-    [u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize],
+    [
+        u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize
+    ],
     impl_inf_cast_exact
 );
 
@@ -240,7 +242,9 @@ macro_rules! impl_exact_int_bounds {
         const MIN_CONSECUTIVE: Self = Self::MIN;
     })*)
 }
-impl_exact_int_bounds!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize);
+impl_exact_int_bounds!(
+    u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize
+);
 impl ExactIntBounds for f64 {
     const MAX_CONSECUTIVE: Self = 9_007_199_254_740_992.0;
     const MIN_CONSECUTIVE: Self = -9_007_199_254_740_992.0;

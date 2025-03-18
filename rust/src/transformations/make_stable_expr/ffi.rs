@@ -9,7 +9,7 @@ use crate::{
 
 use super::make_stable_expr;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_stable_expr(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,

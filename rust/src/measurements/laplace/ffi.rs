@@ -3,10 +3,10 @@ use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::ffi::util::as_ref;
-use crate::measurements::{make_laplace, LaplaceDomain};
+use crate::measurements::{LaplaceDomain, make_laplace};
 use crate::traits::CheckAtom;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_measurements__make_laplace(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,

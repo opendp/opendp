@@ -9,11 +9,11 @@ use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
 use crate::traits::Float;
 use crate::transformations::{
-    make_bounded_float_ordered_sum, make_sized_bounded_float_ordered_sum, Pairwise, SaturatingSum,
-    Sequential,
+    Pairwise, SaturatingSum, Sequential, make_bounded_float_ordered_sum,
+    make_sized_bounded_float_ordered_sum,
 };
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_bounded_float_ordered_sum(
     size_limit: c_uint,
     bounds: *const AnyObject,
@@ -49,7 +49,7 @@ pub extern "C" fn opendp_transformations__make_bounded_float_ordered_sum(
     .into()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_sized_bounded_float_ordered_sum(
     size: c_uint,
     bounds: *const AnyObject,

@@ -25,11 +25,13 @@ fn test_filter() -> Fallible<()> {
     let actual = t_filter.invoke(&lf)?.collect()?;
     assert_eq!(actual, df!("chunk_2_null" => [Some(1)])?);
 
-    assert!(t_filter
-        .output_domain
-        .margins
-        .iter()
-        .all(|m| { m.public_info.is_none() }));
+    assert!(
+        t_filter
+            .output_domain
+            .margins
+            .iter()
+            .all(|m| { m.public_info.is_none() })
+    );
 
     Ok(())
 }

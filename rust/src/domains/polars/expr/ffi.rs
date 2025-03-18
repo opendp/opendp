@@ -5,7 +5,7 @@ use polars::prelude::Expr;
 
 use crate::{
     core::{FfiResult, Metric, MetricSpace},
-    domains::{polars::ffi::unpack_series_domains, Margin, MarginPub},
+    domains::{Margin, MarginPub, polars::ffi::unpack_series_domains},
     error::Fallible,
     ffi::{
         any::{AnyDomain, AnyMetric, AnyObject, Downcast},
@@ -16,7 +16,7 @@ use crate::{
 
 use super::{Context, ExprDomain, WildExprDomain};
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 #[bootstrap(
     name = "wild_expr_domain",
     features("contrib"),

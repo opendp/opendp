@@ -74,7 +74,7 @@ where
                 return fallible!(
                     MakeTransformation,
                     "u8 and 16 are not supported, please use u32 or u64 instead"
-                )
+                );
             }
             dtype => return fallible!(MakeTransformation, "unsupported dtype: {}", dtype),
         }

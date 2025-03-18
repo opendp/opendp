@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
-use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::StableExpr;
+use crate::transformations::traits::UnboundedMetric;
 use polars::prelude::*;
 
 use super::StableDslPlan;

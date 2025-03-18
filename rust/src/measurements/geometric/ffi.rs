@@ -7,11 +7,11 @@ use crate::{
         any::{AnyDomain, AnyMeasurement, AnyMetric, AnyObject, Downcast},
         util::as_ref,
     },
-    measurements::{make_geometric, GeometricDomain},
+    measurements::{GeometricDomain, make_geometric},
     traits::CheckAtom,
 };
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_measurements__make_geometric(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,

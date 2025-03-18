@@ -8,7 +8,7 @@ use crate::{
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     metrics::{AbsoluteDistance, L2Distance},
-    traits::{samplers::sample_discrete_gaussian, CheckAtom, SaturatingCast},
+    traits::{CheckAtom, SaturatingCast, samplers::sample_discrete_gaussian},
 };
 
 use super::GaussianMeasure;
@@ -32,7 +32,6 @@ pub fn make_scalar_integer_gaussian<T, MO, QI>(
 where
     T: CheckAtom + SaturatingCast<IBig>,
     IBig: From<T>,
-
     MO: GaussianMeasure<AbsoluteDistance<QI>>,
 {
     if scale.is_sign_negative() {
@@ -86,7 +85,6 @@ pub fn make_vector_integer_gaussian<T, MO, QI>(
 where
     T: CheckAtom + SaturatingCast<IBig>,
     IBig: From<T>,
-
     MO: GaussianMeasure<L2Distance<QI>>,
 {
     if scale.is_sign_negative() {

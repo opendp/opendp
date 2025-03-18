@@ -4,11 +4,11 @@ use opendp_derive::bootstrap;
 
 use crate::{
     core::{Domain, FfiResult, Function},
-    domains::{type_name, AtomDomain, MapDomain, VectorDomain},
+    domains::{AtomDomain, MapDomain, VectorDomain, type_name},
     error::Fallible,
     ffi::{
-        any::{wrap_func, AnyDomain, AnyObject, CallbackFn, Downcast},
-        util::{self, c_bool, into_c_char_p, to_str, ExtrinsicObject, Type, TypeContents},
+        any::{AnyDomain, AnyObject, CallbackFn, Downcast, wrap_func},
+        util::{self, ExtrinsicObject, Type, TypeContents, c_bool, into_c_char_p, to_str},
     },
     traits::{CheckAtom, Float, Hashable, Integer, Primitive},
 };
@@ -24,7 +24,7 @@ use super::{BitVectorDomain, Bounds, Null, OptionDomain};
     returns(c_type = "FfiResult<void *>")
 )]
 /// Internal function. Free the memory associated with `this`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains___domain_free(this: *mut AnyDomain) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
@@ -39,7 +39,7 @@ pub extern "C" fn opendp_domains___domain_free(this: *mut AnyDomain) -> FfiResul
 /// # Arguments
 /// * `this` - The domain to check membership in.
 /// * `val` - A potential element of the domain.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__member(
     this: *mut AnyDomain,
     val: *const AnyObject,
@@ -59,7 +59,7 @@ pub extern "C" fn opendp_domains__member(
 ///
 /// # Arguments
 /// * `this` - The domain to debug (stringify).
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__domain_debug(this: *mut AnyDomain) -> FfiResult<*mut c_char> {
     let this = try_as_ref!(this);
     FfiResult::Ok(try_!(into_c_char_p(format!("{:?}", this))))
@@ -74,7 +74,7 @@ pub extern "C" fn opendp_domains__domain_debug(this: *mut AnyDomain) -> FfiResul
 ///
 /// # Arguments
 /// * `this` - The domain to retrieve the type from.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__domain_type(this: *mut AnyDomain) -> FfiResult<*mut c_char> {
     let this = try_as_ref!(this);
     FfiResult::Ok(try_!(into_c_char_p(this.type_.descriptor.to_string())))
@@ -89,7 +89,7 @@ pub extern "C" fn opendp_domains__domain_type(this: *mut AnyDomain) -> FfiResult
 ///
 /// # Arguments
 /// * `this` - The domain to retrieve the carrier type from.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__domain_carrier_type(
     this: *mut AnyDomain,
 ) -> FfiResult<*mut c_char> {
@@ -122,7 +122,7 @@ fn atom_domain<T: CheckAtom>(
     AtomDomain::<T>::new(bounds, nullable)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__atom_domain(
     bounds: *const AnyObject,
     nullable: c_bool,
@@ -194,14 +194,18 @@ pub extern "C" fn opendp_domains__atom_domain(
         in_set,
         [(
             T_,
-            [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize]
+            [
+                u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize
+            ]
         )]
     ) {
         dispatch!(
             monomorphize_integer,
             [(
                 T_,
-                [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize]
+                [
+                    u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize
+                ]
             )],
             (bounds, nullable)
         )
@@ -228,7 +232,7 @@ fn option_domain<D: Domain>(element_domain: D) -> OptionDomain<D> {
     OptionDomain::<D>::new(element_domain)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__option_domain(
     element_domain: *const AnyDomain,
     D: *const c_char,
@@ -294,7 +298,7 @@ pub extern "C" fn opendp_domains__option_domain(
 ///
 /// # Arguments
 /// * `atom_domain` - The inner domain.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__vector_domain(
     atom_domain: *const AnyDomain,
     size: *const AnyObject,
@@ -340,7 +344,7 @@ pub extern "C" fn opendp_domains__vector_domain(
 ///
 /// # Arguments
 /// * `max_weight` - The maximum number of positive bits.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__bitvector_domain(
     max_weight: *const AnyObject,
 ) -> FfiResult<*mut AnyDomain> {
@@ -358,7 +362,7 @@ pub extern "C" fn opendp_domains__bitvector_domain(
 /// # Arguments
 /// * `key_domain` - domain of keys in the hashmap
 /// * `value_domain` - domain of values in the hashmap
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__map_domain(
     key_domain: *const AnyDomain,
     value_domain: *const AnyDomain,
@@ -496,7 +500,7 @@ impl Domain for ExtrinsicDomain {
 ///
 /// 1. be a pure function
 /// 2. be sound (only return true if its input is a member of the domain).
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__user_domain(
     identifier: *mut c_char,
     member: *const CallbackFn,
@@ -526,7 +530,7 @@ pub extern "C" fn opendp_domains__user_domain(
 ///
 /// # Arguments
 /// * `domain` - The ExtrinsicDomain to extract the descriptor from
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains___extrinsic_domain_descriptor(
     domain: *mut AnyDomain,
 ) -> FfiResult<*mut ExtrinsicObject> {

@@ -79,7 +79,7 @@ where
             return fallible!(
                 MakeTransformation,
                 "filler data for fill_nan must be numeric"
-            )
+            );
         }
     };
 
@@ -104,7 +104,7 @@ where
             return fallible!(
                 MakeTransformation,
                 "fill_nan may only be applied to float data"
-            )
+            );
         }
     }
     let output_domain = ExprDomain {

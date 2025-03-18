@@ -5,7 +5,7 @@ use crate::domains::{BitVector, BitVectorDomain};
 use crate::error::Fallible;
 use crate::measures::MaxDivergence;
 use crate::metrics::DiscreteDistance;
-use crate::traits::{samplers::sample_bernoulli_float, InfCast, InfDiv, InfLn, InfMul, InfSub};
+use crate::traits::{InfCast, InfDiv, InfLn, InfMul, InfSub, samplers::sample_bernoulli_float};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -35,7 +35,7 @@ pub fn make_randomized_response_bitvec(
             return fallible!(
                 MakeMeasurement,
                 "make_randomized_response_bitvec requires a max_weight on the input_domain"
-            )
+            );
         }
     };
 
@@ -120,7 +120,7 @@ pub fn debias_randomized_response_bitvec(answers: Vec<BitVector>, f: f64) -> Fal
 #[cfg(test)]
 mod test {
     use super::*;
-    use bitvec::prelude::{bitvec, Lsb0};
+    use bitvec::prelude::{Lsb0, bitvec};
 
     #[test]
     fn test_make_randomized_response_bitvec() -> Fallible<()> {

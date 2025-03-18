@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use syn::{AttributeArgs, ItemFn};
+use syn::{ItemFn, Meta};
 
 use crate::{Argument, Function, TypeRecipe};
 
@@ -9,7 +9,7 @@ pub mod signature;
 
 pub mod partial;
 
-use darling::{Error, Result};
+use darling::{Error, Result, ast::NestedMeta};
 
 use crate::bootstrap::{arguments::BootstrapArguments, docstring::BootstrapDocstring};
 
@@ -23,12 +23,17 @@ mod test;
 
 impl Function {
     pub fn from_ast(
-        attr_args: AttributeArgs,
+        attr_args: Vec<Meta>,
         item_fn: ItemFn,
         module: Option<&str>,
     ) -> Result<Function> {
         // Parse the proc bootstrap macro args
-        let arguments = BootstrapArguments::from_attribute_args(&attr_args)?;
+        let arguments = BootstrapArguments::from_attribute_args(
+            &attr_args
+                .into_iter()
+                .map(NestedMeta::Meta)
+                .collect::<Vec<_>>(),
+        )?;
 
         // Parse the signature
         let signature = BootstrapSignature::from_syn(item_fn.sig.clone())?;

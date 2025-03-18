@@ -4,7 +4,7 @@ use std::sync::Arc;
 use crate::accuracy::{
     conservative_discrete_gaussian_tail_to_alpha, conservative_discrete_laplacian_tail_to_alpha,
 };
-use crate::combinators::{make_basic_composition, BasicCompositionMeasure};
+use crate::combinators::{BasicCompositionMeasure, make_basic_composition};
 use crate::core::{Function, Measurement, MetricSpace, PrivacyMap};
 use crate::domains::{CategoricalDomain, Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
@@ -18,15 +18,15 @@ use crate::transformations::{DatasetMetric, StableDslPlan, StableExpr};
 use dashu::integer::IBig;
 use make_private_expr::PrivateExpr;
 use matching::find_len_expr;
-use polars::prelude::{len, JoinType, LazyFrame};
-use polars_plan::dsl::{col, lit, Expr};
+use polars::prelude::{JoinType, LazyFrame, len};
+use polars_plan::dsl::{Expr, col, lit};
 use polars_plan::plans::DslPlan;
 
 #[cfg(test)]
 mod test;
 
 mod matching;
-pub(crate) use matching::{is_threshold_predicate, match_group_by, KeySanitizer, MatchGroupBy};
+pub(crate) use matching::{KeySanitizer, MatchGroupBy, is_threshold_predicate, match_group_by};
 use polars_plan::prelude::ProjectionOptions;
 
 /// Create a private version of an aggregate operation on a LazyFrame.
@@ -150,7 +150,11 @@ where
         let (name, noise) = find_len_expr(&dp_exprs, None)?;
         Some((name, noise, threshold_value, true))
     } else {
-        return fallible!(MakeMeasurement, "The key-set of {:?} is private and cannot be released without a filter or join. Please pass a filtering threshold into make_private_lazyframe or conduct a join against a public key-set.", group_by_id);
+        return fallible!(
+            MakeMeasurement,
+            "The key-set of {:?} is private and cannot be released without a filter or join. Please pass a filtering threshold into make_private_lazyframe or conduct a join against a public key-set.",
+            group_by_id
+        );
     };
 
     if let Some((name, _, threshold_value, is_present)) = &threshold_info {
@@ -254,7 +258,11 @@ where
                 )?;
                 d_out = MO::add_delta(d_out, delta_joint)?;
             } else if margin.public_info.is_none() {
-                return fallible!(FailedMap, "key-sets cannot be privatized under {:?}. FixedSmoothedMaxDivergence is necessary.", output_measure);
+                return fallible!(
+                    FailedMap,
+                    "key-sets cannot be privatized under {:?}. FixedSmoothedMaxDivergence is necessary.",
+                    output_measure
+                );
             }
 
             Ok(d_out)

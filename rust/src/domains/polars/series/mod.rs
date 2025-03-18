@@ -239,7 +239,7 @@ impl SeriesDomain {
                 return fallible!(
                     MakeTransformation,
                     "only floating point types can be made non-NaN"
-                )
+                );
             }
         }
         Ok(())

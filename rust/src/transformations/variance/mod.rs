@@ -11,8 +11,8 @@ use crate::metrics::{AbsoluteDistance, SymmetricDistance};
 use crate::traits::{AlertingSub, ExactIntCast, Float, InfDiv, InfMul, InfPowI, InfSub};
 
 use super::{
-    make_lipschitz_float_mul, make_sum_of_squared_deviations, LipschitzMulFloatDomain,
-    LipschitzMulFloatMetric, Pairwise, UncheckedSum,
+    LipschitzMulFloatDomain, LipschitzMulFloatMetric, Pairwise, UncheckedSum,
+    make_lipschitz_float_mul, make_sum_of_squared_deviations,
 };
 
 #[bootstrap(
@@ -56,8 +56,12 @@ where
     AtomDomain<S::Item>: LipschitzMulFloatDomain<Atom = S::Item>,
     AbsoluteDistance<S::Item>: LipschitzMulFloatMetric<Distance = S::Item>,
 {
-    let size = (input_domain.size)
-        .ok_or_else(|| err!(MakeTransformation, "dataset size must be known. Either specify size in the input domain or use make_resize"))?;
+    let size = (input_domain.size).ok_or_else(|| {
+        err!(
+            MakeTransformation,
+            "dataset size must be known. Either specify size in the input domain or use make_resize"
+        )
+    })?;
     let bounds = (input_domain.element_domain.get_closed_bounds())?;
     if ddof >= size {
         return fallible!(

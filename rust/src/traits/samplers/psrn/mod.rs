@@ -2,8 +2,8 @@ use std::fmt::Debug;
 
 use dashu::{
     float::round::{
-        mode::{Down, Up},
         Round,
+        mode::{Down, Up},
     },
     integer::{IBig, UBig},
     rational::RBig,

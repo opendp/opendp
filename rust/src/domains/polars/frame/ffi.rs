@@ -25,7 +25,7 @@ use polars::prelude::*;
 ///
 /// # Arguments
 /// * `series_domains` - Domain of each series in the lazyframe.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__lazyframe_domain(
     series_domains: *const AnyObject,
 ) -> FfiResult<*mut AnyDomain> {
@@ -46,7 +46,7 @@ fn _lazyframe_from_domain(domain: LazyFrameDomain) -> Fallible<LazyFrame> {
     Ok(DataFrame::from_rows_and_schema(&[], &domain.schema())?.lazy())
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains___lazyframe_from_domain(
     domain: *mut AnyDomain,
 ) -> FfiResult<*mut AnyObject> {
@@ -87,7 +87,7 @@ pub(crate) fn unpack_series_domains(
     ),
     returns(c_type = "FfiResult<AnyDomain *>")
 )]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__with_margin(
     frame_domain: *mut AnyDomain,
     by: *mut AnyObject,
@@ -124,7 +124,7 @@ pub extern "C" fn opendp_domains__with_margin(
                 "No match for concrete type {}",
                 frame_domain.type_.descriptor
             )
-            .into()
+            .into();
         }
     };
 

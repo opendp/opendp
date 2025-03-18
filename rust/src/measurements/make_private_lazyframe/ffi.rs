@@ -16,7 +16,7 @@ use crate::{
 
 use super::make_private_lazyframe;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_measurements__make_private_lazyframe(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,

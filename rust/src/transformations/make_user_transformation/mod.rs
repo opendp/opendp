@@ -2,7 +2,7 @@ use opendp_derive::bootstrap;
 
 use crate::{
     core::{FfiResult, Function, StabilityMap, Transformation},
-    ffi::any::{wrap_func, AnyDomain, AnyMetric, AnyTransformation, CallbackFn},
+    ffi::any::{AnyDomain, AnyMetric, AnyTransformation, CallbackFn, wrap_func},
 };
 
 #[bootstrap(
@@ -39,7 +39,7 @@ use crate::{
 /// In addition, for every element $x$ in `input_domain`, `function(x)` is a member of `output_domain` or raises a data-independent runtime exception.
 ///
 /// In addition, `function` must not have side-effects, and `stability_map` must be a pure function.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_user_transformation(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
