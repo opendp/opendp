@@ -52,7 +52,7 @@ from opendp.mod import (
     binary_search_param,
 )
 from opendp.typing import RuntimeType
-from opendp._lib import indent, import_optional_dependency
+from opendp._lib import indent, import_optional_dependency, get_error_url
 from opendp.extras.polars import LazyFrameQuery, Margin
 from dataclasses import asdict, replace
 
@@ -415,7 +415,9 @@ class Context(object):
             for margin in margins:
                 by = margin.by or []
                 if not isinstance(by, Sequence) or isinstance(by, str):
-                    raise ValueError("Margin keys must be a sequence")
+                    message = "Margin keys must be a sequence"
+                    url = get_error_url(message)
+                    raise ValueError(f"{message}; {url}")
 
                 by_exprs = [col if isinstance(col, pl.Expr) else pl.col(col) for col in by]
                 domain = with_margin(domain, **asdict(replace(margin, by=by_exprs)))
