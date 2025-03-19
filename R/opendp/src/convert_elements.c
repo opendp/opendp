@@ -414,13 +414,13 @@ SEXP privacyprofileptr_to_sexp(AnyObject *input, SEXP info)
 
     int errorOccurred;
     SEXP new_privacy_profile = get_private_func("new_privacy_profile");
-    SEXP privacyprofile_expr = lang2(new_privacy_profile, XPtr);
-    SEXP privacyprofile = R_tryEval(privacyprofile_expr, R_GlobalEnv, &errorOccurred);
+    SEXP privacy_profile_expr = lang2(new_privacy_profile, XPtr);
+    SEXP privacy_profile = R_tryEval(privacy_profile_expr, R_GlobalEnv, &errorOccurred);
     if (errorOccurred)
-        error("failed to construct privacy_profile");
+        error("failed to construct privacy profile");
 
     UNPROTECT(1);
-    return privacyprofile;
+    return privacy_profile;
 }
 
 // AnyObject: Queryable
