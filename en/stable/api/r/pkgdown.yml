@@ -1,0 +1,8 @@
+pandoc: 2.9.2.1
+pkgdown: 2.1.1
+pkgdown_sha: ~
+articles: {}
+last_built: 2025-03-19T04:58Z
+urls:
+  reference: https://docs.opendp.org/reference
+  article: https://docs.opendp.org/articles
