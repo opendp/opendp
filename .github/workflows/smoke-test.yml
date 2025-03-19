@@ -13,7 +13,7 @@ on:
 
 jobs:
   rust-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     defaults:
       run:
         working-directory: rust
@@ -90,8 +90,6 @@ jobs:
 
   rust-test:
     needs: rust-build
-    # TODO: Upgrade to ubuntu-latest.
-    # https://github.com/opendp/opendp/issues/2305
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -135,7 +133,7 @@ jobs:
 
   python-test:
     needs: rust-build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     defaults:
       run:
         working-directory: python
@@ -217,7 +215,7 @@ jobs:
 
   confirm-coverage:
     needs: python-test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Download coverage
         # No additional action needed: We just need to confirm that at least one test produced a coverage report.
@@ -227,7 +225,7 @@ jobs:
 
   docs-links:
     needs: rust-build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     defaults:
       run:
         working-directory: docs
@@ -250,7 +248,9 @@ jobs:
         run: sudo apt-get install -y pandoc
 
       - name: Install dependencies
-        run: python -m pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
 
       - name: Build docs
         run: make html
@@ -260,7 +260,7 @@ jobs:
 
   python-notebooks:
     needs: rust-build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     defaults:
       run:
         working-directory: docs
@@ -312,7 +312,7 @@ jobs:
 
   r-test:
     needs: rust-build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       OPENDP_LIB_DIR: ${{ github.workspace }}/libs
       LINTR_ERROR_ON_LINT: true
