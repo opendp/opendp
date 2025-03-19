@@ -153,6 +153,7 @@ Change to the ``python`` directory, install dependencies, and then install the P
 
     pip install -r requirements-dev.txt
     pip install -e '.[scikit-learn,polars]'
+    pre-commit install
 
 ``requirement-dev.txt`` is compiled from ``requirements-dev.in``:
 To update dependencies, follow the directions in that file.
