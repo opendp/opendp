@@ -67,7 +67,7 @@ class DPExpr(object):
     ):
         """Add noise to the expression.
 
-        If scale is None it is filled by `global_scale` in :py:func:`opendp.measurements.make_private_lazyframe`.
+        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
         If distribution is None, then the noise distribution will be chosen for you:
 
         * Pure-DP: Laplace noise, where ``scale == standard_deviation / sqrt(2)``
