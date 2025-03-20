@@ -10,7 +10,7 @@ use crate::{
         util::{self, c_bool, into_c_char_p, to_str, ExtrinsicObject, Type},
     },
     metrics::{AbsoluteDistance, L1Distance, L2Distance},
-    traits::InfAdd,
+    traits::{InfAdd, Integer},
 };
 
 use super::{
@@ -191,13 +191,17 @@ fn partition_distance<M: Metric>(metric: M) -> PartitionDistance<M> {
 pub extern "C" fn opendp_metrics__partition_distance(
     metric: *const AnyMetric,
 ) -> FfiResult<*mut AnyMetric> {
-    fn monomorphize<M: 'static + Metric>(metric: &AnyMetric) -> FfiResult<*mut AnyMetric> {
-        let metric = try_!(metric.downcast_ref::<M>()).clone();
-        Ok(AnyMetric::new(partition_distance::<M>(metric))).into()
-    }
     let metric = try_as_ref!(metric);
     let M = metric.type_.clone();
-    dispatch!(monomorphize, [(M, [SymmetricDistance, AbsoluteDistance<i32>, AbsoluteDistance<f64>])], (metric))
+    if M == Type::of::<SymmetricDistance>() {
+        let metric = try_!(metric.downcast_ref::<SymmetricDistance>()).clone();
+        return Ok(AnyMetric::new(partition_distance(metric))).into();
+    }
+    fn monomorphize<Q: Integer>(metric: &AnyMetric) -> Fallible<AnyMetric> {
+        let metric = metric.downcast_ref::<AbsoluteDistance<Q>>()?.clone();
+        Ok(AnyMetric::new(partition_distance(metric))).into()
+    }
+    dispatch!(monomorphize, [(M, @integers)], (metric)).into()
 }
 
 #[bootstrap(

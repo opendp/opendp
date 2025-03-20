@@ -1,0 +1,69 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{NoisePrivacyMap<L1Distance<RBig>, MaxDivergence> for ZExpFamily<1>}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise/trait}{NoisePrivacyMap} for \texttt{ZExpFamily<1>} in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+\texttt{NoisePrivacyMap} is parameterized as follows:
+\begin{itemize}
+    \item \texttt{MI}, the input metric, is of type \rustdoc{metrics/type}{L1Distance<RBig>}
+    \item \texttt{MO}, the output measure, is of type \rustdoc{measures/struct}{MaxDivergence}
+\end{itemize}
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/NoisePrivacyMap_for_ZExpFamily1.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    Given a distribution \texttt{self},
+    returns \texttt{Err(e)} if \texttt{self} is not a valid distribution.
+    Otherwise if the output is \texttt{Ok(privacy\_map)}
+    then \texttt{privacy\_map} observes the following:
+
+    Under the condition that:
+    \begin{itemize}
+        \item \texttt{input\_metric} is \texttt{MI::default()}
+        \item \texttt{output\_metric} is \texttt{MO::default()}
+        \item \texttt{function(x) = x + Z} where \texttt{Z} is a vector of iid samples from \texttt{self}
+    \end{itemize}
+
+    For every pair of elements $x, x'$ in \texttt{VectorDomain<AtomDomain<IBig>{}>},
+    and for every pair (\texttt{d\_in}, \texttt{d\_out}),
+    where \texttt{d\_in} has the associated type for \texttt{input\_metric} and \texttt{d\_out} has the associated type for \texttt{output\_measure},
+    if $x, x'$ are \texttt{d\_in}-close under \texttt{input\_metric}, \texttt{privacy\_map(d\_in)} does not raise an exception,
+    and $\texttt{privacy\_map(d\_in)} \leq \texttt{d\_out}$,
+    then \texttt{function(x)}, \texttt{function(x')} are \texttt{d\_out}-close under \texttt{output\_measure}.
+\end{theorem}
+
+\begin{proof}
+    Line \ref{line:neg-scale} rejects \texttt{self} if \texttt{self} does not represent a valid distribution,
+    satisfying the error conditions of the postcondition.
+
+    \begin{align}
+        &\max_{x \sim x'} D_\alpha(M(x), M(x')) \\
+        &= \max_{x \sim x'}\frac{1}{\alpha-1} \ln \mathbb{E}_{z \sim M(x')} \left(\frac{\Pr[M(x) = z]}{\Pr[M(x') = z]}\right)^{\alpha} &&\text{substitute } \rustdoc{measures/struct}{RenyiDivergence} \\
+        &\le \frac{1}{\alpha-1} \ln \mathbb{E}_{z \sim M(x')} \left(\frac{\Pr[M(0) = z]}{\Pr[M(\mu) = z]}\right)^{\alpha} &&\text{where } \Vert\mu\Vert_2 = d_{in} \\
+        &= \frac{1}{\alpha-1} \ln \int_{\mathbb{R}^d} \Pr[M(0) = z]^\alpha \cdot \Pr[M(\mu) = z]^{1 - \alpha} dz &&\text{since } \mathbb{E}[X] = \int x \cdot f(x)\ dx \\
+        &= \frac{1}{\alpha-1} \ln \frac{1}{\sigma \sqrt{2 \pi}} \int_{\mathbb{R}} \frac{\exp(-\alpha z^2 / (2 \sigma^2))}{\exp(-(1 - \alpha) (z - d_{in})^2 / (2 \sigma^2))} dz &&\text{rotated to one dimension} \\
+        &= \frac{1}{\alpha-1} \ln \left[ \frac{\sigma \sqrt{2 \pi}}{\sigma \sqrt{2 \pi}} (\alpha^2 - \alpha) d_{in}^2 / (2 \sigma^2) \right] \\
+        &= \alpha d_{in}^2 / (2 \sigma^2)
+    \end{align}
+
+    
+\end{proof}
+
+\end{document}

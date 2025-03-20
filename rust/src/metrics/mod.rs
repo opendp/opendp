@@ -368,6 +368,26 @@ where
     }
 }
 
+impl<K: CheckAtom, V: CheckAtom, Q> MetricSpace
+    for (
+        MapDomain<AtomDomain<K>, AtomDomain<V>>,
+        PartitionDistance<AbsoluteDistance<Q>>,
+    )
+where
+    K: Eq + Hash,
+{
+    fn check_space(&self) -> Fallible<()> {
+        if self.0.value_domain.nullable() {
+            return fallible!(
+                MetricSpace,
+                "PartitionDistance<AbsoluteDistance<Q>> requires non-nullable elements"
+            );
+        } else {
+            Ok(())
+        }
+    }
+}
+
 /// The $L_1$ distance between two vector-valued aggregates.
 ///
 /// Refer to [`LpDistance`] for details.

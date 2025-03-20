@@ -17,7 +17,6 @@ use polars_plan::dsl::{ColumnsUdf, Expr, GetOutput};
 use polars_plan::prelude::{ApplyOptions, FunctionOptions};
 #[cfg(feature = "ffi")]
 use pyo3_polars::derive::polars_expr;
-#[cfg(feature = "ffi")]
 use serde::{Deserialize, Serialize};
 
 use super::PrivateExpr;
@@ -110,8 +109,7 @@ impl ColumnsUdf for IndexCandidatesShim {
     }
 }
 
-#[derive(Clone)]
-#[cfg_attr(feature = "ffi", derive(Deserialize, Serialize))]
+#[derive(Clone, Deserialize, Serialize)]
 pub(crate) struct IndexCandidatesPlugin {
     pub candidates: Series,
 }
@@ -180,6 +178,7 @@ fn index_candidates(_: &[Series]) -> PolarsResult<Series> {
     polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")
 }
 
+#[cfg(feature = "ffi")]
 /// Helper function for the Polars plan optimizer to determine the output type of the expression.
 ///
 /// Ensures that the input field is numeric.

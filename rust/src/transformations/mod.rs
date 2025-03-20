@@ -107,3 +107,8 @@ pub use crate::transformations::cast_metric::*;
 mod resize;
 #[cfg(feature = "contrib")]
 pub use crate::transformations::resize::*;
+
+#[cfg(feature = "contrib")]
+mod scalar_to_vector;
+#[cfg(feature = "contrib")]
+pub use crate::transformations::scalar_to_vector::*;

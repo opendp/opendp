@@ -72,7 +72,7 @@ fn test_stable_keys_puredp() -> Fallible<()> {
 }
 
 #[test]
-fn test_stable_keys_zCDP() -> Fallible<()> {
+fn test_stable_keys_zcdp() -> Fallible<()> {
     let lf_domain =
         LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?;
 

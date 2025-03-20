@@ -1,0 +1,72 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{fn make\_float\_to\_bigint}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise/nature/fn}{make\_float\_to\_bigint} in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+
+\begin{itemize}
+    \item Generic \texttt{T} implements trait \rustdoc{traits/trait}{SaturatingCast}\texttt{<IBig>}
+\end{itemize}
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_float_to_bigint.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \validTransformation{(\texttt{T})}{\texttt{make\_float\_to\_bigint}}
+\end{theorem}
+
+\begin{proof}
+    In the definition of the function on line \ref{line:elementwise-function},
+    \texttt{RBig.try\_from} is infallible when the input is non-nan making the function infallible.
+    There are no other sources of error in the function, 
+    so the function cannot raise data-dependent errors.
+
+    The function also always returns a vector of IBigs, of the same length as the input, 
+    meaning the output of the function is always a member of the output domain,
+    as defined on line \ref{line:output-domain}.
+
+    The stability argument breaks down into three parts:
+    \begin{itemize}
+        \item The casting from float to rational on line \ref{line:try-from} is 1-stable,
+        because the real values of the numbers remain un-changed,
+        meaning the distance between adjacent inputs always remains the same.
+        \item The rounding on line \ref{line:find-nearest} can cause an increase in the sensitivity equal to $2^k$.
+        \begin{align}
+            & \max_{x \sim x'} d_{Lp}(f(x), f(x'))\\
+            & = \max_{x \sim x'} |r_k(x) - r_k(x')|_p\\
+            & \leq \max_{x \sim x'} |(x + 2^{k - 1}) - (x' - 2^{k - 1})|_p\\
+            & \leq \max_{x \sim x'} |x - x'|_p + 2^{k}\\
+            & = \max_{x \sim x'} d_{Lp}(x, x') + 2^{k}\\
+            & = 1 \cdot \texttt{d\_in} + 2^{k}
+        \end{align}
+    
+        This increase in the sensitivity is reflected in on line \ref{line:x-div-2k},
+        where the rounding distance is added to the sensitivity.
+
+        \item The discarding of the denominator on line \ref{line:find-nearest} is $2^k$-stable,
+            as the denominator is $2^k$.
+            This increase in sensitivity is also reflected on line \ref{line:x-div-2k},
+            where the sensitivity is increased by a factor of $2^k$.
+    \end{itemize}
+
+    Therefore, it is shown that the stability of the function is governed by the stability map.
+\end{proof}
+
+
+\end{document}
