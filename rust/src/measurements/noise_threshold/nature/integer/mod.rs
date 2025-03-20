@@ -45,6 +45,7 @@ where
     > {
         let distribution = ZExpFamily {
             scale: integerize_scale(self.scale, 0)?,
+            divisor: None,
         };
         let threshold = IBig::from(threshold);
 

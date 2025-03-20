@@ -37,7 +37,11 @@ where
 }
 
 pub trait NoiseThresholdPrivacyMap<MI: Metric, MO: Measure>: Sample {
-    fn noise_threshold_privacy_map(self, threshold: IBig) -> Fallible<PrivacyMap<MI, MO>>;
+    fn noise_threshold_privacy_map(
+        &self,
+        input_metric: &MI,
+        threshold: IBig,
+    ) -> Fallible<PrivacyMap<MI, MO>>;
 }
 
 impl<MO: 'static + Measure, TK, const P: usize>
@@ -66,29 +70,26 @@ where
             MO,
         >,
     > {
-        let distribution = self.clone();
-
         if self.scale < RBig::ZERO {
             return fallible!(FailedFunction, "scale must be non-negative");
         }
 
+        let privacy_map = self.noise_threshold_privacy_map(&input_metric, threshold.clone())?;
+
         Measurement::new(
             input_domain,
-            Function::new_fallible(enclose!(
-                (distribution, threshold),
-                move |data: &HashMap<TK, IBig>| {
-                    data.iter()
-                        // noise output count
-                        .map(|(k, v)| Ok((k.clone(), distribution.sample(v)?)))
-                        // only keep keys with values gte threshold
-                        .filter(|res| res.as_ref().map(|(_k, v)| v >= &threshold).unwrap_or(true))
-                        // fail the whole computation if any noise addition failed
-                        .collect()
-                }
-            )),
+            Function::new_fallible(move |data: &HashMap<TK, IBig>| {
+                data.iter()
+                    // noise output count
+                    .map(|(k, v)| Ok((k.clone(), self.sample(v)?)))
+                    // only keep keys with values gte threshold
+                    .filter(|res| res.as_ref().map(|(_k, v)| v >= &threshold).unwrap_or(true))
+                    // fail the whole computation if any noise addition failed
+                    .collect()
+            }),
             input_metric,
             MO::default(),
-            self.noise_threshold_privacy_map(threshold)?,
+            privacy_map,
         )
     }
 }

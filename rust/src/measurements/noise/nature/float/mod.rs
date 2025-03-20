@@ -40,6 +40,7 @@ where
         let FloatExpFamily { scale, k } = self;
         let distribution = ZExpFamily {
             scale: integerize_scale(scale, k)?,
+            divisor: None,
         };
 
         let t_int = make_float_to_bigint(input_space, k)?;
