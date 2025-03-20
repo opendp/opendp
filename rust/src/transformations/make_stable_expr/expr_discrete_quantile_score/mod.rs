@@ -1,5 +1,5 @@
 use crate::core::{StabilityMap, Transformation};
-use crate::domains::{ExprDomain, MarginPub, WildExprDomain};
+use crate::domains::{Context, ExprDomain, Margin, MarginPub, WildExprDomain};
 use crate::metrics::{LInfDistance, Parallel, PartitionDistance};
 use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
 use crate::traits::{InfCast, Number};
@@ -14,7 +14,7 @@ use polars::datatypes::{
     StaticArray, UInt32Type, UInt64Type,
 };
 use polars::lazy::dsl::Expr;
-use polars::prelude::DataType::*;
+use polars::prelude::DataType::{self, *};
 
 mod plugin_dq_score;
 pub(crate) use plugin_dq_score::{DiscreteQuantileScorePlugin, DiscreteQuantileScoreShim};
@@ -85,7 +85,7 @@ where
         }
     }?;
 
-    let margin = middle_domain.context.aggregation("count")?;
+    let margin = middle_domain.context.aggregation("quantile")?;
 
     let mpl = margin
         .max_partition_length
@@ -98,10 +98,27 @@ where
     let len = candidates.len() as i64;
     let fill_value = typed_lit(0u64).repeat_by(len).reshape(&[-1, len]);
 
+    let mut output_domain = active_series.clone();
+    output_domain.set_dtype(DataType::Array(
+        Box::new(DataType::UInt64),
+        candidates.len(),
+    ))?;
+
+    let output_domain = ExprDomain {
+        column: output_domain,
+        context: Context::Aggregation {
+            margin: Margin {
+                max_partition_length: Some(1),
+                max_partition_contributions: None,
+                ..margin
+            },
+        },
+    };
+
     t_prior
         >> Transformation::<_, _, PartitionDistance<MI>, Parallel<LInfDistance<_>>>::new(
-            middle_domain.clone(),
             middle_domain,
+            output_domain,
             Function::then_expr(move |input_expr| {
                 apply_plugin(
                     input_expr,

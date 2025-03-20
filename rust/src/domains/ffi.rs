@@ -14,7 +14,7 @@ use crate::{
 };
 
 #[cfg(feature = "polars")]
-use crate::domains::{CategoricalDomain, DatetimeDomain, EnumDomain};
+use crate::domains::{ArrayDomain, CategoricalDomain, DatetimeDomain, EnumDomain};
 
 use super::{BitVectorDomain, Bounds, Null, OptionDomain};
 
@@ -256,6 +256,11 @@ pub extern "C" fn opendp_domains__option_domain(
     #[cfg(feature = "polars")]
     if D == Type::of::<EnumDomain>() {
         let element_domain = try_!(element_domain.downcast_ref::<EnumDomain>()).clone();
+        return Ok(AnyDomain::new(option_domain(element_domain))).into();
+    }
+    #[cfg(feature = "polars")]
+    if D == Type::of::<ArrayDomain>() {
+        let element_domain = try_!(element_domain.downcast_ref::<ArrayDomain>()).clone();
         return Ok(AnyDomain::new(option_domain(element_domain))).into();
     }
     #[cfg(feature = "polars")]

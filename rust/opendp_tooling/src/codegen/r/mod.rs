@@ -53,6 +53,7 @@ const BLOCKLIST: &'static [&'static str] = &[
     "series_domain",
     "categorical_domain",
     "enum_domain",
+    "array_domain",
     "datetime_domain",
     "arrow_array_free",
     "dataframe_domain",
