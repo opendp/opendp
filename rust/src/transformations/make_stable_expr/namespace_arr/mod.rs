@@ -39,7 +39,7 @@ where
 
     fallible!(
         MakeTransformation,
-        "Expr is not recognized at this time: {:?}. Waiting for: https://github.com/pola-rs/polars/pull/20421", 
+        "Expr is not recognized at this time: {:?}. Waiting for: https://github.com/pola-rs/polars/pull/20421",
         array_function
     )
 }
