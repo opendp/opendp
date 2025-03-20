@@ -8,7 +8,7 @@ use crate::metrics::{InsertDeleteDistance, SymmetricDistance};
 use crate::transformations::make_sum;
 use crate::transformations::sum::MakeSum;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_sum(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,

@@ -2,7 +2,7 @@ use polars::df;
 use polars_plan::dsl::lit;
 
 use crate::{
-    measurements::{make_private_lazyframe, PrivateExpr},
+    measurements::{PrivateExpr, make_private_lazyframe},
     measures::MaxDivergence,
     metrics::{PartitionDistance, SymmetricDistance},
     transformations::test_helper::get_test_data,

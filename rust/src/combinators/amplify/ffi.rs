@@ -95,7 +95,7 @@ fn make_population_amplification(
     super::make_population_amplification(measurement, population_size)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_combinators__make_population_amplification(
     measurement: *const AnyMeasurement,
     population_size: c_uint,

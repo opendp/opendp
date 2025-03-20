@@ -49,7 +49,11 @@ where
         op,
         Eq | NotEq | Lt | LtEq | Gt | GtEq | And | Or | Xor | LogicalAnd | LogicalOr
     ) {
-        return fallible!(MakeTransformation, "unsupported operator: {:?}. Only binary operations that emit booleans are currently supported.", op);
+        return fallible!(
+            MakeTransformation,
+            "unsupported operator: {:?}. Only binary operations that emit booleans are currently supported.",
+            op
+        );
     }
 
     let left_series = &t_left.output_domain.column;
@@ -58,7 +62,11 @@ where
     if matches!(left_series.dtype(), DataType::Categorical(_, _))
         || matches!(right_series.dtype(), DataType::Categorical(_, _))
     {
-        return fallible!(MakeTransformation, "{} cannot be applied to categorical data, because it may trigger a data-dependent CategoricalRemappingWarning in Polars", op);
+        return fallible!(
+            MakeTransformation,
+            "{} cannot be applied to categorical data, because it may trigger a data-dependent CategoricalRemappingWarning in Polars",
+            op
+        );
     }
 
     let mut data_column =

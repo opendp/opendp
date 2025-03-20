@@ -6,8 +6,8 @@ use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::transformations::DatasetMetric;
 
-use super::expr_replace::{is_cast_fallible, literal_is_nullable, literal_len};
 use super::StableExpr;
+use super::expr_replace::{is_cast_fallible, literal_is_nullable, literal_len};
 
 #[cfg(test)]
 mod test;

@@ -26,9 +26,11 @@ fn test_postprocess_alias() -> Fallible<()> {
     let actual = lf.group_by([col("chunk_2_bool")]).agg([expr_p]).collect()?;
     let expected = df!("chunk_2_bool" => [false, true], "new name" => [500u32, 500])?;
 
-    assert!(actual
-        .sort(["chunk_2_bool"], Default::default())?
-        .equals(&expected));
+    assert!(
+        actual
+            .sort(["chunk_2_bool"], Default::default())?
+            .equals(&expected)
+    );
 
     Ok(())
 }
@@ -51,9 +53,11 @@ fn test_postprocess_binary() -> Fallible<()> {
     let actual = lf.group_by([col("chunk_2_bool")]).agg([expr_p]).collect()?;
     let expected = df!("chunk_2_bool" => [false, true], "len" => [false, false])?;
 
-    assert!(actual
-        .sort(["chunk_2_bool"], Default::default())?
-        .equals(&expected));
+    assert!(
+        actual
+            .sort(["chunk_2_bool"], Default::default())?
+            .equals(&expected)
+    );
 
     Ok(())
 }

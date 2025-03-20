@@ -1,7 +1,7 @@
 use std::any::TypeId;
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::ffi::{c_void, CString};
+use std::ffi::{CString, c_void};
 use std::fmt::Formatter;
 use std::hash::Hash;
 use std::os::raw::c_char;
@@ -25,12 +25,12 @@ use crate::core::{FfiError, FfiResult, FfiSlice, Function};
 use crate::domains::BitVector;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyFunction, AnyMeasurement, AnyObject, AnyQueryable, Downcast};
-use crate::ffi::util::{self, into_c_char_p, AnyDomainPtr, ExtrinsicObject};
-use crate::ffi::util::{c_bool, AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents};
+use crate::ffi::util::{self, AnyDomainPtr, ExtrinsicObject, into_c_char_p};
+use crate::ffi::util::{AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents, c_bool};
 use crate::measures::PrivacyProfile;
 use crate::metrics::IntDistance;
-use crate::traits::samplers::{fill_bytes, Shuffle};
 use crate::traits::ProductOrd;
+use crate::traits::samplers::{Shuffle, fill_bytes};
 use crate::{err, fallible, try_, try_as_ref};
 use opendp_derive::bootstrap;
 
@@ -51,7 +51,7 @@ use opendp_derive::bootstrap;
 /// 
 /// # Returns
 /// An AnyObject that contains the data in `slice`. The AnyObject also captures rust type information.
-#[no_mangle]
+#[unsafe(no_mangle)]
 #[rustfmt::skip]
 pub extern "C" fn opendp_data__slice_as_object(
     raw: *const FfiSlice,
@@ -362,7 +362,7 @@ pub extern "C" fn opendp_data__slice_as_object(
 ///
 /// # Arguments
 /// * `this` - A pointer to the AnyObject.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__object_type(this: *mut AnyObject) -> FfiResult<*mut c_char> {
     let obj: &AnyObject = try_as_ref!(this);
 
@@ -384,7 +384,7 @@ pub extern "C" fn opendp_data__object_type(this: *mut AnyObject) -> FfiResult<*m
 ///
 /// # Returns
 /// An FfiSlice that contains the data in FfiObject, but in a format readable in bindings languages.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResult<*mut FfiSlice> {
     let obj = try_as_ref!(obj);
     fn bitvector_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
@@ -676,15 +676,18 @@ fn parse_type_args<const N: usize>(args: &Vec<TypeId>, name: &str) -> Fallible<[
 /// Checks that a vector of three types satisfies the requirements of a partition distance.
 fn check_partition_distance_types(types: &Vec<Type>) -> Fallible<()> {
     if types[0] != Type::of::<IntDistance>() {
-        return fallible!(FFI,
+        return fallible!(
+            FFI,
             "3-tuples are only implemented for partition distances. First type must be a u32, found {}",
             types[0].to_string()
         );
     }
     if types[1] != types[2] {
-        return fallible!(FFI,
+        return fallible!(
+            FFI,
             "3-tuples are only implemented for partition distances. Last two types must be numbers of the same type, found {} and {}",
-            types[1].to_string(), types[2].to_string()
+            types[1].to_string(),
+            types[2].to_string()
         );
     }
     Ok(())
@@ -699,7 +702,7 @@ fn check_partition_distance_types(types: &Vec<Type>) -> Fallible<()> {
 ///
 /// # Arguments
 /// * `raw` - A pointer to the slice to free.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__ffislice_of_anyobjectptrs(
     raw: *const FfiSlice,
 ) -> FfiResult<*mut FfiSlice> {
@@ -729,7 +732,7 @@ pub extern "C" fn opendp_data__ffislice_of_anyobjectptrs(
 ///
 /// # Arguments
 /// * `this` - A pointer to the AnyObject to free.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__object_free(this: *mut AnyObject) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
@@ -738,7 +741,7 @@ pub extern "C" fn opendp_data__object_free(this: *mut AnyObject) -> FfiResult<*m
 /// Internal function. Compute erfc.
 ///
 /// Used to prove an upper bound on the error of erfc.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__erfc(value: f64) -> f64 {
     use statrs::function::erf::erfc;
     erfc(value)
@@ -755,7 +758,7 @@ pub extern "C" fn opendp_data__erfc(value: f64) -> f64 {
 ///
 /// # Arguments
 /// * `this` - A pointer to the FfiSlice to free.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__slice_free(this: *mut FfiSlice) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
@@ -766,7 +769,7 @@ pub extern "C" fn opendp_data__slice_free(this: *mut FfiSlice) -> FfiResult<*mut
     returns(c_type = "FfiResult<void *>")
 )]
 /// Internal function. Free the memory associated with `this`, a slice containing an Arrow array, schema, and name.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__arrow_array_free(this: *mut c_void) -> FfiResult<*mut ()> {
     #[cfg(feature = "polars")]
     {
@@ -805,7 +808,7 @@ pub extern "C" fn opendp_data__arrow_array_free(this: *mut c_void) -> FfiResult<
 ///
 /// # Arguments
 /// * `this` - A pointer to the string to free.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__str_free(this: *mut c_char) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
@@ -820,7 +823,7 @@ pub extern "C" fn opendp_data__str_free(this: *mut c_char) -> FfiResult<*mut ()>
 ///
 /// # Arguments
 /// * `this` - A pointer to the bool to free.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__bool_free(this: *mut c_bool) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
@@ -832,7 +835,7 @@ pub extern "C" fn opendp_data__bool_free(this: *mut c_bool) -> FfiResult<*mut ()
 )]
 /// Internal function. Free the memory associated with `this`, a string.
 /// Used to clean up after the type getter functions.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__extrinsic_object_free(
     this: *mut ExtrinsicObject,
 ) -> FfiResult<*mut ()> {
@@ -1065,7 +1068,7 @@ impl Shuffle for AnyObject {
 ///
 /// # Returns
 /// Delta at a given `epsilon`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__privacy_profile_delta(
     curve: *const AnyObject,
     epsilon: f64,
@@ -1088,7 +1091,7 @@ pub extern "C" fn opendp_data__privacy_profile_delta(
 ///
 /// # Returns
 /// Epsilon at a given `delta`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__privacy_profile_epsilon(
     profile: *const AnyObject,
     delta: f64,
@@ -1106,7 +1109,7 @@ pub extern "C" fn opendp_data__privacy_profile_epsilon(
 /// # Arguments
 /// * `name` - The name of the ArrowArray. A clone of this string owned by Rust will be returned in the slice.
 #[bootstrap(name = "new_arrow_array", arguments(name(rust_type = b"null")))]
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "C" fn opendp_data__new_arrow_array(name: *const c_char) -> FfiResult<*mut FfiSlice> {
     #[cfg(feature = "polars")]
     // prepare a pointer to receive the Array struct
@@ -1134,7 +1137,7 @@ extern "C" fn opendp_data__new_arrow_array(name: *const c_char) -> FfiResult<*mu
 ///
 /// # Arguments
 /// * `this` - The AnyObject to wrap.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn ffiresult_ok(this: *const AnyObject) -> *const FfiResult<*const AnyObject> {
     util::into_raw(FfiResult::Ok(this))
 }
@@ -1144,7 +1147,7 @@ pub extern "C" fn ffiresult_ok(this: *const AnyObject) -> *const FfiResult<*cons
 /// # Arguments
 /// * `message` - The error message.
 /// * `backtrace` - The error backtrace.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn ffiresult_err(
     message: *mut c_char,
     backtrace: *mut c_char,
@@ -1172,7 +1175,7 @@ pub extern "C" fn ffiresult_err(
 )]
 /// Internal function. Populate the buffer behind `ptr` with `len` random bytes
 /// sampled from a cryptographically secure RNG.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_data__fill_bytes(ptr: *mut u8, len: usize) -> bool {
     let buffer = unsafe { slice::from_raw_parts_mut(ptr, len) };
     fill_bytes(buffer).is_ok()

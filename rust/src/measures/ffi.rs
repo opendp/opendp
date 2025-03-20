@@ -1,6 +1,6 @@
 use std::{ffi::c_char, fmt::Debug, marker::PhantomData};
 
-use crate::ffi::any::{wrap_func, AnyObject, CallbackFn, Downcast};
+use crate::ffi::any::{AnyObject, CallbackFn, Downcast, wrap_func};
 use opendp_derive::bootstrap;
 
 use crate::{
@@ -8,7 +8,7 @@ use crate::{
     error::Fallible,
     ffi::{
         any::AnyMeasure,
-        util::{self, into_c_char_p, to_str, ExtrinsicObject, Type},
+        util::{self, ExtrinsicObject, Type, into_c_char_p, to_str},
     },
     measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
 };
@@ -21,7 +21,7 @@ use super::{PrivacyProfile, RenyiDivergence, SmoothedMaxDivergence};
     returns(c_type = "FfiResult<void *>")
 )]
 /// Internal function. Free the memory associated with `this`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_measures___measure_free(this: *mut AnyMeasure) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
@@ -35,7 +35,7 @@ pub extern "C" fn opendp_measures___measure_free(this: *mut AnyMeasure) -> FfiRe
 ///
 /// # Arguments
 /// * `this` - The measure to debug (stringify).
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_measures__measure_debug(this: *mut AnyMeasure) -> FfiResult<*mut c_char> {
     let this = try_as_ref!(this);
     FfiResult::Ok(try_!(into_c_char_p(format!("{:?}", this))))
@@ -50,7 +50,7 @@ pub extern "C" fn opendp_measures__measure_debug(this: *mut AnyMeasure) -> FfiRe
 ///
 /// # Arguments
 /// * `this` - The measure to retrieve the type from.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_measures__measure_type(this: *mut AnyMeasure) -> FfiResult<*mut c_char> {
     let this = try_as_ref!(this);
     FfiResult::Ok(try_!(into_c_char_p(this.type_.descriptor.to_string())))
@@ -65,7 +65,7 @@ pub extern "C" fn opendp_measures__measure_type(this: *mut AnyMeasure) -> FfiRes
 ///
 /// # Arguments
 /// * `this` - The measure to retrieve the distance type from.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_measures__measure_distance_type(
     this: *mut AnyMeasure,
 ) -> FfiResult<*mut c_char> {
@@ -91,7 +91,7 @@ pub extern "C" fn opendp_measures__measure_distance_type(
 /// $Y, Y'$ are $d$-close under the max divergence measure whenever
 ///
 /// $D_\infty(Y, Y') = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y \in S]}{\Pr[Y' \in S]} \Big] \leq d$.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_measures__max_divergence() -> FfiResult<*mut AnyMeasure> {
     Ok(AnyMeasure::new(MaxDivergence)).into()
 }
@@ -119,7 +119,7 @@ pub extern "C" fn opendp_measures__max_divergence() -> FfiResult<*mut AnyMeasure
 ///
 /// Note that $\epsilon$ and $\delta$ are not privacy parameters $\epsilon$ and $\delta$ until quantified over all adjacent datasets,
 /// as is done in the definition of a measurement.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_measures__smoothed_max_divergence() -> FfiResult<*mut AnyMeasure> {
     Ok(AnyMeasure::new(SmoothedMaxDivergence)).into()
 }
@@ -143,7 +143,7 @@ pub extern "C" fn opendp_measures__smoothed_max_divergence() -> FfiResult<*mut A
 ///
 /// Note that this $\epsilon$ and $\delta$ are not privacy parameters $\epsilon$ and $\delta$ until quantified over all adjacent datasets,
 /// as is done in the definition of a measurement.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_measures__fixed_smoothed_max_divergence() -> FfiResult<*mut AnyMeasure> {
     Ok(AnyMeasure::new(Approximate(MaxDivergence))).into()
 }
@@ -186,7 +186,7 @@ fn approximate<M: Measure>(measure: M) -> Approximate<M> {
     Approximate(measure)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_measures__approximate(
     measure: *const AnyMeasure,
 ) -> FfiResult<*mut AnyMeasure> {
@@ -231,7 +231,7 @@ pub extern "C" fn opendp_measures__approximate(
 /// for every possible choice of $\alpha \in (1, \infty)$,
 ///
 /// $D_\alpha(Y, Y') = \frac{1}{1 - \alpha} \mathbb{E}_{x \sim Y'} \Big[\ln \left( \dfrac{\Pr[Y = x]}{\Pr[Y' = x]} \right)^\alpha \Big] \leq d \cdot \alpha$.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_measures__zero_concentrated_divergence() -> FfiResult<*mut AnyMeasure> {
     Ok(AnyMeasure::new(ZeroConcentratedDivergence)).into()
 }
@@ -256,7 +256,7 @@ pub extern "C" fn opendp_measures__zero_concentrated_divergence() -> FfiResult<*
 ///
 /// Note that this $\epsilon$ and $\alpha$ are not privacy parameters $\epsilon$ and $\alpha$ until quantified over all adjacent datasets,
 /// as is done in the definition of a measurement.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_measures__renyi_divergence() -> FfiResult<*mut AnyMeasure> {
     Ok(AnyMeasure::new(RenyiDivergence)).into()
 }
@@ -309,7 +309,7 @@ impl Measure for ExtrinsicDivergence {
 /// Your privacy measure `D` must satisfy that, for any pure function `f` and any two distributions `Y, Y'`, then $D(Y, Y') \ge D(f(Y), f(Y'))$.
 ///
 /// Beyond this, you should also consider whether your privacy measure can be used to provide meaningful privacy guarantees to your privacy units.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_measures__user_divergence(
     descriptor: *mut c_char,
 ) -> FfiResult<*mut AnyMeasure> {
@@ -394,7 +394,7 @@ fn new_privacy_profile(curve: *const CallbackFn) -> Fallible<AnyObject> {
     panic!("this signature only exists for code generation")
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_measures__new_privacy_profile(
     curve: *const CallbackFn,
 ) -> FfiResult<*mut AnyObject> {

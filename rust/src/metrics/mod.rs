@@ -19,7 +19,7 @@ use std::marker::PhantomData;
 
 use crate::{
     core::{Domain, Metric, MetricSpace},
-    domains::{type_name, AtomDomain, BitVectorDomain, MapDomain, VectorDomain},
+    domains::{AtomDomain, BitVectorDomain, MapDomain, VectorDomain, type_name},
     error::Fallible,
     traits::{CheckAtom, InfAdd},
 };

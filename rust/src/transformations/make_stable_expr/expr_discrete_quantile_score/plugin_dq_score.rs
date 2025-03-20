@@ -4,10 +4,10 @@ use polars::{
     datatypes::{
         ArrayChunked, ArrowDataType,
         DataType::{self, *},
-        Field, Float32Type, Float64Type, Int16Type, Int32Type, Int64Type, Int8Type, PolarsDataType,
+        Field, Float32Type, Float64Type, Int8Type, Int16Type, Int32Type, Int64Type, PolarsDataType,
         StaticArray, UInt32Type, UInt64Type,
     },
-    error::{polars_bail, polars_err, PolarsResult},
+    error::{PolarsResult, polars_bail, polars_err},
     prelude::{Column, CompatLevel, IntoColumn},
     series::Series,
 };
@@ -26,7 +26,7 @@ use pyo3_polars::derive::polars_expr;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    polars::{function_flags, OpenDPPlugin},
+    polars::{OpenDPPlugin, function_flags},
     traits::RoundCast,
 };
 

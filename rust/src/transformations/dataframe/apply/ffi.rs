@@ -6,7 +6,7 @@ use crate::err;
 use crate::error::Fallible;
 #[allow(deprecated)]
 use crate::transformations::{
-    make_df_cast_default, make_df_is_equal, DataFrameDomain, DatasetMetric,
+    DataFrameDomain, DatasetMetric, make_df_cast_default, make_df_is_equal,
 };
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
@@ -14,7 +14,7 @@ use crate::ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downca
 use crate::ffi::util::Type;
 use crate::traits::{Hashable, Primitive, RoundCast};
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_df_cast_default(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
@@ -59,7 +59,7 @@ pub extern "C" fn opendp_transformations__make_df_cast_default(
     .into()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_df_is_equal(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,

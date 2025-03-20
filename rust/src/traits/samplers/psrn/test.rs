@@ -41,7 +41,10 @@ pub fn kolmogorov_smirnov(mut samples: [f64; 1000], cdf: impl Fn(f64) -> f64) ->
     // ```
     static CRIT_VALUE: f64 = 0.08494641956324511;
     if statistic > CRIT_VALUE {
-        return fallible!(FailedFunction, "Statistic ({statistic}) exceeds critical value ({CRIT_VALUE})! This indicates that the data is not sampled from the same distribution specified by the cdf. There is a 1e-6 probability of this being a false positive.");
+        return fallible!(
+            FailedFunction,
+            "Statistic ({statistic}) exceeds critical value ({CRIT_VALUE})! This indicates that the data is not sampled from the same distribution specified by the cdf. There is a 1e-6 probability of this being a false positive."
+        );
     }
 
     Ok(())

@@ -14,7 +14,7 @@ use crate::{
     traits::{DistanceConstant, Hashable, InfCast, Integer},
 };
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_measurements__make_alp_queryable(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,

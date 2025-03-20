@@ -56,7 +56,7 @@ where
             return fallible!(
                 MakeTransformation,
                 "expected drop_nans or drop_nulls expression"
-            )
+            );
         }
     }
 

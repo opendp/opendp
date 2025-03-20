@@ -1,11 +1,11 @@
 use crate::core::PrivacyMap;
 use crate::domains::{ExprPlan, WildExprDomain};
-use crate::measurements::{report_noisy_max_gumbel_map, select_score, Optimize};
+use crate::measurements::{Optimize, report_noisy_max_gumbel_map, select_score};
 use crate::metrics::{IntDistance, LInfDistance, Parallel, PartitionDistance};
-use crate::polars::{apply_plugin, literal_value_of, match_plugin, OpenDPPlugin};
+use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
 use crate::traits::{InfCast, InfMul, Number};
-use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::StableExpr;
+use crate::transformations::traits::UnboundedMetric;
 use crate::{
     core::{Function, Measurement},
     error::Fallible,
@@ -14,11 +14,11 @@ use crate::{
 use dashu::float::FBig;
 
 use polars::datatypes::{
-    DataType, Field, Float32Type, Float64Type, Int16Type, Int32Type, Int64Type, Int8Type,
+    DataType, Field, Float32Type, Float64Type, Int8Type, Int16Type, Int32Type, Int64Type,
     PolarsDataType, UInt32Type, UInt64Type,
 };
-use polars::error::{polars_bail, polars_err};
 use polars::error::{PolarsError, PolarsResult};
+use polars::error::{polars_bail, polars_err};
 use polars::lazy::dsl::Expr;
 use polars::prelude::{Column, CompatLevel, IntoColumn};
 use polars::series::{IntoSeries, Series};

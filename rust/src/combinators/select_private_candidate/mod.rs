@@ -2,7 +2,7 @@ use crate::{
     core::{Domain, Function, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
     measures::MaxDivergence,
-    traits::{samplers::sample_geometric_exp_fast, CastInternalRational, InfLn, InfMul, InfSub},
+    traits::{CastInternalRational, InfLn, InfMul, InfSub, samplers::sample_geometric_exp_fast},
 };
 use dashu::integer::UBig;
 use opendp_derive::bootstrap;

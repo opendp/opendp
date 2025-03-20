@@ -68,7 +68,7 @@ where
             return fallible!(
                 MakeTransformation,
                 "expected count, null_count, len, or n_unique expression"
-            )
+            );
         }
     };
 
@@ -144,7 +144,7 @@ pub(crate) fn counting_query_stability_map<M: UnboundedMetric, const P: usize>(
             return fallible!(
                 MakeTransformation,
                 "unsupported Lp norm. Must be an L1 or L2 norm."
-            )
+            );
         }
     };
 

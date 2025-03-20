@@ -70,7 +70,7 @@ fn make_select_private_candidate(
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_combinators__make_select_private_candidate(
     measurement: *const AnyMeasurement,
     stop_probability: f64,

@@ -39,7 +39,7 @@ fn make_fixed_approxDP_to_approxDP(measurement: &AnyMeasurement) -> Fallible<Any
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_combinators__make_fixed_approxDP_to_approxDP(
     measurement: *const AnyMeasurement,
 ) -> FfiResult<*mut AnyMeasurement> {

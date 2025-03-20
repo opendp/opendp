@@ -39,7 +39,7 @@ fn make_pureDP_to_zCDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement>
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_combinators__make_pureDP_to_zCDP(
     measurement: *const AnyMeasurement,
 ) -> FfiResult<*mut AnyMeasurement> {

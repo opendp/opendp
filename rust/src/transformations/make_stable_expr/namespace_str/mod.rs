@@ -40,13 +40,15 @@ where
 
     match str_function {
         #[cfg(feature = "contrib")]
-        StringFunction::Strptime(_, _) => expr_strptime::make_expr_strptime(input_domain, input_metric, expr),
+        StringFunction::Strptime(_, _) => {
+            expr_strptime::make_expr_strptime(input_domain, input_metric, expr)
+        }
 
         expr => fallible!(
             MakeTransformation,
             "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
             expr,
             get_disabled_features_message()
-        )
+        ),
     }
 }

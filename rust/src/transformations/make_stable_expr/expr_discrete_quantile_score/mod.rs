@@ -1,16 +1,16 @@
 use crate::core::{StabilityMap, Transformation};
 use crate::domains::{ExprDomain, MarginPub, WildExprDomain};
 use crate::metrics::{LInfDistance, Parallel, PartitionDistance};
-use crate::polars::{apply_plugin, literal_value_of, match_plugin, OpenDPPlugin};
+use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
 use crate::traits::{InfCast, Number};
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::{
-    score_candidates_constants, score_candidates_map, validate_candidates, StableExpr,
+    StableExpr, score_candidates_constants, score_candidates_map, validate_candidates,
 };
 use crate::{core::Function, error::Fallible};
 
 use polars::datatypes::{
-    Float32Type, Float64Type, Int16Type, Int32Type, Int64Type, Int8Type, PolarsDataType,
+    Float32Type, Float64Type, Int8Type, Int16Type, Int32Type, Int64Type, PolarsDataType,
     StaticArray, UInt32Type, UInt64Type,
 };
 use polars::lazy::dsl::Expr;
@@ -74,7 +74,7 @@ where
             return fallible!(
                 FailedFunction,
                 "u8 and u16 not supported in the OpenDP Polars plugin. Please use u32 or u64."
-            )
+            );
         }
         dtype => {
             return fallible!(

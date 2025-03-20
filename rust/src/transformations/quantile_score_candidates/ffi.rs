@@ -9,7 +9,7 @@ use crate::{
     transformations::{make_quantile_score_candidates, traits::UnboundedMetric},
 };
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_quantile_score_candidates(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,

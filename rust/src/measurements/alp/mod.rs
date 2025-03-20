@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use dashu::float::round::mode::{Down, Up, Zero};
 use dashu::float::FBig;
+use dashu::float::round::mode::{Down, Up, Zero};
 use num::{ToPrimitive, Zero as _};
 use opendp_derive::bootstrap;
 
@@ -81,11 +81,7 @@ fn sample_hash_function<K: Hash>(l: u32) -> Fallible<Arc<dyn Fn(&K) -> usize + S
 /// Computes ceil(log_2(x))
 fn exponent_next_power_of_two(x: u64) -> u32 {
     let exp = 63 - x.leading_zeros().min(63);
-    if x > (1 << exp) {
-        exp + 1
-    } else {
-        exp
-    }
+    if x > (1 << exp) { exp + 1 } else { exp }
 }
 
 // Multiplies x with scale/alpha and applies randomized rounding to return an integer

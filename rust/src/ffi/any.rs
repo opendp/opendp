@@ -16,7 +16,7 @@ use crate::error::*;
 use crate::interactive::{Answer, Query, Queryable};
 use crate::{err, fallible};
 
-use super::util::{into_owned, ExtrinsicObject, Type};
+use super::util::{ExtrinsicObject, Type, into_owned};
 
 /// A trait for something that can be downcast to a concrete type.
 pub trait Downcast {
@@ -588,12 +588,8 @@ mod partials {
     pub type AnyPartialTransformation =
         PartialTransformation<AnyDomain, AnyDomain, AnyMetric, AnyMetric>;
 
-    impl<
-            DI: 'static + Domain,
-            DO: 'static + Domain,
-            MI: 'static + Metric,
-            MO: 'static + Metric,
-        > PartialTransformation<DI, DO, MI, MO>
+    impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Metric>
+        PartialTransformation<DI, DO, MI, MO>
     where
         DI::Carrier: 'static,
         DO::Carrier: 'static,

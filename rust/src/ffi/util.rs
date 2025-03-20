@@ -2,8 +2,8 @@ use std::any;
 use std::any::TypeId;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
-use std::ffi::{c_void, CString};
 use std::ffi::{CStr, IntoStringError, NulError};
+use std::ffi::{CString, c_void};
 use std::os::raw::c_char;
 use std::str::Utf8Error;
 
@@ -463,11 +463,7 @@ pub fn to_bool(b: c_bool) -> bool {
 }
 
 pub fn from_bool(b: bool) -> c_bool {
-    if b {
-        1
-    } else {
-        0
-    }
+    if b { 1 } else { 0 }
 }
 
 #[cfg(test)]

@@ -13,10 +13,10 @@ use crate::{
     error::Fallible,
     measures::MaxDivergence,
     metrics::LInfDistance,
-    traits::{samplers::PartialSample, InfAdd, InfCast, InfDiv, Number},
+    traits::{InfAdd, InfCast, InfDiv, Number, samplers::PartialSample},
 };
 
-use crate::traits::{samplers::GumbelRV, DistanceConstant};
+use crate::traits::{DistanceConstant, samplers::GumbelRV};
 
 #[cfg(test)]
 mod test;

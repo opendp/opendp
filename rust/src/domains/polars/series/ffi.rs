@@ -36,7 +36,7 @@ fn series_domain<DI: 'static + SeriesElementDomain>(
     SeriesDomain::new(name, element_domain)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__series_domain(
     name: *mut c_char,
     element_domain: *const AnyDomain,
@@ -79,7 +79,9 @@ pub extern "C" fn opendp_domains__series_domain(
             // Don't forget to update the corresponding list below.
             [(
                 T,
-                [u32, u64, i32, i64, f32, f64, bool, String, NaiveDate, NaiveTime]
+                [
+                    u32, u64, i32, i64, f32, f64, bool, String, NaiveDate, NaiveTime
+                ]
             )],
             (name, element_domain)
         )
@@ -110,7 +112,9 @@ pub extern "C" fn opendp_domains__series_domain(
             monomorphize_atom,
             [(
                 T,
-                [u32, u64, i32, i64, f32, f64, bool, String, NaiveDate, NaiveTime]
+                [
+                    u32, u64, i32, i64, f32, f64, bool, String, NaiveDate, NaiveTime
+                ]
             )],
             (name, element_domain)
         )

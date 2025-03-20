@@ -85,31 +85,23 @@ impl StableDslPlan<SymmetricDistance, SymmetricDistance> for DslPlan {
             DslPlan::DataFrameScan { .. } => {
                 source::make_stable_source(input_domain, input_metric, self)
             }
-            DslPlan::Filter { .. } => {
-                filter::make_stable_filter(input_domain, input_metric, self)
-            }
-            DslPlan::HStack { .. } => {
-                h_stack::make_h_stack(input_domain, input_metric, self)
-            }
-            DslPlan::Select { .. } => {
-                select::make_select(input_domain, input_metric, self)
-            }
-            dsl => {
-                match dsl.describe() {
-                    Ok(describe) => fallible!(
-                        MakeTransformation,
-                        "A step in your query is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
-                        describe,
-                        get_disabled_features_message()
-                    ),
-                    Err(e) => fallible!(
-                        MakeTransformation,
-                        "A step in your query is not recognized at this time, and the step cannot be identified due to the following error: {}. {:?}",
-                        e,
-                        get_disabled_features_message()
-                    )
-                }
-            }
+            DslPlan::Filter { .. } => filter::make_stable_filter(input_domain, input_metric, self),
+            DslPlan::HStack { .. } => h_stack::make_h_stack(input_domain, input_metric, self),
+            DslPlan::Select { .. } => select::make_select(input_domain, input_metric, self),
+            dsl => match dsl.describe() {
+                Ok(describe) => fallible!(
+                    MakeTransformation,
+                    "A step in your query is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
+                    describe,
+                    get_disabled_features_message()
+                ),
+                Err(e) => fallible!(
+                    MakeTransformation,
+                    "A step in your query is not recognized at this time, and the step cannot be identified due to the following error: {}. {:?}",
+                    e,
+                    get_disabled_features_message()
+                ),
+            },
         }
     }
 }

@@ -10,12 +10,12 @@ use crate::{
         any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast},
         util::to_str,
     },
-    measurements::{make_report_noisy_max_gumbel, Optimize},
+    measurements::{Optimize, make_report_noisy_max_gumbel},
     metrics::LInfDistance,
     traits::{CastInternalRational, CheckNull, DistanceConstant, Number},
 };
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_measurements__make_report_noisy_max_gumbel(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
