@@ -528,7 +528,7 @@ SEXP slice_to_sexp(FfiSlice *raw, SEXP type_name)
 
     if (str_equal(c_origin, "Vec"))
         result = slice_to_vector(raw, type_name);
-    
+
     else if (str_equal(c_origin, "BitVector"))
         result = slice_to_bitvector(raw, type_name);
 

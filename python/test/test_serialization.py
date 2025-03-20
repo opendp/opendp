@@ -82,8 +82,8 @@ def test_version_mismatch_warning():
         "__function__": "atom_domain",
         "__module__": "domains",
         "__kwargs__": {
-            "bounds": {"__tuple__": [0, 10]}, 
-            "nullable": False, 
+            "bounds": {"__tuple__": [0, 10]},
+            "nullable": False,
             "T": "i32"
         },
         "__version__": "bad-version"
@@ -105,7 +105,7 @@ if pl is not None:
         "dp_domain,in_value,out_value",
         [
             (atom, 10, 100),
-            # TODO: Might not be specifying categorical values correctly, 
+            # TODO: Might not be specifying categorical values correctly,
             # but shouldn't error, regardless.
             # https://github.com/opendp/opendp/issues/2264
             # (dp.categorical_domain(['A', 'B', 'C']),
@@ -144,12 +144,12 @@ if pl is not None:
     )
     def test_serializable_measurement(dp_measurement, value, output_type):
         assert isinstance(dp_measurement(value), output_type)
-        
+
 
 
     lf = pl.LazyFrame(schema={"A": pl.Int32, "B": pl.String})
     lf_domain = dp.lazyframe_domain([
-        dp.series_domain("A", dp.atom_domain(T="i32")), 
+        dp.series_domain("A", dp.atom_domain(T="i32")),
         dp.series_domain("B", dp.atom_domain(T=str))
     ])
     lf_domain_with_margin = dp.with_margin(lf_domain, by=[], max_partition_length=1000)

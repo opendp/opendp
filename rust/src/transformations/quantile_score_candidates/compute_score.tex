@@ -7,14 +7,14 @@
 \title{\texttt{fn compute\_score}}
 \author{Michael Shoemate}
 \begin{document}
-\maketitle  
+\maketitle
 
 
 \contrib
 
-Proves soundness of \rustdoc{transformations/quantile\_score\_candidates/fn}{compute\_score} 
+Proves soundness of \rustdoc{transformations/quantile\_score\_candidates/fn}{compute\_score}
 in \asOfCommit{mod.rs}{f5bb719}.
-\texttt{compute\_score} returns a score for each candidate passed in, 
+\texttt{compute\_score} returns a score for each candidate passed in,
 where the score is the distance between the candidate and the ideal alpha-quantile.
 
 \subsection*{Vetting History}
@@ -48,15 +48,15 @@ Each element in the return value corresponds to the score of the candidate at th
 
 \section{Proof}
 
-By the preconditions on \texttt{compute\_count}, 
+By the preconditions on \texttt{compute\_count},
 and by sorting $x$, the preconditions on \texttt{count\_lt\_eq\_recursive} are satisfied.
 
-By the definition of \texttt{count\_lt\_eq\_recursive}, 
-\texttt{num\_lt} contains the number of values in $x$ less than $c$, for each candidate, 
+By the definition of \texttt{count\_lt\_eq\_recursive},
+\texttt{num\_lt} contains the number of values in $x$ less than $c$, for each candidate,
 and similarly for \texttt{num\_eq}.
 
 Then the score is evaluated for each candidate in a loop.
-The scoring function cannot overflow or return null because the risk of overflow is protected 
+The scoring function cannot overflow or return null because the risk of overflow is protected
 by the preconditions.
 The function is also completely non-negative due to the use of $\texttt{abs\_diff}$.
 

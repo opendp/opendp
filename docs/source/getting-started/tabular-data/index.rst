@@ -24,7 +24,7 @@ This functionality is not enabled by default.
     .. tab-item:: R
         :sync: r
 
-        OpenDP does not currently support Polars in R. 
+        OpenDP does not currently support Polars in R.
         For the current status of this, see `issue #1872 <https://github.com/opendp/opendp/issues/1872>`_.
 
     .. tab-item:: Rust
@@ -33,24 +33,24 @@ This functionality is not enabled by default.
         Add ``"polars"`` to the features of the ``opendp`` dependency in your ``Cargo.toml``.
 
 
-Dataset Description 
+Dataset Description
 -------------------
 
 For this section of the documentation, we will use the `Labour Force Survey microdata <https://ec.europa.eu/eurostat/web/microdata/public-microdata/labour-force-survey>`_ released by Eurostat.
 The data surveys working hours of individuals in the European Union collected on a quarterly cadence.
-The public microdata is protected using traditional statistical disclosure control methods such as global recoding, local suppression, and addition of noise. 
+The public microdata is protected using traditional statistical disclosure control methods such as global recoding, local suppression, and addition of noise.
 
-We chose this dataset for a few reasons: 
+We chose this dataset for a few reasons:
 
 1. **Accessibility:** The dataset is accessible to users across various domains.
-2. **Sample Utility:** The public microdata is a sample of the private, full microdata. Methods developed with the public microdata will also work on the private microdata, and researchers can request access to the full dataset through Eurostat. 
-3. **Realism**: This is a real dataset that tracks individuals over multiple years, which will influence the unit of privacy since each individual can be represented multiple times in the dataset. 
+2. **Sample Utility:** The public microdata is a sample of the private, full microdata. Methods developed with the public microdata will also work on the private microdata, and researchers can request access to the full dataset through Eurostat.
+3. **Realism**: This is a real dataset that tracks individuals over multiple years, which will influence the unit of privacy since each individual can be represented multiple times in the dataset.
 
-For this tutorial, we sampled a total of 200,000 rows from the public microdata of France across all study years. 
+For this tutorial, we sampled a total of 200,000 rows from the public microdata of France across all study years.
 
-The `User Guide <https://www.gesis.org/missy/files/documents/EU-LFS/EULFS_Database_UserGuide_2021-3.pdf>`_ describes many variables. Our examples will use just a few. (Descriptions are copied from the User Guide.) 
+The `User Guide <https://www.gesis.org/missy/files/documents/EU-LFS/EULFS_Database_UserGuide_2021-3.pdf>`_ describes many variables. Our examples will use just a few. (Descriptions are copied from the User Guide.)
 
-.. list-table:: 
+.. list-table::
    :header-rows: 1
 
    * - Variable
@@ -88,9 +88,9 @@ The `User Guide <https://www.gesis.org/missy/files/documents/EU-LFS/EULFS_Databa
 Compositor Overview
 -------------------
 
-The compositor is the foundation of our differentially private analysis. 
+The compositor is the foundation of our differentially private analysis.
 It mediates access to the sensitive data,
-ensuring that queries you would like to release satisfy necessary privacy properties. 
+ensuring that queries you would like to release satisfy necessary privacy properties.
 
 .. testsetup::
     >>> import polars as pl
@@ -104,25 +104,25 @@ ensuring that queries you would like to release satisfy necessary privacy proper
     ...     privacy_loss=dp.loss_of(epsilon=1.0),
     ...     split_evenly_over=10,
     ... )
-    
+
     >>> # Once you construct the context, you should abstain from directly accessing your data again.
-    >>> # In fact, it is good practice to delete it! 
+    >>> # In fact, it is good practice to delete it!
     >>> del df
 
 Context Parameters
 ~~~~~~~~~~~~~~~~~~
 
 * ``privacy_unit``: The greatest influence an individual may have on your dataset.
-  In this case, the influence is measured in terms of the number of rows an individual may contribute to your dataset. 
+  In this case, the influence is measured in terms of the number of rows an individual may contribute to your dataset.
   Since we are analyzing quarterly data across 9 years, where an individual contributes up to one record per quarter,
-  the unit of privacy corresponds to 36 row contributions. 
-  If we were to analyze a particular quarter in a particular year, the unit of privacy would be 1 since each individual would contribute at most one row. 
-* ``privacy_loss``: The greatest privacy loss suffered by an individual in your dataset. 
+  the unit of privacy corresponds to 36 row contributions.
+  If we were to analyze a particular quarter in a particular year, the unit of privacy would be 1 since each individual would contribute at most one row.
+* ``privacy_loss``: The greatest privacy loss suffered by an individual in your dataset.
   The privacy loss is upper-bounded by privacy parameters; in this case epsilon (ε).
-* ``split_evenly_over``: This is the number of queries you want to distribute your privacy loss over. 
-  Configure this parameter appropriately according to how many queries you would like to release. 
+* ``split_evenly_over``: This is the number of queries you want to distribute your privacy loss over.
+  Configure this parameter appropriately according to how many queries you would like to release.
 
-Particular examples in the coming sections may require additional parameters, 
+Particular examples in the coming sections may require additional parameters,
 and parameters to the compositor may be adjusted slightly.
 See :py:func:`opendp.context.Context.compositor` for more information.
 

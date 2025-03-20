@@ -47,7 +47,7 @@ def test_impute_constant_inherent():
 
 def test_cast_default():
     caster = dp.t.make_cast_default(
-        dp.vector_domain(dp.atom_domain(T=float)), 
+        dp.vector_domain(dp.atom_domain(T=float)),
         dp.symmetric_distance(), TOA=int)
     assert caster([float('nan'), 2.]) == [0, 2]
 
@@ -370,16 +370,16 @@ def test_lipschitz_b_ary_tree():
     assert tree_builder([1] * leaf_count) == [7, 4, 3, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1]
     #                                  level: 1  2     3           4
     # top of tree is at level 1
-    
+
     suggested_factor = dp.t.choose_branching_factor(size_guess=10_000)
     print("suggested_factor", suggested_factor)
 
     # the categories are bin names!
     meas_base = (
         (dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()) >>
-        dp.t.then_count_by_categories(categories=["A", "B", "C", "D", "E", "F"]) >> 
-        tree_builder >> 
-        dp.m.then_geometric(1.) >> 
+        dp.t.then_count_by_categories(categories=["A", "B", "C", "D", "E", "F"]) >>
+        tree_builder >>
+        dp.m.then_geometric(1.) >>
         dp.t.make_consistent_b_ary_tree(branching_factor)
     )
 

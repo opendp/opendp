@@ -14,7 +14,7 @@ This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsec
 
 \begin{definition}
 \label{plrv}
-(Privacy Loss Random Variable). 
+(Privacy Loss Random Variable).
 Let $M: \mathcal{X}^n \rightarrow \mathbb{Y}$ be a randomized algorithm.
 Let $x, x' \in \mathcal{X}^n$ be neighboring inputs.
 Define $f: \mathcal{Y} \rightarrow \mathbb{R}$ by $f(y) = log \left( \frac{\mathbb{P}[M(x)=y]}{\mathbb{P}[M(x')=y]} \right)$.
@@ -33,7 +33,7 @@ Let $Z = f(M(x))$, the privacy loss random variable, denoted $Z \leftarrow PrivL
 for all $x, x' \in \mathcal{X}^n$ differing on a single element.
 
 \begin{proof}
-Fix neighboring inputs $x, x' \in \mathcal{X}^n$. 
+Fix neighboring inputs $x, x' \in \mathcal{X}^n$.
 Let $f: \mathcal{Y} \rightarrow \mathbb{R}$ be as in \ref{plrv}.
 For notational simplicity, let $Y = M(x)$, $Y' = M(x')$, $Z = f(Y)$ and $Z' = -f(Y')$.
 This is equivalent to $Z \leftarrow PrivLoss(M(x) || M(x'))$.
@@ -49,7 +49,7 @@ For any $E \subset \mathcal{Y}$, we have
 \end{equation}
 This is because $e^{-f(y)} = \frac{\mathbb{P}[Y=y]}{\mathbb{P}[Y'=y]}$.
 
-Thus, for all $E \subset \mathcal{Y}$, we have 
+Thus, for all $E \subset \mathcal{Y}$, we have
 \begin{equation}
     \mathbb{P}[Y \in E] - e^\epsilon \mathbb{P}[Y' \in E] = \mathbb{E} \left[ \mathbb{I}[Y \in E] (1 - e^{\epsilon - f(Y)}) \right]
 \end{equation}
@@ -86,7 +86,7 @@ Now it is easy to identify the worst event as $E = \{y \in \mathcal{Y} : 1 - e^{
 
 \begin{theorem}
 \label{renyidp-approxdp-delta}
-\cite{CKS20} Let $M: \mathcal{X}^n \rightarrow \mathcal{Y}$ be a randomized algorithm. Let $\alpha \in (1, \infty)$ and $\epsilon \geq 0$. Suppose $D_\alpha(M(x) || M(x')) \leq \tau$ for all $x, x' \in \mathcal{X}^n$ differing in a single entry.\footnote{This is the definition of $(\alpha, \tau)$-R\'enyi differential privacy.} Then M is $(\epsilon, \delta)$-differentially private for 
+\cite{CKS20} Let $M: \mathcal{X}^n \rightarrow \mathcal{Y}$ be a randomized algorithm. Let $\alpha \in (1, \infty)$ and $\epsilon \geq 0$. Suppose $D_\alpha(M(x) || M(x')) \leq \tau$ for all $x, x' \in \mathcal{X}^n$ differing in a single entry.\footnote{This is the definition of $(\alpha, \tau)$-R\'enyi differential privacy.} Then M is $(\epsilon, \delta)$-differentially private for
 
 \begin{equation}
     \delta = \frac{e^{(\alpha - 1) (\tau - \epsilon)}}{\alpha - 1} \left(1 - \frac{1}{\alpha}\right)^\alpha
@@ -99,7 +99,7 @@ Fix neighboring $x, x' \in  \mathcal{X}^n$ and let $Z \leftarrow PrivLoss(M(x) |
     \mathbb{E}[e^{(\alpha - 1) Z}] = e^{(\alpha - 1)D_\alpha(M(x) || M(x'))} \leq e^{(\alpha - 1)\tau}
 \end{equation}
 
-By \ref{delta-bound}, our goal is to prove that $\delta \geq \mathbb{E}[max\{0, 1 - e^{\epsilon - Z} \}]$. 
+By \ref{delta-bound}, our goal is to prove that $\delta \geq \mathbb{E}[max\{0, 1 - e^{\epsilon - Z} \}]$.
 Our approach is to pick $c > 0$ such that $max\{0, 1 - e^{\epsilon - Z} \} \leq c e^{(\alpha - 1) z}$ for all $z \in \mathbb{R}$. Then
 \begin{equation}
     \mathbb{E}[max\{0, 1 - e^{\epsilon - Z} \}] \leq \mathbb{E}[c e^{(\alpha - 1) z}] \leq c e^{(\alpha - 1) \tau}.
@@ -107,14 +107,14 @@ Our approach is to pick $c > 0$ such that $max\{0, 1 - e^{\epsilon - Z} \} \leq 
 
 We identify the smallest possible value of $c$:
 \begin{equation}
-    c = \sup\limits_{z \in \mathbb{R}} \frac{max\{0, 1 - e^{\epsilon - z} \}}{e^{(\alpha -1)z}} 
-    = \sup\limits_{z \in \mathbb{R}} e^{z - \alpha z} - e^{\epsilon - \alpha z} 
+    c = \sup\limits_{z \in \mathbb{R}} \frac{max\{0, 1 - e^{\epsilon - z} \}}{e^{(\alpha -1)z}}
+    = \sup\limits_{z \in \mathbb{R}} e^{z - \alpha z} - e^{\epsilon - \alpha z}
     = \sup\limits_{z \in \mathbb{R}}f(z)
 \end{equation}
-where $f(z) = e^{z - \alpha z} - e^{\epsilon - \alpha z}$. We have 
+where $f(z) = e^{z - \alpha z} - e^{\epsilon - \alpha z}$. We have
 
 \begin{equation}
-    f'(z) = e^{z - \alpha z} (1 - \alpha) - e^{\epsilon - \alpha z}(-\alpha) 
+    f'(z) = e^{z - \alpha z} (1 - \alpha) - e^{\epsilon - \alpha z}(-\alpha)
     = e^{-\alpha z} (\alpha e^\epsilon - (\alpha - 1) e^z)
 \end{equation}
 
@@ -137,7 +137,7 @@ Thus
 
 \begin{corollary}
 \label{renyidp-approxdp-epsilon}
-\cite{CKS20} Let $M: \mathcal{X}^n \rightarrow \mathcal{Y}$ be a randomized algorithm. Let $\alpha \in (1, \infty)$ and $\epsilon \geq 0$. Suppose $D_\alpha(M(x) || M(x')) \leq \tau$ for all $x, x' \in \mathcal{X}^n$ differing in a single entry. Then M is $(\epsilon, \delta)$-differentially private for 
+\cite{CKS20} Let $M: \mathcal{X}^n \rightarrow \mathcal{Y}$ be a randomized algorithm. Let $\alpha \in (1, \infty)$ and $\epsilon \geq 0$. Suppose $D_\alpha(M(x) || M(x')) \leq \tau$ for all $x, x' \in \mathcal{X}^n$ differing in a single entry. Then M is $(\epsilon, \delta)$-differentially private for
 
 \begin{equation}
     \epsilon = \tau + \frac{\ln(1 / \delta) + (\alpha - 1) \ln(1 - 1/\alpha) - \ln(\alpha)}{\alpha - 1}
@@ -150,7 +150,7 @@ This follows by rearranging \ref{renyidp-approxdp-delta}.
 
 \begin{corollary}
 \label{zcdp-approxdp-epsilon}
-Let $M: \mathcal{X}^n \rightarrow \mathcal{Y}$ be a randomized algorithm satisfying $\rho$-concentrated differential privacy. Then M is $(\epsilon, \delta)$-differentially private for any $0 < \delta \leq 1$ and 
+Let $M: \mathcal{X}^n \rightarrow \mathcal{Y}$ be a randomized algorithm satisfying $\rho$-concentrated differential privacy. Then M is $(\epsilon, \delta)$-differentially private for any $0 < \delta \leq 1$ and
 \begin{equation}
     \epsilon = \inf\limits_{\alpha \in (1, \infty)} \alpha \rho + \frac{\ln(1 / \delta) + (\alpha - 1) \ln(1 - 1/\alpha) - \ln(\alpha)}{\alpha - 1}
 \end{equation}
@@ -171,7 +171,7 @@ None.
 \subsubsection*{Postcondition}
 
 \begin{theorem}
-    For any possible setting of $\rho$ and $\epsilon$, $\texttt{cdp\_delta}$ either returns an error, 
+    For any possible setting of $\rho$ and $\epsilon$, $\texttt{cdp\_delta}$ either returns an error,
     or a $\delta$ such that any $\rho$-differentially private measurement is also $(\epsilon, \delta)$-differentially private.
 \end{theorem}
 
@@ -180,7 +180,7 @@ None.
 \begin{proof}
 The code always finds an $\alpha_{*} \approx \texttt{a\_max} \geq 1.01$.
 Since $\texttt{a\_max} \in (1, \infty)$, then by \ref{renyidp-approxdp-epsilon}, any $\rho$-differentially private measurement is also $(\epsilon(\texttt{a\_max}), \delta)$-differentially private.
-Define $\delta_{cons}(\alpha)$ as a ``conservative'' function for computing $\delta(\epsilon)$, 
+Define $\delta_{cons}(\alpha)$ as a ``conservative'' function for computing $\delta(\epsilon)$,
 where floating-point arithmetic is computed with conservative rounding such that $\delta_{cons}(\alpha) \geq \delta(\alpha)$ for $\forall \alpha \in (1, \infty)$.
 Since $\texttt{delta} = \delta_{cons}(\texttt{a\_max}) \geq \delta(\texttt{a\_max})$, then any $(\epsilon, \delta(\texttt{a\_max}))$-differentially private measurement is also $(\texttt{epsilon}, \delta)$-differentially private.
 \end{proof}

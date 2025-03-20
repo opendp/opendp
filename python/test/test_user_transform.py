@@ -112,7 +112,7 @@ def test_hash():
         output_measure, = {m.output_measure for m in mechanisms} # ...and measure
 
         return input_domain, input_metric, output_measure
-    
+
     def make_mock_basic_composition(mechanisms):
         input_domain, input_metric, output_measure = get_elements(mechanisms)
 
@@ -121,9 +121,9 @@ def test_hash():
 
         return dp.m.make_user_measurement(
             input_domain, input_metric, output_measure,
-            function=lambda arg: [M(arg) for M in mechanisms], 
+            function=lambda arg: [M(arg) for M in mechanisms],
             privacy_map=lambda d_in: sum(M.map(d_in) for M in mechanisms))
-    
+
     make_mock_basic_composition([
         dp.m.make_randomized_response_bool(.75)
     ] * 3)

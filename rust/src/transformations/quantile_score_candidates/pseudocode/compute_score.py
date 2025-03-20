@@ -1,7 +1,7 @@
 # type: ignore
 def compute_score(
-    x: list[TIA], 
-    candidates: list[TIA], 
+    x: list[TIA],
+    candidates: list[TIA],
     alpha_num: usize,
     alpha_den: usize,
     size_limit: usize

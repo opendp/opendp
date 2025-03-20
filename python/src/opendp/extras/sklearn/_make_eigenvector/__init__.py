@@ -22,7 +22,7 @@ def make_private_eigenvector(
     import opendp.prelude as dp
 
     dp.assert_features("contrib", "floating-point")
-    
+
     np_csprng = get_np_csprng()
     input_desc = input_domain.descriptor
 
@@ -71,12 +71,12 @@ def make_private_eigenvector(
             # Mike Shoemate: I know of no floating-point-safe sampler for `u`.
             #  - Mult normal does not have an invertible cdf
             #  - Could try:
-            #    1. a "conservative" Cholesky decomposition of Omega_inv 
+            #    1. a "conservative" Cholesky decomposition of Omega_inv
             #    2. compute clamp_norm(compute L @ std_gaussian(d), 1) with arbitrary precision
             #       sample with sufficient precision where all components round to same float
-            
-            z = np_csprng.multivariate_normal(mean=np.zeros(d), cov=Omega_inv)  # type: ignore[union-attr] 
-            # u is a sample from the angular central gaussian distribution, 
+
+            z = np_csprng.multivariate_normal(mean=np.zeros(d), cov=Omega_inv)  # type: ignore[union-attr]
+            # u is a sample from the angular central gaussian distribution,
             #    an envelope for the bingham distribution
             u = z / np.linalg.norm(z)
             if np.exp(-u.T @ A @ u) / (M * (u.T @ Omega @ u) ** (d / 2)):

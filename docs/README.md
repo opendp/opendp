@@ -61,7 +61,7 @@ make html-rustdoc
 ```
 
 ## Simulating documentation sites locally
-It is possible to fully simulate all documentation locally, 
+It is possible to fully simulate all documentation locally,
 with functioning links across documentation sites and proofs.
 
 If the following environment variables are set, Sphinx and Rustdoc will build with links to locally-hosted docs:
@@ -91,8 +91,7 @@ Changes should automatically manifest without restarting the server.
 Docs are deployed to http://docs.opendp.org using GitHub Actions.
 
 Note that `make html` is replaced with `make versions` to build multiple versions (branches, tags) using the [`sphinx-multiversion`](https://sphinx-contrib.github.io/multiversion) extension.
-Be sure you have installed `sphinx-multiversion` from the fork in requirements.txt. 
-Otherwise, you will get an error that includes: 
+Be sure you have installed `sphinx-multiversion` from the fork in requirements.txt.
+Otherwise, you will get an error that includes:
 
     /docs/source/api/index.rst:4:toctree contains reference to nonexisting document 'api/python/index'
-

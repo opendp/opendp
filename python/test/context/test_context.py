@@ -139,7 +139,7 @@ def test_middle_param():
     # scale = (U - L) / n / ε
     # 1     = (10- 1) / n / 3
     # n     = 9 / 3
-    # Due to float rounding, n = 3 results in slightly higher sensitivity, 
+    # Due to float rounding, n = 3 results in slightly higher sensitivity,
     # so the lib picks n=4, which is large enough for the sensitivity to be small enough
     # for the query to satisfy ε=3
     dp_sum.param() == 4
@@ -238,7 +238,7 @@ def test_sc_query():
 
     # build a child sequential compositor in zCDP, and then use it to release some gaussian queries
     sub_context_2 = context.query().compositor(  # type: ignore[attr-defined]
-        split_evenly_over=2, 
+        split_evenly_over=2,
         output_measure=dp.zero_concentrated_divergence()
     ).release()
     dp_sum_2 = sub_context_2.query().clamp((1, 10)).sum().gaussian()
