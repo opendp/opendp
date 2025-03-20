@@ -70,7 +70,10 @@ where
             let cat_domain = active_series.element_domain::<CategoricalDomain>()?;
 
             if cat_domain.categories().is_none() {
-                return fallible!(MakeTransformation, "to_physical: to prevent potentially revealing information about row ordering, category ordering must be statically known. Convert to String first.");
+                return fallible!(
+                    MakeTransformation,
+                    "to_physical: to prevent potentially revealing information about row ordering, category ordering must be statically known. Convert to String first."
+                );
             }
 
             active_series.set_element_domain(AtomDomain::<u32>::default());
@@ -89,7 +92,7 @@ where
                 MakeTransformation,
                 "to_physical unsupported dtype: {}",
                 in_dtype
-            )
+            );
         }
     };
 

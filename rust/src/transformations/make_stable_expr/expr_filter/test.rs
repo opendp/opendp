@@ -1,5 +1,5 @@
 use polars::df;
-use polars::prelude::{col, lit, IntoLazy, NamedFrom};
+use polars::prelude::{IntoLazy, NamedFrom, col, lit};
 use polars::series::Series;
 
 use crate::domains::{AtomDomain, LazyFrameDomain, OptionDomain, SeriesDomain};

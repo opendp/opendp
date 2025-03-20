@@ -9,11 +9,11 @@ use crate::traits::{
 };
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::{
-    can_int_sum_overflow, CanFloatSumOverflow, Sequential, SumRelaxation,
+    CanFloatSumOverflow, Sequential, SumRelaxation, can_int_sum_overflow,
 };
 use num::Zero;
 use polars::prelude::*;
-use polars_plan::plans::{typed_lit, TypedLiteral};
+use polars_plan::plans::{TypedLiteral, typed_lit};
 
 use super::StableExpr;
 
@@ -174,7 +174,10 @@ where
 
     // 'mnp_check: this invariant is used later
     if !pp_relaxation.is_zero() && !MI::ORDERED && margin.max_num_partitions.is_none() {
-        return fallible!(MakeTransformation, "max_num_partitions must be known when the metric is not sensitive to ordering (SymmetricDistance)");
+        return fallible!(
+            MakeTransformation,
+            "max_num_partitions must be known when the metric is not sensitive to ordering (SymmetricDistance)"
+        );
     }
 
     Ok(StabilityMap::new_fallible(

@@ -1,11 +1,11 @@
 use dashu::float::{
-    round::mode::{Down, Up},
     FBig,
+    round::mode::{Down, Up},
 };
 
 use crate::{
     error::Fallible,
-    traits::{cast::ToFloatRounded, InfCast},
+    traits::{InfCast, cast::ToFloatRounded},
 };
 
 #[allow(dead_code)]

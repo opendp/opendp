@@ -85,9 +85,11 @@ pub(crate) fn make_row_by_row<DI, DO, M>(
     input_metric: M,
     output_row_domain: DO::ElementDomain,
     row_function: impl 'static
-        + Fn(&<DI::ElementDomain as Domain>::Carrier) -> <DO::ElementDomain as Domain>::Carrier
-        + Send
-        + Sync,
+    + Fn(
+        &<DI::ElementDomain as Domain>::Carrier,
+    ) -> <DO::ElementDomain as Domain>::Carrier
+    + Send
+    + Sync,
 ) -> Fallible<Transformation<DI, DO, M, M>>
 where
     DI: RowByRowDomain<DO>,
@@ -106,11 +108,11 @@ pub(crate) fn make_row_by_row_fallible<DI, DO, M>(
     input_metric: M,
     output_row_domain: DO::ElementDomain,
     row_function: impl 'static
-        + Fn(
-            &<DI::ElementDomain as Domain>::Carrier,
-        ) -> Fallible<<DO::ElementDomain as Domain>::Carrier>
-        + Send
-        + Sync,
+    + Fn(
+        &<DI::ElementDomain as Domain>::Carrier,
+    ) -> Fallible<<DO::ElementDomain as Domain>::Carrier>
+    + Send
+    + Sync,
 ) -> Fallible<Transformation<DI, DO, M, M>>
 where
     DI: RowByRowDomain<DO>,

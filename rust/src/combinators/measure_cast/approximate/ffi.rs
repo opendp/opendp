@@ -4,7 +4,7 @@ use crate::{
     core::{FfiResult, Measure, PrivacyMap},
     error::Fallible,
     ffi::any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast},
-    measures::{ffi::ExtrinsicDivergence, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{MaxDivergence, ZeroConcentratedDivergence, ffi::ExtrinsicDivergence},
 };
 
 #[bootstrap(features("contrib"))]
@@ -53,7 +53,7 @@ fn make_approximate(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement> {
     .into()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_combinators__make_approximate(
     measurement: *const AnyMeasurement,
 ) -> FfiResult<*mut AnyMeasurement> {

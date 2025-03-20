@@ -9,9 +9,9 @@ use crate::ffi::any::{AnyDomain, AnyMetric, Downcast};
 use crate::ffi::any::{AnyObject, AnyTransformation};
 use crate::ffi::util::Type;
 use crate::traits::{Hashable, Number, Primitive};
-use crate::transformations::{make_find, make_find_bin, make_index, DatasetMetric};
+use crate::transformations::{DatasetMetric, make_find, make_find_bin, make_index};
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_find(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
@@ -47,7 +47,7 @@ pub extern "C" fn opendp_transformations__make_find(
     .into()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_find_bin(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
@@ -83,7 +83,7 @@ pub extern "C" fn opendp_transformations__make_find_bin(
     .into()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_index(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,

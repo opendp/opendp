@@ -4,7 +4,7 @@ use crate::{
     error::Fallible,
     metrics::{AbsoluteDistance, IntDistance, SymmetricDistance},
     traits::{
-        samplers::Shuffle, AlertingAbs, ExactIntCast, InfAdd, InfCast, InfMul, InfSub, ProductOrd,
+        AlertingAbs, ExactIntCast, InfAdd, InfCast, InfMul, InfSub, ProductOrd, samplers::Shuffle,
     },
 };
 

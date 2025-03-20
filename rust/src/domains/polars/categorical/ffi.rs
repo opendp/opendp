@@ -20,7 +20,7 @@ use super::CategoricalDomain;
 ///
 /// # Arguments
 /// * `categories` - Optional ordered set of valid string categories
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__categorical_domain(
     categories: *const AnyObject,
 ) -> FfiResult<*mut AnyDomain> {

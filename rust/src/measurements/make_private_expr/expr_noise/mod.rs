@@ -3,14 +3,14 @@ use crate::domains::{ExprDomain, ExprPlan, OuterMetric, WildExprDomain};
 use crate::measurements::{gaussian_zcdp_map, get_discretization_consts, laplace_puredp_map};
 use crate::measures::ZeroConcentratedDivergence;
 use crate::metrics::{L1Distance, L2Distance, PartitionDistance};
-use crate::polars::{apply_plugin, literal_value_of, match_plugin, OpenDPPlugin};
+use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
 use crate::traits::samplers::{
     sample_discrete_gaussian, sample_discrete_gaussian_Z2k, sample_discrete_laplace,
     sample_discrete_laplace_Z2k,
 };
 use crate::traits::{CastInternalRational, ExactIntCast, Float, FloatBits, InfCast, InfMul};
-use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::StableExpr;
+use crate::transformations::traits::UnboundedMetric;
 use crate::{
     core::{Function, Measurement},
     error::Fallible,
@@ -23,8 +23,8 @@ use serde::de::value::Error;
 
 use polars::chunked_array::ChunkedArray;
 use polars::datatypes::{
-    ArrayFromIter, DataType, Field, Float32Type, Float64Type, Int16Type, Int32Type, Int64Type,
-    Int8Type, PolarsDataType, UInt32Type, UInt64Type,
+    ArrayFromIter, DataType, Field, Float32Type, Float64Type, Int8Type, Int16Type, Int32Type,
+    Int64Type, PolarsDataType, UInt32Type, UInt64Type,
 };
 use polars::error::PolarsResult;
 use polars::error::{polars_bail, polars_err};
@@ -214,7 +214,7 @@ where
                 MakeMeasurement,
                 "expected numeric data type, found {:?}",
                 dt
-            )
+            );
         }
     };
 

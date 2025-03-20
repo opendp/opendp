@@ -61,7 +61,7 @@ impl BootstrapSignature {
                         return Err(Error::custom(
                             "default return types are not supported in bootstrap functions",
                         )
-                        .with_span(&sig.output))
+                        .with_span(&sig.output));
                     }
                     ReturnType::Type(_, ty) => *ty,
                 },
@@ -94,7 +94,6 @@ pub(super) fn syn_path_to_string(path: &Path) -> Result<String> {
 /// extract name from pattern
 fn syn_pat_to_string(pat: &Pat) -> Result<String> {
     match pat {
-        Pat::Box(b) => syn_pat_to_string(&*b.pat),
         Pat::Ident(i) => Ok(i.ident.to_string()),
         Pat::Reference(r) => syn_pat_to_string(&*r.pat),
         Pat::Type(t) => syn_pat_to_string(&*t.pat),
@@ -123,7 +122,7 @@ pub(super) fn syn_type_to_type_recipe(ty: &Type) -> Result<TypeRecipe> {
                     }
                 }
                 PathArguments::Parenthesized(p) => {
-                    return Err(Error::custom("parenthesized paths are not supported").with_span(p))
+                    return Err(Error::custom("parenthesized paths are not supported").with_span(p));
                 }
             }
             .into()
@@ -218,10 +217,10 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
                 i if i == "TransitionFn" => "TransitionFn".to_string(),
                 i if i == "Fallible" || i == "FfiResult" => {
                     let args = match &segment.arguments {
-                        PathArguments::AngleBracketed(ref ab) => &ab.args,
+                        PathArguments::AngleBracketed(ab) => &ab.args,
                         args => {
                             return Err(Error::custom("Fallible expects one type argument")
-                                .with_span(&args))
+                                .with_span(&args));
                         }
                     };
 
@@ -239,7 +238,7 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
                     return Err(Error::custom(
                         "Unrecognized rust type. Failed to convert to C type.",
                     )
-                    .with_span(segment))
+                    .with_span(segment));
                 }
             }
         }
@@ -250,7 +249,7 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
             return Err(Error::custom(
                 "Unrecognized rust type structure. Failed to convert to C type.",
             )
-            .with_span(&ty))
+            .with_span(&ty));
         }
     })
 }

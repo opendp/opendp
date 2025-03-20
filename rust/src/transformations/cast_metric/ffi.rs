@@ -8,7 +8,7 @@ use crate::transformations::cast_metric::traits::{
     BoundedMetric, OrderedMetric, UnboundedMetric, UnorderedMetric,
 };
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_ordered_random(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
@@ -49,7 +49,7 @@ pub extern "C" fn opendp_transformations__make_ordered_random(
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_unordered(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
@@ -90,7 +90,7 @@ pub extern "C" fn opendp_transformations__make_unordered(
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_metric_bounded(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
@@ -130,7 +130,7 @@ pub extern "C" fn opendp_transformations__make_metric_bounded(
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_metric_unbounded(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,

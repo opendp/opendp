@@ -8,10 +8,10 @@ use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast};
 use crate::metrics::{AbsoluteDistance, InsertDeleteDistance, SymmetricDistance};
 use crate::traits::{ExactIntCast, Float, InfMul};
 use crate::transformations::{
-    make_mean, LipschitzMulFloatDomain, LipschitzMulFloatMetric, MakeSum,
+    LipschitzMulFloatDomain, LipschitzMulFloatMetric, MakeSum, make_mean,
 };
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_mean(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,

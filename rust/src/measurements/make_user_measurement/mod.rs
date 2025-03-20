@@ -6,7 +6,7 @@ use crate::{
     core::{FfiResult, Function, Measurement, PrivacyMap},
     error::Fallible,
     ffi::any::{
-        wrap_func, AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, CallbackFn,
+        AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, CallbackFn, wrap_func,
     },
 };
 
@@ -61,7 +61,7 @@ fn make_user_measurement<TO>(
     panic!("this signature only exists for code generation")
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_measurements__make_user_measurement(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,

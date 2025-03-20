@@ -1,3 +1,4 @@
+import re
 import pytest
 import opendp.prelude as dp
 
@@ -83,6 +84,26 @@ def test_query_dir():
     query_dir = dir(context.query())
     assert 'count' in query_dir
     assert 'laplace' in query_dir
+
+
+def test_margins_dict_instead_of_list():
+    pl = pytest.importorskip("polars")
+
+    lf = pl.LazyFrame(
+        {"col": [1, 2, 3, 4]},
+        schema={"col": pl.Int32},
+    )
+
+    with pytest.warns(DeprecationWarning, match=re.escape('Margin dicts should be replaced with lists, with the key supplied as the "by" kwarg')):
+        dp.Context.compositor(
+            data=lf,
+            privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(epsilon=1.0),
+            split_evenly_over=1,
+            margins={ # type: ignore[arg-type]
+                ('col',): dp.polars.Margin(public_info="keys", max_partition_length=5),
+            }
+        )
 
 
 @pytest.mark.parametrize(

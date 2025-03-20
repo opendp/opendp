@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::combinators::{make_basic_composition, BasicCompositionMeasure};
+use crate::combinators::{BasicCompositionMeasure, make_basic_composition};
 use crate::core::{Metric, MetricSpace};
 use crate::domains::{ExprPlan, WildExprDomain};
 use crate::{

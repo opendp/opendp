@@ -11,7 +11,7 @@ use crate::metrics::AbsoluteDistance;
 use crate::traits::{ExactIntCast, Float, InfMul};
 
 use super::{
-    make_lipschitz_float_mul, make_sum, LipschitzMulFloatDomain, LipschitzMulFloatMetric, MakeSum,
+    LipschitzMulFloatDomain, LipschitzMulFloatMetric, MakeSum, make_lipschitz_float_mul, make_sum,
 };
 
 #[bootstrap(features("contrib"), generics(MI(suppress), T(suppress)))]
@@ -42,9 +42,12 @@ where
     (AtomDomain<T>, AbsoluteDistance<T>): MetricSpace,
     IBig: From<T::Bits>,
 {
-    let size = input_domain
-        .size
-        .ok_or_else(|| err!(MakeTransformation, "dataset size must be known. Either specify size in the input domain or use make_resize"))?;
+    let size = input_domain.size.ok_or_else(|| {
+        err!(
+            MakeTransformation,
+            "dataset size must be known. Either specify size in the input domain or use make_resize"
+        )
+    })?;
     let bounds = input_domain.element_domain.get_closed_bounds()?;
     if size == 0 {
         return fallible!(MakeTransformation, "dataset size must be positive");
