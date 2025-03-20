@@ -4,9 +4,9 @@ use crate::err;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast};
 use crate::traits::{CheckAtom, ProductOrd};
-use crate::transformations::{make_clamp, DatasetMetric};
+use crate::transformations::{DatasetMetric, make_clamp};
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_clamp(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,

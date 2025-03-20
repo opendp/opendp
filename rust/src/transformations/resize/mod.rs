@@ -7,8 +7,8 @@ use crate::core::{Domain, Function, Metric, MetricSpace, StabilityMap, Transform
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::metrics::{InsertDeleteDistance, IntDistance, SymmetricDistance};
-use crate::traits::samplers::Shuffle;
 use crate::traits::CheckAtom;
+use crate::traits::samplers::Shuffle;
 use std::cmp::Ordering;
 
 #[doc(hidden)]

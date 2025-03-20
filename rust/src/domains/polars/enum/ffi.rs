@@ -18,7 +18,7 @@ use super::EnumDomain;
 ///
 /// # Arguments
 /// * `categories` - Optional ordered set of string categories
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__enum_domain(
     categories: *const AnyObject,
 ) -> FfiResult<*mut AnyDomain> {

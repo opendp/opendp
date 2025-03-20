@@ -7,7 +7,7 @@ use polars::prelude::LazyFrame;
 
 use super::summarize_polars_measurement;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_accuracy__summarize_polars_measurement(
     measurement: *const AnyMeasurement,
     alpha: *const AnyObject,

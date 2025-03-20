@@ -2,7 +2,7 @@ use opendp_derive::bootstrap;
 use polars_plan::dsl::Expr;
 
 use crate::{
-    combinators::{make_approximate, BasicCompositionMeasure},
+    combinators::{BasicCompositionMeasure, make_approximate},
     core::{Measure, Measurement, Metric, MetricSpace, Transformation},
     domains::{Context, ExprDomain, ExprPlan, MarginPub, WildExprDomain},
     error::Fallible,
@@ -198,9 +198,7 @@ where
         }
 
         #[cfg(feature = "contrib")]
-        Expr::Literal(_) => {
-            expr_literal::make_expr_private_lit(input_domain, input_metric, expr)
-        }
+        Expr::Literal(_) => expr_literal::make_expr_private_lit(input_domain, input_metric, expr),
 
         expr => fallible!(
             MakeMeasurement,
@@ -227,7 +225,7 @@ pub(crate) fn approximate_c_stability<MI: UnboundedMetric, MO: Metric>(
             return fallible!(
                 MakeTransformation,
                 "c-stability approximation may only be conducted under aggregation"
-            )
+            );
         }
         Context::Aggregation { margin, .. } => margin,
     };

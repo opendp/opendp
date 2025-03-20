@@ -1,6 +1,6 @@
 use polars::df;
 use polars::lazy::frame::IntoLazy;
-use polars::prelude::{lit, NamedFrom};
+use polars::prelude::{NamedFrom, lit};
 use polars::series::Series;
 use polars_plan::dsl::col;
 

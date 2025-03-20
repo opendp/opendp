@@ -8,10 +8,10 @@ use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::{Type, TypeContents};
 use crate::traits::{CheckAtom, InherentNull, Primitive};
-use crate::transformations::{make_is_equal, make_is_null, DatasetMetric};
+use crate::transformations::{DatasetMetric, make_is_equal, make_is_null};
 
 #[cfg(feature = "honest-but-curious")]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_identity(
     domain: *const AnyDomain,
     metric: *const AnyMetric,
@@ -21,7 +21,7 @@ pub extern "C" fn opendp_transformations__make_identity(
     super::make_identity(domain, metric).into()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_is_equal(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
@@ -59,7 +59,7 @@ pub extern "C" fn opendp_transformations__make_is_equal(
     .into()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_is_null(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
@@ -73,9 +73,9 @@ pub extern "C" fn opendp_transformations__make_is_null(
         args,
     } = DI.contents
     {
-        let type_id =
-            try_!(<[TypeId; 1]>::try_from(args)
-                .map_err(|_| err!(FFI, "Vec must have one type argument")))[0];
+        let type_id = try_!(
+            <[TypeId; 1]>::try_from(args).map_err(|_| err!(FFI, "Vec must have one type argument"))
+        )[0];
         try_!(Type::of_id(&type_id))
     } else {
         return err!(FFI, "Invalid type name.").into();

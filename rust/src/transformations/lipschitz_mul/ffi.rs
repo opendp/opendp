@@ -13,10 +13,10 @@ use crate::{
     metrics::AbsoluteDistance,
     traits::Float,
     traits::{FloatBits, SaturatingMul},
-    transformations::{make_lipschitz_float_mul, LipschitzMulFloatDomain, LipschitzMulFloatMetric},
+    transformations::{LipschitzMulFloatDomain, LipschitzMulFloatMetric, make_lipschitz_float_mul},
 };
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_lipschitz_float_mul(
     constant: *const c_void,
     bounds: *const AnyObject,

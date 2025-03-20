@@ -1,5 +1,5 @@
-use darling::{Error, FromMeta, Result};
-use syn::{AttributeArgs, Item, Type, TypePath};
+use darling::{Error, FromMeta, Result, ast::NestedMeta};
+use syn::{Item, Meta, Type, TypePath};
 
 use crate::bootstrap::arguments::Features;
 
@@ -16,8 +16,13 @@ pub struct Proven {
 
 impl Proven {
     // assumes that proof paths have already been written in the lib's build script
-    pub fn from_ast(attr_args: AttributeArgs, item: Item) -> Result<Self> {
-        let mut proven = Proven::from_list(&attr_args)?;
+    pub fn from_ast(attr_args: Vec<Meta>, item: Item) -> Result<Self> {
+        let mut proven = Proven::from_list(
+            &attr_args
+                .into_iter()
+                .map(NestedMeta::Meta)
+                .collect::<Vec<_>>(),
+        )?;
 
         if proven.proof_path.is_some() {
             return Ok(proven);
@@ -43,7 +48,9 @@ impl Proven {
             }
 
             input => {
-                return Err(Error::custom("only functions or impls can be proven").with_span(&input))
+                return Err(
+                    Error::custom("only functions or impls can be proven").with_span(&input)
+                );
             }
         };
 

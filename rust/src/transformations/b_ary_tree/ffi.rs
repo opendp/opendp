@@ -8,12 +8,12 @@ use crate::{
     },
     metrics::{L1Distance, L2Distance},
     traits::{Integer, Number},
-    transformations::{make_b_ary_tree, BAryTreeMetric},
+    transformations::{BAryTreeMetric, make_b_ary_tree},
 };
 
 use super::choose_branching_factor;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_b_ary_tree(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
@@ -68,7 +68,7 @@ pub extern "C" fn opendp_transformations__make_b_ary_tree(
     .into()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__choose_branching_factor(size_guess: u32) -> u32 {
     choose_branching_factor(size_guess)
 }

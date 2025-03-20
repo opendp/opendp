@@ -1,7 +1,7 @@
 use crate::error::ErrorVariant;
 use crate::metrics::SymmetricDistance;
-use crate::transformations::make_stable_expr::test_helper::get_test_data;
 use crate::transformations::StableExpr;
+use crate::transformations::make_stable_expr::test_helper::get_test_data;
 
 use super::*;
 

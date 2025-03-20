@@ -1,3 +1,6 @@
+mod array;
+pub use array::*;
+
 mod categorical;
 pub use categorical::*;
 

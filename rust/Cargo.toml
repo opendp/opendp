@@ -5,15 +5,15 @@ readme = "../README.md"
 homepage = "https://opendp.org/"
 repository = "https://github.com/opendp/opendp"
 authors = ["The OpenDP Project <info@opendp.org>"]
-edition = "2021"
-rust-version = "1.64.0" # MSRV via `cargo install cargo-msrv && cargo msrv --min 1.49.0 -- cargo check --all-features`
+edition = "2024"
+rust-version = "1.85.0" # MSRV via `cargo install cargo-msrv && cargo msrv --min 1.49.0 -- cargo check --all-features`
 
 [workspace]
 members = [".", "opendp_derive", "opendp_tooling"]
 default-members = [".", "opendp_derive", "opendp_tooling"]
 
 [workspace.dependencies]
-syn = { version = "1.0", features = ["full", "parsing"] }
+syn = { version = "2.0", features = ["full", "parsing"] }
 quote = { version = "1.0" }
 proc-macro2 = { version = "1.0" }
 
@@ -39,11 +39,7 @@ num = "0.3.1"
 thiserror = "1.0.24"
 statrs = "0.13.0"
 dashu = { version = "0.4.0", features = ["num-traits_v02"] }
-openssl = { version = "0.10.64", features = ["vendored"], optional = true }
-
-# Temporary fix until OpenSSL is updated to 3.4.
-# See https://github.com/openssl/openssl/issues/25366
-openssl-src = "=300.3.1"
+openssl = { version = "0.10.71", features = ["vendored"], optional = true }
 
 opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.12.1-dev" }
 readonly = "0.2"
@@ -95,7 +91,7 @@ vega_lite_4 = { version = "0.6.0", optional = true }
 opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.12.1-dev" }
 syn = { workspace = true, optional = true }
 proc-macro2 = { workspace = true, optional = true }
-cbindgen = { version = "0.20.0", optional = true }
+cbindgen = { version = "0.28.0", optional = true }
 
 [features]
 default = ["partials", "use-openssl"]

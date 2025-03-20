@@ -12,7 +12,7 @@ use polars::prelude::*;
 
 use crate::domains::{AtomDomain, CategoricalDomain, DatetimeDomain, OptionDomain};
 
-use super::EnumDomain;
+use super::{ArrayDomain, EnumDomain};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -152,6 +152,13 @@ impl SeriesDomain {
                     .into_series();
                 Arc::new(EnumDomain::new(categories)?)
             }
+            DataType::Array(dtype, size) => {
+                let element_domain = Self::new_element_domain(*dtype)?;
+                Arc::new(ArrayDomain {
+                    element_domain,
+                    size,
+                })
+            }
             dtype => return fallible!(MakeDomain, "unsupported type {}", dtype),
         })
     }
@@ -239,7 +246,7 @@ impl SeriesDomain {
                 return fallible!(
                     MakeTransformation,
                     "only floating point types can be made non-NaN"
-                )
+                );
             }
         }
         Ok(())
@@ -343,8 +350,21 @@ impl SeriesElementDomain for DatetimeDomain {
     const NULLABLE: bool = false;
 }
 
+impl SeriesElementDomain for ArrayDomain {
+    type InnerDomain = Self;
+
+    fn dtype(&self) -> DataType {
+        DataType::Array(Box::new(self.element_domain.dtype()), self.size)
+    }
+    fn inner_domain(&self) -> &Self {
+        self
+    }
+
+    const NULLABLE: bool = false;
+}
+
 /// Object-safe version of [`SeriesElementDomain`].
-pub trait DynSeriesElementDomain: 'static + Send + Sync {
+pub trait DynSeriesElementDomain: 'static + Send + Sync + Debug {
     /// # Proof Definition
     /// Returns the datatype of rows of members in the domain.
     fn dtype(&self) -> DataType;

@@ -9,11 +9,11 @@ use crate::ffi::util::Type;
 use crate::metrics::{AbsoluteDistance, SymmetricDistance};
 use crate::traits::Float;
 use crate::transformations::{
-    make_variance, LipschitzMulFloatDomain, LipschitzMulFloatMetric, Pairwise, Sequential,
-    UncheckedSum,
+    LipschitzMulFloatDomain, LipschitzMulFloatMetric, Pairwise, Sequential, UncheckedSum,
+    make_variance,
 };
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_variance(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,

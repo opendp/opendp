@@ -7,7 +7,7 @@ use crate::{
 
 use polars::{
     df,
-    prelude::{col, IntoLazy},
+    prelude::{IntoLazy, col},
 };
 
 #[test]
@@ -113,11 +113,13 @@ fn test_select_make_expr_count_row_by_row() -> Fallible<()> {
     )])?;
     let expr_domain = lf_domain.row_by_row();
 
-    assert!(col("data")
-        .count()
-        .make_stable(expr_domain, InsertDeleteDistance)
-        .map(|_: Transformation<_, _, _, InsertDeleteDistance>| ())
-        .is_err());
+    assert!(
+        col("data")
+            .count()
+            .make_stable(expr_domain, InsertDeleteDistance)
+            .map(|_: Transformation<_, _, _, InsertDeleteDistance>| ())
+            .is_err()
+    );
 
     Ok(())
 }

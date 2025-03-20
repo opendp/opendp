@@ -2,8 +2,8 @@ use std::any;
 use std::any::TypeId;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
-use std::ffi::{c_void, CString};
 use std::ffi::{CStr, IntoStringError, NulError};
+use std::ffi::{CString, c_void};
 use std::os::raw::c_char;
 use std::str::Utf8Error;
 
@@ -43,8 +43,8 @@ pub struct Pairwise<T>(PhantomData<T>);
 // If polars is not enabled, then these structs don't exist.
 #[cfg(feature = "polars")]
 use crate::domains::{
-    CategoricalDomain, DatetimeDomain, EnumDomain, ExprDomain, ExprPlan, LazyFrameDomain,
-    SeriesDomain,
+    ArrayDomain, CategoricalDomain, DatetimeDomain, EnumDomain, ExprDomain, ExprPlan,
+    LazyFrameDomain, SeriesDomain,
 };
 #[cfg(feature = "polars")]
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
@@ -306,8 +306,8 @@ lazy_static! {
             type_vec![AtomDomain, <NaiveDate, NaiveTime>],
             type_vec![[OptionDomain AtomDomain], <NaiveDate, NaiveTime>],
 
-            type_vec![CategoricalDomain, DatetimeDomain, EnumDomain],
-            type_vec![OptionDomain, <CategoricalDomain, DatetimeDomain, EnumDomain>],
+            type_vec![CategoricalDomain, DatetimeDomain, EnumDomain, ArrayDomain],
+            type_vec![OptionDomain, <CategoricalDomain, DatetimeDomain, EnumDomain, ArrayDomain>],
 
             vec![t!((DslPlan, Expr))],
             type_vec![Vec, <(DslPlan, Expr), SeriesDomain, Expr>],
@@ -463,11 +463,7 @@ pub fn to_bool(b: c_bool) -> bool {
 }
 
 pub fn from_bool(b: bool) -> c_bool {
-    if b {
-        1
-    } else {
-        0
-    }
+    if b { 1 } else { 0 }
 }
 
 #[cfg(test)]

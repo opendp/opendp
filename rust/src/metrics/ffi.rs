@@ -7,7 +7,7 @@ use crate::{
     error::Fallible,
     ffi::{
         any::{AnyMetric, Downcast},
-        util::{self, c_bool, into_c_char_p, to_str, ExtrinsicObject, Type},
+        util::{self, ExtrinsicObject, Type, c_bool, into_c_char_p, to_str},
     },
     metrics::{AbsoluteDistance, L1Distance, L2Distance},
     traits::InfAdd,
@@ -23,7 +23,7 @@ use super::{
     returns(c_type = "FfiResult<void *>")
 )]
 /// Internal function. Free the memory associated with `this`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics___metric_free(this: *mut AnyMetric) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
@@ -37,7 +37,7 @@ pub extern "C" fn opendp_metrics___metric_free(this: *mut AnyMetric) -> FfiResul
 ///
 /// # Arguments
 /// * `this` - The metric to debug (stringify).
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__metric_debug(this: *mut AnyMetric) -> FfiResult<*mut c_char> {
     let this = try_as_ref!(this);
     FfiResult::Ok(try_!(into_c_char_p(format!("{:?}", this))))
@@ -52,7 +52,7 @@ pub extern "C" fn opendp_metrics__metric_debug(this: *mut AnyMetric) -> FfiResul
 ///
 /// # Arguments
 /// * `this` - The metric to retrieve the type from.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__metric_type(this: *mut AnyMetric) -> FfiResult<*mut c_char> {
     let this = try_as_ref!(this);
     FfiResult::Ok(try_!(into_c_char_p(this.type_.descriptor.to_string())))
@@ -67,7 +67,7 @@ pub extern "C" fn opendp_metrics__metric_type(this: *mut AnyMetric) -> FfiResult
 ///
 /// # Arguments
 /// * `this` - The metric to retrieve the distance type from.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__metric_distance_type(
     this: *mut AnyMetric,
 ) -> FfiResult<*mut c_char> {
@@ -82,7 +82,7 @@ pub extern "C" fn opendp_metrics__metric_distance_type(
     returns(c_type = "FfiResult<AnyMetric *>")
 )]
 /// Construct an instance of the `SymmetricDistance` metric.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__symmetric_distance() -> FfiResult<*mut AnyMetric> {
     FfiResult::Ok(util::into_raw(AnyMetric::new(SymmetricDistance::default())))
 }
@@ -92,7 +92,7 @@ pub extern "C" fn opendp_metrics__symmetric_distance() -> FfiResult<*mut AnyMetr
     returns(c_type = "FfiResult<AnyMetric *>")
 )]
 /// Construct an instance of the `InsertDeleteDistance` metric.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__insert_delete_distance() -> FfiResult<*mut AnyMetric> {
     FfiResult::Ok(util::into_raw(AnyMetric::new(
         InsertDeleteDistance::default(),
@@ -104,14 +104,14 @@ pub extern "C" fn opendp_metrics__insert_delete_distance() -> FfiResult<*mut Any
     returns(c_type = "FfiResult<AnyMetric *>")
 )]
 /// Construct an instance of the `ChangeOneDistance` metric.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__change_one_distance() -> FfiResult<*mut AnyMetric> {
     FfiResult::Ok(util::into_raw(AnyMetric::new(ChangeOneDistance::default())))
 }
 
 #[bootstrap(name = "hamming_distance", returns(c_type = "FfiResult<AnyMetric *>"))]
 /// Construct an instance of the `HammingDistance` metric.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__hamming_distance() -> FfiResult<*mut AnyMetric> {
     FfiResult::Ok(util::into_raw(AnyMetric::new(HammingDistance::default())))
 }
@@ -125,7 +125,7 @@ fn absolute_distance<T>() -> AbsoluteDistance<T> {
     AbsoluteDistance::default()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__absolute_distance(T: *const c_char) -> FfiResult<*mut AnyMetric> {
     fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMetric> {
         Ok(AnyMetric::new(absolute_distance::<T>())).into()
@@ -142,7 +142,7 @@ pub extern "C" fn opendp_metrics__absolute_distance(T: *const c_char) -> FfiResu
 fn l1_distance<T>() -> L1Distance<T> {
     L1Distance::default()
 }
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__l1_distance(T: *const c_char) -> FfiResult<*mut AnyMetric> {
     fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMetric> {
         Ok(AnyMetric::new(l1_distance::<T>())).into()
@@ -159,7 +159,7 @@ pub extern "C" fn opendp_metrics__l1_distance(T: *const c_char) -> FfiResult<*mu
 fn l2_distance<T>() -> L2Distance<T> {
     L2Distance::default()
 }
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__l2_distance(T: *const c_char) -> FfiResult<*mut AnyMetric> {
     fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMetric> {
         Ok(AnyMetric::new(l2_distance::<T>())).into()
@@ -170,7 +170,7 @@ pub extern "C" fn opendp_metrics__l2_distance(T: *const c_char) -> FfiResult<*mu
 
 #[bootstrap(name = "discrete_distance", returns(c_type = "FfiResult<AnyMetric *>"))]
 /// Construct an instance of the `DiscreteDistance` metric.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__discrete_distance() -> FfiResult<*mut AnyMetric> {
     FfiResult::Ok(util::into_raw(AnyMetric::new(DiscreteDistance::default())))
 }
@@ -187,7 +187,7 @@ pub extern "C" fn opendp_metrics__discrete_distance() -> FfiResult<*mut AnyMetri
 fn partition_distance<M: Metric>(metric: M) -> PartitionDistance<M> {
     PartitionDistance(metric)
 }
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__partition_distance(
     metric: *const AnyMetric,
 ) -> FfiResult<*mut AnyMetric> {
@@ -214,7 +214,7 @@ pub extern "C" fn opendp_metrics__partition_distance(
 fn linf_distance<T: InfAdd>(monotonic: bool) -> LInfDistance<T> {
     LInfDistance::new(monotonic)
 }
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__linf_distance(
     monotonic: c_bool,
     T: *const c_char,
@@ -269,7 +269,7 @@ impl Metric for ExtrinsicDistance {
 /// 2. for any $x, y$, $d(x, y) \ge 0$ (non-negativity)
 /// 3. for any $x, y$, $d(x, y) = d(y, x)$ (symmetry)
 /// 4. for any $x, y, z$, $d(x, z) \le d(x, y) + d(y, z)$ (triangle inequality)
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__user_distance(
     descriptor: *mut c_char,
 ) -> FfiResult<*mut AnyMetric> {

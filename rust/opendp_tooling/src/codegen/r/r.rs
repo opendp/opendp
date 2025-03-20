@@ -1,8 +1,8 @@
 use std::{collections::HashMap, fs, iter::once};
 
 use crate::{
-    codegen::{flatten_type_recipe, tab_r},
     Argument, Function, TypeRecipe, Value,
+    codegen::{flatten_type_recipe, tab_r},
 };
 
 use super::BLOCKLIST;

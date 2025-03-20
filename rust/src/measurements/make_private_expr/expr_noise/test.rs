@@ -4,7 +4,7 @@ use polars::prelude::*;
 use crate::{
     domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain},
     error::ErrorVariant,
-    measurements::{make_private_expr, make_private_lazyframe, PrivateExpr},
+    measurements::{PrivateExpr, make_private_expr, make_private_lazyframe},
     metrics::{InsertDeleteDistance, PartitionDistance, SymmetricDistance},
     polars::PrivacyNamespace,
     transformations::test_helper::get_test_data,

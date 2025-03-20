@@ -121,7 +121,7 @@ pub(crate) fn literal_len(literal: &LiteralValue) -> Fallible<i64> {
             return fallible!(
                 MakeTransformation,
                 "unrecognized literal when determining length: {l:?}"
-            )
+            );
         }
     })
 }
@@ -149,7 +149,7 @@ pub(crate) fn is_cast_fallible(from: &DataType, to: &DataType) -> bool {
                     AnyValue::Int64(v).cast(&to).is_null()
                 } else {
                     to != &DataType::UInt64
-                }
+                };
             }
             UnknownKind::Float => !to.is_float(),
             UnknownKind::Str => !to.is_string(),

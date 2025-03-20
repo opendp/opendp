@@ -9,11 +9,11 @@ use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
 use crate::traits::Float;
 use crate::transformations::{
-    make_bounded_float_checked_sum, make_sized_bounded_float_checked_sum, CanFloatSumOverflow,
-    Pairwise, Sequential, UncheckedSum,
+    CanFloatSumOverflow, Pairwise, Sequential, UncheckedSum, make_bounded_float_checked_sum,
+    make_sized_bounded_float_checked_sum,
 };
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_bounded_float_checked_sum(
     size_limit: c_uint,
     bounds: *const AnyObject,
@@ -48,7 +48,7 @@ pub extern "C" fn opendp_transformations__make_bounded_float_checked_sum(
     dispatch!(monomorphize, [(T, @floats)], (S, size_limit, bounds)).into()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_sized_bounded_float_checked_sum(
     size: c_uint,
     bounds: *const AnyObject,

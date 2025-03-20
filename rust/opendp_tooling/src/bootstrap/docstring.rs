@@ -1,16 +1,16 @@
 use std::{collections::HashMap, env, path::PathBuf};
 
-use darling::{Error, FromMeta, Result};
-use proc_macro2::{Literal, Punct, Spacing, TokenStream, TokenTree};
+use darling::{Error, FromMeta, Result, ast::NestedMeta};
+use proc_macro2::Span;
 use quote::format_ident;
 use syn::{
-    AttrStyle, Attribute, AttributeArgs, ItemFn, Lit, Meta, MetaNameValue, Path, PathSegment,
-    ReturnType, Type, TypePath,
+    AttrStyle, Attribute, Expr, ExprLit, ItemFn, Lit, LitStr, Meta, MetaNameValue, Path,
+    PathSegment, ReturnType, Type, TypePath,
 };
 
 use crate::{
-    proven::filesystem::{get_src_dir, make_proof_link},
     Deprecation,
+    proven::filesystem::{get_src_dir, make_proof_link},
 };
 
 use super::arguments::BootstrapArguments;
@@ -43,10 +43,10 @@ impl BootstrapDocstring {
         let deprecated = attrs
             .iter()
             .find(|attr| {
-                attr.path.get_ident().map(ToString::to_string).as_deref() == Some("deprecated")
+                attr.path().get_ident().map(ToString::to_string).as_deref() == Some("deprecated")
             })
             .map(|attr| {
-                let meta = DeprecationArguments::from_meta(&attr.parse_meta()?)?;
+                let meta = DeprecationArguments::from_meta(&attr.meta)?;
                 Result::Ok(Deprecation {
                     since: meta.since.ok_or_else(|| {
                         Error::custom("`since` must be specified").with_span(&attr)
@@ -191,7 +191,7 @@ fn parse_docstring_args(args: String) -> HashMap<String, String> {
 /// Keys represent section names, and values are the text under the section
 fn parse_docstring_sections(attrs: Vec<Attribute>) -> Result<HashMap<String, String>> {
     let mut docstrings = (attrs.into_iter())
-        .filter(|v| v.path.get_ident().map(ToString::to_string).as_deref() == Some("doc"))
+        .filter(|v| v.path().get_ident().map(ToString::to_string).as_deref() == Some("doc"))
         .map(parse_doc_attribute)
         .collect::<Result<Vec<_>>>()?
         .into_iter()
@@ -261,14 +261,14 @@ fn parse_supporting_elements(ty: &Type) -> Result<Option<String>> {
                     arg => {
                         return Err(
                             Error::custom("argument to Fallible must to be a type").with_span(&arg)
-                        )
+                        );
                     }
                 }
             }
             arg => {
                 return Err(
                     Error::custom("Fallible needs an angle-bracketed argument").with_span(arg)
-                )
+                );
             }
         }),
         i if i == "Transformation" || i == "Measurement" || i == "Function" => {
@@ -330,7 +330,7 @@ fn parse_supporting_elements(ty: &Type) -> Result<Option<String>> {
                 arg => {
                     return Err(
                         Error::custom("Fallible needs an angle-bracketed argument").with_span(arg)
-                    )
+                    );
                 }
             }
         }
@@ -340,17 +340,21 @@ fn parse_supporting_elements(ty: &Type) -> Result<Option<String>> {
 
 /// extract the string inside a doc comment attribute
 fn parse_doc_attribute(attr: Attribute) -> Result<String> {
-    match attr.parse_meta()? {
-        Meta::NameValue(MetaNameValue {
+    let Meta::NameValue(MetaNameValue {
+        value: Expr::Lit(ExprLit {
             lit: Lit::Str(v), ..
-        }) => Ok(v.value()),
-        _ => Err(Error::custom("doc attribute must be a string literal").with_span(&attr)),
-    }
+        }),
+        ..
+    }) = attr.meta
+    else {
+        return Err(Error::custom("doc attribute must be a string literal").with_span(&attr));
+    };
+    Ok(v.value())
 }
 
 /// Obtain a relative path to a proof, given all available information
 pub fn get_proof_path(
-    attr_args: &AttributeArgs,
+    attr_args: &Vec<Meta>,
     item_fn: &ItemFn,
     proof_paths: &HashMap<String, Option<String>>,
 ) -> Result<Option<String>> {
@@ -359,7 +363,13 @@ pub fn get_proof_path(
         proof_path,
         unproven,
         ..
-    } = BootstrapArguments::from_attribute_args(&attr_args)?;
+    } = BootstrapArguments::from_attribute_args(
+        &attr_args
+            .iter()
+            .cloned()
+            .map(NestedMeta::Meta)
+            .collect::<Vec<_>>(),
+    )?;
 
     let name = name.unwrap_or_else(|| item_fn.sig.ident.to_string());
     if unproven && proof_path.is_some() {
@@ -368,10 +378,14 @@ pub fn get_proof_path(
     Ok(match proof_path {
         Some(proof_path) => Some(proof_path),
         None => match proof_paths.get(&name) {
-            Some(None) => return Err(Error::custom(format!("more than one file named {name}.tex. Please specify `proof_path = \"{{module}}/path/to/proof.tex\"` in the macro arguments."))),
+            Some(None) => {
+                return Err(Error::custom(format!(
+                    "more than one file named {name}.tex. Please specify `proof_path = \"{{module}}/path/to/proof.tex\"` in the macro arguments."
+                )));
+            }
             Some(proof_path) => proof_path.clone(),
-            None => None
-        }
+            None => None,
+        },
     })
 }
 
@@ -387,7 +401,7 @@ pub fn insert_proof_attribute(attributes: &mut Vec<Attribute>, proof_path: Strin
 
     let position = (attributes.iter())
         .position(|attr| {
-            if attr.path.get_ident().map(ToString::to_string).as_deref() != Some("doc") {
+            if attr.path().get_ident().map(ToString::to_string).as_deref() != Some("doc") {
                 return false;
             }
             if let Ok(comment) = parse_doc_attribute(attr.clone()) {
@@ -416,14 +430,14 @@ fn new_comment_attribute(comment: &str) -> Attribute {
         pound_token: Default::default(),
         style: AttrStyle::Outer,
         bracket_token: Default::default(),
-        path: Path::from(format_ident!("doc")),
-        tokens: TokenStream::from_iter(
-            [
-                TokenTree::Punct(Punct::new('=', Spacing::Alone)),
-                TokenTree::Literal(Literal::string(comment)),
-            ]
-            .into_iter(),
-        ),
+        meta: Meta::NameValue(MetaNameValue {
+            value: Expr::Lit(ExprLit {
+                lit: Lit::Str(LitStr::new(comment, Span::call_site())),
+                attrs: Vec::new(),
+            }),
+            path: Path::from(format_ident!("doc")),
+            eq_token: Default::default(),
+        }),
     }
 }
 
