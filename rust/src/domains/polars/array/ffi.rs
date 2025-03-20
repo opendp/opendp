@@ -21,7 +21,7 @@ use super::ArrayDomain;
 /// # Arguments
 /// * `element_domain` - The domain of each element in the array.
 /// * `width` - The width of the array.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__array_domain(
     element_domain: *const AnyDomain,
     width: u32,
