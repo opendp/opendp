@@ -1,7 +1,6 @@
 use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::DslPlanDomain;
 use crate::error::*;
-use crate::transformations::traits::UnboundedMetric;
 use polars::prelude::*;
 
 /// Placeholder transformation for creating a stable LazyFrame source.
@@ -16,8 +15,8 @@ pub fn make_stable_source<M: Metric>(
     plan: DslPlan,
 ) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, M, M>>
 where
-    M: UnboundedMetric + 'static,
     (DslPlanDomain, M): MetricSpace,
+    M::Distance: 'static + Clone,
 {
     let DslPlan::DataFrameScan {
         df: _, // DO NOT TOUCH THE DATA. Touching the data will degrade any downstream stability or privacy guarantees.

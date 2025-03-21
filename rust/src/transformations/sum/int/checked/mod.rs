@@ -55,7 +55,7 @@ where
         VectorDomain::new(AtomDomain::new_closed(bounds)?).with_size(size),
         AtomDomain::default(),
         Function::new(|arg: &Vec<T>| arg.iter().sum()),
-        SymmetricDistance::default(),
+        SymmetricDistance,
         AbsoluteDistance::default(),
         StabilityMap::new_fallible(
             // If d_in is odd, we still only consider databases with (d_in - 1) / 2 substitutions,

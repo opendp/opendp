@@ -109,8 +109,6 @@ where
                 by: input_margin.by,
                 max_partition_length: Some(1),
                 max_num_partitions: input_margin.max_num_partitions,
-                max_partition_contributions: None,
-                max_influenced_partitions: Some(1),
                 public_info: input_margin.public_info,
             },
         },

@@ -48,7 +48,7 @@ where
             Ok(T::from_rational(sample))
         }),
         input_metric,
-        MaxDivergence::default(),
+        MaxDivergence,
         PrivacyMap::new_fallible(laplace_puredp_map(scale, relaxation)),
     )
 }
@@ -105,7 +105,7 @@ where
                 .collect()
         }),
         input_metric,
-        MaxDivergence::default(),
+        MaxDivergence,
         PrivacyMap::new_fallible(laplace_puredp_map(scale, relaxation)),
     )
 }

@@ -7,11 +7,10 @@ use polars::lazy::dsl::len;
 use polars::prelude::*;
 
 use crate::core::Domain;
-use crate::metrics::{LInfDistance, LpDistance};
+use crate::metrics::{LInfDistance, LpDistance, MicrodataMetric, Multi};
 use crate::traits::{InfMul, ProductOrd};
-use crate::{
-    core::MetricSpace, domains::SeriesDomain, error::Fallible, transformations::DatasetMetric,
-};
+use crate::transformations::traits::UnboundedMetric;
+use crate::{core::MetricSpace, domains::SeriesDomain, error::Fallible};
 
 use super::NumericDataType;
 
@@ -103,18 +102,22 @@ impl<F: Frame> PartialEq for FrameDomain<F> {
 pub type LazyFrameDomain = FrameDomain<LazyFrame>;
 pub(crate) type DslPlanDomain = FrameDomain<DslPlan>;
 
-impl<F: Frame, M: DatasetMetric> MetricSpace for (FrameDomain<F>, M) {
+impl<F: Frame, M: MicrodataMetric> MetricSpace for (FrameDomain<F>, M) {
     fn check_space(&self) -> Fallible<()> {
-        if M::SIZED
-            && self
-                .0
-                .margins
-                .iter()
-                .all(|m| m.public_info != Some(MarginPub::Lengths))
-        {
-            return fallible!(MetricSpace, "bounded dataset metric must have known size");
+        if let Some(identifier) = self.1.identifier() {
+            identifier
+                .meta()
+                .root_names()
+                .into_iter()
+                .try_for_each(|n| self.0.series_domain(n).map(|_| ()))?;
         }
         Ok(())
+    }
+}
+
+impl<F: Frame, M: UnboundedMetric> MetricSpace for (FrameDomain<F>, Multi<M>) {
+    fn check_space(&self) -> Fallible<()> {
+        (self.0.clone(), self.1.0.clone()).check_space()
     }
 }
 
@@ -219,12 +222,20 @@ impl<F: Frame> FrameDomain<F> {
     /// when grouped by `by`, observes those descriptors in `margin`,
     /// or an error.
     #[must_use]
-    pub fn with_margin(mut self, margin: Margin) -> Fallible<Self> {
-        if self.margins.iter().find(|m| m.by == margin.by).is_some() {
-            return fallible!(MakeDomain, "margin already exists: {:?}", margin.by);
+    pub fn with_margin(mut self, margin: Margin) -> Self {
+        if let Some(prev_margin) = self.margins.iter_mut().find(|m| m.by == margin.by) {
+            prev_margin.max_partition_length = option_min(
+                margin.max_partition_length,
+                prev_margin.max_partition_length,
+            );
+            prev_margin.max_num_partitions =
+                option_min(margin.max_num_partitions, prev_margin.max_num_partitions);
+            prev_margin.public_info = margin.public_info.max(prev_margin.public_info);
+            return self;
+        } else {
+            self.margins.push(margin);
         }
-        self.margins.push(margin);
-        Ok(self)
+        self
     }
 
     /// # Proof Definition
@@ -247,13 +258,9 @@ impl<F: Frame> FrameDomain<F> {
             .filter(|m| m.by.is_subset(by))
             .collect::<Vec<&Margin>>();
 
-        // the max_partition_* descriptors can take the minimum known value from any margin on a subset of the grouping columns
+        // the max_partition_length descriptors can take the minimum known value from any margin on a subset of the grouping columns
         margin.max_partition_length = (subset_margins.iter())
             .filter_map(|m| m.max_partition_length)
-            .min();
-
-        margin.max_partition_contributions = (subset_margins.iter())
-            .filter_map(|m| m.max_partition_contributions)
             .min();
 
         let all_mnps = (self.margins.iter())
@@ -262,19 +269,6 @@ impl<F: Frame> FrameDomain<F> {
 
         // in the worst case, the max partition length is the product of the max partition lengths of the cover
         margin.max_num_partitions = find_min_covering(by.clone(), all_mnps)
-            .map(|cover| {
-                cover
-                    .iter()
-                    .try_fold(1u32, |acc, (_, v)| acc.inf_mul(v).ok())
-            })
-            .flatten();
-
-        let all_mips = (self.margins.iter())
-            .filter_map(|m| Some((&m.by, m.max_influenced_partitions?)))
-            .collect();
-
-        // in the worst case, the max partition contributions is the product of the max partition contributions of the cover
-        margin.max_influenced_partitions = find_min_covering(by.clone(), all_mips)
             .map(|cover| {
                 cover
                     .iter()
@@ -294,7 +288,6 @@ impl<F: Frame> FrameDomain<F> {
         if by.is_empty() {
             margin.public_info.get_or_insert(MarginPub::Keys);
             margin.max_num_partitions = Some(1);
-            margin.max_influenced_partitions = Some(1);
         }
 
         margin
@@ -371,21 +364,11 @@ impl<F: Frame> Domain for FrameDomain<F> {
 pub struct Margin {
     /// The columns to group by to form the margin.
     pub by: HashSet<Expr>,
+
     /// The greatest number of records that can be present in any one partition.
     pub max_partition_length: Option<u32>,
     /// The greatest number of partitions that can be present.
     pub max_num_partitions: Option<u32>,
-
-    /// The greatest number of contributions that can be made by one unit to any one partition.
-    ///
-    /// This affects how margins interact with the metric.
-    /// The distance between data sets differing by more than this quantity is considered infinite.
-    pub max_partition_contributions: Option<u32>,
-    /// The greatest number of partitions that can be contributed to.
-    ///
-    /// This affects how margins interact with the metric.
-    /// The distance between data sets differing by more than this quantity is considered infinite.
-    pub max_influenced_partitions: Option<u32>,
 
     /// Denote whether the unique values and/or in the margin are public.
     pub public_info: Option<MarginPub>,
@@ -419,8 +402,6 @@ impl Margin {
             by: by.as_ref().iter().cloned().map(Into::into).collect(),
             max_partition_length: None,
             max_num_partitions: None,
-            max_partition_contributions: None,
-            max_influenced_partitions: None,
             public_info: None,
         }
     }
@@ -431,14 +412,6 @@ impl Margin {
     }
     pub fn with_max_num_partitions(mut self, value: u32) -> Self {
         self.max_num_partitions = Some(value);
-        self
-    }
-    pub fn with_max_partition_contributions(mut self, value: u32) -> Self {
-        self.max_partition_contributions = Some(value);
-        self
-    }
-    pub fn with_max_influenced_partitions(mut self, value: u32) -> Self {
-        self.max_influenced_partitions = Some(value);
         self
     }
 
@@ -483,10 +456,7 @@ impl Margin {
     /// given optional domain descriptor `max_num_partitions`
     /// and optional metric descriptor `max_influenced_partitions`.
     pub(crate) fn l_0(&self, l_1: u32) -> u32 {
-        self.max_influenced_partitions
-            .or(self.max_num_partitions)
-            .unwrap_or(l_1)
-            .min(l_1)
+        self.max_num_partitions.unwrap_or(l_1).min(l_1)
     }
 
     /// # Proof Definition
@@ -495,10 +465,7 @@ impl Margin {
     /// given optional domain descriptor `max_partition_length`
     /// and optional metric descriptor `max_partition_contributions`.
     pub(crate) fn l_inf(&self, l_1: u32) -> u32 {
-        self.max_partition_contributions
-            .or(self.max_partition_length)
-            .unwrap_or(l_1)
-            .min(l_1)
+        self.max_partition_length.unwrap_or(l_1).min(l_1)
     }
 }
 
@@ -511,7 +478,7 @@ impl Margin {
 ///
 /// # Citation
 /// * A Greedy Heuristic for the Set-Covering Problem, V. Chvatal
-fn find_min_covering<T: Hash + Eq>(
+pub(crate) fn find_min_covering<T: Hash + Eq>(
     mut must_cover: HashSet<T>,
     sets: Vec<(&HashSet<T>, u32)>,
 ) -> Option<Vec<(&HashSet<T>, u32)>> {
@@ -537,4 +504,15 @@ fn find_min_covering<T: Hash + Eq>(
         covered.push((&best_set, weight));
     }
     Some(covered)
+}
+
+/// # Proof Definition
+/// Return the minimum of `a` and `b` if both are `Some`,
+/// or the `Some` value if only one is `Some`.
+pub(crate) fn option_min<T: Ord>(a: Option<T>, b: Option<T>) -> Option<T> {
+    match (a, b) {
+        (Some(a), Some(b)) => Some(a.min(b)),
+        (Some(x), _) | (_, Some(x)) => Some(x),
+        _ => None,
+    }
 }

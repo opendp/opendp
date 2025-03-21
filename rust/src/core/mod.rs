@@ -110,7 +110,7 @@ impl<TI: 'static, TO: 'static> Function<TI, TO> {
 ///
 /// # Proof Definition
 /// A type `Self` has an implementation for `Metric` iff it can represent a metric for quantifying distances between values in a set.
-pub trait Metric: Default + Clone + PartialEq + Debug + Send + Sync {
+pub trait Metric: Clone + PartialEq + Debug + Send + Sync {
     /// # Proof Definition
     /// `Self::Distance` is a type that represents distances in terms of a metric `Self`.
     type Distance;
