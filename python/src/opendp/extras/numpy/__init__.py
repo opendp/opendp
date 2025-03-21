@@ -116,9 +116,6 @@ def array2_domain(
 
     _check_nonnegative_int(size, "size")
     _check_nonnegative_int(num_columns, "num_columns")
-
-    if nan is None:
-        nan = T in {"f32", "f64"}
     
     T = T or _ELEMENTARY_TYPES.get(origin.dtype.type)
     if T is None:
@@ -126,6 +123,9 @@ def array2_domain(
     T = dp.RuntimeType.parse(T)
     if T not in _PRIMITIVE_TYPES:
         raise ValueError(f"T ({T}) must be a primitive type")
+
+    if nan is None:
+        nan = T in {"f32", "f64"}
 
     def _member(x):
         if not isinstance(x, np.ndarray):
