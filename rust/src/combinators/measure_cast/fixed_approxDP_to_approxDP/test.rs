@@ -10,7 +10,7 @@ use super::*;
 #[test]
 fn test_fixed_approxDP_to_approxDP() -> Fallible<()> {
     let meas_fixed = make_laplace_threshold(
-        MapDomain::<AtomDomain<String>, _>::default(),
+        MapDomain::new(AtomDomain::<String>::default(), AtomDomain::new_non_nan()),
         L1Distance::<f64>::default(),
         1.,
         10.,
