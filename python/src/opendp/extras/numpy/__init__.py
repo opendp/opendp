@@ -117,7 +117,9 @@ def array2_domain(
     _check_nonnegative_int(size, "size")
     _check_nonnegative_int(num_columns, "num_columns")
 
-
+    if nan is None:
+        nan = T in {"f32", "f64"}
+    
     T = T or _ELEMENTARY_TYPES.get(origin.dtype.type)
     if T is None:
         raise ValueError("must specify T, the type of data in the array")  # pragma: no cover
