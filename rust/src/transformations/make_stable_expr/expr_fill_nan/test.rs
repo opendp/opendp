@@ -26,24 +26,15 @@ fn test_make_expr_fill_nan_literal() -> Fallible<()> {
 
     assert_eq!(actual, df!("f64" => [None, Some(1.), Some(0.)])?);
 
-    assert!(
-        !t_fill_nan
-            .output_domain
-            .column
-            .atom_domain::<f64>()?
-            .nullable()
-    );
+    assert!(!t_fill_nan.output_domain.column.atom_domain::<f64>()?.nan());
 
     Ok(())
 }
 
 #[test]
 fn test_make_expr_fill_nan_expr() -> Fallible<()> {
-    let f64_nan = SeriesDomain::new(
-        "f64_nan",
-        OptionDomain::new(AtomDomain::<f64>::new_nullable()),
-    );
-    let f64_nonnan = SeriesDomain::new("f64_nonnan", AtomDomain::<f64>::default());
+    let f64_nan = SeriesDomain::new("f64_nan", OptionDomain::new(AtomDomain::<f64>::default()));
+    let f64_nonnan = SeriesDomain::new("f64_nonnan", AtomDomain::<f64>::new_non_nan());
     let lf_domain = LazyFrameDomain::new(vec![f64_nan, f64_nonnan])?;
 
     let lf = df!(
@@ -65,24 +56,15 @@ fn test_make_expr_fill_nan_expr() -> Fallible<()> {
         &Series::new("f64_nan".into(), [None, Some(1.), Some(0.)])
     );
 
-    assert!(
-        !t_fill_nan
-            .output_domain
-            .column
-            .atom_domain::<f64>()?
-            .nullable()
-    );
+    assert!(!t_fill_nan.output_domain.column.atom_domain::<f64>()?.nan());
 
     Ok(())
 }
 
 #[test]
 fn test_make_expr_fill_nan_expr_filter_fail() -> Fallible<()> {
-    let f64_nan = SeriesDomain::new(
-        "f64_nan",
-        OptionDomain::new(AtomDomain::<f64>::new_nullable()),
-    );
-    let f64_nonnan = SeriesDomain::new("f64_nonnan", AtomDomain::<f64>::default());
+    let f64_nan = SeriesDomain::new("f64_nan", OptionDomain::new(AtomDomain::<f64>::default()));
+    let f64_nonnan = SeriesDomain::new("f64_nonnan", AtomDomain::<f64>::new_non_nan());
     let lf_domain = LazyFrameDomain::new(vec![f64_nan, f64_nonnan])?;
 
     let err = col("f64_nan")

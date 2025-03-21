@@ -631,10 +631,14 @@ class AtomDomain(Domain):
         return _atom_domain_get_bounds_closed(self)
     
     @property
-    def nullable(self) -> bool:
-        '''Whether the domain includes null values'''
-        from opendp.domains import _atom_domain_get_nullable
-        return _atom_domain_get_nullable(self)
+    def nan(self) -> bool:
+        """Whether the domain includes NaN values
+        
+        Only relevant when the carrier type is a floating point type.
+        All other types will always return ``False``.
+        """
+        from opendp.domains import _atom_domain_nan
+        return _atom_domain_nan(self)
     
 
 class OptionDomain(Domain):
@@ -1040,6 +1044,7 @@ def binary_search_chain(
     >>> # The majority of the chain only needs to be defined once.
     >>> pre = (
     ...     dp.space_of(list[float]) >>
+    ...     dp.t.then_impute_constant(0.0) >>
     ...     dp.t.then_clamp(bounds=(0., 1.)) >>
     ...     dp.t.then_resize(size=10, constant=0.) >>
     ...     dp.t.then_mean()
@@ -1099,7 +1104,7 @@ def binary_search_param(
     ...
     >>> def make_fixed_laplace(scale):
     ...     # fixes the input domain and metric, but parameterizes the noise scale
-    ...     return dp.m.make_laplace(dp.atom_domain(T=float), dp.absolute_distance(T=float), scale)
+    ...     return dp.m.make_laplace(dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float), scale)
     ...
     >>> scale = dp.binary_search_param(make_fixed_laplace, d_in=0.1, d_out=1.)
     >>> assert scale == 0.1

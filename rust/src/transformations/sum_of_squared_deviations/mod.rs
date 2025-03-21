@@ -105,7 +105,7 @@ where
 
     Transformation::new(
         input_domain,
-        AtomDomain::default(),
+        AtomDomain::new_non_nan(),
         Function::new(move |arg: &Vec<S::Item>| {
             let mean = S::unchecked_sum(arg) / size_;
             S::unchecked_sum(

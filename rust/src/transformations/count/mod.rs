@@ -43,7 +43,7 @@ where
 {
     Transformation::new(
         input_domain,
-        AtomDomain::default(),
+        AtomDomain::new_non_nan(),
         // think of this as: min(arg.len(), TO::max_value())
         Function::new(move |arg: &Vec<TIA>| {
             // get size via the CollectionSize trait
@@ -88,7 +88,7 @@ where
 {
     Transformation::new(
         input_domain,
-        AtomDomain::default(),
+        AtomDomain::new_non_nan(),
         Function::new(move |arg: &Vec<TIA>| {
             let len = arg.iter().collect::<HashSet<_>>().len();
             TO::exact_int_cast(len).unwrap_or(TO::MAX_CONSECUTIVE)
@@ -162,7 +162,7 @@ where
     }
     Transformation::new(
         input_domain,
-        VectorDomain::new(AtomDomain::default()),
+        VectorDomain::new(AtomDomain::new_non_nan()),
         Function::new(move |data: &Vec<TIA>| {
             let mut counts = categories
                 .iter()
@@ -250,7 +250,7 @@ where
 {
     Transformation::new(
         input_domain.clone(),
-        MapDomain::new(input_domain.element_domain, AtomDomain::default()),
+        MapDomain::new(input_domain.element_domain, AtomDomain::new_non_nan()),
         Function::new(move |data: &Vec<TK>| {
             let mut counts = HashMap::new();
             data.iter().for_each(|v| {

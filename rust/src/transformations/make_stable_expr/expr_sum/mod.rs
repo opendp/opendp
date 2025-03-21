@@ -62,8 +62,8 @@ where
     use DataType::*;
 
     let nan = match dtype {
-        Float32 => middle_domain.column.atom_domain::<f32>()?.nullable(),
-        Float64 => middle_domain.column.atom_domain::<f64>()?.nullable(),
+        Float32 => middle_domain.column.atom_domain::<f32>()?.nan(),
+        Float64 => middle_domain.column.atom_domain::<f64>()?.nan(),
         _ => false,
     };
 

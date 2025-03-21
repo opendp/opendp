@@ -3,7 +3,7 @@ use polars_plan::plans::LiteralValue;
 use polars_plan::utils::expr_output_name;
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{AtomDomain, ExprDomain, Null, OuterMetric, SeriesDomain, WildExprDomain};
+use crate::domains::{AtomDomain, ExprDomain, NaN, OuterMetric, SeriesDomain, WildExprDomain};
 use crate::error::Fallible;
 use crate::transformations::DatasetMetric;
 
@@ -46,8 +46,8 @@ where
         LiteralValue::Int16(_) => series_domain!(i16, None),
         LiteralValue::Int32(_) => series_domain!(i32, None),
         LiteralValue::Int64(_) => series_domain!(i64, None),
-        LiteralValue::Float32(v) => series_domain!(f32, v.is_nan().then(Null::new)),
-        LiteralValue::Float64(v) => series_domain!(f64, v.is_nan().then(Null::new)),
+        LiteralValue::Float32(v) => series_domain!(f32, v.is_nan().then(NaN::new)),
+        LiteralValue::Float64(v) => series_domain!(f64, v.is_nan().then(NaN::new)),
         value => return fallible!(MakeTransformation, "unsupported literal value: {:?}", value),
     };
 

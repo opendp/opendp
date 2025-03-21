@@ -223,7 +223,7 @@ pub fn test_empirical_laplace_accuracy() -> Fallible<()> {
     let accuracy = 1.0;
     let theoretical_alpha = 0.05;
     let scale = accuracy_to_laplacian_scale(accuracy, theoretical_alpha)?;
-    let input_domain = AtomDomain::default();
+    let input_domain = AtomDomain::new_non_nan();
     let input_metric = AbsoluteDistance::default();
     let laplace = make_scalar_float_laplace(input_domain, input_metric, scale, Some(-100))?;
     let n = 50_000;
@@ -246,7 +246,7 @@ pub fn test_empirical_gaussian_accuracy() -> Fallible<()> {
     let theoretical_alpha = 0.05;
     let scale = accuracy_to_gaussian_scale(accuracy, theoretical_alpha)?;
     let base_gaussian = make_scalar_float_gaussian::<ZeroConcentratedDivergence, _>(
-        AtomDomain::default(),
+        AtomDomain::new_non_nan(),
         AbsoluteDistance::default(),
         scale,
         Some(-100),

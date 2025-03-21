@@ -26,7 +26,7 @@ use std::ops::Bound;
 
 use crate::core::Domain;
 use crate::error::Fallible;
-use crate::traits::{CheckAtom, InherentNull, ProductOrd};
+use crate::traits::{CheckAtom, HasNull, ProductOrd};
 use std::fmt::{Debug, Formatter};
 
 use bitvec::prelude::{BitVec, Lsb0};
@@ -37,10 +37,10 @@ mod poly;
 /// # Proof Definition
 /// `AtomDomain(T)` is the domain of all values of an atomic type `T`.
 /// If bounds are set, then the domain is restricted to the bounds.
-/// If nullable is set, then null value(s) are included in the domain.
+/// If nan is set, then nan value(s) are included in the domain.
 ///
 /// # Notes
-/// If nullable is set, a domain may have multiple possible null values,
+/// If nan is set, a domain may have multiple possible NaN values,
 /// like in the case of floating-point numbers, which have ~`2^MANTISSA_BITS` null values.
 ///
 /// Because domains are defined in terms of a union,
@@ -58,8 +58,8 @@ mod poly;
 /// use opendp::core::Domain;
 /// assert!(i32_domain.member(&1)?);
 ///
-/// // Create a domain that includes all non-null 32-bit floats.
-/// let f32_domain = AtomDomain::<f32>::default();
+/// // Create a domain that includes all non-nan 32-bit floats.
+/// let f32_domain = AtomDomain::<f32>::new_non_nan();
 ///
 /// // 1. is a member of the f32_domain
 /// assert!(f32_domain.member(&1.)?);
@@ -68,23 +68,23 @@ mod poly;
 /// # opendp::error::Fallible::Ok(())
 /// ```
 ///
-/// # Null Example
+/// # NaN Example
 /// ```
-/// use opendp::domains::{Null, AtomDomain};
-/// let all_domain = AtomDomain::default();
-/// let null_domain = AtomDomain::new_nullable();
+/// use opendp::domains::AtomDomain;
+/// let all_domain = AtomDomain::new_non_nan();
+/// let nan_domain = AtomDomain::default();
 ///
 /// use opendp::core::Domain;
-/// // f64 NAN is not a member of all_domain, but is a member of null_domain
+/// // f64 NAN is not a member of all_domain, but is a member of nan_domain
 /// assert!(!all_domain.member(&f64::NAN)?);
-/// assert!(null_domain.member(&f64::NAN)?);
+/// assert!(nan_domain.member(&f64::NAN)?);
 ///
 /// # opendp::error::Fallible::Ok(())
 /// ```
 #[derive(Clone, PartialEq)]
 pub struct AtomDomain<T: CheckAtom> {
     pub bounds: Option<Bounds<T>>,
-    nullable: bool,
+    nan: bool,
 }
 
 impl<T: CheckAtom> Debug for AtomDomain<T> {
@@ -94,31 +94,31 @@ impl<T: CheckAtom> Debug for AtomDomain<T> {
             .as_ref()
             .map(|b| format!("bounds={:?}, ", b))
             .unwrap_or_default();
-        let nullable = self.nullable.then(|| "nullable=true, ").unwrap_or_default();
-        write!(f, "AtomDomain({}{}T={})", bounds, nullable, type_name!(T))
+        let nan = self.nan.then(|| "nan=true, ").unwrap_or_default();
+        write!(f, "AtomDomain({}{}T={})", bounds, nan, type_name!(T))
     }
 }
 impl<T: CheckAtom> Default for AtomDomain<T> {
     fn default() -> Self {
         AtomDomain {
             bounds: None,
-            nullable: false,
+            nan: T::NULLABLE,
         }
     }
 }
 impl<T: CheckAtom> AtomDomain<T> {
-    pub fn new(bounds: Option<Bounds<T>>, nullable: Option<Null<T>>) -> Self {
+    pub fn new(bounds: Option<Bounds<T>>, nan: Option<NaN<T>>) -> Self {
         AtomDomain {
             bounds,
-            nullable: nullable.is_some(),
+            nan: nan.is_some(),
         }
     }
-    pub fn nullable(&self) -> bool {
-        self.nullable
+    pub fn nan(&self) -> bool {
+        self.nan
     }
-    pub fn assert_non_null(&self) -> Fallible<()> {
-        if self.nullable() {
-            return fallible!(FailedFunction, "Domain has null values");
+    pub fn assert_non_nan(&self) -> Fallible<()> {
+        if self.nan() {
+            return fallible!(FailedFunction, "Domain contains nan");
         }
         Ok(())
     }
@@ -126,11 +126,11 @@ impl<T: CheckAtom> AtomDomain<T> {
         self.bounds.as_ref()
     }
 }
-impl<T: CheckAtom + InherentNull> AtomDomain<T> {
-    pub fn new_nullable() -> Self {
+impl<T: CheckAtom> AtomDomain<T> {
+    pub fn new_non_nan() -> Self {
         AtomDomain {
             bounds: None,
-            nullable: true,
+            nan: false,
         }
     }
 }
@@ -138,7 +138,7 @@ impl<T: CheckAtom + ProductOrd + Debug> AtomDomain<T> {
     pub fn new_closed(bounds: (T, T)) -> Fallible<Self> {
         Ok(AtomDomain {
             bounds: Some(Bounds::new_closed(bounds)?),
-            nullable: false,
+            nan: false,
         })
     }
 
@@ -160,40 +160,35 @@ impl<T: CheckAtom + ProductOrd + Debug> AtomDomain<T> {
 impl<T: CheckAtom> Domain for AtomDomain<T> {
     type Carrier = T;
     fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
-        val.check_member(self.bounds.clone(), self.nullable)
+        val.check_member(self.bounds.clone(), self.nan)
     }
 }
 
 /// # Proof Definition
-/// `Null(T)` is a marker that can only be constructed by values of `T` that can contain inherent nullity.
+/// `NaN(T)` is a marker that can only be constructed by values of `T` that may be NaN.
 ///
-/// The nullity of members in `T` is indicated via the trait [`crate::traits::InherentNull`].
+/// The presence of nan in values of type `T` is indicated via the trait [`crate::traits::HasNaN`].
 #[derive(PartialEq)]
-pub struct Null<T> {
+pub struct NaN<T> {
     pub _marker: PhantomData<T>,
 }
-impl<T> Clone for Null<T> {
+impl<T> Clone for NaN<T> {
     fn clone(&self) -> Self {
         Self {
             _marker: self._marker.clone(),
         }
     }
 }
-impl<T: InherentNull> Default for Null<T> {
+impl<T: HasNull> Default for NaN<T> {
     fn default() -> Self {
         Self::new()
     }
 }
-impl<T: InherentNull> Null<T> {
+impl<T: HasNull> NaN<T> {
     pub fn new() -> Self {
-        Null {
+        NaN {
             _marker: PhantomData,
         }
-    }
-}
-impl<T> Debug for Null<T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "Null({:?})", type_name!(T))
     }
 }
 

@@ -22,7 +22,9 @@ To use the function, the Transformation or Measurement can be called directly:
 
       >>> import opendp.prelude as dp
       >>> dp.enable_features("contrib")
-      >>> input_domain = dp.vector_domain(dp.atom_domain(T=float))
+      >>> # input data consists of vectors of non-null floats
+      >>> input_domain = dp.vector_domain(dp.atom_domain(T=float, nan=False))
+      >>> # adjacent datasets differ by the addition or removal of records
       >>> input_metric = dp.symmetric_distance()
       >>> clamp = dp.t.make_clamp(input_domain, input_metric, bounds=(0., 5.))
       >>> type(clamp)
@@ -66,7 +68,7 @@ and checks that 1.0 is a member of the domain, but NaN is not.
 
     .. code:: python
 
-      >>> f64_atom_domain = dp.atom_domain(T=float)  # float defaults to f64, a double-precision 64-bit float
+      >>> f64_atom_domain = dp.atom_domain(T=float, nan=False)  # float defaults to f64, a double-precision 64-bit float
       >>> assert f64_atom_domain.member(1.0)
       >>> assert not f64_atom_domain.member(float('nan'))
 

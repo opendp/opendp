@@ -15,7 +15,7 @@ def test_amplification():
     assert not amplified.check(2, .494)
 
 def test_fix_delta():
-    input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
 
     m_gauss = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 10.))
     assert m_gauss.map(1.).epsilon(1e-6) == 0.4299414688369494
@@ -25,14 +25,14 @@ def test_fix_delta():
 
 
 def test_make_basic_composition():
-    input_space = (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
+    input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
     composed = dp.c.make_basic_composition([
         input_space >> dp.t.then_count() >> dp.c.make_basic_composition([
             dp.space_of(int) >> dp.m.then_laplace(scale=2.), 
             dp.space_of(int) >> dp.m.then_laplace(scale=200.)
         ]),
         input_space >> dp.t.then_cast_default(bool) >> dp.t.then_cast_default(int) >> dp.t.then_count() >> dp.m.then_laplace(scale=2.), 
-        input_space >> dp.t.then_cast_default(float) >> dp.t.then_clamp((0., 10.)) >> dp.t.then_sum() >> dp.m.then_laplace(scale=2.), 
+        input_space >> dp.t.then_cast_default(float) >> dp.t.then_impute_constant(0.0) >> dp.t.then_clamp((0., 10.)) >> dp.t.then_sum() >> dp.m.then_laplace(scale=2.), 
 
         dp.c.make_basic_composition([
             input_space >> dp.t.then_count() >> dp.m.then_laplace(scale=2.), 
@@ -70,7 +70,7 @@ def test_make_basic_composition_leak():
 
 
 def test_make_basic_composition_approx():
-    input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
     composed_fixed = dp.c.make_basic_composition([
         dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 1.)), 1e-7)
     ] * 2)
@@ -78,7 +78,7 @@ def test_make_basic_composition_approx():
 
 
 def test_cast_zcdp_approxdp():
-    input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
 
     base_gaussian = input_space >> dp.m.then_gaussian(10., MO=dp.ZeroConcentratedDivergence)
     assert base_gaussian.map(1.) == 0.005000000000000001
@@ -118,7 +118,7 @@ def test_renyidp():
 
 
 def test_make_approximate():
-    input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
 
     # spot check that mechanisms get delta terms
     m_gauss = dp.c.make_approximate(dp.m.make_gaussian(*input_space, 1.0))
@@ -136,7 +136,7 @@ def test_make_approximate():
 
 
 def test_make_pureDP_to_zCDP():
-    input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
     meas = dp.c.make_basic_composition([
         dp.c.make_pureDP_to_zCDP(dp.m.make_laplace(*input_space, 10.)),
         dp.m.make_gaussian(*input_space, 10.)
@@ -147,7 +147,7 @@ def test_make_pureDP_to_zCDP():
 
 
 def test_make_fixed_approxDP_to_approxDP():
-    input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
     fadp_meas = dp.c.make_approximate(dp.m.make_laplace(*input_space, 10.))
 
     adp_meas = dp.c.make_fixed_approxDP_to_approxDP(fadp_meas)

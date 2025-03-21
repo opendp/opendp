@@ -215,21 +215,22 @@ where
     )
 }
 
-#[bootstrap(features("contrib"), generics(DIA(suppress), M(suppress)))]
-/// Make a Transformation that checks if each element in a vector is null.
+#[bootstrap(features("contrib"), generics(M(suppress), DIA(suppress)))]
+/// Make a Transformation that checks if each element in a vector is null or nan.
 ///
 /// # Arguments
 /// * `input_domain` - Domain of input data
 /// * `input_metric` - Metric on input domain
 ///
 /// # Generics
-/// * `DIA` - Atomic Input Domain. Can be any domain for which the carrier type has a notion of nullity.
+/// * `M` - Metric on input domain.
+/// * `DIA` - Atomic Input Domain. Either `OptionDomain<AtomDomain<TIA>>` or `AtomDomain<TIA>`
 pub fn make_is_null<M, DIA>(
     input_domain: VectorDomain<DIA>,
     input_metric: M,
 ) -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<AtomDomain<bool>>, M, M>>
 where
-    DIA: Domain + Default,
+    DIA: Domain,
     DIA::Carrier: 'static + CheckNull,
     M: DatasetMetric,
     (VectorDomain<DIA>, M): MetricSpace,

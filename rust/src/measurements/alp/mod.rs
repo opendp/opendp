@@ -223,8 +223,8 @@ where
     f64: InfCast<CI>,
     (SparseDomain<K, CI>, L1Distance<CI>): MetricSpace,
 {
-    if input_domain.value_domain.nullable() {
-        return fallible!(MakeMeasurement, "value domain must be non-nullable");
+    if input_domain.value_domain.nan() {
+        return fallible!(MakeMeasurement, "value domain must be non-nan");
     }
 
     if scale.is_sign_negative() || scale.is_zero() {

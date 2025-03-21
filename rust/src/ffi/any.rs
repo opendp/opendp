@@ -725,16 +725,18 @@ mod tests {
         #[allow(deprecated)]
         let t2 = transformations::make_select_column::<_, String>("a".to_owned())?.into_any();
         let t3 = transformations::then_cast_default::<SymmetricDistance, String, f64>().into_any();
-        let t4 = transformations::then_clamp::<_, SymmetricDistance>((0.0, 10.0)).into_any();
-        let t5 = transformations::then_sum::<SymmetricDistance, f64>().into_any();
+        let t4 = transformations::then_impute_constant::<AtomDomain<f64>, SymmetricDistance>(0.0)
+            .into_any();
+        let t5 = transformations::then_clamp::<_, SymmetricDistance>((0.0, 10.0)).into_any();
+        let t6 = transformations::then_sum::<SymmetricDistance, f64>().into_any();
         let m1 = measurements::make_laplace(
-            AtomDomain::<f64>::default(),
+            AtomDomain::<f64>::new_non_nan(),
             AbsoluteDistance::default(),
             0.0,
             None,
         )?
         .into_any();
-        let chain = (t1 >> t2 >> t3 >> t4 >> t5 >> m1)?;
+        let chain = (t1 >> t2 >> t3 >> t4 >> t5 >> t6 >> m1)?;
         let arg = AnyObject::new("1.0, 10.0\n2.0, 20.0\n3.0, 30.0\n".to_owned());
         let res = chain.invoke(&arg)?;
         let res: f64 = res.downcast()?;

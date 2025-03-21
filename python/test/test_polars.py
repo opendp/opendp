@@ -107,7 +107,7 @@ def test_private_lazyframe_explicit_sum(measure):
         margin=["B"], public_info="keys", max_partition_length=50, max_num_partitions=10,
     )
 
-    expr = pl.col("A").fill_null(0.0).clip(0.0, 1.0).sum().dp.noise(0.0)
+    expr = pl.col("A").fill_nan(0.0).fill_null(0.0).clip(0.0, 1.0).sum().dp.noise(0.0)
     plan = seed(lf.collect_schema()).group_by("B").agg(expr)
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), measure, plan, 0.0
@@ -133,7 +133,7 @@ def test_private_lazyframe_sum(measure):
     lf_domain, lf = example_lf(
         margin=["B"], public_info="keys", max_partition_length=50, max_num_partitions=10,
     )
-    expr = pl.col("A").fill_null(0.0).dp.sum((1.0, 2.0), scale=0.0)
+    expr = pl.col("A").fill_nan(0.0).fill_null(0.0).dp.sum((1.0, 2.0), scale=0.0)
     plan = seed(lf.collect_schema()).group_by("B").agg(expr)
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), measure, plan, 0.0
@@ -159,7 +159,7 @@ def test_private_lazyframe_mean(measure):
         margin=["B"], public_info="lengths", max_partition_length=50, max_num_partitions=10,
     )
 
-    expr = pl.col("A").fill_null(0.0).dp.mean((1.0, 2.0), scale=(0.0, 0.0))
+    expr = pl.col("A").fill_nan(0.0).fill_null(0.0).dp.mean((1.0, 2.0), scale=(0.0, 0.0))
     plan = seed(lf.collect_schema()).group_by("B").agg(expr)
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), measure, plan, 1.0
@@ -863,7 +863,7 @@ def test_float_sum_with_unlimited_reorderable_partitions():
     # sum of income per region, add noise with scale of 1.0
     pl = pytest.importorskip('polars')
     plan = lf.group_by("region").agg([
-        pl.col("income").dp.sum(bounds=(1_000, 100_000), scale=1.0)
+        pl.col("income").fill_nan(0.0).dp.sum(bounds=(1_000, 100_000), scale=1.0)
     ])
 
     # since there are an unknown number of partitions, and each partition has non-zero sensitivity, sensitivity is undefined

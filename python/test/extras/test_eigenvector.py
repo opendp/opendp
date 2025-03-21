@@ -44,7 +44,7 @@ def test_eigenvector_integration():
         meas = (
             space
             >> then_np_clamp(norm=1.0, p=2)
-            >> then_np_sscp(dp.symmetric_distance())
+            >> then_np_sscp()
             >> then_private_eigenvector(1.0)
         )
 
@@ -68,7 +68,7 @@ def test_eigenvectors():
     sp_sscp = (
         space
         >> then_np_clamp(norm=4.0, p=2)
-        >> then_np_sscp(dp.symmetric_distance())
+        >> then_np_sscp()
     )
     with optional_dependency('scipy.linalg'):
         meas = sp_sscp >> then_private_eigenvectors([1.0] * 3)
