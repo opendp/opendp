@@ -1,6 +1,9 @@
 use polars::prelude::*;
 use polars_plan::dsl::Expr;
 use polars_plan::utils::expr_output_name;
+// This code is not particular to Python, so we shouldn't need the higher-level library here.
+// https://github.com/opendp/opendp/issues/2309
+use pyo3_polars::export::polars_core::utils::try_get_supertype;
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, ExprDomain, ExprPlan, OuterMetric, SeriesDomain, WildExprDomain};
@@ -44,18 +47,6 @@ where
         .clone()
         .make_stable(input_domain.as_row_by_row(), input_metric.clone())?;
 
-    use polars_plan::dsl::Operator::*;
-    if !matches!(
-        op,
-        Eq | NotEq | Lt | LtEq | Gt | GtEq | And | Or | Xor | LogicalAnd | LogicalOr
-    ) {
-        return fallible!(
-            MakeTransformation,
-            "unsupported operator: {:?}. Only binary operations that emit booleans are currently supported.",
-            op
-        );
-    }
-
     let left_series = &t_left.output_domain.column;
     let right_series = &t_right.output_domain.column;
 
@@ -69,9 +60,49 @@ where
         );
     }
 
-    let mut data_column =
-        SeriesDomain::new(expr_output_name(&expr)?, AtomDomain::<bool>::default());
-    data_column.nullable = left_series.nullable || right_series.nullable;
+    use polars_plan::dsl::Operator::*;
+
+    let data_column = match op {
+        Eq | NotEq | Lt | LtEq | Gt | GtEq | And | Or | Xor | LogicalAnd | LogicalOr => {
+            let mut series_domain =
+                SeriesDomain::new(expr_output_name(&expr)?, AtomDomain::<bool>::default());
+            series_domain.nullable = left_series.nullable || right_series.nullable;
+            series_domain
+        }
+        Plus | Minus | Multiply | Divide | TrueDivide | FloorDivide => {
+            let common_dtype = try_get_supertype(&left_series.dtype(), &right_series.dtype())?;
+
+            let out_dtype = match op {
+                Plus | Minus | Multiply | FloorDivide => common_dtype,
+                TrueDivide | Divide => {
+                    if common_dtype.is_float() {
+                        common_dtype
+                    } else {
+                        DataType::Float64
+                    }
+                }
+                _ => unreachable!("due to above match arm"),
+            };
+
+            let mut series_domain = SeriesDomain::new_from_field(Field::new(
+                left_series.name.clone(),
+                out_dtype.clone(),
+            ))?;
+
+            // output is nullable when op is FloorDivide since a // 0 is null for any a
+            series_domain.nullable =
+                left_series.nullable || right_series.nullable || matches!(op, FloorDivide);
+
+            series_domain
+        }
+        _ => {
+            return fallible!(
+                MakeTransformation,
+                "unsupported operator: {:?}. Only arithmetic operations or binary operations that emit booleans are currently supported.",
+                op
+            );
+        }
+    };
 
     let output_domain = ExprDomain {
         column: data_column,
@@ -92,11 +123,10 @@ where
                     right: Arc::new(right.expr),
                     op: op.clone(),
                 },
-                fill: left.fill.zip(right.fill).map(|(l, r)| Expr::BinaryExpr {
-                    left: Arc::new(l),
-                    right: Arc::new(r),
-                    op: op.clone(),
-                }),
+                // Since this is None, if binary expressions are used after the aggregation,
+                // execution will fail in a data-independent way.
+                // But you can't use binary ops after aggs anyways, so this failure is unreachable.
+                fill: None,
             })
         }),
         input_metric.clone(),
