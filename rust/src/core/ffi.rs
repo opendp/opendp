@@ -240,7 +240,7 @@ pub extern "C" fn opendp_core___error_free(this: *mut FfiError) -> bool {
 #[bootstrap(
     name = "transformation_input_domain",
     arguments(this(rust_type = b"null")),
-    returns(c_type = "FfiResult<AnyDomain *>", do_not_convert = true)
+    returns(c_type = "FfiResult<AnyDomain *>")
 )]
 /// Get the input domain from a `transformation`.
 ///
@@ -256,7 +256,7 @@ pub extern "C" fn opendp_core__transformation_input_domain(
 #[bootstrap(
     name = "transformation_output_domain",
     arguments(this(rust_type = b"null")),
-    returns(c_type = "FfiResult<AnyDomain *>", do_not_convert = true)
+    returns(c_type = "FfiResult<AnyDomain *>")
 )]
 /// Get the output domain from a `transformation`.
 ///
@@ -272,7 +272,7 @@ pub extern "C" fn opendp_core__transformation_output_domain(
 #[bootstrap(
     name = "transformation_input_metric",
     arguments(this(rust_type = b"null")),
-    returns(c_type = "FfiResult<AnyMetric *>", do_not_convert = true)
+    returns(c_type = "FfiResult<AnyMetric *>")
 )]
 /// Get the input domain from a `transformation`.
 ///
@@ -288,7 +288,7 @@ pub extern "C" fn opendp_core__transformation_input_metric(
 #[bootstrap(
     name = "transformation_output_metric",
     arguments(this(rust_type = b"null")),
-    returns(c_type = "FfiResult<AnyMetric *>", do_not_convert = true)
+    returns(c_type = "FfiResult<AnyMetric *>")
 )]
 /// Get the output domain from a `transformation`.
 ///
@@ -304,7 +304,7 @@ pub extern "C" fn opendp_core__transformation_output_metric(
 #[bootstrap(
     name = "measurement_input_domain",
     arguments(this(rust_type = b"null")),
-    returns(c_type = "FfiResult<AnyDomain *>", do_not_convert = true)
+    returns(c_type = "FfiResult<AnyDomain *>")
 )]
 /// Get the input domain from a `measurement`.
 ///
@@ -320,7 +320,7 @@ pub extern "C" fn opendp_core__measurement_input_domain(
 #[bootstrap(
     name = "measurement_input_metric",
     arguments(this(rust_type = b"null")),
-    returns(c_type = "FfiResult<AnyMetric *>", do_not_convert = true)
+    returns(c_type = "FfiResult<AnyMetric *>")
 )]
 /// Get the input domain from a `measurement`.
 ///
@@ -336,7 +336,7 @@ pub extern "C" fn opendp_core__measurement_input_metric(
 #[bootstrap(
     name = "measurement_output_measure",
     arguments(this(rust_type = b"null")),
-    returns(c_type = "FfiResult<AnyMeasure *>", do_not_convert = true)
+    returns(c_type = "FfiResult<AnyMeasure *>")
 )]
 /// Get the output domain from a `measurement`.
 ///
