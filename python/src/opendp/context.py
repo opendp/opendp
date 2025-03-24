@@ -412,15 +412,9 @@ class Context(object):
                 from warnings import warn
                 warn('Margin dicts should be replaced with lists, with the key supplied as the "by" kwarg', DeprecationWarning)
                 margins = [replace(margin, by=by) for by, margin in margins.items()]
-            
-            pl = import_optional_dependency("polars")
-            for margin in margins:
-                by = margin.by or []
-                if not isinstance(by, Sequence) or isinstance(by, str):
-                    raise ValueError("Margin keys must be a sequence")
 
-                by_exprs = [col if isinstance(col, pl.Expr) else pl.col(col) for col in by]
-                domain = with_margin(domain, **asdict(replace(margin, by=by_exprs)))
+            for margin in margins:
+                domain = with_margin(domain, Margin(**asdict(replace(margin, by=margin.by or []))))
 
         accountant, d_mids = _sequential_composition_by_weights(
             domain, privacy_unit, privacy_loss, split_evenly_over, split_by_weights

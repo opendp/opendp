@@ -1,6 +1,9 @@
 use std::{ffi::c_char, fmt::Debug, marker::PhantomData};
 
-use crate::ffi::any::{AnyObject, CallbackFn, Downcast, wrap_func};
+use crate::ffi::{
+    any::{AnyObject, CallbackFn, Downcast, wrap_func},
+    util::c_bool,
+};
 use opendp_derive::bootstrap;
 
 use crate::{
@@ -24,6 +27,24 @@ use super::{PrivacyProfile, RenyiDivergence, SmoothedMaxDivergence};
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_measures___measure_free(this: *mut AnyMeasure) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
+}
+
+#[bootstrap(
+    name = "_measure_equal",
+    returns(c_type = "FfiResult<bool *>", hint = "bool")
+)]
+/// Check whether two measures are equal.
+///
+/// # Arguments
+/// * `left` - Measure to compare.
+/// * `right` - Measure to compare.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measures___measure_equal(
+    left: *mut AnyMeasure,
+    right: *const AnyMeasure,
+) -> FfiResult<*mut c_bool> {
+    let status = try_as_ref!(left) == try_as_ref!(right);
+    FfiResult::Ok(util::into_raw(util::from_bool(status)))
 }
 
 #[bootstrap(

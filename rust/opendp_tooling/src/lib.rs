@@ -50,8 +50,6 @@ pub struct Argument {
     pub description: Option<String>,
     // default value for the argument
     pub default: Option<Value>,
-    // a list of names in the default that should be considered generics
-    pub generics: Vec<String>,
     // set to true if the argument represents a type
     pub is_type: bool,
     // most functions convert c_to_py or py_to_c. Set to true to leave the value as-is
@@ -60,6 +58,18 @@ pub struct Argument {
     pub do_not_convert: bool,
     // when is_type, use this as an example to infer the type
     pub example: Option<TypeRecipe>,
+}
+
+impl Argument {
+    /// Returns the intersection of leaf names and the provided variables.
+    /// That is, leaf nodes that are variables are considered generics.
+    fn generics(&self, variables: &Vec<String>) -> Vec<String> {
+        variables
+            .iter()
+            .filter(|v| Some(*v) != self.name.as_ref())
+            .cloned()
+            .collect()
+    }
 }
 
 // TypeRecipe contains the metadata to generate code that evaluates to a rust type name

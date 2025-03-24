@@ -25,7 +25,9 @@ use crate::core::{FfiError, FfiResult, FfiSlice, Function};
 use crate::domains::BitVector;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyFunction, AnyMeasurement, AnyObject, AnyQueryable, Downcast};
-use crate::ffi::util::{self, AnyDomainPtr, ExtrinsicObject, into_c_char_p};
+use crate::ffi::util::{
+    self, AnyDomainPtr, ExtrinsicObject, as_ref, into_c_char_p, into_raw, to_option_str,
+};
 use crate::ffi::util::{AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents, c_bool};
 use crate::measures::PrivacyProfile;
 use crate::metrics::IntDistance;
@@ -260,6 +262,29 @@ pub extern "C" fn opendp_data__slice_as_object(
     fn raw_to_dslplan(raw: &FfiSlice) -> Fallible<AnyObject> {
         Ok(AnyObject::new(LazyFrame::from(deserialize_raw::<DslPlan>(raw, "LazyFrame")?).logical_plan))
     }
+    #[cfg(feature = "polars")]
+    fn raw_to_margin(raw: &FfiSlice) -> Fallible<AnyObject> {
+        use std::collections::HashSet;
+        use crate::domains::{Margin, MarginPub};
+
+        if raw.len != 6 {
+            return fallible!(FFI, "Margin FfiSlice must have length 6, found a length of {}", raw.len);
+        }
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, raw.len) };
+        Ok(AnyObject::new(Margin {
+            by: HashSet::from_iter(try_!(try_as_ref!(slice[0] as *const AnyObject).downcast_ref::<Vec<Expr>>()).clone()),
+            max_partition_length: as_ref(slice[1] as *const u32).cloned(),
+            max_num_partitions: as_ref(slice[2] as *const u32).cloned(),
+            public_info: match to_option_str(slice[3] as *const c_char)? {
+                Some("keys") => Some(MarginPub::Keys),
+                Some("lengths") => Some(MarginPub::Lengths),
+                None => None,
+                _ => return fallible!(FFI, "public_info must be None, 'keys' or 'lengths'"),
+            },
+            max_partition_contributions: as_ref(slice[4] as *const u32).cloned(),
+            max_influenced_partitions: as_ref(slice[5] as *const u32).cloned(),
+        })).into()
+    }
     match T_.contents {
         TypeContents::PLAIN("BitVector") => raw_to_bitvector(raw),
         TypeContents::PLAIN("String") => raw_to_string(raw),
@@ -275,6 +300,8 @@ pub extern "C" fn opendp_data__slice_as_object(
         TypeContents::PLAIN("DataFrame") => raw_to_dataframe(raw),
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("Series") => raw_to_series(raw),
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("Margin") => raw_to_margin(raw),
 
         TypeContents::SLICE(element_id) => {
             let element = try_!(Type::of_id(&element_id));
@@ -305,7 +332,6 @@ pub extern "C" fn opendp_data__slice_as_object(
             match element_ids.len() {
                 // In the inbound direction, we can handle tuples of primitives only.
                 2 => {
-
                     if types == vec![Type::of::<f64>(), Type::of::<ExtrinsicObject>()] {
                         return raw_to_tuple2::<f64, AnyObject>(raw).into();
                     }
@@ -418,6 +444,18 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         util::into_raw(vec);
         res
     }
+
+    #[cfg(feature = "polars")]
+    fn vec_expr_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
+        let vec_expr: &Vec<Expr> = obj.downcast_ref()?;
+        let vec = (vec_expr.iter().cloned())
+            .map(AnyObject::new)
+            .collect::<Vec<AnyObject>>();
+
+        let res = Ok(FfiSlice::new(vec.as_ptr() as *mut c_void, vec.len()));
+        util::into_raw(vec);
+        res
+    }
     fn slice_to_raw<T>(_obj: &AnyObject) -> Fallible<FfiSlice> {
         // TODO: Need to get a reference to the slice here.
         unimplemented!()
@@ -436,8 +474,17 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             2,
         ))
     }
-    fn option_tuple2_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        Ok(
+    fn option_to_raw(obj: &AnyObject, args: &Vec<TypeId>) -> Fallible<FfiSlice> {
+        let [T] = try_!(parse_type_args(args, "Option"));
+
+        Ok(if T == Type::of::<AnyObject>() {
+            // example usage is when returning bounds, which is an option of a tuple
+            if let Some(value) = obj.downcast_ref::<Option<AnyObject>>()? {
+                FfiSlice::new(value as *const AnyObject as *mut c_void, 1)
+            } else {
+                FfiSlice::new(null::<c_void>() as *mut c_void, 0)
+            }
+        } else if T == Type::of::<(f64, AnyObject)>() {
             if let Some((score, candidate)) = obj.downcast_ref::<Option<(f64, AnyObject)>>()? {
                 FfiSlice::new(
                     util::into_raw([
@@ -448,8 +495,10 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
                 )
             } else {
                 FfiSlice::new(null::<c_void>() as *mut c_void, 0)
-            },
-        )
+            }
+        } else {
+            return fallible!(FFI, "unsupported object type: Option<{}>", T.to_string());
+        })
     }
     fn tuple3_partition_distance_to_raw<T: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
         let tuple: &(IntDistance, T, T) = obj.downcast_ref()?;
@@ -576,6 +625,44 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         })
     }
 
+    #[cfg(feature = "polars")]
+    fn margin_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
+        use crate::domains::{Margin, MarginPub};
+
+        let margin = obj.downcast_ref::<Margin>()?;
+
+        fn to_ptr<T>(v: Option<T>) -> *const c_void {
+            v.map(|v| into_raw(v) as *const c_void).unwrap_or_else(null)
+        }
+
+        let buffer = vec![
+            AnyObject::new_raw(margin.by.iter().cloned().collect::<Vec<_>>()) as *const c_void,
+            to_ptr(margin.max_partition_length),
+            to_ptr(margin.max_num_partitions),
+            margin
+                .public_info
+                .map(|v| {
+                    into_c_char_p(
+                        match v {
+                            MarginPub::Keys => "keys",
+                            MarginPub::Lengths => "lengths",
+                        }
+                        .to_string(),
+                    )
+                    .unwrap() as *const c_void
+                })
+                .unwrap_or_else(null),
+            to_ptr(margin.max_partition_contributions),
+            to_ptr(margin.max_influenced_partitions),
+        ];
+        let slice = FfiSlice {
+            ptr: buffer.as_ptr() as *mut c_void,
+            len: buffer.len(),
+        };
+        util::into_raw(buffer);
+        Ok(slice)
+    }
+
     fn tuple_curve_f64_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
         let (curve, delta) = obj.downcast_ref::<(PrivacyProfile, f64)>()?;
 
@@ -602,6 +689,8 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         TypeContents::PLAIN("DataFrame") => dataframe_to_raw(obj),
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("Series") => series_to_raw(obj),
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("Margin") => margin_to_raw(obj),
 
         TypeContents::SLICE(element_id) => {
             let element = try_!(Type::of_id(element_id));
@@ -609,6 +698,12 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         }
         TypeContents::VEC(element_id) => {
             let element = try_!(Type::of_id(element_id));
+
+            #[cfg(feature = "polars")]
+            if element.descriptor == "Expr" {
+                return vec_expr_to_raw(obj).into();
+            }
+
             if element.descriptor == "String" {
                 vec_string_to_raw(obj)
             } else {
@@ -638,8 +733,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         }
         TypeContents::GENERIC { name, args } => {
             if name == &"Option" {
-                if args.len() != 1 { return err!(FFI, "Options should have one argument, found {}", args.len()).into(); };
-                option_tuple2_to_raw(obj)
+                option_to_raw(obj, args)
             } else if name == &"Function" {
                 let [I, O] = try_!(parse_type_args(args, "Function"));
                 dispatch!(function_to_raw, [(I, @primitives), (O, @primitives)], (obj))

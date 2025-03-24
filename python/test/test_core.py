@@ -235,6 +235,7 @@ def test_custom_domain(new_domain):
 
     domain = datetime_domain(months={1, 2, 3, 4})
     assert str(domain).startswith("DatetimeDomain")
+    assert isinstance(domain, dp.ExtrinsicDomain)
 
     element = datetime.strptime("03/17/20 4:32:34", "%m/%d/%y %H:%M:%S")
     assert domain.member(element)

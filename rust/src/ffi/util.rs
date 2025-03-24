@@ -19,7 +19,7 @@ use crate::measures::{
 };
 use crate::metrics::{
     AbsoluteDistance, ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance,
-    L1Distance, L2Distance, SymmetricDistance,
+    L1Distance, L2Distance, PartitionDistance, SymmetricDistance,
 };
 
 #[cfg(feature = "polars")]
@@ -44,7 +44,7 @@ pub struct Pairwise<T>(PhantomData<T>);
 #[cfg(feature = "polars")]
 use crate::domains::{
     ArrayDomain, CategoricalDomain, DatetimeDomain, EnumDomain, ExprDomain, ExprPlan,
-    LazyFrameDomain, SeriesDomain,
+    LazyFrameDomain, Margin, SeriesDomain,
 };
 #[cfg(feature = "polars")]
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
@@ -308,6 +308,7 @@ lazy_static! {
 
             type_vec![CategoricalDomain, DatetimeDomain, EnumDomain, ArrayDomain],
             type_vec![OptionDomain, <CategoricalDomain, DatetimeDomain, EnumDomain, ArrayDomain>],
+            type_vec![Margin],
 
             vec![t!((DslPlan, Expr))],
             type_vec![Vec, <(DslPlan, Expr), SeriesDomain, Expr>],
@@ -323,6 +324,7 @@ lazy_static! {
             type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject]; 1], // Arrays are here just for unit tests, unlikely we'll use them.
             type_vec![[bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject]],
             type_vec![Vec, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject, ExtrinsicObject>],
+            type_vec![Option, <AnyObject>],
             type_vec![HashMap, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>, <bool, char, u8, u16, u32, i16, i32, i64, i128, f32, f64, usize, String, AnyObject, ExtrinsicObject>],
             type_vec![ExtrinsicObject, BitVector],
             // OptionDomain<AtomDomain<_>>::Carrier
@@ -352,6 +354,7 @@ lazy_static! {
 
             // metrics
             type_vec![ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance],
+            type_vec![PartitionDistance, <SymmetricDistance, InsertDeleteDistance>],
             type_vec![DiscreteDistance],
             type_vec![AbsoluteDistance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![L1Distance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],

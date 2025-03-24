@@ -88,7 +88,7 @@ def make_private_eigenvector(
         dp.max_divergence(),
         function,
         lambda d_in: d_in / 2 * unit_epsilon,
-        TO=dp.Vec[input_desc.T],
+        TO=f"Vec<{input_desc.T}>",
     )
 
 
