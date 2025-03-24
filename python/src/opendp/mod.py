@@ -8,7 +8,8 @@ instances of :py:class:`opendp.mod.Domain` are either inputs or outputs for func
 '''
 from __future__ import annotations
 import ctypes
-from typing import Any, Literal, Type, TypeVar, Union, Callable, Optional, overload, TYPE_CHECKING, cast
+from dataclasses import asdict
+from typing import Any, Literal, Sequence, Type, TypeVar, Union, Callable, Optional, overload, TYPE_CHECKING, cast
 import importlib
 import json
 
@@ -26,6 +27,12 @@ __all__ = [
     'Queryable',
     'Function',
     'Domain',
+    'AtomDomain',
+    'OptionDomain',
+    'VectorDomain',
+    'SeriesDomain',
+    'LazyFrameDomain',
+    'ExtrinsicDomain',
     'Metric',
     'Measure',
     'PrivacyProfile',
@@ -539,6 +546,8 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
 
     Functions for creating domains are in :py:mod:`opendp.domains`.
     '''
+    
+    # for documentation see https://docs.python.org/3/library/ctypes.html#ctypes._Pointer._type_
     _type_ = AnyDomain
 
     def member(self, val) -> bool:
@@ -576,14 +585,6 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
         from opendp.typing import RuntimeType
         return RuntimeType.parse(domain_carrier_type(self))
     
-    @property
-    def descriptor(self) -> Any:
-        '''
-        Descriptor of domain. Used to retrieve the descriptor associated with domains defined in Python 
-        '''
-        from opendp.domains import _extrinsic_domain_descriptor
-        return _extrinsic_domain_descriptor(self)
-
     def __repr__(self) -> str:
         from opendp.domains import domain_debug
         return domain_debug(self)
@@ -598,14 +599,145 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
             pass
     
     def __eq__(self, other) -> bool:
-        # TODO: consider adding ffi equality
-        return type(self) is type(other) and str(self) == str(other)
+        from opendp.domains import _domain_equal
+
+        if not isinstance(other, Domain):
+            return False
+        
+        return _domain_equal(self, other)
     
     def __hash__(self) -> int:
         return hash(str(self))
     
     def __iter__(self):
         raise ValueError("Domain does not support iteration")
+
+
+class AtomDomain(Domain):
+    '''The domain of all values of a given atomic type.
+
+    Create an instance of this domain with :py:func:`opendp.domains.atom_domain`.
+
+    If bounds are set, then the domain is restricted to the bounds.
+    If nullable is set, then null value(s) are included in the domain.
+    '''
+
+    _type_ = AnyDomain
+    
+    @property
+    def bounds(self) -> tuple[float, float] | None:
+        '''Bounds of the domain, if they exist'''
+        from opendp.domains import _atom_domain_get_bounds_closed
+        return _atom_domain_get_bounds_closed(self)
+    
+    @property
+    def nullable(self) -> bool:
+        '''Whether the domain includes null values'''
+        from opendp.domains import _atom_domain_get_nullable
+        return _atom_domain_get_nullable(self)
+    
+
+class OptionDomain(Domain):
+    '''A domain whose members are either members of the ``element_domain``, or ``None``.
+
+    Create an instance of this domain with :py:func:`opendp.domains.option_domain`.
+
+    The element domain is the domain of non-null values.
+    '''
+
+    _type_ = AnyDomain
+
+    @property
+    def element_domain(self) -> Domain:
+        '''Domain of non-null values'''
+        from opendp.domains import _option_domain_get_element_domain
+        return _option_domain_get_element_domain(self)
+
+
+class VectorDomain(Domain):
+    '''``VectorDomain`` describes the domain of all vectors whose elements are members of a given domain.
+    
+    Create an instance of this domain with :py:func:`opendp.domains.vector_domain`.
+    '''
+    _type_ = AnyDomain
+    
+    @property
+    def element_domain(self) -> Domain:
+        '''Domain of elements in the vector'''
+        from opendp.domains import _vector_domain_get_element_domain
+        return _vector_domain_get_element_domain(self)
+    
+    @property
+    def size(self) -> Optional[int]:
+        '''Size of vectors in the domain, if it is fixed'''
+        from opendp.domains import _vector_domain_get_size
+        return _vector_domain_get_size(self)
+
+
+class SeriesDomain(Domain):
+    '''``SeriesDomain`` describes the domain of all polars Series.
+    
+    Create an instance of this domain with :py:func:`opendp.domains.series_domain`.
+    '''
+    _type_ = AnyDomain
+
+    @property
+    def name(self) -> str:
+        '''Name of series in the domain'''
+        from opendp.domains import _series_domain_get_name
+        return _series_domain_get_name(self)
+    
+    @property
+    def element_domain(self) -> Domain:
+        '''Domain of non-null elements in the series'''
+        from opendp.domains import _series_domain_get_element_domain
+        return _series_domain_get_element_domain(self)
+    
+    @property
+    def nullable(self) -> bool:
+        '''Whether series in the domain may include null values'''
+        from opendp.domains import _series_domain_get_nullable
+        return _series_domain_get_nullable(self)
+    
+class LazyFrameDomain(Domain):
+    '''``LazyFrameDomain`` describes the domain of all polars LazyFrames.
+    
+    Create an instance of this domain with :py:func:`opendp.domains.lazyframe_domain`.
+    '''
+    _type_ = AnyDomain
+
+    @property
+    def columns(self) -> list[str]:
+        '''List of column names in the frame'''
+        from opendp.domains import _lazyframe_domain_get_columns
+        return _lazyframe_domain_get_columns(self)
+
+    def get_series_domain(self, name: str) -> SeriesDomain:
+        '''Retrieve the series domain with the given name'''
+        from opendp.domains import _lazyframe_domain_get_series_domain
+        return _lazyframe_domain_get_series_domain(self, name)
+    
+    def get_margin(self, by: Sequence[Any]):
+        '''Get the margin descriptor of the frame when grouped by the given columns'''
+        from opendp.domains import _lazyframe_domain_get_margin
+        from opendp._convert import _check_polars_by
+        _check_polars_by(by)
+
+        return _lazyframe_domain_get_margin(self, by)
+
+
+class ExtrinsicDomain(Domain):
+    '''A user-defined domain.'''
+
+    _type_ = AnyDomain
+        
+    @property
+    def descriptor(self) -> Any:
+        '''
+        Descriptor of domain. Used to retrieve the descriptor associated with domains defined in Python 
+        '''
+        from opendp.domains import _extrinsic_domain_descriptor
+        return _extrinsic_domain_descriptor(self)
 
 
 class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
@@ -649,8 +781,12 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
             pass
     
     def __eq__(self, other) -> bool:
-        # TODO: consider adding ffi equality
-        return type(self) is type(other) and str(self) == str(other)
+        from opendp.metrics import _metric_equal
+
+        if not isinstance(other, Metric):
+            return False
+        
+        return _metric_equal(self, other)
     
     def __hash__(self) -> int:
         return hash(str(self))
@@ -707,7 +843,12 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
             pass
 
     def __eq__(self, other):
-        return type(self) is type(other) and str(self) == str(other)
+        from opendp.measures import _measure_equal
+
+        if not isinstance(other, Measure):
+            return False
+        
+        return _measure_equal(self, other)
     
     def __hash__(self) -> int:
         return hash(str(self))
@@ -761,8 +902,11 @@ class _PartialConstructor(object):
         return _PartialConstructor(lambda input_domain, input_metric: self(input_domain, input_metric) >> other) # pragma: no cover
 
     def __rrshift__(self, other):
-        if isinstance(other, tuple) and list(map(type, other)) == [Domain, Metric]:
-            return self(other[0], other[1])
+        if isinstance(other, tuple):  
+            domain, metric = other
+            if isinstance(domain, Domain) and isinstance(metric, Metric):  
+                return self(domain, metric)  
+            
         raise TypeError(f"Cannot chain {type(self)} with {type(other)}")  # pragma: no cover
 
 
@@ -1231,6 +1375,7 @@ def exponential_bounds_search(
 _TUPLE_FLAG = '__tuple__'
 _EXPR_FLAG = '__expr__'
 _LAZY_FLAG = '__lazyframe__'
+_MARGIN_FLAG = '__margin__'
 _FUNCTION_FLAG = '__function__'
 _MODULE_FLAG = '__module__'
 _KWARGS_FLAG = '__kwargs__'
@@ -1264,6 +1409,10 @@ class _Encoder(json.JSONEncoder):
                 k: self.default(v)
                 for k, v in obj.items()
             }
+        
+        from opendp.extras.polars import Margin
+        if isinstance(obj, Margin):
+            return {_MARGIN_FLAG: self.default(asdict(obj))}
 
         # OpenDP specific:
         if hasattr(obj, '__opendp_dict__'):
@@ -1317,6 +1466,11 @@ def _deserialization_hook(dp_dict):
         if _LAZY_FLAG in dp_dict:
             _check_version(dp_dict)
             return pl.LazyFrame.deserialize(_b64_str_to_bytes(dp_dict[_LAZY_FLAG]))
+        if _MARGIN_FLAG in dp_dict:
+            from opendp.extras.polars import Margin
+
+            by = [deserialize(v) for v in dp_dict[_MARGIN_FLAG].get('by', [])]
+            return Margin(**{**dp_dict[_MARGIN_FLAG], "by": by})
     return dp_dict
 
 def serialize(dp_obj):

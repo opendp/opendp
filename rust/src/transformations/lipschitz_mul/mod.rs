@@ -22,10 +22,7 @@ mod ffi;
         constant(rust_type = "T", c_type = "void *"),
         bounds(rust_type = "(T, T)")
     ),
-    generics(
-        D(default = "AtomDomain<T>", generics = "T"),
-        M(default = "AbsoluteDistance<T>", generics = "T")
-    ),
+    generics(D(default = "AtomDomain<T>"), M(default = "AbsoluteDistance<T>")),
     derived_types(T = "$get_atom_or_infer(D, constant)")
 )]
 /// Make a transformation that multiplies an aggregate by a constant.

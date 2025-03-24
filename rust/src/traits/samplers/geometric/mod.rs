@@ -217,7 +217,7 @@ pub(super) fn sample_geometric_buffer(
         (buffer.iter())
             .enumerate()
             // ignore samples that contain no events
-            .filter(|(_, &sample)| sample > 0)
+            .filter(|(_, sample)| **sample > 0)
             // compute the index of the smallest event in the batch
             .map(|(i, sample)| 8 * i + sample.leading_zeros() as usize)
             // retrieve the smallest index

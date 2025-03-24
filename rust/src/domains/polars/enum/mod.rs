@@ -1,5 +1,5 @@
 use polars::{
-    prelude::{is_in, NamedFrom, PlSmallStr},
+    prelude::{NamedFrom, PlSmallStr, is_in},
     series::Series,
 };
 

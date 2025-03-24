@@ -11,7 +11,7 @@ use crate::traits::{CheckAtom, CheckNull, Float, InherentNull};
 use crate::transformations::make_row_by_row;
 
 use super::DatasetMetric;
-use rand::distributions::{uniform::SampleUniform, Distribution, Uniform};
+use rand::distributions::{Distribution, Uniform, uniform::SampleUniform};
 
 #[bootstrap(
     features("contrib"),
@@ -106,11 +106,7 @@ impl<T: CheckAtom + InherentNull> ImputeConstantDomain for AtomDomain<T> {
         default: &'a Self::Carrier,
         constant: &'a Self::Imputed,
     ) -> &'a Self::Imputed {
-        if default.is_null() {
-            constant
-        } else {
-            default
-        }
+        if default.is_null() { constant } else { default }
     }
 }
 
@@ -185,11 +181,7 @@ pub trait DropNullDomain: Domain {
 impl<T: CheckAtom + Clone> DropNullDomain for OptionDomain<AtomDomain<T>> {
     type Imputed = T;
     fn option(value: &Self::Carrier) -> Option<T> {
-        if value.is_null() {
-            None
-        } else {
-            value.clone()
-        }
+        if value.is_null() { None } else { value.clone() }
     }
 }
 /// how to standardize into an option, when null represented as T with internal nullity

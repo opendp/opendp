@@ -1,7 +1,7 @@
 use opendp_derive::bootstrap;
 use polars::{
     datatypes::{AnyValue, DataType, Field},
-    frame::{row::Row, DataFrame},
+    frame::{DataFrame, row::Row},
     prelude::{FunctionExpr, IntoLazy, LazyFrame, Schema},
 };
 use polars_plan::{
@@ -21,12 +21,13 @@ use crate::{
     domains::LazyFrameDomain,
     error::Fallible,
     measurements::{
+        KeySanitizer, MatchGroupBy,
         expr_index_candidates::IndexCandidatesPlugin,
         expr_noise::{Distribution, NoisePlugin, Support},
         expr_report_noisy_max::ReportNoisyMaxPlugin,
-        is_threshold_predicate, match_group_by, KeySanitizer, MatchGroupBy,
+        is_threshold_predicate, match_group_by,
     },
-    polars::{match_trusted_plugin, ExtractLazyFrame, OnceFrame},
+    polars::{ExtractLazyFrame, OnceFrame, match_trusted_plugin},
     transformations::expr_discrete_quantile_score::DiscreteQuantileScorePlugin,
 };
 

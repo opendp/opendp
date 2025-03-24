@@ -4,17 +4,17 @@ use opendp_derive::bootstrap;
 
 use crate::{
     core::{Domain, FfiResult, Function},
-    domains::{type_name, AtomDomain, MapDomain, VectorDomain},
+    domains::{AtomDomain, MapDomain, VectorDomain, type_name},
     error::Fallible,
     ffi::{
-        any::{wrap_func, AnyDomain, AnyObject, CallbackFn, Downcast},
-        util::{self, c_bool, into_c_char_p, to_str, ExtrinsicObject, Type, TypeContents},
+        any::{AnyDomain, AnyObject, CallbackFn, Downcast, wrap_func},
+        util::{self, ExtrinsicObject, Type, TypeContents, c_bool, into_c_char_p, to_str},
     },
     traits::{CheckAtom, Float, Hashable, Integer, Primitive},
 };
 
 #[cfg(feature = "polars")]
-use crate::domains::{CategoricalDomain, DatetimeDomain, EnumDomain};
+use crate::domains::{ArrayDomain, CategoricalDomain, DatetimeDomain, EnumDomain};
 
 use super::{BitVectorDomain, Bounds, Null, OptionDomain};
 
@@ -24,7 +24,7 @@ use super::{BitVectorDomain, Bounds, Null, OptionDomain};
     returns(c_type = "FfiResult<void *>")
 )]
 /// Internal function. Free the memory associated with `this`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains___domain_free(this: *mut AnyDomain) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
@@ -39,7 +39,7 @@ pub extern "C" fn opendp_domains___domain_free(this: *mut AnyDomain) -> FfiResul
 /// # Arguments
 /// * `this` - The domain to check membership in.
 /// * `val` - A potential element of the domain.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__member(
     this: *mut AnyDomain,
     val: *const AnyObject,
@@ -47,6 +47,24 @@ pub extern "C" fn opendp_domains__member(
     let this = try_as_ref!(this);
     let val = try_as_ref!(val);
     let status = try_!(this.member(val));
+    FfiResult::Ok(util::into_raw(util::from_bool(status)))
+}
+
+#[bootstrap(
+    name = "_domain_equal",
+    returns(c_type = "FfiResult<bool *>", hint = "bool")
+)]
+/// Check whether two domains are equal.
+///
+/// # Arguments
+/// * `left` - Domain to compare.
+/// * `right` - Domain to compare.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_domains___domain_equal(
+    left: *mut AnyDomain,
+    right: *const AnyDomain,
+) -> FfiResult<*mut c_bool> {
+    let status = try_as_ref!(left) == try_as_ref!(right);
     FfiResult::Ok(util::into_raw(util::from_bool(status)))
 }
 
@@ -59,7 +77,7 @@ pub extern "C" fn opendp_domains__member(
 ///
 /// # Arguments
 /// * `this` - The domain to debug (stringify).
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__domain_debug(this: *mut AnyDomain) -> FfiResult<*mut c_char> {
     let this = try_as_ref!(this);
     FfiResult::Ok(try_!(into_c_char_p(format!("{:?}", this))))
@@ -74,7 +92,7 @@ pub extern "C" fn opendp_domains__domain_debug(this: *mut AnyDomain) -> FfiResul
 ///
 /// # Arguments
 /// * `this` - The domain to retrieve the type from.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__domain_type(this: *mut AnyDomain) -> FfiResult<*mut c_char> {
     let this = try_as_ref!(this);
     FfiResult::Ok(try_!(into_c_char_p(this.type_.descriptor.to_string())))
@@ -89,7 +107,7 @@ pub extern "C" fn opendp_domains__domain_type(this: *mut AnyDomain) -> FfiResult
 ///
 /// # Arguments
 /// * `this` - The domain to retrieve the carrier type from.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__domain_carrier_type(
     this: *mut AnyDomain,
 ) -> FfiResult<*mut c_char> {
@@ -109,7 +127,7 @@ pub extern "C" fn opendp_domains__domain_carrier_type(
         nullable(rust_type = "bool", c_type = "bool", default = false)
     ),
     generics(T(example = "$get_first(bounds)")),
-    returns(c_type = "FfiResult<AnyDomain *>")
+    returns(c_type = "FfiResult<AnyDomain *>", hint = "AtomDomain")
 )]
 /// Construct an instance of `AtomDomain`.
 ///
@@ -122,7 +140,7 @@ fn atom_domain<T: CheckAtom>(
     AtomDomain::<T>::new(bounds, nullable)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__atom_domain(
     bounds: *const AnyObject,
     nullable: c_bool,
@@ -194,14 +212,18 @@ pub extern "C" fn opendp_domains__atom_domain(
         in_set,
         [(
             T_,
-            [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize]
+            [
+                u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize
+            ]
         )]
     ) {
         dispatch!(
             monomorphize_integer,
             [(
                 T_,
-                [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize]
+                [
+                    u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize
+                ]
             )],
             (bounds, nullable)
         )
@@ -216,9 +238,73 @@ pub extern "C" fn opendp_domains__atom_domain(
 }
 
 #[bootstrap(
+    arguments(domain(rust_type = b"null")),
+    generics(T(suppress)),
+    returns(c_type = "FfiResult<AnyObject *>")
+)]
+/// Retrieve bounds from an AtomDomain<T>
+///
+/// # Generics
+/// * `T` - The type of the atom.
+fn _atom_domain_get_bounds_closed<T: CheckAtom>(
+    domain: &AtomDomain<T>,
+) -> Fallible<Option<(T, T)>> {
+    domain.bounds.as_ref().map(|b| b.get_closed()).transpose()
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_domains___atom_domain_get_bounds_closed(
+    domain: *const AnyDomain,
+) -> FfiResult<*mut AnyObject> {
+    fn monomorphize<T: 'static + CheckAtom>(domain: &AnyDomain) -> Fallible<AnyObject> {
+        let domain = domain.downcast_ref::<AtomDomain<T>>()?;
+        _atom_domain_get_bounds_closed(domain).map(|v| AnyObject::new(v.map(AnyObject::new)))
+    }
+    let domain = try_as_ref!(domain);
+    let T = try_!(domain.type_.get_atom());
+    dispatch!(
+        monomorphize,
+        [(T, @numbers)],
+        (domain)
+    )
+    .into()
+}
+
+#[bootstrap(
+    arguments(domain(rust_type = b"null")),
+    generics(T(suppress)),
+    returns(c_type = "FfiResult<AnyObject *>")
+)]
+/// Retrieve nullability of an AtomDomain<T>
+///
+/// # Generics
+/// * `T` - The type of the atom.
+fn _atom_domain_get_nullable<T: CheckAtom>(domain: &AtomDomain<T>) -> Fallible<bool> {
+    Ok(domain.nullable())
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_domains___atom_domain_get_nullable(
+    domain: *const AnyDomain,
+) -> FfiResult<*mut AnyObject> {
+    fn monomorphize<T: 'static + CheckAtom>(domain: &AnyDomain) -> Fallible<AnyObject> {
+        let domain = domain.downcast_ref::<AtomDomain<T>>()?;
+        _atom_domain_get_nullable(domain).map(AnyObject::new)
+    }
+    let domain = try_as_ref!(domain);
+    let T = try_!(domain.type_.get_atom());
+    dispatch!(
+        monomorphize,
+        [(T, @primitives)],
+        (domain)
+    )
+    .into()
+}
+
+#[bootstrap(
     arguments(element_domain(c_type = "AnyDomain *")),
     generics(D(example = "element_domain")),
-    returns(c_type = "FfiResult<AnyDomain *>")
+    returns(c_type = "FfiResult<AnyDomain *>", hint = "OptionDomain")
 )]
 /// Construct an instance of `OptionDomain`.
 ///
@@ -228,7 +314,7 @@ fn option_domain<D: Domain>(element_domain: D) -> OptionDomain<D> {
     OptionDomain::<D>::new(element_domain)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__option_domain(
     element_domain: *const AnyDomain,
     D: *const c_char,
@@ -252,6 +338,11 @@ pub extern "C" fn opendp_domains__option_domain(
     #[cfg(feature = "polars")]
     if D == Type::of::<EnumDomain>() {
         let element_domain = try_!(element_domain.downcast_ref::<EnumDomain>()).clone();
+        return Ok(AnyDomain::new(option_domain(element_domain))).into();
+    }
+    #[cfg(feature = "polars")]
+    if D == Type::of::<ArrayDomain>() {
+        let element_domain = try_!(element_domain.downcast_ref::<ArrayDomain>()).clone();
         return Ok(AnyDomain::new(option_domain(element_domain))).into();
     }
     #[cfg(feature = "polars")]
@@ -282,19 +373,74 @@ pub extern "C" fn opendp_domains__option_domain(
     .into()
 }
 
+#[bootstrap(name = "_option_domain_get_element_domain")]
+/// Retrieve the element domain of the option domain.
+///
+/// # Arguments
+/// * `option_domain` - The option domain from which to retrieve the element domain
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_domains___option_domain_get_element_domain(
+    option_domain: *const AnyDomain,
+) -> FfiResult<*mut AnyDomain> {
+    fn monomorphize_atom<T: 'static + CheckAtom>(option_domain: &AnyDomain) -> Fallible<AnyDomain> {
+        let option_domain = option_domain
+            .downcast_ref::<OptionDomain<AtomDomain<T>>>()?
+            .clone();
+        Ok(AnyDomain::new(option_domain.element_domain.clone()))
+    }
+
+    let option_domain = try_as_ref!(option_domain);
+    let D = option_domain.type_.clone();
+    let T = try_!(D.get_atom());
+
+    #[cfg(feature = "polars")]
+    if T == Type::of::<CategoricalDomain>() {
+        let option_domain =
+            try_!(option_domain.downcast_ref::<OptionDomain<CategoricalDomain>>()).clone();
+        return Ok(AnyDomain::new(option_domain.element_domain)).into();
+    }
+    #[cfg(feature = "polars")]
+    if T == Type::of::<DatetimeDomain>() {
+        let option_domain =
+            try_!(option_domain.downcast_ref::<OptionDomain<DatetimeDomain>>()).clone();
+        return Ok(AnyDomain::new(option_domain.element_domain)).into();
+    }
+    #[cfg(feature = "polars")]
+    if T == Type::of::<chrono::NaiveDate>() {
+        return monomorphize_atom::<chrono::NaiveDate>(option_domain).into();
+    }
+    #[cfg(feature = "polars")]
+    if T == Type::of::<chrono::NaiveTime>() {
+        return monomorphize_atom::<chrono::NaiveTime>(option_domain).into();
+    }
+
+    dispatch!(
+        monomorphize_atom,
+        [(
+            T,
+            [
+                u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize, f32, f64, bool,
+                String
+            ]
+        )],
+        (option_domain)
+    )
+    .into()
+}
+
 #[bootstrap(
     name = "vector_domain",
     arguments(
         atom_domain(c_type = "AnyDomain *", rust_type = b"null"),
         size(rust_type = "Option<i32>", default = b"null")
     ),
-    returns(c_type = "FfiResult<AnyDomain *>")
+    returns(c_type = "FfiResult<AnyDomain *>", hint = "VectorDomain")
 )]
 /// Construct an instance of `VectorDomain`.
 ///
 /// # Arguments
 /// * `atom_domain` - The inner domain.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__vector_domain(
     atom_domain: *const AnyDomain,
     size: *const AnyObject,
@@ -331,6 +477,86 @@ pub extern "C" fn opendp_domains__vector_domain(
     }.into()
 }
 
+#[bootstrap(name = "_vector_domain_get_element_domain")]
+/// Retrieve the element domain of the vector domain.
+///
+/// # Arguments
+/// * `vector_domain` - The vector domain from which to retrieve the element domain
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_domains___vector_domain_get_element_domain(
+    vector_domain: *const AnyDomain,
+) -> FfiResult<*mut AnyDomain> {
+    let vector_domain = try_as_ref!(vector_domain);
+    let D = vector_domain.type_.clone();
+    let T = try_!(D.get_atom());
+
+    if T == Type::of::<ExtrinsicDomain>() {
+        let vector_domain =
+            try_!(vector_domain.downcast_ref::<VectorDomain<ExtrinsicDomain>>()).clone();
+        return Ok(AnyDomain::new(vector_domain.element_domain)).into();
+    }
+
+    fn monomorphize_atom<T: 'static + CheckAtom>(vector_domain: &AnyDomain) -> Fallible<AnyDomain> {
+        let option_domain = vector_domain
+            .downcast_ref::<VectorDomain<AtomDomain<T>>>()?
+            .clone();
+        Ok(AnyDomain::new(option_domain.element_domain.clone()))
+    }
+
+    dispatch!(
+        monomorphize_atom,
+        [(
+            T,
+            [
+                u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize, f32, f64, bool,
+                String
+            ]
+        )],
+        (vector_domain)
+    )
+    .into()
+}
+
+#[bootstrap(name = "_vector_domain_get_size")]
+/// Retrieve the size of vectors in the vector domain.
+///
+/// # Arguments
+/// * `vector_domain` - The vector domain from which to retrieve the size
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_domains___vector_domain_get_size(
+    vector_domain: *const AnyDomain,
+) -> FfiResult<*mut AnyObject> {
+    let vector_domain = try_as_ref!(vector_domain);
+    let D = vector_domain.type_.clone();
+    let T = try_!(D.get_atom());
+
+    if T == Type::of::<ExtrinsicDomain>() {
+        let vector_domain =
+            try_!(vector_domain.downcast_ref::<VectorDomain<ExtrinsicDomain>>()).clone();
+        return Ok(AnyObject::new(vector_domain.size.map(AnyObject::new))).into();
+    }
+
+    fn monomorphize_atom<T: 'static + CheckAtom>(vector_domain: &AnyDomain) -> Fallible<AnyObject> {
+        let option_domain = vector_domain
+            .downcast_ref::<VectorDomain<AtomDomain<T>>>()?
+            .clone();
+        Ok(AnyObject::new(option_domain.size.map(AnyObject::new)))
+    }
+
+    dispatch!(
+        monomorphize_atom,
+        [(
+            T,
+            [
+                u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, isize, f32, f64, bool,
+                String
+            ]
+        )],
+        (vector_domain)
+    )
+    .into()
+}
+
 #[bootstrap(
     name = "bitvector_domain",
     arguments(max_weight(rust_type = "Option<u32>", default = b"null")),
@@ -340,7 +566,7 @@ pub extern "C" fn opendp_domains__vector_domain(
 ///
 /// # Arguments
 /// * `max_weight` - The maximum number of positive bits.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__bitvector_domain(
     max_weight: *const AnyObject,
 ) -> FfiResult<*mut AnyDomain> {
@@ -358,7 +584,7 @@ pub extern "C" fn opendp_domains__bitvector_domain(
 /// # Arguments
 /// * `key_domain` - domain of keys in the hashmap
 /// * `value_domain` - domain of values in the hashmap
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__map_domain(
     key_domain: *const AnyDomain,
     value_domain: *const AnyDomain,
@@ -496,7 +722,7 @@ impl Domain for ExtrinsicDomain {
 ///
 /// 1. be a pure function
 /// 2. be sound (only return true if its input is a member of the domain).
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__user_domain(
     identifier: *mut c_char,
     member: *const CallbackFn,
@@ -526,7 +752,7 @@ pub extern "C" fn opendp_domains__user_domain(
 ///
 /// # Arguments
 /// * `domain` - The ExtrinsicDomain to extract the descriptor from
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains___extrinsic_domain_descriptor(
     domain: *mut AnyDomain,
 ) -> FfiResult<*mut ExtrinsicObject> {

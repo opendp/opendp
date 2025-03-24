@@ -1,10 +1,10 @@
-use std::{any::TypeId, collections::HashSet, ffi::c_char, os::raw::c_void};
+use std::{any::TypeId, collections::HashSet, ffi::c_char};
 
 use opendp_derive::bootstrap;
 
 use crate::{
     core::{FfiResult, MetricSpace},
-    domains::{Margin, MarginPub, SeriesDomain},
+    domains::{Margin, SeriesDomain},
     error::Fallible,
     ffi::{
         any::{AnyDomain, AnyMetric, AnyObject, Downcast},
@@ -19,13 +19,13 @@ use polars::prelude::*;
 #[bootstrap(
     name = "lazyframe_domain",
     arguments(series_domains(rust_type = "Vec<SeriesDomain>")),
-    returns(c_type = "FfiResult<AnyDomain *>")
+    returns(c_type = "FfiResult<AnyDomain *>", hint = "LazyFrameDomain")
 )]
 /// Construct an instance of `LazyFrameDomain`.
 ///
 /// # Arguments
 /// * `series_domains` - Domain of each series in the lazyframe.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__lazyframe_domain(
     series_domains: *const AnyObject,
 ) -> FfiResult<*mut AnyDomain> {
@@ -33,6 +33,66 @@ pub extern "C" fn opendp_domains__lazyframe_domain(
         unpack_series_domains(series_domains)
     )))))
     .into()
+}
+
+#[bootstrap(
+    name = "_lazyframe_domain_get_columns",
+    returns(c_type = "FfiResult<AnyObject *>")
+)]
+/// Retrieve the column names of the LazyFrameDomain.
+///
+/// # Arguments
+/// * `lazyframe_domain` - Domain to retrieve the column names from
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_domains___lazyframe_domain_get_columns(
+    lazyframe_domain: *const AnyDomain,
+) -> FfiResult<*mut AnyObject> {
+    let lazyframe_domain = try_!(try_as_ref!(lazyframe_domain).downcast_ref::<LazyFrameDomain>());
+    let columns = (lazyframe_domain.series_domains.iter())
+        .map(|s| s.name.to_string())
+        .collect::<Vec<_>>();
+    Ok(AnyObject::new(columns)).into()
+}
+
+#[bootstrap(
+    name = "_lazyframe_domain_get_series_domain",
+    returns(c_type = "FfiResult<AnyDomain *>")
+)]
+/// Retrieve the series domain at index `column`.
+///
+/// # Arguments
+/// * `lazyframe_domain` - Domain to retrieve the SeriesDomain from
+/// * `name` - Name of the SeriesDomain to retrieve
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_domains___lazyframe_domain_get_series_domain(
+    lazyframe_domain: *const AnyDomain,
+    name: *const c_char,
+) -> FfiResult<*mut AnyDomain> {
+    let lazyframe_domain = try_!(try_as_ref!(lazyframe_domain).downcast_ref::<LazyFrameDomain>());
+    let name = try_!(util::to_str(name));
+    let series_domain = try_!(lazyframe_domain.series_domain(name.into()));
+    Ok(AnyDomain::new(series_domain)).into()
+}
+
+#[bootstrap(
+    name = "_lazyframe_domain_get_margin",
+    arguments(by(rust_type = "Vec<Expr>")),
+    returns(c_type = "FfiResult<AnyObject *>")
+)]
+/// Retrieve the series domain at index 'column`.
+///
+/// # Arguments
+/// * `lazyframe_domain` - Domain to retrieve the SeriesDomain from
+/// * `by` - grouping columns
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_domains___lazyframe_domain_get_margin(
+    lazyframe_domain: *const AnyDomain,
+    by: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    let lazyframe_domain = try_!(try_as_ref!(lazyframe_domain).downcast_ref::<LazyFrameDomain>());
+    let by = try_!(try_as_ref!(by).downcast_ref::<Vec<Expr>>());
+    let margin = lazyframe_domain.get_margin(&HashSet::from_iter(by.iter().cloned()));
+    Ok(AnyObject::new(margin)).into()
 }
 
 #[bootstrap()]
@@ -46,7 +106,7 @@ fn _lazyframe_from_domain(domain: LazyFrameDomain) -> Fallible<LazyFrame> {
     Ok(DataFrame::from_rows_and_schema(&[], &domain.schema())?.lazy())
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains___lazyframe_from_domain(
     domain: *mut AnyDomain,
 ) -> FfiResult<*mut AnyObject> {
@@ -72,48 +132,16 @@ pub(crate) fn unpack_series_domains(
 
 #[bootstrap(
     name = "with_margin",
-    arguments(
-        frame_domain(rust_type = b"null"),
-        by(rust_type = "Vec<Expr>"),
-        max_partition_length(c_type = "void *", rust_type = "Option<u32>", default = b"null"),
-        max_num_partitions(c_type = "void *", rust_type = "Option<u32>", default = b"null"),
-        max_partition_contributions(
-            c_type = "void *",
-            rust_type = "Option<u32>",
-            default = b"null"
-        ),
-        max_influenced_partitions(c_type = "void *", rust_type = "Option<u32>", default = b"null"),
-        public_info(rust_type = "Option<String>", default = b"null")
-    ),
-    returns(c_type = "FfiResult<AnyDomain *>")
+    arguments(frame_domain(rust_type = b"null"), margin(rust_type = "Margin")),
+    returns(c_type = "FfiResult<AnyDomain *>", hint = "LazyFrameDomain")
 )]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__with_margin(
     frame_domain: *mut AnyDomain,
-    by: *mut AnyObject,
-    max_partition_length: *mut c_void,
-    max_num_partitions: *mut c_void,
-    max_partition_contributions: *mut c_void,
-    max_influenced_partitions: *mut c_void,
-    public_info: *mut c_char,
+    margin: *mut AnyObject,
 ) -> FfiResult<*mut AnyDomain> {
     let domain = try_as_ref!(frame_domain);
-    let by = HashSet::from_iter(try_!(try_as_ref!(by).downcast_ref::<Vec<Expr>>()).clone());
-
-    let margin = Margin {
-        by,
-        max_partition_length: util::as_ref(max_partition_length as *const u32).cloned(),
-        max_num_partitions: util::as_ref(max_num_partitions as *const u32).cloned(),
-        max_partition_contributions: util::as_ref(max_partition_contributions as *const u32)
-            .cloned(),
-        max_influenced_partitions: util::as_ref(max_influenced_partitions as *const u32).cloned(),
-        public_info: match try_!(util::to_option_str(public_info)) {
-            Some("keys") => Some(MarginPub::Keys),
-            Some("lengths") => Some(MarginPub::Lengths),
-            None => None,
-            _ => return err!(FFI, "public_info must be one of 'keys' or 'lengths'").into(),
-        },
-    };
+    let margin = try_!(try_as_ref!(margin).downcast_ref::<Margin>()).clone();
 
     let frame_domain = try_as_ref!(frame_domain);
     let F_ = match frame_domain.type_.id {
@@ -124,7 +152,7 @@ pub extern "C" fn opendp_domains__with_margin(
                 "No match for concrete type {}",
                 frame_domain.type_.descriptor
             )
-            .into()
+            .into();
         }
     };
 

@@ -1,4 +1,4 @@
-use std::ffi::{c_void, CStr};
+use std::ffi::{CStr, c_void};
 use std::fmt::{Debug, Formatter};
 use std::os::raw::c_char;
 use std::{fmt, ptr};
@@ -7,11 +7,11 @@ use opendp_derive::bootstrap;
 
 use crate::error::{Error, ErrorVariant, ExplainUnwrap, Fallible};
 use crate::ffi::any::{
-    wrap_func, AnyDomain, AnyFunction, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject,
-    AnyQueryable, AnyTransformation, CallbackFn, Downcast, QueryType,
+    AnyDomain, AnyFunction, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, AnyQueryable,
+    AnyTransformation, CallbackFn, Downcast, QueryType, wrap_func,
 };
-use crate::ffi::util::{self, c_bool, Type};
-use crate::ffi::util::{into_c_char_p, ExtrinsicObject};
+use crate::ffi::util::{self, Type, c_bool};
+use crate::ffi::util::{ExtrinsicObject, into_c_char_p};
 use crate::interactive::{Answer, Query, Queryable};
 use crate::{try_, try_as_ref};
 
@@ -231,7 +231,7 @@ impl<T> From<FfiResult<*mut T>> for Fallible<T> {
 ///
 /// # Returns
 /// A boolean, where true indicates successful free
-#[no_mangle]
+#[unsafe(no_mangle)]
 #[must_use]
 pub extern "C" fn opendp_core___error_free(this: *mut FfiError) -> bool {
     util::into_owned(this).is_ok()
@@ -240,13 +240,13 @@ pub extern "C" fn opendp_core___error_free(this: *mut FfiError) -> bool {
 #[bootstrap(
     name = "transformation_input_domain",
     arguments(this(rust_type = b"null")),
-    returns(c_type = "FfiResult<AnyDomain *>", do_not_convert = true)
+    returns(c_type = "FfiResult<AnyDomain *>")
 )]
 /// Get the input domain from a `transformation`.
 ///
 /// # Arguments
 /// * `this` - The transformation to retrieve the value from.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__transformation_input_domain(
     this: *mut AnyTransformation,
 ) -> FfiResult<*mut AnyDomain> {
@@ -256,13 +256,13 @@ pub extern "C" fn opendp_core__transformation_input_domain(
 #[bootstrap(
     name = "transformation_output_domain",
     arguments(this(rust_type = b"null")),
-    returns(c_type = "FfiResult<AnyDomain *>", do_not_convert = true)
+    returns(c_type = "FfiResult<AnyDomain *>")
 )]
 /// Get the output domain from a `transformation`.
 ///
 /// # Arguments
 /// * `this` - The transformation to retrieve the value from.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__transformation_output_domain(
     this: *mut AnyTransformation,
 ) -> FfiResult<*mut AnyDomain> {
@@ -272,13 +272,13 @@ pub extern "C" fn opendp_core__transformation_output_domain(
 #[bootstrap(
     name = "transformation_input_metric",
     arguments(this(rust_type = b"null")),
-    returns(c_type = "FfiResult<AnyMetric *>", do_not_convert = true)
+    returns(c_type = "FfiResult<AnyMetric *>")
 )]
 /// Get the input domain from a `transformation`.
 ///
 /// # Arguments
 /// * `this` - The transformation to retrieve the value from.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__transformation_input_metric(
     this: *mut AnyTransformation,
 ) -> FfiResult<*mut AnyMetric> {
@@ -288,13 +288,13 @@ pub extern "C" fn opendp_core__transformation_input_metric(
 #[bootstrap(
     name = "transformation_output_metric",
     arguments(this(rust_type = b"null")),
-    returns(c_type = "FfiResult<AnyMetric *>", do_not_convert = true)
+    returns(c_type = "FfiResult<AnyMetric *>")
 )]
 /// Get the output domain from a `transformation`.
 ///
 /// # Arguments
 /// * `this` - The transformation to retrieve the value from.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__transformation_output_metric(
     this: *mut AnyTransformation,
 ) -> FfiResult<*mut AnyMetric> {
@@ -304,13 +304,13 @@ pub extern "C" fn opendp_core__transformation_output_metric(
 #[bootstrap(
     name = "measurement_input_domain",
     arguments(this(rust_type = b"null")),
-    returns(c_type = "FfiResult<AnyDomain *>", do_not_convert = true)
+    returns(c_type = "FfiResult<AnyDomain *>")
 )]
 /// Get the input domain from a `measurement`.
 ///
 /// # Arguments
 /// * `this` - The measurement to retrieve the value from.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__measurement_input_domain(
     this: *mut AnyMeasurement,
 ) -> FfiResult<*mut AnyDomain> {
@@ -320,13 +320,13 @@ pub extern "C" fn opendp_core__measurement_input_domain(
 #[bootstrap(
     name = "measurement_input_metric",
     arguments(this(rust_type = b"null")),
-    returns(c_type = "FfiResult<AnyMetric *>", do_not_convert = true)
+    returns(c_type = "FfiResult<AnyMetric *>")
 )]
 /// Get the input domain from a `measurement`.
 ///
 /// # Arguments
 /// * `this` - The measurement to retrieve the value from.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__measurement_input_metric(
     this: *mut AnyMeasurement,
 ) -> FfiResult<*mut AnyMetric> {
@@ -336,13 +336,13 @@ pub extern "C" fn opendp_core__measurement_input_metric(
 #[bootstrap(
     name = "measurement_output_measure",
     arguments(this(rust_type = b"null")),
-    returns(c_type = "FfiResult<AnyMeasure *>", do_not_convert = true)
+    returns(c_type = "FfiResult<AnyMeasure *>")
 )]
 /// Get the output domain from a `measurement`.
 ///
 /// # Arguments
 /// * `this` - The measurement to retrieve the value from.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__measurement_output_measure(
     this: *mut AnyMeasurement,
 ) -> FfiResult<*mut AnyMeasure> {
@@ -358,7 +358,7 @@ pub extern "C" fn opendp_core__measurement_output_measure(
 ///
 /// # Arguments
 /// * `this` - The measurement to retrieve the value from.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__measurement_function(
     this: *mut AnyMeasurement,
 ) -> FfiResult<*mut AnyFunction> {
@@ -377,7 +377,7 @@ pub extern "C" fn opendp_core__measurement_function(
 /// # Arguments
 /// * `transformation` - Transformation to check the map distances with.
 /// * `distance_in` - Distance in terms of the input metric.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__transformation_map(
     transformation: *const AnyTransformation,
     distance_in: *const AnyObject,
@@ -406,7 +406,7 @@ pub extern "C" fn opendp_core__transformation_map(
 ///
 /// # Returns
 /// True indicates that the relation passed at the given distance.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__transformation_check(
     transformation: *const AnyTransformation,
     distance_in: *const AnyObject,
@@ -432,7 +432,7 @@ pub extern "C" fn opendp_core__transformation_check(
 /// # Arguments
 /// * `measurement` - Measurement to check the map distances with.
 /// * `distance_in` - Distance in terms of the input metric.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__measurement_map(
     measurement: *const AnyMeasurement,
     distance_in: *const AnyObject,
@@ -461,7 +461,7 @@ pub extern "C" fn opendp_core__measurement_map(
 ///
 /// # Returns
 /// True indicates that the relation passed at the given distance.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__measurement_check(
     measurement: *const AnyMeasurement,
     distance_in: *const AnyObject,
@@ -486,7 +486,7 @@ pub extern "C" fn opendp_core__measurement_check(
 /// # Arguments
 /// * `this` - Measurement to invoke.
 /// * `arg` - Input data to supply to the measurement. A member of the measurement's input domain.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__measurement_invoke(
     this: *const AnyMeasurement,
     arg: *const AnyObject,
@@ -502,7 +502,7 @@ pub extern "C" fn opendp_core__measurement_invoke(
     returns(c_type = "FfiResult<void *>")
 )]
 /// Internal function. Free the memory associated with `this`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core___measurement_free(this: *mut AnyMeasurement) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
@@ -519,7 +519,7 @@ pub extern "C" fn opendp_core___measurement_free(this: *mut AnyMeasurement) -> F
 /// # Arguments
 /// * `this` - Transformation to invoke.
 /// * `arg` - Input data to supply to the transformation. A member of the transformation's input domain.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__transformation_invoke(
     this: *const AnyTransformation,
     arg: *const AnyObject,
@@ -538,7 +538,7 @@ pub extern "C" fn opendp_core__transformation_invoke(
 ///
 /// # Arguments
 /// * `this` - The transformation to retrieve the value from.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__transformation_function(
     this: *mut AnyTransformation,
 ) -> FfiResult<*mut AnyFunction> {
@@ -551,7 +551,7 @@ pub extern "C" fn opendp_core__transformation_function(
     returns(c_type = "FfiResult<void *>")
 )]
 /// Internal function. Free the memory associated with `this`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core___transformation_free(
     this: *mut AnyTransformation,
 ) -> FfiResult<*mut ()> {
@@ -567,7 +567,7 @@ pub extern "C" fn opendp_core___transformation_free(
 ///
 /// # Arguments
 /// * `this` - The transformation to retrieve the type from.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__transformation_input_carrier_type(
     this: *mut AnyTransformation,
 ) -> FfiResult<*mut c_char> {
@@ -586,7 +586,7 @@ pub extern "C" fn opendp_core__transformation_input_carrier_type(
 ///
 /// # Arguments
 /// * `this` - The measurement to retrieve the type from.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__measurement_input_carrier_type(
     this: *mut AnyMeasurement,
 ) -> FfiResult<*mut c_char> {
@@ -605,7 +605,7 @@ pub extern "C" fn opendp_core__measurement_input_carrier_type(
 ///
 /// # Arguments
 /// * `this` - The transformation to retrieve the type from.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__transformation_input_distance_type(
     this: *mut AnyTransformation,
 ) -> FfiResult<*mut c_char> {
@@ -624,7 +624,7 @@ pub extern "C" fn opendp_core__transformation_input_distance_type(
 ///
 /// # Arguments
 /// * `this` - The transformation to retrieve the type from.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__transformation_output_distance_type(
     this: *mut AnyTransformation,
 ) -> FfiResult<*mut c_char> {
@@ -643,7 +643,7 @@ pub extern "C" fn opendp_core__transformation_output_distance_type(
 ///
 /// # Arguments
 /// * `this` - The measurement to retrieve the type from.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__measurement_input_distance_type(
     this: *mut AnyMeasurement,
 ) -> FfiResult<*mut c_char> {
@@ -662,7 +662,7 @@ pub extern "C" fn opendp_core__measurement_input_distance_type(
 ///
 /// # Arguments
 /// * `this` - The measurement to retrieve the type from.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__measurement_output_distance_type(
     this: *mut AnyMeasurement,
 ) -> FfiResult<*mut c_char> {
@@ -703,7 +703,7 @@ fn new_function<TO>(function: *const CallbackFn) -> Fallible<AnyFunction> {
     panic!("this signature only exists for code generation")
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__new_function(
     function: *const CallbackFn,
     TO: *const c_char,
@@ -727,7 +727,7 @@ pub extern "C" fn opendp_core__new_function(
 /// * `this` - Function to invoke.
 /// * `arg` - Input data to supply to the measurement. A member of the measurement's input domain.
 /// * `TI` - Input Type.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__function_eval(
     this: *const AnyFunction,
     arg: *const AnyObject,
@@ -745,7 +745,7 @@ pub extern "C" fn opendp_core__function_eval(
     returns(c_type = "FfiResult<void *>")
 )]
 /// Internal function. Free the memory associated with `this`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core___function_free(this: *mut AnyFunction) -> FfiResult<*mut ()> {
     util::into_owned(this).map(|_| ()).into()
 }
@@ -762,7 +762,7 @@ pub extern "C" fn opendp_core___function_free(this: *mut AnyFunction) -> FfiResu
 /// # Arguments
 /// * `queryable` - Queryable to eval.
 /// * `query` - Input data to supply to the measurement. A member of the measurement's input domain.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__queryable_eval(
     queryable: *mut AnyObject,
     query: *const AnyObject,
@@ -782,7 +782,7 @@ pub extern "C" fn opendp_core__queryable_eval(
 ///
 /// # Arguments
 /// * `this` - The queryable to retrieve the query type from.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__queryable_query_type(
     this: *mut AnyObject,
 ) -> FfiResult<*mut c_char> {
@@ -852,7 +852,7 @@ fn new_queryable<Q, A>(transition: *const TransitionFn) -> Fallible<AnyObject> {
     panic!("this signature only exists for code generation")
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_core__new_queryable(
     transition: *const TransitionFn,
     Q: *const c_char,

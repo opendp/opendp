@@ -1,5 +1,5 @@
 use crate::core::{Domain, Measure, Measurement, Metric, MetricSpace};
-use std::any::{type_name, Any};
+use std::any::{Any, type_name};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -114,7 +114,7 @@ where
 pub(crate) struct WrapFn(pub Rc<dyn Fn(WrapFn, PolyQueryable) -> Fallible<PolyQueryable>>);
 impl WrapFn {
     // constructs a closure that wraps a PolyQueryable
-    pub(crate) fn as_map(&self) -> impl Fn(PolyQueryable) -> Fallible<PolyQueryable> {
+    pub(crate) fn as_map(&self) -> impl Fn(PolyQueryable) -> Fallible<PolyQueryable> + use<> {
         let wrap_logic = self.clone();
         move |qbl| (wrap_logic.0)(wrap_logic.clone(), qbl)
     }

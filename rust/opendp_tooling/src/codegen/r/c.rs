@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use crate::{
-    codegen::{r::BLOCKLIST, tab_c},
     Argument, Function, TypeRecipe,
+    codegen::{r::BLOCKLIST, tab_c},
 };
 
 /// Generate the R/src/lib.c file.

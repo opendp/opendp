@@ -11,14 +11,14 @@ use crate::metrics::{AbsoluteDistance, SymmetricDistance};
 use crate::traits::{AlertingSub, ExactIntCast, Float, InfDiv, InfMul, InfPowI, InfSub};
 
 use super::{
-    make_lipschitz_float_mul, make_sum_of_squared_deviations, LipschitzMulFloatDomain,
-    LipschitzMulFloatMetric, Pairwise, UncheckedSum,
+    LipschitzMulFloatDomain, LipschitzMulFloatMetric, Pairwise, UncheckedSum,
+    make_lipschitz_float_mul, make_sum_of_squared_deviations,
 };
 
 #[bootstrap(
     features("contrib"),
     arguments(bounds(rust_type = "(T, T)"), ddof(default = 1)),
-    generics(S(default = "Pairwise<T>", generics = "T")),
+    generics(S(default = "Pairwise<T>")),
     derived_types(T = "$get_atom(get_type(input_domain))")
 )]
 /// Make a Transformation that computes the variance of bounded data.
@@ -56,8 +56,12 @@ where
     AtomDomain<S::Item>: LipschitzMulFloatDomain<Atom = S::Item>,
     AbsoluteDistance<S::Item>: LipschitzMulFloatMetric<Distance = S::Item>,
 {
-    let size = (input_domain.size)
-        .ok_or_else(|| err!(MakeTransformation, "dataset size must be known. Either specify size in the input domain or use make_resize"))?;
+    let size = (input_domain.size).ok_or_else(|| {
+        err!(
+            MakeTransformation,
+            "dataset size must be known. Either specify size in the input domain or use make_resize"
+        )
+    })?;
     let bounds = (input_domain.element_domain.get_closed_bounds())?;
     if ddof >= size {
         return fallible!(

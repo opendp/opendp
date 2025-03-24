@@ -1,6 +1,6 @@
 use polars::df;
 use polars::lazy::frame::IntoLazy;
-use polars::prelude::{lit, NamedFrom};
+use polars::prelude::{NamedFrom, lit};
 use polars::series::Series;
 use polars_plan::dsl::col;
 
@@ -26,11 +26,13 @@ fn test_make_expr_fill_nan_literal() -> Fallible<()> {
 
     assert_eq!(actual, df!("f64" => [None, Some(1.), Some(0.)])?);
 
-    assert!(!t_fill_nan
-        .output_domain
-        .column
-        .atom_domain::<f64>()?
-        .nullable());
+    assert!(
+        !t_fill_nan
+            .output_domain
+            .column
+            .atom_domain::<f64>()?
+            .nullable()
+    );
 
     Ok(())
 }
@@ -63,11 +65,13 @@ fn test_make_expr_fill_nan_expr() -> Fallible<()> {
         &Series::new("f64_nan".into(), [None, Some(1.), Some(0.)])
     );
 
-    assert!(!t_fill_nan
-        .output_domain
-        .column
-        .atom_domain::<f64>()?
-        .nullable());
+    assert!(
+        !t_fill_nan
+            .output_domain
+            .column
+            .atom_domain::<f64>()?
+            .nullable()
+    );
 
     Ok(())
 }

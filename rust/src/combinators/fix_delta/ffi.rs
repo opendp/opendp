@@ -50,7 +50,7 @@ fn make_fix_delta(measurement: &AnyMeasurement, delta: f64) -> Fallible<AnyMeasu
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_combinators__make_fix_delta(
     measurement: *const AnyMeasurement,
     delta: f64,

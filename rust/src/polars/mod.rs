@@ -6,10 +6,10 @@ use crate::{
     error::Fallible,
     interactive::{Answer, Query, Queryable},
     measurements::{
+        Optimize,
         expr_index_candidates::IndexCandidatesShim,
         expr_noise::{Distribution, NoiseShim},
         expr_report_noisy_max::ReportNoisyMaxShim,
-        Optimize,
     },
     transformations::expr_discrete_quantile_score::DiscreteQuantileScoreShim,
 };
@@ -20,7 +20,7 @@ use polars::{
     series::Series,
 };
 use polars_plan::{
-    dsl::{lit, ColumnsUdf, Expr, FunctionExpr, SpecialEq},
+    dsl::{ColumnsUdf, Expr, FunctionExpr, SpecialEq, lit},
     plans::{Literal, LiteralValue, Null},
     prelude::{FunctionFlags, FunctionOptions},
 };
@@ -66,7 +66,10 @@ where
             }
 
             if !kwargs.is_empty() {
-                return fallible!(FailedFunction, "OpenDP does not allow pickled keyword arguments as they may enable remote code execution.");
+                return fallible!(
+                    FailedFunction,
+                    "OpenDP does not allow pickled keyword arguments as they may enable remote code execution."
+                );
             }
 
             input

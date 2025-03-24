@@ -1,11 +1,8 @@
-use std::{collections::HashSet, ffi::c_char, os::raw::c_void};
-
 use opendp_derive::bootstrap;
-use polars::prelude::Expr;
 
 use crate::{
     core::{FfiResult, Metric, MetricSpace},
-    domains::{polars::ffi::unpack_series_domains, Margin, MarginPub},
+    domains::{Margin, polars::ffi::unpack_series_domains},
     error::Fallible,
     ffi::{
         any::{AnyDomain, AnyMetric, AnyObject, Downcast},
@@ -16,22 +13,13 @@ use crate::{
 
 use super::{Context, ExprDomain, WildExprDomain};
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 #[bootstrap(
     name = "wild_expr_domain",
     features("contrib"),
     arguments(
         columns(rust_type = "Vec<SeriesDomain>"),
-        by(rust_type = "Option<Vec<Expr>>", default = b"null", hint = "list[Any]"),
-        max_partition_length(c_type = "void *", rust_type = "Option<u32>", default = b"null"),
-        max_num_partitions(c_type = "void *", rust_type = "Option<u32>", default = b"null"),
-        max_partition_contributions(
-            c_type = "void *",
-            rust_type = "Option<u32>",
-            default = b"null"
-        ),
-        max_influenced_partitions(c_type = "void *", rust_type = "Option<u32>", default = b"null"),
-        public_info(rust_type = "Option<String>", default = b"null")
+        margin(rust_type = "Option<Margin>", default = b"null")
     )
 )]
 /// Construct a WildExprDomain.
@@ -42,34 +30,14 @@ use super::{Context, ExprDomain, WildExprDomain};
 /// * `margin` - descriptors for grouped data
 pub extern "C" fn opendp_domains__wild_expr_domain(
     columns: *const AnyObject,
-    by: *const AnyObject,
-    max_partition_length: *const c_void,
-    max_num_partitions: *const c_void,
-    max_partition_contributions: *const c_void,
-    max_influenced_partitions: *const c_void,
-    public_info: *const c_char,
+    margin: *const AnyObject,
 ) -> FfiResult<*mut AnyDomain> {
     let columns = try_!(unpack_series_domains(columns));
 
-    let context = if let Some(by) = util::as_ref(by) {
-        let by = HashSet::from_iter(try_!(by.downcast_ref::<Vec<Expr>>()).clone());
-
-        let margin = Margin {
-            by,
-            max_partition_length: util::as_ref(max_partition_length as *const u32).cloned(),
-            max_num_partitions: util::as_ref(max_num_partitions as *const u32).cloned(),
-            max_partition_contributions: util::as_ref(max_partition_contributions as *const u32)
-                .cloned(),
-            max_influenced_partitions: util::as_ref(max_influenced_partitions as *const u32)
-                .cloned(),
-            public_info: match try_!(util::to_option_str(public_info)) {
-                Some("keys") => Some(MarginPub::Keys),
-                Some("lengths") => Some(MarginPub::Lengths),
-                None => None,
-                _ => return err!(FFI, "public_info must be one of 'keys' or 'lengths'").into(),
-            },
-        };
-        Context::Aggregation { margin }
+    let context = if let Some(margin) = util::as_ref(margin) {
+        Context::Aggregation {
+            margin: try_!(margin.downcast_ref::<Margin>()).clone(),
+        }
     } else {
         Context::RowByRow
     };

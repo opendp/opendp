@@ -1,5 +1,5 @@
 use syn::{
-    punctuated::Punctuated, GenericArgument, ItemFn, PathArguments, ReturnType, Signature, Type,
+    GenericArgument, ItemFn, PathArguments, ReturnType, Signature, Type, punctuated::Punctuated,
 };
 
 use crate::bootstrap::signature::syn_fnarg_to_syn_pattype;

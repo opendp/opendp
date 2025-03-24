@@ -16,7 +16,7 @@ mod ffi;
 #[bootstrap(
     features("contrib"),
     arguments(bounds(rust_type = "(T, T)")),
-    generics(S(default = "Pairwise<T>", generics = "T")),
+    generics(S(default = "Pairwise<T>")),
     derived_types(T = "$get_atom_or_infer(S, get_first(bounds))")
 )]
 /// Make a Transformation that computes the sum of bounded floats with known ordering.
@@ -90,7 +90,7 @@ where
 #[bootstrap(
     features("contrib"),
     arguments(bounds(rust_type = "(T, T)")),
-    generics(S(default = "Pairwise<T>", generics = "T")),
+    generics(S(default = "Pairwise<T>")),
     derived_types(T = "$get_atom_or_infer(S, get_first(bounds))")
 )]
 /// Make a Transformation that computes the sum of bounded floats with known ordering and dataset size.

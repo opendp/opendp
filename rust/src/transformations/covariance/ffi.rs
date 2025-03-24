@@ -13,11 +13,11 @@ use crate::{
         util::Type,
     },
     traits::{CheckAtom, Float, FloatBits},
-    transformations::{make_sized_bounded_covariance, Pairwise, Sequential, UncheckedSum},
+    transformations::{Pairwise, Sequential, UncheckedSum, make_sized_bounded_covariance},
 };
 
 // no entry in bootstrap.json because there's no way to get data into it
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_sized_bounded_covariance(
     size: c_uint,
     bounds_0: *const AnyObject,

@@ -1,3 +1,4 @@
+from opendp.extras.polars import Margin
 import pytest
 import opendp.prelude as dp
 import warnings
@@ -49,7 +50,7 @@ def example_lf(margin=None, **kwargs):
     lf_domain, lf = dp.lazyframe_domain(domains), pl.LazyFrame(series)
     if margin is not None:
         margin = [col if isinstance(col, pl.Expr) else pl.col(col) for col in margin]
-        lf_domain = dp.with_margin(lf_domain, by=margin, **kwargs)
+        lf_domain = dp.with_margin(lf_domain, Margin(by=margin, **kwargs))
     return lf_domain, lf
 
 
@@ -58,9 +59,9 @@ def test_expr_domain():
 
     pl = pytest.importorskip("polars")
     by = [pl.col("A"), pl.col("B")]
-    dp.wild_expr_domain(series_domains, by=by)
-    dp.wild_expr_domain(series_domains, by=by, max_num_partitions=10)
-    dp.wild_expr_domain(series_domains, by=by, public_info="keys")
+    dp.wild_expr_domain(series_domains, dp.polars.Margin(by=by))
+    dp.wild_expr_domain(series_domains, dp.polars.Margin(by=by, max_num_partitions=10))
+    dp.wild_expr_domain(series_domains, dp.polars.Margin(by=by, public_info="keys"))
 
 
 def test_domains():
@@ -186,17 +187,15 @@ def test_cast():
 
 
 def test_stable_expr():
-    pl = pytest.importorskip("polars")
-    domain = dp.wild_expr_domain(example_series()[0])
-    with pytest.raises(dp.OpenDPException):
-        dp.t.make_stable_expr(domain, dp.symmetric_distance(), pl.col("A").cast(int))
+    domain = dp.wild_expr_domain([dp.series_domain("A", dp.atom_domain(T=float))])
+    dp.t.make_stable_expr(domain, dp.symmetric_distance(), "A")
 
 
 def test_private_expr():
     pl = pytest.importorskip("polars")
     pl_testing = pytest.importorskip("polars.testing")
     m_len = dp.m.make_private_expr(
-        dp.wild_expr_domain([], by=[]),
+        dp.wild_expr_domain([], dp.polars.Margin(by=[])),
         dp.partition_distance(dp.symmetric_distance()),
         dp.max_divergence(),
         dp.len(scale=1.0)
@@ -361,9 +360,9 @@ def test_polars_describe():
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0),
         split_evenly_over=2,
-        margins={ # type: ignore[arg-type]
-            ("B",): dp.polars.Margin(public_info="keys", max_partition_length=5),
-        },
+        margins=[
+            dp.polars.Margin(by=["B"], public_info="keys", max_partition_length=5),
+        ],
     )
 
     expected = pl.DataFrame(
@@ -623,7 +622,7 @@ def test_replace_binary_path():
     os.environ["OPENDP_POLARS_LIB_PATH"] = "testing!"
 
     m_expr = dp.m.make_private_expr(
-        dp.wild_expr_domain(example_series()[0], by=[]),
+        dp.wild_expr_domain(example_series()[0], dp.polars.Margin(by=[])),
         dp.partition_distance(dp.symmetric_distance()),
         dp.max_divergence(),
         expr,
@@ -691,7 +690,7 @@ def test_pickle_bomb():
     err_msg_re = "OpenDP does not allow pickled keyword arguments as they may enable remote code execution."
     with pytest.raises(dp.OpenDPException, match=err_msg_re):
         dp.m.make_private_expr(
-            dp.wild_expr_domain(example_series()[0], by=[]),
+            dp.wild_expr_domain(example_series()[0], dp.polars.Margin(by=[])),
             dp.partition_distance(dp.symmetric_distance()),
             dp.max_divergence(),
             bomb_expr,
@@ -856,7 +855,7 @@ def test_float_sum_with_unlimited_reorderable_partitions():
         dp.series_domain("region", dp.atom_domain(T=dp.i64)),
         dp.series_domain("income", dp.atom_domain(T=dp.f64))
     ])
-    lf_domain = dp.with_margin(lf_domain, by=[pl.col("region")], public_info="lengths", max_partition_length=6)
+    lf_domain = dp.with_margin(lf_domain, Margin(by=[pl.col("region")], public_info="lengths", max_partition_length=6))
 
     from opendp.domains import _lazyframe_from_domain
     lf = _lazyframe_from_domain(lf_domain)
@@ -1126,3 +1125,37 @@ def test_enum_domain():
 
     # check that domain is as expected
     assert observed == expected
+
+
+def test_array_domain():
+    pl = pytest.importorskip("polars")
+
+    # this triggers construction of a lazyframe domain from the schema
+    context = dp.Context.compositor(
+        data=pl.LazyFrame(pl.Series("alpha", [["A", "B", "C"]] * 100, dtype=pl.Array(pl.String, 3))),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=1,
+    )
+    observed = context.accountant.input_domain
+    expected = dp.lazyframe_domain([
+        dp.series_domain("alpha", dp.option_domain(dp.array_domain(dp.atom_domain(T=str), 3))),
+    ])
+
+    # check that domain is as expected
+    assert observed == expected
+
+@pytest.mark.xfail(reason="broken until https://github.com/pola-rs/polars/issues/20162 is fixed")
+def test_array_domain_query():
+    pl = pytest.importorskip("polars")
+
+    # this triggers construction of a lazyframe domain from the schema
+    context = dp.Context.compositor(
+        data=pl.LazyFrame(pl.Series("alpha", [["A", "B", "C"]] * 100, dtype=pl.Array(pl.String, 3))),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=1,
+    )
+    
+    # this is broken until https://github.com/pola-rs/polars/issues/20162 is fixed
+    context.query().with_columns(pl.col.alpha.explode()).select(dp.len()).release().collect()

@@ -8,7 +8,7 @@ use crate::{
         util::AnyMeasurementPtr,
     },
     measures::{
-        ffi::TypedMeasure, Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence,
+        Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence, ffi::TypedMeasure,
     },
 };
 
@@ -36,16 +36,18 @@ fn make_basic_composition(measurements: Vec<AnyMeasurement>) -> Fallible<AnyMeas
     super::make_basic_composition(measurements).map(Measurement::into_any_out)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_combinators__make_basic_composition(
     measurements: *const AnyObject,
 ) -> FfiResult<*mut AnyMeasurement> {
     let meas_ptrs = try_!(try_as_ref!(measurements).downcast_ref::<Vec<AnyMeasurementPtr>>());
 
-    let measurements: Vec<AnyMeasurement> = try_!(meas_ptrs
-        .iter()
-        .map(|ptr| Ok(try_as_ref!(*ptr).clone()))
-        .collect());
+    let measurements: Vec<AnyMeasurement> = try_!(
+        meas_ptrs
+            .iter()
+            .map(|ptr| Ok(try_as_ref!(*ptr).clone()))
+            .collect()
+    );
     make_basic_composition(measurements).into()
 }
 

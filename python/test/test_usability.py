@@ -1,3 +1,4 @@
+import re
 import pytest
 import opendp.prelude as dp
 
@@ -83,6 +84,49 @@ def test_query_dir():
     query_dir = dir(context.query())
     assert 'count' in query_dir
     assert 'laplace' in query_dir
+
+
+def test_string_instead_of_tuple_for_margin_key():
+    pl = pytest.importorskip("polars")
+
+    lf = pl.LazyFrame(
+        {"a_column": [1, 2, 3, 4]},
+        schema={"a_column": pl.Int32},
+    )
+
+    with pytest.raises(ValueError, match=re.escape('by (a_column) must be a sequence type; Did you mean ["a_column"]? ...')):
+        dp.Context.compositor(
+            data=lf,
+            privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(epsilon=1.0),
+            split_evenly_over=1,
+            margins=[
+                # To reproduce failure, the column name must be multiple characters.
+                # TODO: We want to fail earlier because the key is not a tuple.
+                # (mypy does catch this, so we need "type: ignore", but we can't rely on users running mypy.)
+                dp.polars.Margin(by=("a_column"), public_info="keys", max_partition_length=5), # type: ignore
+            ],
+        )
+
+
+def test_margins_dict_instead_of_list():
+    pl = pytest.importorskip("polars")
+
+    lf = pl.LazyFrame(
+        {"col": [1, 2, 3, 4]},
+        schema={"col": pl.Int32},
+    )
+
+    with pytest.warns(DeprecationWarning, match=re.escape('Margin dicts should be replaced with lists, with the key supplied as the "by" kwarg')):
+        dp.Context.compositor(
+            data=lf,
+            privacy_unit=dp.unit_of(contributions=1),
+            privacy_loss=dp.loss_of(epsilon=1.0),
+            split_evenly_over=1,
+            margins={ # type: ignore[arg-type]
+                ('col',): dp.polars.Margin(public_info="keys", max_partition_length=5),
+            }
+        )
 
 
 @pytest.mark.parametrize(

@@ -15,7 +15,7 @@ use super::UncheckedSum;
 #[bootstrap(
     features("contrib"),
     arguments(bounds(rust_type = "(T, T)")),
-    generics(S(default = "Pairwise<T>", generics = "T")),
+    generics(S(default = "Pairwise<T>")),
     derived_types(T = "$get_atom(get_type(input_domain))")
 )]
 /// Make a Transformation that computes the sum of squared deviations of bounded data.
@@ -61,8 +61,12 @@ where
     S: UncheckedSum,
     S::Item: 'static + Float,
 {
-    let size = (input_domain.size)
-        .ok_or_else(|| err!(MakeTransformation, "dataset size must be known. Either specify size in the input domain or use make_resize"))?;
+    let size = (input_domain.size).ok_or_else(|| {
+        err!(
+            MakeTransformation,
+            "dataset size must be known. Either specify size in the input domain or use make_resize"
+        )
+    })?;
     let bounds = (input_domain.element_domain.get_closed_bounds())?;
 
     if size == 0 {

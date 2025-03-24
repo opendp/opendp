@@ -180,7 +180,7 @@ def test_subcontext_changes_metric():
     subcontext = context.query().clamp((0, 1)).sum().compositor(split_evenly_over=1).release()
 
     # This still corresponds to the top-level context:
-    assert subcontext.accountant.input_domain == dp.vector_domain(dp.atom_domain(T=dp.i32))
+    assert subcontext.accountant.input_domain == dp.vector_domain(dp.atom_domain(T=int))
 
     # TODO: Is there a good way to make this assertion through the public API?
     assert subcontext.query()._chain == (

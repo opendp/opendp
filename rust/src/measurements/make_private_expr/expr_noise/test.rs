@@ -4,7 +4,7 @@ use polars::prelude::*;
 use crate::{
     domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain},
     error::ErrorVariant,
-    measurements::{make_private_expr, make_private_lazyframe, PrivateExpr},
+    measurements::{PrivateExpr, make_private_expr, make_private_lazyframe},
     metrics::{InsertDeleteDistance, PartitionDistance, SymmetricDistance},
     polars::PrivacyNamespace,
     transformations::test_helper::get_test_data,
@@ -166,7 +166,7 @@ fn check_autocalibration(
 #[test]
 fn test_sum_unbounded_dp_autocalibration() -> Fallible<()> {
     check_autocalibration(
-        Margin::default().with_max_partition_length(100),
+        Margin::select().with_max_partition_length(100),
         (4, 7),
         (1, 1, 1),
     )
@@ -175,7 +175,7 @@ fn test_sum_unbounded_dp_autocalibration() -> Fallible<()> {
 #[test]
 fn test_sum_bounded_dp_autocalibration() -> Fallible<()> {
     check_autocalibration(
-        Margin::default()
+        Margin::select()
             .with_max_partition_length(100)
             .with_public_lengths(),
         (4, 7),

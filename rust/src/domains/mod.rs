@@ -243,7 +243,7 @@ impl<T: ProductOrd + Debug> Bounds<T> {
                             "upper bound ({:?}) excludes inclusive lower bound ({:?})",
                             l,
                             u
-                        )
+                        );
                     }
                     (Bound::Excluded(l), Bound::Included(u)) => {
                         return fallible!(
@@ -251,7 +251,7 @@ impl<T: ProductOrd + Debug> Bounds<T> {
                             "lower bound ({:?}) excludes inclusive upper bound ({:?})",
                             l,
                             u
-                        )
+                        );
                     }
                     _ => (),
                 }

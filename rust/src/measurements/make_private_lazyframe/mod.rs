@@ -6,14 +6,14 @@ use opendp_derive::bootstrap;
 use std::fmt::Debug;
 
 use crate::{
-    combinators::{make_approximate, BasicCompositionMeasure},
+    combinators::{BasicCompositionMeasure, make_approximate},
     core::{Function, Measure, Measurement, Metric, MetricSpace},
     domains::{DslPlanDomain, LazyFrameDomain},
     error::Fallible,
     measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
     metrics::PartitionDistance,
-    polars::{get_disabled_features_message, OnceFrame},
-    transformations::{traits::UnboundedMetric, DatasetMetric, StableDslPlan},
+    polars::{OnceFrame, get_disabled_features_message},
+    transformations::{DatasetMetric, StableDslPlan, traits::UnboundedMetric},
 };
 
 use super::PrivateExpr;
@@ -23,7 +23,7 @@ mod ffi;
 
 #[cfg(feature = "contrib")]
 mod group_by;
-pub(crate) use group_by::{is_threshold_predicate, match_group_by, KeySanitizer, MatchGroupBy};
+pub(crate) use group_by::{KeySanitizer, MatchGroupBy, is_threshold_predicate, match_group_by};
 
 #[cfg(feature = "contrib")]
 mod postprocess;
@@ -60,20 +60,22 @@ where
     }
     match plan {
         #[cfg(feature = "contrib")]
-        plan if matches!(plan, DslPlan::Select { .. }) => select::make_private_select::<MS, MI, MO>(
-            input_domain,
-            input_metric,
-            output_measure,
-            plan,
-            global_scale,
-        ),
+        plan if matches!(plan, DslPlan::Select { .. }) => {
+            select::make_private_select::<MS, MI, MO>(
+                input_domain,
+                input_metric,
+                output_measure,
+                plan,
+                global_scale,
+            )
+        }
 
         plan => fallible!(
             MakeMeasurement,
             "A step in your query is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
             plan.describe()?,
             get_disabled_features_message()
-        )
+        ),
     }
 }
 

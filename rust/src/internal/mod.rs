@@ -11,8 +11,8 @@ use crate::{
     error::Fallible,
     ffi::{
         any::{
-            wrap_func, AnyDomain, AnyFunction, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject,
-            AnyTransformation, CallbackFn, Downcast,
+            AnyDomain, AnyFunction, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject,
+            AnyTransformation, CallbackFn, Downcast, wrap_func,
         },
         util::{self, ExtrinsicObject},
     },
@@ -66,7 +66,7 @@ fn _make_measurement<TO>(
     panic!("this signature only exists for code generation")
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_internal___make_measurement(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
@@ -110,7 +110,7 @@ pub extern "C" fn opendp_internal___make_measurement(
 /// * `output_metric` - The metric from which distances between outputs of adjacent inputs are measured.
 /// * `function` - A function mapping data from `input_domain` to `output_domain`.
 /// * `stability_map` - A function mapping distances from `input_metric` to `output_metric`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_internal___make_transformation(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
@@ -148,7 +148,7 @@ pub extern "C" fn opendp_internal___make_transformation(
 /// * `identifier` - A string description of the data domain.
 /// * `member` - A function used to test if a value is a member of the data domain.
 /// * `descriptor` - Additional constraints on the domain.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_internal___extrinsic_domain(
     identifier: *mut c_char,
     member: *const CallbackFn,
@@ -177,7 +177,7 @@ pub extern "C" fn opendp_internal___extrinsic_domain(
 ///
 /// # Arguments
 /// * `descriptor` - A string description of the privacy measure.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_internal___extrinsic_divergence(
     descriptor: *mut c_char,
 ) -> FfiResult<*mut AnyMeasure> {
@@ -197,7 +197,7 @@ pub extern "C" fn opendp_internal___extrinsic_divergence(
 ///
 /// # Arguments
 /// * `descriptor` - A string description of the metric.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_internal___extrinsic_distance(
     descriptor: *mut c_char,
 ) -> FfiResult<*mut AnyMetric> {
@@ -226,7 +226,7 @@ fn _new_pure_function<TO>(function: CallbackFn) -> Fallible<AnyFunction> {
     panic!("this signature only exists for code generation")
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_internal___new_pure_function(
     function: *const CallbackFn,
     TO: *const c_char,

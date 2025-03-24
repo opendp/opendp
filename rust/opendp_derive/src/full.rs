@@ -1,15 +1,15 @@
 use quote::ToTokens;
-use syn::{parse_macro_input, AttributeArgs, Item, ItemFn};
+use syn::{Item, ItemFn, Meta, Token, parse_macro_input, punctuated::Punctuated};
 
 use proc_macro::TokenStream;
 
 use opendp_tooling::{
+    Function,
     bootstrap::{
         docstring::{get_proof_path, insert_proof_attribute},
         partial::generate_partial,
     },
-    proven::{filesystem::load_proof_paths, Proven},
-    Function,
+    proven::{Proven, filesystem::load_proof_paths},
 };
 
 macro_rules! try_ {
@@ -35,7 +35,10 @@ pub(crate) fn bootstrap(attr_args: TokenStream, input: TokenStream) -> TokenStre
     let original_input = input.clone();
 
     // parse the inputs
-    let attr_args = parse_macro_input!(attr_args as AttributeArgs);
+    let attr_args =
+        parse_macro_input!(attr_args with Punctuated::<Meta, Token![,]>::parse_terminated)
+            .into_iter()
+            .collect::<Vec<_>>();
     let mut item_fn = parse_macro_input!(input as ItemFn);
     let proof_paths = load_proof_paths().unwrap_or_default();
 
@@ -76,7 +79,10 @@ pub(crate) fn bootstrap(attr_args: TokenStream, input: TokenStream) -> TokenStre
 pub(crate) fn proven(attr_args: TokenStream, input: TokenStream) -> TokenStream {
     let original_input = input.clone();
 
-    let attr_args = parse_macro_input!(attr_args as AttributeArgs);
+    let attr_args =
+        parse_macro_input!(attr_args with Punctuated::<Meta, Token![,]>::parse_terminated)
+            .into_iter()
+            .collect::<Vec<_>>();
     let mut item = parse_macro_input!(input as Item);
 
     let proven = try_!(Proven::from_ast(attr_args, item.clone()), original_input);

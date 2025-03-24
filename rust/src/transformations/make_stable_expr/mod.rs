@@ -72,6 +72,9 @@ mod expr_sum;
 mod expr_to_physical;
 
 #[cfg(feature = "contrib")]
+mod namespace_arr;
+
+#[cfg(feature = "contrib")]
 mod namespace_dt;
 
 #[cfg(feature = "contrib")]
@@ -128,18 +131,25 @@ where
         use Expr::*;
         use FunctionExpr::*;
         match self {
-
             #[cfg(feature = "contrib")]
             Alias(_, _) => expr_alias::make_expr_alias(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
-            Expr::BinaryExpr { .. } => expr_binary::make_expr_binary(input_domain, input_metric, self),
+            Expr::BinaryExpr { .. } => {
+                expr_binary::make_expr_binary(input_domain, input_metric, self)
+            }
 
             #[cfg(feature = "contrib")]
             Function {
                 function: Boolean(_),
                 ..
-            } => return expr_boolean_function::make_expr_boolean_function(input_domain, input_metric, self),
+            } => {
+                return expr_boolean_function::make_expr_boolean_function(
+                    input_domain,
+                    input_metric,
+                    self,
+                );
+            }
 
             #[cfg(feature = "contrib")]
             Cast { .. } => expr_cast::make_expr_cast(input_domain, input_metric, self),
@@ -154,7 +164,9 @@ where
             Function {
                 function: DropNans | DropNulls,
                 ..
-            } => expr_drop_nan_or_null::make_expr_drop_nan_or_null(input_domain, input_metric, self),
+            } => {
+                expr_drop_nan_or_null::make_expr_drop_nan_or_null(input_domain, input_metric, self)
+            }
 
             #[cfg(feature = "contrib")]
             Function {
@@ -185,8 +197,7 @@ where
 
             #[cfg(feature = "contrib")]
             Function {
-                function: Replace,
-                ..
+                function: Replace, ..
             } => expr_replace::make_expr_replace(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
@@ -194,6 +205,12 @@ where
                 function: ReplaceStrict { .. },
                 ..
             } => expr_replace_strict::make_expr_replace_strict(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Function {
+                function: FunctionExpr::ArrayExpr(_),
+                ..
+            } => namespace_arr::make_namespace_arr(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
             Function {
@@ -212,7 +229,7 @@ where
                 "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
                 expr,
                 get_disabled_features_message()
-            )
+            ),
         }
     }
 }
@@ -231,14 +248,14 @@ where
         use Expr::*;
         match self {
             #[cfg(feature = "contrib")]
-            Agg(AggExpr::Count(_, _) | AggExpr::NUnique(_)) | Function { function: FunctionExpr::NullCount, .. } => {
-                expr_count::make_expr_count(input_domain, input_metric, self)
-            }
+            Agg(AggExpr::Count(_, _) | AggExpr::NUnique(_))
+            | Function {
+                function: FunctionExpr::NullCount,
+                ..
+            } => expr_count::make_expr_count(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
-            Agg(AggExpr::Sum(_)) => {
-                expr_sum::make_expr_sum(input_domain, input_metric, self)
-            }
+            Agg(AggExpr::Sum(_)) => expr_sum::make_expr_sum(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
             Len => expr_len::make_expr_len(input_domain, input_metric, self),
@@ -248,7 +265,7 @@ where
                 "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
                 expr,
                 get_disabled_features_message()
-            )
+            ),
         }
     }
 }
@@ -282,7 +299,7 @@ where
                 "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
                 expr,
                 get_disabled_features_message()
-            )
+            ),
         }
     }
 }

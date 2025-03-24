@@ -334,7 +334,9 @@ macro_rules! impl_ProductOrd_for_ord {
         fn total_cmp(&self, other: &Self) -> Fallible<Ordering> {Ok(Ord::cmp(self, other))}
     })*}
 }
-impl_ProductOrd_for_ord!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize);
+impl_ProductOrd_for_ord!(
+    u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize
+);
 
 impl_ProductOrd_for_ord!(RBig, IBig);
 
@@ -383,7 +385,7 @@ impl<T1: ProductOrd + Debug, T2: ProductOrd + Debug> ProductOrd for (T1, T2) {
                         "unknown ordering between {:?} and {:?}",
                         self,
                         other
-                    )
+                    );
                 }
             },
         )
