@@ -26,7 +26,7 @@ it can raise an exception and prevent you from running more queries than your bu
       ...     privacy_loss=dp.loss_of(epsilon=1.0),
       ...     split_evenly_over=1,
       ... )
-      >>> sum_query = context.query().clamp((1.0, 10.0)).sum()
+      >>> sum_query = context.query().impute_constant(0.0).clamp((1.0, 10.0)).sum()
       >>> dp_sum_query = sum_query.laplace()
       >>> print('DP sum should be near 500:', dp_sum_query.release())  # doctest: +ELLIPSIS
       DP sum should be near 500: ...

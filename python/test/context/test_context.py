@@ -135,7 +135,7 @@ def test_middle_param():
         split_evenly_over=1,
     )
 
-    dp_sum = context.query().resize(constant=2.0).clamp((1.0, 10.0)).mean().laplace(1.0)
+    dp_sum = context.query().resize(constant=2.0).impute_constant(0.0).clamp((1.0, 10.0)).mean().laplace(1.0)
     # scale = (U - L) / n / ε
     # 1     = (10- 1) / n / 3
     # n     = 9 / 3
@@ -225,9 +225,7 @@ def test_sc_query():
         data=[1, 2, 3],
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=3.0, delta=1e-6),
-        split_evenly_over=2,
-        # TODO: Using split_by_weights instead fails:
-        # split_by_weights=[1, 2],
+        split_by_weights=[1, 2],
         domain=dp.vector_domain(dp.atom_domain(T=int)),
     )
 
@@ -249,6 +247,7 @@ def test_sc_query():
     dp_mean = (
         sub_context_2.query()
         .cast_default(float)
+        .impute_constant(0.0)
         .clamp((1.0, 10.0))
         .resize(3, constant=5.0)
         .mean()
@@ -324,9 +323,9 @@ def test_transformation_release_error():
         data=[1., 2., 3.],
         privacy_unit=privacy_unit,
         privacy_loss=privacy_loss,
-        domain=dp.vector_domain(dp.atom_domain(T=float), size=3),
+        domain=dp.vector_domain(dp.atom_domain(T=float, nan=False), size=3),
         split_evenly_over=1
     )
-    clamped = context.query().clamp((1., 10.))
+    clamped = context.query().impute_constant(0.0)
     with pytest.raises(ValueError, match=r"Query is not yet a measurement"):
         clamped.release()

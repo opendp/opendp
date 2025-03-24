@@ -40,7 +40,7 @@ pub fn make_clamp<TA: 'static + Clone + ProductOrd + CheckAtom, M: DatasetMetric
 where
     (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
 {
-    input_domain.element_domain.assert_non_null()?;
+    input_domain.element_domain.assert_non_nan()?;
 
     let mut output_row_domain = input_domain.element_domain.clone();
     output_row_domain.bounds = Some(Bounds::<TA>::new_closed(bounds.clone())?);

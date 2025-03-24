@@ -131,5 +131,5 @@ def test_hash():
     with pytest.raises(ValueError):
         make_mock_basic_composition([
             dp.m.make_randomized_response_bool(.75),
-            dp.m.make_gaussian(dp.atom_domain(T=float), dp.absolute_distance(T=float), 1.)
+            dp.m.make_gaussian(dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float), 1.)
         ])

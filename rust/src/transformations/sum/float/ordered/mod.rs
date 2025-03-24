@@ -69,7 +69,7 @@ where
 
     Transformation::new(
         VectorDomain::new(AtomDomain::new_closed(bounds)?),
-        AtomDomain::default(),
+        AtomDomain::new_non_nan(),
         Function::new(move |arg: &Vec<S::Item>| {
             S::saturating_sum(&arg[..size_limit.min(arg.len())])
         }),
@@ -141,7 +141,7 @@ where
 
     Transformation::new(
         VectorDomain::new(AtomDomain::new_closed(bounds)?).with_size(size),
-        AtomDomain::default(),
+        AtomDomain::new_non_nan(),
         Function::new(move |arg: &Vec<S::Item>| S::saturating_sum(arg)),
         InsertDeleteDistance::default(),
         AbsoluteDistance::default(),

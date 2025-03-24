@@ -57,9 +57,7 @@ where
 #[derive(Debug)]
 pub struct Column(Box<dyn IsVec>);
 impl CheckNull for Column {
-    fn is_null(&self) -> bool {
-        false
-    }
+    const NULLABLE: bool = false;
 }
 
 impl Column {

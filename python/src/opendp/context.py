@@ -886,9 +886,9 @@ def _translate_measure_distance(d_from, from_measure: Measure, to_measure: Measu
         return (d_from, 0.0)
 
     if from_to == ("ZeroConcentratedDivergence", "MaxDivergence"):
-        space = atom_domain(T=float), absolute_distance(T=float)
+        space = atom_domain(T=float, nan=False), absolute_distance(T=float)
         scale = binary_search_param(
-            lambda eps: make_pureDP_to_zCDP(make_laplace(*space, eps)),
+            lambda scale: make_pureDP_to_zCDP(make_laplace(*space, scale)),
             d_in=constant,
             d_out=d_from,
             T=float,

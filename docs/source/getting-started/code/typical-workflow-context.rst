@@ -64,6 +64,7 @@
 # mean
 >>> mean_query = (
 ...     context.query()
+...     .impute_constant(imputed_value)
 ...     .clamp(bounds)
 ...     .resize(size=dp_count, constant=imputed_value)
 ...     .mean()

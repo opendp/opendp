@@ -36,7 +36,7 @@ fn test_impute_constant_option() -> Fallible<()> {
 #[test]
 fn test_impute_constant_inherent() -> Fallible<()> {
     let imputer = make_impute_constant(
-        VectorDomain::new(AtomDomain::new_nullable()),
+        VectorDomain::new(AtomDomain::default()),
         SymmetricDistance::default(),
         12.,
     )?;
@@ -64,7 +64,7 @@ fn test_impute_drop_option() -> Fallible<()> {
 #[test]
 fn test_impute_drop_inherent() -> Fallible<()> {
     let imputer = make_drop_null(
-        VectorDomain::new(AtomDomain::new_nullable()),
+        VectorDomain::new(AtomDomain::default()),
         SymmetricDistance::default(),
     )?;
 

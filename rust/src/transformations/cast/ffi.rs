@@ -8,7 +8,7 @@ use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
 use crate::metrics::IntDistance;
-use crate::traits::{CheckAtom, InherentNull, RoundCast};
+use crate::traits::{CheckAtom, HasNull, RoundCast};
 use crate::transformations::{DatasetMetric, make_cast, make_cast_default, make_cast_inherent};
 
 #[unsafe(no_mangle)]
@@ -104,7 +104,7 @@ pub extern "C" fn opendp_transformations__make_cast_inherent(
     where
         M: 'static + DatasetMetric,
         TIA: 'static + Clone + CheckAtom,
-        TOA: 'static + RoundCast<TIA> + InherentNull + CheckAtom,
+        TOA: 'static + RoundCast<TIA> + HasNull + CheckAtom,
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
     {

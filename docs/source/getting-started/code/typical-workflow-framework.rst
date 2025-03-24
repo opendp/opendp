@@ -64,7 +64,8 @@
 
 # mean
 >>> mean_transformation = (
-...     dp.t.make_clamp(input_domain, input_metric, bounds) >>
+...     dp.t.make_impute_constant(input_domain, input_metric, 0.0) >>
+...     dp.t.then_clamp(bounds) >>
 ...     dp.t.then_resize(size=dp_count, constant=imputed_value) >>
 ...     dp.t.then_mean()
 ... )

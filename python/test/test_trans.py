@@ -54,7 +54,7 @@ def test_cast_default():
 
 def test_impute_uniform():
     caster = dp.t.make_impute_uniform_float(
-        dp.vector_domain(dp.atom_domain(T=float, nullable=True)),
+        dp.vector_domain(dp.atom_domain(T=float, nan=True)),
         dp.symmetric_distance(),
         bounds=(-1., 2.))
     assert -1. <= caster([float('nan')])[0] <= 2.
@@ -314,7 +314,7 @@ def test_indexing():
 
 
 def test_lipschitz_mul_float():
-    trans = dp.t.make_sized_bounded_float_ordered_sum(10, (0., 10.)) >> dp.t.make_lipschitz_float_mul(1 / 10, (-3., 4.))
+    trans = dp.t.make_sized_bounded_float_ordered_sum(10, (0., 10.)) >> dp.t.then_lipschitz_float_mul(1 / 10, (-3., 4.))
 
     assert trans([3.] * 10) == 0.4
     assert trans.map(2) == 1.0000000000000153

@@ -1,51 +1,51 @@
 use dashu::integer::IBig;
-use num::One;
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::{Domain, Function, Metric, MetricSpace, StabilityMap, Transformation},
-    domains::{AtomDomain, VectorDomain},
+    core::{Function, StabilityMap, Transformation},
+    domains::AtomDomain,
     error::Fallible,
-    metrics::{AbsoluteDistance, LpDistance},
-    traits::{
-        AlertingAbs, CheckNull, Float, FloatBits, InfAdd, InfMul, InfPowI, ProductOrd,
-        SaturatingMul,
-    },
+    metrics::AbsoluteDistance,
+    traits::Float,
 };
 
 #[cfg(feature = "ffi")]
 mod ffi;
 
+#[cfg(test)]
+mod test;
+
 #[bootstrap(
     features("contrib"),
-    arguments(
-        constant(rust_type = "T", c_type = "void *"),
-        bounds(rust_type = "(T, T)")
-    ),
-    generics(D(default = "AtomDomain<T>"), M(default = "AbsoluteDistance<T>")),
-    derived_types(T = "$get_atom_or_infer(D, constant)")
+    arguments(constant(c_type = "void *")),
+    generics(TA(suppress)),
+    derived_types(TA = "$get_atom(get_carrier_type(input_domain))")
 )]
 /// Make a transformation that multiplies an aggregate by a constant.
 ///
 /// The bounds clamp the input, in order to bound the increase in sensitivity from float rounding.
 ///
 /// # Arguments
+/// * `input_domain` - The domain of the input.
+/// * `input_metric` - The metric of the input.
 /// * `constant` - The constant to multiply aggregates by.
 /// * `bounds` - Tuple of inclusive lower and upper bounds.
 ///
 /// # Generics
-/// * `D` - Domain of the function. Must be `AtomDomain<T>` or `VectorDomain<AtomDomain<T>>`
-/// * `M` - Metric. Must be `AbsoluteDistance<T>`, `L1Distance<T>` or `L2Distance<T>`
-pub fn make_lipschitz_float_mul<D, M>(
-    constant: D::Atom,
-    bounds: (D::Atom, D::Atom),
-) -> Fallible<Transformation<D, D, M, M>>
-where
-    D: LipschitzMulFloatDomain,
-    M: LipschitzMulFloatMetric<Distance = D::Atom>,
-    (D, M): MetricSpace,
-{
-    let _2 = D::Atom::one() + D::Atom::one();
+/// * `TA` - Atomic type.
+pub fn make_lipschitz_float_mul<TA: Float>(
+    input_domain: AtomDomain<TA>,
+    input_metric: AbsoluteDistance<TA>,
+    constant: TA,
+    bounds: (TA, TA),
+) -> Fallible<
+    Transformation<AtomDomain<TA>, AtomDomain<TA>, AbsoluteDistance<TA>, AbsoluteDistance<TA>>,
+> {
+    if input_domain.nan() {
+        return fallible!(MakeTransformation, "input_domain may not contain NaN.");
+    }
+
+    let _2 = TA::exact_int_cast(2)?;
     let (lower, upper) = bounds;
 
     // Float arithmetic is computed with effectively infinite precision, and rounded to the nearest float
@@ -68,64 +68,21 @@ where
 
     // retrieve the unbiased exponent from the largest output magnitude float w
     let max_exponent: IBig = output_mag.raw_exponent().into();
-    let max_unbiased_exponent = max_exponent - D::Atom::EXPONENT_BIAS.into();
+    let max_unbiased_exponent = max_exponent - TA::EXPONENT_BIAS.into();
 
     // greatest possible error is the ulp of the greatest possible output
-    let output_ulp = _2.inf_powi(max_unbiased_exponent - D::Atom::MANTISSA_BITS.into())?;
+    let output_ulp = _2.inf_powi(max_unbiased_exponent - TA::MANTISSA_BITS.into())?;
 
     Transformation::new(
-        D::default(),
-        D::default(),
-        Function::new_fallible(move |arg: &D::Carrier| D::transform(&constant, &bounds, arg)),
-        M::default(),
-        M::default(),
+        input_domain,
+        AtomDomain::new_non_nan(),
+        Function::new_fallible(move |arg: &TA| {
+            Ok(arg.total_clamp(lower, upper)?.saturating_mul(&constant))
+        }),
+        input_metric.clone(),
+        input_metric,
         StabilityMap::new_fallible(move |d_in| {
             constant.alerting_abs()?.inf_mul(d_in)?.inf_add(&output_ulp)
         }),
     )
 }
-
-/// Implemented for any domain that supports multiplication lipschitz extensions
-pub trait LipschitzMulFloatDomain: Domain + Default {
-    type Atom: 'static + Float;
-    fn transform(
-        constant: &Self::Atom,
-        bounds: &(Self::Atom, Self::Atom),
-        v: &Self::Carrier,
-    ) -> Fallible<Self::Carrier>;
-}
-
-impl<T> LipschitzMulFloatDomain for AtomDomain<T>
-where
-    T: 'static + Float,
-{
-    type Atom = T;
-    fn transform(constant: &T, &(lower, upper): &(T, T), v: &T) -> Fallible<T> {
-        Ok(v.total_clamp(lower, upper)?.saturating_mul(constant))
-    }
-}
-
-impl<D: LipschitzMulFloatDomain> LipschitzMulFloatDomain for VectorDomain<D>
-where
-    D::Atom: Copy + SaturatingMul + CheckNull + ProductOrd,
-{
-    type Atom = D::Atom;
-    fn transform(
-        constant: &D::Atom,
-        bounds: &(Self::Atom, Self::Atom),
-        v: &Vec<D::Carrier>,
-    ) -> Fallible<Vec<D::Carrier>> {
-        v.iter()
-            .map(|v_i| D::transform(constant, bounds, v_i))
-            .collect()
-    }
-}
-
-/// Implemented for any metric that supports multiplication lipschitz extensions
-pub trait LipschitzMulFloatMetric: Metric {}
-
-impl<const P: usize, Q> LipschitzMulFloatMetric for LpDistance<P, Q> {}
-impl<Q> LipschitzMulFloatMetric for AbsoluteDistance<Q> {}
-
-#[cfg(test)]
-mod test;

@@ -50,7 +50,7 @@ pub fn make_quantile_score_candidates<MI: UnboundedMetric, TIA: Number>(
 where
     (VectorDomain<AtomDomain<TIA>>, MI): MetricSpace,
 {
-    if input_domain.element_domain.nullable() {
+    if input_domain.element_domain.nan() {
         return fallible!(MakeTransformation, "input must be non-null");
     }
 

@@ -62,7 +62,7 @@ mod tests {
 
     #[test]
     fn test_poly_measurement() -> Fallible<()> {
-        let input_domain = AtomDomain::default();
+        let input_domain = AtomDomain::new_non_nan();
         let input_metric = AbsoluteDistance::default();
         let op_plain = measurements::make_laplace(input_domain, input_metric, 0.0, None)?;
         let arg = 100.;

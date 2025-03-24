@@ -85,7 +85,7 @@ can find it under ``dp.m``:
 
             >>> # call the constructor to produce the measurement `base_lap`
             >>> base_lap = dp.m.make_laplace(
-            ...     dp.atom_domain(T=float), 
+            ...     dp.atom_domain(T=float, nan=False), 
             ...     dp.absolute_distance(T=float), 
             ...     scale=5.
             ... )
@@ -289,7 +289,7 @@ links:
 
         .. code:: python
 
-            >>> input_domain = dp.vector_domain(dp.atom_domain(T=float))
+            >>> input_domain = dp.vector_domain(dp.atom_domain(T=float, nan=False))
             >>> input_metric = dp.symmetric_distance()
             
             >>> # call the constructor to produce the transformation `clamp`
@@ -405,9 +405,9 @@ can breeze through an entire release:
             
             >>> # construct the measurement
             >>> dp_sum = (
-            ...     dp.t.make_clamp(dp.vector_domain(dp.atom_domain(T=float)), dp.symmetric_distance(), bounds) >> 
-            ...     dp.t.make_sum(dp.vector_domain(dp.atom_domain(bounds=bounds)), dp.symmetric_distance()) >> 
-            ...     dp.m.make_laplace(dp.atom_domain(T=float), dp.absolute_distance(T=float), 5.)
+            ...     dp.t.make_clamp(dp.vector_domain(dp.atom_domain(T=float, nan=False)), dp.symmetric_distance(), bounds) >> 
+            ...     dp.t.make_sum(dp.vector_domain(dp.atom_domain(bounds=bounds, nan=False)), dp.symmetric_distance()) >> 
+            ...     dp.m.make_laplace(dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float), 5.)
             ... )
             
             >>> # evaluate the privacy expenditure and make a DP release

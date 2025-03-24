@@ -6,12 +6,9 @@ use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
-use crate::metrics::{AbsoluteDistance, SymmetricDistance};
+use crate::metrics::SymmetricDistance;
 use crate::traits::Float;
-use crate::transformations::{
-    LipschitzMulFloatDomain, LipschitzMulFloatMetric, Pairwise, Sequential, UncheckedSum,
-    make_variance,
-};
+use crate::transformations::{Pairwise, Sequential, UncheckedSum, make_variance};
 
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_variance(
@@ -37,8 +34,6 @@ pub extern "C" fn opendp_transformations__make_variance(
         where
             S: UncheckedSum,
             S::Item: 'static + Float,
-            AtomDomain<S::Item>: LipschitzMulFloatDomain<Atom = S::Item>,
-            AbsoluteDistance<S::Item>: LipschitzMulFloatMetric<Distance = S::Item>,
         {
             let input_domain = input_domain
                 .downcast_ref::<VectorDomain<AtomDomain<S::Item>>>()?

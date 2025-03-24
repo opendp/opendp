@@ -65,7 +65,7 @@ fn test_make_chain_tt() -> Fallible<()> {
         stability_map0,
     )?;
     let input_domain1 = AtomDomain::<i32>::default();
-    let output_domain1 = AtomDomain::<f64>::default();
+    let output_domain1 = AtomDomain::<f64>::new_non_nan();
     let function1 = Function::new(|a: &i32| (a + 1) as f64);
     let input_metric1 = AbsoluteDistance::<i32>::default();
     let output_metric1 = AbsoluteDistance::<i32>::default();
