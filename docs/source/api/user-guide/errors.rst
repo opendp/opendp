@@ -6,7 +6,7 @@ This means there are a lot of potential errors, some more clear than others.
 This is not a complete list, but it does describe some situations,
 and tries to provide more context than a short error message can accomodate.
 
-``Margin keys must be a sequence``
+``'by' kwarg must be a sequence type``
 ----------------------------------
 
 Confirm that you aren't using a string for the ``by`` kwarg by mistake.
