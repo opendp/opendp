@@ -41,18 +41,23 @@ None
     \validMeasurement{\texttt{(input\_domain, input\_metric, d\_in, d\_out)}}{\texttt{make\_canonical\_noise}}
 \end{theorem}
 
+We now prove each part in the postcondition.
 \subsubsection*{Data-independent runtime errors}
-\begin{proof}
+\begin{proof}[Proof of Theorem~\ref{valid-measurement}, Part 1]
+\label{data-independent-error}
 \rustdoc{traits/samplers/struct}{PartialSample}\texttt{.value}, 
 hereafter referred to as just \texttt{value} (a function) 
 can only fail when the pseudorandom byte generator used in its implementation fails due to lack of system entropy. 
 This is usually related to the computer's physical environment and not the dataset. 
 This is the only source of errors in the function.
-
-The rest of this proof is conditioned on the assumption that \texttt{value} does not raise an exception.
 \end{proof}
-\subsubsection*{Privacy guarantee}
 
+\subsubsection*{Privacy guarantee}
+Proving the privacy guarantee of Theorem~\ref{valid-measurement} is more involved, 
+and we need to establish several definitions and lemmas first.
+
+In the pseudocode, \texttt{d\_in} and \texttt{d\_out} are used to create a tradeoff function.  
+The following defines the corresponding noise distribution.
 \begin{definition}[\protect{\cite[Definition~3.7]{awan2023canonical}}]
     \label{def-3-7}  % Def 3.7
     Let $f$ be a symmetric nontrivial tradeoff function, and let {$c\in [0,1/2)$} be the unique fixed point of $f$: $f(c)=c$. 
@@ -62,45 +67,48 @@ The rest of this proof is conditioned on the assumption that \texttt{value} does
         1-f(F_f(x-1))&x>1/2.\\
     \end{cases}\]
 \end{definition}
+For more context on the definition of a tradeoff function, refer to \cite{awan2023canonical}.
 
+We will first prove that the mechanism \texttt{function} adds noise from this distribution.
 \begin{lemma}
     \label{function-correctness}
-    \texttt{function} on line \ref{function} returns $\texttt{arg} + \texttt{d\_in} \cdot N$ 
+    Condition on the assumption that \texttt{value} does not raise an exception.
+    Should \texttt{value} raise an exception, the function will return an error, as discussed in Proof Part~\ref{data-independent-error}.
+
+    \texttt{function} on Line~\ref{function} returns $\texttt{arg} + \texttt{d\_in} \cdot N$ 
     rounded to the nearest \texttt{f64} in postprocessing,
-    where $N$ is a sample from some random variable $F_f(\cdot)$, as defined in \ref{def-3-7},
+    where $N$ is a sample from some random variable $F_f(\cdot)$, as defined in Definition~\ref{def-3-7},
     and $f$ is the tradeoff function \texttt{tradeoff}.
 \end{lemma}
 
 \begin{proof}
-The code block on line \ref{try-cast-arg} converts float \texttt{arg} to a rational bignum.
+The code block on Line~\ref{try-cast-arg} converts float \texttt{arg} to a rational bignum.
 Due to \ref{non-null}, the input domain excludes null values, 
 so if the input is a member of the input domain, then the cast will never fail.
 
-Line \ref{sensitivity-check} ensures that \texttt{d\_in} is well-formed (distances cannot be negative).
+Line~\ref{sensitivity-check} ensures that \texttt{d\_in} is well-formed (distances cannot be negative).
     
 \rustdoc{measurements/canonical\_noise/fn}{approximate\_to\_tradeoff} has no user preconditions,
 so by its postcondition, \texttt{tradeoff} is a symmetric nontrivial tradeoff function
 and \texttt{fixed\_point} is the fixed-point of \texttt{tradeoff}.
 
-On line \ref{canonical-rv}, by the definition of \rustdoc{traits/samplers/canonical/struct}{CanonicalRV},
-\texttt{canonical\_rv} is a random variable representing $F_f(\cdot)$ (as is defined in \ref{def-3-7}) 
+On Line~\ref{canonical-rv}, by the definition of \rustdoc{traits/samplers/canonical/struct}{CanonicalRV},
+\texttt{canonical\_rv} is a random variable representing $F_f(\cdot)$ (as is defined in Definition~\ref{def-3-7}) 
 scaled by \texttt{d\_in} and shifted by \texttt{arg}.
 That is, \texttt{canonical\_rv} represents the distribution of $\texttt{arg} + \texttt{d\_in} \cdot N$.
 
-Line \ref{sample-value} then constructs a sampler for the random variable (\rustdoc{traits/samplers/struct}{PartialSample})
+Line~\ref{sample-value} then constructs a sampler for the random variable (\rustdoc{traits/samplers/struct}{PartialSample})
 and \texttt{.value} draws a sample, rounded to the nearest floating point number.
 By the postcondition of \rustdoc{traits/samplers/struct}{PartialSample}\texttt{.value}, 
 the returned value is a post-processing rounding to the nearest float
 of an infinite-precision sample from the \texttt{canonical\_rv} random variable.
 \end{proof}
 
-Recall several definitions from \cite{awan2023canonical}.
-\begin{theorem}[\protect{\cite[Theorem~3.9]{awan2023canonical}}]
-    \label{thm-3-9}
-    Let $f$ be a symmetric nontrivial tradeoff function and let $F_f$ be as in
-        \ref{def-3-7}. Then $F_f$ is a canonical noise distribution for $f$.
-\end{theorem}
+Now that we have shown that \texttt{function} adds noise from the distribution $F_f(\cdot)$,
+we can prove that the privacy guarantee is satisfied when noise from $F_f(\cdot)$ is added.
 
+Recall several definitions from \cite{awan2023canonical}.
+First, we need to define a canonical noise distribution.
 \begin{definition}[\protect{\cite[Definition~3.1]{awan2023canonical}}]
     \label{def-3-1}    
     Let $f$ be a symmetric nontrivial tradeoff function. A {continuous} distribution function $F$ is a \emph{canonical noise distribution} (CND) for $f$ if 
@@ -113,22 +121,29 @@ Recall several definitions from \cite{awan2023canonical}.
     \end{enumerate}
 \end{definition}
 
-Using these definitions, and \ref{function-correctness},
-we can prove the privacy guarantee in \ref{valid-measurement}.
+Then, $F_f$, the noise added in \texttt{function}, is a canonical noise distribution:
+\begin{theorem}[\protect{\cite[Theorem~3.9]{awan2023canonical}}]
+    \label{thm-3-9}
+    Let $f$ be a symmetric nontrivial tradeoff function and let $F_f$ be as in
+        \ref{def-3-7}. Then $F_f$ is a canonical noise distribution for $f$.
+\end{theorem}
 
-\begin{proof}
+Using these definitions, and Lemma~\ref{function-correctness},
+we can prove the privacy guarantee in Theorem~\ref{valid-measurement}.
+
+\begin{proof}[Proof of Theorem~\ref{valid-measurement} Part 2]
 Since \texttt{tradeoff} is a symmetric nontrivial tradeoff function, 
-and by the definition of \rustdoc{traits/samplers/canonical/struct}{CanonicalRV} that $F_f$ is as in \ref{def-3-7},
-then by \ref{thm-3-9}, $F_f$ is a canonical noise distribution for $f$.
+and by the definition of \rustdoc{traits/samplers/canonical/struct}{CanonicalRV} that $F_f$ is as in Definition~\ref{def-3-7},
+then by Theorem~\ref{thm-3-9}, $F_f$ is a canonical noise distribution for $f$.
 
-Therefore by definition \ref{def-3-1},
+Therefore by Definition~\ref{def-3-1},
 for every statistic $S: X^n\rightarrow \mathbb{R}$ with sensitivity $\Delta>0$, and $N\sim F(\cdot)$, 
 the mechanism $S(X) + \Delta N$ satisfies $f$-DP.
-By \ref{function-correctness}, \texttt{function} returns $S(X) + \Delta N$, where $S(X)$ is \texttt{arg}, $\Delta$ is \texttt{d\_in}.
+By Lemma~\ref{function-correctness}, \texttt{function} returns $S(X) + \Delta N$, where $S(X)$ is \texttt{arg}, $\Delta$ is \texttt{d\_in}.
 Since \texttt{tradeoff} is an equivalent but conservative representation of the privacy parameters \texttt{d\_out},
 the mechanism satisfies \texttt{d\_out}-DP when input datasets may differ by at most \texttt{d\_in}.
 
-This guarantee is then reflected in the privacy map on line \ref{privacy-map}.
+This guarantee is then reflected in the privacy map on line~\ref{privacy-map}.
 If \texttt{d\_in\_p} is no greater than \texttt{d\_in}, then the privacy loss is \texttt{d\_out}.
 
 Therefore, for every pair of elements $x, x'$ in \texttt{input\_domain} and for every pair $(\din, \dout)$,

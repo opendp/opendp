@@ -75,8 +75,13 @@ The quantile function $F^{-1}_f(u)$ is defined in the following lemma.
     if $U\sim U(0,1)$, then $F_f^{-1}(U) \sim F_f$. 
 \end{proposition}
 
-The pseudocode implements \ref{prop-f-6} with exact arithmetic via fractions,
-as it involves no transcendental functions.
+\texttt{quantile\_cnd} is the quantile function $F^{-1}_f(u)$, 
+\texttt{f} is the tradeoff function $f$, 
+\texttt{uniform} is $u$,
+and \texttt{c} is the fixed point of $f$, as guaranteed in the precondition.
+
+Since the pseudocode uses exact arithmetic, \texttt{quantile\_cnd} implements \ref{prop-f-6},
+satisfying the postcondition.
 
 \end{proof}
 
