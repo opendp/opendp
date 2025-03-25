@@ -52,7 +52,7 @@ from opendp.mod import (
     binary_search_param,
 )
 from opendp.typing import RuntimeType
-from opendp._lib import indent, import_optional_dependency, get_error_url
+from opendp._lib import indent, import_optional_dependency
 from opendp.extras.polars import LazyFrameQuery, Margin
 from dataclasses import asdict, replace
 
