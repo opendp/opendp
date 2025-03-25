@@ -255,7 +255,7 @@ def test_randomized_response_bitvec():
 
 
 def test_canonical_noise():
-    space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+    space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
     m_cnd = space >> dp.m.then_canonical_noise(d_in=1., d_out=(1., 1e-6))
 
     assert m_cnd.map(1.) == (1.0, 1e-6)

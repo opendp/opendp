@@ -1,8 +1,8 @@
 # type: ignore
 def appproximate_to_tradeoff(
-    params: tuple[f64, f64]
+    param: tuple[f64, f64]
 ) -> tuple[Callable[[RBig], RBig], RBig]:
-    epsilon, delta = params
+    epsilon, delta = param
 
     exp_eps = epsilon.with_rounding(Down).exp()  # `\label{exp-eps}`
     exp_eps = RBig.try_from(exp_eps)

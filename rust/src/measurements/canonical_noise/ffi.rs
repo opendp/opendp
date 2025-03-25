@@ -8,7 +8,7 @@ use crate::metrics::AbsoluteDistance;
 
 use super::make_canonical_noise;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_measurements__make_canonical_noise(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,

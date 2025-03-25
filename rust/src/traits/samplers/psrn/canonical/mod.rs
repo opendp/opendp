@@ -2,7 +2,7 @@ use super::{InverseCDF, ODPRound};
 use dashu::{rational::RBig, rbig};
 use opendp_derive::proven;
 
-#[cfg(test)]
+#[cfg(all(feature = "contrib", test))]
 mod test;
 
 /// A random variable representing a shifted and scaled canonical noise distribution.

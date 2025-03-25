@@ -34,7 +34,7 @@ Argument \texttt{uniform} is in $[0, 1]$.
 
 \begin{theorem}
 Given a random variable \texttt{self} (of type \rustdoc{traits/samplers/psrn/canonical/struct}{CanonicalRV}),
-return \texttt{Ok(out)} where \texttt{out} is the inverse cumulative distribution function of \texttt{CanonicalRV} (which includes a rescale and shift) evaluated at \texttt{uniform}
+the algorithm returns \texttt{Some(out)} where \texttt{out} is the inverse cumulative distribution function of \texttt{CanonicalRV} (which includes a rescale and shift) evaluated at \texttt{uniform}
 with error in direction \texttt{R}, or \texttt{None}.
 
 The error between \texttt{out} and the exactly-computed CDF decreases monotonically as \texttt{refinements} increases.

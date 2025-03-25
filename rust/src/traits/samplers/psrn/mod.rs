@@ -12,7 +12,7 @@ use dashu::{
 use super::sample_from_uniform_bytes;
 use crate::{error::Fallible, traits::RoundCast};
 
-#[cfg(test)]
+#[cfg(all(feature = "contrib", test))]
 mod test;
 
 mod gumbel;

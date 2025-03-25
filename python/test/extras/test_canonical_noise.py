@@ -190,6 +190,7 @@ def test_canonical_context_no_transformation():
         privacy_unit=dp.unit_of(absolute=1.0),
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=2,
+        domain=dp.atom_domain(nan=False, T=float)
     )
 
     assert isinstance(context.query().canonical_noise().release(), float)
@@ -206,7 +207,7 @@ def test_canonical_context_with_transformation():
         split_evenly_over=2,
     )
 
-    query = context.query().clamp((0.0, 1.0)).sum()
+    query = context.query().impute_constant(0.0).clamp((0.0, 1.0)).sum()
 
     assert isinstance(query.canonical_noise().release(), float)
     assert isinstance(query.canonical_noise(binomial_size=1000).release(), BinomialCND)
