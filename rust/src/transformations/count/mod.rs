@@ -43,7 +43,7 @@ where
 {
     Transformation::new(
         input_domain,
-        AtomDomain::default(),
+        AtomDomain::new_non_nan(),
         // think of this as: min(arg.len(), TO::max_value())
         Function::new(move |arg: &Vec<TIA>| {
             // get size via the CollectionSize trait
@@ -88,7 +88,7 @@ where
 {
     Transformation::new(
         input_domain,
-        AtomDomain::default(),
+        AtomDomain::new_non_nan(),
         Function::new(move |arg: &Vec<TIA>| {
             let len = arg.iter().collect::<HashSet<_>>().len();
             TO::exact_int_cast(len).unwrap_or(TO::MAX_CONSECUTIVE)
@@ -112,11 +112,7 @@ impl<const P: usize, Q: One> CountByCategoriesConstant<Q> for LpDistance<P, Q> {
 #[bootstrap(
     features("contrib"),
     arguments(null_category(default = true)),
-    generics(
-        MO(hint = "SensitivityMetric", default = "L1Distance<int>"),
-        TIA(suppress),
-        TOA(default = "int")
-    ),
+    generics(MO(default = "L1Distance<int>"), TIA(suppress), TOA(default = "int")),
     derived_types(TIA = "$get_atom(get_type(input_domain))")
 )]
 /// Make a Transformation that computes the number of times each category appears in the data.
@@ -166,7 +162,7 @@ where
     }
     Transformation::new(
         input_domain,
-        VectorDomain::new(AtomDomain::default()),
+        VectorDomain::new(AtomDomain::new_non_nan()),
         Function::new(move |data: &Vec<TIA>| {
             let mut counts = categories
                 .iter()
@@ -215,10 +211,7 @@ impl<const P: usize, Q: One> CountByConstant<Q> for LpDistance<P, Q> {
     }
 }
 
-#[bootstrap(
-    features("contrib"),
-    generics(MO(hint = "SensitivityMetric"), TK(suppress), TV(default = "int"))
-)]
+#[bootstrap(features("contrib"), generics(TK(suppress), TV(default = "int")))]
 /// Make a Transformation that computes the count of each unique value in data.
 /// This assumes that the category set is unknown.
 ///
@@ -257,7 +250,7 @@ where
 {
     Transformation::new(
         input_domain.clone(),
-        MapDomain::new(input_domain.element_domain, AtomDomain::default()),
+        MapDomain::new(input_domain.element_domain, AtomDomain::new_non_nan()),
         Function::new(move |data: &Vec<TK>| {
             let mut counts = HashMap::new();
             data.iter().for_each(|v| {

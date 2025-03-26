@@ -4,7 +4,53 @@ This file documents the version history of OpenDP. The links on each version num
 showing the source changes from the previous version.
 
 
-## [0.12.0-dev](https://github.com/opendp/opendp/compare/v0.11.1...HEAD) - TBD
+## [0.12.1-dev](https://github.com/opendp/opendp/compare/v0.12.0...HEAD) - TBD
+
+
+### Fix
+
+- Replace _dependencies with lifelines [#2278](https://github.com/opendp/opendp/pull/2278)
+- Compatibility with r lintr 3.2 [#2279](https://github.com/opendp/opendp/issues/2279)
+- Make sure default `cargo test` also passes [#2275](https://github.com/opendp/opendp/pull/2275)
+- Reported broken links [#2241](https://github.com/opendp/opendp/pull/2241)
+- Docs.rs build [#2212](https://github.com/opendp/opendp/pull/2212)
+- Two links [#2191](https://github.com/opendp/opendp/pull/2191)
+
+### Testing
+
+- Clean up ast tests [#2257](https://github.com/opendp/opendp/pull/2257)
+
+### Docs
+
+- Check for docstrings on classes [#2260](https://github.com/opendp/opendp/pull/2260)
+- Add AST checks on the formatting of the docstring [#2267](https://github.com/opendp/opendp/pull/2267)
+- Better 404 page + better docs links [#2252](https://github.com/opendp/opendp/pull/2252)
+- Check that every parameter has a brief description [#2242](https://github.com/opendp/opendp/pull/2242)
+- Checking docstrings, continued [#2182](https://github.com/opendp/opendp/pull/2182)
+- Consistent lists of communication channels [#2227](https://github.com/opendp/opendp/pull/2227)
+- Fix pca api docs [#2218](https://github.com/opendp/opendp/pull/2218)
+- Update venv instructions with more descriptive names [#2197](https://github.com/opendp/opendp/pull/2197)
+- Feedback links [#2154](https://github.com/opendp/opendp/pull/2154)
+- Check for docstrings that are out of sync [#2181](https://github.com/opendp/opendp/pull/2181)
+- Add Backticks around name [#2190](https://github.com/opendp/opendp/pull/2190)
+
+### Feat
+
+- Opendp object serialization [#2228](https://github.com/opendp/opendp/pull/2228)
+- Simplify polars oo code [#2251](https://github.com/opendp/opendp/pull/2251)
+- Polars select transformation [#2207](https://github.com/opendp/opendp/pull/2207)
+- Example data in api [#2229](https://github.com/opendp/opendp/pull/2229)
+- If randomgen is missing, prompt for scikit-learn [#2189](https://github.com/opendp/opendp/pull/2189)
+
+### Dev
+
+- update ubuntu to 22.04 [#2277](https://github.com/opendp/opendp/pull/2277)
+- Warn about bare `print` [#2172](https://github.com/opendp/opendp/pull/2172)
+- List -> sequence [#2177](https://github.com/opendp/opendp/pull/2177)
+
+
+## [0.12.0](https://github.com/opendp/opendp/compare/v0.11.1...v0.12.0) - 2024-12-19
+
 
 ### Added
 

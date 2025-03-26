@@ -5,7 +5,7 @@ use crate::{
     measurements::laplace_puredp_map,
     measures::MaxDivergence,
     metrics::{AbsoluteDistance, L1Distance},
-    traits::{samplers::sample_discrete_laplace_linear, ExactIntCast, InfCast, Integer},
+    traits::{ExactIntCast, InfCast, Integer, samplers::sample_discrete_laplace_linear},
 };
 
 /// Make a Measurement that adds noise from the discrete_laplace(`scale`) distribution to the input,

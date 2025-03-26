@@ -1,11 +1,11 @@
 use std::{collections::HashMap, fs, iter::once};
 
 use crate::{
-    codegen::{flatten_type_recipe, tab_r},
     Argument, Function, TypeRecipe, Value,
+    codegen::{flatten_type_recipe, tab_r},
 };
 
-use super::BLACKLIST;
+use super::BLOCKLIST;
 
 static ATOM_TYPES: &'static [&'static str] = &[
     "u32", "u64", "i32", "i64", "f32", "f64", "usize", "bool", "String",
@@ -21,7 +21,7 @@ pub fn generate_r_module(
     let body = module
         .into_iter()
         .filter(|func| func.has_ffi)
-        .filter(|func| !BLACKLIST.contains(&func.name.as_str()))
+        .filter(|func| !BLOCKLIST.contains(&func.name.as_str()))
         .map(|func| generate_r_function(module_name, &func, hierarchy))
         .collect::<Vec<String>>()
         .join("\n");
@@ -68,7 +68,7 @@ pub(crate) fn generate_r_function(
   make_chain_dyn(
     {name}({pre_args_nl}{args}),
     lhs,
-    log)
+    log_)
 }}"#,
             then_docs = generate_then_doc_block(module_name, func, hierarchy),
             then_name = func.name.replacen("make_", "then_", 1),
@@ -125,6 +125,7 @@ pub(crate) fn generate_r_function(
 /// generate an input argument, complete with name, hint and default.
 /// also returns a bool to make it possible to move arguments with defaults to the end of the signature.
 fn generate_r_input_argument(arg: &Argument, func: &Function) -> (String, bool) {
+    let type_names = func.type_names();
     let default = if let Some(default) = &arg.default {
         Some(match default.clone() {
             Value::Null => "NULL".to_string(),
@@ -133,7 +134,7 @@ fn generate_r_input_argument(arg: &Argument, func: &Function) -> (String, bool) 
             Value::Float(float) => float.to_string(),
             Value::String(mut string) => {
                 if arg.is_type {
-                    string = arg.generics.iter().fold(string, |string, generic| {
+                    string = type_names.iter().fold(string, |string, generic| {
                         // TODO: kind of hacky. avoids needing a full parser for the type string
                         // replace all instances of the generic with .generic
                         string
@@ -378,10 +379,11 @@ fn generate_type_arg_formatter(func: &Function) -> String {
         .filter(|arg| arg.is_type)
         .map(|type_arg| {
             let name = sanitize_r(type_arg.name(), type_arg.is_type);
-            let generics = if type_arg.generics.is_empty() {
+            let generics = type_arg.generics(&type_names);
+            let generics = if generics.is_empty() {
                 "".to_string()
             } else {
-                format!(", generics = list({})", type_arg.generics.iter()
+                format!(", generics = list({})", generics.iter()
                     .map(|v| format!("\"{}\"", sanitize_r(v, true)))
                     .collect::<Vec<_>>().join(", "))
             };
@@ -399,11 +401,11 @@ fn generate_type_arg_formatter(func: &Function) -> String {
                         derivation = type_spec.rust_type.as_ref().unwrap().to_r(Some(&type_names)))))
         // substitute concrete types in for generics
         .chain(func.args.iter()
-            .filter(|arg| !arg.generics.is_empty())
+            .filter(|arg| arg.is_type && !arg.generics(&type_names).is_empty())
             .map(|arg|
                 format!("{name} <- rt_substitute({name}, {args})",
                         name=sanitize_r(arg.name(), true),
-                        args=arg.generics.iter()
+                        args=arg.generics(&type_names).iter()
                             .map(|generic| format!("{generic} = {generic}", generic = sanitize_r(generic, true)))
                             .collect::<Vec<_>>().join(", "))))
         // determine types of arguments that are not type args
@@ -442,23 +444,7 @@ fn generate_assert_is_similar(func: &Function) -> String {
             };
             let inferred = {
                 let name = sanitize_r(arg.name(), arg.is_type);
-                let generics = if arg.generics.is_empty() {
-                    "".to_string()
-                } else {
-                    format!(
-                        ", generics = list({})",
-                        arg.generics
-                            .iter()
-                            .map(|v| format!("\"{}\"", sanitize_r(v, true)))
-                            .collect::<Vec<_>>()
-                            .join(", ")
-                    )
-                };
-                format!(
-                    "rt_infer({name}{generics})",
-                    name = name,
-                    generics = generics
-                )
+                format!("rt_infer({name})")
             };
             (expected, inferred)
         })
@@ -481,7 +467,7 @@ fn generate_assert_is_similar(func: &Function) -> String {
     }
 }
 
-// generates the `log <- ...` code that tracks arguments
+// generates the `log_ <- ...` code that tracks arguments
 fn generate_logger(module_name: &str, func: &Function, then: bool) -> String {
     let func_name = if then {
         func.name.replacen("make_", "then_", 1)
@@ -506,7 +492,7 @@ fn generate_logger(module_name: &str, func: &Function, then: bool) -> String {
 
     format!(
         r#"
-log <- new_constructor_log("{func_name}", "{module_name}", new_hashtab(
+log_ <- new_constructor_log("{func_name}", "{module_name}", new_hashtab(
   list({keys}),
   list({vals})
 ))
@@ -550,7 +536,7 @@ fn generate_wrapper_call(module_name: &str, func: &Function) -> String {
     let call = format!(
         r#".Call(
   "{module_name}__{name}",{args_str}
-  log, PACKAGE = "opendp")"#,
+  log_, PACKAGE = "opendp")"#,
         name = func.name
     );
     format!(

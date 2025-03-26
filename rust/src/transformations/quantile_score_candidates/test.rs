@@ -92,7 +92,7 @@ fn test_scorer() -> Fallible<()> {
 #[cfg(feature = "derive")]
 mod test_trans {
     use crate::{
-        measurements::{make_report_noisy_max_gumbel, Optimize},
+        measurements::{Optimize, make_report_noisy_max_gumbel},
         metrics::SymmetricDistance,
     };
 

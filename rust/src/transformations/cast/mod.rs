@@ -6,7 +6,7 @@ use opendp_derive::bootstrap;
 use crate::core::{MetricSpace, Transformation};
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::error::Fallible;
-use crate::traits::{CheckAtom, InherentNull, RoundCast};
+use crate::traits::{CheckAtom, HasNull, RoundCast};
 use crate::transformations::make_row_by_row;
 
 use super::DatasetMetric;
@@ -122,16 +122,13 @@ pub fn make_cast_inherent<M, TIA, TOA>(
 where
     M: DatasetMetric,
     TIA: 'static + Clone + CheckAtom,
-    TOA: 'static + RoundCast<TIA> + InherentNull + CheckAtom,
+    TOA: 'static + RoundCast<TIA> + HasNull + CheckAtom,
     (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
     (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
 {
-    make_row_by_row(
-        input_domain,
-        input_metric,
-        AtomDomain::new_nullable(),
-        |v| TOA::round_cast(v.clone()).unwrap_or(TOA::NULL),
-    )
+    make_row_by_row(input_domain, input_metric, AtomDomain::default(), |v| {
+        TOA::round_cast(v.clone()).unwrap_or(TOA::NULL)
+    })
 }
 
 #[cfg(test)]

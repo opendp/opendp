@@ -19,17 +19,17 @@ test_that("then_laplace", {
   expect_error(meas(), "expected exactly one of attr, arg or d_in")
   expect_error(meas(0L), "numeric attr not allowed; Did you mean 'arg='?")
 
-  space <- c(atom_domain(.T = "f64"), absolute_distance(.T = "f64"))
+  space <- c(atom_domain(.T = "f64", nan = FALSE), absolute_distance(.T = "f64"))
   (space |> then_laplace(1.))(arg = 0.)
 
-  space <- c(vector_domain(atom_domain(.T = "f64")), l1_distance(.T = "f64"))
+  space <- c(vector_domain(atom_domain(.T = "f64", nan = FALSE)), l1_distance(.T = "f64"))
   (space |> then_laplace(1.))(arg = c(0., 1.))
 
-  space <- c(vector_domain(atom_domain(.T = "int")), l1_distance(.T = "int"))
+  space <- c(vector_domain(atom_domain(.T = "int", nan = FALSE)), l1_distance(.T = "int"))
   (space |> then_laplace(1.))(arg = c(0L, 1L))
 })
 
-test_that("make_laplace", {
+test_that("make_laplace_int", {
   meas <- make_laplace(atom_domain(.T = "i32"), absolute_distance(.T = "i32"), 1.)
   expect_type(meas(arg = 0L), "integer")
   expect_equal(meas(d_in = 1L), 1.0)
@@ -45,8 +45,8 @@ test_that("make_geometric", {
   expect_equal(meas(d_in = 1L), 1.0)
 })
 
-test_that("make_laplace", {
-  space <- c(atom_domain(.T = "f64"), absolute_distance(.T = "f64"))
+test_that("make_laplace_float", {
+  space <- c(atom_domain(.T = "f64", nan = FALSE), absolute_distance(.T = "f64"))
   meas <- space |> then_laplace(1., k = -40L)
   expect_type(meas(arg = 0), "double")
   expect_equal(meas(d_in = 1), 1.0)
@@ -60,7 +60,7 @@ test_that("make_discrete_laplace", {
 })
 
 test_that("test_gaussian_curve", {
-  input_space <- c(atom_domain(.T = f64), absolute_distance(.T = f64))
+  input_space <- c(atom_domain(.T = f64, nan = FALSE), absolute_distance(.T = f64))
   meas <- make_zCDP_to_approxDP(input_space |> then_gaussian(4.))
   curve <- meas(d_in = 1.)
   expect_equal(curve(delta = 0.), Inf)
@@ -91,7 +91,7 @@ test_that("test_gaussian_curve", {
 })
 
 test_that("test_gaussian_search", {
-  input_space <- c(atom_domain(.T = f64), absolute_distance(.T = f64))
+  input_space <- c(atom_domain(.T = f64, nan = FALSE), absolute_distance(.T = f64))
 
   make_approx_gauss <- function(scale, delta) {
     make_fix_delta(make_zCDP_to_approxDP(input_space |> then_gaussian(scale)), delta)
@@ -108,21 +108,21 @@ test_that("test_gaussian_search", {
 })
 
 test_that("test_laplace", {
-  input_space <- c(atom_domain(.T = f64), absolute_distance(.T = f64))
+  input_space <- c(atom_domain(.T = f64, nan = FALSE), absolute_distance(.T = f64))
   meas <- input_space |> then_laplace(10.5)
   meas(arg = 100.)
   expect_lt(meas(d_in = 1.), 0.096)
 })
 
 test_that("test_vector_laplace", {
-  input_space <- c(vector_domain(atom_domain(.T = f64)), l1_distance(.T = f64))
+  input_space <- c(vector_domain(atom_domain(.T = f64, nan = FALSE)), l1_distance(.T = f64))
   meas <- input_space |> then_laplace(scale = 10.5)
   meas(arg = c(80., 90., 100.))
   expect_lt(meas(d_in = 1.), 1.3)
 })
 
 test_that("test_gaussian_smoothed_max_divergence", {
-  input_space <- c(atom_domain(.T = f64), absolute_distance(.T = f64))
+  input_space <- c(atom_domain(.T = f64, nan = FALSE), absolute_distance(.T = f64))
   meas <- make_zCDP_to_approxDP(input_space |> then_gaussian(scale = 10.5))
   meas(arg = 100.)
 
@@ -131,7 +131,7 @@ test_that("test_gaussian_smoothed_max_divergence", {
 })
 
 test_that("test_gaussian_zcdp", {
-  input_space <- c(atom_domain(.T = f64), absolute_distance(.T = f64))
+  input_space <- c(atom_domain(.T = f64, nan = FALSE), absolute_distance(.T = f64))
   meas <- input_space |> then_gaussian(scale = 1.5, .MO = "ZeroConcentratedDivergence")
   meas(arg = 100.)
 
@@ -140,7 +140,7 @@ test_that("test_gaussian_zcdp", {
 
 test_that("test_vector_gaussian", {
   delta <- 0.000001
-  input_space <- c(vector_domain(atom_domain(.T = f64)), l2_distance(.T = f64))
+  input_space <- c(vector_domain(atom_domain(.T = f64, nan = FALSE)), l2_distance(.T = f64))
   meas <- make_fix_delta(
     make_zCDP_to_approxDP(
       input_space |> then_gaussian(scale = 10.5)
@@ -240,13 +240,13 @@ test_that("test_gaussian", {
   # Both expect_s3_class and expect_s4_class failed.
   # Not sure which we are using, and which we expect to pass.
 
-  input_space <- c(atom_domain(.T = f64), absolute_distance(.T = f64))
+  input_space <- c(atom_domain(.T = f64, nan = FALSE), absolute_distance(.T = f64))
   (input_space |> then_gaussian(1.))(arg = 1.)
 
   input_space <- c(vector_domain(atom_domain(.T = i32)), l2_distance(.T = f64))
   (input_space |> then_gaussian(1.))(arg = c(1L, 2L, 3L))
 
-  input_space <- c(vector_domain(atom_domain(.T = f64)), l2_distance(.T = f64))
+  input_space <- c(vector_domain(atom_domain(.T = f64, nan = FALSE)), l2_distance(.T = f64))
   (input_space |> then_gaussian(1.))(arg = c(1., 2., 3.))
 })
 

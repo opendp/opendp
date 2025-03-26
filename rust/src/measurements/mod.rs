@@ -38,6 +38,11 @@ mod make_user_measurement;
 #[cfg(all(feature = "honest-but-curious", feature = "ffi"))]
 pub use crate::measurements::make_user_measurement::*;
 
+#[cfg(feature = "contrib")]
+mod private_quantile;
+#[cfg(feature = "contrib")]
+pub use private_quantile::*;
+
 #[cfg(all(feature = "floating-point", feature = "contrib"))]
 mod laplace_threshold;
 #[cfg(all(feature = "floating-point", feature = "contrib"))]

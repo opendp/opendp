@@ -33,12 +33,27 @@ where
         return fallible!(MakeTransformation, "expected fill_nan expression");
     };
 
+    // only enforce row-by-row context if the fill expression is not broadcastable
+    let expr_domain = if fill.clone().meta().root_names().len() > 0 {
+        input_domain.as_row_by_row()
+    } else if let Expr::Literal(value) = fill.clone() {
+        if !value.is_scalar() {
+            return fallible!(MakeTransformation, "fill expression must be broadcastable");
+        }
+        input_domain.clone()
+    } else {
+        return fallible!(
+            MakeTransformation,
+            "fill expression must be a column or scalar"
+        );
+    };
+
     let t_data = data
         .clone()
-        .make_stable(input_domain.as_row_by_row(), input_metric.clone())?;
+        .make_stable(expr_domain.clone(), input_metric.clone())?;
     let t_fill = fill
         .clone()
-        .make_stable(input_domain.as_row_by_row(), input_metric.clone())?;
+        .make_stable(expr_domain, input_metric.clone())?;
 
     let (data_domain, data_metric) = t_data.output_space();
     let (fill_domain, fill_metric) = t_fill.output_space();
@@ -54,24 +69,22 @@ where
 
     let fill_series = &fill_domain.column;
     let fill_can_be_nan = match fill_series.dtype() {
-        // from the perspective of atom domain, null refers to existence of any missing value.
-        // For float types, this is NaN.
-        // Therefore if the float domain may be nullable, then the domain includes NaN
-        DataType::Float32 => fill_series.atom_domain::<f32>()?.nullable(),
-        DataType::Float64 => fill_series.atom_domain::<f64>()?.nullable(),
+        // If the float domain is NaN-able, then the domain includes NaN
+        DataType::Float32 => fill_series.atom_domain::<f32>()?.nan(),
+        DataType::Float64 => fill_series.atom_domain::<f64>()?.nan(),
         i if i.is_numeric() => false,
         _ => {
             return fallible!(
                 MakeTransformation,
                 "filler data for fill_nan must be numeric"
-            )
+            );
         }
     };
 
     if fill_can_be_nan {
         return fallible!(
             MakeTransformation,
-            "filler data for fill_nan must not contain nan"
+            "filler data for fill_nan must not contain NaN"
         );
     }
     if fill_series.nullable {
@@ -89,7 +102,7 @@ where
             return fallible!(
                 MakeTransformation,
                 "fill_nan may only be applied to float data"
-            )
+            );
         }
     }
     let output_domain = ExprDomain {

@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use syn::{AttributeArgs, ItemFn};
+use syn::{ItemFn, Meta};
 
 use crate::{Argument, Function, TypeRecipe};
 
@@ -9,7 +9,7 @@ pub mod signature;
 
 pub mod partial;
 
-use darling::{Error, Result};
+use darling::{Error, Result, ast::NestedMeta};
 
 use crate::bootstrap::{arguments::BootstrapArguments, docstring::BootstrapDocstring};
 
@@ -23,12 +23,17 @@ mod test;
 
 impl Function {
     pub fn from_ast(
-        attr_args: AttributeArgs,
+        attr_args: Vec<Meta>,
         item_fn: ItemFn,
         module: Option<&str>,
     ) -> Result<Function> {
         // Parse the proc bootstrap macro args
-        let arguments = BootstrapArguments::from_attribute_args(&attr_args)?;
+        let arguments = BootstrapArguments::from_attribute_args(
+            &attr_args
+                .into_iter()
+                .map(NestedMeta::Meta)
+                .collect::<Vec<_>>(),
+        )?;
 
         // Parse the signature
         let signature = BootstrapSignature::from_syn(item_fn.sig.clone())?;
@@ -85,7 +90,6 @@ pub fn reconcile_function(
             signature.output_c_type,
         )?,
         derived_types: reconcile_derived_types(bootstrap.derived_types),
-        dependencies: bootstrap.dependencies.0,
         supports_partial: signature.supports_partial,
         has_ffi: bootstrap.has_ffi.unwrap_or(true),
         deprecation: doc_comments.deprecated,
@@ -129,7 +133,6 @@ fn reconcile_arguments(
                         }
                     }
                 }),
-                generics: Vec::new(),
                 description: doc_comments.remove(&name),
                 hint: boot_type.hint,
                 default: boot_type.default,
@@ -162,7 +165,6 @@ fn reconcile_generics(
                 description: doc_comments.remove(&name),
                 hint: boot_type.hint,
                 default: boot_type.default,
-                generics: boot_type.generics.0,
                 is_type: true,
                 example: boot_type.example,
                 ..Default::default()
@@ -186,6 +188,7 @@ fn reconcile_return(
         rust_type: boot_type.rust_type,
         description: doc_comment,
         do_not_convert: boot_type.do_not_convert,
+        hint: boot_type.hint,
         ..Default::default()
     })
 }

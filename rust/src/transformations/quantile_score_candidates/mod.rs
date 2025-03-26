@@ -26,7 +26,7 @@ mod ffi;
 ///
 ///
 /// # Arguments
-/// * `input_domain` - Uses a tighter sensitivity when the size of vectors in the input domain is known.
+/// * `input_domain` - Uses a smaller sensitivity when the size of vectors in the input domain is known.
 /// * `input_metric` - Either SymmetricDistance or InsertDeleteDistance.
 /// * `candidates` - Potential quantiles to score
 /// * `alpha` - a value in $[0, 1]$. Choose 0.5 for median
@@ -50,7 +50,7 @@ pub fn make_quantile_score_candidates<MI: UnboundedMetric, TIA: Number>(
 where
     (VectorDomain<AtomDomain<TIA>>, MI): MetricSpace,
 {
-    if input_domain.element_domain.nullable() {
+    if input_domain.element_domain.nan() {
         return fallible!(MakeTransformation, "input must be non-null");
     }
 

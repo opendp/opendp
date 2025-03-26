@@ -7,8 +7,8 @@ use crate::{
 use dashu::{
     base::{EstimatedLog2, SquareRoot},
     float::{
-        round::mode::{Down, Up},
         FBig,
+        round::mode::{Down, Up},
     },
     integer::IBig,
 };
@@ -404,7 +404,9 @@ macro_rules! impl_alerting_int {
         })+
     };
 }
-impl_alerting_int!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize);
+impl_alerting_int!(
+    u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize
+);
 macro_rules! impl_alerting_float {
     ($($t:ty),+) => {
         $(impl SaturatingAdd for $t {
@@ -657,7 +659,9 @@ macro_rules! impl_int_inf {
         })+
     }
 }
-impl_int_inf!(u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize);
+impl_int_inf!(
+    u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize
+);
 
 macro_rules! impl_float_inf_bi {
     ($($ty:ty),+; $name:ident, $method_inf:ident, $method_neg_inf:ident, $op:ident) => {

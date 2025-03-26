@@ -9,7 +9,7 @@ use crate::{
     polars::get_disabled_features_message,
 };
 
-use super::{traits::UnboundedMetric, DatasetMetric};
+use super::traits::UnboundedMetric;
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -42,10 +42,16 @@ mod expr_cut;
 pub(crate) mod expr_discrete_quantile_score;
 
 #[cfg(feature = "contrib")]
+pub(crate) mod expr_drop_nan_or_null;
+
+#[cfg(feature = "contrib")]
 mod expr_fill_nan;
 
 #[cfg(feature = "contrib")]
 mod expr_fill_null;
+
+#[cfg(feature = "contrib")]
+mod expr_filter;
 
 #[cfg(feature = "contrib")]
 mod expr_len;
@@ -54,10 +60,19 @@ mod expr_len;
 mod expr_lit;
 
 #[cfg(feature = "contrib")]
+pub(crate) mod expr_replace;
+
+#[cfg(feature = "contrib")]
+mod expr_replace_strict;
+
+#[cfg(feature = "contrib")]
 mod expr_sum;
 
 #[cfg(feature = "contrib")]
 mod expr_to_physical;
+
+#[cfg(feature = "contrib")]
+mod namespace_arr;
 
 #[cfg(feature = "contrib")]
 mod namespace_dt;
@@ -99,7 +114,7 @@ pub trait StableExpr<MI: Metric, MO: Metric> {
 
 impl<M: OuterMetric> StableExpr<M, M> for Expr
 where
-    M::InnerMetric: DatasetMetric,
+    M::InnerMetric: UnboundedMetric,
     M::Distance: Clone,
     (WildExprDomain, M): MetricSpace,
     (ExprDomain, M): MetricSpace,
@@ -116,18 +131,25 @@ where
         use Expr::*;
         use FunctionExpr::*;
         match self {
-
             #[cfg(feature = "contrib")]
             Alias(_, _) => expr_alias::make_expr_alias(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
-            Expr::BinaryExpr { .. } => expr_binary::make_expr_binary(input_domain, input_metric, self),
+            Expr::BinaryExpr { .. } => {
+                expr_binary::make_expr_binary(input_domain, input_metric, self)
+            }
 
             #[cfg(feature = "contrib")]
             Function {
                 function: Boolean(_),
                 ..
-            } => return expr_boolean_function::make_expr_boolean_function(input_domain, input_metric, self),
+            } => {
+                return expr_boolean_function::make_expr_boolean_function(
+                    input_domain,
+                    input_metric,
+                    self,
+                );
+            }
 
             #[cfg(feature = "contrib")]
             Cast { .. } => expr_cast::make_expr_cast(input_domain, input_metric, self),
@@ -140,9 +162,20 @@ where
 
             #[cfg(feature = "contrib")]
             Function {
+                function: DropNans | DropNulls,
+                ..
+            } => {
+                expr_drop_nan_or_null::make_expr_drop_nan_or_null(input_domain, input_metric, self)
+            }
+
+            #[cfg(feature = "contrib")]
+            Function {
                 function: FillNull { .. },
                 ..
             } => expr_fill_null::make_expr_fill_null(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Filter { .. } => expr_filter::make_expr_filter(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
             Column(_) => expr_col::make_expr_col(input_domain, input_metric, self),
@@ -164,6 +197,23 @@ where
 
             #[cfg(feature = "contrib")]
             Function {
+                function: Replace, ..
+            } => expr_replace::make_expr_replace(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Function {
+                function: ReplaceStrict { .. },
+                ..
+            } => expr_replace_strict::make_expr_replace_strict(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Function {
+                function: FunctionExpr::ArrayExpr(_),
+                ..
+            } => namespace_arr::make_namespace_arr(input_domain, input_metric, self),
+
+            #[cfg(feature = "contrib")]
+            Function {
                 function: FunctionExpr::TemporalExpr(_),
                 ..
             } => namespace_dt::make_namespace_dt(input_domain, input_metric, self),
@@ -179,7 +229,7 @@ where
                 "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
                 expr,
                 get_disabled_features_message()
-            )
+            ),
         }
     }
 }
@@ -198,14 +248,14 @@ where
         use Expr::*;
         match self {
             #[cfg(feature = "contrib")]
-            Agg(AggExpr::Count(_, _) | AggExpr::NUnique(_)) | Function { function: FunctionExpr::NullCount, .. } => {
-                expr_count::make_expr_count(input_domain, input_metric, self)
-            }
+            Agg(AggExpr::Count(_, _) | AggExpr::NUnique(_))
+            | Function {
+                function: FunctionExpr::NullCount,
+                ..
+            } => expr_count::make_expr_count(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
-            Agg(AggExpr::Sum(_)) => {
-                expr_sum::make_expr_sum(input_domain, input_metric, self)
-            }
+            Agg(AggExpr::Sum(_)) => expr_sum::make_expr_sum(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
             Len => expr_len::make_expr_len(input_domain, input_metric, self),
@@ -215,7 +265,7 @@ where
                 "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
                 expr,
                 get_disabled_features_message()
-            )
+            ),
         }
     }
 }
@@ -249,7 +299,7 @@ where
                 "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
                 expr,
                 get_disabled_features_message()
-            )
+            ),
         }
     }
 }

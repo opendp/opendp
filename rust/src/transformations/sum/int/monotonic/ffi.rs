@@ -11,7 +11,7 @@ use crate::transformations::{
     make_bounded_int_monotonic_sum, make_sized_bounded_int_monotonic_sum,
 };
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_bounded_int_monotonic_sum(
     bounds: *const AnyObject,
     T: *const c_char,
@@ -30,7 +30,7 @@ pub extern "C" fn opendp_transformations__make_bounded_int_monotonic_sum(
     .into()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_sized_bounded_int_monotonic_sum(
     size: c_uint,
     bounds: *const AnyObject,

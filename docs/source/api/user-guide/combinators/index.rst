@@ -153,6 +153,9 @@ These combinators are used to cast the output measure of a Measurement.
      - ``Approximate<ZeroConcentratedDivergence>``
      - :func:`opendp.combinators.make_approximate`
    * - ``MaxDivergence``
+     - ``SmoothedMaxDivergence``
+     - :func:`opendp.combinators.make_fixed_approxDP_to_approxDP`
+   * - ``MaxDivergence``
      - ``ZeroConcentratedDivergence``
      - :func:`opendp.combinators.make_pureDP_to_zCDP`
    * - ``ZeroConcentratedDivergence``
@@ -171,7 +174,7 @@ This is useful if you want to compose pure-DP measurements with approximate-DP m
 
     .. code:: python
 
-        >>> input_space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
+        >>> input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
         >>> meas_pureDP = input_space >> dp.m.then_laplace(scale=10.)
         >>> # convert the output measure to `Approximate<MaxDivergence>`
         >>> meas_fixed_approxDP = dp.c.make_approximate(meas_pureDP)
@@ -245,7 +248,8 @@ The resulting measurement expects the size of the input dataset to be 10.
 
     .. code:: python
 
-        >>> input_space = dp.vector_domain(dp.atom_domain(bounds=(0., 10.)), size=10), dp.symmetric_distance()
+        >>> atom_domain = dp.atom_domain(bounds=(0., 10.), nan=False)
+        >>> input_space = dp.vector_domain(atom_domain, size=10), dp.symmetric_distance()
         >>> meas = input_space >> dp.t.then_mean() >> dp.m.then_laplace(scale=0.5)
         >>> print("standard mean:", meas([1.] * 10)) # -> 1.03 # doctest: +ELLIPSIS
         standard mean: ...

@@ -235,7 +235,7 @@ mod full;
 ///         arg(rust_type = "$measurement_input_carrier_type(this)")
 ///     )
 /// )]
-/// #[no_mangle]
+/// #[unsafe(no_mangle)]
 /// pub extern "C" fn opendp_core__measurement_invoke(
 ///     this: *const AnyMeasurement,
 ///     arg: *const AnyObject

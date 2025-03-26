@@ -14,7 +14,7 @@ fn test_with_column() -> Fallible<()> {
         "chunk_2_null",
         OptionDomain::new(AtomDomain::<i64>::default()),
     )])?
-    .with_margin(&["chunk_2_null"], Margin::default().with_public_keys())?;
+    .with_margin(Margin::by(["chunk_2_null"]).with_public_keys())?;
 
     let t_with_column = make_stable_lazyframe(
         lf_domain.clone(),
@@ -46,7 +46,7 @@ fn test_with_column() -> Fallible<()> {
 fn test_fill_nan() -> Fallible<()> {
     let lf = df!("f64" => [1f64, f64::NAN])?.lazy();
 
-    let series_domain = SeriesDomain::new("f64", AtomDomain::<f64>::new_nullable());
+    let series_domain = SeriesDomain::new("f64", AtomDomain::<f64>::default());
     let lf_domain = LazyFrameDomain::new(vec![series_domain])?;
 
     let t_with_column = make_stable_lazyframe(

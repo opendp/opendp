@@ -85,9 +85,11 @@ pub(crate) fn make_row_by_row<DI, DO, M>(
     input_metric: M,
     output_row_domain: DO::ElementDomain,
     row_function: impl 'static
-        + Fn(&<DI::ElementDomain as Domain>::Carrier) -> <DO::ElementDomain as Domain>::Carrier
-        + Send
-        + Sync,
+    + Fn(
+        &<DI::ElementDomain as Domain>::Carrier,
+    ) -> <DO::ElementDomain as Domain>::Carrier
+    + Send
+    + Sync,
 ) -> Fallible<Transformation<DI, DO, M, M>>
 where
     DI: RowByRowDomain<DO>,
@@ -106,11 +108,11 @@ pub(crate) fn make_row_by_row_fallible<DI, DO, M>(
     input_metric: M,
     output_row_domain: DO::ElementDomain,
     row_function: impl 'static
-        + Fn(
-            &<DI::ElementDomain as Domain>::Carrier,
-        ) -> Fallible<<DO::ElementDomain as Domain>::Carrier>
-        + Send
-        + Sync,
+    + Fn(
+        &<DI::ElementDomain as Domain>::Carrier,
+    ) -> Fallible<<DO::ElementDomain as Domain>::Carrier>
+    + Send
+    + Sync,
 ) -> Fallible<Transformation<DI, DO, M, M>>
 where
     DI: RowByRowDomain<DO>,
@@ -213,21 +215,22 @@ where
     )
 }
 
-#[bootstrap(features("contrib"), generics(DIA(suppress), M(suppress)))]
-/// Make a Transformation that checks if each element in a vector is null.
+#[bootstrap(features("contrib"), generics(M(suppress), DIA(suppress)))]
+/// Make a Transformation that checks if each element in a vector is null or nan.
 ///
 /// # Arguments
 /// * `input_domain` - Domain of input data
 /// * `input_metric` - Metric on input domain
 ///
 /// # Generics
-/// * `DIA` - Atomic Input Domain. Can be any domain for which the carrier type has a notion of nullity.
+/// * `M` - Metric on input domain.
+/// * `DIA` - Atomic Input Domain. Either `OptionDomain<AtomDomain<TIA>>` or `AtomDomain<TIA>`
 pub fn make_is_null<M, DIA>(
     input_domain: VectorDomain<DIA>,
     input_metric: M,
 ) -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<AtomDomain<bool>>, M, M>>
 where
-    DIA: Domain + Default,
+    DIA: Domain,
     DIA::Carrier: 'static + CheckNull,
     M: DatasetMetric,
     (VectorDomain<DIA>, M): MetricSpace,

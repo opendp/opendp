@@ -22,8 +22,7 @@ fn test_margin() -> Fallible<()> {
         SeriesDomain::new("B", AtomDomain::<String>::default()),
     ])?
     .with_margin(
-        &["A"],
-        Margin::default()
+        Margin::by(["A"])
             .with_max_partition_length(1)
             .with_max_num_partitions(2),
     )?;
@@ -61,8 +60,7 @@ fn test_get_margin_max_partition_descriptors() -> Fallible<()> {
         SeriesDomain::new("B", AtomDomain::<i32>::default()),
     ])?
     .with_margin(
-        &["A"],
-        Margin::default()
+        Margin::by(["A"])
             .with_max_partition_length(10)
             .with_max_partition_contributions(3),
     )?;
@@ -91,14 +89,12 @@ fn test_get_margin_covering_small_to_large() -> Fallible<()> {
         SeriesDomain::new("C", AtomDomain::<i32>::default()),
     ])?
     .with_margin(
-        &["A"],
-        Margin::default()
+        Margin::by(["A"])
             .with_max_num_partitions(10)
             .with_max_influenced_partitions(3),
     )?
     .with_margin(
-        &["B"],
-        Margin::default()
+        Margin::by(["B"])
             .with_max_num_partitions(11)
             .with_max_influenced_partitions(4),
     )?;
@@ -118,8 +114,7 @@ fn test_get_margin_covering_large_to_small() -> Fallible<()> {
         SeriesDomain::new("C", AtomDomain::<i32>::default()),
     ])?
     .with_margin(
-        &["A", "B"],
-        Margin::default()
+        Margin::by(["A", "B"])
             .with_max_num_partitions(10)
             .with_max_influenced_partitions(3),
     )?;
@@ -137,30 +132,30 @@ fn test_get_margin_public_info() -> Fallible<()> {
         SeriesDomain::new("A", AtomDomain::<i32>::default()),
         SeriesDomain::new("B", AtomDomain::<i32>::default()),
     ])?
-    .with_margin(&["A", "B"], Margin::default().with_public_lengths())?;
+    .with_margin(Margin::by(["A", "B"]).with_public_lengths())?;
 
     // nothing is known when grouping not in margins
-    let margin_abc = lf_domain.get_margin(&BTreeSet::from(["A".into(), "B".into(), "C".into()]));
+    let margin_abc = lf_domain.get_margin(&HashSet::from(["A".into(), "B".into(), "C".into()]));
     assert_eq!(margin_abc.public_info, None);
 
     // retrieving info directly from the margin as-is
-    let margin_ab = lf_domain.get_margin(&BTreeSet::from(["A".into(), "B".into()]));
+    let margin_ab = lf_domain.get_margin(&HashSet::from(["A".into(), "B".into()]));
     assert_eq!(margin_ab.public_info, Some(MarginPub::Lengths));
 
     // keys and lengths are known on coarser partitions
-    let margin_a = lf_domain.get_margin(&BTreeSet::from(["A".into()]));
+    let margin_a = lf_domain.get_margin(&HashSet::from(["A".into()]));
     assert_eq!(margin_a.public_info, Some(MarginPub::Lengths));
     Ok(())
 }
 
 #[test]
 fn test_find_min_covering_optimal() -> Fallible<()> {
-    let must_cover = BTreeSet::from([1u32, 2, 3, 4, 5]);
+    let must_cover = HashSet::from([1u32, 2, 3, 4, 5]);
     let sets = [
-        BTreeSet::from([1, 2, 3]),
-        BTreeSet::from([2, 4]),
-        BTreeSet::from([3, 4]),
-        BTreeSet::from([4, 5]),
+        HashSet::from([1, 2, 3]),
+        HashSet::from([2, 4]),
+        HashSet::from([3, 4]),
+        HashSet::from([4, 5]),
     ];
     let covering =
         find_min_covering(must_cover.clone(), sets.iter().map(|k| (k, 1)).collect()).unwrap();
@@ -178,16 +173,16 @@ fn test_find_min_covering_optimal() -> Fallible<()> {
 
 #[test]
 fn test_find_min_covering_nonoptimal() -> Fallible<()> {
-    let must_cover = BTreeSet::from_iter(1..=14);
+    let must_cover = HashSet::from_iter(1..=14);
 
     // optimal covering is the first two sets,
     // but the greedy algorithm non-optimally chooses the last three sets
     let sets = [
-        BTreeSet::from_iter(1..=7),
-        BTreeSet::from_iter(8..=14),
-        BTreeSet::from([1, 8]),
-        BTreeSet::from([2, 3, 9, 10]),
-        BTreeSet::from([4, 5, 6, 7, 11, 12, 13, 14]),
+        HashSet::from_iter(1..=7),
+        HashSet::from_iter(8..=14),
+        HashSet::from([1, 8]),
+        HashSet::from([2, 3, 9, 10]),
+        HashSet::from([4, 5, 6, 7, 11, 12, 13, 14]),
     ];
     let covering =
         find_min_covering(must_cover.clone(), sets.iter().map(|k| (k, 1)).collect()).unwrap();

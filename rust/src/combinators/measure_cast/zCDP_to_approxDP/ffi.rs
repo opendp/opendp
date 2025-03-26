@@ -8,7 +8,7 @@ use crate::{
     measures::{Approximate, ZeroConcentratedDivergence},
 };
 
-#[bootstrap(features("contrib"), dependencies("$get_dependencies(measurement)"))]
+#[bootstrap(features("contrib"))]
 /// Constructs a new output measurement where the output measure
 /// is casted from `ZeroConcentratedDivergence` to `SmoothedMaxDivergence`.
 ///
@@ -49,7 +49,7 @@ fn make_zCDP_to_approxDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasuremen
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_combinators__make_zCDP_to_approxDP(
     measurement: *const AnyMeasurement,
 ) -> FfiResult<*mut AnyMeasurement> {

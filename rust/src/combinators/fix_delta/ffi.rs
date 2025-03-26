@@ -8,11 +8,7 @@ use crate::{
     measures::{Approximate, SmoothedMaxDivergence},
 };
 
-#[bootstrap(
-    features("contrib"),
-    arguments(measurement(rust_type = b"null"),),
-    dependencies("$get_dependencies(measurement)")
-)]
+#[bootstrap(features("contrib"), arguments(measurement(rust_type = b"null"),))]
 /// Fix the delta parameter in the privacy map of a `measurement` with a SmoothedMaxDivergence output measure.
 ///
 /// # Arguments
@@ -54,7 +50,7 @@ fn make_fix_delta(measurement: &AnyMeasurement, delta: f64) -> Fallible<AnyMeasu
     )
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_combinators__make_fix_delta(
     measurement: *const AnyMeasurement,
     delta: f64,

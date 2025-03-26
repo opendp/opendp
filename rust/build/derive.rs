@@ -1,12 +1,12 @@
 use std::{collections::HashMap, path::Path, str::FromStr};
 
 use opendp_tooling::{
+    Function,
     bootstrap::docstring::{get_proof_path, insert_proof_attribute},
     proven::filesystem::{find_proof_paths, get_src_dir, write_proof_paths},
-    Function,
 };
 use proc_macro2::TokenStream;
-use syn::{File, Item, ItemFn};
+use syn::{File, Item, ItemFn, Meta, Token, punctuated::Punctuated};
 
 pub fn main() {
     // rebuild if link paths change
@@ -166,18 +166,22 @@ fn parse_file(
     (items.into_iter())
         .flat_map(flatten_fns)
         // ignore the function if it doesn't have a bootstrap proc macro invocation
-        .filter(|func| (func.attrs.iter()).any(|attr| path_is_eq(&attr.path, "bootstrap")))
+        .filter(|func| (func.attrs.iter()).any(|attr| path_is_eq(&attr.path(), "bootstrap")))
         // attempt to parse and simulate the proc macro on the function
         .map(|mut item_fn| {
             // extract the bootstrap attribute
             let idx = (item_fn.attrs.iter())
-                .position(|attr| path_is_eq(&attr.path, "bootstrap"))
+                .position(|attr| path_is_eq(&attr.path(), "bootstrap"))
                 .expect("bootstrap attr always exists because of filter");
             let bootstrap_attr = item_fn.attrs.remove(idx);
 
             // parse args to the bootstrap macro
-            let attr_args = match bootstrap_attr.parse_meta().ok()? {
-                syn::Meta::List(ml) => ml.nested.into_iter().collect(),
+            let attr_args = match bootstrap_attr.meta {
+                Meta::List(ml) => ml
+                    .parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated)
+                    .ok()?
+                    .into_iter()
+                    .collect(),
                 _ => return None,
             };
 

@@ -12,7 +12,7 @@ We suggest importing under the conventional name ``dp``:
 '''
 
 import logging
-from typing import Any, Callable, Optional, Union, MutableMapping, Sequence
+from typing import Any, Callable, Optional, Sequence, Union, MutableMapping
 import importlib
 from inspect import signature
 from functools import partial
@@ -44,7 +44,7 @@ from opendp.mod import (
     Domain,
     Measurement,
     Metric,
-    PartialConstructor,
+    _PartialConstructor,
     Queryable,
     Transformation,
     Measure,
@@ -54,8 +54,7 @@ from opendp.mod import (
 from opendp.typing import RuntimeType
 from opendp._lib import indent, import_optional_dependency
 from opendp.extras.polars import LazyFrameQuery, Margin
-from dataclasses import asdict
-
+from dataclasses import asdict, replace
 
 __all__ = [
     'space_of',
@@ -152,7 +151,6 @@ def domain_of(T, infer: bool = False) -> Domain:
 
     >>> dp.domain_of('Option<int>')  # Python's `Optional` is not supported.
     OptionDomain(AtomDomain(T=i32))
-    
     >>> dp.domain_of(dp.i32)
     AtomDomain(T=i32)
 
@@ -386,7 +384,7 @@ class Context(object):
         split_evenly_over: Optional[int] = None,
         split_by_weights: Optional[Sequence[float]] = None,
         domain: Optional[Domain] = None,
-        margins: Optional[MutableMapping[tuple[str, ...], Margin]] = None,
+        margins: Optional[Sequence[Margin]] = None,
     ) -> "Context":
         """Constructs a new context containing a sequential compositor with the given weights.
 
@@ -395,22 +393,28 @@ class Context(object):
 
         ``split_evenly_over`` and ``split_by_weights`` are mutually exclusive.
 
+        When ``data`` is a Polars LazyFrame, queries are specified as a Polars compute plan.
+        In addition, ``margins`` may be specified, which contain descriptors for the data under grouping.
+
         :param data: The data to be analyzed.
         :param privacy_unit: The privacy unit of the compositor.
         :param privacy_loss: The privacy loss of the compositor.
         :param split_evenly_over: The number of parts to evenly distribute the privacy loss.
         :param split_by_weights: A list of weights for each intermediate privacy loss.
         :param domain: The domain of the data.
-        :param margins: A dictionary where the keys are grouping columns and values describe known properties of the respective margins."""
+        :param margins: Descriptors for grouped data."""
         if domain is None:
             domain = domain_of(data, infer=True)
 
         if margins:
-            for by, margin in margins.items():
-                if not isinstance(by, tuple):
-                    msg = by if isinstance(by, str) else "your-column"
-                    raise ValueError(f"Margin keys must be tuples. For single-valued tuples include a trailing comma, ie: `('{msg}',)`")
-                domain = with_margin(domain, by=list(by), **asdict(margin))
+            # allows dictionaries of {[by]: [margin]}
+            if isinstance(margins, MutableMapping):
+                from warnings import warn
+                warn('Margin dicts should be replaced with lists, with the key supplied as the "by" kwarg', DeprecationWarning)
+                margins = [replace(margin, by=by) for by, margin in margins.items()]
+
+            for margin in margins:
+                domain = with_margin(domain, Margin(**asdict(replace(margin, by=margin.by or []))))
 
         accountant, d_mids = _sequential_composition_by_weights(
             domain, privacy_unit, privacy_loss, split_evenly_over, split_by_weights
@@ -487,7 +491,18 @@ Chain = Union[tuple[Domain, Metric], Transformation, Measurement, "PartialChain"
 
 
 class Query(object):
-    """A helper API to build a measurement."""
+    """Initializes the query with the given chain and output measure.
+
+    It is more convenient to use the ``context.query()`` constructor than this one.
+    However, this can be used stand-alone to help build a transformation/measurement that is not part of a context.
+
+    :param chain: an initial metric space (tuple of domain and metric) or transformation
+    :param output_measure: how privacy will be measured on the output of the query
+    :param d_in: an upper bound on the distance between adjacent datasets
+    :param d_out: an upper bound on the overall privacy loss
+    :param context: if specified, then when the query is released, the chain will be submitted to this context
+    :param _wrap_release: for internal use only
+    """
 
     _chain: Chain
     """The current chain of transformations and measurements."""
@@ -508,18 +523,6 @@ class Query(object):
         context: "Context" = None, # type: ignore[assignment]
         _wrap_release=None,
     ) -> None:
-        """Initializes the query with the given chain and output measure.
-
-        It is more convenient to use the ``context.query()`` constructor than this one.
-        However, this can be used stand-alone to help build a transformation/measurement that is not part of a context.
-
-        :param chain: an initial metric space (tuple of domain and metric) or transformation
-        :param output_measure: how privacy will be measured on the output of the query
-        :param d_in: an upper bound on the distance between adjacent datasets
-        :param d_out: an upper bound on the overall privacy loss
-        :param context: if specified, then when the query is released, the chain will be submitted to this context
-        :param _wrap_release: for internal use only
-        """
         self._chain = chain
         self._output_measure = output_measure
         self._d_in = d_in
@@ -739,9 +742,9 @@ class PartialChain(object):
         chain.param = param
         return chain
 
-    def __rshift__(self, other: Union[Transformation, Measurement, PartialConstructor]):
+    def __rshift__(self, other: Union[Transformation, Measurement, _PartialConstructor]):
         # partials may be chained with other transformations or measurements to form a new partial
-        if isinstance(other, (Transformation, Measurement, PartialConstructor)):
+        if isinstance(other, (Transformation, Measurement, _PartialConstructor)):
             return PartialChain(lambda x: self(x) >> other)
 
         raise ValueError("At most one parameter may be missing at a time")  # pragma: no cover
@@ -883,9 +886,9 @@ def _translate_measure_distance(d_from, from_measure: Measure, to_measure: Measu
         return (d_from, 0.0)
 
     if from_to == ("ZeroConcentratedDivergence", "MaxDivergence"):
-        space = atom_domain(T=float), absolute_distance(T=float)
+        space = atom_domain(T=float, nan=False), absolute_distance(T=float)
         scale = binary_search_param(
-            lambda eps: make_pureDP_to_zCDP(make_laplace(*space, eps)),
+            lambda scale: make_pureDP_to_zCDP(make_laplace(*space, scale)),
             d_in=constant,
             d_out=d_from,
             T=float,

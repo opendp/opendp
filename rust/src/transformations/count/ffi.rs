@@ -8,15 +8,15 @@ use crate::err;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, Downcast};
 use crate::ffi::any::{AnyObject, AnyTransformation};
-use crate::ffi::util::{c_bool, to_bool, Type};
+use crate::ffi::util::{Type, c_bool, to_bool};
 use crate::metrics::{L1Distance, L2Distance, SymmetricDistance};
 use crate::traits::{Hashable, Number, Primitive};
 use crate::transformations::{
-    make_count, make_count_by, make_count_by_categories, make_count_distinct,
-    CountByCategoriesConstant, CountByConstant,
+    CountByCategoriesConstant, CountByConstant, make_count, make_count_by,
+    make_count_by_categories, make_count_distinct,
 };
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_count(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
@@ -47,7 +47,7 @@ pub extern "C" fn opendp_transformations__make_count(
     .into()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_count_distinct(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
@@ -78,7 +78,7 @@ pub extern "C" fn opendp_transformations__make_count_distinct(
     .into()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_count_by_categories(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
@@ -144,7 +144,7 @@ pub extern "C" fn opendp_transformations__make_count_by_categories(
     .into()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_count_by(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,

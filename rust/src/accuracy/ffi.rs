@@ -13,7 +13,7 @@ use crate::traits::InfCast;
 
 macro_rules! build_extern_accuracy {
     ($arg:ident, $ffi_func:ident, $func:ident) => {
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub extern "C" fn $ffi_func(
             $arg: *const c_void,
             alpha: *const c_void,

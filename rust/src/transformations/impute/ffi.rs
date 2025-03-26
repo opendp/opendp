@@ -6,13 +6,13 @@ use crate::err;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::{Type, TypeContents};
-use crate::traits::{CheckAtom, Float, InherentNull};
+use crate::traits::{CheckAtom, Float, HasNull};
 use crate::transformations::{
-    make_drop_null, make_impute_constant, make_impute_uniform_float, DatasetMetric,
-    ImputeConstantDomain,
+    DatasetMetric, ImputeConstantDomain, make_drop_null, make_impute_constant,
+    make_impute_uniform_float,
 };
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_impute_uniform_float(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
@@ -44,7 +44,7 @@ pub extern "C" fn opendp_transformations__make_impute_uniform_float(
     dispatch!(monomorphize, [(M_, @dataset_metrics), (TA_, @floats)], (input_domain, input_metric, bounds)).into()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_impute_constant(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
@@ -108,7 +108,7 @@ pub extern "C" fn opendp_transformations__make_impute_constant(
             ) -> Fallible<AnyTransformation>
             where
                 AtomDomain<TA>: ImputeConstantDomain<Imputed = TA>,
-                TA: 'static + InherentNull + Clone + CheckAtom,
+                TA: 'static + HasNull + Clone + CheckAtom,
                 M: 'static + DatasetMetric,
                 (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
             {
@@ -133,7 +133,7 @@ pub extern "C" fn opendp_transformations__make_impute_constant(
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_drop_null(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
@@ -192,7 +192,7 @@ pub extern "C" fn opendp_transformations__make_drop_null(
             ) -> Fallible<AnyTransformation>
             where
                 AtomDomain<TA>: ImputeConstantDomain<Imputed = TA>,
-                TA: 'static + InherentNull + Clone + CheckAtom,
+                TA: 'static + HasNull + Clone + CheckAtom,
                 M: 'static + DatasetMetric,
                 (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
             {

@@ -8,10 +8,10 @@ use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
 use crate::traits::Integer;
 use crate::transformations::{
-    make_bounded_int_split_sum, make_sized_bounded_int_split_sum, SplitSatSum,
+    SplitSatSum, make_bounded_int_split_sum, make_sized_bounded_int_split_sum,
 };
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_bounded_int_split_sum(
     bounds: *const AnyObject,
     T: *const c_char,
@@ -30,7 +30,7 @@ pub extern "C" fn opendp_transformations__make_bounded_int_split_sum(
     .into()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_sized_bounded_int_split_sum(
     size: c_uint,
     bounds: *const AnyObject,

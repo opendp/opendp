@@ -1,8 +1,14 @@
+mod array;
+pub use array::*;
+
 mod categorical;
 pub use categorical::*;
 
 mod datetime;
 pub use datetime::*;
+
+mod r#enum;
+pub use r#enum::*;
 
 mod frame;
 pub use frame::*;

@@ -1,8 +1,8 @@
 use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
-use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::StableExpr;
+use crate::transformations::traits::UnboundedMetric;
 use polars::prelude::*;
 
 use super::StableDslPlan;
@@ -58,7 +58,7 @@ where
 
     let mut output_domain = middle_domain.clone();
 
-    output_domain.margins.values_mut().for_each(|m| {
+    output_domain.margins.iter_mut().for_each(|m| {
         // After filtering you no longer know partition lengths or keys.
         m.public_info = None;
     });
@@ -67,9 +67,12 @@ where
         >> Transformation::new(
             middle_domain,
             output_domain,
-            Function::new(move |plan: &DslPlan| DslPlan::Filter {
-                input: Arc::new(plan.clone()),
-                predicate: predicate.clone(),
+            Function::new_fallible(move |plan: &DslPlan| {
+                let predicate = t_pred.invoke(plan)?.expr;
+                Ok(DslPlan::Filter {
+                    input: Arc::new(plan.clone()),
+                    predicate: predicate.clone(),
+                })
             }),
             middle_metric.clone(),
             middle_metric,

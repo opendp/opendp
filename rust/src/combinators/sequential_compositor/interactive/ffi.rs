@@ -68,7 +68,7 @@ fn make_sequential_composition(
     ], (input_domain, input_metric, output_measure, d_in, d_mids))
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_combinators__make_sequential_composition(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
@@ -101,10 +101,7 @@ pub extern "C" fn opendp_combinators__make_sequential_composition(
     make_sequential_composition(input_domain, input_metric, output_measure, d_in, d_mids).into()
 }
 
-impl<
-        QI: 'static + ProductOrd + Clone + Send + Sync,
-        QO: 'static + ProductOrd + Clone + Send + Sync,
-    >
+impl<QI: 'static + ProductOrd + Clone + Send + Sync, QO: 'static + ProductOrd + Clone + Send + Sync>
     Measurement<
         AnyDomain,
         Queryable<Measurement<AnyDomain, AnyObject, TypedMetric<QI>, TypedMeasure<QO>>, AnyObject>,

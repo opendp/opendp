@@ -3,13 +3,13 @@ use dashu::rational::RBig;
 use crate::{
     domains::AtomDomain,
     metrics::AbsoluteDistance,
-    traits::{samplers::sample_discrete_laplace, SaturatingCast},
+    traits::{SaturatingCast, samplers::sample_discrete_laplace},
 };
 
 use super::*;
 
-fn make_test_scorer(
-) -> Fallible<Measurement<AtomDomain<u32>, (f64, &'static str), AbsoluteDistance<u32>, MaxDivergence>>
+fn make_test_scorer()
+-> Fallible<Measurement<AtomDomain<u32>, (f64, &'static str), AbsoluteDistance<u32>, MaxDivergence>>
 {
     Measurement::new(
         AtomDomain::<u32>::default(),
@@ -44,8 +44,8 @@ fn test_make_select_private_candidate_without_max_iters() -> Fallible<()> {
     Ok(())
 }
 
-fn make_nan_test_scorer(
-) -> Fallible<Measurement<AtomDomain<u32>, (f64, &'static str), AbsoluteDistance<u32>, MaxDivergence>>
+fn make_nan_test_scorer()
+-> Fallible<Measurement<AtomDomain<u32>, (f64, &'static str), AbsoluteDistance<u32>, MaxDivergence>>
 {
     Measurement::new(
         AtomDomain::<u32>::default(),

@@ -6,14 +6,14 @@ use opendp_derive::bootstrap;
 use std::fmt::Debug;
 
 use crate::{
-    combinators::{make_approximate, BasicCompositionMeasure},
+    combinators::{BasicCompositionMeasure, make_approximate},
     core::{Function, Measure, Measurement, Metric, MetricSpace},
     domains::{DslPlanDomain, LazyFrameDomain},
     error::Fallible,
     measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
     metrics::PartitionDistance,
-    polars::{get_disabled_features_message, OnceFrame},
-    transformations::{traits::UnboundedMetric, DatasetMetric, StableDslPlan},
+    polars::{OnceFrame, get_disabled_features_message},
+    transformations::{DatasetMetric, StableDslPlan, traits::UnboundedMetric},
 };
 
 use super::PrivateExpr;
@@ -23,7 +23,10 @@ mod ffi;
 
 #[cfg(feature = "contrib")]
 mod group_by;
-pub(crate) use group_by::{is_threshold_predicate, match_group_by, KeySanitizer, MatchGroupBy};
+pub(crate) use group_by::{KeySanitizer, MatchGroupBy, is_threshold_predicate, match_group_by};
+
+#[cfg(feature = "contrib")]
+mod postprocess;
 
 #[cfg(feature = "contrib")]
 mod select;
@@ -38,15 +41,15 @@ fn make_private_aggregation<MS, MI, MO>(
 ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, MO>>
 where
     MS: 'static + UnboundedMetric + DatasetMetric,
-    MI: Metric,
+    MI: 'static + UnboundedMetric,
     MO: 'static + ApproximateMeasure,
     MO::Distance: Debug,
-    Expr: PrivateExpr<PartitionDistance<MS>, MO>,
-    DslPlan: StableDslPlan<MS, MS>,
+    Expr: PrivateExpr<PartitionDistance<MI>, MO>,
+    DslPlan: StableDslPlan<MS, MI>,
 {
     #[cfg(feature = "contrib")]
     if group_by::match_group_by(plan.clone())?.is_some() {
-        return group_by::make_private_group_by(
+        return group_by::make_private_group_by::<MS, MI, MO>(
             input_domain,
             input_metric,
             output_measure,
@@ -57,20 +60,22 @@ where
     }
     match plan {
         #[cfg(feature = "contrib")]
-        plan if matches!(plan, DslPlan::Select { .. }) => select::make_private_select(
-            input_domain,
-            input_metric,
-            output_measure,
-            plan,
-            global_scale,
-        ),
+        plan if matches!(plan, DslPlan::Select { .. }) => {
+            select::make_private_select::<MS, MI, MO>(
+                input_domain,
+                input_metric,
+                output_measure,
+                plan,
+                global_scale,
+            )
+        }
 
         plan => fallible!(
             MakeMeasurement,
             "A step in your query is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
             plan.describe()?,
             get_disabled_features_message()
-        )
+        ),
     }
 }
 
@@ -160,6 +165,17 @@ where
             return fallible!(MakeMeasurement, "{}", SORT_ERR_MSG);
         }
 
+        if let Some(meas) = postprocess::match_postprocess(
+            input_domain.clone(),
+            input_metric.clone(),
+            output_measure.clone(),
+            self.clone(),
+            global_scale,
+            threshold,
+        )? {
+            return Ok(meas);
+        }
+
         make_private_aggregation::<MS, MS, _>(
             input_domain,
             input_metric,
@@ -186,6 +202,17 @@ where
     ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, ZeroConcentratedDivergence>> {
         if matches!(self, DslPlan::Sort { .. }) {
             return fallible!(MakeMeasurement, "{}", SORT_ERR_MSG);
+        }
+
+        if let Some(meas) = postprocess::match_postprocess(
+            input_domain.clone(),
+            input_metric.clone(),
+            output_measure.clone(),
+            self.clone(),
+            global_scale,
+            threshold,
+        )? {
+            return Ok(meas);
         }
 
         make_private_aggregation::<MS, MS, _>(
@@ -218,6 +245,17 @@ where
     ) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, Approximate<MO>>> {
         if matches!(self, DslPlan::Sort { .. }) {
             return fallible!(MakeMeasurement, "{}", SORT_ERR_MSG);
+        }
+
+        if let Some(meas) = postprocess::match_postprocess::<MS, Approximate<MO>>(
+            input_domain.clone(),
+            input_metric.clone(),
+            output_measure.clone(),
+            self.clone(),
+            global_scale,
+            threshold,
+        )? {
+            return Ok(meas);
         }
 
         if let Ok(meas) = make_private_aggregation::<MS, MS, _>(

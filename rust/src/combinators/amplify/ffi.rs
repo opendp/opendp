@@ -75,10 +75,7 @@ impl IsSizedDomain for AnyDomain {
     }
 }
 
-#[bootstrap(
-    features("contrib", "honest-but-curious"),
-    dependencies("$get_dependencies(measurement)")
-)]
+#[bootstrap(features("contrib", "honest-but-curious"))]
 /// Construct an amplified measurement from a `measurement` with privacy amplification by subsampling.
 /// This measurement does not perform any sampling.
 /// It is useful when you have a dataset on-hand that is a simple random sample from a larger population.
@@ -98,7 +95,7 @@ fn make_population_amplification(
     super::make_population_amplification(measurement, population_size)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_combinators__make_population_amplification(
     measurement: *const AnyMeasurement,
     population_size: c_uint,

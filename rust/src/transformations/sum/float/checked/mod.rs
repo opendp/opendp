@@ -4,7 +4,7 @@ use crate::{
     error::Fallible,
     metrics::{AbsoluteDistance, IntDistance, SymmetricDistance},
     traits::{
-        samplers::Shuffle, AlertingAbs, ExactIntCast, InfAdd, InfCast, InfMul, InfSub, ProductOrd,
+        AlertingAbs, ExactIntCast, InfAdd, InfCast, InfMul, InfSub, ProductOrd, samplers::Shuffle,
     },
 };
 
@@ -20,7 +20,7 @@ mod ffi;
 #[bootstrap(
     features("contrib"),
     arguments(bounds(rust_type = "(T, T)")),
-    generics(S(default = "Pairwise<T>", generics = "T")),
+    generics(S(default = "Pairwise<T>")),
     returns(c_type = "FfiResult<AnyTransformation *>"),
     derived_types(T = "$get_atom_or_infer(S, get_first(bounds))")
 )]
@@ -80,7 +80,7 @@ where
 
     Transformation::new(
         VectorDomain::new(AtomDomain::new_closed(bounds)?),
-        AtomDomain::default(),
+        AtomDomain::new_non_nan(),
         Function::new_fallible(move |arg: &Vec<S::Item>| {
             let mut data = arg.clone();
             if arg.len() > size_limit {
@@ -105,7 +105,7 @@ where
 #[bootstrap(
     features("contrib"),
     arguments(bounds(rust_type = "(T, T)")),
-    generics(S(default = "Pairwise<T>", generics = "T")),
+    generics(S(default = "Pairwise<T>")),
     returns(c_type = "FfiResult<AnyTransformation *>"),
     derived_types(T = "$get_atom_or_infer(S, get_first(bounds))")
 )]
@@ -162,7 +162,7 @@ where
 
     Transformation::new(
         VectorDomain::new(AtomDomain::new_closed(bounds)?).with_size(size),
-        AtomDomain::default(),
+        AtomDomain::new_non_nan(),
         // Under the assumption that the input data is in input domain, then an unchecked sum is safe.
         Function::new(move |arg: &Vec<S::Item>| S::unchecked_sum(arg)),
         SymmetricDistance::default(),

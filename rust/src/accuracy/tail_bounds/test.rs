@@ -7,8 +7,8 @@ use crate::{
     measurements::make_laplace,
     metrics::AbsoluteDistance,
     traits::{
-        samplers::{sample_discrete_gaussian, sample_uniform_uint_below},
         ExactIntCast,
+        samplers::{sample_discrete_gaussian, sample_uniform_uint_below},
     },
 };
 

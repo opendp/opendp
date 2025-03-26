@@ -15,7 +15,7 @@ The methods of this module will then be accessible at ``dp.polars``.
 """
 
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, replace
 import os
 from typing import Any, Literal, Sequence
 from opendp._lib import lib_path, import_optional_dependency
@@ -33,6 +33,8 @@ from opendp.domains import (
     atom_domain,
     categorical_domain,
     datetime_domain,
+    enum_domain,
+    array_domain,
 )
 from opendp.measurements import make_private_lazyframe
 
@@ -46,7 +48,7 @@ class DPExpr(object):
     See the full example there for more information.
 
     In addition to the DP-specific methods here, many Polars ``Expr`` methods are also supported,
-    and are documented in the :ref:`API User Guide <expression-index>`.    
+    and are documented in the :ref:`API User Guide <expression-index>`.
 
     This class is typically not used directly by users:
     Instead its methods are registered under the ``dp`` namespace of Polars expressions.
@@ -57,7 +59,6 @@ class DPExpr(object):
     """
 
     def __init__(self, expr):
-        """Apply a differentially private plugin to a Polars expression."""
         self.expr = expr
 
     def noise(
@@ -67,7 +68,7 @@ class DPExpr(object):
     ):
         """Add noise to the expression.
 
-        If scale is None it is filled by `global_scale` in :py:func:`opendp.measurements.make_private_lazyframe`.
+        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
         If distribution is None, then the noise distribution will be chosen for you:
 
         * Pure-DP: Laplace noise, where ``scale == standard_deviation / sqrt(2)``
@@ -331,7 +332,7 @@ class DPExpr(object):
         ...     privacy_unit=dp.unit_of(contributions=1),
         ...     privacy_loss=dp.loss_of(epsilon=1.),
         ...     split_evenly_over=1,
-        ...     margins={(): dp.polars.Margin(max_partition_length=5)}
+        ...     margins=[dp.polars.Margin(max_partition_length=5)]
         ... )
         >>> query = context.query().select(pl.col("visits").fill_null(0).dp.sum((0, 1)))
         >>> query.release().collect()
@@ -369,7 +370,7 @@ class DPExpr(object):
         ...     privacy_unit=dp.unit_of(contributions=1),
         ...     privacy_loss=dp.loss_of(epsilon=1.),
         ...     split_evenly_over=1,
-        ...     margins={(): dp.polars.Margin(max_partition_length=5)}
+        ...     margins=[dp.polars.Margin(max_partition_length=5)]
         ... )
         >>> query = context.query().select(pl.col("visits").fill_null(0).dp.mean((0, 1)))
         >>> with pl.Config(float_precision=0): # just to prevent doctest from failing
@@ -464,7 +465,7 @@ class DPExpr(object):
         ...     privacy_unit=dp.unit_of(contributions=1),
         ...     privacy_loss=dp.loss_of(epsilon=1.),
         ...     split_evenly_over=1,
-        ...     margins={(): dp.polars.Margin(max_partition_length=100)}
+        ...     margins=[dp.polars.Margin(max_partition_length=100)]
         ... )
         >>> candidates = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
         >>> query = context.query().select(pl.col("age").fill_null(0).dp.quantile(0.25, candidates))
@@ -502,7 +503,7 @@ class DPExpr(object):
         ...     privacy_unit=dp.unit_of(contributions=1),
         ...     privacy_loss=dp.loss_of(epsilon=1.),
         ...     split_evenly_over=1,
-        ...     margins={(): dp.polars.Margin(max_partition_length=100)}
+        ...     margins=[dp.polars.Margin(max_partition_length=100)]
         ... )
         >>> candidates = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
         >>> query = context.query().select(pl.col("age").fill_null(0).dp.quantile(0.5, candidates))
@@ -522,7 +523,7 @@ class DPExpr(object):
         return self.expr.dp.quantile(0.5, candidates, scale)
 
 
-pl = import_optional_dependency('polars', raise_error=False)
+pl = import_optional_dependency("polars", raise_error=False)
 if pl is not None:
     pl.api.register_expr_namespace("dp")(DPExpr)
 
@@ -562,14 +563,15 @@ def dp_len(scale: float | None = None):
 
 
 class OnceFrame(object):
+    """OnceFrame is a Polars LazyFrame that may only be collected into a DataFrame once.
+
+    The APIs on this class mimic those that can be found in Polars.
+
+    Differentially private guarantees on a given LazyFrame require the LazyFrame to be evaluated at most once.
+    The purpose of this class is to protect against repeatedly evaluating the LazyFrame.
+    """
+
     def __init__(self, queryable):
-        """OnceFrame is a Polars LazyFrame that may only be collected into a DataFrame once.
-
-        The APIs on this class mimic those that can be found in Polars.
-
-        Differentially private guarantees on a given LazyFrame require the LazyFrame to be evaluated at most once.
-        The purpose of this class is to protect against repeatedly evaluating the LazyFrame.
-        """
         self.queryable = queryable
 
     def collect(self):
@@ -586,10 +588,12 @@ class OnceFrame(object):
         To remain DP at the advertised privacy level, only collect the ``LazyFrame`` once.
 
         Requires "honest-but-curious" because the privacy guarantees only apply if:
+
         1. The LazyFrame (compute plan) is only ever executed once.
-        2. The analyst does not observe ordering of rows in the output. 
-        
+        2. The analyst does not observe ordering of rows in the output.
+
         To ensure that row ordering is not observed:
+
         1. Do not extend the compute plan with order-sensitive computations.
         2. Shuffle the output once collected `(in Polars sample all, with shuffle enabled) <https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.sample.html>`_.
         """
@@ -607,14 +611,22 @@ def _lazyframe_domain_from_schema(schema) -> Domain:
 
 def _series_domain_from_field(field) -> Domain:
     """Builds the broadest possible SeriesDomain that matches a given field."""
+    name, dtype = field
+    return series_domain(name, option_domain(_domain_from_dtype(dtype)))
+
+
+def _domain_from_dtype(dtype) -> Domain:
+    """Builds the broadest possible Domain that matches a given dtype."""
     import polars as pl
 
-    name, dtype = field
     if dtype == pl.Categorical:
-        return series_domain(name, option_domain(categorical_domain()))
+        return categorical_domain()
+    if dtype == pl.Enum:
+        return enum_domain(dtype.categories)
     if dtype == pl.Datetime:
-        dt_domain = datetime_domain(dtype.time_unit, dtype.time_zone)
-        return series_domain(name, option_domain(dt_domain))
+        return datetime_domain(dtype.time_unit, dtype.time_zone)
+    if dtype == pl.Array:
+        return array_domain(_domain_from_dtype(dtype.inner), dtype.size)
 
     T = {
         pl.UInt32: "u32",
@@ -634,9 +646,7 @@ def _series_domain_from_field(field) -> Domain:
     if T is None:
         raise ValueError(f"unrecognized dtype: {dtype}")  # pragma: no cover
 
-    element_domain = option_domain(atom_domain(T=T, nullable=T in {"f32", "f64"}))
-    return series_domain(name, element_domain)
-
+    return atom_domain(T=T)
 
 _LAZY_EXECUTION_METHODS = {
     "collect",
@@ -650,7 +660,7 @@ _LAZY_EXECUTION_METHODS = {
 }
 
 
-class LazyFrameQuery():
+class LazyFrameQuery:
     """
     A ``LazyFrameQuery`` may be returned by :py:func:`opendp.context.Context.query`.
     It mimics a `Polars LazyFrame <https://docs.pola.rs/api/python/stable/reference/lazyframe/index.html>`_,
@@ -791,13 +801,13 @@ class LazyFrameQuery():
     def join(  # type: ignore[empty-body]
         self,
         other,
-        on = None,
-        how = "inner",
+        on=None,
+        how="inner",
         *,
-        left_on = None,
-        right_on = None,
+        left_on=None,
+        right_on=None,
         suffix: str = "_right",
-        validate = "m:m",
+        validate="m:m",
         join_nulls: bool = False,
         coalesce: bool | None = None,
         allow_parallel: bool = True,
@@ -820,8 +830,8 @@ class LazyFrameQuery():
         :param on: optional, the names of columns to join on. Useful if the key dataframe contains extra columns
         """
         # Motivation for adding this new API:
-        # 1. Writing a left join is more difficult in the context API: 
-        #   see the complexity of this implementation, where you have to go under the hood. 
+        # 1. Writing a left join is more difficult in the context API:
+        #   see the complexity of this implementation, where you have to go under the hood.
         #   This gives an easier shorthand to write a left join.
         # 2. Left joins are more likely to be supported by database backends.
         # 3. Easier to use; with the Polars API the key set needs to be lazy, user must specify they want a right join and the join keys.
@@ -829,7 +839,7 @@ class LazyFrameQuery():
         if pl is not None:
             if isinstance(keys, pl.dataframe.frame.DataFrame):
                 keys = keys.lazy()
-        
+
         if on is None:
             on = keys.collect_schema().names()
 
@@ -895,32 +905,32 @@ class LazyFrameQuery():
     def summarize(self, alpha: float | None = None):
         """Summarize the statistics released by this query.
 
-        :param alpha: optional. A value in [0, 1] denoting the statistical significance. For the corresponding confidence level, subtract from from 1: for 95% confidence, use 0.05 for alpha.
-
         If ``alpha`` is passed, the resulting data frame includes an ``accuracy`` column.
 
         If a threshold is configured for censoring small/sensitive partitions,
         a threshold column will be included,
         containing the cutoff for the respective count query being thresholded.
 
+        :param alpha: optional. A value in [0, 1] denoting the statistical significance. For the corresponding confidence level, subtract from from 1: for 95% confidence, use 0.05 for alpha.
+
         :example:
 
         >>> import polars as pl
         >>> data = pl.LazyFrame([pl.Series("convicted", [0, 1, 1, 0, 1] * 50, dtype=pl.Int32)])
-
+        >>>
         >>> context = dp.Context.compositor(
         ...     data=data,
         ...     privacy_unit=dp.unit_of(contributions=1),
         ...     privacy_loss=dp.loss_of(epsilon=1.0),
         ...     split_evenly_over=1,
-        ...     margins={(): dp.polars.Margin(max_partition_length=1000)},
+        ...     margins=[dp.polars.Margin(by=(), max_partition_length=1000)],
         ... )
-
+        >>>
         >>> query = context.query().select(
         ...     dp.len(),
         ...     pl.col("convicted").fill_null(0).dp.sum((0, 1))
         ... )
-
+        >>>
         >>> query.summarize(alpha=.05)  # type: ignore[union-attr]
         shape: (2, 5)
         ┌───────────┬──────────────┬─────────────────┬───────┬──────────┐
@@ -948,7 +958,8 @@ class LazyFrameQuery():
 
         return summarize_polars_measurement(self.resolve(), alpha)
 
-class LazyGroupByQuery():
+
+class LazyGroupByQuery:
     """
     A ``LazyGroupByQuery`` is returned by :py:func:`opendp.extras.polars.LazyFrameQuery.group_by`.
     It mimics a `Polars LazyGroupBy <https://docs.pola.rs/api/python/stable/reference/lazyframe/group_by.html>`_,
@@ -974,7 +985,7 @@ class LazyGroupByQuery():
 
 
 @dataclass
-class Margin(object):
+class Margin:
     """
     The ``Margin`` class is used to describe what information is known publicly about a grouped dataset:
     like the values you might expect to find in the margins of a table.
@@ -984,6 +995,9 @@ class Margin(object):
 
     Instances of this class are used by :py:func:`opendp.context.Context.compositor`.
     """
+
+    by: Sequence | None = None
+    """Polars expressions describing the grouping columns."""
 
     public_info: Literal["keys"] | Literal["lengths"] | None = None
     """Identifies properties of grouped data that are considered public information.
@@ -1013,3 +1027,21 @@ class Margin(object):
 
     max_influenced_partitions: int | None = None
     """The greatest number of partitions any one individual can contribute to."""
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Margin):
+            return False
+
+        # special logic for by, which is considered a set (order and dupes don't matter)
+        # and may contain expressions that do not have a boolean equality operator
+        def serialize(by):
+            if isinstance(by, str):
+                by = pl.col(by)
+            return by.meta.serialize()
+
+        self_by = {serialize(col) for col in self.by or []}
+        other_by = {serialize(col) for col in other.by or []}
+        if self_by != other_by:
+            return False
+        
+        return asdict(replace(self, by=None)) == asdict(replace(other, by=None))

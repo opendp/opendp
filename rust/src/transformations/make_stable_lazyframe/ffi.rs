@@ -9,7 +9,7 @@ use crate::{
 
 use super::make_stable_lazyframe;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_stable_lazyframe(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,

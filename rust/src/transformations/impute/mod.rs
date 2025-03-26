@@ -7,11 +7,11 @@ use crate::core::{Domain, Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::traits::samplers::GeneratorOpenDP;
-use crate::traits::{CheckAtom, CheckNull, Float, InherentNull};
+use crate::traits::{CheckAtom, CheckNull, Float, HasNull};
 use crate::transformations::make_row_by_row;
 
 use super::DatasetMetric;
-use rand::distributions::{uniform::SampleUniform, Distribution, Uniform};
+use rand::distributions::{Distribution, Uniform, uniform::SampleUniform};
 
 #[bootstrap(
     features("contrib"),
@@ -100,17 +100,13 @@ impl<T: CheckAtom> ImputeConstantDomain for OptionDomain<AtomDomain<T>> {
     }
 }
 // how to impute, when null represented as T with internal nullity
-impl<T: CheckAtom + InherentNull> ImputeConstantDomain for AtomDomain<T> {
+impl<T: CheckAtom + HasNull> ImputeConstantDomain for AtomDomain<T> {
     type Imputed = Self::Carrier;
     fn impute_constant<'a>(
         default: &'a Self::Carrier,
         constant: &'a Self::Imputed,
     ) -> &'a Self::Imputed {
-        if default.is_null() {
-            constant
-        } else {
-            default
-        }
+        if default.is_null() { constant } else { default }
     }
 }
 
@@ -153,7 +149,7 @@ where
     (VectorDomain<DIA>, M): MetricSpace,
     (VectorDomain<AtomDomain<DIA::Imputed>>, M): MetricSpace,
 {
-    let output_atom_domain = AtomDomain::default();
+    let output_atom_domain = AtomDomain::new_non_nan();
     if !output_atom_domain.member(&constant)? {
         return fallible!(MakeTransformation, "Constant may not be null.");
     }
@@ -185,15 +181,11 @@ pub trait DropNullDomain: Domain {
 impl<T: CheckAtom + Clone> DropNullDomain for OptionDomain<AtomDomain<T>> {
     type Imputed = T;
     fn option(value: &Self::Carrier) -> Option<T> {
-        if value.is_null() {
-            None
-        } else {
-            value.clone()
-        }
+        if value.is_null() { None } else { value.clone() }
     }
 }
 /// how to standardize into an option, when null represented as T with internal nullity
-impl<T: CheckAtom + InherentNull + Clone> DropNullDomain for AtomDomain<T> {
+impl<T: CheckAtom + HasNull + Clone> DropNullDomain for AtomDomain<T> {
     type Imputed = T;
     fn option(value: &Self::Carrier) -> Option<T> {
         if value.is_null() {

@@ -9,11 +9,11 @@ use crate::traits::{
 };
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::{
-    can_int_sum_overflow, CanFloatSumOverflow, Sequential, SumRelaxation,
+    CanFloatSumOverflow, Sequential, SumRelaxation, can_int_sum_overflow,
 };
 use num::Zero;
 use polars::prelude::*;
-use polars_plan::plans::{typed_lit, TypedLiteral};
+use polars_plan::plans::{TypedLiteral, typed_lit};
 
 use super::StableExpr;
 
@@ -47,7 +47,7 @@ where
         .make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
-    let (by, input_margin) = middle_domain.context.grouping("sum")?;
+    let input_margin = middle_domain.context.aggregation("sum")?;
 
     if middle_domain.column.nullable {
         return fallible!(
@@ -62,8 +62,8 @@ where
     use DataType::*;
 
     let nan = match dtype {
-        Float32 => middle_domain.column.atom_domain::<f32>()?.nullable(),
-        Float64 => middle_domain.column.atom_domain::<f64>()?.nullable(),
+        Float32 => middle_domain.column.atom_domain::<f32>()?.nan(),
+        Float64 => middle_domain.column.atom_domain::<f64>()?.nan(),
         _ => false,
     };
 
@@ -104,9 +104,9 @@ where
     // build output domain
     let output_domain = ExprDomain {
         column: series_domain,
-        context: Context::Grouping {
-            by,
+        context: Context::Aggregation {
             margin: Margin {
+                by: input_margin.by,
                 max_partition_length: Some(1),
                 max_num_partitions: input_margin.max_num_partitions,
                 max_partition_contributions: None,
@@ -146,7 +146,7 @@ where
     TI: Summand,
     f64: InfCast<TI::Sum> + InfCast<u32>,
 {
-    let margin = domain.context.grouping("sum")?.1;
+    let margin = domain.context.aggregation("sum")?;
     let (l, u) = domain.column.atom_domain::<TI>()?.get_closed_bounds()?;
     let (l, u) = (TI::Sum::neg_inf_cast(l)?, TI::Sum::inf_cast(u)?);
 
@@ -174,7 +174,10 @@ where
 
     // 'mnp_check: this invariant is used later
     if !pp_relaxation.is_zero() && !MI::ORDERED && margin.max_num_partitions.is_none() {
-        return fallible!(MakeTransformation, "max_num_partitions must be known when the metric is not sensitive to ordering (SymmetricDistance)");
+        return fallible!(
+            MakeTransformation,
+            "max_num_partitions must be known when the metric is not sensitive to ordering (SymmetricDistance)"
+        );
     }
 
     Ok(StabilityMap::new_fallible(

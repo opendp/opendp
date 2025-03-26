@@ -10,7 +10,7 @@ use crate::ffi::any::{AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
 use crate::traits::{Hashable, Primitive};
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_select_column(
     key: *const AnyObject,
     K: *const c_char,

@@ -1,4 +1,5 @@
 First, create a measurement with the Polars API:
+
 >>> import opendp.prelude as dp
 >>> import polars as pl
 >>> dp.enable_features("contrib")
@@ -8,7 +9,7 @@ First, create a measurement with the Polars API:
 ...     dp.series_domain("A", dp.atom_domain(T="i32")), 
 ...     dp.series_domain("B", dp.atom_domain(T=str))
 ... ])
->>> lf_domain = dp.with_margin(lf_domain, by=[], max_partition_length=1000)
+>>> lf_domain = dp.with_margin(lf_domain, dp.polars.Margin(by=[], max_partition_length=1000))
 >>> meas = dp.m.make_private_lazyframe(
 ...     lf_domain,
 ...     dp.symmetric_distance(),
@@ -18,6 +19,7 @@ First, create a measurement with the Polars API:
 ... )
 
 This function extracts utility information about each aggregate in the resulting data frame:
+
 >>> dp.summarize_polars_measurement(meas)
 shape: (2, 4)
 ┌────────┬──────────────┬─────────────────┬───────┐
@@ -30,6 +32,7 @@ shape: (2, 4)
 └────────┴──────────────┴─────────────────┴───────┘
 
 If you pass an alpha argument, then you also get accuracy estimates:
+
 >>> dp.summarize_polars_measurement(meas, alpha=.05)
 shape: (2, 5)
 ┌────────┬──────────────┬─────────────────┬───────┬──────────┐

@@ -7,11 +7,11 @@ use crate::err;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast};
 use crate::ffi::util::{Type, TypeContents};
-use crate::traits::{CheckAtom, InherentNull, Primitive};
-use crate::transformations::{make_is_equal, make_is_null, DatasetMetric};
+use crate::traits::{CheckAtom, HasNull, Primitive};
+use crate::transformations::{DatasetMetric, make_is_equal, make_is_null};
 
 #[cfg(feature = "honest-but-curious")]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_identity(
     domain: *const AnyDomain,
     metric: *const AnyMetric,
@@ -21,7 +21,7 @@ pub extern "C" fn opendp_transformations__make_identity(
     super::make_identity(domain, metric).into()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_is_equal(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
@@ -59,7 +59,7 @@ pub extern "C" fn opendp_transformations__make_is_equal(
     .into()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_is_null(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
@@ -73,9 +73,9 @@ pub extern "C" fn opendp_transformations__make_is_null(
         args,
     } = DI.contents
     {
-        let type_id =
-            try_!(<[TypeId; 1]>::try_from(args)
-                .map_err(|_| err!(FFI, "Vec must have one type argument")))[0];
+        let type_id = try_!(
+            <[TypeId; 1]>::try_from(args).map_err(|_| err!(FFI, "Vec must have one type argument"))
+        )[0];
         try_!(Type::of_id(&type_id))
     } else {
         return err!(FFI, "Invalid type name.").into();
@@ -108,7 +108,7 @@ pub extern "C" fn opendp_transformations__make_is_null(
                 input_metric: &AnyMetric,
             ) -> Fallible<AnyTransformation>
             where
-                TIA: 'static + CheckAtom + InherentNull,
+                TIA: 'static + CheckAtom + HasNull,
                 M: 'static + DatasetMetric,
                 (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
                 (VectorDomain<AtomDomain<bool>>, M): MetricSpace,
@@ -169,7 +169,7 @@ mod tests {
     #[test]
     fn test_make_is_null() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_is_null(
-            AnyDomain::new_raw(VectorDomain::new(AtomDomain::<f64>::new_nullable())),
+            AnyDomain::new_raw(VectorDomain::new(AtomDomain::<f64>::default())),
             AnyMetric::new_raw(SymmetricDistance::default()),
         ))?;
         let arg = AnyObject::new_raw(vec![1., 2., f64::NAN]);

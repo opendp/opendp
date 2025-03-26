@@ -11,7 +11,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-darling = { version = "0.14" }
+darling = { version = "0.20" }
 serde_json = { version = "1.0" }
 syn = { workspace = true }
 quote = { workspace = true }

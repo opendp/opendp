@@ -4,7 +4,7 @@ use polars::prelude::*;
 use crate::{
     domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain},
     error::ErrorVariant,
-    measurements::{make_private_expr, make_private_lazyframe, PrivateExpr},
+    measurements::{PrivateExpr, make_private_expr, make_private_lazyframe},
     metrics::{InsertDeleteDistance, PartitionDistance, SymmetricDistance},
     polars::PrivacyNamespace,
     transformations::test_helper::get_test_data,
@@ -138,7 +138,7 @@ fn check_autocalibration(
     d_in: (u32, u32, u32),
 ) -> Fallible<()> {
     let series_domain = SeriesDomain::new("A", AtomDomain::<i32>::default());
-    let lf_domain = LazyFrameDomain::new(vec![series_domain])?.with_margin::<&str>(&[], margin)?;
+    let lf_domain = LazyFrameDomain::new(vec![series_domain])?.with_margin(margin)?;
     let expr_domain = lf_domain.select();
 
     // Get resulting sum (expression result)
@@ -166,7 +166,7 @@ fn check_autocalibration(
 #[test]
 fn test_sum_unbounded_dp_autocalibration() -> Fallible<()> {
     check_autocalibration(
-        Margin::default().with_max_partition_length(100),
+        Margin::select().with_max_partition_length(100),
         (4, 7),
         (1, 1, 1),
     )
@@ -175,7 +175,7 @@ fn test_sum_unbounded_dp_autocalibration() -> Fallible<()> {
 #[test]
 fn test_sum_bounded_dp_autocalibration() -> Fallible<()> {
     check_autocalibration(
-        Margin::default()
+        Margin::select()
             .with_max_partition_length(100)
             .with_public_lengths(),
         (4, 7),

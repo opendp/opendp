@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
-use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::StableExpr;
+use crate::transformations::traits::UnboundedMetric;
 use polars::prelude::*;
 
 use super::StableDslPlan;
@@ -77,11 +77,11 @@ where
 
     // only keep margins for series that have not changed
     let new_series_names = new_series
-        .map(|series_domain| series_domain.name.clone())
+        .map(|series_domain| col(series_domain.name.clone()))
         .collect();
     let margins = (middle_domain.margins.iter())
-        .filter(|(k, _)| k.is_disjoint(&new_series_names))
-        .map(|(k, v)| (k.clone(), v.clone()))
+        .filter(|m| m.by.is_disjoint(&new_series_names))
+        .cloned()
         .collect();
 
     // instead of using the public APIs that check invariants, directly populate the struct entries

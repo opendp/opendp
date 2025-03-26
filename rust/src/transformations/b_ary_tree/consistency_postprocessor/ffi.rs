@@ -8,7 +8,7 @@ use crate::{
     transformations::make_consistent_b_ary_tree,
 };
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_consistent_b_ary_tree(
     branching_factor: u32,
     TIA: *const c_char,

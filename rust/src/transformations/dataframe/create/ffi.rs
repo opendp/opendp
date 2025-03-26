@@ -14,12 +14,12 @@ use crate::{
 
 use super::{make_split_lines, make_split_records};
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_split_lines() -> FfiResult<*mut AnyTransformation> {
     make_split_lines().into_any().into()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_split_records(
     separator: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
@@ -27,7 +27,7 @@ pub extern "C" fn opendp_transformations__make_split_records(
     make_split_records(separator).into_any().into()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_create_dataframe(
     col_names: *const AnyObject,
     K: *const c_char,
@@ -44,7 +44,7 @@ pub extern "C" fn opendp_transformations__make_create_dataframe(
     dispatch!(monomorphize, [(K, @hashable)], (col_names)).into()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_split_dataframe(
     separator: *const c_char,
     col_names: *const AnyObject,

@@ -61,12 +61,13 @@ where
             //    if more data is passed then num_bins, then ignore
             let pad_length = num_leaves - leaf_count.min(arg.len());
 
-            let mut layers = vec![arg
-                .iter()
-                .take(leaf_count)
-                .cloned()
-                .chain((0..pad_length).map(|_| TA::zero()))
-                .collect::<Vec<TA>>()];
+            let mut layers = vec![
+                arg.iter()
+                    .take(leaf_count)
+                    .cloned()
+                    .chain((0..pad_length).map(|_| TA::zero()))
+                    .collect::<Vec<TA>>(),
+            ];
 
             (0..num_layers - 1).for_each(|i| {
                 layers.push(

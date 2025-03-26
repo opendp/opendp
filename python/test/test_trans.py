@@ -54,7 +54,7 @@ def test_cast_default():
 
 def test_impute_uniform():
     caster = dp.t.make_impute_uniform_float(
-        dp.vector_domain(dp.atom_domain(T=float, nullable=True)),
+        dp.vector_domain(dp.atom_domain(T=float, nan=True)),
         dp.symmetric_distance(),
         bounds=(-1., 2.))
     assert -1. <= caster([float('nan')])[0] <= 2.
@@ -314,7 +314,7 @@ def test_indexing():
 
 
 def test_lipschitz_mul_float():
-    trans = dp.t.make_sized_bounded_float_ordered_sum(10, (0., 10.)) >> dp.t.make_lipschitz_float_mul(1 / 10, (-3., 4.))
+    trans = dp.t.make_sized_bounded_float_ordered_sum(10, (0., 10.)) >> dp.t.then_lipschitz_float_mul(1 / 10, (-3., 4.))
 
     assert trans([3.] * 10) == 0.4
     assert trans.map(2) == 1.0000000000000153
@@ -397,10 +397,9 @@ def test_lipschitz_b_ary_tree():
 
 def test_quantile_score_candidates():
 
-    input_domain = dp.vector_domain(dp.atom_domain(T=int))
-    input_metric = dp.symmetric_distance()
-    trans = dp.t.make_quantile_score_candidates(input_domain, input_metric, [20, 33, 40, 50, 72, 100], alpha=0.5)
+    input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
+    trans = input_space >> dp.t.then_quantile_score_candidates([0, 25, 50, 75, 100], alpha=0.5)
     scores = trans(list(range(101)))
     # score works out to 2 * |50 - cand|
-    assert scores == [60, 34, 20, 0, 44, 100]
+    assert scores == [100, 50, 0, 50, 100]
     assert trans.map(1) == 1

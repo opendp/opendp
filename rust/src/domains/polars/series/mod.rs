@@ -12,6 +12,8 @@ use polars::prelude::*;
 
 use crate::domains::{AtomDomain, CategoricalDomain, DatetimeDomain, OptionDomain};
 
+use super::{ArrayDomain, EnumDomain};
+
 #[cfg(feature = "ffi")]
 mod ffi;
 
@@ -19,7 +21,7 @@ mod ffi;
 mod test;
 
 /// # Proof Definition
-/// `SeriesDomain` describes a set of polars `Series`.
+/// `SeriesDomain` describes the domain of all polars `Series`.
 ///
 /// # Example
 /// ```
@@ -133,8 +135,8 @@ impl SeriesDomain {
             DataType::Int16 => Arc::new(AtomDomain::<i16>::default()),
             DataType::Int32 => Arc::new(AtomDomain::<i32>::default()),
             DataType::Int64 => Arc::new(AtomDomain::<i64>::default()),
-            DataType::Float32 => Arc::new(AtomDomain::<f64>::new_nullable()),
-            DataType::Float64 => Arc::new(AtomDomain::<f64>::new_nullable()),
+            DataType::Float32 => Arc::new(AtomDomain::<f64>::default()),
+            DataType::Float64 => Arc::new(AtomDomain::<f64>::default()),
             DataType::String => Arc::new(AtomDomain::<String>::default()),
             DataType::Date => Arc::new(AtomDomain::<NaiveDate>::default()),
             DataType::Datetime(time_unit, time_zone) => Arc::new(DatetimeDomain {
@@ -142,6 +144,21 @@ impl SeriesDomain {
                 time_zone,
             }),
             DataType::Time => Arc::new(AtomDomain::<NaiveTime>::default()),
+            DataType::Categorical(_, _) => Arc::new(CategoricalDomain::default()),
+            DataType::Enum(mapping, _) => {
+                let mapping =
+                    mapping.ok_or_else(|| err!(MakeDomain, "EnumDomain requires a mapping"))?;
+                let categories = ChunkedArray::<StringType>::from(mapping.get_categories().clone())
+                    .into_series();
+                Arc::new(EnumDomain::new(categories)?)
+            }
+            DataType::Array(dtype, size) => {
+                let element_domain = Self::new_element_domain(*dtype)?;
+                Arc::new(ArrayDomain {
+                    element_domain,
+                    size,
+                })
+            }
             dtype => return fallible!(MakeDomain, "unsupported type {}", dtype),
         })
     }
@@ -213,6 +230,26 @@ impl SeriesDomain {
         (self.element_domain.as_any())
             .downcast_ref::<D>()
             .ok_or_else(|| err!(FailedCast, "domain downcast failed"))
+    }
+
+    pub fn set_non_nan(&mut self) -> Fallible<()> {
+        match self.dtype() {
+            DataType::Float64 => {
+                let atom_domain = self.atom_domain::<f64>()?.clone();
+                self.set_element_domain(AtomDomain::<f64>::new(atom_domain.bounds, None));
+            }
+            DataType::Float32 => {
+                let atom_domain = self.atom_domain::<f32>()?.clone();
+                self.set_element_domain(AtomDomain::<f32>::new(atom_domain.bounds, None));
+            }
+            _ => {
+                return fallible!(
+                    MakeTransformation,
+                    "only floating point types can be made non-NaN"
+                );
+            }
+        }
+        Ok(())
     }
 }
 
@@ -287,6 +324,19 @@ impl SeriesElementDomain for CategoricalDomain {
     const NULLABLE: bool = false;
 }
 
+impl SeriesElementDomain for EnumDomain {
+    type InnerDomain = Self;
+
+    fn dtype(&self) -> DataType {
+        DataType::Enum(None, Default::default())
+    }
+    fn inner_domain(&self) -> &Self {
+        self
+    }
+
+    const NULLABLE: bool = false;
+}
+
 impl SeriesElementDomain for DatetimeDomain {
     type InnerDomain = Self;
 
@@ -300,8 +350,21 @@ impl SeriesElementDomain for DatetimeDomain {
     const NULLABLE: bool = false;
 }
 
+impl SeriesElementDomain for ArrayDomain {
+    type InnerDomain = Self;
+
+    fn dtype(&self) -> DataType {
+        DataType::Array(Box::new(self.element_domain.dtype()), self.size)
+    }
+    fn inner_domain(&self) -> &Self {
+        self
+    }
+
+    const NULLABLE: bool = false;
+}
+
 /// Object-safe version of [`SeriesElementDomain`].
-pub trait DynSeriesElementDomain: 'static + Send + Sync {
+pub trait DynSeriesElementDomain: 'static + Send + Sync + Debug {
     /// # Proof Definition
     /// Returns the datatype of rows of members in the domain.
     fn dtype(&self) -> DataType;

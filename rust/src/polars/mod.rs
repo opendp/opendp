@@ -6,10 +6,10 @@ use crate::{
     error::Fallible,
     interactive::{Answer, Query, Queryable},
     measurements::{
+        Optimize,
         expr_index_candidates::IndexCandidatesShim,
         expr_noise::{Distribution, NoiseShim},
         expr_report_noisy_max::ReportNoisyMaxShim,
-        Optimize,
     },
     transformations::expr_discrete_quantile_score::DiscreteQuantileScoreShim,
 };
@@ -20,7 +20,7 @@ use polars::{
     series::Series,
 };
 use polars_plan::{
-    dsl::{lit, ColumnsUdf, Expr, FunctionExpr, SpecialEq},
+    dsl::{ColumnsUdf, Expr, FunctionExpr, SpecialEq, lit},
     plans::{Literal, LiteralValue, Null},
     prelude::{FunctionFlags, FunctionOptions},
 };
@@ -66,7 +66,10 @@ where
             }
 
             if !kwargs.is_empty() {
-                return fallible!(FailedFunction, "OpenDP does not allow pickled keyword arguments as they may enable remote code execution.");
+                return fallible!(
+                    FailedFunction,
+                    "OpenDP does not allow pickled keyword arguments as they may enable remote code execution."
+                );
             }
 
             input
@@ -533,10 +536,12 @@ impl OnceFrame {
     /// Extract the compute plan with the private data.
     ///
     /// Requires "honest-but-curious" because the privacy guarantees only apply if:
+    ///
     /// 1. The LazyFrame (compute plan) is only ever executed once.
     /// 2. The analyst does not observe ordering of rows in the output.
     ///    
     /// To ensure that row ordering is not observed:
+    ///
     /// 1. Do not extend the compute plan with order-sensitive computations.
     /// 2. Shuffle the output once collected ([in Polars sample all, with shuffling enabled](https://docs.rs/polars/latest/polars/frame/struct.DataFrame.html#method.sample_n_literal)).
     #[cfg(feature = "honest-but-curious")]

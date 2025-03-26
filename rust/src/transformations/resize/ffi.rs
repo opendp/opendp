@@ -12,7 +12,7 @@ use crate::metrics::{InsertDeleteDistance, IntDistance, SymmetricDistance};
 use crate::traits::CheckAtom;
 use crate::transformations::resize::IsMetricOrdered;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_resize(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,

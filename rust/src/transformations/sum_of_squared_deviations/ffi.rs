@@ -11,9 +11,9 @@ use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast};
 use crate::ffi::util::Type;
 use crate::metrics::SymmetricDistance;
 use crate::traits::{Float, FloatBits};
-use crate::transformations::{make_sum_of_squared_deviations, Pairwise, Sequential, UncheckedSum};
+use crate::transformations::{Pairwise, Sequential, UncheckedSum, make_sum_of_squared_deviations};
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_sum_of_squared_deviations(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,

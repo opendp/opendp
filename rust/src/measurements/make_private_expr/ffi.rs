@@ -15,7 +15,7 @@ use crate::{
 
 use super::make_private_expr;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_measurements__make_private_expr(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,

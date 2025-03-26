@@ -28,7 +28,7 @@ pub enum KeySanitizer {
 
 pub(crate) struct MatchGroupBy {
     pub input: DslPlan,
-    pub keys: Vec<Expr>,
+    pub group_by: Vec<Expr>,
     pub aggs: Vec<Expr>,
     pub key_sanitizer: Option<KeySanitizer>,
 }
@@ -67,7 +67,7 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
                     return fallible!(
                         MakeMeasurement,
                         "only left or right joins can be used to privatize key-sets"
-                    )
+                    );
                 }
             };
 
@@ -116,7 +116,11 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
     };
 
     if options.as_ref() != &GroupbyOptions::default() {
-        return fallible!(MakeMeasurement, "Unsupported options in logical plan. Do not optimize the lazyframe passed into the constructor. Options should be default, but are {:?}", options);
+        return fallible!(
+            MakeMeasurement,
+            "Unsupported options in logical plan. Do not optimize the lazyframe passed into the constructor. Options should be default, but are {:?}",
+            options
+        );
     }
 
     if apply.is_some() {
@@ -129,7 +133,7 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
 
     Ok(Some(MatchGroupBy {
         input: Arc::unwrap_or_clone(input),
-        keys,
+        group_by: keys,
         aggs,
         key_sanitizer,
     }))
@@ -147,7 +151,7 @@ pub fn match_grouping_columns(keys: Vec<Expr>) -> Fallible<BTreeSet<PlSmallStr>>
                         MakeMeasurement,
                         "Expected column expression in keys, found {:?}",
                         e
-                    )
+                    );
                 }
             })
         })

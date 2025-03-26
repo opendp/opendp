@@ -10,10 +10,6 @@ use crate::ffi::any::{AnyFunction, AnyMeasurement, AnyTransformation};
     arguments(
         measurement1(rust_type = b"null"),
         transformation0(rust_type = b"null")
-    ),
-    dependencies(
-        "$get_dependencies(measurement1)",
-        "$get_dependencies(transformation0)"
     )
 )]
 /// Construct the functional composition (`measurement1` ○ `transformation0`).
@@ -29,7 +25,7 @@ fn make_chain_mt(
     super::make_chain_mt(measurement1, transformation0)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_combinators__make_chain_mt(
     measurement1: *const AnyMeasurement,
     transformation0: *const AnyTransformation,
@@ -44,10 +40,6 @@ pub extern "C" fn opendp_combinators__make_chain_mt(
     arguments(
         transformation1(rust_type = b"null"),
         transformation0(rust_type = b"null")
-    ),
-    dependencies(
-        "$get_dependencies(transformation1)",
-        "$get_dependencies(transformation0)"
     )
 )]
 /// Construct the functional composition (`transformation1` ○ `transformation0`).
@@ -62,7 +54,7 @@ fn make_chain_tt(
 ) -> Fallible<AnyTransformation> {
     super::make_chain_tt(transformation1, transformation0)
 }
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_combinators__make_chain_tt(
     transformation1: *const AnyTransformation,
     transformation0: *const AnyTransformation,
@@ -74,8 +66,7 @@ pub extern "C" fn opendp_combinators__make_chain_tt(
 
 #[bootstrap(
     features("contrib"),
-    arguments(postprocess1(rust_type = b"null"), measurement0(rust_type = b"null")),
-    dependencies("$get_dependencies(postprocess1)", "$get_dependencies(measurement0)")
+    arguments(postprocess1(rust_type = b"null"), measurement0(rust_type = b"null"))
 )]
 /// Construct the functional composition (`postprocess1` ○ `measurement0`).
 /// Returns a Measurement that when invoked, computes `postprocess1(measurement0(x))`.
@@ -91,7 +82,7 @@ fn make_chain_pm(
     super::make_chain_pm(postprocess1, measurement0)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_combinators__make_chain_pm(
     postprocess1: *const AnyFunction,
     measurement0: *const AnyMeasurement,

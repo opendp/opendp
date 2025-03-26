@@ -211,3 +211,4 @@ def test_bitvec():
         val_out = np.frombuffer(c_to_py(obj), dtype=np.uint8)
         bits = np.unpackbits(val_out)
         assert (bits.tolist() + [0]).index(0) == i
+

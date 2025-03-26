@@ -7,12 +7,12 @@ use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, Measure, MetricSpac
 use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
-use crate::ffi::util::{as_ref, Type};
-use crate::measurements::{make_gaussian, GaussianDomain};
+use crate::ffi::util::{Type, as_ref};
+use crate::measurements::{GaussianDomain, make_gaussian};
 use crate::measures::ZeroConcentratedDivergence;
 use crate::traits::{CheckAtom, Float, InfCast, Number};
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_measurements__make_gaussian(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,

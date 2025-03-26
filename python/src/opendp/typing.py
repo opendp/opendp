@@ -20,7 +20,7 @@ from typing import Optional, Union, Any, Type, Sequence, _GenericAlias # type: i
 from types import GenericAlias
 import re
 
-from opendp.mod import Function, UnknownTypeException, Measurement, Transformation, Domain, Metric, Measure
+from opendp.mod import UnknownTypeException, Measurement, Transformation, Domain, Metric, Measure
 from opendp._lib import ATOM_EQUIVALENCE_CLASSES, import_optional_dependency
 
 
@@ -202,7 +202,7 @@ class RuntimeType(object):
         if isinstance(type_name, str):
             type_name = type_name.strip()
             if type_name in generics:
-                return GenericType(type_name)
+                return _GenericType(type_name)
             if type_name.startswith('(') and type_name.endswith(')'):
                 return RuntimeType('Tuple', cls._parse_args(type_name[1:-1], generics=generics))
             start, end = type_name.find('<'), type_name.rfind('>')
@@ -221,15 +221,6 @@ class RuntimeType(object):
                     return closeness[cls._parse_args(type_name[start + 1: end], generics=generics)[0]]
                 return closeness
 
-            domain = {
-                'AtomDomain': AtomDomain,
-                'VectorDomain': VectorDomain,
-                'MapDomain': MapDomain,
-                'OptionDomain': OptionDomain,
-            }.get(origin)
-            if domain is not None:
-                return domain[cls._parse_args(type_name[start + 1: end], generics=generics)[0]]
-
             if 0 < start < end < len(type_name):
                 return RuntimeType(origin, args=cls._parse_args(type_name[start + 1: end], generics=generics))
             if start == end < 0:
@@ -237,6 +228,8 @@ class RuntimeType(object):
                     return _ELEMENTARY_TYPES[int]
                 if type_name == "float":
                     return _ELEMENTARY_TYPES[float]
+                if type_name == "str": # "str" translates to "String"
+                    return _ELEMENTARY_TYPES[str]
                 return type_name
 
         if isinstance(type_name, Hashable) and type_name in _ELEMENTARY_TYPES:
@@ -249,7 +242,6 @@ class RuntimeType(object):
 
     @classmethod
     def _parse_args(cls, args, generics: Optional[Sequence[str]] = None):
-        import re
         return [cls.parse(v, generics=generics) for v in re.split(r",\s*(?![^()<>]*\))", args)]
 
     @classmethod
@@ -272,7 +264,7 @@ class RuntimeType(object):
         Vec<String>
         >>> dp.RuntimeType.infer((12., True, "A"))
         (f64, bool, String)
-        
+        >>>
         >>> dp.RuntimeType.infer([])
         Traceback (most recent call last):
         ...
@@ -367,20 +359,21 @@ class RuntimeType(object):
             return cls.infer(public_example)
         raise UnknownTypeException("either type_name or public_example must be passed")  # pragma: no cover
 
-    def substitute(self: Union["RuntimeType", str], **kwargs):
-        '''
-        Substitutes any generic type parameters according to the passed keyword arguments
-        
-        :param kwargs:
-        '''
-        if isinstance(self, GenericType):
-            return kwargs.get(self.origin, self)
-        if isinstance(self, RuntimeType):
-            return RuntimeType(self.origin, self.args and [RuntimeType.substitute(arg, **kwargs) for arg in self.args])
-        return self
+def _substitute(value: Union["RuntimeType", str], **kwargs):
+    '''
+    Substitutes any generic type parameters according to the passed keyword arguments
+    
+    :param value: The type to apply substitutions to
+    :param kwargs: The substitutions to apply
+    '''
+    if isinstance(value, _GenericType):
+        return kwargs.get(value.origin, value)
+    if isinstance(value, RuntimeType):
+        return RuntimeType(value.origin, value.args and [_substitute(arg, **kwargs) for arg in value.args])
+    return value
     
 
-class GenericType(RuntimeType):
+class _GenericType(RuntimeType):
     def __repr__(self):
         raise UnknownTypeException(f"attempted to create a type_name with an unknown generic: {self.origin}")  # pragma: no cover
 
@@ -442,33 +435,6 @@ Series: str = 'Series'
 Expr: str = 'Expr'
 AnyMeasurementPtr: str = 'AnyMeasurementPtr'
 AnyTransformationPtr: str = 'AnyTransformationPtr'
-LazyFrameDomain: str = 'LazyFrame'
-SeriesDomain: str = 'SeriesDomain'
-
-class DomainDescriptor(RuntimeType):
-    def __getitem__(self, subdomain):
-        if not isinstance(subdomain, tuple):
-            subdomain = (subdomain,)
-        return DomainDescriptor(self.origin, [self.parse(type_name=sub_i) for sub_i in subdomain])
-
-    def __call__(self, *args, **kwargs):
-        '''
-        >>> FakeDomain = DomainDescriptor('FakeDomain')
-        >>> FakeDomain(int)
-        Traceback (most recent call last):
-        ...
-        Exception: Use dp.fake_domain to construst a new FakeDomain
-        '''
-        # https://stackoverflow.com/a/12867228/10727889
-        lc_name = re.sub('(?!^)([A-Z])', r'_\1', self.origin).lower()
-        raise Exception(f'Use dp.{lc_name} to construst a new {self.origin}')
-
-
-AtomDomain: DomainDescriptor = DomainDescriptor('AtomDomain')
-VectorDomain: DomainDescriptor = DomainDescriptor('VectorDomain')
-OptionDomain: DomainDescriptor = DomainDescriptor('OptionDomain')
-SizedDomain: DomainDescriptor = DomainDescriptor('SizedDomain')
-MapDomain: DomainDescriptor = DomainDescriptor('MapDomain')
 
 
 def get_atom(type_name):
@@ -478,7 +444,7 @@ def get_atom(type_name):
     '''
     type_name = RuntimeType.parse(type_name)
     while isinstance(type_name, RuntimeType):
-        if isinstance(type_name, GenericType):
+        if isinstance(type_name, _GenericType):
             return
         type_name = type_name.args[0]
     return type_name
@@ -520,23 +486,6 @@ def pass_through(value: Any) -> Any:
     :param value: Value to pass through
     '''
     return value
-
-def get_dependencies(opendp_obj: Union[Measurement, Transformation, Function]) -> Any:
-    '''
-    Returns the dependencies of ``opendp_obj``.
-    Used extensively by combinators.
-
-    :param opendp_obj: Return the dependencies for this object
-    '''
-    return getattr(opendp_obj, "_dependencies", None)
-
-def get_dependencies_iterable(opendp_objs: Sequence[Union[Measurement, Transformation, Function]]) -> Sequence[Any]:
-    '''
-    Returns a list with the dependencies of each item in ``value``.
-
-    :param opendp_objs: Return the dependencies for all of these objects
-    '''
-    return list(map(get_dependencies, opendp_objs))
 
 def get_carrier_type(domain: Domain) -> Union[RuntimeType, str]:
     '''

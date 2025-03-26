@@ -32,7 +32,7 @@ fn datetime_domain(time_unit: &str, time_zone: Option<&str>) -> Fallible<Datetim
             return fallible!(
                 MakeDomain,
                 "time unit ({time_unit}) must be of `ns`, `us` or `ms`, corresponding to nano-, micro-, and milliseconds"
-            )
+            );
         }
     };
     Ok(DatetimeDomain {
@@ -41,7 +41,7 @@ fn datetime_domain(time_unit: &str, time_zone: Option<&str>) -> Fallible<Datetim
     })
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains__datetime_domain(
     time_unit: *mut c_char,
     time_zone: *mut c_char,

@@ -11,7 +11,6 @@ fn make_argument() -> Argument {
         hint: None,
         description: Some("fake description".to_string()),
         default: Some(Value::Float(99.9)),
-        generics: vec![],
         is_type: false,
         do_not_convert: false,
         example: None,
@@ -28,7 +27,6 @@ fn make_function(parameter_argument: Argument, return_argument: Argument) -> Fun
         args: vec![parameter_argument],
         derived_types: vec![],
         ret: return_argument,
-        dependencies: vec![],
         supports_partial: false,
         has_ffi: true,
         deprecation: Some(Deprecation {
@@ -64,7 +62,7 @@ def fake_function(
 
     # No type arguments to standardize.
     # Convert arguments to c types.
-    c_fake_argument = py_to_c(fake_argument, c_type=ctypes.c_double, type_name=f64)
+    c_fake_argument = py_to_c(fake_argument, c_type=ctypes.c_double, type_name=\"f64\")
 
     # Call library function.
     lib_function = lib.opendp_fake_module__fake_function
@@ -72,7 +70,6 @@ def fake_function(
     lib_function.restype = ctypes.c_double
 
     output = c_to_py(lib_function(c_fake_argument))
-
     try:
         output.__opendp_dict__ = {
             '__function__': 'fake_function',
@@ -111,7 +108,7 @@ fake_function <- function(
   assert_features(\"fake_feature\")
 
   # No type arguments to standardize.
-  log <- new_constructor_log(\"fake_function\", \"fake_module\", new_hashtab(
+  log_ <- new_constructor_log(\"fake_function\", \"fake_module\", new_hashtab(
     list(\"fake_argument\"),
     list(unbox2(fake_argument))
   ))
@@ -123,7 +120,7 @@ fake_function <- function(
   output <- .Call(
     \"fake_module__fake_function\",
     fake_argument,
-    log, PACKAGE = \"opendp\")
+    log_, PACKAGE = \"opendp\")
   output
 }
 ";

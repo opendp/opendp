@@ -11,8 +11,8 @@ use crate::{
     error::Fallible,
     ffi::{
         any::{
-            wrap_func, AnyDomain, AnyFunction, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject,
-            AnyTransformation, CallbackFn, Downcast,
+            AnyDomain, AnyFunction, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject,
+            AnyTransformation, CallbackFn, Downcast, wrap_func,
         },
         util::{self, ExtrinsicObject},
     },
@@ -31,14 +31,7 @@ use self::util::to_str;
         function(rust_type = "$pass_through(TO)"),
         privacy_map(rust_type = "$measure_distance_type(output_measure)"),
     ),
-    generics(TO(default = "ExtrinsicObject")),
-    dependencies(
-        "input_domain",
-        "input_metric",
-        "output_measure",
-        "c_function",
-        "c_privacy_map"
-    )
+    generics(TO(default = "ExtrinsicObject"))
 )]
 /// Construct a Measurement from user-defined callbacks.
 /// This is meant for internal use, as it does not require "honest-but-curious",
@@ -73,7 +66,7 @@ fn _make_measurement<TO>(
     panic!("this signature only exists for code generation")
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_internal___make_measurement(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
@@ -102,14 +95,6 @@ pub extern "C" fn opendp_internal___make_measurement(
         output_metric(hint = "Metric"),
         function(rust_type = "$domain_carrier_type(output_domain)"),
         stability_map(rust_type = "$metric_distance_type(output_metric)"),
-    ),
-    dependencies(
-        "input_domain",
-        "input_metric",
-        "output_domain",
-        "output_metric",
-        "c_function",
-        "c_stability_map"
     )
 )]
 /// Construct a Transformation from user-defined callbacks.
@@ -125,7 +110,7 @@ pub extern "C" fn opendp_internal___make_measurement(
 /// * `output_metric` - The metric from which distances between outputs of adjacent inputs are measured.
 /// * `function` - A function mapping data from `input_domain` to `output_domain`.
 /// * `stability_map` - A function mapping distances from `input_metric` to `output_metric`.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_internal___make_transformation(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
@@ -151,8 +136,7 @@ pub extern "C" fn opendp_internal___make_transformation(
         identifier(c_type = "char *", rust_type = b"null"),
         member(rust_type = "bool"),
         descriptor(default = b"null", rust_type = "ExtrinsicObject")
-    ),
-    dependencies("c_member")
+    )
 )]
 /// Construct a new ExtrinsicDomain.
 /// This is meant for internal use, as it does not require "honest-but-curious",
@@ -164,7 +148,7 @@ pub extern "C" fn opendp_internal___make_transformation(
 /// * `identifier` - A string description of the data domain.
 /// * `member` - A function used to test if a value is a member of the data domain.
 /// * `descriptor` - Additional constraints on the domain.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_internal___extrinsic_domain(
     identifier: *mut c_char,
     member: *const CallbackFn,
@@ -193,7 +177,7 @@ pub extern "C" fn opendp_internal___extrinsic_domain(
 ///
 /// # Arguments
 /// * `descriptor` - A string description of the privacy measure.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_internal___extrinsic_divergence(
     descriptor: *mut c_char,
 ) -> FfiResult<*mut AnyMeasure> {
@@ -213,7 +197,7 @@ pub extern "C" fn opendp_internal___extrinsic_divergence(
 ///
 /// # Arguments
 /// * `descriptor` - A string description of the metric.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_internal___extrinsic_distance(
     descriptor: *mut c_char,
 ) -> FfiResult<*mut AnyMetric> {
@@ -223,8 +207,7 @@ pub extern "C" fn opendp_internal___extrinsic_distance(
 
 #[bootstrap(
     features("contrib"),
-    arguments(function(rust_type = "$pass_through(TO)")),
-    dependencies("c_function")
+    arguments(function(rust_type = "$pass_through(TO)"))
 )]
 /// Construct a Function from a user-defined callback.
 /// This is meant for internal use, as it does not require "honest-but-curious",
@@ -243,7 +226,7 @@ fn _new_pure_function<TO>(function: CallbackFn) -> Fallible<AnyFunction> {
     panic!("this signature only exists for code generation")
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_internal___new_pure_function(
     function: *const CallbackFn,
     TO: *const c_char,

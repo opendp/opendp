@@ -12,7 +12,7 @@ mod c;
 pub(crate) mod r;
 
 // some functions are called directly by R's C layer instead of through the codegen
-const BLACKLIST: &'static [&'static str] = &[
+const BLOCKLIST: &'static [&'static str] = &[
     // core
     "_error_free",
     "bool_free",
@@ -51,11 +51,25 @@ const BLACKLIST: &'static [&'static str] = &[
     // polars
     "new_arrow_array",
     "series_domain",
+    "_series_domain_get_element_domain",
+    "_series_domain_get_name",
+    "_series_domain_get_nullable",
     "categorical_domain",
+    "enum_domain",
+    "array_domain",
     "datetime_domain",
     "arrow_array_free",
     "dataframe_domain",
     "lazyframe_domain",
+    "_lazyframe_domain_get_columns",
+    "_lazyframe_domain_get_margin",
+    "_lazyframe_domain_get_series_domain",
+    "_margin_get_by",
+    "_margin_get_max_partition_length",
+    "_margin_get_max_num_partitions",
+    "_margin_get_max_partition_contributions",
+    "_margin_get_max_influenced_partitions",
+    "_margin_get_public_info",
     "_lazyframe_from_domain",
     "with_margin",
     "wild_expr_domain",

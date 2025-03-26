@@ -1,16 +1,16 @@
 use crate::core::{Measure, Metric, MetricSpace};
 use crate::domains::{ExprPlan, WildExprDomain};
-use crate::polars::{apply_plugin, literal_value_of, match_plugin, OpenDPPlugin};
+use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
 use crate::{
     core::{Function, Measurement},
     error::Fallible,
 };
 
 use polars::datatypes::{DataType, Field};
+use polars::error::PolarsResult;
 use polars::error::polars_bail;
 #[cfg(feature = "ffi")]
 use polars::error::polars_err;
-use polars::error::PolarsResult;
 use polars::prelude::{Column, CompatLevel};
 use polars::series::Series;
 use polars_plan::dsl::{ColumnsUdf, Expr, GetOutput};

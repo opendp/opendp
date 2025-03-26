@@ -10,9 +10,7 @@ use crate::error::Fallible;
 use crate::metrics::AbsoluteDistance;
 use crate::traits::{ExactIntCast, Float, InfMul};
 
-use super::{
-    make_lipschitz_float_mul, make_sum, LipschitzMulFloatDomain, LipschitzMulFloatMetric, MakeSum,
-};
+use super::{MakeSum, make_lipschitz_float_mul, make_sum};
 
 #[bootstrap(features("contrib"), generics(MI(suppress), T(suppress)))]
 /// Make a Transformation that computes the mean of bounded data.
@@ -36,15 +34,16 @@ pub fn make_mean<MI, T>(
 where
     MI: 'static + Metric,
     T: 'static + MakeSum<MI> + ExactIntCast<usize> + Float + InfMul,
-    AtomDomain<T>: LipschitzMulFloatDomain<Atom = T>,
-    AbsoluteDistance<T>: LipschitzMulFloatMetric<Distance = T>,
     (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
     (AtomDomain<T>, AbsoluteDistance<T>): MetricSpace,
     IBig: From<T::Bits>,
 {
-    let size = input_domain
-        .size
-        .ok_or_else(|| err!(MakeTransformation, "dataset size must be known. Either specify size in the input domain or use make_resize"))?;
+    let size = input_domain.size.ok_or_else(|| {
+        err!(
+            MakeTransformation,
+            "dataset size must be known. Either specify size in the input domain or use make_resize"
+        )
+    })?;
     let bounds = input_domain.element_domain.get_closed_bounds()?;
     if size == 0 {
         return fallible!(MakeTransformation, "dataset size must be positive");
@@ -54,7 +53,12 @@ where
     // don't loosen the bounds by the relaxation term because any value greater than nU is pure error
     let sum_bounds = (size_.neg_inf_mul(&bounds.0)?, size_.inf_mul(&bounds.1)?);
     make_sum::<MI, T>(input_domain, input_metric)?
-        >> make_lipschitz_float_mul::<AtomDomain<T>, _>(size_.recip(), sum_bounds)?
+        >> make_lipschitz_float_mul(
+            AtomDomain::new_non_nan(),
+            AbsoluteDistance::default(),
+            size_.recip(),
+            sum_bounds,
+        )?
 }
 
 #[cfg(test)]

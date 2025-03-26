@@ -10,7 +10,7 @@ use crate::ffi::util::Type;
 use crate::traits::Integer;
 use crate::transformations::make_sized_bounded_int_checked_sum;
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_sized_bounded_int_checked_sum(
     size: c_uint,
     bounds: *const AnyObject,

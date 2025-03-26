@@ -45,13 +45,13 @@ where
         return fallible!(MakeMeasurement, "Expected len() expression");
     };
 
-    let (by, margin) = input_domain.context.grouping("len")?;
+    let margin = input_domain.context.aggregation("len")?;
 
     if Some(MarginPub::Lengths) != margin.public_info {
         return fallible!(
             MakeMeasurement,
             "The length of partitions when grouped by {:?} is not public information. You may have forgotten to add noise to your query.",
-            by
+            margin.by
         );
     }
 

@@ -6,7 +6,7 @@ use crate::{
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     traits::{Hashable, Primitive, RoundCast},
-    transformations::{make_cast_default, make_is_equal, DatasetMetric},
+    transformations::{DatasetMetric, make_cast_default, make_is_equal},
 };
 
 use super::{DataFrame, DataFrameDomain};

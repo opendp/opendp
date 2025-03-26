@@ -4,9 +4,9 @@ use crate::err;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast};
 use crate::traits::{CheckAtom, ProductOrd};
-use crate::transformations::{make_clamp, DatasetMetric};
+use crate::transformations::{DatasetMetric, make_clamp};
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_clamp(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
@@ -53,7 +53,7 @@ mod tests {
     #[test]
     fn test_make_vector_clamp() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_clamp(
-            AnyDomain::new_raw(VectorDomain::new(AtomDomain::<f64>::default())),
+            AnyDomain::new_raw(VectorDomain::new(AtomDomain::<f64>::new_non_nan())),
             AnyMetric::new_raw(SymmetricDistance::default()),
             AnyObject::new_raw((0.0, 10.0)),
         ))?;

@@ -16,6 +16,7 @@ def test_private_selection_threshold_composition():
     # candidate
     m_sum = (
         space
+        >> dp.t.then_impute_constant(0.0)
         >> dp.t.then_clamp(bounds)
         >> dp.t.then_sum()
         >> dp.m.then_laplace(scale=2 * range_ / epsilon)

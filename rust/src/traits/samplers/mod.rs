@@ -18,8 +18,8 @@ pub use psrn::*;
 mod uniform;
 pub use uniform::*;
 
-use rand::prelude::SliceRandom;
 use rand::RngCore;
+use rand::prelude::SliceRandom;
 
 use crate::error::Fallible;
 

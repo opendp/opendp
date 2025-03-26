@@ -5,13 +5,13 @@ use crate::{
     error::Fallible,
     ffi::{
         any::{AnyFunction, AnyObject, Downcast},
-        util::{to_str, Type},
+        util::{Type, to_str},
     },
     traits::{Float, Number, RoundCast},
-    transformations::{make_cdf, make_quantiles_from_counts, Interpolation},
+    transformations::{Interpolation, make_cdf, make_quantiles_from_counts},
 };
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_cdf(
     TA: *const c_char,
 ) -> FfiResult<*mut AnyFunction> {
@@ -25,7 +25,7 @@ pub extern "C" fn opendp_transformations__make_cdf(
     .into()
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_quantiles_from_counts(
     bin_edges: *const AnyObject,
     alphas: *const AnyObject,

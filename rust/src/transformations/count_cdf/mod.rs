@@ -155,11 +155,7 @@ where
 }
 
 fn abs_diff<T: PartialOrd + Sub<Output = T>>(a: T, b: T) -> T {
-    if a < b {
-        b - a
-    } else {
-        a - b
-    }
+    if a < b { b - a } else { a - b }
 }
 
 /// Compute number of elements less than each edge
@@ -225,11 +221,7 @@ fn count_lt<TI: PartialOrd>(x: &[TI], target: &TI) -> usize {
             upper = middle;
         }
     }
-    if &x[lower] < target {
-        upper
-    } else {
-        lower
-    }
+    if &x[lower] < target { upper } else { lower }
 }
 
 #[cfg(test)]
