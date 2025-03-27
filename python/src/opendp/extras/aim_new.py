@@ -1,4 +1,5 @@
 import math
+from itertools import chain, combinations
 from typing import NamedTuple
 
 import opendp.prelude as dp
@@ -35,7 +36,7 @@ def make_ordinal_aim(
         t = 0                                                   # Algo 2 line 6
         
         # important arrays updated outside of the loop
-        W_plus = []
+        W_plus = [list(subquery) for query in args.queries for subquery in get_all_subsets(query)] # W_plus; the set of all possible queries and subqueries of the workload
         marginal_weights = [] # array of w_r for each r in W_plus
         n_r_array = [] # the number of possible combos of values in the columns specified by each r in W_plus; NEED_TO_INITIALIZE
         sigmas = [math.sqrt(T / (2 * args.alpha * args.rho))]   # Algo 2 line 4
@@ -48,6 +49,14 @@ def make_ordinal_aim(
         # updated synthetic datasets
         p_hat = np.zeros((n, d)) # the last generated synthetic dataset
         p_hat_new = np.zeros((n, d)) # the new synthetic dataset after each measurement
+
+        # n_r_array initialization
+        for query in W_plus:
+            n_r = math.prod(input_domain.cardinalities[col_index] for col_index in query)
+            n_r_array.append(n_r)
+            
+        # all_marginals initialization
+
 
         # Algo 3: initialize p_t
         size_one_queries, size_one_indices = zip(*[
@@ -132,6 +141,9 @@ def make_ordinal_aim(
 
         synthetic_data = None # FIX_THIS need to get D_hat from p_hat_new using private PGM now
         return synthetic_data
+    
+    def get_all_subsets(list):
+        return chain.from_iterable(combinations(list, r) for r in range(1, len(list) + 1))
     
     def get_new_query_fit(selected_queries, new_query, rho_used):
         '''
