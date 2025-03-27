@@ -61,6 +61,7 @@ def array2_domain(
     num_columns: int | None = None,
     nan: Optional[bool] = None,
     T: RuntimeTypeDescriptor | None = None,
+    cardinalities: Optional[list[int]] = None, # MAX_EDIT: added this for make_ordinal_aim
 ) -> Domain:
     """Construct a Domain representing 2-dimensional numpy arrays.
 
@@ -71,6 +72,7 @@ def array2_domain(
     :param num_columns: number of columns in the data
     :param nan: whether NaN values are allowed
     :param T: atom type
+    :param cardinalities: cardinalities of the categorical columns # MAX_EDIT: added this
     """
     np = import_optional_dependency('numpy')
     import opendp.prelude as dp
@@ -147,6 +149,27 @@ def array2_domain(
             raise ValueError(f"must have row norm at most {norm}")
         if size is not None and len(x) != size:
             raise ValueError(f"must have exactly {size} rows")
+        
+        if cardinalities is not None: # MAX_EDIT: added this
+            # check that cardinalities array is the right length
+            if x.shape[1] != len(cardinalities):
+                raise ValueError(f"must have exactly {len(cardinalities)} columns") 
+            
+            # check that in the data, everything is actually an integer
+            if not np.issubdtype(x.dtype, np.integer):
+                raise ValueError("the data must have integer values")
+            
+            # check there are no NaN values
+            if np.any(np.isnan(x)):
+                raise ValueError("the data must not have missing values")
+            
+            # for each column in the data, check values are in [0, cardinality)]
+            for column_idx, cardinality in enumerate(cardinalities):
+                if cardinality <= 0:
+                    raise ValueError(f"cardinality of column {column_idx} must be positive")
+                col = x[:, column_idx]
+                if not np.all((0 <= col) & (col < cardinality)):
+                    raise ValueError(f"column {column_idx} must have values in [0, {cardinality})") 
         return True
 
     class NPArray2Descriptor(NamedTuple):
@@ -157,6 +180,7 @@ def array2_domain(
         num_columns: int | None
         nan: bool
         T: str | dp.RuntimeType
+        cardinalities: Optional[list[int]] # MAX_EDIT: added this
 
     desc = NPArray2Descriptor(
         origin=origin,
@@ -166,6 +190,7 @@ def array2_domain(
         num_columns=num_columns,
         nan=nan,
         T=T,
+        cardinalities=cardinalities, # MAX_EDIT: added this
     )
 
     return _extrinsic_domain(f"NPArray2Domain({_fmt_attrs(desc)})", _member, desc)
