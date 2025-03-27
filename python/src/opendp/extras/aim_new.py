@@ -1,5 +1,5 @@
 import math
-from itertools import chain, combinations
+from itertools import chain, combinations, product
 from typing import NamedTuple
 
 import opendp.prelude as dp
@@ -25,6 +25,44 @@ def make_ordinal_aim(
     '''
     constructor that implements aim for ordinal data
     '''
+    def get_all_subsets(list):
+        return chain.from_iterable(combinations(list, r) for r in range(1, len(list) + 1))
+    
+    def get_new_query_fit(selected_queries, new_query, rho_used):
+        '''
+        should calculate the junction tree size of this list, then compare it to rho_used/rho * max_size
+        '''
+        junction_tree_size = 0
+        # FIX_THIS: calculate the junction tree size
+        new_query_fit = False
+        if junction_tree_size <= rho_used / args.rho * args.max_size:
+            new_query_fit = True
+        return new_query_fit
+    
+    def get_distribution_marginal(query, distribution):
+        '''
+        calculates M_r(distribution) in Algo 2 line 14
+        '''
+        subset_data = distribution[:, query] # get subset of the distribution that's only this
+        subset_cardinalities = [input_domain.cardinalities[i] for i in query]
+        subset_domain = np.array([math.prod(subset_cardinalities[i+1:]) for i in range(len(subset_cardinalities))])
+        flattened_indices = np.sum((subset_data - 1) * subset_domain, axis = 1)
+        marginal = np.bincount(flattened_indices, minlength = math.prod(subset_cardinalities))
+        return marginal
+
+    W_plus = [list(subquery) for query in args.queries for subquery in get_all_subsets(query)]  # W_plus; the set of all possible queries and subqueries of the workload
+    marginal_weights = []                                                                       # array of w_r for each r in W_plus
+    n_r_array = []                                                                              # the number of possible combos of values in the columns specified by each r in W_plus
+    
+    for query in W_plus:
+        # n_r_array initialization
+        n_r = math.prod(input_domain.cardinalities[col_index] for col_index in query)
+        n_r_array.append(n_r)
+        
+        # calculate marginal weights, Algo 2 line 8
+        w_r = sum(weight * len(set(query), set(s)) for weight, s in zip(args.query_weights, args.queries))
+        marginal_weights.append(w_r)
+
     def aim_mechanism(data):
         '''
         this is AIM
@@ -36,9 +74,6 @@ def make_ordinal_aim(
         t = 0                                                   # Algo 2 line 6
         
         # important arrays updated outside of the loop
-        W_plus = [list(subquery) for query in args.queries for subquery in get_all_subsets(query)] # W_plus; the set of all possible queries and subqueries of the workload
-        marginal_weights = [] # array of w_r for each r in W_plus
-        n_r_array = [] # the number of possible combos of values in the columns specified by each r in W_plus; NEED_TO_INITIALIZE
         sigmas = [math.sqrt(T / (2 * args.alpha * args.rho))]   # Algo 2 line 4
         epsilons = [0] # I initialize this with 0 bc there is no epsilon 0 and want to keep indices consistent with sigmas
         all_marginals = [] # M_r(D) for all r in W_plus; this is a list of lists; NEED_TO_INITIALIZE
@@ -49,14 +84,9 @@ def make_ordinal_aim(
         # updated synthetic datasets
         p_hat = np.zeros((n, d)) # the last generated synthetic dataset
         p_hat_new = np.zeros((n, d)) # the new synthetic dataset after each measurement
-
-        # n_r_array initialization
-        for query in W_plus:
-            n_r = math.prod(input_domain.cardinalities[col_index] for col_index in query)
-            n_r_array.append(n_r)
             
         # all_marginals initialization
-
+        all_marginals = [get_distribution_marginal(query, data) for query in W_plus]
 
         # Algo 3: initialize p_t
         size_one_queries, size_one_indices = zip(*[
@@ -71,10 +101,7 @@ def make_ordinal_aim(
             rho_used += 1/(2 * sigmas[t]**2)                                                                        # Algo 3 line 4
         p_hat = np.zeros((n, d))                                                                                    # Algo 3 line 6 -- FIX_THIS; need to add the import from Private-PGM
 
-        # calculate marginal weights, Algo 2 line 8
-        for query in W_plus:
-            w_r = sum(weight * len(set(query), set(s)) for weight, s in zip(args.query_weights, args.queries))
-            marginal_weights.append(w_r)
+        # initialize sigmas and epsilons
         sigmas.append(sigmas[0])
         epsilons.append(math.sqrt(8 * (1 - args.alpha) * args.rho / args.T)) # Algo 2 line 9
 
@@ -142,33 +169,11 @@ def make_ordinal_aim(
         synthetic_data = None # FIX_THIS need to get D_hat from p_hat_new using private PGM now
         return synthetic_data
     
-    def get_all_subsets(list):
-        return chain.from_iterable(combinations(list, r) for r in range(1, len(list) + 1))
-    
-    def get_new_query_fit(selected_queries, new_query, rho_used):
-        '''
-        should calculate the junction tree size of this list, then compare it to rho_used/rho * max_size
-        '''
-        junction_tree_size = 0
-        # FIX_THIS: calculate the junction tree size
-        new_query_fit = False
-        if junction_tree_size <= rho_used / args.rho * args.max_size:
-            new_query_fit = True
-        return new_query_fit
-    
-    def get_distribution_marginal(query, distribution):
-        '''
-        calculates M_r(distribution) in Algo 2 line 14
-        '''
-        marginal = []
-        # FIX_THIS: calculate the marginal
-        return marginal
-    
     return dp.m.make_user_measurement(
         input_domain = input_domain,
         input_metric = input_metric,
-        output_measure = dp.max_divergence(),
+        output_measure = dp.zero_concentrated_divergence(),
         function = aim_mechanism,
-        privacy_map = privacy_map, # FIX_THIS; which privacy map to use?
+        privacy_map = lambda d_in: d_in * args.rho,
         TO = np.ndarray,
     )
