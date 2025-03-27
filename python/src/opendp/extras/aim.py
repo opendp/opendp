@@ -1,7 +1,7 @@
+import numpy as np
 import opendp.prelude as dp
 import opendp.measurements as dpm
 import itertools
-import numpy as np
 import math
 
 # have to get ryan mckenna's library as a dependence
@@ -12,6 +12,8 @@ dp.enable_features("contrib")
 
 # can ignore most comments, they're just notes for me to remember reasoning
 # how do we determine the domain? is this an input or inferred from the data
+
+
 
 class AIM_Mechanism:
     def __init__(self, data, queries, query_weights, rho, MAX_SIZE = 80, alpha = 0.9):
@@ -131,14 +133,14 @@ class AIM_Mechanism:
     def get_quality_score(self, r, w_r):
         ''' calculate q_r for query r (line 14, algo 2)'''
         # TODO: implement this
-        marginal_difference = np.linalg.norm(self.get_real_marginal(r) - self.get_approximate_marginal(r), ord = 1)
+        marginal_difference = la.norm(self.get_real_marginal(r) - self.get_approximate_marginal(r), ord = 1)
         n_r = 0 # TODO: how do you calculate n_r? --> related to domain question
         q_r = w_r * (marginal_difference - math.sqrt(2/math.pi) * self.new_sigma[self.new_t] * n_r)
         return q_r
 
     def anneal(self, r_t):
         '''update epsilon and new_sigma'''
-        left_expr = np.linalg.norm(self.get_real_marginal(r_t) - self.get_approximate_marginal(r_t), ord = 1)
+        left_expr = la.norm(self.get_real_marginal(r_t) - self.get_approximate_marginal(r_t), ord = 1)
         n_rt = 0 # TODO: how to calculate n_rt?
         right_expr = math.sqrt(2 / math.pi) * self.new_sigma[self.new_t] * n_rt
 
