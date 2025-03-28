@@ -77,3 +77,4 @@ See also the :ref:`comprehensive listing of features for Rust<rust-feature-listi
    context/index
    polars/index
    plugins/index
+   errors
