@@ -93,6 +93,17 @@ def test_version_mismatch_warning():
         dp.deserialize(bad_serialized)
 
 
+def test_deserialize_polars_plan_error():
+    pl = pytest.importorskip('polars')
+    context = dp.Context.compositor(
+        data=[1, 2, 3], # It will expect a LazyFrame here.
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+    )
+    with pytest.raises(ValueError, match=r"'data' of context must be a LazyFrame"):
+        context.deserialize_polars_plan(pl.LazyFrame({}).serialize())
+
 
 # Would normally put the conditional inside the test,
 # but since we need polars at test collection time,
@@ -200,5 +211,5 @@ if pl is not None:
         ids=lambda arg: str(arg)
     )
     def test_not_currently_serializable(dp_obj):
-        with pytest.raises(Exception, match=r"OpenDP JSON Encoder currently does not handle"):
+        with pytest.raises(Exception, match=r"OpenDP JSON Encoder does not handle"):
             dp.serialize(dp_obj)

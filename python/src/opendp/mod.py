@@ -1424,7 +1424,7 @@ class _Encoder(json.JSONEncoder):
             return self.default({**obj.__opendp_dict__, '__version__': __version__})
 
         stateful_error_msg = (
-            f"OpenDP JSON Encoder currently does not handle instances of {type(obj)}: "
+            f"OpenDP JSON Encoder does not handle instances of {type(obj)}: "
             f"It may have state which is not set by the constructor. Error on: {obj}"
         )
 

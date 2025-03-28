@@ -668,13 +668,13 @@ class LazyFrameQuery:
 
     # Keep this docstring in sync with the docstring below for the dummy class.
 
-    def __init__(self, lf_plan, query):
-        self._lf_plan = lf_plan
+    def __init__(self, polars_plan, query):
+        self.polars_plan = polars_plan
         self._query = query
         # do not initialize super() because inheritance is only used to mimic the API surface
 
     def __getattribute__(self, name):
-        # Re-route all possible attribute access to self._lf_plan.
+        # Re-route all possible attribute access to self.polars_plan.
         # __getattribute__ is necessary because __getattr__ cannot intercept calls to inherited methods
 
         # We keep the query plan void of data anyways,
@@ -684,11 +684,11 @@ class LazyFrameQuery:
         if name in _LAZY_EXECUTION_METHODS:
             raise ValueError("You must call `.release()` before executing a query.")
 
-        lf_plan = object.__getattribute__(self, "_lf_plan")
+        polars_plan = object.__getattribute__(self, "polars_plan")
         query = object.__getattribute__(self, "_query")
-        attr = getattr(lf_plan, name, None)
+        attr = getattr(polars_plan, name, None)
 
-        # If not a valid attribute on self._lf_plan, then don't re-route
+        # If not a valid attribute on self.polars_plan, then don't re-route
         if attr is None:
             return object.__getattribute__(self, name)
 
@@ -844,7 +844,7 @@ class LazyFrameQuery:
             on = keys.collect_schema().names()
 
         return LazyFrameQuery(
-            keys.join(self._lf_plan, how="left", on=on),
+            keys.join(self.polars_plan, how="left", on=on),
             self._query,
         )
 
@@ -852,7 +852,7 @@ class LazyFrameQuery:
         """Resolve the query into a measurement."""
 
         # access attributes of self without getting intercepted by Self.__getattribute__
-        lf_plan = object.__getattribute__(self, "_lf_plan")
+        polars_plan = object.__getattribute__(self, "polars_plan")
         query = object.__getattribute__(self, "_query")
         input_domain, input_metric = query._chain
         d_in, d_out = query._d_in, query._d_out
@@ -862,7 +862,7 @@ class LazyFrameQuery:
                 input_domain=input_domain,
                 input_metric=input_metric,
                 output_measure=query._output_measure,
-                lazyframe=lf_plan,
+                lazyframe=polars_plan,
                 global_scale=scale,
                 threshold=threshold,
             )
@@ -980,8 +980,8 @@ class LazyGroupByQuery:
         :param aggs: expressions to apply in the aggregation context
         :param named_aggs: named/aliased expressions to apply in the aggregation context
         """
-        lf_plan = self._lgb_plan.agg(*aggs, **named_aggs)
-        return LazyFrameQuery(lf_plan, self._query)
+        polars_plan = self._lgb_plan.agg(*aggs, **named_aggs)
+        return LazyFrameQuery(polars_plan, self._query)
 
 
 @dataclass

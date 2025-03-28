@@ -376,6 +376,25 @@ class Context(object):
     d_mids     = {self.d_mids})"""
     # TODO: Add "d_out" when filters are implemented.
 
+    def deserialize_polars_plan(self, serialized_plan: bytes) -> "LazyFrameQuery":
+        '''
+        Given a serialized Polars plan, wraps it with a LazyFrameQuery.
+        See the :ref:`serialization documentation <lazyframe-serialization>`
+        for context and full example.
+
+        :param serialized_plan: A plan like that returned by ``query.polars_plan.serialize()``
+        '''
+        import io
+        pl = import_optional_dependency('polars')
+        
+        new_plan = pl.LazyFrame.deserialize(io.BytesIO(serialized_plan))
+        new_query = self.query()
+        if not isinstance(new_query, LazyFrameQuery):
+            raise ValueError("'data' of context must be a LazyFrame")
+
+        new_query.polars_plan = new_plan
+        return new_query
+
     @staticmethod
     def compositor(
         data: Any,
@@ -481,8 +500,8 @@ class Context(object):
             from opendp.domains import _lazyframe_from_domain
 
             # creates an empty lazyframe to hold the query plan
-            lf_plan = _lazyframe_from_domain(self.accountant.input_domain)
-            return LazyFrameQuery(lf_plan, query)
+            polars_plan = _lazyframe_from_domain(self.accountant.input_domain)
+            return LazyFrameQuery(polars_plan, query)
 
         return query
 
