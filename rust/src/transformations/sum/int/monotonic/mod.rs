@@ -47,7 +47,7 @@ pub fn make_bounded_int_monotonic_sum<T: Integer>(
         VectorDomain::new(AtomDomain::new_closed(bounds)?),
         AtomDomain::default(),
         Function::new(|arg: &Vec<T>| arg.iter().fold(T::zero(), |sum, v| sum.saturating_add(v))),
-        SymmetricDistance::default(),
+        SymmetricDistance,
         AbsoluteDistance::default(),
         StabilityMap::new_from_constant(lower.alerting_abs()?.total_max(upper)?),
     )
@@ -92,7 +92,7 @@ pub fn make_sized_bounded_int_monotonic_sum<T: Integer>(
         VectorDomain::new(AtomDomain::new_closed(bounds)?).with_size(size),
         AtomDomain::default(),
         Function::new(|arg: &Vec<T>| arg.iter().fold(T::zero(), |sum, v| sum.saturating_add(v))),
-        SymmetricDistance::default(),
+        SymmetricDistance,
         AbsoluteDistance::default(),
         StabilityMap::new_fallible(
             // If d_in is odd, we still only consider databases with (d_in - 1) / 2 substitutions,

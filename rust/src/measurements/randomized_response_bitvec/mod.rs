@@ -64,7 +64,7 @@ pub fn make_randomized_response_bitvec(
             Ok(arg.clone() ^ noise_vector) // xor on bit vectors
         }),
         input_metric,
-        MaxDivergence::default(),
+        MaxDivergence,
         PrivacyMap::new_fallible(move |&d_in: &u32| {
             if d_in == 0 {
                 return Ok(0.0);
@@ -126,7 +126,7 @@ mod test {
     fn test_make_randomized_response_bitvec() -> Fallible<()> {
         let m_rr = make_randomized_response_bitvec(
             BitVectorDomain::new().with_max_weight(1),
-            DiscreteDistance::default(),
+            DiscreteDistance,
             0.5,
             false,
         )?;

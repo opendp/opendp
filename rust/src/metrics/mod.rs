@@ -14,6 +14,11 @@
 #[cfg(feature = "ffi")]
 pub(crate) mod ffi;
 
+#[cfg(feature = "polars")]
+pub mod polars;
+#[cfg(feature = "polars")]
+pub use polars::*;
+
 use std::hash::Hash;
 use std::marker::PhantomData;
 
@@ -447,7 +452,7 @@ impl<T: CheckAtom, Q> MetricSpace for (AtomDomain<T>, AbsoluteDistance<Q>) {
 ///
 #[derive(Clone, PartialEq)]
 pub struct Parallel<M: Metric>(pub M);
-impl<M: Metric> Default for Parallel<M> {
+impl<M: Metric + Default> Default for Parallel<M> {
     fn default() -> Self {
         Parallel(M::default())
     }
@@ -483,7 +488,7 @@ impl<M: Metric> Metric for Parallel<M> {
 ///
 #[derive(Clone, PartialEq)]
 pub struct PartitionDistance<M: Metric>(pub M);
-impl<M: Metric> Default for PartitionDistance<M> {
+impl<M: Metric + Default> Default for PartitionDistance<M> {
     fn default() -> Self {
         PartitionDistance(M::default())
     }
@@ -644,3 +649,58 @@ impl<T: CheckAtom> MetricSpace for (VectorDomain<AtomDomain<T>>, LInfDistance<T>
         }
     }
 }
+
+pub trait MicrodataMetric: 'static + Metric<Distance = IntDistance> {
+    /// Whether adjacent datasets share the same number of element.
+    const SIZED: bool;
+    /// Whether the metric is sensitive to reordering of elements.
+    const ORDERED: bool;
+    #[cfg(feature = "polars")]
+    /// The identifier column if defined.
+    fn identifier(&self) -> Option<polars_plan::dsl::Expr>;
+
+    type EventMetric: EventLevelMetric;
+}
+impl MicrodataMetric for SymmetricDistance {
+    const SIZED: bool = false;
+    const ORDERED: bool = false;
+    #[cfg(feature = "polars")]
+    fn identifier(&self) -> Option<polars_plan::dsl::Expr> {
+        None
+    }
+    type EventMetric = SymmetricDistance;
+}
+impl MicrodataMetric for InsertDeleteDistance {
+    const SIZED: bool = false;
+    const ORDERED: bool = true;
+    #[cfg(feature = "polars")]
+    fn identifier(&self) -> Option<polars_plan::dsl::Expr> {
+        None
+    }
+    type EventMetric = InsertDeleteDistance;
+}
+impl MicrodataMetric for ChangeOneDistance {
+    const SIZED: bool = true;
+    const ORDERED: bool = false;
+    #[cfg(feature = "polars")]
+    fn identifier(&self) -> Option<polars_plan::dsl::Expr> {
+        None
+    }
+    type EventMetric = ChangeOneDistance;
+}
+impl MicrodataMetric for HammingDistance {
+    const SIZED: bool = true;
+    const ORDERED: bool = true;
+    #[cfg(feature = "polars")]
+    fn identifier(&self) -> Option<polars_plan::dsl::Expr> {
+        None
+    }
+    type EventMetric = HammingDistance;
+}
+
+pub trait EventLevelMetric: MicrodataMetric + Default {}
+
+impl EventLevelMetric for SymmetricDistance {}
+impl EventLevelMetric for InsertDeleteDistance {}
+impl EventLevelMetric for ChangeOneDistance {}
+impl EventLevelMetric for HammingDistance {}
