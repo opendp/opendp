@@ -1,7 +1,7 @@
-use crate::domains::{LazyFrameDomain, OptionDomain, SeriesDomain};
+use crate::domains::{AtomDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
 use crate::metrics::SymmetricDistance;
 use core::f64;
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Div, Mul, Rem, Sub};
 
 use super::*;
 
@@ -54,11 +54,11 @@ fn get_bool_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
     let lf = df!(
         "L" => [
             Some(true), Some(true), Some(false), Some(false),
-            Some(true), None, Some(false), None
+            Some(true), None, Some(false), None, None
         ],
         "R" => [
             Some(true), Some(false), Some(true), Some(false),
-            None, Some(true), None, Some(false)
+            None, Some(true), None, Some(false), None
         ],
     )?
     .lazy();
@@ -111,7 +111,7 @@ macro_rules! test_binary {
             .get(0)
             .unwrap();
 
-        assert!(output_series.nullable == (out > 0));
+        assert_eq!(output_series.nullable, (out > 0));
         Fallible::Ok(())
     }};
 }
@@ -136,6 +136,18 @@ fn test_eq() -> Fallible<()> {
 }
 
 #[test]
+fn test_eq_missing() -> Fallible<()> {
+    test_binary!(
+        get_f64_data,
+        eq_missing,
+        [
+            true, false, // NaN is equal to NaN?
+            true, false, true, false, true, false,
+        ]
+    )
+}
+
+#[test]
 fn test_neq() -> Fallible<()> {
     test_binary!(
         get_f64_data,
@@ -150,6 +162,15 @@ fn test_neq() -> Fallible<()> {
             Some(false),
             Some(true),
         ]
+    )
+}
+
+#[test]
+fn test_neq_validity() -> Fallible<()> {
+    test_binary!(
+        get_f64_data,
+        neq_missing,
+        [false, true, false, true, false, true, false, true,]
     )
 }
 
@@ -242,6 +263,7 @@ fn test_and() -> Fallible<()> {
             None,
             Some(false),
             Some(false),
+            None,
         ]
     )
 }
@@ -258,6 +280,7 @@ fn test_or() -> Fallible<()> {
             Some(false),
             Some(true),
             Some(true),
+            None,
             None,
             None,
         ]
@@ -316,7 +339,8 @@ fn test_xor() -> Fallible<()> {
             None,
             None,
             None,
-            None
+            None,
+            None,
         ]
     )
 }
@@ -419,5 +443,25 @@ fn test_floor_div() -> Fallible<()> {
         ]
     )?;
     test_binary!(get_i32_data, floor_div, [None, Some(1), None])?;
+    Ok(())
+}
+
+#[test]
+fn test_rem() -> Fallible<()> {
+    test_binary!(
+        get_f64_data,
+        rem,
+        [
+            Some(f64::NAN),
+            Some(f64::NAN),
+            Some(f64::NAN),
+            Some(f64::NAN),
+            None,
+            None,
+            Some(f64::NAN),
+            Some(f64::NAN)
+        ]
+    )?;
+    test_binary!(get_i32_data, rem, [None, Some(0), None])?;
     Ok(())
 }
