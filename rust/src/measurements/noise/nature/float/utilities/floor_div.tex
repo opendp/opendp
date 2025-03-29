@@ -1,0 +1,48 @@
+\documentclass{article}
+\input{../../../../../lib.sty}
+
+\title{\texttt{fn floor\_div}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise/distribution/float/utilities/fn}{floor\_div} in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+None
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+In the following pseudocode, define $/$ as zero integer division, as used by the Rust Dashu dependency's IBig.
+Zero integer division is real division that is then rounded towards zero.
+This differs from Python's division, which converts to float,
+and Python's integer division, which is the desired floor integer division.
+
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/floor\_div.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    Return $floor(a / b)$, where $/$ denotes real division.
+\end{theorem}
+
+\begin{proof}
+    Consider the following cases:
+    \begin{itemize}
+        \item If $a \geq 0$ then zero integer division and floor integer division are equivalent.
+            Therefore the result is $floor(a / b)$.
+        \item If $a < 0$ then $b - 1$ is subtracted before zero integer division.
+            This shifts the problematic upper elements that would round up into the range that rounds down,
+            while the lower elements that would round down now round up, resulting in the correct floor division.
+            Therefore the result is $floor(a / b)$.
+    \end{itemize}
+    In all cases, the result is $floor(a / b)$.
+\end{proof}
+\end{document}
