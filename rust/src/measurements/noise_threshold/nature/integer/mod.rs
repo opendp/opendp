@@ -46,6 +46,7 @@ where
     > {
         let distribution = ZExpFamily {
             scale: integerize_scale(self.scale, 0)?,
+            divisor: None,
         };
         let threshold = UBig::try_from(threshold).map_err(|_| {
             err!(

@@ -50,6 +50,7 @@ where
         let FloatExpFamily { scale, k } = self;
         let distribution = ZExpFamily {
             scale: integerize_scale(scale, k)?,
+            divisor: None,
         };
 
         if threshold.is_sign_negative() {
