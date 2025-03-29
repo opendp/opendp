@@ -1,12 +1,9 @@
 use polars::prelude::*;
 use polars_plan::dsl::Expr;
 use polars_plan::utils::expr_output_name;
-// This code is not particular to Python, so we shouldn't need the higher-level library here.
-// https://github.com/opendp/opendp/issues/2309
-use pyo3_polars::export::polars_core::utils::try_get_supertype;
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{AtomDomain, ExprDomain, ExprPlan, OuterMetric, SeriesDomain, WildExprDomain};
+use crate::domains::{ExprDomain, ExprPlan, OuterMetric, SeriesDomain, WildExprDomain};
 use crate::error::*;
 use crate::transformations::DatasetMetric;
 
@@ -62,50 +59,61 @@ where
 
     use polars_plan::dsl::Operator::*;
 
-    let data_column = match op {
-        Eq | NotEq | Lt | LtEq | Gt | GtEq | And | Or | Xor | LogicalAnd | LogicalOr => {
-            let mut series_domain =
-                SeriesDomain::new(expr_output_name(&expr)?, AtomDomain::<bool>::default());
-            series_domain.nullable = left_series.nullable || right_series.nullable;
-            series_domain
-        }
-        Plus | Minus | Multiply | Divide | TrueDivide | FloorDivide => {
-            let common_dtype = try_get_supertype(&left_series.dtype(), &right_series.dtype())?;
+    if !matches!(
+        op,
+        Eq | EqValidity
+            | NotEq
+            | NotEqValidity
+            | Lt
+            | LtEq
+            | Gt
+            | GtEq
+            | Plus
+            | Minus
+            | Multiply
+            | Divide
+            | TrueDivide
+            | FloorDivide
+            | Modulus
+            | And
+            | Or
+            | Xor
+            | LogicalAnd
+            | LogicalOr
+    ) {
+        return fallible!(
+            MakeTransformation,
+            "unsupported binary operator: {:?}. Please open an issue on the OpenDP GitHub if you would like to see this supported.",
+            op
+        );
+    }
+    // use Polars to compute the output dtype
+    let mock_df = DataFrame::new(vec![
+        Column::new_empty("left".into(), &left_series.dtype()),
+        Column::new_empty("right".into(), &right_series.dtype()),
+    ])?;
+    let out_dtype = mock_df
+        .lazy()
+        .select([binary_expr(col("left"), op, col("right"))])
+        .collect()?
+        .column("left")?
+        .dtype()
+        .clone();
 
-            let out_dtype = match op {
-                Plus | Minus | Multiply | FloorDivide => common_dtype,
-                TrueDivide | Divide => {
-                    if common_dtype.is_float() {
-                        common_dtype
-                    } else {
-                        DataType::Float64
-                    }
-                }
-                _ => unreachable!("due to above match arm"),
-            };
+    let field = Field::new(expr_output_name(&expr)?, out_dtype.clone());
+    let mut series_domain = SeriesDomain::new_from_field(field)?;
 
-            let mut series_domain = SeriesDomain::new_from_field(Field::new(
-                left_series.name.clone(),
-                out_dtype.clone(),
-            ))?;
+    // division by zero may introduce null values
+    series_domain.nullable = left_series.nullable
+        || right_series.nullable
+        || matches!(op, FloorDivide | TrueDivide | Divide);
 
-            // output is nullable when op is FloorDivide since a // 0 is null for any a
-            series_domain.nullable =
-                left_series.nullable || right_series.nullable || matches!(op, FloorDivide);
-
-            series_domain
-        }
-        _ => {
-            return fallible!(
-                MakeTransformation,
-                "unsupported operator: {:?}. Only arithmetic operations or binary operations that emit booleans are currently supported.",
-                op
-            );
-        }
-    };
+    if matches!(op, EqValidity | NotEqValidity) {
+        series_domain.nullable = false;
+    }
 
     let output_domain = ExprDomain {
-        column: data_column,
+        column: series_domain,
         context: input_domain.context.clone(),
     };
 
