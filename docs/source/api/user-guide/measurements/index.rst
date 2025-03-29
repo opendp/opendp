@@ -15,6 +15,7 @@ This means you will need to choose a measurement that chains with your :ref:`agg
   :hidden:
 
   additive-noise-mechanisms
+  canonical-noise-mechanism
   randomized-response
 
 Additive Noise Mechanisms
@@ -91,6 +92,11 @@ Geometric Noise
 ***************
 The geometric mechanism (:func:`make_geometric <opendp.measurements.make_geometric>`) is an alias for the discrete Laplace (:func:`make_laplace <opendp.measurements.make_laplace>`).
 If you need constant-time execution to protect against timing side-channels, specify bounds!
+
+
+Canonical Noise
+***************
+The canonical noise mechanism (:func:`opendp.measurements.make_canonical_noise`) is discussed in detail in `these examples <canonical-noise-mechanism.html>`_
 
 
 Noise Addition with Thresholding
