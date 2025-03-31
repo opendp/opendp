@@ -220,6 +220,22 @@ impl<F: Frame> FrameDomain<F> {
     /// or an error.
     #[must_use]
     pub fn with_margin(mut self, margin: Margin) -> Fallible<Self> {
+        let _ = margin
+            .by
+            .iter()
+            .map(|e| e.clone().meta().root_names())
+            .flatten()
+            .try_for_each(|name| {
+                if self
+                    .series_domains
+                    .iter()
+                    .find(|s| s.name == name)
+                    .is_none()
+                {
+                    return fallible!(MakeDomain, "column not found: {}", name);
+                };
+                Ok(())
+            });
         if self.margins.iter().find(|m| m.by == margin.by).is_some() {
             return fallible!(MakeDomain, "margin already exists: {:?}", margin.by);
         }
@@ -305,7 +321,13 @@ impl<F: Frame> FrameDomain<F> {
             .iter()
             .find(|s| s.name == name)
             .cloned()
-            .ok_or_else(|| err!(MakeTransformation, "unrecognized column: {}", name))
+            .ok_or_else(|| {
+                err!(
+                    MakeTransformation,
+                    "unrecognized column in series domain: {}",
+                    name
+                )
+            })
     }
 }
 
