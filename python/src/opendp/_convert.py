@@ -682,11 +682,13 @@ def _slice_to_margin(raw: FfiSlicePtr):
     )
 
 def _check_polars_by(by):
+    message = "'by' kwarg must be a sequence type"
+    error_url = get_error_url(message)
     if isinstance(by, str):
-        raise ValueError(f"by ({by}) must be a sequence type; Did you mean [\"{by}\"]?")
+        raise ValueError(f"{message}; Did you mean [\"{by}\"]? {error_url}")
     
     if not isinstance(by, Sequence):
-        raise ValueError(f"by ({by}) must be a sequence type")
+        raise ValueError(f"{message}, not '{by}'. {error_url}")
 
 
 def _margin_to_slice(val) -> FfiSlicePtr:
