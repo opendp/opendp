@@ -3,7 +3,7 @@ use crate::error::Fallible;
 use super::{InverseCDF, ODPRound};
 use dashu::{base::Sign, float::FBig, rational::RBig};
 
-#[cfg(test)]
+#[cfg(all(feature = "contrib", test))]
 mod test;
 
 /// A Gumbel random variable.
