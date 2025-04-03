@@ -25,15 +25,15 @@ use crate::traits::{ExactIntCast, Hashable, InfDiv, InfLn, InfMul, InfSub};
 // In the case of privatizing a balanced coin flip,
 //     t = 2, p = .75, giving eps = ln(.75 / .25) = ln(3)
 
-#[bootstrap(features("contrib"), arguments(constant_time(default = false)))]
+#[bootstrap(features("contrib"), arguments(mitigate_timing(default = false)))]
 /// Make a Measurement that implements randomized response on a boolean value.
 ///
 /// # Arguments
 /// * `prob` - Probability of returning the correct answer. Must be in `[0.5, 1)`
-/// * `constant_time` - Set to true to enable constant time. Slower.
+/// * `mitigate_timing` - Set to true to attempt to pad the runtime to run in constant time. Slower.
 pub fn make_randomized_response_bool(
     prob: f64,
-    constant_time: bool,
+    mitigate_timing: bool,
 ) -> Fallible<Measurement<AtomDomain<bool>, bool, DiscreteDistance, MaxDivergence>> {
     // number of categories t is 2, and probability is bounded below by 1/t
     if !((0.5)..(1.0)).contains(&prob) {
@@ -48,7 +48,7 @@ pub fn make_randomized_response_bool(
     Measurement::new(
         AtomDomain::default(),
         Function::new_fallible(move |arg: &bool| {
-            Ok(arg ^ !sample_bernoulli_float(prob, constant_time)?)
+            Ok(arg ^ !sample_bernoulli_float(prob, mitigate_timing)?)
         }),
         DiscreteDistance::default(),
         MaxDivergence::default(),
