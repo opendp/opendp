@@ -5,7 +5,7 @@ use polars::series::Series;
 use polars_plan::dsl::col;
 
 use crate::domains::{AtomDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
-use crate::metrics::{Multi, SymmetricDistance};
+use crate::metrics::{FrameDistance, SymmetricDistance};
 
 use super::*;
 
@@ -18,9 +18,10 @@ fn test_make_expr_fill_nan_literal() -> Fallible<()> {
 
     let lf = df!("f64" => [None, Some(1.), Some(f64::NAN)])?.lazy();
 
-    let t_fill_nan = col("f64")
-        .fill_nan(0.0)
-        .make_stable(lf_domain.clone().row_by_row(), Multi(SymmetricDistance))?;
+    let t_fill_nan = col("f64").fill_nan(0.0).make_stable(
+        lf_domain.clone().row_by_row(),
+        FrameDistance(SymmetricDistance),
+    )?;
     let expr_fill_nan = t_fill_nan.invoke(&lf.logical_plan)?.expr;
     let actual = lf.with_column(expr_fill_nan).collect()?;
 
@@ -43,9 +44,10 @@ fn test_make_expr_fill_nan_expr() -> Fallible<()> {
     )?
     .lazy();
 
-    let t_fill_nan = col("f64_nan")
-        .fill_nan(col("f64_nonnan"))
-        .make_stable(lf_domain.clone().row_by_row(), Multi(SymmetricDistance))?;
+    let t_fill_nan = col("f64_nan").fill_nan(col("f64_nonnan")).make_stable(
+        lf_domain.clone().row_by_row(),
+        FrameDistance(SymmetricDistance),
+    )?;
 
     let expr_fill_nan = t_fill_nan.invoke(&lf.logical_plan)?.expr;
     let actual = lf.with_column(expr_fill_nan).collect()?;
@@ -69,7 +71,10 @@ fn test_make_expr_fill_nan_expr_filter_fail() -> Fallible<()> {
 
     let err = col("f64_nan")
         .fill_nan(lit(0.0).filter(col("f64_nonnan").gt_eq(0.0)))
-        .make_stable(lf_domain.clone().row_by_row(), Multi(SymmetricDistance))
+        .make_stable(
+            lf_domain.clone().row_by_row(),
+            FrameDistance(SymmetricDistance),
+        )
         .unwrap_err();
 
     assert_eq!(

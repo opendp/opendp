@@ -9,7 +9,7 @@ use std::ptr::null;
 use std::slice;
 
 #[cfg(feature = "polars")]
-use crate::metrics::{GroupBound, GroupBounds};
+use crate::metrics::{Bound, Bounds};
 #[cfg(feature = "polars")]
 use ::polars::export::arrow;
 #[cfg(feature = "polars")]
@@ -147,7 +147,7 @@ pub extern "C" fn opendp_data__slice_as_object(
             .ok_or_else(|| err!(FFI, "Attempted to follow a null pointer to create a tuple"))?;
         Ok(AnyObject::new(tuple))
     }
-    fn raw_to_tuple3_partition_distance<T: 'static + Clone>(
+    fn raw_to_tuple3_l0Pinf_distance<T: 'static + Clone>(
         raw: &FfiSlice,
     ) -> Fallible<AnyObject> {
         if raw.len != 3 {
@@ -267,7 +267,7 @@ pub extern "C" fn opendp_data__slice_as_object(
     #[cfg(feature = "polars")]
     fn raw_to_margin(raw: &FfiSlice) -> Fallible<AnyObject> {
         use std::collections::HashSet;
-        use crate::domains::{Margin, MarginPub};
+        use crate::domains::{Margin, Invariant};
 
         if raw.len != 4 {
             return fallible!(FFI, "Margin FfiSlice must have length 6, found a length of {}", raw.len);
@@ -275,13 +275,13 @@ pub extern "C" fn opendp_data__slice_as_object(
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, raw.len) };
         Ok(AnyObject::new(Margin {
             by: HashSet::from_iter(try_!(try_as_ref!(slice[0] as *const AnyObject).downcast_ref::<Vec<Expr>>()).clone()),
-            max_partition_length: as_ref(slice[1] as *const u32).cloned(),
-            max_num_partitions: as_ref(slice[2] as *const u32).cloned(),
-            public_info: match to_option_str(slice[3] as *const c_char)? {
-                Some("keys") => Some(MarginPub::Keys),
-                Some("lengths") => Some(MarginPub::Lengths),
+            max_length: as_ref(slice[1] as *const u32).cloned(),
+            max_groups: as_ref(slice[2] as *const u32).cloned(),
+            invariant: match to_option_str(slice[3] as *const c_char)? {
+                Some("keys") => Some(Invariant::Keys),
+                Some("lengths") => Some(Invariant::Lengths),
                 None => None,
-                _ => return fallible!(FFI, "public_info must be None, 'keys' or 'lengths'"),
+                _ => return fallible!(FFI, "invariant must be None, 'keys' or 'lengths'"),
             },
         })).into()
     }
@@ -290,22 +290,22 @@ pub extern "C" fn opendp_data__slice_as_object(
     fn raw_to_group_bound(raw: &FfiSlice) -> Fallible<AnyObject> {
         use std::collections::HashSet;
         if raw.len != 3 {
-            return fallible!(FFI, "GroupBound FfiSlice must have length 3, found a length of {}", raw.len);
+            return fallible!(FFI, "Bound FfiSlice must have length 3, found a length of {}", raw.len);
         }
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, raw.len) };
-        Ok(AnyObject::new(GroupBound {
+        Ok(AnyObject::new(Bound {
             by: HashSet::from_iter(try_!(try_as_ref!(slice[0] as *const AnyObject).downcast_ref::<Vec<Expr>>()).clone()),
-            max_partition_contributions: as_ref(slice[1] as *const u32).cloned(),
-            max_influenced_partitions: as_ref(slice[2] as *const u32).cloned(),
+            per_group: as_ref(slice[1] as *const u32).cloned(),
+            num_groups: as_ref(slice[2] as *const u32).cloned(),
         })).into()
     }
     #[cfg(feature = "polars")]
     fn raw_to_group_bounds(raw: &FfiSlice) -> Fallible<AnyObject> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const AnyObject, raw.len) };
         let vec = slice.iter()
-            .map(|b| try_as_ref!(*b).downcast_ref::<GroupBound>().cloned())
-            .collect::<Fallible<Vec<GroupBound>>>()?;
-        Ok(AnyObject::new(GroupBounds(vec)))
+            .map(|b| try_as_ref!(*b).downcast_ref::<Bound>().cloned())
+            .collect::<Fallible<Vec<Bound>>>()?;
+        Ok(AnyObject::new(Bounds(vec)))
     }
     match T_.contents {
         TypeContents::PLAIN("BitVector") => raw_to_bitvector(raw),
@@ -325,9 +325,9 @@ pub extern "C" fn opendp_data__slice_as_object(
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("Margin") => raw_to_margin(raw),
         #[cfg(feature = "polars")]
-        TypeContents::PLAIN("GroupBound") => raw_to_group_bound(raw),
+        TypeContents::PLAIN("Bound") => raw_to_group_bound(raw),
         #[cfg(feature = "polars")]
-        TypeContents::PLAIN("GroupBounds") => raw_to_group_bounds(raw),
+        TypeContents::PLAIN("Bounds") => raw_to_group_bounds(raw),
 
         TypeContents::SLICE(element_id) => {
             let element = try_!(Type::of_id(&element_id));
@@ -347,7 +347,7 @@ pub extern "C" fn opendp_data__slice_as_object(
                 #[cfg(feature = "polars")]
                 "Expr" => raw_to_vec_obj::<Expr>(raw),
                 #[cfg(feature = "polars")]
-                "GroupBound" => raw_to_vec_obj::<GroupBound>(raw),
+                "Bound" => raw_to_vec_obj::<Bound>(raw),
                 _ => dispatch!(raw_to_vec, [(element, @primitives)], (raw)),
             }
         }
@@ -366,8 +366,8 @@ pub extern "C" fn opendp_data__slice_as_object(
                     dispatch!(raw_to_tuple2, [(types[0], @primitives), (types[1], @primitives)], (raw))
                 },
                 3 => {
-                    try_!(check_partition_distance_types(&types));
-                    dispatch!(raw_to_tuple3_partition_distance, [(types[1], @numbers)], (raw))
+                    try_!(check_l0Pinf_distance_types(&types));
+                    dispatch!(raw_to_tuple3_l0Pinf_distance, [(types[1], @numbers)], (raw))
                 },
                 l => return err!(FFI, "Only tuples of length 2 or 3 are supported, found a length of {}", l).into()
             }
@@ -528,7 +528,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             return fallible!(FFI, "unsupported object type: Option<{}>", T.to_string());
         })
     }
-    fn tuple3_partition_distance_to_raw<T: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
+    fn tuple3_l0Pinf_distance_to_raw<T: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
         let tuple: &(IntDistance, T, T) = obj.downcast_ref()?;
         Ok(FfiSlice::new(
             util::into_raw([
@@ -655,7 +655,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
 
     #[cfg(feature = "polars")]
     fn margin_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        use crate::domains::{Margin, MarginPub};
+        use crate::domains::{Invariant, Margin};
 
         let margin = obj.downcast_ref::<Margin>()?;
 
@@ -665,15 +665,15 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
 
         let buffer = vec![
             AnyObject::new_raw(margin.by.iter().cloned().collect::<Vec<_>>()) as *const c_void,
-            to_ptr(margin.max_partition_length),
-            to_ptr(margin.max_num_partitions),
+            to_ptr(margin.max_length),
+            to_ptr(margin.max_groups),
             margin
-                .public_info
+                .invariant
                 .map(|v| {
                     into_c_char_p(
                         match v {
-                            MarginPub::Keys => "keys",
-                            MarginPub::Lengths => "lengths",
+                            Invariant::Keys => "keys",
+                            Invariant::Lengths => "lengths",
                         }
                         .to_string(),
                     )
@@ -691,16 +691,16 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
 
     #[cfg(feature = "polars")]
     fn group_bound_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        let group_bound = obj.downcast_ref::<GroupBound>()?;
+        let group_bound = obj.downcast_ref::<Bound>()?;
 
         let buffer = vec![
             AnyObject::new_raw(group_bound.by.iter().cloned().collect::<Vec<_>>()) as *const c_void,
             group_bound
-                .max_partition_contributions
+                .per_group
                 .map(|v| util::into_raw(v) as *const c_void)
                 .unwrap_or_else(null),
             group_bound
-                .max_influenced_partitions
+                .num_groups
                 .map(|v| util::into_raw(v) as *const c_void)
                 .unwrap_or_else(null),
         ];
@@ -715,7 +715,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
     #[cfg(feature = "polars")]
     fn group_bounds_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
         let bounds = obj
-            .downcast_ref::<GroupBounds>()?
+            .downcast_ref::<Bounds>()?
             .0
             .iter()
             .map(|b| AnyObject::new(b.clone()))
@@ -754,9 +754,9 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("Margin") => margin_to_raw(obj),
         #[cfg(feature = "polars")]
-        TypeContents::PLAIN("GroupBound") => group_bound_to_raw(obj),
+        TypeContents::PLAIN("Bound") => group_bound_to_raw(obj),
         #[cfg(feature = "polars")]
-        TypeContents::PLAIN("GroupBounds") => group_bounds_to_raw(obj),
+        TypeContents::PLAIN("Bounds") => group_bounds_to_raw(obj),
 
         TypeContents::SLICE(element_id) => {
             let element = try_!(Type::of_id(element_id));
@@ -768,8 +768,8 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             #[cfg(feature = "polars")]
             if element.descriptor == "Expr" {
                 return vec_expr_to_raw(obj).into();
-            } else if element.descriptor == "GroupBound" {
-                return vec_to_raw::<GroupBound>(obj).into();
+            } else if element.descriptor == "Bound" {
+                return vec_to_raw::<Bound>(obj).into();
             }
 
             if element.descriptor == "String" {
@@ -793,8 +793,8 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
                     dispatch!(tuple2_to_raw, [(types[0], @primitives_plus), (types[1], @primitives_plus)], (obj))
                 },
                 3 => {
-                    try_!(check_partition_distance_types(&types));
-                    dispatch!(tuple3_partition_distance_to_raw, [(types[1], @numbers)], (obj))
+                    try_!(check_l0Pinf_distance_types(&types));
+                    dispatch!(tuple3_l0Pinf_distance_to_raw, [(types[1], @numbers)], (obj))
                 },
                 l => return err!(FFI, "Only tuples of length 2 or 3 are supported, found length of {}", l).into()
             }
@@ -835,19 +835,19 @@ fn parse_type_args<const N: usize>(args: &Vec<TypeId>, name: &str) -> Fallible<[
         })
 }
 
-/// Checks that a vector of three types satisfies the requirements of a partition distance.
-fn check_partition_distance_types(types: &Vec<Type>) -> Fallible<()> {
+/// Checks that a vector of three types satisfies the requirements of a l0Pinf distance.
+fn check_l0Pinf_distance_types(types: &Vec<Type>) -> Fallible<()> {
     if types[0] != Type::of::<IntDistance>() {
         return fallible!(
             FFI,
-            "3-tuples are only implemented for partition distances. First type must be a u32, found {}",
+            "3-tuples are only implemented for l0Pinf distances. First type must be a u32, found {}",
             types[0].to_string()
         );
     }
     if types[1] != types[2] {
         return fallible!(
             FFI,
-            "3-tuples are only implemented for partition distances. Last two types must be numbers of the same type, found {} and {}",
+            "3-tuples are only implemented for l0Pinf distances. Last two types must be numbers of the same type, found {} and {}",
             types[1].to_string(),
             types[2].to_string()
         );
@@ -1098,10 +1098,7 @@ impl Clone for AnyObject {
                 #[cfg(feature = "polars")]
                 if let Ok(clone) = dispatch!(
                     clone_plain,
-                    [(
-                        self.type_,
-                        [LazyFrame, DataFrame, Series, GroupBound, GroupBounds]
-                    )],
+                    [(self.type_, [LazyFrame, DataFrame, Series, Bound, Bounds])],
                     (self)
                 ) {
                     return clone;
@@ -1170,7 +1167,7 @@ impl Clone for AnyObject {
             }
             TypeContents::VEC(type_id) => {
                 #[cfg(feature = "polars")]
-                if let Ok(clone) = dispatch!(clone_plain, [(self.type_, [GroupBound])], (self)) {
+                if let Ok(clone) = dispatch!(clone_plain, [(self.type_, [Bound])], (self)) {
                     return clone;
                 }
 

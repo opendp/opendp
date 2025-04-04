@@ -15,7 +15,7 @@ The methods of this module will then be accessible at ``dp.polars``.
 """
 
 from __future__ import annotations
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass, field, replace
 import os
 from typing import Any, Literal, Sequence
 from opendp._lib import lib_path, import_optional_dependency
@@ -23,7 +23,7 @@ from opendp.mod import (
     ChangeOneIdDistance,
     Domain,
     Measurement,
-    MultiDistance,
+    FrameDistance,
     OpenDPException,
     SymmetricIdDistance,
     binary_search,
@@ -40,6 +40,7 @@ from opendp.domains import (
     array_domain,
 )
 from opendp.measurements import make_private_lazyframe
+from deprecated import deprecated
 
 
 class DPExpr(object):
@@ -335,7 +336,7 @@ class DPExpr(object):
         ...     privacy_unit=dp.unit_of(contributions=1),
         ...     privacy_loss=dp.loss_of(epsilon=1.),
         ...     split_evenly_over=1,
-        ...     margins=[dp.polars.Margin(max_partition_length=5)]
+        ...     margins=[dp.polars.Margin(max_length=5)]
         ... )
         >>> query = context.query().select(pl.col("visits").fill_null(0).dp.sum((0, 1)))
         >>> query.release().collect()
@@ -373,7 +374,7 @@ class DPExpr(object):
         ...     privacy_unit=dp.unit_of(contributions=1),
         ...     privacy_loss=dp.loss_of(epsilon=1.),
         ...     split_evenly_over=1,
-        ...     margins=[dp.polars.Margin(max_partition_length=5)]
+        ...     margins=[dp.polars.Margin(max_length=5)]
         ... )
         >>> query = context.query().select(pl.col("visits").fill_null(0).dp.mean((0, 1)))
         >>> with pl.Config(float_precision=0): # just to prevent doctest from failing
@@ -468,7 +469,7 @@ class DPExpr(object):
         ...     privacy_unit=dp.unit_of(contributions=1),
         ...     privacy_loss=dp.loss_of(epsilon=1.),
         ...     split_evenly_over=1,
-        ...     margins=[dp.polars.Margin(max_partition_length=100)]
+        ...     margins=[dp.polars.Margin(max_length=100)]
         ... )
         >>> candidates = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
         >>> query = context.query().select(pl.col("age").fill_null(0).dp.quantile(0.25, candidates))
@@ -506,7 +507,7 @@ class DPExpr(object):
         ...     privacy_unit=dp.unit_of(contributions=1),
         ...     privacy_loss=dp.loss_of(epsilon=1.),
         ...     split_evenly_over=1,
-        ...     margins=[dp.polars.Margin(max_partition_length=100)]
+        ...     margins=[dp.polars.Margin(max_length=100)]
         ... )
         >>> candidates = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
         >>> query = context.query().select(pl.col("age").fill_null(0).dp.quantile(0.5, candidates))
@@ -650,6 +651,7 @@ def _domain_from_dtype(dtype) -> Domain:
         raise ValueError(f"unrecognized dtype: {dtype}")  # pragma: no cover
 
     return atom_domain(T=T)
+
 
 _LAZY_EXECUTION_METHODS = {
     "collect",
@@ -851,25 +853,69 @@ class LazyFrameQuery:
             self._query,
         )
 
-    def truncate(
+    def truncate_per_group(
         self,
         k: int,
-        over: list[Any] | None = None,
+        by: list[Any] | None = None,
+        keep: Literal["first", "last", "sample"] = "first",
     ) -> LazyFrameQuery:
         """
-        Truncate the data to keep at most `k` rows for each identifier.
+        Limit the number of contributed rows per group.
 
-        :param k: the number of rows to keep for each identifier
-        :param over: optional, other columns to group by
+        :param k: the number of rows to keep for each identifier and group
+        :param by: optional, additional columns to group by
+        :param keep: which rows to keep for each identifier in each group
         """
         input_metric = self._query._chain[1]
-        
-        if isinstance(input_metric, MultiDistance):
+
+        if isinstance(input_metric, FrameDistance):
             input_metric = input_metric.inner_metric
         if not isinstance(input_metric, (SymmetricIdDistance, ChangeOneIdDistance)):
-            raise ValueError(f"truncation is only supported for identifier distances, found {input_metric}")
+            raise ValueError("truncation is only valid when identifier is defined")
 
-        return self.filter(pl.int_range(pl.len()).over(input_metric.identifier, *over or []) < k)
+        if keep == "first":
+            indexes = pl.int_range(pl.len())
+        elif keep == "last":
+            indexes = pl.int_range(pl.len()).reverse()
+        elif keep == "sample":
+            indexes = pl.int_range(pl.len()).shuffle()
+        else:
+            raise ValueError("keep must be 'first', 'last', or 'sample'")  # pragma: no cover
+
+        return self.filter(
+            indexes.over(input_metric.identifier, *by or []) < k
+        )
+
+    def truncate_num_groups(
+        self,
+        k: int,
+        by: list[Any],
+        keep: Literal["first", "last"] = "first",
+    ) -> LazyFrameQuery:
+        """
+        Limit the number of groups an individual may influence.
+
+        :param k: the number of partitions to keep for each identifier
+        :param by: which grouping keys to use for the partitioning
+        :param keep: which partitions to keep for each identifier
+        """
+        input_metric = self._query._chain[1]
+
+        if isinstance(input_metric, FrameDistance):
+            input_metric = input_metric.inner_metric
+        if not isinstance(input_metric, (SymmetricIdDistance, ChangeOneIdDistance)):
+            raise ValueError("truncation is only valid when identifier is defined")
+
+        if keep == "first":
+            ranks = pl.struct(*by).rank("dense", descending=False)
+        elif keep == "last":
+            ranks = pl.struct(*by).rank("dense", descending=True)
+        else:
+            raise ValueError("keep must be 'first' or 'last'")  # pragma: no cover
+
+        return self.filter(
+            ranks.over(input_metric.identifier) < k
+        )
 
     def resolve(self) -> Measurement:
         """Resolve the query into a measurement."""
@@ -889,10 +935,18 @@ class LazyFrameQuery:
                 global_scale=scale,
                 threshold=threshold,
             )
+        
+        # when the query has sensitivity zero or is behind an invariant
+        try:
+            m_zero = _make(0., threshold=None)
+            if m_zero.check(d_in, d_out):
+                # if the zero scale measurement is already private, return it
+                return m_zero
+        except OpenDPException:
+            pass
 
         # when the output measure is δ-approximate, then there are two free parameters to tune
         if getattr(query._output_measure.type, "origin", None) == "Approximate":
-
             # search for a scale parameter. Solve for epsilon first,
             # setting threshold to u32::MAX so as not to interfere with the search for a suitable scale parameter
             scale = binary_search(
@@ -946,7 +1000,7 @@ class LazyFrameQuery:
         ...     privacy_unit=dp.unit_of(contributions=1),
         ...     privacy_loss=dp.loss_of(epsilon=1.0),
         ...     split_evenly_over=1,
-        ...     margins=[dp.polars.Margin(by=(), max_partition_length=1000)],
+        ...     margins=[dp.polars.Margin(by=(), max_length=1000)],
         ... )
         >>>
         >>> query = context.query().select(
@@ -1019,18 +1073,11 @@ class Margin:
     Instances of this class are used by :py:func:`opendp.context.Context.compositor`.
     """
 
-    by: Sequence | None = None
+    by: Sequence = field(default_factory=list)
     """Polars expressions describing the grouping columns."""
 
-    public_info: Literal["keys"] | Literal["lengths"] | None = None
-    """Identifies properties of grouped data that are considered public information.
-    
-    * ``"keys"`` designates that keys are not protected
-    * ``"lengths"`` designates that both keys and partition lengths are not protected
-    """
-
-    max_partition_length: int | None = None
-    """An upper bound on the number of records in any one partition.
+    max_length: int | None = None
+    """An upper bound on the number of records in any one group.
 
     If you don't know how many records are in the data, you can specify a very loose upper bound,
     for example, the size of the total population you are sampling from.
@@ -1039,17 +1086,70 @@ class Margin:
     `Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It <https://arxiv.org/pdf/2207.10635.pdf>`_.
     """
 
-    max_num_partitions: int | None = None
-    """An upper bound on the number of distinct partitions."""
+    max_groups: int | None = None
+    """An upper bound on the number of distinct groups."""
 
-    max_partition_contributions: int | None = None
-    """The greatest number of records an individual may contribute to any one partition.
+
+    invariant: Literal["keys"] | Literal["lengths"] | None = None
+    """Identifies properties of grouped data that are considered invariant.
     
-    This can significantly reduce the sensitivity of grouped queries under zero-Concentrated DP.
+    * ``"keys"`` designates that keys are not protected
+    * ``"lengths"`` designates that both keys and partition lengths are not protected
+
+    By the analysis of invariants conducted in
+    `Formal Privacy Guarantees with Invariant Statistics <https://arxiv.org/abs/2410.17468>`_,
+    when invariants are set, the effective privacy guarantees of the library are weaker than advertised.
     """
 
-    max_influenced_partitions: int | None = None
-    """The greatest number of partitions any one individual can contribute to."""
+    @property
+    @deprecated(reason="Use max_length instead.")
+    def max_partition_length(self):
+        return self.max_length  # pragma: no cover
+
+    @max_partition_length.setter
+    @deprecated(reason="Use max_length instead.")
+    def max_partition_length(self, value):
+        self.max_length = value  # pragma: no cover
+
+    @property
+    @deprecated(reason="Use max_groups instead. This was renamed to be consistent with Polars terminology.")
+    def max_num_partitions(self):
+        return self.max_groups  # pragma: no cover
+
+    @max_num_partitions.setter
+    @deprecated(reason="Use max_groups instead. This was renamed to be consistent with Polars terminology.")
+    def max_num_partitions(self, value):
+        self.max_groups = value  # pragma: no cover
+
+    @property
+    @deprecated(reason='Use invariant instead. This was renamed because invariants are not "public information". Invariants are "unprotected information".')
+    def public_info(self):
+        return self.invariant  # pragma: no cover
+
+    @public_info.setter
+    @deprecated(reason='Use invariant instead. This was renamed because invariants are not "public information". Invariants are "unprotected information".')
+    def public_info(self, value):
+        self.invariant = value  # pragma: no cover
+
+    @property
+    @deprecated(reason='Use `dp.unit_of(contributions=[dp.polars.Bound(per_group=...)])` instead.')
+    def max_partition_contributions(self):
+        raise NotImplementedError("max_partition_contributions is deprecated. Use `dp.unit_of(contributions=[dp.polars.Bound(per_group=...)])` instead.") # pragma: no cover
+    
+    @max_partition_contributions.setter
+    @deprecated(reason='Use `dp.unit_of(contributions=[dp.polars.Bound(per_group=...)])` instead.')
+    def max_partition_contributions(self, value):
+        _ = value  # pragma: no cover
+
+    @property
+    @deprecated(reason='Use `dp.unit_of(contributions=[dp.polars.Bound(num_groups=...)])` instead.')
+    def max_influenced_partitions(self):
+        raise NotImplementedError("max_influenced_partitions is deprecated. Use `dp.unit_of(contributions=[dp.polars.Bound(num_groups=...)])` instead.") # pragma: no cover
+    
+    @max_influenced_partitions.setter
+    @deprecated(reason='Use `dp.unit_of(contributions=[dp.polars.Bound(num_groups=...)])` instead.')
+    def max_influenced_partitions(self, value):
+        _ = value  # pragma: no cover
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Margin):
@@ -1062,36 +1162,35 @@ class Margin:
                 by = pl.col(by)
             return by.meta.serialize()
 
-        self_by = {serialize(col) for col in self.by or []}
-        other_by = {serialize(col) for col in other.by or []}
+        self_by = {serialize(col) for col in self.by}
+        other_by = {serialize(col) for col in other.by}
         if self_by != other_by:
             return False
 
-        return asdict(replace(self, by=None)) == asdict(replace(other, by=None))
+        return asdict(replace(self, by=[])) == asdict(replace(other, by=[]))
 
 
 @dataclass
-class GroupBound(object):
+class Bound(object):
     """
-    The ``GroupBound`` class is used to describe bounds on the number of contributions an individual may make,
+    The ``Bound`` class is used to describe bounds on the number of contributions an individual may make,
     and the number of partitions an individual may influence.
     """
 
-    by: Sequence
+    by: Sequence = field(default_factory=list)
     """Polars expressions describing the grouping columns."""
 
-    max_partition_contributions: int | None = None
-    """The greatest number of records an individual may contribute to any one partition.
+    per_group: int | None = None
+    """The greatest number of records an individual may contribute to any one group.
     
     This can significantly reduce the sensitivity of grouped queries under zero-Concentrated DP.
     """
 
-    max_influenced_partitions: int | None = None
+    num_groups: int | None = None
     """The greatest number of partitions any one individual can contribute to."""
 
-
     def __eq__(self, other) -> bool:
-        if not isinstance(other, GroupBound):
+        if not isinstance(other, Bound):
             return False
 
         # special logic for by, which is considered a set (order and dupes don't matter)
@@ -1101,9 +1200,9 @@ class GroupBound(object):
                 by = pl.col(by)
             return by.meta.serialize()
 
-        self_by = {serialize(col) for col in self.by or []}
-        other_by = {serialize(col) for col in other.by or []}
+        self_by = {serialize(col) for col in self.by}
+        other_by = {serialize(col) for col in other.by}
         if self_by != other_by:
             return False
 
-        return asdict(replace(self, by=None)) == asdict(replace(other, by=None)) # type: ignore[arg-type]
+        return asdict(replace(self, by=[])) == asdict(replace(other, by=[]))  # type: ignore[arg-type]

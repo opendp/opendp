@@ -5,7 +5,7 @@ use polars::series::Series;
 use crate::domains::{AtomDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
 use crate::measurements::make_private_lazyframe;
 use crate::measures::MaxDivergence;
-use crate::metrics::{Multi, SymmetricDistance};
+use crate::metrics::{FrameDistance, SymmetricDistance};
 use crate::polars::PrivacyNamespace;
 
 use super::*;
@@ -14,7 +14,7 @@ use super::*;
 fn make_expr_drop_nan_standard() -> Fallible<()> {
     let series_domain = SeriesDomain::new("", AtomDomain::<f32>::default());
     let lf_domain = LazyFrameDomain::new(vec![series_domain])?
-        .with_margin(Margin::select().with_max_partition_length(5))?;
+        .with_margin(Margin::select().with_max_length(5))?;
     let lf = df!("" => &[1.0, f32::NAN])?.lazy();
 
     let lf_filter = lf
@@ -23,7 +23,7 @@ fn make_expr_drop_nan_standard() -> Fallible<()> {
 
     let m_obs = make_private_lazyframe(
         lf_domain,
-        Multi(SymmetricDistance),
+        FrameDistance(SymmetricDistance),
         MaxDivergence,
         lf_filter,
         Some(0.0),
@@ -42,7 +42,7 @@ fn make_expr_drop_nan_standard() -> Fallible<()> {
 fn make_expr_drop_null_standard() -> Fallible<()> {
     let series_domain = SeriesDomain::new("", OptionDomain::new(AtomDomain::<i32>::default()));
     let lf_domain = LazyFrameDomain::new(vec![series_domain])?
-        .with_margin(Margin::select().with_max_partition_length(5))?;
+        .with_margin(Margin::select().with_max_length(5))?;
     let lf = df!("" => &[Some(1i32), None])?.lazy();
 
     let lf_filter = lf
@@ -51,7 +51,7 @@ fn make_expr_drop_null_standard() -> Fallible<()> {
 
     let m_obs = make_private_lazyframe(
         lf_domain,
-        Multi(SymmetricDistance),
+        FrameDistance(SymmetricDistance),
         MaxDivergence,
         lf_filter,
         Some(0.0),

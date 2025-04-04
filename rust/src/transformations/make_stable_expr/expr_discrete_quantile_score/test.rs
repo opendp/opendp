@@ -12,15 +12,11 @@ pub fn get_quantile_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
         SeriesDomain::new("cycle_(..101f64)", AtomDomain::<i32>::default()),
         SeriesDomain::new("cycle_(..10i32)", AtomDomain::<f64>::default()),
     ])?
-    .with_margin(
-        Margin::select()
-            .with_max_partition_length(1000)
-            .with_public_keys(),
-    )?
+    .with_margin(Margin::select().with_max_length(1000).with_invariant_keys())?
     .with_margin(
         Margin::by(["cycle_(..10i32)"])
-            .with_max_partition_length(1000)
-            .with_public_keys(),
+            .with_max_length(1000)
+            .with_invariant_keys(),
     )?;
 
     let lf = df!(

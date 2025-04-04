@@ -11,7 +11,7 @@ use crate::{
 };
 
 #[cfg(feature = "polars")]
-use crate::{ffi::util::Type, metrics::GroupBounds};
+use crate::{ffi::util::Type, metrics::Bounds};
 
 fn make_sequential_composition(
     input_domain: AnyDomain,
@@ -66,10 +66,10 @@ fn make_sequential_composition(
     let QO = output_measure.distance_type.clone();
 
     #[cfg(feature = "polars")]
-    if QI == Type::of::<GroupBounds>() {
+    if QI == Type::of::<Bounds>() {
         return dispatch!(
             monomorphize,
-            [(QI, [GroupBounds]), (QO, [f64, (f64, f64)])],
+            [(QI, [Bounds]), (QO, [f64, (f64, f64)])],
             (input_domain, input_metric, output_measure, d_in, d_mids)
         );
     }

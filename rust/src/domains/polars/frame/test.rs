@@ -21,11 +21,7 @@ fn test_margin() -> Fallible<()> {
         SeriesDomain::new("A", AtomDomain::<i32>::default()),
         SeriesDomain::new("B", AtomDomain::<String>::default()),
     ])?
-    .with_margin(
-        Margin::by(["A"])
-            .with_max_partition_length(1)
-            .with_max_num_partitions(2),
-    )?;
+    .with_margin(Margin::by(["A"]).with_max_length(1).with_max_groups(2))?;
 
     let lf_exceed_partition_size = df!("A" => [1, 2, 2], "B" => ["1", "1", "2"])?.lazyframe();
     assert!(!lf_domain.member(&lf_exceed_partition_size)?);
@@ -39,13 +35,9 @@ fn test_margin() -> Fallible<()> {
     Ok(())
 }
 
-fn assert_row_descriptors<F: Frame>(
-    domain: &FrameDomain<F>,
-    by: &[&str],
-    max_partition_length: Option<u32>,
-) {
+fn assert_row_descriptors<F: Frame>(domain: &FrameDomain<F>, by: &[&str], max_length: Option<u32>) {
     let margin = domain.get_margin(&by.iter().map(|s| (*s).into()).collect());
-    assert_eq!(margin.max_partition_length, max_partition_length);
+    assert_eq!(margin.max_length, max_length);
 }
 
 #[test]
@@ -54,7 +46,7 @@ fn test_get_margin_max_partition_descriptors() -> Fallible<()> {
         SeriesDomain::new("A", AtomDomain::<i32>::default()),
         SeriesDomain::new("B", AtomDomain::<i32>::default()),
     ])?
-    .with_margin(Margin::by(["A"]).with_max_partition_length(10))?;
+    .with_margin(Margin::by(["A"]).with_max_length(10))?;
 
     assert_row_descriptors(&lf_domain, &["A", "B"], Some(10));
     assert_row_descriptors(&lf_domain, &["B"], None);
@@ -64,10 +56,10 @@ fn test_get_margin_max_partition_descriptors() -> Fallible<()> {
 fn assert_partition_descriptors<F: Frame>(
     domain: &FrameDomain<F>,
     by: &[&str],
-    max_num_partitions: Option<u32>,
+    max_groups: Option<u32>,
 ) {
     let margin = domain.get_margin(&by.iter().map(|s| (*s).into()).collect());
-    assert_eq!(margin.max_num_partitions, max_num_partitions);
+    assert_eq!(margin.max_groups, max_groups);
 }
 
 #[test]
@@ -77,8 +69,8 @@ fn test_get_margin_covering_small_to_large() -> Fallible<()> {
         SeriesDomain::new("B", AtomDomain::<i32>::default()),
         SeriesDomain::new("C", AtomDomain::<i32>::default()),
     ])?
-    .with_margin(Margin::by(["A"]).with_max_num_partitions(10))?
-    .with_margin(Margin::by(["B"]).with_max_num_partitions(11))?;
+    .with_margin(Margin::by(["A"]).with_max_groups(10))?
+    .with_margin(Margin::by(["B"]).with_max_groups(11))?;
 
     assert_partition_descriptors(&lf_domain, &["A", "B"], Some(110));
     assert_partition_descriptors(&lf_domain, &["B"], Some(11));
@@ -94,7 +86,7 @@ fn test_get_margin_covering_large_to_small() -> Fallible<()> {
         SeriesDomain::new("B", AtomDomain::<i32>::default()),
         SeriesDomain::new("C", AtomDomain::<i32>::default()),
     ])?
-    .with_margin(Margin::by(["A", "B"]).with_max_num_partitions(10))?;
+    .with_margin(Margin::by(["A", "B"]).with_max_groups(10))?;
 
     assert_partition_descriptors(&lf_domain, &["A"], Some(10));
     assert_partition_descriptors(&lf_domain, &["B"], Some(10));
@@ -104,24 +96,24 @@ fn test_get_margin_covering_large_to_small() -> Fallible<()> {
 }
 
 #[test]
-fn test_get_margin_public_info() -> Fallible<()> {
+fn test_get_margin_invariant() -> Fallible<()> {
     let lf_domain = LazyFrameDomain::new(vec![
         SeriesDomain::new("A", AtomDomain::<i32>::default()),
         SeriesDomain::new("B", AtomDomain::<i32>::default()),
     ])?
-    .with_margin(Margin::by(["A", "B"]).with_public_lengths())?;
+    .with_margin(Margin::by(["A", "B"]).with_invariant_lengths())?;
 
     // nothing is known when grouping not in margins
     let margin_abc = lf_domain.get_margin(&HashSet::from(["A".into(), "B".into(), "C".into()]));
-    assert_eq!(margin_abc.public_info, None);
+    assert_eq!(margin_abc.invariant, None);
 
     // retrieving info directly from the margin as-is
     let margin_ab = lf_domain.get_margin(&HashSet::from(["A".into(), "B".into()]));
-    assert_eq!(margin_ab.public_info, Some(MarginPub::Lengths));
+    assert_eq!(margin_ab.invariant, Some(Invariant::Lengths));
 
     // keys and lengths are known on coarser partitions
     let margin_a = lf_domain.get_margin(&HashSet::from(["A".into()]));
-    assert_eq!(margin_a.public_info, Some(MarginPub::Lengths));
+    assert_eq!(margin_a.invariant, Some(Invariant::Lengths));
     Ok(())
 }
 

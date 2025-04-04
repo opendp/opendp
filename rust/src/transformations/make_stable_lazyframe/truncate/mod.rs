@@ -1,18 +1,27 @@
 use std::collections::HashSet;
 
 use crate::core::{Function, StabilityMap, Transformation};
-use crate::domains::DslPlanDomain;
+use crate::domains::{
+    Context, DslPlanDomain, FrameDomain, SeriesDomain, WildExprDomain, option_min,
+};
 use crate::error::*;
-use crate::metrics::{GroupBound, GroupBounds, Multi, SymmetricDistance, SymmetricIdDistance};
-use crate::polars::literal_value_of;
+use crate::metrics::{
+    Bound, Bounds, FrameDistance, PartitionDistance, SymmetricDistance, SymmetricIdDistance,
+};
 use crate::traits::InfMul;
+use crate::transformations::make_stable_expr;
+use matching::TruncatePlan;
 use polars::prelude::*;
-use polars_plan::prelude::{ApplyOptions, FunctionOptions};
+use polars_plan::prelude::GroupbyOptions;
 
 use super::StableDslPlan;
+use super::group_by::assert_infallible;
 
 #[cfg(test)]
 mod test;
+
+mod matching;
+pub(crate) use matching::match_truncations;
 
 /// Transformation for creating a stable LazyFrame truncation.
 ///
@@ -22,156 +31,146 @@ mod test;
 /// * `plan` - The LazyFrame to transform.
 pub fn make_stable_truncate(
     input_domain: DslPlanDomain,
-    input_metric: Multi<SymmetricIdDistance>,
+    input_metric: FrameDistance<SymmetricIdDistance>,
     plan: DslPlan,
 ) -> Fallible<
     Transformation<
         DslPlanDomain,
         DslPlanDomain,
-        Multi<SymmetricIdDistance>,
-        Multi<SymmetricDistance>,
+        FrameDistance<SymmetricIdDistance>,
+        FrameDistance<SymmetricDistance>,
     >,
 > {
-    let DslPlan::Filter { input, predicate } = plan else {
-        return fallible!(MakeTransformation, "Expected filter in logical plan");
+    // the identifier is protected from changes, so we can use the identifier from the input metric
+    // instead of the identifier from the middle_metric to match truncations
+    let (input, truncations) = match_truncations(plan, &input_metric.0.identifier);
+
+    if truncations.is_empty() {
+        return fallible!(MakeTransformation, "failed to match truncation");
     };
 
-    let t_prior = input
-        .as_ref()
-        .clone()
-        .make_stable(input_domain, input_metric)?;
-    let (middle_domain, middle_metric): (_, Multi<SymmetricIdDistance>) = t_prior.output_space();
+    let t_prior = input.make_stable(input_domain, input_metric)?;
+    let (middle_domain, middle_metric): (_, FrameDistance<SymmetricIdDistance>) =
+        t_prior.output_space();
 
-    let Some((over, threshold)) = match_truncate(&predicate, &middle_metric.0.identifier) else {
-        return fallible!(MakeTransformation, "Expected truncation in logical plan");
-    };
+    let output_domain =
+        truncations
+            .iter()
+            .try_fold(middle_domain.clone(), |mut domain, truncation| {
+                match &truncation.plan {
+                    TruncatePlan::Filter(_) => {
+                        domain.margins.iter_mut().for_each(|m| {
+                            // After filtering you no longer know partition lengths or keys.
+                            m.invariant = None;
+                        });
+                        Ok(domain)
+                    }
+                    TruncatePlan::GroupBy { keys, aggs } => {
+                        // each key expression must be stable row by row
+                        keys.iter().try_for_each(|key| {
+                            make_stable_expr::<_, PartitionDistance<SymmetricIdDistance>>(
+                                WildExprDomain {
+                                    columns: middle_domain.series_domains.clone(),
+                                    context: Context::RowByRow,
+                                },
+                                PartitionDistance(middle_metric.0.clone()),
+                                key.clone(),
+                            )
+                            .map(|_| ())
+                        })?;
 
-    let mut output_domain = middle_domain.clone();
+                        // each agg expression must be infallible. True means resize is allowed
+                        aggs.iter().try_for_each(|e| assert_infallible(e, true))?;
 
-    output_domain.margins.iter_mut().for_each(|m| {
-        // After filtering you no longer know partition lengths or keys.
-        m.public_info = None;
-    });
-
-    t_prior
-        >> Transformation::new(
-            middle_domain,
-            output_domain,
-            Function::new_fallible(move |plan: &DslPlan| {
-                Ok(DslPlan::Filter {
-                    input: Arc::new(plan.clone()),
-                    predicate: predicate.clone(),
-                })
-            }),
-            middle_metric.clone(),
-            Multi(SymmetricDistance),
-            StabilityMap::new_fallible(move |d_in: &GroupBounds| {
-                // once truncated, max partition contributions when grouped by "over" are bounded
-                let bound = d_in.get_bound(&over);
-                let mut new_bound = GroupBound::by(&over.iter().cloned().collect::<Vec<_>>());
-                if let Some(mpc) = bound.max_partition_contributions {
-                    new_bound =
-                        new_bound.with_max_partition_contributions(mpc.inf_mul(&threshold)?);
-                } else {
-                    // if the bound is not set, we can't do anything
-                    return fallible!(
-                        FailedMap,
-                        "ID contributions to grouping ({over:?}) are not bounded."
-                    );
+                        // derive new output domain
+                        FrameDomain::new_with_margins(
+                            domain
+                                .simulate_schema(|lf| lf.group_by(&keys).agg(&aggs))?
+                                .iter_fields()
+                                .map(SeriesDomain::new_from_field)
+                                .collect::<Fallible<_>>()?,
+                            domain
+                                .margins
+                                .into_iter()
+                                // only keep margins that are a subset of the truncation keys
+                                .filter(|m| m.by.is_subset(&HashSet::from_iter(keys.clone())))
+                                // discard invariants as multiverses are mixed
+                                .map(|mut m| {
+                                    m.invariant = None;
+                                    m
+                                })
+                                .collect(),
+                        )
+                    }
                 }
+            })?;
 
-                // truncation does not affect max influenced partitions
-                if let Some(mip) = bound.max_influenced_partitions {
-                    new_bound = new_bound.with_max_influenced_partitions(mip);
-                }
-                Ok(GroupBounds(vec![new_bound]))
-            }),
-        )?
-}
-
-pub(crate) fn match_truncate(predicate: &Expr, identifier: &Expr) -> Option<(HashSet<Expr>, u32)> {
-    let Expr::BinaryExpr { left, op, right } = predicate else {
-        return None;
-    };
-
-    let (over, threshold) = match op {
-        Operator::Lt => (left, literal_value_of::<u32>(&right).ok()??),
-        Operator::LtEq => (left, literal_value_of::<u32>(&right).ok()?? + 1),
-        Operator::Gt => (right, literal_value_of::<u32>(&left).ok()??),
-        Operator::GtEq => (right, literal_value_of::<u32>(&left).ok()?? + 1),
-        _ => return None,
-    };
-
-    let Expr::Window {
-        function,
-        partition_by,
-        order_by,
-        options,
-    } = &**over
-    else {
-        return None;
-    };
-
-    if !is_enumeration(&**function) || order_by.is_some() {
-        return None;
-    }
-
-    if !matches!(options, WindowType::Over(WindowMapping::GroupsToRows)) {
-        return None;
-    }
-
-    let (ids, other) = partition_by
+    let per_id_bounds = truncations
         .iter()
-        .cloned()
-        .partition::<HashSet<_>, _>(|expr| expr == identifier);
+        .flat_map(|truncation| truncation.bounds.clone())
+        .collect::<Vec<Bound>>();
 
-    if ids.is_empty() {
-        return None;
-    }
+    let t_truncate = Transformation::new(
+        middle_domain,
+        output_domain,
+        Function::new(move |plan: &DslPlan| {
+            truncations
+                .iter()
+                .fold(plan.clone(), |plan, truncation| match &truncation.plan {
+                    TruncatePlan::Filter(predicate) => DslPlan::Filter {
+                        input: Arc::new(plan.clone()),
+                        predicate: predicate.clone(),
+                    },
+                    TruncatePlan::GroupBy { keys, aggs } => DslPlan::GroupBy {
+                        input: Arc::new(plan),
+                        keys: keys.clone(),
+                        aggs: aggs.clone(),
+                        apply: None,
+                        maintain_order: false,
+                        options: Arc::new(GroupbyOptions::default()),
+                    },
+                })
+        }),
+        middle_metric.clone(),
+        FrameDistance(SymmetricDistance),
+        StabilityMap::new_fallible(move |d_in: &Bounds| {
+            let total_num_ids = d_in.get_bound(&Default::default()).per_group;
 
-    Some((other, threshold))
-}
+            let new_bounds = (per_id_bounds.iter())
+                .map(|per_id_bound| {
+                    let Bound {
+                        by,
+                        per_group: rows_per_id,
+                        num_groups: groups_per_id,
+                    } = per_id_bound.clone();
+                    let Bound {
+                        by,
+                        per_group: num_ids_per_partition,
+                        num_groups: num_groups_via_bound,
+                    } = d_in.get_bound(&by);
 
-fn is_enumeration(expr: &Expr) -> bool {
-    let expr = ignore_reorder(expr);
-    expr.eq(&int_range(lit(0), len(), 1, DataType::Int64))
-}
+                    // once truncated, max partition contributions when grouped by "over" are bounded
+                    let mut new_bound = Bound::by(&by.iter().cloned().collect::<Vec<_>>());
 
-fn ignore_reorder(expr: &Expr) -> &Expr {
-    let Expr::Function {
-        input,
-        function,
-        options,
-    } = expr
-    else {
-        return expr;
-    };
+                    if let Some((per_id, num_ids)) = rows_per_id.zip(num_ids_per_partition) {
+                        new_bound = new_bound.with_per_group(per_id.inf_mul(&num_ids)?);
+                    }
 
-    if options
-        != &(FunctionOptions {
-            collect_groups: ApplyOptions::GroupWise,
-            ..Default::default()
-        })
-    {
-        return expr;
-    }
+                    let num_groups_via_truncation = groups_per_id
+                        .zip(total_num_ids)
+                        .map(|(per_id, num_ids)| per_id.inf_mul(&num_ids))
+                        .transpose()?;
 
-    match function {
-        FunctionExpr::Reverse => (),
-        FunctionExpr::Random { method, .. } => {
-            // since method is not public, we can't match on the enum directly.
-            // however, we can convert it to a string and match on that.
-            let method: &'static str = method.into();
-            if method != "Shuffle" {
-                return expr;
-            }
-        }
-        _ => return expr,
-    }
-
-    let Ok([first_input]) = <&[_; 1]>::try_from(input.as_slice()) else {
-        return expr;
-    };
-
-    first_input
+                    if let Some(num_groups) =
+                        option_min(num_groups_via_truncation, num_groups_via_bound)
+                    {
+                        new_bound = new_bound.with_num_groups(num_groups);
+                    }
+                    Ok(new_bound)
+                })
+                .collect::<Fallible<Vec<Bound>>>()?;
+            Ok(Bounds(new_bounds))
+        }),
+    )?;
+    t_prior >> t_truncate
 }

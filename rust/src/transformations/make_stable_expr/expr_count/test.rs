@@ -2,7 +2,7 @@ use super::*;
 
 use crate::{
     domains::{LazyFrameDomain, Margin, OptionDomain},
-    metrics::{InsertDeleteDistance, L1Distance, L2Distance, Multi, SymmetricDistance},
+    metrics::{FrameDistance, InsertDeleteDistance, L1Distance, L2Distance, SymmetricDistance},
 };
 
 use polars::{
@@ -116,8 +116,8 @@ fn test_select_make_expr_count_row_by_row() -> Fallible<()> {
     assert!(
         col("data")
             .count()
-            .make_stable(expr_domain, Multi(InsertDeleteDistance))
-            .map(|_: Transformation<_, _, _, Multi<InsertDeleteDistance>>| ())
+            .make_stable(expr_domain, FrameDistance(InsertDeleteDistance))
+            .map(|_: Transformation<_, _, _, FrameDistance<InsertDeleteDistance>>| ())
             .is_err()
     );
 
@@ -125,11 +125,11 @@ fn test_select_make_expr_count_row_by_row() -> Fallible<()> {
 }
 
 #[test]
-fn test_expr_count_public_info() -> Fallible<()> {
+fn test_expr_count_invariant() -> Fallible<()> {
     // this transformation should refuse to build in a row-by-row context like `with_columns`
     let series_domain = SeriesDomain::new("data", AtomDomain::<i32>::default());
     let lf_domain = LazyFrameDomain::new(vec![series_domain])?
-        .with_margin(Margin::select().with_public_lengths())?;
+        .with_margin(Margin::select().with_invariant_lengths())?;
 
     let t_count: Transformation<_, _, _, L2Distance<f64>> = col("data").count().make_stable(
         lf_domain.clone().select(),
