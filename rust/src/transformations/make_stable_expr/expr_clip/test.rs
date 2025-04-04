@@ -1,5 +1,5 @@
 use crate::domains::AtomDomain;
-use crate::metrics::{Multi, SymmetricDistance};
+use crate::metrics::{FrameDistance, SymmetricDistance};
 use crate::transformations::test_helper::get_test_data;
 
 use super::*;
@@ -12,7 +12,7 @@ fn test_make_expr_clip() -> Fallible<()> {
 
     let t_clip = expected
         .clone()
-        .make_stable(lf_domain.clone().select(), Multi(SymmetricDistance))?;
+        .make_stable(lf_domain.clone().select(), FrameDistance(SymmetricDistance))?;
     let actual = t_clip.invoke(&lf.logical_plan)?.expr;
 
     assert_eq!(expected, actual);
