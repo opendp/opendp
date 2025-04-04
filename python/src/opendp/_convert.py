@@ -8,7 +8,7 @@ from opendp.mod import (
     ExtrinsicDomain,
     LazyFrameDomain,
     Metric,
-    MultiDistance,
+    FrameDistance,
     SeriesDomain,
     SymmetricIdDistance,
     UnknownTypeException,
@@ -232,13 +232,14 @@ def c_to_py(value: Any) -> Any:
         rt_type = RuntimeType.parse(metric_type(value))
 
         if isinstance(rt_type, RuntimeType):
-            if rt_type.origin == "Multi":
-                value = ctypes.cast(value, MultiDistance)
+            if rt_type.origin == "FrameDistance":
+                value.__class__ = FrameDistance
         else:
             if rt_type == "SymmetricIdDistance":
-                value = ctypes.cast(value, SymmetricIdDistance)
+                value.__class__ = SymmetricIdDistance
             elif rt_type == "ChangeOneIdDistance":
-                value = ctypes.cast(value, ChangeOneIdDistance)
+                value.__class__ = ChangeOneIdDistance
+        # if you fall through these cases, then it is just treated as a generic Metric
 
     if isinstance(value, ctypes.c_void_p):
         # returned void pointers are interpreted as None
@@ -285,14 +286,14 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
         if type_name == "ExprPlan":
             return _slice_to_exprplan(raw)
 
-        if type_name == "GroupBound":
+        if type_name == "Bound":
             return _slice_to_group_bound(raw)
         
         if type_name == "Margin":
             return _slice_to_margin(raw)
         
-        if type_name == "GroupBounds":
-            return _slice_to_vector(raw, RuntimeType("Vec", ["GroupBound"]))
+        if type_name == "Bounds":
+            return _slice_to_vector(raw, RuntimeType("Vec", ["Bound"]))
 
         if type_name == "AnyObject":
             return _slice_to_anyobject(raw)
@@ -356,11 +357,11 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
         if type_name == "Expr":
             return _expr_to_slice(value)
 
-        if type_name == "GroupBound":
-            return _group_bound_to_slice(value)
+        if type_name == "Bound":
+            return _bound_to_slice(value)
         
-        if type_name == "GroupBounds":
-            return _vector_to_slice(value, RuntimeType("Vec", ["GroupBound"]))
+        if type_name == "Bounds":
+            return _vector_to_slice(value, RuntimeType("Vec", ["Bound"]))
 
     if isinstance(type_name, RuntimeType):
         if type_name.origin == "Vec":
@@ -456,7 +457,7 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
 
     inner_type_name = type_name.args[0]
 
-    if isinstance(inner_type_name, RuntimeType) or inner_type_name in {"Expr", "GroupBound"}:
+    if isinstance(inner_type_name, RuntimeType) or inner_type_name in {"Expr", "Bound"}:
         c_repr = [py_to_c(v, c_type=AnyObjectPtr, type_name=inner_type_name) for v in val]
         array = (AnyObjectPtr * len(val))(*c_repr) # type: ignore[operator]
         ffislice = _wrap_in_slice(array, len(val))
@@ -499,7 +500,7 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> Sequence[Any]:
 
     inner_type_name = type_name.args[0]
 
-    if inner_type_name in {'AnyObject', 'Expr', 'GroupBound'}:
+    if inner_type_name in {'AnyObject', 'Expr', 'Bound'}:
         from opendp._data import ffislice_of_anyobjectptrs
         raw = ffislice_of_anyobjectptrs(raw)
         array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyObjectPtr))[0:raw.contents.len]
@@ -711,12 +712,12 @@ def _slice_to_margin(raw: FfiSlicePtr):
     void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
     ptr_data: list[ctypes.c_void_p] = void_array_ptr[0: raw.contents.len]
 
-    public_info = ctypes.cast(ptr_data[3], ctypes.c_char_p)
+    invariant = ctypes.cast(ptr_data[3], ctypes.c_char_p)
     return Margin(
         by=c_to_py(ctypes.cast(ptr_data[0], AnyObjectPtr)),
-        max_partition_length=_from_optional_u32_void_ptr(ptr_data[1]),
-        max_num_partitions=_from_optional_u32_void_ptr(ptr_data[2]),
-        public_info=public_info.value.decode() if public_info.value else None, # type: ignore[arg-type]
+        max_length=_from_optional_u32_void_ptr(ptr_data[1]),
+        max_groups=_from_optional_u32_void_ptr(ptr_data[2]),
+        invariant=invariant.value.decode() if invariant.value else None, # type: ignore[arg-type]
     )
 
 def _check_polars_by(by):
@@ -734,41 +735,41 @@ def _margin_to_slice(val) -> FfiSlicePtr:
     _check_polars_by(val.by)
     by = ctypes.cast(py_to_c(val.by, c_type=AnyObjectPtr, type_name="Vec<Expr>"), ctypes.c_void_p)
 
-    mpl = _to_optional_u32_void_ptr(val.max_partition_length)
-    mnp = _to_optional_u32_void_ptr(val.max_num_partitions)
+    max_length = _to_optional_u32_void_ptr(val.max_length)
+    max_groups = _to_optional_u32_void_ptr(val.max_groups)
 
     def str_to_nullptr(s):
         return ctypes.cast(ctypes.c_char_p(s.encode()), ctypes.c_void_p)
 
-    public_info = str_to_nullptr(val.public_info) if val.public_info else None
+    invariant = str_to_nullptr(val.invariant) if val.invariant else None
 
-    array = (ctypes.c_void_p * 4)(by, mpl, mnp, public_info)
+    array = (ctypes.c_void_p * 4)(by, max_length, max_groups, invariant)
     return _wrap_in_slice(ctypes.pointer(array), 4)
 
 def _slice_to_group_bound(raw: FfiSlicePtr):
-    from opendp.extras.polars import GroupBound
+    from opendp.extras.polars import Bound
 
     void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
     ptr_data: list[ctypes.c_void_p] = void_array_ptr[0: raw.contents.len]
 
-    return GroupBound(
+    return Bound(
         by=c_to_py(ctypes.cast(ptr_data[0], AnyObjectPtr)),
-        max_partition_contributions=_from_optional_u32_void_ptr(ptr_data[1]),
-        max_influenced_partitions=_from_optional_u32_void_ptr(ptr_data[2]),
+        per_group=_from_optional_u32_void_ptr(ptr_data[1]),
+        num_groups=_from_optional_u32_void_ptr(ptr_data[2]),
     )
 
 
-def _group_bound_to_slice(val) -> FfiSlicePtr:
-    from opendp.extras.polars import GroupBound
-    assert isinstance(val, GroupBound)
-    
+def _bound_to_slice(val) -> FfiSlicePtr:
+    from opendp.extras.polars import Bound
+    assert isinstance(val, Bound)
+
     _check_polars_by(val.by)
     by = ctypes.cast(py_to_c(val.by, c_type=AnyObjectPtr, type_name="Vec<Expr>"), ctypes.c_void_p)
 
-    mip = _to_optional_u32_void_ptr(val.max_influenced_partitions)
-    mpc = _to_optional_u32_void_ptr(val.max_partition_contributions)
+    num_groups = _to_optional_u32_void_ptr(val.num_groups)
+    per_group = _to_optional_u32_void_ptr(val.per_group)
 
-    array = (ctypes.c_void_p * 3)(by, mpc, mip)
+    array = (ctypes.c_void_p * 3)(by, per_group, num_groups)
     return _wrap_in_slice(ctypes.pointer(array), 3)
 
 

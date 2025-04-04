@@ -4,7 +4,7 @@ use polars_plan::dsl::lit;
 use crate::{
     measurements::{PrivateExpr, make_private_lazyframe},
     measures::MaxDivergence,
-    metrics::{Multi, PartitionDistance, SymmetricDistance},
+    metrics::{FrameDistance, PartitionDistance, SymmetricDistance},
     transformations::test_helper::get_test_data,
 };
 
@@ -33,7 +33,7 @@ fn test_make_expr_private_lit_groupby() -> Fallible<()> {
 
     let m_lit = make_private_lazyframe(
         lf_domain.cast_carrier(),
-        Multi(SymmetricDistance),
+        FrameDistance(SymmetricDistance),
         MaxDivergence,
         lf.clone().group_by(["chunk_2_bool"]).agg([lit(1)]),
         None,

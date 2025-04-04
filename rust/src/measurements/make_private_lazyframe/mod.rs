@@ -9,10 +9,12 @@ use std::fmt::Debug;
 use crate::{
     combinators::{BasicCompositionMeasure, make_approximate},
     core::{Function, Measure, Measurement, Metric, MetricSpace, StabilityMap, Transformation},
-    domains::{DslPlanDomain, LazyFrameDomain, Margin, MarginPub},
+    domains::{DslPlanDomain, Invariant, LazyFrameDomain, Margin},
     error::Fallible,
     measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
-    metrics::{ChangeOneDistance, ChangeOneIdDistance, HammingDistance, Multi, PartitionDistance},
+    metrics::{
+        ChangeOneDistance, ChangeOneIdDistance, FrameDistance, HammingDistance, PartitionDistance,
+    },
     polars::{OnceFrame, get_disabled_features_message},
     transformations::{
         StableDslPlan,
@@ -37,19 +39,19 @@ mod select;
 
 fn make_private_aggregation<MI, MO>(
     input_domain: DslPlanDomain,
-    input_metric: Multi<MI>,
+    input_metric: FrameDistance<MI>,
     output_measure: MO,
     plan: DslPlan,
     global_scale: Option<f64>,
     threshold: Option<u32>,
-) -> Fallible<Measurement<DslPlanDomain, DslPlan, Multi<MI>, MO>>
+) -> Fallible<Measurement<DslPlanDomain, DslPlan, FrameDistance<MI>, MO>>
 where
     MI: 'static + UnboundedMetric,
     MI::EventMetric: UnboundedMetric,
     MO: 'static + ApproximateMeasure,
     MO::Distance: Debug,
     Expr: PrivateExpr<PartitionDistance<MI::EventMetric>, MO>,
-    DslPlan: StableDslPlan<Multi<MI>, Multi<MI::EventMetric>>,
+    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
 {
     #[cfg(feature = "contrib")]
     if group_by::match_group_by(plan.clone())?.is_some() {
@@ -150,21 +152,21 @@ pub trait PrivateDslPlan<MI: Metric, MO: Measure> {
 
 const SORT_ERR_MSG: &'static str = "Found sort in query plan. To conceal row ordering in the original dataset, the output dataset is shuffled. Therefore, sorting the data before release (that shuffles) is wasted computation.";
 
-impl<MI> PrivateDslPlan<Multi<MI>, MaxDivergence> for DslPlan
+impl<MI> PrivateDslPlan<FrameDistance<MI>, MaxDivergence> for DslPlan
 where
     MI: UnboundedMetric,
     MI::EventMetric: UnboundedMetric,
-    DslPlan: StableDslPlan<Multi<MI>, Multi<MI::EventMetric>>,
-    (DslPlanDomain, Multi<MI>): MetricSpace,
+    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
+    (DslPlanDomain, FrameDistance<MI>): MetricSpace,
 {
     fn make_private(
         self,
         input_domain: DslPlanDomain,
-        input_metric: Multi<MI>,
+        input_metric: FrameDistance<MI>,
         output_measure: MaxDivergence,
         global_scale: Option<f64>,
         threshold: Option<u32>,
-    ) -> Fallible<Measurement<DslPlanDomain, DslPlan, Multi<MI>, MaxDivergence>> {
+    ) -> Fallible<Measurement<DslPlanDomain, DslPlan, FrameDistance<MI>, MaxDivergence>> {
         if matches!(self, DslPlan::Sort { .. }) {
             return fallible!(MakeMeasurement, "{}", SORT_ERR_MSG);
         }
@@ -191,20 +193,21 @@ where
     }
 }
 
-impl<MI> PrivateDslPlan<Multi<MI>, ZeroConcentratedDivergence> for DslPlan
+impl<MI> PrivateDslPlan<FrameDistance<MI>, ZeroConcentratedDivergence> for DslPlan
 where
     MI: UnboundedMetric,
     MI::EventMetric: UnboundedMetric,
-    DslPlan: StableDslPlan<Multi<MI>, Multi<MI::EventMetric>>,
+    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
 {
     fn make_private(
         self,
         input_domain: DslPlanDomain,
-        input_metric: Multi<MI>,
+        input_metric: FrameDistance<MI>,
         output_measure: ZeroConcentratedDivergence,
         global_scale: Option<f64>,
         threshold: Option<u32>,
-    ) -> Fallible<Measurement<DslPlanDomain, DslPlan, Multi<MI>, ZeroConcentratedDivergence>> {
+    ) -> Fallible<Measurement<DslPlanDomain, DslPlan, FrameDistance<MI>, ZeroConcentratedDivergence>>
+    {
         if matches!(self, DslPlan::Sort { .. }) {
             return fallible!(MakeMeasurement, "{}", SORT_ERR_MSG);
         }
@@ -231,7 +234,7 @@ where
     }
 }
 
-impl<MI, MO> PrivateDslPlan<Multi<MI>, Approximate<MO>> for DslPlan
+impl<MI, MO> PrivateDslPlan<FrameDistance<MI>, Approximate<MO>> for DslPlan
 where
     MI: UnboundedMetric,
     MI::EventMetric: UnboundedMetric,
@@ -239,23 +242,23 @@ where
     Approximate<MO>: 'static + ApproximateMeasure,
     <Approximate<MO> as Measure>::Distance: Debug,
     Expr: PrivateExpr<PartitionDistance<MI::EventMetric>, Approximate<MO>>,
-    DslPlan: StableDslPlan<Multi<MI>, Multi<MI::EventMetric>>
-        + PrivateDslPlan<Multi<MI::EventMetric>, MO>
-        + PrivateDslPlan<Multi<MI>, MO>,
+    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>
+        + PrivateDslPlan<FrameDistance<MI::EventMetric>, MO>
+        + PrivateDslPlan<FrameDistance<MI>, MO>,
 {
     fn make_private(
         self,
         input_domain: DslPlanDomain,
-        input_metric: Multi<MI>,
+        input_metric: FrameDistance<MI>,
         output_measure: Approximate<MO>,
         global_scale: Option<f64>,
         threshold: Option<u32>,
-    ) -> Fallible<Measurement<DslPlanDomain, DslPlan, Multi<MI>, Approximate<MO>>> {
+    ) -> Fallible<Measurement<DslPlanDomain, DslPlan, FrameDistance<MI>, Approximate<MO>>> {
         if matches!(self, DslPlan::Sort { .. }) {
             return fallible!(MakeMeasurement, "{}", SORT_ERR_MSG);
         }
 
-        if let Some(meas) = postprocess::match_postprocess::<Multi<MI>, Approximate<MO>>(
+        if let Some(meas) = postprocess::match_postprocess::<FrameDistance<MI>, Approximate<MO>>(
             input_domain.clone(),
             input_metric.clone(),
             output_measure.clone(),
@@ -291,7 +294,7 @@ impl<MI, MO> PrivateDslPlan<MI, MO> for DslPlan
 where
     MI: 'static + UnboundedMetric,
     MO: 'static + Measure,
-    DslPlan: PrivateDslPlan<Multi<MI>, MO>,
+    DslPlan: PrivateDslPlan<FrameDistance<MI>, MO>,
 {
     fn make_private(
         self,
@@ -306,11 +309,11 @@ where
             input_domain.clone(),
             Function::new(Clone::clone),
             input_metric.clone(),
-            Multi(input_metric.clone()),
+            FrameDistance(input_metric.clone()),
             StabilityMap::new(|&d_in: &u32| d_in.into()),
         ) >> self.make_private(
             input_domain,
-            Multi(input_metric),
+            FrameDistance(input_metric),
             output_measure,
             global_scale,
             threshold,
@@ -338,11 +341,11 @@ macro_rules! impl_plan_bounded_dp {
                     .iter_mut()
                     .find(|m| m.by == HashSet::new())
                 {
-                    prev_margin.public_info = Some(MarginPub::Lengths);
+                    prev_margin.invariant = Some(Invariant::Lengths);
                 } else {
                     middle_domain
                         .margins
-                        .push(Margin::select().with_public_lengths());
+                        .push(Margin::select().with_invariant_lengths());
                 }
                 let middle_metric = input_metric.to_unbounded();
 

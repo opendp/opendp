@@ -14,11 +14,11 @@ fn test_filter() -> Fallible<()> {
         "chunk_2_null",
         OptionDomain::new(AtomDomain::<i64>::default()),
     )])?
-    .with_margin(Margin::by(["chunk_2_null"]).with_public_keys())?;
+    .with_margin(Margin::by(["chunk_2_null"]).with_invariant_keys())?;
 
     let t_filter = make_stable_lazyframe(
         lf_domain.clone(),
-        Multi(SymmetricDistance),
+        FrameDistance(SymmetricDistance),
         lf.clone().filter(col("chunk_2_null").is_not_null()),
     )?;
 
@@ -30,7 +30,7 @@ fn test_filter() -> Fallible<()> {
             .output_domain
             .margins
             .iter()
-            .all(|m| { m.public_info.is_none() })
+            .all(|m| { m.invariant.is_none() })
     );
 
     Ok(())
@@ -44,11 +44,11 @@ fn test_filter_fail_with_non_bool_predicate() -> Fallible<()> {
         "chunk_2_null",
         OptionDomain::new(AtomDomain::<i64>::default()),
     )])?
-    .with_margin(Margin::by(["chunk_2_null"]).with_public_keys())?;
+    .with_margin(Margin::by(["chunk_2_null"]).with_invariant_keys())?;
 
     let variant = make_stable_lazyframe(
         lf_domain.clone(),
-        Multi(SymmetricDistance),
+        FrameDistance(SymmetricDistance),
         lf.clone().filter(col("chunk_2_null").fill_nan(0)),
     )
     .map(|_| ())

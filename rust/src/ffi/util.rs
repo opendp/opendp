@@ -23,7 +23,7 @@ use crate::metrics::{
 };
 
 #[cfg(feature = "polars")]
-use crate::metrics::{ChangeOneIdDistance, GroupBound, GroupBounds, Multi, SymmetricIdDistance};
+use crate::metrics::{Bound, Bounds, ChangeOneIdDistance, FrameDistance, SymmetricIdDistance};
 
 #[cfg(feature = "polars")]
 use crate::polars::{OnceFrame, OnceFrameAnswer, OnceFrameQuery};
@@ -315,11 +315,11 @@ lazy_static! {
 
             // metrics
             type_vec![SymmetricIdDistance, ChangeOneIdDistance],
-            type_vec![Multi, <SymmetricDistance, InsertDeleteDistance, SymmetricIdDistance>],
+            type_vec![FrameDistance, <SymmetricDistance, InsertDeleteDistance, SymmetricIdDistance>],
 
             // metric distances
-            type_vec![GroupBound, GroupBounds],
-            type_vec![Vec, <GroupBound>],
+            type_vec![Bound, Bounds],
+            type_vec![Vec, <Bound>],
 
             vec![t!((DslPlan, Expr))],
             type_vec![Vec, <(DslPlan, Expr), SeriesDomain, Expr>],

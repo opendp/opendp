@@ -1,5 +1,5 @@
 use crate::domains::{AtomDomain, LazyFrameDomain, SeriesDomain};
-use crate::metrics::{Multi, SymmetricDistance};
+use crate::metrics::{FrameDistance, SymmetricDistance};
 use crate::transformations::make_stable_lazyframe;
 
 use super::*;
@@ -13,7 +13,7 @@ fn test_expr_cut() -> Fallible<()> {
     let expr = col("data").cut(vec![-1.0, 1.0], None::<Vec<String>>, false, false);
     let t_cut = make_stable_lazyframe(
         lf_domain,
-        Multi(SymmetricDistance),
+        FrameDistance(SymmetricDistance),
         lf.clone().with_column(expr),
     )?;
 

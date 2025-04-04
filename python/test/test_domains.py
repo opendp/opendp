@@ -54,35 +54,36 @@ def test_lazyframe_domain_series():
 def test_lazyframe_domain_margins():
     import_optional_dependency("polars")
     atom_domain = dp.atom_domain(bounds=(1.0, 2.0), nan=True)
-    series_domain = dp.series_domain("A", atom_domain)
+    series_domain_a = dp.series_domain("A", atom_domain)
+    series_domain_b = dp.series_domain("B", atom_domain)
     frame_domain = dp.with_margin(
-        dp.lazyframe_domain([series_domain]),
+        dp.lazyframe_domain([series_domain_a, series_domain_b]),
         dp.polars.Margin(
             by=["A"],
-            max_num_partitions=20,
-            max_partition_length=1000,
-            public_info="keys"
+            max_groups=20,
+            max_length=1000,
+            invariant="keys"
         ),
     )
-    assert frame_domain.get_series_domain("A") == series_domain
+    assert frame_domain.get_series_domain("A") == series_domain_a
 
     # for coverage
     assert dp.polars.Margin(by=[]) != "not a margin"
     assert dp.polars.Margin(by=[]) != dp.polars.Margin(by=["A"])
     assert frame_domain.get_margin([]) == dp.polars.Margin(
-        by=[], max_num_partitions=1, public_info="keys"
+        by=[], max_groups=1, invariant="keys"
     )
 
     assert frame_domain.get_margin(["A"]) == dp.polars.Margin(
         by=["A"],
-        max_num_partitions=20,
-        max_partition_length=1000,
-        public_info="keys",
+        max_groups=20,
+        max_length=1000,
+        invariant="keys",
     )
 
     assert frame_domain.get_margin(["A", "B"]) == dp.polars.Margin(
         by=["A", "B"],
-        max_partition_length=1000,
+        max_length=1000,
     )
 
     # now add a margin for column B
@@ -90,16 +91,16 @@ def test_lazyframe_domain_margins():
         frame_domain,
         Margin(
             by=["B"],
-            max_num_partitions=20,
-            max_partition_length=500,
-            public_info="keys"
+            max_groups=20,
+            max_length=500,
+            invariant="keys"
         ),
     )
 
     assert frame_domain.get_margin(["A", "B"]) == dp.polars.Margin(
         by=["A", "B"],
-        max_partition_length=500,  # from B
-        max_num_partitions=400, # 20 * 20
+        max_length=500,  # from B
+        max_groups=400, # 20 * 20
     )
 
     with pytest.raises(ValueError, match="must be a sequence type; Did you mean [\"A\"]?"):

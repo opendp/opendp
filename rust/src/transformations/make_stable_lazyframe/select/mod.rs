@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
-use crate::metrics::Multi;
+use crate::metrics::FrameDistance;
 use crate::transformations::StableExpr;
 use crate::transformations::traits::UnboundedMetric;
 use polars::prelude::*;
@@ -23,11 +23,11 @@ pub fn make_select<MI: 'static + Metric, MO: UnboundedMetric>(
     input_domain: DslPlanDomain,
     input_metric: MI,
     plan: DslPlan,
-) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, MI, Multi<MO>>>
+) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, MI, FrameDistance<MO>>>
 where
-    DslPlan: StableDslPlan<MI, Multi<MO>>,
+    DslPlan: StableDslPlan<MI, FrameDistance<MO>>,
     (DslPlanDomain, MI): MetricSpace,
-    (DslPlanDomain, Multi<MO>): MetricSpace,
+    (DslPlanDomain, FrameDistance<MO>): MetricSpace,
 {
     let DslPlan::Select {
         input,

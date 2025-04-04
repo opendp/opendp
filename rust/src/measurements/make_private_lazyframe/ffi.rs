@@ -12,8 +12,8 @@ use crate::{
     measurements::PrivateDslPlan,
     measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
     metrics::{
-        ChangeOneDistance, ChangeOneIdDistance, HammingDistance, InsertDeleteDistance, Multi,
-        SymmetricDistance, SymmetricIdDistance,
+        ChangeOneDistance, ChangeOneIdDistance, FrameDistance, HammingDistance,
+        InsertDeleteDistance, SymmetricDistance, SymmetricIdDistance,
     },
 };
 
@@ -82,7 +82,7 @@ pub extern "C" fn opendp_measurements__make_private_lazyframe(
             (MI_, [
                 SymmetricDistance, SymmetricIdDistance, InsertDeleteDistance,
                 ChangeOneDistance, HammingDistance, ChangeOneIdDistance,
-                Multi<SymmetricDistance>, Multi<SymmetricIdDistance>, Multi<InsertDeleteDistance>
+                FrameDistance<SymmetricDistance>, FrameDistance<SymmetricIdDistance>, FrameDistance<InsertDeleteDistance>
             ]),
             (MO_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>])],
         (

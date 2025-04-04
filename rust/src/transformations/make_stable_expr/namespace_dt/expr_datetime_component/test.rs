@@ -3,7 +3,7 @@ use std::str::FromStr;
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 
 use crate::domains::{AtomDomain, DatetimeDomain, LazyFrameDomain, SeriesDomain};
-use crate::metrics::{Multi, SymmetricDistance};
+use crate::metrics::{FrameDistance, SymmetricDistance};
 use crate::transformations::make_stable_lazyframe;
 
 use super::*;
@@ -35,7 +35,7 @@ fn test_make_expr_components() -> Fallible<()> {
         col("datetime").dt().ordinal_day().alias("datetime-day"),
         col("date").dt().quarter().alias("date-quarter"),
     ]);
-    let t_components = make_stable_lazyframe(lf_domain, Multi(SymmetricDistance), plan)?;
+    let t_components = make_stable_lazyframe(lf_domain, FrameDistance(SymmetricDistance), plan)?;
 
     let actual = t_components.invoke(&data)?.collect()?;
     let expected = r#"shape: (1, 6)

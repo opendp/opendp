@@ -4,7 +4,7 @@ use polars_plan::dsl::Expr;
 use crate::{
     combinators::{BasicCompositionMeasure, make_approximate},
     core::{Measure, Measurement, Metric, MetricSpace, Transformation},
-    domains::{Context, ExprDomain, ExprPlan, MarginPub, WildExprDomain},
+    domains::{Context, ExprDomain, ExprPlan, Invariant, WildExprDomain},
     error::Fallible,
     measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
     metrics::PartitionDistance,
@@ -230,9 +230,9 @@ pub(crate) fn approximate_c_stability<MI: UnboundedMetric, MO: Metric>(
         Context::Aggregation { margin, .. } => margin,
     };
 
-    let d_in = match margin.public_info {
+    let d_in = match margin.invariant {
         // smallest valid dataset distance is 2 in bounded-DP
-        Some(MarginPub::Lengths) => 2,
+        Some(Invariant::Lengths) => 2,
         _ => 1,
     };
     trans.map(&(margin.l_0(d_in), d_in, margin.l_inf(d_in)))

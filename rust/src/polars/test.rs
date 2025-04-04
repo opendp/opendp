@@ -18,7 +18,7 @@ fn test_dp_quantile() -> Fallible<()> {
         "A",
         AtomDomain::<f64>::new_non_nan(),
     )])?
-    .with_margin(Margin::select().with_max_partition_length(100))?;
+    .with_margin(Margin::select().with_max_length(100))?;
 
     let lf = df!("A" => [50f64; 100])?.lazy();
 

@@ -1,5 +1,5 @@
 use crate::domains::{AtomDomain, LazyFrameDomain, SeriesDomain};
-use crate::metrics::{Multi, SymmetricDistance};
+use crate::metrics::{FrameDistance, SymmetricDistance};
 use crate::transformations::make_stable_lazyframe;
 
 use super::*;
@@ -21,7 +21,7 @@ fn test_make_expr_cast_String() -> Fallible<()> {
         // Polars doesn't support casting a string to a boolean
         // col("String").cast(DataType::Boolean).alias("String_bool"),
     ]);
-    let t_casted = make_stable_lazyframe(lf_domain, Multi(SymmetricDistance), casted)?;
+    let t_casted = make_stable_lazyframe(lf_domain, FrameDistance(SymmetricDistance), casted)?;
 
     let actual = t_casted.invoke(&lf)?.collect()?;
     let expected = df!(
@@ -53,7 +53,7 @@ fn test_make_expr_cast_f64() -> Fallible<()> {
         col("f64").cast(DataType::Int64).alias("f64_i64"),
         col("f64").cast(DataType::Boolean).alias("f64_bool"),
     ]);
-    let t_casted = make_stable_lazyframe(lf_domain, Multi(SymmetricDistance), casted)?;
+    let t_casted = make_stable_lazyframe(lf_domain, FrameDistance(SymmetricDistance), casted)?;
 
     let actual = t_casted.invoke(&lf)?.collect()?;
     let expected = df!(
@@ -82,7 +82,7 @@ fn test_make_expr_cast_int() -> Fallible<()> {
         col("i64").cast(DataType::Float64).alias("i64_f64"),
         col("i64").cast(DataType::Boolean).alias("i64_bool"),
     ]);
-    let t_casted = make_stable_lazyframe(lf_domain, Multi(SymmetricDistance), casted)?;
+    let t_casted = make_stable_lazyframe(lf_domain, FrameDistance(SymmetricDistance), casted)?;
 
     let actual = t_casted.invoke(&lf)?.collect()?;
     let expected = df!(
@@ -112,7 +112,7 @@ fn test_make_expr_cast_bool() -> Fallible<()> {
         col("bool").cast(DataType::Float64).alias("bool_f64"),
         col("bool").cast(DataType::Int64).alias("bool_i64"),
     ]);
-    let t_casted = make_stable_lazyframe(lf_domain, Multi(SymmetricDistance), casted)?;
+    let t_casted = make_stable_lazyframe(lf_domain, FrameDistance(SymmetricDistance), casted)?;
 
     let actual = t_casted.invoke(&lf)?.collect()?;
     let expected = df!(

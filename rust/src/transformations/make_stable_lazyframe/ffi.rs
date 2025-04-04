@@ -9,8 +9,8 @@ use crate::{
         util::TypeContents,
     },
     metrics::{
-        ChangeOneDistance, ChangeOneIdDistance, HammingDistance, InsertDeleteDistance, Multi,
-        SymmetricDistance, SymmetricIdDistance,
+        ChangeOneDistance, ChangeOneIdDistance, FrameDistance, HammingDistance,
+        InsertDeleteDistance, SymmetricDistance, SymmetricIdDistance,
     },
     transformations::{
         StableDslPlan,
@@ -52,7 +52,7 @@ pub extern "C" fn opendp_transformations__make_stable_lazyframe(
         }
         dispatch!(
             monomorphize,
-            [(MI, [Multi<SymmetricDistance>, Multi<SymmetricIdDistance>, Multi<InsertDeleteDistance>])],
+            [(MI, [FrameDistance<SymmetricDistance>, FrameDistance<SymmetricIdDistance>, FrameDistance<InsertDeleteDistance>])],
             (
                 input_domain,
                 input_metric,
@@ -66,7 +66,7 @@ pub extern "C" fn opendp_transformations__make_stable_lazyframe(
             lazyframe: LazyFrame,
         ) -> Fallible<AnyTransformation>
         where
-            DslPlan: StableDslPlan<MI, Multi<MI>>,
+            DslPlan: StableDslPlan<MI, FrameDistance<MI>>,
         {
             let input_metric = input_metric.downcast_ref::<MI>()?.clone();
             make_stable_lazyframe(input_domain, input_metric, lazyframe).into_any()
@@ -87,7 +87,7 @@ pub extern "C" fn opendp_transformations__make_stable_lazyframe(
             lazyframe: LazyFrame,
         ) -> Fallible<AnyTransformation>
         where
-            DslPlan: StableDslPlan<MI, Multi<MI::UnboundedMetric>>,
+            DslPlan: StableDslPlan<MI, FrameDistance<MI::UnboundedMetric>>,
         {
             let input_metric = input_metric.downcast_ref::<MI>()?.clone();
             make_stable_lazyframe(input_domain, input_metric, lazyframe).into_any()
