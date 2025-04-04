@@ -1,5 +1,5 @@
 use crate::core::{StabilityMap, Transformation};
-use crate::domains::{Context, ExprDomain, Margin, MarginPub, WildExprDomain};
+use crate::domains::{Context, ExprDomain, Invariant, Margin, WildExprDomain};
 use crate::metrics::{LInfDistance, Parallel, PartitionDistance};
 use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
 use crate::traits::{InfCast, Number};
@@ -87,13 +87,13 @@ where
 
     let margin = middle_domain.context.aggregation("quantile")?;
 
-    let mpl = margin
-        .max_partition_length
-        .ok_or_else(|| err!(MakeTransformation, "Must know max_partition_length"))?;
+    let mgl = margin
+        .max_length
+        .ok_or_else(|| err!(MakeTransformation, "Must know max_length"))?;
 
     // alpha = alpha_num / alpha_den (numerator and denominator of alpha)
     let (alpha_num, alpha_den, size_limit) =
-        score_candidates_constants::<u64>(Some(mpl as u64), alpha)?;
+        score_candidates_constants::<u64>(Some(mgl as u64), alpha)?;
 
     let len = candidates.len() as i64;
     let fill_value = typed_lit(0u64).repeat_by(len).reshape(&[-1, len]);
@@ -108,7 +108,7 @@ where
         column: output_domain,
         context: Context::Aggregation {
             margin: Margin {
-                max_partition_length: Some(1),
+                max_length: Some(1),
                 ..margin
             },
         },
@@ -136,7 +136,7 @@ where
                 let out_li = f64::inf_cast(score_candidates_map(
                     alpha_num,
                     alpha_den,
-                    margin.public_info == Some(MarginPub::Lengths),
+                    margin.invariant == Some(Invariant::Lengths),
                 )(li)?)?;
                 Ok((*l0, out_li))
             }),

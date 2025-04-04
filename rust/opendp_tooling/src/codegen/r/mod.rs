@@ -64,12 +64,6 @@ const BLOCKLIST: &'static [&'static str] = &[
     "_lazyframe_domain_get_columns",
     "_lazyframe_domain_get_margin",
     "_lazyframe_domain_get_series_domain",
-    "_margin_get_by",
-    "_margin_get_max_partition_length",
-    "_margin_get_max_num_partitions",
-    "_margin_get_max_partition_contributions",
-    "_margin_get_max_influenced_partitions",
-    "_margin_get_public_info",
     "_lazyframe_from_domain",
     "with_margin",
     "wild_expr_domain",
@@ -84,8 +78,8 @@ const BLOCKLIST: &'static [&'static str] = &[
     "_change_one_id_distance_get_identifier",
     "symmetric_id_distance",
     "_symmetric_id_distance_get_identifier",
-    "multi_distance",
-    "_multi_distance_get_inner_metric",
+    "frame_distance",
+    "_frame_distance_get_inner_metric",
 ];
 
 /// Top-level function to generate R bindings, including all modules.

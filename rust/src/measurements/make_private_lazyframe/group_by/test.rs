@@ -20,7 +20,7 @@ fn test_aggregate() -> Fallible<()> {
         SeriesDomain::new("B", AtomDomain::<f64>::default()),
         SeriesDomain::new("C", AtomDomain::<i32>::default()),
     ])?
-    .with_margin(Margin::by(["A", "C"]).with_public_keys())?;
+    .with_margin(Margin::by(["A", "C"]).with_invariant_keys())?;
 
     let lf = df!(
         "A" => &[1i32, 2, 2],
@@ -30,7 +30,7 @@ fn test_aggregate() -> Fallible<()> {
 
     let error_variant_res = make_private_group_by::<_, _>(
         lf_domain,
-        Multi(SymmetricDistance),
+        FrameDistance(SymmetricDistance),
         MaxDivergence,
         lf.group_by(&[col("A"), col("C")])
             .agg(&[col("B").sum()])
@@ -56,7 +56,7 @@ fn test_stable_keys_puredp() -> Fallible<()> {
 
     let meas = make_private_lazyframe(
         lf_domain,
-        Multi(SymmetricDistance),
+        FrameDistance(SymmetricDistance),
         Approximate(MaxDivergence),
         lf.clone()
             .group_by(&[col("A")])
@@ -83,7 +83,7 @@ fn test_stable_keys_zCDP() -> Fallible<()> {
 
     let meas = make_private_lazyframe(
         lf_domain,
-        Multi(SymmetricDistance),
+        FrameDistance(SymmetricDistance),
         Approximate(ZeroConcentratedDivergence),
         lf.clone()
             .group_by(&[col("A")])
@@ -110,7 +110,7 @@ fn test_explicit_keys() -> Fallible<()> {
         SeriesDomain::new("A", AtomDomain::<u32>::default()),
         SeriesDomain::new("B", AtomDomain::<f64>::default()),
     ])?
-    .with_margin(Margin::by(["A"]).with_max_partition_length(1))?;
+    .with_margin(Margin::by(["A"]).with_max_length(1))?;
 
     let lf = df!("A" => &[0u32], "B" => &[0.0f64])?.lazy();
     let keys = df!("A" => &(0u32..N_SAMPLES).collect::<Vec<_>>())?.lazy();

@@ -39,9 +39,9 @@ where
     let old_margin = input_domain.context.aggregation("len")?;
     let margin = Margin {
         by: old_margin.by,
-        max_partition_length: Some(1),
-        max_num_partitions: Some(1),
-        public_info: old_margin.public_info,
+        max_length: Some(1),
+        max_groups: Some(1),
+        invariant: old_margin.invariant,
     };
 
     // build output domain
@@ -58,6 +58,6 @@ where
         Function::from_expr(len()).fill_with(typed_lit(0u32)),
         input_metric,
         LpDistance::default(),
-        counting_query_stability_map(margin.public_info),
+        counting_query_stability_map(margin.invariant),
     )
 }

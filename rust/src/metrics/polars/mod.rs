@@ -24,11 +24,11 @@ mod ffi;
 /// we say that $x, x'$ are $d$-close under the identifier distance metric whenever
 ///
 /// ```math
-/// d_{ID}(x, x') = |identifier(x) \Delta identifier(x')| \leq d
+/// d_{SymId}(x, x') = |\mathrm{identifier}(x) \Delta \mathrm{identifier}(x')| \leq d
 /// ```
 ///
-/// In addition, if the data in $x$ and $x'$ corresponding to any one identifier differs,
-/// then the datasets are not close.
+/// In addition, for each identifier in both $x$ and $x'$,
+/// the corresponding data must be equivalent for the datasets to be close.
 #[derive(Clone, PartialEq, Debug)]
 pub struct SymmetricIdDistance {
     pub identifier: Expr,
@@ -49,10 +49,10 @@ impl Metric for SymmetricIdDistance {
 /// ```math
 /// d_{COId}(x, x') = d_{SymId}(ids(u), ids(v)) / 2 \leq d
 /// ```
-/// $d_{SymId}$ is in reference to the [`ChangeOneIdDistance`].
+/// $d_{COId}$ is in reference to the [`ChangeOneIdDistance`].
 ///
-/// In addition, if the data in $x$ and $x'$ corresponding to any one identifier differs,
-/// then the datasets are not close.
+/// In addition, for each identifier in both $x$ and $x'$,
+/// the corresponding data must be equivalent for the datasets to be close.
 #[derive(Clone, PartialEq, Debug)]
 pub struct ChangeOneIdDistance {
     pub identifier: Expr,
@@ -62,22 +62,35 @@ impl Metric for ChangeOneIdDistance {
     type Distance = IntDistance;
 }
 
-/// Multi-distance betweeen datasets in terms of the number of added or removed identifiers.
+/// Frame-distance betweeen datasets.
 ///
 /// # Proof Definition
 ///
 /// ## `d`-closeness
-/// For any two datasets $x, x'$ and any $d$ of type [`IntDistance`],
-/// we say that $x, x'$ are $d$-close under the identifier distance metric whenever
+/// For any two datasets $x, x' \in \texttt{D}$,
+/// and for each distance bound $d_i$ of type [`Bounds`],
+/// let $\pi_{d_i}(x)$ and $\pi_{d_i}(x')$ be partitionings of $x, x'$ with respect to $d_i$,
+/// and let $\pi_{d_i}(x)_j$ denote the data in partition j of $\pi_{d_i}(x)$.
+///
+/// Define a vector of per-partition distances $s_i$ with respect to partitioning $d_i$ as follows:
 ///
 /// ```math
-/// d_{ID}(x, x') = |identifier(x) \Delta identifier(x')| \leq d
+/// s_i = [d_M(\pi_{d_i}(x)_0, \pi_{d_i}(x')_0), \ldots, d_M(\pi_{d_i}(x)_r, \pi_{d_i}(x')_r)],
 /// ```
 ///
-/// In addition, if the data in $x$ and $x'$ corresponding to any one identifier differs,
-/// then the datasets are not close.
+/// Then $x, x'$ are $d_i$-close under the ith frame distance,
+/// where $d_{i0}$ is ``num_groups`` and $d_{i\infty}$ is ``per_group``,
+/// whenever,
+///
+/// ```math
+/// |s_i|_0 \leq d_{i0} \land |s_i|_\infty \leq d_{i\infty}.
+/// ```
+///
+/// Finally, for any two datasets $x, x'$ and any $d$ of type [`Bounds`],
+/// we say that $x, x'$ are $d$-close under the frame distance metric whenever
+/// $x, x'$ are $d_i$-close under the ith frame distance for all $d_i$ in $d$.
 #[derive(Clone, PartialEq, Debug)]
-pub struct Multi<M: UnboundedMetric>(pub M);
+pub struct FrameDistance<M: UnboundedMetric>(pub M);
 
 impl MicrodataMetric for SymmetricIdDistance {
     const SIZED: bool = false;
@@ -96,49 +109,45 @@ impl MicrodataMetric for ChangeOneIdDistance {
     type EventMetric = ChangeOneDistance;
 }
 
-impl<M: UnboundedMetric> Metric for Multi<M> {
-    type Distance = GroupBounds;
+impl<M: UnboundedMetric> Metric for FrameDistance<M> {
+    type Distance = Bounds;
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub struct GroupBounds(pub Vec<GroupBound>);
+pub struct Bounds(pub Vec<Bound>);
 
-impl From<u32> for GroupBounds {
+impl From<u32> for Bounds {
     fn from(v: u32) -> Self {
-        Self(vec![
-            GroupBound::by::<[Expr; 0], Expr>([]).with_max_partition_contributions(v),
-        ])
+        Self(vec![Bound::by::<[Expr; 0], Expr>([]).with_per_group(v)])
     }
 }
 
-impl GroupBounds {
+impl Bounds {
     /// # Proof Definition
-    /// Return a `GroupBound` with given `by` implied by `self`.
-    pub fn get_bound(&self, by: &HashSet<Expr>) -> GroupBound {
+    /// Return a `Bound` with given `by` implied by `self`.
+    pub fn get_bound(&self, by: &HashSet<Expr>) -> Bound {
         let mut bound = (self.0.iter())
             .find(|b| &b.by == by)
             .cloned()
-            .unwrap_or_else(|| GroupBound {
+            .unwrap_or_else(|| Bound {
                 by: by.clone(),
                 ..Default::default()
             });
 
         let subset_bounds = (self.0.iter())
             .filter(|m| m.by.is_subset(by))
-            .collect::<Vec<&GroupBound>>();
+            .collect::<Vec<&Bound>>();
 
         // max partition contributions is the fewest partition contributions
         // of any grouping as coarse or coarser than the current grouping
-        bound.max_partition_contributions = (subset_bounds.iter())
-            .filter_map(|m| m.max_partition_contributions)
-            .min();
+        bound.per_group = (subset_bounds.iter()).filter_map(|m| m.per_group).min();
 
         let all_mips = (self.0.iter())
-            .filter_map(|b| Some((&b.by, b.max_influenced_partitions?)))
+            .filter_map(|b| Some((&b.by, b.num_groups?)))
             .collect();
 
         // in the worst case, the max partition contributions is the product of the max partition contributions of the cover
-        bound.max_influenced_partitions = find_min_covering(by.clone(), all_mips)
+        bound.num_groups = find_min_covering(by.clone(), all_mips)
             .map(|cover| {
                 cover
                     .iter()
@@ -147,20 +156,16 @@ impl GroupBounds {
             .flatten();
 
         if by.is_empty() {
-            bound.max_influenced_partitions = Some(1);
+            bound.num_groups = Some(1);
         }
 
         bound
     }
 
-    pub fn with_bound(mut self, bound: GroupBound) -> Self {
+    pub fn with_bound(mut self, bound: Bound) -> Self {
         if let Some(b) = self.0.iter_mut().find(|m| m.by == bound.by) {
-            b.max_influenced_partitions =
-                option_min(b.max_influenced_partitions, bound.max_influenced_partitions);
-            b.max_partition_contributions = option_min(
-                b.max_partition_contributions,
-                bound.max_partition_contributions,
-            );
+            b.num_groups = option_min(b.num_groups, bound.num_groups);
+            b.per_group = option_min(b.per_group, bound.per_group);
         } else {
             self.0.push(bound);
         }
@@ -169,7 +174,7 @@ impl GroupBounds {
 }
 
 #[derive(Clone, PartialEq, Default, Debug)]
-pub struct GroupBound {
+pub struct Bound {
     /// The columns data is grouped by to partition the data into groups.
     pub by: HashSet<Expr>,
 
@@ -177,41 +182,41 @@ pub struct GroupBound {
     ///
     /// This affects how margins interact with the metric.
     /// The distance between data sets differing by more than this quantity is considered infinite.
-    pub max_partition_contributions: Option<u32>,
+    pub per_group: Option<u32>,
 
     /// The greatest number of partitions that can be contributed to.
     ///
     /// This affects how margins interact with the metric.
     /// The distance between data sets differing by more than this quantity is considered infinite.
-    pub max_influenced_partitions: Option<u32>,
+    pub num_groups: Option<u32>,
 }
 
-impl GroupBound {
+impl Bound {
     pub fn by<E: AsRef<[IE]>, IE: Into<Expr> + Clone>(by: E) -> Self {
         Self {
             by: by.as_ref().iter().cloned().map(Into::into).collect(),
-            max_partition_contributions: None,
-            max_influenced_partitions: None,
+            per_group: None,
+            num_groups: None,
         }
     }
 
-    pub fn with_max_partition_contributions(mut self, value: u32) -> Self {
-        self.max_partition_contributions = Some(value);
+    pub fn with_per_group(mut self, value: u32) -> Self {
+        self.per_group = Some(value);
         self
     }
-    pub fn with_max_influenced_partitions(mut self, value: u32) -> Self {
-        self.max_influenced_partitions = Some(value);
+    pub fn with_num_groups(mut self, value: u32) -> Self {
+        self.num_groups = Some(value);
         self
     }
 }
 
-impl PartialOrd for GroupBounds {
+impl PartialOrd for Bounds {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.total_cmp(other).ok()
     }
 }
 
-impl ProductOrd for GroupBounds {
+impl ProductOrd for Bounds {
     fn total_cmp(&self, other: &Self) -> Fallible<Ordering> {
         if self != other {
             return fallible!(

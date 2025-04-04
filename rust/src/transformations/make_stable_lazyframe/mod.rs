@@ -5,10 +5,10 @@ use std::collections::HashSet;
 
 use crate::{
     core::{Function, Metric, MetricSpace, StabilityMap, Transformation},
-    domains::{DslPlanDomain, LazyFrameDomain, Margin, MarginPub},
+    domains::{DslPlanDomain, Invariant, LazyFrameDomain, Margin},
     error::Fallible,
     metrics::{
-        ChangeOneDistance, ChangeOneIdDistance, GroupBounds, HammingDistance, Multi,
+        Bounds, ChangeOneDistance, ChangeOneIdDistance, FrameDistance, HammingDistance,
         SymmetricDistance, SymmetricIdDistance,
     },
     polars::get_disabled_features_message,
@@ -21,6 +21,9 @@ mod ffi;
 
 #[cfg(feature = "contrib")]
 mod filter;
+
+#[cfg(feature = "contrib")]
+mod group_by;
 
 #[cfg(feature = "contrib")]
 mod h_stack;
@@ -83,23 +86,26 @@ pub trait StableDslPlan<MI: Metric, MO: Metric> {
     ) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, MI, MO>>;
 }
 
-impl StableDslPlan<Multi<SymmetricIdDistance>, Multi<SymmetricDistance>> for DslPlan {
+impl StableDslPlan<FrameDistance<SymmetricIdDistance>, FrameDistance<SymmetricDistance>>
+    for DslPlan
+{
     fn make_stable(
         self,
         input_domain: DslPlanDomain,
-        input_metric: Multi<SymmetricIdDistance>,
+        input_metric: FrameDistance<SymmetricIdDistance>,
     ) -> Fallible<
         Transformation<
             DslPlanDomain,
             DslPlanDomain,
-            Multi<SymmetricIdDistance>,
-            Multi<SymmetricDistance>,
+            FrameDistance<SymmetricIdDistance>,
+            FrameDistance<SymmetricDistance>,
         >,
     > {
-        if let DslPlan::Filter { predicate, .. } = &self {
-            if truncate::match_truncate(&predicate, &input_metric.0.identifier).is_some() {
-                return truncate::make_stable_truncate(input_domain, input_metric, self);
-            }
+        if !truncate::match_truncations(self.clone(), &input_metric.0.identifier)
+            .1
+            .is_empty()
+        {
+            return truncate::make_stable_truncate(input_domain, input_metric, self);
         }
 
         match &self {
@@ -124,16 +130,20 @@ impl StableDslPlan<Multi<SymmetricIdDistance>, Multi<SymmetricDistance>> for Dsl
     }
 }
 
-impl<M: UnboundedMetric> StableDslPlan<Multi<M>, Multi<M>> for DslPlan {
+impl<M: UnboundedMetric> StableDslPlan<FrameDistance<M>, FrameDistance<M>> for DslPlan {
     fn make_stable(
         self,
         input_domain: DslPlanDomain,
-        input_metric: Multi<M>,
-    ) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, Multi<M>, Multi<M>>> {
+        input_metric: FrameDistance<M>,
+    ) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, FrameDistance<M>, FrameDistance<M>>>
+    {
         match &self {
             DslPlan::DataFrameScan { .. } => {
                 source::make_stable_source(input_domain, input_metric, self)
             }
+            DslPlan::GroupBy { .. } => {
+                group_by::make_stable_group_by(input_domain, input_metric, self)
+            }
             DslPlan::Filter { .. } => filter::make_stable_filter(input_domain, input_metric, self),
             DslPlan::HStack { .. } => h_stack::make_h_stack(input_domain, input_metric, self),
             DslPlan::Select { .. } => select::make_select(input_domain, input_metric, self),
@@ -155,45 +165,46 @@ impl<M: UnboundedMetric> StableDslPlan<Multi<M>, Multi<M>> for DslPlan {
     }
 }
 
-impl<M: UnboundedMetric> StableDslPlan<M, Multi<M>> for DslPlan {
+impl<M: UnboundedMetric> StableDslPlan<M, FrameDistance<M>> for DslPlan {
     fn make_stable(
         self,
         input_domain: DslPlanDomain,
         input_metric: M,
-    ) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, M, Multi<M>>> {
+    ) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, M, FrameDistance<M>>> {
         Transformation::new(
             input_domain.clone(),
             input_domain.clone(),
             Function::new(Clone::clone),
             input_metric.clone(),
-            Multi(input_metric.clone()),
-            StabilityMap::new(|&d_in| GroupBounds::from(d_in)),
-        )? >> self.make_stable(input_domain, Multi(input_metric))?
+            FrameDistance(input_metric.clone()),
+            StabilityMap::new(|&d_in| Bounds::from(d_in)),
+        )? >> self.make_stable(input_domain, FrameDistance(input_metric))?
     }
 }
 
 macro_rules! impl_plan_bounded_dp {
     ($ty:ty) => {
-        impl<MO: UnboundedMetric> StableDslPlan<$ty, Multi<MO>> for DslPlan
+        impl<MO: UnboundedMetric> StableDslPlan<$ty, FrameDistance<MO>> for DslPlan
         where
-            DslPlan: StableDslPlan<<$ty as BoundedMetric>::UnboundedMetric, Multi<MO>>,
+            DslPlan: StableDslPlan<<$ty as BoundedMetric>::UnboundedMetric, FrameDistance<MO>>,
         {
             fn make_stable(
                 self,
                 input_domain: DslPlanDomain,
                 input_metric: $ty,
-            ) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, $ty, Multi<MO>>> {
+            ) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, $ty, FrameDistance<MO>>>
+            {
                 let mut middle_domain = input_domain.clone();
                 if let Some(prev_margin) = middle_domain
                     .margins
                     .iter_mut()
                     .find(|m| m.by == HashSet::new())
                 {
-                    prev_margin.public_info = Some(MarginPub::Lengths);
+                    prev_margin.invariant = Some(Invariant::Lengths);
                 } else {
                     middle_domain
                         .margins
-                        .push(Margin::select().with_public_lengths());
+                        .push(Margin::select().with_invariant_lengths());
                 }
                 let middle_metric = input_metric.to_unbounded();
 
@@ -213,16 +224,18 @@ macro_rules! impl_plan_bounded_dp {
 impl_plan_bounded_dp!(HammingDistance);
 impl_plan_bounded_dp!(ChangeOneDistance);
 
-impl<MO: UnboundedMetric> StableDslPlan<ChangeOneIdDistance, Multi<MO>> for DslPlan
+impl<MO: UnboundedMetric> StableDslPlan<ChangeOneIdDistance, FrameDistance<MO>> for DslPlan
 where
-    DslPlan: StableDslPlan<<ChangeOneIdDistance as BoundedMetric>::UnboundedMetric, Multi<MO>>,
+    DslPlan:
+        StableDslPlan<<ChangeOneIdDistance as BoundedMetric>::UnboundedMetric, FrameDistance<MO>>,
 {
     fn make_stable(
         self,
         input_domain: DslPlanDomain,
         input_metric: ChangeOneIdDistance,
-    ) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, ChangeOneIdDistance, Multi<MO>>>
-    {
+    ) -> Fallible<
+        Transformation<DslPlanDomain, DslPlanDomain, ChangeOneIdDistance, FrameDistance<MO>>,
+    > {
         Transformation::new(
             input_domain.clone(),
             input_domain.clone(),

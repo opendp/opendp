@@ -5,7 +5,7 @@ use crate::{
     domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain},
     error::ErrorVariant,
     measurements::{PrivateExpr, make_private_expr, make_private_lazyframe},
-    metrics::{InsertDeleteDistance, Multi, PartitionDistance, SymmetricDistance},
+    metrics::{FrameDistance, InsertDeleteDistance, PartitionDistance, SymmetricDistance},
     polars::PrivacyNamespace,
     transformations::test_helper::get_test_data,
 };
@@ -110,7 +110,7 @@ fn test_make_laplace_grouped() -> Fallible<()> {
         .laplace(None);
     let m_lap = make_private_lazyframe(
         lf_domain,
-        Multi(SymmetricDistance),
+        FrameDistance(SymmetricDistance),
         MaxDivergence,
         lf.clone().group_by(["chunk_2_bool"]).agg([expr_exp]),
         Some(scale),
@@ -165,19 +165,15 @@ fn check_autocalibration(
 
 #[test]
 fn test_sum_unbounded_dp_autocalibration() -> Fallible<()> {
-    check_autocalibration(
-        Margin::select().with_max_partition_length(100),
-        (4, 7),
-        (1, 1, 1),
-    )
+    check_autocalibration(Margin::select().with_max_length(100), (4, 7), (1, 1, 1))
 }
 
 #[test]
 fn test_sum_bounded_dp_autocalibration() -> Fallible<()> {
     check_autocalibration(
         Margin::select()
-            .with_max_partition_length(100)
-            .with_public_lengths(),
+            .with_max_length(100)
+            .with_invariant_lengths(),
         (4, 7),
         (1, 2, 2),
     )

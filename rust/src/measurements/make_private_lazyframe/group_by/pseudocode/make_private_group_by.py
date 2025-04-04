@@ -39,7 +39,7 @@ def make_private_group_by(
     # reconcile information about the threshold |\label{line:reconcile-threshold}|
     dp_exprs = m_exprs.invoke((input_expr, all()))
 
-    if margin.public_info is not None:
+    if margin.invariant is not None:
         threshold_info = None
     elif is_threshold_predicate(predicate) is not None:
         name, threshold_value = is_threshold_predicate(predicate)
@@ -98,7 +98,7 @@ def make_private_group_by(
             delta_single = integrate_discrete_noise_tail(plugin.distribution, plugin.scale, d_instability)
             delta_joint = 1 - (1 - delta_single).inf_powi(l0)
             d_out = MO.add_delta(d_out, delta_joint)
-        elif margin.public_info is None:
+        elif margin.invariant is None:
             raise "keys must be public if threshold is unknown"
 
         return d_out

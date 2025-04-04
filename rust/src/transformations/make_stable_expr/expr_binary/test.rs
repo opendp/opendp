@@ -1,5 +1,5 @@
 use crate::domains::{AtomDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
-use crate::metrics::{Multi, SymmetricDistance};
+use crate::metrics::{FrameDistance, SymmetricDistance};
 use core::f64;
 use std::ops::{Add, Div, Mul, Rem, Sub};
 
@@ -99,7 +99,7 @@ macro_rules! test_binary {
         );
         let t_op = col("L")
             .$op(col("R"))
-            .make_stable(expr_domain.clone(), Multi(SymmetricDistance))?;
+            .make_stable(expr_domain.clone(), FrameDistance(SymmetricDistance))?;
         let output_series = &t_op.output_domain.column;
         assert_eq!(&*output_series.name, "L");
 

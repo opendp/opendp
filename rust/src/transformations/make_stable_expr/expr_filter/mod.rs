@@ -2,7 +2,7 @@ use polars_plan::dsl::Expr;
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{
-    Context, ExprDomain, ExprPlan, Margin, MarginPub, OuterMetric, WildExprDomain,
+    Context, ExprDomain, ExprPlan, Invariant, Margin, OuterMetric, WildExprDomain,
 };
 use crate::error::*;
 use crate::transformations::traits::UnboundedMetric;
@@ -71,7 +71,7 @@ where
         column: t_input.output_domain.column.clone(),
         context: Context::Aggregation {
             margin: Margin {
-                public_info: margin.public_info.map(|_| MarginPub::Keys),
+                invariant: margin.invariant.map(|_| Invariant::Keys),
                 ..margin
             },
         },

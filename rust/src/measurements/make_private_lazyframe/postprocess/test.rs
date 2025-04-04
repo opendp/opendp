@@ -6,7 +6,7 @@ use crate::{
     error::ErrorVariant,
     measurements::make_private_lazyframe,
     measures::MaxDivergence,
-    metrics::{Multi, SymmetricDistance},
+    metrics::{FrameDistance, SymmetricDistance},
     polars::PrivacyNamespace,
 };
 
@@ -18,8 +18,8 @@ fn lazyframe_select_postprocess_query() -> Fallible<(LazyFrameDomain, LazyFrame)
 
     let lf_domain = LazyFrameDomain::new(vec![s1, s2])?.with_margin(
         Margin::by(["B"])
-            .with_public_lengths()
-            .with_max_partition_length(5),
+            .with_invariant_lengths()
+            .with_max_length(5),
     )?;
     let lf = df!("A" => [0, 1, 1], "B" => [true, false, true])?
         .lazy()
@@ -37,7 +37,7 @@ fn test_make_private_lazyframe_post_valid() -> Fallible<()> {
 
     make_private_lazyframe(
         lf_domain,
-        Multi(SymmetricDistance),
+        FrameDistance(SymmetricDistance),
         MaxDivergence,
         query,
         None,
@@ -55,7 +55,7 @@ fn test_make_private_lazyframe_post_invalid() -> Fallible<()> {
     assert_eq!(
         make_private_lazyframe(
             lf_domain,
-            Multi(SymmetricDistance),
+            FrameDistance(SymmetricDistance),
             MaxDivergence,
             query,
             None,

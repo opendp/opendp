@@ -1,7 +1,7 @@
 use crate::core::{Function, StabilityMap, Transformation};
 use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
-use crate::metrics::Multi;
+use crate::metrics::FrameDistance;
 use crate::transformations::StableExpr;
 use crate::transformations::traits::UnboundedMetric;
 use polars::prelude::*;
@@ -19,11 +19,11 @@ mod test;
 /// * `plan` - The LazyFrame to transform.
 pub fn make_stable_filter<MI: UnboundedMetric, MO: UnboundedMetric>(
     input_domain: DslPlanDomain,
-    input_metric: Multi<MI>,
+    input_metric: FrameDistance<MI>,
     plan: DslPlan,
-) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, Multi<MI>, Multi<MO>>>
+) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, FrameDistance<MI>, FrameDistance<MO>>>
 where
-    DslPlan: StableDslPlan<Multi<MI>, Multi<MO>>,
+    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MO>>,
 {
     let DslPlan::Filter { input, predicate } = plan else {
         return fallible!(MakeTransformation, "Expected filter in logical plan");
@@ -58,7 +58,7 @@ where
 
     output_domain.margins.iter_mut().for_each(|m| {
         // After filtering you no longer know partition lengths or keys.
-        m.public_info = None;
+        m.invariant = None;
     });
 
     t_prior

@@ -9,7 +9,7 @@ First, create a measurement with the Polars API:
 ...     dp.series_domain("A", dp.atom_domain(T="i32")), 
 ...     dp.series_domain("B", dp.atom_domain(T=str))
 ... ])
->>> lf_domain = dp.with_margin(lf_domain, dp.polars.Margin(by=[], max_partition_length=1000))
+>>> lf_domain = dp.with_margin(lf_domain, dp.polars.Margin(by=[], max_length=1000))
 >>> meas = dp.m.make_private_lazyframe(
 ...     lf_domain,
 ...     dp.symmetric_distance(),
