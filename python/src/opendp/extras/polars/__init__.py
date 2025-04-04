@@ -15,7 +15,7 @@ The methods of this module will then be accessible at ``dp.polars``.
 """
 
 from __future__ import annotations
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass, field, replace
 import os
 from typing import Any, Literal, Sequence
 from opendp._lib import lib_path, import_optional_dependency
@@ -651,6 +651,7 @@ def _domain_from_dtype(dtype) -> Domain:
 
     return atom_domain(T=T)
 
+
 _LAZY_EXECUTION_METHODS = {
     "collect",
     "collect_async",
@@ -851,25 +852,80 @@ class LazyFrameQuery:
             self._query,
         )
 
-    def truncate(
+    def truncate_contributions(
         self,
         k: int,
-        over: list[Any] | None = None,
+        by: list[Any] | None = None,
+        keep: Literal["sample", "first", "last"] = "sample",
     ) -> LazyFrameQuery:
         """
-        Truncate the data to keep at most `k` rows for each identifier.
+        Truncate data to a max number of rows per identifier.
 
         :param k: the number of rows to keep for each identifier
-        :param over: optional, other columns to group by
+        :param by: optional, other columns to group by
+        :param keep: which rows to keep for each identifier in each partition
         """
         input_metric = self._query._chain[1]
-        
+
         if isinstance(input_metric, MultiDistance):
             input_metric = input_metric.inner_metric
         if not isinstance(input_metric, (SymmetricIdDistance, ChangeOneIdDistance)):
-            raise ValueError(f"truncation is only supported for identifier distances, found {input_metric}")
+            raise ValueError(
+                f"truncation is only supported for identifier distances, found {input_metric}"
+            )
 
-        return self.filter(pl.int_range(pl.len()).over(input_metric.identifier, *over or []) < k)
+        if keep == "sample":
+            indexes = pl.int_range(pl.len()).shuffle()
+        elif keep == "first":
+            indexes = pl.int_range(pl.len())
+        elif keep == "last":
+            indexes = pl.int_range(pl.len()).reverse()
+        else:
+            raise ValueError("take must be one of 'first', 'last', or 'random'")
+
+        return self.filter(
+            indexes.over(input_metric.identifier, *by or []) < k
+        )
+
+    def truncate_partitions(
+        self,
+        k: int,
+        by: list[Any],
+        keep: Literal["sample", "first", "last"] = "sample",
+    ) -> LazyFrameQuery:
+        """
+        Truncate data to a max number of partitions per identifier.
+
+        :param k: the number of partitions to keep for each identifier
+        :param by: optional, other columns to group by
+        :param keep: which partitions to keep for each identifier
+        """
+        input_metric = self._query._chain[1]
+
+        if isinstance(input_metric, MultiDistance):
+            input_metric = input_metric.inner_metric
+        if not isinstance(input_metric, (SymmetricIdDistance, ChangeOneIdDistance)):
+            raise ValueError(
+                f"truncation is only supported for identifier distances, found {input_metric}"
+            )
+
+        label = pl.struct(*by)
+        if keep == "sample":
+            kept = label.unique(maintain_order=False).sample(k)
+        elif keep == "first":
+            kept = label.unique(maintain_order=True).head(k)
+        elif keep == "last":
+            kept = label.unique(maintain_order=True).tail(k)
+        else:
+            raise ValueError("take must be one of 'first', 'last', or 'random'")
+
+        return self.filter(
+            kept
+            .implode()
+            .over(input_metric.identifier, mapping_strategy="join")
+            .list.get(0)
+            .list.contains(label)
+        )
 
     def resolve(self) -> Measurement:
         """Resolve the query into a measurement."""
@@ -892,6 +948,13 @@ class LazyFrameQuery:
 
         # when the output measure is δ-approximate, then there are two free parameters to tune
         if getattr(query._output_measure.type, "origin", None) == "Approximate":
+            try:
+                m_zero = _make(0., threshold=None)
+                if m_zero.check(d_in, d_out):
+                    # if the zero scale measurement is already private, return it
+                    return m_zero
+            except OpenDPException:
+                pass
 
             # search for a scale parameter. Solve for epsilon first,
             # setting threshold to u32::MAX so as not to interfere with the search for a suitable scale parameter
@@ -1019,7 +1082,7 @@ class Margin:
     Instances of this class are used by :py:func:`opendp.context.Context.compositor`.
     """
 
-    by: Sequence | None = None
+    by: Sequence = field(default_factory=list)
     """Polars expressions describing the grouping columns."""
 
     public_info: Literal["keys"] | Literal["lengths"] | None = None
@@ -1062,12 +1125,12 @@ class Margin:
                 by = pl.col(by)
             return by.meta.serialize()
 
-        self_by = {serialize(col) for col in self.by or []}
-        other_by = {serialize(col) for col in other.by or []}
+        self_by = {serialize(col) for col in self.by}
+        other_by = {serialize(col) for col in other.by}
         if self_by != other_by:
             return False
 
-        return asdict(replace(self, by=None)) == asdict(replace(other, by=None))
+        return asdict(replace(self, by=[])) == asdict(replace(other, by=[]))
 
 
 @dataclass
@@ -1077,7 +1140,7 @@ class GroupBound(object):
     and the number of partitions an individual may influence.
     """
 
-    by: Sequence
+    by: Sequence = field(default_factory=list)
     """Polars expressions describing the grouping columns."""
 
     max_partition_contributions: int | None = None
@@ -1088,7 +1151,6 @@ class GroupBound(object):
 
     max_influenced_partitions: int | None = None
     """The greatest number of partitions any one individual can contribute to."""
-
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, GroupBound):
@@ -1101,9 +1163,9 @@ class GroupBound(object):
                 by = pl.col(by)
             return by.meta.serialize()
 
-        self_by = {serialize(col) for col in self.by or []}
-        other_by = {serialize(col) for col in other.by or []}
+        self_by = {serialize(col) for col in self.by}
+        other_by = {serialize(col) for col in other.by}
         if self_by != other_by:
             return False
 
-        return asdict(replace(self, by=None)) == asdict(replace(other, by=None)) # type: ignore[arg-type]
+        return asdict(replace(self, by=[])) == asdict(replace(other, by=[]))  # type: ignore[arg-type]

@@ -96,10 +96,11 @@ impl StableDslPlan<Multi<SymmetricIdDistance>, Multi<SymmetricDistance>> for Dsl
             Multi<SymmetricDistance>,
         >,
     > {
-        if let DslPlan::Filter { predicate, .. } = &self {
-            if truncate::match_truncate(&predicate, &input_metric.0.identifier).is_some() {
-                return truncate::make_stable_truncate(input_domain, input_metric, self);
-            }
+        if !truncate::match_truncations(self.clone(), &input_metric.0.identifier)
+            .0
+            .is_empty()
+        {
+            return truncate::make_stable_truncate(input_domain, input_metric, self);
         }
 
         match &self {

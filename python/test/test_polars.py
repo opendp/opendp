@@ -1192,7 +1192,7 @@ def test_array_domain_query():
     # this is broken until https://github.com/pola-rs/polars/issues/20162 is fixed
     context.query().with_columns(pl.col.alpha.explode()).select(dp.len()).release().collect()
 
-def test_truncation():
+def test_truncate_contributions():
     pl = pytest.importorskip("polars")
 
     context = dp.Context.compositor(
@@ -1202,11 +1202,11 @@ def test_truncation():
         split_evenly_over=1,
     )
 
-    truncation_predicate = pl.int_range(pl.len()).over("id") < 3
-    query = context.query().filter(truncation_predicate).select(dp.len())
+    max_contributions = pl.int_range(pl.len()).over("id") < 3
+    query = context.query().filter(max_contributions).select(dp.len())
     assert query.summarize()["scale"][0] == 3.0000000000000004  # type: ignore[index]
 
-    query = context.query().truncate(k=2).select(dp.len())
+    query = context.query().truncate_contributions(2).select(dp.len())
     assert query.summarize()["scale"][0] == 2.0000000000000004  # type: ignore[index]
 
     context = dp.Context.compositor(
@@ -1229,7 +1229,7 @@ def test_truncation():
     query = context.query().filter(truncation_predicate).group_by("alpha").agg(dp.len())
     assert query.summarize()["scale"][0] == 3.0000000000000004  # type: ignore[index]
 
-    query = context.query().truncate(k=2, over=["alpha"]).group_by("alpha").agg(dp.len())
+    query = context.query().truncate_contributions(2, by=["alpha"]).group_by("alpha").agg(dp.len())
     assert query.summarize()["scale"][0] == 2.0000000000000004  # type: ignore[index]
 
 
@@ -1260,7 +1260,7 @@ def test_lazyframe_bounded_dp_truncation():
 
     # the unused with_columns is for test coverage of .truncate, 
     # which retrieves input domain from prior query
-    query = context.query().with_columns(x=pl.lit(10)).truncate(3).select(dp.len())
+    query = context.query().with_columns(x=pl.lit(10)).truncate_contributions(3).select(dp.len())
     assert query.summarize()["scale"][0] == 6.000000000000001  # type: ignore[index]
 
 
@@ -1276,4 +1276,4 @@ def test_unnecessary_lazyframe_truncation():
     )
 
     with pytest.raises(ValueError, match="truncation is only supported for"):
-        context.query().truncate(3)
+        context.query().truncate_contributions(3)

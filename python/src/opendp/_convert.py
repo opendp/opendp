@@ -761,7 +761,7 @@ def _slice_to_group_bound(raw: FfiSlicePtr):
 def _group_bound_to_slice(val) -> FfiSlicePtr:
     from opendp.extras.polars import GroupBound
     assert isinstance(val, GroupBound)
-    
+
     _check_polars_by(val.by)
     by = ctypes.cast(py_to_c(val.by, c_type=AnyObjectPtr, type_name="Vec<Expr>"), ctypes.c_void_p)
 

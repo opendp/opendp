@@ -247,7 +247,7 @@ where
                 _ => {
                     return fallible!(
                         FailedMap,
-                        "l0, l1, l∞ bounds ({l0:?}, {l1:?}, {li:?}) are not well-defined. Either truncate, or set max_influenced_partitions and max_partition_contributions."
+                        "max_influenced_partitions ({l0:?}), total contributions ({l1:?}), and max_partition_contributions ({li:?}) are not sufficiently well-defined. Either truncate or set appropriate margin descriptors like max_influenced_partitions and max_partition_contributions."
                     );
                 }
             };
