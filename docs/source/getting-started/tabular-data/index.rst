@@ -46,9 +46,10 @@ We chose this dataset for a few reasons:
 2. **Sample Utility:** The public microdata is a sample of the private, full microdata. Methods developed with the public microdata will also work on the private microdata, and researchers can request access to the full dataset through Eurostat. 
 3. **Realism**: This is a real dataset that tracks individuals over multiple years, which will influence the unit of privacy since each individual can be represented multiple times in the dataset. 
 
-For this tutorial, we sampled a total of 200,000 rows from the public microdata of France across all study years. 
+For this tutorial, we selected a few columns of interest from the public microdata of France across 9 study years. 
 
-The `User Guide <https://www.gesis.org/missy/files/documents/EU-LFS/EULFS_Database_UserGuide_2021-3.pdf>`_ describes many variables. Our examples will use just a few. (Descriptions are copied from the User Guide.) 
+The `User Guide <https://www.gesis.org/missy/files/documents/EU-LFS/EULFS_Database_UserGuide_2021-3.pdf>`_ describes many variables. 
+Our examples will use just a few. (Descriptions are copied from the User Guide.) 
 
 .. list-table:: 
    :header-rows: 1
@@ -84,6 +85,9 @@ The `User Guide <https://www.gesis.org/missy/files/documents/EU-LFS/EULFS_Databa
      - Fixed Reference Year
      - Single Year
 
+While the dataset does not contain a unique identifier for individuals,
+we've generated a column of unique identifiers ``PIDENT`` for the purpose of demonstrating library functionality.
+
 
 Compositor Overview
 -------------------
@@ -116,7 +120,11 @@ Context Parameters
   In this case, the influence is measured in terms of the number of rows an individual may contribute to your dataset. 
   Since we are analyzing quarterly data across 9 years, where an individual contributes up to one record per quarter,
   the unit of privacy corresponds to 36 row contributions. 
-  If we were to analyze a particular quarter in a particular year, the unit of privacy would be 1 since each individual would contribute at most one row. 
+  If we were to analyze a particular quarter in a particular year, the unit of privacy would be 1 since each individual would contribute at most one row.   
+  Alternatively, if you have a identifier column ``PIDENT``, 
+  you could set the privacy unit to ``dp.unit_of(contributions=1, identifier="PIDENT")``.
+  For simplicity, examples will express the privacy unit in terms of 36 row contributions, 
+  except when demonstrating how to use identifiers.
 * ``privacy_loss``: The greatest privacy loss suffered by an individual in your dataset. 
   The privacy loss is upper-bounded by privacy parameters; in this case epsilon (ε).
 * ``split_evenly_over``: This is the number of queries you want to distribute your privacy loss over. 
@@ -131,6 +139,6 @@ See :py:func:`opendp.context.Context.compositor` for more information.
   essential-statistics
   grouping
   preparing-microdata
-  privacy-unit
+  identifier-truncation
 
 More thorough documentation can be found in the `OpenDP Polars User Guide <../../api/user-guide/polars/index.html>`_.

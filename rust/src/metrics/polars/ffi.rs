@@ -9,7 +9,8 @@ use crate::{
         util,
     },
     metrics::{
-        ChangeOneIdDistance, InsertDeleteDistance, Multi, SymmetricDistance, SymmetricIdDistance,
+        ChangeOneIdDistance, FrameDistance, InsertDeleteDistance, SymmetricDistance,
+        SymmetricIdDistance,
     },
     transformations::traits::UnboundedMetric,
 };
@@ -19,7 +20,7 @@ use crate::{
     arguments(identifier(rust_type = "Expr")),
     returns(c_type = "FfiResult<AnyMetric *>", hint = "SymmetricIdDistance")
 )]
-/// Construct an instance of the `Multi` metric.
+/// Construct an instance of the `SymmetricIdDistance` metric.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__symmetric_id_distance(
     identifier: *const AnyObject,
@@ -45,7 +46,7 @@ pub extern "C" fn opendp_metrics___symmetric_id_distance_get_identifier(
     arguments(identifier(rust_type = "Expr")),
     returns(c_type = "FfiResult<AnyMetric *>", hint = "ChangeOneIdDistance")
 )]
-/// Construct an instance of the `Multi` metric.
+/// Construct an instance of the `ChangeOneIdDistance` metric.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__change_one_id_distance(
     identifier: *const AnyObject,
@@ -66,15 +67,15 @@ pub extern "C" fn opendp_metrics___change_one_id_distance_get_identifier(
     FfiResult::Ok(AnyObject::new_raw(metric.identifier.clone()))
 }
 
-#[bootstrap(name = "multi_distance", returns(c_type = "FfiResult<AnyMetric *>"))]
-/// `MultiDistance` is a higher-order metric with multiple distance types for grouped data.
+#[bootstrap(name = "frame_distance", returns(c_type = "FfiResult<AnyMetric *>"))]
+/// `frame_distance` is a higher-order metric that contains multiple distance bounds for different groupings of data.
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_metrics__multi_distance(
+pub extern "C" fn opendp_metrics__frame_distance(
     inner_metric: *const AnyMetric,
 ) -> FfiResult<*mut AnyMetric> {
     fn monomorphize<M: 'static + UnboundedMetric>(inner_metric: &AnyMetric) -> Fallible<AnyMetric> {
         let inner_metric = inner_metric.downcast_ref::<M>()?.clone();
-        Ok(AnyMetric::new(Multi(inner_metric)))
+        Ok(AnyMetric::new(FrameDistance(inner_metric)))
     }
     let inner_metric = try_as_ref!(inner_metric);
     let M = inner_metric.type_.clone();
@@ -90,16 +91,18 @@ pub extern "C" fn opendp_metrics__multi_distance(
 }
 
 #[bootstrap(
-    name = "_multi_distance_get_inner_metric",
+    name = "_frame_distance_get_inner_metric",
     returns(c_type = "FfiResult<AnyMetric *>")
 )]
-/// Retrieve the inner metric of a `MultiDistance` metric.
+/// Retrieve the inner metric of a `FrameDistance` metric.
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_metrics___multi_distance_get_inner_metric(
+pub extern "C" fn opendp_metrics___frame_distance_get_inner_metric(
     metric: *const AnyMetric,
 ) -> FfiResult<*mut AnyMetric> {
     fn monomorphize<M: UnboundedMetric>(metric: &AnyMetric) -> Fallible<AnyMetric> {
-        Ok(AnyMetric::new(metric.downcast_ref::<Multi<M>>()?.0.clone()))
+        Ok(AnyMetric::new(
+            metric.downcast_ref::<FrameDistance<M>>()?.0.clone(),
+        ))
     }
     let metric = try_as_ref!(metric);
     let M = try_!(metric.type_.get_atom());

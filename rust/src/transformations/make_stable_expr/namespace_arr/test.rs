@@ -2,7 +2,7 @@ use polars::prelude::{col, lit};
 
 use crate::{
     domains::{ArrayDomain, AtomDomain, Context, SeriesDomain, WildExprDomain},
-    metrics::{Multi, SymmetricDistance},
+    metrics::{FrameDistance, SymmetricDistance},
     transformations::make_stable_expr,
 };
 
@@ -20,7 +20,7 @@ fn test_arr_namespace() -> Fallible<()> {
 
     let res = make_stable_expr(
         input_domain,
-        Multi(SymmetricDistance),
+        FrameDistance(SymmetricDistance),
         col("a").arr().get(lit(0), true),
     );
     let msg = res.unwrap_err().message.unwrap();

@@ -4,7 +4,7 @@ use std::fmt::{Debug, Formatter};
 
 use crate::core::{Metric, MetricSpace};
 use crate::metrics::{
-    AbsoluteDistance, LInfDistance, LpDistance, Multi, Parallel, PartitionDistance,
+    AbsoluteDistance, FrameDistance, LInfDistance, LpDistance, Parallel, PartitionDistance,
 };
 use crate::traits::ProductOrd;
 use crate::transformations::traits::UnboundedMetric;
@@ -213,7 +213,7 @@ pub trait OuterMetric: 'static + Metric {
     fn inner_metric(&self) -> Self::InnerMetric;
 }
 
-impl<M: UnboundedMetric> OuterMetric for Multi<M> {
+impl<M: UnboundedMetric> OuterMetric for FrameDistance<M> {
     type InnerMetric = M;
 
     fn inner_metric(&self) -> Self::InnerMetric {
@@ -245,7 +245,7 @@ impl<const P: usize, Q: 'static> OuterMetric for LpDistance<P, Q> {
     }
 }
 
-impl<M: UnboundedMetric> MetricSpace for (WildExprDomain, Multi<M>) {
+impl<M: UnboundedMetric> MetricSpace for (WildExprDomain, FrameDistance<M>) {
     fn check_space(&self) -> Fallible<()> {
         let (expr_domain, metric) = self;
         (
@@ -262,7 +262,7 @@ impl<M: UnboundedMetric> MetricSpace for (WildExprDomain, PartitionDistance<M>) 
     }
 }
 
-impl<M: UnboundedMetric> MetricSpace for (ExprDomain, Multi<M>) {
+impl<M: UnboundedMetric> MetricSpace for (ExprDomain, FrameDistance<M>) {
     fn check_space(&self) -> Fallible<()> {
         Ok(())
     }

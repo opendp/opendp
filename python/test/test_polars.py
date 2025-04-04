@@ -1,4 +1,4 @@
-from opendp.extras.polars import Margin, GroupBound
+from opendp.extras.polars import Margin, Bound
 import pytest
 import opendp.prelude as dp
 import warnings
@@ -60,18 +60,18 @@ def test_expr_domain():
     pl = pytest.importorskip("polars")
     by = [pl.col("A"), pl.col("B")]
     dp.wild_expr_domain(series_domains, dp.polars.Margin(by=by))
-    dp.wild_expr_domain(series_domains, dp.polars.Margin(by=by, max_num_partitions=10))
-    dp.wild_expr_domain(series_domains, dp.polars.Margin(by=by, public_info="keys"))
+    dp.wild_expr_domain(series_domains, dp.polars.Margin(by=by, max_groups=10))
+    dp.wild_expr_domain(series_domains, dp.polars.Margin(by=by, invariant="keys"))
 
 
 def test_domains():
     example_lf(margin=["B"])
-    example_lf(margin=["B"], public_info="keys", max_partition_length=50)
+    example_lf(margin=["B"], invariant="keys", max_length=50)
     example_lf(
         margin=["B"],
-        public_info="lengths",
-        max_partition_length=50,
-        max_num_partitions=3,
+        invariant="lengths",
+        max_length=50,
+        max_groups=3,
     )
 
 
@@ -103,9 +103,9 @@ def test_private_lazyframe_explicit_sum(measure):
 
     lf_domain, lf = example_lf(
         margin=["B"],
-        public_info="keys",
-        max_partition_length=50,
-        max_num_partitions=10,
+        invariant="keys",
+        max_length=50,
+        max_groups=10,
     )
 
     expr = pl.col("A").fill_nan(0.0).fill_null(0.0).clip(0.0, 1.0).sum().dp.noise(0.0)
@@ -133,9 +133,9 @@ def test_private_lazyframe_sum(measure):
 
     lf_domain, lf = example_lf(
         margin=["B"],
-        public_info="keys",
-        max_partition_length=50,
-        max_num_partitions=10,
+        invariant="keys",
+        max_length=50,
+        max_groups=10,
     )
     expr = pl.col("A").fill_nan(0.0).fill_null(0.0).dp.sum((1.0, 2.0), scale=0.0)
     plan = seed(lf.collect_schema()).group_by("B").agg(expr)
@@ -161,9 +161,9 @@ def test_private_lazyframe_mean(measure):
 
     lf_domain, lf = example_lf(
         margin=["B"],
-        public_info="lengths",
-        max_partition_length=50,
-        max_num_partitions=10,
+        invariant="lengths",
+        max_length=50,
+        max_groups=10,
     )
 
     expr = pl.col("A").fill_nan(0.0).fill_null(0.0).dp.mean((1.0, 2.0), scale=(0.0, 0.0))
@@ -195,7 +195,7 @@ def test_cast():
 
 def test_stable_expr():
     domain = dp.wild_expr_domain([dp.series_domain("A", dp.atom_domain(T=float))])
-    dp.t.make_stable_expr(domain, dp.multi_distance(dp.symmetric_distance()), "A")
+    dp.t.make_stable_expr(domain, dp.frame_distance(dp.symmetric_distance()), "A")
 
 
 def test_private_expr():
@@ -221,7 +221,7 @@ def test_private_lazyframe_median():
     pl_testing = pytest.importorskip("polars.testing")
 
     lf_domain, lf = example_lf(
-        margin=["A"], public_info="keys", max_partition_length=50
+        margin=["A"], invariant="keys", max_length=50
     )
     candidates = list(range(1, 6))
     expr = pl.col("B").dp.median(candidates, 1.0)
@@ -248,7 +248,7 @@ def test_filter(measure):
     pl = pytest.importorskip("polars")
     pl_testing = pytest.importorskip("polars.testing")
 
-    lf_domain, lf = example_lf(margin=[], public_info="keys", max_partition_length=50)
+    lf_domain, lf = example_lf(margin=[], invariant="keys", max_length=50)
 
     plan = lf.filter(pl.col("B") < 2).select(dp.len(scale=0.0))
 
@@ -341,8 +341,8 @@ def test_polars_context():
         privacy_loss=dp.loss_of(epsilon=1.0),
         split_evenly_over=2,
         margins=[
-            dp.polars.Margin(max_partition_length=5),
-            dp.polars.Margin(by=["B"], public_info="keys"),
+            dp.polars.Margin(max_length=5),
+            dp.polars.Margin(by=["B"], invariant="keys"),
         ],
     )
 
@@ -376,7 +376,7 @@ def test_polars_describe():
         privacy_loss=dp.loss_of(epsilon=1.0),
         split_evenly_over=2,
         margins=[
-            dp.polars.Margin(by=["B"], public_info="keys", max_partition_length=5),
+            dp.polars.Margin(by=["B"], invariant="keys", max_length=5),
         ],
     )
 
@@ -420,7 +420,7 @@ def test_polars_accuracy_threshold():
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=2,
         margins=[
-            dp.polars.Margin(by=["B"], max_partition_length=5),
+            dp.polars.Margin(by=["B"], max_length=5),
         ],
     )
 
@@ -500,7 +500,7 @@ def test_polars_threshold_epsilon():
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=2,
         margins=[
-            dp.polars.Margin(by=["A"], public_info="keys"),
+            dp.polars.Margin(by=["A"], invariant="keys"),
         ],
     )
 
@@ -713,7 +713,7 @@ def test_cut():
             privacy_unit=dp.unit_of(contributions=1),
             privacy_loss=dp.loss_of(epsilon=10000.0),
             split_evenly_over=1,
-            margins=[dp.polars.Margin(by=by, public_info="keys")],
+            margins=[dp.polars.Margin(by=by, invariant="keys")],
         )
     actual = context.query().group_by(*by).agg(dp.len()).release().collect().sort("x")
     expected = pl.DataFrame(
@@ -853,7 +853,7 @@ def test_float_sum_with_unlimited_reorderable_partitions():
         ]
     )
     lf_domain = dp.with_margin(
-        lf_domain, dp.polars.Margin(by=[pl.col("region")], public_info="lengths", max_partition_length=6)
+        lf_domain, dp.polars.Margin(by=[pl.col("region")], invariant="lengths", max_length=6)
     )
 
     from opendp.domains import _lazyframe_from_domain
@@ -869,7 +869,7 @@ def test_float_sum_with_unlimited_reorderable_partitions():
     # since there are an unknown number of partitions, and each partition has non-zero sensitivity, sensitivity is undefined
     with pytest.raises(
         dp.OpenDPException,
-        match="max_num_partitions must be known when the metric is not sensitive to ordering",
+        match="max_groups must be known when the metric is not sensitive to ordering",
     ):
         dp.m.make_private_lazyframe(
             lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan
@@ -931,7 +931,7 @@ def test_explicit_grouping_keys():
     pl = pytest.importorskip("polars")
     pl_testing = pytest.importorskip("polars.testing")
 
-    lf_domain, lf = example_lf(margin=["B"], max_partition_length=100)
+    lf_domain, lf = example_lf(margin=["B"], max_length=100)
 
     plan_right = (
         seed(lf.collect_schema()).group_by("B").agg(pl.col("D").dp.sum((0, 10)))
@@ -957,7 +957,7 @@ def test_explicit_grouping_keys_context():
     pl = pytest.importorskip("polars")
     pl_testing = pytest.importorskip("polars.testing")
 
-    lf_domain, lf = example_lf(margin=["B"], max_partition_length=100)
+    lf_domain, lf = example_lf(margin=["B"], max_length=100)
 
     context = dp.Context.compositor(
         data=lf,
@@ -1045,7 +1045,7 @@ def test_replace():
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=4,
-        margins=[dp.polars.Margin(by=(), max_partition_length=300)],
+        margins=[dp.polars.Margin(by=(), max_length=300)],
     )
 
     # replace multiple input values with one output value
@@ -1091,7 +1091,7 @@ def test_replace_strict():
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=1,
-        margins=[dp.polars.Margin(by=(), max_partition_length=300)],
+        margins=[dp.polars.Margin(by=(), max_length=300)],
     )
 
     # replace multiple input values with one output value
@@ -1117,7 +1117,7 @@ def test_cast_enum():
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=1,
-        margins=[dp.polars.Margin(by=(), max_partition_length=300)],
+        margins=[dp.polars.Margin(by=(), max_length=300)],
     )
 
     enum_dtype = pl.Enum(["A", "B", "C"])
@@ -1184,8 +1184,8 @@ def test_arithmetic():
         }),
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0),
-                split_evenly_over=1,
-        margins=[dp.polars.Margin(by=(), max_partition_length=300)],
+        split_evenly_over=1,
+        margins=[dp.polars.Margin(by=(), max_length=300)],
     )
 
     context.query().filter(pl.col.data.truediv(2) > 1.5).select(dp.len()).summarize()
@@ -1200,7 +1200,8 @@ def test_arithmetic():
     # expectation is 330.0
     assert 260 < observed < 400
 
-def test_truncation():
+@pytest.mark.parametrize("keep", ["first", "last", "sample"])
+def test_truncate_per_group(keep):
     pl = pytest.importorskip("polars")
 
     context = dp.Context.compositor(
@@ -1210,21 +1211,17 @@ def test_truncation():
         split_evenly_over=1,
     )
 
-    truncation_predicate = pl.int_range(pl.len()).over("id") < 3
-    query = context.query().filter(truncation_predicate).select(dp.len())
-    assert query.summarize()["scale"][0] == 3.0000000000000004  # type: ignore[index]
-
-    query = context.query().truncate(k=2).select(dp.len())
+    query = context.query().truncate_per_group(2, keep=keep).select(dp.len())
     assert query.summarize()["scale"][0] == 2.0000000000000004  # type: ignore[index]
 
     context = dp.Context.compositor(
         data=pl.LazyFrame({"alpha": ["A", "B", "C", "D"] * 100, "id": list(range(100)) * 4}),
         privacy_unit=dp.unit_of(
             contributions=[
-                GroupBound(
+                Bound(
                     by=["alpha"],
-                    max_influenced_partitions=1,
-                    max_partition_contributions=1,
+                    num_groups=1,
+                    per_group=1,
                 )
             ],
             identifier="id",
@@ -1233,11 +1230,29 @@ def test_truncation():
         split_evenly_over=1,
     )
 
-    truncation_predicate = pl.int_range(pl.len()).over("id", "alpha") < 3
-    query = context.query().filter(truncation_predicate).group_by("alpha").agg(dp.len())
-    assert query.summarize()["scale"][0] == 3.0000000000000004  # type: ignore[index]
+    query = context.query().truncate_per_group(2, by=["alpha"], keep=keep).group_by("alpha").agg(dp.len())
+    assert query.summarize()["scale"][0] == 2.0000000000000004  # type: ignore[index]
 
-    query = context.query().truncate(k=2, over=["alpha"]).group_by("alpha").agg(dp.len())
+
+
+@pytest.mark.parametrize("keep", ["first", "last"])
+def test_truncate_num_groups(keep):
+    pl = pytest.importorskip("polars")
+
+    context = dp.Context.compositor(
+        data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100}),
+        privacy_unit=dp.unit_of(contributions=1, identifier="id"),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=1,
+    )
+
+    query = (
+        context.query()
+        .truncate_per_group(2)
+        .truncate_num_groups(1, keep=keep, by=["alpha"])
+        .group_by("alpha")
+        .agg(dp.len())
+    )
     assert query.summarize()["scale"][0] == 2.0000000000000004  # type: ignore[index]
 
 
@@ -1250,7 +1265,7 @@ def test_private_lazyframe_bounded_dp(privacy_unit):
         privacy_unit=privacy_unit,
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=1,
-        margins=[dp.polars.Margin(by=(), max_partition_length=300)],
+        margins=[dp.polars.Margin(by=(), max_length=300)],
     )
 
     query = context.query().select(pl.col.id.fill_null(0).dp.sum((0, 3)))
@@ -1268,7 +1283,7 @@ def test_lazyframe_bounded_dp_truncation():
 
     # the unused with_columns is for test coverage of .truncate, 
     # which retrieves input domain from prior query
-    query = context.query().with_columns(x=pl.lit(10)).truncate(3).select(dp.len())
+    query = context.query().with_columns(x=pl.lit(10)).truncate_per_group(3).select(dp.len())
     assert query.summarize()["scale"][0] == 6.000000000000001  # type: ignore[index]
 
 
@@ -1280,8 +1295,47 @@ def test_unnecessary_lazyframe_truncation():
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=1,
-        margins=[dp.polars.Margin(by=(), max_partition_length=300)],
+        margins=[dp.polars.Margin(by=(), max_length=300)],
     )
 
-    with pytest.raises(ValueError, match="truncation is only supported for"):
-        context.query().truncate(3)
+    with pytest.raises(ValueError, match="truncation is only valid when"):
+        context.query().truncate_per_group(3)
+    with pytest.raises(ValueError, match="truncation is only valid when"):
+        context.query().truncate_num_groups(3, by=["alpha"])
+
+
+def test_frame_distance():
+    pl = pytest.importorskip("polars")
+
+    context = dp.Context.compositor(
+        data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": range(300)}),
+        privacy_unit=dp.unit_of(contributions=[
+            dp.polars.Bound(per_group=2)
+        ], identifier="id"),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-8),
+        split_evenly_over=1,
+    )
+
+    query = (
+        context.query()
+        # user can contribute one record per id per group (2 records per group)
+        .truncate_per_group(1, by=["alpha"])
+        # user can contribute one group per id (2 groups total)
+        .truncate_num_groups(1, by=["alpha"])
+        .group_by("alpha")
+        .agg(dp.len())
+    )
+    # ...therefore sensitivity of count is 2 * 2
+    assert query.summarize()["scale"][0] == 4.000000000000001  # type: ignore[index]
+
+
+def test_zero_budget():
+    pl = pytest.importorskip("polars")
+
+    context = dp.Context.compositor(
+        data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100}),
+        privacy_unit=dp.unit_of(changes=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+    )
+    context.query().select(pl.len()).release().collect()

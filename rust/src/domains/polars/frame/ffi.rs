@@ -11,8 +11,8 @@ use crate::{
         util::{self, AnyDomainPtr, Type},
     },
     metrics::{
-        ChangeOneDistance, ChangeOneIdDistance, HammingDistance, InsertDeleteDistance, Multi,
-        SymmetricDistance, SymmetricIdDistance,
+        ChangeOneDistance, ChangeOneIdDistance, FrameDistance, HammingDistance,
+        InsertDeleteDistance, SymmetricDistance, SymmetricIdDistance,
     },
 };
 
@@ -217,11 +217,11 @@ impl<F: 'static + Frame> MetricSpace for (FrameDomain<F>, AnyMetric) {
         }
 
         // multi-metrics
-        if let Some(_) = dispatch!(in_set, [(M, [Multi<SymmetricDistance>, Multi<SymmetricIdDistance>, Multi<InsertDeleteDistance>])])
+        if let Some(_) = dispatch!(in_set, [(M, [FrameDistance<SymmetricDistance>, FrameDistance<SymmetricIdDistance>, FrameDistance<InsertDeleteDistance>])])
         {
             return dispatch!(monomorphize_dataset, [
                 (F, [F]),
-                (M, [Multi<SymmetricDistance>, Multi<SymmetricIdDistance>, Multi<InsertDeleteDistance>])
+                (M, [FrameDistance<SymmetricDistance>, FrameDistance<SymmetricIdDistance>, FrameDistance<InsertDeleteDistance>])
             ], (domain, metric));
         }
 

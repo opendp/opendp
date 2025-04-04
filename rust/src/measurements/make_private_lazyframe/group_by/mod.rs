@@ -11,7 +11,7 @@ use crate::error::*;
 use crate::measurements::expr_noise::Distribution;
 use crate::measurements::make_private_expr;
 use crate::measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence};
-use crate::metrics::{GroupBounds, Multi, PartitionDistance};
+use crate::metrics::{Bounds, FrameDistance, PartitionDistance};
 use crate::traits::{InfAdd, InfMul, InfPowI, InfSub};
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::{StableDslPlan, StableExpr};
@@ -40,19 +40,19 @@ use polars_plan::prelude::ProjectionOptions;
 /// * `threshold` - Only keep groups with length greater than threshold
 pub fn make_private_group_by<MI, MO>(
     input_domain: DslPlanDomain,
-    input_metric: Multi<MI>,
+    input_metric: FrameDistance<MI>,
     output_measure: MO,
     plan: DslPlan,
     global_scale: Option<f64>,
     threshold: Option<u32>,
-) -> Fallible<Measurement<DslPlanDomain, DslPlan, Multi<MI>, MO>>
+) -> Fallible<Measurement<DslPlanDomain, DslPlan, FrameDistance<MI>, MO>>
 where
     MI: 'static + UnboundedMetric,
     MI::EventMetric: UnboundedMetric,
     MO: 'static + ApproximateMeasure,
     Expr: PrivateExpr<PartitionDistance<MI::EventMetric>, MO>
         + StableExpr<PartitionDistance<MI::EventMetric>, PartitionDistance<MI::EventMetric>>,
-    DslPlan: StableDslPlan<Multi<MI>, Multi<MI::EventMetric>>,
+    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
 {
     let Some(MatchGroupBy {
         input,
@@ -102,7 +102,7 @@ where
 
     let is_join = if let Some(KeySanitizer::Join { keys, .. }) = key_sanitizer.clone() {
         let num_keys = LazyFrame::from((*keys).clone()).select([len()]).collect()?;
-        margin.max_num_partitions = Some(num_keys.column("len")?.u32()?.last().unwrap());
+        margin.max_groups = Some(num_keys.column("len")?.u32()?.last().unwrap());
 
         true
     } else {
@@ -138,7 +138,7 @@ where
         .map(|ep| (ep.expr, ep.fill))
         .unzip();
 
-    let threshold_info = if margin.public_info.is_some() || is_join {
+    let threshold_info = if margin.invariant.is_some() || is_join {
         None
     } else if let Some((name, threshold_value)) = match_filter(&key_sanitizer) {
         let noise = find_len_expr(&dp_exprs, Some(name.as_str()))?.1;
@@ -226,18 +226,13 @@ where
         }),
         middle_metric,
         output_measure.clone(),
-        PrivacyMap::new_fallible(move |d_in: &GroupBounds| {
+        PrivacyMap::new_fallible(move |d_in: &Bounds| {
             let bound = d_in.get_bound(&group_by_id);
-            let mip = bound.max_influenced_partitions;
-            let mpc = bound.max_partition_contributions;
-
-            let mnp = margin.max_num_partitions;
-            let mpl = margin.max_partition_length;
 
             // incorporate all information into optional bounds
-            let l0 = option_min(mip, mnp);
-            let li = option_min(mpc, mpl);
-            let l1 = d_in.get_bound(&HashSet::new()).max_partition_contributions;
+            let l0 = option_min(bound.num_groups, margin.max_groups);
+            let li = option_min(bound.per_group, margin.max_length);
+            let l1 = d_in.get_bound(&HashSet::new()).per_group;
 
             // reduce optional bounds to concrete bounds
             let (l0, l1, li) = match (l0, l1, li) {
@@ -247,7 +242,7 @@ where
                 _ => {
                     return fallible!(
                         FailedMap,
-                        "l0, l1, l∞ bounds ({l0:?}, {l1:?}, {li:?}) are not well-defined. Either truncate, or set max_influenced_partitions and max_partition_contributions."
+                        "num_groups ({l0:?}), total contributions ({l1:?}), and per_group ({li:?}) are not sufficiently well-defined. Either truncate or set appropriate margin descriptors like num_groups and per_group."
                     );
                 }
             };
@@ -270,7 +265,7 @@ where
                         .neg_inf_powi(IBig::from(l0))?,
                 )?;
                 d_out = MO::add_delta(d_out, delta_joint)?;
-            } else if margin.public_info.is_none() {
+            } else if margin.invariant.is_none() {
                 return fallible!(
                     FailedMap,
                     "key-sets cannot be privatized under {:?}. FixedSmoothedMaxDivergence is necessary.",
