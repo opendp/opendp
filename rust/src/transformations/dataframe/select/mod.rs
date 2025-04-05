@@ -48,8 +48,8 @@ where
                 .as_form::<Vec<TOA>>()
                 .map(|c| c.clone())
         }),
-        SymmetricDistance::default(),
-        SymmetricDistance::default(),
+        SymmetricDistance,
+        SymmetricDistance,
         StabilityMap::new_from_constant(1),
     )
 }

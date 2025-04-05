@@ -54,7 +54,7 @@ mod tests {
     fn test_make_mean() -> Fallible<()> {
         let transformation = Result::from(opendp_transformations__make_mean(
             AnyDomain::new_raw(VectorDomain::new(AtomDomain::new_closed((0., 10.))?).with_size(3)),
-            AnyMetric::new_raw(InsertDeleteDistance::default()),
+            AnyMetric::new_raw(InsertDeleteDistance),
         ))?;
         let arg = AnyObject::new_raw(vec![1.0, 2.0, 3.0]);
         let res = core::opendp_core__transformation_invoke(&transformation, arg);

@@ -1,5 +1,5 @@
 use crate::domains::{LazyFrameDomain, OptionDomain, SeriesDomain};
-use crate::metrics::SymmetricDistance;
+use crate::metrics::{Multi, SymmetricDistance};
 
 use super::*;
 
@@ -64,7 +64,7 @@ macro_rules! test_binary {
         );
         let t_op = col("L")
             .$op(col("R"))
-            .make_stable(expr_domain.clone(), SymmetricDistance)?;
+            .make_stable(expr_domain.clone(), Multi(SymmetricDistance))?;
         let output_series = &t_op.output_domain.column;
         assert_eq!(&*output_series.name, "L");
 

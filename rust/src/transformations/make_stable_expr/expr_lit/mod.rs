@@ -5,7 +5,7 @@ use polars_plan::utils::expr_output_name;
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, ExprDomain, NaN, OuterMetric, SeriesDomain, WildExprDomain};
 use crate::error::Fallible;
-use crate::transformations::DatasetMetric;
+use crate::metrics::MicrodataMetric;
 
 #[cfg(test)]
 mod test;
@@ -22,7 +22,7 @@ pub fn make_expr_lit<M: OuterMetric>(
     expr: Expr,
 ) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
 where
-    M::InnerMetric: DatasetMetric,
+    M::InnerMetric: MicrodataMetric,
     M::Distance: Clone,
     (WildExprDomain, M): MetricSpace,
     (ExprDomain, M): MetricSpace,

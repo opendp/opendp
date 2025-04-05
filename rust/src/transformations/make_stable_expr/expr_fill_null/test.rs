@@ -5,7 +5,7 @@ use polars::series::Series;
 use polars_plan::dsl::col;
 
 use crate::domains::{AtomDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
-use crate::metrics::SymmetricDistance;
+use crate::metrics::{Multi, SymmetricDistance};
 
 use super::*;
 
@@ -20,7 +20,7 @@ fn test_make_expr_fill_null() -> Fallible<()> {
 
     let t_fill_null = col("i32")
         .fill_null(0)
-        .make_stable(lf_domain.clone().row_by_row(), SymmetricDistance)?;
+        .make_stable(lf_domain.clone().row_by_row(), Multi(SymmetricDistance))?;
     let expr_fill_null = t_fill_null.invoke(&lf.logical_plan)?.expr;
     println!("{:?}", expr_fill_null);
     let actual = lf.with_column(expr_fill_null).collect()?;
@@ -46,7 +46,7 @@ fn test_make_expr_fill_null_expr() -> Fallible<()> {
 
     let t_fill_null = col("f64_null")
         .fill_null(col("f64_nonnull"))
-        .make_stable(lf_domain.clone().row_by_row(), SymmetricDistance)?;
+        .make_stable(lf_domain.clone().row_by_row(), Multi(SymmetricDistance))?;
 
     let expr_fill_null = t_fill_null.invoke(&lf.logical_plan)?.expr;
     let actual = lf.with_column(expr_fill_null).collect()?;
@@ -70,7 +70,7 @@ fn test_make_expr_fill_null_expr_filter_fail() -> Fallible<()> {
 
     let err = col("f64_null")
         .fill_null(lit(0.0).filter(col("f64_nonnull").gt_eq(0.0)))
-        .make_stable(lf_domain.clone().row_by_row(), SymmetricDistance)
+        .make_stable(lf_domain.clone().row_by_row(), Multi(SymmetricDistance))
         .unwrap_err();
 
     assert_eq!(

@@ -88,7 +88,7 @@ where
             }
             Ok(S::unchecked_sum(&data[..size_limit.min(data.len())]))
         }),
-        SymmetricDistance::default(),
+        SymmetricDistance,
         AbsoluteDistance::default(),
         StabilityMap::new_fallible(move |d_in: &IntDistance| {
             // d_out =  |BS*(v) - BS*(v')| where BS* is the finite sum and BS the ideal sum
@@ -165,7 +165,7 @@ where
         AtomDomain::new_non_nan(),
         // Under the assumption that the input data is in input domain, then an unchecked sum is safe.
         Function::new(move |arg: &Vec<S::Item>| S::unchecked_sum(arg)),
-        SymmetricDistance::default(),
+        SymmetricDistance,
         AbsoluteDistance::default(),
         StabilityMap::new_fallible(move |d_in: &IntDistance| {
             // d_out =  |BS*(v) - BS*(v')| where BS* is the finite sum and BS the ideal sum

@@ -102,12 +102,12 @@ mod test_trans {
     fn test_scorer() -> Fallible<()> {
         let candidates = vec![7, 12, 14, 72, 76];
         let input_domain = VectorDomain::new(AtomDomain::default());
-        let input_metric = SymmetricDistance::default();
+        let input_metric = SymmetricDistance;
         let trans =
             make_quantile_score_candidates(input_domain, input_metric, candidates.clone(), 0.75)?;
 
         let input_domain = VectorDomain::new(AtomDomain::default()).with_size(100);
-        let input_metric = SymmetricDistance::default();
+        let input_metric = SymmetricDistance;
         let trans_sized =
             make_quantile_score_candidates(input_domain, input_metric, candidates, 0.75)?;
 
@@ -127,7 +127,7 @@ mod test_trans {
     fn test_release() -> Fallible<()> {
         let candidates = vec![7, 12, 14, 72, 76];
         let input_domain = VectorDomain::new(AtomDomain::default());
-        let input_metric = SymmetricDistance::default();
+        let input_metric = SymmetricDistance;
         let trans = make_quantile_score_candidates(input_domain, input_metric, candidates, 0.75)?;
         let exp_mech = make_report_noisy_max_gumbel(
             trans.output_domain.clone(),
@@ -147,7 +147,7 @@ mod test_trans {
     fn test_release_sized() -> Fallible<()> {
         let candidates = vec![7, 12, 14, 72, 76];
         let input_domain = VectorDomain::new(AtomDomain::default()).with_size(100);
-        let input_metric = SymmetricDistance::default();
+        let input_metric = SymmetricDistance;
         let trans_sized =
             make_quantile_score_candidates(input_domain, input_metric, candidates, 0.75)?;
         let exp_mech = make_report_noisy_max_gumbel(

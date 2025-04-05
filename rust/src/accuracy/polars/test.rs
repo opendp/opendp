@@ -13,7 +13,7 @@ use crate::{
     error::Fallible,
     measurements::make_private_lazyframe,
     measures::MaxDivergence,
-    metrics::SymmetricDistance,
+    metrics::{Multi, SymmetricDistance},
     polars::PrivacyNamespace,
 };
 
@@ -29,14 +29,14 @@ fn test_summarize_polars_measurement_basic() -> Fallible<()> {
         Margin::select()
             .with_public_keys()
             .with_max_partition_length(10),
-    )?;
+    );
 
     let lf = df!("A" => &[3, 4, 5], "B" => &[1., 3., 7.])?.lazy();
 
     let meas = make_private_lazyframe(
         lf_domain,
-        SymmetricDistance,
-        MaxDivergence::default(),
+        Multi(SymmetricDistance),
+        MaxDivergence,
         lf.select([
             len().dp().noise(None, None),
             col("A").dp().sum((0, 1), None),
@@ -76,14 +76,14 @@ fn test_summarize_polars_measurement_mean() -> Fallible<()> {
         Margin::select()
             .with_public_lengths()
             .with_max_partition_length(10),
-    )?;
+    );
 
     let lf = df!("A" => &[3, 4, 5], "B" => &[1., 3., 7.])?.lazy();
 
     let meas = make_private_lazyframe(
         lf_domain,
-        SymmetricDistance,
-        MaxDivergence::default(),
+        Multi(SymmetricDistance),
+        MaxDivergence,
         lf.select([col("A").dp().mean((3, 5), Some((1.0, 0.0)))]),
         None,
         None,
@@ -121,7 +121,7 @@ fn test_summarize_polars_measurement_quantile() -> Fallible<()> {
                 Margin::select()
                     .with_public_lengths()
                     .with_max_partition_length(100),
-            )?;
+            );
 
     let lf = df!("A" => (0..=100i32).collect::<Vec<_>>())?.lazy();
 
@@ -131,8 +131,8 @@ fn test_summarize_polars_measurement_quantile() -> Fallible<()> {
     );
     let meas = make_private_lazyframe(
         lf_domain,
-        SymmetricDistance,
-        MaxDivergence::default(),
+        Multi(SymmetricDistance),
+        MaxDivergence,
         lf.select([
             col("A")
                 .dp()
