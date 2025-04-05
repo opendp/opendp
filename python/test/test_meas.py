@@ -161,14 +161,13 @@ def test_vector_discrete_gaussian():
     assert not meas.check(1., 0.124)
 
 def test_make_count_by_ptr():
-    input_space = dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()
     meas = (
-        input_space >>
-        dp.t.then_count_by(MO=dp.L1Distance[float], TV=float) >> 
-        dp.m.then_laplace_threshold(scale=2., threshold=28.)
+        dp.space_of(list[str]) >>
+        dp.t.then_count_by() >> 
+        dp.m.then_laplace_threshold(scale=2., threshold=28)
     )
     print("stability histogram:", meas(["CAT_A"] * 20 + ["CAT_B"] * 10))
-    assert meas.map(1) == (0.5, 6.854795431920434e-07)
+    assert meas.map(1) == (0.5, 5.175928103895444e-07)
     assert meas.check(1, (1.0, 1e-6))
 
 def test_randomized_response():
@@ -217,8 +216,7 @@ def test_report_noisy_max_gumbel():
 def test_alp_histogram():
     counter = dp.t.make_count_by(
         dp.vector_domain(dp.atom_domain(T=str)),
-        dp.symmetric_distance(),
-        MO=dp.L1Distance[int])
+        dp.symmetric_distance())
 
     alp_meas = counter >> dp.m.then_alp_queryable(
         scale=1.,
@@ -252,3 +250,59 @@ def test_randomized_response_bitvec():
     # epsilon is 2 * m * ln((2 - f) / f)
     # where m = 4 and f = .95
     assert m_rr.map(1) == 0.8006676684558611
+
+def test_laplace_threshold_int():
+    domain = dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=int))
+    metric = dp.l_01I(dp.absolute_distance(T=int))
+    meas = dp.m.make_laplace_threshold(domain, metric, scale=2., threshold=28)
+    release = meas({str(i): i * 10 for i in range(10)})
+    # 0 + noise is likely not over 28
+    assert "0" not in release, release
+    # 90 + noise is likely over 28
+    assert "9" in release, release
+    # delta is the mass of the right tail of integer laplace greater than 28 with conservative arithmetic
+    # 5 = 10 / 2 = Δ / σ
+    assert meas.map((1, 10, 10)) == (5.0, 4.659221997116436e-05)
+
+def test_laplace_threshold_float():
+    domain = dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=float, nan=False))
+    metric = dp.l_01I(dp.absolute_distance(T=float))
+    meas = dp.m.make_laplace_threshold(domain, metric, scale=2., threshold=28.)
+    release = meas({str(i): i * 10.0 for i in range(10)})
+    # 0 + noise is likely not over 28
+    assert "0" not in release, release
+    # 90 + noise is likely over 28
+    assert "9" in release, release
+    print(meas.map((1, 10, 10)))
+    # delta is the mass of the right tail of continuous laplace greater than 28 with conservative arithmetic
+    # the looser continuous laplace is used because discrete laplace tail bound is not computable with large constants
+    assert meas.map((1, 10, 10)) == (5.0, 6.17049020433802e-05)
+
+def test_gaussian_threshold_int():
+    domain = dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=int))
+    metric = dp.l_02I(dp.absolute_distance(T=int))
+    meas = dp.m.make_gaussian_threshold(domain, metric, scale=2., threshold=28)
+    release = meas({str(i): i * 10 for i in range(10)})
+    # 0 + noise is likely not over 28
+    assert "0" not in release, release
+    # 90 + noise is likely over 28
+    assert "9" in release, release
+    # delta is the mass of the right tail of continuous gaussian greater than 28 with conservative arithmetic
+    # the continuous gaussian is used because discrete gaussian tail bound is not analytic
+    # 12.5 = (10 / 2)^2 / 2 = (Δ / σ)^2 / 2
+    assert meas.map((1, 10, 10)) == (12.5, 1.1102230246251565e-16)
+
+def test_gaussian_threshold_float():
+    domain = dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=float, nan=False))
+    metric = dp.l_02I(dp.absolute_distance(T=float))
+    meas = dp.m.make_gaussian_threshold(domain, metric, scale=2., threshold=28.)
+    release = meas({str(i): i * 10.0 for i in range(10)})
+    # 0 + noise is likely not over 28
+    assert "0" not in release, release
+    # 90 + noise is likely over 28
+    assert "9" in release, release
+    # delta is the mass of the right tail of continuous gaussian greater than 28 with conservative arithmetic
+    # the continuous gaussian is used because discrete gaussian tail bound is not analytic
+    # 12.5 = (10 / 2)^2 / 2 = (Δ / σ)^2 / 2
+    assert meas.map((1, 10, 10)) == (12.5, 1.1102230246251565e-16)
+

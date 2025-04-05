@@ -112,14 +112,6 @@ impl fmt::Display for Error {
     }
 }
 
-// simplify error creation from vega_lite_4
-#[cfg(all(test, feature = "test-plot"))]
-impl From<String> for Error {
-    fn from(v: String) -> Self {
-        err!(FailedFunction, "{}", v)
-    }
-}
-
 #[cfg(feature = "polars")]
 impl From<Error> for PolarsError {
     fn from(value: Error) -> Self {
