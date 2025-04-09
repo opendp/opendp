@@ -936,6 +936,7 @@ class LazyFrameQuery:
                 threshold=threshold,
             )
         
+        # when the query has sensitivity zero or is behind an invariant
         try:
             m_zero = _make(0., threshold=None)
             if m_zero.check(d_in, d_out):

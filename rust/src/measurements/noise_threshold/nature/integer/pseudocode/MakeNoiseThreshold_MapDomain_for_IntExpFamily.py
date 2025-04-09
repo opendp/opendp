@@ -3,13 +3,13 @@ class IntExpFamily:
     def make_noise_threshold(
         self,
         input_space: tuple[
-            MapDomain[AtomDomain[TK], AtomDomain[TV]], L0PI[P, AbsoluteDistance[QI]]
+            MapDomain[AtomDomain[TK], AtomDomain[TV]], L0PInfDistance[P, AbsoluteDistance[QI]]
         ],
         threshold: TV,
     ) -> Measurement[
         MapDomain[AtomDomain[TK], AtomDomain[TV]],
         HashMap[TK, TV],
-        L0PI[P, AbsoluteDistance[QI]],
+        L0PInfDistance[P, AbsoluteDistance[QI]],
         MO,
     ]:
         distribution = ZExpFamily(

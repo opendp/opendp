@@ -376,7 +376,7 @@ where
 impl<K: CheckAtom, V: CheckAtom, const P: usize, Q> MetricSpace
     for (
         MapDomain<AtomDomain<K>, AtomDomain<V>>,
-        L0PI<P, AbsoluteDistance<Q>>,
+        L0PInfDistance<P, AbsoluteDistance<Q>>,
     )
 where
     K: Eq + Hash,
@@ -486,14 +486,14 @@ impl<T: CheckAtom, Q> MetricSpace for (AtomDomain<T>, AbsoluteDistance<Q>) {
 /// |s|_0 \leq d_0 \land |s|_\infty \leq d_2.
 /// ```
 #[derive(Clone, PartialEq, Default)]
-pub struct L0I<M: Metric>(pub M);
-impl<M: Metric> Debug for L0I<M> {
+pub struct L0InfDistance<M: Metric>(pub M);
+impl<M: Metric> Debug for L0InfDistance<M> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "L0I({:?})", self.0)
+        write!(f, "L0InfDistance({:?})", self.0)
     }
 }
 
-impl<M: Metric> Metric for L0I<M> {
+impl<M: Metric> Metric for L0InfDistance<M> {
     //               L^0          L^\infty
     type Distance = (IntDistance, M::Distance);
 }
@@ -524,24 +524,27 @@ impl<M: Metric> Metric for L0I<M> {
 /// |s|_0 \leq d_0 \land |s|_P \leq d_1 \land |s|_\infty \leq d_2.
 /// ```
 #[derive(Clone, PartialEq, Default)]
-pub struct L0PI<const P: usize, M: Metric>(pub M);
+pub struct L0PInfDistance<const P: usize, M: Metric>(pub M);
 
-pub type L01I<M> = L0PI<1, M>;
-pub type L02I<M> = L0PI<2, M>;
+pub type L01InfDistance<M> = L0PInfDistance<1, M>;
+pub type L02InfDistance<M> = L0PInfDistance<2, M>;
 
-impl<M: Metric, const P: usize> Debug for L0PI<P, M> {
+impl<M: Metric, const P: usize> Debug for L0PInfDistance<P, M> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "L0{P}I({:?})", self.0)
+        write!(f, "L0{P}InfDistance({:?})", self.0)
     }
 }
 
-impl<const P: usize, M: Metric> Metric for L0PI<P, M> {
+impl<const P: usize, M: Metric> Metric for L0PInfDistance<P, M> {
     //               L^0          L^P          L^\infty
     type Distance = (IntDistance, M::Distance, M::Distance);
 }
 
 impl<T: CheckAtom, const P: usize> MetricSpace
-    for (VectorDomain<AtomDomain<T>>, L0PI<P, AbsoluteDistance<T>>)
+    for (
+        VectorDomain<AtomDomain<T>>,
+        L0PInfDistance<P, AbsoluteDistance<T>>,
+    )
 {
     fn check_space(&self) -> Fallible<()> {
         if self.0.element_domain.nan() {

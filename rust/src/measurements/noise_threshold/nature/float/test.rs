@@ -9,7 +9,7 @@ fn test_make_noise_floatexpfamily() -> Fallible<()> {
             AtomDomain::<bool>::default(),
             AtomDomain::<f64>::new_non_nan(),
         ),
-        L0PI(AbsoluteDistance::<f64>::default()),
+        L0PInfDistance(AbsoluteDistance::<f64>::default()),
     );
 
     assert!(
@@ -30,7 +30,7 @@ fn test_make_noise_floatexpfamily() -> Fallible<()> {
             AtomDomain::<bool>::default(),
             AtomDomain::<f64>::new_non_nan(),
         ),
-        L0PI(AbsoluteDistance::<f64>::default()),
+        L0PInfDistance(AbsoluteDistance::<f64>::default()),
     );
     assert!(
         FloatExpFamily::<2> {

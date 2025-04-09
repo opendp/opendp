@@ -1,12 +1,12 @@
 # type: ignore
-# analogous to impl NoiseThresholdPrivacyMap<L01I<AbsoluteDistance<RBig>>, Approximate<MaxDivergence>> for ZExpFamily<1> in Rust
+# analogous to impl NoiseThresholdPrivacyMap<L01InfDistance<AbsoluteDistance<RBig>>, Approximate<MaxDivergence>> for ZExpFamily<1> in Rust
 class ZExpFamily1:
     def noise_threshold_privacy_map(
         self,
-        _input_metric: L01I[AbsoluteDistance[RBig]],
+        _input_metric: L01InfDistance[AbsoluteDistance[RBig]],
         output_measure: Approximate[MaxDivergence],
         threshold: UBig,
-    ) -> PrivacyMap[L01I[AbsoluteDistance[RBig]], Approximate[MaxDivergence]]:
+    ) -> PrivacyMap[L01InfDistance[AbsoluteDistance[RBig]], Approximate[MaxDivergence]]:
         # |\label{line:noise-privacy-map}|
         noise_privacy_map = self.noise_privacy_map(L1Distance.default(), output_measure[0])
         scale = self.scale

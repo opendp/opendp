@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use super::*;
 use crate::{
     domains::{AtomDomain, MapDomain},
-    metrics::{AbsoluteDistance, L0PI},
+    metrics::{AbsoluteDistance, L0PInfDistance},
     traits::InfCast,
 };
 use num::{One, Zero};
@@ -17,7 +17,7 @@ fn test_make_laplace_threshold_native_types() -> Fallible<()> {
         ($($ty:ty),+) => {$(
             // map
             let domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<$ty>::new_non_nan());
-            let metric = L0PI(AbsoluteDistance::<$ty>::default());
+            let metric = L0PInfDistance(AbsoluteDistance::<$ty>::default());
             let meas = make_laplace_threshold(domain, metric, 1., <$ty>::inf_cast(50)?, None)?;
 
             let data = HashMap::from([(false, <$ty>::zero()), (true, <$ty>::inf_cast(100)?)]);
@@ -38,7 +38,7 @@ fn test_make_laplace_threshold_native_types() -> Fallible<()> {
 #[test]
 fn test_make_laplace_threshold_bigint() -> Fallible<()> {
     let domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<IBig>::default());
-    let metric = L0PI(AbsoluteDistance::<RBig>::default());
+    let metric = L0PInfDistance(AbsoluteDistance::<RBig>::default());
     let meas = make_laplace_threshold(domain, metric, 1., ibig!(50), None)?;
 
     let data = HashMap::from([(false, ibig!(0)), (true, ibig!(100))]);
@@ -60,7 +60,7 @@ fn test_make_laplace_threshold_float_map() -> Fallible<()> {
             AtomDomain::<bool>::default(),
             AtomDomain::<f64>::new_non_nan(),
         ),
-        L0PI(AbsoluteDistance::<f64>::default()).clone(),
+        L0PInfDistance(AbsoluteDistance::<f64>::default()).clone(),
         1f64,
         10f64,
         None,
@@ -106,7 +106,7 @@ fn test_make_laplace_threshold_int_map() -> Fallible<()> {
             AtomDomain::<bool>::default(),
             AtomDomain::<i32>::new_non_nan(),
         ),
-        L0PI(AbsoluteDistance::<u32>::default()),
+        L0PInfDistance(AbsoluteDistance::<u32>::default()),
         1f64,
         10,
         None,
@@ -127,7 +127,7 @@ fn test_make_laplace_threshold_extreme_int() -> Fallible<()> {
     // an extreme noise scale dominates the output, resulting in the release always being saturated
     let meas = make_laplace_threshold(
         MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<u32>::default()),
-        L0PI(AbsoluteDistance::<f64>::default()),
+        L0PInfDistance(AbsoluteDistance::<f64>::default()),
         f64::MAX,
         50,
         None,
@@ -141,7 +141,7 @@ fn test_make_laplace_threshold_extreme_int() -> Fallible<()> {
 #[test]
 fn test_make_noise_threshold_zexpfamily1_large_scale() -> Fallible<()> {
     let domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<IBig>::default());
-    let metric = L0PI(AbsoluteDistance::<RBig>::default());
+    let metric = L0PInfDistance(AbsoluteDistance::<RBig>::default());
     let distribution = ZExpFamily::<1> {
         scale: rbig!(23948285282902934157),
     };
@@ -159,7 +159,7 @@ fn test_make_noise_threshold_zexpfamily1_large_scale() -> Fallible<()> {
 #[test]
 fn test_make_noise_threshold_zexpfamily1_zero_scale() -> Fallible<()> {
     let domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<IBig>::default());
-    let metric = L0PI(AbsoluteDistance::<RBig>::default());
+    let metric = L0PInfDistance(AbsoluteDistance::<RBig>::default());
     let distribution = ZExpFamily { scale: rbig!(0) };
 
     let meas: Measurement<_, _, _, Approximate<MaxDivergence>> =
@@ -177,7 +177,7 @@ fn test_make_noise_threshold_zexpfamily1_zero_scale() -> Fallible<()> {
 #[test]
 fn test_laplace_threshold_int() -> Fallible<()> {
     let input_domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<i32>::default());
-    let input_metric = L0PI(AbsoluteDistance::<i32>::default());
+    let input_metric = L0PInfDistance(AbsoluteDistance::<i32>::default());
     let m_thresh =
         make_laplace_threshold(input_domain.clone(), input_metric.clone(), 0.0, 10, None)?;
 
@@ -196,7 +196,7 @@ fn test_laplace_threshold_float() -> Fallible<()> {
         AtomDomain::<bool>::default(),
         AtomDomain::<f64>::new_non_nan(),
     );
-    let input_metric = L0PI(AbsoluteDistance::<i32>::default());
+    let input_metric = L0PInfDistance(AbsoluteDistance::<i32>::default());
     // when k is None, the grid is on subnormal increments, so nothing rounds, all values are exact
     let m_thresh = make_laplace_threshold(input_domain, input_metric, 0.0, 10.0, None)?;
 
@@ -212,7 +212,7 @@ fn test_laplace_threshold_float_k() -> Fallible<()> {
         AtomDomain::<bool>::default(),
         AtomDomain::<f64>::new_non_nan(),
     );
-    let input_metric = L0PI(AbsoluteDistance::<i32>::default());
+    let input_metric = L0PInfDistance(AbsoluteDistance::<i32>::default());
     // k = -1 means grid is on 0.5 increments, so 9.74 rounds to 9.5 and 9.76 rounds to 10.0
     let m_thresh = make_laplace_threshold(input_domain, input_metric, 0.0, 9.9, Some(-1))?;
 
