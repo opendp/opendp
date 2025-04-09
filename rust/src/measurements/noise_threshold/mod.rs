@@ -9,7 +9,7 @@ use opendp_derive::proven;
 use crate::core::{Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap};
 use crate::domains::{AtomDomain, MapDomain};
 use crate::error::Fallible;
-use crate::metrics::{AbsoluteDistance, L0PI};
+use crate::metrics::{AbsoluteDistance, L0PInfDistance};
 use crate::traits::Hashable;
 
 use super::{Sample, ZExpFamily};
@@ -69,26 +69,26 @@ pub trait NoiseThresholdPrivacyMap<MI: Metric, MO: Measure>: Sample {
 impl<TK, const P: usize, MO: 'static + Measure>
     MakeNoiseThreshold<
         MapDomain<AtomDomain<TK>, AtomDomain<IBig>>,
-        L0PI<P, AbsoluteDistance<RBig>>,
+        L0PInfDistance<P, AbsoluteDistance<RBig>>,
         MO,
     > for ZExpFamily<P>
 where
     TK: Hashable,
-    ZExpFamily<P>: NoiseThresholdPrivacyMap<L0PI<P, AbsoluteDistance<RBig>>, MO>,
+    ZExpFamily<P>: NoiseThresholdPrivacyMap<L0PInfDistance<P, AbsoluteDistance<RBig>>, MO>,
 {
     type Threshold = IBig;
     fn make_noise_threshold(
         self,
         (input_domain, input_metric): (
             MapDomain<AtomDomain<TK>, AtomDomain<IBig>>,
-            L0PI<P, AbsoluteDistance<RBig>>,
+            L0PInfDistance<P, AbsoluteDistance<RBig>>,
         ),
         threshold: IBig,
     ) -> Fallible<
         Measurement<
             MapDomain<AtomDomain<TK>, AtomDomain<IBig>>,
             HashMap<TK, IBig>,
-            L0PI<P, AbsoluteDistance<RBig>>,
+            L0PInfDistance<P, AbsoluteDistance<RBig>>,
             MO,
         >,
     > {

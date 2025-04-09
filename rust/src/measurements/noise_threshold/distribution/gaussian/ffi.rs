@@ -10,7 +10,7 @@ use crate::ffi::util::{Type, TypeContents, as_ref};
 use crate::measurements::nature::Nature;
 use crate::measurements::{MakeNoiseThreshold, make_gaussian_threshold};
 use crate::measures::{Approximate, ZeroConcentratedDivergence};
-use crate::metrics::{AbsoluteDistance, L02I};
+use crate::metrics::{AbsoluteDistance, L02InfDistance};
 use crate::traits::{Hashable, Number};
 
 #[unsafe(no_mangle)]
@@ -35,7 +35,7 @@ pub extern "C" fn opendp_measurements__make_gaussian_threshold(
         QI: Number,
         <TV as Nature>::RV<2>: MakeNoiseThreshold<
                 MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
-                L02I<AbsoluteDistance<QI>>,
+                L02InfDistance<AbsoluteDistance<QI>>,
                 MO,
                 Threshold = TV,
             >,
@@ -44,7 +44,7 @@ pub extern "C" fn opendp_measurements__make_gaussian_threshold(
             .downcast_ref::<MapDomain<AtomDomain<TK>, AtomDomain<TV>>>()?
             .clone();
         let input_metric = input_metric
-            .downcast_ref::<L02I<AbsoluteDistance<QI>>>()?
+            .downcast_ref::<L02InfDistance<AbsoluteDistance<QI>>>()?
             .clone();
         let threshold = *try_as_ref!(threshold as *const TV);
         make_gaussian_threshold(input_domain, input_metric, scale, threshold, k).into_any()

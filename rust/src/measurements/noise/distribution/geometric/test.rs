@@ -15,18 +15,19 @@ fn test_make_geometric_native_types() -> Fallible<()> {
             let meas = make_geometric(
                 AtomDomain::<$ty>::new_non_nan(),
                 AbsoluteDistance::<$ty>::default(),
-                1., Some((0, 10))
+                1., Some((0, 4))
             )?;
-            assert!((0..10).contains(&meas.invoke(&<$ty>::zero())?));
+            let r = meas.invoke(&<$ty>::zero())?;
+            assert!((0..=4).contains(&r), "sampled value out of bounds: {}", r);
             assert_eq!(meas.map(&<$ty>::one())?, 1.0);
             // vector
             let meas = make_geometric(
                 VectorDomain::new(AtomDomain::<$ty>::new_non_nan()),
                 L1Distance::<$ty>::default(),
-                1., Some((0, 10))
+                1., Some((0, 4))
             )?;
-            meas.invoke(&vec![<$ty>::zero(); 10])?.into_iter().for_each(|s| {
-                assert!((0..10).contains(&s));
+            meas.invoke(&vec![<$ty>::zero(); 100])?.into_iter().for_each(|r| {
+                assert!((0..=4).contains(&r), "sampled value out of bounds: {}", r);
             });
             assert_eq!(meas.map(&<$ty>::one())?, 1.0);
         )+}

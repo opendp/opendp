@@ -6,7 +6,7 @@ use crate::measurements::{
     DiscreteGaussian, DiscreteLaplace, MakeNoise, make_gaussian, make_laplace,
 };
 use crate::measures::ZeroConcentratedDivergence;
-use crate::metrics::{L1Distance, L01I, L2Distance};
+use crate::metrics::{L1Distance, L01InfDistance, L2Distance};
 use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
 use crate::traits::{InfMul, Number};
 use crate::transformations::StableExpr;
@@ -191,12 +191,12 @@ impl NoiseExprMeasure for ZeroConcentratedDivergence {
 /// * `global_scale` - (Re)scale the noise parameter for the noise distribution
 pub fn make_expr_noise<MI: 'static + UnboundedMetric, MO: NoiseExprMeasure>(
     input_domain: WildExprDomain,
-    input_metric: L01I<MI>,
+    input_metric: L01InfDistance<MI>,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<WildExprDomain, ExprPlan, L01I<MI>, MO>>
+) -> Fallible<Measurement<WildExprDomain, ExprPlan, L01InfDistance<MI>, MO>>
 where
-    Expr: StableExpr<L01I<MI>, MO::Metric>,
+    Expr: StableExpr<L01InfDistance<MI>, MO::Metric>,
     (ExprDomain, MO::Metric): MetricSpace,
     // This is ugly, but necessary because MO is generic
     MO::Dist: MakeNoise<VectorDomain<AtomDomain<u32>>, MO::Metric, MO>

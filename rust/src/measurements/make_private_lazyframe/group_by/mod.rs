@@ -11,7 +11,7 @@ use crate::error::*;
 use crate::measurements::expr_noise::Distribution;
 use crate::measurements::make_private_expr;
 use crate::measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence};
-use crate::metrics::{Bounds, FrameDistance, L0PI, L01I};
+use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance};
 use crate::traits::{InfAdd, InfMul, InfPowI, InfSub, option_min};
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::{StableDslPlan, StableExpr};
@@ -51,8 +51,8 @@ where
     MI: 'static + UnboundedMetric,
     MI::EventMetric: UnboundedMetric,
     MO: 'static + ApproximateMeasure,
-    Expr: PrivateExpr<L01I<MI::EventMetric>, MO>
-        + StableExpr<L01I<MI::EventMetric>, L01I<MI::EventMetric>>,
+    Expr: PrivateExpr<L01InfDistance<MI::EventMetric>, MO>
+        + StableExpr<L01InfDistance<MI::EventMetric>, L01InfDistance<MI::EventMetric>>,
     DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
 {
     let is_truncated = input_metric.0.identifier().is_some();
@@ -79,7 +79,7 @@ where
         .iter()
         .map(|expr| {
             expr.clone()
-                .make_stable(expr_domain.clone(), L0PI(middle_metric.0.clone()))
+                .make_stable(expr_domain.clone(), L0PInfDistance(middle_metric.0.clone()))
         })
         .collect::<Fallible<Vec<_>>>()?;
 
@@ -122,7 +122,7 @@ where
             .map(|expr| {
                 make_private_expr(
                     expr_domain.clone(),
-                    L0PI(middle_metric.0.clone()),
+                    L0PInfDistance(middle_metric.0.clone()),
                     output_measure.clone(),
                     expr,
                     global_scale,

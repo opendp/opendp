@@ -73,7 +73,7 @@ None
         &\leq\frac{1}{s}\max_{x \sim x'} \sum_{i=1}^d|x'_i - x_i|
             &&d \text{ applications of reverse triangle inequality} \\
         &=\frac{1}{s}\max_{x \sim x'}||x' - x||_1
-            &&\text{substitute } L_1 from \rustdoc{metrics/type}{LpDistance} \\
+            &&\text{substitute } L_1 \text{ from } \rustdoc{metrics/type}{LpDistance} \\
         &\leq\frac{\texttt{d\_in}}{s}
             &&\text{since } ||x' - x||_1 = d_{L_1}(x, x') \leq \texttt{d\_in} \\
     \end{align}

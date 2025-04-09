@@ -3,7 +3,7 @@ use crate::domains::{
     AtomDomain, Context, ExprDomain, Invariant, Margin, SeriesDomain, WildExprDomain,
 };
 use crate::error::*;
-use crate::metrics::{IntDistance, L01I, LpDistance};
+use crate::metrics::{IntDistance, L01InfDistance, LpDistance};
 use crate::traits::{InfMul, InfSqrt, ProductOrd};
 use crate::transformations::traits::UnboundedMetric;
 use polars::prelude::{AggExpr, FunctionExpr};
@@ -35,14 +35,14 @@ enum Strategy {
 /// * `expr` - a length expression
 pub fn make_expr_count<MI, const P: usize>(
     input_domain: WildExprDomain,
-    input_metric: L01I<MI>,
+    input_metric: L01InfDistance<MI>,
     expr: Expr,
-) -> Fallible<Transformation<WildExprDomain, ExprDomain, L01I<MI>, LpDistance<P, f64>>>
+) -> Fallible<Transformation<WildExprDomain, ExprDomain, L01InfDistance<MI>, LpDistance<P, f64>>>
 where
     MI: 'static + UnboundedMetric,
-    (ExprDomain, L01I<MI>): MetricSpace,
+    (ExprDomain, L01InfDistance<MI>): MetricSpace,
     (ExprDomain, LpDistance<P, f64>): MetricSpace,
-    Expr: StableExpr<L01I<MI>, L01I<MI>>,
+    Expr: StableExpr<L01InfDistance<MI>, L01InfDistance<MI>>,
 {
     let (input, strategy) = match expr {
         Expr::Agg(AggExpr::Count(input, include_nulls)) => (
@@ -129,7 +129,7 @@ where
 
 pub(crate) fn counting_query_stability_map<M: UnboundedMetric, const P: usize>(
     invariant: Option<Invariant>,
-) -> StabilityMap<L01I<M>, LpDistance<P, f64>> {
+) -> StabilityMap<L01InfDistance<M>, LpDistance<P, f64>> {
     if let Some(Invariant::Lengths) = invariant {
         return StabilityMap::new(move |_| 0.);
     }

@@ -6,7 +6,7 @@ use crate::core::{Function, Measurement, MetricSpace, StabilityMap, Transformati
 use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
 use crate::measurements::make_private_expr;
-use crate::metrics::{Bounds, FrameDistance, L0PI, L01I};
+use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance};
 use crate::transformations::StableDslPlan;
 use crate::transformations::traits::UnboundedMetric;
 use make_private_expr::PrivateExpr;
@@ -34,7 +34,7 @@ where
     MI: 'static + UnboundedMetric,
     MI::EventMetric: UnboundedMetric,
     MO: 'static + BasicCompositionMeasure,
-    Expr: PrivateExpr<L01I<MI::EventMetric>, MO>,
+    Expr: PrivateExpr<L01InfDistance<MI::EventMetric>, MO>,
     DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
     (DslPlanDomain, FrameDistance<MI>): MetricSpace,
     (DslPlanDomain, FrameDistance<MI::EventMetric>): MetricSpace,
@@ -65,7 +65,7 @@ where
         expr_domain.clone(),
         Function::new(Clone::clone),
         middle_metric.clone(),
-        L0PI(middle_metric.0.clone()),
+        L0PInfDistance(middle_metric.0.clone()),
         // the output distance triple consists of three numbers:
         // l0: number of changed groups. Only one group exists in select
         // l1: total number of contributions across all groups
@@ -92,7 +92,7 @@ where
         .map(|expr| {
             make_private_expr(
                 expr_domain.clone(),
-                L0PI(middle_metric.0.clone()),
+                L0PInfDistance(middle_metric.0.clone()),
                 output_measure.clone(),
                 expr.clone(),
                 global_scale,
