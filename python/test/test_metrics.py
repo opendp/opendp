@@ -5,9 +5,9 @@ import pytest
 
 
 
-def test_l01I_distance():
+def test_l01inf_distance():
     domain = dp.vector_domain(dp.atom_domain(T=float))
-    metric = dp.l_01I(dp.symmetric_distance())
+    metric = dp.l01inf_distance(dp.symmetric_distance())
     assert metric != str(metric)
     trans = dp.t.make_user_transformation(
         domain,

@@ -1,6 +1,6 @@
 use crate::core::{Measure, Metric, MetricSpace, PrivacyMap};
 use crate::domains::{ExprPlan, WildExprDomain};
-use crate::metrics::L0PI;
+use crate::metrics::L0PInfDistance;
 use crate::{
     core::{Function, Measurement},
     error::Fallible,
@@ -22,12 +22,12 @@ mod test;
 /// * `expr` - literal expression
 pub fn make_expr_private_lit<MI: 'static + Metric, MO: 'static + Measure, const P: usize>(
     input_domain: WildExprDomain,
-    input_metric: L0PI<P, MI>,
+    input_metric: L0PInfDistance<P, MI>,
     expr: Expr,
-) -> Fallible<Measurement<WildExprDomain, ExprPlan, L0PI<P, MI>, MO>>
+) -> Fallible<Measurement<WildExprDomain, ExprPlan, L0PInfDistance<P, MI>, MO>>
 where
     MO::Distance: Zero,
-    (WildExprDomain, L0PI<P, MI>): MetricSpace,
+    (WildExprDomain, L0PInfDistance<P, MI>): MetricSpace,
 {
     let Expr::Literal(_) = &expr else {
         return fallible!(MakeMeasurement, "Expected Literal expression");

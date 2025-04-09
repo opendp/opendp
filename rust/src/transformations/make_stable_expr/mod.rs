@@ -5,7 +5,7 @@ use crate::{
     core::{Metric, MetricSpace, Transformation},
     domains::{ExprDomain, OuterMetric, WildExprDomain},
     error::Fallible,
-    metrics::{L0I, L01I, LInfDistance, LpDistance},
+    metrics::{L0InfDistance, L01InfDistance, LInfDistance, LpDistance},
     polars::get_disabled_features_message,
 };
 
@@ -234,15 +234,16 @@ where
     }
 }
 
-impl<MI, const P: usize> StableExpr<L01I<MI>, LpDistance<P, f64>> for Expr
+impl<MI, const P: usize> StableExpr<L01InfDistance<MI>, LpDistance<P, f64>> for Expr
 where
     MI: 'static + UnboundedMetric,
 {
     fn make_stable(
         self,
         input_domain: WildExprDomain,
-        input_metric: L01I<MI>,
-    ) -> Fallible<Transformation<WildExprDomain, ExprDomain, L01I<MI>, LpDistance<P, f64>>> {
+        input_metric: L01InfDistance<MI>,
+    ) -> Fallible<Transformation<WildExprDomain, ExprDomain, L01InfDistance<MI>, LpDistance<P, f64>>>
+    {
         use Expr::*;
         match self {
             #[cfg(feature = "contrib")]
@@ -268,16 +269,22 @@ where
     }
 }
 
-impl<MI> StableExpr<L01I<MI>, L0I<LInfDistance<f64>>> for Expr
+impl<MI> StableExpr<L01InfDistance<MI>, L0InfDistance<LInfDistance<f64>>> for Expr
 where
     MI: 'static + UnboundedMetric,
 {
     fn make_stable(
         self,
         input_domain: WildExprDomain,
-        input_metric: L01I<MI>,
-    ) -> Fallible<Transformation<WildExprDomain, ExprDomain, L01I<MI>, L0I<LInfDistance<f64>>>>
-    {
+        input_metric: L01InfDistance<MI>,
+    ) -> Fallible<
+        Transformation<
+            WildExprDomain,
+            ExprDomain,
+            L01InfDistance<MI>,
+            L0InfDistance<LInfDistance<f64>>,
+        >,
+    > {
         if expr_discrete_quantile_score::match_discrete_quantile_score(&self)?.is_some() {
             return expr_discrete_quantile_score::make_expr_discrete_quantile_score(
                 input_domain,

@@ -14,7 +14,7 @@ use crate::{
             integerize_scale, x_mul_2k,
         },
     },
-    metrics::{AbsoluteDistance, L0PI},
+    metrics::{AbsoluteDistance, L0PInfDistance},
     traits::{CastInternalRational, ExactIntCast, Float, Hashable, Number},
 };
 
@@ -25,28 +25,31 @@ mod test;
     proof_path = "measurements/noise_threshold/nature/float/MakeNoiseThreshold_MapDomain_for_FloatExpFamily.tex"
 )]
 impl<TK, TV, const P: usize, QI: Number, MO: 'static + Measure>
-    MakeNoiseThreshold<MapDomain<AtomDomain<TK>, AtomDomain<TV>>, L0PI<P, AbsoluteDistance<QI>>, MO>
-    for FloatExpFamily<P>
+    MakeNoiseThreshold<
+        MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
+        L0PInfDistance<P, AbsoluteDistance<QI>>,
+        MO,
+    > for FloatExpFamily<P>
 where
     TK: Hashable,
     TV: Float,
     RBig: TryFrom<TV> + TryFrom<QI>,
     i32: ExactIntCast<TV::Bits>,
-    ZExpFamily<P>: NoiseThresholdPrivacyMap<L0PI<P, AbsoluteDistance<RBig>>, MO>,
+    ZExpFamily<P>: NoiseThresholdPrivacyMap<L0PInfDistance<P, AbsoluteDistance<RBig>>, MO>,
 {
     type Threshold = TV;
     fn make_noise_threshold(
         self,
         input_space: (
             MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
-            L0PI<P, AbsoluteDistance<QI>>,
+            L0PInfDistance<P, AbsoluteDistance<QI>>,
         ),
         threshold: TV,
     ) -> Fallible<
         Measurement<
             MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
             HashMap<TK, TV>,
-            L0PI<P, AbsoluteDistance<QI>>,
+            L0PInfDistance<P, AbsoluteDistance<QI>>,
             MO,
         >,
     > {
@@ -80,7 +83,7 @@ where
 fn make_float_to_bigint_threshold<TK, TV, const P: usize, QI: Number>(
     (input_domain, input_metric): (
         MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
-        L0PI<P, AbsoluteDistance<QI>>,
+        L0PInfDistance<P, AbsoluteDistance<QI>>,
     ),
     threshold: TV,
     k: i32,
@@ -88,8 +91,8 @@ fn make_float_to_bigint_threshold<TK, TV, const P: usize, QI: Number>(
     Transformation<
         MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
         MapDomain<AtomDomain<TK>, AtomDomain<IBig>>,
-        L0PI<P, AbsoluteDistance<QI>>,
-        L0PI<P, AbsoluteDistance<RBig>>,
+        L0PInfDistance<P, AbsoluteDistance<QI>>,
+        L0PInfDistance<P, AbsoluteDistance<RBig>>,
     >,
 >
 where
@@ -129,7 +132,7 @@ where
                 .collect()
         }),
         input_metric.clone(),
-        L0PI::default(),
+        L0PInfDistance::default(),
         StabilityMap::new_fallible(move |(l0, lp, li): &(u32, QI, QI)| {
             // Lp sensitivity
             let r_lp = RBig::try_from(lp.clone())

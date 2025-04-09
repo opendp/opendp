@@ -1,15 +1,15 @@
 # type: ignore
 def make_float_to_bigint_threshold(
     input_space: tuple[
-        MapDomain[AtomDomain[TK], MapDomain[TV]], L0PI[P, AbsoluteDistance[QI]]
+        MapDomain[AtomDomain[TK], MapDomain[TV]], L0PInfDistance[P, AbsoluteDistance[QI]]
     ],
     threshold: TV,
     k: i32,
 ) -> Transformation[
     MapDomain[AtomDomain[TK], AtomDomain[TV]],
     MapDomain[AtomDomain[TK], AtomDomain[IBig]],
-    L0PI[P, AbsoluteDistance[QI]],
-    L0PI[P, AbsoluteDistance[RBig]],
+    L0PInfDistance[P, AbsoluteDistance[QI]],
+    L0PInfDistance[P, AbsoluteDistance[RBig]],
 ]:
     input_domain, input_metric = input_space
     if input_domain.value_domain.nan():

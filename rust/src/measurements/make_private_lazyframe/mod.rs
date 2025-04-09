@@ -12,7 +12,9 @@ use crate::{
     domains::{DslPlanDomain, Invariant, LazyFrameDomain, Margin},
     error::Fallible,
     measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
-    metrics::{ChangeOneDistance, ChangeOneIdDistance, FrameDistance, HammingDistance, L01I},
+    metrics::{
+        ChangeOneDistance, ChangeOneIdDistance, FrameDistance, HammingDistance, L01InfDistance,
+    },
     polars::{OnceFrame, get_disabled_features_message},
     transformations::{
         StableDslPlan,
@@ -48,7 +50,7 @@ where
     MI::EventMetric: UnboundedMetric,
     MO: 'static + ApproximateMeasure,
     MO::Distance: Debug,
-    Expr: PrivateExpr<L01I<MI::EventMetric>, MO>,
+    Expr: PrivateExpr<L01InfDistance<MI::EventMetric>, MO>,
     DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
 {
     #[cfg(feature = "contrib")]
@@ -239,7 +241,7 @@ where
     MO: 'static + BasicCompositionMeasure,
     Approximate<MO>: 'static + ApproximateMeasure,
     <Approximate<MO> as Measure>::Distance: Debug,
-    Expr: PrivateExpr<L01I<MI::EventMetric>, Approximate<MO>>,
+    Expr: PrivateExpr<L01InfDistance<MI::EventMetric>, Approximate<MO>>,
     DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>
         + PrivateDslPlan<FrameDistance<MI::EventMetric>, MO>
         + PrivateDslPlan<FrameDistance<MI>, MO>,

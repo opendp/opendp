@@ -21,7 +21,7 @@ This is the core implementation of all variations of the thresholded gaussian or
 \texttt{MakeNoise} is parameterized as follows:
 \begin{itemize}
     \item \texttt{DI} is \texttt{MapDomain<AtomDomain<TK>, AtomDomain<IBig>{}>}
-    \item \texttt{MI} is \texttt{L0PI<P, AbsoluteDistance<UBig>{}>}
+    \item \texttt{MI} is \texttt{L0PInfDistance<P, AbsoluteDistance<UBig>{}>}
     \item \texttt{MO} is \texttt{MO}
 \end{itemize}
 
@@ -30,7 +30,7 @@ The following trait bounds are required:
     \item Generic \texttt{TK} implements trait \rustdoc{traits/trait}{Hashable}
     \item Const-generic \texttt{P} is of type \texttt{usize}
     \item Generic \texttt{MO} implements trait \rustdoc{core/trait}{Measure}
-    \item Type \texttt{ZExpFamily<P>} implements trait \rustdoc{measurements/noise_threshold/trait}{NoiseThresholdPrivacyMap}\texttt{<L0PI<P, AbsoluteDistance<UBig>{}>, MO>}
+    \item Type \texttt{ZExpFamily<P>} implements trait \rustdoc{measurements/noise_threshold/trait}{NoiseThresholdPrivacyMap}\texttt{<L0PInfDistance<P, AbsoluteDistance<UBig>{}>, MO>}
 \end{itemize}
 
 \subsubsection*{User-Verified}

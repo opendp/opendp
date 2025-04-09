@@ -6,7 +6,7 @@ use super::*;
 fn test_make_int_to_bigint() -> Fallible<()> {
     let space = (
         MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<i32>::default()),
-        L0PI(AbsoluteDistance::<f64>::default()),
+        L0PInfDistance(AbsoluteDistance::<f64>::default()),
     );
 
     let t_cast = make_int_to_bigint_threshold::<bool, i32, 2, f64>(space.clone())?;
@@ -26,7 +26,7 @@ fn test_make_int_to_bigint() -> Fallible<()> {
 fn test_make_noise_intexpfamily() -> Fallible<()> {
     let space = (
         MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<i32>::default()),
-        L0PI(AbsoluteDistance::<f64>::default()),
+        L0PInfDistance(AbsoluteDistance::<f64>::default()),
     );
 
     assert!(

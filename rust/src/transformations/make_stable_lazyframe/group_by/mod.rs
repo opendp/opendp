@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use crate::core::{Function, StabilityMap, Transformation};
 use crate::domains::{Context, DslPlanDomain, FrameDomain, SeriesDomain, WildExprDomain};
 use crate::error::*;
-use crate::metrics::{Bound, Bounds, FrameDistance, L0PI, L01I};
+use crate::metrics::{Bound, Bounds, FrameDistance, L0PInfDistance, L01InfDistance};
 use crate::traits::{InfMul, option_min};
 use crate::transformations::StableExpr;
 use crate::transformations::traits::UnboundedMetric;
@@ -69,8 +69,8 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
     // each expression must be stable row by row
     keys.iter().try_for_each(|key| {
         key.clone()
-            .make_stable(expr_domain.clone(), L0PI(middle_metric.0.clone()))
-            .map(|_: Transformation<_, _, _, L01I<M>>| ())
+            .make_stable(expr_domain.clone(), L0PInfDistance(middle_metric.0.clone()))
+            .map(|_: Transformation<_, _, _, L01InfDistance<M>>| ())
     })?;
 
     // check that aggregations are infallible. Aggregations are allowed to resize data

@@ -34,9 +34,9 @@ $k \neq \texttt{i32.MIN}$
         &\max \mathrm{argmin}_i |i 2^k - x| \\
         &= \max \mathrm{argmin}_i |i - x 2^{-k}| &&\text{argmin doesn't change when rescaled}\\
         &= \lfloor x 2^{-k}\rceil &&\text{where } \lfloor \cdot \rceil \text{ rounds to nearest int with ties towards infinity} \\
-        &= \lfloor n / d \rceil &&\text{where } x 2^{-k} = n / d, n \in \mathbb{Z}, n \in \mathbb{Z}^+ \\
+        &= \lfloor n / d \rceil &&\text{where } x 2^{-k} = n / d, n \in \mathbb{Z}, d \in \mathbb{Z}^+ \\
         &= ((n \cdot 2) // d + 1) // 2 &&\text{where // denotes integer floor division} \\
-        &= ((n << 1) // d + 1) >> 1 &&\text{where << and >> denote left and right shift}
+        &= ((n << 1) // d + 1) >> 1 &&\text{where <{}< and >{}> denote left and right shift}
     \end{align}
 
     Since $x$ is a rational, line \ref{line:into-parts} splits $x 2^{-k}$ into its numerator $n$ and denominator $d$.

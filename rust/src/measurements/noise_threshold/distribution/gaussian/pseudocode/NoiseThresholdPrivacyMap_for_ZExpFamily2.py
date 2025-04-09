@@ -3,10 +3,10 @@
 class ZExpFamily2:
     def noise_threshold_privacy_map(
         self,
-        _input_metric: L02I[AbsoluteDistance[RBig]],
+        _input_metric: L02InfDistance[AbsoluteDistance[RBig]],
         output_measure: Approximate[ZeroConcentratedDivergence],
         threshold: UBig,
-    ) -> PrivacyMap[L02I[AbsoluteDistance[RBig]], Approximate[ZeroConcentratedDivergence]]:
+    ) -> PrivacyMap[L02InfDistance[AbsoluteDistance[RBig]], Approximate[ZeroConcentratedDivergence]]:
         # |\label{line:noise-privacy-map}|
         noise_privacy_map = self.noise_privacy_map(L2Distance.default(), output_measure[0])
         scale = self.scale
