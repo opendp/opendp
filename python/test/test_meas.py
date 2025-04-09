@@ -253,20 +253,20 @@ def test_randomized_response_bitvec():
 
 def test_laplace_threshold_int():
     domain = dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=int))
-    metric = dp.l_01I(dp.absolute_distance(T=int))
+    metric = dp.l01inf_distance(dp.absolute_distance(T=int))
     meas = dp.m.make_laplace_threshold(domain, metric, scale=2., threshold=28)
     release = meas({str(i): i * 10 for i in range(10)})
     # 0 + noise is likely not over 28
-    assert "0" not in release, release
+    assert "0" not in release
     # 90 + noise is likely over 28
-    assert "9" in release, release
+    assert "9" in release
     # delta is the mass of the right tail of integer laplace greater than 28 with conservative arithmetic
     # 5 = 10 / 2 = Δ / σ
     assert meas.map((1, 10, 10)) == (5.0, 4.659221997116436e-05)
 
 def test_laplace_threshold_float():
     domain = dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=float, nan=False))
-    metric = dp.l_01I(dp.absolute_distance(T=float))
+    metric = dp.l01inf_distance(dp.absolute_distance(T=float))
     meas = dp.m.make_laplace_threshold(domain, metric, scale=2., threshold=28.)
     release = meas({str(i): i * 10.0 for i in range(10)})
     # 0 + noise is likely not over 28
@@ -280,7 +280,7 @@ def test_laplace_threshold_float():
 
 def test_gaussian_threshold_int():
     domain = dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=int))
-    metric = dp.l_02I(dp.absolute_distance(T=int))
+    metric = dp.l02inf_distance(dp.absolute_distance(T=int))
     meas = dp.m.make_gaussian_threshold(domain, metric, scale=2., threshold=28)
     release = meas({str(i): i * 10 for i in range(10)})
     # 0 + noise is likely not over 28
@@ -294,7 +294,7 @@ def test_gaussian_threshold_int():
 
 def test_gaussian_threshold_float():
     domain = dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=float, nan=False))
-    metric = dp.l_02I(dp.absolute_distance(T=float))
+    metric = dp.l02inf_distance(dp.absolute_distance(T=float))
     meas = dp.m.make_gaussian_threshold(domain, metric, scale=2., threshold=28.)
     release = meas({str(i): i * 10.0 for i in range(10)})
     # 0 + noise is likely not over 28

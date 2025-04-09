@@ -1,7 +1,7 @@
 use crate::core::{Function, MetricSpace, Transformation};
 use crate::domains::{AtomDomain, Context, ExprDomain, Margin, SeriesDomain, WildExprDomain};
 use crate::error::*;
-use crate::metrics::{L01I, LpDistance};
+use crate::metrics::{L01InfDistance, LpDistance};
 use crate::transformations::traits::UnboundedMetric;
 use polars_plan::dsl::{Expr, len};
 use polars_plan::plans::typed_lit;
@@ -24,12 +24,12 @@ mod test;
 /// * `expr` - a length expression
 pub fn make_expr_len<MI, const P: usize>(
     input_domain: WildExprDomain,
-    input_metric: L01I<MI>,
+    input_metric: L01InfDistance<MI>,
     expr: Expr,
-) -> Fallible<Transformation<WildExprDomain, ExprDomain, L01I<MI>, LpDistance<P, f64>>>
+) -> Fallible<Transformation<WildExprDomain, ExprDomain, L01InfDistance<MI>, LpDistance<P, f64>>>
 where
     MI: 'static + UnboundedMetric,
-    (WildExprDomain, L01I<MI>): MetricSpace,
+    (WildExprDomain, L01InfDistance<MI>): MetricSpace,
     (ExprDomain, LpDistance<P, f64>): MetricSpace,
 {
     let Expr::Len = expr else {

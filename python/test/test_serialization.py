@@ -188,7 +188,7 @@ if pl is not None:
             ),
             dp.m.make_private_expr(
                 dp.wild_expr_domain([], dp.polars.Margin(by=[])),
-                dp.l_01I(dp.symmetric_distance()),
+                dp.l01inf_distance(dp.symmetric_distance()),
                 dp.max_divergence(),
                 dp.len(scale=1.0)
             ),

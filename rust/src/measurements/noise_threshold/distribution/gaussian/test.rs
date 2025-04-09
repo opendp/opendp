@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use super::*;
 use crate::{
     domains::{AtomDomain, MapDomain},
-    metrics::{AbsoluteDistance, L0PI},
+    metrics::{AbsoluteDistance, L0PInfDistance},
     traits::InfCast,
 };
 use num::{One, Zero};
@@ -17,7 +17,7 @@ fn test_make_gaussian_threshold_native_types() -> Fallible<()> {
         ($($ty:ty),+) => {$(
             // map
             let domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<$ty>::new_non_nan());
-            let metric = L0PI(AbsoluteDistance::<$ty>::default());
+            let metric = L0PInfDistance(AbsoluteDistance::<$ty>::default());
             let meas = make_gaussian_threshold(domain, metric, 1., <$ty>::inf_cast(50)?, None)?;
 
             let data = HashMap::from([(false, <$ty>::zero()), (true, <$ty>::inf_cast(100)?)]);
@@ -38,7 +38,7 @@ fn test_make_gaussian_threshold_native_types() -> Fallible<()> {
 #[test]
 fn test_make_gaussian_threshold_bigint() -> Fallible<()> {
     let domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<IBig>::default());
-    let metric = L0PI(AbsoluteDistance::<RBig>::default());
+    let metric = L0PInfDistance(AbsoluteDistance::<RBig>::default());
     let meas = make_gaussian_threshold(domain, metric, 1., ibig!(50), None)?;
 
     let data = HashMap::from([(false, ibig!(0)), (true, ibig!(100))]);
@@ -86,7 +86,7 @@ fn test_make_gaussian_threshold_map() -> Fallible<()> {
         Ok(())
     }
 
-    let metric = L0PI(AbsoluteDistance::<f64>::default());
+    let metric = L0PInfDistance(AbsoluteDistance::<f64>::default());
     let m_float = make_gaussian_threshold(
         MapDomain::new(
             AtomDomain::<bool>::default(),
@@ -118,7 +118,7 @@ fn test_make_gaussian_threshold_extreme_int() -> Fallible<()> {
     // an extreme noise scale dominates the output, resulting in the release always being saturated
     let meas = make_gaussian_threshold(
         MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<u32>::default()),
-        L0PI(AbsoluteDistance::<f64>::default()),
+        L0PInfDistance(AbsoluteDistance::<f64>::default()),
         f64::MAX,
         50,
         None,
@@ -132,7 +132,7 @@ fn test_make_gaussian_threshold_extreme_int() -> Fallible<()> {
 #[test]
 fn test_make_noise_threshold_zexpfamily2_large_scale() -> Fallible<()> {
     let domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<IBig>::default());
-    let metric = L0PI(AbsoluteDistance::<RBig>::default());
+    let metric = L0PInfDistance(AbsoluteDistance::<RBig>::default());
     let distribution = ZExpFamily::<2> {
         scale: rbig!(23948285282902934157),
     };
@@ -150,7 +150,7 @@ fn test_make_noise_threshold_zexpfamily2_large_scale() -> Fallible<()> {
 #[test]
 fn test_make_noise_threshold_zexpfamily2_zero_scale() -> Fallible<()> {
     let domain = MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<IBig>::default());
-    let metric = L0PI(AbsoluteDistance::<RBig>::default());
+    let metric = L0PInfDistance(AbsoluteDistance::<RBig>::default());
     let distribution = ZExpFamily { scale: rbig!(0) };
 
     let meas: Measurement<_, _, _, Approximate<ZeroConcentratedDivergence>> =

@@ -203,7 +203,7 @@ def test_private_expr():
     pl_testing = pytest.importorskip("polars.testing")
     m_len = dp.m.make_private_expr(
         dp.wild_expr_domain([], dp.polars.Margin(by=[])),
-        dp.l_01I(dp.symmetric_distance()),
+        dp.l01inf_distance(dp.symmetric_distance()),
         dp.max_divergence(),
         dp.len(scale=1.0),
     )
@@ -617,7 +617,7 @@ def test_replace_binary_path():
 
     m_expr = dp.m.make_private_expr(
         dp.wild_expr_domain(example_series()[0], dp.polars.Margin(by=[])),
-        dp.l_01I(dp.symmetric_distance()),
+        dp.l01inf_distance(dp.symmetric_distance()),
         dp.max_divergence(),
         expr,
     )
@@ -687,7 +687,7 @@ def test_pickle_bomb():
     with pytest.raises(dp.OpenDPException, match=err_msg_re):
         dp.m.make_private_expr(
             dp.wild_expr_domain(example_series()[0], dp.polars.Margin(by=[])),
-            dp.l_01I(dp.symmetric_distance()),
+            dp.l01inf_distance(dp.symmetric_distance()),
             dp.max_divergence(),
             bomb_expr,
         )
@@ -1232,8 +1232,6 @@ def test_truncate_per_group(keep):
 
     query = context.query().truncate_per_group(2, by=["alpha"], keep=keep).group_by("alpha").agg(dp.len())
     assert query.summarize()["scale"][0] == 2.0000000000000004  # type: ignore[index]
-
-
 
 @pytest.mark.parametrize("keep", ["first", "last"])
 def test_truncate_num_groups(keep):

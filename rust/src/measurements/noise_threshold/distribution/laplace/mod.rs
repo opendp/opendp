@@ -17,7 +17,7 @@ use crate::{
         NoiseThresholdPrivacyMap, ZExpFamily, nature::Nature,
     },
     measures::{Approximate, MaxDivergence},
-    metrics::{AbsoluteDistance, L1Distance, L01I},
+    metrics::{AbsoluteDistance, L1Distance, L01InfDistance},
     traits::{InfPowI, InfSub, option_min},
 };
 
@@ -87,15 +87,16 @@ where
 #[proven(
     proof_path = "measurements/noise_threshold/distribution/laplace/NoiseThresholdPrivacyMap_for_ZExpFamily1.tex"
 )]
-impl NoiseThresholdPrivacyMap<L01I<AbsoluteDistance<RBig>>, Approximate<MaxDivergence>>
+impl NoiseThresholdPrivacyMap<L01InfDistance<AbsoluteDistance<RBig>>, Approximate<MaxDivergence>>
     for ZExpFamily<1>
 {
     fn noise_threshold_privacy_map(
         &self,
-        _input_metric: &L01I<AbsoluteDistance<RBig>>,
+        _input_metric: &L01InfDistance<AbsoluteDistance<RBig>>,
         output_measure: &Approximate<MaxDivergence>,
         threshold: UBig,
-    ) -> Fallible<PrivacyMap<L01I<AbsoluteDistance<RBig>>, Approximate<MaxDivergence>>> {
+    ) -> Fallible<PrivacyMap<L01InfDistance<AbsoluteDistance<RBig>>, Approximate<MaxDivergence>>>
+    {
         let noise_privacy_map =
             self.noise_privacy_map(&L1Distance::default(), &output_measure.0)?;
         let ZExpFamily { scale } = self.clone();
