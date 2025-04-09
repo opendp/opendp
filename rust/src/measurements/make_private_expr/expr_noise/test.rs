@@ -5,7 +5,7 @@ use crate::{
     domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain},
     error::ErrorVariant,
     measurements::{PrivateExpr, make_private_expr, make_private_lazyframe},
-    metrics::{FrameDistance, InsertDeleteDistance, L0PI, SymmetricDistance},
+    metrics::{FrameDistance, InsertDeleteDistance, L0PInfDistance, SymmetricDistance},
     polars::PrivacyNamespace,
     transformations::test_helper::get_test_data,
 };
@@ -17,7 +17,7 @@ fn test_make_expr_puredp() -> Fallible<()> {
 
     let m_quant = make_private_expr(
         lf_domain.select(),
-        L0PI(InsertDeleteDistance),
+        L0PInfDistance(InsertDeleteDistance),
         MaxDivergence,
         col("const_1f64").dp().sum((0., 1.), Some(scale)),
         None,
@@ -38,7 +38,7 @@ fn test_make_expr_zcdp() -> Fallible<()> {
 
     let m_quant = make_private_expr(
         lf_domain.select(),
-        L0PI(InsertDeleteDistance),
+        L0PInfDistance(InsertDeleteDistance),
         ZeroConcentratedDivergence::default(),
         col("const_1f64").dp().sum((0., 1.), Some(scale)),
         None,
@@ -59,7 +59,7 @@ fn test_fail_make_expr_wrong_distribution() -> Fallible<()> {
 
     let variant = make_private_expr(
         lf_domain.select(),
-        L0PI(InsertDeleteDistance),
+        L0PInfDistance(InsertDeleteDistance),
         MaxDivergence,
         col("const_1f64")
             .clip(lit(0.), lit(1.))
@@ -84,7 +84,7 @@ fn test_make_expr_gaussian() -> Fallible<()> {
 
     let m_quant = make_private_expr(
         lf_domain.select(),
-        L0PI(InsertDeleteDistance),
+        L0PInfDistance(InsertDeleteDistance),
         ZeroConcentratedDivergence::default(),
         col("const_1f64").dp().sum((0., 1.), Some(scale)),
         None,
@@ -149,7 +149,7 @@ fn check_autocalibration(
         .noise(None, None)
         .make_private(
             expr_domain,
-            L0PI(InsertDeleteDistance),
+            L0PInfDistance(InsertDeleteDistance),
             MaxDivergence,
             Some(1.),
         )?;

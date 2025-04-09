@@ -1,7 +1,7 @@
 \documentclass{article}
 \input{../../../../lib.sty}
 
-\title{\texttt{NoiseThresholdPrivacyMap<L01I<AbsoluteDistance<RBig>>, Approximate<MaxDivergence>> for ZExpFamily<1>}}
+\title{\texttt{NoiseThresholdPrivacyMap<L01InfDistance<AbsoluteDistance<RBig>>, Approximate<MaxDivergence>> for ZExpFamily<1>}}
 \author{Michael Shoemate}
 \date{}
 
@@ -17,7 +17,7 @@ Proves soundness of the implementation of \rustdoc{measurements/noise_threshold/
 \subsubsection*{Compiler-Verified}
 \texttt{NoiseThresholdPrivacyMap} is parameterized as follows:
 \begin{itemize}
-    \item \texttt{MI}, the input metric, is of type \rustdoc{metrics/type}{L01I}\texttt{<AbsoluteDistance<RBig>>}
+    \item \texttt{MI}, the input metric, is of type \rustdoc{metrics/type}{L01InfDistance}\texttt{<AbsoluteDistance<RBig>>}
     \item \texttt{MO}, the output measure, is of type \rustdoc{measures/struct}{Approximate}\texttt{<MaxDivergence>}
 \end{itemize}
 

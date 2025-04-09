@@ -1,7 +1,7 @@
 use crate::{
     domains::{AtomDomain, MapDomain},
     measurements::make_laplace_threshold,
-    metrics::L0PI,
+    metrics::L0PInfDistance,
     traits::NextFloat,
 };
 
@@ -11,7 +11,7 @@ use super::*;
 fn test_fixed_approxDP_to_approxDP() -> Fallible<()> {
     let meas_fixed = make_laplace_threshold(
         MapDomain::new(AtomDomain::<String>::default(), AtomDomain::new_non_nan()),
-        L0PI::default(),
+        L0PInfDistance::default(),
         1.,
         10,
         None,

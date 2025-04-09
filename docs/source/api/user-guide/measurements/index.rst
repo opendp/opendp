@@ -30,16 +30,16 @@ Notice that there is a symmetric structure to the additive noise measurements:
 
    * - Vector Input Metric
      - Constructor
-   * - ``L1Distance<T>``
+   * - ``L1Distance<QI>``
      - :func:`make_laplace <opendp.measurements.make_laplace>`
-   * - ``L2Distance<T>``
+   * - ``L2Distance<QI>``
      - :func:`make_gaussian <opendp.measurements.make_gaussian>`
+    
+`QI` can be any numeric type (the data type of the sensitivity can vary independently from the data type of the input).
 
 In the following sections, scalar-valued and vector-valued versions of each measurement are listed separately.
-You can choose whether to construct scalar or vector-valued versions by setting the ``D`` type argument when calling the constructor.
-
-:Scalar: ``D=AtomDomain[T]`` (default)
-:Vector: ``D=VectorDomain[AtomDomain[T]]``
+You can choose whether to construct scalar or vector-valued versions of mechanisms by passing the appropriate input space.
+See the notebook above for examples.
 
 Laplacian Noise
 ***************
@@ -98,9 +98,9 @@ Thresholded Noise Mechanisms
 ----------------------------
 
 Thresholded noise mechanisms are generalizations of the additive noise mechanisms
-that also release a set of keys, whose values are greater than the `threshold` parameter.
+that also release a set of keys, whose values are greater than the ``threshold`` parameter.
 
-See the `Thresholded Noise Mechanisms notebook <thresholded-noise-mechanisms.html>`_ for code examples and more exposition.
+See the `Thresholded Noise Mechanisms documentation <thresholded-noise-mechanisms.html>`_ for code examples and more exposition.
 
 Just like the additive noise mechanisms, the thresholded noise mechanisms have a symmetric structure:
 
@@ -109,9 +109,9 @@ Just like the additive noise mechanisms, the thresholded noise mechanisms have a
 
    * - Vector Input Metric
      - Constructor
-   * - ``L01I<AbsoluteDistance<T>>``
+   * - ``L01InfDistance<AbsoluteDistance<T>>``
      - :func:`make_laplace_threshold <opendp.measurements.make_laplace_threshold>`
-   * - ``L02I<AbsoluteDistance<T>>``
+   * - ``L02InfDistance<AbsoluteDistance<T>>``
      - :func:`make_gaussian_threshold <opendp.measurements.make_gaussian_threshold>`
 
 Laplacian Noise
@@ -130,7 +130,7 @@ functions to convert to/from accuracy estimates.
      - Output Measure
    * - :func:`opendp.measurements.make_laplace_threshold`
      - ``MapDomain<AtomDomain<TK>, AtomDomain<TV>>``
-     - ``L01I<AbsoluteDistance<QI>>``
+     - ``L01InfDistance<AbsoluteDistance<QI>>``
      - ``Approximate<MaxDivergence>``
 
 
@@ -151,7 +151,7 @@ Refer to :ref:`measure-casting` to convert to approximate DP.
      - Output Measure
    * - :func:`opendp.measurements.make_gaussian_threshold`
      - ``MapDomain<AtomDomain<TK>, AtomDomain<TV>>``
-     - ``L02P<AbsoluteDistance<QI>>``
+     - ``L02InfDistance<AbsoluteDistance<QI>>``
      - ``Approximate<ZeroConcentratedDivergence>``
 
 

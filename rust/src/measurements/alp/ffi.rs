@@ -10,7 +10,7 @@ use crate::{
         any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast},
         util::{self, Type, TypeContents},
     },
-    metrics::{AbsoluteDistance, L01I},
+    metrics::{AbsoluteDistance, L01InfDistance},
     traits::{DistanceConstant, Hashable, InfCast, Integer},
 };
 
@@ -39,12 +39,13 @@ pub extern "C" fn opendp_measurements__make_alp_queryable(
         f64: InfCast<CI>,
         (
             MapDomain<AtomDomain<K>, AtomDomain<CI>>,
-            L01I<AbsoluteDistance<CI>>,
+            L01InfDistance<AbsoluteDistance<CI>>,
         ): MetricSpace,
     {
         let input_domain =
             try_!(input_domain.downcast_ref::<MapDomain<AtomDomain<K>, AtomDomain<CI>>>());
-        let input_metric = try_!(input_metric.downcast_ref::<L01I<AbsoluteDistance<CI>>>());
+        let input_metric =
+            try_!(input_metric.downcast_ref::<L01InfDistance<AbsoluteDistance<CI>>>());
         let total_limit = try_as_ref!(total_limit as *const CI).clone();
         let value_limit = util::as_ref(value_limit as *const CI).cloned();
 

@@ -10,7 +10,9 @@ use opendp_derive::bootstrap;
 use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, MapDomain, VectorDomain};
 use crate::error::*;
-use crate::metrics::{AbsoluteDistance, L0PI, L1Distance, L01I, LpDistance, SymmetricDistance};
+use crate::metrics::{
+    AbsoluteDistance, L0PInfDistance, L1Distance, L01InfDistance, LpDistance, SymmetricDistance,
+};
 use crate::traits::{CollectionSize, Hashable, InfCast, Integer, Number, Primitive};
 
 #[cfg(test)]
@@ -226,7 +228,7 @@ pub fn make_count_by<TK: Hashable, TV: Integer>(
         VectorDomain<AtomDomain<TK>>,
         MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
         SymmetricDistance,
-        L01I<AbsoluteDistance<TV>>,
+        L01InfDistance<AbsoluteDistance<TV>>,
     >,
 > {
     Transformation::new(
@@ -241,7 +243,7 @@ pub fn make_count_by<TK: Hashable, TV: Integer>(
             counts
         }),
         input_metric,
-        L0PI::default(),
+        L0PInfDistance::default(),
         StabilityMap::new_fallible(move |d_in| {
             Ok((*d_in, TV::inf_cast(*d_in)?, TV::inf_cast(*d_in)?))
         }),
@@ -258,7 +260,7 @@ impl<Q: InfCast<u32>> CountByMetric for L1Distance<Q> {
     }
 }
 
-impl<Q: InfCast<u32>> CountByMetric for L01I<AbsoluteDistance<Q>> {
+impl<Q: InfCast<u32>> CountByMetric for L01InfDistance<AbsoluteDistance<Q>> {
     fn stability_map(d_in: u32) -> Fallible<Self::Distance> {
         Ok((d_in, Q::inf_cast(d_in)?, Q::inf_cast(d_in)?))
     }

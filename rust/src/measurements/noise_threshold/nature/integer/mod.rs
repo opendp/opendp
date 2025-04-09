@@ -14,7 +14,7 @@ use crate::{
         MakeNoiseThreshold, NoiseThresholdPrivacyMap, ZExpFamily,
         nature::{float::integerize_scale, integer::IntExpFamily},
     },
-    metrics::{AbsoluteDistance, L0PI},
+    metrics::{AbsoluteDistance, L0PInfDistance},
     traits::{Hashable, Integer, Number, SaturatingCast},
 };
 
@@ -22,29 +22,32 @@ use crate::{
 mod test;
 
 impl<TK, TV, const P: usize, QI: Number, MO: 'static + Measure>
-    MakeNoiseThreshold<MapDomain<AtomDomain<TK>, AtomDomain<TV>>, L0PI<P, AbsoluteDistance<QI>>, MO>
-    for IntExpFamily<P>
+    MakeNoiseThreshold<
+        MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
+        L0PInfDistance<P, AbsoluteDistance<QI>>,
+        MO,
+    > for IntExpFamily<P>
 where
     TK: Hashable,
     TV: Integer + SaturatingCast<IBig>,
     IBig: From<TV>,
     RBig: TryFrom<QI>,
     UBig: TryFrom<TV>,
-    ZExpFamily<P>: NoiseThresholdPrivacyMap<L0PI<P, AbsoluteDistance<RBig>>, MO>,
+    ZExpFamily<P>: NoiseThresholdPrivacyMap<L0PInfDistance<P, AbsoluteDistance<RBig>>, MO>,
 {
     type Threshold = TV;
     fn make_noise_threshold(
         self,
         input_space: (
             MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
-            L0PI<P, AbsoluteDistance<QI>>,
+            L0PInfDistance<P, AbsoluteDistance<QI>>,
         ),
         threshold: TV,
     ) -> Fallible<
         Measurement<
             MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
             HashMap<TK, TV>,
-            L0PI<P, AbsoluteDistance<QI>>,
+            L0PInfDistance<P, AbsoluteDistance<QI>>,
             MO,
         >,
     > {
@@ -69,14 +72,14 @@ where
 fn make_int_to_bigint_threshold<TK, TV, const P: usize, QI: Number>(
     input_space: (
         MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
-        L0PI<P, AbsoluteDistance<QI>>,
+        L0PInfDistance<P, AbsoluteDistance<QI>>,
     ),
 ) -> Fallible<
     Transformation<
         MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
         MapDomain<AtomDomain<TK>, AtomDomain<IBig>>,
-        L0PI<P, AbsoluteDistance<QI>>,
-        L0PI<P, AbsoluteDistance<RBig>>,
+        L0PInfDistance<P, AbsoluteDistance<QI>>,
+        L0PInfDistance<P, AbsoluteDistance<RBig>>,
     >,
 >
 where
@@ -98,7 +101,7 @@ where
                 .collect()
         }),
         input_metric,
-        L0PI::default(),
+        L0PInfDistance::default(),
         StabilityMap::new_fallible(move |(l0, lp, li): &(u32, QI, QI)| {
             let lp = RBig::try_from(lp.clone())
                 .map_err(|_| err!(FailedMap, "l{P} ({lp:?}) must be finite"))?;
