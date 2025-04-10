@@ -1,3 +1,5 @@
+.. _measurement-plugin:
+
 Measurement example
 ===================
 
