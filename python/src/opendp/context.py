@@ -102,21 +102,22 @@ def register(
     then the input domain and input metric are omitted when called via the Context API.
 
     Constructor requirements:
-    - The constructor must return a transformation or measurement.
-    - If name is None, the constructor's name must start with ``make_``.
+    
+    * The constructor must return a transformation or measurement.
+    * If name is None, the constructor's name must start with ``make_``.
 
     :param constructor: The constructor function to register.
     :param name: The name to register the constructor under in the Context API. If None, the name will be derived from the constructor's name.
     """
     if name is None:
         if not constructor.__name__.startswith("make_"):
-            raise ValueError(  # pragma: no cover
+            raise ValueError(
                 f"constructor.__name__ must start with 'make_', found {constructor.__name__}"
             )
         name = constructor.__name__[5:]
 
     if name in constructors:
-        raise ValueError(  # pragma: no cover
+        raise ValueError(
             f"'{name}' is already registered in the Context API. Please choose a different name."
         )
 

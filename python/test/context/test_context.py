@@ -351,3 +351,10 @@ def test_register():
         split_evenly_over=1
     )
     assert context.query().constant("z").release() == "z"
+
+def test_register_fail():
+    with pytest.raises(ValueError, match="must start with 'make_',"):
+        dp.register(lambda: 0) # type: ignore[arg-type, return-value]
+
+    with pytest.raises(ValueError, match="is already registered in the Context API"):
+        dp.register(dp.t.make_sum)
