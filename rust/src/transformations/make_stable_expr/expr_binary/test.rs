@@ -124,7 +124,7 @@ fn test_eq() -> Fallible<()> {
         [
             Some(true),
             Some(false),
-            // NaN is equal to NaN?
+            // NaN is equal to NaN: https://docs.pola.rs/user-guide/concepts/data-types-and-structures/#floating-point-numbers
             Some(true),
             Some(false),
             None,
@@ -141,7 +141,8 @@ fn test_eq_missing() -> Fallible<()> {
         get_f64_data,
         eq_missing,
         [
-            true, false, // NaN is equal to NaN?
+            true,
+            false, // NaN is equal to NaN: https://docs.pola.rs/user-guide/concepts/data-types-and-structures/#floating-point-numbers
             true, false, true, false, true, false,
         ]
     )
@@ -201,7 +202,7 @@ fn test_lt_eq() -> Fallible<()> {
         [
             Some(true),
             Some(false),
-            // nan is equal to NaN? zero is lte NaN?
+            // nan is equal to NaN, zero is lte NaN: https://docs.pola.rs/user-guide/concepts/data-types-and-structures/#floating-point-numbers
             Some(true),
             Some(true),
             None,
@@ -238,7 +239,7 @@ fn test_gt_eq() -> Fallible<()> {
         [
             Some(true),
             Some(true),
-            // nan is equal to NaN?
+            // nan is equal to NaN: https://docs.pola.rs/user-guide/concepts/data-types-and-structures/#floating-point-numbers
             Some(true),
             Some(false),
             None,

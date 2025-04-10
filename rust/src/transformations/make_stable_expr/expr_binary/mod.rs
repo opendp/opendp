@@ -108,6 +108,7 @@ where
         || right_series.nullable
         || matches!(op, FloorDivide | TrueDivide | Divide);
 
+    // these ops eliminate all nulls, regardless of the input
     if matches!(op, EqValidity | NotEqValidity) {
         series_domain.nullable = false;
     }
