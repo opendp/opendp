@@ -1,5 +1,6 @@
+from opendp.extras._utilities import to_then
 from opendp.mod import Domain, Metric, Transformation
-from opendp.extras._utilities import register_transformation
+from opendp.context import register
 from opendp._lib import import_optional_dependency
 from opendp._internal import _make_transformation
 
@@ -77,4 +78,5 @@ def make_np_clamp(
 
 # generate then variant of the constructor
 # TODO: Show this in the API Reference?
-then_np_clamp = register_transformation(make_np_clamp)
+register(make_np_clamp)
+then_np_clamp = to_then(make_np_clamp)

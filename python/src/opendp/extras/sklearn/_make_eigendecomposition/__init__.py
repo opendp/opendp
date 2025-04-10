@@ -1,11 +1,12 @@
 from __future__ import annotations
 from typing import Sequence
 
-from opendp.extras._utilities import register_measurement
+from opendp.context import register
 from opendp.extras.sklearn._make_eigenvector import then_private_eigenvectors
 from opendp.extras.sklearn._make_eigenvalues import then_eigenvalues
 from opendp.extras.numpy._make_np_sscp import make_np_sscp
 
+from opendp.extras._utilities import to_then
 from opendp.mod import Domain, Metric, Measurement
 
 
@@ -64,6 +65,5 @@ def make_private_np_eigendecomposition(
 
 
 # generate then variant of the constructor
-then_private_np_eigendecomposition = register_measurement(
-    make_private_np_eigendecomposition
-)
+then_private_np_eigendecomposition = to_then(make_private_np_eigendecomposition)
+register(make_private_np_eigendecomposition)

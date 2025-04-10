@@ -16,7 +16,8 @@ See also our :ref:`tutorial on diffentially private PCA <dp-pca>`.
 from __future__ import annotations
 from typing import NamedTuple, Optional, TYPE_CHECKING, Sequence
 from opendp.extras.numpy import then_np_clamp
-from opendp.extras._utilities import register_measurement, to_then
+from opendp.context import register
+from opendp.extras._utilities import to_then
 from opendp.extras.numpy._make_np_mean import make_private_np_mean
 from opendp.extras.sklearn._make_eigendecomposition import then_private_np_eigendecomposition
 from opendp.mod import Domain, Measurement, Metric
@@ -152,7 +153,8 @@ def make_private_pca(
 
 
 # generate then variant of the constructor
-then_private_pca = register_measurement(make_private_pca)
+then_private_pca = to_then(make_private_pca)
+register(make_private_pca)
 
 
 class PCA():

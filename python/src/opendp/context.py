@@ -1,4 +1,4 @@
-'''
+"""
 The ``context`` module provides :py:class:`opendp.context.Context` and supporting utilities.
 
 For more context, see :ref:`context in the User Guide <context-user-guide>`.
@@ -9,7 +9,7 @@ We suggest importing under the conventional name ``dp``:
 .. code:: python
 
     >>> import opendp.prelude as dp
-'''
+"""
 
 import logging
 from typing import Any, Callable, Optional, Sequence, Union, MutableMapping
@@ -24,6 +24,7 @@ from opendp.combinators import (
     make_zCDP_to_approxDP,
 )
 from opendp.domains import atom_domain, vector_domain, with_margin
+from opendp.extras._utilities import supports_partial, to_then
 from opendp.measurements import make_laplace, make_gaussian
 from opendp.measures import (
     approximate,
@@ -57,15 +58,16 @@ from opendp.extras.polars import LazyFrameQuery, Margin
 from dataclasses import asdict, replace
 
 __all__ = [
-    'space_of',
-    'domain_of',
-    'metric_of',
-    'loss_of',
-    'unit_of',
-    'Context',
-    'Query',
-    'Chain',
-    'PartialChain'
+    "space_of",
+    "domain_of",
+    "metric_of",
+    "loss_of",
+    "unit_of",
+    "Context",
+    "Query",
+    "Chain",
+    "PartialChain",
+    "register",
 ]
 
 
@@ -88,6 +90,40 @@ for module_name in ["transformations", "measurements"]:
         constructor = getattr(module, partial_name if is_partial else name)
 
         constructors[name[5:]] = constructor, is_partial
+
+
+def register(
+    constructor: Callable[..., Union[Transformation, Measurement]],
+    name: Optional[str] = None,
+):
+    """Register a constructor function to be used in the Context API.
+
+    If the constructor supports partial application (first two arguments are ``input_domain`` and ``input_metric``),
+    then the input domain and input metric are omitted when called via the Context API.
+
+    Constructor requirements:
+    - The constructor must return a transformation or measurement.
+    - If name is None, the constructor's name must start with ``make_``.
+
+    :param constructor: The constructor function to register.
+    :param name: The name to register the constructor under in the Context API. If None, the name will be derived from the constructor's name.
+    """
+    if name is None:
+        if not constructor.__name__.startswith("make_"):
+            raise ValueError(  # pragma: no cover
+                f"constructor.__name__ must start with 'make_', found {constructor.__name__}"
+            )
+        name = constructor.__name__[5:]
+
+    if name in constructors:
+        raise ValueError(  # pragma: no cover
+            f"'{name}' is already registered in the Context API. Please choose a different name."
+        )
+
+    if supports_partial(constructor):
+        constructors[name] = to_then(constructor), True
+    else:
+        constructors[name] = constructor, False
 
 
 def space_of(T, M=None, infer: bool = False) -> tuple[Domain, Metric]:
@@ -114,16 +150,18 @@ def space_of(T, M=None, infer: bool = False) -> tuple[Domain, Metric]:
 
     # choose a metric type if not set
     if M is None:
-        if D.origin == "VectorDomain": # type: ignore[union-attr]
+        if D.origin == "VectorDomain":  # type: ignore[union-attr]
             M = ty.SymmetricDistance
-        elif D.origin == "AtomDomain" and ty.get_atom(D) in ty._NUMERIC_TYPES: # type: ignore[union-attr]
+        elif D.origin == "AtomDomain" and ty.get_atom(D) in ty._NUMERIC_TYPES:  # type: ignore[union-attr]
             M = ty.AbsoluteDistance
         else:
-            raise TypeError(f"no default metric for domain {D}. Please set `M`")  # pragma: no cover
+            raise TypeError(
+                f"no default metric for domain {D}. Please set `M`"
+            )  # pragma: no cover
 
     # choose a distance type if not set
     if isinstance(M, ty.RuntimeType) and not M.args:
-        M = M[ty.get_atom(D)] # type: ignore[index]
+        M = M[ty.get_atom(D)]  # type: ignore[index]
 
     return domain, metric_of(M)
 
@@ -136,7 +174,7 @@ def domain_of(T, infer: bool = False) -> Domain:
     >>> import opendp.prelude as dp
     >>> dp.domain_of(list[int])
     VectorDomain(AtomDomain(T=i32))
-    
+
     As well as strings representing types in the underlying Rust syntax:
 
     >>> dp.domain_of('Vec<int>')
@@ -146,7 +184,7 @@ def domain_of(T, infer: bool = False) -> Domain:
 
     >>> dp.domain_of(dict[str, int])
     MapDomain { key_domain: AtomDomain(T=String), value_domain: AtomDomain(T=i32) }
-    
+
     .. TODO: Support python syntax for Option: https://github.com/opendp/opendp/issues/1389
 
     >>> dp.domain_of('Option<int>')  # Python's `Optional` is not supported.
@@ -203,7 +241,7 @@ def domain_of(T, infer: bool = False) -> Domain:
 
 def metric_of(M) -> Metric:
     """Constructs an instance of a metric from metric type ``M``.
-    
+
     :param M: Metric type
     """
     import opendp.typing as ty
@@ -236,9 +274,10 @@ def metric_of(M) -> Metric:
 
 
 def loss_of(
-        epsilon: Optional[float] = None,
-        delta: Optional[float] = None,
-        rho: Optional[float] = None) -> tuple[Measure, Union[float, tuple[float, float]]]:
+    epsilon: Optional[float] = None,
+    delta: Optional[float] = None,
+    rho: Optional[float] = None,
+) -> tuple[Measure, Union[float, tuple[float, float]]]:
     """Constructs a privacy loss, consisting of a privacy measure and a privacy loss parameter.
 
     >>> import opendp.prelude as dp
@@ -254,30 +293,35 @@ def loss_of(
     :param rho: Parameter for zero-concentrated ρ-DP.
 
     """
+
     def _range_warning(name, value, info_level, warn_level):
         if value > warn_level:
             if info_level == warn_level:
-                logger.warning(f'{name} should be less than or equal to {warn_level}')
+                logger.warning(f"{name} should be less than or equal to {warn_level}")
             else:
-                logger.warning(f'{name} should be less than or equal to {warn_level}, and is typically less than or equal to {info_level}')
+                logger.warning(
+                    f"{name} should be less than or equal to {warn_level}, and is typically less than or equal to {info_level}"
+                )
         elif value > info_level:
-            logger.info(f'{name} is typically less than or equal to {info_level}')
+            logger.info(f"{name} is typically less than or equal to {info_level}")
 
     if [rho is None, epsilon is None].count(True) != 1:
-        raise ValueError("Either epsilon or rho must be specified, and they are mutually exclusive.")  # pragma: no cover
-    
+        raise ValueError(
+            "Either epsilon or rho must be specified, and they are mutually exclusive."
+        )  # pragma: no cover
+
     if epsilon is not None:
-        _range_warning('epsilon', epsilon, 1, 5)
+        _range_warning("epsilon", epsilon, 1, 5)
         measure, loss = max_divergence(), epsilon
 
     if rho is not None:
-        _range_warning('rho', rho, 0.25, 0.5)
+        _range_warning("rho", rho, 0.25, 0.5)
         measure, loss = zero_concentrated_divergence(), rho
-    
+
     if delta is None:
         return measure, loss
     else:
-        _range_warning('delta', delta, 1e-6, 1e-6)
+        _range_warning("delta", delta, 1e-6, 1e-6)
         return approximate(measure), (loss, delta)
 
 
@@ -291,7 +335,7 @@ def unit_of(
     ordered: bool = False,
     U=None,
 ) -> tuple[Metric, float]:
-    """Constructs a unit of privacy, consisting of a metric and a dataset distance. 
+    """Constructs a unit of privacy, consisting of a metric and a dataset distance.
     The parameters are mutually exclusive.
 
     >>> import opendp.prelude as dp
@@ -332,7 +376,7 @@ def unit_of(
     if l2 is not None:
         metric = l2_distance(T=RuntimeType.parse_or_infer(U, l2))
         return metric, l2
-    raise Exception('No matching metric found')  # pragma: no cover
+    raise Exception("No matching metric found")  # pragma: no cover
 
 
 class Context(object):
@@ -360,7 +404,9 @@ class Context(object):
         d_in: float,
         d_mids: Optional[Sequence[float]] = None,
         d_out: Optional[float] = None,
-        space_override: Optional[tuple[Domain, Metric]] = None, # TODO: Document or add leading underscore and explain that is is for internal use only.
+        space_override: Optional[
+            tuple[Domain, Metric]
+        ] = None,  # TODO: Document or add leading underscore and explain that is is for internal use only.
     ):
         self.accountant = accountant
         self.queryable = queryable
@@ -374,6 +420,7 @@ class Context(object):
     accountant = {indent(repr(self.accountant))},
     d_in       = {self.d_in},
     d_mids     = {self.d_mids})"""
+
     # TODO: Add "d_out" when filters are implemented.
 
     def deserialize_polars_plan(self, serialized_plan: bytes) -> "LazyFrameQuery":
@@ -429,11 +476,17 @@ class Context(object):
             # allows dictionaries of {[by]: [margin]}
             if isinstance(margins, MutableMapping):
                 from warnings import warn
-                warn('Margin dicts should be replaced with lists, with the key supplied as the "by" kwarg', DeprecationWarning)
+
+                warn(
+                    'Margin dicts should be replaced with lists, with the key supplied as the "by" kwarg',
+                    DeprecationWarning,
+                )
                 margins = [replace(margin, by=by) for by, margin in margins.items()]
 
             for margin in margins:
-                domain = with_margin(domain, Margin(**asdict(replace(margin, by=margin.by or []))))
+                domain = with_margin(
+                    domain, Margin(**asdict(replace(margin, by=margin.by or [])))
+                )
 
         accountant, d_mids = _sequential_composition_by_weights(
             domain, privacy_unit, privacy_loss, split_evenly_over, split_by_weights
@@ -445,7 +498,9 @@ class Context(object):
             inferred_domain = domain_of(data, infer=True)
             if vector_domain(domain) == inferred_domain:
                 # With Python 3.11, add_note is available, but pytest.raises doesn't see notes.
-                e.args = (e.args[0] + '; To fix, wrap domain kwarg with dp.vector_domain()',)
+                e.args = (
+                    e.args[0] + "; To fix, wrap domain kwarg with dp.vector_domain()",
+                )
             raise e
 
         return Context(
@@ -473,17 +528,21 @@ class Context(object):
         d_query = None
         if self.d_mids is not None:
             if kwargs:
-                raise ValueError(f"Expected no privacy arguments but got {kwargs}")  # pragma: no cover
+                raise ValueError(
+                    f"Expected no privacy arguments but got {kwargs}"
+                )  # pragma: no cover
             if not self.d_mids:
-                raise ValueError("Privacy allowance has been exhausted")  # pragma: no cover
+                raise ValueError(
+                    "Privacy allowance has been exhausted"
+                )  # pragma: no cover
             d_query = self.d_mids[0]
-        elif kwargs: # pragma: no cover
+        elif kwargs:  # pragma: no cover
             # TODO: Is there a way to reach this? The usual ways of constructing a Context will populate d_mids.
             # TODO: Update the docstring if we do remove this.
-            measure, d_query = loss_of(**kwargs) # type: ignore[assignment]
-            if measure != self.output_measure: # type: ignore[attr-defined]
+            measure, d_query = loss_of(**kwargs)  # type: ignore[assignment]
+            if measure != self.output_measure:  # type: ignore[attr-defined]
                 raise ValueError(
-                    f"Expected output measure {self.output_measure} but got {measure}" # type: ignore[attr-defined]
+                    f"Expected output measure {self.output_measure} but got {measure}"  # type: ignore[attr-defined]
                 )
 
         chain = self.space_override or self.accountant.input_space
@@ -494,7 +553,7 @@ class Context(object):
             d_out=d_query,
             context=self,
         )
-        
+
         # return a LazyFrameQuery when dealing with Polars data, to better mimic the Polars API
         if chain[0].type == "LazyFrameDomain":
             from opendp.domains import _lazyframe_from_domain
@@ -536,10 +595,10 @@ class Query(object):
     def __init__(
         self,
         chain: Chain,
-        output_measure: Measure = None, # type: ignore[assignment]
+        output_measure: Measure = None,  # type: ignore[assignment]
         d_in: Optional[float] = None,
         d_out: Optional[float] = None,
-        context: "Context" = None, # type: ignore[assignment]
+        context: "Context" = None,  # type: ignore[assignment]
         _wrap_release=None,
     ) -> None:
         self._chain = chain
@@ -560,7 +619,9 @@ class Query(object):
     def __getattr__(self, name: str) -> Callable[..., "Query"]:
         """Creates a new query by applying a transformation or measurement to the current chain."""
         if name not in constructors:
-            raise AttributeError(f"Unrecognized constructor: '{name}'")  # pragma: no cover
+            raise AttributeError(
+                f"Unrecognized constructor: '{name}'"
+            )  # pragma: no cover
 
         def make(*args, **kwargs) -> "Query":
             """Wraps the ``make_{name}`` constructor to allow one optional parameter and chains it to the current query.
@@ -586,7 +647,9 @@ class Query(object):
             elif param_diff < 0:
                 raise ValueError(f"{name} is missing {-param_diff} parameter(s).")
             elif param_diff > 0:
-                raise ValueError(f"{name} has {param_diff} parameter(s) too many.")  # pragma: no cover
+                raise ValueError(
+                    f"{name} has {param_diff} parameter(s) too many."
+                )  # pragma: no cover
 
             new_chain = constructor(*args, **kwargs)
             if is_partial or not isinstance(self._chain, tuple):
@@ -598,7 +661,7 @@ class Query(object):
 
     def new_with(self, *, chain: Chain, wrap_release=None) -> "Query":
         """Convenience constructor that creates a new query with a different chain.
-        
+
         :param chain: the prior query. Either a metric space or transformation
         :param wrap_release: a function to apply to apply to releases
         """
@@ -607,7 +670,7 @@ class Query(object):
             output_measure=self._output_measure,
             d_in=self._d_in,
             d_out=self._d_out,
-            context=self._context, # type: ignore[arg-type]
+            context=self._context,  # type: ignore[arg-type]
             _wrap_release=wrap_release or self._wrap_release,
         )
 
@@ -636,7 +699,7 @@ class Query(object):
     def release(self) -> Any:
         """Release the query. The query must be part of a context."""
         # TODO: consider adding an optional `data` parameter for when _context is None
-        answer = self._context(self.resolve()) # type: ignore[misc]
+        answer = self._context(self.resolve())  # type: ignore[misc]
         if self._wrap_release:
             answer = self._wrap_release(answer)
         return answer
@@ -665,9 +728,13 @@ class Query(object):
         """
 
         if d_out is not None and self._d_out is not None:
-            raise ValueError("`d_out` has already been specified in query")  # pragma: no cover
+            raise ValueError(
+                "`d_out` has already been specified in query"
+            )  # pragma: no cover
         if d_out is None and self._d_out is None:
-            raise ValueError("`d_out` has not yet been specified in the query")  # pragma: no cover
+            raise ValueError(
+                "`d_out` has not yet been specified in the query"
+            )  # pragma: no cover
         d_out = d_out or self._d_out
 
         if output_measure is not None:
@@ -702,7 +769,7 @@ class Query(object):
                     queryable=queryable,
                     d_in=d_in,
                     d_mids=d_mids,
-                    space_override=(input_domain, input_metric)
+                    space_override=(input_domain, input_metric),
                 )
 
             return self.new_with(chain=accountant, wrap_release=_wrap_release)
@@ -713,7 +780,9 @@ class Query(object):
         """Helper function for composition in a context."""
         if isinstance(self._chain, PartialChain):
             # TODO: Can we exercise this?
-            return PartialChain(lambda x: compositor(self._chain(x), self._d_in)) # pragma: no cover
+            return PartialChain(
+                lambda x: compositor(self._chain(x), self._d_in)
+            )  # pragma: no cover
         else:
             return compositor(self._chain, self._d_in)
 
@@ -735,7 +804,13 @@ class PartialChain(object):
         """Returns the transformation or measurement with the given parameter."""
         return self.partial(v)
 
-    def fix(self, d_in: float, d_out: float, output_measure: Optional[Measure] = None, T=None):
+    def fix(
+        self,
+        d_in: float,
+        d_out: float,
+        output_measure: Optional[Measure] = None,
+        T=None,
+    ):
         """Returns the closest transformation or measurement that satisfies the given stability or privacy constraint.
 
         The discovered parameter is assigned to the param attribute of the returned transformation or measurement.
@@ -748,36 +823,47 @@ class PartialChain(object):
         # When the output measure corresponds to approx-DP, only optimize the epsilon parameter.
         # The delta parameter should be fixed in _cast_measure, and if not, then the search will be impossible here anyways.
         if output_measure == fixed_smoothed_max_divergence():
+
             def _predicate(param):
                 meas = _cast_measure(self(param), output_measure, d_out)
-                return meas.map(d_in)[0] <= d_out[0] # type: ignore[index] 
+                return meas.map(d_in)[0] <= d_out[0]  # type: ignore[index]
+
         else:
+
             def _predicate(param):
                 meas = _cast_measure(self(param), output_measure, d_out)
                 return meas.check(d_in, d_out)
-        
+
         param = binary_search(_predicate)
         chain = self.partial(param)
         chain.param = param
         return chain
 
-    def __rshift__(self, other: Union[Transformation, Measurement, _PartialConstructor]):
+    def __rshift__(
+        self, other: Union[Transformation, Measurement, _PartialConstructor]
+    ):
         # partials may be chained with other transformations or measurements to form a new partial
         if isinstance(other, (Transformation, Measurement, _PartialConstructor)):
             return PartialChain(lambda x: self(x) >> other)
 
-        raise ValueError("At most one parameter may be missing at a time")  # pragma: no cover
-    
-    def __rrshift__(self, other: Union[tuple[Domain, Metric], Transformation, Measurement]):
+        raise ValueError(
+            "At most one parameter may be missing at a time"
+        )  # pragma: no cover
+
+    def __rrshift__(
+        self, other: Union[tuple[Domain, Metric], Transformation, Measurement]
+    ):
         if isinstance(other, (tuple, Transformation, Measurement)):
             return PartialChain(lambda x: other >> self(x))
-        
-        raise ValueError("At most one parameter may be missing at a time")  # pragma: no cover
+
+        raise ValueError(
+            "At most one parameter may be missing at a time"
+        )  # pragma: no cover
 
     @classmethod
     def wrap(cls, f):
         """Wraps a constructor for a transformation or measurement to return a partial chain instead.
-        
+
         :param f: function to wrap
         """
 
@@ -863,8 +949,11 @@ def _cast_measure(chain, to_measure: Optional[Measure] = None, d_to=None):
 
     if from_to == ("MaxDivergence", "Approximate<MaxDivergence>"):
         return make_approximate(chain)
-    
-    if from_to == ("ZeroConcentratedDivergence", "Approximate<ZeroConcentratedDivergence>"):
+
+    if from_to == (
+        "ZeroConcentratedDivergence",
+        "Approximate<ZeroConcentratedDivergence>",
+    ):
         return make_approximate(chain)
 
     if from_to == ("MaxDivergence", "ZeroConcentratedDivergence"):
@@ -878,11 +967,15 @@ def _cast_measure(chain, to_measure: Optional[Measure] = None, d_to=None):
         "Approximate<MaxDivergence>",
     ):
         return make_fix_delta(make_zCDP_to_approxDP(chain), d_to[1])
-    
-    raise ValueError(f"Unable to cast measure from {from_to[0]} to {from_to[1]}")  # pragma: no cover
+
+    raise ValueError(
+        f"Unable to cast measure from {from_to[0]} to {from_to[1]}"
+    )  # pragma: no cover
 
 
-def _translate_measure_distance(d_from, from_measure: Measure, to_measure: Measure, alpha: Optional[float] = None):
+def _translate_measure_distance(
+    d_from, from_measure: Measure, to_measure: Measure, alpha: Optional[float] = None
+):
     """Translate a privacy loss ``d_from`` from ``from_measure`` to ``to_measure``.
 
     >>> _translate_measure_distance(1, dp.max_divergence(), dp.max_divergence())
@@ -918,6 +1011,7 @@ def _translate_measure_distance(d_from, from_measure: Measure, to_measure: Measu
         "Approximate<MaxDivergence>",
         "ZeroConcentratedDivergence",
     ):
+
         def _caster(measurement):
             return make_fix_delta(make_zCDP_to_approxDP(measurement), delta=d_from[1])
 
@@ -929,7 +1023,7 @@ def _translate_measure_distance(d_from, from_measure: Measure, to_measure: Measu
             T=float,
         )
         return make_gaussian(*space, scale).map(constant)
-    
+
     if from_to == (
         "Approximate<MaxDivergence>",
         "Approximate<ZeroConcentratedDivergence>",
@@ -939,8 +1033,11 @@ def _translate_measure_distance(d_from, from_measure: Measure, to_measure: Measu
             raise ValueError(f"alpha ({alpha}) must be in [0, 1)")  # pragma: no cover
         delta_zCDP, delta_inf = delta * (1 - alpha), delta * alpha
 
-        rho = _translate_measure_distance((epsilon, delta_zCDP), from_measure, zero_concentrated_divergence())
+        rho = _translate_measure_distance(
+            (epsilon, delta_zCDP), from_measure, zero_concentrated_divergence()
+        )
         return rho, delta_inf
-        
 
-    raise ValueError(f"Unable to translate distance from {from_to[0]} to {from_to[1]}")  # pragma: no cover
+    raise ValueError(
+        f"Unable to translate distance from {from_to[0]} to {from_to[1]}"
+    )  # pragma: no cover
