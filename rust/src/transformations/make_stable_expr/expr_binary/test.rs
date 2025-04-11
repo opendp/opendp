@@ -466,3 +466,29 @@ fn test_rem() -> Fallible<()> {
     test_binary!(get_i32_data, rem, [None, Some(0), None])?;
     Ok(())
 }
+
+#[test]
+fn test_overflow() -> Fallible<()> {
+    // ensures behavior of arithmetic is as expected when overflow occurs
+    let data = df!(
+        "x" => [i32::MAX, i32::MIN],
+        "add" => [1, -1],
+        "sub" => [-1, 1],
+        "mul" => [2, 2],
+    )?;
+    let expected = df!(
+        "add" => [i32::MIN, i32::MAX],
+        "sub" => [i32::MIN, i32::MAX],
+        "mul" => [-2, 0],
+    )?;
+    let observed = data
+        .lazy()
+        .select([
+            (col("x") + col("add")).alias("add"),
+            (col("x") - col("sub")).alias("sub"),
+            (col("x") * col("mul")).alias("mul"),
+        ])
+        .collect()?;
+    assert_eq!(observed, expected);
+    Ok(())
+}
