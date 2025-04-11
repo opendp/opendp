@@ -4,7 +4,9 @@ use crate::error::*;
 use crate::measurements::make_private_lazyframe;
 use crate::measures::MaxDivergence;
 use crate::polars::PrivacyNamespace;
+use crate::traits::samplers::test::kolmogorov_smirnov;
 use polars::prelude::*;
+use statrs::function::erf;
 
 use crate::metrics::SymmetricDistance;
 
@@ -95,5 +97,44 @@ fn test_stable_keys_zCDP() -> Fallible<()> {
     println!("counts {}", counts.collect()?);
     println!("params {:?}", params);
 
+    Ok(())
+}
+
+#[test]
+fn test_explicit_keys() -> Fallible<()> {
+    let lf_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("A", AtomDomain::<u32>::default()),
+        SeriesDomain::new("B", AtomDomain::<f64>::default()),
+    ])?
+    .with_margin(Margin::by(["A"]).with_max_partition_length(1))?;
+
+    let lf = df!("A" => &[0u32], "B" => &[0.0f64])?.lazy();
+    let keys = df!("A" => &(0u32..1000).collect::<Vec<_>>())?.lazy();
+
+    let meas = make_private_lazyframe(
+        lf_domain,
+        SymmetricDistance,
+        ZeroConcentratedDivergence,
+        lf.clone()
+            .group_by(&[col("A")])
+            .agg(&[col("B")
+                .fill_nan(0.0)
+                .fill_null(0.0)
+                .dp()
+                .sum((0.0, 1.0), None)])
+            .join(keys, [col("A")], [col("A")], JoinType::Right.into()),
+        Some(1.),
+        None,
+    )?;
+
+    let release = meas.invoke(&lf)?.collect()?;
+    let samples: Vec<f64> = release.column("B")?.f64()?.iter().flatten().collect();
+    let samples = <[f64; 1000]>::try_from(samples).unwrap();
+
+    pub fn normal_cdf(x: f64) -> f64 {
+        (erf::erf(x / std::f64::consts::SQRT_2) + 1.0) / 2.0
+    }
+
+    kolmogorov_smirnov(samples, normal_cdf)?;
     Ok(())
 }
