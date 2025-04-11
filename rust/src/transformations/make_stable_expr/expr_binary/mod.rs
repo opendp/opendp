@@ -3,7 +3,7 @@ use polars_plan::dsl::Expr;
 use polars_plan::utils::expr_output_name;
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{AtomDomain, ExprDomain, ExprPlan, OuterMetric, SeriesDomain, WildExprDomain};
+use crate::domains::{ExprDomain, ExprPlan, OuterMetric, SeriesDomain, WildExprDomain};
 use crate::error::*;
 use crate::transformations::DatasetMetric;
 
@@ -44,18 +44,6 @@ where
         .clone()
         .make_stable(input_domain.as_row_by_row(), input_metric.clone())?;
 
-    use polars_plan::dsl::Operator::*;
-    if !matches!(
-        op,
-        Eq | NotEq | Lt | LtEq | Gt | GtEq | And | Or | Xor | LogicalAnd | LogicalOr
-    ) {
-        return fallible!(
-            MakeTransformation,
-            "unsupported operator: {:?}. Only binary operations that emit booleans are currently supported.",
-            op
-        );
-    }
-
     let left_series = &t_left.output_domain.column;
     let right_series = &t_right.output_domain.column;
 
@@ -69,12 +57,64 @@ where
         );
     }
 
-    let mut data_column =
-        SeriesDomain::new(expr_output_name(&expr)?, AtomDomain::<bool>::default());
-    data_column.nullable = left_series.nullable || right_series.nullable;
+    use polars_plan::dsl::Operator::*;
+
+    if !matches!(
+        op,
+        Eq | EqValidity
+            | NotEq
+            | NotEqValidity
+            | Lt
+            | LtEq
+            | Gt
+            | GtEq
+            | Plus
+            | Minus
+            | Multiply
+            | Divide
+            | TrueDivide
+            | FloorDivide
+            | Modulus
+            | And
+            | Or
+            | Xor
+            | LogicalAnd
+            | LogicalOr
+    ) {
+        return fallible!(
+            MakeTransformation,
+            "unsupported binary operator: {:?}. Please open an issue on the OpenDP GitHub if you would like to see this supported.",
+            op
+        );
+    }
+    // use Polars to compute the output dtype
+    let mock_df = DataFrame::new(vec![
+        Column::new_empty("left".into(), &left_series.dtype()),
+        Column::new_empty("right".into(), &right_series.dtype()),
+    ])?;
+    let out_dtype = mock_df
+        .lazy()
+        .select([binary_expr(col("left"), op, col("right"))])
+        .collect()?
+        .column("left")?
+        .dtype()
+        .clone();
+
+    let field = Field::new(expr_output_name(&expr)?, out_dtype.clone());
+    let mut series_domain = SeriesDomain::new_from_field(field)?;
+
+    // division by zero may introduce null values
+    series_domain.nullable = left_series.nullable
+        || right_series.nullable
+        || matches!(op, FloorDivide | TrueDivide | Divide);
+
+    // these ops eliminate all nulls, regardless of the input
+    if matches!(op, EqValidity | NotEqValidity) {
+        series_domain.nullable = false;
+    }
 
     let output_domain = ExprDomain {
-        column: data_column,
+        column: series_domain,
         context: input_domain.context.clone(),
     };
 
@@ -92,11 +132,10 @@ where
                     right: Arc::new(right.expr),
                     op: op.clone(),
                 },
-                fill: left.fill.zip(right.fill).map(|(l, r)| Expr::BinaryExpr {
-                    left: Arc::new(l),
-                    right: Arc::new(r),
-                    op: op.clone(),
-                }),
+                // Since this is None, if binary expressions are used after the aggregation,
+                // execution will fail in a data-independent way.
+                // But you can't use binary ops after aggs anyways, so this failure is unreachable.
+                fill: None,
             })
         }),
         input_metric.clone(),

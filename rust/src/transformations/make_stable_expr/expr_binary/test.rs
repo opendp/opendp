@@ -1,5 +1,7 @@
-use crate::domains::{LazyFrameDomain, OptionDomain, SeriesDomain};
+use crate::domains::{AtomDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
 use crate::metrics::SymmetricDistance;
+use core::f64;
+use std::ops::{Add, Div, Mul, Rem, Sub};
 
 use super::*;
 
@@ -28,6 +30,21 @@ fn get_f64_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
     Ok((lf_domain, lf))
 }
 
+fn get_i32_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
+    let lf_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("L", AtomDomain::<i32>::default()),
+        SeriesDomain::new("R", OptionDomain::new(AtomDomain::<i32>::default())),
+    ])?;
+
+    let lf = df!(
+        "L" => [Some(1), Some(1), Some(1)],
+        "R" => [Some(0), Some(1), None],
+    )?
+    .lazy();
+
+    Ok((lf_domain, lf))
+}
+
 fn get_bool_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
     let lf_domain = LazyFrameDomain::new(vec![
         SeriesDomain::new("L", AtomDomain::<bool>::default()),
@@ -37,11 +54,11 @@ fn get_bool_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
     let lf = df!(
         "L" => [
             Some(true), Some(true), Some(false), Some(false),
-            Some(true), None, Some(false), None
+            Some(true), None, Some(false), None, None
         ],
         "R" => [
             Some(true), Some(false), Some(true), Some(false),
-            None, Some(true), None, Some(false)
+            None, Some(true), None, Some(false), None
         ],
     )?
     .lazy();
@@ -49,7 +66,23 @@ fn get_bool_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
     Ok((lf_domain, lf))
 }
 
+fn get_string_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
+    let lf_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("L", AtomDomain::<String>::default()),
+        SeriesDomain::new("R", OptionDomain::new(AtomDomain::<String>::default())),
+    ])?;
+
+    let lf = df!(
+        "L" => ["".to_string(), "A".to_string()],
+        "R" => [Some("1".to_string()), None],
+    )?
+    .lazy();
+
+    Ok((lf_domain, lf))
+}
+
 macro_rules! test_binary {
+    // (the function to call to get the data, the operation to test, the expected data output)
     ($get:ident, $op:ident, $expected:expr) => {{
         let (lf_domain, lf) = $get()?;
         let expr_domain = lf_domain.row_by_row();
@@ -60,7 +93,9 @@ macro_rules! test_binary {
                 .column("L")?,
             &Column::new("L".into(), $expected),
             "input: {:?}",
-            lf.clone().collect()?
+            lf.clone()
+                .with_columns([col("L").$op(col("R")).alias("O")])
+                .collect()?
         );
         let t_op = col("L")
             .$op(col("R"))
@@ -76,8 +111,8 @@ macro_rules! test_binary {
             .get(0)
             .unwrap();
 
-        assert!(output_series.nullable == (out > 0));
-        Ok(())
+        assert_eq!(output_series.nullable, (out > 0));
+        Fallible::Ok(())
     }};
 }
 
@@ -89,13 +124,26 @@ fn test_eq() -> Fallible<()> {
         [
             Some(true),
             Some(false),
-            // NaN is equal to NaN?
+            // NaN is equal to NaN: https://docs.pola.rs/user-guide/concepts/data-types-and-structures/#floating-point-numbers
             Some(true),
             Some(false),
             None,
             None,
             Some(true),
             Some(false),
+        ]
+    )
+}
+
+#[test]
+fn test_eq_missing() -> Fallible<()> {
+    test_binary!(
+        get_f64_data,
+        eq_missing,
+        [
+            true,
+            false, // NaN is equal to NaN: https://docs.pola.rs/user-guide/concepts/data-types-and-structures/#floating-point-numbers
+            true, false, true, false, true, false,
         ]
     )
 }
@@ -115,6 +163,15 @@ fn test_neq() -> Fallible<()> {
             Some(false),
             Some(true),
         ]
+    )
+}
+
+#[test]
+fn test_neq_validity() -> Fallible<()> {
+    test_binary!(
+        get_f64_data,
+        neq_missing,
+        [false, true, false, true, false, true, false, true,]
     )
 }
 
@@ -145,7 +202,7 @@ fn test_lt_eq() -> Fallible<()> {
         [
             Some(true),
             Some(false),
-            // nan is equal to NaN? zero is lte NaN?
+            // nan is equal to NaN, zero is lte NaN: https://docs.pola.rs/user-guide/concepts/data-types-and-structures/#floating-point-numbers
             Some(true),
             Some(true),
             None,
@@ -182,7 +239,7 @@ fn test_gt_eq() -> Fallible<()> {
         [
             Some(true),
             Some(true),
-            // nan is equal to NaN?
+            // nan is equal to NaN: https://docs.pola.rs/user-guide/concepts/data-types-and-structures/#floating-point-numbers
             Some(true),
             Some(false),
             None,
@@ -207,6 +264,7 @@ fn test_and() -> Fallible<()> {
             None,
             Some(false),
             Some(false),
+            None,
         ]
     )
 }
@@ -223,6 +281,7 @@ fn test_or() -> Fallible<()> {
             Some(false),
             Some(true),
             Some(true),
+            None,
             None,
             None,
         ]
@@ -281,7 +340,155 @@ fn test_xor() -> Fallible<()> {
             None,
             None,
             None,
-            None
+            None,
+            None,
         ]
     )
+}
+
+#[test]
+fn test_add() -> Fallible<()> {
+    test_binary!(
+        get_f64_data,
+        add,
+        [
+            Some(0.),
+            Some(1.),
+            Some(f64::NAN),
+            Some(f64::NAN),
+            None,
+            None,
+            Some(f64::INFINITY),
+            Some(f64::INFINITY)
+        ]
+    )?;
+    test_binary!(get_i32_data, add, [Some(1), Some(2), None])?;
+    test_binary!(get_string_data, add, [Some("1".to_string()), None])?;
+    Ok(())
+}
+
+#[test]
+fn test_sub() -> Fallible<()> {
+    test_binary!(
+        get_f64_data,
+        sub,
+        [
+            Some(0.),
+            Some(1.),
+            Some(f64::NAN),
+            Some(f64::NAN),
+            None,
+            None,
+            Some(f64::NAN),
+            Some(-f64::INFINITY)
+        ]
+    )?;
+    test_binary!(get_i32_data, sub, [Some(1), Some(0), None])?;
+    Ok(())
+}
+
+#[test]
+fn test_mul() -> Fallible<()> {
+    test_binary!(
+        get_f64_data,
+        mul,
+        [
+            Some(0.),
+            Some(0.),
+            Some(f64::NAN),
+            Some(f64::NAN),
+            None,
+            None,
+            Some(f64::INFINITY),
+            Some(f64::NAN)
+        ]
+    )?;
+    test_binary!(get_i32_data, mul, [Some(0), Some(1), None])?;
+    Ok(())
+}
+
+#[test]
+fn test_div() -> Fallible<()> {
+    test_binary!(
+        get_f64_data,
+        div,
+        [
+            Some(f64::NAN),
+            Some(f64::INFINITY),
+            Some(f64::NAN),
+            Some(f64::NAN),
+            None,
+            None,
+            Some(f64::NAN),
+            Some(0.)
+        ]
+    )?;
+    test_binary!(get_i32_data, div, [None, Some(1), None])?;
+    Ok(())
+}
+
+#[test]
+fn test_floor_div() -> Fallible<()> {
+    test_binary!(
+        get_f64_data,
+        floor_div,
+        [
+            Some(f64::NAN),
+            Some(f64::INFINITY),
+            Some(f64::NAN),
+            Some(f64::NAN),
+            None,
+            None,
+            Some(f64::NAN),
+            Some(0.)
+        ]
+    )?;
+    test_binary!(get_i32_data, floor_div, [None, Some(1), None])?;
+    Ok(())
+}
+
+#[test]
+fn test_rem() -> Fallible<()> {
+    test_binary!(
+        get_f64_data,
+        rem,
+        [
+            Some(f64::NAN),
+            Some(f64::NAN),
+            Some(f64::NAN),
+            Some(f64::NAN),
+            None,
+            None,
+            Some(f64::NAN),
+            Some(f64::NAN)
+        ]
+    )?;
+    test_binary!(get_i32_data, rem, [None, Some(0), None])?;
+    Ok(())
+}
+
+#[test]
+fn test_overflow() -> Fallible<()> {
+    // ensures behavior of arithmetic is as expected when overflow occurs
+    let data = df!(
+        "x" => [i32::MAX, i32::MIN],
+        "add" => [1, -1],
+        "sub" => [-1, 1],
+        "mul" => [2, 2],
+    )?;
+    let expected = df!(
+        "add" => [i32::MIN, i32::MAX],
+        "sub" => [i32::MIN, i32::MAX],
+        "mul" => [-2, 0],
+    )?;
+    let observed = data
+        .lazy()
+        .select([
+            (col("x") + col("add")).alias("add"),
+            (col("x") - col("sub")).alias("sub"),
+            (col("x") * col("mul")).alias("mul"),
+        ])
+        .collect()?;
+    assert_eq!(observed, expected);
+    Ok(())
 }
