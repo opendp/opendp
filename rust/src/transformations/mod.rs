@@ -107,3 +107,8 @@ pub use cast_metric::*;
 mod resize;
 #[cfg(feature = "contrib")]
 pub use resize::*;
+
+#[cfg(feature = "contrib")]
+mod scalar_to_vector;
+#[cfg(feature = "contrib")]
+pub use scalar_to_vector::*;

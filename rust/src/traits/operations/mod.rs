@@ -423,3 +423,18 @@ impl FloatBits for f32 {
         Self::from_bits(bits)
     }
 }
+
+/// # Proof Definition
+/// Return the minimum of `a` and `b` if both are `Some`,
+/// or the `Some` value if only one is `Some`.
+pub(crate) fn option_min<T: PartialOrd>(a: Option<T>, b: Option<T>) -> Option<T> {
+    match (a, b) {
+        (Some(a), Some(b)) => match a.partial_cmp(&b) {
+            None => None,
+            Some(std::cmp::Ordering::Greater) => Some(b),
+            _ => Some(a),
+        },
+        (Some(x), _) | (_, Some(x)) => Some(x),
+        _ => None,
+    }
+}
