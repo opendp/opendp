@@ -329,3 +329,25 @@ def test_transformation_release_error():
     clamped = context.query().impute_constant(0.0)
     with pytest.raises(ValueError, match=r"Query is not yet a measurement"):
         clamped.release()
+
+
+def test_register():
+
+    def make_constant(input_domain, input_metric, constant):
+        return _make_measurement(
+            input_domain,
+            input_metric,
+            dp.max_divergence(),
+            lambda _: constant,
+            lambda _: 0.,
+        )
+    
+    dp.register(make_constant)
+    # now call the constructor through the context API
+    context = dp.Context.compositor(
+        data=[1, 2, 3],
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1
+    )
+    assert context.query().constant("z").release() == "z"
