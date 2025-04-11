@@ -1,0 +1,41 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{fn conservative\_discrete\_laplacian\_tail\_to\_alpha}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+\contrib
+
+Proof for \rustdoc{accuracy/tail\_bounds/fn}{conservative\_discrete\_laplacian\_tail\_to\_alpha}.
+
+\begin{definition}
+    Define $Y \sim \mathcal{L}_\mathbb{Z}(0, s)$, a random variable following the discrete laplace distribution:
+    \begin{equation}
+        \forall x \in \mathbb{Z} \qquad \Pr[X = x] = \frac{e^{1/s} - 1}{e^{1/s} + 1} e^{-|x|/s}
+    \end{equation}
+\end{definition}
+
+\begin{theorem}
+    Assume $X \sim \mathcal{L}_\mathbb{Z}(0, s)$, and $t > 0$.
+    \begin{equation}
+        \alpha = P[X > t] = \frac{e^{-t/s}}{e^{-1/s} + 1}
+    \end{equation}
+\end{theorem}
+
+\begin{proof}
+    \begin{align*}
+        \alpha &= P[X > t] \\
+        &= \sum_{x=t + 1}^{\infty} \frac{e^{1/s} - 1}{e^{1/s} + 1} e^{-|x|/s} \\
+        &= \frac{e^{1/s} - 1}{e^{1/s} + 1} \sum_{x=t + 1}^{\infty} e^{-x/s} 
+            && \text{since } t > 0 \\
+        &= \frac{e^{1/s} - 1}{e^{1/s} + 1} \frac{e^{(1-(t + 1))/s}}{e^{1/s} - 1} 
+            && \text{since } \sum_{x=t}^\infty p^x = \frac{p^t}{1 - p} \text{ if } |p| < 1 \text{, let } p = e^{1/s}\\
+        &= \frac{e^{-t/s}}{e^{1/s} + 1}
+    \end{align*}
+
+\end{proof}
+
+\end{document}
