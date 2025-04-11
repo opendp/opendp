@@ -5,7 +5,7 @@ use polars_plan::utils::expr_output_name;
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{ExprDomain, ExprPlan, OuterMetric, SeriesDomain, WildExprDomain};
 use crate::error::*;
-use crate::transformations::DatasetMetric;
+use crate::metrics::MicrodataMetric;
 
 use super::StableExpr;
 
@@ -25,7 +25,7 @@ pub fn make_expr_binary<M>(
 ) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
 where
     M: OuterMetric,
-    M::InnerMetric: DatasetMetric,
+    M::InnerMetric: MicrodataMetric,
     M::Distance: Clone,
     (WildExprDomain, M): MetricSpace,
     (ExprDomain, M): MetricSpace,

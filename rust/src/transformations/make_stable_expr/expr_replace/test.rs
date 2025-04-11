@@ -1,5 +1,5 @@
 use crate::domains::{AtomDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
-use crate::metrics::SymmetricDistance;
+use crate::metrics::{FrameDistance, SymmetricDistance};
 use crate::transformations::make_stable_lazyframe;
 
 use super::*;
@@ -10,7 +10,11 @@ fn check_replace(old: Expr, new: Expr, expected: Option<(Series, bool)>) -> Fall
     let lf = df!("" => &[1, 2, 3])?.lazy();
 
     let lf_replace = lf.clone().with_column(col("").replace(old, new));
-    let t_obs = make_stable_lazyframe(lf_domain.clone(), SymmetricDistance, lf_replace);
+    let t_obs = make_stable_lazyframe(
+        lf_domain.clone(),
+        FrameDistance(SymmetricDistance),
+        lf_replace,
+    );
 
     let (t_obs, expected) = match (t_obs, expected) {
         (Err(_), None) => return Ok(()),
