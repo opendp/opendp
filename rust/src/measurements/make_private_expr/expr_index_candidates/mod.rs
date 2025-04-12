@@ -59,7 +59,7 @@ where
     m_prior
         >> Function::then_expr(move |input_expr| {
             apply_plugin(
-                input_expr,
+                vec![input_expr],
                 expr.clone(),
                 IndexCandidatesPlugin {
                     candidates: candidates.clone(),

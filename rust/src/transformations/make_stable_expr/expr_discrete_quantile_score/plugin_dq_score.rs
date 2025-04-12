@@ -17,7 +17,7 @@ use polars_arrow::{
 };
 use polars_plan::{
     dsl::{ColumnsUdf, GetOutput},
-    prelude::{ApplyOptions, FunctionOptions},
+    prelude::{ApplyOptions, FunctionFlags, FunctionOptions},
 };
 
 #[cfg(feature = "ffi")]
@@ -25,10 +25,7 @@ use pyo3_polars::derive::polars_expr;
 #[cfg(feature = "ffi")]
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    polars::{OpenDPPlugin, function_flags},
-    traits::RoundCast,
-};
+use crate::{polars::OpenDPPlugin, traits::RoundCast};
 
 use super::series_to_vec;
 
@@ -52,7 +49,9 @@ impl OpenDPPlugin for DiscreteQuantileScoreShim {
         FunctionOptions {
             collect_groups: ApplyOptions::GroupWise,
             fmt_str: Self::NAME,
-            flags: function_flags(["RETURNS_SCALAR", "CHANGES_LENGTH"]),
+            flags: FunctionFlags::ALLOW_GROUP_AWARE
+                | FunctionFlags::RETURNS_SCALAR
+                | FunctionFlags::CHANGES_LENGTH,
             ..Default::default()
         }
     }
@@ -81,7 +80,9 @@ impl OpenDPPlugin for DiscreteQuantileScorePlugin {
         FunctionOptions {
             collect_groups: ApplyOptions::GroupWise,
             fmt_str: Self::NAME,
-            flags: function_flags(["RETURNS_SCALAR", "CHANGES_LENGTH"]),
+            flags: FunctionFlags::ALLOW_GROUP_AWARE
+                | FunctionFlags::RETURNS_SCALAR
+                | FunctionFlags::CHANGES_LENGTH,
             ..Default::default()
         }
     }
@@ -164,7 +165,9 @@ fn discrete_quantile_score_udf(
     let scores = UInt64Array::from_values(scores_iter);
 
     let dtype = ArrowDataType::FixedSizeList(
-        Box::new(ArrowField::new("".into(), ArrowDataType::UInt64, false)),
+        // should match how Polars initializes ArrowField
+        Box::new(ArrowField::new("item".into(), ArrowDataType::UInt64, true)),
+        // the length here is the number of elements in each row
         scores.len(),
     );
 

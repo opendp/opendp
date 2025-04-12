@@ -22,9 +22,12 @@ use polars::{
 use polars_plan::{
     dsl::{ColumnsUdf, Expr, FunctionExpr, SpecialEq, lit},
     plans::{Literal, LiteralValue, Null},
-    prelude::{FunctionFlags, FunctionOptions},
+    prelude::FunctionOptions,
 };
 use serde::{Deserialize, Serialize};
+
+#[cfg(test)]
+mod test;
 
 // this trait is used to make the Deserialize trait bound conditional on the feature flag
 #[cfg(not(feature = "ffi"))]
@@ -136,7 +139,7 @@ where
 /// * `plugin_expr` - A plugin expression. The input to the plugin is replaced with input_expr.
 /// * `kwargs_new` - Extra parameters to the plugin
 pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
-    input_expr: Expr,
+    input_exprs: Vec<Expr>,
     plugin_expr: Expr,
     kwargs_new: KW,
 ) -> Expr {
@@ -165,21 +168,17 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
             }
 
             Expr::Function {
-                input: vec![input_expr],
+                input: input_exprs,
                 function,
                 options,
             }
         }
         // handle the case where the expression is an AnonymousFunction from Rust
-        Expr::AnonymousFunction {
-            output_type,
-            options,
-            ..
-        } => Expr::AnonymousFunction {
-            input: vec![input_expr],
+        Expr::AnonymousFunction { .. } => Expr::AnonymousFunction {
+            input: input_exprs,
+            output_type: kwargs_new.get_output().unwrap(),
             function: LazySerde::Deserialized(SpecialEq::new(Arc::new(kwargs_new))),
-            output_type,
-            options,
+            options: KW::function_options(),
         },
         _ => unreachable!("only called after constructor checks"),
     }
@@ -576,11 +575,4 @@ pub(crate) fn get_disabled_features_message() -> String {
             disabled_features.join(", ")
         )
     }
-}
-
-pub(crate) fn function_flags<const L: usize>(flags: [&'static str; L]) -> FunctionFlags {
-    flags
-        .into_iter()
-        .map(|f| FunctionFlags::from_name(f).unwrap())
-        .fold(FunctionFlags::default(), FunctionFlags::intersection)
 }
