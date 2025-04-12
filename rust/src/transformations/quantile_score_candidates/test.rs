@@ -1,7 +1,8 @@
 use num::Float;
 
 use crate::{
-    measurements::{Optimize, make_report_noisy_max_gumbel},
+    measurements::{Optimize, make_report_noisy_max},
+    measures::RangeDivergence,
     metrics::SymmetricDistance,
     traits::samplers::sample_uniform_uint_below,
 };
@@ -23,9 +24,10 @@ fn test_quantile_score_candidates_median() -> Fallible<()> {
         vec![59, 33, 19, 1, 45, 100]
     );
 
-    let m_rnm = make_report_noisy_max_gumbel(
+    let m_rnm = make_noisy_max(
         t_qscore.output_domain.clone(),
         t_qscore.output_metric.clone(),
+        ZeroConcentratedDivergence,
         1.0,
         Optimize::Min,
     )?;
