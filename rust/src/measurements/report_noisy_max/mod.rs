@@ -22,8 +22,8 @@ mod test;
 #[bootstrap(
     features("contrib"),
     arguments(
-        optimize(c_type = "char *", rust_type = "String"),
         output_measure(c_type = "AnyMeasure *", rust_type = b"null"),
+        optimize(c_type = "char *", rust_type = "String", default = "max"),
     ),
     generics(MO(suppress), TIA(suppress))
 )]
