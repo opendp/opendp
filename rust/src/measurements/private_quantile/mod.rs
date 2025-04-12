@@ -4,7 +4,6 @@ use crate::{
     core::{Function, Measurement, MetricSpace},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    measures::RangeDivergence,
     traits::{ExactIntCast, Number},
     transformations::{
         make_quantile_score_candidates, score_candidates_constants, traits::UnboundedMetric,
