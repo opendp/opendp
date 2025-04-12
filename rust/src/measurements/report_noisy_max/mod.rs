@@ -6,13 +6,16 @@ use crate::{
     metrics::LInfDistance,
     traits::{
         InfCast, InfDiv, Number,
-        samplers::{ExponentialRV, GumbelRV, InverseCDF, PartialSample},
+        samplers::{ExponentialRV, GumbelRV, InverseCDF, PartialSample, sample_uniform_uint_below},
     },
 };
 use dashu::float::FBig;
 use num::Zero;
 use opendp_derive::bootstrap;
 use std::fmt::Display;
+
+#[cfg(feature = "polars")]
+use super::expr_report_noisy_max::SelectionDistribution;
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -22,8 +25,8 @@ mod test;
 #[bootstrap(
     features("contrib"),
     arguments(
-        optimize(c_type = "char *", rust_type = "String"),
         output_measure(c_type = "AnyMeasure *", rust_type = b"null"),
+        optimize(c_type = "char *", rust_type = "String", default = "max"),
     ),
     generics(MO(suppress), TIA(suppress))
 )]
@@ -68,43 +71,7 @@ where
     Measurement::new(
         input_domain,
         Function::new_fallible(move |x: &Vec<TIA>| {
-            if scale.is_zero() {
-                let cmp = |l: &TIA, r: &TIA| match optimize {
-                    Optimize::Max => l > r,
-                    Optimize::Min => l < r,
-                };
-                return Ok((x.iter().enumerate())
-                    .reduce(|l, r| if cmp(&l.1, &r.1) { l } else { r })
-                    .ok_or_else(|| err!(FailedFunction, "there must be at least one candidate"))?
-                    .0);
-            }
-
-            (x.iter().enumerate())
-                // Cast to FBig and discard failed casts.
-                // Cast only fails on NaN scores, which are not in the input domain but could still be passed by the user.
-                // If the user still passes NaN in the input data, discarding results in graceful failure.
-                .filter_map(|(i, x_i)| Some((i, FBig::try_from(*x_i).ok()?)))
-                // Normalize sign.
-                .map(|(i, x_i)| {
-                    let y_i = match optimize {
-                        Optimize::Min => -x_i,
-                        Optimize::Max => x_i,
-                    };
-                    (i, y_i)
-                })
-                // Initialize partial sample.
-                .map(|(i, f_shift)| {
-                    let rv = MO::random_variable(f_shift, f_scale.clone())?;
-                    Ok((i, PartialSample::new(rv)))
-                })
-                // Reduce to the pair with largest sample.
-                .reduce(|l, r| {
-                    let (mut l, mut r) = (l?, r?);
-                    Ok(if l.1.greater_than(&mut r.1)? { l } else { r })
-                })
-                .ok_or_else(|| err!(FailedFunction, "there must be at least one candidate"))?
-                // Return the index of the largest sample.
-                .map(|v| v.0)
+            select_score::<TIA, MO::RV>(x, f_scale.clone(), optimize.clone())
         }),
         input_metric.clone(),
         output_measure.clone(),
@@ -121,16 +88,86 @@ where
     )
 }
 
-/// # Proof Definition
-/// Defines the noise distribution associated with the privacy measure.
-pub trait SelectionMeasure: 'static + Measure<Distance = f64> {
-    type RV: InverseCDF;
+pub fn select_score<TIA, RV: SelectionRV>(
+    x: &[TIA],
+    scale: FBig,
+    optimize: Optimize,
+) -> Fallible<usize>
+where
+    TIA: Number,
+    FBig: TryFrom<TIA>,
+{
+    if scale.is_zero() {
+        let cmp = |l: &TIA, r: &TIA| match optimize {
+            Optimize::Max => l > r,
+            Optimize::Min => l < r,
+        };
+        return Ok((x.iter().enumerate())
+            .reduce(|l, r| if cmp(&l.1, &r.1) { l } else { r })
+            .ok_or_else(|| err!(FailedFunction, "there must be at least one candidate"))?
+            .0);
+    }
 
+    // When all scores are same, return a random index.
+    // This is a workaround for slow performance of the samplers
+    // when all scores are the same.
+    if x.windows(2).all(|w| w[0] == w[1]) {
+        return sample_uniform_uint_below(x.len());
+    }
+
+    (x.iter().enumerate())
+        // Cast to FBig and discard failed casts.
+        // Cast only fails on NaN scores, which are not in the input domain but could still be passed by the user.
+        // If the user still passes NaN in the input data, discarding results in graceful failure.
+        .filter_map(|(i, x_i)| Some((i, FBig::try_from(*x_i).ok()?)))
+        // Normalize sign.
+        .map(|(i, x_i)| {
+            let y_i = match optimize {
+                Optimize::Min => -x_i,
+                Optimize::Max => x_i,
+            };
+            (i, y_i)
+        })
+        // Initialize partial sample.
+        .map(|(i, f_shift)| {
+            let rv = RV::new(f_shift, scale.clone())?;
+            Ok((i, PartialSample::new(rv)))
+        })
+        // Reduce to the pair with largest sample.
+        .reduce(|l, r| {
+            let (mut l, mut r) = (l?, r?);
+            Ok(if l.1.greater_than(&mut r.1)? { l } else { r })
+        })
+        .ok_or_else(|| err!(FailedFunction, "there must be at least one candidate"))?
+        // Return the index of the largest sample.
+        .map(|v| v.0)
+}
+
+pub trait SelectionRV: InverseCDF {
     /// # Proof Definition
     /// `scale` must be non-negative.
     ///
     /// Returns a random variable.
-    fn random_variable(shift: FBig, scale: FBig) -> Fallible<Self::RV>;
+    fn new(shift: FBig, scale: FBig) -> Fallible<Self>;
+}
+
+impl SelectionRV for GumbelRV {
+    fn new(shift: FBig, scale: FBig) -> Fallible<Self> {
+        GumbelRV::new(shift, scale)
+    }
+}
+impl SelectionRV for ExponentialRV {
+    fn new(shift: FBig, scale: FBig) -> Fallible<Self> {
+        ExponentialRV::new(shift, scale)
+    }
+}
+/// # Proof Definition
+/// Defines the noise distribution associated with the privacy measure.
+pub trait SelectionMeasure: 'static + Measure<Distance = f64> {
+    type RV: SelectionRV;
+
+    #[cfg(feature = "polars")]
+    const DISTRIBUTION: SelectionDistribution;
 
     /// # Proof Definition
     /// Given a mechanism that computes $\mathcal{M}(x) = \mathrm{argmax}_i z_i$,
@@ -165,17 +202,15 @@ pub trait SelectionMeasure: 'static + Measure<Distance = f64> {
 impl SelectionMeasure for RangeDivergence {
     type RV = GumbelRV;
 
-    fn random_variable(shift: FBig, scale: FBig) -> Fallible<Self::RV> {
-        GumbelRV::new(shift, scale)
-    }
+    #[cfg(feature = "polars")]
+    const DISTRIBUTION: SelectionDistribution = SelectionDistribution::Gumbel;
 }
 
 impl SelectionMeasure for MaxDivergence {
     type RV = ExponentialRV;
 
-    fn random_variable(shift: FBig, scale: FBig) -> Fallible<Self::RV> {
-        ExponentialRV::new(shift, scale)
-    }
+    #[cfg(feature = "polars")]
+    const DISTRIBUTION: SelectionDistribution = SelectionDistribution::Exponential;
 }
 
 #[derive(PartialEq, Clone, Copy, Debug)]

@@ -1,9 +1,9 @@
 use crate::core::PrivacyMap;
-use crate::domains::{AtomDomain, ExprPlan, VectorDomain, WildExprDomain};
-use crate::measurements::{Optimize, SelectionMeasure, make_report_noisy_max};
-use crate::measures::MaxDivergence;
+use crate::domains::{ArrayDomain, AtomDomain, ExprPlan, VectorDomain, WildExprDomain};
+use crate::measurements::{Optimize, SelectionMeasure, make_report_noisy_max, select_score};
 use crate::metrics::{IntDistance, L0InfDistance, L01InfDistance, LInfDistance};
 use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
+use crate::traits::samplers::{ExponentialRV, GumbelRV};
 use crate::traits::{InfCast, InfMul, Number};
 use crate::transformations::StableExpr;
 use crate::transformations::traits::UnboundedMetric;
@@ -99,55 +99,80 @@ where
             ReportNoisyMaxPlugin::NAME
         );
     }
-
-    let DataType::Array(elem_dtype, _) = middle_domain.column.dtype() else {
-        return fallible!(
-            MakeMeasurement,
-            "{} requires array input",
-            ReportNoisyMaxPlugin::NAME
-        );
-    };
+    let array_domain = middle_domain.column.element_domain::<ArrayDomain>()?;
 
     use DataType::*;
-    if !matches!(
-        elem_dtype.as_ref(),
-        UInt32 | UInt64 | Int8 | Int16 | Int32 | Int64 | Float32 | Float64
-    ) {
-        return fallible!(
-            MakeMeasurement,
-            "{} requires numeric array input",
-            ReportNoisyMaxPlugin::NAME
-        );
-    }
-    let m_rnm = make_report_noisy_max(
-        VectorDomain::<AtomDomain<f64>>::default(),
-        middle_metric.0.clone(),
+    let privacy_map = match array_domain.element_domain.dtype() {
+        UInt32 => rnm_privacy_map::<u32, _>(array_domain, scale, optimize)?,
+        UInt64 => rnm_privacy_map::<u64, _>(array_domain, scale, optimize)?,
+        Int8 => rnm_privacy_map::<i8, _>(array_domain, scale, optimize)?,
+        Int16 => rnm_privacy_map::<i16, _>(array_domain, scale, optimize)?,
+        Int32 => rnm_privacy_map::<i32, _>(array_domain, scale, optimize)?,
+        Int64 => rnm_privacy_map::<i64, _>(array_domain, scale, optimize)?,
+        Float32 => rnm_privacy_map::<f32, _>(array_domain, scale, optimize)?,
+        Float64 => rnm_privacy_map::<f64, _>(array_domain, scale, optimize)?,
+        _ => {
+            return fallible!(
+                MakeMeasurement,
+                "{} requires numeric array input",
+                ReportNoisyMaxPlugin::NAME
+            );
+        }
+    };
+
+    let m_rnm = Measurement::<_, _, L0InfDistance<LInfDistance<f64>>, _>::new(
+        middle_domain,
+        Function::then_expr(move |input_expr| {
+            apply_plugin(
+                vec![input_expr],
+                expr.clone(),
+                ReportNoisyMaxPlugin {
+                    distribution: MO::DISTRIBUTION,
+                    optimize: optimize.clone(),
+                    scale,
+                },
+            )
+        }),
+        middle_metric.clone(),
+        MO::default(),
+        privacy_map,
+    )?;
+
+    t_prior >> m_rnm
+}
+
+fn rnm_privacy_map<T: Number, MO: SelectionMeasure>(
+    array_domain: &ArrayDomain,
+    scale: f64,
+    optimize: Optimize,
+) -> Fallible<PrivacyMap<L0InfDistance<LInfDistance<f64>>, MO>>
+where
+    T: Number + InfCast<f64>,
+    FBig: TryFrom<T> + TryFrom<f64>,
+    f64: InfCast<T> + InfCast<IntDistance>,
+{
+    let atom_domain = array_domain
+        .element_domain
+        .as_any()
+        .downcast_ref::<AtomDomain<T>>()
+        // should be unreachable
+        .ok_or_else(|| err!(MakeMeasurement, "failed to downcast domain"))?
+        .clone();
+
+    let meas = make_report_noisy_max(
+        VectorDomain::new(atom_domain),
+        LInfDistance::default(),
         MO::default(),
         scale,
         optimize,
     )?;
-    let privacy_map = m_rnm.privacy_map.clone();
 
-    t_prior
-        >> Measurement::<_, _, L0InfDistance<LInfDistance<f64>>, _>::new(
-            middle_domain,
-            Function::then_expr(move |input_expr| {
-                apply_plugin(
-                    vec![input_expr],
-                    expr.clone(),
-                    ReportNoisyMaxPlugin {
-                        optimize: optimize.clone(),
-                        scale,
-                    },
-                )
-            }),
-            middle_metric.clone(),
-            MO::default(),
-            PrivacyMap::new_fallible(move |(l0, li): &(IntDistance, f64)| {
-                let epsilon = privacy_map.eval(li)?;
-                f64::inf_cast(*l0)?.inf_mul(&epsilon)
-            }),
-        )?
+    Ok(PrivacyMap::new_fallible(
+        move |(l0, li): &(IntDistance, f64)| {
+            let epsilon = meas.map(&T::inf_cast(*li)?)?;
+            f64::inf_cast(*l0)?.inf_mul(&epsilon)
+        },
+    ))
 }
 
 /// Determine if the given expression is a report_noisy_max_gumbel expression.
@@ -218,13 +243,21 @@ impl OpenDPPlugin for ReportNoisyMaxShim {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
+pub enum SelectionDistribution {
+    Exponential,
+    Gumbel,
+}
+
 /// Arguments for the Report Noisy Max expression
 #[derive(Serialize, Deserialize, Clone)]
 pub(crate) struct ReportNoisyMaxPlugin {
-    /// Controls whether the noisy maximum or noisy minimum candidate is selected.
-    pub optimize: Optimize,
+    /// The distribution to sample from.
+    pub distribution: SelectionDistribution,
     /// The scale of the noise.
     pub scale: f64,
+    /// Controls whether the noisy maximum or noisy minimum candidate is selected.
+    pub optimize: Optimize,
 }
 
 impl OpenDPPlugin for ReportNoisyMaxPlugin {
@@ -267,20 +300,25 @@ fn report_noisy_max_gumbel_udf(
         polars_bail!(InvalidOperation: "{} expects a single input field", ReportNoisyMaxPlugin::NAME);
     };
 
-    let ReportNoisyMaxPlugin { optimize, scale } = kwargs;
+    let ReportNoisyMaxPlugin {
+        distribution,
+        optimize,
+        scale,
+    } = kwargs;
 
     if scale.is_sign_negative() {
         polars_bail!(InvalidOperation: "{} scale ({}) must be non-negative", ReportNoisyMaxPlugin::NAME, scale);
     }
 
-    if scale.is_nan() {
+    let Ok(scale) = FBig::try_from(scale.clone()) else {
         polars_bail!(InvalidOperation: "{} scale ({}) must be a number", ReportNoisyMaxPlugin::NAME, scale);
-    }
+    };
 
     // PT stands for Polars Type
     fn rnm_impl<PT: 'static + PolarsDataType>(
         column: &Column,
-        scale: f64,
+        distribution: SelectionDistribution,
+        scale: FBig,
         optimize: Optimize,
     ) -> PolarsResult<Column>
     where
@@ -289,13 +327,6 @@ fn report_noisy_max_gumbel_udf(
         FBig: TryFrom<PT::Physical<'static>>,
         f64: InfCast<PT::Physical<'static>>,
     {
-        let m_rnm = make_report_noisy_max(
-            VectorDomain::<AtomDomain<PT::Physical<'static>>>::default(),
-            LInfDistance::default(),
-            MaxDivergence,
-            scale,
-            optimize,
-        )?;
         Ok(column
             .as_materialized_series()
             // unpack the series into a chunked array
@@ -309,7 +340,14 @@ fn report_noisy_max_gumbel_udf(
                         PolarsError::InvalidOperation("input dtype does not match".into())
                     })?;
 
-                let idx = m_rnm.invoke(&arr.values_iter().cloned().collect())? as u32;
+                let scores = arr.values_iter().cloned().collect::<Vec<_>>();
+                use SelectionDistribution::*;
+                let idx = match distribution {
+                    Exponential => {
+                        select_score::<_, ExponentialRV>(&scores, scale.clone(), optimize)
+                    }
+                    Gumbel => select_score::<_, GumbelRV>(&scores, scale.clone(), optimize),
+                }? as u32;
                 PolarsResult::Ok(idx)
             })?
             // convert the resulting chunked array back to a series
@@ -323,14 +361,14 @@ fn report_noisy_max_gumbel_udf(
     };
 
     match dtype.as_ref() {
-        UInt32 => rnm_impl::<UInt32Type>(series, scale, optimize),
-        UInt64 => rnm_impl::<UInt64Type>(series, scale, optimize),
-        Int8 => rnm_impl::<Int8Type>(series, scale, optimize),
-        Int16 => rnm_impl::<Int16Type>(series, scale, optimize),
-        Int32 => rnm_impl::<Int32Type>(series, scale, optimize),
-        Int64 => rnm_impl::<Int64Type>(series, scale, optimize),
-        Float32 => rnm_impl::<Float32Type>(series, scale, optimize),
-        Float64 => rnm_impl::<Float64Type>(series, scale, optimize),
+        UInt32 => rnm_impl::<UInt32Type>(series, distribution, scale, optimize),
+        UInt64 => rnm_impl::<UInt64Type>(series, distribution, scale, optimize),
+        Int8 => rnm_impl::<Int8Type>(series, distribution, scale, optimize),
+        Int16 => rnm_impl::<Int16Type>(series, distribution, scale, optimize),
+        Int32 => rnm_impl::<Int32Type>(series, distribution, scale, optimize),
+        Int64 => rnm_impl::<Int64Type>(series, distribution, scale, optimize),
+        Float32 => rnm_impl::<Float32Type>(series, distribution, scale, optimize),
+        Float64 => rnm_impl::<Float64Type>(series, distribution, scale, optimize),
         UInt8 | UInt16 => {
             polars_bail!(InvalidOperation: "u8 and u16 not supported in the OpenDP Polars plugin. Please use u32 or u64.")
         }

@@ -200,39 +200,17 @@ def test_gaussian():
     (input_space >> dp.m.then_gaussian(1.))([1., 2., 3.])
 
 
-def test_report_noisy_max_gumbel():
+@pytest.mark.parametrize("monotonic,epsilon,rho", [(False, 2, 1 / 2), (True, 1, 1 / 8)])
+def test_report_noisy_max_gumbel(monotonic, epsilon, rho):
     input_domain = dp.vector_domain(dp.atom_domain(T=dp.usize))
 
-    input_metric = dp.linf_distance(T=dp.usize)
+    input_metric = dp.linf_distance(monotonic=monotonic, T=dp.usize)
     meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max(dp.range_divergence(), 1., "max")
     # fails with very small probability
     assert meas([0, 0, 20, 0]) == 2  # because score 2 is by far the greatest
-    assert meas.map(2) == 4
 
-    input_metric = dp.linf_distance(monotonic=True, T=dp.usize)
-    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max(dp.range_divergence(), 1., "max")
-    # fails with very small probability
-    assert meas([0, 0, 20, 0]) == 2  # because score 2 is by far the greatest
-    assert meas.map(2) == 2
-
-    assert dp.c.make_bounded_range_to_pureDP(meas).map(1) == 1
-    assert dp.c.make_bounded_range_to_zCDP(meas).map(1) == 1 / 8
-
-
-def test_report_noisy_max_exponential():
-    input_domain = dp.vector_domain(dp.atom_domain(T=dp.usize))
-
-    input_metric = dp.linf_distance(T=dp.usize)
-    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max(dp.max_divergence(), 1., "max")
-    # fails with probability about e^{-20} / 3
-    assert meas([0, 0, 20, 0]) == 2  # because score 2 is by far the greatest
-    assert meas.map(2) == 4
-
-    input_metric = dp.linf_distance(monotonic=True, T=dp.usize)
-    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max(dp.max_divergence(), 1., "max")
-    # fails with probability about e^{-20} / 3
-    assert meas([0, 0, 20, 0]) == 2  # because score 2 is by far the greatest
-    assert meas.map(2) == 2
+    assert dp.c.make_bounded_range_to_pureDP(meas).map(1) == epsilon
+    assert dp.c.make_bounded_range_to_zCDP(meas).map(1) == rho
 
 
 def test_alp_histogram():
