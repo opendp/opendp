@@ -16,7 +16,7 @@ use crate::{
 use polars::{
     frame::DataFrame,
     lazy::frame::LazyFrame,
-    prelude::{DslPlan, GetOutput, LazySerde, NamedFrom},
+    prelude::{DslPlan, GetOutput, LazySerde, NamedFrom, len, repeat},
     series::Series,
 };
 use polars_plan::{
@@ -266,7 +266,12 @@ impl Function<ExprPlan, ExprPlan> {
     pub(crate) fn fill_with(self, value: Expr) -> Self {
         Self::new_fallible(move |arg: &ExprPlan| {
             let mut plan = self.eval(arg)?;
-            plan.fill = Some(value.clone());
+            // Without repeat, the expression will be scalar-valued,
+            // and broadcast later to the required length.
+            // The drawback is that randomized plugins, like noise and report_noisy_max,
+            // will then only be applied to one row,
+            // and the one noisy row will then be broadcast to the entire column.
+            plan.fill = Some(repeat(value.clone(), len()));
             Ok(plan)
         })
     }
@@ -286,14 +291,19 @@ impl Function<DslPlan, ExprPlan> {
     }
 
     /// # Proof Definition
-    /// Returns a Function that specifies what the function should return if evaluated on an empty partition.
+    /// Returns a Function that specifies what plan should evaluate to when evaluated on an empty partition.
     ///
     /// Polars only keeps non-empty partitions in group-by,
     /// so this is used to fill missing values after joining with an explicit key set.
     pub(crate) fn fill_with(self, value: Expr) -> Self {
         Self::new_fallible(move |arg: &DslPlan| {
             let mut plan = self.eval(arg)?;
-            plan.fill = Some(value.clone());
+            // Without repeat, the expression will be scalar-valued,
+            // and broadcast later to the required length.
+            // The drawback is that randomized plugins, like noise and report_noisy_max,
+            // will then only be applied to one row,
+            // and the one noisy row will then be broadcast to the entire column.
+            plan.fill = Some(repeat(value.clone(), len()));
             Ok(plan)
         })
     }

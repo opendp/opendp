@@ -1,8 +1,7 @@
 use crate::{
     error::Fallible,
     traits::samplers::{
-        PartialSample,
-        psrn::test::{assert_ordered_progression, kolmogorov_smirnov},
+        PartialSample, psrn::test::assert_ordered_progression, test::kolmogorov_smirnov,
     },
 };
 

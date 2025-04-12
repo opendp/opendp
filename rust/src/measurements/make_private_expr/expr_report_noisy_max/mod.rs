@@ -3,6 +3,7 @@ use crate::domains::{ExprPlan, WildExprDomain};
 use crate::measurements::{Optimize, report_noisy_max_gumbel_map, select_score};
 use crate::metrics::{IntDistance, LInfDistance, Parallel, PartitionDistance};
 use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
+use crate::traits::samplers::sample_uniform_uint_below;
 use crate::traits::{InfCast, InfMul, Number};
 use crate::transformations::StableExpr;
 use crate::transformations::traits::UnboundedMetric;
@@ -238,7 +239,7 @@ impl OpenDPPlugin for ReportNoisyMaxPlugin {
     }
 }
 
-// allow the RNMGumbelArgs struct to be stored inside an AnonymousFunction, when used from Rust directly
+// allow the ReportNoisyMaxPlugin struct to be stored inside an AnonymousFunction, when used from Rust directly
 impl ColumnsUdf for ReportNoisyMaxPlugin {
     // makes it possible to downcast the AnonymousFunction trait object back to Self
     fn as_any(&self) -> &dyn std::any::Any {
@@ -294,6 +295,15 @@ fn report_noisy_max_gumbel_udf(
                     .ok_or_else(|| {
                         PolarsError::InvalidOperation("input dtype does not match".into())
                     })?;
+
+                // when all scores are same, return a random index
+                // this is a workaround for slow performance of the gumbel mechanism
+                // when all scores are the same
+                let min = arr.values_iter().min_by(|a, b| a.partial_cmp(b).unwrap());
+                let max = arr.values_iter().max_by(|a, b| a.partial_cmp(b).unwrap());
+                if min == max {
+                    return sample_uniform_uint_below(arr.len() as u32);
+                }
 
                 select_score(arr.values_iter().cloned(), optimize.clone(), scale.clone())
                     .map(|idx| idx as u32)
