@@ -10,7 +10,7 @@ use crate::{
         any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, Downcast},
         util::to_str,
     },
-    measurements::{Optimize, make_report_noisy_max, report_noisy_max::SelectionMeasure},
+    measurements::{Optimize, SelectionMeasure, make_report_noisy_max},
     measures::{MaxDivergence, RangeDivergence},
     metrics::LInfDistance,
     traits::{CastInternalRational, CheckNull, DistanceConstant, Number},

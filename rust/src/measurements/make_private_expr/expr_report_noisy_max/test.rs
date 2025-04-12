@@ -35,6 +35,7 @@ fn test_report_noisy_max_gumbel_udf() -> Fallible<()> {
     let actual = super::report_noisy_max_gumbel_udf(
         &[scores],
         ReportNoisyMaxPlugin {
+            distribution: SelectionDistribution::Gumbel,
             optimize: Optimize::Max,
             scale: 0.0,
         },
