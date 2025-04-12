@@ -200,36 +200,37 @@ def test_gaussian():
     (input_space >> dp.m.then_gaussian(1.))([1., 2., 3.])
 
 
-def test_report_noisy_max_gumbel():
+@pytest.mark.parametrize("measure,d_out", [
+    # d_in * 2 / scale = 2
+    (dp.max_divergence(), 2), 
+    # (d_in * 2 / scale)^2 / 8
+    (dp.zero_concentrated_divergence(), 1 / 2)
+])
+def test_noisy_max(measure, d_out):
     input_domain = dp.vector_domain(dp.atom_domain(T=dp.usize))
 
     input_metric = dp.linf_distance(T=dp.usize)
-    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max(dp.range_divergence(), 1., "max")
+    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max(measure, 1., "max")
     # fails with very small probability
     assert meas([0, 0, 20, 40]) == 3  # because score 3 is by far the greatest
-    assert meas.map(2) == 4
-
-    input_metric = dp.linf_distance(monotonic=True, T=dp.usize)
-    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max(dp.range_divergence(), 1., "max")
-    # fails with very small probability
-    assert meas([0, 0, 20, 0]) == 2  # because score 2 is by far the greatest
-    assert meas.map(2) == 2
 
 
-def test_report_noisy_max_exponential():
+
+@pytest.mark.parametrize("measure,d_out", [
+    # (d_in * 2) / scale * 2 = 4
+    (dp.max_divergence(), 4), 
+    # ((d_in * 2) / scale)^2 / 8 * 2 = 1
+    (dp.zero_concentrated_divergence(), 1)
+])
+def test_noisy_top_k(measure, d_out):
     input_domain = dp.vector_domain(dp.atom_domain(T=dp.usize))
-
     input_metric = dp.linf_distance(T=dp.usize)
-    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max(dp.max_divergence(), 1., "max")
-    # fails with probability about e^{-20} / 3
-    assert meas([0, 0, 20, 0]) == 2  # because score 2 is by far the greatest
-    assert meas.map(2) == 4
 
-    input_metric = dp.linf_distance(monotonic=True, T=dp.usize)
-    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max(dp.max_divergence(), 1., "max")
-    # fails with probability about e^{-20} / 3
-    assert meas([0, 0, 20, 0]) == 2  # because score 2 is by far the greatest
-    assert meas.map(2) == 2
+    meas = (input_domain, input_metric) >> dp.m.then_noisy_top_k(measure, 2, 1.)
+    # fails with very small probability
+    assert meas([0, 0, 20, 40]) == [3, 2]  # because score 3 and then 2 are by far the greatest
+
+    assert meas.map(1) == d_out
 
 
 def test_alp_histogram():
