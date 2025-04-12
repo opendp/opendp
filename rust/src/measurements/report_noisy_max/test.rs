@@ -1,6 +1,7 @@
-use core::f64;
-
-use crate::error::Fallible;
+use crate::{
+    error::Fallible,
+    measures::{MaxDivergence, ZeroConcentratedDivergence},
+};
 
 use super::*;
 
