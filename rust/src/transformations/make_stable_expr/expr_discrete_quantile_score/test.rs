@@ -71,6 +71,7 @@ fn test_expr_discrete_quantile_score_int() -> Fallible<()> {
     let candidates = Series::new("".into(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
     let m_quant: Transformation<_, _, _, Parallel<LInfDistance<f64>>> = col("cycle_(..10i32)")
+        .cast(DataType::Int64)
         .dp()
         .quantile_score(0.5, candidates)
         .make_stable(expr_domain, PartitionDistance(SymmetricDistance))?;
