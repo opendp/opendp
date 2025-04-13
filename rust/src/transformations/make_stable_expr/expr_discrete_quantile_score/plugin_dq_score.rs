@@ -1,5 +1,3 @@
-use std::iter::zip;
-
 use polars::{
     datatypes::{
         ArrayChunked, ArrowDataType,
@@ -25,7 +23,7 @@ use pyo3_polars::derive::polars_expr;
 #[cfg(feature = "ffi")]
 use serde::{Deserialize, Serialize};
 
-use crate::{polars::OpenDPPlugin, traits::RoundCast};
+use crate::{polars::OpenDPPlugin, traits::RoundCast, transformations::score_candidates};
 
 use super::series_to_vec;
 
@@ -119,50 +117,22 @@ fn discrete_quantile_score_udf(
     };
     let series = column.as_materialized_series();
 
-    let n = series.len() as u64;
-    let DiscreteQuantileScorePlugin {
-        candidates,
-        alpha: (alpha_num, alpha_den),
-        size_limit,
-    } = kwargs;
-
-    // compute histograms of the number of records between each candidate
-    // one histogram has left-open intervals, the other has right-open intervals
-    let (hist_lo, hist_ro) = match series.dtype() {
-        UInt32 => series_histogram::<UInt32Type>(series, candidates),
-        UInt64 => series_histogram::<UInt64Type>(series, candidates),
-        Int8 => series_histogram::<Int8Type>(series, candidates),
-        Int16 => series_histogram::<Int16Type>(series, candidates),
-        Int32 => series_histogram::<Int32Type>(series, candidates),
-        Int64 => series_histogram::<Int64Type>(series, candidates),
-        Float32 => series_histogram::<Float32Type>(series, candidates),
-        Float64 => series_histogram::<Float64Type>(series, candidates),
+    // pack scores into a series, where each row is an array of the scores for each candidate
+    let scores = match series.dtype() {
+        UInt32 => compute_scores_array::<UInt32Type>(series, kwargs),
+        UInt64 => compute_scores_array::<UInt64Type>(series, kwargs),
+        Int8 => compute_scores_array::<Int8Type>(series, kwargs),
+        Int16 => compute_scores_array::<Int16Type>(series, kwargs),
+        Int32 => compute_scores_array::<Int32Type>(series, kwargs),
+        Int64 => compute_scores_array::<Int64Type>(series, kwargs),
+        Float32 => compute_scores_array::<Float32Type>(series, kwargs),
+        Float64 => compute_scores_array::<Float64Type>(series, kwargs),
         UInt8 | UInt16 => polars_bail!(
             InvalidOperation: "u8 and u16 are not supported in the OpenDP Polars plugin. Please use u32 or u64."),
         dtype => polars_bail!(
             InvalidOperation: "Expected numeric data type, found {:?}",
             dtype),
     }?;
-
-    let scores_iter = zip(hist_lo, hist_ro)
-        .scan((0, 0), |(lt, le), (lo, ro)| {
-            // cumsum the left-open histogram to get the total number of records less than the candidate
-            *lt += lo;
-            // cumsum the right-open histogram to get the total number of records lt or equal to the candidate
-            *le += ro;
-
-            let gt = n - *le;
-
-            // the number of records equal to the candidate is the difference between the two cumsums
-            Some(((*lt).min(size_limit), gt.min(size_limit)))
-        })
-        .map(|(lt, gt)| {
-            // |(1 - α) * #(x < c)          -       α * #(x > c)  |    * α_den
-            ((alpha_den - alpha_num) * lt).abs_diff(alpha_num * gt)
-        });
-
-    // pack scores into a series, where each row is an array of the scores for each candidate
-    let scores = UInt64Array::from_values(scores_iter);
 
     let dtype = ArrowDataType::FixedSizeList(
         // should match how Polars initializes ArrowField
@@ -176,40 +146,32 @@ fn discrete_quantile_score_udf(
 }
 
 // PT stands for Polars Type
-fn series_histogram<PT: 'static + PolarsDataType>(
+/// Glue for calling the scorer function from Polars/Arrow dtypes.
+fn compute_scores_array<PT: 'static + PolarsDataType>(
     series: &Series,
-    candidates: Series,
-) -> PolarsResult<(Vec<u64>, Vec<u64>)>
+    kwargs: DiscreteQuantileScorePlugin,
+) -> PolarsResult<UInt64Array>
 where
-    // candidates must be able to be converted into a the physical dtype
+    // candidates must be able to be converted into a physical dtype
     for<'a> PT::Physical<'a>: 'static + RoundCast<f64> + PartialOrd,
     PT::Array: StaticArray,
 {
-    let candidates = series_to_vec::<PT>(&candidates.cast(&PT::get_dtype())?)?;
+    let DiscreteQuantileScorePlugin {
+        candidates,
+        alpha: (alpha_num, alpha_den),
+        size_limit,
+    } = kwargs;
 
-    // count of the number of records between...
-    //  (-inf, c1), [c1, c2), [c2, c3), ..., [ck, inf)
-    let mut hist_lo = vec![0u64; candidates.len() + 1];
-    //  (-inf, c1], (c1, c2], (c2, c3], ..., (ck, inf)
-    let mut hist_ro = vec![0u64; candidates.len() + 1];
-
-    series
-        .unpack::<PT>()?
-        .downcast_iter()
-        .flat_map(StaticArray::values_iter)
-        .for_each(|v| {
-            let idx_lt = candidates.partition_point(|c| *c < v);
-            hist_ro[idx_lt] += 1;
-
-            let idx_eq = idx_lt + candidates[idx_lt..].partition_point(|c| *c == v);
-            hist_lo[idx_eq] += 1;
-        });
-
-    // don't care about the number of elements greater than all
-    hist_lo.pop();
-    hist_ro.pop();
-
-    Ok((hist_lo, hist_ro))
+    Ok(UInt64Array::from_values(score_candidates(
+        series
+            .unpack::<PT>()?
+            .downcast_iter()
+            .flat_map(StaticArray::values_iter),
+        series_to_vec::<PT>(&candidates.cast(&PT::get_dtype())?)?,
+        alpha_num,
+        alpha_den,
+        size_limit,
+    )))
 }
 
 #[cfg(feature = "ffi")]

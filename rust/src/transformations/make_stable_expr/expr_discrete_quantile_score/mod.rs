@@ -5,7 +5,7 @@ use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
 use crate::traits::{InfCast, Number};
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::{
-    StableExpr, score_candidates_constants, score_candidates_map, validate_candidates,
+    StableExpr, check_candidates, score_candidates_constants, score_candidates_map,
 };
 use crate::{core::Function, error::Fallible};
 
@@ -56,9 +56,21 @@ where
     if active_series.nullable {
         return fallible!(
             MakeTransformation,
-            "Quantile estimation requires non-null inputs"
+            "Quantile estimation requires non-null inputs. Try using `.fill_null(x)` or `.drop_null()` first."
         );
     }
+    let nan = match active_series.dtype() {
+        DataType::Float32 => active_series.atom_domain::<f32>()?.nan(),
+        DataType::Float64 => active_series.atom_domain::<f64>()?.nan(),
+        _ => false,
+    };
+    if nan {
+        return fallible!(
+            MakeTransformation,
+            "Quantile estimation requires non-nan inputs. Try using `.fill_nan(x)` or `.drop_nan()` first."
+        );
+    }
+
     let candidates = candidates.strict_cast(&active_series.dtype())?;
 
     match active_series.dtype() {
@@ -92,8 +104,7 @@ where
         .ok_or_else(|| err!(MakeTransformation, "Must know max_partition_length"))?;
 
     // alpha = alpha_num / alpha_den (numerator and denominator of alpha)
-    let (alpha_num, alpha_den, size_limit) =
-        score_candidates_constants::<u64>(Some(mpl as u64), alpha)?;
+    let (alpha_num, alpha_den, size_limit) = score_candidates_constants(Some(mpl as u64), alpha)?;
 
     let len = candidates.len() as i64;
     let fill_value = typed_lit(0u64).repeat_by(len).reshape(&[-1, len]);
@@ -155,7 +166,7 @@ where
             candidates.null_count()
         );
     }
-    validate_candidates(&series_to_vec::<T>(&candidates.cast(&T::get_dtype())?)?)
+    check_candidates(&series_to_vec::<T>(&candidates.cast(&T::get_dtype())?)?)
 }
 
 fn series_to_vec<'a, T: 'static + PolarsDataType>(

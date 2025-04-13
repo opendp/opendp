@@ -468,7 +468,7 @@ class DPExpr(object):
         ...     margins=[dp.polars.Margin(max_partition_length=100)]
         ... )
         >>> candidates = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
-        >>> query = context.query().select(pl.col("age").fill_null(0).dp.quantile(0.25, candidates))
+        >>> query = context.query().select(pl.col("age").cast(int).fill_null(0).dp.quantile(0.25, candidates))
         >>> query.release().collect()
         shape: (1, 1)
         ┌─────┐
@@ -506,7 +506,7 @@ class DPExpr(object):
         ...     margins=[dp.polars.Margin(max_partition_length=100)]
         ... )
         >>> candidates = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
-        >>> query = context.query().select(pl.col("age").fill_null(0).dp.quantile(0.5, candidates))
+        >>> query = context.query().select(pl.col("age").cast(int).fill_null(0).dp.quantile(0.5, candidates))
         >>> query.release().collect()
         shape: (1, 1)
         ┌─────┐
