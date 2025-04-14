@@ -37,3 +37,4 @@ Examples
   transformation
   selecting-grouping-columns
   context-api-plugins
+  regression
