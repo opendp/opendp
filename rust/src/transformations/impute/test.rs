@@ -9,6 +9,7 @@ fn test_impute_uniform() -> Fallible<()> {
         SymmetricDistance::default(),
         (2.0, 3.0),
     )?;
+    assert!(!imputer.output_domain.element_domain.nan());
 
     let result = imputer.invoke(&vec![1.0, f64::NAN])?;
 
@@ -25,6 +26,7 @@ fn test_impute_constant_option() -> Fallible<()> {
         SymmetricDistance::default(),
         "IMPUTED".to_string(),
     )?;
+    assert!(!imputer.output_domain.element_domain.nan());
 
     let result = imputer.invoke(&vec![Some("A".to_string()), None])?;
 
@@ -55,6 +57,8 @@ fn test_impute_drop_option() -> Fallible<()> {
         SymmetricDistance::default(),
     )?;
 
+    assert!(!imputer.output_domain.element_domain.nan());
+
     let result = imputer.invoke(&vec![Some(f64::NAN), Some(23.), None])?;
 
     assert_eq!(result, vec![23.]);
@@ -67,6 +71,7 @@ fn test_impute_drop_inherent() -> Fallible<()> {
         VectorDomain::new(AtomDomain::default()),
         SymmetricDistance::default(),
     )?;
+    assert!(!imputer.output_domain.element_domain.nan());
 
     let result = imputer.invoke(&vec![f64::NAN, 23.])?;
 

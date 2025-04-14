@@ -52,7 +52,7 @@ where
     make_row_by_row(
         input_domain,
         input_metric,
-        AtomDomain::default(),
+        AtomDomain::new_non_nan(),
         move |v| {
             if v.is_null() {
                 let mut rng = GeneratorOpenDP::new();
@@ -225,7 +225,7 @@ where
 {
     Transformation::new(
         input_domain,
-        VectorDomain::new(AtomDomain::default()),
+        VectorDomain::new(AtomDomain::new_non_nan()),
         Function::new(|arg: &Vec<DIA::Carrier>| arg.iter().filter_map(DIA::option).collect()),
         input_metric.clone(),
         input_metric,
