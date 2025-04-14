@@ -257,24 +257,6 @@ impl Function<ExprPlan, ExprPlan> {
     pub(crate) fn then_expr(function: impl Fn(Expr) -> Expr + 'static + Send + Sync) -> Self {
         Self::new(move |arg: &ExprPlan| arg.then(&function))
     }
-
-    /// # Proof Definition
-    /// Returns a Function that specifies what the function should return if evaluated on an empty partition.
-    ///
-    /// Polars only keeps non-empty partitions in group-by,
-    /// so this is used to fill missing values after joining with an explicit key set.
-    pub(crate) fn fill_with(self, value: Expr) -> Self {
-        Self::new_fallible(move |arg: &ExprPlan| {
-            let mut plan = self.eval(arg)?;
-            // Without repeat, the expression will be scalar-valued,
-            // and broadcast later to the required length.
-            // The drawback is that randomized plugins, like noise and report_noisy_max,
-            // will then only be applied to one row,
-            // and the one noisy row will then be broadcast to the entire column.
-            plan.fill = Some(repeat(value.clone(), len()));
-            Ok(plan)
-        })
-    }
 }
 impl Function<DslPlan, ExprPlan> {
     /// # Proof Definition
@@ -289,21 +271,25 @@ impl Function<DslPlan, ExprPlan> {
             })
         })
     }
+}
 
+impl<TI: 'static> Function<TI, ExprPlan> {
     /// # Proof Definition
-    /// Returns a Function that specifies what plan should evaluate to when evaluated on an empty partition.
+    /// Returns a Function that specifies how to impute missing values representing empty partitions.
     ///
     /// Polars only keeps non-empty partitions in group-by,
     /// so this is used to fill missing values after joining with an explicit key set.
     pub(crate) fn fill_with(self, value: Expr) -> Self {
-        Self::new_fallible(move |arg: &DslPlan| {
+        // Without repeat, the expression will be scalar-valued,
+        // and broadcast later to the required length.
+        // The drawback is that randomized plugins, like noise and report_noisy_max,
+        // will then only be applied to one row,
+        // and the one noisy row will then be broadcast to the entire column.
+        let fill = repeat(value.clone(), len());
+
+        Self::new_fallible(move |arg: &TI| {
             let mut plan = self.eval(arg)?;
-            // Without repeat, the expression will be scalar-valued,
-            // and broadcast later to the required length.
-            // The drawback is that randomized plugins, like noise and report_noisy_max,
-            // will then only be applied to one row,
-            // and the one noisy row will then be broadcast to the entire column.
-            plan.fill = Some(repeat(value.clone(), len()));
+            plan.fill = Some(fill.clone());
             Ok(plan)
         })
     }

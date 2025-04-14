@@ -4,7 +4,7 @@ use crate::error::*;
 use crate::measurements::make_private_lazyframe;
 use crate::measures::MaxDivergence;
 use crate::polars::PrivacyNamespace;
-use crate::traits::samplers::test::{chisquare, kolmogorov_smirnov};
+use crate::traits::samplers::test::{check_chi_square, check_kolmogorov_smirnov};
 use polars::prelude::*;
 
 use statrs::function::erf;
@@ -133,6 +133,7 @@ fn test_explicit_keys() -> Fallible<()> {
         lf.clone()
             .group_by(&[col("A")])
             .agg(&[sum_expr, median_expr])
+            // add a privatizing join (the constructor adds an imputer to the resulting onceframe)
             .join(keys, [col("A")], [col("A")], JoinType::Right.into()),
         Some(1.),
         None,
@@ -146,13 +147,13 @@ fn test_explicit_keys() -> Fallible<()> {
         (erf::erf(x / std::f64::consts::SQRT_2) + 1.0) / 2.0
     }
 
-    kolmogorov_smirnov(gauss_samples, normal_cdf)?;
+    check_kolmogorov_smirnov(gauss_samples, normal_cdf)?;
 
     // check for uniformity of samples (all scores are matching)
     let unif_samples: Vec<_> = release.column("med")?.f64()?.iter().flatten().collect();
     let mut counts = [0.0; N_CANDIDATES];
     unif_samples.iter().for_each(|&s| counts[s as usize] += 1.0);
-    chisquare(
+    check_chi_square(
         counts,
         [N_SAMPLES as f64 / (N_CANDIDATES as f64); N_CANDIDATES],
     )?;

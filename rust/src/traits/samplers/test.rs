@@ -69,7 +69,10 @@ where
 /// Assuming the samples are draws from the distribution specified by the cdf,
 /// then the p-value is the false discovery rate,
 /// or chance of this test failing even when the data is a sample from the distribution.
-pub fn kolmogorov_smirnov(mut samples: [f64; 1000], cdf: impl Fn(f64) -> f64) -> Fallible<()> {
+pub fn check_kolmogorov_smirnov(
+    mut samples: [f64; 1000],
+    cdf: impl Fn(f64) -> f64,
+) -> Fallible<()> {
     // first, compute the test statistic. For a one-sample KS test,
     // this is the greatest distance between the empirical CDF of the samples and the expected CDF.
     samples.sort_by(|a, b| a.total_cmp(b));
@@ -119,7 +122,7 @@ pub fn kolmogorov_smirnov(mut samples: [f64; 1000], cdf: impl Fn(f64) -> f64) ->
 /// Assuming the samples are draws from the expected distribution,
 /// then the p-value is the false discovery rate,
 /// or chance of this test failing even when the data is a sample from the distribution.
-pub fn chisquare(observed: [f64; 10], expected: [f64; 10]) -> Fallible<()> {
+pub fn check_chi_square(observed: [f64; 10], expected: [f64; 10]) -> Fallible<()> {
     let statistic = observed
         .iter()
         .zip(expected)

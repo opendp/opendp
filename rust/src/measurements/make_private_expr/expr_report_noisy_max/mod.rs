@@ -296,12 +296,10 @@ fn report_noisy_max_gumbel_udf(
                         PolarsError::InvalidOperation("input dtype does not match".into())
                     })?;
 
-                // when all scores are same, return a random index
-                // this is a workaround for slow performance of the gumbel mechanism
-                // when all scores are the same
-                let min = arr.values_iter().min_by(|a, b| a.partial_cmp(b).unwrap());
-                let max = arr.values_iter().max_by(|a, b| a.partial_cmp(b).unwrap());
-                if min == max {
+                // When all scores are same, return a random index.
+                // This is a workaround for slow performance of the gumbel mechanism
+                // when all scores are the same.
+                if arr.values().windows(2).all(|w| w[0] == w[1]) {
                     return sample_uniform_uint_below(arr.len() as u32);
                 }
 
