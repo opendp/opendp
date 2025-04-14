@@ -222,7 +222,7 @@ where
         middle_domain,
         Function::then_expr(move |input_expr| {
             apply_plugin(
-                input_expr,
+                vec![input_expr],
                 expr.clone(),
                 NoisePlugin {
                     scale,
