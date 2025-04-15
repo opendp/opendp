@@ -280,11 +280,11 @@ impl<TI: 'static> Function<TI, ExprPlan> {
     /// Polars only keeps non-empty partitions in group-by,
     /// so this is used to fill missing values after joining with an explicit key set.
     pub(crate) fn fill_with(self, value: Expr) -> Self {
-        // Without repeat, the expression will be scalar-valued,
+        // Without this repeat, the expression would be scalar-valued,
         // and broadcast later to the required length.
-        // The drawback is that randomized plugins, like noise and report_noisy_max,
-        // will then only be applied to one row,
-        // and the one noisy row will then be broadcast to the entire column.
+        // This would cause randomized plugins, like noise and report_noisy_max,
+        // to only be applied to one row,
+        // and the one noisy row would then be broadcast to the entire column.
         let fill = repeat(value.clone(), len());
 
         Self::new_fallible(move |arg: &TI| {
