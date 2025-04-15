@@ -149,3 +149,20 @@ def test_polars_expr_loader_error_is_human_readable():
             dp.max_divergence(),
             pl.LazyFrame({}),
         )
+
+
+def test_unrecognized_column():
+    pl = pytest.importorskip("polars")
+
+    context = dp.Context.compositor(
+        data=pl.LazyFrame({"A": [1, 2, 3, 4], "B": [5, 6, 7, 8]}),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1),
+        split_evenly_over=1,
+        margins=[]
+    )
+    config = pl.col("X").fill_null(0).dp.mean((0, 10))
+
+    plain_query = context.query().select(config)
+    with pytest.raises(dp.OpenDPException, match=r"unrecognized column 'X' in output domain; expected one of: A, B"):
+        plain_query.release()

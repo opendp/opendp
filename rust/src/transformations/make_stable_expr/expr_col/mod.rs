@@ -27,10 +27,16 @@ where
         return fallible!(MakeTransformation, "Expected col() expression");
     };
 
+    let input_columns = input_domain
+        .columns
+        .iter()
+        .map(|column| column.name.to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
     let output_domain = ExprDomain {
         column: (input_domain.columns.iter())
             .find(|s| s.name == col_name)
-            .ok_or_else(|| err!(MakeTransformation, "unrecognized column: {}", col_name))?
+            .ok_or_else(|| err!(MakeTransformation, "unrecognized column '{col_name}' in output domain; expected one of: {input_columns}"))?
             .clone(),
         context: input_domain.context.clone(),
     };
