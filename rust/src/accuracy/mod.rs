@@ -4,7 +4,7 @@
 mod ffi;
 
 #[cfg(feature = "polars")]
-mod polars;
+pub mod polars;
 
 mod tail_bounds;
 pub use tail_bounds::*;

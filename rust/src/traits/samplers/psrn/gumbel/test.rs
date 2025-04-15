@@ -1,8 +1,7 @@
 use crate::{
     error::Fallible,
     traits::samplers::{
-        PartialSample,
-        psrn::test::{assert_ordered_progression, kolmogorov_smirnov},
+        PartialSample, psrn::test::assert_ordered_progression, test::check_kolmogorov_smirnov,
     },
 };
 
@@ -31,5 +30,5 @@ fn test_gumbel_psrn() -> Fallible<()> {
         .try_into()
         .unwrap();
 
-    kolmogorov_smirnov(samples, |x| (-(-x).exp()).exp())
+    check_kolmogorov_smirnov(samples, |x| (-(-x).exp()).exp())
 }
