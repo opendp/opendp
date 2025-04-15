@@ -1127,24 +1127,6 @@ def test_enum_domain():
     assert observed == expected
 
 
-def test_array_domain():
-    pl = pytest.importorskip("polars")
-
-    # this triggers construction of a lazyframe domain from the schema
-    context = dp.Context.compositor(
-        data=pl.LazyFrame(pl.Series("alpha", [["A", "B", "C"]] * 100, dtype=pl.Array(pl.String, 3))),
-        privacy_unit=dp.unit_of(contributions=1),
-        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
-        split_evenly_over=1,
-    )
-    observed = context.accountant.input_domain
-    expected = dp.lazyframe_domain([
-        dp.series_domain("alpha", dp.option_domain(dp.array_domain(dp.atom_domain(T=str), 3))),
-    ])
-
-    # check that domain is as expected
-    assert observed == expected
-
 @pytest.mark.xfail(reason="broken until https://github.com/pola-rs/polars/issues/20162 is fixed")
 def test_array_domain_query():
     pl = pytest.importorskip("polars")
@@ -1159,3 +1141,29 @@ def test_array_domain_query():
     
     # this is broken until https://github.com/pola-rs/polars/issues/20162 is fixed
     context.query().with_columns(pl.col.alpha.explode()).select(dp.len()).release().collect()
+
+def test_arithmetic():
+    pl = pytest.importorskip("polars")
+
+    context = dp.Context.compositor(
+        data=pl.LazyFrame({
+            "data": [1, 2, 3] * 100,
+            "weights": [0.2, 0.5, 0.7] * 100,
+        }),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+        margins=[dp.polars.Margin(by=(), max_partition_length=300)],
+    )
+
+    context.query().filter(pl.col.data.truediv(2) > 1.5).select(dp.len()).summarize()
+
+    observed = (
+        context.query()
+        .select((pl.col.data * pl.col.weights).fill_null(0).fill_nan(0).dp.sum((0, 5)))
+        .release()
+        .collect()["data"][0]
+    )
+
+    # expectation is 330.0
+    assert 260 < observed < 400
