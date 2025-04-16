@@ -50,6 +50,33 @@ def test_binary_search():
     assert dp.binary_search(lambda x: x >= 5, T=int) == 5
 
 
+def test_binary_search_inferred_int():
+    def predicate(v):
+        if not isinstance(v, int):
+            raise TypeError("Expected int")
+        return v <= 5
+    
+    assert dp.binary_search(predicate) == 5
+
+def test_binary_search_inferred_int_fail():
+    def predicate(v):
+        if not isinstance(v, int):
+            raise TypeError("Expected int")
+        raise ValueError("I always fail for some other reason")
+    
+    # int is inferred, but the ValueError should pop up
+    with pytest.raises(ValueError):
+        dp.binary_search(predicate)
+
+def test_binary_search_failed_infer():
+    def predicate(_):
+        raise TypeError("always raised for some other reason")
+    
+    # type inference should fail, and we get the error from type inference
+    with pytest.raises(TypeError):
+        dp.binary_search(predicate)
+
+    
 def test_type_inference():
     def chainer(b):
         return dp.t.make_sum(
