@@ -180,16 +180,16 @@ class PCA:
         n_components: int | float | str | None = None,
         n_changes: int = 1,
         whiten: bool = False,
-    ) -> None:
+    ) -> None:  # pragma: no cover
         # Error if constructor called without dependency:
-        import_optional_dependency('sklearn.decomposition')  # pragma: no cover
+        import_optional_dependency('sklearn.decomposition')
         # used for mypy typing
-        self.n_samples_ = None  # pragma: no cover
-        self.components_ = None  # pragma: no cover
-        self.n_components_ = None  # pragma: no cover
-        self.explained_variance_ = None  # pragma: no cover
-        self.explained_variance_ratio_ = None  # pragma: no cover
-        self.singular_values_ = None  # pragma: no cover
+        self.n_samples_ = None
+        self.components_ = None
+        self.n_components_ = None
+        self.explained_variance_ = None
+        self.explained_variance_ratio_ = None
+        self.singular_values_ = None
 
     @property
     def n_features(self):
@@ -230,9 +230,7 @@ class PCA:
 
 _decomposition = import_optional_dependency('sklearn.decomposition', False)
 if _decomposition is not None:
-    PCAStub = PCA
-    
-    class PCA(_decomposition.PCA):  # type: ignore
+    class PCA(_decomposition.PCA):  # type: ignore  # noqa: F811
         def __init__(
             self,
             *,
@@ -244,8 +242,6 @@ if _decomposition is not None:
             n_changes: int = 1,
             whiten: bool = False,
         ) -> None:
-            # Mypy has a lot of complaints because of the class redefinition,
-            # so there's a lot of "type: ignore" below.
             super().__init__(
                 n_components or n_features,
                 whiten=whiten,
