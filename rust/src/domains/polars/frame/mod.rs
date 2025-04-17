@@ -206,6 +206,9 @@ impl<F: Frame> FrameDomain<F> {
         )
     }
 
+    /// # Proof Definition
+    /// Return the schema shared by all members of the domain,
+    /// when `plan` is applied to members of the domain.
     pub(crate) fn simulate_schema(
         &self,
         plan: impl Fn(LazyFrame) -> LazyFrame,
@@ -403,6 +406,7 @@ pub enum Invariant {
     Keys,
     /// The distance between data sets with different margin keys or partition lengths is infinite.
     Lengths,
+    // `Order` is also a potential invariant, for dropping the shuffle after collect.
 }
 
 impl PartialOrd for Invariant {

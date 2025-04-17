@@ -730,7 +730,8 @@ def _check_polars_by(by):
 
 def _margin_to_slice(val) -> FfiSlicePtr:
     from opendp.extras.polars import Margin
-    assert isinstance(val, Margin)
+    if not isinstance(val, Margin):
+        raise ValueError(f"expected Polars Margin, got {val}") # pragma: no cover
     
     _check_polars_by(val.by)
     by = ctypes.cast(py_to_c(val.by, c_type=AnyObjectPtr, type_name="Vec<Expr>"), ctypes.c_void_p)

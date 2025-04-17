@@ -1,0 +1,54 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{fn match\_per\_group\_predicate}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle  
+
+
+\contrib
+
+Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_per\_group\_predicate} 
+in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+None 
+
+\subsection*{Function}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/match_per_group_predicate.py}
+
+\subsection*{Postcondition}
+\begin{theorem}[Postcondition]
+    If \texttt{enumeration} is an enumeration of rows,
+    and \texttt{partition\_by} includes \texttt{identifier},
+    then returns a \texttt{threshold} bound on per-group contribution,
+    when grouped by the non-identifier columns in \texttt{partition\_by}.
+\end{theorem}
+
+\begin{proof}
+    Due to the ambiguity between matching predicates that bound \texttt{num\_groups} or \texttt{per\_group},
+    an error is only raised if the predicate is unambiguously a \texttt{per\_group} truncation predicate.
+    
+    
+    The \texttt{per\_group} predicate is only unambiguously identified 
+    This check happens on line \ref{line:check_rank}.
+
+    Line \ref{line:check_identifier} checks that \texttt{partition\_by} is a singleton of the \texttt{identifier}, meeting the conditions of the postcondition.
+
+    We now check whether the truncation predicate is well-defined, on lines \ref{line:check_method} and \ref{line:check_input}.
+
+    Finally, line \ref{line:extract_grouping_columns} extracts the grouping columns from the predicate.
+
+    This predicate corresponds to a \texttt{num\_groups} truncation predicate,
+    because the over expression groups by the \texttt{identifier} column,
+    and within each group, a dense ranking is applied to unique combinations of the grouping columns.
+    If the only rows kept are those corresponding to grouping keys assigned dense ranks less than \texttt{threshold},
+    then each user identifier will have at most \texttt{threshold} unique combinations of the grouping columns
+    after filtering by the predicate.
+
+    Therefore the bound on user contributions constructed on line \ref{line:bound} is valid.
+\end{proof}
+\end{document}
