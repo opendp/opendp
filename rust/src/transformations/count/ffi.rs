@@ -3,17 +3,17 @@ use std::os::raw::c_char;
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::core::{Metric, MetricSpace};
-use crate::domains::{AtomDomain, MapDomain, VectorDomain};
+use crate::domains::{AtomDomain, VectorDomain};
 use crate::err;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, Downcast};
 use crate::ffi::any::{AnyObject, AnyTransformation};
 use crate::ffi::util::{Type, c_bool, to_bool};
 use crate::metrics::{L1Distance, L2Distance, SymmetricDistance};
-use crate::traits::{Hashable, Number, Primitive};
+use crate::traits::{Hashable, Integer, Number, Primitive};
 use crate::transformations::{
-    CountByCategoriesConstant, CountByConstant, make_count, make_count_by,
-    make_count_by_categories, make_count_distinct,
+    CountByCategoriesConstant, make_count, make_count_by, make_count_by_categories,
+    make_count_distinct,
 };
 
 #[unsafe(no_mangle)]
@@ -148,48 +148,31 @@ pub extern "C" fn opendp_transformations__make_count_by_categories(
 pub extern "C" fn opendp_transformations__make_count_by(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
-    MO: *const c_char,
     TV: *const c_char,
 ) -> FfiResult<*mut AnyTransformation> {
-    fn monomorphize<QO>(
+    fn monomorphize<TK, TV>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
-        MO: Type,
-        TK: Type,
-        TV: Type,
     ) -> Fallible<AnyTransformation>
     where
-        QO: Number,
+        TK: Hashable,
+        TV: Integer,
     {
-        fn monomorphize2<MO, TK, TV>(
-            input_domain: &AnyDomain,
-            input_metric: &AnyMetric,
-        ) -> Fallible<AnyTransformation>
-        where
-            MO: 'static + Metric + CountByConstant<MO::Distance> + Default,
-            MO::Distance: Number,
-            TK: Hashable,
-            TV: Number,
-            (MapDomain<AtomDomain<TK>, AtomDomain<TV>>, MO): MetricSpace,
-        {
-            let input_domain = input_domain
-                .downcast_ref::<VectorDomain<AtomDomain<TK>>>()?
-                .clone();
-            let input_metric = input_metric.downcast_ref::<SymmetricDistance>()?.clone();
-            make_count_by::<MO, TK, TV>(input_domain, input_metric).into_any()
-        }
-        dispatch!(monomorphize2, [
-            (MO, [L1Distance<QO>, L2Distance<QO>]),
-            (TK, @hashable),
-            (TV, @numbers)
-        ], (input_domain, input_metric))
+        let input_domain = input_domain
+            .downcast_ref::<VectorDomain<AtomDomain<TK>>>()?
+            .clone();
+        let input_metric = input_metric.downcast_ref::<SymmetricDistance>()?.clone();
+        make_count_by::<TK, TV>(input_domain, input_metric).into_any()
     }
+
     let input_domain = try_as_ref!(input_domain);
     let input_metric = try_as_ref!(input_metric);
-    let MO = try_!(Type::try_from(MO));
     let TK = try_!(input_domain.type_.get_atom());
     let TV = try_!(Type::try_from(TV));
-    let QO = try_!(MO.get_atom());
 
-    dispatch!(monomorphize, [(QO, @numbers)], (input_domain, input_metric, MO, TK, TV)).into()
+    dispatch!(monomorphize, [
+        (TK, @hashable),
+        (TV, @integers)
+    ], (input_domain, input_metric))
+    .into()
 }

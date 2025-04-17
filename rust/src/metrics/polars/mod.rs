@@ -4,9 +4,9 @@ use polars::prelude::Expr;
 
 use crate::{
     core::Metric,
-    domains::{find_min_covering, option_min},
+    domains::find_min_covering,
     error::Fallible,
-    traits::{InfMul, ProductOrd},
+    traits::{InfMul, ProductOrd, option_min},
     transformations::traits::UnboundedMetric,
 };
 

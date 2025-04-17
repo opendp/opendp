@@ -1,3 +1,4 @@
+use dashu::{integer::UBig, rational::RBig};
 use num::Zero;
 use statrs::function::erf::erfc;
 
@@ -8,6 +9,26 @@ use crate::{
 
 #[cfg(all(test, feature = "contrib"))]
 mod test;
+
+/// Computes the probability of sampling a value greater than `t` from the continuous laplace distribution.
+///
+/// Arithmetic is controlled such that the resulting probability can only ever be slightly over-estimated due to numerical inaccuracy.
+///
+/// # Proof definition
+/// Returns `Ok(out)`, where `out` does not underestimate $\Pr[X > t]$
+/// for $X \sim \mathcal{L}_\mathbb{R}(0, s)$, assuming $t > 0$,
+/// or `Err(e)` if any numerical computation overflows.
+///
+/// $\mathcal{L}_\mathbb{R}(0, s)$ is distributed as follows:
+/// ```math
+/// \forall x \in \mathbb{R}, \quad  
+/// P[X = x] = \frac{1}{2 s}e^{-|x|/s}, \quad
+/// \text{where } X \sim \mathcal{L}_\mathbb{R}(0, s)
+/// ```
+pub fn conservative_continuous_laplacian_tail_to_alpha(scale: RBig, tail: RBig) -> Fallible<f64> {
+    // tail and scale division should be big rationals for precision and to avoid overflow
+    f64::neg_inf_cast(-tail / scale)?.inf_exp()?.inf_div(&2.0)
+}
 
 /// Computes the probability of sampling a value greater than `t` from the discrete laplace distribution.
 ///
@@ -24,10 +45,11 @@ mod test;
 /// P[X = x] = \frac{e^{-1/scale} - 1}{e^{-1/scale} + 1} e^{-|x|/scale}, \quad
 /// \text{where } X \sim \mathcal{L}_\mathbb{Z}(0, scale)
 /// ```
-pub fn conservative_discrete_laplacian_tail_to_alpha(scale: f64, tail: u32) -> Fallible<f64> {
-    let t = f64::neg_inf_cast(tail)?;
-    let numer = t.neg_inf_div(&-scale)?.inf_exp()?;
-    let denom = scale.recip().neg_inf_exp()?.neg_inf_add(&1.)?;
+pub fn conservative_discrete_laplacian_tail_to_alpha(scale: RBig, tail: UBig) -> Fallible<f64> {
+    let numer = f64::inf_cast(-RBig::from(tail) / scale.clone())?.inf_exp()?;
+    let denom = f64::neg_inf_cast(RBig::ONE / scale)?
+        .neg_inf_exp()?
+        .neg_inf_add(&1.)?;
     numer.inf_div(&denom)
 }
 
@@ -49,9 +71,9 @@ pub fn conservative_discrete_laplacian_tail_to_alpha(scale: f64, tail: u32) -> F
 /// P[X = x] = \frac{e^{-\frac{x^2}{2\sigma^2}}}{\sum_{y\in\mathbb{Z}}e^{-\frac{y^2}{2\sigma^2}}}, \quad
 /// \text{where } X \sim \mathcal{N}_\mathbb{Z}(0, \sigma^2)
 /// ```
-pub fn conservative_discrete_gaussian_tail_to_alpha(scale: f64, tail: u32) -> Fallible<f64> {
+pub fn conservative_discrete_gaussian_tail_to_alpha(scale: RBig, tail: UBig) -> Fallible<f64> {
     // where tail = m - 1
-    conservative_continuous_gaussian_tail_to_alpha(scale, f64::neg_inf_cast(tail)?)
+    conservative_continuous_gaussian_tail_to_alpha(scale, RBig::from(tail))
 }
 
 /// Computes the probability of sampling a value greater than or equal to `t` from the continuous gaussian distribution.
@@ -67,11 +89,12 @@ pub fn conservative_discrete_gaussian_tail_to_alpha(scale: f64, tail: u32) -> Fa
 /// ```math
 /// f(x) = \frac{1}{\sigma \sqrt{2 \pi}} e^{-\frac{1}{2}\left( \frac{x - \mu}{\sigma}\right)^2}
 /// ```
-pub fn conservative_continuous_gaussian_tail_to_alpha(scale: f64, tail: f64) -> Fallible<f64> {
+pub fn conservative_continuous_gaussian_tail_to_alpha(scale: RBig, tail: RBig) -> Fallible<f64> {
     // the SQRT_2 constant is already rounded down
-    let SQRT_2_CEIL: f64 = std::f64::consts::SQRT_2.next_up_();
+    let sqrt_2_ceil: f64 = std::f64::consts::SQRT_2.next_up_();
 
-    let t = tail.neg_inf_div(&scale)?.neg_inf_div(&SQRT_2_CEIL)?;
+    // tail and scale division should be big rationals for precision and to avoid overflow
+    let t = f64::neg_inf_cast(tail / scale)?.neg_inf_div(&sqrt_2_ceil)?;
     // round down to nearest smaller f32
     let t = f32::neg_inf_cast(t)? as f64;
     // erfc error is at most 1 f32 ulp (see erfc_err_analysis.py)

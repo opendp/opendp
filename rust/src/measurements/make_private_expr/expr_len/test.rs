@@ -5,7 +5,7 @@ use crate::{
     error::ErrorVariant,
     measurements::PrivateExpr,
     measures::MaxDivergence,
-    metrics::{PartitionDistance, SymmetricDistance},
+    metrics::{L0PInfDistance, SymmetricDistance},
     transformations::test_helper::get_test_data,
 };
 
@@ -17,7 +17,7 @@ fn test_make_count_expr_grouped() -> Fallible<()> {
 
     let m_lap = len().make_private(
         expr_domain,
-        PartitionDistance(SymmetricDistance),
+        L0PInfDistance(SymmetricDistance),
         MaxDivergence,
         None,
     )?;
@@ -47,7 +47,7 @@ fn test_make_count_expr_no_length() -> Fallible<()> {
     let variant = len()
         .make_private(
             expr_domain,
-            PartitionDistance(SymmetricDistance),
+            L0PInfDistance(SymmetricDistance),
             MaxDivergence,
             None,
         )
