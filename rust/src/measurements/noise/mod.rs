@@ -1,8 +1,10 @@
 use dashu::{
-    integer::{IBig, fast_div::ConstDivisor},
+    base::AbsOrd,
+    integer::{fast_div::ConstDivisor, IBig, UBig},
     rational::RBig,
 };
 use opendp_derive::proven;
+use std::cmp::Ordering;
 
 use crate::{
     core::{Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
@@ -75,6 +77,7 @@ pub trait NoisePrivacyMap<MI: Metric, MO: Measure>: Sample {
 pub struct ZExpFamily<const P: usize> {
     pub scale: RBig,
     pub divisor: Option<ConstDivisor>,
+    pub radius: Option<UBig>,
 }
 
 pub trait SampleDiscreteNoise: 'static + Send + Sync {
@@ -105,7 +108,19 @@ where
     Self: SampleDiscreteNoise,
 {
     fn sample(&self, shift: &IBig) -> Fallible<IBig> {
-        let mut sample = shift + self.sample_discrete_noise()?;
+        let noise = if let Some(ref radius) = self.radius {
+            loop {
+                let noise = self.sample_discrete_noise()?;
+
+                if matches!(noise.abs_cmp(radius), Ordering::Less | Ordering::Equal) {
+                    break noise;
+                }
+            }
+        } else {
+            self.sample_discrete_noise()?
+        };
+
+        let mut sample = shift + noise;
 
         if let Some(divisor) = &self.divisor {
             sample %= divisor

@@ -1,16 +1,20 @@
 use core::f64;
-
-use dashu::{base::Signed, rational::RBig};
+use dashu::{base::Signed, integer::UBig, rational::RBig};
 use opendp_derive::{bootstrap, proven};
 
 use crate::core::{Measure, Metric, MetricSpace};
 use crate::measurements::noise::nature::Nature;
 use crate::measurements::{MakeNoise, NoiseDomain, NoisePrivacyMap, ZExpFamily};
 use crate::metrics::ModularMetric;
+use crate::traits::InfSub;
 use crate::{
-    core::{Domain, Measurement, PrivacyMap},
+    accuracy::{
+        conservative_discrete_laplacian_tail_to_alpha,
+        conservative_discrete_laplacian_tail_to_alpha_lower,
+    },
+    core::{Measurement, PrivacyMap},
     error::Fallible,
-    measures::MaxDivergence,
+    measures::{Approximate, MaxDivergence},
     metrics::L1Distance,
     traits::InfCast,
 };
@@ -23,8 +27,9 @@ mod ffi;
 
 #[bootstrap(
     features("contrib"),
-    arguments(k(default = b"null")),
-    generics(DI(suppress), MI(suppress), MO(default = "MaxDivergence"))
+    arguments(k(default = b"null"), radius(c_type = "AnyObject *")),
+    generics(DI(suppress), MI(suppress), MO(default = "MaxDivergence")),
+    derived_types(T = "$get_atom(input_domain)")
 )]
 /// Make a Measurement that adds noise from the Laplace(`scale`) distribution to the input.
 ///
@@ -51,28 +56,30 @@ mod ffi;
 /// * `DI` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 /// * `MI` - Metric used to measure distance between members of the input domain.
 /// * `MO` - Measure used to quantify privacy loss. Valid values are just `MaxDivergence`
-pub fn make_laplace<DI: Domain, MI: Metric, MO: Measure>(
+pub fn make_laplace<DI: NoiseDomain, MI: Metric, MO: Measure>(
     input_domain: DI,
     input_metric: MI,
     scale: f64,
+    radius: Option<DI::Atom>,
     k: Option<i32>,
 ) -> Fallible<Measurement<DI, DI::Carrier, MI, MO>>
 where
-    DiscreteLaplace: MakeNoise<DI, MI, MO>,
+    DiscreteLaplace<DI::Atom>: MakeNoise<DI, MI, MO>,
     (DI, MI): MetricSpace,
 {
-    DiscreteLaplace { scale, k }.make_noise((input_domain, input_metric))
+    DiscreteLaplace { scale, k, radius }.make_noise((input_domain, input_metric))
 }
 
-pub struct DiscreteLaplace {
+pub struct DiscreteLaplace<T> {
     pub scale: f64,
     pub k: Option<i32>,
+    pub radius: Option<T>,
 }
 
 /// Laplace mechanism
 #[proven(proof_path = "measurements/noise/distribution/laplace/MakeNoise_for_DiscreteLaplace.tex")]
 impl<DI: NoiseDomain, MI: ModularMetric, MO: 'static + Measure> MakeNoise<DI, MI, MO>
-    for DiscreteLaplace
+    for DiscreteLaplace<DI::Atom>
 where
     (DI, MI): MetricSpace,
     DI::Atom: Nature,
@@ -80,7 +87,8 @@ where
 {
     fn make_noise(self, input_space: (DI, MI)) -> Fallible<Measurement<DI, DI::Carrier, MI, MO>> {
         let modular = input_space.1.modular();
-        DI::Atom::new_distribution(self.scale, self.k, modular)?.make_noise(input_space)
+        DI::Atom::new_distribution(self.scale, self.k, modular, self.radius)?
+            .make_noise(input_space)
     }
 }
 
@@ -93,6 +101,13 @@ impl NoisePrivacyMap<L1Distance<RBig>, MaxDivergence> for ZExpFamily<1> {
         input_metric: &L1Distance<RBig>,
         _output_measure: &MaxDivergence,
     ) -> Fallible<PrivacyMap<L1Distance<RBig>, MaxDivergence>> {
+        if let Some(ref radius) = self.radius {
+            return fallible!(
+                MakeMeasurement,
+                "radius ({}) introduces a delta parameter that is not compatible with pure-DP",
+                radius
+            );
+        }
         if self.divisor.is_some() != input_metric.modular() {
             return fallible!(
                 MakeMeasurement,
@@ -120,6 +135,79 @@ impl NoisePrivacyMap<L1Distance<RBig>, MaxDivergence> for ZExpFamily<1> {
 
             // d_in / scale
             f64::inf_cast(d_in / scale.clone())
+        }))
+    }
+}
+
+impl NoisePrivacyMap<L1Distance<RBig>, Approximate<MaxDivergence>> for ZExpFamily<1> {
+    fn noise_privacy_map(
+        &self,
+        input_metric: &L1Distance<RBig>,
+        output_measure: &Approximate<MaxDivergence>,
+    ) -> Fallible<PrivacyMap<L1Distance<RBig>, Approximate<MaxDivergence>>> {
+        let distribution = ZExpFamily {
+            scale: self.scale.clone(),
+            divisor: None,
+            radius: None,
+        };
+
+        let noise_privacy_map =
+            distribution.noise_privacy_map(&L1Distance::default(), &output_measure.0)?;
+
+        if self.divisor.is_some() != input_metric.modular() {
+            return fallible!(
+                MakeMeasurement,
+                "divisor ({}) must be set if and only if the input metric is modular ({})",
+                self.divisor.is_some(),
+                input_metric.modular()
+            );
+        }
+
+        let scale = self.scale.clone();
+        if scale < RBig::ZERO {
+            return fallible!(MakeMeasurement, "scale ({}) must not be negative", scale);
+        }
+
+        let radius = self.radius.clone();
+        if radius == Some(UBig::ZERO) {
+            return fallible!(MakeMeasurement, "radius must not be non-zero");
+        }
+
+        Ok(PrivacyMap::new_fallible(move |d_in: &RBig| {
+            if d_in.is_negative() {
+                return fallible!(FailedMap, "sensitivity ({}) must be positive", d_in);
+            }
+
+            if d_in.is_zero() {
+                return Ok((0.0, 0.0));
+            }
+
+            if scale.is_zero() {
+                return Ok((f64::INFINITY, 0.0));
+            }
+
+            let epsilon = noise_privacy_map.eval(d_in)?;
+
+            if let Some(r) = radius.clone() {
+                let (_, d_in_floor) = d_in.floor().into_parts();
+                if r <= d_in_floor {
+                    return Ok((0.0, 1.0));
+                } else {
+                    let large_tail_upper_bound = conservative_discrete_laplacian_tail_to_alpha(
+                        scale.clone(),
+                        r.clone() - d_in_floor,
+                    )?;
+                    let small_tail_upper_bound =
+                        conservative_discrete_laplacian_tail_to_alpha_lower(
+                            scale.clone(),
+                            r.clone(),
+                        )?;
+                    let delta = large_tail_upper_bound.inf_sub(&small_tail_upper_bound)?;
+                    return Ok((epsilon, delta));
+                };
+            } else {
+                return Ok((epsilon, 0.0));
+            };
         }))
     }
 }
