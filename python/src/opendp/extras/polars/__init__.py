@@ -858,6 +858,11 @@ class LazyFrameQuery:
         k: int,
         by: list[Any] | None = None,
         keep: Literal["first", "last", "sample"] = "first",
+        sort_by: list[Any] | None = None,
+        descending: bool | Sequence[bool] = False,
+        nulls_last: bool | Sequence[bool] = False,
+        multithreaded: bool = True,
+        maintain_order: bool = False,
     ) -> LazyFrameQuery:
         """
         Limit the number of contributed rows per group.
@@ -865,6 +870,11 @@ class LazyFrameQuery:
         :param k: the number of rows to keep for each identifier and group
         :param by: optional, additional columns to group by
         :param keep: which rows to keep for each identifier in each group
+        :param sort_by: optional, sort the rows by these expressions before truncating
+        :param descending: Option for sort_by. Whether to sort in descending order
+        :param nulls_last: Option for sort_by. Whether to put nulls at the end of the sort
+        :param multithreaded: Option for sort_by. Whether to use multiple threads for sorting
+        :param maintain_order: Option for sort_by. Whether to maintain the order of the input rows
         """
         input_metric = self._query._chain[1]
 
@@ -873,18 +883,26 @@ class LazyFrameQuery:
         if not isinstance(input_metric, (SymmetricIdDistance, ChangeOneIdDistance)):
             raise ValueError("truncation is only valid when identifier is defined")
 
-        if keep == "first":
+        if sort_by is not None:
+            indexes = pl.int_range(pl.len()).sort_by(
+                sort_by,
+                descending=descending,
+                nulls_last=nulls_last,
+                multithreaded=multithreaded,
+                maintain_order=maintain_order,
+            )
+        elif keep == "first":
             indexes = pl.int_range(pl.len())
         elif keep == "last":
             indexes = pl.int_range(pl.len()).reverse()
         elif keep == "sample":
             indexes = pl.int_range(pl.len()).shuffle()
         else:
-            raise ValueError("keep must be 'first', 'last', or 'sample'")  # pragma: no cover
+            raise ValueError(
+                "keep must be 'first', 'last', or 'sample', or specify `sort_by`"
+            )  # pragma: no cover
 
-        return self.filter(
-            indexes.over(input_metric.identifier, *by or []) < k
-        )
+        return self.filter(indexes.over(input_metric.identifier, *by or []) < k)
 
     def truncate_num_groups(
         self,
@@ -913,9 +931,7 @@ class LazyFrameQuery:
         else:
             raise ValueError("keep must be 'first' or 'last'")  # pragma: no cover
 
-        return self.filter(
-            ranks.over(input_metric.identifier) < k
-        )
+        return self.filter(ranks.over(input_metric.identifier) < k)
 
     def resolve(self) -> Measurement:
         """Resolve the query into a measurement."""
@@ -935,10 +951,10 @@ class LazyFrameQuery:
                 global_scale=scale,
                 threshold=threshold,
             )
-        
+
         # when the query has sensitivity zero or is behind an invariant
         try:
-            m_zero = _make(0., threshold=None)
+            m_zero = _make(0.0, threshold=None)
             if m_zero.check(d_in, d_out):
                 # if the zero scale measurement is already private, return it
                 return m_zero
@@ -1079,6 +1095,7 @@ class Margin:
     max_length: int | None = None
     """An upper bound on the number of records in any one group.
 
+    The library may request you set a max dataset or partition length (for instance, for float sums).
     If you don't know how many records are in the data, you can specify a very loose upper bound,
     for example, the size of the total population you are sampling from.
 
@@ -1088,7 +1105,6 @@ class Margin:
 
     max_groups: int | None = None
     """An upper bound on the number of distinct groups."""
-
 
     invariant: Literal["keys"] | Literal["lengths"] | None = None
     """Identifies properties of grouped data that are considered invariant.
@@ -1112,44 +1128,56 @@ class Margin:
         self.max_length = value  # pragma: no cover
 
     @property
-    @deprecated(reason="Use max_groups instead. This was renamed to be consistent with Polars terminology.")
+    @deprecated(
+        reason="Use max_groups instead. This was renamed to be consistent with Polars terminology."
+    )
     def max_num_partitions(self):
         return self.max_groups  # pragma: no cover
 
     @max_num_partitions.setter
-    @deprecated(reason="Use max_groups instead. This was renamed to be consistent with Polars terminology.")
+    @deprecated(
+        reason="Use max_groups instead. This was renamed to be consistent with Polars terminology."
+    )
     def max_num_partitions(self, value):
         self.max_groups = value  # pragma: no cover
 
     @property
-    @deprecated(reason='Use invariant instead. This was renamed because invariants are not "public information". Invariants are "unprotected information".')
+    @deprecated(
+        reason='Use invariant instead. This was renamed because invariants are not "public information". Invariants are "unprotected information".'
+    )
     def public_info(self):
         return self.invariant  # pragma: no cover
 
     @public_info.setter
-    @deprecated(reason='Use invariant instead. This was renamed because invariants are not "public information". Invariants are "unprotected information".')
+    @deprecated(
+        reason='Use invariant instead. This was renamed because invariants are not "public information". Invariants are "unprotected information".'
+    )
     def public_info(self, value):
         self.invariant = value  # pragma: no cover
 
     @property
-    @deprecated(reason='Use `dp.unit_of(contributions=[dp.polars.Bound(per_group=...)])` instead.')
     def max_partition_contributions(self):
-        raise NotImplementedError("max_partition_contributions is deprecated. Use `dp.unit_of(contributions=[dp.polars.Bound(per_group=...)])` instead.") # pragma: no cover
-    
+        raise NotImplementedError(
+            "max_partition_contributions has been moved. Use `dp.unit_of(contributions=[dp.polars.Bound(per_group=...)])` instead."
+        )  # pragma: no cover
+
     @max_partition_contributions.setter
-    @deprecated(reason='Use `dp.unit_of(contributions=[dp.polars.Bound(per_group=...)])` instead.')
     def max_partition_contributions(self, value):
-        _ = value  # pragma: no cover
+        raise NotImplementedError(
+            "max_partition_contributions has been moved. Use `dp.unit_of(contributions=[dp.polars.Bound(per_group=...)])` instead."
+        )  # pragma: no cover
 
     @property
-    @deprecated(reason='Use `dp.unit_of(contributions=[dp.polars.Bound(num_groups=...)])` instead.')
     def max_influenced_partitions(self):
-        raise NotImplementedError("max_influenced_partitions is deprecated. Use `dp.unit_of(contributions=[dp.polars.Bound(num_groups=...)])` instead.") # pragma: no cover
-    
+        raise NotImplementedError(
+            "max_influenced_partitions has been moved. Use `dp.unit_of(contributions=[dp.polars.Bound(num_groups=...)])` instead."
+        )  # pragma: no cover
+
     @max_influenced_partitions.setter
-    @deprecated(reason='Use `dp.unit_of(contributions=[dp.polars.Bound(num_groups=...)])` instead.')
     def max_influenced_partitions(self, value):
-        _ = value  # pragma: no cover
+        raise NotImplementedError(
+            "max_influenced_partitions has been moved. Use `dp.unit_of(contributions=[dp.polars.Bound(num_groups=...)])` instead."
+        )  # pragma: no cover
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Margin):

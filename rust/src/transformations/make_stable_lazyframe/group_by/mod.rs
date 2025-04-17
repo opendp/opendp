@@ -15,6 +15,9 @@ use polars_plan::prelude::{FunctionFlags, GroupbyOptions};
 
 use super::StableDslPlan;
 
+#[cfg(test)]
+mod test;
+
 /// Transformation for stable group by and aggregate.
 ///
 /// # Arguments
@@ -40,6 +43,13 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
 
     if apply.is_some() {
         return fallible!(MakeTransformation, "apply is not currently supported");
+    }
+
+    if maintain_order {
+        return fallible!(
+            MakeTransformation,
+            "maintain_order is wasted compute because row ordering is protected information"
+        );
     }
 
     if options.as_ref() != &GroupbyOptions::default() {
@@ -68,8 +78,16 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
             .map(|_: Transformation<_, _, _, PartitionDistance<M>>| ())
     })?;
 
-    // check that aggregations are infallible
-    aggs.iter().try_for_each(|e| assert_infallible(e, true))?;
+    // check that aggregations are infallible. Aggregations are allowed to resize data
+    aggs.iter()
+        .try_for_each(|e| check_infallible(e, Resize::Allow))?;
+
+    if middle_metric.0.identifier().is_some() {
+        return fallible!(
+            MakeTransformation,
+            "stable groupby (sample and aggregate) is not supported on datasets with unbounded row contributions. If you want to execute a groupby truncation, include the identifier in the groupby keys."
+        );
+    }
 
     // use Polars to compute the output dtype
     let series_domains = middle_domain
@@ -81,15 +99,10 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
     let h_keys = keys.iter().cloned().collect();
     let output_domain = FrameDomain::new_with_margins(
         series_domains,
-        middle_domain
-            .margins
-            .iter()
-            .cloned()
+        (middle_domain.margins.iter().cloned())
             .filter(|m| m.by.is_subset(&h_keys))
             .map(|mut m| {
-                if !m.by.is_subset(&h_keys) {
-                    m.invariant = None;
-                }
+                m.invariant = None;
                 m
             })
             .collect(),
@@ -103,20 +116,25 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
             keys: keys.clone(),
             aggs: aggs.clone(),
             apply: None,
-            maintain_order,
+            maintain_order: false,
             options: options.clone(),
         }),
         middle_metric.clone(),
         middle_metric.clone(),
         StabilityMap::new_fallible(move |d_in: &Bounds| {
+            let contributed_rows = d_in.get_bound(&HashSet::new()).per_group;
+            let contributed_groups = d_in.get_bound(&h_keys).num_groups;
+
+            let Some(influenced_groups) = option_min(contributed_rows, contributed_groups) else {
+                return fallible!(
+                    FailedMap,
+                    "an upper bound on the number of contributed rows or groups is required"
+                );
+            };
+
             Ok(Bounds(vec![Bound {
                 by: HashSet::new(),
-                per_group: option_min(
-                    d_in.get_bound(&HashSet::new()).per_group,
-                    d_in.get_bound(&h_keys).num_groups,
-                )
-                .map(|v| v.inf_mul(&2))
-                .transpose()?,
+                per_group: Some(influenced_groups.inf_mul(&2)?),
                 num_groups: None,
             }]))
         }),
@@ -125,17 +143,30 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
     t_prior >> t_group_agg
 }
 
-pub(crate) fn assert_infallible(expr: &Expr, allow_resize: bool) -> Fallible<()> {
+#[derive(Clone, Copy)]
+pub(crate) enum Resize {
+    Allow,
+    Ban,
+}
+
+/// # Proof Definition
+/// Returns an error if the expression may raise data-dependent errors,
+/// or if `resize` is Ban and the expression resizes the data.
+///
+/// A resize is an expression that changes the number of rows in the data.
+/// Scalar-valued expressions are not considered a resize,
+/// because they can be broadcasted.
+pub(crate) fn check_infallible(expr: &Expr, resize: Resize) -> Fallible<()> {
     Ok(match expr {
-        Expr::Alias(e, _) => assert_infallible(e.as_ref(), allow_resize)?,
+        Expr::Alias(e, _) => check_infallible(e.as_ref(), resize)?,
         Expr::Column(_) => (),
         Expr::Columns(_) => (),
         Expr::DtypeColumn(_) => (),
         Expr::IndexColumn(_) => (),
         Expr::Literal(_) => (),
         Expr::BinaryExpr { left, right, .. } => {
-            assert_infallible(&left, false)?;
-            assert_infallible(&right, false)?;
+            check_infallible(&left, Resize::Ban)?;
+            check_infallible(&right, Resize::Ban)?;
         }
         Expr::Cast { options, expr, .. } => {
             if matches!(options, CastOptions::Strict) {
@@ -144,73 +175,77 @@ pub(crate) fn assert_infallible(expr: &Expr, allow_resize: bool) -> Fallible<()>
                     "Strict casting may cause data-dependent errors. Set strict to false."
                 );
             }
-            assert_infallible(expr, allow_resize)?;
+            check_infallible(expr, resize)?;
         }
-        Expr::Sort { expr, .. } => assert_infallible(expr.as_ref(), allow_resize)?,
+        Expr::Sort { expr, .. } => check_infallible(expr.as_ref(), resize)?,
         Expr::Gather { .. } => fallible!(
             MakeTransformation,
             "Gather may cause data-dependent errors due to OOB indexing."
         )?,
         Expr::SortBy { expr, by, .. } => {
-            assert_infallible(expr, false)?;
-            by.iter().try_for_each(|by| assert_infallible(by, false))?;
+            check_infallible(expr, Resize::Ban)?;
+            by.iter()
+                .try_for_each(|by| check_infallible(by, Resize::Ban))?;
         }
         Expr::Agg(agg_expr) => match agg_expr {
-            AggExpr::Sum(e) => assert_infallible(e, true)?,
-            AggExpr::Mean(e) => assert_infallible(e, true)?,
-            AggExpr::Median(e) => assert_infallible(e, true)?,
-            AggExpr::NUnique(e) => assert_infallible(e, true)?,
-            AggExpr::First(e) => assert_infallible(e, true)?,
-            AggExpr::Last(e) => assert_infallible(e, true)?,
-            AggExpr::Implode(e) => assert_infallible(e, true)?,
-            AggExpr::Count(e, _) => assert_infallible(e, true)?,
-            AggExpr::Quantile { expr: e, .. } => assert_infallible(e, true)?,
-            AggExpr::Max { input: e, .. } => assert_infallible(e, true)?,
-            AggExpr::Min { input: e, .. } => assert_infallible(e, true)?,
-            AggExpr::Std(e, _) => assert_infallible(e, true)?,
-            AggExpr::Var(e, _) => assert_infallible(e, true)?,
-            AggExpr::AggGroups(e) => assert_infallible(e, true)?,
+            AggExpr::Sum(e) => check_infallible(e, Resize::Allow)?,
+            AggExpr::Mean(e) => check_infallible(e, Resize::Allow)?,
+            AggExpr::Median(e) => check_infallible(e, Resize::Allow)?,
+            AggExpr::NUnique(e) => check_infallible(e, Resize::Allow)?,
+            AggExpr::First(e) => check_infallible(e, Resize::Allow)?,
+            AggExpr::Last(e) => check_infallible(e, Resize::Allow)?,
+            AggExpr::Implode(e) => check_infallible(e, Resize::Allow)?,
+            AggExpr::Count(e, _) => check_infallible(e, Resize::Allow)?,
+            AggExpr::Quantile { expr: e, .. } => check_infallible(e, Resize::Allow)?,
+            AggExpr::Max { input: e, .. } => check_infallible(e, Resize::Allow)?,
+            AggExpr::Min { input: e, .. } => check_infallible(e, Resize::Allow)?,
+            AggExpr::Std(e, _) => check_infallible(e, Resize::Allow)?,
+            AggExpr::Var(e, _) => check_infallible(e, Resize::Allow)?,
+            AggExpr::AggGroups(e) => check_infallible(e, Resize::Allow)?,
         },
         Expr::Ternary {
             predicate,
             truthy,
             falsy,
         } => {
-            assert_infallible(predicate, false)?;
-            assert_infallible(truthy, false)?;
-            assert_infallible(falsy, false)?;
+            check_infallible(predicate, Resize::Ban)?;
+            check_infallible(truthy, Resize::Ban)?;
+            check_infallible(falsy, Resize::Ban)?;
         }
         Expr::Function {
             input,
             function,
             options,
         } => {
-            if !allow_resize && options.flags.contains(FunctionFlags::CHANGES_LENGTH) {
+            if matches!(resize, Resize::Ban)
+                && options.flags.contains(FunctionFlags::CHANGES_LENGTH)
+                && !options.flags.contains(FunctionFlags::RETURNS_SCALAR)
+            {
                 return fallible!(
                     MakeTransformation,
                     "Function {function:?} may cause data-dependent errors due to different lengths."
                 );
             }
-            assert_infallible_function(function, input, allow_resize)?
+            check_infallible_function(function, input, resize)?
         }
         Expr::Explode(e) => {
-            if !allow_resize {
+            if matches!(resize, Resize::Ban) {
                 return fallible!(
                     MakeTransformation,
-                    "Explode may cause data-dependent errors due to different lengths."
+                    "explode may cause data-dependent errors due to different lengths."
                 );
             }
-            assert_infallible(e, allow_resize)?;
+            check_infallible(e, resize)?;
         }
         Expr::Filter { input, by } => {
-            if !allow_resize {
+            if matches!(resize, Resize::Ban) {
                 return fallible!(
                     MakeTransformation,
                     "Filter may cause data-dependent errors due to different lengths."
                 );
             }
-            assert_infallible(input.as_ref(), allow_resize)?;
-            assert_infallible(by.as_ref(), allow_resize)?;
+            check_infallible(input.as_ref(), resize)?;
+            check_infallible(by.as_ref(), resize)?;
         }
         Expr::Window { .. } => {
             return fallible!(
@@ -225,11 +260,11 @@ pub(crate) fn assert_infallible(expr: &Expr, allow_resize: bool) -> Fallible<()>
                 "Slice may cause data-dependent errors due to null offset."
             );
         }
-        Expr::Exclude(e, _) => assert_infallible(e.as_ref(), allow_resize)?,
-        Expr::KeepName(e) => assert_infallible(e.as_ref(), allow_resize)?,
+        Expr::Exclude(e, _) => check_infallible(e.as_ref(), resize)?,
+        Expr::KeepName(e) => check_infallible(e.as_ref(), resize)?,
         Expr::Len => (),
         Expr::Nth(_) => (),
-        Expr::RenameAlias { expr, .. } => assert_infallible(expr.as_ref(), allow_resize)?,
+        Expr::RenameAlias { expr, .. } => check_infallible(expr.as_ref(), resize)?,
         Expr::Field(_) => (),
         Expr::AnonymousFunction { .. } => {
             return fallible!(
@@ -244,25 +279,42 @@ pub(crate) fn assert_infallible(expr: &Expr, allow_resize: bool) -> Fallible<()>
     })
 }
 
-fn assert_infallible_function(
+/// # Proof Definition
+/// Returns an error if the function expression may raise data-dependent errors,
+/// or if `resize` is Ban and the expression resizes the data.
+///
+/// A resize is an expression that changes the number of rows in the data.
+/// Scalar-valued expressions are not considered a resize,
+/// because they can be broadcasted.
+fn check_infallible_function(
     function: &FunctionExpr,
     inputs: &Vec<Expr>,
-    allow_resize: bool,
+    resize: Resize,
 ) -> Fallible<()> {
     macro_rules! check_inputs {
         () => {
-            check_inputs!(allow_resize)
+            check_inputs!(resize)
         };
+        (resize=$name:literal) => {{
+            if matches!(resize, Resize::Ban) {
+                return fallible!(
+                    MakeTransformation,
+                    "{} may cause data-dependent errors due to different lengths.",
+                    $name
+                );
+            }
+            check_inputs!(resize)
+        }};
         (aggregate) => {
-            check_inputs!(true)
+            check_inputs!(Resize::Allow)
         };
         (aligned_rows) => {
-            check_inputs!(false)
+            check_inputs!(Resize::Ban)
         };
-        ($allow_resize:expr) => {
+        ($resize:expr) => {
             inputs
                 .iter()
-                .try_for_each(|e| assert_infallible(e, $allow_resize))?
+                .try_for_each(|e| check_infallible(e, $resize))?
         };
     }
     Ok(match function {
@@ -278,8 +330,8 @@ fn assert_infallible_function(
             BooleanFunction::IsIn => {
                 let [input, set] = <&[Expr; 2]>::try_from(inputs.as_slice())
                     .map_err(|_| err!(MakeTransformation, "IsIn must have two arguments"))?;
-                assert_infallible(input, allow_resize)?;
-                assert_infallible(set, true)?;
+                check_infallible(input, resize)?;
+                check_infallible(set, Resize::Allow)?;
             }
             BooleanFunction::AllHorizontal => check_inputs!(aligned_rows),
             BooleanFunction::AnyHorizontal => check_inputs!(aligned_rows),
@@ -309,19 +361,19 @@ fn assert_infallible_function(
         FunctionExpr::Clip { .. } => check_inputs!(aligned_rows),
         FunctionExpr::AsStruct => check_inputs!(aligned_rows),
         FunctionExpr::Reverse => check_inputs!(),
-        FunctionExpr::ValueCounts { .. } => check_inputs!(),
+        FunctionExpr::ValueCounts { .. } => check_inputs!(resize = "value_counts"),
         FunctionExpr::Coalesce => check_inputs!(aligned_rows),
         FunctionExpr::ShrinkType => {
             return fallible!(MakeTransformation, "shrink_type has data-dependent dtype.");
         }
-        FunctionExpr::Unique(_) => check_inputs!(),
+        FunctionExpr::Unique(_) => check_inputs!(resize = "unique"),
         FunctionExpr::Round { .. } => check_inputs!(),
         FunctionExpr::RoundSF { .. } => check_inputs!(),
         FunctionExpr::Floor => check_inputs!(),
         FunctionExpr::Ceil => check_inputs!(),
         FunctionExpr::UpperBound => check_inputs!(),
         FunctionExpr::LowerBound => check_inputs!(),
-        FunctionExpr::ConcatExpr(_) => check_inputs!(),
+        FunctionExpr::ConcatExpr(_) => check_inputs!(resize = "concat_expr"),
         FunctionExpr::Cut { .. } => check_inputs!(),
         FunctionExpr::QCut { .. } => check_inputs!(),
         FunctionExpr::ToPhysical => check_inputs!(),
@@ -345,17 +397,6 @@ fn assert_infallible_function(
         FunctionExpr::MinHorizontal => check_inputs!(aligned_rows),
         FunctionExpr::SumHorizontal => check_inputs!(aligned_rows),
         FunctionExpr::MeanHorizontal => check_inputs!(aligned_rows),
-        FunctionExpr::Replace => {
-            return fallible!(MakeTransformation, "replace is not currently supported.");
-        }
-        FunctionExpr::ReplaceStrict { .. } => {
-            return fallible!(
-                MakeTransformation,
-                "replace_strict is not currently supported."
-            );
-        }
-        FunctionExpr::GatherEvery { .. } => check_inputs!(),
-        FunctionExpr::ExtendConstant => check_inputs!(),
         // in the future, other patterns may be added
         #[allow(unreachable_patterns)]
         _ => {

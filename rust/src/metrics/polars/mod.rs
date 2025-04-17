@@ -79,11 +79,11 @@ impl Metric for ChangeOneIdDistance {
 /// ```
 ///
 /// Then $x, x'$ are $d_i$-close under the ith frame distance,
-/// where $d_{i0}$ is ``num_groups`` and $d_{i\infty}$ is ``per_group``,
+/// where $d_{Fi0}$ is ``num_groups`` and $d_{Fi\infty}$ is ``per_group``,
 /// whenever,
 ///
 /// ```math
-/// |s_i|_0 \leq d_{i0} \land |s_i|_\infty \leq d_{i\infty}.
+/// |s_i|_0 \leq d_{Fi0} \land |s_i|_\infty \leq d_{Fi\infty}.
 /// ```
 ///
 /// Finally, for any two datasets $x, x'$ and any $d$ of type [`Bounds`],

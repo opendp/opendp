@@ -54,6 +54,8 @@ where
         + StableExpr<PartitionDistance<MI::EventMetric>, PartitionDistance<MI::EventMetric>>,
     DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
 {
+    let is_truncated = input_metric.0.identifier().is_some();
+
     let Some(MatchGroupBy {
         input,
         group_by,
@@ -240,9 +242,25 @@ where
                 (l0, Some(l1), li) => (l0.unwrap_or(l1), l1, li.unwrap_or(l1)),
                 (Some(l0), None, Some(li)) => (l0, l0.inf_mul(&li)?, li),
                 _ => {
+                    let msg = if is_truncated {
+                        let mut msg = " This is likely due to a missing truncation earlier in the data pipeline.".to_string();
+                        if l0.is_none() {
+                            msg = format!(
+                                "{msg} To bound `num_groups` in the Context API, try using `.truncate_num_groups(num_groups, by=by)`."
+                            );
+                        }
+                        if li.is_none() {
+                            msg = format!(
+                                "{msg} To bound `per_group` in the Context API, try using `.truncate_per_group(per_group, by=by)`."
+                            );
+                        }
+                        msg
+                    } else {
+                        "".to_string()
+                    };
                     return fallible!(
                         FailedMap,
-                        "num_groups ({l0:?}), total contributions ({l1:?}), and per_group ({li:?}) are not sufficiently well-defined. Either truncate or set appropriate margin descriptors like num_groups and per_group."
+                        "num_groups ({l0:?}), total contributions ({l1:?}), and per_group ({li:?}) are not sufficiently well-defined.{msg}"
                     );
                 }
             };

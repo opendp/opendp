@@ -354,7 +354,7 @@ def unit_of(
     :param absolute: Greatest absolute distance a privacy unit can influence a scalar aggregate data set
     :param l1: Greatest l1 distance a privacy unit can influence a vector aggregate data set
     :param l2: Greatest l2 distance a privacy unit can influence a vector aggregate data set
-    :param identifier: Name of the column that contains identifiers
+    :param identifier: Can be a column name or Polars expression.
     :param ordered: Set to ``True`` to use ``InsertDeleteDistance`` instead of ``SymmetricDistance``, or ``HammingDistance`` instead of ``ChangeOneDistance``.
     :param U: The type of the dataset distance."""
 
@@ -362,13 +362,13 @@ def unit_of(
         return p not in ["ordered", "U", "_is_distance", "identifier"] and v is not None
 
     if sum(1 for p, v in locals().items() if _is_distance(p, v)) != 1:
-        raise ValueError("Must specify exactly one distance.")  # pragma: no cover
+        raise ValueError("Must specify exactly one distance.")
 
     if ordered:
         if contributions is None and changes is None:
             raise ValueError('"ordered" is only valid with "changes" or "contributions"')
         if identifier is not None:
-            raise ValueError('"ordered" must be False when "identifier" is set') # pragma: no cover
+            raise ValueError('"ordered" must be False when "identifier" is set')
         
     if contributions is not None:
         if identifier is None:

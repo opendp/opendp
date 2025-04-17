@@ -1234,6 +1234,20 @@ def test_truncate_per_group(keep):
     assert query.summarize()["scale"][0] == 2.0000000000000004  # type: ignore[index]
 
 
+def test_truncate_per_group_sort_by():
+    pl = pytest.importorskip("polars")
+
+    context = dp.Context.compositor(
+        data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100, "sort": [3, 2, 1] * 100}),
+        privacy_unit=dp.unit_of(contributions=1, identifier="id"),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=1,
+    )
+
+    query = context.query().truncate_per_group(2, sort_by=pl.col("sort")).select(dp.len())
+    assert query.summarize()["scale"][0] == 2.0000000000000004  # type: ignore[index]
+
+
 
 @pytest.mark.parametrize("keep", ["first", "last"])
 def test_truncate_num_groups(keep):
