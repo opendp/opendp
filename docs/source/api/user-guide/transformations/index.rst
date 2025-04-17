@@ -317,6 +317,12 @@ The input and output metrics may be configured to any combination of ``Symmetric
      - ``SymmetricDistance/InsertDeleteDistance``
 
 
+.. toctree::
+   :glob:
+   :titlesonly:
+
+   preprocess-resize
+
 .. _aggregators:
 
 Aggregators
