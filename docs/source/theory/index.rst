@@ -14,4 +14,5 @@ For that, see :doc:`../getting-started/index` or :doc:`../api/index`.
   dp-with-opendp
   accuracy-pitfalls
   attacks/index
+  mechanisms/index
   resources
