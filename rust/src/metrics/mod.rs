@@ -61,25 +61,9 @@ pub type IntDistance = u32;
 /// * `VectorDomain<D>` for any valid `D`
 ///
 /// When this metric is paired with a `VectorDomain`, we instead consider the multisets corresponding to $u, v \in \texttt{D}$.
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Default, Debug)]
 pub struct SymmetricDistance;
 
-impl Default for SymmetricDistance {
-    fn default() -> Self {
-        SymmetricDistance
-    }
-}
-
-impl PartialEq for SymmetricDistance {
-    fn eq(&self, _other: &Self) -> bool {
-        true
-    }
-}
-impl Debug for SymmetricDistance {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "SymmetricDistance()")
-    }
-}
 impl Metric for SymmetricDistance {
     type Distance = IntDistance;
 }
@@ -131,25 +115,9 @@ impl<K: Hashable> MetricSpace for (DataFrameDomain<K>, SymmetricDistance) {
 /// # Compatible Domains
 ///
 /// * `VectorDomain<D>` for any valid `D`
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Default, Debug)]
 pub struct InsertDeleteDistance;
 
-impl Default for InsertDeleteDistance {
-    fn default() -> Self {
-        InsertDeleteDistance
-    }
-}
-
-impl PartialEq for InsertDeleteDistance {
-    fn eq(&self, _other: &Self) -> bool {
-        true
-    }
-}
-impl Debug for InsertDeleteDistance {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "InsertDeleteDistance()")
-    }
-}
 impl Metric for InsertDeleteDistance {
     type Distance = IntDistance;
 }
@@ -203,25 +171,9 @@ impl<K: Hashable> MetricSpace for (DataFrameDomain<K>, InsertDeleteDistance) {
 /// # Compatible Domains
 ///
 /// * `VectorDomain<D>` for any valid `D`, when `VectorDomain::size.is_some()`.
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Default, Debug)]
 pub struct ChangeOneDistance;
 
-impl Default for ChangeOneDistance {
-    fn default() -> Self {
-        ChangeOneDistance
-    }
-}
-
-impl PartialEq for ChangeOneDistance {
-    fn eq(&self, _other: &Self) -> bool {
-        true
-    }
-}
-impl Debug for ChangeOneDistance {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "ChangeOneDistance()")
-    }
-}
 impl Metric for ChangeOneDistance {
     type Distance = IntDistance;
 }
@@ -268,25 +220,9 @@ impl<D: Domain> MetricSpace for (VectorDomain<D>, ChangeOneDistance) {
 /// # Compatible Domains
 ///
 /// * `VectorDomain<D>` for any valid `D`, when `VectorDomain::size.is_some()`.
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Default, Debug)]
 pub struct HammingDistance;
 
-impl Default for HammingDistance {
-    fn default() -> Self {
-        HammingDistance
-    }
-}
-
-impl PartialEq for HammingDistance {
-    fn eq(&self, _other: &Self) -> bool {
-        true
-    }
-}
-impl Debug for HammingDistance {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "HammingDistance()")
-    }
-}
 impl Metric for HammingDistance {
     type Distance = IntDistance;
 }
@@ -301,47 +237,72 @@ impl<D: Domain> MetricSpace for (VectorDomain<D>, HammingDistance) {
     }
 }
 
-/// The $L_p$ distance between two vector-valued aggregates.
+/// The $L_p$ distance between two points.
 ///
 /// # Proof Definition
 ///
 /// ### $d$-closeness
-/// For any two vectors $u, v \in \texttt{D}$ and $d$ of generic type $\texttt{Q}$,
-/// we say that $u, v$ are $d$-close under the the $L_p$ distance metric (abbreviated as $d_{LP}$) whenever
+/// For any two vectors $x, x' \in \texttt{D}$ and $d$ of generic type $\texttt{Q}$,
+/// we say that $x, x'$ are $d$-close under the the $L_p$ distance metric (abbreviated as $d_{LP}$) whenever
 ///
 /// ```math
-/// d_{LP}(u, v) = \|u_i - v_i\|_p \leq d
+/// d_{Lp}(x, x') \leq d.
 /// ```
 ///
-/// If $u$ and $v$ are different lengths, then
+/// If $x$ and $x'$ are different lengths, then
 /// ```math
-/// d_{LP}(u, v) = \infty
+/// d_{Lp}(x, x') = \infty,
 /// ```
 ///
-/// # Compatible Domains
+/// otherwise if `self.modulo` is false (default), then
+/// ```math
+/// d_{Lp}(x, x') = \|x - x'\|_p,
+/// ```
 ///
-/// * `VectorDomain<D>` for any valid `D`
-/// * `MapDomain<D>` for any valid `D`
-pub struct LpDistance<const P: usize, Q>(PhantomData<fn() -> Q>);
+/// otherwise when `self.modulo` is true, then
+/// ```math
+/// d_{Lp}(x, x') = \min_{z \in D} \|(x + z) \mod m - (x' + z) \mod m\|_p.
+/// ```
+pub struct LpDistance<const P: usize, Q> {
+    modular: bool,
+    _marker: PhantomData<fn() -> Q>,
+}
+
+impl<const P: usize, Q> LpDistance<P, Q> {
+    pub fn new(modular: bool) -> Self {
+        Self {
+            modular,
+            _marker: PhantomData,
+        }
+    }
+}
+
 impl<const P: usize, Q> Default for LpDistance<P, Q> {
     fn default() -> Self {
-        LpDistance(PhantomData)
+        LpDistance {
+            modular: false,
+            _marker: PhantomData,
+        }
     }
 }
 
 impl<const P: usize, Q> Clone for LpDistance<P, Q> {
     fn clone(&self) -> Self {
-        Self::default()
+        Self {
+            modular: self.modular,
+            _marker: PhantomData,
+        }
     }
 }
 impl<const P: usize, Q> PartialEq for LpDistance<P, Q> {
-    fn eq(&self, _other: &Self) -> bool {
-        true
+    fn eq(&self, other: &Self) -> bool {
+        self.modular == other.modular
     }
 }
 impl<const P: usize, Q> Debug for LpDistance<P, Q> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "L{}Distance({})", P, type_name!(Q))
+        let modular = self.modular.then_some(", modular").unwrap_or_default();
+        write!(f, "L{}Distance({}{})", P, type_name!(Q), modular)
     }
 }
 impl<const P: usize, Q> Metric for LpDistance<P, Q> {
@@ -393,51 +354,62 @@ where
     }
 }
 
-/// The $L_1$ distance between two vector-valued aggregates.
+/// The $L_1$ distance between two vectors.
 ///
 /// Refer to [`LpDistance`] for details.
 pub type L1Distance<Q> = LpDistance<1, Q>;
 
-/// The $L_2$ distance between two vector-valued aggregates.
+/// The $L_2$ distance between two vectors.
 ///
 /// Refer to [`LpDistance`] for details.
 pub type L2Distance<Q> = LpDistance<2, Q>;
 
-/// The absolute distance between two scalar-valued aggregates.
+/// The absolute distance between two scalars.
 ///
 /// # Proof Definition
 ///
 /// ### `d`-closeness
-/// For any two scalars $u, v \in \texttt{D}$ and $d$ of generic type $\texttt{Q}$,
-/// we say that $u, v$ are $d$-close under the the the absolute distance metric (abbreviated as $d_{Abs}$) whenever
+/// For any two scalars $x, x' \in \texttt{D}$ and $d$ of generic type $\texttt{Q}$,
+/// we say that $x, x'$ are $d$-close under the the the absolute distance metric (abbreviated as $d_{Abs}$) whenever
 ///
 /// ```math
-/// d_{Abs}(u, v) = |u - v| \leq d
+/// d_{Abs}(x, x') = |x - x'| \leq d
 /// ```
 ///
-/// # Compatible Domains
-///
-/// * `AtomDomain<T>` for any valid `T`
-pub struct AbsoluteDistance<Q>(PhantomData<fn() -> Q>);
+/// if `self.modulo` is false (default), otherwise
+/// ```math
+/// d_{Lp}(x, x') = \min_{z \in D} |(x + z) \mod m - (x' + z) \mod m|.
+/// ```
+pub struct AbsoluteDistance<Q> {
+    modular: bool,
+    _marker: PhantomData<fn() -> Q>,
+}
 impl<Q> Default for AbsoluteDistance<Q> {
     fn default() -> Self {
-        AbsoluteDistance(PhantomData)
+        AbsoluteDistance {
+            modular: false,
+            _marker: PhantomData,
+        }
     }
 }
 
 impl<Q> Clone for AbsoluteDistance<Q> {
     fn clone(&self) -> Self {
-        Self::default()
+        Self {
+            modular: self.modular,
+            _marker: PhantomData,
+        }
     }
 }
 impl<Q> PartialEq for AbsoluteDistance<Q> {
-    fn eq(&self, _other: &Self) -> bool {
-        true
+    fn eq(&self, other: &Self) -> bool {
+        self.modular == other.modular
     }
 }
 impl<Q> Debug for AbsoluteDistance<Q> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "AbsoluteDistance({})", type_name!(Q))
+        let modulo = self.modular.then_some(", modulo").unwrap_or_default();
+        write!(f, "AbsoluteDistance({}{})", type_name!(Q), modulo)
     }
 }
 impl<Q> Metric for AbsoluteDistance<Q> {
@@ -450,6 +422,21 @@ impl<T: CheckAtom, Q> MetricSpace for (AtomDomain<T>, AbsoluteDistance<Q>) {
         } else {
             Ok(())
         }
+    }
+}
+
+pub trait ModularMetric: Metric {
+    fn modular(&self) -> bool;
+}
+
+impl<Q> ModularMetric for AbsoluteDistance<Q> {
+    fn modular(&self) -> bool {
+        self.modular
+    }
+}
+impl<const P: usize, Q> ModularMetric for LpDistance<P, Q> {
+    fn modular(&self) -> bool {
+        self.modular
     }
 }
 
