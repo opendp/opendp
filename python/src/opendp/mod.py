@@ -1293,24 +1293,8 @@ def exponential_bounds_search(
     """
 
     # try to infer T
-    if T is None:
-        def _check_type(v):
-            try:
-                predicate(v)
-            except TypeError:
-                return False
-            except OpenDPException as e:
-                if "No match for concrete type" in (e.message or ""):
-                    return False # pragma: no cover
-            return True
-        
-        if _check_type(0.):
-            T = float
-        elif _check_type(0):
-            T = int
-        else:
-            raise TypeError("unable to infer type `T`; pass the type `T` or bounds")  # pragma: no cover
-
+    T = T or _infer_type(predicate)
+                
     # core search functionality
     def signed_band_search(center, at_center, sign):
         """Identify which band (of eight) the decision boundary lies in.
@@ -1375,6 +1359,37 @@ def exponential_bounds_search(
     center, sign = binary_search(_exception_predicate, bounds=exception_bounds, T=T, return_sign=True)
     at_center = predicate(center)
     return signed_band_search(center, at_center, sign)
+
+
+def _infer_type(predicate: Callable[[float], bool]) -> Union[Type[float], Type[int]]:
+    def _is_type_error(e):
+        is_match_error = isinstance(e, OpenDPException) and "No match for concrete type" in (e.message or "")
+        is_type_error = isinstance(e, TypeError)
+        return is_match_error or is_type_error
+
+    try:
+        predicate(0.)
+        # predicate succeeded with a float, assume it wants floats
+        return float
+    except Exception as e:
+        if not _is_type_error(e):
+            # it didn't reject the type, but did fail with a different error
+            return float
+    
+    # Try again with the more forgiving type, an int.
+    try:
+        predicate(0)
+        # predicate is happy with an int, assume it wants ints
+        return int
+    except Exception as e:
+        if not _is_type_error(e):
+            # it didn't reject the type, but did fail with a different error
+            return int
+
+        # enrich the error message if in Python 3.11+.
+        if hasattr(e, "add_note"):
+            e.add_note("Unable to infer type `T`; pass the type `T` or bounds. This exception is raised when the predicate is evaluated at 0")
+        raise
 
 
 _TUPLE_FLAG = '__tuple__'

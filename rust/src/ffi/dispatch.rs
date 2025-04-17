@@ -150,6 +150,7 @@ impl<T> FailedDispatch for Fallible<T> {
         };
         fallible!(
             FFI,
+            // If you change this, you should also change the corresponding check in Python binary search type inference.
             "No match for concrete type {}. {}",
             type_,
             debug_message
