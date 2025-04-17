@@ -70,6 +70,7 @@ mod tests {
             input_metric,
             0.0,
             None,
+            None,
         )?;
         let arg = 100.;
         let res_plain = op_plain.invoke(&arg)?;

@@ -277,6 +277,7 @@ where
 mod tests_shr {
     use crate::{
         measurements::then_laplace,
+        measures::MaxDivergence,
         transformations::{make_split_lines, then_cast_default, then_clamp, then_sum},
     };
 
@@ -288,7 +289,7 @@ mod tests_shr {
             >> then_cast_default()
             >> then_clamp((0, 1))
             >> then_sum()
-            >> then_laplace(1., None))
+            >> then_laplace::<_, _, MaxDivergence>(1., None, None))
         .map(|_| ())
     }
 }

@@ -14,15 +14,15 @@ use crate::measures::MaxDivergence;
 use crate::metrics::{AbsoluteDistance, L1Distance};
 use crate::traits::{Integer, Number};
 
-trait GeometricMetric<T> {
-    type Domain: NoiseDomain;
+trait GeometricDomain<Q>: NoiseDomain {
+    type Metric: Metric;
 }
 
-impl<T: Number, Q: Number> GeometricMetric<T> for AbsoluteDistance<Q> {
-    type Domain = AtomDomain<T>;
+impl<T: Number, Q: Number> GeometricDomain<Q> for AtomDomain<T> {
+    type Metric = AbsoluteDistance<Q>;
 }
-impl<T: Number, Q: Number> GeometricMetric<T> for L1Distance<Q> {
-    type Domain = VectorDomain<AtomDomain<T>>;
+impl<T: Number, Q: Number> GeometricDomain<Q> for VectorDomain<AtomDomain<T>> {
+    type Metric = L1Distance<Q>;
 }
 
 #[unsafe(no_mangle)]
@@ -46,37 +46,33 @@ pub extern "C" fn opendp_measurements__make_geometric(
         ConstantTimeGeometric<T>: MakeNoise<AtomDomain<T>, AbsoluteDistance<QI>, MO>
             + MakeNoise<VectorDomain<AtomDomain<T>>, L1Distance<QI>, MO>,
     {
-        fn monomorphize2<MI: 'static + Metric, MO: 'static + Measure, T: Number>(
+        fn monomorphize2<DI: 'static + GeometricDomain<QI>, MO: 'static + Measure, QI: Number>(
             input_domain: &AnyDomain,
             input_metric: &AnyMetric,
             scale: f64,
-            bounds: Option<(
-                <MI::Domain as NoiseDomain>::Atom,
-                <MI::Domain as NoiseDomain>::Atom,
-            )>,
+            bounds: Option<(DI::Atom, DI::Atom)>,
         ) -> Fallible<AnyMeasurement>
         where
-            MI: GeometricMetric<T>,
-            DiscreteLaplace: MakeNoise<MI::Domain, MI, MO>,
-            ConstantTimeGeometric<<MI::Domain as NoiseDomain>::Atom>: MakeNoise<MI::Domain, MI, MO>,
-            (MI::Domain, MI): MetricSpace,
+            DiscreteLaplace<DI::Atom>: MakeNoise<DI, DI::Metric, MO>,
+            ConstantTimeGeometric<DI::Atom>: MakeNoise<DI, DI::Metric, MO>,
+            (DI, DI::Metric): MetricSpace,
         {
-            let input_domain = input_domain.downcast_ref::<MI::Domain>()?.clone();
-            let input_metric = input_metric.downcast_ref::<MI>()?.clone();
-            make_geometric::<MI::Domain, MI, MO>(input_domain, input_metric, scale, bounds)
+            let input_domain = input_domain.downcast_ref::<DI>()?.clone();
+            let input_metric = input_metric.downcast_ref::<DI::Metric>()?.clone();
+            make_geometric::<DI, DI::Metric, MO>(input_domain, input_metric, scale, bounds)
                 .into_any()
         }
-        let T_ = input_domain.type_.get_atom()?;
-        let MI = input_metric.type_.clone();
+        let DI = input_domain.type_.clone();
+        let QI = input_metric.type_.get_atom()?;
         let bounds = if let Some(bounds) = as_ref(bounds) {
             Some(try_!(bounds.downcast_ref::<(T, T)>()).clone())
         } else {
             None
         };
         dispatch!(monomorphize2, [
-            (MI, [AbsoluteDistance<QI>, L1Distance<QI>]),
+            (DI, [AtomDomain<T>, VectorDomain<AtomDomain<T>>]),
             (MO, [MO]),
-            (T_, [T])
+            (QI, [QI])
         ], (input_domain, input_metric, scale, bounds))
     }
 

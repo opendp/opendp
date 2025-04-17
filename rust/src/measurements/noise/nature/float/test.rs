@@ -1,4 +1,8 @@
-use crate::{measurements::make_laplace, metrics::AbsoluteDistance};
+use crate::{
+    measurements::make_laplace,
+    measures::{MaxDivergence, ZeroConcentratedDivergence},
+    metrics::AbsoluteDistance,
+};
 
 use super::*;
 
@@ -10,33 +14,44 @@ fn test_make_noise_floatexpfamily() -> Fallible<()> {
     );
 
     assert!(
-        FloatExpFamily::<1> { scale: 1.0, k: 0 }
-            .make_noise(space.clone())
-            .is_ok()
-    );
-    assert!(
-        FloatExpFamily::<1> {
-            scale: f64::NAN,
-            k: 0
+        FloatExpFamily::<1, _> {
+            scale: 1.0,
+            k: 0,
+            radius: None
         }
         .make_noise(space.clone())
+        .map(|_: Measurement<_, _, _, MaxDivergence>| ())
+        .is_ok()
+    );
+    assert!(
+        FloatExpFamily::<1, _> {
+            scale: f64::NAN,
+            k: 0,
+            radius: None
+        }
+        .make_noise(space.clone())
+        .map(|_: Measurement<_, _, _, MaxDivergence>| ())
         .is_err()
     );
     assert!(
-        FloatExpFamily::<2> {
+        FloatExpFamily::<2, _> {
             scale: 1.0,
-            k: i32::MIN
+            k: i32::MIN,
+            radius: None
         }
         .make_noise(space.clone())
+        .map(|_: Measurement<_, _, _, ZeroConcentratedDivergence>| ())
         .is_err()
     );
 
     assert!(
-        FloatExpFamily::<2> {
+        FloatExpFamily::<2, _> {
             scale: 1.0,
-            k: i32::MAX
+            k: i32::MAX,
+            radius: None
         }
         .make_noise(space.clone())
+        .map(|_: Measurement<_, _, _, ZeroConcentratedDivergence>| ())
         .is_ok()
     );
 
@@ -57,13 +72,14 @@ fn test_then_deintegerize_vec() -> Fallible<()> {
 
 #[allow(non_snake_case)]
 fn sample_dlap_Z2K(shift: f64, scale: f64, k: i32) -> Fallible<f64> {
-    make_laplace(
+    let m_lap: Measurement<_, _, _, MaxDivergence> = make_laplace(
         AtomDomain::<f64>::new_non_nan(),
         AbsoluteDistance::<i8>::default(),
         scale,
+        None,
         Some(k),
-    )?
-    .invoke(&shift)
+    )?;
+    m_lap.invoke(&shift)
 }
 
 #[test]

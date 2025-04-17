@@ -1,6 +1,6 @@
 use dashu::rbig;
 
-use crate::metrics::L2Distance;
+use crate::{measures::MaxDivergence, metrics::L2Distance};
 
 use super::*;
 
@@ -30,14 +30,22 @@ fn test_make_noise_intexpfamily() -> Fallible<()> {
     );
 
     assert!(
-        IntExpFamily::<1> { scale: 1.0 }
-            .make_noise(space.clone())
-            .is_ok()
+        IntExpFamily::<1, _> {
+            scale: 1.0,
+            radius: None
+        }
+        .make_noise(space.clone())
+        .map(|_: Measurement<_, _, _, MaxDivergence>| ())
+        .is_ok()
     );
     assert!(
-        IntExpFamily::<1> { scale: f64::NAN }
-            .make_noise(space.clone())
-            .is_err()
+        IntExpFamily::<1, _> {
+            scale: f64::NAN,
+            radius: None
+        }
+        .make_noise(space.clone())
+        .map(|_: Measurement<_, _, _, MaxDivergence>| ())
+        .is_err()
     );
 
     Ok(())

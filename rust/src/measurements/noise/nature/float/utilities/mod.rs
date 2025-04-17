@@ -10,7 +10,7 @@ mod test;
 
 use crate::{
     error::Fallible,
-    traits::{ExactIntCast, Float, InfCast, InfSqrt},
+    traits::{ExactIntCast, Float, InfCast, InfSqrt, Number},
 };
 
 #[proven(proof_path = "measurements/noise/nature/float/utilities/find_nearest_multiple_of_2k.tex")]
@@ -130,4 +130,28 @@ pub fn integerize_scale(scale: f64, k: i32) -> Fallible<RBig> {
         .map_err(|_| err!(MakeTransformation, "scale ({scale}) must be finite"))?;
 
     Ok(x_mul_2k(scale, -k))
+}
+
+pub fn integerize_radius<T: Number>(radius: Option<T>, k: i32) -> Fallible<Option<UBig>>
+where
+    RBig: TryFrom<T>,
+{
+    let Some(radius) = radius else {
+        return Ok(None);
+    };
+
+    if k == i32::MIN {
+        return fallible!(MakeTransformation, "k ({k}) must not be i32::MIN");
+    }
+
+    let r_radius = RBig::try_from(radius)
+        .map_err(|_| err!(MakeTransformation, "radius ({radius}) must be finite"))?;
+
+    let i_radius = find_nearest_multiple_of_2k(r_radius, k);
+
+    let (Sign::Positive, u_radius) = i_radius.into_parts() else {
+        return fallible!(MakeTransformation, "radius ({radius}) must be positive");
+    };
+
+    Ok(Some(u_radius))
 }

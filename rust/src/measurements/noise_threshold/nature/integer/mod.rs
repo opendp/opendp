@@ -12,7 +12,10 @@ use crate::{
     error::Fallible,
     measurements::{
         MakeNoiseThreshold, NoiseThresholdPrivacyMap, ZExpFamily,
-        nature::{float::integerize_scale, integer::IntExpFamily},
+        nature::{
+            float::{integerize_radius, integerize_scale},
+            integer::IntExpFamily,
+        },
     },
     metrics::{AbsoluteDistance, L0PInfDistance},
     traits::{Hashable, Integer, Number, SaturatingCast},
@@ -26,12 +29,12 @@ impl<TK, TV, const P: usize, QI: Number, MO: 'static + Measure>
         MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
         L0PInfDistance<P, AbsoluteDistance<QI>>,
         MO,
-    > for IntExpFamily<P>
+    > for IntExpFamily<P, TV>
 where
     TK: Hashable,
     TV: Integer + SaturatingCast<IBig>,
     IBig: From<TV>,
-    RBig: TryFrom<QI>,
+    RBig: TryFrom<QI> + TryFrom<TV>,
     UBig: TryFrom<TV>,
     ZExpFamily<P>: NoiseThresholdPrivacyMap<L0PInfDistance<P, AbsoluteDistance<RBig>>, MO>,
 {
@@ -53,6 +56,7 @@ where
     > {
         let distribution = ZExpFamily {
             scale: integerize_scale(self.scale, 0)?,
+            radius: integerize_radius(self.radius, 0)?,
         };
 
         let t_int = make_int_to_bigint_threshold::<TK, TV, P, QI>(input_space)?;
