@@ -14,8 +14,8 @@ We also need to specify the column we'll be grouping by.
 ...     lf_domain,
 ...     dp.polars.Margin(
 ...         by=[pl.col("grade")],
-...         public_info="keys",
-...         max_partition_length=50))
+...         invariant="keys",
+...         max_length=50))
 
 With that in place, we can plan the Polars computation, using the `dp` plugin. 
 

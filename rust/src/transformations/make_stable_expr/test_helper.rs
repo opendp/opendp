@@ -12,25 +12,24 @@ pub fn get_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
     ])?
     .with_margin(
         Margin::select()
-            .with_public_lengths()
-            .with_max_partition_length(1000),
+            .with_invariant_lengths()
+            .with_max_length(1000),
     )?
     .with_margin(
         Margin::by(["chunk_2_bool"])
-            .with_public_lengths()
-            .with_max_partition_length(500)
-            .with_max_num_partitions(2)
-            .with_max_partition_contributions(1),
+            .with_invariant_lengths()
+            .with_max_length(500)
+            .with_max_groups(2),
     )?
     .with_margin(
         Margin::by(["chunk_2_bool", "cycle_5_alpha"])
-            .with_public_keys()
-            .with_max_partition_length(200),
+            .with_invariant_keys()
+            .with_max_length(200),
     )?
     .with_margin(
         Margin::by(["cycle_(..100i32)"])
-            .with_public_keys()
-            .with_max_partition_length(100),
+            .with_invariant_keys()
+            .with_max_length(100),
     )?;
 
     let lf = df!(

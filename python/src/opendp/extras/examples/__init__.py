@@ -67,10 +67,10 @@ def get_france_lfs_path() -> Path:
     '''
     from io import BytesIO
     from zipfile import ZipFile
-    path = Path(__file__).parent / 'france_lfs.csv'
+    path = Path(__file__).parent / 'v2_france_lfs.csv'
     if not path.exists():
-        url = 'https://raw.githubusercontent.com/opendp/dp-test-datasets/refs/heads/main/data/sample_FR_LFS.csv.zip'
+        url = 'https://raw.githubusercontent.com/opendp/dp-test-datasets/refs/heads/main/data/eurostat/V2_FR_LFS.csv.zip'
         france_lfs_bytes = _http_get(url)
         with ZipFile(BytesIO(france_lfs_bytes)) as data_zip:
-            path.write_text(data_zip.open('sample_FR_LFS.csv').read().decode())
+            path.write_text(data_zip.open('V2_FR_LFS.csv').read().decode())
     return path

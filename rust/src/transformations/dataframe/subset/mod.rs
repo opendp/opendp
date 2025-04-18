@@ -64,8 +64,8 @@ pub fn make_subset_by<TK: Hashable>(
 
             Ok(subsetted)
         }),
-        SymmetricDistance::default(),
-        SymmetricDistance::default(),
+        SymmetricDistance,
+        SymmetricDistance,
         StabilityMap::new_from_constant(1),
     )
 }

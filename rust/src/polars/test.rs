@@ -16,7 +16,7 @@ use super::*;
 fn test_dp_quantile() -> Fallible<()> {
     let lf_domain =
         LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<f64>::default())])?
-            .with_margin(Margin::select().with_max_partition_length(100))?;
+            .with_margin(Margin::select().with_max_length(100))?;
 
     let lf = df!("A" => [50f64; 100])?.lazy();
 

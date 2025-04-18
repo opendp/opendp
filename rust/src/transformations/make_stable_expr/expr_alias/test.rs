@@ -6,7 +6,7 @@ use polars_plan::dsl::col;
 
 use crate::{
     domains::{AtomDomain, LazyFrameDomain, SeriesDomain},
-    metrics::SymmetricDistance,
+    metrics::{FrameDistance, SymmetricDistance},
     transformations::make_stable_lazyframe,
 };
 
@@ -28,7 +28,7 @@ macro_rules! test_query {
         let (lf_domain, lf) = get_alias_data()?;
 
         let query = lf.clone().with_column($expr);
-        let t_lf = make_stable_lazyframe(lf_domain, SymmetricDistance, query)?;
+        let t_lf = make_stable_lazyframe(lf_domain, FrameDistance(SymmetricDistance), query)?;
 
         assert_eq!(
             t_lf.output_domain.schema(),
@@ -72,10 +72,10 @@ fn test_alias() -> Fallible<()> {
 
     let t_ab = col("A")
         .alias("B")
-        .make_stable(expr_domain.clone(), SymmetricDistance)?;
+        .make_stable(expr_domain.clone(), FrameDistance(SymmetricDistance))?;
     let t_bc = col("B")
         .alias("C")
-        .make_stable(expr_domain, SymmetricDistance)?;
+        .make_stable(expr_domain, FrameDistance(SymmetricDistance))?;
 
     let expr_ab = t_ab.invoke(&lf.logical_plan)?.expr;
     let expr_bc = t_bc.invoke(&lf.logical_plan)?.expr;
