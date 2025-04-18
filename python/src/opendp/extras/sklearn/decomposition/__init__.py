@@ -157,7 +157,7 @@ then_private_pca = to_then(make_private_pca)
 register(make_private_pca)
 
 
-class PCA():
+class PCA:
     '''
     DP wrapper for `sklearn's PCA <https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html>`_.
 
@@ -180,37 +180,24 @@ class PCA():
         n_components: int | float | str | None = None,
         n_changes: int = 1,
         whiten: bool = False,
-    ) -> None:
+    ) -> None:  # pragma: no cover
         # Error if constructor called without dependency:
         import_optional_dependency('sklearn.decomposition')
-        
-        # The zero-argument form of super() does not work,
-        # (I believe) because the type argument is determined lexically,
-        # and it doesn't see our redefinition.
-        # Instead, make the type explicit.
-        #
-        # Also because of the class redefinition, mypy has a lot of complaints,
-        # and so there's a lot of "type: ignore" below.
-        super(PCA, self).__init__(  # type: ignore[call-arg]
-            n_components or n_features,
-            whiten=whiten,
-        )
-        self.epsilon = epsilon
-        self.row_norm = row_norm
-        self.n_samples = n_samples
-        self.n_features_in_ = n_features
-        self.n_changes = n_changes
+        # used for mypy typing
+        self.n_samples_ = None
+        self.components_ = None
+        self.n_components_ = None
+        self.explained_variance_ = None
+        self.explained_variance_ratio_ = None
+        self.singular_values_ = None
 
     @property
     def n_features(self):
         '''
         Number of features
         '''
-        return self.n_features_in_
+        ...
 
-    # This isn't strictly necessary, since we just call the superclass method,
-    # but this lets us document a frequently used method,
-    # and avoids a number of mypy warnings.
     def fit(self, X, y=None):
         '''
         Fit the model with X.
@@ -218,103 +205,164 @@ class PCA():
         :param X: Training data, where ``n_samples`` is the number of samples and ``n_features`` is the number of features.
         :param y: Ignored
         '''
-        return super(PCA, self).fit(X) # type: ignore[misc]
+        ...
 
     # this overrides the scikit-learn method to instead use the opendp-core constructor
     def _fit(self, X):
-        return self._prepare_fitter()(X)
+        ...
 
-    def _prepare_fitter(self) -> Measurement:
+    def _prepare_fitter(self) -> Measurement:  # type: ignore[empty-body]
         """Returns a measurement that computes the mean and eigendecomposition,
         and then apply those releases to self."""
-        import opendp.prelude as dp
-
-        if hasattr(self, "components_"):
-            raise ValueError("DP-PCA model has already been fitted")  # pragma: no cover
-
-        input_domain = dp.numpy.array2_domain(
-            num_columns=self.n_features_in_, size=self.n_samples, T=float
-        )
-        input_metric = dp.symmetric_distance()
-
-        n_estimated_components = (
-            self.n_components  # type: ignore[attr-defined]
-            if isinstance(self.n_components, int)  # type: ignore[attr-defined]
-            else self.n_features_in_  # type: ignore[attr-defined]
-        )
-
-        return make_private_pca(
-            input_domain,
-            input_metric,
-            self.epsilon / self.n_changes * 2,
-            norm=self.row_norm,
-            num_components=n_estimated_components,
-        ) >> self._postprocess
+        ...
 
     def _postprocess(self, values):
         """A function that applies a release of the mean and eigendecomposition to self"""
-        np = import_optional_dependency('numpy')
-        from sklearn.utils.extmath import stable_cumsum, svd_flip # type: ignore[import]
-        from sklearn.decomposition._pca import _infer_dimension # type: ignore[import]
+        ...
 
-        self.mean_, S, Vt = values
-        U = Vt.T
-        n_samples, n_features = self.n_samples, self.n_features_in_
-        n_components = self.n_components  # type: ignore[attr-defined]
-
-        # CODE BELOW THIS POINT IS FROM SKLEARN
-        # flip eigenvectors' sign to enforce deterministic output
-        U, Vt = svd_flip(U, Vt)
-
-        components_ = Vt
-
-        # Get variance explained by singular values
-        explained_variance_ = (S**2) / (n_samples - 1)
-        total_var = np.sum(explained_variance_)
-        explained_variance_ratio_ = explained_variance_ / total_var
-        singular_values_ = S # Store the singular values. 
-
-        # Postprocess the number of components required
-        if n_components == "mle":
-            n_components = _infer_dimension(explained_variance_, n_samples)
-        elif 0 < n_components < 1.0:
-            # number of components for which the cumulated explained
-            # variance percentage is superior to the desired threshold
-            # side='right' ensures that number of features selected
-            # their variance is always greater than n_components float
-            # passed. More discussion in issue: https://github.com/scikit-learn/scikit-learn/pull/15669
-            explained_variance_ratio_np = explained_variance_ratio_
-            ratio_cumsum = stable_cumsum(explained_variance_ratio_np)
-            n_components = np.searchsorted(ratio_cumsum, n_components, side="right") + 1
-
-        # Compute noise covariance using Probabilistic PCA model
-        # The sigma2 maximum likelihood (cf. eq. 12.46)
-        if n_components < min(n_features, n_samples):
-            self.noise_variance_ = np.mean(explained_variance_[n_components:])
-        else:
-            self.noise_variance_ = 0.0
-
-        self.n_samples_ = n_samples
-        self.components_ = components_[:n_components, :]
-        self.n_components_ = n_components
-        self.explained_variance_ = explained_variance_[:n_components]
-        self.explained_variance_ratio_ = explained_variance_ratio_[:n_components]
-        self.singular_values_ = singular_values_[:n_components]
-
-        return U, S, Vt
-
-    def measurement(self) -> Measurement:
+    def measurement(self) -> Measurement:  # type: ignore[empty-body]
         """Return a measurement that releases a fitted model."""
-        return self._prepare_fitter() >> (lambda _: self)
+        ...
 
-    # overrides an sklearn method
     def _validate_params(*args, **kwargs):
-        pass
+        ...
 
 
 _decomposition = import_optional_dependency('sklearn.decomposition', False)
 if _decomposition is not None:
-    PCA = type('PCA', (_decomposition.PCA,), dict(PCA.__dict__))  # type: ignore[assignment,misc]
+    class PCA(_decomposition.PCA):  # type: ignore  # noqa: F811
+        def __init__(
+            self,
+            *,
+            epsilon: float,
+            row_norm: float,
+            n_samples: int,
+            n_features: int,
+            n_components: int | float | str | None = None,
+            n_changes: int = 1,
+            whiten: bool = False,
+        ) -> None:
+            super().__init__(
+                n_components or n_features,
+                whiten=whiten,
+            )
+            self.epsilon = epsilon
+            self.row_norm = row_norm
+            self.n_samples = n_samples
+            self.n_features_in_ = n_features
+            self.n_changes = n_changes
+
+        @property
+        def n_features(self):
+            '''
+            Number of features
+            '''
+            return self.n_features_in_
+
+        # This isn't strictly necessary, since we just call the superclass method,
+        # but this lets us document a frequently used method,
+        # and avoids a number of mypy warnings.
+        def fit(self, X, y=None):
+            '''
+            Fit the model with X.
+
+            :param X: Training data, where ``n_samples`` is the number of samples and ``n_features`` is the number of features.
+            :param y: Ignored
+            '''
+            return super().fit(X)
+
+        # this overrides the scikit-learn method to instead use the opendp-core constructor
+        def _fit(self, X):
+            return self._prepare_fitter()(X)
+
+        def _prepare_fitter(self) -> Measurement:
+            """Returns a measurement that computes the mean and eigendecomposition,
+            and then apply those releases to self."""
+            import opendp.prelude as dp
+
+            if hasattr(self, "components_"):
+                raise ValueError("DP-PCA model has already been fitted")  # pragma: no cover
+
+            input_domain = dp.numpy.array2_domain(
+                num_columns=self.n_features_in_, size=self.n_samples, T=float
+            )
+            input_metric = dp.symmetric_distance()
+
+            n_estimated_components = (
+                self.n_components
+                if isinstance(self.n_components, int)
+                else self.n_features_in_
+            )
+
+            return make_private_pca(
+                input_domain,
+                input_metric,
+                self.epsilon / self.n_changes * 2,
+                norm=self.row_norm,
+                num_components=n_estimated_components,
+            ) >> self._postprocess
+
+        def _postprocess(self, values):
+            """A function that applies a release of the mean and eigendecomposition to self"""
+            np = import_optional_dependency('numpy')
+            from sklearn.utils.extmath import stable_cumsum, svd_flip # type: ignore[import]
+            from sklearn.decomposition._pca import _infer_dimension # type: ignore[import]
+
+            self.mean_, S, Vt = values
+            U = Vt.T
+            n_samples, n_features = self.n_samples, self.n_features_in_
+            n_components = self.n_components
+
+            # CODE BELOW THIS POINT IS FROM SKLEARN
+            # flip eigenvectors' sign to enforce deterministic output
+            U, Vt = svd_flip(U, Vt)
+
+            components_ = Vt
+
+            # Get variance explained by singular values
+            explained_variance_ = (S**2) / (n_samples - 1)
+            total_var = np.sum(explained_variance_)
+            explained_variance_ratio_ = explained_variance_ / total_var
+            singular_values_ = S # Store the singular values. 
+
+            # Postprocess the number of components required
+            if n_components == "mle":
+                n_components = _infer_dimension(explained_variance_, n_samples)
+            elif 0 < n_components < 1.0:
+                # number of components for which the cumulated explained
+                # variance percentage is superior to the desired threshold
+                # side='right' ensures that number of features selected
+                # their variance is always greater than n_components float
+                # passed. More discussion in issue: https://github.com/scikit-learn/scikit-learn/pull/15669
+                explained_variance_ratio_np = explained_variance_ratio_
+                ratio_cumsum = stable_cumsum(explained_variance_ratio_np)
+                n_components = np.searchsorted(ratio_cumsum, n_components, side="right") + 1
+
+            # Compute noise covariance using Probabilistic PCA model
+            # The sigma2 maximum likelihood (cf. eq. 12.46)
+            if n_components < min(n_features, n_samples):
+                self.noise_variance_ = np.mean(explained_variance_[n_components:])
+            else:
+                self.noise_variance_ = 0.0
+
+            self.n_samples_ = n_samples
+            self.components_ = components_[:n_components, :]
+            self.n_components_ = n_components
+            self.explained_variance_ = explained_variance_[:n_components]
+            self.explained_variance_ratio_ = explained_variance_ratio_[:n_components]
+            self.singular_values_ = singular_values_[:n_components]
+
+            return U, S, Vt
+
+        def measurement(self) -> Measurement:
+            """Return a measurement that releases a fitted model."""
+            return self._prepare_fitter() >> (lambda _: self)
+
+        # overrides an sklearn method
+        def _validate_params(*args, **kwargs):
+            pass
+
+
 
         
 def _smaller(v):

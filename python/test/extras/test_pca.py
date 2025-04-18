@@ -62,7 +62,7 @@ def test_pca_skl():
     print("singular values", model.singular_values_)
     print("components", model.components_)
 
-    loadings = model.singular_values_ * model.components_
+    loadings = model.singular_values_ * model.components_  # type: ignore[operator]
     print("loadings", loadings)
 
     model = dp.sklearn.decomposition.PCA(
