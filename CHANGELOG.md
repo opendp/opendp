@@ -4,11 +4,59 @@ This file documents the version history of OpenDP. The links on each version num
 showing the source changes from the previous version.
 
 
-## [0.12.2-dev](https://github.com/opendp/opendp/compare/v0.12.1...HEAD) - TBD
+## [0.13.0-dev](https://github.com/opendp/opendp/compare/v0.12.1...HEAD) - TBD
 
 
+### Feat
 
+- Polars
+    - array dtype [#2225](https://github.com/opendp/opendp/pull/2225)
+    - replace [#2222](https://github.com/opendp/opendp/pull/2222)
+    - select/with_columns postprocessors [#2210](https://github.com/opendp/opendp/pull/2210)
+    - expressions in group_by context [#2209](https://github.com/opendp/opendp/pull/2209)
+    - expression filtering [#2223](https://github.com/opendp/opendp/pull/2223)
+    - enum dtype [#2224](https://github.com/opendp/opendp/pull/2224)
+    - binary function expressions [#2307](https://github.com/opendp/opendp/pull/2307)
+- Constructor registration in context api [#2343](https://github.com/opendp/opendp/pull/2343)
+- Serialize query [#2253](https://github.com/opendp/opendp/pull/2253)
+- Domain descriptor ffi [#2240](https://github.com/opendp/opendp/pull/2240)
+- Add `make_private_quantile` [#2293](https://github.com/opendp/opendp/pull/2293)
+- Add `make_fixed_approxdp_to_approxdp` [#1860](https://github.com/opendp/opendp/pull/1860)
+- Show errors when binary search type inference fails [#2366](https://github.com/opendp/opendp/pull/2366)
+- `member` is true or false, with a warning; expand serialization tests [#2265](https://github.com/opendp/opendp/pull/2265)
 
+### Fix
+
+- Privacy Impacting
+    - Polars group by with explicit keys fill value [#2345](https://github.com/opendp/opendp/pull/2345)
+
+- Always default to include nan in domains [#2288](https://github.com/opendp/opendp/pull/2288)
+- Exception in pca constructor [#2368](https://github.com/opendp/opendp/pull/2368)
+- Tighten imputer domain descriptors [#2362](https://github.com/opendp/opendp/pull/2362)
+- Rust quantile schema mismatch [#2349](https://github.com/opendp/opendp/pull/2349)
+- Openssl compilation in smoke-test [#2319](https://github.com/opendp/opendp/pull/2319)
+- Nightly pypi invalid metadata [#2348](https://github.com/opendp/opendp/pull/2348)
+
+### Docs
+
+- Improve proof definition coverage [#2109](https://github.com/opendp/opendp/pull/2109)
+- Add missing backticks [#2302](https://github.com/opendp/opendp/pull/2302)
+- Add a note about tools to consider for param consistency checks [#2303](https://github.com/opendp/opendp/pull/2303)
+- Add documentation on queryable [#2259](https://github.com/opendp/opendp/pull/2259)
+- Update use case list [#2335](https://github.com/opendp/opendp/pull/2335)
+- Fuzzy doctests [#2249](https://github.com/opendp/opendp/pull/2249)
+- Better error message if bad margin [#2317](https://github.com/opendp/opendp/pull/2317)
+
+### Chore
+
+- Pep 639 compatibility [#2326](https://github.com/opendp/opendp/pull/2326)
+- Rust 2024 edition [#2322](https://github.com/opendp/opendp/pull/2322)
+- Update ubuntu in ci [#2304](https://github.com/opendp/opendp/pull/2304)
+- Add pip upgrade to link checker [#2336](https://github.com/opendp/opendp/pull/2336)
+
+### Deprecate
+
+- Margins dict [#2299](https://github.com/opendp/opendp/pull/2299)
 
 ## [0.12.1](https://github.com/opendp/opendp/compare/v0.12.0...v0.12.1) - 2025-02-20
 
