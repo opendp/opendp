@@ -1,0 +1,63 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{fn make\_row\_by\_row}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of \rustdoc{transformations/fn}{make\_row\_by\_row} in \asOfCommit{mod.rs}{f5bb719}.
+This constructor is a special case of \rustdoc{transformations/fn}{make\_row\_by\_row\_fallible}.
+The proof for this constructor appeals to the proof for \rustdoc{transformations/fn}{make\_row\_by\_row\_fallible}.
+
+\texttt{make\_row\_by\_row} returns a Transformation that applies a user-specified function to each record in the input dataset.
+
+\subsection*{Vetting History}
+\begin{itemize}
+    \item \vettingPR{562}
+\end{itemize}
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\begin{itemize}
+
+    \item \texttt{DI} (input domain) is a type with trait \rustdoc{transformations/trait}{RowByRowDomain}\texttt{<DO>}. 
+        This trait provides a way to apply a map function to each record in the input dataset to retrieve a dataset that is a member of the output domain, of type \texttt{DO}. The trait further implies that \texttt{DatasetDomain} is also implemented for \texttt{DI}.
+    \item \texttt{DO} (output domain) is a type with trait \rustdoc{transformations/trait}{DatasetDomain}. 
+        \texttt{DatasetDomain} is used to define the type of the row domain.
+    \item \texttt{M} (metric) is a type with trait \rustdoc{transformations/trait}{DatasetMetric}. 
+        \texttt{DatasetMetric} is used to restrict the set of valid metrics to those which measure distances between datasets.
+    \item \rustdoc{core/trait}{MetricSpace} is implemented for \texttt{(DI, M)}. Therefore \texttt{M} is a valid metric on \texttt{DI}.
+    \item \rustdoc{core/trait}{MetricSpace} is implemented for \texttt{(DO, M)}.
+    \item \texttt{row\_function} has no side-effects.
+    \item If the input to \texttt{row\_function} is a member of \texttt{input\_domain}'s row domain, then the output is a member of \texttt{output\_row\_domain}.
+\end{itemize}
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_row_by_row.py}
+
+\subsection*{Postcondition}
+\validTransformation{\texttt{(input\_domain, input\_metric, output\_domain, row\_function, DI, DO, M)}}{\texttt{make\_row\_by\_row}}
+
+\section{Proofs}
+
+\begin{proof} \textbf{(Part 1 -- appropriate output domain).}
+    Since the preconditions for this constructor are a super-set of the preconditions on \texttt{make\_row\_by\_row\_fallible}, 
+    the proof of \texttt{make\_row\_by\_row\_fallible} applies. 
+    Thus, by the output domain proof on \texttt{make\_row\_by\_row\_fallible}, 
+    for all settings of input arguments, the function returns a dataset in the output domain.
+\end{proof}
+
+\begin{proof} \textbf{(Part 2 -- stability map).} 
+    The proof of \texttt{make\_row\_by\_row\_fallible} similarly applies. 
+    Thus, by the stability map proof on \texttt{make\_row\_by\_row\_fallible}, 
+    for all settings of input arguments, 
+    where $u, v$ are \din-close under \texttt{input\_metric},
+    \function(u), \function(v) are \dout-close under \texttt{output\_metric}.
+\end{proof}
+
+\end{document}
