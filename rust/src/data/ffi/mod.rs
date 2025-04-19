@@ -707,7 +707,8 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             if element.descriptor == "String" {
                 vec_string_to_raw(obj)
             } else {
-                dispatch!(vec_to_raw, [(element, @primitives_plus)], (obj))
+                // equivalent to @primitives-plus, but listing the types out excludes this from debug build narrowing of types
+                dispatch!(vec_to_raw, [(element, [u32, u64, i32, i64, usize, f32, f64, bool, String, AnyObject, ExtrinsicObject])], (obj))
             }
         }
         TypeContents::TUPLE(element_ids) => {

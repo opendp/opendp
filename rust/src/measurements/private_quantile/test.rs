@@ -26,8 +26,8 @@ fn test_private_quantile_unsized() -> Fallible<()> {
         1.0,
     )?;
     assert!((50..100).contains(&m_q75.invoke(&(0..100).collect())?));
-    // d_in * alpha / scale = 1 * (3 / 4) / 1 = 0.75
-    assert_eq!(m_q75.map(&1)?, 0.75);
+    // d_in * alpha / scale * 2 = 1 * (3 / 4) / 1 * 2 = 1.5
+    assert_eq!(m_q75.map(&1)?, 1.5);
     Ok(())
 }
 

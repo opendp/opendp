@@ -123,6 +123,8 @@ fn test_explicit_keys() -> Fallible<()> {
         .alias("sum");
     let candidates = (0..N_CANDIDATES).map(|v| v as f64).collect::<Vec<_>>();
     let median_expr = col("B")
+        .fill_nan(0.0)
+        .fill_null(0.0)
         .dp()
         .median(Series::new("".into(), candidates.clone()), None)
         .alias("med");

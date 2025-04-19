@@ -3,42 +3,36 @@ def make_quantile_score_candidates(
     input_domain: VectorDomain[AtomDomain[TIA]],
     input_metric: MI,
     candidates: list[TIA],
-    alpha: A
+    alpha: f64,
 ) -> Transformation:
+    if input_domain.element_domain.nan():
+        raise ValueError("input_domain members must have non-nan elements")
 
-    input_domain.element_domain.assert_non_null()
+    check_candidates(candidates)
 
-    for i in range(len(candidates) - 1):
-        assert candidates[i] < candidates[i + 1]
+    size = input_domain.size
+    if size is not None:
+        size = u64.exact_int_cast(input_domain.size)
 
-    alpha_numer, alpha_denom = alpha.into_frac(size=None)
-    if alpha_numer > alpha_denom or alpha_denom == 0:
-        raise ValueError("alpha must be within [0, 1]")
+    alpha_num, alpha_den, size_limit = score_candidates_constants(size, alpha)
 
-    if input_domain.size is not None:
-        # to ensure that the function will not overflow
-        input_domain.size.inf_mul(alpha_denom)
-        size_limit = input_domain.size
-    else:
-        size_limit = (usize.MAX).neg_inf_div(alpha_den)
-
-    def function(arg: list[TIA]) -> list[usize]:
-        return compute_score(arg, candidates, alpha_numer, alpha_denom, size_limit)
-
-    if input_domain.size is not None:
-        def stability_map(d_in: u32) -> usize:
-            return TOA.inf_cast(d_in // 2).inf_mul(2).inf_mul(alpha_denom)
-    else:
-        abs_dist_const: usize = max(alpha_numer, alpha_denom.inf_sub(alpha_numer))
-        stability_map = new_stability_map_from_constant(abs_dist_const, QO=usize)
+    def function(arg: list[TIA]) -> list[u64]:
+        scores = compute_score(arg, candidates, alpha_num, alpha_den, size_limit)
+        return Vec.from_iter(scores)  # like calling list(s) on an iter s
 
     return Transformation(
         input_domain=input_domain,
         output_domain=VectorDomain(
-            element_domain=AtomDomain(T=usize), 
-            size=len(candidates)),
+            element_domain=AtomDomain(T=u64), size=len(candidates)
+        ),
         function=function,
         input_metric=input_metric,
-        output_metric=LInfDistance(Q=usize),
-        stability_map=stability_map,
+        output_metric=LInfDistance.default(T=u64),
+        stability_map=StabilityMap.new_fallible( # `\label{map}`
+            score_candidates_map(
+                alpha_num,
+                alpha_den,
+                input_domain.size.is_some(),
+            )
+        ),
     )
