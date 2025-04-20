@@ -39,16 +39,34 @@ def make_ordinal_aim(
             new_query_fit = True
         return new_query_fit
     
-    def get_distribution_marginal(query, distribution):
-        '''
-        calculates M_r(distribution) in Algo 2 line 14
-        '''
-        subset_data = distribution[:, query] # get subset of the distribution that's only this
-        subset_cardinalities = [input_domain.cardinalities[i] for i in query]
-        subset_domain = np.array([math.prod(subset_cardinalities[i+1:]) for i in range(len(subset_cardinalities))])
-        flattened_indices = np.sum((subset_data - 1) * subset_domain, axis = 1)
-        marginal = np.bincount(flattened_indices, minlength = math.prod(subset_cardinalities))
-        return marginal
+    def make_distribution_marginal_transformation(query: list[int]):
+        def get_marginal(data):
+            '''
+            calculates M_r(distribution) in Algo 2 line 14
+            '''
+            subset_data = data[:, query] # get subset of the distribution that's only this
+            subset_cardinalities = [input_domain.cardinalities[i] for i in query]
+            subset_domain = np.array([math.prod(subset_cardinalities[i+1:]) for i in range(len(subset_cardinalities))])
+            flattened_indices = np.sum((subset_data - 1) * subset_domain, axis = 1)
+            marginal = np.bincount(flattened_indices, minlength = math.prod(subset_cardinalities))
+            return marginal
+        
+        def stability_map(d_in: int):
+            return d_in
+        input_domain = dp.numpy.array2_domain()
+        input_metric = dp.symmetric_distance()
+        output_domain = dp.vector_domain(dp.atom_domain(T = int))
+        output_metric = dp.symmetric_distance()
+
+        return dp.t.make_user_transformation(
+            input_domain = input_domain,
+            input_metric = input_metric,
+            output_domain = output_domain,
+            output_metric = output_metric,
+            function = get_marginal,
+            stability_map = stability_map
+        )
+
 
     W_plus = [list(subquery) for query in args.queries for subquery in get_all_subsets(query)]  # W_plus; the set of all possible queries and subqueries of the workload
     marginal_weights = []                                                                       # array of w_r for each r in W_plus
@@ -63,6 +81,7 @@ def make_ordinal_aim(
         w_r = sum(weight * len(set(query), set(s)) for weight, s in zip(args.query_weights, args.queries))
         marginal_weights.append(w_r)
 
+    # everything before aim_mechanism is a function of the queries not the 
     def aim_mechanism(data):
         '''
         this is AIM
@@ -85,8 +104,11 @@ def make_ordinal_aim(
         p_hat = np.zeros((n, d)) # the last generated synthetic dataset
         p_hat_new = np.zeros((n, d)) # the new synthetic dataset after each measurement
             
-        # all_marginals initialization
-        all_marginals = [get_distribution_marginal(query, data) for query in W_plus]
+        # all_marginals initialization - changed to transformation
+        marginal_transformations = [make_distribution_marginal_transformation(query) for query in W_plus]
+        for marginal_fn in marginal_transformations:
+            marginal = marginal_fn(data)
+            all_marginals.append(marginal)
 
         # Algo 3: initialize p_t
         size_one_queries, size_one_indices = zip(*[
@@ -96,7 +118,8 @@ def make_ordinal_aim(
         for query, index in zip(size_one_queries, size_one_indices):
             t += 1                                                                                                  # Algo 3 line 2
             sigmas.append(sigmas[0])                                                                                # Algo 3 line 2
-            y_t = all_marginals[index] + np.random.normal(0, scale = sigmas[t], size = all_marginals[index].shape)  # Algo 3 line 3
+            gaussian = dp.m.make_gaussian(input_domain = input_domain, input_metric = input_metric, scale = sigmas[t])
+            y_t = np.array([gaussian(val) for val in all_marginals[index]])                                         # Algo 3 line 3 
             size_one_measurements.append(y_t)                                                                       # Algo 3 line 3; this array should be reset every time we start measuring again
             rho_used += 1/(2 * sigmas[t]**2)                                                                        # Algo 3 line 4
         p_hat = np.zeros((n, d))                                                                                    # Algo 3 line 6 -- FIX_THIS; need to add the import from Private-PGM
@@ -118,11 +141,12 @@ def make_ordinal_aim(
                                      if query not in selected_queries 
                                      and get_new_query_fit(selected_queries, query, rho_used)]) # Algo 2 line 13
             
-            # calculate the q_r(D) for each r in C_t; Algo 2 line 14 gettign each part of the score function
+            # calculate the q_r(D) for each r in C_t; Algo 2 line 14 getting each part of the score function
             for query, index in zip(C_t, C_t_indices):
                 w_r = marginal_weights[index]
                 M_r_D = all_marginals[index]
-                M_r_p_hat = get_distribution_marginal(query, p_hat)
+                marginal_fn = make_distribution_marginal_transformation(query)
+                M_r_p_hat = marginal_fn(p_hat)
                 q_r = w_r * (np.sum(np.abs(M_r_D - M_r_p_hat)) - math.sqrt(2 / math.pi) * sigmas[t] * n_r_array[index])
                 q_r_array.append(q_r)
 
@@ -140,15 +164,17 @@ def make_ordinal_aim(
             selected_queries.append(selected_query) # Algo 2 line 14; add newly selected query to the list
 
             # MEASURE the marginal on selected query; Algo 2 line 15
-            selected_noisy_marginal = all_marginals[selected_query_index] + np.random.normal(0, scale = sigmas[t], size = all_marginals[selected_query_index].shape) 
+            gaussian = dp.m.make_gaussian(input_domain = input_domain, input_metric = input_metric, scale = sigmas[t])
+            selected_noisy_marginal = np.array([gaussian(val) for val in all_marginals[selected_query_index]]) # changed to measurement
             selected_noisy_marginals.append(selected_noisy_marginal)
 
             # ESTIMATE new synthetic dataset using Private-PGM; Algo 2 line 16
             p_hat_new = np.zeros((n, d)) # FIX_THIS; get the actual new thing
 
             # ANNEAL; Algo 2 line 17; add the new epsilon and sigma to the epsilons and sigmas lists
-            new_selected_marginal = get_distribution_marginal(selected_query, p_hat_new)
-            old_selected_marginal = get_distribution_marginal(selected_query, p_hat)
+            selected_query_marginal_fn = make_distribution_marginal_transformation(selected_query)
+            new_selected_marginal = selected_query_marginal_fn(p_hat_new)
+            old_selected_marginal = selected_query_marginal_fn(p_hat)
             marginals_l1_difference = np.sum(np.abs(new_selected_marginal - old_selected_marginal))
             if marginals_l1_difference <= math.sqrt(2 / math.pi) * sigmas[t] * n_r_array[selected_query_index]:
                 epsilons.append(2 * epsilons[t]) # Algo 4 line 2
