@@ -12,7 +12,7 @@ NULL
 #'
 #' Required features: `contrib`
 #'
-#' [debias_randomized_response_bitvec in Rust documentation.](https://docs.rs/opendp/0.13.0-nightly.20250422.1/opendp/measurements/fn.debias_randomized_response_bitvec.html)
+#' [debias_randomized_response_bitvec in Rust documentation.](https://docs.rs/opendp/0.13.0-beta.20250422.1/opendp/measurements/fn.debias_randomized_response_bitvec.html)
 #'
 #' @concept measurements
 #' @param answers A vector of BitVectors with consistent size
@@ -59,7 +59,7 @@ debias_randomized_response_bitvec <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_alp_queryable in Rust documentation.](https://docs.rs/opendp/0.13.0-nightly.20250422.1/opendp/measurements/fn.make_alp_queryable.html)
+#' [make_alp_queryable in Rust documentation.](https://docs.rs/opendp/0.13.0-beta.20250422.1/opendp/measurements/fn.make_alp_queryable.html)
 #'
 #' **Citations:**
 #'
@@ -174,7 +174,7 @@ then_alp_queryable <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_gaussian in Rust documentation.](https://docs.rs/opendp/0.13.0-nightly.20250422.1/opendp/measurements/fn.make_gaussian.html)
+#' [make_gaussian in Rust documentation.](https://docs.rs/opendp/0.13.0-beta.20250422.1/opendp/measurements/fn.make_gaussian.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -310,7 +310,7 @@ then_gaussian <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_geometric in Rust documentation.](https://docs.rs/opendp/0.13.0-nightly.20250422.1/opendp/measurements/fn.make_geometric.html)
+#' [make_geometric in Rust documentation.](https://docs.rs/opendp/0.13.0-beta.20250422.1/opendp/measurements/fn.make_geometric.html)
 #'
 #' **Citations:**
 #'
@@ -407,7 +407,7 @@ then_geometric <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_laplace in Rust documentation.](https://docs.rs/opendp/0.13.0-nightly.20250422.1/opendp/measurements/fn.make_laplace.html)
+#' [make_laplace in Rust documentation.](https://docs.rs/opendp/0.13.0-beta.20250422.1/opendp/measurements/fn.make_laplace.html)
 #'
 #' **Citations:**
 #'
@@ -499,7 +499,7 @@ then_laplace <- function(
 #'
 #' Required features: `contrib`, `floating-point`
 #'
-#' [make_laplace_threshold in Rust documentation.](https://docs.rs/opendp/0.13.0-nightly.20250422.1/opendp/measurements/fn.make_laplace_threshold.html)
+#' [make_laplace_threshold in Rust documentation.](https://docs.rs/opendp/0.13.0-beta.20250422.1/opendp/measurements/fn.make_laplace_threshold.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -588,7 +588,7 @@ then_laplace_threshold <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_private_quantile in Rust documentation.](https://docs.rs/opendp/0.13.0-nightly.20250422.1/opendp/measurements/fn.make_private_quantile.html)
+#' [make_private_quantile in Rust documentation.](https://docs.rs/opendp/0.13.0-beta.20250422.1/opendp/measurements/fn.make_private_quantile.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -678,7 +678,7 @@ then_private_quantile <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_randomized_response in Rust documentation.](https://docs.rs/opendp/0.13.0-nightly.20250422.1/opendp/measurements/fn.make_randomized_response.html)
+#' [make_randomized_response in Rust documentation.](https://docs.rs/opendp/0.13.0-beta.20250422.1/opendp/measurements/fn.make_randomized_response.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -689,7 +689,7 @@ then_private_quantile <- function(
 #'
 #' **Proof Definition:**
 #'
-#' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/randomized_response/make_randomized_response.pdf)
+#' [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/measurements/randomized_response/make_randomized_response.pdf)
 #'
 #' @concept measurements
 #' @param categories Set of valid outcomes
@@ -767,7 +767,7 @@ then_randomized_response <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_randomized_response_bitvec in Rust documentation.](https://docs.rs/opendp/0.13.0-nightly.20250422.1/opendp/measurements/fn.make_randomized_response_bitvec.html)
+#' [make_randomized_response_bitvec in Rust documentation.](https://docs.rs/opendp/0.13.0-beta.20250422.1/opendp/measurements/fn.make_randomized_response_bitvec.html)
 #'
 #' **Citations:**
 #'
@@ -782,7 +782,7 @@ then_randomized_response <- function(
 #'
 #' **Proof Definition:**
 #'
-#' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/randomized_response_bitvec/make_randomized_response_bitvec.pdf)
+#' [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/measurements/randomized_response_bitvec/make_randomized_response_bitvec.pdf)
 #'
 #' @concept measurements
 #' @param input_domain BitVectorDomain with max_weight
@@ -856,7 +856,7 @@ then_randomized_response_bitvec <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_randomized_response_bool in Rust documentation.](https://docs.rs/opendp/0.13.0-nightly.20250422.1/opendp/measurements/fn.make_randomized_response_bool.html)
+#' [make_randomized_response_bool in Rust documentation.](https://docs.rs/opendp/0.13.0-beta.20250422.1/opendp/measurements/fn.make_randomized_response_bool.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -867,7 +867,7 @@ then_randomized_response_bitvec <- function(
 #'
 #' **Proof Definition:**
 #'
-#' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/randomized_response/make_randomized_response_bool.pdf)
+#' [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/measurements/randomized_response/make_randomized_response_bool.pdf)
 #'
 #' @concept measurements
 #' @param prob Probability of returning the correct answer. Must be in `[0.5, 1)`
@@ -935,7 +935,7 @@ then_randomized_response_bool <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_report_noisy_max_gumbel in Rust documentation.](https://docs.rs/opendp/0.13.0-nightly.20250422.1/opendp/measurements/fn.make_report_noisy_max_gumbel.html)
+#' [make_report_noisy_max_gumbel in Rust documentation.](https://docs.rs/opendp/0.13.0-beta.20250422.1/opendp/measurements/fn.make_report_noisy_max_gumbel.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -946,7 +946,7 @@ then_randomized_response_bool <- function(
 #'
 #' **Proof Definition:**
 #'
-#' [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/measurements/gumbel_max/make_report_noisy_max_gumbel.pdf)
+#' [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/measurements/gumbel_max/make_report_noisy_max_gumbel.pdf)
 #'
 #' @concept measurements
 #' @param input_domain Domain of the input vector. Must be a non-nan VectorDomain.
