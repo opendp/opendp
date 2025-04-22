@@ -60,7 +60,7 @@ def _atom_domain_get_bounds_closed(
 ):
     r"""Retrieve bounds from an AtomDomain<T>
 
-    [_atom_domain_get_bounds_closed in Rust documentation.](https://docs.rs/opendp/0.13.0-nightly.20250422.1/opendp/domains/fn._atom_domain_get_bounds_closed.html)
+    [_atom_domain_get_bounds_closed in Rust documentation.](https://docs.rs/opendp/0.13.0-beta.20250422.1/opendp/domains/fn._atom_domain_get_bounds_closed.html)
 
     :param domain: 
     :type domain: Domain
@@ -96,7 +96,7 @@ def _atom_domain_nan(
 ):
     r"""Retrieve whether members of AtomDomain<T> may be NaN.
 
-    [_atom_domain_nan in Rust documentation.](https://docs.rs/opendp/0.13.0-nightly.20250422.1/opendp/domains/fn._atom_domain_nan.html)
+    [_atom_domain_nan in Rust documentation.](https://docs.rs/opendp/0.13.0-beta.20250422.1/opendp/domains/fn._atom_domain_nan.html)
 
     :param domain: 
     :type domain: Domain
@@ -349,7 +349,7 @@ def _lazyframe_from_domain(
 
     This is useful for creating a dummy lazyframe used to write a query plan.
 
-    [_lazyframe_from_domain in Rust documentation.](https://docs.rs/opendp/0.13.0-nightly.20250422.1/opendp/domains/fn._lazyframe_from_domain.html)
+    [_lazyframe_from_domain in Rust documentation.](https://docs.rs/opendp/0.13.0-beta.20250422.1/opendp/domains/fn._lazyframe_from_domain.html)
 
     :param domain: A LazyFrameDomain.
     :type domain: Domain
@@ -419,7 +419,7 @@ def _series_domain_get_element_domain(
 ) -> Domain:
     r"""Retrieve the element domain of the series domain.
 
-    [_series_domain_get_element_domain in Rust documentation.](https://docs.rs/opendp/0.13.0-nightly.20250422.1/opendp/domains/fn._series_domain_get_element_domain.html)
+    [_series_domain_get_element_domain in Rust documentation.](https://docs.rs/opendp/0.13.0-beta.20250422.1/opendp/domains/fn._series_domain_get_element_domain.html)
 
     :param series_domain: The series domain from which to retrieve the element domain
     :type series_domain: Domain
@@ -635,7 +635,7 @@ def atom_domain(
     The domain defaults to unbounded if `bounds` is `None`,
     If `T` is float, `nan` defaults to `true`.
 
-    [atom_domain in Rust documentation.](https://docs.rs/opendp/0.13.0-nightly.20250422.1/opendp/domains/fn.atom_domain.html)
+    [atom_domain in Rust documentation.](https://docs.rs/opendp/0.13.0-beta.20250422.1/opendp/domains/fn.atom_domain.html)
 
     :param bounds: Optional bounds of elements in the domain, if the data type is numeric.
     :param nan: Whether the domain may contain NaN, if the data type is float.
@@ -753,7 +753,7 @@ def datetime_domain(
 
     Documentation on valid time zones can be found [in the Polars documentation](https://docs.pola.rs/user-guide/transformations/time-series/timezones/).
 
-    [datetime_domain in Rust documentation.](https://docs.rs/opendp/0.13.0-nightly.20250422.1/opendp/domains/fn.datetime_domain.html)
+    [datetime_domain in Rust documentation.](https://docs.rs/opendp/0.13.0-beta.20250422.1/opendp/domains/fn.datetime_domain.html)
 
     :param time_unit: One of `ns`, `us` or `ms`, corresponding to nano-, micro-, and milliseconds
     :type time_unit: str
@@ -1037,7 +1037,7 @@ def option_domain(
 ) -> OptionDomain:
     r"""Construct an instance of `OptionDomain`.
 
-    [option_domain in Rust documentation.](https://docs.rs/opendp/0.13.0-nightly.20250422.1/opendp/domains/fn.option_domain.html)
+    [option_domain in Rust documentation.](https://docs.rs/opendp/0.13.0-beta.20250422.1/opendp/domains/fn.option_domain.html)
 
     :param element_domain: 
     :type element_domain: Domain
@@ -1079,7 +1079,7 @@ def series_domain(
 ) -> SeriesDomain:
     r"""Construct an instance of `SeriesDomain`.
 
-    [series_domain in Rust documentation.](https://docs.rs/opendp/0.13.0-nightly.20250422.1/opendp/domains/fn.series_domain.html)
+    [series_domain in Rust documentation.](https://docs.rs/opendp/0.13.0-beta.20250422.1/opendp/domains/fn.series_domain.html)
 
     :param name: The name of the series.
     :type name: str
