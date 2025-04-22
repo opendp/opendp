@@ -35,7 +35,7 @@ metric_equal <- function(
 
 #' Construct an instance of the `AbsoluteDistance` metric.
 #'
-#' [absolute_distance in Rust documentation.](https://docs.rs/opendp/0.13.0-beta.20250422.1/opendp/metrics/fn.absolute_distance.html)
+#' [absolute_distance in Rust documentation.](https://docs.rs/opendp/0.13.0/opendp/metrics/fn.absolute_distance.html)
 #'
 #' @concept metrics
 #' @param .T undocumented
@@ -155,7 +155,7 @@ insert_delete_distance <- function(
 
 #' Construct an instance of the `L1Distance` metric.
 #'
-#' [l1_distance in Rust documentation.](https://docs.rs/opendp/0.13.0-beta.20250422.1/opendp/metrics/fn.l1_distance.html)
+#' [l1_distance in Rust documentation.](https://docs.rs/opendp/0.13.0/opendp/metrics/fn.l1_distance.html)
 #'
 #' @concept metrics
 #' @param .T undocumented
@@ -183,7 +183,7 @@ l1_distance <- function(
 
 #' Construct an instance of the `L2Distance` metric.
 #'
-#' [l2_distance in Rust documentation.](https://docs.rs/opendp/0.13.0-beta.20250422.1/opendp/metrics/fn.l2_distance.html)
+#' [l2_distance in Rust documentation.](https://docs.rs/opendp/0.13.0/opendp/metrics/fn.l2_distance.html)
 #'
 #' @concept metrics
 #' @param .T undocumented
@@ -211,7 +211,7 @@ l2_distance <- function(
 
 #' Construct an instance of the `LInfDistance` metric.
 #'
-#' [linf_distance in Rust documentation.](https://docs.rs/opendp/0.13.0-beta.20250422.1/opendp/metrics/fn.linf_distance.html)
+#' [linf_distance in Rust documentation.](https://docs.rs/opendp/0.13.0/opendp/metrics/fn.linf_distance.html)
 #'
 #' @concept metrics
 #' @param monotonic set to true if non-monotonicity implies infinite distance
@@ -316,7 +316,7 @@ metric_type <- function(
 
 #' Construct an instance of the `PartitionDistance` metric.
 #'
-#' [partition_distance in Rust documentation.](https://docs.rs/opendp/0.13.0-beta.20250422.1/opendp/metrics/fn.partition_distance.html)
+#' [partition_distance in Rust documentation.](https://docs.rs/opendp/0.13.0/opendp/metrics/fn.partition_distance.html)
 #'
 #' @concept metrics
 #' @param metric The metric used to compute distance between partitions.
