@@ -442,3 +442,20 @@ def indent(text):
     spaces = ' ' * 4
     indented_rest = [f'\n{spaces}{line}' for line in rest]
     return first + ''.join(indented_rest)
+
+
+def get_error_url(message: str) -> str:
+    '''
+    >>> import opendp.prelude as dp
+    >>> version = dp.__version__
+    >>> print(get_error_url("Don't do *that*!").replace(dp.__version__, '0.0.0'))
+    https://docs.opendp.org/en/v0.0.0/api/user-guide/errors.html#don-t-do-that
+    '''
+    import re
+    import opendp.prelude as dp
+    normed = re.sub(r'\W+', '-', message.lower())
+    normed = re.sub(r'^-+', '', normed)
+    normed = re.sub(r'-+$', '', normed)
+    return f'https://docs.opendp.org/en/v{dp.__version__}/api/user-guide/errors.html#{normed}'
+    
+    

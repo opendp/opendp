@@ -1,8 +1,12 @@
 from doctest import run_docstring_examples, OPTIONFLAGS_BY_NAME
+from pathlib import Path
+import re
+from urllib.parse import urlparse
 
 import pytest
 
 import opendp.prelude as dp
+from opendp._lib import get_error_url
 
 
 def test_number_of_tests_found(request):
@@ -121,3 +125,22 @@ def test_doctest_fuzzy_polars(capsys):
     
     with pytest.raises(Exception, match='FUZZY_DF can not be used with other flags'):
         assert_pass(doctest_in, capsys, {'FUZZY_DF', 'NUMBER'})
+
+
+def test_error_rst_consistency():
+    errors_rst_lines = (Path(__file__).parent.parent.parent / 'docs/source/api/user-guide/errors.rst').read_text().splitlines()
+
+    # Assumes titles are bound by ``...``
+    fragments_from_titles = set(
+        urlparse(get_error_url(line)).fragment
+        for line in errors_rst_lines
+        if re.match(r'^``[^`]+``$', line)
+    )
+    fragments_from_urls = set(
+        match.group(1) for match in [
+            re.search(r'errors\.html#(.+)', line)
+            for line in errors_rst_lines
+        ] if match
+    )
+
+    assert fragments_from_titles == fragments_from_urls
