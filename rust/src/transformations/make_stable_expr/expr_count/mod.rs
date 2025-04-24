@@ -149,7 +149,7 @@ pub(crate) fn counting_query_stability_map<M: UnboundedMetric, const P: usize>(
     // an explanatory example of this math is provided in the tests
     StabilityMap::new_fallible(
         move |(l0, l1, l_inf): &(IntDistance, IntDistance, IntDistance)| {
-            // if l0 partitions may change, then l0_p denotes how sensitivity scales wrt the norm
+            // if l0 groups may change, then l0_p denotes how sensitivity scales wrt the norm
             let l0_p = norm_map(f64::from(*l0))?;
             let l1_p = f64::from(*l1);
             let l_inf_p = f64::from(*l_inf);

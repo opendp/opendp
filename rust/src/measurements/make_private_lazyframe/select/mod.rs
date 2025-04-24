@@ -75,9 +75,9 @@ where
         middle_metric.clone(),
         PartitionDistance(middle_metric.0.clone()),
         // the output distance triple consists of three numbers:
-        // l0: number of changed partitions. Only one partition exists in select
-        // l1: total number of contributions across all partitions
-        // l∞: max number of contributions in any one partition
+        // l0: number of changed groups. Only one group exists in select
+        // l1: total number of contributions across all groups
+        // l∞: max number of contributions in any one group
         StabilityMap::new_fallible(move |d_in: &Bounds| {
             let l1 = d_in
                 .get_bound(&HashSet::new())

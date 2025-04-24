@@ -283,7 +283,7 @@ impl<F: Frame> FrameDomain<F> {
             .filter_map(|m| Some((&m.by, m.max_groups?)))
             .collect();
 
-        // in the worst case, the max partition length is the product of the max partition lengths of the cover
+        // in the worst case, the max group length is the product of the max group lengths of the cover
         margin.max_groups = find_min_covering(by.clone(), all_mngs)
             .map(|cover| {
                 cover
@@ -387,12 +387,15 @@ pub struct Margin {
     /// The columns to group by to form the margin.
     pub by: HashSet<Expr>,
 
-    /// The greatest number of records that can be present in any one partition.
+    /// The greatest number of records that can be present in any one group.
     pub max_length: Option<u32>,
-    /// The greatest number of partitions that can be present.
+    /// The greatest number of groups that can be present.
     pub max_groups: Option<u32>,
 
-    /// Denote whether the unique values and/or in the margin are public.
+    /// Denote whether all datasets have the same keys and/or lengths.
+    ///
+    /// This is more general than a domain descriptor;
+    /// it denotes a multiverse of potential domains.
     pub invariant: Option<Invariant>,
 }
 
@@ -402,9 +405,9 @@ pub struct Margin {
 /// Order of elements in the enum is significant:
 /// variants are ordered by how restrictive they are as descriptors.
 pub enum Invariant {
-    /// The distance between data sets with different margin keys is infinite.
+    /// All datasets share the same group keys.
     Keys,
-    /// The distance between data sets with different margin keys or partition lengths is infinite.
+    /// All datasets share the same group keys and group lengths.
     Lengths,
     // `Order` is also a potential invariant, for dropping the shuffle after collect.
 }
@@ -474,19 +477,17 @@ impl Margin {
     }
 
     /// # Proof Definition
-    /// Returns the greatest number of partitions that may differ
+    /// Returns the greatest number of groups that may differ
     /// when at most `l_1` records may be added or removed,
-    /// given optional domain descriptor `max_groups`
-    /// and optional metric descriptor `num_groups`.
+    /// given optional domain descriptor `max_groups`.
     pub(crate) fn l_0(&self, l_1: u32) -> u32 {
         self.max_groups.unwrap_or(l_1).min(l_1)
     }
 
     /// # Proof Definition
-    /// Returns the greatest number of records that may be added or removed in any any one partition
+    /// Returns the greatest number of records that may be added or removed in any any one group
     /// when at most `l_1` records may be added or removed,
-    /// given optional domain descriptor `max_length`
-    /// and optional metric descriptor `per_group`.
+    /// given optional domain descriptor `max_length`.
     pub(crate) fn l_inf(&self, l_1: u32) -> u32 {
         self.max_length.unwrap_or(l_1).min(l_1)
     }

@@ -103,7 +103,7 @@ where
 /// * `output_measure` - How to measure privacy loss.
 /// * `lazyframe` - A description of the computations to be run, in the form of a [`LazyFrame`].
 /// * `global_scale` - Optional. A tune-able parameter that affects the privacy-utility tradeoff.
-/// * `threshold` - Optional. Minimum number of rows in each released partition.
+/// * `threshold` - Optional. Minimum number of rows in each released group.
 pub fn make_private_lazyframe<MI: Metric, MO: 'static + Measure>(
     input_domain: LazyFrameDomain,
     input_metric: MI,

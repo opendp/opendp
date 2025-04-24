@@ -86,7 +86,7 @@ Our examples will use just a few. (Descriptions are copied from the User Guide.)
      - Single Year
 
 While the dataset does not contain a unique identifier for individuals,
-we've generated a column of unique identifiers ``PIDENT`` for the purpose of demonstrating library functionality.
+we've generated a synthetic column of unique identifiers, ``PIDENT``, for the purpose of demonstrating library functionality.
 
 
 Compositor Overview

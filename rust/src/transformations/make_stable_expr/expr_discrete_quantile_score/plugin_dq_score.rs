@@ -68,7 +68,7 @@ pub(crate) struct DiscreteQuantileScorePlugin {
     pub candidates: Series,
     /// Alpha numerator, alpha denominator
     pub alpha: (u64, u64),
-    // Max partition length
+    // Max group length
     pub size_limit: u64,
 }
 

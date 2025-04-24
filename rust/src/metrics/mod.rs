@@ -433,23 +433,22 @@ impl<T: CheckAtom, Q> MetricSpace for (AtomDomain<T>, AbsoluteDistance<Q>) {
     }
 }
 
-/// The $L^0$, $L\infty$ norms of the per-partition distances between data sets.
+/// The $L^0$, $L\infty$ norms of the group-wise distances between data sets.
 ///
-/// The $L^0$ norm counts the number of partitions that have changed.
-/// The $L\infty$ norm is the greatest change in any one partition.
+/// The $L^0$ norm counts the number of groups that have changed.
+/// The $L\infty$ norm is the greatest change in any one group.
 ///
 /// # Proof Definition
 ///
 /// ### $d$-closeness
-/// For any two partitionings $x, x' \in \texttt{D}$ and $d$ of type `(u32, M::Distance)`,
-/// we say that $x, x'$ are $d = (l0, li)$-close under the the partition distance metric whenever
+/// For any two groupings $x, x' \in \texttt{D}$ and $d$ of type `(u32, M::Distance)`,
+/// we say that $x, x'$ are $d = (l0, li)$-close under the the parallel distance metric whenever
 ///
 /// ```math
 /// d(x, x') = (|d_M(x, x')|_0, |d_M(x, x')|_\infty) \leq (l0, li) = d
 /// ```
 ///
 /// Both numbers in the 2-tuple must be less than their respective values to be $d$-close.
-///
 #[derive(Clone, PartialEq)]
 pub struct Parallel<M: Metric>(pub M);
 impl<M: Metric + Default> Default for Parallel<M> {
@@ -468,24 +467,23 @@ impl<M: Metric> Metric for Parallel<M> {
     type Distance = (IntDistance, M::Distance);
 }
 
-/// The $L^0$, $L^1$, $L\infty$ norms of the per-partition distances between data sets.
+/// The $L^0$, $L^1$, $L\infty$ norms of the group-wise distances between data sets.
 ///
-/// The $L^0$ norm counts the number of partitions that have changed.
+/// The $L^0$ norm counts the number of groups that have changed.
 /// The $L^1$ norm is the total change.
-/// The $L\infty$ norm is the greatest change in any one partition.
+/// The $L\infty$ norm is the greatest change in any one group.
 ///
 /// # Proof Definition
 ///
 /// ### $d$-closeness
-/// For any two partitionings $u, v \in \texttt{D}$ and $d$ of type `(usize, M::Distance, M::Distance)`,
-/// we say that $u, v$ are $d$-close under the the partition distance metric whenever
+/// For any two groupings $x, x' \in \texttt{D}$ and $d$ of type `(usize, M::Distance, M::Distance)`,
+/// we say that $x, x'$ are $d$-close under the the partition distance metric whenever
 ///
 /// ```math
 /// d(x, x') = |d_M(x, x')|_0, |d_M(x, x')|_1, |d_M(x, x')|_\infty \leq d
 /// ```
 ///
 /// All three numbers in the triple must be less than their respective values in $d$ to be $d$-close.
-///
 #[derive(Clone, PartialEq)]
 pub struct PartitionDistance<M: Metric>(pub M);
 impl<M: Metric + Default> Default for PartitionDistance<M> {

@@ -78,7 +78,7 @@ pub(crate) fn match_truncations(
     if match_group_by_truncation(&plan, identifier).is_some() {
         return fallible!(
             MakeTransformation,
-            "groupby truncation must be the last truncation in the plan. Otherwise the groupby truncation may invalidate later truncations."
+            "Groupby truncation must be the last truncation in the plan. Otherwise the groupby truncation may invalidate later truncations."
         );
     }
     // since the parse descends to the source,

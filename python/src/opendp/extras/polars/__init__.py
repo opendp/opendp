@@ -857,7 +857,7 @@ class LazyFrameQuery:
         self,
         k: int,
         by: list[Any] | None = None,
-        keep: Literal["first", "last", "sample"] = "first",
+        keep: Literal["sample", "first", "last"] = "sample",
         sort_by: list[Any] | None = None,
         descending: bool | Sequence[bool] = False,
         nulls_last: bool | Sequence[bool] = False,
@@ -913,9 +913,9 @@ class LazyFrameQuery:
         """
         Limit the number of groups an individual may influence.
 
-        :param k: the number of partitions to keep for each identifier
-        :param by: which grouping keys to use for the partitioning
-        :param keep: which partitions to keep for each identifier
+        :param k: the number of groups to keep for each identifier
+        :param by: when grouped by these grouping columns
+        :param keep: which groups to keep for each identifier
         """
         input_metric = self._query._chain[1]
 
@@ -1000,7 +1000,7 @@ class LazyFrameQuery:
 
         If ``alpha`` is passed, the resulting data frame includes an ``accuracy`` column.
 
-        If a threshold is configured for censoring small/sensitive partitions,
+        If a threshold is configured for censoring small/sensitive groups,
         a threshold column will be included,
         containing the cutoff for the respective count query being thresholded.
 
@@ -1095,7 +1095,7 @@ class Margin:
     max_length: int | None = None
     """An upper bound on the number of records in any one group.
 
-    The library may request you set a max dataset or partition length (for instance, for float sums).
+    The library may request you set a max dataset or group length (for instance, for float sums).
     If you don't know how many records are in the data, you can specify a very loose upper bound,
     for example, the size of the total population you are sampling from.
 
@@ -1110,7 +1110,7 @@ class Margin:
     """Identifies properties of grouped data that are considered invariant.
     
     * ``"keys"`` designates that keys are not protected
-    * ``"lengths"`` designates that both keys and partition lengths are not protected
+    * ``"lengths"`` designates that both keys and group lengths are not protected
 
     By the analysis of invariants conducted in
     `Formal Privacy Guarantees with Invariant Statistics <https://arxiv.org/abs/2410.17468>`_,
@@ -1201,8 +1201,8 @@ class Margin:
 @dataclass
 class Bound(object):
     """
-    The ``Bound`` class is used to describe bounds on the number of contributions an individual may make,
-    and the number of partitions an individual may influence.
+    The ``Bound`` class is used to describe bounds on the number of 
+    contributed rows per-group and the number of contributed groups.
     """
 
     by: Sequence = field(default_factory=list)
@@ -1215,7 +1215,7 @@ class Bound(object):
     """
 
     num_groups: int | None = None
-    """The greatest number of partitions any one individual can contribute to."""
+    """The greatest number of groups any one individual can contribute."""
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Bound):

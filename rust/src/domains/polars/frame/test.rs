@@ -53,7 +53,7 @@ fn test_get_margin_max_partition_descriptors() -> Fallible<()> {
     Ok(())
 }
 
-fn assert_partition_descriptors<F: Frame>(
+fn assert_group_descriptors<F: Frame>(
     domain: &FrameDomain<F>,
     by: &[&str],
     max_groups: Option<u32>,
@@ -72,10 +72,10 @@ fn test_get_margin_covering_small_to_large() -> Fallible<()> {
     .with_margin(Margin::by(["A"]).with_max_groups(10))?
     .with_margin(Margin::by(["B"]).with_max_groups(11))?;
 
-    assert_partition_descriptors(&lf_domain, &["A", "B"], Some(110));
-    assert_partition_descriptors(&lf_domain, &["B"], Some(11));
-    assert_partition_descriptors(&lf_domain, &[], Some(1));
-    assert_partition_descriptors(&lf_domain, &["C"], None);
+    assert_group_descriptors(&lf_domain, &["A", "B"], Some(110));
+    assert_group_descriptors(&lf_domain, &["B"], Some(11));
+    assert_group_descriptors(&lf_domain, &[], Some(1));
+    assert_group_descriptors(&lf_domain, &["C"], None);
     Ok(())
 }
 
@@ -88,10 +88,10 @@ fn test_get_margin_covering_large_to_small() -> Fallible<()> {
     ])?
     .with_margin(Margin::by(["A", "B"]).with_max_groups(10))?;
 
-    assert_partition_descriptors(&lf_domain, &["A"], Some(10));
-    assert_partition_descriptors(&lf_domain, &["B"], Some(10));
-    assert_partition_descriptors(&lf_domain, &[], Some(1));
-    assert_partition_descriptors(&lf_domain, &["C"], None);
+    assert_group_descriptors(&lf_domain, &["A"], Some(10));
+    assert_group_descriptors(&lf_domain, &["B"], Some(10));
+    assert_group_descriptors(&lf_domain, &[], Some(1));
+    assert_group_descriptors(&lf_domain, &["C"], None);
     Ok(())
 }
 

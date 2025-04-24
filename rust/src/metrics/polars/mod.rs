@@ -69,10 +69,10 @@ impl Metric for ChangeOneIdDistance {
 /// ## `d`-closeness
 /// For any two datasets $x, x' \in \texttt{D}$,
 /// and for each distance bound $d_i$ of type [`Bounds`],
-/// let $\pi_{d_i}(x)$ and $\pi_{d_i}(x')$ be partitionings of $x, x'$ with respect to $d_i$,
-/// and let $\pi_{d_i}(x)_j$ denote the data in partition j of $\pi_{d_i}(x)$.
+/// let $\pi_{d_i}(x)$ and $\pi_{d_i}(x')$ be groupings of $x, x'$ with respect to $d_i$,
+/// and let $\pi_{d_i}(x)_j$ denote the data in group j of $\pi_{d_i}(x)$.
 ///
-/// Define a vector of per-partition distances $s_i$ with respect to partitioning $d_i$ as follows:
+/// Define a vector of per-group distances $s_i$ with respect to grouping $d_i$ as follows:
 ///
 /// ```math
 /// s_i = [d_M(\pi_{d_i}(x)_0, \pi_{d_i}(x')_0), \ldots, d_M(\pi_{d_i}(x)_r, \pi_{d_i}(x')_r)],
@@ -138,7 +138,7 @@ impl Bounds {
             .filter(|m| m.by.is_subset(by))
             .collect::<Vec<&Bound>>();
 
-        // max partition contributions is the fewest partition contributions
+        // max per-group contributions is the fewest per-group contributions
         // of any grouping as coarse or coarser than the current grouping
         bound.per_group = (subset_bounds.iter()).filter_map(|m| m.per_group).min();
 
@@ -146,7 +146,7 @@ impl Bounds {
             .filter_map(|b| Some((&b.by, b.num_groups?)))
             .collect();
 
-        // in the worst case, the max partition contributions is the product of the max partition contributions of the cover
+        // in the worst case, the max num-group contributions is the product of the max num-group contributions of the cover
         bound.num_groups = find_min_covering(by.clone(), all_mips)
             .map(|cover| {
                 cover
@@ -175,19 +175,13 @@ impl Bounds {
 
 #[derive(Clone, PartialEq, Default, Debug)]
 pub struct Bound {
-    /// The columns data is grouped by to partition the data into groups.
+    /// The columns to group by.
     pub by: HashSet<Expr>,
 
-    /// The greatest number of contributions that can be made by one unit to any one partition.
-    ///
-    /// This affects how margins interact with the metric.
-    /// The distance between data sets differing by more than this quantity is considered infinite.
+    /// The greatest number of contributions that can be made by one unit to any one group.
     pub per_group: Option<u32>,
 
-    /// The greatest number of partitions that can be contributed to.
-    ///
-    /// This affects how margins interact with the metric.
-    /// The distance between data sets differing by more than this quantity is considered infinite.
+    /// The greatest number of groups that can be contributed.
     pub num_groups: Option<u32>,
 }
 

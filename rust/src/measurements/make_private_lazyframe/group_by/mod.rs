@@ -170,7 +170,7 @@ where
                     let name = dp_expr.clone().meta().output_name()?;
                     let null_expr = null_expr.ok_or_else(|| {
                         let name = dp_expr.clone().meta().output_name().map_or_else(|_| "an expression".to_string(), |n| format!("column \"{n}\""));
-                        err!(MakeMeasurement, "{} can't be joined with an explicit key set because missing partitions cannot be filled", name)
+                        err!(MakeMeasurement, "{} can't be joined with an explicit key set because missing groups cannot be filled", name)
                     })?;
 
                     Ok(col(name).fill_null(null_expr))

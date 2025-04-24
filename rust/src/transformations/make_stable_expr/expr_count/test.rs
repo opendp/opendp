@@ -73,9 +73,9 @@ fn test_grouped_make_len_expr() -> Fallible<()> {
 
         // assume we're in a grouping context.
         // By the following triple, we know
-        // 1. an individual can influence up to 10 partitions (l0)
+        // 1. an individual can influence up to 10 groups (l0)
         // 2. an individual can contribute up to 10 records total (l1)
-        // 3. an individual can contribute at most 1 record to any partition (linf)
+        // 3. an individual can contribute at most 1 record to any group (linf)
         let sensitivity = t_sum.map(&(10, 10, 1))?;
 
         // The sensitivity d_out under the l2 distance in unbounded DP is given by the following formula:
@@ -85,7 +85,7 @@ fn test_grouped_make_len_expr() -> Fallible<()> {
         // = min(3.16227, 10)
         // = 3.16227
 
-        // that is, in the worst case, we know the sum will differ by at most 1 in 10 partitions,
+        // that is, in the worst case, we know the sum will differ by at most 1 in 10 groups,
         // so the l2 distance between any two outputs on neighboring data sets is at most 3.16227
 
         // The sensitivity is slightly higher to account for potential rounding errors.
