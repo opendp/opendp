@@ -11,7 +11,7 @@ use crate::{
         MakeNoiseThreshold, NoiseThresholdPrivacyMap, ZExpFamily,
         nature::float::{
             FloatExpFamily, find_nearest_multiple_of_2k, get_min_k, get_rounding_distance,
-            integerize_scale, x_mul_2k,
+            integerize_radius, integerize_scale, x_mul_2k,
         },
     },
     metrics::{AbsoluteDistance, L0PInfDistance},
@@ -29,7 +29,7 @@ impl<TK, TV, const P: usize, QI: Number, MO: 'static + Measure>
         MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
         L0PInfDistance<P, AbsoluteDistance<QI>>,
         MO,
-    > for FloatExpFamily<P>
+    > for FloatExpFamily<P, TV>
 where
     TK: Hashable,
     TV: Float,
@@ -53,9 +53,10 @@ where
             MO,
         >,
     > {
-        let FloatExpFamily { scale, k } = self;
+        let FloatExpFamily { scale, k, radius } = self;
         let distribution = ZExpFamily {
             scale: integerize_scale(scale, k)?,
+            radius: integerize_radius(radius, k)?,
         };
 
         if threshold.is_sign_negative() {

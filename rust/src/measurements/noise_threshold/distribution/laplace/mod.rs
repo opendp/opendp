@@ -58,17 +58,22 @@ pub fn make_laplace_threshold<DI: NoiseDomain, MI: Metric, MO: 'static + Measure
     k: Option<i32>,
 ) -> Fallible<Measurement<DI, DI::Carrier, MI, MO>>
 where
-    DiscreteLaplace: MakeNoiseThreshold<DI, MI, MO, Threshold = DI::Atom>,
+    DiscreteLaplace<DI::Atom>: MakeNoiseThreshold<DI, MI, MO, Threshold = DI::Atom>,
     (DI, MI): MetricSpace,
 {
-    DiscreteLaplace { scale, k }.make_noise_threshold((input_domain, input_metric), threshold)
+    DiscreteLaplace {
+        scale,
+        k,
+        radius: None,
+    }
+    .make_noise_threshold((input_domain, input_metric), threshold)
 }
 
 #[proven(
     proof_path = "measurements/noise_threshold/distribution/laplace/MakeNoiseThreshold_for_DiscreteLaplace.tex"
 )]
 impl<DI: NoiseDomain, MI: Metric, MO: 'static + Measure> MakeNoiseThreshold<DI, MI, MO>
-    for DiscreteLaplace
+    for DiscreteLaplace<DI::Atom>
 where
     (DI, MI): MetricSpace,
     DI::Atom: Nature,
@@ -80,7 +85,8 @@ where
         input_space: (DI, MI),
         threshold: DI::Atom,
     ) -> Fallible<Measurement<DI, DI::Carrier, MI, MO>> {
-        DI::Atom::new_distribution(self.scale, self.k)?.make_noise_threshold(input_space, threshold)
+        DI::Atom::new_distribution(self.scale, self.k, None)?
+            .make_noise_threshold(input_space, threshold)
     }
 }
 
@@ -99,7 +105,10 @@ impl NoiseThresholdPrivacyMap<L01InfDistance<AbsoluteDistance<RBig>>, Approximat
     {
         let noise_privacy_map =
             self.noise_privacy_map(&L1Distance::default(), &output_measure.0)?;
-        let ZExpFamily { scale } = self.clone();
+        let ZExpFamily { scale, radius } = self.clone();
+        if radius.is_some() {
+            return fallible!(FailedMap, "thresholded noise does not support radius");
+        }
 
         Ok(PrivacyMap::new_fallible(
             move |(l0, l1, li): &(u32, RBig, RBig)| {

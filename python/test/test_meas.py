@@ -67,6 +67,11 @@ def test_vector_laplace():
     print("base laplace:", meas([80., 90., 100.]))
     assert meas.check(1., 1.3)
 
+def test_laplace_radius():
+    input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
+    meas = dp.m.make_laplace(*input_space, 10.5, radius=10.0)
+    print("base laplace:", meas(100.))
+    print("epsilon, delta", meas.map(1.))
 
 def test_gaussian_smoothed_max_divergence():
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
@@ -97,6 +102,13 @@ def test_vector_gaussian():
     print("base gaussian:", meas([80., 90., 100.]))
     assert meas.check(1., (0.6, delta))
 
+def test_gaussian_radius():
+    input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
+    meas = input_space >> dp.m.then_gaussian(scale=1.5, radius=10.0)
+    print("base gaussian:", meas(100.))
+
+    rho, delta = meas.map(d_in=1.)
+    print("rho, delta:", rho, delta)
 
 def test_geometric():
     input_space = dp.atom_domain(T=int), dp.absolute_distance(T=int)

@@ -25,6 +25,7 @@ fn test_laplace_tail(tail: UBig, theoretical_alpha: f64, label: &str) -> Fallibl
         Default::default(),
         scale,
         None,
+        None,
     )?;
     let n = 50_000;
     let empirical_alpha = (0..n)

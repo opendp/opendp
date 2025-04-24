@@ -17,9 +17,10 @@ pub(crate) use utilities::*;
 #[cfg(test)]
 mod test;
 
-pub struct FloatExpFamily<const P: usize> {
+pub struct FloatExpFamily<const P: usize, T> {
     pub scale: f64,
     pub k: i32,
+    pub radius: Option<T>,
 }
 
 /// Float vector mechanism
@@ -27,7 +28,7 @@ pub struct FloatExpFamily<const P: usize> {
     proof_path = "measurements/noise/nature/float/MakeNoise_VectorDomain_for_FloatExpFamily.tex"
 )]
 impl<T: Float, const P: usize, QI: Number, MO: 'static + Measure>
-    MakeNoise<VectorDomain<AtomDomain<T>>, LpDistance<P, QI>, MO> for FloatExpFamily<P>
+    MakeNoise<VectorDomain<AtomDomain<T>>, LpDistance<P, QI>, MO> for FloatExpFamily<P, T>
 where
     i32: ExactIntCast<<T as FloatBits>::Bits>,
     RBig: TryFrom<T> + TryFrom<QI>,
@@ -37,9 +38,11 @@ where
         self,
         input_space: (VectorDomain<AtomDomain<T>>, LpDistance<P, QI>),
     ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, Vec<T>, LpDistance<P, QI>, MO>> {
-        let FloatExpFamily { scale, k } = self;
+        let FloatExpFamily { scale, k, radius } = self;
+
         let distribution = ZExpFamily {
             scale: integerize_scale(scale, k)?,
+            radius: integerize_radius(radius, k)?,
         };
 
         let t_int = make_float_to_bigint(input_space, k)?;
@@ -104,7 +107,7 @@ where
     proof_path = "measurements/noise/nature/float/MakeNoise_AtomDomain_for_FloatExpFamily.tex"
 )]
 impl<T: Float, const P: usize, QI: Number, MO: 'static + Measure>
-    MakeNoise<AtomDomain<T>, AbsoluteDistance<QI>, MO> for FloatExpFamily<P>
+    MakeNoise<AtomDomain<T>, AbsoluteDistance<QI>, MO> for FloatExpFamily<P, T>
 where
     i32: ExactIntCast<<T as FloatBits>::Bits>,
     RBig: TryFrom<T> + TryFrom<QI>,

@@ -30,14 +30,20 @@ fn test_make_noise_intexpfamily() -> Fallible<()> {
     );
 
     assert!(
-        IntExpFamily::<1> { scale: 1.0 }
-            .make_noise_threshold(space.clone(), 0)
-            .is_ok()
+        IntExpFamily::<1, _> {
+            scale: 1.0,
+            radius: None
+        }
+        .make_noise_threshold(space.clone(), 0)
+        .is_ok()
     );
     assert!(
-        IntExpFamily::<1> { scale: f64::NAN }
-            .make_noise_threshold(space.clone(), 0)
-            .is_err()
+        IntExpFamily::<1, _> {
+            scale: f64::NAN,
+            radius: None
+        }
+        .make_noise_threshold(space.clone(), 0)
+        .is_err()
     );
 
     Ok(())

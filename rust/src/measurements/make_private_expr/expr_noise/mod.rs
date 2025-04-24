@@ -127,32 +127,33 @@ pub enum Support {
 pub trait NoiseExprMeasure: 'static + Measure<Distance = f64> {
     type Metric: 'static + OuterMetric<Distance = f64>;
     const DISTRIBUTION: Distribution;
-    type Dist;
+    type Dist<A>;
     fn map_function<T: Number>(
         input_metric: &Self::Metric,
         scale: f64,
     ) -> Fallible<PrivacyMap<Self::Metric, Self>>
     where
-        Self::Dist: MakeNoise<VectorDomain<AtomDomain<T>>, Self::Metric, Self>,
+        Self::Dist<T>: MakeNoise<VectorDomain<AtomDomain<T>>, Self::Metric, Self>,
         (VectorDomain<AtomDomain<T>>, Self::Metric): MetricSpace;
 }
 
 impl NoiseExprMeasure for MaxDivergence {
     type Metric = L1Distance<f64>;
     const DISTRIBUTION: Distribution = Distribution::Laplace;
-    type Dist = DiscreteLaplace;
+    type Dist<A> = DiscreteLaplace<A>;
     fn map_function<T: Number>(
         input_metric: &Self::Metric,
         scale: f64,
     ) -> Fallible<PrivacyMap<Self::Metric, Self>>
     where
-        Self::Dist: MakeNoise<VectorDomain<AtomDomain<T>>, Self::Metric, Self>,
+        Self::Dist<T>: MakeNoise<VectorDomain<AtomDomain<T>>, Self::Metric, Self>,
         (VectorDomain<AtomDomain<T>>, Self::Metric): MetricSpace,
     {
         Ok(make_laplace(
             VectorDomain::new(AtomDomain::<T>::new_non_nan()),
             input_metric.clone(),
             scale,
+            None,
             None,
         )?
         .privacy_map
@@ -162,19 +163,20 @@ impl NoiseExprMeasure for MaxDivergence {
 impl NoiseExprMeasure for ZeroConcentratedDivergence {
     type Metric = L2Distance<f64>;
     const DISTRIBUTION: Distribution = Distribution::Gaussian;
-    type Dist = DiscreteGaussian;
+    type Dist<A> = DiscreteGaussian<A>;
     fn map_function<T: Number>(
         input_metric: &Self::Metric,
         scale: f64,
     ) -> Fallible<PrivacyMap<Self::Metric, Self>>
     where
-        Self::Dist: MakeNoise<VectorDomain<AtomDomain<T>>, Self::Metric, Self>,
+        Self::Dist<T>: MakeNoise<VectorDomain<AtomDomain<T>>, Self::Metric, Self>,
         (VectorDomain<AtomDomain<T>>, Self::Metric): MetricSpace,
     {
         Ok(make_gaussian(
             VectorDomain::new(AtomDomain::<T>::new_non_nan()),
             input_metric.clone(),
             scale,
+            None,
             None,
         )?
         .privacy_map
@@ -199,14 +201,14 @@ where
     Expr: StableExpr<L01InfDistance<MI>, MO::Metric>,
     (ExprDomain, MO::Metric): MetricSpace,
     // This is ugly, but necessary because MO is generic
-    MO::Dist: MakeNoise<VectorDomain<AtomDomain<u32>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<u64>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<i8>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<i16>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<i32>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<i64>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<f32>>, MO::Metric, MO>
-        + MakeNoise<VectorDomain<AtomDomain<f64>>, MO::Metric, MO>,
+    MO::Dist<u32>: MakeNoise<VectorDomain<AtomDomain<u32>>, MO::Metric, MO>,
+    MO::Dist<u64>: MakeNoise<VectorDomain<AtomDomain<u64>>, MO::Metric, MO>,
+    MO::Dist<i8>: MakeNoise<VectorDomain<AtomDomain<i8>>, MO::Metric, MO>,
+    MO::Dist<i16>: MakeNoise<VectorDomain<AtomDomain<i16>>, MO::Metric, MO>,
+    MO::Dist<i32>: MakeNoise<VectorDomain<AtomDomain<i32>>, MO::Metric, MO>,
+    MO::Dist<i64>: MakeNoise<VectorDomain<AtomDomain<i64>>, MO::Metric, MO>,
+    MO::Dist<f32>: MakeNoise<VectorDomain<AtomDomain<f32>>, MO::Metric, MO>,
+    MO::Dist<f64>: MakeNoise<VectorDomain<AtomDomain<f64>>, MO::Metric, MO>,
     (VectorDomain<AtomDomain<u32>>, MO::Metric): MetricSpace,
     (VectorDomain<AtomDomain<u64>>, MO::Metric): MetricSpace,
     (VectorDomain<AtomDomain<i8>>, MO::Metric): MetricSpace,
@@ -391,17 +393,17 @@ where
     <T::NumericPolars as PolarsDataType>::Array: ArrayFromIter<T> + ArrayFromIter<Option<T>>,
     // must be able to convert the chunked array to a series
     ChunkedArray<T::NumericPolars>: IntoSeries,
-    DiscreteLaplace: MakeNoise<VectorDomain<AtomDomain<T>>, L1Distance<f64>, MaxDivergence>,
-    DiscreteGaussian:
+    DiscreteLaplace<T>: MakeNoise<VectorDomain<AtomDomain<T>>, L1Distance<f64>, MaxDivergence>,
+    DiscreteGaussian<T>:
         MakeNoise<VectorDomain<AtomDomain<T>>, L2Distance<f64>, ZeroConcentratedDivergence>,
     RBig: TryFrom<T>,
 {
     let domain = VectorDomain::new(AtomDomain::<T>::new_non_nan());
     let function = match distribution {
-        Distribution::Laplace => make_laplace(domain, L1Distance::default(), scale, None)?
+        Distribution::Laplace => make_laplace(domain, L1Distance::default(), scale, None, None)?
             .function
             .clone(),
-        Distribution::Gaussian => make_gaussian(domain, L2Distance::default(), scale, None)?
+        Distribution::Gaussian => make_gaussian(domain, L2Distance::default(), scale, None, None)?
             .function
             .clone(),
     };

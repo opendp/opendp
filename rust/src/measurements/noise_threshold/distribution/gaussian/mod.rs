@@ -59,17 +59,22 @@ pub fn make_gaussian_threshold<DI: NoiseDomain, MI: Metric, MO: 'static + Measur
     k: Option<i32>,
 ) -> Fallible<Measurement<DI, DI::Carrier, MI, MO>>
 where
-    DiscreteGaussian: MakeNoiseThreshold<DI, MI, MO, Threshold = DI::Atom>,
+    DiscreteGaussian<DI::Atom>: MakeNoiseThreshold<DI, MI, MO, Threshold = DI::Atom>,
     (DI, MI): MetricSpace,
 {
-    DiscreteGaussian { scale, k }.make_noise_threshold((input_domain, input_metric), threshold)
+    DiscreteGaussian {
+        scale,
+        k,
+        radius: None,
+    }
+    .make_noise_threshold((input_domain, input_metric), threshold)
 }
 
 #[proven(
     proof_path = "measurements/noise_threshold/distribution/gaussian/MakeNoiseThreshold_for_DiscreteGaussian.tex"
 )]
 impl<DI: NoiseDomain, MI: Metric, MO: 'static + Measure> MakeNoiseThreshold<DI, MI, MO>
-    for DiscreteGaussian
+    for DiscreteGaussian<DI::Atom>
 where
     (DI, MI): MetricSpace,
     DI::Atom: Nature,
@@ -81,7 +86,8 @@ where
         input_space: (DI, MI),
         threshold: DI::Atom,
     ) -> Fallible<Measurement<DI, DI::Carrier, MI, MO>> {
-        DI::Atom::new_distribution(self.scale, self.k)?.make_noise_threshold(input_space, threshold)
+        DI::Atom::new_distribution(self.scale, self.k, None)?
+            .make_noise_threshold(input_space, threshold)
     }
 }
 
@@ -104,7 +110,13 @@ impl
     > {
         let noise_privacy_map =
             self.noise_privacy_map(&L2Distance::default(), &output_measure.0)?;
-        let ZExpFamily { scale } = self.clone();
+        let ZExpFamily { scale, radius } = self.clone();
+        if radius.is_some() {
+            return fallible!(
+                FailedMap,
+                "thresholded noise mechanisms do not support radius"
+            );
+        }
 
         Ok(PrivacyMap::new_fallible(
             move |(l0, l2, li): &(u32, RBig, RBig)| {

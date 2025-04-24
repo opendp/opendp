@@ -11,10 +11,11 @@ use super::*;
 fn test_zCDP_to_approxDP_nontrivial() -> Fallible<()> {
     let d_in = 1.0;
     let scale = 4.0;
-    let profile = make_zCDP_to_approxDP(make_gaussian(
+    let profile = make_zCDP_to_approxDP(make_gaussian::<_, _, ZeroConcentratedDivergence>(
         AtomDomain::<f64>::new_non_nan(),
         AbsoluteDistance::<f64>::default(),
         scale,
+        None,
         None,
     )?)?
     .map(&d_in)?;
@@ -42,6 +43,7 @@ fn test_zCDP_to_approxDP_insensitive() -> Fallible<()> {
         AbsoluteDistance::<f64>::default(),
         4.,
         None,
+        None,
     )?)?
     .map(&0.0)?;
 
@@ -54,10 +56,11 @@ fn test_zCDP_to_approxDP_insensitive() -> Fallible<()> {
 
 #[test]
 fn test_zCDP_to_approxDP_nonprivate() -> Fallible<()> {
-    let profile = make_zCDP_to_approxDP(make_gaussian(
+    let profile = make_zCDP_to_approxDP(make_gaussian::<_, _, ZeroConcentratedDivergence>(
         AtomDomain::<f64>::new_non_nan(),
         AbsoluteDistance::<f64>::default(),
         0.,
+        None,
         None,
     )?)?
     .map(&1.0)?;
@@ -76,6 +79,7 @@ fn test_zCDP_to_approxDP_insensitive_nonprivate() -> Fallible<()> {
         AbsoluteDistance::<f64>::default(),
         0.,
         None,
+        None,
     )?)?
     .map(&0.0)?;
 
@@ -92,6 +96,7 @@ fn test_approx_zCDP_to_approx_approxDP() -> Fallible<()> {
         AtomDomain::<f64>::new_non_nan(),
         AbsoluteDistance::<f64>::default(),
         1.,
+        None,
         None,
     )?;
 

@@ -52,7 +52,7 @@ pub fn make_geometric<DI: NoiseDomain, MI: Metric, MO: Measure>(
     bounds: Option<(DI::Atom, DI::Atom)>,
 ) -> Fallible<Measurement<DI, DI::Carrier, MI, MO>>
 where
-    DiscreteLaplace: MakeNoise<DI, MI, MO>,
+    DiscreteLaplace<DI::Atom>: MakeNoise<DI, MI, MO>,
     ConstantTimeGeometric<DI::Atom>: MakeNoise<DI, MI, MO>,
     (DI, MI): MetricSpace,
 {
@@ -60,7 +60,12 @@ where
     if let Some(bounds) = bounds {
         ConstantTimeGeometric { scale, bounds }.make_noise(input_space)
     } else {
-        DiscreteLaplace { scale, k: None }.make_noise(input_space)
+        DiscreteLaplace {
+            scale,
+            k: None,
+            radius: None,
+        }
+        .make_noise(input_space)
     }
 }
 
@@ -119,6 +124,7 @@ where
         let distribution = ZExpFamily {
             scale: RBig::from_f64(scale)
                 .ok_or_else(|| err!(MakeTransformation, "scale ({}) must be finite", scale))?,
+            radius: None,
         };
         let output_measure = MO::default();
 

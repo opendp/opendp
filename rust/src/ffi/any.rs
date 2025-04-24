@@ -729,10 +729,11 @@ mod tests {
             .into_any();
         let t5 = transformations::then_clamp::<_, SymmetricDistance>((0.0, 10.0)).into_any();
         let t6 = transformations::then_sum::<SymmetricDistance, f64>().into_any();
-        let m1 = measurements::make_laplace(
+        let m1 = measurements::make_laplace::<_, _, MaxDivergence>(
             AtomDomain::<f64>::new_non_nan(),
             AbsoluteDistance::<f64>::default(),
             0.0,
+            None,
             None,
         )?
         .into_any();

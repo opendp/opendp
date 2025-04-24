@@ -1,4 +1,8 @@
-use dashu::{integer::IBig, rational::RBig};
+use dashu::{
+    base::AbsOrd,
+    integer::{IBig, UBig},
+    rational::RBig,
+};
 use opendp_derive::proven;
 
 use crate::{
@@ -72,6 +76,7 @@ pub trait NoisePrivacyMap<MI: Metric, MO: Measure>: Sample {
 #[derive(Clone)]
 pub struct ZExpFamily<const P: usize> {
     pub scale: RBig,
+    pub radius: Option<UBig>,
 }
 
 pub trait Sample: 'static + Clone + Send + Sync {
@@ -86,7 +91,18 @@ pub trait Sample: 'static + Clone + Send + Sync {
 #[proven(proof_path = "measurements/noise/Sample_for_ZExpFamily1.tex")]
 impl Sample for ZExpFamily<1> {
     fn sample(&self, shift: &IBig) -> Fallible<IBig> {
-        Ok(shift + sample_discrete_laplace(self.scale.clone())?)
+        let noise = if let Some(ref radius) = self.radius {
+            loop {
+                let noise = sample_discrete_laplace(self.scale.clone())?;
+                if noise.abs_cmp(radius).is_le() {
+                    break noise;
+                }
+            }
+        } else {
+            sample_discrete_laplace(self.scale.clone())?
+        };
+
+        Ok(shift + noise)
     }
 }
 
