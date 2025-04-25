@@ -35,6 +35,7 @@ None
 \end{theorem}
 
 \begin{proof}
+    The postconditions can be directly checked:
     \begin{enumerate}
         \item \texttt{candidates} is non-empty, by the check on line \ref{empty}
         \item \texttt{candidates} is strictly increasing, 
@@ -42,7 +43,7 @@ None
         \item \texttt{candidates} is totally ordered, 
             because no comparisons may fail
     \end{enumerate}
-    The postcondition holds.
+    Therefore the postcondition holds.
 \end{proof}
 
 \end{document}
