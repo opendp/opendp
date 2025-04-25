@@ -39,6 +39,8 @@ where
     (DslPlanDomain, FrameDistance<MI>): MetricSpace,
     (DslPlanDomain, FrameDistance<MI::EventMetric>): MetricSpace,
 {
+    let is_truncated = input_metric.0.identifier().is_some();
+
     let DslPlan::Select { expr, input, .. } = plan.clone() else {
         return fallible!(MakeMeasurement, "Expected selection in logical plan");
     };
@@ -58,16 +60,6 @@ where
         },
     };
 
-    // now that the domain is set up, we can clone it for use in the closure
-    let margin = margin.clone();
-
-    if margin.max_groups.unwrap_or(1) != 1 {
-        return fallible!(
-            MakeMeasurement,
-            "There is only one partition in select, so both num_groups and max_groups must either be unset or one"
-        );
-    }
-
     let t_group_by = Transformation::new(
         middle_domain.clone(),
         expr_domain.clone(),
@@ -82,7 +74,14 @@ where
             let l1 = d_in
                 .get_bound(&HashSet::new())
                 .per_group
-                .ok_or_else(|| err!(FailedMap, "per_group is unknown"))?;
+                .ok_or_else(|| {
+                    let msg = if is_truncated {
+                        " This is likely due to a missing truncation earlier in the data pipeline. To bound `per_group` in the Context API, try using `.truncate_per_group(per_group)`"
+                    } else {
+                        ""
+                    };
+                    err!(FailedMap, "`per_group` contributions is unknown.{msg}")
+                })?;
 
             Ok((1, l1, l1))
         }),

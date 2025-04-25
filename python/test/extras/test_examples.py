@@ -22,6 +22,6 @@ def test_california_pums():
     assert dp.examples.get_california_pums_path().read_text().startswith('59,1,9,1,0,1')
 
 def test_france_lfs():
-    assert dp.examples.get_france_lfs_path().read_text().startswith('PIDENT,YEAR,QUARTER,SEX,AGE,HWUSUAL,HWACTUAL,ILOSTAT')
+    assert dp.examples.get_france_lfs_path().read_text().startswith('PIDENT,YEAR,QUARTER,SEX,AGE,HWUSUAL,HWACTUAL,ILOSTAT\n')
 
 

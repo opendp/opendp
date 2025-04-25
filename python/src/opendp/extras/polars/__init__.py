@@ -664,6 +664,28 @@ _LAZY_EXECUTION_METHODS = {
     "fetch",
 }
 
+@dataclass
+class SortBy:
+    """Configuration for ``keep`` in :py:meth:`LazyFrameQuery.truncate_per_group`.
+     
+    Follows the arguments in Polars' ``sort_by`` method.
+    """
+
+    by: Any
+    """Column(s) to sort by. Accepts expression input. Strings are parsed as column names."""
+
+    descending: bool | Sequence[bool] = False
+    """Sort in descending order. When sorting by multiple columns, can be specified per column by passing a sequence of booleans."""
+
+    nulls_last: bool | Sequence[bool] = False
+    """Place null values last; can specify a single boolean applying to all columns or a sequence of booleans for per-column control."""
+
+    multithreaded: bool = True
+    """Sort using multiple threads."""
+
+    maintain_order: bool = False
+    """Whether the order should be maintained if elements are equal."""
+
 
 class LazyFrameQuery:
     """
@@ -857,12 +879,7 @@ class LazyFrameQuery:
         self,
         k: int,
         by: list[Any] | None = None,
-        keep: Literal["sample", "first", "last"] = "sample",
-        sort_by: list[Any] | None = None,
-        descending: bool | Sequence[bool] = False,
-        nulls_last: bool | Sequence[bool] = False,
-        multithreaded: bool = True,
-        maintain_order: bool = False,
+        keep: Literal["sample", "first", "last"] | SortBy = "sample",
     ) -> LazyFrameQuery:
         """
         Limit the number of contributed rows per group.
@@ -870,36 +887,28 @@ class LazyFrameQuery:
         :param k: the number of rows to keep for each identifier and group
         :param by: optional, additional columns to group by
         :param keep: which rows to keep for each identifier in each group
-        :param sort_by: optional, sort the rows by these expressions before truncating
-        :param descending: Option for sort_by. Whether to sort in descending order
-        :param nulls_last: Option for sort_by. Whether to put nulls at the end of the sort
-        :param multithreaded: Option for sort_by. Whether to use multiple threads for sorting
-        :param maintain_order: Option for sort_by. Whether to maintain the order of the input rows
         """
         input_metric = self._query._chain[1]
+
+        if isinstance(by, str):
+            raise ValueError("by must be a list of strings or expressions")  # pragma: no cover
 
         if isinstance(input_metric, FrameDistance):
             input_metric = input_metric.inner_metric
         if not isinstance(input_metric, (SymmetricIdDistance, ChangeOneIdDistance)):
             raise ValueError("truncation is only valid when identifier is defined")
 
-        if sort_by is not None:
-            indexes = pl.int_range(pl.len()).sort_by(
-                sort_by,
-                descending=descending,
-                nulls_last=nulls_last,
-                multithreaded=multithreaded,
-                maintain_order=maintain_order,
-            )
+        if keep == "sample":
+            indexes = pl.int_range(pl.len()).shuffle()
         elif keep == "first":
             indexes = pl.int_range(pl.len())
         elif keep == "last":
             indexes = pl.int_range(pl.len()).reverse()
-        elif keep == "sample":
-            indexes = pl.int_range(pl.len()).shuffle()
+        elif isinstance(keep, SortBy):
+            indexes = pl.int_range(pl.len()).sort_by(**asdict(keep))
         else:
             raise ValueError(
-                "keep must be 'first', 'last', or 'sample', or specify `sort_by`"
+                "keep must be 'sample', 'first', 'last' or SortBy"
             )  # pragma: no cover
 
         return self.filter(indexes.over(input_metric.identifier, *by or []) < k)
@@ -908,7 +917,7 @@ class LazyFrameQuery:
         self,
         k: int,
         by: list[Any],
-        keep: Literal["first", "last"] = "first",
+        keep: Literal["sample", "first", "last"] = "sample",
     ) -> LazyFrameQuery:
         """
         Limit the number of groups an individual may influence.
@@ -919,17 +928,23 @@ class LazyFrameQuery:
         """
         input_metric = self._query._chain[1]
 
+        if isinstance(by, str):
+            raise ValueError("by must be a list of strings or expressions")  # pragma: no cover
+
         if isinstance(input_metric, FrameDistance):
             input_metric = input_metric.inner_metric
         if not isinstance(input_metric, (SymmetricIdDistance, ChangeOneIdDistance)):
             raise ValueError("truncation is only valid when identifier is defined")
 
-        if keep == "first":
-            ranks = pl.struct(*by).rank("dense", descending=False)
+        struct = pl.struct(*by)
+        if keep == "sample":
+            ranks = pl.struct(struct.hash(), struct).rank("dense")
+        elif keep == "first":
+            ranks = struct.rank("dense", descending=False)
         elif keep == "last":
-            ranks = pl.struct(*by).rank("dense", descending=True)
+            ranks = struct.rank("dense", descending=True)
         else:
-            raise ValueError("keep must be 'first' or 'last'")  # pragma: no cover
+            raise ValueError("keep must be 'sample', 'first' or 'last'")  # pragma: no cover
 
         return self.filter(ranks.over(input_metric.identifier) < k)
 
@@ -1095,12 +1110,12 @@ class Margin:
     max_length: int | None = None
     """An upper bound on the number of records in any one group.
 
-    The library may request you set a max dataset or group length (for instance, for float sums).
-    If you don't know how many records are in the data, you can specify a very loose upper bound,
-    for example, the size of the total population you are sampling from.
-
+    Some operations (for instance, for float sums) will error if `max_length` is not provided.
     This is used to resolve issues raised in the paper
     `Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It <https://arxiv.org/pdf/2207.10635.pdf>`_.
+    
+    If you don't know how many records are in the data, you can specify a very loose upper bound,
+    for example, the size of the total population you are sampling from.
     """
 
     max_groups: int | None = None

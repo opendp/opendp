@@ -163,7 +163,7 @@ fn match_truncation_predicate(predicate: &Expr, identifier: &Expr) -> Fallible<O
             bounds.into_iter().flatten().collect::<Vec<_>>()
         }
 
-        // handles logical where multiple criteria must be met
+        // handles logical and where multiple criteria must be met
         Expr::BinaryExpr {
             left,
             op: Operator::And,
@@ -278,18 +278,46 @@ fn match_num_groups_predicate(
     let Ok([input_item]) = <&[_; 1]>::try_from(input.as_slice()) else {
         return fallible!(
             MakeTransformation,
-            "rank function must be applied to a single input"
+            "rank function must be applied to a single input, found {:?}",
+            input.len()
         );
     };
 
-    let by = match input_item {
+    let by = match input_item.clone() {
         // Treat as_struct as a special case that represents multiple columns.
         // Could still actually have a struct column via to_struct(to_struct(...)).
         Expr::Function {
             function: FunctionExpr::AsStruct,
-            input,
+            mut input,
             ..
-        } => input.into_iter().cloned().collect(),
+        } => {
+            // If the first field is a hash of the second field,
+            // then interpret the grouping columns as the hash input.
+            // The second field disambiguates hash collisions when ranking.
+            if let Some(Expr::Function {
+                input: hash_input,
+                function: FunctionExpr::Hash(_, _, _, _),
+                ..
+            }) = input.get(0)
+            {
+                if hash_input.get(0) == input.get(1) {
+                    let Some(Expr::Function {
+                        input: true_input,
+                        function: FunctionExpr::AsStruct,
+                        ..
+                    }) = hash_input.get(0)
+                    else {
+                        return fallible!(
+                            MakeTransformation,
+                            "expected hash input to be a struct, found {:?}",
+                            hash_input
+                        );
+                    };
+                    input = true_input.clone();
+                }
+            }
+            input.into_iter().collect()
+        }
         input => HashSet::from([input.clone()]),
     };
 

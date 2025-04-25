@@ -48,12 +48,10 @@ None
     Since parsing the query plan happens in reverse order,
     the algorithm starts by attempting to parse a group by truncation on line \ref{line:match_group_by_truncation}.
     By the postcondition of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_group\_by\_truncation},
-    if the group by truncation is present, it will be returned as a tuple of the form:
-    \begin{lstlisting}
-        (input, truncation, per_id_bound)
-    \end{lstlisting}
-    where \texttt{input} is the execution plan with the group by truncation removed,
-    \texttt{truncation} is the group by truncation and \texttt{per\_id\_bounds} are the per-id bounds on row contributions.
+    if the group by truncation is present, it will be returned as a tuple of
+    \texttt{input}, (the execution plan with the group by truncation removed),
+    \texttt{truncation}, (the group by truncation) and 
+    \texttt{per\_id\_bounds} (the per-id bounds on row contributions).
     The state of the algorithm is then updated on lines \ref{line:match_group_by_truncation_start}-\ref{line:match_group_by_truncation_end},
     maintaining the invariants on \texttt{input}, \texttt{truncations} and \texttt{bounds}.
 
@@ -73,13 +71,10 @@ None
 
     Line \ref{line:allowed_keys_check} checks that the truncation predicate is valid,
     by ensuring that the truncation predicate is a subset of the allowed keys.
-
     The algorithm then updates the state on lines \ref{line:match_filter_truncation_start}-\ref{line:match_filter_truncation_end},
     maintaining the invariants on \texttt{input}, \texttt{truncations} and \texttt{bounds}.
-
     Finally, since the descent through the query plan is in reverse order,
     line \ref{line:truncations_reverse} ensures that the truncation order is correct.
-    
     Neither the check on line \ref{line:match_group_by_truncation_check} 
     nor the reversal on line \ref{line:bounds_reverse} are necessary to match the postcondition,
     but both are included to improve usability.

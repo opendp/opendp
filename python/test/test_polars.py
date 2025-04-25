@@ -1244,9 +1244,27 @@ def test_truncate_per_group_sort_by():
         split_evenly_over=1,
     )
 
-    query = context.query().truncate_per_group(2, sort_by=pl.col("sort")).select(dp.len())
+    query = context.query().truncate_per_group(2, keep=dp.polars.SortBy(pl.col("sort"))).select(dp.len())
     assert query.summarize()["scale"][0] == 2.0000000000000004  # type: ignore[index]
 
+
+def test_truncate_error_messages():
+    pl = pytest.importorskip("polars")
+
+    context = dp.Context.compositor(
+        data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100, "sort": [3, 2, 1] * 100}),
+        privacy_unit=dp.unit_of(contributions=1, identifier="id"),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=1,
+    )
+
+    query = context.query().truncate_num_groups(1, by=["alpha"]).select(dp.len())
+    with pytest.raises(dp.OpenDPException, match="`per_group` contributions is unknown. This is likely due to a missing truncation"):
+        query.summarize()
+    
+    query = context.query().truncate_num_groups(1, by=["alpha"]).group_by("sort").agg(dp.len())
+    with pytest.raises(dp.OpenDPException, match=re.escape('To bound `num_groups` in the Context API, try using `.truncate_num_groups(num_groups, by=[col("sort")])`. To bound `per_group` in the Context API, try using `.truncate_per_group(per_group, by=[col("sort")])`.')):
+        query.summarize()
 
 
 @pytest.mark.parametrize("keep", ["first", "last"])

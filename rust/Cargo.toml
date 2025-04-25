@@ -72,6 +72,7 @@ polars = { version = "=0.44.2", features = [
     "random",
     "range",
     "is_in",
+    "row_hash"
 ], optional = true }
 polars-plan = { version = "=0.44.2", features = [
     "ffi_plugin",

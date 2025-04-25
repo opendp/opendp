@@ -244,14 +244,20 @@ where
                 _ => {
                     let msg = if is_truncated {
                         let mut msg = " This is likely due to a missing truncation earlier in the data pipeline.".to_string();
+                        let by_str = group_by_id
+                            .iter()
+                            .map(|e| format!("{e:?}"))
+                            .collect::<Vec<_>>()
+                            .join(", ");
+
                         if l0.is_none() {
                             msg = format!(
-                                "{msg} To bound `num_groups` in the Context API, try using `.truncate_num_groups(num_groups, by=by)`."
+                                "{msg} To bound `num_groups` in the Context API, try using `.truncate_num_groups(num_groups, by=[{by_str}])`."
                             );
                         }
                         if li.is_none() {
                             msg = format!(
-                                "{msg} To bound `per_group` in the Context API, try using `.truncate_per_group(per_group, by=by)`."
+                                "{msg} To bound `per_group` in the Context API, try using `.truncate_per_group(per_group, by=[{by_str}])`."
                             );
                         }
                         msg

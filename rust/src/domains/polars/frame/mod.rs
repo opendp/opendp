@@ -237,22 +237,23 @@ impl<F: Frame> FrameDomain<F> {
     }
 
     /// # Proof Definition
-    /// Return an equivalent FrameDomain, but with `margin`.
-    ///
-    /// If another margin with same `by` keys is present, then it is replaced with `margin`.
+    /// Errors if another margin with same `by` keys is present,
+    /// otherwise returns an equivalent FrameDomain, but with `margin`.
     #[must_use]
     pub fn with_margin(mut self, margin: Margin) -> Fallible<Self> {
-        margin
-            .by
-            .iter()
+        (margin.by.iter())
             .map(|e| e.clone().meta().root_names())
             .flatten()
             .try_for_each(|name| self.series_domain(name).map(|_| ()))?;
-        if let Some(idx) = self.margins.iter().position(|m| m.by == margin.by) {
-            self.margins[idx] = margin;
-        } else {
-            self.margins.push(margin);
+
+        if self.margins.iter().any(|m| m.by == margin.by) {
+            return fallible!(
+                MakeDomain,
+                "margin ({:?}) is already present in domain",
+                margin.by
+            );
         }
+        self.margins.push(margin);
         Ok(self)
     }
 

@@ -270,7 +270,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         use crate::domains::{Margin, Invariant};
 
         if raw.len != 4 {
-            return fallible!(FFI, "Margin FfiSlice must have length 6, found a length of {}", raw.len);
+            return fallible!(FFI, "Margin FfiSlice must have length 4, found a length of {}", raw.len);
         }
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, raw.len) };
         Ok(AnyObject::new(Margin {

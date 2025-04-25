@@ -44,6 +44,14 @@ None
     We now check whether the truncation predicate is well-defined, on lines \ref{line:check_method} and \ref{line:check_input}.
 
     Finally, line \ref{line:extract_grouping_columns} extracts the grouping columns from the predicate.
+    Special consideration is made for structs, which are considered multiple grouping columns.
+    
+    Further consideration is made if the first field is a hash of the second field, on line \ref{line:check_hash}.
+    This effectively randomizes the ranking of the grouping columns, as the ranking is based on a lexicographic ordering.
+    and gives in effect a random sample of grouping columns.
+    The second field of grouping columns is kept in the ranker for the rare case that there are hash collisions,
+    which prevents different combinations of grouping keys from being assigned the same rank, 
+    preventing more distinct groups being kept than is permitted.
 
     This predicate corresponds to a \texttt{num\_groups} truncation predicate,
     because the over expression groups by the \texttt{identifier} column,

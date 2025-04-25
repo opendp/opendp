@@ -48,6 +48,7 @@ pub fn make_stable_truncate(
         match_truncations(plan, &input_metric.0.identifier)?;
 
     if truncations.is_empty() {
+        // should be unreachable in practice, but makes this function self-contained
         return fallible!(MakeTransformation, "failed to match truncation");
     };
 
