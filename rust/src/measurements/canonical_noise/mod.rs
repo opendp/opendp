@@ -21,6 +21,9 @@ use crate::{
 #[cfg(feature = "ffi")]
 mod ffi;
 
+#[cfg(test)]
+mod test;
+
 #[bootstrap(features("contrib"))]
 /// Make a Measurement that adds noise from a canonical noise distribution.
 /// The implementation is tailored towards approximate-DP,
