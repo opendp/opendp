@@ -23,6 +23,11 @@ mod laplace;
 #[cfg(feature = "contrib")]
 pub use laplace::*;
 
+#[cfg(feature = "contrib")]
+mod permute_and_flip;
+#[cfg(feature = "contrib")]
+pub use permute_and_flip::*;
+
 #[cfg(all(feature = "contrib", feature = "polars"))]
 mod make_private_expr;
 #[cfg(all(feature = "contrib", feature = "polars"))]
