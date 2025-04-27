@@ -27,9 +27,7 @@ use crate::core::{FfiError, FfiResult, FfiSlice, Function};
 use crate::domains::BitVector;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyFunction, AnyMeasurement, AnyObject, AnyQueryable, Downcast};
-use crate::ffi::util::{
-    self, AnyDomainPtr, ExtrinsicObject, as_ref, into_c_char_p, into_raw, to_option_str,
-};
+use crate::ffi::util::{self, AnyDomainPtr, ExtrinsicObject, as_ref, into_c_char_p};
 use crate::ffi::util::{AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents, c_bool};
 use crate::measures::PrivacyProfile;
 use crate::metrics::IntDistance;
@@ -275,9 +273,9 @@ pub extern "C" fn opendp_data__slice_as_object(
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, raw.len) };
         Ok(AnyObject::new(Margin {
             by: HashSet::from_iter(try_!(try_as_ref!(slice[0] as *const AnyObject).downcast_ref::<Vec<Expr>>()).clone()),
-            max_length: as_ref(slice[1] as *const u32).cloned(),
-            max_groups: as_ref(slice[2] as *const u32).cloned(),
-            invariant: match to_option_str(slice[3] as *const c_char)? {
+            max_length: util::as_ref(slice[1] as *const u32).cloned(),
+            max_groups: util::as_ref(slice[2] as *const u32).cloned(),
+            invariant: match util::to_option_str(slice[3] as *const c_char)? {
                 Some("keys") => Some(Invariant::Keys),
                 Some("lengths") => Some(Invariant::Lengths),
                 None => None,
@@ -660,7 +658,8 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         let margin = obj.downcast_ref::<Margin>()?;
 
         fn to_ptr<T>(v: Option<T>) -> *const c_void {
-            v.map(|v| into_raw(v) as *const c_void).unwrap_or_else(null)
+            v.map(|v| util::into_raw(v) as *const c_void)
+                .unwrap_or_else(null)
         }
 
         let buffer = vec![

@@ -11,9 +11,9 @@ mod chain;
 pub use crate::combinators::chain::*;
 
 #[cfg(feature = "contrib")]
-mod sequential_compositor;
+mod sequential_composition;
 #[cfg(feature = "contrib")]
-pub use sequential_compositor::*;
+pub use sequential_composition::*;
 
 #[cfg(feature = "contrib")]
 mod select_private_candidate;

@@ -1,14 +1,25 @@
 library(opendp)
 enable_features("contrib")
 
-
-test_that("make_basic_composition", {
+test_that("make_composition", {
   domain <- atom_domain(.T = "i32")
   metric <- absolute_distance(.T = "i32")
 
   meas_lap <- make_laplace(domain, metric, scale = 0.)
-  meas <- make_basic_composition(c(meas_lap, meas_lap))
-  meas <- make_basic_composition(c(meas_lap, meas))
+  meas <- make_composition(c(meas_lap, meas_lap))
+  meas <- make_composition(c(meas_lap, meas))
+
+  # recursive packing/unpacking of compositors/releases
+  expect_equal(meas(arg = 1L), list(1L, list(1L, 1L)))
+})
+
+test_that("make_composition", {
+  domain <- atom_domain(.T = "i32")
+  metric <- absolute_distance(.T = "i32")
+
+  meas_lap <- make_laplace(domain, metric, scale = 0.)
+  meas <- make_composition(c(meas_lap, meas_lap))
+  meas <- make_composition(c(meas_lap, meas))
 
   # recursive packing/unpacking of compositors/releases
   expect_equal(meas(arg = 1L), list(1L, list(1L, 1L)))
@@ -74,6 +85,25 @@ test_that("make_fix_delta", {
 
   meas_fεδ <- make_fix_delta(meas_εδ, 1e-7)
   expect_equal(meas_fεδ(d_in = 1L), list(5.6708588355, 1e-7))
+})
+
+
+
+test_that("make_adaptive_composition", {
+  meas_rr <- make_randomized_response_bool(prob = 0.75)
+
+  meas_sc <- make_adaptive_composition(
+    input_domain = meas_rr("input_domain"),
+    input_metric = meas_rr("input_metric"),
+    output_measure = meas_rr("output_measure"),
+    d_mids = c(2, 2),
+    d_in = 1L
+  )
+
+  sc_qbl <- meas_sc(arg = TRUE)
+  expect_type(sc_qbl(query = meas_rr), "logical")
+  expect_type(sc_qbl(query = meas_rr), "logical")
+  expect_error(sc_qbl(query = meas_rr))
 })
 
 

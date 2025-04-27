@@ -5,7 +5,7 @@ import pytest
 
 def test_sequential_composition():
     max_influence = 1
-    sc_meas = dp.c.make_sequential_composition(
+    sc_meas = dp.c.make_adaptive_composition(
         input_domain=dp.vector_domain(dp.atom_domain(T=int)),
         input_metric=dp.symmetric_distance(),
         output_measure=dp.max_divergence(),
@@ -33,7 +33,7 @@ def test_sequential_composition():
     print("exact sum:", exact_sum)
     exact_sum_sc_qbl = sc_qbl(
         exact_sum
-        >> dp.c.make_sequential_composition(
+        >> dp.c.make_adaptive_composition(
             input_domain=exact_sum.output_domain,
             input_metric=exact_sum.output_metric,
             output_measure=dp.max_divergence(),
@@ -50,7 +50,7 @@ def test_sequential_composition():
 
 def test_sequential_composition_approxdp():
     max_influence = 1
-    sc_meas = dp.c.make_sequential_composition(
+    sc_meas = dp.c.make_adaptive_composition(
         input_domain=dp.vector_domain(dp.atom_domain(T=int)),
         input_metric=dp.symmetric_distance(),
         output_measure=dp.fixed_smoothed_max_divergence(),

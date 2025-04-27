@@ -4,7 +4,7 @@ use std::sync::Arc;
 use crate::accuracy::{
     conservative_discrete_gaussian_tail_to_alpha, conservative_discrete_laplacian_tail_to_alpha,
 };
-use crate::combinators::{BasicCompositionMeasure, make_basic_composition};
+use crate::combinators::{SequentialCompositionMeasure, make_composition};
 use crate::core::{Function, Measurement, PrivacyMap};
 use crate::domains::{CategoricalDomain, Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
@@ -117,7 +117,7 @@ where
         },
     };
 
-    let m_exprs = make_basic_composition(
+    let m_exprs = make_composition(
         aggs.into_iter()
             .map(|expr| {
                 make_private_expr(
@@ -316,7 +316,7 @@ fn match_filter(key_sanitizer: &Option<KeySanitizer>) -> Option<(String, u32)> {
         .and_then(is_threshold_predicate)
 }
 
-pub trait ApproximateMeasure: BasicCompositionMeasure {
+pub trait ApproximateMeasure: SequentialCompositionMeasure {
     fn add_delta(d_out: Self::Distance, delta_p: f64) -> Fallible<Self::Distance>;
 }
 
@@ -337,9 +337,9 @@ macro_rules! impl_measure_non_catastrophic {
 impl_measure_non_catastrophic!(MaxDivergence);
 impl_measure_non_catastrophic!(ZeroConcentratedDivergence);
 
-impl<MO: BasicCompositionMeasure> ApproximateMeasure for Approximate<MO>
+impl<MO: SequentialCompositionMeasure> ApproximateMeasure for Approximate<MO>
 where
-    Self: BasicCompositionMeasure<Distance = (MO::Distance, f64)>,
+    Self: SequentialCompositionMeasure<Distance = (MO::Distance, f64)>,
 {
     fn add_delta((d_out, delta): Self::Distance, delta_p: f64) -> Fallible<Self::Distance> {
         Ok((d_out, delta.inf_add(&delta_p)?))

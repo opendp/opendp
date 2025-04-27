@@ -26,7 +26,7 @@ def make_private_group_by(
         ExprContext.Aggregate(by),
     )
 
-    m_exprs = make_basic_composition([
+    m_exprs = make_composition([
         make_private_expr(
              expr_domain,
              PartitionDistance(middle_metric),

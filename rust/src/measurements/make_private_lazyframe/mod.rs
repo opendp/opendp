@@ -7,7 +7,7 @@ use std::collections::HashSet;
 use std::fmt::Debug;
 
 use crate::{
-    combinators::{BasicCompositionMeasure, make_approximate},
+    combinators::{SequentialCompositionMeasure, make_approximate},
     core::{Function, Measure, Measurement, Metric, MetricSpace, StabilityMap, Transformation},
     domains::{DslPlanDomain, Invariant, LazyFrameDomain, Margin},
     error::Fallible,
@@ -238,7 +238,7 @@ impl<MI, MO> PrivateDslPlan<FrameDistance<MI>, Approximate<MO>> for DslPlan
 where
     MI: UnboundedMetric,
     MI::EventMetric: UnboundedMetric,
-    MO: 'static + BasicCompositionMeasure,
+    MO: 'static + SequentialCompositionMeasure,
     Approximate<MO>: 'static + ApproximateMeasure,
     <Approximate<MO> as Measure>::Distance: Debug,
     Expr: PrivateExpr<L01InfDistance<MI::EventMetric>, Approximate<MO>>,

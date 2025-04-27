@@ -61,7 +61,7 @@ def make_private_np_eigendecomposition(
     m_eigvecs = t_sscp.output_space >> then_private_eigenvectors(
         eigvecs_epsilons,
     )
-    return t_sscp >> dp.c.make_basic_composition([m_eigvals, m_eigvecs])
+    return t_sscp >> dp.c.make_composition([m_eigvals, m_eigvecs])
 
 
 # generate then variant of the constructor

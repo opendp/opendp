@@ -22,7 +22,7 @@ def test_private_selection_threshold_composition():
         >> dp.m.then_laplace(scale=2 * range_ / epsilon)
     )
 
-    m_scored_candidate = dp.c.make_basic_composition([m_count, m_sum])
+    m_scored_candidate = dp.c.make_composition([m_count, m_sum])
 
     m_private_selection = dp.c.make_select_private_candidate(
         m_scored_candidate, threshold=threshold, stop_probability=0

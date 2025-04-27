@@ -156,7 +156,7 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
             :start-after: mediate
             :end-before: /mediate
 
-        ``dp.Context.compositor`` creates a sequential composition measurement.
+        ``dp.Context.compositor`` creates an adaptive composition measurement.
         You can now submit up to three queries to ``context``, in the form of measurements.
 
     .. tab-item:: Framework API (Python)
@@ -167,7 +167,7 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
             :start-after: mediate
             :end-before: /mediate
 
-        ``dp.c.make_sequential_composition`` creates a sequential composition measurement.
+        ``dp.c.make_adaptive_composition`` creates an adaptive composition measurement.
         You can now submit up to three queries to ``queryable``, in the form of measurements.
 
     .. tab-item:: Framework API (R)
@@ -178,7 +178,7 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
             :start-after: mediate
             :end-before: /mediate
 
-        ``make_sequential_composition`` creates a sequential composition measurement.
+        ``make_adaptive_composition`` creates an adaptive composition measurement.
         You can now submit up to three queries to ``queryable``, in the form of measurements.
 
 Since the privacy loss budget is at most ε = 1, and we are partitioning our budget evenly amongst three queries, then each query will be calibrated to satisfy ε = 1/3.
