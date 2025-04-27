@@ -134,7 +134,7 @@ and ``mean_meas`` releases.
 
         .. code:: python
 
-            >>> print('map 1:', dp.c.make_basic_composition([count_meas, mean_meas]).map(1))
+            >>> print('map 1:', dp.c.make_composition([count_meas, mean_meas]).map(1))
             map 1: ...
 
 Another approach is to compute the DP sum and DP count, and then
@@ -150,7 +150,7 @@ postprocess the output.
             >>> dp_sum = input_space >> dp.t.then_impute_constant(0.0) >> dp.t.then_clamp(bounds) >> dp.t.then_sum() >> dp.m.then_laplace(10.)
             >>> dp_count = input_space >> dp.t.then_count() >> dp.m.then_laplace(1.)
             
-            >>> dp_fraction_meas = dp.c.make_basic_composition([dp_sum, dp_count])
+            >>> dp_fraction_meas = dp.c.make_composition([dp_sum, dp_count])
             
             >>> dp_sum, dp_count = dp_fraction_meas(data)
             >>> print("dp mean:", dp_sum / dp_count)

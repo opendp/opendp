@@ -1,17 +1,16 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
-// UNIT TESTS
 #[cfg(test)]
 mod test;
 
 use crate::{
-    core::{Domain, Function, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
+    core::{Domain, Function, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
     interactive::wrap,
-    measures::{Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence},
-    traits::InfAdd,
 };
+
+use super::SequentialCompositionMeasure;
 
 /// Construct the DP composition of [`measurement0`, `measurement1`, ...].
 /// Returns a Measurement that when invoked, computes `[measurement0(x), measurement1(x), ...]`
@@ -31,14 +30,14 @@ use crate::{
 /// * `TO` - Output Type.
 /// * `MI` - Input Metric
 /// * `MO` - Output Measure
-pub fn make_basic_composition<DI, TO, MI, MO>(
+pub fn make_composition<DI, TO, MI, MO>(
     measurements: Vec<Measurement<DI, TO, MI, MO>>,
 ) -> Fallible<Measurement<DI, Vec<TO>, MI, MO>>
 where
     DI: 'static + Domain,
     TO: 'static,
     MI: 'static + Metric,
-    MO: 'static + BasicCompositionMeasure,
+    MO: 'static + SequentialCompositionMeasure,
     (DI, MI): MetricSpace,
 {
     if measurements.is_empty() {
@@ -103,66 +102,33 @@ where
     )
 }
 
-pub trait BasicCompositionMeasure: Measure {
-    fn concurrent(&self) -> Fallible<bool>;
-    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance>;
-}
-
-impl BasicCompositionMeasure for MaxDivergence {
-    fn concurrent(&self) -> Fallible<bool> {
-        Ok(true)
-    }
-    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        d_i.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))
-    }
-}
-
-impl BasicCompositionMeasure for ZeroConcentratedDivergence {
-    fn concurrent(&self) -> Fallible<bool> {
-        Ok(true)
-    }
-    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        d_i.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))
-    }
-}
-
-impl BasicCompositionMeasure for Approximate<MaxDivergence> {
-    fn concurrent(&self) -> Fallible<bool> {
-        Ok(true)
-    }
-    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        let (d_i0, deltas): (Vec<_>, Vec<_>) = d_i.into_iter().unzip();
-        let delta = deltas
-            .iter()
-            .try_fold(0.0, |sum, delta| sum.inf_add(delta))?;
-
-        Ok((self.0.compose(d_i0)?, delta))
-    }
-}
-
-impl BasicCompositionMeasure for Approximate<ZeroConcentratedDivergence> {
-    fn concurrent(&self) -> Fallible<bool> {
-        Ok(false)
-    }
-    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        let (d_i0, deltas): (Vec<_>, Vec<_>) = d_i.into_iter().unzip();
-        let delta = deltas
-            .iter()
-            .try_fold(0.0, |sum, delta| sum.inf_add(delta))?;
-
-        Ok((self.0.compose(d_i0)?, delta))
-    }
-}
-
-impl BasicCompositionMeasure for RenyiDivergence {
-    fn concurrent(&self) -> Fallible<bool> {
-        Ok(true)
-    }
-    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        Ok(Function::new_fallible(move |alpha| {
-            d_i.iter()
-                .map(|f| f.eval(alpha))
-                .try_fold(0.0, |sum, e2| sum.inf_add(&e2?))
-        }))
-    }
+/// Construct the DP composition \[`measurement0`, `measurement1`, ...\].
+/// Returns a Measurement that when invoked, computes `[measurement0(x), measurement1(x), ...]`
+///
+/// All metrics and domains must be equivalent.
+///
+/// **Composition Properties**
+///
+/// * sequential: all measurements are applied to the same dataset
+/// * basic: the composition is the linear sum of the privacy usage of each query
+/// * noninteractive: all mechanisms specified up-front (but each can be interactive)
+/// * compositor: all privacy parameters specified up-front (via the map)
+///
+/// # Arguments
+/// * `measurements` - A vector of Measurements to compose.
+#[deprecated(
+    since = "0.14.0",
+    note = "This function has been renamed, use `make_composition` instead."
+)]
+pub fn make_basic_composition<DI, TO, MI, MO>(
+    measurements: Vec<Measurement<DI, TO, MI, MO>>,
+) -> Fallible<Measurement<DI, Vec<TO>, MI, MO>>
+where
+    DI: 'static + Domain,
+    TO: 'static,
+    MI: 'static + Metric,
+    MO: 'static + SequentialCompositionMeasure,
+    (DI, MI): MetricSpace,
+{
+    make_composition(measurements)
 }

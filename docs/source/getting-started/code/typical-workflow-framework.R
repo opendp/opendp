@@ -26,7 +26,7 @@ imputed_value <- 50.0
 # mediate
 data <- runif(100L, min = 0.0, max = 100.0)
 
-m_sc <- make_sequential_composition(
+m_sc <- make_adaptive_composition(
   input_domain = input_domain,
   input_metric = input_metric,
   output_measure = privacy_measure,

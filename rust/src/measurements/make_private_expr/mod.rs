@@ -2,7 +2,7 @@ use opendp_derive::bootstrap;
 use polars_plan::dsl::Expr;
 
 use crate::{
-    combinators::{BasicCompositionMeasure, make_approximate},
+    combinators::{SequentialCompositionMeasure, make_approximate},
     core::{Measure, Measurement, Metric, MetricSpace, Transformation},
     domains::{Context, ExprDomain, ExprPlan, Invariant, WildExprDomain},
     error::Fallible,
@@ -159,7 +159,7 @@ where
 
 fn make_private_measure_agnostic<
     MI: 'static + UnboundedMetric,
-    MO: 'static + BasicCompositionMeasure<Distance = f64>,
+    MO: 'static + SequentialCompositionMeasure<Distance = f64>,
 >(
     input_domain: WildExprDomain,
     input_metric: L01InfDistance<MI>,

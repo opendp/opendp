@@ -20,7 +20,7 @@ from opendp.combinators import (
     make_fix_delta,
     make_approximate,
     make_pureDP_to_zCDP,
-    make_sequential_composition,
+    make_adaptive_composition,
     make_zCDP_to_approxDP,
 )
 from opendp.domains import atom_domain, vector_domain, with_margin
@@ -405,7 +405,7 @@ def unit_of(
 class Context(object):
     """A Context coordinates queries to an instance of a privacy :py:attr:`accountant`.
 
-    It is recommended to use the :py:func:`make_sequential_composition <opendp.combinators.make_sequential_composition>` constructor instead of this one.
+    It is recommended to use :py:meth:`Context.compositor` constructor instead of this one.
 
     :param accountant: The measurement used to spawn the queryable.
     :param queryable: Executes the queries and tracks the privacy expenditure.
@@ -509,7 +509,7 @@ class Context(object):
             for margin in margins:
                 domain = with_margin(domain, margin)
 
-        accountant, d_mids = _sequential_composition_by_weights(
+        accountant, d_mids = _adaptive_composition_by_weights(
             domain, privacy_unit, privacy_loss, split_evenly_over, split_by_weights
         )
 
@@ -774,7 +774,7 @@ class Query(object):
             assert d_out is not None
             privacy_loss = output_measure or self._output_measure, d_out
 
-            accountant, d_mids = _sequential_composition_by_weights(
+            accountant, d_mids = _adaptive_composition_by_weights(
                 input_domain,
                 privacy_unit,
                 privacy_loss,
@@ -888,7 +888,7 @@ class PartialChain(object):
         return _inner
 
 
-def _sequential_composition_by_weights(
+def _adaptive_composition_by_weights(
     domain: Domain,
     privacy_unit: tuple[Metric, Union[float, Sequence[Bound]]],
     privacy_loss: tuple[Measure, float],
@@ -938,7 +938,7 @@ def _sequential_composition_by_weights(
         return [_mul(w, scale) for w in weights]
 
     def _scale_sc(scale: float):
-        return make_sequential_composition(
+        return make_adaptive_composition(
             input_domain=domain,
             input_metric=input_metric,
             output_measure=output_measure,

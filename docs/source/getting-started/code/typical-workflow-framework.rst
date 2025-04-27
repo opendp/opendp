@@ -29,7 +29,7 @@
 >>> from random import randint
 >>> data = [float(randint(0, 100)) for _ in range(100)]
 
->>> m_sc = dp.c.make_sequential_composition(
+>>> m_sc = dp.c.make_adaptive_composition(
 ...     input_domain=input_domain,
 ...     input_metric=input_metric,
 ...     output_measure=privacy_measure,

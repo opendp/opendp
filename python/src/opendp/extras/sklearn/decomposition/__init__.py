@@ -118,7 +118,7 @@ def make_private_pca(
     # make releases under the assumption that d_in is 2.
     unit_d_in = 2
 
-    compositor = dp.c.make_sequential_composition(
+    compositor = dp.c.make_adaptive_composition(
         input_domain,
         input_metric,
         dp.max_divergence(),
