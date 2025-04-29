@@ -35,5 +35,6 @@ Examples
 
   measurement
   transformation
-  selecting-grouping-columns
   context-api-plugins
+  theil-sen-regression
+  selecting-grouping-columns
