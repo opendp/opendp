@@ -30,14 +30,20 @@ fn test_make_noise_intexpfamily() -> Fallible<()> {
     );
 
     assert!(
-        IntExpFamily::<1> { scale: 1.0 }
-            .make_noise(space.clone())
-            .is_ok()
+        IntExpFamily::<1> {
+            scale: 1.0,
+            divisor: None
+        }
+        .make_noise(space.clone())
+        .is_ok()
     );
     assert!(
-        IntExpFamily::<1> { scale: f64::NAN }
-            .make_noise(space.clone())
-            .is_err()
+        IntExpFamily::<1> {
+            scale: f64::NAN,
+            divisor: None
+        }
+        .make_noise(space.clone())
+        .is_err()
     );
 
     Ok(())
@@ -49,7 +55,7 @@ fn test_then_saturating_cast() -> Fallible<()> {
     let q = IBig::try_from(i8::MAX).unwrap();
     assert_eq!(i8::saturating_cast(q + IBig::ONE), i8::MAX);
 
-    let f_i32 = then_saturating_cast::<i32>();
+    let f_i32 = then_saturating_cast::<i32>(false);
     assert_eq!(
         f_i32.eval(&vec![IBig::from(i32::MAX) + IBig::ONE])?,
         vec![i32::MAX]

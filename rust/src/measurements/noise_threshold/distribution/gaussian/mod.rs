@@ -81,7 +81,8 @@ where
         input_space: (DI, MI),
         threshold: DI::Atom,
     ) -> Fallible<Measurement<DI, DI::Carrier, MI, MO>> {
-        DI::Atom::new_distribution(self.scale, self.k)?.make_noise_threshold(input_space, threshold)
+        DI::Atom::new_distribution(self.scale, self.k, false)?
+            .make_noise_threshold(input_space, threshold)
     }
 }
 
@@ -104,8 +105,14 @@ impl
     > {
         let noise_privacy_map =
             self.noise_privacy_map(&L2Distance::default(), &output_measure.0)?;
-        let ZExpFamily { scale } = self.clone();
-
+        let ZExpFamily { scale, divisor } = self;
+        if divisor.is_some() {
+            return fallible!(
+                MakeMeasurement,
+                "modular noise addition is not supported in thresholded noise"
+            );
+        }
+        let scale = scale.clone();
         Ok(PrivacyMap::new_fallible(
             move |(l0, l2, li): &(u32, RBig, RBig)| {
                 let (Sign::Positive, li) = li.floor().into_parts() else {

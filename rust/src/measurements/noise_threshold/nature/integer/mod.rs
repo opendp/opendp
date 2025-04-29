@@ -53,6 +53,7 @@ where
     > {
         let distribution = ZExpFamily {
             scale: integerize_scale(self.scale, 0)?,
+            divisor: None,
         };
 
         let t_int = make_int_to_bigint_threshold::<TK, TV, P, QI>(input_space)?;
