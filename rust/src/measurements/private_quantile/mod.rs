@@ -5,7 +5,7 @@ use crate::{
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     measures::MaxDivergence,
-    traits::Number,
+    traits::{ExactIntCast, Number},
     transformations::{
         make_quantile_score_candidates, score_candidates_constants, traits::UnboundedMetric,
     },
@@ -56,7 +56,11 @@ where
 
     // scale up the noise proportionally to the increase in sensitivity
     // due to the integerization of scores
-    let denominator = score_candidates_constants(input_domain.size.clone(), alpha)?.1;
+    let denominator = score_candidates_constants(
+        input_domain.size.map(u64::exact_int_cast).transpose()?,
+        alpha,
+    )?
+    .1;
 
     let t_score =
         make_quantile_score_candidates(input_domain, input_metric, candidates.clone(), alpha)?;
@@ -64,7 +68,7 @@ where
     let m_rnm = make_report_noisy_max_gumbel(
         t_score.output_domain.clone(),
         t_score.output_metric.clone(),
-        scale * denominator as f64 * 2.0,
+        scale * denominator as f64,
         Optimize::Min,
     )?;
     let p_index = Function::new(move |idx: &usize| candidates[*idx]);

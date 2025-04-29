@@ -1,0 +1,49 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{fn check\_candidates}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle  
+
+
+\contrib
+
+Proves soundness of \rustdoc{transformations/quantile\_score\_candidates/fn}{check\_candidates} 
+in \asOfCommit{mod.rs}{f5bb719}.
+\texttt{check\_candidates} raises an error if the discrete quantile candidate set is invalid.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+None
+
+\subsection*{Function}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/check_candidates.py}
+
+\subsection*{Postcondition}
+
+\begin{theorem}
+    Candidates must be:
+    \begin{enumerate}
+        \item non-empty
+        \item strictly increasing
+        \item totally ordered
+    \end{enumerate}
+
+    Otherwise the function errors.
+\end{theorem}
+
+\begin{proof}
+    The postconditions can be directly checked:
+    \begin{enumerate}
+        \item \texttt{candidates} is non-empty, by the check on line \ref{empty}
+        \item \texttt{candidates} is strictly increasing, 
+            because there is no window where the left candidate is not less than the right candidate
+        \item \texttt{candidates} is totally ordered, 
+            because no comparisons may fail
+    \end{enumerate}
+    Therefore the postcondition holds.
+\end{proof}
+
+\end{document}

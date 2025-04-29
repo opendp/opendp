@@ -1,0 +1,179 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{fn score\_candidates\_map}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle  
+
+
+\contrib
+
+Proves soundness of \rustdoc{transformations/quantile\_score\_candidates/fn}{score\_candidates\_map} 
+in \asOfCommit{mod.rs}{f5bb719}.
+\texttt{score\_candidates\_map} returns a specific function that can be used to prove stability of the quantile scoring transformation.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+$\texttt{alpha\_den} > \texttt{alpha\_num}$.
+
+\subsection*{Function}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/score_candidates_map.py}
+
+
+\subsection*{Postcondition}
+
+\begin{theorem}
+    Define \function as follows:
+    \begin{equation*}
+        \function(x) = \mathrm{score\_candidates}_i(x, \texttt{candidates}, \texttt{alpha\_num}, \texttt{alpha\_den}, \texttt{size\_limit})
+    \end{equation*}
+
+    The function calls \rustdoc{transformations/quantile\_score\_candidates/fn}{score\_candidates} with fixed choices of
+    \texttt{candidates}, \texttt{alpha\_num}, \texttt{alpha\_den} and \texttt{size\_limit}.
+
+    If the input domain is the set of all vectors with non-null elements of type \texttt{TI},
+    input metric is either \rustdoc{metrics/struct}{SymmetricDistance} or \rustdoc{metrics/struct}{InsertDeleteDistance},
+    and the postcondition of \function is satisfied, then \function is stable.
+
+    This means that, for any two elements $x, x'$ in the \texttt{input\_domain},
+        where $x, x'$ share the same length if \texttt{known\_length} is true,
+    and any pair $(\din, \dout)$, 
+        where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \texttt{output\_metric},
+    then when $x, x'$ are \din-close under \texttt{input\_metric} and $\texttt{stability\_map}(\din) \leq \dout$,
+    \function(x), \function(x') are \dout-close under \texttt{output\_metric}.
+\end{theorem}
+
+
+The sensitivity of this function differs depending on whether the size of the input vector is known.
+\label{unsized-stability}
+First, consider the case where the size is unknown.
+
+\begin{lemma}
+    \label{single-change-stab-sym}
+    If $d_{Sym}(x, x') = 1$, then $d_\infty(\function(x), \function(x')) \le \max(\alpha_{num}, \alpha_{den} - \alpha_{num})$.
+\end{lemma}
+
+\begin{proof}
+    Assume $d_{Sym}(x, x') = 1$. 
+
+    \begin{align*}
+        &d_\infty(\function(x)_i, \function(x')_i) \\
+        &= \max\limits_{i} |\function(x)_i - \function(x')_i| &&\text{by definition of } d_\infty \\
+        &= \max\limits_{i} |\mathrm{abs\_diff}(\alpha_{den} \cdot \min(\#(x < C_i), l), \alpha_{num} \cdot \min(|x| - \#(x = C_i), l)) &&\text{by definition of } \function
+            \\&\hspace{1cm}\mathrm{abs\_diff}(\alpha_{den} \cdot \min(\#(x' < C_i), l), \alpha_{num} \cdot \min(|x'| - \#(x' = C_i), l))| \\
+        &= \alpha_{den} \cdot \max\limits_{i} ||\min(\#(x < C_i), l) - \alpha \cdot \min(|x| - \#(x = C_i), l)|
+            \\&\hspace{1cm}|\min(\#(x' < C_i), l) - \alpha \cdot \min(|x'| - \#(x' = C_i), l)|| \\
+        &\le \alpha_{den} \cdot \max\limits_{i} ||\#(x < C_i) - \alpha \cdot (|x| - \#(x = C_i))|
+            \\&\hspace{1cm}|\#(x' < C_i) - \alpha \cdot (|x| - \#(x' = C_i))|| \\
+    \intertext{Consider each of the three cases of adding or removing an element in x.}
+    \intertext{Case 1. Assume $x'$ is equal to $x$, but with some $x_j < C_i$ added or removed.}
+        &= \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)| 
+            \\&\hspace{1cm} - |(1 - \alpha) \cdot (\#(x < C_i) \pm 1) - \alpha \cdot \#(x > C_i)|| \\
+        &\leq \alpha_{den} \cdot  \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)|
+            \\&\hspace{1cm} - (|(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)| + |\pm(1 - \alpha)|)| &&\text{by triangle inequality} \\
+        &= \alpha_{den} \cdot \max\limits_{i} |1 - \alpha| &&\text{scores cancel}\\
+        &= \alpha_{den} - \alpha_{num} &&\text{since } \alpha \leq 1
+    \intertext{Case 2. Assume $x'$ is equal to $x$, but with some $x_j > C_i$ added or removed.}
+        &= \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)| 
+            \\&\hspace{1cm} - |(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot (\#(x > C_i) \pm 1)|| \\
+        &\leq \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)| 
+            \\&\hspace{1cm} - (|(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)| + |\pm\alpha|)| &&\text{by triangle inequality} \\
+        &= \alpha_{den} \cdot \max\limits_{i} |\alpha| &&\text{scores cancel}\\
+        &= \alpha_{num} &&\text{since } \alpha \geq 0
+    \intertext{Case 3. Assume $x'$ is equal to $x$, but with some $x_j = C_i$ added or removed.}
+        &= \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)| 
+            \\&\hspace{1cm} - |(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)|| \\
+        &= 0 &&\text{no change in score}
+    \intertext{Take the union bound over all cases.}
+        &\le \max(\alpha_{num}, \alpha_{den} - \alpha_{num})
+    \end{align*}
+
+\end{proof}
+
+\label{sec:known-size}
+Now consider the case where the dataset size is known.
+
+\begin{lemma}
+    \label{single-change-stab}
+    If $d_{CO}(x, x') \le 1$, then $d_\infty(\function(x), \function(x')) \le \alpha_{den}$.
+\end{lemma}
+
+\begin{proof}
+    Assume $d_{CO}(x, x') \le 1$. 
+
+    \begin{align*}
+        &d_\infty(\function(x), \function(x')) \\
+        &= \max\limits_{i} |\function(x)_i - \function(x')_i| &&\text{by definition of } d_\infty \\
+        &= \max\limits_{i} |\mathrm{abs\_diff}(\alpha_{den} \cdot \min(\#(x < C_i), l), \alpha_{num} \cdot \min(|x| - \#(x = C_i), l)) &&\text{by def. of } \function
+            \\&\hspace{1cm} -\mathrm{abs\_diff}(\alpha_{den} \cdot \min(\#(x' < C_i), l), \alpha_{num} \cdot \min(|x'| - \#(x' = C_i), l))| \\
+        &= \alpha_{den} \cdot \max\limits_{i} ||\min(\#(x < C_i), l) - \alpha \cdot \min(|x| - \#(x = C_i), l)|
+            \\&\hspace{1.65cm}-|\min(\#(x' < C_i), l) - \alpha \cdot \min(|x'| - \#(x' = C_i), l)|| \\
+        &= \alpha_{den} \cdot \max\limits_{i} ||\#(x < C_i) - \alpha \cdot (|x| - \#(x = C_i))|
+            \\&\hspace{1.65cm}-|\#(x' < C_i) - \alpha \cdot (|x| - \#(x' = C_i))|| \\
+    \end{align*}
+
+    \begin{align*}
+    \intertext{Consider each of the four cases of changing a row in x.}
+    \intertext{Case 1. Assume $x'$ is equal to $x$, but with some $x_j < C_i$ replaced with $x'_j > C_i$.}
+        &= \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)| 
+            \\&\hspace{1.7cm} - |(1 - \alpha) \cdot (\#(x < C_i) - 1) - \alpha \cdot (\#(x > C_i) + 1)|| &&\text{by definition of }\function \\
+        &\leq \alpha_{den} \cdot \max\limits_{i} ||(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)|
+            \\&\hspace{1.65cm} - (|(1 - \alpha) \cdot \#(x < C_i) - \alpha \cdot \#(x > C_i)| + |1|)| &&\text{by triangle inequality} \\
+        &= \alpha_{den} \cdot \max\limits_{i} |1| &&\text{scores cancel}\\
+        &= \alpha_{den}
+    \intertext{Case 2. Assume $x'$ is equal to $x$, but with some $x_j > C_i$ replaced with $x'_j < C_i$.}
+        &= \alpha_{den}
+        \intertext{\hspace{1cm}by symmetry, follows from Case 1.}
+    \intertext{Case 3. Assume $x'$ is equal to $x$, but with some $x_j \neq C_i$ replaced with $C_i$.}
+        &\leq \max(\alpha_{num}, \alpha_{den} - \alpha_{num})\\
+        \intertext{\hspace{1cm}equivalent to one removal (see \rustdoc{transformations/fn}{make\_quantile\_score\_candidates})}
+    \intertext{Case 4. Assume $x'$ is equal to $x$, but with some $x_j = C_i$ replaced with $x'_j \neq C_i$.}
+        &\leq \max(\alpha_{num}, \alpha_{den} - \alpha_{num}) \\
+    \intertext{\hspace{1cm}equivalent to one addition (see \rustdoc{transformations/fn}{make\_quantile\_score\_candidates})}
+    \intertext{Take the union bound over all cases.}
+        d_\infty(x_i, x'_i) &\le \max(\alpha_{den}, \max(\alpha_{num}, \alpha_{den} - \alpha_{num})) = \alpha_{den}
+        \intertext{\hspace{1cm}since $\max(\alpha, 1 - \alpha) \leq 1$}
+    \end{align*}
+\end{proof}
+
+\begin{proof}[Proof of postcondition]
+    Assume the input domain is the set of all vectors with non-null elements of type \texttt{TI},
+    input metric is either \rustdoc{metrics/struct}{SymmetricDistance} or \rustdoc{metrics/struct}{InsertDeleteDistance},
+    and the postcondition of \function is satisfied.
+
+    First, consider the case where the size is unknown.
+    Take any two members $s, s'$ in the \texttt{input\_domain} and any pair $(\din, \dout)$, 
+    where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \texttt{output\_metric}.
+    Assume $s, s'$ are \din-close under \texttt{input\_metric} and that $\texttt{stability\_map}(\din) \leq \dout$. 
+
+    \begin{align*}
+        \dout &= \max\limits_{s \sim s'} d_{\infty}(s, s') &&\text{where } s = \function(x)\\
+        &= \max\limits_{s \sim s'} \max\limits_{i} |s_i - s'_i| &&\text{by definition of }\rustdoc{metrics/struct}{LInfDistance} \text{, without monotonicity} \\
+        &\leq \sum_j^{\din} \max\limits_{Z_{j} \sim Z_{j+1}} \max\limits_{i} |s_{i,j} - s_{i,j+1}| &&\text{by path property } d_{Sym}(Z_i, Z_{i+1}) = 1, x = Z_0 \text{ and } x' = Z_\din \\
+        &\leq \sum_j^{\din} \max(\alpha_{num}, \alpha_{den} - \alpha_{num}) &&\text{by \ref{single-change-stab-sym}} \\
+        &\leq \din \cdot \max(\alpha_{num}, \alpha_{den} - \alpha_{num}) \\
+    \end{align*}
+    \label{sec:unknown-size}
+    This formula matches the stability map in the case where the dataset size is unknown.
+
+    Now, consider the case where the size is known.
+    Take any two elements $s, s'$ in the \texttt{input\_domain} and any pair $(\din, \dout)$, 
+    where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \texttt{output\_metric}.
+    Assume $s, s'$ are \din-close under \texttt{input\_metric} and that $\texttt{stability\_map}(\din) \leq \dout$. 
+
+    \begin{align*}
+        \dout &= \max\limits_{s \sim s'} d_{\infty}(s, s') \\
+        &= \max\limits_{s \sim s'} \max\limits_{i} |s_i - s'_i| &&\text{by definition of }\rustdoc{metrics/struct}{LInfDistance}\text{, without monotonicity} \\
+        &\leq \sum_j^{\din // 2} \max\limits_{Z_{j} \sim Z_{j+1}} \max\limits_{i} |s_{i,j} - s_{i,j+1}| &&\text{by path property } d_{CO}(Z_i, Z_{i+1}) = 1, x = Z_0 \text{ and } Z_\din = x' \\
+        &\leq \sum_j^{\din // 2} \alpha_{den} &&\text{by \ref{single-change-stab}} \\
+        &\leq (\din // 2) \cdot \alpha_{den} \\
+    \end{align*}
+
+    This formula matches the stability map in the case where the dataset size is known.
+
+    It is shown that \function(x), \function(x') are \dout-close under \texttt{output\_metric} for any choice of input arguments.
+\end{proof}
+
+\end{document}
