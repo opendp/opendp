@@ -158,7 +158,5 @@ postprocess the output.
             >>> print("epsilon:", dp_fraction_meas.map(1))
             epsilon: ...
 
-The same approaches are valid for the variance estimator. The `Unknown
-Dataset Size
-notebook <../../../getting-started/examples/unknown-dataset-size.ipynb>`__
+The same approaches are valid for the variance estimator. The `Resize preprocessing documentation <preprocess-resize.ipynb>`__
 goes into greater detail on the tradeoffs of these approaches.
