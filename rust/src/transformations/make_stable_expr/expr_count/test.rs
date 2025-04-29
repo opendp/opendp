@@ -2,7 +2,10 @@ use super::*;
 
 use crate::{
     domains::{LazyFrameDomain, Margin, OptionDomain},
-    metrics::{FrameDistance, InsertDeleteDistance, L1Distance, L2Distance, SymmetricDistance},
+    metrics::{
+        FrameDistance, InsertDeleteDistance, L0PInfDistance, L1Distance, L2Distance,
+        SymmetricDistance,
+    },
 };
 
 use polars::{
@@ -29,7 +32,7 @@ fn test_select_make_expr_counting() -> Fallible<()> {
     for (expr, expected) in exprs {
         let t_sum: Transformation<_, _, _, L1Distance<f64>> = expr
             .clone()
-            .make_stable(expr_domain.clone(), PartitionDistance(SymmetricDistance))?;
+            .make_stable(expr_domain.clone(), L0PInfDistance(SymmetricDistance))?;
         let expr_res = t_sum.invoke(&lf.logical_plan)?.expr;
         assert_eq!(expr_res, expr);
 
@@ -67,7 +70,7 @@ fn test_grouped_make_len_expr() -> Fallible<()> {
     for (expr, expected) in exprs {
         let t_sum: Transformation<_, _, _, L2Distance<f64>> = expr
             .clone()
-            .make_stable(expr_domain.clone(), PartitionDistance(SymmetricDistance))?;
+            .make_stable(expr_domain.clone(), L0PInfDistance(SymmetricDistance))?;
         let expr_res = t_sum.invoke(&lf.logical_plan)?.expr;
         assert_eq!(expr_res, expr);
 
@@ -133,13 +136,13 @@ fn test_expr_count_invariant() -> Fallible<()> {
 
     let t_count: Transformation<_, _, _, L2Distance<f64>> = col("data").count().make_stable(
         lf_domain.clone().select(),
-        PartitionDistance(InsertDeleteDistance),
+        L0PInfDistance(InsertDeleteDistance),
     )?;
     assert_eq!(t_count.map(&(10, 10, 1))?, 0.);
 
     let t_len: Transformation<_, _, _, L2Distance<f64>> = col("data").len().make_stable(
         lf_domain.clone().select(),
-        PartitionDistance(InsertDeleteDistance),
+        L0PInfDistance(InsertDeleteDistance),
     )?;
 
     assert_eq!(t_len.map(&(10, 10, 1))?, 0.);
@@ -147,7 +150,7 @@ fn test_expr_count_invariant() -> Fallible<()> {
     let t_null_count: Transformation<_, _, _, L2Distance<f64>> =
         col("data").null_count().make_stable(
             lf_domain.clone().select(),
-            PartitionDistance(InsertDeleteDistance),
+            L0PInfDistance(InsertDeleteDistance),
         )?;
 
     assert_ne!(t_null_count.map(&(10, 10, 1))?, 0.);

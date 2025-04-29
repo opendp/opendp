@@ -373,6 +373,26 @@ where
     }
 }
 
+impl<K: CheckAtom, V: CheckAtom, const P: usize, Q> MetricSpace
+    for (
+        MapDomain<AtomDomain<K>, AtomDomain<V>>,
+        L0PInfDistance<P, AbsoluteDistance<Q>>,
+    )
+where
+    K: Eq + Hash,
+{
+    fn check_space(&self) -> Fallible<()> {
+        if self.0.value_domain.nan() {
+            return fallible!(
+                MetricSpace,
+                "PartitionDistance<AbsoluteDistance<Q>> requires non-nullable elements"
+            );
+        } else {
+            Ok(())
+        }
+    }
+}
+
 /// The $L_1$ distance between two vector-valued aggregates.
 ///
 /// Refer to [`LpDistance`] for details.
@@ -440,73 +460,81 @@ impl<T: CheckAtom, Q> MetricSpace for (AtomDomain<T>, AbsoluteDistance<Q>) {
 ///
 /// # Proof Definition
 ///
-/// ### $d$-closeness
-/// For any two groupings $x, x' \in \texttt{D}$ and $d$ of type `(u32, M::Distance)`,
-/// we say that $x, x'$ are $d = (l0, li)$-close under the the parallel distance metric whenever
+/// ## $d$-closeness
+/// For any two datasets $x, x' \in \texttt{D}$,
+/// where $x$ and $x'$ are indexed by $1, \ldots, r$, let
 ///
 /// ```math
-/// d(x, x') = (|d_M(x, x')|_0, |d_M(x, x')|_\infty) \leq (l0, li) = d
+/// s = [d_M(x_0, x'_0), \ldots, d_M(x_r, x'_r)],
 /// ```
+/// where `M` is a valid metric on the indexed space.
+/// If a dataset `x` does not contain an index `i`, assume `x_i` is the additive identity.
 ///
-/// Both numbers in the 2-tuple must be less than their respective values to be $d$-close.
-#[derive(Clone, PartialEq)]
-pub struct Parallel<M: Metric>(pub M);
-impl<M: Metric + Default> Default for Parallel<M> {
-    fn default() -> Self {
-        Parallel(M::default())
-    }
-}
-impl<M: Metric> Debug for Parallel<M> {
+/// For any $d$ of type `(usize, M::Distance, M::Distance)`,
+/// we say that $x, x'$ are $d$-close under the the multi-norm distance metric whenever
+///
+/// ```math
+/// |s|_0 \leq d_0 \land |s|_\infty \leq d_2.
+/// ```
+#[derive(Clone, PartialEq, Default)]
+pub struct L0InfDistance<M: Metric>(pub M);
+impl<M: Metric> Debug for L0InfDistance<M> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "Parallel({:?})", self.0)
+        write!(f, "L0InfDistance({:?})", self.0)
     }
 }
 
-impl<M: Metric> Metric for Parallel<M> {
+impl<M: Metric> Metric for L0InfDistance<M> {
     //               L^0          L^\infty
     type Distance = (IntDistance, M::Distance);
 }
 
-/// The $L^0$, $L^1$, $L\infty$ norms of the group-wise distances between data sets.
+/// The $L^0$, $L^P$, $L\infty$ norms of the per-partition distances between data sets.
 ///
-/// The $L^0$ norm counts the number of groups that have changed.
-/// The $L^1$ norm is the total change.
-/// The $L\infty$ norm is the greatest change in any one group.
+/// The $L^0$ norm counts the number of partitions that have changed.
+/// The $L^P$ norm is the total change if $P = 1$, or euclidean distance if $P = 2$.
+/// The $L\infty$ norm is the greatest change in any one partition.
 ///
 /// # Proof Definition
 ///
-/// ### $d$-closeness
-/// For any two groupings $x, x' \in \texttt{D}$ and $d$ of type `(usize, M::Distance, M::Distance)`,
-/// we say that $x, x'$ are $d$-close under the the partition distance metric whenever
+/// ## $d$-closeness
+/// For any two datasets $x, x' \in \texttt{D}$,
+/// where $x$ and $x'$ are indexed by $1, \ldots, r$, let
 ///
 /// ```math
-/// d(x, x') = |d_M(x, x')|_0, |d_M(x, x')|_1, |d_M(x, x')|_\infty \leq d
+/// s = [d_M(x_0, x'_0), \ldots, d_M(x_r, x'_r)],
 /// ```
+/// where `M` is a valid metric on the indexed space.
+/// If a dataset `x` does not contain an index `i`, assume `x_i` is the additive identity.
 ///
-/// All three numbers in the triple must be less than their respective values in $d$ to be $d$-close.
-#[derive(Clone, PartialEq)]
-pub struct PartitionDistance<M: Metric>(pub M);
-impl<M: Metric + Default> Default for PartitionDistance<M> {
-    fn default() -> Self {
-        PartitionDistance(M::default())
-    }
-}
+/// For any integer $P > 0$,
+/// and $d$ of type `(usize, M::Distance, M::Distance)`,
+/// we say that $x, x'$ are $d$-close under the the multi-norm distance metric whenever
+///
+/// ```math
+/// |s|_0 \leq d_0 \land |s|_P \leq d_1 \land |s|_\infty \leq d_2.
+/// ```
+#[derive(Clone, PartialEq, Default)]
+pub struct L0PInfDistance<const P: usize, M: Metric>(pub M);
 
-impl<M: Metric> Debug for PartitionDistance<M> {
+pub type L01InfDistance<M> = L0PInfDistance<1, M>;
+pub type L02InfDistance<M> = L0PInfDistance<2, M>;
+
+impl<M: Metric, const P: usize> Debug for L0PInfDistance<P, M> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "PartitionDistance({:?})", self.0)
+        write!(f, "L0{P}InfDistance({:?})", self.0)
     }
 }
 
-impl<M: Metric> Metric for PartitionDistance<M> {
-    //               L^0          L^1          L^\infty
+impl<const P: usize, M: Metric> Metric for L0PInfDistance<P, M> {
+    //               L^0          L^P          L^\infty
     type Distance = (IntDistance, M::Distance, M::Distance);
 }
 
-impl<T: CheckAtom> MetricSpace
+impl<T: CheckAtom, const P: usize> MetricSpace
     for (
         VectorDomain<AtomDomain<T>>,
-        PartitionDistance<AbsoluteDistance<T>>,
+        L0PInfDistance<P, AbsoluteDistance<T>>,
     )
 {
     fn check_space(&self) -> Fallible<()> {

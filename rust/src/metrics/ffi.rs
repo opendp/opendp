@@ -10,12 +10,12 @@ use crate::{
         util::{self, ExtrinsicObject, Type, c_bool, into_c_char_p, to_str},
     },
     metrics::{AbsoluteDistance, L1Distance, L2Distance},
-    traits::InfAdd,
+    traits::{InfAdd, Number},
 };
 
 use super::{
-    ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance, LInfDistance,
-    PartitionDistance, SymmetricDistance,
+    ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance, L0PInfDistance,
+    L01InfDistance, L02InfDistance, LInfDistance, SymmetricDistance,
 };
 
 #[bootstrap(
@@ -197,24 +197,55 @@ pub extern "C" fn opendp_metrics__discrete_distance() -> FfiResult<*mut AnyMetri
     generics(M(suppress)),
     returns(c_type = "FfiResult<AnyMetric *>")
 )]
-/// Construct an instance of the `PartitionDistance` metric.
+/// Construct an instance of the `L01InfDistance` metric.
 ///
 /// # Arguments
 /// * `metric` - The metric used to compute distance between partitions.
-fn partition_distance<M: Metric>(metric: M) -> PartitionDistance<M> {
-    PartitionDistance(metric)
+fn l01inf_distance<M: Metric>(metric: M) -> L01InfDistance<M> {
+    L0PInfDistance(metric)
 }
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_metrics__partition_distance(
+pub extern "C" fn opendp_metrics__l01inf_distance(
     metric: *const AnyMetric,
 ) -> FfiResult<*mut AnyMetric> {
-    fn monomorphize<M: 'static + Metric>(metric: &AnyMetric) -> FfiResult<*mut AnyMetric> {
-        let metric = try_!(metric.downcast_ref::<M>()).clone();
-        Ok(AnyMetric::new(partition_distance::<M>(metric))).into()
-    }
     let metric = try_as_ref!(metric);
     let M = metric.type_.clone();
-    dispatch!(monomorphize, [(M, [SymmetricDistance, AbsoluteDistance<i32>, AbsoluteDistance<f64>])], (metric))
+    if M == Type::of::<SymmetricDistance>() {
+        let metric = try_!(metric.downcast_ref::<SymmetricDistance>()).clone();
+        return Ok(AnyMetric::new(l01inf_distance(metric))).into();
+    }
+    fn monomorphize<Q: Number>(metric: &AnyMetric) -> Fallible<AnyMetric> {
+        let metric = metric.downcast_ref::<AbsoluteDistance<Q>>()?.clone();
+        Ok(AnyMetric::new(l01inf_distance(metric))).into()
+    }
+    let Q = try_!(M.get_atom());
+    dispatch!(monomorphize, [(Q, @numbers)], (metric)).into()
+}
+
+#[bootstrap(
+    arguments(metric(c_type = "AnyMetric *", rust_type = b"null")),
+    generics(M(suppress)),
+    returns(c_type = "FfiResult<AnyMetric *>")
+)]
+/// Construct an instance of the `L02InfDistance` metric.
+///
+/// # Arguments
+/// * `metric` - The metric used to compute distance between partitions.
+fn l02inf_distance<M: Metric>(metric: M) -> L02InfDistance<M> {
+    L0PInfDistance(metric)
+}
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_metrics__l02inf_distance(
+    metric: *const AnyMetric,
+) -> FfiResult<*mut AnyMetric> {
+    let metric = try_as_ref!(metric);
+    let M = metric.type_.clone();
+    fn monomorphize<Q: Number>(metric: &AnyMetric) -> Fallible<AnyMetric> {
+        let metric = metric.downcast_ref::<AbsoluteDistance<Q>>()?.clone();
+        Ok(AnyMetric::new(l02inf_distance(metric))).into()
+    }
+    let Q = try_!(M.get_atom());
+    dispatch!(monomorphize, [(Q, @numbers)], (metric)).into()
 }
 
 #[bootstrap(

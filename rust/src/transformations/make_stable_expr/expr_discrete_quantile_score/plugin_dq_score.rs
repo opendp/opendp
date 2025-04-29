@@ -20,7 +20,7 @@ use polars_plan::{
 
 #[cfg(feature = "ffi")]
 use pyo3_polars::derive::polars_expr;
-#[cfg(feature = "ffi")]
+
 use serde::{Deserialize, Serialize};
 
 use crate::{polars::OpenDPPlugin, traits::RoundCast, transformations::score_candidates};

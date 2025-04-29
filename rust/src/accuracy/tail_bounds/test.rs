@@ -1,10 +1,11 @@
 use std::thread::{self, JoinHandle};
 
-use dashu::{integer::IBig, rational::RBig};
+use dashu::{integer::IBig, rational::RBig, rbig, ubig};
 
 use crate::{
     domains::AtomDomain,
     measurements::make_laplace,
+    measures::MaxDivergence,
     metrics::AbsoluteDistance,
     traits::{
         ExactIntCast,
@@ -14,13 +15,14 @@ use crate::{
 
 use super::*;
 
-fn test_laplace_tail(tail: u32, theoretical_alpha: f64, label: &str) -> Fallible<()> {
+fn test_laplace_tail(tail: UBig, theoretical_alpha: f64, label: &str) -> Fallible<()> {
+    let tail = i8::try_from(tail)?;
     let scale = 1.;
 
     println!("alpha: {}", theoretical_alpha);
-    let m_dlap = make_laplace(
-        AtomDomain::<i8>::default(),
-        AbsoluteDistance::default(),
+    let m_dlap = make_laplace::<AtomDomain<i8>, AbsoluteDistance<i8>, MaxDivergence>(
+        Default::default(),
+        Default::default(),
         scale,
         None,
     )?;
@@ -40,17 +42,17 @@ fn test_laplace_tail(tail: u32, theoretical_alpha: f64, label: &str) -> Fallible
 
 #[test]
 pub fn test_empirical_integrate_discrete_laplace_tail_fixed() -> Fallible<()> {
-    let scale = 1.;
-    let tail = 2;
-    let alpha = conservative_discrete_laplacian_tail_to_alpha(scale, tail)?;
+    let scale = rbig!(1);
+    let tail = ubig!(2);
+    let alpha = conservative_discrete_laplacian_tail_to_alpha(scale, tail.clone())?;
     test_laplace_tail(tail, alpha, "Discrete Laplace")
 }
 
 #[test]
 pub fn test_empirical_integrate_discrete_laplace_tail_random() -> Fallible<()> {
-    let scale = 1.;
-    let tail = 1 + sample_uniform_uint_below(10)?;
-    let alpha = conservative_discrete_laplacian_tail_to_alpha(scale, tail)?;
+    let scale = rbig!(1);
+    let tail = UBig::from(1u32 + sample_uniform_uint_below(10)?);
+    let alpha = conservative_discrete_laplacian_tail_to_alpha(scale, tail.clone())?;
     test_laplace_tail(tail, alpha, "Discrete Laplace")
 }
 
@@ -69,7 +71,8 @@ pub(super) fn discrete_gaussian_tail_to_alpha(scale: f64, tail: u32) -> Fallible
 }
 
 fn test_gaussian_tail(scale: f64, tail: u32) -> Fallible<()> {
-    let alpha_upper = conservative_discrete_gaussian_tail_to_alpha(scale, tail)?;
+    let alpha_upper =
+        conservative_discrete_gaussian_tail_to_alpha(RBig::try_from(scale)?, UBig::from(tail))?;
     let alpha_avg = discrete_gaussian_tail_to_alpha(scale, tail)?;
 
     let r_scale = RBig::try_from(scale)?;
@@ -114,4 +117,36 @@ pub fn test_empirical_integrate_discrete_gaussian_tail_multi_run() -> Fallible<(
     handles
         .into_iter()
         .try_for_each(|h| h.join().expect("thread failed"))
+}
+
+#[test]
+fn test_laplace_discrete_upper_bounded_by_continuous() -> Fallible<()> {
+    for scale in [1., 10., 100., 1000., 10000., u32::MAX as f64] {
+        for tail in [1, 10, 100, 1000, 10000, u32::MAX] {
+            let alpha_discrete = conservative_discrete_laplacian_tail_to_alpha(
+                RBig::try_from(scale)?,
+                UBig::from(tail),
+            )?;
+            let alpha_continuous = conservative_continuous_laplacian_tail_to_alpha(
+                RBig::try_from(scale)?,
+                RBig::from(tail),
+            )?;
+            // The greatest differences in bounds comes from large point masses,
+            // so differences between the bounds decrease as fewer large point masses are considered.
+            // Thus difference decreases as scale and tail gets larger.
+            println!(
+                "scale: {scale: >10}, tail: {tail: >10}, difference {}",
+                alpha_continuous - alpha_discrete
+            );
+            assert!(
+                alpha_discrete <= alpha_continuous,
+                "scale: {scale}, tail: {tail}"
+            );
+
+            // The same relationship holds for the discrete gaussian,
+            // but in that case the conservative discrete bound is implemented via the conservative continuous bound,
+            // so the test is not repeated.
+        }
+    }
+    Ok(())
 }

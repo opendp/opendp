@@ -1,0 +1,39 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{fn then\_index\_or\_default}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{transformations/fn}{then\_index\_or\_default} in \asOfCommit{mod.rs}{f5bb719}.
+
+This postprocessor indexes into a vector or returns the default value of the type if the index does not exist.
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+\begin{itemize}
+    \item Generic \texttt{T} implements trait \texttt{Default}
+\end{itemize}
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/then_index_or_default.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \validPostprocessor{(\texttt{index, T})}{\texttt{then\_index\_or\_default}}
+\end{theorem}
+
+\begin{proof}
+    The function is infallible, so the function satisfies the data-independent errors property.
+    Therefore the postcondition is satisfied.
+\end{proof}
+
+\end{document}

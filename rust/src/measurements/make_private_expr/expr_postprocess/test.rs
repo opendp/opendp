@@ -3,7 +3,7 @@ use polars_plan::dsl::{col, len, lit};
 
 use crate::{
     measures::MaxDivergence,
-    metrics::{PartitionDistance, SymmetricDistance},
+    metrics::{L0PInfDistance, SymmetricDistance},
     transformations::test_helper::get_test_data,
 };
 
@@ -17,7 +17,7 @@ fn test_postprocess_alias() -> Fallible<()> {
 
     let m_expr = expr.clone().make_private(
         lf_domain.aggregate(["chunk_2_bool"]),
-        PartitionDistance(SymmetricDistance),
+        L0PInfDistance(SymmetricDistance),
         MaxDivergence,
         Some(0.),
     )?;
@@ -44,7 +44,7 @@ fn test_postprocess_binary() -> Fallible<()> {
 
     let m_expr = expr.clone().make_private(
         lf_domain.aggregate(["chunk_2_bool"]),
-        PartitionDistance(SymmetricDistance),
+        L0PInfDistance(SymmetricDistance),
         MaxDivergence,
         Some(0.),
     )?;

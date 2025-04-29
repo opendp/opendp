@@ -4,7 +4,7 @@ use std::fmt::{Debug, Formatter};
 
 use crate::core::{Metric, MetricSpace};
 use crate::metrics::{
-    AbsoluteDistance, FrameDistance, LInfDistance, LpDistance, Parallel, PartitionDistance,
+    AbsoluteDistance, FrameDistance, L0InfDistance, L0PInfDistance, LInfDistance, LpDistance,
 };
 use crate::traits::ProductOrd;
 use crate::transformations::traits::UnboundedMetric;
@@ -221,7 +221,7 @@ impl<M: UnboundedMetric> OuterMetric for FrameDistance<M> {
     }
 }
 
-impl<M: 'static + Metric> OuterMetric for PartitionDistance<M> {
+impl<const P: usize, M: 'static + Metric> OuterMetric for L0PInfDistance<P, M> {
     type InnerMetric = M;
 
     fn inner_metric(&self) -> Self::InnerMetric {
@@ -229,7 +229,7 @@ impl<M: 'static + Metric> OuterMetric for PartitionDistance<M> {
     }
 }
 
-impl<M: 'static + Metric> OuterMetric for Parallel<M> {
+impl<M: 'static + Metric> OuterMetric for L0InfDistance<M> {
     type InnerMetric = M;
 
     fn inner_metric(&self) -> Self::InnerMetric {
@@ -256,9 +256,14 @@ impl<M: UnboundedMetric> MetricSpace for (WildExprDomain, FrameDistance<M>) {
     }
 }
 
-impl<M: UnboundedMetric> MetricSpace for (WildExprDomain, PartitionDistance<M>) {
+impl<const P: usize, M: UnboundedMetric> MetricSpace for (WildExprDomain, L0PInfDistance<P, M>) {
     fn check_space(&self) -> Fallible<()> {
-        Ok(())
+        let (expr_domain, L0PInfDistance(inner_metric)) = self;
+        (
+            expr_domain.clone().to_frame_domain::<DslPlan>()?,
+            inner_metric.clone(),
+        )
+            .check_space()
     }
 }
 
@@ -316,14 +321,14 @@ impl<Q: ProductOrd> MetricSpace for (ExprDomain, LInfDistance<Q>) {
     }
 }
 
-impl<Q: ProductOrd> MetricSpace for (ExprDomain, Parallel<LInfDistance<Q>>) {
+impl<Q: ProductOrd> MetricSpace for (ExprDomain, L0InfDistance<LInfDistance<Q>>) {
     fn check_space(&self) -> Fallible<()> {
-        let (expr_domain, Parallel(inner_metric)) = self;
+        let (expr_domain, L0InfDistance(inner_metric)) = self;
         (expr_domain.clone(), inner_metric.clone()).check_space()
     }
 }
 
-impl<M: UnboundedMetric> MetricSpace for (ExprDomain, PartitionDistance<M>) {
+impl<const P: usize, M: UnboundedMetric> MetricSpace for (ExprDomain, L0PInfDistance<P, M>) {
     fn check_space(&self) -> Fallible<()> {
         Ok(())
     }

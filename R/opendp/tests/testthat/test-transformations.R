@@ -248,9 +248,9 @@ test_that("test_count_distinct", {
 
 test_that("test_count_by", {
   input_space <- c(vector_domain(atom_domain(.T = String)), symmetric_distance())
-  query <- input_space |> then_count_by(.MO = "L1Distance<f64>", .TV = f64)
-  expect_true(hashtab_eq(query(arg = STR_DATA), new_hashtab(STR_DATA, rep(1, each = 9))))
-  expect_equal(query(d_in = 1L), 1.)
+  query <- input_space |> then_count_by()
+  expect_true(hashtab_eq(query(arg = STR_DATA), new_hashtab(STR_DATA, rep(1L, each = 9))))
+  expect_equal(query(d_in = 1L), list(1L, 1L, 1L))
 })
 
 test_that("test_count_by_categories", {

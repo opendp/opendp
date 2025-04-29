@@ -58,13 +58,19 @@ mod tests {
     use crate::domains::AtomDomain;
     use crate::error::*;
     use crate::measurements;
+    use crate::measures::MaxDivergence;
     use crate::metrics::AbsoluteDistance;
 
     #[test]
     fn test_poly_measurement() -> Fallible<()> {
-        let input_domain = AtomDomain::new_non_nan();
-        let input_metric = AbsoluteDistance::default();
-        let op_plain = measurements::make_laplace(input_domain, input_metric, 0.0, None)?;
+        let input_domain = AtomDomain::<f64>::new_non_nan();
+        let input_metric = AbsoluteDistance::<u32>::default();
+        let op_plain = measurements::make_laplace::<_, _, MaxDivergence>(
+            input_domain,
+            input_metric,
+            0.0,
+            None,
+        )?;
         let arg = 100.;
         let res_plain = op_plain.invoke(&arg)?;
         assert_eq!(res_plain, arg);

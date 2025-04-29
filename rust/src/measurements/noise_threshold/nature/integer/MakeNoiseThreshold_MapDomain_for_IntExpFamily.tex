@@ -1,0 +1,64 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{MakeNoise<MapDomain<AtomDomain<TK>, AtomDomain<TV>>, L0PInfDistance<P, AbsoluteDistance<QI>>, MO> for IntExpFamily<P>}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise_threshold/trait}{MakeNoiseThreshold} over hashmaps
+for \texttt{IntExpFamily} in \asOfCommit{mod.rs}{f5bb719}.
+
+This mechanism samples from the \texttt{IntExpFamily} distribution, 
+where the tails are clipped to the smallest and largest representable integers in the native integer type.
+This is done by first sampling from the \texttt{ZExpFamily}, the equivalent distribution supported on all integers,
+and then clipping the tails by clamping.
+The clamping is done by saturating the cast of the sampled value to the native integer type.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+
+\begin{itemize}
+    \item Generic \texttt{T} implements trait \rustdoc{traits/trait}{Integer} and \rustdoc{traits/trait}{SaturatingCast}\texttt{<IBig>}
+        The saturating cast is for infallible postprocessing of big ints back to type \texttt{T}.
+    \item Const-generic \texttt{P} is of type \texttt{usize}
+    \item Generic \texttt{QI} implements trait \rustdoc{traits/trait}{Integer}
+    \item Generic \texttt{MO} implements trait \rustdoc{core/trait}{Measure}
+    \item Type \texttt{IBig} implements trait \texttt{From<T>}.
+        This infallible exact cast is for converting integers to big ints in the preprocessing transformation.
+    \item Type \texttt{RBig} implements trait \texttt{TryFrom<QI>}.
+        This is for fallible casting from input sensitivity of type \texttt{QI} to a rational in the privacy map.
+    \item Type \texttt{ZExpFamily<P>} implements trait \rustdoc{measurements/trait}{NoisePrivacyMap}\texttt{<LpDistance<P, RBig>, MO>}.
+        This bound requires that it must be possible to construct a privacy map for this combination of noise distribution, distance type and privacy measure.
+\end{itemize}
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/MakeNoiseThreshold_MapDomain_for_IntExpFamily.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \validMeasurement{(\texttt{self, input\_space, threshold, MO, TK, TV, P, QI})}{\texttt{make\_noise\_threshold}}
+\end{theorem}
+
+\begin{proof}
+    Line \ref{line:dist} constructs a new random variable following a distribution equivalent to \texttt{IntExpFamily}, 
+    but without clipped tails.
+
+    Neither constructor \rustdoc{measurements/noise_threshold/nature/integer/fn}{make\_int\_to\_bigint\_threshold} nor
+    \rustdoc{measurements/noise_threshold/trait}{MakeNoiseThreshold}\texttt{.make\_noise\_threshold} have manual preconditions, 
+    and the postconditions guarantee a valid transformation and valid measurement, respectively.
+    \rustdoc{measurements/noise_threshold/nature/integer/fn}{then\_saturating\_cast\_hashmap} also does not have preconditions,
+    and its postcondition guarantees that it returns a valid postprocessor.
+
+    The chain of a valid transformation, valid measurement and valid postprocessor is a valid measurement.
+\end{proof}
+
+\end{document}

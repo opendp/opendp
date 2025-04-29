@@ -5,7 +5,7 @@ use polars_arrow::array::{FixedSizeListArray, UInt32Array};
 use crate::{
     error::ErrorVariant,
     measurements::make_private_expr,
-    metrics::{PartitionDistance, SymmetricDistance},
+    metrics::{L0PInfDistance, SymmetricDistance},
     polars::PrivacyNamespace,
     transformations::expr_discrete_quantile_score::test::get_quantile_test_data,
 };
@@ -56,7 +56,7 @@ fn test_report_noisy_max_gumbel_expr() -> Fallible<()> {
 
     let m_quant = make_private_expr(
         lf_domain.select(),
-        PartitionDistance(SymmetricDistance),
+        L0PInfDistance(SymmetricDistance),
         MaxDivergence,
         col("cycle_(..101f64)")
             .dp()
@@ -85,7 +85,7 @@ fn test_fail_report_noisy_max_gumbel_expr_nan_scale() -> Fallible<()> {
 
     let err_variant = make_private_expr(
         lf_domain.select(),
-        PartitionDistance(SymmetricDistance),
+        L0PInfDistance(SymmetricDistance),
         MaxDivergence,
         col("cycle_(..101f64)").dp().median(candidates, Some(scale)),
         None,

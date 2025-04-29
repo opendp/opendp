@@ -1,6 +1,6 @@
 use crate::{
     measures::MaxDivergence,
-    metrics::{PartitionDistance, SymmetricDistance},
+    metrics::{L0PInfDistance, SymmetricDistance},
     polars::PrivacyNamespace,
     transformations::expr_discrete_quantile_score::test::get_quantile_test_data,
 };
@@ -41,7 +41,7 @@ fn test_index_candidates_expr() -> Fallible<()> {
         .quantile(0.80, candidates, Some(scale))
         .make_private(
             lf_domain.select(),
-            PartitionDistance(SymmetricDistance),
+            L0PInfDistance(SymmetricDistance),
             MaxDivergence,
             None,
         )?;

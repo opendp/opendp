@@ -79,15 +79,10 @@ def make_private_group_by(
         return output
     
     def privacy_map(d_in):  # |\label{line:privacy-map}|
-        mip = margin.get("max_influenced_partitions", default=d_in)
-        mnp = margin.get("max_num_partitions", default=d_in)
-        mpc = margin.get("max_partition_contributions", default=d_in)
-        mpl = margin.get("max_partition_length", default=d_in)
-
-        l0 = min(mip, mnp, d_in)
-        li = min(mpc, mpl, d_in)
+        l0 = margin.l_0(d_in)
+        li = margin.l_inf(d_in)
         l1 = l0.inf_mul(li).min(d_in)
-
+        
         d_out = m_exprs.map((l0, l1, li))
 
         if threshold is not None:
