@@ -90,8 +90,8 @@ where
             let arg: Vec<_> = arg.iter().map(|e| vec_string_to_str(e)).collect();
             create_dataframe(col_names.clone(), &arg)
         }),
-        SymmetricDistance::default(),
-        SymmetricDistance::default(),
+        SymmetricDistance,
+        SymmetricDistance,
         StabilityMap::new_from_constant(1),
     )
 }
@@ -131,8 +131,8 @@ where
         AtomDomain::default(),
         DataFrameDomain::new(),
         Function::new(move |arg: &String| split_dataframe(&separator, col_names.clone(), &arg)),
-        SymmetricDistance::default(),
-        SymmetricDistance::default(),
+        SymmetricDistance,
+        SymmetricDistance,
         StabilityMap::new_from_constant(1),
     )
 }
@@ -165,8 +165,8 @@ pub fn make_split_lines() -> Fallible<
         Function::new(|arg: &String| -> Vec<String> {
             arg.lines().map(|v| v.to_owned()).collect()
         }),
-        SymmetricDistance::default(),
-        SymmetricDistance::default(),
+        SymmetricDistance,
+        SymmetricDistance,
         StabilityMap::new_from_constant(1),
     )
 }
@@ -209,8 +209,8 @@ pub fn make_split_records(
             let ret = split_records(&separator, &arg);
             ret.into_iter().map(vec_str_to_string).collect()
         }),
-        SymmetricDistance::default(),
-        SymmetricDistance::default(),
+        SymmetricDistance,
+        SymmetricDistance,
         StabilityMap::new_from_constant(1),
     )
 }

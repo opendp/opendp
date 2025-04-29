@@ -6,9 +6,9 @@ use crate::core::{Function, Measurement, MetricSpace, StabilityMap, Transformati
 use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
 use crate::measurements::make_private_expr;
-use crate::metrics::PartitionDistance;
+use crate::metrics::{Bounds, FrameDistance, PartitionDistance};
+use crate::transformations::StableDslPlan;
 use crate::transformations::traits::UnboundedMetric;
-use crate::transformations::{DatasetMetric, StableDslPlan};
 use make_private_expr::PrivateExpr;
 use polars::prelude::{DslPlan, Expr};
 
@@ -23,22 +23,24 @@ mod test;
 /// * `output_measure` - The measure of the output LazyFrame.
 /// * `plan` - The LazyFrame to transform.
 /// * `global_scale` - The parameter for the measurement.
-pub fn make_private_select<MS, MI, MO>(
+pub fn make_private_select<MI, MO>(
     input_domain: DslPlanDomain,
-    input_metric: MS,
+    input_metric: FrameDistance<MI>,
     output_measure: MO,
     plan: DslPlan,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, MO>>
+) -> Fallible<Measurement<DslPlanDomain, DslPlan, FrameDistance<MI>, MO>>
 where
-    MS: 'static + DatasetMetric,
     MI: 'static + UnboundedMetric,
+    MI::EventMetric: UnboundedMetric,
     MO: 'static + BasicCompositionMeasure,
-    Expr: PrivateExpr<PartitionDistance<MI>, MO>,
-    DslPlan: StableDslPlan<MS, MI>,
-    (DslPlanDomain, MS): MetricSpace,
-    (DslPlanDomain, MI): MetricSpace,
+    Expr: PrivateExpr<PartitionDistance<MI::EventMetric>, MO>,
+    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
+    (DslPlanDomain, FrameDistance<MI>): MetricSpace,
+    (DslPlanDomain, FrameDistance<MI::EventMetric>): MetricSpace,
 {
+    let is_truncated = input_metric.0.identifier().is_some();
+
     let DslPlan::Select { expr, input, .. } = plan.clone() else {
         return fallible!(MakeMeasurement, "Expected selection in logical plan");
     };
@@ -58,36 +60,31 @@ where
         },
     };
 
-    // now that the domain is set up, we can clone it for use in the closure
-    let margin = margin.clone();
-
-    if margin.max_partition_contributions.is_some() {
-        return fallible!(
-            MakeMeasurement,
-            "Since there is only one partition in select, max_partition_contributions is redundant with the input distance, so it must be unset"
-        );
-    }
-
-    if margin.max_influenced_partitions.unwrap_or(1) != 1
-        || margin.max_num_partitions.unwrap_or(1) != 1
-    {
-        return fallible!(
-            MakeMeasurement,
-            "There is only one partition in select, so both max_influenced_partitions and max_num_partitions must either be unset or one"
-        );
-    }
-
     let t_group_by = Transformation::new(
         middle_domain.clone(),
         expr_domain.clone(),
         Function::new(Clone::clone),
         middle_metric.clone(),
-        PartitionDistance(middle_metric.clone()),
+        PartitionDistance(middle_metric.0.clone()),
         // the output distance triple consists of three numbers:
-        // l0: number of changed partitions. Only one partition exists in select
-        // l1: total number of contributions across all partitions
-        // l∞: max number of contributions in any one partition
-        StabilityMap::new(move |&d_in| (1, d_in, d_in)),
+        // l0: number of changed groups. Only one group exists in select
+        // l1: total number of contributions across all groups
+        // l∞: max number of contributions in any one group
+        StabilityMap::new_fallible(move |d_in: &Bounds| {
+            let l1 = d_in
+                .get_bound(&HashSet::new())
+                .per_group
+                .ok_or_else(|| {
+                    let msg = if is_truncated {
+                        " This is likely due to a missing truncation earlier in the data pipeline. To bound `per_group` in the Context API, try using `.truncate_per_group(per_group)`"
+                    } else {
+                        ""
+                    };
+                    err!(FailedMap, "`per_group` contributions is unknown.{msg}")
+                })?;
+
+            Ok((1, l1, l1))
+        }),
     )?;
 
     let m_exprs = expr
@@ -95,7 +92,7 @@ where
         .map(|expr| {
             make_private_expr(
                 expr_domain.clone(),
-                PartitionDistance(middle_metric.clone()),
+                PartitionDistance(middle_metric.0.clone()),
                 output_measure.clone(),
                 expr.clone(),
                 global_scale,

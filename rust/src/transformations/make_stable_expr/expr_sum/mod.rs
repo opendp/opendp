@@ -1,6 +1,6 @@
 use crate::core::{Function, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, Context, Margin, WildExprDomain};
-use crate::domains::{ExprDomain, MarginPub::Lengths, NumericDataType, SeriesDomain};
+use crate::domains::{ExprDomain, Invariant::Lengths, NumericDataType, SeriesDomain};
 use crate::error::*;
 use crate::metrics::{IntDistance, LpDistance, PartitionDistance};
 use crate::traits::{
@@ -107,11 +107,9 @@ where
         context: Context::Aggregation {
             margin: Margin {
                 by: input_margin.by,
-                max_partition_length: Some(1),
-                max_num_partitions: input_margin.max_num_partitions,
-                max_partition_contributions: None,
-                max_influenced_partitions: Some(1),
-                public_info: input_margin.public_info,
+                max_length: Some(1),
+                max_groups: input_margin.max_groups,
+                invariant: input_margin.invariant,
             },
         },
     };
@@ -150,14 +148,13 @@ where
     let (l, u) = domain.column.atom_domain::<TI>()?.get_closed_bounds()?;
     let (l, u) = (TI::Sum::neg_inf_cast(l)?, TI::Sum::inf_cast(u)?);
 
-    let public_info = margin.public_info;
+    let invariant = margin.invariant;
 
-    let max_size = usize::exact_int_cast(margin.max_partition_length.ok_or_else(|| {
-        err!(
-            MakeTransformation,
-            "must specify max_partition_length in margin"
-        )
-    })?)?;
+    let max_size = usize::exact_int_cast(
+        margin
+            .max_length
+            .ok_or_else(|| err!(MakeTransformation, "must specify max_length in margin"))?,
+    )?;
 
     let pp_relaxation = f64::inf_cast(TI::Sum::relaxation(max_size, l, u)?)?;
 
@@ -167,38 +164,36 @@ where
         _ => return fallible!(MakeTransformation, "unsupported Lp norm"),
     };
 
-    let pp_map = move |d_in: &IntDistance| match public_info {
+    let pp_map = move |d_in: &IntDistance| match invariant {
         Some(Lengths) => TI::Sum::inf_cast(*d_in / 2)?.inf_mul(&u.inf_sub(&l)?),
         _ => TI::Sum::inf_cast(*d_in)?.inf_mul(&l.alerting_abs()?.total_max(u)?),
     };
 
-    // 'mnp_check: this invariant is used later
-    if !pp_relaxation.is_zero() && !MI::ORDERED && margin.max_num_partitions.is_none() {
+    // 'mng_check: this invariant is used later
+    if !pp_relaxation.is_zero() && !MI::ORDERED && margin.max_groups.is_none() {
         return fallible!(
             MakeTransformation,
-            "max_num_partitions must be known when the metric is not sensitive to ordering (SymmetricDistance)"
+            "max_groups must be known when the metric is not sensitive to ordering (SymmetricDistance)"
         );
     }
 
     Ok(StabilityMap::new_fallible(
         move |(l0, l1, l_inf): &(IntDistance, IntDistance, IntDistance)| {
-            // max changed partitions
-            let mcp = if pp_relaxation.is_zero() {
+            // max changed groups
+            let mcg = if pp_relaxation.is_zero() {
                 0u32
             } else if MI::ORDERED {
-                (*l0).min(margin.max_num_partitions.unwrap_or(*l0))
+                (*l0).min(margin.max_groups.unwrap_or(*l0))
             } else {
-                margin
-                    .max_num_partitions
-                    .expect("not none due to 'mnp_check above")
+                margin.max_groups.expect("not none due to 'mng_check above")
             };
 
-            let mcp_p = norm_map(f64::from(mcp))?;
+            let mcg_p = norm_map(f64::from(mcg))?;
             let l0_p = norm_map(f64::from(*l0))?;
             let l1_p = f64::inf_cast(pp_map(l1)?)?;
             let l_inf_p = f64::inf_cast(pp_map(l_inf)?)?;
 
-            let relaxation = mcp_p.inf_mul(&pp_relaxation)?;
+            let relaxation = mcg_p.inf_mul(&pp_relaxation)?;
 
             l1_p.total_min(l0_p.inf_mul(&l_inf_p)?)?
                 .inf_add(&relaxation)

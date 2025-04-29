@@ -205,7 +205,7 @@ pub(crate) fn apply_anonymous_function<KW: OpenDPPlugin>(input: Vec<Expr>, kwarg
 
 pub(crate) fn literal_value_of<T: ExtractValue>(expr: &Expr) -> Fallible<Option<T>> {
     let Expr::Literal(literal) = expr else {
-        return fallible!(FailedFunction);
+        return fallible!(FailedFunction, "Expected literal, found: {:?}", expr);
     };
 
     T::extract(literal.clone())
@@ -275,9 +275,9 @@ impl Function<DslPlan, ExprPlan> {
 
 impl<TI: 'static> Function<TI, ExprPlan> {
     /// # Proof Definition
-    /// Returns a Function that specifies how to impute missing values representing empty partitions.
+    /// Returns a Function that specifies how to impute missing values representing empty groups.
     ///
-    /// Polars only keeps non-empty partitions in group-by,
+    /// Polars only keeps non-empty groups in group-by,
     /// so this is used to fill missing values after joining with an explicit key set.
     pub(crate) fn fill_with(self, value: Expr) -> Self {
         // Without this repeat, the expression would be scalar-valued,

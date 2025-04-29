@@ -42,7 +42,7 @@ where
         VectorDomain::new(AtomDomain::new_closed(bounds)?),
         AtomDomain::default(),
         Function::new(|arg: &Vec<T>| arg.iter().fold(T::zero(), |sum, v| sum.saturating_add(v))),
-        InsertDeleteDistance::default(),
+        InsertDeleteDistance,
         AbsoluteDistance::default(),
         StabilityMap::new_from_constant(lower.alerting_abs()?.total_max(upper)?),
     )
@@ -84,7 +84,7 @@ where
         VectorDomain::new(AtomDomain::new_closed(bounds)?).with_size(size),
         AtomDomain::default(),
         Function::new(|arg: &Vec<T>| arg.iter().fold(T::zero(), |sum, v| sum.saturating_add(v))),
-        InsertDeleteDistance::default(),
+        InsertDeleteDistance,
         AbsoluteDistance::default(),
         StabilityMap::new_fallible(
             // If d_in is odd, we still only consider databases with (d_in - 1) / 2 substitutions,

@@ -57,7 +57,7 @@ fn test_report_noisy_max_gumbel_expr() -> Fallible<()> {
     let m_quant = make_private_expr(
         lf_domain.select(),
         PartitionDistance(SymmetricDistance),
-        MaxDivergence::default(),
+        MaxDivergence,
         col("cycle_(..101f64)")
             .dp()
             .quantile_score(0.5, candidates)
@@ -86,7 +86,7 @@ fn test_fail_report_noisy_max_gumbel_expr_nan_scale() -> Fallible<()> {
     let err_variant = make_private_expr(
         lf_domain.select(),
         PartitionDistance(SymmetricDistance),
-        MaxDivergence::default(),
+        MaxDivergence,
         col("cycle_(..101f64)").dp().median(candidates, Some(scale)),
         None,
     )

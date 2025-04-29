@@ -104,7 +104,7 @@ def test_string_instead_of_tuple_for_margin_key():
                 # To reproduce failure, the column name must be multiple characters.
                 # TODO: We want to fail earlier because the key is not a tuple.
                 # (mypy does catch this, so we need "type: ignore", but we can't rely on users running mypy.)
-                dp.polars.Margin(by=("a_column"), public_info="keys", max_partition_length=5), # type: ignore
+                dp.polars.Margin(by=("a_column"), invariant="keys", max_length=5), # type: ignore
             ],
         )
 
@@ -124,7 +124,7 @@ def test_margins_dict_instead_of_list():
             privacy_loss=dp.loss_of(epsilon=1.0),
             split_evenly_over=1,
             margins={ # type: ignore[arg-type]
-                ('col',): dp.polars.Margin(public_info="keys", max_partition_length=5),
+                ('col',): dp.polars.Margin(invariant="keys", max_length=5),
             }
         )
 

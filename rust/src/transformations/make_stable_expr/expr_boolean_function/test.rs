@@ -1,5 +1,5 @@
 use crate::domains::{AtomDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
-use crate::metrics::SymmetricDistance;
+use crate::metrics::{FrameDistance, SymmetricDistance};
 
 use super::*;
 
@@ -27,7 +27,7 @@ fn get_f64_i64_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
 macro_rules! is_nullable {
     ($col:expr, $op:ident, $domain:ident) => {
         $col.$op()
-            .make_stable($domain.clone(), SymmetricDistance)?
+            .make_stable($domain.clone(), FrameDistance(SymmetricDistance))?
             .output_domain
             .column
             .nullable

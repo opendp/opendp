@@ -10,6 +10,9 @@ use crate::{
     traits::ProductOrd,
 };
 
+#[cfg(feature = "polars")]
+use crate::{ffi::util::Type, metrics::Bounds};
+
 fn make_sequential_composition(
     input_domain: AnyDomain,
     input_metric: AnyMetric,
@@ -62,10 +65,23 @@ fn make_sequential_composition(
     let QI = input_metric.distance_type.clone();
     let QO = output_measure.distance_type.clone();
 
-    dispatch!(monomorphize, [
-        (QI, @numbers),
-        (QO, [f64, (f64, f64)])
-    ], (input_domain, input_metric, output_measure, d_in, d_mids))
+    #[cfg(feature = "polars")]
+    if QI == Type::of::<Bounds>() {
+        return dispatch!(
+            monomorphize,
+            [(QI, [Bounds]), (QO, [f64, (f64, f64)])],
+            (input_domain, input_metric, output_measure, d_in, d_mids)
+        );
+    }
+
+    dispatch!(
+        monomorphize,
+        [
+            (QI, [u32, u64, i32, i64, usize, f32, f64]),
+            (QO, [f64, (f64, f64)])
+        ],
+        (input_domain, input_metric, output_measure, d_in, d_mids)
+    )
 }
 
 #[unsafe(no_mangle)]

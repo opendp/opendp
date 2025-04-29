@@ -3,7 +3,7 @@ use polars_plan::dsl::lit;
 
 use crate::{
     domains::{AtomDomain, LazyFrameDomain},
-    metrics::SymmetricDistance,
+    metrics::{FrameDistance, SymmetricDistance},
     transformations::StableExpr,
 };
 
@@ -17,7 +17,7 @@ fn test_lit() -> Fallible<()> {
     )])?;
     let lf = df!("bool" => [true; 3])?.lazy();
 
-    let t_const = lit(1.0).make_stable(lf_domain.row_by_row(), SymmetricDistance)?;
+    let t_const = lit(1.0).make_stable(lf_domain.row_by_row(), FrameDistance(SymmetricDistance))?;
     let expr_const = t_const.invoke(&lf.logical_plan)?.expr;
     assert_eq!(expr_const, lit(1.0));
 

@@ -1,6 +1,6 @@
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{
-    AtomDomain, Context, ExprDomain, Margin, MarginPub, SeriesDomain, WildExprDomain,
+    AtomDomain, Context, ExprDomain, Invariant, Margin, SeriesDomain, WildExprDomain,
 };
 use crate::error::*;
 use crate::metrics::{IntDistance, LpDistance, PartitionDistance};
@@ -91,11 +91,9 @@ where
         context: Context::Aggregation {
             margin: Margin {
                 by: margin.by,
-                max_partition_length: Some(1),
-                max_num_partitions: margin.max_num_partitions,
-                max_partition_contributions: None,
-                max_influenced_partitions: margin.max_influenced_partitions,
-                public_info: margin.public_info.clone(),
+                max_length: Some(1),
+                max_groups: margin.max_groups,
+                invariant: margin.invariant.clone(),
             },
         },
     };
@@ -106,8 +104,8 @@ where
         _ => false,
     };
 
-    let public_info = if will_count_all {
-        margin.public_info
+    let invariant = if will_count_all {
+        margin.invariant
     } else {
         None
     };
@@ -125,14 +123,14 @@ where
             .fill_with(typed_lit(0u32)),
             middle_metric,
             LpDistance::default(),
-            counting_query_stability_map(public_info),
+            counting_query_stability_map(invariant),
         )?
 }
 
 pub(crate) fn counting_query_stability_map<M: UnboundedMetric, const P: usize>(
-    public_info: Option<MarginPub>,
+    invariant: Option<Invariant>,
 ) -> StabilityMap<PartitionDistance<M>, LpDistance<P, f64>> {
-    if let Some(MarginPub::Lengths) = public_info {
+    if let Some(Invariant::Lengths) = invariant {
         return StabilityMap::new(move |_| 0.);
     }
 
@@ -151,7 +149,7 @@ pub(crate) fn counting_query_stability_map<M: UnboundedMetric, const P: usize>(
     // an explanatory example of this math is provided in the tests
     StabilityMap::new_fallible(
         move |(l0, l1, l_inf): &(IntDistance, IntDistance, IntDistance)| {
-            // if l0 partitions may change, then l0_p denotes how sensitivity scales wrt the norm
+            // if l0 groups may change, then l0_p denotes how sensitivity scales wrt the norm
             let l0_p = norm_map(f64::from(*l0))?;
             let l1_p = f64::from(*l1);
             let l_inf_p = f64::from(*l_inf);

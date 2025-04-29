@@ -8,8 +8,9 @@ use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, Downcast};
 use crate::ffi::any::{AnyObject, AnyTransformation};
 use crate::ffi::util::Type;
+use crate::metrics::EventLevelMetric;
 use crate::traits::{Hashable, Number, Primitive};
-use crate::transformations::{DatasetMetric, make_find, make_find_bin, make_index};
+use crate::transformations::{make_find, make_find_bin, make_index};
 
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_find(
@@ -23,7 +24,7 @@ pub extern "C" fn opendp_transformations__make_find(
         categories: &AnyObject,
     ) -> Fallible<AnyTransformation>
     where
-        M: 'static + DatasetMetric,
+        M: 'static + EventLevelMetric,
         TIA: 'static + Hashable,
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<OptionDomain<AtomDomain<usize>>>, M): MetricSpace,
@@ -60,7 +61,7 @@ pub extern "C" fn opendp_transformations__make_find_bin(
     ) -> Fallible<AnyTransformation>
     where
         TIA: 'static + Number,
-        M: 'static + DatasetMetric,
+        M: 'static + EventLevelMetric,
         (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
         (VectorDomain<AtomDomain<usize>>, M): MetricSpace,
     {
@@ -99,7 +100,7 @@ pub extern "C" fn opendp_transformations__make_index(
     ) -> Fallible<AnyTransformation>
     where
         TOA: Primitive,
-        M: 'static + DatasetMetric,
+        M: 'static + EventLevelMetric,
         (VectorDomain<AtomDomain<usize>>, M): MetricSpace,
         (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
     {

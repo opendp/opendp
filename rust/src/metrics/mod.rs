@@ -14,6 +14,11 @@
 #[cfg(feature = "ffi")]
 pub(crate) mod ffi;
 
+#[cfg(feature = "polars")]
+pub mod polars;
+#[cfg(feature = "polars")]
+pub use polars::*;
+
 use std::hash::Hash;
 use std::marker::PhantomData;
 
@@ -428,26 +433,25 @@ impl<T: CheckAtom, Q> MetricSpace for (AtomDomain<T>, AbsoluteDistance<Q>) {
     }
 }
 
-/// The $L^0$, $L\infty$ norms of the per-partition distances between data sets.
+/// The $L^0$, $L\infty$ norms of the group-wise distances between data sets.
 ///
-/// The $L^0$ norm counts the number of partitions that have changed.
-/// The $L\infty$ norm is the greatest change in any one partition.
+/// The $L^0$ norm counts the number of groups that have changed.
+/// The $L\infty$ norm is the greatest change in any one group.
 ///
 /// # Proof Definition
 ///
 /// ### $d$-closeness
-/// For any two partitionings $x, x' \in \texttt{D}$ and $d$ of type `(u32, M::Distance)`,
-/// we say that $x, x'$ are $d = (l0, li)$-close under the the partition distance metric whenever
+/// For any two groupings $x, x' \in \texttt{D}$ and $d$ of type `(u32, M::Distance)`,
+/// we say that $x, x'$ are $d = (l0, li)$-close under the the parallel distance metric whenever
 ///
 /// ```math
 /// d(x, x') = (|d_M(x, x')|_0, |d_M(x, x')|_\infty) \leq (l0, li) = d
 /// ```
 ///
 /// Both numbers in the 2-tuple must be less than their respective values to be $d$-close.
-///
 #[derive(Clone, PartialEq)]
 pub struct Parallel<M: Metric>(pub M);
-impl<M: Metric> Default for Parallel<M> {
+impl<M: Metric + Default> Default for Parallel<M> {
     fn default() -> Self {
         Parallel(M::default())
     }
@@ -463,27 +467,26 @@ impl<M: Metric> Metric for Parallel<M> {
     type Distance = (IntDistance, M::Distance);
 }
 
-/// The $L^0$, $L^1$, $L\infty$ norms of the per-partition distances between data sets.
+/// The $L^0$, $L^1$, $L\infty$ norms of the group-wise distances between data sets.
 ///
-/// The $L^0$ norm counts the number of partitions that have changed.
+/// The $L^0$ norm counts the number of groups that have changed.
 /// The $L^1$ norm is the total change.
-/// The $L\infty$ norm is the greatest change in any one partition.
+/// The $L\infty$ norm is the greatest change in any one group.
 ///
 /// # Proof Definition
 ///
 /// ### $d$-closeness
-/// For any two partitionings $u, v \in \texttt{D}$ and $d$ of type `(usize, M::Distance, M::Distance)`,
-/// we say that $u, v$ are $d$-close under the the partition distance metric whenever
+/// For any two groupings $x, x' \in \texttt{D}$ and $d$ of type `(usize, M::Distance, M::Distance)`,
+/// we say that $x, x'$ are $d$-close under the the partition distance metric whenever
 ///
 /// ```math
 /// d(x, x') = |d_M(x, x')|_0, |d_M(x, x')|_1, |d_M(x, x')|_\infty \leq d
 /// ```
 ///
 /// All three numbers in the triple must be less than their respective values in $d$ to be $d$-close.
-///
 #[derive(Clone, PartialEq)]
 pub struct PartitionDistance<M: Metric>(pub M);
-impl<M: Metric> Default for PartitionDistance<M> {
+impl<M: Metric + Default> Default for PartitionDistance<M> {
     fn default() -> Self {
         PartitionDistance(M::default())
     }
@@ -644,3 +647,58 @@ impl<T: CheckAtom> MetricSpace for (VectorDomain<AtomDomain<T>>, LInfDistance<T>
         }
     }
 }
+
+pub trait MicrodataMetric: 'static + Metric<Distance = IntDistance> {
+    /// Whether adjacent datasets share the same number of element.
+    const SIZED: bool;
+    /// Whether the metric is sensitive to reordering of elements.
+    const ORDERED: bool;
+    #[cfg(feature = "polars")]
+    /// The identifier column if defined.
+    fn identifier(&self) -> Option<polars_plan::dsl::Expr>;
+
+    type EventMetric: EventLevelMetric;
+}
+impl MicrodataMetric for SymmetricDistance {
+    const SIZED: bool = false;
+    const ORDERED: bool = false;
+    #[cfg(feature = "polars")]
+    fn identifier(&self) -> Option<polars_plan::dsl::Expr> {
+        None
+    }
+    type EventMetric = SymmetricDistance;
+}
+impl MicrodataMetric for InsertDeleteDistance {
+    const SIZED: bool = false;
+    const ORDERED: bool = true;
+    #[cfg(feature = "polars")]
+    fn identifier(&self) -> Option<polars_plan::dsl::Expr> {
+        None
+    }
+    type EventMetric = InsertDeleteDistance;
+}
+impl MicrodataMetric for ChangeOneDistance {
+    const SIZED: bool = true;
+    const ORDERED: bool = false;
+    #[cfg(feature = "polars")]
+    fn identifier(&self) -> Option<polars_plan::dsl::Expr> {
+        None
+    }
+    type EventMetric = ChangeOneDistance;
+}
+impl MicrodataMetric for HammingDistance {
+    const SIZED: bool = true;
+    const ORDERED: bool = true;
+    #[cfg(feature = "polars")]
+    fn identifier(&self) -> Option<polars_plan::dsl::Expr> {
+        None
+    }
+    type EventMetric = HammingDistance;
+}
+
+pub trait EventLevelMetric: MicrodataMetric + Default {}
+
+impl EventLevelMetric for SymmetricDistance {}
+impl EventLevelMetric for InsertDeleteDistance {}
+impl EventLevelMetric for ChangeOneDistance {}
+impl EventLevelMetric for HammingDistance {}

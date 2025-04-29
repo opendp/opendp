@@ -3,10 +3,8 @@ use crate::domains::AtomDomain;
 
 #[test]
 fn test() -> Fallible<()> {
-    let (input_domain, input_metric) = (
-        VectorDomain::new(AtomDomain::default()),
-        SymmetricDistance::default(),
-    );
+    let (input_domain, input_metric) =
+        (VectorDomain::new(AtomDomain::default()), SymmetricDistance);
     let trans =
         make_resize::<_, SymmetricDistance, SymmetricDistance>(input_domain, input_metric, 3, "x")?;
     assert_eq!(trans.invoke(&vec!["A"; 2])?, vec!["A", "A", "x"]);

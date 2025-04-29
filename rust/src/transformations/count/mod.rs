@@ -149,7 +149,7 @@ pub fn make_count_by_categories<MO, TIA, TOA>(
     >,
 >
 where
-    MO: CountByCategoriesConstant<MO::Distance> + Metric,
+    MO: CountByCategoriesConstant<MO::Distance> + Metric + Default,
     MO::Distance: Number,
     TIA: Hashable,
     TOA: Number,
@@ -241,7 +241,7 @@ pub fn make_count_by<MO, TK, TV>(
     >,
 >
 where
-    MO: CountByConstant<MO::Distance> + Metric,
+    MO: CountByConstant<MO::Distance> + Metric + Default,
     MO::Distance: Number,
     TK: Hashable,
     TV: Number,

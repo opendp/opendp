@@ -5,8 +5,9 @@ use crate::{
     data::Column,
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
+    metrics::EventLevelMetric,
     traits::{Hashable, Primitive, RoundCast},
-    transformations::{DatasetMetric, make_cast_default, make_is_equal},
+    transformations::{make_cast_default, make_is_equal},
 };
 
 use super::{DataFrame, DataFrameDomain};
@@ -28,7 +29,7 @@ fn make_apply_transformation_dataframe<K: Hashable, VI: Primitive, VO: Primitive
     >,
 ) -> Fallible<Transformation<DataFrameDomain<K>, DataFrameDomain<K>, M, M>>
 where
-    M: DatasetMetric,
+    M: EventLevelMetric,
     (DataFrameDomain<K>, M): MetricSpace,
     (VectorDomain<AtomDomain<VI>>, M): MetricSpace,
     (VectorDomain<AtomDomain<VO>>, M): MetricSpace,
@@ -102,7 +103,7 @@ where
     TK: Hashable,
     TIA: Primitive,
     TOA: Primitive + RoundCast<TIA>,
-    M: DatasetMetric,
+    M: EventLevelMetric,
     (DataFrameDomain<TK>, M): MetricSpace,
     (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
     (VectorDomain<AtomDomain<TOA>>, M): MetricSpace,
@@ -149,7 +150,7 @@ pub fn make_df_is_equal<TK, TIA, M>(
 where
     TK: Hashable,
     TIA: Primitive,
-    M: DatasetMetric,
+    M: EventLevelMetric,
     (DataFrameDomain<TK>, M): MetricSpace,
     (VectorDomain<AtomDomain<TIA>>, M): MetricSpace,
     (VectorDomain<AtomDomain<bool>>, M): MetricSpace,

@@ -1,0 +1,71 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn make\_stable\_group\_by}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle  
+
+
+\contrib
+
+Proves soundness of \rustdoc{transformations/make_stable_lazyframe/group_by/fn}{make\_stable\_group\_by} 
+in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler Verified}
+\begin{itemize}
+    \item Generic \texttt{M} implements \rustdoc{transformations/cast_metric/trait}{UnboundedMetric}.
+\end{itemize}
+
+\subsubsection*{Caller Verified}
+None
+
+\subsection*{Function}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_stable_group_by.py}
+
+\subsection*{Postcondition}
+\validTransformation{\texttt{(input\_domain, input\_metric, plan)}}{\\\texttt{make\_stable\_group\_by}}
+
+\begin{proof}[Appropriate Output Domain]
+    By line \ref{line:stable-keys} the grouping keys are stable row-by-row transformations of the data.
+    By line \ref{line:infallible-aggs} the aggregates are infallible.
+    Therefore the function does not raise data-dependent errors.
+
+    By the postcondition of \texttt{DslPlan.simulate\_schema},
+    \texttt{series\_domains} follows the expected schema of members in the output domain.
+    Notice that this is a very conservative output domain, as no data descriptors are preserved except for the schema itself.
+    On the other hand, this comes with the benefit that aggregations are black-boxes, allowing for any infallible group-wise data processing.
+
+    For the same reason, the only margins preserved are those that are a subset of the grouping keys.
+    Among these margins, invariants are discarded. A more careful proof may be able to preserve invariants,
+    but this is not necessary for the soundness of the transformation.
+
+    It has been shown that for every element $x$ in \texttt{input\_domain}, $\function(x)$ is in \texttt{output\_domain} or raises a data-independent runtime exception.
+\end{proof}
+
+
+The stability guarantee doesn't attempt to claim the broadest set of possible bounds on output distances,
+rather it only claims a simple bound that might be useful for the user.
+This can be extended in the future, but is sufficient for select queries.
+
+\begin{proof}[Stability guarantee]
+    We first simplify the problem on line \ref{line:identifier} by only considering datasets that differ by rows, not by identifiers.
+    
+    The only bound derived is when there are no grouping keys.
+
+    We first retrieve optional upper bounds on the number of rows and groups an individual may contribute on lines \ref{line:total-contributions} and \ref{line:total-groups}.
+    Both of these bounds directly correspond to the number of rows an individual may influence in the resulting dataset.
+    
+    \begin{align}
+        &\max_{x \sim x'} d_{\mathrm{FrameDistance<M>}}(\texttt{function}(x), \texttt{function}(x')) \\
+        &\le \mathrm{option\_min}(\texttt{contributed\_rows}, \texttt{contributed\_groups}) \cdot 2
+    \end{align}
+
+    Since each influenced row accounts for one addition and one removal, the distance is twice the number of influenced rows.
+    This is reflected on line \ref{line:double}.
+    The resulting bound is returned on line \ref{line:bound}, satisfying the postcondition.
+\end{proof}
+\end{document}

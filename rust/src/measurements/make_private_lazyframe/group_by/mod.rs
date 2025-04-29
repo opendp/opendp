@@ -1,20 +1,20 @@
-use std::fmt::Debug;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use crate::accuracy::{
     conservative_discrete_gaussian_tail_to_alpha, conservative_discrete_laplacian_tail_to_alpha,
 };
 use crate::combinators::{BasicCompositionMeasure, make_basic_composition};
-use crate::core::{Function, Measurement, MetricSpace, PrivacyMap};
-use crate::domains::{CategoricalDomain, Context, DslPlanDomain, WildExprDomain};
+use crate::core::{Function, Measurement, PrivacyMap};
+use crate::domains::{CategoricalDomain, Context, DslPlanDomain, WildExprDomain, option_min};
 use crate::error::*;
 use crate::measurements::expr_noise::Distribution;
 use crate::measurements::make_private_expr;
 use crate::measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence};
-use crate::metrics::PartitionDistance;
+use crate::metrics::{Bounds, FrameDistance, PartitionDistance};
 use crate::traits::{InfAdd, InfMul, InfPowI, InfSub};
 use crate::transformations::traits::UnboundedMetric;
-use crate::transformations::{DatasetMetric, StableDslPlan, StableExpr};
+use crate::transformations::{StableDslPlan, StableExpr};
 use dashu::integer::IBig;
 use make_private_expr::PrivateExpr;
 use matching::find_len_expr;
@@ -38,25 +38,24 @@ use polars_plan::prelude::ProjectionOptions;
 /// * `plan` - The LazyFrame to transform.
 /// * `global_scale` - The parameter for the measurement.
 /// * `threshold` - Only keep groups with length greater than threshold
-pub fn make_private_group_by<MS, MI, MO>(
+pub fn make_private_group_by<MI, MO>(
     input_domain: DslPlanDomain,
-    input_metric: MS,
+    input_metric: FrameDistance<MI>,
     output_measure: MO,
     plan: DslPlan,
     global_scale: Option<f64>,
     threshold: Option<u32>,
-) -> Fallible<Measurement<DslPlanDomain, DslPlan, MS, MO>>
+) -> Fallible<Measurement<DslPlanDomain, DslPlan, FrameDistance<MI>, MO>>
 where
-    MS: 'static + DatasetMetric,
     MI: 'static + UnboundedMetric,
+    MI::EventMetric: UnboundedMetric,
     MO: 'static + ApproximateMeasure,
-    MO::Distance: Debug,
-    Expr: PrivateExpr<PartitionDistance<MI>, MO>
-        + StableExpr<PartitionDistance<MI>, PartitionDistance<MI>>,
-    DslPlan: StableDslPlan<MS, MI>,
-    (DslPlanDomain, MS): MetricSpace,
-    (DslPlanDomain, MI): MetricSpace,
+    Expr: PrivateExpr<PartitionDistance<MI::EventMetric>, MO>
+        + StableExpr<PartitionDistance<MI::EventMetric>, PartitionDistance<MI::EventMetric>>,
+    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
 {
+    let is_truncated = input_metric.0.identifier().is_some();
+
     let Some(MatchGroupBy {
         input,
         group_by,
@@ -80,7 +79,7 @@ where
         .map(|expr| {
             expr.clone().make_stable(
                 expr_domain.clone(),
-                PartitionDistance(middle_metric.clone()),
+                PartitionDistance(middle_metric.0.clone()),
             )
         })
         .collect::<Fallible<Vec<_>>>()?;
@@ -105,7 +104,7 @@ where
 
     let is_join = if let Some(KeySanitizer::Join { keys, .. }) = key_sanitizer.clone() {
         let num_keys = LazyFrame::from((*keys).clone()).select([len()]).collect()?;
-        margin.max_num_partitions = Some(num_keys.column("len")?.u32()?.last().unwrap());
+        margin.max_groups = Some(num_keys.column("len")?.u32()?.last().unwrap());
 
         true
     } else {
@@ -124,7 +123,7 @@ where
             .map(|expr| {
                 make_private_expr(
                     expr_domain.clone(),
-                    PartitionDistance(middle_metric.clone()),
+                    PartitionDistance(middle_metric.0.clone()),
                     output_measure.clone(),
                     expr,
                     global_scale,
@@ -141,7 +140,7 @@ where
         .map(|ep| (ep.expr, ep.fill))
         .unzip();
 
-    let threshold_info = if margin.public_info.is_some() || is_join {
+    let threshold_info = if margin.invariant.is_some() || is_join {
         None
     } else if let Some((name, threshold_value)) = match_filter(&key_sanitizer) {
         let noise = find_len_expr(&dp_exprs, Some(name.as_str()))?.1;
@@ -171,7 +170,7 @@ where
                     let name = dp_expr.clone().meta().output_name()?;
                     let null_expr = null_expr.ok_or_else(|| {
                         let name = dp_expr.clone().meta().output_name().map_or_else(|_| "an expression".to_string(), |n| format!("column \"{n}\""));
-                        err!(MakeMeasurement, "{} can't be joined with an explicit key set because missing partitions cannot be filled", name)
+                        err!(MakeMeasurement, "{} can't be joined with an explicit key set because missing groups cannot be filled", name)
                     })?;
 
                     Ok(col(name).fill_null(null_expr))
@@ -229,15 +228,48 @@ where
         }),
         middle_metric,
         output_measure.clone(),
-        PrivacyMap::new_fallible(move |&d_in| {
-            let mip = margin.max_influenced_partitions.unwrap_or(d_in);
-            let mnp = margin.max_num_partitions.unwrap_or(d_in);
-            let mpc = margin.max_partition_contributions.unwrap_or(d_in);
-            let mpl = margin.max_partition_length.unwrap_or(d_in);
+        PrivacyMap::new_fallible(move |d_in: &Bounds| {
+            let bound = d_in.get_bound(&group_by_id);
 
-            let l0 = mip.min(mnp).min(d_in);
-            let li = mpc.min(mpl).min(d_in);
-            let l1 = l0.inf_mul(&li)?.min(d_in);
+            // incorporate all information into optional bounds
+            let l0 = option_min(bound.num_groups, margin.max_groups);
+            let li = option_min(bound.per_group, margin.max_length);
+            let l1 = d_in.get_bound(&HashSet::new()).per_group;
+
+            // reduce optional bounds to concrete bounds
+            let (l0, l1, li) = match (l0, l1, li) {
+                (Some(l0), Some(l1), Some(li)) => (l0, l1, li),
+                (l0, Some(l1), li) => (l0.unwrap_or(l1), l1, li.unwrap_or(l1)),
+                (Some(l0), None, Some(li)) => (l0, l0.inf_mul(&li)?, li),
+                _ => {
+                    let msg = if is_truncated {
+                        let mut msg = " This is likely due to a missing truncation earlier in the data pipeline.".to_string();
+                        let by_str = group_by_id
+                            .iter()
+                            .map(|e| format!("{e:?}"))
+                            .collect::<Vec<_>>()
+                            .join(", ");
+
+                        if l0.is_none() {
+                            msg = format!(
+                                "{msg} To bound `num_groups` in the Context API, try using `.truncate_num_groups(num_groups, by=[{by_str}])`."
+                            );
+                        }
+                        if li.is_none() {
+                            msg = format!(
+                                "{msg} To bound `per_group` in the Context API, try using `.truncate_per_group(per_group, by=[{by_str}])`."
+                            );
+                        }
+                        msg
+                    } else {
+                        "".to_string()
+                    };
+                    return fallible!(
+                        FailedMap,
+                        "num_groups ({l0:?}), total contributions ({l1:?}), and per_group ({li:?}) are not sufficiently well-defined.{msg}"
+                    );
+                }
+            };
 
             let mut d_out = privacy_map.eval(&(l0, l1, li))?;
 
@@ -257,7 +289,7 @@ where
                         .neg_inf_powi(IBig::from(l0))?,
                 )?;
                 d_out = MO::add_delta(d_out, delta_joint)?;
-            } else if margin.public_info.is_none() {
+            } else if margin.invariant.is_none() {
                 return fallible!(
                     FailedMap,
                     "key-sets cannot be privatized under {:?}. FixedSmoothedMaxDivergence is necessary.",

@@ -1,0 +1,55 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{fn match\_per\_group\_predicate}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle  
+
+
+\contrib
+
+Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_per\_group\_predicate} 
+in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler Verified}
+Types matching pseudocode.
+
+\subsection*{Precondition}
+None 
+
+\subsection*{Function}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/match_per_group_predicate.py}
+
+\subsection*{Postcondition}
+\begin{theorem}[Postcondition]
+    If \texttt{enumeration} is an enumeration of rows,
+    and \texttt{partition\_by} includes \texttt{identifier},
+    then returns a \texttt{threshold} bound on per-group contribution,
+    when grouped by the non-identifier columns in \texttt{partition\_by}.
+\end{theorem}
+
+\begin{proof}
+    Reorderings of an enumeration, like reversal, shuffling and sorting are also valid enumerations,
+    so lines \ref{line:reordering_start}-\ref{line:reordering_end} ignore these reorderings and re-assign the enumeration to the input of the reordering.
+
+    Due to the ambiguity between matching predicates that bound \texttt{num\_groups} or \texttt{per\_group},
+    an error is only raised if the predicate is unambiguously a \texttt{num\_groups} truncation predicate.
+    This check happens on line \ref{line:check_enumeration}.
+
+    Line \ref{line:partition} splits the partition by expressions into two sets,
+    one containing the \texttt{identifier} and the other containing the grouping columns.
+
+    This predicate corresponds to a \texttt{per\_group} truncation predicate,
+    because the over expression groups by both the \texttt{identifier} column and any expressions in \texttt{by},
+    and within each group, an enumeration is applied to count the number of rows.
+    If the only rows kept are those whose enumeration is less than \texttt{threshold},
+    then each user identifier will have at most \texttt{threshold} rows when their records are grouped by \texttt{by}.
+    Reorderings of the enumeration, like reversal, shuffling and sorting can be used to choose which records from each individual are kept.
+    
+    Therefore the bound on user contributions constructed on line \ref{line:bound} is valid.
+\end{proof}
+\end{document}

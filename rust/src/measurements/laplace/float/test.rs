@@ -5,7 +5,7 @@ use crate::{metrics::SymmetricDistance, transformations::make_mean};
 fn test_chain_laplace() -> Fallible<()> {
     let chain = (make_mean(
         VectorDomain::new(AtomDomain::new_closed((10., 12.))?).with_size(3),
-        SymmetricDistance::default(),
+        SymmetricDistance,
     )? >> make_scalar_float_laplace(
         AtomDomain::new_non_nan(),
         AbsoluteDistance::default(),

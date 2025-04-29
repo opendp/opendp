@@ -6,11 +6,10 @@ use opendp_derive::bootstrap;
 use crate::core::{Domain, Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, OptionDomain, VectorDomain};
 use crate::error::Fallible;
+use crate::metrics::EventLevelMetric;
 use crate::traits::samplers::GeneratorOpenDP;
 use crate::traits::{CheckAtom, CheckNull, Float, HasNull};
 use crate::transformations::make_row_by_row;
-
-use super::DatasetMetric;
 use rand::distributions::{Distribution, Uniform, uniform::SampleUniform};
 
 #[bootstrap(
@@ -35,7 +34,7 @@ pub fn make_impute_uniform_float<M, TA>(
 ) -> Fallible<Transformation<VectorDomain<AtomDomain<TA>>, VectorDomain<AtomDomain<TA>>, M, M>>
 where
     TA: Float + SampleUniform,
-    M: DatasetMetric,
+    M: EventLevelMetric,
     (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
 {
     let (lower, upper) = bounds;
@@ -145,7 +144,7 @@ where
     DIA: ImputeConstantDomain + Default,
     DIA::Imputed: 'static + Clone + CheckAtom,
     DIA::Carrier: 'static,
-    M: DatasetMetric,
+    M: EventLevelMetric,
     (VectorDomain<DIA>, M): MetricSpace,
     (VectorDomain<AtomDomain<DIA::Imputed>>, M): MetricSpace,
 {
@@ -219,7 +218,7 @@ pub fn make_drop_null<M, DIA>(
 where
     DIA: DropNullDomain + Default,
     DIA::Imputed: CheckAtom,
-    M: DatasetMetric,
+    M: EventLevelMetric,
     (VectorDomain<DIA>, M): MetricSpace,
     (VectorDomain<AtomDomain<DIA::Imputed>>, M): MetricSpace,
 {

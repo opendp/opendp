@@ -1,5 +1,5 @@
 use crate::domains::{LazyFrameDomain, SeriesDomain, SeriesElementDomain};
-use crate::metrics::SymmetricDistance;
+use crate::metrics::{FrameDistance, SymmetricDistance};
 use crate::transformations::make_stable_lazyframe;
 
 use super::*;
@@ -17,7 +17,7 @@ fn assert_expr_to_physical<DI: 'static + SeriesElementDomain, DO: 'static + Seri
 
     let t_binned = make_stable_lazyframe(
         lf_domain,
-        SymmetricDistance,
+        FrameDistance(SymmetricDistance),
         lf.clone().with_column(col(name.clone()).to_physical()),
     )?;
 

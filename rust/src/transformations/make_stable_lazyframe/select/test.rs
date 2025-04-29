@@ -17,7 +17,7 @@ fn test_select_microdata() -> Fallible<()> {
 
     let t_select = make_stable_lazyframe(
         lf_domain.clone(),
-        SymmetricDistance,
+        FrameDistance(SymmetricDistance),
         lf.clone().select([lit(2).gt(col("chunk_2_null"))]),
     )?;
 

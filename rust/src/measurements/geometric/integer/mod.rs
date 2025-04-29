@@ -49,7 +49,7 @@ where
             sample_discrete_laplace_linear::<T, f64>(*v, scale, bounds)
         }),
         input_metric,
-        MaxDivergence::default(),
+        MaxDivergence,
         PrivacyMap::new_fallible(laplace_puredp_map(scale, 0.0)),
     )
 }
@@ -100,7 +100,7 @@ where
                 .collect()
         }),
         input_metric,
-        MaxDivergence::default(),
+        MaxDivergence,
         PrivacyMap::new_fallible(laplace_puredp_map(scale, 0.0)),
     )
 }

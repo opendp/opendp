@@ -34,6 +34,9 @@ __all__ = [
     'LazyFrameDomain',
     'ExtrinsicDomain',
     'Metric',
+    'SymmetricIdDistance',
+    'ChangeOneIdDistance',
+    'FrameDistance',
     'Measure',
     'PrivacyProfile',
     '_PartialConstructor',
@@ -798,7 +801,46 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
     def __iter__(self):
         raise ValueError("Metric does not support iteration")  # pragma: no cover
 
+class FrameDistance(Metric):
+    '''``FrameDistance`` is a higher-order metric that contains multiple distance bounds for different groupings of data.'''
 
+    _type_ = AnyMetric
+    
+    @property
+    def inner_metric(self) -> Metric:
+        '''Bounds of the domain, if they exist'''
+        from opendp.metrics import _frame_distance_get_inner_metric
+        return _frame_distance_get_inner_metric(self)
+    
+class SymmetricIdDistance(Metric):
+    '''``SymmetricIdDistance`` is a metric for measuring the distance between the identifiers of two datasets.
+    
+    The metric counts the number of identifiers that must be added or removed to make the two datasets equal.
+    '''
+
+    _type_ = AnyMetric
+    
+    @property
+    def identifier(self):
+        '''The name of the column storing identifiers'''
+        from opendp.metrics import _symmetric_id_distance_get_identifier
+        return _symmetric_id_distance_get_identifier(self)
+    
+
+class ChangeOneIdDistance(Metric):
+    '''``ChangeOneIdDistance`` is a metric for measuring the distance between the identifiers of two datasets.
+    
+    The metric counts the number of identifiers that must be changed to make the two datasets equal.
+    '''
+
+    _type_ = AnyMetric
+    
+    @property
+    def identifier(self):
+        '''The name of the column storing identifiers'''
+        from opendp.metrics import _change_one_id_distance_get_identifier
+        return _change_one_id_distance_get_identifier(self)
+    
 class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
     '''
     See the `Measure <../../api/user-guide/programming-framework/supporting-elements.html#measure>`_

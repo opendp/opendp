@@ -125,8 +125,8 @@ where
         input_domain.clone(),
         input_domain,
         Function::new(|arg: &D::Carrier| arg.clone()),
-        input_metric,
-        MI::UnboundedMetric::default(),
+        input_metric.clone(),
+        input_metric.to_unbounded(),
         StabilityMap::new(|d_in| d_in * 2),
     )
 }
@@ -171,8 +171,8 @@ where
         input_domain.clone(),
         input_domain,
         Function::new(|arg: &D::Carrier| arg.clone()),
-        input_metric,
-        MI::BoundedMetric::default(),
+        input_metric.clone(),
+        input_metric.to_bounded(),
         StabilityMap::new(|d_in| d_in / 2),
     )
 }

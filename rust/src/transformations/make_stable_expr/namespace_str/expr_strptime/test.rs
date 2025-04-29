@@ -3,7 +3,7 @@ use std::str::FromStr;
 use chrono::NaiveTime;
 
 use crate::domains::{AtomDomain, LazyFrameDomain, SeriesDomain};
-use crate::metrics::SymmetricDistance;
+use crate::metrics::{FrameDistance, SymmetricDistance};
 use crate::transformations::make_stable_lazyframe;
 
 use super::*;
@@ -54,7 +54,7 @@ fn test_make_expr_strptime() -> Fallible<()> {
             lit("null"),
         ),
     ]);
-    let t_casted = make_stable_lazyframe(lf_domain, SymmetricDistance, casted)?;
+    let t_casted = make_stable_lazyframe(lf_domain, FrameDistance(SymmetricDistance), casted)?;
 
     let observed = t_casted.invoke(&lf)?.collect()?;
     let expected = r#"shape: (4, 3)

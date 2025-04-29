@@ -4,8 +4,8 @@ use polars_plan::dsl::Expr;
 use crate::core::{MetricSpace, Transformation};
 use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
+use crate::metrics::MicrodataMetric;
 use crate::polars::get_disabled_features_message;
-use crate::transformations::DatasetMetric;
 
 use super::StableExpr;
 
@@ -24,7 +24,7 @@ pub fn make_namespace_str<M: OuterMetric>(
     expr: Expr,
 ) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
 where
-    M::InnerMetric: DatasetMetric,
+    M::InnerMetric: MicrodataMetric,
     M::Distance: Clone,
     (WildExprDomain, M): MetricSpace,
     (ExprDomain, M): MetricSpace,

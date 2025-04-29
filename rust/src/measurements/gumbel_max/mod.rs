@@ -92,7 +92,7 @@ where
             select_score(arg.iter().cloned(), optimize.clone(), scale_frac.clone())
         }),
         input_metric.clone(),
-        MaxDivergence::default(),
+        MaxDivergence,
         PrivacyMap::new_fallible(report_noisy_max_gumbel_map(scale, input_metric)),
     )
 }

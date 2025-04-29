@@ -25,6 +25,16 @@ def test_unit_of():
     with pytest.raises(ValueError):
         dp.unit_of(l2=2.0, ordered=True)
 
+def test_unit_of_identifier():
+    pytest.importorskip("polars")
+    with pytest.raises(ValueError, match="Must specify exactly one distance."):
+        dp.unit_of(identifier="A")
+    assert dp.unit_of(identifier="A", contributions=3) == (dp.symmetric_id_distance("A"), 3)
+
+    with pytest.raises(ValueError):
+        dp.unit_of(identifier="A", contributions=3, ordered=True)
+
+    assert dp.unit_of(identifier="A", changes=3) == (dp.change_one_id_distance("A"), 3)
 
 def test_privacy_loss_of():
     assert dp.loss_of(epsilon=3) == (dp.max_divergence(), 3.0)

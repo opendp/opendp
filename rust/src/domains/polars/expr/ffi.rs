@@ -1,17 +1,15 @@
 use opendp_derive::bootstrap;
 
 use crate::{
-    core::{FfiResult, Metric, MetricSpace},
+    core::FfiResult,
     domains::{Margin, polars::ffi::unpack_series_domains},
-    error::Fallible,
     ffi::{
-        any::{AnyDomain, AnyMetric, AnyObject, Downcast},
+        any::{AnyDomain, AnyObject, Downcast},
         util,
     },
-    metrics::{InsertDeleteDistance, SymmetricDistance},
 };
 
-use super::{Context, ExprDomain, WildExprDomain};
+use super::{Context, WildExprDomain};
 
 #[unsafe(no_mangle)]
 #[bootstrap(
@@ -43,24 +41,4 @@ pub extern "C" fn opendp_domains__wild_expr_domain(
     };
 
     Ok(AnyDomain::new(WildExprDomain { columns, context })).into()
-}
-
-impl MetricSpace for (ExprDomain, AnyMetric) {
-    fn check_space(&self) -> Fallible<()> {
-        let (domain, metric) = self.clone();
-
-        fn monomorphize<M: 'static + Metric>(domain: ExprDomain, metric: AnyMetric) -> Fallible<()>
-        where
-            (ExprDomain, M): MetricSpace,
-        {
-            let input_metric = metric.downcast_ref::<M>()?;
-            (domain.clone(), input_metric.clone()).check_space()
-        }
-
-        dispatch!(
-            monomorphize,
-            [(metric.type_, [SymmetricDistance, InsertDeleteDistance])],
-            (domain, metric)
-        )
-    }
 }

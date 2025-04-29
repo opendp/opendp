@@ -73,7 +73,7 @@ where
         Function::new(move |arg: &Vec<S::Item>| {
             S::saturating_sum(&arg[..size_limit.min(arg.len())])
         }),
-        InsertDeleteDistance::default(),
+        InsertDeleteDistance,
         AbsoluteDistance::default(),
         StabilityMap::new_fallible(move |d_in: &IntDistance| {
             // d_out =  |BS*(v) - BS*(v')| where BS* is the finite sum and BS the ideal sum
@@ -143,7 +143,7 @@ where
         VectorDomain::new(AtomDomain::new_closed(bounds)?).with_size(size),
         AtomDomain::new_non_nan(),
         Function::new(move |arg: &Vec<S::Item>| S::saturating_sum(arg)),
-        InsertDeleteDistance::default(),
+        InsertDeleteDistance,
         AbsoluteDistance::default(),
         StabilityMap::new_fallible(move |d_in: &IntDistance| {
             // d_out =  |BS*(v) - BS*(v')| where BS* is the finite sum and BS the ideal sum
