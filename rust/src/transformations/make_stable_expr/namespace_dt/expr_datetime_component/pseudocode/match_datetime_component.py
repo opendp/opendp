@@ -2,7 +2,7 @@
 def match_datetime_component(
     temporal_function: TemporalFunction,
 ) -> DataType | None:
-    ({
+    return ({
         Millennium: DataType.UInt32,
         Century: DataType.Int32,
         Year: DataType.Int32,
