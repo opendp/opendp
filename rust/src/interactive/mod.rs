@@ -54,12 +54,12 @@ impl<Q: ?Sized, A> Queryable<Q, A> {
 
 // in the Queryable struct definition, this 'a lifetime is supplied by an HRTB after `dyn`, and then elided
 #[derive(Debug)]
-pub(crate) enum Query<'a, Q: ?Sized> {
+pub enum Query<'a, Q: ?Sized> {
     External(&'a Q),
     Internal(&'a dyn Any),
 }
 
-pub(crate) enum Answer<A> {
+pub enum Answer<A> {
     External(A),
     Internal(Box<dyn Any>),
 }
@@ -146,7 +146,7 @@ impl<Q: ?Sized, A> Queryable<Q, A>
 where
     Self: IntoPolyQueryable + FromPolyQueryable,
 {
-    pub(crate) fn new(
+    pub fn new(
         transition: impl FnMut(&Self, Query<Q>) -> Fallible<Answer<A>> + 'static,
     ) -> Fallible<Self> {
         let queryable = Queryable::new_raw(transition);
@@ -157,16 +157,14 @@ where
         })
     }
 
-    pub(crate) fn new_raw(
+    pub fn new_raw(
         transition: impl FnMut(&Self, Query<Q>) -> Fallible<Answer<A>> + 'static,
     ) -> Self {
         Queryable(Rc::new(RefCell::new(transition)))
     }
 
     #[allow(dead_code)]
-    pub(crate) fn new_external(
-        mut transition: impl FnMut(&Q) -> Fallible<A> + 'static,
-    ) -> Fallible<Self> {
+    pub fn new_external(mut transition: impl FnMut(&Q) -> Fallible<A> + 'static) -> Fallible<Self> {
         Queryable::new(
             move |_self: &Self, query: Query<Q>| -> Fallible<Answer<A>> {
                 match query {
