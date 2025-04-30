@@ -5,7 +5,7 @@ def make_canonical_noise(
     d_in: f64,
     d_out: tuple[f64, f64],
 ):
-    assert not input_domain.nan(), "input data must be non-null" # `\label{non-null}`
+    assert not input_domain.nan(), "input data must be non-nan" # `\label{non-nan}`
     assert not d_in.is_sign_negative() and d_in.is_finite() # `\label{sensitivity-check}`
 
     tradeoff, fixed_point = approximate_to_tradeoff(d_out)

@@ -85,7 +85,7 @@ We will first prove that the mechanism \texttt{function} adds noise from this di
 
 \begin{proof}
 The code block on Line~\ref{try-cast-arg} converts float \texttt{arg} to a rational bignum.
-Due to \ref{non-null}, the input domain excludes null values, 
+Due to line~\ref{non-nan}, the input domain excludes nan values, 
 so if the input is a member of the input domain, then the cast will never fail.
 
 Line~\ref{sensitivity-check} ensures that \texttt{d\_in} is well-formed (distances cannot be negative).
