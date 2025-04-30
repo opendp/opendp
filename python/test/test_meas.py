@@ -306,3 +306,11 @@ def test_gaussian_threshold_float():
     # 12.5 = (10 / 2)^2 / 2 = (Δ / σ)^2 / 2
     assert meas.map((1, 10, 10)) == (12.5, 1.1102230246251565e-16)
 
+
+def test_canonical_noise():
+    space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
+    m_cnd = space >> dp.m.then_canonical_noise(d_in=1., d_out=(1., 1e-6))
+
+    assert m_cnd.map(1.) == (1.0, 1e-6)
+    # just check that it runs
+    assert isinstance(m_cnd(0.), float)

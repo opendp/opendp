@@ -12,18 +12,25 @@ use dashu::{
 use super::sample_from_uniform_bytes;
 use crate::{error::Fallible, traits::RoundCast};
 
-#[cfg(test)]
+#[cfg(all(feature = "contrib", test))]
 mod test;
 
 mod gumbel;
 pub use gumbel::GumbelRV;
 
+mod canonical;
+pub use canonical::CanonicalRV;
+
 pub trait InverseCDF: Sized {
     /// Type of lower or upper bound on the true random sample.
     type Edge: PartialOrd + Debug;
 
-    /// Calculate either a lower or upper bound on the inverse cumulative distribution function.
-    /// Returns None if the inverse CDF cannot be computed for the given uniform sample.
+    /// # Proof Definition
+    /// Given a random variable `self` (of type `Self`),
+    /// return `Ok(out)` where `out` is the inverse cumulative distribution function evaluated at `uniform`
+    /// with error in direction `R`, or `None`.
+    ///
+    /// The error between `out` and the exactly-computed CDF decreases monotonically as `refinements` increases.
     fn inverse_cdf<R: ODPRound>(&self, uniform: RBig, refinements: usize) -> Option<Self::Edge>;
 }
 
@@ -109,6 +116,11 @@ impl<D: InverseCDF> PartialSample<D> {
     }
 
     /// Refine `psrn` until both bounds of interval round to same TO
+    ///
+    /// # Proof Definition
+    /// Returns a sample from the distribution with CDF as defined by `self`,
+    /// rounded to the nearest value of type `TO`,
+    /// or an error if there is a lack of system entropy.
     pub fn value<TO: RoundCast<D::Edge> + PartialEq>(&mut self) -> Fallible<TO> {
         Ok(loop {
             let Some((l, r)) = self.lower().zip(self.upper()) else {
