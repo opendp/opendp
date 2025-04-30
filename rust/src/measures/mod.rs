@@ -250,3 +250,23 @@ pub struct RenyiDivergence;
 impl Measure for RenyiDivergence {
     type Distance = Function<f64, f64>;
 }
+
+/// Privacy measure used to define $\eta$-Bounded Range.
+///
+/// The range divergence between two distributions $Y$ and $Y'$.
+///
+/// # Proof Definition
+///
+/// ### `d`-closeness
+/// For any two distributions $Y, Y'$ and any non-negative $d$ ($\eta$),
+/// $Y, Y'$ are $d$-close under the range divergence privacy measure whenever
+///
+/// ```math
+/// D_{\mathrm{BR}}(Y, Y') = \max_{y_0, y_1 \in \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y = y_0]}{\Pr[Y' = y_0]} \Big] - \Big[\ln \dfrac{\Pr[Y = y_1]}{\Pr[Y' = y_1]} \Big]
+/// ```
+#[derive(Default, Clone, Debug, PartialEq)]
+pub struct RangeDivergence;
+
+impl Measure for RangeDivergence {
+    type Distance = f64;
+}

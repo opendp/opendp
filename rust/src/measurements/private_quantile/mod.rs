@@ -4,7 +4,7 @@ use crate::{
     core::{Function, Measurement, MetricSpace},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    measures::MaxDivergence,
+    measures::RangeDivergence,
     traits::{ExactIntCast, Number},
     transformations::{
         make_quantile_score_candidates, score_candidates_constants, traits::UnboundedMetric,
@@ -42,7 +42,7 @@ pub fn make_private_quantile<MI: 'static + UnboundedMetric, T: Number>(
     mut candidates: Vec<T>,
     alpha: f64,
     scale: f64,
-) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, T, MI, MaxDivergence>>
+) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, T, MI, RangeDivergence>>
 where
     (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
 {
