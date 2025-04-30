@@ -48,6 +48,11 @@ mod report_noisy_max;
 #[cfg(feature = "contrib")]
 pub use report_noisy_max::*;
 
+#[cfg(feature = "contrib")]
+mod report_noisy_top_k;
+#[cfg(feature = "contrib")]
+pub use report_noisy_top_k::*;
+
 #[cfg(all(feature = "floating-point", feature = "contrib"))]
 mod alp;
 #[cfg(all(feature = "floating-point", feature = "contrib"))]

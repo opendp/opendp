@@ -1,6 +1,6 @@
 use crate::core::PrivacyMap;
 use crate::domains::{ArrayDomain, AtomDomain, ExprPlan, VectorDomain, WildExprDomain};
-use crate::measurements::{Optimize, SelectionMeasure, make_report_noisy_max, select_score};
+use crate::measurements::{Optimize, SelectionMeasure, make_report_noisy_max, report_noisy_top_k};
 use crate::metrics::{IntDistance, L0InfDistance, L01InfDistance, LInfDistance};
 use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
 use crate::traits::samplers::{ExponentialRV, GumbelRV};
@@ -344,10 +344,12 @@ fn report_noisy_max_gumbel_udf(
                 use SelectionDistribution::*;
                 let idx = match distribution {
                     Exponential => {
-                        select_score::<_, ExponentialRV>(&scores, scale.clone(), optimize)
+                        report_noisy_top_k::<_, ExponentialRV>(&scores, 1, scale.clone(), optimize)
                     }
-                    Gumbel => select_score::<_, GumbelRV>(&scores, scale.clone(), optimize),
-                }? as u32;
+                    Gumbel => {
+                        report_noisy_top_k::<_, GumbelRV>(&scores, 1, scale.clone(), optimize)
+                    }
+                }?[0] as u32;
                 PolarsResult::Ok(idx)
             })?
             // convert the resulting chunked array back to a series
