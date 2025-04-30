@@ -129,10 +129,7 @@ where
             (i, y_i)
         })
         // Initialize partial sample.
-        .map(|(i, f_shift)| {
-            let rv = RV::new(f_shift, scale.clone())?;
-            Ok((i, PartialSample::new(rv)))
-        })
+        .map(|(i, f_shift)| Ok((i, PartialSample::new(RV::new(f_shift, scale.clone())))))
         // Reduce to the pair with largest sample.
         .reduce(|l, r| {
             let (mut l, mut r) = (l?, r?);
@@ -148,17 +145,17 @@ pub trait SelectionRV: InverseCDF {
     /// `scale` must be non-negative.
     ///
     /// Returns a random variable.
-    fn new(shift: FBig, scale: FBig) -> Fallible<Self>;
+    fn new(shift: FBig, scale: FBig) -> Self;
 }
 
 impl SelectionRV for GumbelRV {
-    fn new(shift: FBig, scale: FBig) -> Fallible<Self> {
-        GumbelRV::new(shift, scale)
+    fn new(shift: FBig, scale: FBig) -> Self {
+        GumbelRV { shift, scale }
     }
 }
 impl SelectionRV for ExponentialRV {
-    fn new(shift: FBig, scale: FBig) -> Fallible<Self> {
-        ExponentialRV::new(shift, scale)
+    fn new(shift: FBig, scale: FBig) -> Self {
+        ExponentialRV { shift, scale }
     }
 }
 /// # Proof Definition
