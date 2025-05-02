@@ -446,8 +446,8 @@ impl<DI: Domain, MI: Metric, DO: Domain, MO: Metric> Debug for Transformation<DI
 pub struct Odometer<DI: Domain, MI: Metric, MO: Measure, Q, A> {
     pub input_domain: DI,
     pub input_metric: MI,
-    pub function: Function<DI::Carrier, OdometerQueryable<Q, A, MO::Distance>>,
     pub output_measure: MO,
+    pub function: Function<DI::Carrier, OdometerQueryable<Q, A, MO::Distance>>,
 }
 
 impl<DI: Domain, MI: Metric, MO: Measure, Q, A> Clone for Odometer<DI, MI, MO, Q, A> {
@@ -467,16 +467,16 @@ where
 {
     pub fn new(
         input_domain: DI,
-        function: Function<DI::Carrier, OdometerQueryable<Q, A, MO::Distance>>,
         input_metric: MI,
         output_measure: MO,
+        function: Function<DI::Carrier, OdometerQueryable<Q, A, MO::Distance>>,
     ) -> Fallible<Self> {
         (input_domain.clone(), input_metric.clone()).check_space()?;
         Ok(Self {
             input_domain,
-            function,
             input_metric,
             output_measure,
+            function,
         })
     }
 }
@@ -524,7 +524,7 @@ impl<Q, AB: 'static> OdometerQueryable<Q, Box<dyn Any>, AB> {
             .map_err(|_| {
                 err!(
                     FailedCast,
-                    "eval_invoke_poly failed to downcast to {}",
+                    "invoke_poly failed to downcast to {}",
                     std::any::type_name::<A>()
                 )
             })
