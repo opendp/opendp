@@ -1,5 +1,5 @@
 use crate::{
-    combinators::Sequentiality,
+    combinators::Composition,
     error::Fallible,
     ffi::any::{AnyMeasure, AnyObject, Downcast},
     measures::{
@@ -10,15 +10,15 @@ use crate::{
 use super::{Adaptivity, CompositionMeasure};
 
 impl CompositionMeasure for AnyMeasure {
-    fn theorem(&self, adaptivity: Adaptivity) -> Fallible<Sequentiality> {
+    fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composition> {
         fn monomorphize<M: 'static + CompositionMeasure>(
             self_: &AnyMeasure,
             adaptivity: Adaptivity,
-        ) -> Fallible<Sequentiality>
+        ) -> Fallible<Composition>
         where
             M::Distance: Clone,
         {
-            self_.downcast_ref::<M>()?.theorem(adaptivity)
+            self_.downcast_ref::<M>()?.composability(adaptivity)
         }
         dispatch!(monomorphize, [
             (self.type_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>, RenyiDivergence])
@@ -48,8 +48,8 @@ impl CompositionMeasure for AnyMeasure {
 }
 
 impl<Q: 'static> CompositionMeasure for TypedMeasure<Q> {
-    fn theorem(&self, adaptivity: Adaptivity) -> Fallible<Sequentiality> {
-        self.measure.theorem(adaptivity)
+    fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composition> {
+        self.measure.composability(adaptivity)
     }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
         self.measure

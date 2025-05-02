@@ -9,7 +9,7 @@ def make_fully_adaptive_composition(
         Sequentiality.Sequential
     )
 
-    def function(arg: DI_Carrier):
+    def fully_adaptive_composition(arg: DI_Carrier):
         return new_fully_adaptive_composition_queryable(
             input_domain,
             input_metric,
@@ -19,6 +19,6 @@ def make_fully_adaptive_composition(
     
     return Odometer.new(
         input_domain,
-        Function.new_fallible(function),
         input_metric,
-        output_measure)
+        output_measure,
+        Function.new_fallible(fully_adaptive_composition))

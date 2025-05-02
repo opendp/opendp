@@ -25,25 +25,40 @@ use crate::{
 
 #[derive(Debug)]
 pub enum Adaptivity {
+    /// All queries are executed together in a single batch.
     NonAdaptive,
+    /// The privacy loss parameters are non-adaptive,
+    /// but the queries can be chosen adaptively based on the results of previous queries.
     Adaptive,
+    /// The privacy loss parameters and queries can be chosen adaptively
+    /// based on the results of previous queries.
     FullyAdaptive,
 }
 
 #[derive(Debug)]
-pub enum Sequentiality {
+pub enum Composition {
+    /// Previous interactive mechanisms are locked when a new query is submitted.
     Sequential,
+    /// Previous interactive mechanisms are not locked when a new query is submitted.
     Concurrent,
 }
 
 pub trait CompositionMeasure: Measure {
-    fn theorem(&self, adaptivity: Adaptivity) -> Fallible<Sequentiality>;
+    /// # Proof Definition
+    /// For a given adaptivity and privacy measure,
+    /// returns an error if composition is not valid,
+    /// otherwise returns whether the privacy measure supports sequential or concurrent composition.
+    fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composition>;
+
+    /// # Proof Definition
+    /// For a given privacy measure, and list of privacy parameters `d_i`,
+    /// returns the composition of the privacy parameters.
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance>;
 }
 
 impl CompositionMeasure for MaxDivergence {
-    fn theorem(&self, _adaptivity: Adaptivity) -> Fallible<Sequentiality> {
-        Ok(Sequentiality::Concurrent)
+    fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composition> {
+        Ok(Composition::Concurrent)
     }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
         d_i.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))
@@ -51,8 +66,8 @@ impl CompositionMeasure for MaxDivergence {
 }
 
 impl CompositionMeasure for ZeroConcentratedDivergence {
-    fn theorem(&self, _adaptivity: Adaptivity) -> Fallible<Sequentiality> {
-        Ok(Sequentiality::Concurrent)
+    fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composition> {
+        Ok(Composition::Concurrent)
     }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
         d_i.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))
@@ -60,8 +75,8 @@ impl CompositionMeasure for ZeroConcentratedDivergence {
 }
 
 impl CompositionMeasure for Approximate<MaxDivergence> {
-    fn theorem(&self, _adaptivity: Adaptivity) -> Fallible<Sequentiality> {
-        Ok(Sequentiality::Concurrent)
+    fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composition> {
+        Ok(Composition::Concurrent)
     }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
         let (d_i0, deltas): (Vec<_>, Vec<_>) = d_i.into_iter().unzip();
@@ -74,14 +89,14 @@ impl CompositionMeasure for Approximate<MaxDivergence> {
 }
 
 impl CompositionMeasure for Approximate<ZeroConcentratedDivergence> {
-    fn theorem(&self, adaptivity: Adaptivity) -> Fallible<Sequentiality> {
+    fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composition> {
         if matches!(adaptivity, Adaptivity::FullyAdaptive) {
             return fallible!(
                 MakeMeasurement,
                 "{adaptivity:?} composition is not supported for zCDP"
             );
         }
-        Ok(Sequentiality::Sequential)
+        Ok(Composition::Sequential)
     }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
         let (d_i0, deltas): (Vec<_>, Vec<_>) = d_i.into_iter().unzip();
@@ -94,8 +109,8 @@ impl CompositionMeasure for Approximate<ZeroConcentratedDivergence> {
 }
 
 impl CompositionMeasure for RenyiDivergence {
-    fn theorem(&self, _adaptivity: Adaptivity) -> Fallible<Sequentiality> {
-        Ok(Sequentiality::Concurrent)
+    fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composition> {
+        Ok(Composition::Concurrent)
     }
 
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
