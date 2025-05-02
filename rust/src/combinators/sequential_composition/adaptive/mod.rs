@@ -2,7 +2,7 @@ use opendp_derive::bootstrap;
 use std::fmt::Debug;
 
 use crate::{
-    combinators::{Adaptivity, Sequentiality, assert_components_match},
+    combinators::{Adaptivity, Composition, assert_components_match},
     core::{Domain, Function, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
     interactive::{Answer, Query, Queryable, Wrapper},
@@ -80,9 +80,9 @@ where
 
     let d_out = output_measure.compose(d_mids.clone())?;
 
-    let sequential = matches!(
-        output_measure.theorem(Adaptivity::Adaptive)?,
-        Sequentiality::Sequential
+    let is_sequential = matches!(
+        output_measure.composability(Adaptivity::Adaptive)?,
+        Composition::Sequential
     );
 
     Measurement::new(
@@ -146,7 +146,7 @@ where
                             );
                         }
 
-                        let seq_wrapper = sequential.then(|| {
+                        let seq_wrapper = is_sequential.then(|| {
                             // when the output measure doesn't allow concurrent composition,
                             // wrap any interactive queryables spawned.
                             // This way, when the child gets a query it sends an AskPermission query to this parent queryable

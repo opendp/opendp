@@ -1,7 +1,7 @@
 use opendp_derive::proven;
 
 use crate::{
-    combinators::{Adaptivity, CompositionMeasure, Sequentiality, assert_components_match},
+    combinators::{Adaptivity, Composition, CompositionMeasure, assert_components_match},
     core::{
         Domain, Function, Measurement, Metric, MetricSpace, Odometer, OdometerAnswer,
         OdometerQuery, OdometerQueryable,
@@ -31,33 +31,30 @@ pub fn make_fully_adaptive_composition<
     d_in: MI::Distance,
 ) -> Fallible<Odometer<DI, MI, MO, Measurement<DI, TO, MI, MO>, TO>>
 where
-    DI::Carrier: Clone + Send + Sync,
+    DI::Carrier: Clone,
     MI::Distance: Clone + Send + Sync,
-    MO::Distance: Clone + Send + Sync,
+    MO::Distance: Clone,
     (DI, MI): MetricSpace,
 {
-    let sequential = matches!(
-        output_measure.theorem(Adaptivity::FullyAdaptive)?,
-        Sequentiality::Sequential
+    let is_sequential = matches!(
+        output_measure.composability(Adaptivity::FullyAdaptive)?,
+        Composition::Sequential
     );
 
     Odometer::new(
         input_domain.clone(),
-        Function::new_fallible(enclose!(
-            (input_domain, input_metric, output_measure),
-            move |arg: &DI::Carrier| {
-                new_fully_adaptive_composition_queryable(
-                    input_domain.clone(),
-                    input_metric.clone(),
-                    output_measure.clone(),
-                    d_in.clone(),
-                    arg.clone(),
-                    sequential,
-                )
-            }
-        )),
-        input_metric,
-        output_measure,
+        input_metric.clone(),
+        output_measure.clone(),
+        Function::new_fallible(move |arg: &DI::Carrier| {
+            new_fully_adaptive_composition_queryable(
+                input_domain.clone(),
+                input_metric.clone(),
+                output_measure.clone(),
+                d_in.clone(),
+                arg.clone(),
+                is_sequential,
+            )
+        }),
     )
 }
 
@@ -75,12 +72,10 @@ fn new_fully_adaptive_composition_queryable<
     output_measure: MO,
     d_in: MI::Distance,
     data: DI::Carrier,
-    sequential: bool,
+    is_sequential: bool,
 ) -> Fallible<OdometerQueryable<Measurement<DI, TO, MI, MO>, TO, MO::Distance>>
 where
-    MI::Distance: Clone + Send + Sync,
-    MO::Distance: Clone + Send + Sync,
-    DI::Carrier: Clone + Send + Sync,
+    MO::Distance: Clone,
     (DI, MI): MetricSpace,
 {
     let mut d_mids: Vec<MO::Distance> = vec![];
@@ -114,7 +109,7 @@ where
 
                     let d_mid = measurement.map(&d_in)?;
 
-                    let seq_wrapper = sequential.then(|| {
+                    let seq_wrapper = is_sequential.then(|| {
                         // when the output measure doesn't allow concurrent composition,
                         // wrap any interactive queryables spawned.
                         // This way, when the child gets a query it sends an AskPermission query to this parent queryable,
