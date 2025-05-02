@@ -9,10 +9,13 @@ use crate::{
     traits::ProductOrd,
 };
 
+#[cfg(test)]
+mod test;
+
 #[cfg(feature = "ffi")]
 mod ffi;
 
-use super::BasicCompositionMeasure;
+use super::SequentialCompositionMeasure;
 
 #[bootstrap(
     features("contrib"),
@@ -50,11 +53,11 @@ use super::BasicCompositionMeasure;
 /// * `TO` - Output Type.
 /// * `MI` - Input Metric
 /// * `MO` - Output Metric
-pub fn make_sequential_composition<
+pub fn make_adaptive_composition<
     DI: Domain + 'static,
     TO: 'static,
     MI: Metric + 'static,
-    MO: BasicCompositionMeasure + 'static,
+    MO: SequentialCompositionMeasure + 'static,
 >(
     input_domain: DI,
     input_metric: MI,
@@ -199,5 +202,63 @@ where
     )
 }
 
-#[cfg(test)]
-mod test;
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        d_in(rust_type = "$get_distance_type(input_metric)", c_type = "AnyObject *"),
+        d_mids(rust_type = "Vec<QO>", c_type = "AnyObject *"),
+        output_measure(c_type = "AnyMeasure *", rust_type = b"null")
+    ),
+    generics(DI(suppress), TO(suppress), MI(suppress), MO(suppress)),
+    derived_types(QO = "$get_distance_type(output_measure)")
+)]
+/// Construct a Measurement that when invoked,
+/// returns a queryable that interactively composes measurements.
+///
+/// **Composition Properties**
+///
+/// * sequential: all measurements are applied to the same dataset
+/// * basic: the composition is the linear sum of the privacy usage of each query
+/// * interactive: mechanisms can be specified based on answers to previous queries
+/// * compositor: all privacy parameters specified up-front
+///
+/// If the privacy measure supports concurrency,
+/// this compositor allows you to spawn multiple interactive mechanisms
+/// and interleave your queries amongst them.
+///
+/// # Arguments
+/// * `input_domain` - indicates the space of valid input datasets
+/// * `input_metric` - how distances are measured between members of the input domain
+/// * `output_measure` - how privacy is measured
+/// * `d_in` - maximum distance between adjacent input datasets
+/// * `d_mids` - maximum privacy expenditure of each query
+///
+/// # Generics
+/// * `DI` - Input Domain.
+/// * `TO` - Output Type.
+/// * `MI` - Input Metric
+/// * `MO` - Output Metric
+#[deprecated(
+    since = "0.14.0",
+    note = "This function has been renamed, use `make_adaptive_composition` instead."
+)]
+pub fn make_sequential_composition<
+    DI: Domain + 'static,
+    TO: 'static,
+    MI: Metric + 'static,
+    MO: SequentialCompositionMeasure + 'static,
+>(
+    input_domain: DI,
+    input_metric: MI,
+    output_measure: MO,
+    d_in: MI::Distance,
+    d_mids: Vec<MO::Distance>,
+) -> Fallible<Measurement<DI, Queryable<Measurement<DI, TO, MI, MO>, TO>, MI, MO>>
+where
+    DI::Carrier: 'static + Clone,
+    MI::Distance: 'static + ProductOrd + Clone + Send + Sync,
+    MO::Distance: 'static + ProductOrd + Clone + Send + Sync + Debug,
+    (DI, MI): MetricSpace,
+{
+    make_adaptive_composition(input_domain, input_metric, output_measure, d_in, d_mids)
+}

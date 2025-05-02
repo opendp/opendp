@@ -118,9 +118,9 @@ OpenDP has several compositors for making multiple releases on the same dataset:
 
    * - Function
      - Description
-   * - :func:`make_basic_composition <opendp.combinators.make_basic_composition>`
+   * - :func:`make_composition <opendp.combinators.make_composition>`
      - Non-interactive
-   * - :func:`make_sequential_composition <opendp.combinators.make_sequential_composition>`
+   * - :func:`make_adaptive_composition <opendp.combinators.make_adaptive_composition>`
      - Interactive
 
 Composition combinators can compose Measurements with ``ZeroConcentratedDivergence``, ``MaxDivergence`` and ``FixedSmoothedMaxDivergence`` output measures,

@@ -275,7 +275,7 @@ def test_extrinsic_free():
         lambda _: 0.0,
     )
 
-    sc_meas = space >> dp.c.then_sequential_composition(
+    sc_meas = space >> dp.c.then_adaptive_composition(
         dp.max_divergence(),
         d_in=1,
         d_mids=[1.0],

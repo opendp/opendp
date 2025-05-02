@@ -133,7 +133,7 @@ def test_margins_dict_instead_of_list():
     "domain", [dp.lazyframe_domain([]), dp.series_domain("A", dp.atom_domain(T=bool))])
 def test_polars_data_loader_error_is_human_readable(domain):
     pytest.importorskip("polars")
-    overall_pipeline = dp.c.make_sequential_composition(
+    overall_pipeline = dp.c.make_adaptive_composition(
         domain, dp.symmetric_distance(), dp.max_divergence(), d_in=1,
         d_mids=[1.])
     with pytest.raises(ValueError, match="expected Polars *"):

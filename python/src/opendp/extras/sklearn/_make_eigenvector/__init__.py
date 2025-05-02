@@ -156,7 +156,7 @@ def make_private_eigenvectors(
         )  # pragma: no cover
 
     privacy_measure = dp.max_divergence()
-    m_compose = dp.c.make_sequential_composition(
+    m_compose = dp.c.make_adaptive_composition(
         input_domain, input_metric, privacy_measure, 2, unit_epsilons
     )
 

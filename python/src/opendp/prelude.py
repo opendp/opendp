@@ -31,7 +31,7 @@ For example:
     <class 'function'>
     >>> type(dp.m.then_laplace)
     <class 'function'>
-    >>> type(dp.c.make_basic_composition)
+    >>> type(dp.c.make_composition)
     <class 'function'>
 '''
 from opendp.mod import *
