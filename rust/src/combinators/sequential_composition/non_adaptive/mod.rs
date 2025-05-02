@@ -10,7 +10,7 @@ use crate::{
     interactive::{Wrapper, wrap},
 };
 
-use super::{Adaptivity, CompositionMeasure, Sequentiality};
+use super::{Adaptivity, Composition, CompositionMeasure};
 
 /// Construct the DP composition of [`measurement0`, `measurement1`, ...].
 /// Returns a Measurement that when invoked, computes `[measurement0(x), measurement1(x), ...]`
@@ -23,11 +23,11 @@ use super::{Adaptivity, CompositionMeasure, Sequentiality};
 /// * compositor: all privacy parameters specified up-front (via the map)
 ///
 /// # Arguments
-/// * `measurements` - A vector of Measurements to compose. All DI, MI, MO must be equivalent.
+/// * `measurements` - A vector of Measurements to compose. All input domains, input metrics and output measures must be equivalent.
 ///
 /// # Generics
-/// * `DI` - Input Domain.
-/// * `TO` - Output Type.
+/// * `DI` - Input Domain
+/// * `TO` - Output Type
 /// * `MI` - Input Metric
 /// * `MO` - Output Measure
 pub fn make_composition<DI, TO, MI, MO>(
@@ -71,8 +71,8 @@ where
         .collect::<Vec<_>>();
 
     let sequential = matches!(
-        output_measure.theorem(Adaptivity::NonAdaptive)?,
-        Sequentiality::Sequential
+        output_measure.composability(Adaptivity::NonAdaptive)?,
+        Composition::Sequential
     );
 
     Measurement::new(
