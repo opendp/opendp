@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use opendp_derive::proven;
 
 use crate::{
-    combinators::{Adaptivity, Composability, CompositionMeasure, assert_elements_match},
+    combinators::{Adaptivity, Composition, CompositionMeasure, assert_elements_match},
     core::{
         Domain, Function, Measurement, Metric, MetricSpace, Odometer, OdometerAnswer,
         OdometerQuery, OdometerQueryable,
@@ -33,33 +33,30 @@ pub fn make_fully_adaptive_composition<
     d_in: MI::Distance,
 ) -> Fallible<Odometer<DI, MI, MO, Measurement<DI, MI, MO, TO>, TO>>
 where
-    DI::Carrier: Clone + Send + Sync,
+    DI::Carrier: Clone,
     MI::Distance: Clone + Send + Sync,
-    MO::Distance: Clone + Send + Sync,
+    MO::Distance: Clone,
     (DI, MI): MetricSpace,
 {
     let require_sequentiality = matches!(
         output_measure.composability(Adaptivity::FullyAdaptive)?,
-        Composability::Sequential
+        Composition::Sequential
     );
 
     Odometer::new(
         input_domain.clone(),
-        Function::new_fallible(enclose!(
-            (input_domain, input_metric, output_measure),
-            move |arg: &DI::Carrier| {
-                new_fully_adaptive_composition_queryable(
-                    input_domain.clone(),
-                    input_metric.clone(),
-                    output_measure.clone(),
-                    d_in.clone(),
-                    arg.clone(),
-                    require_sequentiality,
-                )
-            }
-        )),
-        input_metric,
-        output_measure,
+        input_metric.clone(),
+        output_measure.clone(),
+        Function::new_fallible(move |arg: &DI::Carrier| {
+            new_fully_adaptive_composition_queryable(
+                input_domain.clone(),
+                input_metric.clone(),
+                output_measure.clone(),
+                d_in.clone(),
+                arg.clone(),
+                require_sequentiality,
+            )
+        }),
     )
 }
 
@@ -80,9 +77,7 @@ fn new_fully_adaptive_composition_queryable<
     require_sequentiality: bool,
 ) -> Fallible<OdometerQueryable<Measurement<DI, MI, MO, TO>, TO, MO::Distance>>
 where
-    MI::Distance: Clone + Send + Sync,
-    MO::Distance: Clone + Send + Sync,
-    DI::Carrier: Clone + Send + Sync,
+    MO::Distance: Clone,
     (DI, MI): MetricSpace,
 {
     let mut d_mids: Vec<MO::Distance> = vec![];
@@ -96,26 +91,12 @@ where
 
             Ok(match query {
                 // evaluate external invoke query
-                Query::External(OdometerQuery::Invoke(measurement)) => {
-                    assert_elements_match!(
-                        DomainMismatch,
-                        &input_domain,
-                        &measurement.input_domain
-                    );
+                Query::External(OdometerQuery::Invoke(meas)) => {
+                    assert_elements_match!(DomainMismatch, &input_domain, &meas.input_domain);
+                    assert_elements_match!(MetricMismatch, &input_metric, &meas.input_metric);
+                    assert_elements_match!(MeasureMismatch, &output_measure, &meas.output_measure);
 
-                    assert_elements_match!(
-                        MetricMismatch,
-                        &input_metric,
-                        &measurement.input_metric
-                    );
-
-                    assert_elements_match!(
-                        MeasureMismatch,
-                        &output_measure,
-                        &measurement.output_measure
-                    );
-
-                    let d_mid = measurement.map(&d_in)?;
+                    let d_mid = meas.map(&d_in)?;
                     let enforce_sequentiality = Rc::new(RefCell::new(false));
 
                     let seq_wrapper = require_sequentiality.then(|| {
@@ -140,7 +121,7 @@ where
                     });
 
                     // evaluate the query and wrap the answer
-                    let answer = measurement.invoke_wrap(&data, seq_wrapper)?;
+                    let answer = meas.invoke_wrap(&data, seq_wrapper)?;
 
                     // start enforcing sequentiality
                     *enforce_sequentiality.borrow_mut() = true;
