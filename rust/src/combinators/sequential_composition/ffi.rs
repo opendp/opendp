@@ -1,5 +1,5 @@
 use crate::{
-    combinators::Composition,
+    combinators::Composability,
     error::Fallible,
     ffi::any::{AnyMeasure, AnyObject, Downcast},
     measures::{Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence},
@@ -8,11 +8,11 @@ use crate::{
 use super::{Adaptivity, CompositionMeasure};
 
 impl CompositionMeasure for AnyMeasure {
-    fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composition> {
+    fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composability> {
         fn monomorphize<M: 'static + CompositionMeasure>(
             self_: &AnyMeasure,
             adaptivity: Adaptivity,
-        ) -> Fallible<Composition>
+        ) -> Fallible<Composability>
         where
             M::Distance: Clone,
         {
