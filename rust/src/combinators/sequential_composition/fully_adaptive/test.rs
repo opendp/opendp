@@ -1,8 +1,10 @@
 use std::any::Any;
 
 use crate::{
-    combinators::make_adaptive_composition, domains::AtomDomain,
-    measurements::make_randomized_response_bool, measures::MaxDivergence,
+    combinators::make_adaptive_composition,
+    domains::AtomDomain,
+    measurements::make_randomized_response_bool,
+    measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
     metrics::DiscreteDistance,
 };
 
@@ -15,7 +17,6 @@ fn test_privacy_odometer() -> Fallible<()> {
         AtomDomain::default(),
         DiscreteDistance::default(),
         MaxDivergence::default(),
-        1,
     )?;
 
     // pass dataset in and receive a queryable
@@ -39,13 +40,13 @@ fn test_privacy_odometer() -> Fallible<()> {
     )?
     .into_poly();
 
-    println!("\nsubmitting a CC query. This CC compositor is concretely-typed");
+    // submitting a CC query. This CC compositor is concretely-typed
     let mut answer3 = odometer.invoke_poly::<Queryable<_, bool>>(cc_query_3)?;
 
-    println!("\nsubmitting a RR query to child CC compositor with concrete types");
+    // submitting a RR query to child CC compositor with concrete types
     let _answer3_1: bool = answer3.eval(&rr_query)?;
 
-    println!("\nsubmitting a second RR query to child CC compositor with concrete types");
+    // submitting a second RR query to child CC compositor with concrete types
     let _answer3_2: bool = answer3.eval(&rr_query)?;
 
     // pass a concurrent composition compositor into the original CC compositor
@@ -59,15 +60,38 @@ fn test_privacy_odometer() -> Fallible<()> {
     )?
     .into_poly();
 
-    println!("\nsubmitting a second CC query to root CC compositor with type erasure");
+    // submitting a second CC query to root CC compositor with type erasure
     let mut answer4 = odometer.invoke_poly::<Queryable<_, Box<dyn Any>>>(cc_query_4)?;
 
-    println!("\nsubmitting a RR query to child CC compositor");
+    // submitting a RR query to child CC compositor
     let _answer4_1: bool = answer4.eval_poly(&rr_poly_query)?;
     let _answer4_2: bool = answer4.eval_poly(&rr_poly_query)?;
 
-    let total_usage = odometer.privacy_loss()?;
+    let total_usage = odometer.privacy_loss(1)?;
     println!("total usage: {:?}", total_usage);
 
+    Ok(())
+}
+
+#[test]
+fn test_fully_adaptive_interactive_postprocessing() -> Fallible<()> {
+    let m_query = (Measurement::new(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        Approximate(ZeroConcentratedDivergence),
+        Function::new_fallible(|&arg: &bool| Queryable::new_external(move |_: &()| Ok(!arg))),
+        PrivacyMap::new(|_| (1.0, 1e-7)),
+    )? >> Function::<Queryable<(), bool>, bool>::new_fallible(|qbl: &_| {
+        qbl.clone().eval(&())
+    }))?;
+    let m_odo = make_fully_adaptive_composition(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        Approximate(ZeroConcentratedDivergence),
+    )?;
+
+    let mut qbl = m_odo.invoke(&false)?;
+    assert!(qbl.invoke(m_query)?);
+    assert_eq!(qbl.privacy_loss(1)?, (1.0, 1e-7));
     Ok(())
 }

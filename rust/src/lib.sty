@@ -156,16 +156,20 @@
 \newcommand{\validTransformation}[2]{%
   \begin{theorem}
   For every setting of the input parameters #1 to #2 such that the given preconditions
-  hold, #2 raises an exception (at compile time or run time) or returns a valid transformation. A valid transformation has the following properties:
+  hold, #2 raises an error (at compile time or run time) or returns a valid transformation. A valid transformation has the following properties:
   \begin{enumerate}
+      \item \textup{(Data-independent runtime errors).}
+      For every pair of members $x$ and $x'$ in \texttt{input\_domain},
+      $\texttt{invoke}(x)$ and $\texttt{invoke}(x')$ either both return the same error or neither return an error. 
+
       \item \textup{(Appropriate output domain).} 
-      For every element $x$ in \texttt{input\_domain}, $\function(x)$ is in \texttt{output\_domain} or raises a data-independent runtime exception.
+      For every member $x$ in \texttt{input\_domain}, $\function(x)$ is in \texttt{output\_domain} or raises a data-independent runtime error.
       
       \item \textup{(Stability guarantee).} 
-      For every pair of elements $x, x'$ in \texttt{input\_domain} and for every pair $(\din, \dout)$, 
+      For every pair of members $x$ and $x'$ in \texttt{input\_domain} and for every pair $(\din, \dout)$, 
       where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \\ \texttt{output\_metric}, 
-      if $x, x'$ are \din-close under \texttt{input\_metric}, $\texttt{stability\_map}(\din)$ does not raise an exception,
-      and $\texttt{stability\_map}(\din) \leq \dout$, 
+      if $x, x'$ are \din-close under \texttt{input\_metric}, $\texttt{stability\_map}(\din)$ does not raise an error,
+      and $\texttt{stability\_map}(\din) = \dout$, 
       then $\function(x), \function(x')$ are $\dout$-close under \texttt{output\_metric}.
   \end{enumerate}
   \end{theorem}
@@ -174,74 +178,64 @@
 
 \newcommand{\validMeasurement}[2]{%
   For every setting of the input parameters #1 to #2 such that the given preconditions
-  hold, #2 raises an exception (at compile time or run time) or returns a valid measurement. A valid measurement has the following properties:
+  hold, #2 raises an error (at compile time or run time) or returns a valid measurement. A valid measurement has the following properties:
   \begin{enumerate}
       \item \textup{(Data-independent runtime errors).}
-      For every pair of elements $x, x'$ in \texttt{input\_domain},
-      $\function(x)$ returns an error if and only if $\function(x')$ returns an error.
+      For every pair of members $x$ and $x'$ in \texttt{input\_domain},
+      $\texttt{invoke}(x)$ and $\texttt{invoke}(x')$ either both return the same error or neither return an error. 
 
       \item \textup{(Privacy guarantee).}
-      For every pair of elements $x, x'$ in \texttt{input\_domain} and for every pair $(\din, \dout)$,
+      For every pair of members $x$ and $x'$ in \texttt{input\_domain} and for every pair $(\din, \dout)$,
       where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \\ \texttt{output\_measure},
-      if $x, x'$ are \din-close under \texttt{input\_metric}, $\texttt{privacy\_map}(\din)$ does not raise an exception,
-      and $\texttt{privacy\_map}(\din) \leq \dout$,
+      if $x, x'$ are \din-close under \texttt{input\_metric}, $\texttt{privacy\_map}(\din)$ does not raise an error,
+      and $\texttt{privacy\_map}(\din) = \dout$,
       then $\function(x), \function(x')$ are $\dout$-close under \texttt{output\_measure}.
   \end{enumerate}
 }
 
 \newcommand{\validPostprocessor}[2]{%
   For every setting of the input parameters #1 to #2 such that the given preconditions
-  hold, #2 raises an exception (at compile time or run time) or returns a valid postprocessor. A valid postprocessor has the following property:
+  hold, #2 raises an error (at compile time or run time) or returns a valid postprocessor. A valid postprocessor has the following property:
   \begin{enumerate}
       \item \textup{(Data-independent errors).}
-      For every pair of elements $x, x'$ in \texttt{input\_domain},
-      $\function(x), \function(x')$ either neither or both raise an error.
-      If both raise an error, then they both raise the same error.
+      For every pair of members $x$ and $x'$ in \texttt{input\_domain},
+      $\function(x), \function(x')$ either both raise the same error, 
+      or neither raise an error.
   \end{enumerate}
 }
 
 \newcommand{\validOdometer}[2]{%
   For every setting of the input parameters #1 to #2 such that the given preconditions
-  hold, #2 raises an exception (at compile time or run time) or returns a valid odometer. 
+  hold, #2 raises an error (at compile time or run time) or returns a valid odometer. 
   A valid odometer has the following properties:
   \begin{enumerate}
-      \item \textup{(Data-independent exceptions).}
-      For every pair of elements $x, x'$ in \texttt{input\_domain},
-      $\function(x)$ and $\function(x')$ either both raise an exception, 
-      or neither raise an exception. 
-
-      \item \textup{(Wrapping guarantee).}
-      Interactive measurement queryables spawned while evaluating external queries 
-      are wrapped by the wrapper function accompanying the external query.
+      \item \textup{(Data-independent runtime errors).}
+      For every pair of members $x$ and $x'$ in \texttt{input\_domain},
+      $\texttt{invoke}(x)$ and $\texttt{invoke}(x')$ either both return the same error or neither return an error. 
 
       \item \textup{(Valid odometer queryable).}
-      For every element $x$ in \texttt{input\_domain},
-      where $\function(x)$ does not raise an exception,
+      For every member $x$ in \texttt{input\_domain},
+      where $\function(x)$ does not raise an error,
       $\function(x)$ returns a valid odometer queryable.
   \end{enumerate}
 }
 
 \newcommand{\validOdometerQueryable}[2]{%
   For every setting of the input parameters #1 to #2 such that the given preconditions
-  hold, #2 raises an exception (at compile time or run time) or returns a valid odometer queryable. 
+  hold, #2 raises a data-independent error or returns a valid odometer queryable (\texttt{queryable}). 
   A valid odometer queryable is an \rustdoc{core/type}{OdometerQueryable} with the following properties:
   \begin{enumerate}
-      \item \textup{(Data-independent exceptions).}
-      For every pair of elements $x, x'$ in \texttt{input\_domain},
-      $\texttt{invoke}(x)$ and $\texttt{invoke}(x')$ either both raise an exception, 
-      or neither raise an exception. 
+    \item \textup{(Data-independent errors).}
+    For every pair of members $x$ and $x'$ in \texttt{input\_domain}, and every query $q$,
+    $\texttt{queryable.invoke}_x(q)$ and $\texttt{queryable.invoke}_{x'}(q)$ either both return the same error or neither return an error. 
 
-      \item \textup{(Wrapping guarantee).}
-      Interactive measurement queryables spawned while evaluating external queries 
-      are wrapped by the wrapper function accompanying the external query.
-
-      \item \textup{(Privacy Guarantee).}
-      For every pair of elements $x, x'$ in \texttt{input\_domain}, every interactive algorithm \mathcal{A}, and for every pair $(\din, \dout)$,
-      where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \texttt{output\_measure},
-      if $x, x'$ are \din-close under \texttt{input\_metric}, $\texttt{privacy\_loss}(\din)$ does not raise an exception,
-      and $\texttt{privacy\_loss}(\din) \leq \dout$,
-      then $\texttt{View}(\mathcal{A} \leftrightarrow \function(x)), \texttt{View}(\mathcal{A} \leftrightarrow \function(x'))$ 
-      are $\dout$-close under \texttt{output\_measure}.
+    \item \textup{(Privacy Guarantee).}
+    For every pair of members $x$ and $x'$ in \texttt{input\_domain}, 
+    every adversary $\mathcal{A}$, and for every pair $(\din, \dout)$, 
+    where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \texttt{output\_measure}, 
+    if $x$ and $x'$ are \din-close under \texttt{input\_metric}, $\texttt{queryable.eval(privacy\_loss)}$ does not return an error, 
+    and $\texttt{queryable.eval(privacy\_loss)} = \dout$, 
+    then $\texttt{View}(\mathcal{A} \leftrightarrow \texttt{queryable}_x), \texttt{View}(\mathcal{A} \leftrightarrow \texttt{queryable}_{x'})$ are $\dout$-close under \texttt{output\_measure},
+    where $\texttt{queryable}_x$ denotes all messages received by $\mathcal{A}$ under $x$.
   \end{enumerate}
-  \end{theorem}
 }
