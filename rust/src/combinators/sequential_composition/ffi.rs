@@ -1,5 +1,5 @@
 use crate::{
-    combinators::Composition,
+    combinators::Composability,
     error::Fallible,
     ffi::any::{AnyMeasure, AnyObject, Downcast},
     measures::{
@@ -10,11 +10,11 @@ use crate::{
 use super::{Adaptivity, CompositionMeasure};
 
 impl CompositionMeasure for AnyMeasure {
-    fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composition> {
+    fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composability> {
         fn monomorphize<M: 'static + CompositionMeasure>(
             self_: &AnyMeasure,
             adaptivity: Adaptivity,
-        ) -> Fallible<Composition>
+        ) -> Fallible<Composability>
         where
             M::Distance: Clone,
         {
@@ -48,7 +48,7 @@ impl CompositionMeasure for AnyMeasure {
 }
 
 impl<Q: 'static> CompositionMeasure for TypedMeasure<Q> {
-    fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composition> {
+    fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composability> {
         self.measure.composability(adaptivity)
     }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {

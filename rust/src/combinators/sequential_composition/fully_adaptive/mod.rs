@@ -1,10 +1,10 @@
 use opendp_derive::proven;
 
 use crate::{
-    combinators::{Adaptivity, Composition, CompositionMeasure, assert_components_match},
+    combinators::{Adaptivity, Composability, CompositionMeasure, assert_components_match},
     core::{
         Domain, Function, Measurement, Metric, MetricSpace, Odometer, OdometerAnswer,
-        OdometerQuery, OdometerQueryable,
+        OdometerQuery, OdometerQueryable, PrivacyMap,
     },
     error::Fallible,
     interactive::{Answer, Query, Queryable, Wrapper},
@@ -28,7 +28,6 @@ pub fn make_fully_adaptive_composition<
     input_domain: DI,
     input_metric: MI,
     output_measure: MO,
-    d_in: MI::Distance,
 ) -> Fallible<Odometer<DI, MI, MO, Measurement<DI, TO, MI, MO>, TO>>
 where
     DI::Carrier: Clone,
@@ -36,10 +35,8 @@ where
     MO::Distance: Clone,
     (DI, MI): MetricSpace,
 {
-    let is_sequential = matches!(
-        output_measure.composability(Adaptivity::FullyAdaptive)?,
-        Composition::Sequential
-    );
+    // check if fully adaptive composition is supported
+    output_measure.composability(Adaptivity::FullyAdaptive)?;
 
     Odometer::new(
         input_domain.clone(),
@@ -50,9 +47,7 @@ where
                 input_domain.clone(),
                 input_metric.clone(),
                 output_measure.clone(),
-                d_in.clone(),
                 arg.clone(),
-                is_sequential,
             )
         }),
     )
@@ -70,18 +65,26 @@ fn new_fully_adaptive_composition_queryable<
     input_domain: DI,
     input_metric: MI,
     output_measure: MO,
-    d_in: MI::Distance,
     data: DI::Carrier,
-    is_sequential: bool,
-) -> Fallible<OdometerQueryable<Measurement<DI, TO, MI, MO>, TO, MO::Distance>>
+) -> Fallible<OdometerQueryable<Measurement<DI, TO, MI, MO>, TO, MI::Distance, MO::Distance>>
 where
     MO::Distance: Clone,
     (DI, MI): MetricSpace,
 {
-    let mut d_mids: Vec<MO::Distance> = vec![];
+    let is_sequential = matches!(
+        output_measure.composability(Adaptivity::FullyAdaptive)?,
+        Composability::Sequential
+    );
+
+    let mut privacy_maps: Vec<PrivacyMap<MI, MO>> = vec![];
     Queryable::new(
-        move |self_: &OdometerQueryable<Measurement<DI, TO, MI, MO>, TO, MO::Distance>,
-              query: Query<OdometerQuery<Measurement<DI, TO, MI, MO>>>| {
+        move |self_: &OdometerQueryable<
+            Measurement<DI, TO, MI, MO>,
+            TO,
+            MI::Distance,
+            MO::Distance,
+        >,
+              query: Query<OdometerQuery<Measurement<DI, TO, MI, MO>, MI::Distance>>| {
             // this queryable and wrapped children communicate via an AskPermission query
             // defined here, where no-one else can access the type
             struct AskPermission(pub usize);
@@ -107,15 +110,13 @@ where
                         &measurement.output_measure
                     );
 
-                    let d_mid = measurement.map(&d_in)?;
-
                     let seq_wrapper = is_sequential.then(|| {
                         // when the output measure doesn't allow concurrent composition,
                         // wrap any interactive queryables spawned.
                         // This way, when the child gets a query it sends an AskPermission query to this parent queryable,
                         // giving this sequential odometer queryable
                         // a chance to deny the child permission to execute
-                        let child_id = d_mids.len();
+                        let child_id = privacy_maps.len();
                         let mut self_ = self_.clone();
 
                         Wrapper::new_recursive_pre_hook(move || {
@@ -127,20 +128,24 @@ where
                     let answer = measurement.invoke_wrap(&data, seq_wrapper)?;
 
                     // we've now increased our privacy spend. This is our only state modification
-                    d_mids.push(d_mid);
+                    privacy_maps.push(measurement.privacy_map.clone());
 
                     // done!
                     Answer::External(OdometerAnswer::Invoke(answer))
                 }
                 // evaluate external map query
-                Query::External(OdometerQuery::PrivacyLoss) => Answer::External(
-                    OdometerAnswer::PrivacyLoss(output_measure.compose(d_mids.clone())?),
-                ),
+                Query::External(OdometerQuery::PrivacyLoss(d_in)) => {
+                    let d_mids = (privacy_maps.iter())
+                        .map(|m| m.eval(d_in))
+                        .collect::<Fallible<_>>()?;
+                    let d_out = output_measure.compose(d_mids)?;
+                    Answer::External(OdometerAnswer::PrivacyLoss(d_out))
+                }
                 Query::Internal(query) => {
                     // check if the query is from a child queryable who is asking for permission to execute
                     if let Some(AskPermission(id)) = query.downcast_ref() {
                         // deny permission if the sequential odometer has moved on
-                        if *id + 1 != d_mids.len() {
+                        if *id + 1 != privacy_maps.len() {
                             return fallible!(
                                 FailedFunction,
                                 "sequential odometer has received a new query"
