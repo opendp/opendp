@@ -444,12 +444,16 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Debug for Transformation<DI
 }
 
 /// A privacy odometer that can track privacy loss over multiple queries.
+///
+/// The odometer is defined in terms of [HSTV+](https://arxiv.org/abs/2309.05901),
+/// but the truncated view is also parameterized by $d_{in}$,
+/// and $(\epsilon, \delta)$ is generalized to $d_{out}$.
 #[readonly::make]
 pub struct Odometer<DI: Domain, MI: Metric, MO: Measure, Q, A> {
     pub input_domain: DI,
     pub input_metric: MI,
     pub output_measure: MO,
-    pub function: Function<DI::Carrier, OdometerQueryable<Q, A, MO::Distance>>,
+    pub function: Function<DI::Carrier, OdometerQueryable<Q, A, MI::Distance, MO::Distance>>,
 }
 
 impl<DI: Domain, MI: Metric, MO: Measure, Q, A> Clone for Odometer<DI, MI, MO, Q, A> {
@@ -471,7 +475,7 @@ where
         input_domain: DI,
         input_metric: MI,
         output_measure: MO,
-        function: Function<DI::Carrier, OdometerQueryable<Q, A, MO::Distance>>,
+        function: Function<DI::Carrier, OdometerQueryable<Q, A, MI::Distance, MO::Distance>>,
     ) -> Fallible<Self> {
         (input_domain.clone(), input_metric.clone()).check_space()?;
         Ok(Self {
@@ -484,25 +488,50 @@ where
 }
 
 impl<DI: Domain, MI: Metric, MO: Measure, Q, A> Odometer<DI, MI, MO, Q, A> {
-    pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<OdometerQueryable<Q, A, MO::Distance>> {
+    /// Invokes the odometer with a dataset to spawn an odometer queryable.
+    pub fn invoke(
+        &self,
+        arg: &DI::Carrier,
+    ) -> Fallible<OdometerQueryable<Q, A, MI::Distance, MO::Distance>> {
         self.function.eval(arg)
     }
 }
 
-pub type OdometerQueryable<Q, A, AB> = Queryable<OdometerQuery<Q>, OdometerAnswer<A, AB>>;
-
-pub enum OdometerQuery<Q> {
-    Invoke(Q),
-    PrivacyLoss,
+impl<DI: Domain, MI: Metric, MO: Measure, Q, A> Debug for Odometer<DI, MI, MO, Q, A> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Odometer")
+            .field("input_domain", &self.input_domain)
+            .field("input_metric", &self.input_metric)
+            .field("output_measure", &self.output_measure)
+            .finish()
+    }
 }
 
+pub type OdometerQueryable<Q, A, QB, AB> = Queryable<OdometerQuery<Q, QB>, OdometerAnswer<A, AB>>;
+
+/// The standard query type for odometer queryables.
+pub enum OdometerQuery<Q, QB> {
+    /// An invoke query that changes the state of the odometer.
+    Invoke(Q),
+    /// A privacy loss query that returns the privacy loss of the odometer,
+    /// without changing the state of the queryable.
+    ///
+    /// The input is the distance between adjacent datasets.
+    PrivacyLoss(QB),
+}
+
+/// The standard answer type for odometer queryables.
 pub enum OdometerAnswer<A, AB> {
+    /// An answer to an invoke query.
     Invoke(A),
+    /// An answer to a privacy loss query.
+    ///
+    /// The output is the privacy loss parameter.
     PrivacyLoss(AB),
 }
 
 // convenience methods for invoking or mapping distances over the odometer queryable
-impl<Q, A, AB> OdometerQueryable<Q, A, AB> {
+impl<Q, A, QB, AB> OdometerQueryable<Q, A, QB, AB> {
     pub fn invoke(&mut self, query: Q) -> Fallible<A> {
         if let OdometerAnswer::Invoke(answer) = self.eval(&OdometerQuery::Invoke(query))? {
             Ok(answer)
@@ -510,8 +539,8 @@ impl<Q, A, AB> OdometerQueryable<Q, A, AB> {
             fallible!(FailedCast, "return type is not an answer")
         }
     }
-    pub fn privacy_loss(&mut self) -> Fallible<AB> {
-        if let OdometerAnswer::PrivacyLoss(map) = self.eval(&OdometerQuery::PrivacyLoss)? {
+    pub fn privacy_loss(&mut self, d_in: QB) -> Fallible<AB> {
+        if let OdometerAnswer::PrivacyLoss(map) = self.eval(&OdometerQuery::PrivacyLoss(d_in))? {
             Ok(map)
         } else {
             fallible!(FailedCast, "return type is not a privacy map")
@@ -519,7 +548,7 @@ impl<Q, A, AB> OdometerQueryable<Q, A, AB> {
     }
 }
 
-impl<Q, AB: 'static> OdometerQueryable<Q, Box<dyn Any>, AB> {
+impl<Q, QB, AB: 'static> OdometerQueryable<Q, Box<dyn Any>, QB, AB> {
     pub fn invoke_poly<A: 'static>(&mut self, query: Q) -> Fallible<A> {
         self.invoke(query)?
             .downcast()

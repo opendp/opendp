@@ -15,7 +15,6 @@ fn test_privacy_odometer() -> Fallible<()> {
         AtomDomain::default(),
         DiscreteDistance::default(),
         MaxDivergence::default(),
-        1,
     )?;
 
     // pass dataset in and receive a queryable
@@ -66,7 +65,7 @@ fn test_privacy_odometer() -> Fallible<()> {
     let _answer4_1: bool = answer4.eval_poly(&rr_poly_query)?;
     let _answer4_2: bool = answer4.eval_poly(&rr_poly_query)?;
 
-    let total_usage = odometer.privacy_loss()?;
+    let total_usage = odometer.privacy_loss(1)?;
     println!("total usage: {:?}", total_usage);
 
     Ok(())
