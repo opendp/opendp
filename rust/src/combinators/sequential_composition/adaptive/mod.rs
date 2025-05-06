@@ -2,7 +2,7 @@ use opendp_derive::bootstrap;
 use std::{cell::RefCell, fmt::Debug, rc::Rc};
 
 use crate::{
-    combinators::{Adaptivity, Composition, assert_elements_match},
+    combinators::{Adaptivity, Composability, assert_elements_match},
     core::{Domain, Function, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
     interactive::{Answer, Query, Queryable, Wrapper},
@@ -82,7 +82,7 @@ where
 
     let require_sequentiality = matches!(
         output_measure.composability(Adaptivity::Adaptive)?,
-        Composition::Sequential
+        Composability::Sequential
     );
 
     // an upper bound on the privacy unit in the privacy map

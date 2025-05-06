@@ -1,7 +1,7 @@
 \documentclass{article}
 \input{../../../lib.sty}
 
-\title{\texttt{fn make\_fully\_adaptive\_composition\_queryable}}
+\title{\texttt{fn new\_fully\_adaptive\_composition\_queryable}}
 \author{Michael Shoemate}
 \date{}
 
@@ -10,7 +10,7 @@
 \maketitle
 
 \contrib
-Proves soundness of \texttt{fn make\_fully\_adaptive\_composition\_queryable}.
+Proves soundness of \texttt{fn new\_fully\_adaptive\_composition\_queryable}.
 
 \section{Hoare Triple}
 \subsection*{Precondition}
@@ -23,6 +23,7 @@ Types matching those in the pseudocode.
     \item Generic \texttt{MO} implements \rustdoc{measurements/combinators/sequential_composition/trait}{CompositionMeasure}.
     \item \texttt{(DI, MI)} implements \rustdoc{core/trait}{MetricSpace}.
 \end{itemize}
+
 \subsubsection*{User-verified}
 \texttt{data} is a member of \texttt{input\_domain}.
 
@@ -31,17 +32,18 @@ Types matching those in the pseudocode.
 \lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/new_fully_adaptive_composition_queryable.py}
 
 \subsubsection*{Postconditions}
-\validMeasurement{\texttt{(input\_domain, input\_metric, output\_measure, d\_in, data, DI, TO, MI, MO)}}{\texttt{new\_fully\_adaptive\_composition\_queryable}}
+\begin{theorem}
+    \validOdometerQueryable{\texttt{(input\_domain, input\_metric, output\_measure, data, DI, MI, MO, TO)}}{\texttt{new\_fully\_adaptive\_composition\_queryable}}
+\end{theorem}
 
-\begin{proof} \textup{Wrapping Guarantee}
-    \rustdoc{core/struct}{Measurement}\texttt{.invoke\_wrap} on line \ref{invoke} guarantees to wrap all spawned IM queryables with the provided wrapper,
-    satisfying the wrapping guarantee.
-    Since this is the only location where interactive mechanism queryables can be spawned,
-    the wrapping guarantee holds.
+\begin{proof}[Proof of data-independent errors]
+    The only interaction with the data is on line \ref{invoke}.
+    By the postcondition of a valid measurement,
+    errors are data-independent.
 \end{proof}
 
-\begin{proof} \textup{Privacy guarantee}
-    The transition function follows the $\mathcal{G}\text{-}OdomCon(IM)$ procedure described in Algorithm~6 of \cite{haney2023concurrentcompositioninteractivedifferential},
+\begin{proof}[Proof of privacy guarantee]
+    The transition function follows the $\mathcal{G}\text{-OdomCon(IM)}$ procedure described in Algorithm~6 of \cite{haney2023concurrentcompositioninteractivedifferential},
     with some adjustments that do not materially affect the privacy analysis.
 
     \begin{itemize}

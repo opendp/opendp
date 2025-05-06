@@ -12,7 +12,7 @@ use crate::{
     interactive::{Wrapper, wrap},
 };
 
-use super::{Adaptivity, Composition, CompositionMeasure};
+use super::{Adaptivity, Composability, CompositionMeasure};
 
 /// Construct the DP composition of [`measurement0`, `measurement1`, ...].
 /// Returns a Measurement that when invoked, computes `[measurement0(x), measurement1(x), ...]`
@@ -74,7 +74,7 @@ where
 
     let require_sequentiality = matches!(
         output_measure.composability(Adaptivity::NonAdaptive)?,
-        Composition::Sequential
+        Composability::Sequential
     );
 
     Measurement::new(
