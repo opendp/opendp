@@ -12,6 +12,7 @@ pub use adaptive::*;
 mod fully_adaptive;
 #[cfg(feature = "contrib")]
 pub use fully_adaptive::*;
+use opendp_derive::proven;
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -36,88 +37,92 @@ pub enum Adaptivity {
 }
 
 #[derive(Debug)]
-pub enum Composition {
+pub enum Composability {
     /// Previous interactive mechanisms are locked when a new query is submitted.
     Sequential,
     /// Previous interactive mechanisms are not locked when a new query is submitted.
     Concurrent,
 }
 
+/// # Proof Definition
+/// `composability` returns `Ok(out)` if the composition of a vector of privacy parameters `d_mids`
+/// is bounded above by `self.compose(d_mids)` under `adaptivity` adaptivity and `out`-composability.
+/// Otherwise returns an error.
 pub trait CompositionMeasure: Measure {
-    /// # Proof Definition
-    /// For a given adaptivity and privacy measure,
-    /// returns an error if composition is not valid,
-    /// otherwise returns whether the privacy measure supports sequential or concurrent composition.
-    fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composition>;
-
-    /// # Proof Definition
-    /// For a given privacy measure, and list of privacy parameters `d_i`,
-    /// returns the composition of the privacy parameters.
-    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance>;
+    fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composability>;
+    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance>;
 }
 
+#[proven(
+    proof_path = "combinators/sequential_composition/CompositionMeasure_for_MaxDivergence.tex"
+)]
 impl CompositionMeasure for MaxDivergence {
-    fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composition> {
-        Ok(Composition::Concurrent)
+    fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
+        Ok(Composability::Concurrent)
     }
-    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        d_i.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))
+    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+        d_mids.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))
     }
 }
 
+#[proven(
+    proof_path = "combinators/sequential_composition/CompositionMeasure_for_ZeroConcentratedDivergence.tex"
+)]
 impl CompositionMeasure for ZeroConcentratedDivergence {
-    fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composition> {
-        Ok(Composition::Concurrent)
+    fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
+        Ok(Composability::Concurrent)
     }
-    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        d_i.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))
+    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+        d_mids.iter().try_fold(0.0, |sum, d_i| sum.inf_add(d_i))
     }
 }
 
+#[proven(
+    proof_path = "combinators/sequential_composition/CompositionMeasure_for_ApproximateMaxDivergence.tex"
+)]
 impl CompositionMeasure for Approximate<MaxDivergence> {
-    fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composition> {
-        Ok(Composition::Concurrent)
+    fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
+        Ok(Composability::Concurrent)
     }
-    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        let (d_i0, deltas): (Vec<_>, Vec<_>) = d_i.into_iter().unzip();
-        let delta = deltas
+    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+        d_mids
             .iter()
-            .try_fold(0.0, |sum, delta| sum.inf_add(delta))?;
-
-        Ok((self.0.compose(d_i0)?, delta))
+            .try_fold((0.0, 0.0), |(eps_g, del_g), (eps_i, del_i)| {
+                Ok((eps_g.inf_add(eps_i)?, del_g.inf_add(del_i)?))
+            })
     }
 }
 
+#[proven(
+    proof_path = "combinators/sequential_composition/CompositionMeasure_for_ZeroConcentratedDivergence.tex"
+)]
 impl CompositionMeasure for Approximate<ZeroConcentratedDivergence> {
-    fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composition> {
-        if matches!(adaptivity, Adaptivity::FullyAdaptive) {
-            return fallible!(
-                MakeMeasurement,
-                "{adaptivity:?} composition is not supported for zCDP"
-            );
-        }
-        Ok(Composition::Sequential)
+    fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
+        Ok(Composability::Sequential)
     }
-    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        let (d_i0, deltas): (Vec<_>, Vec<_>) = d_i.into_iter().unzip();
-        let delta = deltas
+    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+        d_mids
             .iter()
-            .try_fold(0.0, |sum, delta| sum.inf_add(delta))?;
-
-        Ok((self.0.compose(d_i0)?, delta))
+            .try_fold((0.0, 0.0), |(eps_g, del_g), (eps_i, del_i)| {
+                Ok((eps_g.inf_add(eps_i)?, del_g.inf_add(del_i)?))
+            })
     }
 }
 
+#[proven(
+    proof_path = "combinators/sequential_composition/CompositionMeasure_for_RenyiDivergence.tex"
+)]
 impl CompositionMeasure for RenyiDivergence {
-    fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composition> {
-        Ok(Composition::Concurrent)
+    fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
+        Ok(Composability::Concurrent)
     }
 
-    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
+    fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance> {
         Ok(Function::new_fallible(move |alpha| {
-            d_i.iter()
+            d_mids
+                .iter()
                 .map(|f| f.eval(alpha))
-                .try_fold(0.0, |sum, e2| sum.inf_add(&e2?))
+                .try_fold(0.0, |sum, eps| sum.inf_add(&eps?))
         }))
     }
 }

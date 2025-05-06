@@ -1,0 +1,56 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{CompositionMeasure for Approximate<ZeroConcentratedDivergence>}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{combinators/sequential_composition/trait}{CompositionMeasure} 
+for \texttt{Approximate<ZeroConcentratedDivergence>} in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+Types matching pseudocode.
+
+
+\subsubsection*{Caller-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/CompositionMeasure_for_ApproximateZeroConcentratedDivergence.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+  \texttt{composability} returns \texttt{Ok(out)} if the composition of a vector of privacy parameters \texttt{d\_mids} 
+  is bounded above by \texttt{self.compose(d\_mids)} under \texttt{adaptivity} adaptivity and \texttt{out}-composability.
+  Otherwise returns an error.
+\end{theorem}
+
+\begin{proof}
+  By the postcondition of \rustdoc{traits/trait}{InfAdd} we have that $\sum_i \texttt{d\_mids}_i \le \texttt{compose(d\_mids)}$,
+  where the summation is applied independently to rhos and deltas, and the comparison applies to both the global rho and global delta.
+
+  \begin{center}
+    \begin{tabular}{ r | l l }
+      Adaptivity & Sequential & Concurrent \\ 
+      \hline
+      Non-Adaptive & Lemma~8.2\cite{bun2016concentrated} & None \\  
+      Adaptive & Lemma~8.2\cite{bun2016concentrated} & None \\
+      Fully-Adaptive & Theorem~1\cite{whitehouse2023fullyadaptive} & None
+    \end{tabular}
+
+    This table is reflected in the implementation of \texttt{composability} on line~\ref{line:composability}.
+  \end{center}
+  
+\end{proof}
+
+\bibliographystyle{alpha}
+\bibliography{ref}
+
+\end{document}

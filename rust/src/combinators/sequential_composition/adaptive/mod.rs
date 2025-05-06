@@ -2,7 +2,7 @@ use opendp_derive::bootstrap;
 use std::fmt::Debug;
 
 use crate::{
-    combinators::{Adaptivity, Composition, assert_components_match},
+    combinators::{Adaptivity, Composability, assert_components_match},
     core::{Domain, Function, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
     interactive::{Answer, Query, Queryable, Wrapper},
@@ -82,7 +82,7 @@ where
 
     let is_sequential = matches!(
         output_measure.composability(Adaptivity::Adaptive)?,
-        Composition::Sequential
+        Composability::Sequential
     );
 
     Measurement::new(
