@@ -4,8 +4,13 @@ def new_fully_adaptive_composition_queryable(
     input_metric: MI,
     output_measure: MO,
     data: DI_Carrier,
-    sequential: bool
 ) -> OdometerQueryable[Measurement[DI, TO, MI, MO], TO, MO_Distance]:
+    
+    is_sequential = matches(
+        output_measure.theorem(Adaptivity.FullyAdaptive),
+        Sequentiality.Sequential
+    )
+
     d_mids = []  # Vec<MO_Distance> `\label{mutable-state}`
     
     def transition(  # `\label{transition}`
@@ -39,11 +44,11 @@ def new_fully_adaptive_composition_queryable(
                     measurement.output_measure
                 )
 
-                if sequential:
+                if is_sequential:
                     # when the output measure doesn't allow concurrent composition,
                     # wrap any interactive queryables spawned.
-                    # This way, when the child gets a query it sends an AskPermission query to this parent queryable,
-                    # giving this sequential odometer queryable
+                    # This way, when the child gets a query it sends an AskPermission query 
+                    # to this parent queryable, giving this sequential odometer queryable
                     # a chance to deny the child permission to execute
                     child_id = d_mids.len()
 
@@ -55,18 +60,20 @@ def new_fully_adaptive_composition_queryable(
 
                 answer = measurement.invoke_wrap(data, seq_wrapper)  # `\label{invoke}`
 
-                # we've now increased our privacy spend. This is our only state modification
+                # We've now increased our privacy spend. 
+                # This is our only state modification
                 d_mids.push(measurement.privacy_map)  # `\label{child-privacy-map}`
 
                 return Answer.External(OdometerAnswer.Invoke(answer))
             
-            # evaluate external map query
+            # evaluate external privacy loss query
             case Query.External(OdometerQuery.PrivacyLoss()):
                 d_out = output_measure.compose(d_mids)
                 return Answer.External(OdometerAnswer.Map(d_out))
             
             case Query.Internal(query):
-                # check if the query is from a child queryable who is asking for permission to execute
+                # Check if the query is from a child queryable 
+                #     who is asking for permission to execute
                 if isinstance(query, AskPermission):  # `\label{ask-permission-handler}`
                     # deny permission if the sequential odometer has moved on
                     if query.id + 1 != d_mids.len():

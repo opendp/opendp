@@ -1,7 +1,7 @@
 use opendp_derive::proven;
 
 use crate::{
-    combinators::{Adaptivity, Composition, CompositionMeasure, assert_components_match},
+    combinators::{Adaptivity, Composability, CompositionMeasure, assert_components_match},
     core::{
         Domain, Function, Measurement, Metric, MetricSpace, Odometer, OdometerAnswer,
         OdometerQuery, OdometerQueryable,
@@ -19,6 +19,7 @@ mod test;
 /// * `input_domain` - indicates the space of valid input datasets
 /// * `input_metric` - how distances are measured between members of the input domain
 /// * `output_measure` - how privacy is measured
+/// * `d_in` - the distance between two adjacent datasets
 pub fn make_fully_adaptive_composition<
     DI: 'static + Domain,
     TO: 'static,
@@ -36,10 +37,8 @@ where
     MO::Distance: Clone,
     (DI, MI): MetricSpace,
 {
-    let is_sequential = matches!(
-        output_measure.composability(Adaptivity::FullyAdaptive)?,
-        Composition::Sequential
-    );
+    // check if fully adaptive composition is supported
+    output_measure.composability(Adaptivity::FullyAdaptive)?;
 
     Odometer::new(
         input_domain.clone(),
@@ -52,7 +51,6 @@ where
                 output_measure.clone(),
                 d_in.clone(),
                 arg.clone(),
-                is_sequential,
             )
         }),
     )
@@ -72,12 +70,16 @@ fn new_fully_adaptive_composition_queryable<
     output_measure: MO,
     d_in: MI::Distance,
     data: DI::Carrier,
-    is_sequential: bool,
 ) -> Fallible<OdometerQueryable<Measurement<DI, TO, MI, MO>, TO, MO::Distance>>
 where
     MO::Distance: Clone,
     (DI, MI): MetricSpace,
 {
+    let is_sequential = matches!(
+        output_measure.composability(Adaptivity::FullyAdaptive)?,
+        Composability::Sequential
+    );
+
     let mut d_mids: Vec<MO::Distance> = vec![];
     Queryable::new(
         move |self_: &OdometerQueryable<Measurement<DI, TO, MI, MO>, TO, MO::Distance>,
