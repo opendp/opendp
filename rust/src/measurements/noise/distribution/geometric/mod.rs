@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use dashu::rational::RBig;
 use num::FromPrimitive;
 use opendp_derive::{bootstrap, proven};
@@ -73,19 +75,20 @@ pub struct ConstantTimeGeometric<T> {
 #[proven(
     proof_path = "measurements/noise/distribution/geometric/MakeNoise_AtomDomain_for_ConstantTimeGeometric.tex"
 )]
-impl<T, MO> MakeNoise<AtomDomain<T>, AbsoluteDistance<T>, MO> for ConstantTimeGeometric<T>
+impl<T, QI, MO> MakeNoise<AtomDomain<T>, AbsoluteDistance<QI>, MO> for ConstantTimeGeometric<T>
 where
     T: Integer,
+    QI: 'static + Clone,
     MO: 'static + Measure,
     RBig: TryFrom<T>,
     usize: ExactIntCast<T>,
-    ConstantTimeGeometric<T>: MakeNoise<VectorDomain<AtomDomain<T>>, L1Distance<T>, MO>,
+    ConstantTimeGeometric<T>: MakeNoise<VectorDomain<AtomDomain<T>>, L1Distance<QI>, MO>,
     ZExpFamily<1>: NoisePrivacyMap<L1Distance<RBig>, MO>,
 {
     fn make_noise(
         self,
-        input_space: (AtomDomain<T>, AbsoluteDistance<T>),
-    ) -> Fallible<Measurement<AtomDomain<T>, T, AbsoluteDistance<T>, MO>> {
+        input_space: (AtomDomain<T>, AbsoluteDistance<QI>),
+    ) -> Fallible<Measurement<AtomDomain<T>, T, AbsoluteDistance<QI>, MO>> {
         let t_vec = make_vec(input_space)?;
         let m_geom = self.make_noise(t_vec.output_space())?;
         t_vec >> m_geom >> then_index_or_default(0)
@@ -96,18 +99,20 @@ where
 #[proven(
     proof_path = "measurements/noise/distribution/geometric/MakeNoise_VectorDomain_for_ConstantTimeGeometric.tex"
 )]
-impl<T, MO> MakeNoise<VectorDomain<AtomDomain<T>>, L1Distance<T>, MO> for ConstantTimeGeometric<T>
+impl<T, QI, MO> MakeNoise<VectorDomain<AtomDomain<T>>, L1Distance<QI>, MO>
+    for ConstantTimeGeometric<T>
 where
     T: Integer,
+    QI: Clone + Debug,
     MO: 'static + Measure,
     usize: ExactIntCast<T>,
-    RBig: TryFrom<T>,
+    RBig: TryFrom<QI>,
     ZExpFamily<1>: NoisePrivacyMap<L1Distance<RBig>, MO>,
 {
     fn make_noise(
         self,
-        (input_domain, input_metric): (VectorDomain<AtomDomain<T>>, L1Distance<T>),
-    ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, Vec<T>, L1Distance<T>, MO>> {
+        (input_domain, input_metric): (VectorDomain<AtomDomain<T>>, L1Distance<QI>),
+    ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, Vec<T>, L1Distance<QI>, MO>> {
         let ConstantTimeGeometric {
             scale,
             bounds: (lower, upper),
@@ -142,9 +147,9 @@ where
             }),
             input_metric,
             output_measure,
-            PrivacyMap::new_fallible(move |d_in: &T| {
+            PrivacyMap::new_fallible(move |d_in: &QI| {
                 let d_in = RBig::try_from(d_in.clone())
-                    .map_err(|_| err!(FailedMap, "d_in ({d_in}) must be finite"))?;
+                    .map_err(|_| err!(FailedMap, "d_in ({d_in:?}) must be finite"))?;
                 privacy_map.eval(&d_in)
             }),
         )
