@@ -185,12 +185,11 @@ def test_without_max_partition_length():
         plain_query.release()
 
     agg_query = context_wo_margin.query().group_by(["B"]).agg(config)
-    with pytest.raises(dp.OpenDPException, match=r"must specify 'max_length' in a margin with by=\[\]"):
+    with pytest.raises(dp.OpenDPException, match="must specify 'max_length' in a margin with by=\\[col\\(\"B\"\\)\\]"):
         agg_query.release()
     
-    
 # Add a margin and try the same queries again:
-def test_with_max_partition_length():
+def test_with_max_length():
     pl = pytest.importorskip("polars")
 
     context_w_margin = dp.Context.compositor(
@@ -200,7 +199,7 @@ def test_with_max_partition_length():
         split_evenly_over=2,
         margins=[dp.polars.Margin(
             by=[],
-            max_partition_length=1
+            max_length=1
         )],
     )
 
@@ -214,11 +213,11 @@ def test_with_max_partition_length():
         agg_query.release()
 
 
-# Add a public key set:
-def test_with_max_partition_length_and_public_keys():
+# Make key set invariant:
+def test_with_max_length_and_invariant_keys():
     pl = pytest.importorskip("polars")
     
-    context_w_public_keys = dp.Context.compositor(
+    context_w_invariant_keys = dp.Context.compositor(
         data=pl.LazyFrame({"A": [1, 2, 3, 4], "B": [5, 6, 7, 8]}),
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1),
@@ -226,20 +225,20 @@ def test_with_max_partition_length_and_public_keys():
         margins=[
             dp.polars.Margin(
                 by=[],
-                max_partition_length=1
+                max_length=1
             ),
             dp.polars.Margin(
                 by=['B'],
-                max_partition_length=1,
-                public_info='keys',
+                max_length=1,
+                invariant='keys',
             ),
         ],
     )
 
     config = pl.col("A").fill_null(0).dp.mean((0, 10))
 
-    plain_query = context_w_public_keys.query().select(config)
+    plain_query = context_w_invariant_keys.query().select(config)
     plain_query.release()
 
-    agg_query = context_w_public_keys.query().group_by(["B"]).agg(config)
+    agg_query = context_w_invariant_keys.query().group_by(["B"]).agg(config)
     agg_query.release()
