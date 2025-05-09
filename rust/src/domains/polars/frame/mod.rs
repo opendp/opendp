@@ -266,34 +266,30 @@ impl<F: Frame> FrameDomain<F> {
     /// Best effort is made to derive more restrictive descriptors,
     /// but optimal inference of descriptors is not guaranteed.
     pub fn get_margin(&self, by: &HashSet<Expr>) -> Margin {
-        let mut margin = self
-            .margins
-            .iter()
+        // find the margin descriptor for `by` if it exists, otherwise create a new one
+        let mut margin = (self.margins.iter())
             .find(|m| &m.by == by)
             .cloned()
             .unwrap_or_else(|| Margin::by(by.iter().cloned().collect::<Vec<_>>()));
 
-        let subset_margins = self
-            .margins
-            .iter()
+        // find margins for coarser groupings of the data
+        let coarser_margins = (self.margins.iter())
             .filter(|m| m.by.is_subset(by))
             .collect::<Vec<&Margin>>();
 
-        // the max_length descriptors can take the minimum known value from any margin on a subset of the grouping columns
-        margin.max_length = (subset_margins.iter()).filter_map(|m| m.max_length).min();
+        // the max_length is the largest group length of any coarser grouping
+        margin.max_length = coarser_margins.iter().filter_map(|m| m.max_length).min();
 
-        let all_mngs = (self.margins.iter())
+        let all_max_groups = (self.margins.iter())
             .filter_map(|m| Some((&m.by, m.max_groups?)))
             .collect();
 
         // in the worst case, the max group length is the product of the max group lengths of the cover
-        margin.max_groups = find_min_covering(by.clone(), all_mngs)
-            .map(|cover| {
-                cover
-                    .iter()
-                    .try_fold(1u32, |acc, (_, v)| acc.inf_mul(v).ok())
-            })
-            .flatten();
+        margin.max_groups = find_min_covering(by.clone(), all_max_groups).and_then(|cover| {
+            cover
+                .iter()
+                .try_fold(1u32, |acc, (_, v)| acc.inf_mul(v).ok())
+        });
 
         // if keys or lengths are known about any higher-way marginal,
         // then the same is known about lower-way marginals
@@ -302,12 +298,6 @@ impl<F: Frame> FrameDomain<F> {
             .map(|m| m.invariant)
             .max()
             .flatten();
-
-        // with no grouping, the key-set is trivial/public
-        if by.is_empty() {
-            margin.invariant.get_or_insert(Invariant::Keys);
-            margin.max_groups = Some(1);
-        }
 
         margin
     }
@@ -514,16 +504,19 @@ pub(crate) fn find_min_covering<T: Hash + Eq>(
     while !must_cover.is_empty() {
         let (best_set, weight) = sets
             .iter()
-            .max_by_key(|(set, len)| {
+            .max_by_key(|(set, weight)| {
                 (
                     // choose the set that covers the most uncovered elements
                     set.intersection(&must_cover).count(),
                     // of those, prioritize smaller sets
                     -(set.len() as i32),
                     // of those, prioritize lower weight
-                    -(*len as i32),
+                    -(*weight as i32),
                 )
             })
+            // If sets is non-empty, and the "best set" overlaps with the must_cover set,
+            //    then it is a valid addition to the covering.
+            // Otherwise, return None.
             .and_then(|(best_set, weight)| {
                 (!best_set.is_disjoint(&must_cover)).then(|| (best_set, *weight))
             })?;

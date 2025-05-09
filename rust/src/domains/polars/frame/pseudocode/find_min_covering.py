@@ -1,9 +1,9 @@
 # type: ignore
 def find_min_covering(
-    must_cover: set[T], sets: dict[set[T], u32]
-) -> dict[set[T], u32] | None:
+    must_cover: set[T], sets: list[set[T], u32]
+) -> list[tuple[set[T], u32]] | None:
     
-    covered = dict()  # `\label{covered}`
+    covered = list()  # `\label{covered}`
 
     while must_cover:  # `\label{loop}`
 
