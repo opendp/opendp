@@ -90,6 +90,27 @@ test_that("test_gaussian_curve", {
   expect_equal(curve(epsilon = 0.1), 0.0)
 })
 
+test_that("test_beta_gaussian_profile_nonzero_scale", {
+  input_space <- c(atom_domain(.T = f64, nan = FALSE), absolute_distance(.T = f64))
+  meas <- make_zCDP_to_approxDP(input_space |> then_gaussian(4.))
+  profile <- meas(d_in = 1.)
+  expect_equal(profile(alpha = 0.0), 1.0)
+  expect_equal(profile(alpha = 1e-3), 0.9975453589292126)
+  expect_equal(profile(alpha = 1.0), 0.0)
+})
+
+test_that("test_posterior_relative_risk", {
+  input_space <- c(atom_domain(.T = f64, nan = FALSE), absolute_distance(.T = f64))
+  meas <- make_zCDP_to_approxDP(input_space |> then_gaussian(4.))
+  profile <- meas(d_in = 1.)
+
+  posterior <- profile("posterior")(prior = 0.2)
+  expect_equal(posterior(arg = 0.5), 0.24212394006956922)
+
+  relative_risk <- profile("relative_risk")(prior = 0.2)
+  expect_equal(relative_risk(arg = 0.5), 1.210619700347846)
+})
+
 test_that("test_gaussian_search", {
   input_space <- c(atom_domain(.T = f64, nan = FALSE), absolute_distance(.T = f64))
 

@@ -37,6 +37,22 @@ def test_gaussian_curve():
     assert profile.delta(epsilon=0.1) == 0.0
 
 
+def test_beta_gaussian_profile_nonzero_scale():
+    input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
+    meas = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 4.))
+    profile: dp.PrivacyProfile = meas.map(d_in=1.0)
+    assert profile.beta(alpha=0.0) == 1.0
+    assert profile.beta(alpha=1e-3) == 0.9975453589292126
+    assert profile.beta(alpha=1.0) == 0.0
+    
+def test_beta_gaussian_profile_zero_scale():
+    input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
+    meas = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 0.))
+    profile: dp.PrivacyProfile = meas.map(d_in=1.0)
+    assert profile.beta(alpha=0.0) == 1.0
+    assert profile.beta(alpha=0.1) == 0.0
+
+
 def test_gaussian_search():
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
 
