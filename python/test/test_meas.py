@@ -53,6 +53,16 @@ def test_beta_gaussian_profile_zero_scale():
     assert profile.beta(alpha=0.1) == 0.0
 
 
+@pytest.mark.skip(reason="slow running test")
+def test_posterior_curve_gaussian():
+    pytest.importorskip('matplotlib')
+    input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
+    meas = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 1.))
+    profile: dp.PrivacyProfile = meas.map(1.0)
+    profile.plot_tradeoff_curve()
+    profile.plot_posteriors()
+    profile.plot_relative_risks()
+
 def test_gaussian_search():
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
 
