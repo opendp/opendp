@@ -8,6 +8,8 @@ def test_unit_of():
     assert dp.unit_of(contributions=3) == (dp.symmetric_distance(), 3)
     assert dp.unit_of(contributions=3, ordered=True) == (dp.insert_delete_distance(), 3)
     assert dp.unit_of(local=True) == (dp.discrete_distance(), 1)
+    with pytest.raises(ValueError, match='"local" must be the only parameter'):
+        dp.unit_of(local=True, ordered=True)
 
     assert dp.unit_of(changes=3) == (dp.change_one_distance(), 3)
     assert dp.unit_of(changes=3, ordered=True) == (dp.hamming_distance(), 3)

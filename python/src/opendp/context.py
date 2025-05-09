@@ -368,6 +368,8 @@ def unit_of(
         raise ValueError("Must specify exactly one distance.")
 
     if local:
+        if identifier is not None or ordered or U is not None:
+            raise ValueError('"local" must be the only parameter')
         return discrete_distance(), int(local)
     
     if ordered:
