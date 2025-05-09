@@ -7,6 +7,7 @@ from opendp._internal import _make_measurement
 def test_unit_of():
     assert dp.unit_of(contributions=3) == (dp.symmetric_distance(), 3)
     assert dp.unit_of(contributions=3, ordered=True) == (dp.insert_delete_distance(), 3)
+    assert dp.unit_of(local=True) == (dp.discrete_distance(), 1)
 
     assert dp.unit_of(changes=3) == (dp.change_one_distance(), 3)
     assert dp.unit_of(changes=3, ordered=True) == (dp.hamming_distance(), 3)
@@ -368,3 +369,26 @@ def test_register_fail():
 
     with pytest.raises(ValueError, match="is already registered in the Context API"):
         dp.register(dp.t.make_sum)
+
+def test_local_DP():
+    context = dp.Context.compositor(
+        data=True,
+        privacy_unit=dp.unit_of(local=True),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=2,
+    )
+    query = context.query().randomized_response_bool()
+
+    assert query.param() == 0.6224593312018545
+    assert isinstance(query.release(), bool)
+
+    context = dp.Context.compositor(
+        data="A",
+        privacy_unit=dp.unit_of(local=True),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=2,
+    )
+    query = context.query().randomized_response(["A", "B"])
+
+    assert query.param() == 0.6224593312018545
+    assert isinstance(query.release(), str)

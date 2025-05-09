@@ -33,9 +33,7 @@ The mechanism returned by \texttt{make\_randomized\_response} takes in a data se
 \subsection*{Preconditions}
 \begin{itemize}
     \item Variable \texttt{categories} must be a set with members of type \texttt{T}
-    \item Variable \texttt{prob} must be of type \texttt{QO}
-    \item Type \texttt{QO} must have trait \rustdoc{traits/trait}{Float}
-    \item The bit representation of type \texttt{QO} must support \texttt{ExactIntCast} to and from \texttt{usize}
+    \item Variable \texttt{prob} must be of type \texttt{f64}
 \end{itemize}
 
 \subsection*{Pseudocode}
@@ -43,7 +41,7 @@ The mechanism returned by \texttt{make\_randomized\_response} takes in a data se
 
 \subsection*{Postcondition}
 
-\validMeasurement{\texttt{(categories, prob, T, QO)}}{\\ \texttt{make\_randomized\_response}}
+\validMeasurement{\texttt{(categories, prob, T)}}{\\ \texttt{make\_randomized\_response}}
 
 \section{Proof}
 
@@ -72,7 +70,7 @@ Note that all categories must be unique as the input data type is a set.
 This means duplicate categories cannot influence the output distribution.
 
 $t$ must be at least two, by pseudocode line \ref{line:num_cats}, as any fewer would not be useful.
-$p$ is restricted to $[1/t, 1.0)$ by pseudocode line \ref{line:range}, as any less would not be useful.
+$p$ is restricted to $[1/t, 1.0]$ by pseudocode line \ref{line:range}, as any less would not be useful.
 
 We'll first consider all possible output probabilities, 
 and then use this to upper bound the ratio of any two probabilities.

@@ -13,7 +13,7 @@
 
 Proves soundness of \rustdoc{measurements/fn}{make\_randomized\_response\_bool} in \asOfCommit{mod.rs}{f5bb719}.
 
-\texttt{make\_randomized\_response\_bool} accepts a parameter \texttt{prob} of type \texttt{Q} and a parameter \texttt{constant\_time} of type \texttt{bool}.
+\texttt{make\_randomized\_response\_bool} accepts a parameter \texttt{prob} of type \texttt{f64} and a parameter \texttt{constant\_time} of type \texttt{bool}.
 The function on the resulting measurement takes in a boolean data point \texttt{arg} and returns the truthful value \texttt{arg} with probability \texttt{prob},
 or the complement $\texttt{!arg}$ with probability $1 - \texttt{prob}$.
 The measurement function makes mitigations against timing channels if \texttt{constant\_time} is set. 
@@ -25,19 +25,12 @@ The measurement function makes mitigations against timing channels if \texttt{co
     \end{warning}
 \end{tcolorbox}
 
-\subsection*{PR History}
-\begin{itemize}
-    \item \vettingPR{490}
-\end{itemize}
-
 \section{Hoare Triple}
 
 \subsection*{Preconditions}
 \begin{itemize}
-    \item Variable \texttt{prob} must be of type \texttt{QO}
+    \item Variable \texttt{prob} must be of type \texttt{f64}
     \item Variable \texttt{constant\_time} must be of type \texttt{bool}
-    \item Type \texttt{bool} must have trait \rustdoc{traits/samplers/bernoulli/trait}{SampleBernoulli}\texttt{<QO>}
-    \item Type \texttt{QO} must have trait \rustdoc{traits/trait}{Float}
 \end{itemize}
 
 \subsection*{Pseudocode}
@@ -45,7 +38,7 @@ The measurement function makes mitigations against timing channels if \texttt{co
 
 \subsection*{Postcondition}
 
-\validMeasurement{\texttt{(prob, constant\_time, QO)}}{\\ \texttt{make\_randomized\_response\_bool}}
+\validMeasurement{\texttt{(prob, constant\_time)}}{\\ \texttt{make\_randomized\_response\_bool}}
 
 \section{Proof}
 
@@ -70,7 +63,7 @@ Here, the metric is \texttt{DiscreteMetric} which enforces that $\din \geq 1$ if
 If $x = x'$, then the output distributions on $x$ and $x'$ are identical, and therefore the max-divergence is 0.
 Consider $x \ne x'$ and assume without loss of generality that $x = \top$ and $x' = \bot$. 
 For shorthand, we let $p$ represent \texttt{prob}, the probability that \texttt{sample\_bernoulli\_float} returns $\top$. 
-Observe that $p = [0.5, 1.0)$ otherwise \texttt{make\_randomized\_response\_bool} raises an error. 
+Observe that $p = [0.5, 1.0]$ otherwise \texttt{make\_randomized\_response\_bool} raises an error. 
 
 We now consider the max-divergence $D_{\infty}(Y||Y')$ over the random variables $Y = \function(x)$ and $Y' = \function(x')$.
 
@@ -83,7 +76,7 @@ We now consider the max-divergence $D_{\infty}(Y||Y')$ over the random variables
     =& \ln (\frac{p}{1 - p})
 \end{align*}
 
-We let $c = \texttt{privacy\_map}(\din) = \texttt{QO.inf\_ln(prob.inf\_div(1.neg\_inf\_sub(prob)))}$.
+We let $c = \texttt{privacy\_map}(\din) = \texttt{f64.inf\_ln(prob.inf\_div(1.neg\_inf\_sub(prob)))}$.
 The computation of \texttt{c} rounds upward in the presence of floating point rounding errors. 
 This is because \texttt{1.neg\_inf\_sub(prob)} appears in the denominator, and to ensure that the bound holds even in the presence of rounding errors, the conservative choice is to round down (so the quantity as a whole is bounded above). 
 Similarly, \texttt{inf\_div} and \texttt{inf\_ln} round up. 

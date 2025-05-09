@@ -36,6 +36,7 @@ from opendp.metrics import (
     absolute_distance,
     change_one_distance,
     change_one_id_distance,
+    discrete_distance,
     hamming_distance,
     insert_delete_distance,
     l1_distance,
@@ -336,6 +337,7 @@ def unit_of(
     absolute: Optional[float] = None,
     l1: Optional[float] = None,
     l2: Optional[float] = None,
+    local: Optional[bool] = None,
     identifier: Optional[str] = None,
     ordered: bool = False,
     U=None,
@@ -354,6 +356,7 @@ def unit_of(
     :param absolute: Greatest absolute distance a privacy unit can influence a scalar aggregate data set
     :param l1: Greatest l1 distance a privacy unit can influence a vector aggregate data set
     :param l2: Greatest l2 distance a privacy unit can influence a vector aggregate data set
+    :param local: Set to true if the dataset consists of one individual (for local-DP)
     :param identifier: Can be a column name or Polars expression.
     :param ordered: Set to ``True`` to use ``InsertDeleteDistance`` instead of ``SymmetricDistance``, or ``HammingDistance`` instead of ``ChangeOneDistance``.
     :param U: The type of the dataset distance."""
@@ -364,6 +367,9 @@ def unit_of(
     if sum(1 for p, v in locals().items() if _is_distance(p, v)) != 1:
         raise ValueError("Must specify exactly one distance.")
 
+    if local:
+        return discrete_distance(), int(local)
+    
     if ordered:
         if contributions is None and changes is None:
             raise ValueError('"ordered" is only valid with "changes" or "contributions"')
