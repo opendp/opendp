@@ -1,9 +1,8 @@
 # type: ignore
-def make_randomized_response(categories: set[T], prob: QO):
+def make_randomized_response(categories: set[T], prob: f64):
     input_domain = AtomDomain(bool)
-    output_domain = AtomDomain(bool)
     input_metric = DiscreteMetric()
-    output_measure = MaxDivergence(QO)
+    output_measure = MaxDivergence()
 
     categories = list(categories)
 
@@ -12,13 +11,16 @@ def make_randomized_response(categories: set[T], prob: QO):
     
     num_categories = len(categories)
 
-    if not (1 / num_categories <= prob < 1):  # |\label{line:range}|
-        raise ValueError("probability must be within [1/num_categories, 1)")
+    if not (1 / num_categories <= prob <= 1):  # |\label{line:range}|
+        raise ValueError("probability must be within [1/num_categories, 1]")
     
     # prepare constant: |\label{line:map}|
-    c = p.inf_div((1).neg_inf_sub(prob)) \
-        .inf_mul(num_categories.inf_sub(1)) \
-        .inf_ln()
+    if prob == 1.0:
+        c = float("inf")
+    else:
+        c = p.inf_div((1).neg_inf_sub(prob)) \
+            .inf_mul(num_categories.inf_sub(1)) \
+            .inf_ln()
     
     def privacy_map(d_in: u32) -> QO:
         if d_in == 0:
@@ -40,4 +42,4 @@ def make_randomized_response(categories: set[T], prob: QO):
         is_member = index != -1
         return truth if be_honest and is_member else lie
     
-    return Measurement(input_domain, output_domain, function, input_metric, output_measure, privacy_map)
+    return Measurement(input_domain, function, input_metric, output_measure, privacy_map)

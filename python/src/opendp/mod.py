@@ -1318,6 +1318,20 @@ def binary_search(
     return value
 
 
+_EXPONENTIAL_SEARCH_BANDS: dict[Type, list[float]] = {
+    # Searching bands of [(k - 1) * 2^16, k * 2^16].
+    # Integers have linear space between bands.
+    # Additionally include 1 because zero is prone to error.
+    int: [0, 1, *(2 ** 16 * k for k in range(1, 9))],
+
+    # Searching bands of [2^((k - 1)^2), 2^(k^2)].
+    # Exponent has ten bits (2^1024 overflows) so k must be in [0, 32).
+    # Unlikely to need numbers greater than 2**64, and to avoid overflow from shifted centers,
+    #    only check k in [0, 8). 
+    # Set your own bounds if this is not sufficient.
+    float: [0.0, 0.5, *(2. ** k ** 2 for k in range(1024 // 32 // 4))]
+}
+
 def exponential_bounds_search(
         predicate: Callable[[float], bool], 
         T: Optional[Type[float]]) -> Optional[tuple[float, float]]:
@@ -1346,19 +1360,9 @@ def exponential_bounds_search(
         :param sign: Search in this direction
         """
 
-        if T == int:
-            # searching bands of [(k - 1) * 2^16, k * 2^16].
-            # center + 1 included because zero is prone to error
-            bands = [center, center + 1, *(center + sign * 2 ** 16 * k for k in range(1, 9))]
-
-        elif T == float:
-            # searching bands of [2^((k - 1)^2), 2^(k^2)].
-            # exponent has ten bits (2.^1024 overflows) so k must be in [0, 32).
-            # unlikely to need numbers greater than 2**64, and to avoid overflow from shifted centers,
-            #    only check k in [0, 8). Set your own bounds if this is not sufficient
-            bands = [center, *(center + sign * 2. ** k ** 2 for k in range(1024 // 32 // 4))]
-        else:
+        if T not in _EXPONENTIAL_SEARCH_BANDS:
             raise TypeError(f"unknown type {T}. Must be one of int, float")  # pragma: no cover
+        bands = [center + sign * c for c in _EXPONENTIAL_SEARCH_BANDS[T]]
 
         for i in range(1, len(bands)):
             # looking for a change in sign that indicates the decision boundary is within this band
