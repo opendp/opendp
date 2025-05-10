@@ -1,0 +1,84 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{NoisePrivacyMap<L1Distance<RBig>, MaxDivergence> for ZExpFamily<1>}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise/trait}{NoisePrivacyMap} for \texttt{ZExpFamily<1>} in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+\texttt{NoisePrivacyMap} is parameterized as follows:
+\begin{itemize}
+    \item \texttt{MI}, the input metric, is of type \rustdoc{metrics/type}{L1Distance<RBig>}
+    \item \texttt{MO}, the output measure, is of type \rustdoc{measures/struct}{MaxDivergence}
+\end{itemize}
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/NoisePrivacyMap_for_ZExpFamily1.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    Given a distribution \texttt{self},
+    returns \texttt{Err(e)} if \texttt{self} is not a valid distribution.
+    Otherwise if the output is \texttt{Ok(privacy\_map)}
+    then \texttt{privacy\_map} observes the following:
+
+    Define \texttt{function(x) = x + Z} where \texttt{Z} is a vector of iid samples from \texttt{self}.
+
+    For every pair of elements $x, x'$ in \texttt{VectorDomain<AtomDomain<IBig>{}>},
+    and for every pair (\texttt{d\_in}, \texttt{d\_out}),
+    where \texttt{d\_in} has the associated type for \texttt{input\_metric} and \texttt{d\_out} has the associated type for \texttt{output\_measure},
+    if $x, x'$ are \texttt{d\_in}-close under \texttt{input\_metric}, \texttt{privacy\_map(d\_in)} does not raise an exception,
+    and $\texttt{privacy\_map(d\_in)} \leq \texttt{d\_out}$,
+    then \texttt{function(x)}, \texttt{function(x')} are \texttt{d\_out}-close under \texttt{output\_measure}.
+\end{theorem}
+
+\begin{proof}
+    Line \ref{line:neg-scale} rejects \texttt{self} if \texttt{self} does not represent a valid distribution,
+    satisfying the error conditions of the postcondition.
+
+    We now construct the privacy map.
+    First consider the extreme values of the scale and sensitivity parameters.
+    The sensitivity \texttt{d\_in}, a bound on distances, must not be negative, as checked on line \ref{line:neg-sens}.
+    In the case where sensitivity is zero (line \ref{line:zero-sens}), the privacy loss is zero, regardless the choice of scale parameter (even zero).
+    This is because the privacy loss when adjacent datasets are always identical is zero.
+    Otherwise, in the case where the scale is zero, the privacy loss is infinite.
+    To avoid a rational division overflow, line \ref{line:zero-scale} returns infinity.
+
+    By line \ref{line:map}, both the sensitivity and scale are positive rationals.
+    We directly compute the max divergence over all $x$, $x'$ in the input domain of big-integer vectors.
+    \begin{align}
+        &\max_{x \sim x'} D_\infty(M(x), M(x')) \\
+        &=\max_{x \sim x'} \max_{S \subseteq \textrm{supp}(M(\cdot))} \Big[\ln \dfrac{\Pr[M(x) \in S]}{\Pr[M(x') \in S]} \Big]
+            &&\text{substitute } \rustdoc{measures/struct}{MaxDivergence} \\
+        &\leq\max_{x \sim x'} \max_{y \in \mathbb{Z}^d} \Big[\ln \dfrac{\Pr[M(x) = y]}{\Pr[M(x') = y]} \Big] 
+            &&\text{mass is upper-bounded by point densities}\\
+        &=\max_{x \sim x'} \max_{y \in \mathbb{Z}^d} \ln \dfrac{\prod_{i=1}^d \frac{e^{-1/s} - 1}{e^{-1/s} + 1} e^{-|x_i - z_i|/s}}{\prod_{i=1}^d\frac{e^{-1/s} - 1}{e^{-1/s} + 1} e^{-|x'_i-z_i|/s}}
+            &&\text{substitute pdf}\\
+        &=\max_{x \sim x'} \max_{y \in \mathbb{Z}^d} \ln \prod_{i=1}^d e^{\frac{|x'_i - z_i| - |x_i - z_i|}{s}}
+            &&\text{cancel constants} \\
+        &=\frac{1}{s}\max_{x \sim x'} \max_{y \in \mathbb{Z}^d} \sum_{i=1}^d|x'_i - z_i| - |x_i - z_i| 
+            &&\text{simplify via log rules}\\
+        &\leq\frac{1}{s}\max_{x \sim x'} \sum_{i=1}^d|x'_i - x_i|
+            &&d \text{ applications of reverse triangle inequality} \\
+        &=\frac{1}{s}\max_{x \sim x'}||x' - x||_1
+            &&\text{substitute } L_1 \text{ from } \rustdoc{metrics/type}{LpDistance} \\
+        &\leq\frac{\texttt{d\_in}}{s}
+            &&\text{since } ||x' - x||_1 = d_{L_1}(x, x') \leq \texttt{d\_in} \\
+    \end{align}
+
+    Line \ref{line:map} implements this bound with exact division and conservative cast to float.
+\end{proof}
+
+\end{document}
