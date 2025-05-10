@@ -1,3 +1,5 @@
+use opendp_derive::bootstrap;
+
 use crate::{
     core::{
         Domain, Function, Measure, Measurement, Metric, MetricSpace, Odometer, OdometerQueryable,
@@ -12,6 +14,20 @@ use std::fmt::Debug;
 #[cfg(test)]
 mod test;
 
+#[cfg(feature = "ffi")]
+mod ffi;
+
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        odometer(rust_type = b"null"),
+        d_out(
+            c_type = "AnyObject *",
+            rust_type = "$get_distance_type(odometer_output_measure(odometer))"
+        )
+    ),
+    generics(DI(suppress), MI(suppress), MO(suppress), Q(suppress), A(suppress))
+)]
 /// Combinator that limits the privacy loss of an odometer.
 ///
 /// Adjusts the queryable returned by the odometer
@@ -32,8 +48,8 @@ pub fn make_privacy_filter<
     d_out: MO::Distance,
 ) -> Fallible<Measurement<DI, OdometerQueryable<Q, A, MO::Distance>, MI, MO>>
 where
-    DI::Carrier: Clone + Send + Sync,
-    MI::Distance: Clone + Debug + ProductOrd + Send + Sync + 'static,
+    DI::Carrier: Clone,
+    MI::Distance: Clone + Debug + ProductOrd + Send + Sync,
     MO::Distance: Clone + Debug + ProductOrd + Send + Sync,
     (DI, MI): MetricSpace,
 {
