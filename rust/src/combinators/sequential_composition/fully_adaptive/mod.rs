@@ -1,7 +1,9 @@
 use opendp_derive::proven;
 
 use crate::{
-    combinators::{Adaptivity, Composability, CompositionMeasure, assert_components_match},
+    combinators::{
+        Adaptivity, Composability, CompositionMeasure, PendingLoss, assert_components_match,
+    },
     core::{
         Domain, Function, Measurement, Metric, MetricSpace, Odometer, OdometerAnswer,
         OdometerQuery, OdometerQueryable,
@@ -44,7 +46,7 @@ where
         input_domain.clone(),
         input_metric.clone(),
         output_measure.clone(),
-        Function::new_fallible(move |arg: &DI::Carrier| {
+        Function::new_fallible(enclose!(d_in, move |arg: &DI::Carrier| {
             new_fully_adaptive_composition_queryable(
                 input_domain.clone(),
                 input_metric.clone(),
@@ -52,7 +54,8 @@ where
                 d_in.clone(),
                 arg.clone(),
             )
-        }),
+        })),
+        d_in,
     )
 }
 
@@ -150,6 +153,23 @@ where
                         }
                         // otherwise, return Ok to approve the change
                         return Ok(Answer::internal(()));
+                    }
+
+                    // handler to see privacy usage after running a query.
+                    // Someone is passing in an OdometerQuery internally,
+                    // so return the potential privacy loss of this odometer after running this query
+                    if let Some(query) =
+                        query.downcast_ref::<OdometerQuery<Measurement<DI, TO, MI, MO>>>()
+                    {
+                        return Ok(Answer::internal(match query {
+                            OdometerQuery::Invoke(meas) => {
+                                let mut pending_d_mids = d_mids.clone();
+                                pending_d_mids.push(meas.map(&d_in)?);
+
+                                PendingLoss::New(output_measure.compose(pending_d_mids)?)
+                            }
+                            OdometerQuery::PrivacyLoss => PendingLoss::Same::<MO::Distance>,
+                        }));
                     }
 
                     return fallible!(FailedFunction, "query not recognized");
