@@ -105,6 +105,9 @@ nitpick_ignore = [
     ('py:class', 'opendp.mod.LP_AnyMetric'),
     ('py:class', 'opendp.mod.LP_AnyTransformation'),
 
+    # Optional dependency for numpy
+    ('py:class', 'numpy.ndarray'),
+
     # I think the problem is that Sphinx is making parameter list documentation,
     # and it doesn't understand that `M` and `T` are type parameters, not actual types.
     ('py:class', 'opendp.mod.M'),
