@@ -1,0 +1,1 @@
+from ._aim import make_ordinal_aim
