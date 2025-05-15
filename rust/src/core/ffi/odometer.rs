@@ -166,7 +166,7 @@ pub extern "C" fn opendp_core__odometer_queryable_invoke_type(
 }
 
 #[bootstrap(
-    name = "odometer_queryable_map_type",
+    name = "odometer_queryable_privacy_loss_type",
     arguments(this(rust_type = b"null")),
     returns(c_type = "FfiResult<char *>")
 )]
@@ -175,7 +175,7 @@ pub extern "C" fn opendp_core__odometer_queryable_invoke_type(
 /// # Arguments
 /// * `this` - The queryable to retrieve the query type from.
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_core__odometer_queryable_map_type(
+pub extern "C" fn opendp_core__odometer_queryable_privacy_loss_type(
     this: *mut AnyObject,
 ) -> FfiResult<*mut c_char> {
     let this = try_as_mut_ref!(this);
@@ -185,10 +185,10 @@ pub extern "C" fn opendp_core__odometer_queryable_map_type(
 }
 
 #[bootstrap(
-    name = "odometer_queryable_map",
+    name = "odometer_queryable_privacy_loss",
     arguments(
         queryable(rust_type = b"null"),
-        d_in(rust_type = "$odometer_queryable_map_type(queryable)")
+        d_in(rust_type = "$odometer_queryable_privacy_loss_type(queryable)")
     )
 )]
 /// Retrieve the privacy loss of an odometer `queryable`.
@@ -197,13 +197,13 @@ pub extern "C" fn opendp_core__odometer_queryable_map_type(
 /// * `queryable` - Queryable to eval.
 /// * `d_in` - Maximum distance between adjacent inputs in the input domain.
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_core__odometer_queryable_map(
+pub extern "C" fn opendp_core__odometer_queryable_privacy_loss(
     queryable: *mut AnyObject,
     d_in: *const AnyObject,
 ) -> FfiResult<*mut AnyObject> {
     let queryable = try_!(try_as_mut_ref!(queryable).downcast_mut::<AnyOdometerQueryable>());
     let d_in = try_as_ref!(d_in).clone();
-    queryable.map(d_in).into()
+    queryable.privacy_loss(d_in).into()
 }
 
 #[cfg(test)]

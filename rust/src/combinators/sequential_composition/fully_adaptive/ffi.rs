@@ -1,10 +1,15 @@
 #[cfg(feature = "polars")]
-use crate::{ffi::util::Type, metrics::Bounds};
+use crate::metrics::Bounds;
+
+use crate::ffi::util::Type;
 
 use crate::{
     core::FfiResult,
     error::Fallible,
-    ffi::any::{AnyDomain, AnyMeasure, AnyMetric, AnyObject, AnyOdometer},
+    ffi::{
+        any::{AnyDomain, AnyMeasure, AnyMetric, AnyObject, AnyOdometer},
+        util::ExtrinsicObject,
+    },
     measures::ffi::TypedMeasure,
     metrics::ffi::TypedMetric,
 };
@@ -19,7 +24,7 @@ pub extern "C" fn opendp_combinators__make_fully_adaptive_composition(
     let input_metric = try_as_ref!(input_metric).clone();
     let output_measure = try_as_ref!(output_measure).clone();
 
-    fn monomorphize<QI: 'static + Clone + Send + Sync, QO: 'static + Clone + Default>(
+    fn monomorphize<QI: 'static + Clone + Send + Sync, QO: 'static + Clone>(
         input_domain: AnyDomain,
         input_metric: AnyMetric,
         output_measure: AnyMeasure,
@@ -45,6 +50,14 @@ pub extern "C" fn opendp_combinators__make_fully_adaptive_composition(
         return dispatch!(
             monomorphize,
             [(QI, [Bounds]), (QO, [f64, (f64, f64)])],
+            (input_domain, input_metric, output_measure)
+        )
+        .into();
+    }
+    if QI == Type::of::<ExtrinsicObject>() {
+        return dispatch!(
+            monomorphize,
+            [(QI, [ExtrinsicObject]), (QO, [f64, (f64, f64)])],
             (input_domain, input_metric, output_measure)
         )
         .into();
