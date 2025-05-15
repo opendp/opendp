@@ -126,7 +126,7 @@ test_that("make_sequential_composition", {
   expect_error(sc_qbl(query = meas_rr))
 })
 
-test_that("test_sequential_odometer", {
+test_that("test_fully_adaptive_composition", {
   max_influence <- 1L
   space <- c(vector_domain(atom_domain(.T = "i32")), symmetric_distance())
   o_sc <- space |> then_fully_adaptive_composition(max_divergence())
@@ -150,16 +150,16 @@ test_that("test_sequential_odometer", {
 
   m_lap <- make_laplace(atom_domain(.T = "i32"), absolute_distance(.T = "i32"), 200.)
   t_sum <- space |> then_clamp(c(0L, 10L)) |> then_sum()
-  expect_warning({
-    m_sum_compositor <- t_sum |> then_sequential_composition(
-      output_measure = max_divergence(),
-      d_in = t_sum(d_in = max_influence),
-      d_mids = c(0.2, 0.09)
-    )
-  })
+  m_sum_compositor <- t_sum |> then_adaptive_composition(
+    output_measure = max_divergence(),
+    d_in = t_sum(d_in = max_influence),
+    d_mids = c(0.2, 0.09)
+  )
   qbl_summed <- oqbl_sc(query = m_sum_compositor)
   # it's slightly larger, checking greater than will do
-  expect_gt(oqbl_sc(d_in = max_influence), m_sum(d_in = max_influence) + 0.2 + 0.09)
+  d_current <- oqbl_sc(d_in = max_influence)
+  expect_gt(d_current, m_sum(d_in = max_influence) + 0.2 + 0.09)
+  expect_lt(d_current, m_sum(d_in = max_influence) + 0.2 + 0.09 + 0.0001)
 
   expect_type(qbl_summed(query = m_lap), "integer") # child release
   expect_type(qbl_summed(query = m_lap), "integer") # child release

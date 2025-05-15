@@ -220,6 +220,36 @@ def test_new_domain():
     assert not not_null_domain.member(float("nan"))
 
 
+@pytest.mark.parametrize("struct", [
+    dp.m.make_user_measurement(
+        dp.atom_domain(T=int),
+        dp.absolute_distance(T=int),
+        dp.max_divergence(),
+        lambda x: x,
+        lambda _: 0.0,
+    ), 
+    dp.t.make_user_transformation(
+        dp.atom_domain(T=int),
+        dp.absolute_distance(T=int),
+        dp.atom_domain(T=int),
+        dp.absolute_distance(T=int),
+        lambda x: x,
+        lambda _: 0.0,
+    ),
+    dp.c.make_fully_adaptive_composition(
+        dp.atom_domain(T=int),
+        dp.absolute_distance(T=int),
+        dp.max_divergence(),
+    ),
+    dp.user_distance(""),
+    dp.user_divergence(""),
+    dp.user_domain("", lambda _: True),
+    dp.new_function(lambda x: x, TO="i32"),
+])
+def test_struct_iter(struct):
+    with pytest.raises(ValueError):
+        [*struct]
+
 @pytest.mark.parametrize("new_domain", [dp.user_domain, _extrinsic_domain])
 def test_custom_domain(new_domain):
     from datetime import datetime
