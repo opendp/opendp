@@ -1484,8 +1484,8 @@ _EXPONENTIAL_SEARCH_BANDS: dict[Type, list[float]] = {
 }
 
 def exponential_bounds_search(
-        predicate: Callable[[float], bool], 
-        T: Optional[Type[float]]) -> Optional[tuple[float, float]]:
+    predicate: Callable[[float], bool], T: Optional[Union[Type[float], Type[int]]]
+) -> Optional[tuple[float, float]]:
     """Determine bounds for a binary search via an exponential search,
     in large bands of [2^((k - 1)^2), 2^(k^2)] for k in [0, 8).
     Will attempt to recover once if `predicate` throws an exception, 
