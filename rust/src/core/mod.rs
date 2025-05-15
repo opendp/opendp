@@ -539,7 +539,7 @@ impl<Q, A, QB, AB> OdometerQueryable<Q, A, QB, AB> {
             fallible!(FailedCast, "return type is not an answer")
         }
     }
-    pub fn map(&mut self, d_in: QB) -> Fallible<AB> {
+    pub fn privacy_loss(&mut self, d_in: QB) -> Fallible<AB> {
         if let OdometerAnswer::PrivacyLoss(map) = self.eval(&OdometerQuery::PrivacyLoss(d_in))? {
             Ok(map)
         } else {

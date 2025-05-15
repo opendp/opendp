@@ -437,7 +437,7 @@ new_odometer_queryable <- function(ptr) {
       return(odometer_queryable_invoke(ptr, query))
     }
     if (!missing(d_in)) {
-      return(odometer_queryable_map(ptr, d_in))
+      return(odometer_queryable_privacy_loss(ptr, d_in))
     }
 
     switch(attr,

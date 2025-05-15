@@ -114,7 +114,7 @@ def test_fully_adaptive_composition():
     print("A")
     qbl_comp: dp.OdometerQueryable = o_comp([1] * 200)
     print("B")
-    assert qbl_comp.map(max_influence) == 0.0
+    assert qbl_comp.privacy_loss(max_influence) == 0.0
 
     print("C")
     assert str(qbl_comp) == "OdometerQueryable(Q=AnyMeasurement, QB=u32)"
@@ -123,7 +123,7 @@ def test_fully_adaptive_composition():
     # evaluating
     print("D")
     assert isinstance(qbl_comp(m_sum), int)
-    assert qbl_comp.map(max_influence) == m_sum.map(max_influence)
+    assert qbl_comp.privacy_loss(max_influence) == m_sum.map(max_influence)
 
     m_lap = dp.m.make_laplace(dp.atom_domain(T=int), dp.absolute_distance(T=int), 200.)
     t_sum = space >> dp.t.then_clamp((0, 10)) >> dp.t.then_sum()
@@ -134,14 +134,14 @@ def test_fully_adaptive_composition():
     )
     qbl_summed = qbl_comp.invoke(m_sum_compositor)
     # it's slightly larger, checking greater than will do
-    assert qbl_comp.map(max_influence) > m_sum.map(max_influence) + 0.2 + 0.09
+    assert qbl_comp.privacy_loss(max_influence) > m_sum.map(max_influence) + 0.2 + 0.09
 
     assert isinstance(qbl_summed(m_lap), int) # child release
     assert isinstance(qbl_summed(m_lap), int) # child release
     assert isinstance(qbl_comp(m_sum), int) # root release
 
     # it's slightly larger, checking greater than will do
-    assert qbl_comp.map(1) > m_sum.map(max_influence) * 2 + 0.2 + 0.09
+    assert qbl_comp.privacy_loss(1) > m_sum.map(max_influence) * 2 + 0.2 + 0.09
 
 
 def test_odometer_supporting_elements():
@@ -178,7 +178,7 @@ def test_privacy_filter():
     m_count = dp.t.make_count(*m_filter.input_space) >> dp.m.then_laplace(1.0)
 
     qbl_filter(m_count)
-    assert qbl_filter.map(1) == 1.0
+    assert qbl_filter.privacy_loss(1) == 1.0
     qbl_filter(m_count)
-    assert qbl_filter.map(1) == 2.0
+    assert qbl_filter.privacy_loss(1) == 2.0
 

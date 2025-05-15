@@ -313,7 +313,7 @@ impl<QI: 'static + Clone + Send + Sync, QO: 'static + Clone>
                             }
                             Query::External(OdometerQuery::PrivacyLoss(d_in)) => {
                                 let answer = AnyObject::new(
-                                    inner_qbl.map(d_in.downcast_ref::<QI>()?.clone())?,
+                                    inner_qbl.privacy_loss(d_in.downcast_ref::<QI>()?.clone())?,
                                 );
                                 Ok(Answer::External(OdometerAnswer::PrivacyLoss(answer)))
                             }
