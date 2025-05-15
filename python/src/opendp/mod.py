@@ -503,7 +503,11 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         ...
 
     @overload
-    def __rshift__(self, other: "_PartialConstructor") -> "_PartialConstructor":
+    def __rshift__(self, other: "Odometer") -> "Odometer":
+        ...
+
+    @overload
+    def __rshift__(self, other: "_PartialConstructor") -> Union["Transformation", "Measurement", "Odometer"]:
         ...
 
     def __rshift__(self, other: Union["Measurement", "Transformation", "_PartialConstructor"]) -> Union["Measurement", "Transformation", "_PartialConstructor", "PartialChain"]:  # type: ignore[name-defined] # noqa F821
@@ -1186,7 +1190,7 @@ class OpenDPException(Exception):
         return response
 
 
-GLOBAL_FEATURES = set()
+GLOBAL_FEATURES: set[str] = set()
 
 
 def enable_features(*features: str) -> None:
@@ -1496,8 +1500,8 @@ _EXPONENTIAL_SEARCH_BANDS: dict[Type, list[float]] = {
 }
 
 def exponential_bounds_search(
-        predicate: Callable[[float], bool], 
-        T: Optional[Type[float]]) -> Optional[tuple[float, float]]:
+    predicate: Callable[[float], bool], T: Optional[Union[Type[float], Type[int]]]
+) -> Optional[tuple[float, float]]:
     """Determine bounds for a binary search via an exponential search,
     in large bands of [2^((k - 1)^2), 2^(k^2)] for k in [0, 8).
     Will attempt to recover once if `predicate` throws an exception, 

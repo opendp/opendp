@@ -109,7 +109,7 @@ def register(
     then the input domain and input metric are omitted when called via the Context API.
 
     Constructor requirements:
-    
+
     * The constructor must return a transformation or measurement.
     * If name is None, the constructor's name must start with ``make_``.
 
@@ -303,7 +303,7 @@ def loss_of(
     """
 
     def _range_warning(name, value, info_level, warn_level):
-        if value > warn_level and value != float("inf"):
+        if value > warn_level:
             if info_level == warn_level:
                 logger.warning(f"{name} should be less than or equal to {warn_level}")
             else:
@@ -345,7 +345,7 @@ def unit_of(
     ordered: bool = False,
     U=None,
 ) -> tuple[Metric, Union[float, Sequence[Bound]]]:
-    """Constructs a unit of privacy, consisting of a metric and a dataset distance. 
+    """Constructs a unit of privacy, consisting of a metric and a dataset distance.
     The parameters are mutually exclusive.
 
     >>> import opendp.prelude as dp
@@ -374,32 +374,34 @@ def unit_of(
         if identifier is not None or ordered or U is not None:
             raise ValueError('"local" must be the only parameter')
         return discrete_distance(), int(local)
-    
+
     if ordered:
         if contributions is None and changes is None:
-            raise ValueError('"ordered" is only valid with "changes" or "contributions"')
+            raise ValueError(
+                '"ordered" is only valid with "changes" or "contributions"'
+            )
         if identifier is not None:
             raise ValueError('"ordered" must be False when "identifier" is set')
-        
+
     if contributions is not None:
         if identifier is None:
             metric = insert_delete_distance() if ordered else symmetric_distance()
         else:
             metric = symmetric_id_distance(identifier)
-        
+
         if isinstance(contributions, Sequence):
             metric = frame_distance(metric)
-            
+
         return metric, contributions
-    
+
     if changes is not None:
         if identifier is None:
             metric = hamming_distance() if ordered else change_one_distance()
         else:
             metric = change_one_id_distance(identifier)
-    
+
         return metric, changes
-    
+
     if absolute is not None:
         metric = absolute_distance(T=RuntimeType.parse_or_infer(U, absolute))
         return metric, absolute
@@ -409,8 +411,8 @@ def unit_of(
     if l2 is not None:
         metric = l2_distance(T=RuntimeType.parse_or_infer(U, l2))
         return metric, l2
-    
-    raise Exception('No matching metric found')  # pragma: no cover
+
+    raise Exception("No matching metric found")  # pragma: no cover
 
 
 class Context(object):
@@ -422,7 +424,9 @@ class Context(object):
     :param queryable: Executes the queries and tracks the privacy expenditure.
     :param d_in: An upper bound on the distance between adjacent datasets.
     :param d_mids: A sequence of privacy losses for each query to be sent to the queryable. Used for compositors.
-    :param d_out: An upper bound on the overall privacy loss. Used for filters."""
+    :param d_out: An upper bound on the overall privacy loss. Used for filters.
+    :param query_space: The input space of queries to the context. If not specified, it defaults to the input space of the compositor.
+    """
 
     accountant: Union[Measurement, Odometer]
     """The accountant is the measurement used to spawn the queryable.
@@ -436,9 +440,9 @@ class Context(object):
         accountant: Measurement,
         queryable: Queryable,
         d_in: Union[float, Sequence[Bound]],
-        d_mids: Optional[Sequence[Union[float, tuple[float, float]]]] = None,
+        d_mids: Optional[Union[list[float], list[tuple[float, float]]]] = None,
         d_out: Optional[Union[float, tuple[float, float]]] = None,
-        _space_override: Optional[tuple[Domain, Metric]] = None,
+        query_space: Optional[tuple[Domain, Metric]] = None,
     ):
         self.accountant = accountant
         self.queryable = queryable
@@ -446,37 +450,28 @@ class Context(object):
         self.d_mids = d_mids
         self.d_out = d_out
 
-        self.d_mids_consumed: list[Union[float, tuple[float, float]]] = []
-        self._space_override = _space_override
+        self.d_mids_consumed: Union[list[float], list[tuple[float, float]]] = []
+        self.query_space = query_space
 
     def __repr__(self) -> str:
-        if self.d_mids is not None:
-            return f"""Context(
-    accountant = {indent(repr(self.accountant))},
-    d_in       = {self.d_in},
-    d_mids     = {self.d_mids})"""
-
-        if self.d_out is not None:
-            return f"""Context(
-    accountant = {indent(repr(self.accountant))},
-    d_in       = {self.d_in},
-    d_out      = {self.d_out})"""
-        
         return f"""Context(
     accountant = {indent(repr(self.accountant))},
-    d_in       = {self.d_in})"""
+    d_in       = {self.d_in},
+    d_mids     = {self.d_mids},
+    d_out      = {self.d_out})"""
 
     def deserialize_polars_plan(self, serialized_plan: bytes) -> "LazyFrameQuery":
-        '''
+        """
         Given a serialized Polars plan, wraps it with a LazyFrameQuery.
         See the :ref:`serialization documentation <lazyframe-serialization>`
         for context and full example.
 
         :param serialized_plan: A plan like that returned by ``query.polars_plan.serialize()``
-        '''
+        """
         import io
-        pl = import_optional_dependency('polars')
-        
+
+        pl = import_optional_dependency("polars")
+
         new_plan = pl.LazyFrame.deserialize(io.BytesIO(serialized_plan))
         new_query = self.query()
         if not isinstance(new_query, LazyFrameQuery):
@@ -525,7 +520,7 @@ class Context(object):
                     DeprecationWarning,
                 )
                 margins = [replace(margin, by=by) for by, margin in margins.items()]
-            
+
             for margin in margins:
                 domain = with_margin(domain, margin)
 
@@ -555,11 +550,11 @@ class Context(object):
     def __call__(self, query: Measurement):
         """Executes the given query on the context."""
         answer = self.queryable(query)
-        if self.d_mids is not None:
-            self.d_mids_consumed.append(self.d_mids[0])
-            self.d_mids = self.d_mids[1:]
-        else:
-            self.d_mids_consumed.append(query.map(self.d_in))
+
+        # pop won't fail if queryable returned an answer
+        self.d_mids_consumed.append(
+            query.map(self.d_in) if self.d_mids is None else self.d_mids.pop(0)  # type: ignore[arg-type]
+        )
         return answer
 
     def query(self, **kwargs) -> Union["Query", LazyFrameQuery]:
@@ -587,11 +582,15 @@ class Context(object):
             if measure != self.accountant.output_measure:
                 measure_type = self.accountant.output_measure.type
                 msg = f"Expected output measure {self.accountant.output_measure} but got {measure}."
-                if isinstance(measure_type, RuntimeType) and measure_type.origin == "Approximate" and "delta" not in kwargs:
+                if (
+                    isinstance(measure_type, RuntimeType)
+                    and measure_type.origin == "Approximate"
+                    and "delta" not in kwargs
+                ):
                     msg += " Consider setting `delta=0.0` in your query."
                 raise ValueError(msg)
 
-        chain = self._space_override or self.accountant.input_space
+        chain = self.query_space or self.accountant.input_space
         query = Query(
             chain=chain,
             output_measure=self.accountant.output_measure,
@@ -609,32 +608,39 @@ class Context(object):
             return LazyFrameQuery(polars_plan, query)
 
         return query
-    
+
     def current_privacy_loss(self):
         """When the query losses are static, returns the list of consumed privacy losses,
         otherwise returns the current privacy loss of the queryable."""
         if isinstance(self.queryable, OdometerQueryable):
-            return self.queryable.privacy_loss()
-        return self.d_mids_consumed
-    
+            return self.queryable.privacy_loss(self.d_in)
+        return self.d_mids_consumed.copy()
+
     def remaining_privacy_loss(self):
         """Returns the remaining privacy loss."""
         if isinstance(self.queryable, OdometerQueryable):
             if self.d_out is None:
                 raise ValueError("The privacy loss is unbounded.")
-            
+
             def _sub(a, b):
-                if isinstance(a, tuple):
+                if (
+                    isinstance(a, tuple)
+                    and isinstance(b, tuple)
+                    and len(a) == len(b) == 2
+                ):
                     return a[0] - b[0], a[1] - b[1]
                 else:
                     return a - b
-            
-            return _sub(self.d_out, self.queryable.privacy_loss())
-        
-        return self.d_mids
+
+            return _sub(self.d_out, self.queryable.privacy_loss(self.d_in))
 
 
-Chain = Union[tuple[Domain, Metric], Transformation, Measurement, Odometer, "PartialChain"]
+        return None if self.d_mids is None else self.d_mids.copy()
+
+
+Chain = Union[
+    tuple[Domain, Metric], Transformation, Measurement, Odometer, "PartialChain"
+]
 
 
 class Query(object):
@@ -664,7 +670,7 @@ class Query(object):
     def __init__(
         self,
         chain: Chain,
-        output_measure: Measure = None, # type: ignore[assignment]
+        output_measure: Measure,
         d_in: Optional[Union[float, Sequence[Bound]]] = None,
         d_out: Optional[Union[float, tuple[float, float]]] = None,
         context: "Context" = None,  # type: ignore[assignment]
@@ -681,7 +687,7 @@ class Query(object):
         context = ""
         if self._context is not None:
             context = f""",\n    context        = {indent(repr(self._context))}"""
-        
+
         return f"""Query(
     chain          = {indent(repr(self._chain))},
     output_measure = {self._output_measure},
@@ -692,7 +698,7 @@ class Query(object):
         """Creates a new query by applying a transformation or measurement to the current chain."""
         if name == "canonical_noise":
             return self._canonical_noise
-        
+
         if name not in constructors:
             raise AttributeError(
                 f"Unrecognized constructor: '{name}'"
@@ -733,7 +739,7 @@ class Query(object):
             return self.new_with(chain=new_chain)
 
         return make
-    
+
     def _canonical_noise(self, binomial_size: Optional[int] = None):
         """Make a measurement that adds noise from the canonical noise distribution.
 
@@ -766,7 +772,7 @@ class Query(object):
                 "Canonical noise requires all arguments in the input query to be specified."
             )
         else:
-            raise ValueError( # pragma: no cover
+            raise ValueError(  # pragma: no cover
                 f"Canonical noise expects a metric space or transformation as the prior query, found {self._chain}"
             )
 
@@ -794,10 +800,10 @@ class Query(object):
         return super().__dir__() + list(constructors.keys())  # type: ignore[operator]
 
     def resolve(
-        self, 
-        allow_transformations: bool = False, 
-        bounds: Optional[tuple[float, float]] = None, 
-        T: Optional[Type[float]] = None
+        self,
+        allow_transformations: bool = False,
+        bounds: Optional[tuple[float, float]] = None,
+        T: Optional[Union[Type[float], Type[int]]] = None,
     ) -> Union[Transformation, Measurement, Odometer]:
         """Resolve the query into a transformation, measurement or odometer.
 
@@ -809,25 +815,32 @@ class Query(object):
         if isinstance(self._chain, PartialChain):
             assert self._d_in is not None
             assert self._d_out is not None
-            chain = self._chain.fix(self._d_in, self._d_out, self._output_measure, bounds=bounds, T=T)
+            chain = self._chain.fix(
+                self._d_in, self._d_out, self._output_measure, bounds=bounds, T=T
+            )
         else:
             chain = self._chain
         if not allow_transformations and isinstance(chain, Transformation):
             raise ValueError("Query is not yet a measurement or odometer.")
         return _cast_measure(chain, self._output_measure, self._d_out)
 
-    def release(self, data=None, bounds: Optional[tuple[float, float]] = None, T: Optional[Type[float]] = None):
+    def release(
+        self,
+        data=None,
+        bounds: Optional[tuple[float, float]] = None,
+        T: Optional[Union[Type[float], Type[int]]] = None,
+    ):
         """Release the query. The query must be part of a context.
-        
+
         :param data: The data to be analyzed. If not specified, the query must be part of a context.
         :param bounds: Search for a potentially missing parameter of interest within these bounds.
         :param T: The type of the parameter to search for. Either ``float`` or ``int``.
         """
         if self._context is not None and data is not None:
             raise ValueError("Cannot specify data when the query is part of a context.")
-        
+
         measurement = self.resolve(bounds=bounds, T=T)
-        
+
         if self._context is not None:
             answer = self._context(measurement)
         elif data is not None:
@@ -837,23 +850,24 @@ class Query(object):
 
         if self._wrap_release:
             answer = self._wrap_release(answer)
-        
+
         return answer
 
-    
     def param(
         self,
         allow_transformations=False,
         bounds: Optional[tuple[float, float]] = None,
-        T: Optional[Type[float]] = None,
+        T: Optional[Union[Type[float], Type[int]]] = None,
     ):
         """Returns the discovered parameter, if there is one.
-        
+
         :param allow_transformations: If true, allow the response to be a transformation.
         :param bounds: Search for a potentially missing parameter of interest within these bounds.
         :param T: The type of the parameter to search for. Either ``float`` or ``int``.
         """
-        resolved = self.resolve(allow_transformations=allow_transformations, bounds=bounds, T=T)
+        resolved = self.resolve(
+            allow_transformations=allow_transformations, bounds=bounds, T=T
+        )
         return getattr(resolved, "param", None)
 
     def compositor(
@@ -900,7 +914,7 @@ class Query(object):
             accountant, d_mids, _ = _normalize_compositor(
                 input_domain,
                 privacy_unit,
-                privacy_loss, # type: ignore[arg-type]
+                privacy_loss,
                 split_evenly_over,
                 split_by_weights,
             )
@@ -914,7 +928,7 @@ class Query(object):
                     d_in=d_in,
                     d_mids=d_mids,
                     d_out=d_out,
-                    _space_override=(input_domain, input_metric),
+                    query_space=(input_domain, input_metric),
                 )
 
             return self.new_with(chain=accountant, wrap_release=_wrap_release)
@@ -950,12 +964,12 @@ class PartialChain(object):
         return self.partial(v)
 
     def fix(
-        self, 
-        d_in: Union[float, Sequence[Bound]], 
-        d_out: Union[float, tuple[float, float]], 
-        output_measure: Optional[Measure] = None, 
-        bounds: Optional[tuple[float, float]] = None, 
-        T=None
+        self,
+        d_in: Union[float, Sequence[Bound]],
+        d_out: Union[float, tuple[float, float]],
+        output_measure: Optional[Measure] = None,
+        bounds: Optional[tuple[float, float]] = None,
+        T=None,
     ):
         """Returns the closest transformation or measurement that satisfies the given stability or privacy constraint.
 
@@ -969,7 +983,11 @@ class PartialChain(object):
         """
         # When the output measure corresponds to approx-DP, only optimize the epsilon parameter.
         # The delta parameter should be fixed in _cast_measure, and if not, then the search will be impossible here anyways.
-        if output_measure is not None and isinstance(output_measure.type, RuntimeType) and output_measure.type.origin == "Approximate":
+        if (
+            output_measure is not None
+            and isinstance(output_measure.type, RuntimeType)
+            and output_measure.type.origin == "Approximate"
+        ):
 
             def _predicate(param):
                 meas = _cast_measure(self(param), output_measure, d_out)
@@ -1026,7 +1044,11 @@ def _normalize_compositor(
     privacy_loss: tuple[Measure, Union[float, tuple[float, float]]],
     split_evenly_over: Optional[int] = None,
     split_by_weights: Optional[Sequence[float]] = None,
-) -> tuple[Union[Measurement, Odometer], Optional[Sequence[Any]], Optional[Any]]:
+) -> tuple[
+    Union[Measurement, Odometer],
+    Optional[Union[list[float], list[tuple[float, float]]]],
+    Optional[Any],
+]:
     """Constructs a sequential composition measurement
     where the ``d_mids`` are proportional to the weights.
 
@@ -1065,15 +1087,13 @@ def _normalize_compositor(
             input_domain=domain,
             input_metric=input_metric,
             output_measure=output_measure,
-            d_in=d_in,
         )
 
-        # While delta = 1.0 is equivalent to no bound on the privacy loss,
-        #     float("inf") carries more semantic meaning.
-        if d_out in {float("inf"), (float("inf"), float("inf"))}:
+        inf = float("inf")
+        if d_out in {inf, (inf, inf), (inf, 1.0)}:
             return odometer, None, None
-    
-        return make_privacy_filter(odometer, d_out), None, d_out
+
+        return make_privacy_filter(odometer, d_in, d_out), None, d_out
 
     def _mul(dist, scale: float):
         if isinstance(dist, tuple):
@@ -1137,7 +1157,7 @@ def _cast_measure(chain, to_measure: Optional[Measure] = None, d_to=None):
 
 def _translate_measure_distance(
     d_from, from_measure: Measure, to_measure: Measure, alpha: Optional[float] = None
-):
+) -> Union[float, tuple[float, float]]:
     """Translate a privacy loss ``d_from`` from ``from_measure`` to ``to_measure``.
 
     >>> _translate_measure_distance(1, dp.max_divergence(), dp.max_divergence())
@@ -1198,7 +1218,7 @@ def _translate_measure_distance(
         rho = _translate_measure_distance(
             (epsilon, delta_zCDP), from_measure, zero_concentrated_divergence()
         )
-        return rho, delta_inf
+        return rho, delta_inf  # type: ignore[return-value]
 
     raise ValueError(
         f"Unable to translate distance from {from_to[0]} to {from_to[1]}"

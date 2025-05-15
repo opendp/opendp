@@ -2,7 +2,7 @@ import pytest
 import logging
 import opendp.prelude as dp
 from opendp._internal import _make_measurement
-
+import re
 
 def test_unit_of():
     assert dp.unit_of(contributions=3) == (dp.symmetric_distance(), 3)
@@ -92,7 +92,8 @@ def test_context_repr():
         input_metric   = SymmetricDistance(),
         output_measure = MaxDivergence),
     d_in       = 3,
-    d_mids     = [3.0])'''
+    d_mids     = [3.0],
+    d_out      = None)'''
 
     assert repr(
         dp.Context.compositor(
@@ -106,6 +107,7 @@ def test_context_repr():
         input_metric   = SymmetricDistance(),
         output_measure = MaxDivergence),
     d_in       = 3,
+    d_mids     = None,
     d_out      = 3.0)'''
 
     assert repr(
@@ -119,7 +121,9 @@ def test_context_repr():
         input_domain   = VectorDomain(AtomDomain(T=i32)),
         input_metric   = SymmetricDistance(),
         output_measure = MaxDivergence),
-    d_in       = 3)'''
+    d_in       = 3,
+    d_mids     = None,
+    d_out      = None)'''
 
 
 def test_context_init_split_by_weights():
@@ -219,7 +223,8 @@ def test_query_repr():
             input_metric   = SymmetricDistance(),
             output_measure = MaxDivergence),
         d_in       = 1,
-        d_mids     = [1.0]))'''
+        d_mids     = [1.0],
+        d_out      = None))'''
 
 
 def test_subcontext_changes_metric():

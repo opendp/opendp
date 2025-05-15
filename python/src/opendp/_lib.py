@@ -82,7 +82,7 @@ def import_optional_dependency(name, raise_error=True):
         return None
 
 
-_np_csprng = None
+_np_csprng: Any = None
 _buffer_pos = 0 # TODO: Make this into a class rather than using ad-hoc globals.
 def get_np_csprng():
     global _np_csprng
