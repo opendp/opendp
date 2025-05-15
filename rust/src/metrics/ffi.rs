@@ -144,7 +144,7 @@ fn absolute_distance<T>() -> AbsoluteDistance<T> {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__absolute_distance(T: *const c_char) -> FfiResult<*mut AnyMetric> {
-    fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMetric> {
+    fn monomorphize<T: 'static + Clone>() -> FfiResult<*mut AnyMetric> {
         Ok(AnyMetric::new(absolute_distance::<T>())).into()
     }
     let T = try_!(Type::try_from(T));
@@ -161,7 +161,7 @@ fn l1_distance<T>() -> L1Distance<T> {
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__l1_distance(T: *const c_char) -> FfiResult<*mut AnyMetric> {
-    fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMetric> {
+    fn monomorphize<T: 'static + Clone>() -> FfiResult<*mut AnyMetric> {
         Ok(AnyMetric::new(l1_distance::<T>())).into()
     }
     let T = try_!(Type::try_from(T));
@@ -178,7 +178,7 @@ fn l2_distance<T>() -> L2Distance<T> {
 }
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__l2_distance(T: *const c_char) -> FfiResult<*mut AnyMetric> {
-    fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMetric> {
+    fn monomorphize<T: 'static + Clone>() -> FfiResult<*mut AnyMetric> {
         Ok(AnyMetric::new(l2_distance::<T>())).into()
     }
     let T = try_!(Type::try_from(T));
@@ -268,7 +268,7 @@ pub extern "C" fn opendp_metrics__linf_distance(
     T: *const c_char,
 ) -> FfiResult<*mut AnyMetric> {
     let monotonic = util::to_bool(monotonic);
-    fn monomorphize<T: 'static + InfAdd>(monotonic: bool) -> FfiResult<*mut AnyMetric> {
+    fn monomorphize<T: 'static + InfAdd + Clone>(monotonic: bool) -> FfiResult<*mut AnyMetric> {
         Ok(AnyMetric::new(linf_distance::<T>(monotonic))).into()
     }
     let T = try_!(Type::try_from(T));
@@ -374,6 +374,6 @@ impl<Q> Default for TypedMetric<Q> {
     }
 }
 
-impl<Q> Metric for TypedMetric<Q> {
+impl<Q: Clone> Metric for TypedMetric<Q> {
     type Distance = Q;
 }

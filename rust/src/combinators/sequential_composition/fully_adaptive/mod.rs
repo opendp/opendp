@@ -1,7 +1,9 @@
 use opendp_derive::proven;
 
 use crate::{
-    combinators::{Adaptivity, Composability, CompositionMeasure, assert_components_match},
+    combinators::{
+        Adaptivity, Composability, CompositionMeasure, PendingLoss, assert_components_match,
+    },
     core::{
         Domain, Function, Measurement, Metric, MetricSpace, Odometer, OdometerAnswer,
         OdometerQuery, OdometerQueryable, PrivacyMap,
@@ -31,8 +33,6 @@ pub fn make_fully_adaptive_composition<
 ) -> Fallible<Odometer<DI, MI, MO, Measurement<DI, TO, MI, MO>, TO>>
 where
     DI::Carrier: Clone,
-    MI::Distance: Clone + Send + Sync,
-    MO::Distance: Clone,
     (DI, MI): MetricSpace,
 {
     // check if fully adaptive composition is supported
@@ -68,7 +68,6 @@ fn new_fully_adaptive_composition_queryable<
     data: DI::Carrier,
 ) -> Fallible<OdometerQueryable<Measurement<DI, TO, MI, MO>, TO, MI::Distance, MO::Distance>>
 where
-    MO::Distance: Clone,
     (DI, MI): MetricSpace,
 {
     let is_sequential = matches!(
@@ -153,6 +152,31 @@ where
                         }
                         // otherwise, return Ok to approve the change
                         return Ok(Answer::internal(()));
+                    }
+
+                    // handler to see privacy usage after running a query.
+                    // Someone is passing in an OdometerQuery internally,
+                    // so return the potential privacy loss of this odometer after running this query
+                    if let Some(query) = query
+                        .downcast_ref::<OdometerQuery<Measurement<DI, TO, MI, MO>, MI::Distance>>()
+                    {
+                        return Ok(Answer::internal(match query {
+                            OdometerQuery::Invoke(meas) => {
+                                let mut pending_maps = privacy_maps.clone();
+                                pending_maps.push(meas.privacy_map.clone());
+                                let output_measure = output_measure.clone();
+                                PendingLoss::New(PrivacyMap::<MI, MO>::new_fallible(
+                                    move |d_in: &MI::Distance| {
+                                        // check if the query is from a child queryable who is asking for permission to execute
+                                        let d_mids = (pending_maps.iter())
+                                            .map(|m| m.eval(d_in))
+                                            .collect::<Fallible<_>>()?;
+                                        output_measure.compose(d_mids)
+                                    },
+                                ))
+                            }
+                            OdometerQuery::PrivacyLoss(_) => PendingLoss::Same,
+                        }));
                     }
 
                     return fallible!(FailedFunction, "query not recognized");
