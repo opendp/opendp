@@ -65,7 +65,7 @@ fn test_privacy_odometer() -> Fallible<()> {
     let _answer4_1: bool = answer4.eval_poly(&rr_poly_query)?;
     let _answer4_2: bool = answer4.eval_poly(&rr_poly_query)?;
 
-    let total_usage = odometer.map(1)?;
+    let total_usage = odometer.privacy_loss(1)?;
     println!("total usage: {:?}", total_usage);
 
     Ok(())
