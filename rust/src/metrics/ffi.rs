@@ -326,7 +326,7 @@ pub extern "C" fn opendp_metrics__user_distance(
 }
 
 pub struct TypedMetric<Q> {
-    metric: AnyMetric,
+    pub metric: AnyMetric,
     marker: PhantomData<fn() -> Q>,
 }
 

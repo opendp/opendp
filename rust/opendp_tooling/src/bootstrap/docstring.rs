@@ -249,6 +249,14 @@ fn parse_supporting_elements(ty: &Type) -> Result<Option<String>> {
         _ => return Ok(None),
     };
 
+    // syn doesn't have a pretty printer but we don't need to add a dep...
+    let pprint = |ty| {
+        quote::quote!(#ty)
+            .to_string()
+            .replace(" ", "")
+            .replace(",", ", ")
+    };
+
     match ident {
         i if i == "Fallible" => parse_supporting_elements(match arguments {
             syn::PathArguments::AngleBracketed(ab) => {
@@ -271,69 +279,83 @@ fn parse_supporting_elements(ty: &Type) -> Result<Option<String>> {
                 );
             }
         }),
-        i if i == "Transformation" || i == "Measurement" || i == "Function" => {
-            match arguments {
-                syn::PathArguments::AngleBracketed(ab) => {
-                    let num_args = if i == "Function" { 2 } else { 4 };
+        i if i == "Transformation" || i == "Measurement" || i == "Function" => match arguments {
+            syn::PathArguments::AngleBracketed(ab) => {
+                let num_args = if i == "Function" { 2 } else { 4 };
 
-                    if ab.args.len() != num_args {
-                        return Err(Error::custom(format!(
-                            "{i} needs {num_args} angle-bracketed arguments"
-                        ))
-                        .with_span(&ab.args));
-                    }
+                if ab.args.len() != num_args {
+                    return Err(Error::custom(format!(
+                        "{i} needs {num_args} angle-bracketed arguments"
+                    ))
+                    .with_span(&ab.args));
+                }
 
-                    let [input_domain, output_domain] = [&ab.args[0], &ab.args[1]];
+                let [input_domain, output_domain] = [&ab.args[0], &ab.args[1]];
 
-                    // syn doesn't have a pretty printer but we don't need to add a dep...
-                    let pprint = |ty| {
-                        quote::quote!(#ty)
-                            .to_string()
-                            .replace(" ", "")
-                            .replace(",", ", ")
-                    };
+                let input_label = match i {
+                    i if i == "Transformation" => "Domain:",
+                    i if i == "Measurement" => "Domain:",
+                    i if i == "Odometer" => "Domain:",
+                    i if i == "Function" => "Type:  ",
+                    _ => unreachable!(),
+                };
 
-                    let input_label = match i {
-                        i if i == "Transformation" => "Domain:",
-                        i if i == "Measurement" => "Domain:",
-                        i if i == "Function" => "Type:  ",
+                let output_label = match i {
+                    i if i == "Transformation" => "Domain:",
+                    i if i == "Measurement" => "Type:  ",
+                    i if i == "Function" => "Type:  ",
+                    _ => unreachable!(),
+                };
+
+                let mut lines = vec![
+                    format!("* Input {}   `{}`", input_label, pprint(input_domain)),
+                    format!("* Output {}  `{}`", output_label, pprint(output_domain)),
+                ];
+
+                if i != "Function" {
+                    let output_distance = match i {
+                        i if i == "Transformation" => "Metric: ",
+                        i if i == "Measurement" => "Measure:",
                         _ => unreachable!(),
                     };
-
-                    let output_label = match i {
-                        i if i == "Transformation" => "Domain:",
-                        i if i == "Measurement" => "Type:  ",
-                        i if i == "Function" => "Type:  ",
-                        _ => unreachable!(),
-                    };
-
-                    let mut lines = vec![
-                        format!("* Input {}   `{}`", input_label, pprint(input_domain)),
-                        format!("* Output {}  `{}`", output_label, pprint(output_domain)),
-                    ];
-
-                    if i != "Function" {
-                        let output_distance = match i {
-                            i if i == "Transformation" => "Metric: ",
-                            i if i == "Measurement" => "Measure:",
-                            _ => unreachable!(),
-                        };
-                        let [input_metric, output_metmeas] = [&ab.args[2], &ab.args[3]];
-                        lines.extend([
-                            format!("* Input Metric:   `{}`", pprint(input_metric)),
-                            format!("* Output {} `{}`", output_distance, pprint(output_metmeas)),
-                        ]);
-                    }
-
-                    Ok(Some(lines.join("\n")))
+                    let [input_metric, output_metmeas] = [&ab.args[2], &ab.args[3]];
+                    lines.extend([
+                        format!("* Input Metric:   `{}`", pprint(input_metric)),
+                        format!("* Output {} `{}`", output_distance, pprint(output_metmeas)),
+                    ]);
                 }
-                arg => {
-                    return Err(
-                        Error::custom("Fallible needs an angle-bracketed argument").with_span(arg)
-                    );
-                }
+
+                Ok(Some(lines.join("\n")))
             }
-        }
+            arg => {
+                return Err(
+                    Error::custom("Fallible needs an angle-bracketed argument").with_span(arg)
+                );
+            }
+        },
+        i if i == "Odometer" => match arguments {
+            syn::PathArguments::AngleBracketed(ab) => {
+                let [input_domain, input_metric, output_measure, query, answer] =
+                    <[&_; 5]>::try_from(ab.args.iter().collect::<Vec<&_>>()).map_err(|_| {
+                        Error::custom(format!("Odometer needs 5 angle-bracketed arguments"))
+                    })?;
+
+                let lines = vec![
+                    format!("* Input Domain    `{}`", pprint(input_domain)),
+                    format!("* Input Metric    `{}`", pprint(input_metric)),
+                    format!("* Output Measure  `{}`", pprint(output_measure)),
+                    format!("* Query           `{}`", pprint(query)),
+                    format!("* Answer          `{}`", pprint(answer)),
+                ];
+
+                Ok(Some(lines.join("\n")))
+            }
+            arg => {
+                return Err(
+                    Error::custom("Fallible needs an angle-bracketed argument").with_span(arg)
+                );
+            }
+        },
         _ => Ok(None),
     }
 }
