@@ -14,7 +14,7 @@ The methods of this module will then be accessible at ``dp.numpy``.
 from __future__ import annotations
 from typing import NamedTuple, Literal, Optional
 from opendp.mod import Domain
-from opendp.typing import RuntimeTypeDescriptor, _ELEMENTARY_TYPES, _PRIMITIVE_TYPES
+from opendp.typing import RuntimeType, RuntimeTypeDescriptor, _ELEMENTARY_TYPES, _PRIMITIVE_TYPES
 from opendp._lib import import_optional_dependency
 from opendp._internal import _extrinsic_domain
 import typing
@@ -60,6 +60,7 @@ def array2_domain(
     size: int | None = None,
     num_columns: int | None = None,
     nan: Optional[bool] = None,
+    cardinalities: numpy.ndarray | None = None,
     T: RuntimeTypeDescriptor | None = None,
 ) -> Domain:
     """Construct a Domain representing 2-dimensional numpy arrays.
@@ -70,6 +71,7 @@ def array2_domain(
     :param size: number of rows in data
     :param num_columns: number of columns in the data
     :param nan: whether NaN values are allowed
+    :param cardinalities: cardinalities of the categorical columns
     :param T: atom type
     """
     np = import_optional_dependency('numpy')
@@ -116,6 +118,9 @@ def array2_domain(
 
     _check_nonnegative_int(size, "size")
     _check_nonnegative_int(num_columns, "num_columns")
+
+    if any(not isinstance(c, int) or c <= 0 for c in (cardinalities or [])):
+        raise ValueError(f"cardinalities ({cardinalities}) must be positive")
     
     T = T or _ELEMENTARY_TYPES.get(origin.dtype.type)
     if T is None:
@@ -147,16 +152,10 @@ def array2_domain(
             raise ValueError(f"must have row norm at most {norm}")
         if size is not None and len(x) != size:
             raise ValueError(f"must have exactly {size} rows")
+        
+        if cardinalities is not None and cardinalities >= np.unique(x, axis=0):
+            raise ValueError(f"unique values in data must not exceed cardinalities")
         return True
-
-    class NPArray2Descriptor(NamedTuple):
-        origin: numpy.ndarray | None
-        norm: float | None
-        p: Literal[1, 2, None]
-        size: int | None
-        num_columns: int | None
-        nan: bool
-        T: str | dp.RuntimeType
 
     desc = NPArray2Descriptor(
         origin=origin,
@@ -165,10 +164,67 @@ def array2_domain(
         size=size,
         num_columns=num_columns,
         nan=nan,
+        cardinalities=cardinalities,
         T=T,
     )
 
     return _extrinsic_domain(f"NPArray2Domain({_fmt_attrs(desc)})", _member, desc)
+
+
+class NPArray2Descriptor(NamedTuple):
+    origin: numpy.ndarray | None
+    norm: float | None
+    p: Literal[1, 2, None]
+    size: int | None
+    num_columns: int | None
+    nan: bool
+    cardinalities: numpy.ndarray | None
+    T: str | RuntimeType
+
+
+def arrayd_domain(
+    *,
+    shape: tuple[int, ...],
+    T: RuntimeTypeDescriptor = None,
+) -> Domain:
+    """Construct a Domain representing d-dimensional numpy arrays.
+
+    :param shape: shape of the array
+    :param T: atom type
+    """
+    np = import_optional_dependency('numpy')
+    import opendp.prelude as dp
+
+    if not isinstance(shape, tuple):
+        raise ValueError("shape must be a tuple")
+    if any(not isinstance(s, int) or s <= 0 for s in shape):
+        raise ValueError("shape must be a tuple of positive integers")
+
+    if T is None:
+        raise ValueError("must specify T, the type of data in the array")  # pragma: no cover
+    T = dp.RuntimeType.parse(T)
+    if T not in _PRIMITIVE_TYPES:
+        raise ValueError(f"T ({T}) must be a primitive type")
+
+    def _member(x):
+        if not isinstance(x, np.ndarray):
+            raise TypeError("must be a numpy ndarray")
+        T_actual = _ELEMENTARY_TYPES.get(x.dtype.type)
+        if T_actual != T:
+            raise TypeError(f"must have data of type {T}, got {T_actual}")
+        return True
+
+    desc = NPArrayDDescriptor(
+        shape=shape,
+        T=T,
+    )
+
+    return _extrinsic_domain(f"NPArray2Domain({_fmt_attrs(desc)})", _member, desc)
+
+
+class NPArrayDDescriptor(NamedTuple):
+    shape: tuple[int, ...]
+    T: str | RuntimeType
 
 
 def _sscp_domain(
