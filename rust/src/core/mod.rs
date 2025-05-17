@@ -460,8 +460,8 @@ impl<DI: Domain, MI: Metric, MO: Measure, Q, A> Clone for Odometer<DI, MI, MO, Q
     fn clone(&self) -> Self {
         Self {
             input_domain: self.input_domain.clone(),
-            function: self.function.clone(),
             input_metric: self.input_metric.clone(),
+            function: self.function.clone(),
             output_measure: self.output_measure.clone(),
         }
     }
