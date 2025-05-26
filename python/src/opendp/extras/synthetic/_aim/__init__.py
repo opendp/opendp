@@ -32,6 +32,7 @@ from opendp.extras.numpy import NPArray2Descriptor, NPArrayDDescriptor, arrayd_d
 
 # pip install opendp[synthetic]
 from mbi import LinearMeasurement, MarkovRandomField, estimation, Domain as MBIDomain
+from mbi.junction_tree import hypothetical_model_size # maxine_edit: added this to calculate junction tree
 
 
 def make_ordinal_aim(
@@ -233,6 +234,7 @@ def make_select(
     selected_indices,
     model: MarkovRandomField,
     max_size,
+    mbi_domain
 ):
     if output_measure != zero_concentrated_divergence():
         raise ValueError("output_measure must be zero_concentrated_divergence")
@@ -241,7 +243,7 @@ def make_select(
     valid_indices = [
         index
         for index, query in enumerate(queries)
-        if is_memory_bounded(query, d_in, d_out, max_size)
+        if is_memory_bounded(query, d_in, d_out, max_size, mbi_domain, selected_indices, queries)
         and index not in selected_indices
     ]
 
@@ -380,17 +382,26 @@ def make_measure(input_domain: ExtrinsicDomain, input_metric, index, d_in, d_out
     ), scale
 
 
-def is_memory_bounded(query, d_mid, d_out, max_size):
+def is_memory_bounded(query, d_mid, d_out, max_size, mbi_domain, selected_indices, queries):
     """
     should calculate the junction tree size of this list, then compare it to d_mid/d_out * max_size
+    :param query: a query, i.e. list of column indices
+    :param d_mid: current privacy lost exhausted
+    :param d_out: total privacy budget
+    :param max_size: max memory constraint
+    :param mbi_domain: MBI domain object
+    :param selected_indices: these are indices into the queries array of already selected queries, i.e. list of ints
+    :param queries: total list of queries; list of lists of ints
+    maxine_edit: completed the fn, before didn't do anything
     """
-    junction_tree_size = 0
-    # FIX_THIS: calculate the junction tree size
+    current_query_cliques = [tuple(str(i) for i in queries[j]) for j in selected_indices]
+    new_query_clique = tuple(str(i) for i in query)
+    total_cliques = current_query_cliques + [new_query_clique]
+    hypothetical_size_mb = hypothetical_model_size(mbi_domain, total_cliques) # if the new query were added, this is the size of the junction tree
+    maximum_size_mb = d_mid / d_out * max_size # space threshold; new query cannot push memory above this value
     new_query_fit = False
-    if junction_tree_size <= d_mid / d_out * max_size:
-        new_query_fit = True
-    return new_query_fit
+    return hypothetical_size_mb <= maximum_size_mb
 
 
-def get_all_subsets(list):
-    return chain.from_iterable(combinations(list, r) for r in range(1, len(list) + 1))
+def get_all_subsets(this_list): # maxine_edit: changed list to this_list in case it shadows the list type and creates bug
+    return chain.from_iterable(combinations(this_list, r) for r in range(1, len(this_list) + 1))
