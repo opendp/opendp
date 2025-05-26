@@ -119,8 +119,9 @@ def make_ordinal_aim(
             print("iterating")
 
             # SELECT a query that best reduces the error
-            selected_index = qbl(
-                make_select(
+
+            # maxine_edit: separated this to deal with case where it returns None
+            selected_measurement = make_select(
                     *t_crosstabs.output_space,
                     output_measure=output_measure,
                     queries=queries,
@@ -130,11 +131,20 @@ def make_ordinal_aim(
                     d_in=d_in,
                     d_out=d_select,
                     max_size=max_size,
+                    mbi_domain=mbi_domain
                 )
-            )
+            if selected_measurement == None:
+                break # maxine_edit: deal with the case where there are no more indices to select
 
+            selected_index = qbl(selected_measurement)
             selected_indices.append(selected_index)
             selected_query = queries[selected_index]
+
+            # maxine_edit: added the next few lines to fix privacy budget overflow issues:
+            d_mid = qbl.privacy_loss(d_in)
+            if d_mid + d_select + d_measure > d_out * (1 - 1e-7):
+                print("Privacy budget nearly exhausted (up to rounding error). Exiting the loop.")
+                break
 
             # MEASURE selected marginal with noise
             m_measure, scale = make_measure(
@@ -146,7 +156,7 @@ def make_ordinal_aim(
 
             current_releases.append(
                 LinearMeasurement(
-                    noisy_measurement=qbl(m_measure),
+                    noisy_measurement=qbl(m_measure).flatten(), # maxine_edit: LinearMeasurement expects flat queries
                     clique=selected_query,
                     stddev=scale,
                 )
@@ -249,6 +259,11 @@ def make_select(
 
     queries = [queries[i] for i in valid_indices]
     weights = [weights[i] for i in valid_indices]
+
+    # maxine_edit: There is an error here when valid_indices has nothing in it — i.e. when there are no more queries (that fit within the budget)
+    if weights == []:
+        return None
+
 
     return binary_search_chain(
         lambda scale: make_pureDP_to_zCDP(
