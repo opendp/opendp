@@ -11,10 +11,10 @@ def test_make_ordinal_aim():
     
     # Generate data respecting the cardinalities for each column
     data[:, 0] = np.random.randint(0, 3, size=n_rows)  # Values 0-2
-    data[:, 1] = np.random.randint(0, 11, size=n_rows)  # Values 0-3
+    data[:, 1] = np.random.randint(0, 4, size=n_rows)  # Values 0-3
     data[:, 2] = np.random.randint(0, 5, size=n_rows)  # Values 0-4
     data[:, 3] = np.random.randint(0, 7, size=n_rows)  # Values 0-6
-
+    
     cardinalities=[3, 4, 5, 7]
 
     # Test the ordinal aim creation
