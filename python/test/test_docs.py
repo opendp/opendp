@@ -1,3 +1,5 @@
+from pathlib import Path
+from json import loads
 import pytest
 from opendp import measurements, transformations
 
@@ -19,4 +21,13 @@ def test_thens_are_documented(module, function):
 
     assert function.__doc__ is not None, 'missing documentation'
     assert f':py:func:`{m_name}.{make_name}`' in function.__doc__, f'no link to {make_name}'
+
+
+@pytest.mark.parametrize(
+    "nb_path",
+    list((Path(__file__).parent.parent.parent / 'docs' / 'source').glob("**/*.ipynb")),
+    ids=lambda path: path.name
+)
+def test_notebooks_are_executed(nb_path):
+    loads(nb_path.read_text())
 
