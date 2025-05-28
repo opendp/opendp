@@ -11,6 +11,8 @@ exclude =
     .venv-dev
     # suggested virtualenv for docs/
     .venv-docs
+    # suggested virtualenv for tools/
+    .venv-tools
     out
     vendor
 
