@@ -29,5 +29,10 @@ def test_thens_are_documented(module, function):
     ids=lambda path: path.name
 )
 def test_notebooks_are_executed(nb_path):
-    loads(nb_path.read_text())
+    nb = loads(nb_path.read_text())
+    counts_sources = [(cell.get('execution_count'), ''.join(cell.get('source', ''))) for cell in nb['cells'] if cell['cell_type'] == 'code']
+    triples = [(index, count, source) for (index, (count, source)) in enumerate(counts_sources, start=1)]
+    indexes, counts, sources = zip(*triples)
+    bad_sources = [source for (index, count, source) in triples if index != count]
+    assert indexes == counts, f'First cell with missing or misordered execution:\n{bad_sources[0]}'
 
