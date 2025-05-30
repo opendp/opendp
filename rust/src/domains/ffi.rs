@@ -30,7 +30,7 @@ pub extern "C" fn opendp_domains___domain_free(this: *mut AnyDomain) -> FfiResul
 }
 
 #[bootstrap(
-    name = "member",
+    name = "_member",
     arguments(this(hint = "Domain"), val(rust_type = "$domain_carrier_type(this)")),
     returns(c_type = "FfiResult<bool *>", hint = "bool")
 )]
@@ -40,7 +40,7 @@ pub extern "C" fn opendp_domains___domain_free(this: *mut AnyDomain) -> FfiResul
 /// * `this` - The domain to check membership in.
 /// * `val` - A potential element of the domain.
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_domains__member(
+pub extern "C" fn opendp_domains___member(
     this: *mut AnyDomain,
     val: *const AnyObject,
 ) -> FfiResult<*mut c_bool> {
