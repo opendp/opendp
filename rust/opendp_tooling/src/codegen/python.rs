@@ -41,18 +41,6 @@ fn generate_module(
     typemap: &HashMap<String, String>,
     hierarchy: &HashMap<String, Vec<String>>,
 ) -> String {
-    let all = module
-        .iter()
-        .filter(|func| func.has_ffi)
-        .map(|func| format!("    \"{}\"", func.name))
-        .chain(
-            module
-                .iter()
-                .filter(|func| func.supports_partial && func.has_ffi)
-                .map(|func| format!("    \"{}\"", func.name.replacen("make_", "then_", 1))),
-        )
-        .collect::<Vec<_>>()
-        .join(",\n");
     let functions = module
         .into_iter()
         .filter(|func| func.has_ffi)
@@ -148,9 +136,6 @@ from opendp.mod import *
 from opendp.typing import *
 from opendp.typing import _substitute # noqa: F401
 {extra_imports}
-__all__ = [
-{all}
-]
 
 {functions}"#
     )

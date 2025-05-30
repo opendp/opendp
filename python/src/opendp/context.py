@@ -12,6 +12,7 @@ We suggest importing under the conventional name ``dp``:
 """
 
 import logging
+import inspect
 from typing import Any, Callable, Optional, Sequence, Union, MutableMapping
 import importlib
 from inspect import signature
@@ -84,13 +85,13 @@ logger = logging.getLogger(__name__)
 constructors = {}
 for module_name in ["transformations", "measurements"]:
     module = importlib.import_module(f"opendp.{module_name}")
-    for name in module.__all__:
+    module_names = [name for name, _value in inspect.getmembers(module)]
+    for name in module_names:
         if not name.startswith("make_"):
             continue
         partial_name = "then_" + name[5:]
-        make_func = getattr(module, name)
 
-        is_partial = partial_name in module.__all__
+        is_partial = partial_name in module_names
         constructor = getattr(module, partial_name if is_partial else name)
 
         constructors[name[5:]] = constructor, is_partial
