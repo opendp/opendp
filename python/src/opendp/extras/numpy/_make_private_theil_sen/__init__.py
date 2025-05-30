@@ -80,7 +80,12 @@ def make_private_percentile_medians(y_bounds, scale):
     ])
 
 
-def make_private_theil_sen(x_bounds, y_bounds, scale, runs=1):
+def make_private_theil_sen(
+        x_bounds: tuple[float, float],
+        y_bounds: tuple[float, float],
+        scale: float,
+        runs: int=1
+    ):
     # x_cuts are the 25th and 75th percentiles of x_bounds. 
     # We'll predict y's at these x_cuts.
     x_cuts = x_bounds[0] + (x_bounds[1] - x_bounds[0]) * np.array([0.25, 0.75])
