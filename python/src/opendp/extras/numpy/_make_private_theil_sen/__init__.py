@@ -74,7 +74,7 @@ def make_private_percentile_medians(y_bounds, scale):
         scale=scale,
     )
     # apply the median mechanism to the 25th and 75th percentile columns
-    return dp.c.make_basic_composition([
+    return dp.c.make_composition([
         make_select_column(0) >> dp.t.then_drop_null() >> m_median,
         make_select_column(1) >> dp.t.then_drop_null() >> m_median,
     ])
