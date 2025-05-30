@@ -85,7 +85,18 @@ def make_private_theil_sen(
         y_bounds: tuple[float, float],
         scale: float,
         runs: int=1
-    ):
+    ) -> dp.Measurement:
+    '''
+    Makes a measurement that takes a numpy array of (x, y) pairs,
+    and returns a (slope, intercept) tuple.
+
+    >>> meas = make_private_theil_sen((0, 100), (0, 100), scale=1.0)
+    >>> slope, intercept = meas(np.array([[x, x] for x in range(100)]))
+
+    :param runs: Controls how many times randomized pairwise predictions are computed. 
+    The default is 1. Increasing this value can improve the robustness and accuracy of the results; 
+    however, it can also increase computational cost and amount of noise needed later in the algorithm.
+    '''
     # x_cuts are the 25th and 75th percentiles of x_bounds. 
     # We'll predict y's at these x_cuts.
     x_cuts = x_bounds[0] + (x_bounds[1] - x_bounds[0]) * np.array([0.25, 0.75])
