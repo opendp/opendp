@@ -235,3 +235,98 @@ def _sscp_domain(
     )
 
     return _extrinsic_domain(f"NPSSCPDomain({_fmt_attrs(desc)})", _member, desc)
+
+def make_private_theil_sen(x_bounds, y_bounds, scale, runs=1):
+    import numpy as np
+    import opendp.prelude as dp
+
+    def pairwise_predict(data, x_cuts):
+        '''
+        The function matches data points together into pairs, 
+        fits a line that passes through each pair of points, 
+        and then computes the y values of each line at `x_cuts`.
+        That is, it predicts the y values at `x_cuts`, pairwise.
+        '''
+        # Get an even number of rows.
+        data = np.array(data, copy=True)[: len(data) // 2 * 2]
+
+        # Shuffle the data to get random matchings.
+        np.random.shuffle(data)
+
+        # Split data into pairs, where pair i is (p1[i], p2[i]).
+        p1, p2 = np.array_split(data, 2)
+
+        # Compute differences.
+        dx, dy = (p2 - p1).T
+
+        # Compute the midpoints of the pairs.
+        x_bar, y_bar = (p1 + p2).T / 2
+
+        # Compute y values on the pairwise slopes at x_cuts.
+        points = dy / dx * (x_cuts[None].T - x_bar) + y_bar
+
+        # Pairs where the x difference is zero are degenerate.
+        return points.T[dx != 0]
+    
+    def make_pairwise_predict(x_cuts, runs: int = 1):
+        '''
+        The parameter `runs` controls how many times randomized pairwise predictions are computed. 
+        The default is 1. Increasing `runs` can improve the robustness and accuracy of the results; 
+        however, it can also increase computational cost and amount of noise needed later in the algorithm. 
+        '''
+        return dp.t.make_user_transformation(
+            # Outputs are Nx2 non-nan float numpy arrays.
+            input_domain=dp.numpy.array2_domain(num_columns=2, T=float),
+            # Neighboring input datasets differ by addition/removal of rows.
+            input_metric=dp.symmetric_distance(),
+            # Outputs are Nx2 non-nan float numpy arrays, but are half as long.
+            output_domain=dp.numpy.array2_domain(num_columns=2, T=float),
+            # Neighboring output datasets also differ by additions/removals.
+            output_metric=dp.symmetric_distance(),
+            # Apply the function `runs` times.
+            function=lambda x: np.vstack(
+                [pairwise_predict(x, x_cuts) for _ in range(runs)]
+            ),
+            # Each execution of pairwise predict contributes b_in records.
+            stability_map=lambda b_in: b_in * runs,
+        )
+    
+    def make_select_column(j):
+        return dp.t.make_user_transformation(
+            input_domain=dp.numpy.array2_domain(num_columns=2, T=float),
+            input_metric=dp.symmetric_distance(),
+            output_domain=dp.vector_domain(dp.atom_domain(T=float)),
+            output_metric=dp.symmetric_distance(),
+            function=lambda x: x[:, j],
+            stability_map=lambda b_in: b_in)
+    
+    def make_private_percentile_medians(y_bounds, scale):
+        # this median mechanism favors candidates closest to the true median
+        m_median = dp.m.then_private_quantile(
+            # 100 evenly spaced points between y_bounds
+            candidates=np.linspace(*y_bounds, 100),
+            alpha=0.5,
+            scale=scale,
+        )
+        # apply the median mechanism to the 25th and 75th percentile columns
+        return dp.c.make_basic_composition([
+            make_select_column(0) >> dp.t.then_drop_null() >> m_median,
+            make_select_column(1) >> dp.t.then_drop_null() >> m_median,
+        ])
+
+    # x_cuts are the 25th and 75th percentiles of x_bounds. 
+    # We'll predict y's at these x_cuts.
+    x_cuts = x_bounds[0] + (x_bounds[1] - x_bounds[0]) * np.array([0.25, 0.75])
+
+    # we want coefficients, not y values! 
+    # Luckily y values are related to coefficients via a linear system
+    P_inv = np.linalg.inv(np.vstack([x_cuts, np.ones_like(x_cuts)]).T)
+
+    return (
+        # pairwise_predict will return a 2xN array of y values at the x_cuts.
+        make_pairwise_predict(x_cuts, runs)
+        # privately select median y values for each x_cut
+        >> make_private_percentile_medians(y_bounds, scale)
+        # transform median y values to coefficients (slope and intercept)
+        >> (lambda ys: P_inv @ ys)
+    )
