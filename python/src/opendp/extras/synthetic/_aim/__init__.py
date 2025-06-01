@@ -71,6 +71,9 @@ def make_ordinal_aim(
     cardinalities = input_domain.descriptor.cardinalities
     if cardinalities is None:
         raise ValueError("input_domain must have known cardinalities")
+    
+    if cardinalities == []:
+        raise ValueError("the cardinalities of input_domain cannot be empty") # maxine_edit: added extra case above one doesn't catch
 
     if input_metric != symmetric_distance():
         raise ValueError("input_metric must be symmetric_distance")
@@ -78,7 +81,16 @@ def make_ordinal_aim(
     if output_measure != zero_concentrated_divergence():
         raise ValueError("output_measure must be zero_concentrated_divergence")
 
-    d = len(input_domain.descriptor.cardinalities)
+    d = len(input_domain.descriptor.cardinalities) 
+
+    if weights is None or weights == []: # maxine_edit: handle the case where weights is empty or None before sending to expand_queries, which assumes it is a list
+        weights = [1.0] * len(queries)   # assume that unspecified weights means everything is weighted equally
+
+    if any(w < 0 for w in weights):
+        raise ValueError("all weights must be non-negative")
+    
+    if any(w == 0 for w in weights):
+        print(f"Warning: at least one of the weights entered is zero, so the corresponding query will be ignored.")
 
     queries, weights = expand_queries(queries, weights)
 
@@ -107,8 +119,8 @@ def make_ordinal_aim(
         current_releases = releases.copy()
 
         # Initialize budget parameters
-        d_select = d_out * (1 - alpha) / T
-        d_measure = d_out * alpha / T
+        d_select = d_out * (1 - alpha) / T  # i.e. epsilon**2 / 8
+        d_measure = d_out * alpha / T       # i.e. 1/(2 * sigma**2)
 
         model = estimation.mirror_descent(
             mbi_domain, current_releases, iters=max_iters, callback_fn=lambda *_: None
@@ -180,12 +192,20 @@ def make_ordinal_aim(
 
             if error <= scale * np.sqrt(2 / np.pi) * size:
                 # TODO: d_select should scale nonlinearly due to rdp
-                d_select /= 2
-                d_measure *= 2
+                # maxine_edit: does this address the above? (convert back to eps and sigma and then to d_sel and d_meas)
+                eps = np.sqrt(8 * d_select)
+                sigma = np.sqrt(1 / (2 * d_measure))
+                eps *= 2.0
+                sigma /= 2.0
+                d_select = eps **2 / 8.0
+                d_measure = 1.0 / (2.0 * sigma**2)
+
+                # d_select /= 2
+                # d_measure *= 2
 
             d_mid = qbl.privacy_loss(d_in)
 
-            if d_mid + d_select + d_measure > d_out:
+            if d_mid + d_select + d_measure > d_out * (1 - 1e-7): # maxine_edit: added the -1e-7 due to rounding errors encountered in testing
                 d_select = (d_out - d_mid) * (1 - alpha)
                 d_measure = (d_out - d_mid) * alpha
 
@@ -264,7 +284,6 @@ def make_select(
     if weights == []:
         return None
 
-
     return binary_search_chain(
         lambda scale: make_pureDP_to_zCDP(
             make_score_crosstabs(
@@ -334,6 +353,9 @@ def make_stable_crosstab(input_domain, input_metric, query: list[int]):
 
     if input_domain.descriptor.cardinalities is None:
         raise ValueError("input_domain must have known cardinalities")
+    
+    if input_domain.descriptor.cardinalities == []:
+        raise ValueError("input_domain cardinalities must not be empty")
 
     if input_metric != symmetric_distance():
         raise ValueError("input_metric must be symmetric_distance")
@@ -366,7 +388,7 @@ def make_measure(input_domain: ExtrinsicDomain, input_metric, index, d_in, d_out
     indexed_domain = descriptor[index]
     if not isinstance(indexed_domain.descriptor, NPArrayDDescriptor):
         raise ValueError(
-            "input_domain must be opendp.extras.numoy.domains.arrayd_domain"
+            "input_domain must be opendp.extras.numpy.domains.arrayd_domain"
         )
 
     if input_metric != linf_l2_distance():
