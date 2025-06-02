@@ -13,3 +13,4 @@ Submodule organization will follow the conventions of `scikit-learn <https://sci
 '''
 
 import opendp.extras.sklearn.decomposition
+from opendp.extras.sklearn._make_private_theil_sen import make_private_theil_sen # noqa: F401

@@ -19,7 +19,6 @@ from opendp._lib import import_optional_dependency
 from opendp._internal import _extrinsic_domain
 import typing
 from opendp.extras.numpy._make_np_clamp import make_np_clamp, then_np_clamp # noqa: F401
-from opendp.extras.numpy._make_private_theil_sen import make_private_theil_sen # noqa: F401
 
 
 if typing.TYPE_CHECKING: # pragma: no cover
