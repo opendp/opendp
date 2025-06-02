@@ -46,7 +46,7 @@ def make_ordinal_aim(
     weights: Optional[list[int]] = None,
     max_size: int = 80,
     max_iters: int = 100,
-    alpha: float = 0.1,
+    alpha: float = 0.9,
 ):
     """
     Implements AIM (Adaptive Iterative Mechanism) for ordinal data.
@@ -208,7 +208,8 @@ def make_ordinal_aim(
             if d_mid + d_select + d_measure > d_out * (1 - 1e-7): # maxine_edit: added the -1e-7 due to rounding errors encountered in testing
                 d_select = (d_out - d_mid) * (1 - alpha)
                 d_measure = (d_out - d_mid) * alpha
-
+            print(f"Privacy used so far: rho = {d_mid}")
+        print(f"Total privacy budget expended: rho = {d_mid}")
         return current_releases
 
     return _make_measurement(
@@ -436,9 +437,8 @@ def is_memory_bounded(query, d_mid, d_out, max_size, mbi_domain, selected_indice
     total_cliques = current_query_cliques + [new_query_clique]
     hypothetical_size_mb = hypothetical_model_size(mbi_domain, total_cliques) # if the new query were added, this is the size of the junction tree
     maximum_size_mb = d_mid / d_out * max_size # space threshold; new query cannot push memory above this value
-    new_query_fit = False
     return hypothetical_size_mb <= maximum_size_mb
 
 
-def get_all_subsets(this_list): # maxine_edit: changed list to this_list in case it shadows the list type and creates bug
+def get_all_subsets(this_list): # maxine_edit: just changed list to this_list in case it shadows the list type and creates bug
     return chain.from_iterable(combinations(this_list, r) for r in range(1, len(this_list) + 1))
