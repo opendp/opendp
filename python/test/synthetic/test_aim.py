@@ -1,6 +1,9 @@
 import opendp.prelude as dp
 
 def test_make_ordinal_aim():
+    """
+    Correctness test for make_ordinal_aim()
+    """
     from mbi import LinearMeasurement
     import numpy as np
 
@@ -118,23 +121,7 @@ def test_make_ordinal_aim():
     except ValueError as e:
         print(f"value error: {e}")
 
-    m_aim = dp.synthetic.make_ordinal_aim(
-        dp.numpy.array2_domain(cardinalities=cardinalities, T=int),
-        dp.symmetric_distance(),
-        dp.zero_concentrated_divergence(),
-        d_in=1,
-        d_out=0.5,
-        releases=releases, 
-        queries=[
-            [0, 1, 2],
-            [2, 3],
-        ],
-        weights=[1.0, 0.5]
-    )
-
-    m_aim(data)
-    print("done with normal aim run")
-
+    # cover line 86 - 87 if weights are None or empty
     m_aim_weightless = dp.synthetic.make_ordinal_aim(
         dp.numpy.array2_domain(cardinalities=cardinalities, T=int),
         dp.symmetric_distance(),
@@ -152,6 +139,7 @@ def test_make_ordinal_aim():
     m_aim_weightless(data)
     print("done with run with weights = None")
 
+    
     m_aim_weightempty = dp.synthetic.make_ordinal_aim(
         dp.numpy.array2_domain(cardinalities=cardinalities, T=int),
         dp.symmetric_distance(),
@@ -169,23 +157,7 @@ def test_make_ordinal_aim():
     m_aim_weightempty(data)
     print("done with run with empty weights")
 
-    m_aim_weightzero = dp.synthetic.make_ordinal_aim(
-        dp.numpy.array2_domain(cardinalities=cardinalities, T=int),
-        dp.symmetric_distance(),
-        dp.zero_concentrated_divergence(),
-        d_in=1,
-        d_out=0.5,
-        releases=releases, 
-        queries=[
-            [0, 1, 2],
-            [2, 3],
-        ],
-        weights=[0, 1]
-    )
-
-    m_aim_weightzero(data)
-    print("done with run with empty weights")
-
+    # cover line 90 negative weight error
     try:
         m_aim_negative = dp.synthetic.make_ordinal_aim(
             dp.numpy.array2_domain(cardinalities=cardinalities, T=int),
@@ -203,6 +175,24 @@ def test_make_ordinal_aim():
     except ValueError as e:
         print(f"value error: {e}")
 
-    
+    # cover line 93 zero weight warning + remaining lines
+    m_aim = dp.synthetic.make_ordinal_aim(
+        dp.numpy.array2_domain(cardinalities=cardinalities, T=int),
+        dp.symmetric_distance(),
+        dp.zero_concentrated_divergence(),
+        d_in=1,
+        d_out=0.5,
+        releases=releases, 
+        queries=[
+            [0, 1, 2],
+            [2, 3],
+            [0, 3],
+            [1, 2]
+        ],
+        weights=[0, 0.3, 0.7, 1]
+    )
+
+    m_aim(data)
+    print("done with run with empty weights + rest of normal queries")
 
 dp.enable_features("contrib", "rust-stack-trace")
