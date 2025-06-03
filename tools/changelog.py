@@ -67,7 +67,7 @@ def main():
     changelog_update = get_changelog_update(log_lines)
 
     for line in old_changelog_lines:
-        if prev_version in line:
+        if f'[{prev_version}]' in line:
             new_changelog_lines.append(changelog_update)
             new_changelog_lines.append('')
         new_changelog_lines.append(line)
