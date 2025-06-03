@@ -199,7 +199,7 @@ def {then_name}(
     .. end-markdown
 
     .. seealso:: 
-      Delays application of `input_domain` and `input_metric` in :py:func:`opendp.{module_name}.{func_name}`
+      Delays application of ``input_domain`` and ``input_metric`` in :py:func:`opendp.{module_name}.{func_name}`
 
 {doc_params}{example}
     """
@@ -383,7 +383,7 @@ fn generate_docstring_arg(arg: &Argument, hierarchy: &HashMap<String, Vec<String
             })
             .map(|v| format!("\n:type {}: {}", name, v))
             .unwrap_or_default(),
-        description = arg.description.clone().unwrap_or_default()
+        description = arg.description.clone().unwrap_or_default().replace("`", "``") // markdown "`" to rst "``"
     )
 }
 

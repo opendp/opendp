@@ -51,13 +51,13 @@ def docstring(app, what, name, obj, options, lines):
     
     for i, line in enumerate(lines):
         if line == flag:
-            md_lines, rst_lines = lines[:i], lines[i:]
-            new_rst = pypandoc.convert_text('\n'.join(md_lines), 'rst', format='md')
+            orig_md_lines, orig_rst_lines = lines[:i], lines[i:]
+            new_rst = pypandoc.convert_text('\n'.join(orig_md_lines), 'rst', format='md')
 
             lines.clear()
             lines += new_rst.splitlines()
             lines += [""]
-            lines += rst_lines
+            lines += orig_rst_lines
             break
         
 
