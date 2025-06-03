@@ -196,6 +196,8 @@ def {then_name}(
 ):  
     r"""partial constructor of {func_name}
 
+    .. end-markdown
+
     .. seealso:: 
       Delays application of `input_domain` and `input_metric` in :py:func:`opendp.{module_name}.{func_name}`
 
@@ -353,6 +355,9 @@ fn generate_docstring(
 
     format!(
         r#"r"""{description}
+
+.. end-markdown
+
 {doc_args}{ret_arg}
 {raises}{example}
 """"#,

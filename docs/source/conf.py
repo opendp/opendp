@@ -50,7 +50,7 @@ py_attr_re = re.compile(r"\:py\:\w+\:(``[^:`]+``)")
 
 def is_rst(line):
     """heuristic to determine where RST format begins"""
-    return line.startswith(":") or line.startswith(".. ")
+    return line.startswith(".. end-markdown")
 
 def docstring(app, what, name, obj, options, lines):
     path = name.split(".")
