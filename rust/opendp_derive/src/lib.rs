@@ -40,7 +40,7 @@ mod full;
 ///
 /// # Features
 /// You can indicate a list of features that must be enabled by the user for the function to exist.
-/// ```compile_fail
+/// ```no_run
 /// #[bootstrap(
 ///     features("contrib", "floating-point")
 /// )]
@@ -68,7 +68,7 @@ mod full;
 /// # Arguments, Generics and Return
 /// You can pass additional metadata that is specific to each argument or generic.
 ///
-/// ```compile_fail
+/// ```no_run
 /// #[bootstrap(
 ///     // can specify multiple. Everything is optional
 ///     arguments(my_arg1(default = "example"), my_arg2(hint = "int")),
