@@ -560,10 +560,8 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
         :param val: a value to be checked for membership in `self`
         '''
         try:
-            # TODO: Should we rename the import to "_member"?
-            # https://github.com/opendp/opendp/issues/2268
-            from opendp.domains import member
-            return member(self, val)
+            from opendp.domains import _member
+            return _member(self, val)
         except Exception as e:
             from warnings import warn
             warn(f'Value ({val}) does not belong to carrier type of {self}. Details: {e}')
