@@ -383,7 +383,11 @@ fn generate_docstring_arg(arg: &Argument, hierarchy: &HashMap<String, Vec<String
             })
             .map(|v| format!("\n:type {}: {}", name, v))
             .unwrap_or_default(),
-        description = arg.description.clone().unwrap_or_default().replace("`", "``") // markdown "`" to rst "``"
+        description = arg
+            .description
+            .clone()
+            .unwrap_or_default()
+            .replace("`", "``") // markdown "`" to rst "``"
     )
 }
 
