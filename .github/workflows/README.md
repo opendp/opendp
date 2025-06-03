@@ -142,14 +142,12 @@ on github, or with the `gh` command line tool. Parameters:
     1. Update changelog
 
         ```shell
-        python channel_tool.py changelog
-
         git fetch --tags
         python changelog.py
         ```
         Additional manual edits will be useful to arrange individual commits thematically.
 
-    1. Update `VERSION` file on the `main` branch to match the version you want to release.
+    1. Update `VERSION` file to match the version you want to release.
 
         - If it's a patch release, no change to the version number should be needed: The patch should have been incremented after the previous release.
         - If it's a minor release, run `python channel_tool.py bump_version --position minor`
