@@ -65,18 +65,10 @@ def docstring(app, what, name, obj, options, lines):
         # rust documentation is markdown, convert to rst
         rst = pypandoc.convert_text('\n'.join(description), 'rst', format='md')
 
-        # allow sphinx notation to pass through
-        params = "\n".join(line.replace("`", "``") for line in params)
-        indexes = set()
-        for match in py_attr_re.finditer(params):
-            a, b = match.span(1)
-            indexes |= {a, b - 1}
-        params = "".join(l for i, l in enumerate(params) if i not in indexes)
-
         lines.clear()
         lines += rst.splitlines()
         lines += [""]
-        lines += params.splitlines()
+        lines += params
 
 def setup(app):
     app.connect('autodoc-process-docstring', docstring)
