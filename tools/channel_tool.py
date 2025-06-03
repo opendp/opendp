@@ -186,8 +186,11 @@ def changelog(args):
         if channel == "dev":
             date = "TBD"
 
-    log(f"Updating heading to {new_heading_version}, {diff_source}...{diff_target}, {date}")
-    changelog_lines[i] = f"## [{new_heading_version}]({URL_BASE}{diff_source}...{diff_target}) - {date}\n"
+    old_line = changelog_lines[i]
+    new_line = f"## [{new_heading_version}]({URL_BASE}{diff_source}...{diff_target}) - {date}\n"
+    changelog_lines[i] = new_line
+    log(f"{old_line=}\n# {new_line=}")
+
     if args.prepend:
         # Prepend a new heading for the current version.
         diff_source = diff_target
