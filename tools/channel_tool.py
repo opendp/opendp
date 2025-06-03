@@ -3,6 +3,7 @@ import configupdater
 import datetime
 import re
 import zoneinfo
+import os
 from pathlib import Path
 
 import tomlkit
@@ -104,11 +105,11 @@ def update_version(version):
         toml["dependencies"]["opendp_tooling"]["version"] = str(stripped_version)
         toml["build-dependencies"]["opendp_tooling"]["version"] = str(stripped_version)
         return toml
-    update_file("rust/Cargo.toml", tomlkit.load, munge_cargo_root, tomlkit.dump)
+    update_file("../rust/Cargo.toml", tomlkit.load, munge_cargo_root, tomlkit.dump)
     def munge_cargo_opendp_derive(toml):
         toml["dependencies"]["opendp_tooling"]["version"] = str(stripped_version)
         return toml
-    update_file("rust/opendp_derive/Cargo.toml", tomlkit.load, munge_cargo_opendp_derive, tomlkit.dump)
+    update_file("../rust/opendp_derive/Cargo.toml", tomlkit.load, munge_cargo_opendp_derive, tomlkit.dump)
 
     # Python config
     def load_python_config(f):
@@ -120,11 +121,11 @@ def update_version(version):
         return config
     def dump_python_config(config, f):
         config.write(f)
-    update_file("python/setup.cfg", load_python_config, munge_python_config, dump_python_config)
+    update_file("../python/setup.cfg", load_python_config, munge_python_config, dump_python_config)
     
     # R Package
-    log("Updating R/opendp/DESCRIPTION")
-    with ControlEditor(path='R/opendp/DESCRIPTION') as control:
+    log("Updating ../R/opendp/DESCRIPTION")
+    with ControlEditor(path='../R/opendp/DESCRIPTION') as control:
         # while it might not look like it, this mutates the DESCRIPTION file in-place
         next(iter(control.paragraphs))["Version"] = r_version
 
@@ -255,6 +256,7 @@ def _main(argv):
 
 
 def main():
+    os.chdir(Path(__file__).parent)
     _main(sys.argv)
 
 
