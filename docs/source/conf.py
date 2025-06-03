@@ -5,7 +5,6 @@ import os
 from datetime import datetime
 import semver
 import pypandoc
-import re
 from sphinx.ext import autodoc
 
 # docs should be built without needing import the library binary for the specified version
@@ -33,18 +32,6 @@ extensions = [
     'nbsphinx',
     'sphinx_design',
 ]
-
-# convert markdown to rst when rendering with sphinx
-markdown_modules = {
-    "accuracy", 
-    "combinators", 
-    "core",
-    "measurements", 
-    "transformations",
-    "domains",
-    "metrics",
-    "measures"
-}
 
 def docstring(app, what, name, obj, options, lines):
     flag = ".. end-markdown"
