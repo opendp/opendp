@@ -160,6 +160,7 @@ register(make_private_pca)
 class PCA:
     '''
     DP wrapper for `sklearn's PCA <https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html>`_.
+    This implementation is based on `Differentially Private Covariance Estimation <https://papers.nips.cc/paper_files/paper/2019/hash/4158f6d19559955bae372bb00f6204e4-Abstract.html>`_ by Kareem Amin, et al.
 
     Trying to create an instance without sklearn installed will raise an ``ImportError``.
     
