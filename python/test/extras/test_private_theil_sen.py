@@ -1,5 +1,5 @@
 import numpy as np
-from opendp.extras.numpy import make_private_theil_sen
+from opendp.extras.sklearn.linear_model._make_private_theil_sen import make_private_theil_sen
 
 
 def test_private_theil_sen():
