@@ -46,29 +46,20 @@ markdown_modules = {
     "measures"
 }
 
-py_attr_re = re.compile(r"\:py\:\w+\:(``[^:`]+``)")
-
-def is_rst(line):
-    """heuristic to determine where RST format begins"""
-    return line.startswith(".. end-markdown")
-
 def docstring(app, what, name, obj, options, lines):
-    path = name.split(".")
+    flag = ".. end-markdown"
+    
+    for i, line in enumerate(lines):
+        if line == flag:
+            md_lines, rst_lines = lines[:i], lines[i:]
+            new_rst = pypandoc.convert_text('\n'.join(md_lines), 'rst', format='md')
 
-    # "len(path) > 2": We only need special processing for the contents of modules.
-    # The top-of-module docstrings are plain RST.
-    if len(path) > 2 and path[1] in markdown_modules:
-        # split docstring into description and params
-        param_index = next((i for i, line in enumerate(lines) if is_rst(line)), len(lines))
-        description, params = lines[:param_index], lines[param_index:]
+            lines.clear()
+            lines += new_rst.splitlines()
+            lines += [""]
+            lines += rst_lines
+            break
         
-        # rust documentation is markdown, convert to rst
-        rst = pypandoc.convert_text('\n'.join(description), 'rst', format='md')
-
-        lines.clear()
-        lines += rst.splitlines()
-        lines += [""]
-        lines += params
 
 def setup(app):
     app.connect('autodoc-process-docstring', docstring)
