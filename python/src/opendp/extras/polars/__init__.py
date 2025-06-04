@@ -17,13 +17,15 @@ The methods of this module will then be accessible at ``dp.polars``.
 from __future__ import annotations
 from dataclasses import asdict, dataclass, field, replace
 import os
-from typing import Any, Literal, Sequence
+from typing import Any, Literal, Mapping, Optional, Sequence, Union, cast
 from opendp._lib import lib_path, import_optional_dependency
+from opendp.extras.mbi import ContingencyTable, make_contingency_table, AIM, Algorithm
 from opendp.mod import (
     ChangeOneIdDistance,
     Domain,
     Measurement,
     FrameDistance,
+    Metric,
     OpenDPException,
     SymmetricIdDistance,
     binary_search,
@@ -41,6 +43,12 @@ from opendp.domains import (
 )
 from opendp.measurements import make_private_lazyframe
 from deprecated import deprecated
+from opendp.transformations import make_stable_lazyframe
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # pragma: no cover
+    from opendp.context import Query
+    from opendp.extras.polars.contingency_table import ContingencyTableQuery
 
 
 class DPExpr(object):
@@ -667,10 +675,11 @@ _LAZY_EXECUTION_METHODS = {
     "fetch",
 }
 
+
 @dataclass
 class SortBy:
     """Configuration for ``keep`` in :py:meth:`LazyFrameQuery.truncate_per_group`.
-     
+
     Follows the arguments in Polars' ``sort_by`` method.
     """
 
@@ -894,7 +903,9 @@ class LazyFrameQuery:
         input_metric = self._query._chain[1]
 
         if isinstance(by, str):
-            raise ValueError("by must be a list of strings or expressions")  # pragma: no cover
+            raise ValueError(
+                "by must be a list of strings or expressions"
+            )  # pragma: no cover
 
         if isinstance(input_metric, FrameDistance):
             input_metric = input_metric.inner_metric
@@ -932,7 +943,9 @@ class LazyFrameQuery:
         input_metric = self._query._chain[1]
 
         if isinstance(by, str):
-            raise ValueError("by must be a list of strings or expressions")  # pragma: no cover
+            raise ValueError(
+                "by must be a list of strings or expressions"
+            )  # pragma: no cover
 
         if isinstance(input_metric, FrameDistance):
             input_metric = input_metric.inner_metric
@@ -947,7 +960,9 @@ class LazyFrameQuery:
         elif keep == "last":
             ranks = struct.rank("dense", descending=True)
         else:
-            raise ValueError("keep must be 'sample', 'first' or 'last'")  # pragma: no cover
+            raise ValueError(
+                "keep must be 'sample', 'first' or 'last'"
+            )  # pragma: no cover
 
         return self.filter(ranks.over(input_metric.identifier) < k)
 
@@ -1068,6 +1083,54 @@ class LazyFrameQuery:
         from opendp.accuracy import summarize_polars_measurement
 
         return summarize_polars_measurement(self.resolve(), alpha)
+
+        
+    def contingency_table(
+        self,
+        *,
+        keys: Optional[Mapping[str, Sequence]] = None,
+        cuts: Optional[Mapping[str, Sequence[float]]] = None,
+        table: Optional[ContingencyTable] = None,
+        algorithm: Union[Algorithm] = AIM(),
+    ) -> "ContingencyTableQuery":
+        """Release an approximation to a contingency table across all columns.
+
+        :param keys: dictionary of column names and unique categories
+        :param cuts: dictionary of column names and bin edges for numerical columns
+        :param table: ContingencyTable from prior release
+        :param algorithm: configuration for internal estimation algorithm
+        """
+        from .contingency_table import ContingencyTableQuery
+
+        query: Query = object.__getattribute__(self, "_query")
+        input_domain, input_metric = cast(tuple[Domain, Metric], query._chain)
+        d_in, d_out = query._d_in, query._d_out
+
+        t_plan = make_stable_lazyframe(
+            input_domain,
+            input_metric,
+            lazyframe=object.__getattribute__(self, "polars_plan"),
+        )
+
+        m_table, oneway_scale, oneway_threshold = make_contingency_table(
+            input_domain=t_plan.output_domain,
+            input_metric=t_plan.output_metric,
+            output_measure=query._output_measure,
+            d_in=t_plan.map(d_in),
+            d_out=d_out,  # type: ignore[arg-type]
+            keys=keys,
+            cuts=cuts,
+            table=table,
+            algorithm=algorithm,
+        )
+
+        return ContingencyTableQuery(
+            chain=t_plan >> m_table,
+            output_measure=query._output_measure,
+            context=query._context,
+            oneway_scale=oneway_scale,
+            oneway_threshold=oneway_threshold
+        )
 
 
 class LazyGroupByQuery:
@@ -1219,7 +1282,7 @@ class Margin:
 @dataclass
 class Bound(object):
     """
-    The ``Bound`` class is used to describe bounds on the number of 
+    The ``Bound`` class is used to describe bounds on the number of
     contributed rows per-group and the number of contributed groups.
     """
 

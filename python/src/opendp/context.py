@@ -47,6 +47,7 @@ from opendp.metrics import (
     symmetric_id_distance,
 )
 from opendp.mod import (
+    ApproximateDivergence,
     Domain,
     Measurement,
     Metric,
@@ -577,14 +578,13 @@ class Context(object):
                 )  # pragma: no cover
             d_query = self.d_mids[0]
         elif kwargs:
-            measure, d_query = loss_of(**kwargs)
+            observed_measure, d_query = loss_of(**kwargs)
 
-            if measure != self.accountant.output_measure:
-                measure_type = self.accountant.output_measure.type
-                msg = f"Expected output measure {self.accountant.output_measure} but got {measure}."
+            expected_measure = self.accountant.output_measure
+            if observed_measure != expected_measure:
+                msg = f"Expected output measure {expected_measure} but got {observed_measure}."
                 if (
-                    isinstance(measure_type, RuntimeType)
-                    and measure_type.origin == "Approximate"
+                    isinstance(expected_measure, ApproximateDivergence)
                     and "delta" not in kwargs
                 ):
                     msg += " Consider setting `delta=0.0` in your query."
@@ -634,7 +634,6 @@ class Context(object):
 
             return _sub(self.d_out, self.queryable.privacy_loss(self.d_in))
 
-
         return None if self.d_mids is None else self.d_mids.copy()
 
 
@@ -673,7 +672,7 @@ class Query(object):
         output_measure: Measure,
         d_in: Optional[Union[float, Sequence[Bound]]] = None,
         d_out: Optional[Union[float, tuple[float, float]]] = None,
-        context: "Context" = None,  # type: ignore[assignment]
+        context: Optional["Context"] = None,
         _wrap_release=None,
     ) -> None:
         self._chain = chain
@@ -701,7 +700,7 @@ class Query(object):
 
         if name not in constructors:
             raise AttributeError(
-                f"Unrecognized constructor: '{name}'"
+                f"Unrecognized constructor: '{name}'. Did you mean to '.release()' first?"
             )  # pragma: no cover
 
         def make(*args, **kwargs) -> "Query":
