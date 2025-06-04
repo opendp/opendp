@@ -74,11 +74,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r requirements-dev.txt
+          python -m pip install -r requirements.txt
 
       - name: Check markdown links
         run: |
-          find .. | grep '\.md$' | grep -v 'venv/\|.git/\|CHANGELOG\|vendor/\|R/opendp/README.md' \
+          find .. | grep '\.md$' | grep -v 'venv\|.git/\|CHANGELOG\|vendor/\|R/opendp/README.md' \
           | xargs linkchecker --no-warnings -f linkchecker-external.cfg
 
       - name: Install Pandoc
