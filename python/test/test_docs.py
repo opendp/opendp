@@ -34,5 +34,9 @@ def test_notebooks_are_executed(nb_path):
     triples = [(index, count, source) for (index, (count, source)) in enumerate(counts_sources, start=1)]
     indexes, counts, sources = zip(*triples)
     bad_sources = [source for (index, count, source) in triples if index != count]
-    assert indexes == counts, f'First cell with missing or misordered execution:\n{bad_sources[0]}'
+    short_path = nb_path.relative_to(Path.cwd(), walk_up=True)
+    # Notebook execution requires dependencies (jupyter, matplotlib, ...) beyond the basic dev environment.
+    assert indexes == counts, f'''Notebook not completely executed.
+To fix: jupyter nbconvert --to notebook --execute {short_path} --inplace
+First cell with missing or misordered execution:\n{bad_sources[0].splitlines()[0]}'''
 
