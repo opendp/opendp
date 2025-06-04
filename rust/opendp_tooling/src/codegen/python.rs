@@ -355,7 +355,6 @@ fn generate_docstring(
 
     format!(
         r#"r"""{description}
-
 .. end-markdown
 
 {doc_args}{ret_arg}

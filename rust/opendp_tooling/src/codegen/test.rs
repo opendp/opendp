@@ -53,6 +53,8 @@ def fake_function(
 ):
     r\"\"\"fake description
 
+    .. end-markdown
+
     :param fake_argument: fake description
     :return: fake description
     :raises TypeError: if an argument's type differs from the expected type
