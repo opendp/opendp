@@ -28,7 +28,7 @@ Learning About Differential Privacy
 Papers
 ------
 
-* `The Complexity of Differential Privacy <https://privacytools.seas.harvard.edu/files/privacytools/files/complexityprivacy_1.pdf>`_
+* `The Complexity of Differential Privacy <https://salil.seas.harvard.edu/publications/complexity-differential-privacy>`_
 * `Calibrating Noise to Sensitivity in Private Data Analysis <https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf>`_ (Laplace mechanism)
 * `On Significance of the Least Significant Bits For Differential Privacy <https://www.microsoft.com/en-us/research/wp-content/uploads/2012/10/lsbs.pdf>`_ (Snapping mechanism and how floating-point numbers and the laplace mechanism leak)
 * `Mechanism Design via Differential Privacy <https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/mdviadp.pdf>`_ (Exponential mechanism)
