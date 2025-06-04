@@ -137,6 +137,9 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
         raise UnknownTypeException(rust_type)  # pragma: no cover
 
     if c_type == AnyObjectPtr:
+        if isinstance(value, ctypes.POINTER(AnyObject)):
+            return value
+        
         from opendp._data import slice_as_object
         return slice_as_object(value, type_name) # type: ignore[arg-type]
 
