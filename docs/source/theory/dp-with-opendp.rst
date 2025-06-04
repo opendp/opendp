@@ -19,7 +19,7 @@ has the flexibility to explore different approaches to DP.
 
 --------------
 
-Any constructors that have not completed the proof-writing and vetting
+Any functions that have not completed the proof-writing and vetting
 process may still be accessed if you opt-in to “contrib”. Please contact
 us if you are interested in proof-writing. Thank you!
 
