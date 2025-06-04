@@ -5,7 +5,6 @@ import os
 from datetime import datetime
 import semver
 import pypandoc
-import re
 from sphinx.ext import autodoc
 
 # docs should be built without needing import the library binary for the specified version
@@ -34,49 +33,20 @@ extensions = [
     'sphinx_design',
 ]
 
-# convert markdown to rst when rendering with sphinx
-markdown_modules = {
-    "accuracy", 
-    "combinators", 
-    "core",
-    "measurements", 
-    "transformations",
-    "domains",
-    "metrics",
-    "measures"
-}
-
-py_attr_re = re.compile(r"\:py\:\w+\:(``[^:`]+``)")
-
-def is_rst(line):
-    """heuristic to determine where RST format begins"""
-    return line.startswith(":") or line.startswith(".. ")
-
 def docstring(app, what, name, obj, options, lines):
-    path = name.split(".")
+    flag = ".. end-markdown"
+    
+    for i, line in enumerate(lines):
+        if line == flag:
+            orig_md_lines, orig_rst_lines = lines[:i], lines[i:]
+            new_rst = pypandoc.convert_text('\n'.join(orig_md_lines), 'rst', format='md')
 
-    # "len(path) > 2": We only need special processing for the contents of modules.
-    # The top-of-module docstrings are plain RST.
-    if len(path) > 2 and path[1] in markdown_modules:
-        # split docstring into description and params
-        param_index = next((i for i, line in enumerate(lines) if is_rst(line)), len(lines))
-        description, params = lines[:param_index], lines[param_index:]
+            lines.clear()
+            lines += new_rst.splitlines()
+            lines += [""]
+            lines += orig_rst_lines
+            break
         
-        # rust documentation is markdown, convert to rst
-        rst = pypandoc.convert_text('\n'.join(description), 'rst', format='md')
-
-        # allow sphinx notation to pass through
-        params = "\n".join(line.replace("`", "``") for line in params)
-        indexes = set()
-        for match in py_attr_re.finditer(params):
-            a, b = match.span(1)
-            indexes |= {a, b - 1}
-        params = "".join(l for i, l in enumerate(params) if i not in indexes)
-
-        lines.clear()
-        lines += rst.splitlines()
-        lines += [""]
-        lines += params.splitlines()
 
 def setup(app):
     app.connect('autodoc-process-docstring', docstring)
