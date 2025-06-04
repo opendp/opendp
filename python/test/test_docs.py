@@ -33,8 +33,12 @@ def test_notebooks_are_executed(nb_path):
     counts_sources = [(cell.get('execution_count'), ''.join(cell.get('source', ''))) for cell in nb['cells'] if cell['cell_type'] == 'code']
     triples = [(index, count, source) for (index, (count, source)) in enumerate(counts_sources, start=1)]
     indexes, counts, sources = zip(*triples)
+
+    # Info for error message:
     bad_sources = [source for (index, count, source) in triples if index != count]
-    short_path = nb_path.relative_to(Path.cwd(), walk_up=True)
+    from sys import version_info
+    short_path = nb_path.relative_to(Path.cwd(), walk_up=True) if version_info >= (3, 12) else nb_path.name
+
     # Notebook execution requires dependencies (jupyter, matplotlib, ...) beyond the basic dev environment.
     assert indexes == counts, f'''Notebook not completely executed.
 To fix: jupyter nbconvert --to notebook --execute {short_path} --inplace
