@@ -29,10 +29,8 @@ class LinearRegression:
         :param x_bounds: TODO
         :param y_bounds: TODO
         :param scale: TODO
-        :param runs: Controls how many times randomized pairwise predictions are computed.
-            The default is 1. Increasing this value can improve the robustness and accuracy of the results;
-            however, it can also increase computational cost and amount of noise needed later in the algorithm.
-        :returns: sklearn.linear_model.LinearRegression
+        :param runs: Controls how many times randomized pairwise predictions are computed. Increasing this value can improve the robustness and accuracy of the results; However, it can also increase computational cost and amount of noise needed later in the algorithm.
+        :return: A fitted sklearn ``LinearRegression``
         """
         meas = _make_private_theil_sen(
             x_bounds=x_bounds, y_bounds=y_bounds, scale=scale, runs=runs
@@ -40,7 +38,7 @@ class LinearRegression:
         np = import_optional_dependency("numpy")
         slope, intercept = meas(np.stack([X, y], axis=1))
 
-        from sklearn.linear_model import LinearRegression as LR  # type: ignore
+        from sklearn.linear_model import LinearRegression as LR
 
         fit_regression = LR()
         fit_regression.coef_ = np.array([slope])

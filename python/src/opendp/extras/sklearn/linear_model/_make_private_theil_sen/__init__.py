@@ -99,10 +99,6 @@ def make_private_theil_sen(
     >>> import numpy as np
     >>> meas = make_private_theil_sen((0, 100), (0, 100), scale=1.0)
     >>> slope, intercept = meas(np.array([[x, x] for x in range(100)]))
-
-    :param runs: Controls how many times randomized pairwise predictions are computed.
-    The default is 1. Increasing this value can improve the robustness and accuracy of the results;
-    however, it can also increase computational cost and amount of noise needed later in the algorithm.
     """
     np = import_optional_dependency("numpy")
     # x_cuts are the 25th and 75th percentiles of x_bounds.
