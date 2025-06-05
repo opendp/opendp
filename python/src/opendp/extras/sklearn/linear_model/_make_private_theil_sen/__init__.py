@@ -93,6 +93,7 @@ def make_private_theil_sen(
     Makes a measurement that takes a numpy array of (x, y) pairs,
     and returns a (slope, intercept) tuple.
 
+    >>> import numpy as np
     >>> meas = make_private_theil_sen((0, 100), (0, 100), scale=1.0)
     >>> slope, intercept = meas(np.array([[x, x] for x in range(100)]))
 
