@@ -40,7 +40,7 @@ class LinearRegression:
         np = import_optional_dependency("numpy")
         slope, intercept = meas(np.stack([X, y], axis=1))
 
-        from sklearn.linear_model import LinearRegression as LR
+        from sklearn.linear_model import LinearRegression as LR  # type: ignore
 
         fit_regression = LR()
         fit_regression.coef_ = np.array([slope])
