@@ -3,13 +3,13 @@ from opendp._lib import import_optional_dependency
 
 
 def pairwise_predict(data, x_cuts):
-    '''
-    The function matches data points together into pairs, 
-    fits a line that passes through each pair of points, 
+    """
+    The function matches data points together into pairs,
+    fits a line that passes through each pair of points,
     and then computes the y values of each line at `x_cuts`.
     That is, it predicts the y values at `x_cuts`, pairwise.
-    '''
-    np = import_optional_dependency('numpy')
+    """
+    np = import_optional_dependency("numpy")
     # Get an even number of rows.
     data = np.array(data, copy=True)[: len(data) // 2 * 2]
 
@@ -33,12 +33,12 @@ def pairwise_predict(data, x_cuts):
 
 
 def make_pairwise_predict(x_cuts, runs: int = 1):
-    '''
-    The parameter `runs` controls how many times randomized pairwise predictions are computed. 
-    The default is 1. Increasing `runs` can improve the robustness and accuracy of the results; 
-    however, it can also increase computational cost and amount of noise needed later in the algorithm. 
-    '''
-    np = import_optional_dependency('numpy')
+    """
+    The parameter `runs` controls how many times randomized pairwise predictions are computed.
+    The default is 1. Increasing `runs` can improve the robustness and accuracy of the results;
+    however, it can also increase computational cost and amount of noise needed later in the algorithm.
+    """
+    np = import_optional_dependency("numpy")
     return dp.t.make_user_transformation(
         # Outputs are Nx2 non-nan float numpy arrays.
         input_domain=dp.numpy.array2_domain(num_columns=2, T=float),
@@ -64,11 +64,12 @@ def make_select_column(j):
         output_domain=dp.vector_domain(dp.atom_domain(T=float)),
         output_metric=dp.symmetric_distance(),
         function=lambda x: x[:, j],
-        stability_map=lambda b_in: b_in)
+        stability_map=lambda b_in: b_in,
+    )
 
 
 def make_private_percentile_medians(y_bounds, scale):
-    np = import_optional_dependency('numpy')
+    np = import_optional_dependency("numpy")
     # this median mechanism favors candidates closest to the true median
     m_median = dp.m.then_private_quantile(
         # 100 evenly spaced points between y_bounds
@@ -77,19 +78,21 @@ def make_private_percentile_medians(y_bounds, scale):
         scale=scale,
     )
     # apply the median mechanism to the 25th and 75th percentile columns
-    return dp.c.make_composition([
-        make_select_column(0) >> dp.t.then_drop_null() >> m_median,
-        make_select_column(1) >> dp.t.then_drop_null() >> m_median,
-    ])
+    return dp.c.make_composition(
+        [
+            make_select_column(0) >> dp.t.then_drop_null() >> m_median,
+            make_select_column(1) >> dp.t.then_drop_null() >> m_median,
+        ]
+    )
 
 
 def make_private_theil_sen(
-        x_bounds: tuple[float, float],
-        y_bounds: tuple[float, float],
-        scale: float,
-        runs: int=1
-    ) -> dp.Measurement:
-    '''
+    x_bounds: tuple[float, float],
+    y_bounds: tuple[float, float],
+    scale: float,
+    runs: int = 1,
+) -> dp.Measurement:
+    """
     Makes a measurement that takes a numpy array of (x, y) pairs,
     and returns a (slope, intercept) tuple.
 
@@ -97,16 +100,16 @@ def make_private_theil_sen(
     >>> meas = make_private_theil_sen((0, 100), (0, 100), scale=1.0)
     >>> slope, intercept = meas(np.array([[x, x] for x in range(100)]))
 
-    :param runs: Controls how many times randomized pairwise predictions are computed. 
-    The default is 1. Increasing this value can improve the robustness and accuracy of the results; 
+    :param runs: Controls how many times randomized pairwise predictions are computed.
+    The default is 1. Increasing this value can improve the robustness and accuracy of the results;
     however, it can also increase computational cost and amount of noise needed later in the algorithm.
-    '''
-    np = import_optional_dependency('numpy')
-    # x_cuts are the 25th and 75th percentiles of x_bounds. 
+    """
+    np = import_optional_dependency("numpy")
+    # x_cuts are the 25th and 75th percentiles of x_bounds.
     # We'll predict y's at these x_cuts.
     x_cuts = x_bounds[0] + (x_bounds[1] - x_bounds[0]) * np.array([0.25, 0.75])
 
-    # we want coefficients, not y values! 
+    # we want coefficients, not y values!
     # Luckily y values are related to coefficients via a linear system
     P_inv = np.linalg.inv(np.vstack([x_cuts, np.ones_like(x_cuts)]).T)
 
