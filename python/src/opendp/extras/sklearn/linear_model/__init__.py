@@ -14,6 +14,7 @@ class LinearRegression:
     """
 
     def fit(
+        self,
         X,
         y,
         x_bounds: tuple[float, float],
@@ -31,12 +32,25 @@ class LinearRegression:
         :param scale: TODO
         :param runs: Controls how many times randomized pairwise predictions are computed. Increasing this value can improve the robustness and accuracy of the results; However, it can also increase computational cost and amount of noise needed later in the algorithm.
         :return: A fitted sklearn ``LinearRegression``
+
+        :example:
+
+        >>> import opendp.prelude as dp
+        >>> lin_reg = dp.sklearn.linear_model.LinearRegression().fit(
+        ...     X=[[1], [2], [3], [4], [5]],
+        ...     y=[1, 2, 3, 4, 5],
+        ...     x_bounds=(0,10),
+        ...     y_bounds=(0,10),
+        ...     scale=1,
+        ... )
+        >>> lin_reg.predict([[10]])
+        array([...])
         """
         meas = _make_private_theil_sen(
             x_bounds=x_bounds, y_bounds=y_bounds, scale=scale, runs=runs
         )
         np = import_optional_dependency("numpy")
-        slope, intercept = meas(np.stack([X, y], axis=1))
+        slope, intercept = meas(np.stack([[x[0] for x in X], y], axis=1))
 
         from sklearn.linear_model import LinearRegression as LR
 
