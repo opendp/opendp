@@ -2,7 +2,6 @@ import opendp.prelude as dp
 import pytest
 
 
-
 def test_sequential_composition():
     max_influence = 1
     sc_meas = dp.c.make_adaptive_composition(
@@ -181,4 +180,24 @@ def test_privacy_filter():
     assert qbl_filter.privacy_loss(1) == 1.0
     qbl_filter(m_count)
     assert qbl_filter.privacy_loss(1) == 2.0
+
+
+def test_odometer_chain_ot():
+
+    t_prior = dp.space_of(list[str]) >> dp.t.then_cast_default(TOA=int)
+    o_ac = t_prior >> dp.c.then_fully_adaptive_composition(
+        output_measure=dp.max_divergence()
+    )
+
+    qbl_ac: dp.OdometerQueryable = o_ac(["1"] * 200)
+    assert repr(qbl_ac) == "OdometerQueryable(Q=AnyMeasurement, QB=u32)"
+
+    m_sum = (
+        t_prior.output_space
+        >> dp.t.then_clamp((0, 10))
+        >> dp.t.then_sum()
+        >> dp.m.then_laplace(100.0)
+    )
+    assert isinstance(qbl_ac(m_sum), int)
+    assert qbl_ac.privacy_loss(1) == m_sum.map(1)
 

@@ -84,6 +84,7 @@ where
 }
 
 /// Denotes the prospective privacy loss of after releasing a query.
+#[derive(Clone)]
 pub enum PendingLoss<U> {
     /// The pending loss is the same as the current loss
     Same,
