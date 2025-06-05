@@ -17,7 +17,7 @@ class LinearRegression:
         self,
         X,
         y,
-        x_bounds: tuple[float, float],
+        x_bounds: tuple[float, float], # TODO: Wrap this so each feature has its own bound tuple?
         y_bounds: tuple[float, float],
         scale: float,
         runs: int = 1,
@@ -25,11 +25,11 @@ class LinearRegression:
         """
         Fit DP linear model.
 
-        :param X: TODO
-        :param y: TODO
-        :param x_bounds: TODO
-        :param y_bounds: TODO
-        :param scale: TODO
+        :param X: Training data. Array-like of shape (n_samples, 1)
+        :param y: Target values. Array-like of shape (n_samples,)
+        :param x_bounds: Bounds for training data
+        :param y_bounds: Bounds for target data
+        :param scale: The scale of the noise to be added
         :param runs: Controls how many times randomized pairwise predictions are computed. Increasing this value can improve the robustness and accuracy of the results; However, it can also increase computational cost and amount of noise needed later in the algorithm.
         :return: A fitted sklearn ``LinearRegression``
 
