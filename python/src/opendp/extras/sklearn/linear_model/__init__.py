@@ -1,6 +1,5 @@
-import numpy as np
-
 from opendp.extras.sklearn.linear_model._make_private_theil_sen import make_private_theil_sen as _make_private_theil_sen # noqa: F401
+from opendp._lib import import_optional_dependency
 
 
 class LinearRegression():
@@ -31,11 +30,13 @@ class LinearRegression():
         :param runs: Controls how many times randomized pairwise predictions are computed. 
         The default is 1. Increasing this value can improve the robustness and accuracy of the results; 
         however, it can also increase computational cost and amount of noise needed later in the algorithm.
+        
         '''
         # Should this return a new instance of this class?
         # or should we create a new sklearn.linear_model.LinearRegression
         # instance and set parameters on it?
         meas = _make_private_theil_sen(x_bounds=x_bounds, y_bounds=y_bounds, scale=scale, runs=runs)
+        np = import_optional_dependency('numpy')
         slope, intercept = meas(np.stack([X, y], axis=1))
 
         fit_regression = LinearRegression()
