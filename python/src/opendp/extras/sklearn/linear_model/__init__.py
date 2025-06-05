@@ -36,6 +36,11 @@ class LinearRegression:
         :example:
 
         >>> import opendp.prelude as dp
+        >>> try:
+        ...    import importlib
+        ...    assert importlib.import_module('sklearn')
+        ... except ImportError:
+        ...     pytest.skip('Requires extra install')
         >>> lin_reg = dp.sklearn.linear_model.LinearRegression().fit(
         ...     X=[[1], [2], [3], [4], [5]],
         ...     y=[1, 2, 3, 4, 5],
