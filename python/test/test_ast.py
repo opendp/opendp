@@ -130,6 +130,8 @@ def check_directive_order(docstring):
 
 def check_directive_continuity(docstring):
     '''
+    TODO: Add support for multi-line, indented param descriptions.
+
     >>> check_directive_continuity("""
     ...     :param xyz: The input
     ...     Surprise!
