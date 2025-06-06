@@ -60,7 +60,7 @@ def array2_domain(
     size: int | None = None,
     num_columns: int | None = None,
     nan: Optional[bool] = None,
-    cardinalities: numpy.ndarray | None = None,
+    cardinalities: list[int] | numpy.ndarray | None = None,
     T: RuntimeTypeDescriptor | None = None,
 ) -> Domain:
     """Construct a Domain representing 2-dimensional numpy arrays.
@@ -114,13 +114,32 @@ def array2_domain(
             raise ValueError("origin must have 0 or 1 dimensions")  # pragma: no cover
 
     elif origin is not None:
-        raise ValueError("origin must be a scalar or ndarray")
+        raise ValueError("origin must be a scalar, ndarray or None")
 
     _check_nonnegative_int(size, "size")
     _check_nonnegative_int(num_columns, "num_columns")
 
-    if any(not isinstance(c, int) or c <= 0 for c in (cardinalities or [])):
-        raise ValueError(f"cardinalities ({cardinalities}) must be positive")
+    if isinstance(cardinalities, list):
+        cardinalities = np.asarray(cardinalities)
+    
+    if isinstance(cardinalities, np.ndarray):
+        if cardinalities.ndim != 1:
+            raise ValueError(f"cardinalities ndim ({cardinalities.ndim}) must be one")
+        
+        if not np.issubdtype(cardinalities.dtype, np.integer):
+            raise ValueError(f"cardinalities dtype ({cardinalities.dtype}) must be integer")
+        
+        if any(c <= 0 for c in cardinalities):
+            raise ValueError(f"cardinalities ({cardinalities}) must be positive")
+        
+        if num_columns is None:
+            num_columns = len(cardinalities)
+
+        if len(cardinalities) != num_columns:
+            raise ValueError(f"cardinalities length ({len(cardinalities)}) must match num_columns ({num_columns})")
+    
+    elif cardinalities is not None:
+        raise ValueError("cardinalities must be a list, ndarray or None")
     
     T = T or _ELEMENTARY_TYPES.get(origin.dtype.type)
     if T is None:
@@ -153,8 +172,12 @@ def array2_domain(
         if size is not None and len(x) != size:
             raise ValueError(f"must have exactly {size} rows")
         
-        if cardinalities is not None and cardinalities >= np.unique(x, axis=0):
-            raise ValueError(f"unique values in data must not exceed cardinalities")
+        if cardinalities is not None:
+            x_s = np.sort(x, axis=0)
+            n_unique = (x_s[1:] != x_s[:-1]).sum(axis=0) + 1
+            if any(cardinalities < n_unique):
+                raise ValueError("unique values in data must not exceed cardinalities")
+        
         return True
 
     desc = NPArray2Descriptor(
@@ -196,9 +219,9 @@ def arrayd_domain(
     import opendp.prelude as dp
 
     if not isinstance(shape, tuple):
-        raise ValueError("shape must be a tuple")
+        raise ValueError(f"shape ({shape}) must be a tuple")
     if any(not isinstance(s, int) or s <= 0 for s in shape):
-        raise ValueError("shape must be a tuple of positive integers")
+        raise ValueError(f"shape ({shape}) must be a tuple of positive integers")
 
     if T is None:
         raise ValueError("must specify T, the type of data in the array")  # pragma: no cover
@@ -208,10 +231,13 @@ def arrayd_domain(
 
     def _member(x):
         if not isinstance(x, np.ndarray):
-            raise TypeError("must be a numpy ndarray")
+            raise ValueError("must be a numpy ndarray")
         T_actual = _ELEMENTARY_TYPES.get(x.dtype.type)
         if T_actual != T:
-            raise TypeError(f"must have data of type {T}, got {T_actual}")
+            raise ValueError(f"must have data of type {T}, got {T_actual}")
+        
+        if x.shape != shape:
+            raise ValueError(f"must have shape {shape}")
         return True
 
     desc = NPArrayDDescriptor(
