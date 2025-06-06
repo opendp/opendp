@@ -135,7 +135,7 @@ jobs:
         extra-install:
           - '.'
           - '.[scikit-learn]'
-          - '.[polars]'
+          - '.[polars,mbi]'
 
     steps:
       - name: Checkout repository
