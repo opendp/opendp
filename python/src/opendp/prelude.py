@@ -35,7 +35,7 @@ For example:
     <class 'function'>
 '''
 from opendp.mod import *
-from opendp.extras import sklearn, numpy, polars, examples # maxine_edit: deleted synthetic here
+from opendp.extras import sklearn, numpy, polars, examples, synthetic
 from opendp.extras.polars import dp_len as len
 import opendp.transformations as t
 import opendp.measurements as m
@@ -47,6 +47,5 @@ from opendp.typing import *
 from opendp.accuracy import *
 from opendp.core import new_function, new_queryable
 from opendp.context import *
-import opendp.extras.synthetic as synthetic # maxine_edit: added this to make dp.synthetic accessible elsewhere
-synthetic = synthetic
-__all__ = ["t", "m", "c", "synthetic"]
+
+__all__ = ["t", "m", "c"]

@@ -140,12 +140,12 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - '3.9'
+          - '3.10'
           - '3.12'
         extra-install:
           - '.'
           - '.[scikit-learn]'
-          - '.[polars]'
+          - '.[polars,synthetic]'
 
     steps:
       - name: Checkout repository
