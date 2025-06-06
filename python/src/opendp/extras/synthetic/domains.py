@@ -5,8 +5,8 @@ from opendp.mod import Domain
 def tuple_domain(element_domains: tuple[Domain, ...]):
     """Domain containing a fixed-length tuple of elements, each with its own domain."""
 
-    def _member(x):
-        if not isinstance(x, list):
+    def _member(x):  # pragma: no cover
+        if not isinstance(x, tuple):
             raise ValueError("Expected a tuple")
         return all(domain_i.member(x_i) for domain_i, x_i in zip(element_domains, x))
 
@@ -30,4 +30,3 @@ def linf_l2_distance():
     is the maximum L2 sensitivity of any array in the list.
     """
     return _extrinsic_distance(descriptor="LInfL2Distance")
-
