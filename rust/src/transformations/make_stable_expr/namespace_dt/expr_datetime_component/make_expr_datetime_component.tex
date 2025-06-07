@@ -1,0 +1,88 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{fn make\_expr\_datetime\_component}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of \rustdoc{transformations/make\_stable\_expr/namespace\_dt/expr\_datetime\_component/fn}{make\_expr\_datetime\_component} in \asOfCommit{mod.rs}{f5bb719}.
+
+\texttt{make\_expr\_datetime\_component} returns a Transformation that extracts a component from a temporal data type.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Argument \texttt{input\_domain} of type \texttt{ExprDomain}
+    \item Argument \texttt{input\_metric} of type \texttt{M}
+    \item Generic \texttt{M} implements \texttt{OuterMetric}
+    \begin{itemize}
+        \item \texttt{OuterMetric} defines an associated type \texttt{InnerMetric} that must implement \texttt{DatasetMetric}
+    \end{itemize}
+    \item \texttt{(ExprDomain, M)} implements \texttt{MetricSpace}
+    \item \texttt{Expr} implements \texttt{StableExpr<M, M>}
+\end{itemize}
+
+\subsubsection*{Caller-verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/make_expr_datetime_component.py}
+
+\subsection*{Postcondition}
+\begin{sloppypar}
+\validTransformation{\texttt{(input\_domain, input\_metric, M)}}{\texttt{make\_expr\_datetime\_component}}
+\end{sloppypar}
+
+\section{Proof}
+
+Starting from line \ref{match-strategy}, 
+\texttt{expr} is matched as if it were a temporal expression, or otherwise rejects the expression.
+All preconditions for \rustdoc{transformations/make\_stable\_expr/namespace\_dt/expr\_datetime\_component/fn}{make\_datetime\_component} 
+on line \ref{match-dt} are satisfied by the compiler, 
+therefore by the postcondition \texttt{to\_dtype} and \texttt{max\_num\_partitions} 
+are the output data type and upper bound on the number of unique values in the output.
+
+All preconditions for \texttt{make\_stable} on line \ref{t-prior} are compiler-verified,
+therefore by the postcondition \texttt{t\_prior} is a valid transformation.
+To prove that the output is a valid transformation, 
+we must first prove that the transformation on line \ref{t-component} is a valid transformation.
+
+\begin{proof}[Proof of Data-Independent Errors]
+    If the input data type does not include the component, 
+    then all possible choices of input dataset would fail,
+    resulting in data-independent errors.
+
+    If the input data type does include the component,
+    then Polars will never raise an error.
+\end{proof}
+
+\begin{proof}[Proof of Output Domain]
+    The output domain is the same as the input domain, 
+    but the active series has a new data type and margin metadata needs to be updated.
+    Line \ref{domain-dtype} updates the series domain so that non-null elements are of type \texttt{to\_type},
+    which by the postcondition of \texttt{match\_datetime\_component} on line \ref{match-dt}
+    represents the type of outputs when \texttt{temporal\_function} is applied to the data.
+
+    Other domain descriptors, like the nullity and name, remain unchanged.
+    New null values cannot be introduced, 
+    because retrieval of a time component fails (in a data-independent way) if the component is not present in the type.
+    The output domain now accounts for all transformations made to data in the input domain.
+\end{proof}
+
+\begin{proof}[Proof of Stability]
+    Datetime component retrieval is a 1-stable row-by-row transformation, 
+    as the component retrieval is applied independently to each and every row.
+    See \rustdoc{transformations/manipulation/fn}{make\_row\_by\_row} for a proof of the stability of row-by-row functions.
+\end{proof}
+
+Since it has been shown that both \texttt{t\_prior} and the component transformation are valid transformations,
+then the preconditions for \texttt{make\_chain\_tt} are met (invoked via the right-shift operator shorthand),
+and therefore the output is a valid transformation.
+
+\end{document}

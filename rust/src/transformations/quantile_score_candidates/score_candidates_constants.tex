@@ -1,0 +1,52 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{fn score\_candidates\_constants}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle  
+
+
+\contrib
+
+Proves soundness of \rustdoc{transformations/quantile\_score\_candidates/fn}{score\_candidates\_constants} 
+in \asOfCommit{mod.rs}{f5bb719}.
+\texttt{score\_candidates\_constants} returns a fractional decomposition of alpha and an upper bound on dataset size to protect against overflow.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+None
+
+\subsection*{Function}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/score_candidates_constants.py}
+
+
+\subsection*{Postcondition}
+
+\begin{theorem}
+    When the function does not fail, it returns the following constants:
+    \begin{itemize}
+        \item \texttt{alpha\_num}
+        \item \texttt{alpha\_den}
+        \item \texttt{size\_limit}
+    \end{itemize}
+
+    The constants follow the following properties:
+    \begin{enumerate}
+        \item $alpha_num / alpha_den \in [0, 1]$
+        \item $size_limit \cdot alpha_den < 2^{64}$
+    \end{enumerate}
+
+    An error is raised if these properties cannot be met.
+\end{theorem}
+
+\begin{proof}
+    While the code is complicated, all that is needed is to observe that the function does not return until line \ref{return},
+    and that the conditions are explicitly checked on lines \ref{prop-1} and \ref{prop-2}.
+    
+    Therefore, the postcondition holds.
+\end{proof}
+
+
+\end{document}

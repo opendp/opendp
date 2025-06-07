@@ -1,0 +1,58 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{fn make\_vec}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{transformations/fn}{make\_vec} in \asOfCommit{mod.rs}{f5bb719}.
+
+This transformation simply wraps an input scalar in a singleton vec.
+The output metric then becomes an Lp distance.
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+\begin{itemize}
+    \item Generic \texttt{T} implements trait \rustdoc{traits/trait}{Number}
+    \item Generic \texttt{Q} implements trait \rustdoc{traits/trait}{Number}
+\end{itemize}
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_vec.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \validTransformation{(\texttt{input\_space, T, Q})}{\texttt{make\_vec}}
+\end{theorem}
+
+\begin{proof}
+    The function is infallible, and the output domain trivially follows, since all output vectors are length-one.
+    For all $x$ in the input domain, the output of \texttt{make\_vec} is a vector of length 1, so the output domain is trivially valid.
+    The function is 1-stable because:
+
+    \begin{align}
+        \texttt{d\_out}\\
+        = \max_{x \sim x'} d_{Lp}(f(x), f(x'))\\
+        = \max_{x \sim x'} (\sum_i (x_i - x_i')^p)^{1/p}\\
+        = \max_{x \sim x'} ((x_1 - x_1')^p)^{1/p}\\
+        = \max_{x \sim x'} |x_1 - x_1'|\\
+        = \max_{x \sim x'} d_{Abs}(x_1, x_1')\\
+        = 1 \cdot \texttt{d\_in}\\
+    \end{align}
+
+    For every pair of elements $x, x'$ in \texttt{input\_domain} and for every pair $(\din, \dout)$, 
+    where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \\ \texttt{output\_metric}, 
+    if $x, x'$ are \din-close under \texttt{input\_metric}, $\texttt{stability\_map}(\din)$ does not raise an exception,
+    and $\texttt{stability\_map}(\din) \leq \dout$, 
+    then $\function(x), \function(x')$ are $\dout$-close under \texttt{output\_metric}.
+\end{proof}
+
+\end{document}

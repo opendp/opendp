@@ -1,0 +1,55 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{MakeNoise<AtomDomain<IBig>, AbsoluteDistance<RBig>, MO> for IntExpFamily<P>}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise/trait}{MakeNoise} over scalars
+for \texttt{ZExpFamily} in \asOfCommit{mod.rs}{f5bb719}.
+
+The intuition of this implementation is that a vector-valued mechanism can be used to privatize a scalar-valued input,
+by transforming the input into a singleton vector, 
+applying the vector mechanism, and then unpacking the resulting singleton vector.
+
+This matches the code and proof for the float case, \texttt{MakeNoise<AtomDomain<T>, AbsoluteDistance<QI>, MO> for FloatExpFamily<P>},
+except for elementary data type.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+
+\begin{itemize}
+    \item Const-generic \texttt{P} is of type \texttt{usize}
+    \item Generic \texttt{MO} implements trait \rustdoc{core/trait}{Measure}
+    \item Type \texttt{ZExpFamily<P>} implements trait \rustdoc{measurements/trait}{NoisePrivacyMap}\texttt{<LpDistance<P, RBig>, MO>}.
+        This bound requires that it must be possible to construct a privacy map for this combination of noise distribution, distance type and privacy measure.
+\end{itemize}
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/MakeNoise_AtomDomain_for_ZExpFamily.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \validMeasurement{(\texttt{self, input\_space, MO, T, P, QI})}{\texttt{make\_noise}}
+\end{theorem}
+
+\begin{proof}
+    Neither constructor \rustdoc{transformations/scalar_to_vector/fn}{make\_vec} nor
+    \rustdoc{measurements/noise/trait}{MakeNoise}\texttt{.make\_noise} have manual preconditions, 
+    and the postconditions guarantee a valid transformation and valid measurement, respectively.
+    \rustdoc{transformations/scalar\_to\_vector/fn}{then\_index\_or\_default} also does not have preconditions,
+    and its postcondition guarantees that it returns a valid postprocessor.
+
+    The chain of a valid transformation, valid measurement and valid postprocessor is a valid measurement.
+\end{proof}
+
+\end{document}
