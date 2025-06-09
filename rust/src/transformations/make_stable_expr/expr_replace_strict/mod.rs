@@ -5,6 +5,7 @@ use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::metrics::MicrodataMetric;
+use crate::transformations::expr_replace::materialize_lit_list;
 
 use super::StableExpr;
 use super::expr_replace::{is_cast_fallible, literal_is_nullable, literal_len};
@@ -33,14 +34,21 @@ where
     let Expr::Function {
         mut input,
         function: FunctionExpr::ReplaceStrict { return_dtype },
-        options,
     } = expr
     else {
         return fallible!(MakeTransformation, "expected replace_strict expression");
     };
 
+    let return_dtype_lit = match return_dtype.as_ref() {
+        Some(expr) => Some(
+            expr.as_literal()
+                .ok_or_else(|| err!(MakeTransformation, "return_dtype must be literal"))?,
+        ),
+        None => None,
+    };
+
     if input.len() == 3 {
-        input.push(Expr::Literal(LiteralValue::Null));
+        input.push(Expr::Literal(LiteralValue::untyped_null()));
     }
 
     // check arguments
@@ -66,8 +74,11 @@ where
         );
     };
 
+    let old_lit = materialize_lit_list(old_lit)?;
+    let new_lit = materialize_lit_list(new_lit)?;
+
     // check lengths
-    let (old_len, new_len) = (literal_len(old_lit)?, literal_len(new_lit)?);
+    let (old_len, new_len) = (literal_len(&old_lit)?, literal_len(&new_lit)?);
     if ![old_len, 1].contains(&new_len) {
         return fallible!(
             MakeTransformation,
@@ -104,13 +115,13 @@ where
     }
 
     let new_dtype = new_lit.get_datatype();
-    if let Some(return_dtype) = return_dtype.as_ref() {
-        if is_cast_fallible(&new_dtype, return_dtype) {
+    if let Some(return_dtype_lit) = return_dtype_lit {
+        if is_cast_fallible(&new_dtype, return_dtype_lit) {
             return fallible!(
                 MakeTransformation,
                 "replace_strict: new datatype ({}) must be consistent with the return datatype ({})",
                 new_dtype,
-                return_dtype
+                return_dtype_lit
             );
         }
     }
@@ -132,7 +143,7 @@ where
 
     // if replacement can introduce nulls, then set nullable
     output_domain.column.nullable =
-        literal_is_nullable(new_lit) || literal_is_nullable(default_lit);
+        literal_is_nullable(&new_lit) || literal_is_nullable(&default_lit);
 
     t_prior
         >> Transformation::new(
@@ -143,7 +154,6 @@ where
                 function: FunctionExpr::ReplaceStrict {
                     return_dtype: return_dtype.clone(),
                 },
-                options: options.clone(),
             }),
             middle_metric.clone(),
             middle_metric,

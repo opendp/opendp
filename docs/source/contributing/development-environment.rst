@@ -56,7 +56,28 @@ Now run ``cargo build`` in the ``rust`` subdirectory of the repo:
 This will compile a debug build of the OpenDP shared library, placing it in the directory ``opendp/rust/target/debug``. 
 (The specific name of the library file will vary depending on your platform.)
 
+
+.. note::
+
+  On Mac, you may need to set ``RUSTFLAGS`` before build (`necessary for PyO3 <https://pyo3.rs/v0.25.1/building-and-distribution.html#macos>`_):
+
+  .. code-block:: bash
+
+    export RUSTFLAGS="-C link-arg=-undefined -C link-arg=dynamic_lookup"
+
 Substitute ``cargo build`` with ``cargo test`` to test, or ``cargo check`` to check syntax.
+
+.. note::
+
+  If linking fails when runnning ``cargo test``, you may need to build without the ``pyo3/extension-module`` feature (`context here <https://pyo3.rs/v0.25.1/faq.html#i-cant-run-cargo-test-or-i-cant-build-in-a-cargo-workspace-im-having-linker-issues-like-symbol-not-found-or-undefined-reference-to-_pyexc_systemerror>`_):
+
+  .. code-block:: bash
+
+    cargo test --features=untrusted,polars,ffi,derive
+  
+  Since ``pyo3/extension-module`` is enabled when running ``--all-features``, 
+  the other remaining features are enabled in the above command.
+
 
 Note that Python and R require builds with different features.
 Details are in the :ref:`python-setup` and :ref:`r-setup` sections below.

@@ -9,7 +9,7 @@ use crate::transformations::StableExpr;
 use crate::transformations::traits::UnboundedMetric;
 use polars::chunked_array::cast::CastOptions;
 use polars::prelude::*;
-use polars_plan::prelude::{FunctionFlags, GroupbyOptions};
+use polars_plan::prelude::GroupbyOptions;
 
 use super::StableDslPlan;
 
@@ -155,9 +155,7 @@ pub(crate) fn check_infallible(expr: &Expr, resize: Resize) -> Fallible<()> {
     Ok(match expr {
         Expr::Alias(e, _) => check_infallible(e.as_ref(), resize)?,
         Expr::Column(_) => (),
-        Expr::Columns(_) => (),
-        Expr::DtypeColumn(_) => (),
-        Expr::IndexColumn(_) => (),
+        Expr::Selector(_) => (),
         Expr::Literal(_) => (),
         Expr::BinaryExpr { left, right, .. } => {
             check_infallible(&left, Resize::Ban)?;
@@ -207,23 +205,8 @@ pub(crate) fn check_infallible(expr: &Expr, resize: Resize) -> Fallible<()> {
             check_infallible(truthy, Resize::Ban)?;
             check_infallible(falsy, Resize::Ban)?;
         }
-        Expr::Function {
-            input,
-            function,
-            options,
-        } => {
-            if matches!(resize, Resize::Ban)
-                && options.flags.contains(FunctionFlags::CHANGES_LENGTH)
-                && !options.flags.contains(FunctionFlags::RETURNS_SCALAR)
-            {
-                return fallible!(
-                    MakeTransformation,
-                    "Function {function:?} may cause data-dependent errors due to different lengths."
-                );
-            }
-            check_infallible_function(function, input, resize)?
-        }
-        Expr::Explode(e) => {
+        Expr::Function { input, function } => check_infallible_function(function, input, resize)?,
+        Expr::Explode { input: e, .. } => {
             if matches!(resize, Resize::Ban) {
                 return fallible!(
                     MakeTransformation,
@@ -248,17 +231,14 @@ pub(crate) fn check_infallible(expr: &Expr, resize: Resize) -> Fallible<()> {
                 "Window functions are not currently supported."
             );
         }
-        Expr::Wildcard => (),
         Expr::Slice { .. } => {
             return fallible!(
                 MakeTransformation,
                 "Slice may cause data-dependent errors due to null offset."
             );
         }
-        Expr::Exclude(e, _) => check_infallible(e.as_ref(), resize)?,
         Expr::KeepName(e) => check_infallible(e.as_ref(), resize)?,
         Expr::Len => (),
-        Expr::Nth(_) => (),
         Expr::RenameAlias { expr, .. } => check_infallible(expr.as_ref(), resize)?,
         Expr::Field(_) => (),
         Expr::AnonymousFunction { .. } => {
@@ -270,7 +250,15 @@ pub(crate) fn check_infallible(expr: &Expr, resize: Resize) -> Fallible<()> {
         Expr::SubPlan(_, _) => {
             return fallible!(MakeTransformation, "SubPlans are not currently supported.");
         }
-        Expr::Selector(_) => (),
+        Expr::DataTypeFunction(_) => {
+            return fallible!(
+                MakeTransformation,
+                "Data type function is not currently supported."
+            );
+        }
+        Expr::Eval { .. } => {
+            return fallible!(MakeTransformation, "Eval is not currently supported.");
+        }
     })
 }
 
@@ -320,9 +308,14 @@ fn check_infallible_function(
             BooleanFunction::IsNotNull => check_inputs!(),
             BooleanFunction::IsFinite => check_inputs!(),
             BooleanFunction::IsInfinite => check_inputs!(),
+            BooleanFunction::IsFirstDistinct => check_inputs!(),
+            BooleanFunction::IsLastDistinct => check_inputs!(),
+            BooleanFunction::IsUnique => check_inputs!(),
+            BooleanFunction::IsDuplicated => check_inputs!(),
+            BooleanFunction::IsBetween { .. } => check_inputs!(),
             BooleanFunction::IsNan => check_inputs!(),
             BooleanFunction::IsNotNan => check_inputs!(),
-            BooleanFunction::IsIn => {
+            BooleanFunction::IsIn { .. } => {
                 let [input, set] = <&[Expr; 2]>::try_from(inputs.as_slice())
                     .map_err(|_| err!(MakeTransformation, "IsIn must have two arguments"))?;
                 check_infallible(input, resize)?;
@@ -386,12 +379,10 @@ fn check_infallible_function(
                 "FfiPlugin may raise data-dependent errors."
             );
         }
-        FunctionExpr::BackwardFill { .. } => check_inputs!(),
-        FunctionExpr::ForwardFill { .. } => check_inputs!(),
         FunctionExpr::MaxHorizontal => check_inputs!(aligned_rows),
         FunctionExpr::MinHorizontal => check_inputs!(aligned_rows),
-        FunctionExpr::SumHorizontal => check_inputs!(aligned_rows),
-        FunctionExpr::MeanHorizontal => check_inputs!(aligned_rows),
+        FunctionExpr::SumHorizontal { ignore_nulls: _ } => check_inputs!(aligned_rows),
+        FunctionExpr::MeanHorizontal { ignore_nulls: _ } => check_inputs!(aligned_rows),
         // in the future, other patterns may be added
         #[allow(unreachable_patterns)]
         _ => {

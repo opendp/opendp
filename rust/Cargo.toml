@@ -48,45 +48,126 @@ bitvec = "1.0"
 # A strict version requirement is necessary to keep the serialization format of LazyFrames stable.
 # If you change the version of Polars, 
 # be sure to also change the Python package version requirement and test binary compatibility.
-polars = { version = "=0.44.2", features = [
-    "lazy",
-    "csv",
-    "dtype-struct",
-    "dtype-array",
-    "dtype-date",
-    "dtype-datetime",
-    "dtype-time",
-    "parquet",
-    "serde-lazy",
-    "streaming",
-    "round_series",
-    "rank",
-    "polars-ops",
-    "abs",
+#
+# The features track the features enabled in the Rust build for the Polars Python crate.
+# Having matching features is necessary for cross-binary DSL compatibility.
+polars = { version = "=0.50.0", features = [
     "meta",
-    "cutqcut",
-    "strings",
-    "repeat_by",
+    # polars-python/polars
+    "abs",
+    "approx_unique",
+    "array_any_all",
+    "arg_where",
+    "bitwise",
+    "business",
     "concat_str",
-    "replace",
+    "cum_agg",
+    "cumulative_eval",
+    "dataframe_arithmetic",
+    "month_start",
+    "month_end",
+    "offset_by",
+    "diagonal_concat",
+    "diff",
+    "dot_diagram",
+    "dot_product",
+    "dtype-categorical",
+    "dtype-full",
+    "dynamic_group_by",
+    "ewma",
+    "ewma_by",
+    "fmt",
+    "fused",
+    "interpolate",
+    "interpolate_by",
+    "is_first_distinct",
+    "is_last_distinct",
+    "is_unique",
+    "is_between",
+    "lazy",
+    "list_eval",
+    "list_to_struct",
+    "list_arithmetic",
+    "array_arithmetic",
+    "array_to_struct",
+    "log",
+    "mode",
+    "moment",
+    "ndarray",
+    "partition_by",
+    "product",
     "random",
     "range",
+    "rank",
+    "reinterpret",
+    "replace",
+    "rolling_window",
+    "rolling_window_by",
+    "round_series",
+    "row_hash",
+    "rows",
+    "semi_anti_join",
+    "serde-lazy",
+    "string_encoding",
+    "string_normalize",
+    "string_reverse",
+    "string_to_integer",
+    "string_pad",
+    "strings",
+    "temporal",
+    "to_dummies",
+    "true_div",
+    "unique_counts",
+    "zip_with",
+    "cov",
+    # polars-python/operations
+    "approx_unique",
+    "array_any_all",
+    "array_count",
+    "bitwise",
     "is_in",
-    "row_hash"
-], optional = true }
-polars-plan = { version = "=0.44.2", features = [
-    "ffi_plugin",
-], optional = true }
+    "repeat_by",
+    "trigonometry",
+    "sign",
+    "performant",
+    "list_gather",
+    "list_filter",
+    "list_count",
+    "list_sets",
+    "list_any_all",
+    "list_drop_nulls",
+    "list_sample",
+    "cutqcut",
+    "rle",
+    "extract_groups",
+    "pivot",
+    "extract_jsonpath",
+    "asof_join",
+    "cross_join",
+    "pct_change",
+    "index_of",
+    "search_sorted",
+    "merge_sorted",
+    "top_k",
+    "propagate_nans",
+    "timezones",
+    "peaks",
+    "hist",
+    "find_many",
+    "string_normalize",
+], optional = true }    
+polars-plan = { version = "=0.50.0", features = ["ffi_plugin", "python"], optional = true }
+polars-utils = { version = "=0.50.0" }
+
 # matches the version specified in Polars: 
 #   https://github.com/pola-rs/polars/blob/main/Cargo.toml
 chrono = { version = "0.4.31", default-features = false, features = ["std"], optional = true }
 
-polars-arrow = { version = "=0.44.2", optional = true }
-pyo3 = { version = "0.21.2", features = ["abi3-py39", "extension-module"], optional = true }
-pyo3-polars = { version = "=0.18.0", features = ["derive", "dtype-array", "dtype-categorical", "dtype-struct"], optional = true }
+polars-arrow = { version = "=0.50.0", optional = true }
+pyo3 = { version = "0.25", features = ["abi3-py310"], optional = true }
+pyo3-polars = { version = "=0.23.1", features = ["derive", "dtype-array", "dtype-categorical", "dtype-struct", "lazy"], optional = true }
 serde = { version = "1.0", optional = true }
 serde-pickle = { version = "1.1", optional = true }
-ciborium = { version = "0.2.1", optional = true }
 
 lazy_static = { version = "1.4.0", optional = true }
 
@@ -112,7 +193,6 @@ polars = [
     "pyo3-polars",
     "serde",
     "serde-pickle",
-    "ciborium",
     "chrono"
 ]
 use-openssl = ["openssl"]
@@ -122,10 +202,8 @@ ffi = ["lazy_static", "cbindgen"]
 # execute proc macros to insert proof links
 derive = ["opendp_tooling", "opendp_derive/full", "syn", "proc-macro2"]
 
-# deprecated
-bindings-python = ["bindings"]
 # generate language bindings
-bindings = ["ffi", "derive"]
+bindings = ["ffi", "derive", "pyo3/extension-module"]
 
 # generate "then_xxx" functions in Rust for "make_xxx" functions whose first two arguments are the metric space
 partials = ["derive", "opendp_derive/partials"]

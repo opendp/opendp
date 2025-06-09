@@ -57,10 +57,6 @@ fn assert_temporal_op_schema<const L: usize>(df: DataFrame, ops: [TemporalFuncti
             Expr::Function {
                 input: vec![col("x")],
                 function: FunctionExpr::TemporalExpr(op.clone()),
-                options: FunctionOptions {
-                    collect_groups: ApplyOptions::ElementWise,
-                    ..Default::default()
-                },
             }
             .alias(op.to_string().as_str())
         })

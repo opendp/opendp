@@ -72,7 +72,7 @@ where
         // If the float domain is NaN-able, then the domain includes NaN
         DataType::Float32 => fill_series.atom_domain::<f32>()?.nan(),
         DataType::Float64 => fill_series.atom_domain::<f64>()?.nan(),
-        i if i.is_numeric() => false,
+        i if i.is_primitive_numeric() => false,
         _ => {
             return fallible!(
                 MakeTransformation,

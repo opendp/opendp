@@ -11,10 +11,12 @@ use polars::error::PolarsResult;
 use polars::error::polars_bail;
 #[cfg(feature = "ffi")]
 use polars::error::polars_err;
-use polars::prelude::{Column, CompatLevel};
+use polars::prelude::{Column, CompatLevel, IntoColumn};
 use polars::series::Series;
+#[cfg(feature = "ffi")]
+use polars_arrow as arrow;
 use polars_plan::dsl::{ColumnsUdf, Expr, GetOutput};
-use polars_plan::prelude::{ApplyOptions, FunctionOptions};
+use polars_plan::prelude::{FunctionFlags, FunctionOptions};
 #[cfg(feature = "ffi")]
 use pyo3_polars::derive::polars_expr;
 use serde::{Deserialize, Serialize};
@@ -117,9 +119,10 @@ pub(crate) struct IndexCandidatesPlugin {
 impl OpenDPPlugin for IndexCandidatesShim {
     const NAME: &'static str = "index_candidates";
     fn function_options() -> FunctionOptions {
+        let mut flags = FunctionFlags::default();
+        flags.set_elementwise();
         FunctionOptions {
-            collect_groups: ApplyOptions::ElementWise,
-            fmt_str: Self::NAME,
+            flags,
             ..Default::default()
         }
     }
@@ -133,11 +136,7 @@ impl OpenDPPlugin for IndexCandidatesShim {
 impl OpenDPPlugin for IndexCandidatesPlugin {
     const NAME: &'static str = "index_candidates_plugin";
     fn function_options() -> FunctionOptions {
-        FunctionOptions {
-            collect_groups: ApplyOptions::ElementWise,
-            fmt_str: Self::NAME,
-            ..Default::default()
-        }
+        FunctionOptions::elementwise()
     }
 
     fn get_output(&self) -> Option<GetOutput> {
@@ -168,7 +167,7 @@ fn index_candidates_udf(inputs: &[Column], kwargs: IndexCandidatesPlugin) -> Pol
         polars_bail!(InvalidOperation: "{:?} expects a single input field", IndexCandidatesShim::NAME);
     };
     let selections = kwargs.candidates.0.take(column.u32()?)?;
-    Ok(Column::Series(selections.with_name(column.name().clone())))
+    Ok(selections.with_name(column.name().clone()).into_column())
 }
 
 // generate the FFI plugin for the index_candidates noise expression
@@ -207,7 +206,7 @@ fn index_candidates_plugin(
     inputs: &[Series],
     kwargs: IndexCandidatesPlugin,
 ) -> PolarsResult<Series> {
-    let inputs: Vec<Column> = inputs.iter().cloned().map(Column::Series).collect();
+    let inputs: Vec<Column> = inputs.iter().cloned().map(|s| s.into_column()).collect();
     let out = index_candidates_udf(inputs.as_slice(), kwargs)?;
     Ok(out.take_materialized_series())
 }
