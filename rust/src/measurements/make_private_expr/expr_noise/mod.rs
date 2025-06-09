@@ -31,7 +31,7 @@ use polars::series::{IntoSeries, Series};
 #[cfg(feature = "ffi")]
 use polars::{datatypes::CompatLevel, error::polars_err};
 use polars_plan::dsl::{ColumnsUdf, GetOutput};
-use polars_plan::prelude::{ApplyOptions, FunctionOptions};
+use polars_plan::prelude::FunctionOptions;
 use serde::de::IntoDeserializer;
 use serde::{Deserialize, Serialize};
 
@@ -56,11 +56,7 @@ impl ColumnsUdf for NoiseShim {
 impl OpenDPPlugin for NoiseShim {
     const NAME: &'static str = "noise";
     fn function_options() -> FunctionOptions {
-        FunctionOptions {
-            collect_groups: ApplyOptions::ElementWise,
-            fmt_str: Self::NAME,
-            ..Default::default()
-        }
+        FunctionOptions::elementwise().with_fmt_str(Self::NAME)
     }
 
     fn get_output(&self) -> Option<GetOutput> {
@@ -98,11 +94,7 @@ impl ColumnsUdf for NoisePlugin {
 impl OpenDPPlugin for NoisePlugin {
     const NAME: &'static str = "noise_plugin";
     fn function_options() -> FunctionOptions {
-        FunctionOptions {
-            collect_groups: ApplyOptions::ElementWise,
-            fmt_str: Self::NAME,
-            ..Default::default()
-        }
+        FunctionOptions::elementwise().with_fmt_str(Self::NAME)
     }
 
     fn get_output(&self) -> Option<GetOutput> {
@@ -454,7 +446,7 @@ pub(crate) fn noise_plugin_type_udf(input_fields: &[Field]) -> PolarsResult<Fiel
 #[cfg(feature = "ffi")]
 #[pyo3_polars::derive::polars_expr(output_type_func=noise_plugin_type_udf)]
 fn noise_plugin(inputs: &[Series], kwargs: NoisePlugin) -> PolarsResult<Series> {
-    let inputs: Vec<Column> = inputs.iter().cloned().map(Column::Series).collect();
+    let inputs: Vec<Column> = inputs.iter().cloned().map(|s| s.into_column()).collect();
     let out = noise_udf(inputs.as_slice(), kwargs)?;
     Ok(out.take_materialized_series())
 }

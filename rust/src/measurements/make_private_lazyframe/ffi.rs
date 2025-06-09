@@ -1,5 +1,4 @@
-use polars::lazy::frame::LazyFrame;
-use polars_plan::plans::DslPlan;
+use polars::{lazy::frame::LazyFrame, prelude::DslPlan};
 
 use crate::{
     core::{FfiResult, IntoAnyMeasurementFfiResultExt, Measure, Metric, MetricSpace},

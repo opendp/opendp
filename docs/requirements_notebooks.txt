@@ -4,6 +4,6 @@ pandas
 seaborn
 scipy
 scikit-learn
-polars==1.12.0
+polars==1.30.0
 pyarrow
 hvplot

@@ -18,8 +18,8 @@ use polars::prelude::DataType::{self, *};
 
 mod plugin_dq_score;
 pub(crate) use plugin_dq_score::{DiscreteQuantileScorePlugin, DiscreteQuantileScoreShim};
+use polars::prelude::{AnyValue, FalseT, LiteralValue, NamedFrom, Scalar};
 use polars::series::Series;
-use polars_plan::plans::typed_lit;
 
 #[cfg(test)]
 pub mod test;
@@ -111,8 +111,11 @@ where
     // alpha = alpha_num / alpha_den (numerator and denominator of alpha)
     let (alpha_num, alpha_den, size_limit) = score_candidates_constants(Some(mgl as u64), alpha)?;
 
-    let len = candidates.len() as i64;
-    let fill_value = typed_lit(0u64).repeat_by(len).reshape(&[-1, len]);
+    let len = candidates.len();
+    let fill_value = Expr::Literal(LiteralValue::Scalar(Scalar::new(
+        DataType::Array(Box::new(DataType::UInt64), len),
+        AnyValue::Array(Series::new("".into(), &vec![0u64; len]), len),
+    )));
 
     let mut output_domain = active_series.clone();
     output_domain.set_dtype(DataType::Array(
@@ -159,7 +162,7 @@ where
         )?
 }
 
-fn validate<T: 'static + PolarsDataType>(candidates: &Series) -> Fallible<()>
+fn validate<T: 'static + PolarsDataType<IsLogical = FalseT>>(candidates: &Series) -> Fallible<()>
 where
     for<'a> T::Physical<'a>: Number,
 {
@@ -170,10 +173,12 @@ where
             candidates.null_count()
         );
     }
-    check_candidates(&series_to_vec::<T>(&candidates.cast(&T::get_dtype())?)?)
+    check_candidates(&series_to_vec::<T>(
+        &candidates.cast(&T::get_static_dtype())?,
+    )?)
 }
 
-fn series_to_vec<'a, T: 'static + PolarsDataType>(
+fn series_to_vec<'a, T: 'static + PolarsDataType<IsLogical = FalseT>>(
     series: &'a Series,
 ) -> Fallible<Vec<T::Physical<'a>>>
 where

@@ -1,10 +1,8 @@
 use std::{collections::BTreeSet, sync::Arc};
 
-use polars::prelude::PlSmallStr;
-use polars::prelude::{JoinOptions, JoinType};
+use polars::prelude::{DslPlan, JoinOptions, JoinType, PlSmallStr};
 use polars_plan::{
     dsl::{Expr, Operator},
-    plans::DslPlan,
     prelude::GroupbyOptions,
     utils::expr_output_name,
 };

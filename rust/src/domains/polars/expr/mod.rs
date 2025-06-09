@@ -285,7 +285,7 @@ impl<Q: ProductOrd, const P: usize> MetricSpace for (ExprDomain, LpDistance<P, Q
                 "LpDistance between vectors with nulls is undefined"
             );
         }
-        if !column.dtype().is_numeric() {
+        if !column.dtype().is_primitive_numeric() {
             return fallible!(
                 MetricSpace,
                 "LpDistance is only well defined for numeric data"
@@ -305,7 +305,7 @@ impl<Q: ProductOrd> MetricSpace for (ExprDomain, LInfDistance<Q>) {
             );
         }
         if let DataType::Array(inner_dtype, _) = column.dtype() {
-            if !inner_dtype.is_numeric() {
+            if !inner_dtype.is_primitive_numeric() {
                 return fallible!(
                     MetricSpace,
                     "LInfDistance is only well defined for numeric array data"

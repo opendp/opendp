@@ -1,6 +1,6 @@
 use polars::{
     prelude::{NamedFrom, PlSmallStr, is_in},
-    series::Series,
+    series::{IntoSeries, Series},
 };
 
 use crate::{core::Domain, error::Fallible};
@@ -58,7 +58,10 @@ impl Domain for EnumDomain {
     fn member(&self, value: &Self::Carrier) -> Fallible<bool> {
         Ok(is_in(
             &self.categories,
-            &Series::new("".into(), &vec![value.as_str()]),
+            &Series::new("".into(), &vec![value.as_str()])
+                .implode()?
+                .into_series(),
+            false,
         )?
         .get(0)
         .unwrap())

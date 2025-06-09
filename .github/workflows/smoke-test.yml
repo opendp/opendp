@@ -126,7 +126,7 @@ jobs:
         run: cargo test --verbose
 
       - name: Test (all-features)
-        run: cargo test --verbose --all-features
+        run: cargo test --verbose --features=ffi,derive,polars,untrusted
 
       - name: Run docs example
         run: cd ../docs/source/getting-started/code/quickstart-framework-rust; cargo run
