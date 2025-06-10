@@ -140,6 +140,5 @@ See :py:func:`opendp.context.Context.compositor` for more information.
   grouping
   preparing-microdata
   identifier-truncation
-  noise
 
 More thorough documentation can be found in the `OpenDP Polars User Guide <../../api/user-guide/polars/index.html>`_.
