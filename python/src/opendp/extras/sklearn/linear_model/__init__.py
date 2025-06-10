@@ -85,4 +85,4 @@ class LinearRegression:
 
         :raises NotImplementedError: This method is included only for documention.
         """
-        raise NotImplementedError("Included only for documentation")
+        raise NotImplementedError("Included only for documentation") # pragma: no cover
