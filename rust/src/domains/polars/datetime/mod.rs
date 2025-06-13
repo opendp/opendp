@@ -1,4 +1,4 @@
-use polars::prelude::{PlSmallStr, TimeUnit};
+use polars::prelude::{TimeUnit, TimeZone};
 
 use crate::{core::Domain, error::Fallible};
 
@@ -14,7 +14,7 @@ mod ffi;
 pub struct DatetimeDomain {
     pub time_unit: TimeUnit,
     /// See https://docs.pola.rs/user-guide/transformations/time-series/timezones/
-    pub time_zone: Option<PlSmallStr>,
+    pub time_zone: Option<TimeZone>,
 }
 
 impl Domain for DatetimeDomain {

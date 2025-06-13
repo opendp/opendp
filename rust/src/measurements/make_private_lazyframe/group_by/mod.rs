@@ -19,9 +19,8 @@ use dashu::integer::{IBig, UBig};
 use dashu::rational::RBig;
 use make_private_expr::PrivateExpr;
 use matching::find_len_expr;
-use polars::prelude::{JoinType, LazyFrame, len};
+use polars::prelude::{DslPlan, JoinType, LazyFrame, len};
 use polars_plan::dsl::{Expr, col, lit};
-use polars_plan::plans::DslPlan;
 
 #[cfg(test)]
 mod test;

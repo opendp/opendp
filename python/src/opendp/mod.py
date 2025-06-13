@@ -1551,7 +1551,7 @@ def deserialize(dp_json):
     return json.loads(dp_json, object_hook=_deserialization_hook)
 
 
-_EXPECTED_POLARS_VERSION = '1.12.0' # Keep in sync with setup.cfg.
+_EXPECTED_POLARS_VERSION = '1.30.0' # Keep in sync with setup.cfg.
 
 
 __version__ = get_opendp_version()

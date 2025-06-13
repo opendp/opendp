@@ -5,6 +5,7 @@ use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::metrics::MicrodataMetric;
+use crate::transformations::expr_replace::materialize_lit_list;
 
 use super::StableExpr;
 use super::expr_replace::{is_cast_fallible, literal_is_nullable, literal_len};
@@ -40,7 +41,7 @@ where
     };
 
     if input.len() == 3 {
-        input.push(Expr::Literal(LiteralValue::Null));
+        input.push(Expr::Literal(LiteralValue::untyped_null()));
     }
 
     // check arguments
@@ -66,8 +67,11 @@ where
         );
     };
 
+    let old_lit = materialize_lit_list(old_lit)?;
+    let new_lit = materialize_lit_list(new_lit)?;
+
     // check lengths
-    let (old_len, new_len) = (literal_len(old_lit)?, literal_len(new_lit)?);
+    let (old_len, new_len) = (literal_len(&old_lit)?, literal_len(&new_lit)?);
     if ![old_len, 1].contains(&new_len) {
         return fallible!(
             MakeTransformation,
@@ -132,7 +136,7 @@ where
 
     // if replacement can introduce nulls, then set nullable
     output_domain.column.nullable =
-        literal_is_nullable(new_lit) || literal_is_nullable(default_lit);
+        literal_is_nullable(&new_lit) || literal_is_nullable(&default_lit);
 
     t_prior
         >> Transformation::new(

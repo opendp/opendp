@@ -223,7 +223,7 @@ impl<F: Frame> FrameDomain<F> {
                     e
                 )
             })?;
-        Ok(output.schema())
+        Ok((&**output.schema()).clone())
     }
 
     /// # Proof Definition

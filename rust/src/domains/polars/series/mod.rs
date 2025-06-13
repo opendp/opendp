@@ -424,7 +424,7 @@ pub trait PrimitiveDataType: 'static + Send + Sync {
     ///
     /// A default implementation is provided because Polars already implements this on the marker type (Self::Polars).
     fn dtype() -> DataType {
-        Self::Polars::get_dtype()
+        Self::Polars::get_static_dtype()
     }
 }
 

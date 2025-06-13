@@ -455,7 +455,7 @@ def test_polars_non_wrapping():
         split_evenly_over=1,
     )
     # only calls that return a LazyFrame or LazyGroupBy are wrapped
-    assert context.query().explain() == 'DF ["A"]; PROJECT */1 COLUMNS; SELECTION: None'
+    assert context.query().explain() == 'DF ["A"]; PROJECT */1 COLUMNS'
     assert context.query().collect_schema() == {"A": pl.String}
 
     # for coverage: attribute access works properly
@@ -625,7 +625,7 @@ def test_replace_binary_path():
 
     # check that local paths in new expressions get overwritten
     os.environ["OPENDP_POLARS_LIB_PATH"] = __file__
-    assert str(dp.len(scale=1.0)) == f"len().{__file__}:noise([null, dyn float: 1.0])"
+    assert str(dp.len(scale=1.0)) == f"len().{__file__}:noise([null, dyn float: 1])"
 
     # cleanup
     del os.environ["OPENDP_POLARS_LIB_PATH"]

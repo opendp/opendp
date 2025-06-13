@@ -410,6 +410,7 @@ class DPExpr(object):
             function_name="discrete_quantile_score",
             args=[self.expr, alpha, Series(candidates)],
             returns_scalar=True,
+            changes_length=True,
         )
 
     def _report_noisy_max(

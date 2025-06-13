@@ -15,6 +15,7 @@ use super::StableExpr;
 #[cfg(test)]
 mod test;
 
+#[derive(Debug)]
 enum Strategy {
     Count,
     NullCount,
@@ -80,7 +81,9 @@ where
     let t_prior = input.make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
-    let margin = middle_domain.context.aggregation("count")?;
+    let margin = middle_domain
+        .context
+        .aggregation(format!("{strategy:?}").as_str())?;
 
     let output_domain = ExprDomain {
         column: SeriesDomain::new(

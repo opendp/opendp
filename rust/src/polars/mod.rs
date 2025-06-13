@@ -64,6 +64,7 @@ where
                     lib,
                     symbol,
                     kwargs, // Don't un-pickle! subjects the library to arbitrary code execution.
+                    ..
                 },
             ..
         } => {
@@ -112,6 +113,7 @@ where
                     lib,
                     symbol,
                     kwargs,
+                    ..
                 },
             ..
         } => {
@@ -160,6 +162,7 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
                 lib,
                 symbol,
                 kwargs,
+                ..
             } = &mut function
             {
                 if let Ok(path) = std::env::var("OPENDP_POLARS_LIB_PATH") {
@@ -221,7 +224,7 @@ pub(crate) trait ExtractValue: Sized {
 macro_rules! impl_extract_value {
     ($($ty:ty)+) => {$(impl ExtractValue for $ty {
         fn extract(literal: LiteralValue) -> Fallible<Option<Self>> {
-            if let LiteralValue::Null = literal {
+            if literal.is_null() {
                 return Ok(None);
             }
             Ok(Some(literal
@@ -236,8 +239,10 @@ impl_extract_value!(u32 u64 i32 i64 f32 f64);
 
 impl ExtractValue for Series {
     fn extract(literal: LiteralValue) -> Fallible<Option<Self>> {
+        if literal.is_null() {
+            return Ok(None);
+        }
         Ok(match literal {
-            LiteralValue::Null => None,
             LiteralValue::Series(series) => Some((*series).clone()),
             _ => return fallible!(FailedFunction, "expected series, found: {:?}", literal),
         })
@@ -246,11 +251,13 @@ impl ExtractValue for Series {
 
 impl ExtractValue for String {
     fn extract(literal: LiteralValue) -> Fallible<Option<Self>> {
-        Ok(match literal {
-            LiteralValue::Null => None,
-            LiteralValue::String(string) => Some(string.into_string()),
-            _ => return fallible!(FailedFunction, "expected String, found: {:?}", literal),
-        })
+        if literal.is_null() {
+            return Ok(None);
+        }
+        literal
+            .extract_str()
+            .map(|s| Some(s.to_string()))
+            .ok_or_else(|| err!(FailedFunction, "expected String, found: {:?}", literal))
     }
 }
 
@@ -498,7 +505,8 @@ impl From<LazyFrame> for OnceFrame {
             Ok(match query {
                 Query::External(q_external) => Answer::External(match q_external {
                     OnceFrameQuery::Collect => {
-                        let dataframe = lazyframe.collect()?;
+                        // TODO: allow CSE once https://github.com/pola-rs/polars/pull/23032 is released
+                        let dataframe = lazyframe.with_comm_subexpr_elim(false).collect()?;
                         let n = dataframe.height();
                         let dataframe = dataframe.sample_n_literal(n, false, true, None)?;
                         state.take();

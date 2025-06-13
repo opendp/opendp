@@ -8,7 +8,7 @@ use crate::{
     transformations::make_stable_lazyframe::group_by::{Resize, check_infallible},
 };
 use opendp_derive::proven;
-use polars_plan::prelude::{ApplyOptions, FunctionOptions, GroupbyOptions};
+use polars_plan::prelude::GroupbyOptions;
 
 use polars::prelude::{
     BooleanFunction, DataType, DslPlan, Expr, FunctionExpr, Operator, RankMethod, WindowMapping,
@@ -343,13 +343,7 @@ fn match_per_group_predicate(
     // reorderings of an enumeration are still enumerations
     match enumeration {
         Expr::Function {
-            input,
-            function,
-            options:
-                FunctionOptions {
-                    collect_groups: ApplyOptions::GroupWise,
-                    ..
-                },
+            input, function, ..
         } => {
             // FunctionExprs that may reorder data
             let is_reorder = match function {

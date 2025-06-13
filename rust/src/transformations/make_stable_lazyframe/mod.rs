@@ -1,6 +1,5 @@
 use opendp_derive::bootstrap;
-use polars::lazy::frame::LazyFrame;
-use polars_plan::plans::DslPlan;
+use polars::{lazy::frame::LazyFrame, prelude::DslPlan};
 use std::collections::HashSet;
 
 use crate::{

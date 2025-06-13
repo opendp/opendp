@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use polars::prelude::DslPlan;
+
 use crate::combinators::SequentialCompositionMeasure;
 use crate::core::{Metric, MetricSpace};
 use crate::domains::{DslPlanDomain, LazyFrameDomain};
@@ -7,8 +9,6 @@ use crate::{
     core::{Function, Measurement},
     error::Fallible,
 };
-
-use polars_plan::plans::DslPlan;
 
 use super::PrivateDslPlan;
 
