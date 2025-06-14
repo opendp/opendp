@@ -7,10 +7,10 @@ mod test;
 use crate::{
     core::{Domain, Function, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    interactive::wrap,
+    interactive::{Wrapper, wrap},
 };
 
-use super::SequentialCompositionMeasure;
+use super::{Adaptivity, Composability, CompositionMeasure};
 
 /// Construct the DP composition of [`measurement0`, `measurement1`, ...].
 /// Returns a Measurement that when invoked, computes `[measurement0(x), measurement1(x), ...]`
@@ -23,11 +23,11 @@ use super::SequentialCompositionMeasure;
 /// * compositor: all privacy parameters specified up-front (via the map)
 ///
 /// # Arguments
-/// * `measurements` - A vector of Measurements to compose. All DI, MI, MO must be equivalent.
+/// * `measurements` - A vector of Measurements to compose. All input domains, input metrics and output measures must be equivalent.
 ///
 /// # Generics
-/// * `DI` - Input Domain.
-/// * `TO` - Output Type.
+/// * `DI` - Input Domain
+/// * `TO` - Output Type
 /// * `MI` - Input Metric
 /// * `MO` - Output Measure
 pub fn make_composition<DI, TO, MI, MO>(
@@ -37,7 +37,7 @@ where
     DI: 'static + Domain,
     TO: 'static,
     MI: 'static + Metric,
-    MO: 'static + SequentialCompositionMeasure,
+    MO: 'static + CompositionMeasure,
     (DI, MI): MetricSpace,
 {
     if measurements.is_empty() {
@@ -70,24 +70,28 @@ where
         .map(|m| m.privacy_map.clone())
         .collect::<Vec<_>>();
 
-    let concurrent = output_measure.concurrent()?;
+    let sequential = matches!(
+        output_measure.composability(Adaptivity::NonAdaptive)?,
+        Composability::Sequential
+    );
+
     Measurement::new(
         input_domain,
         Function::new_fallible(move |arg: &DI::Carrier| {
             let go = || functions.iter().map(|f| f.eval(arg)).collect();
 
-            if concurrent {
-                go()
-            } else {
+            if sequential {
                 wrap(
-                    |_qbl| {
+                    Wrapper::new(|_qbl| {
                         fallible!(
                             FailedFunction,
                             "output_measure must allow concurrency to spawn queryables from a noninteractive compositor"
                         )
-                    },
+                    }),
                     go,
                 )
+            } else {
+                go()
             }
         }),
         input_metric,
@@ -127,7 +131,7 @@ where
     DI: 'static + Domain,
     TO: 'static,
     MI: 'static + Metric,
-    MO: 'static + SequentialCompositionMeasure,
+    MO: 'static + CompositionMeasure,
     (DI, MI): MetricSpace,
 {
     make_composition(measurements)
