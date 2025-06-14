@@ -1,0 +1,253 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{fn make\_report\_noisy\_max\_gumbel}}
+\author{Michael Shoemate}
+\begin{document} 
+\maketitle
+
+\contrib
+
+Proves soundness of \rustdoc{measurements/fn}{make\_report\_noisy\_max\_gumbel} 
+in \asOfCommit{mod.rs}{f5bb719}.\\
+\texttt{make\_report\_noisy\_max\_gumbel} returns a Measurement that 
+noisily selects the index of the greatest score, from a vector of input scores.
+This released index can be later be used to index into a public candidate set (postprocessing).
+
+\subsection*{Vetting History}
+\begin{itemize}
+    \item \vettingPR{456}
+\end{itemize}
+
+The naive implementation samples some index $k$ from a categorical distribution, 
+with probabilities assigned to each candidate relative to their score.
+We may use inverse transform sampling to select the smallest index $k$ for which the cumulative probability is greater than some $U \sim Uniform(0, 1)$.
+\begin{equation} 
+    \label{m-naive} 
+    M(s) = argmin_k \sum_i^k p_i >= U
+\end{equation} 
+
+The probability of index $k$ being selected is the normalization of its likelihood $e^{s_k / \tau}$.
+As a candidate's score $s_k$ increases, the candidate becomes exponentially more likely to be selected.
+\begin{equation}
+    \label{prob-of-k}
+    p_k = \frac{e^{s_k / \tau}}{\sum_i e^{s_i / \tau}}
+\end{equation}
+
+This equation introduces a new temperature parameter, $\tau$, which calibrates how distinguishable scores are from each other.
+As temperature increases, the categorical output distribution tends towards entropy/uniformity and becomes more privacy preserving.
+As temperature decreases, the categorical distribution tends towards a one-hot vector, becoming less private.
+Temperature is related to $\epsilon$ and the sensitivity ($\Delta$) of the scoring function as follows:
+
+\begin{equation}
+    \tau = \Delta / \epsilon
+\end{equation}
+When $\epsilon$ increases, temperature decreases, and candidates become more distinguishable from each other.
+We also divide scores by their global sensitivity to normalize the sensitivity to one.
+In the differential privacy literature for the exponential mechanism, the sensitivity is often multiplied by two.
+In OpenDP this factor is bundled into the $\Delta$ term, which is expressed in terms of a metric that captures monotonicity.
+
+\section{Gumbel Reparameterization}
+\label{gumbel-reparam}
+
+In practice, computing $e^{s_i / \tau}$ is prone to zero underflow and overflow. 
+Specifically, a scaled score of just $-709$ underflows to zero and $+710$ overflows to infinity when stored in a 64-bit float. 
+A simple improvement is to shift the scores by subtracting the greatest score from all scores.
+In idealized arithmetic, the resulting probabilities are not affected by shifts in the underlying scores.
+On finite data types, this shift prevents a catastrophic overflow, but makes underflow more likely, 
+causing tail values of the distribution to round to zero. 
+
+The inverse transform sampling is also subject to accumulated rounding errors from the arithmetic and sum, 
+which influence the likelihood of being chosen.
+
+The Gumbel-max trick may instead be used to privately select an index.
+Let $K = argmax_k G_k$, a random variable representing the selected index. 
+Denote the $k^{th}$ noisy score as $G_k \sim Gumbel(\mu = s_k / \tau)$.
+$K$ can be sampled via an inverse transform, where $u_k$ is sampled iid uniformly from $(0, 1)$:
+\begin{equation}
+    M(s) = argmax_k (s_k / \tau - log(-log(u_k)))
+\end{equation}
+
+\begin{theorem}
+    \label{gumbel-equiv}
+Sampling from K is equivalent to sampling from the softmax, because $P(K=k) = p_k$. \cite{Medina2020DuffAD}
+\end{theorem}
+\begin{align*}
+    P(K = k) &= P(G_k = max_i G_i) &&\text{by definition of K} \\
+    &= P(-log(Z_k / N) = max_i -log(Z_k / N)) &&\text{by \ref{g-z-equiv}}\\
+    &= P(log(Z_k / N) = min_i log(Z_k / N)) &&\text{since } max -a_i = -min_i a_i \\
+    &= P(Z_k = min_i Z_i) &&\text{simplify monotonic terms} \\
+    &= P(Z_k \leq min_{i \neq k} Z_i) \\
+    &= P(Z_k \leq Q) &&\text{by \ref{exp-min} where } Q \sim Exp(\sum_{i \neq k} p_i)\\
+    &= \frac{p_k}{p_k + \sum_{i \neq k} p_i}  &&\text{by \ref{exp-comp}} \\
+    &= p_k &&\text{since } p_k + \sum_{i \neq k} p_i = 1
+\end{align*}
+
+
+\begin{lemma}
+\label{g-z-equiv}
+$G_k = -log(Z_k / N)$ where $Z_k \sim Exp(p_k)$ and normalization term $N = \sum_i e^{s_i / \tau}$.
+\end{lemma}
+\begin{align*}
+    G_k &= s_k / \tau - log(-log(U_k)) &&\text{Gumbel PDF centered at } s_k / \tau \\
+    &= log(e^{s_k / \tau}) - log(-log(U_k)) \\
+    &= log(p_k N) - log(-log(U_k)) &&\text{since } p_k = e^{s_k / \tau} / N \\
+    &= log(p_k N / (-log(U_k))) \\
+    &= -log(-log(U_k) / (p_k N)) \\
+    &= -log(Z_k / N) &&\text{substitute $Z_k = -log(U_k) / p_k$}
+\end{align*}
+
+\begin{lemma}
+\label{exp-min}
+If $X_1 \sim Exp(\lambda_1)$, $X_2 \sim Exp(\lambda_2)$ and $Z \sim Exp(\lambda_1 + \lambda_2)$, then $min(X_1, X_2) \sim Z$.
+\end{lemma}
+\begin{align*}
+    P(min(X_1, X_2) \geq x) &= P(X_1 \geq x)P(X_2 \geq x) &&\text{by independence} \\
+    &= e^{-\lambda_1x}e^{-\lambda_2x} &&\text{substitute exponential density} \\
+    &= e^{-(\lambda_1 + \lambda_2)x} \\
+    &= P(Z \geq x) &&\text{substitute exponential density}
+\end{align*}
+
+
+\begin{lemma}
+\label{exp-comp}
+If $X_1 \sim Exp(\lambda_1)$, $X_2 \sim Exp(\lambda_2)$, then $P(X_1 \leq X_2) = \frac{\lambda_1}{\lambda_1 + \lambda_2}$.
+
+\begin{align*}
+    P(X_1 \leq X_2) &= \int_0^\infty \int_{x_1}^\infty \lambda_1 \lambda_2 e^{-\lambda_1 x_1} e^{-\lambda_2 x_2} \,dx_1 dx_2 \\
+    &= \int_0^\infty -\lambda e^{-(\lambda_1 + \lambda_2) x_1} \,dx_1 \\
+    &= \frac{\lambda_1}{\lambda_1 + \lambda_2}
+\end{align*}
+
+% Since $P(Z_k > z) = e^{p_k z}$, $P(Z_k \geq max_j Z_j) = e^{p_k max_j Z_j}$ 
+\end{lemma}
+
+
+\subsection{Metric}
+We need a metric that captures the distance between score vectors $x$ and $x'$ respectively on neighboring datasets. 
+The $i^{th}$ element of each score vector is the score for the $i^{th}$ candidate.
+The sensitivity of the scoring function can be measured in terms of the $L_\infty$ norm, which we name the \texttt{LInfDistance}. 
+It characterizes the greatest that any one score may change:
+\begin{equation}
+    \Delta_{\infty} = \max_{x \sim x'} d_{\infty}(f(x), f(x')) = \max_{x \sim x'} \max_i \abs{f(x)_i - f(x')_i}
+\end{equation}
+Unfortunately, this choice of metric always results in a loosening by a factor of 2 when evaluating the privacy guarantee of the exponential mechanism.
+This is because both the $i^{th}$ likelihood and normalization term may vary in opposite directions, resulting in a more distinguishing event.
+However, this loosening is not necessary if we can prove that the scoring function is monotonic, because the $i^{th}$ likelihood and normalization term will always vary in the same direction.
+
+We instead use a slight adjustment to this metric, \texttt{RangeDistance}, characterizing the greatest difference in scores:
+\begin{equation}
+    \Delta_{\text{Range}} = \max_{x \sim x'} d_{\text{Range}}(f(x), f(x')) = \max_{x \sim x'} \max_{ij} \abs{(f(x)_i - f(x')_i) - (f(x)_j - f(x')_j)}
+\end{equation}
+Consider when the scoring function is not monotonic.
+The sensitivity is maximized when $x_i - x'_i$ and $x_j - x'_j$ vary maximally in opposite directions, resulting in the same loosening factor of 2.
+On the other hand, when the scoring function is monotonic, the sign of the $x_i - x'_i$ term matches the sign of the $x_j - x'_j$ term,
+and their magnitudes cancel.
+Therefore, when the scorer is monotonic, the sensitivity is maximized when one term is zero. 
+It is shown in \ref{privacy-guarantee} that a tighter analysis of the exponential mechanism is compatible with a score vector whose sensitivity is expressed in terms of this metric.
+
+Given that both the infinity-distance and range-distance are useful, the mechanism still uses the infinity-distance,
+but an additional boolean is stored in the metric to indicate when the score is monotonic.
+
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\begin{itemize}
+    \item \texttt{TIA} (input atom type) is a type with traits \rustdoc{traits/trait}{Number} and \rustdoc{traits/samplers/trait}{CastInternalRational}
+
+    \item \texttt{QO} (output distance type) is a type with traits \rustdoc{traits/trait}{Float}, 
+    \rustdoc{traits/samplers/trait}{CastInternalRational} and
+    \rustdoc{traits/trait}{DistanceConstant} from type \texttt{TIA}
+\end{itemize}
+
+\subsection*{Function}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2]{./pseudocode/make_report_noisy_max_gumbel.py}
+
+\subsection*{Postcondition}
+
+\validMeasurement{\texttt{input\_domain, input\_metric, scale, optimize, TIA, QO}}{\texttt{make\_report\_noisy\_max\_gumbel}} 
+
+\section{Proof}
+\subsection{Privacy Guarantee}
+
+To ensure that the Gumbel sample is valid, the \texttt{input\_domain} is required to be non-null.
+The scale is also required to be positive.
+
+\begin{lemma}
+    \label{function-prob}
+    By the definition of $\function$ in the pseudocode, for any $x$ in \texttt{input\_domain}, \\
+    $\Pr[\function(x) = i] = \Pr[\mathrm{argmax}_k (u_k / \tau - \ln(-\ln(U_k))) = i]$.
+\end{lemma}
+
+\begin{proof}
+    For each score $s_k$, \function\ samples a Gumbel random variable centered at $sign \cdot s_k / \tau$.
+    The choice of sign does not affect the privacy guarantee, so we omit it from further analysis.
+    Sampling from a Gumbel distribution is equivalent to adding a draw from $-\ln(-\ln(U_k))$, where $U_k \sim Uniform(0, 1)$.
+    The algorithm only returns the index of the maximum Gumbel random variable,
+    therefore the probability of returning $i$ is the probability that the $i^{th}$ Gumbel random variable is the maximum.
+\end{proof}
+
+\begin{lemma}
+    \label{priv-inequality}
+    Assume $x$, $x'$ in \texttt{input\_domain}. Then
+    $\ln\left(\frac{\sum_{i} \exp(\frac{\epsilon x'_i}{\Delta})}{\sum_{i} \exp(\frac{\epsilon x_i}{\Delta})}\right) \le \frac{\epsilon \max_j (x'_j - x_j)}{\Delta}$.
+\end{lemma}
+
+\begin{proof}
+\begin{align*}
+    \ln\left(\frac{\sum_{i} \exp(\frac{\epsilon x'_i}{\Delta})}{\sum_{i} \exp(\frac{\epsilon x_i}{\Delta})}\right)
+    &= \ln\left(\frac{\sum_{i} \exp(\frac{\epsilon (x'_i - x_i + x_i)}{\Delta})}{\sum_{i} \exp(\frac{\epsilon x_i}{\Delta})}\right) \\
+    &= \ln\left(\frac{\sum_{i} \exp(\frac{\epsilon (x'_i - x_i)}{\Delta})\exp(\frac{\epsilon (x_i)}{\Delta})}{\sum_{i} \exp(\frac{\epsilon x_i}{\Delta})}\right) \\
+    &\le \ln\left(\frac{\exp(\frac{\epsilon \max_j(x'_j - x_j)}{\Delta}) \sum_{i} \exp(\frac{\epsilon x_i}{\Delta})}{\sum_{i} \exp(\frac{\epsilon x_i}{\Delta})}\right) \\
+    &= \frac{\epsilon \max_j(x'_j - x_j)}{\Delta}
+\end{align*}
+\end{proof}
+
+\label{privacy-guarantee}
+Assume $x$, $x'$ in \texttt{input\_domain} are \din-close under \rustdoc{metrics/struct}{LInfDistance} and $\texttt{privacy\_map}(\din) \le \dout$.
+Let the output random variables be denoted $Y \sim \function(x)$ and $Y' \sim \function(x')$.
+
+\begin{align*}
+    &\max_{x \sim x'} D_\infty(Y || Y') \\
+    \leq& \max_{x \sim x'} \max_i \ln\left(\frac{\Pr[\function(x) = i]}{\Pr[\function(x') = i]}\right) 
+    &&\text{by } \rustdoc{measures/struct}{MaxDivergence}\\
+    =& \max_{x \sim x'} \max_i \ln\left(\frac
+            {\Pr[\mathrm{argmax}_k (x_k / \tau - \ln(-\ln(U_k))) = i]}
+            {\Pr[\mathrm{argmax}_k (x'_k / \tau - \ln(-\ln(U_k))) = i]}
+        \right) &&\text{by \ref{function-prob}, substitute \function}\\
+    =& \max_{x \sim x'} \max_i \ln \left(
+        \frac
+            {\exp \frac{x_i}{\tau}}
+            {\sum_{k} \exp\frac{x_k}{\tau}
+        }
+        \bigg/ \frac
+            {\exp\frac{x'_i}{\tau}}
+            {\sum_{k} \exp\frac{x'_k}{\tau}} \right)
+        &&\text{by \ref{gumbel-reparam}} \\
+    =& \max_{x \sim x'} \max_i \ln \left(\frac
+        {\exp\frac{x_i}{\tau}}{\exp\frac{x'_i}{\tau}}
+        \frac{\sum_{k} \exp\frac{x'_k}{\tau}}{\sum_{k} \exp\frac{x_k}{\tau}}\right) \\
+    =& \max_{x \sim x'} \max_i \ln \left(\frac
+        {\exp\frac{x_i}{\tau}}{\exp\frac{x'_i}{\tau}}\right) + \ln \left(
+        \frac{\sum_{k} \exp\frac{x'_k}{\tau}}{\sum_{k} \exp\frac{x_k}{\tau}}\right) \\
+    =& \max_{x \sim x'} \frac{\max_i (x_i - x'_i)}{\tau} 
+        + \ln\left(\frac{\sum_{k} \exp\frac{x'_k}{\tau}}{\sum_{k} \exp\frac{x_k}{\tau}}\right) \\
+    \leq& \max_{x \sim x'} \frac{\max_i (x_i - x'_i)}{\tau} + \frac{\max_j (x'_j - x_j)}{\tau} &&\text{by \ref{priv-inequality}} \\
+    \leq& \frac{\max_{x \sim x'} \max_{ij} \abs{(x_i - x'_i) - (x_j - x'_j)}}{\tau} \\
+    =& d_{in} / \tau &&\text{by }\texttt{RangeDistance}\\
+\end{align*}
+% If monotonic, $\Delta = \din$, else $\Delta = 2 \cdot \din$. 
+% Now substitute the inequality that $ \tau \geq \Delta / \epsilon$.
+
+Since this expression aligns with the pseudocode given for the privacy map,
+it has been shown that $\function(x)$ and $\function(x')$ are \dout-close under \texttt{output\_measure} 
+under the definitions of $\function$ and \texttt{privacy\_map}, 
+and the conditions on the input distance and privacy map.
+
+
+
+\bibliographystyle{plain}
+\bibliography{references.bib}
+
+\end{document}

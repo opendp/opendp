@@ -1,0 +1,61 @@
+\documentclass{article}
+\input{../../../../../lib.sty}
+
+\title{\texttt{fn find\_nearest\_multiple\_of\_2k}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise/distribution/float/utilities/fn}{find\_nearest\_multiple\_of\_2k} in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+None
+
+\subsubsection*{User-Verified}
+$k \neq \texttt{i32.MIN}$
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/find_nearest_multiple_of_2k.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    Return $\max \mathrm{argmin}_i |i 2^k - x|$.
+\end{theorem}
+
+\begin{proof}
+    We first rewrite the expression into an efficiently computable integer form.
+    \begin{align}
+        &\max \mathrm{argmin}_i |i 2^k - x| \\
+        &= \max \mathrm{argmin}_i |i - x 2^{-k}| &&\text{argmin doesn't change when rescaled}\\
+        &= \lfloor x 2^{-k}\rceil &&\text{where } \lfloor \cdot \rceil \text{ rounds to nearest int with ties towards infinity} \\
+        &= \lfloor n / d \rceil &&\text{where } x 2^{-k} = n / d, n \in \mathbb{Z}, d \in \mathbb{Z}^+ \\
+        &= ((n \cdot 2) // d + 1) // 2 &&\text{where // denotes integer floor division} \\
+        &= ((n << 1) // d + 1) >> 1 &&\text{where <{}< and >{}> denote left and right shift}
+    \end{align}
+
+    Since $x$ is a rational, line \ref{line:into-parts} splits $x 2^{-k}$ into its numerator $n$ and denominator $d$.
+    Then line \ref{line:return} directly computes the quantity of interest.
+    The formula works by dividing twice the numerator, which retains whether the original number was in the lower or upper half of the interval.
+    Addition by one moves the upper half of each interval to the next interval.
+    Finally, floor division by two maps the data into the expected space.
+
+    Several implementation considerations are worth noting:
+    \begin{itemize}
+        \item Negation of $k$ is well-defined for all values of \texttt{i32}, 
+            except for \texttt{i32.MIN}, which is not allowed by the precondition.
+        \item The left shift operator \texttt{<{}<} is equivalent to integer multiplication by $2$.
+        \item The right shift operator \texttt{>{}>} is equivalent to floor integer division by $2$,
+            as the right-most bit is discarded, which always floors in two's complement arithmetic.
+        \item Integer floor division is implemented via \rustdoc{measurements/noise/distribution/float/utilities/fn}{floor\_div},
+            because IBig integer division rounds towards zero, giving the wrong result on negative numerators.
+    \end{itemize}
+
+    Therefore the implementation follows the formula, which is equivalent to the postcondition.
+\end{proof}
+\end{document}
