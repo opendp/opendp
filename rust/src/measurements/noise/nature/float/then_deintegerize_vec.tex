@@ -1,0 +1,46 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{fn then\_deintegerize\_vec}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise/nature/fn}{then\_deintegerize\_vec} in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+
+\begin{itemize}
+    \item Generic \texttt{TO} implements trait \rustdoc{traits/trait}{CastInternalRational}
+\end{itemize}
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/then_deintegerize_vec.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \validPostprocessor{(\texttt{k, TO})}{\texttt{then\_deintegerize\_vec}}
+\end{theorem}
+
+\begin{proof}
+    By the postcondition of \texttt{TO.from\_rational},
+    the outcome of the function is the nearest representable float,
+    and may saturate to positive or negative infinity.
+    The precondition of \texttt{x\_mul\_2k} that $k$ is not \texttt{i32.MIN} is satisfied on line \ref{line:check-k}.
+    Since \texttt{TO.from\_rational} and \texttt{x\_mul\_2k} are both infallible, 
+    the function is infallible,
+    meaning that the function cannot raise data-dependent errors.
+    Therefore the function is a valid postprocessor.
+\end{proof}
+
+
+\end{document}
