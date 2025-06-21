@@ -1,0 +1,86 @@
+\documentclass{article}
+\input{../../../lib.sty}
+\usepackage{bbm}
+
+\title{\texttt{fn counting\_query\_stability\_map}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+This document proves that the implementation of \rustdoc{transformations/make_stable_expr/expr_count/fn}{counting\_query\_stability\_map} in \asOfCommit{mod.rs}{f5bb719} 
+satisfies its proof definition.
+
+\section{Hoare Triple}
+\subsection*{Preconditions}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Argument \texttt{public\_info} must be Keys, Lengths or None
+    \item Generic \texttt{M} must implement \texttt{UnboundedMetric}
+    \item Const generic \texttt{P} must be of type \texttt{usize}
+\end{itemize}
+
+\subsubsection*{User-verified}
+None
+
+\subsubsection*{Pseudocode}
+
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/counting_query_stability_map.py}
+
+\subsubsection*{Postcondition}
+\begin{definition}
+    \label{sample-bernoulli}
+    For any setting of the input parameters \texttt{public\_info}, \texttt{M} and \texttt{P}, 
+    returns a \texttt{StabilityMap} where for any predicate $p(\cdot)$ 
+    and $f(x) = [\sum_i \mathbbm{1}_{p(x_{1i})}, \sum_i \mathbbm{1}_{p(x_{2i})}, \dots]$, 
+    if $d_{\mathrm{PartitionDistance<M>}}(x, x') \leq d_{in}$,
+    then $d_{LP}(f(x), f(x')) \leq d_{out}$, where $d_{out} = \texttt{StabilityMap.eval}(d_{in})$.
+\end{definition}
+
+\begin{proof} 
+Since the input metric is PartitionDistance<M>,
+and M is an unbounded dataset distance metric (with associated distance type \texttt{u32}),
+the distance type is a tuple of the $L_0$, $L_1$ and $L_\infty$ distances between the per-partition distances with respect to the input metric \texttt{M},
+as shown on \ref{l01i}.
+
+\begin{align}
+    &d_{LP}(f(x), f(x')) \\
+    &= d_{LP}\left(\left[\sum_j^{\len(x_1)} \mathbbm{1}_{p(x_{1j})}, \sum_j^{\len(x_2)} \mathbbm{1}_{p(x_{2j})}, \dots\right], \left[\sum_j^{\len(x_1)} \mathbbm{1}_{p(x'_{1j})}, \sum_j^{\len(x_2)} \mathbbm{1}_{p(x'_{2j})}, \dots\right]\right) \\
+    &= \left(\sum_i^{\len(x)}\left(\sum_j^{\len(x_i)} \mathbbm{1}_{p(x_{ij})} - \mathbbm{1}_{p(x'_{ij})}\right)^P\right)^{1/P}
+\end{align}
+
+
+Consider two cases. First, when substituting the $\Delta_0$ and $\Delta_\infty$ bounds:
+
+\begin{align}
+    &= \left(\sum_i^{\len(x)}\left(\sum_j^{\len(x_i)} \mathbbm{1}_{p(x_{ij})} - \mathbbm{1}_{p(x'_{ij})}\right)^P\right)^{1/P} \\
+    &\leq \left(\sum_i^{\Delta_0}\left(\Delta_\infty\right)^P\right)^{1/P} \\
+    &= \Delta_0^{1/P}\Delta_\infty
+\end{align}
+
+Alternatively, apply the $\Delta_1$ bound, 
+considering that distance is maximized when all $\Delta_1$ contributions are made to the same partition:
+\begin{align}
+    &= \left(\sum_i^{\len(x)}\left(\sum_j^{\len(x_i)} \mathbbm{1}_{p(x_{ij})} - \mathbbm{1}_{p(x'_{ij})}\right)^P\right)^{1/P} \\
+    &\leq (\Delta_1^P)^{1/P} \\
+    &= \Delta_1
+\end{align}
+
+The sensitivity is no greater than the smaller of these two bounds:
+\begin{equation}
+    \label{final-bound}
+    d_{LP}(f(x), f(x')) \leq \min(\Delta_1, \Delta_0^{1/P}\Delta_\infty)
+\end{equation}
+
+We now switch to the pseudocode.
+If partition length is invariant (via \texttt{public\_info}), then $\Delta_1 = \Delta_\infty = 0$, making the query insensitive.
+This invariant is reflected in \ref{public-info}, where an insensitive stability map is returned,
+satisfying the postcondition.
+
+\texttt{norm\_map} on line \ref{norm-map} computes $x^{1/P}$, and is used on line \ref{l0-p} to compute $\Delta^{1/P}$.
+Line \ref{final-bound-impl} then returns the bound from equation \ref{final-bound}.
+Therefore, the stability map returned on line \ref{stability-map} also satisfies the postcondition.
+
+\end{proof}
+
+\end{document} 

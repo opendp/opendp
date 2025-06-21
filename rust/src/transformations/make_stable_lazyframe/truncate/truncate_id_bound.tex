@@ -1,0 +1,91 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn truncate\_id\_bound}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle  
+
+
+\contrib
+
+Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/fn}{truncate\_id\_bound} 
+in \asOfCommit{mod.rs}{f5bb719}.
+\texttt{truncate\_id\_bound} returns an uppper bound on dataset distances in terms of the symmetric distance metric.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Caller Verified}
+\begin{itemize}
+    \item $\texttt{id\_bound.by} = \texttt{truncate.by}$
+\end{itemize}
+
+
+\subsection*{Function}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/truncate_id_bound.py}
+
+
+
+\subsection*{Postcondition}
+\begin{theorem}[Postcondition]
+    Let $g$ vary over groups when partitioned by \texttt{id\_bound.by}.
+    If for any two datasets $x, x'$ we have that
+    \begin{align*}
+        ||d_{\mathrm{SymId}}(\texttt{function}(x)_{g}, \texttt{function}(x')_{g})||_\infty &\le \texttt{id\_bound.per\_group}, \\
+        ||d_{\mathrm{SymId}}(\texttt{function}(x)_{g}, \texttt{function}(x')_{g})||_0 &\le \texttt{id\_bound.num\_groups}, \\
+        d_{\mathrm{SymId}}(\texttt{function}(x), \texttt{function}(x')) &\le \texttt{total\_ids},
+    \end{align*}
+    and \texttt{function} truncates a dataset such that, 
+    \begin{align*}
+        \max_{id} ||d_{\mathrm{Sym}}(\texttt{function}(x)_{id,g}, \texttt{function}(x')_{id,g})||_\infty &\le \texttt{truncation.per\_group}, \\
+        \max_{id} ||d_{\mathrm{Sym}}(\texttt{function}(x)_{id,g}, \texttt{function}(x')_{id,g})||_0 &\le \texttt{truncation.num\_groups},
+    \end{align*}
+    then we have that
+    \begin{align*}
+        ||d_{\mathrm{Sym}}(\texttt{function}(x)_{g}, \texttt{function}(x')_{g})||_\infty &\le \texttt{row\_bound.per\_group}, \\
+        ||d_{\mathrm{Sym}}(\texttt{function}(x)_{g}, \texttt{function}(x')_{g})||_0 &\le \texttt{row\_bound.num\_groups},
+    \end{align*}
+    where $\texttt{row\_bound}$ denotes the return value.
+\end{theorem}
+
+\begin{proof}
+    Assume the preconditions are met, as well as the conditions of the postcondition.
+
+    We first prove the per-group bound.
+    \begin{align*}
+        &||d_{\mathrm{Sym}}(\texttt{function}(x)_{g}, \texttt{function}(x')_{g})||_\infty \\
+        &\le ||d_{\mathrm{SymId}}(\texttt{function}(x)_{g}, \texttt{function}(x')_{g})||_\infty \cdot \max_{id} ||d_{\mathrm{Sym}}(\texttt{function}(x)_{id,g}, \texttt{function}(x')_{id,g})||_\infty \\
+        &\le \texttt{id\_bound.per\_group} \cdot \texttt{truncation.per\_group}\\
+        &= \texttt{row\_bound.per\_group} \hspace{2cm} \text{by line } \ref{line:per-group}
+    \end{align*}
+    
+    We now prove the number of groups bound.
+    There are two ways to bound the number of contributed groups.
+    We first reason by the total number of identifiers.
+    \begin{align*}
+        &||d_{\mathrm{Sym}}(\texttt{function}(x)_{g}, \texttt{function}(x')_{g})||_0 \\
+        &\le d_{\mathrm{SymId}}(\texttt{function}(x), \texttt{function}(x')) \cdot \max_{id} ||d_{\mathrm{Sym}}(\texttt{function}(x)_{id,g}, \texttt{function}(x')_{id,g})||_0 \\
+        &\le \texttt{total\_ids} \cdot \texttt{truncation.num\_groups} \\
+        &= \texttt{num\_groups\_via\_truncation} \hspace{2cm} \text{by line } \ref{line:num-groups-via-truncation}
+    \end{align*}
+
+    We can also directly bound the number of contributed groups by \texttt{id\_bound.num\_groups}:
+    \begin{align*}
+        &||d_{\mathrm{Sym}}(\texttt{function}(x)_{g}, \texttt{function}(x')_{g})||_0 \\
+        &= ||d_{\mathrm{SymId}}(\texttt{function}(x)_{g}, \texttt{function}(x')_{g})||_0 \\
+        &\le \texttt{id\_bound.num\_groups}
+    \end{align*}
+    This is a valid upper bound on the number of contributed groups, because truncation is applied independently to each group.
+
+    Therefore, we take the minimum of the two upper bounds.
+    \begin{align*}
+        &||d_{\mathrm{Sym}}(\texttt{function}(x)_{g}, \texttt{function}(x')_{g})||_0 \\
+        &\min(\texttt{num\_groups\_via\_truncation}, \texttt{id\_bound.num\_groups}) \\
+        &= \texttt{row\_bound.num\_groups} \hspace{2cm} \text{by line } \ref{line:num-groups}
+    \end{align*}
+
+    In the implementation, any of the input bounds could be missing.
+    When a bound is missing, any output bounds that require it are not claimed.
+\end{proof}
+\end{document}
