@@ -1,3 +1,19 @@
+'''
+This module requires extra installs: ``pip install 'opendp[scikit-learn]'``
+
+For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
+We suggest importing under the conventional name ``dp``:
+
+.. code:: python
+
+    >>> import opendp.prelude as dp
+
+The methods of this module will then be accessible at ``dp.sklearn.linear_model``.    
+
+If you're interested in the underlying algorithm, we've also
+`implemented Theil-Sen Regression as a demonstration of OpenDP plugins <../user-guide/plugins/theil-sen-regression.html>`_.
+'''
+
 from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
     make_private_theil_sen as _make_private_theil_sen,
 )  # noqa: F401
