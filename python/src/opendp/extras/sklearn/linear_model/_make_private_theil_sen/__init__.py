@@ -32,7 +32,7 @@ def pairwise_predict(data, x_cuts):
     return points.T[dx != 0]
 
 
-def make_pairwise_predict(x_cuts, runs: int = 1):
+def make_pairwise_predict(x_cuts, runs: int = 1, T = float):
     """
     The parameter `runs` controls how many times randomized pairwise predictions are computed.
     The default is 1. Increasing `runs` can improve the robustness and accuracy of the results;
@@ -41,11 +41,11 @@ def make_pairwise_predict(x_cuts, runs: int = 1):
     np = import_optional_dependency("numpy")
     return dp.t.make_user_transformation(
         # Outputs are Nx2 float numpy arrays.
-        input_domain=dp.numpy.array2_domain(num_columns=2, T=float),
+        input_domain=dp.numpy.array2_domain(num_columns=2, T=T),
         # Neighboring input datasets differ by addition/removal of rows.
         input_metric=dp.symmetric_distance(),
         # Outputs are Nx2 float numpy arrays, but are half as long.
-        output_domain=dp.numpy.array2_domain(num_columns=2, T=float),
+        output_domain=dp.numpy.array2_domain(num_columns=2, T=T),
         # Neighboring output datasets also differ by additions/removals.
         output_metric=dp.symmetric_distance(),
         # Apply the function `runs` times.
