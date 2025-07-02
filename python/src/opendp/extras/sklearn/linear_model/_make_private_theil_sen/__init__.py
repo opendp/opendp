@@ -92,6 +92,7 @@ def make_private_theil_sen(
     scale: float,
     runs: int = 1,
     candidates_count: int = 100,
+    fraction_bounds: tuple[float, float] = (0.25, 0.75),
 ) -> dp.Measurement:
     """
     Makes a measurement that takes a numpy array of (x, y) pairs,
@@ -102,9 +103,9 @@ def make_private_theil_sen(
     >>> slope, intercept = meas(np.array([[x, x] for x in range(100)]))
     """
     np = import_optional_dependency("numpy")
-    # x_cuts are the 25th and 75th percentiles of x_bounds.
+    # x_cuts are the fraction_bounds (for example, 25th and 75th percentiles) of x_bounds.
     # We'll predict y's at these x_cuts.
-    x_cuts = x_bounds[0] + (x_bounds[1] - x_bounds[0]) * np.array([0.25, 0.75])
+    x_cuts = x_bounds[0] + (x_bounds[1] - x_bounds[0]) * np.array(fraction_bounds)
 
     # we want coefficients, not y values!
     # Luckily y values are related to coefficients via a linear system
