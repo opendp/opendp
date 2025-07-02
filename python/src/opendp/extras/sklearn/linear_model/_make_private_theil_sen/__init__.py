@@ -40,11 +40,11 @@ def make_pairwise_predict(x_cuts, runs: int = 1):
     """
     np = import_optional_dependency("numpy")
     return dp.t.make_user_transformation(
-        # Outputs are Nx2 non-nan float numpy arrays.
+        # Outputs are Nx2 float numpy arrays.
         input_domain=dp.numpy.array2_domain(num_columns=2, T=float),
         # Neighboring input datasets differ by addition/removal of rows.
         input_metric=dp.symmetric_distance(),
-        # Outputs are Nx2 non-nan float numpy arrays, but are half as long.
+        # Outputs are Nx2 float numpy arrays, but are half as long.
         output_domain=dp.numpy.array2_domain(num_columns=2, T=float),
         # Neighboring output datasets also differ by additions/removals.
         output_metric=dp.symmetric_distance(),
