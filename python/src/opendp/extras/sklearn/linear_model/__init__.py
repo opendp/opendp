@@ -55,7 +55,7 @@ class LinearRegression:
             x_bounds=x_bounds, y_bounds=y_bounds, scale=scale, runs=runs
         )
         np = import_optional_dependency("numpy")
-        slope, intercept = meas(np.stack([[x[0] for x in X], y], axis=1))
+        slope, intercept = meas(np.stack([X[:, 0], y], axis=1))
 
         from sklearn.linear_model import LinearRegression as LR
 
