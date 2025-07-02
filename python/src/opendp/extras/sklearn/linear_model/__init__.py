@@ -21,6 +21,7 @@ class LinearRegression:
         y_bounds: tuple[float, float],
         scale: float,
         runs: int = 1,
+        candidates_count: int = 100,
     ):
         """
         Fit DP linear model.
@@ -31,6 +32,7 @@ class LinearRegression:
         :param y_bounds: Bounds for target data
         :param scale: The scale of the noise to be added
         :param runs: Controls how many times randomized pairwise predictions are computed. Increasing this value can improve the robustness and accuracy of the results; However, it can also increase computational cost and amount of noise needed later in the algorithm.
+        :param candidates_count: How many evenly spaced candidates to generate
         :return: A fitted sklearn ``LinearRegression``
 
         :example:
@@ -52,9 +54,10 @@ class LinearRegression:
         array([...])
         """
         meas = _make_private_theil_sen(
-            x_bounds=x_bounds, y_bounds=y_bounds, scale=scale, runs=runs
+            x_bounds=x_bounds, y_bounds=y_bounds, scale=scale, runs=runs, candidates_count=candidates_count
         )
         np = import_optional_dependency("numpy")
+        X = np.array(X)
         slope, intercept = meas(np.stack([X[:, 0], y], axis=1))
 
         from sklearn.linear_model import LinearRegression as LR

@@ -57,23 +57,23 @@ def make_pairwise_predict(x_cuts, runs: int = 1, T = float):
     )
 
 
-def make_select_column(j):
+def make_select_column(j, T = float):
     return dp.t.make_user_transformation(
-        input_domain=dp.numpy.array2_domain(num_columns=2, T=float),
+        input_domain=dp.numpy.array2_domain(num_columns=2, T=T),
         input_metric=dp.symmetric_distance(),
-        output_domain=dp.vector_domain(dp.atom_domain(T=float)),
+        output_domain=dp.vector_domain(dp.atom_domain(T=T)),
         output_metric=dp.symmetric_distance(),
         function=lambda x: x[:, j],
         stability_map=lambda b_in: b_in,
     )
 
 
-def make_private_percentile_medians(y_bounds, scale):
+def make_private_percentile_medians(y_bounds, scale, candidates_count=100):
     np = import_optional_dependency("numpy")
     # this median mechanism favors candidates closest to the true median
     m_median = dp.m.then_private_quantile(
-        # 100 evenly spaced points between y_bounds
-        candidates=np.linspace(*y_bounds, 100),
+        # Evenly spaced points between y_bounds
+        candidates=np.linspace(*y_bounds, candidates_count),
         alpha=0.5,
         scale=scale,
     )
@@ -91,6 +91,7 @@ def make_private_theil_sen(
     y_bounds: tuple[float, float],
     scale: float,
     runs: int = 1,
+    candidates_count: int = 100,
 ) -> dp.Measurement:
     """
     Makes a measurement that takes a numpy array of (x, y) pairs,
@@ -113,7 +114,7 @@ def make_private_theil_sen(
         # pairwise_predict will return a 2xN array of y values at the x_cuts.
         make_pairwise_predict(x_cuts, runs)
         # privately select median y values for each x_cut
-        >> make_private_percentile_medians(y_bounds, scale)
+        >> make_private_percentile_medians(y_bounds, scale, candidates_count=candidates_count)
         # transform median y values to coefficients (slope and intercept)
         >> (lambda ys: P_inv @ ys)
     )
