@@ -13,7 +13,7 @@ def pairwise_predict(data, x_cuts):
     # Get an even number of rows.
     data = np.array(data, copy=True)[: len(data) // 2 * 2]
 
-    # Shuffle the data to get random matchings.
+    # Shuffling the data improves the utility of results.
     np.random.shuffle(data)
 
     # Split data into pairs, where pair i is (p1[i], p2[i]).
