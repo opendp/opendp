@@ -1,0 +1,1435 @@
+The authors of the dependency Rust crates:
+
+addr2line (version 0.24.2):
+  
+
+adler2 (version 2.0.1):
+  Jonas Schievink
+  oyvindln
+
+ahash (version 0.8.12):
+  Tom Kaitchuck
+
+aho-corasick (version 1.1.3):
+  Andrew Gallant
+
+alga (version 0.9.3):
+  Brendan Zabarauskas
+  Darin Morrison
+  Sébastien Crozet
+  Wadelma
+
+alloc-no-stdlib (version 2.0.4):
+  Daniel Reiter Horn
+
+alloc-stdlib (version 0.2.2):
+  Daniel Reiter Horn
+
+allocator-api2 (version 0.2.21):
+  Zakarum
+
+android_system_properties (version 0.1.5):
+  Nicolas Silva
+
+android-tzdata (version 0.1.1):
+  RumovZ
+
+anstream (version 0.6.19):
+  
+
+anstyle-parse (version 0.2.7):
+  
+
+anstyle-query (version 1.1.3):
+  
+
+anstyle-wincon (version 3.0.9):
+  
+
+anstyle (version 1.0.11):
+  
+
+approx (version 0.3.2):
+  Brendan Zabarauskas
+
+argminmax (version 0.6.3):
+  Jeroen Van Der Donckt
+
+array-init-cursor (version 0.2.1):
+  
+
+arrayref (version 0.3.9):
+  David Roundy
+
+arrayvec (version 0.7.6):
+  bluss
+
+async-stream-impl (version 0.3.6):
+  Carl Lerche
+
+async-stream (version 0.3.6):
+  Carl Lerche
+
+async-trait (version 0.1.88):
+  David Tolnay
+
+atoi_simd (version 0.15.6):
+  Dmitry Rodionov
+
+atoi (version 2.0.0):
+  Markus Klein
+
+atomic-waker (version 1.1.2):
+  Stjepan Glavina
+  Contributors to futures-rs
+
+autocfg (version 1.5.0):
+  Josh Stone
+
+backtrace (version 0.3.75):
+  The Rust Project Developers
+
+base64 (version 0.22.1):
+  Marshall Pierce
+
+bitflags (version 2.9.1):
+  The Rust Project Developers
+
+bitvec (version 1.0.1):
+  
+
+blake3 (version 1.8.2):
+  Jack O'Connor
+  Samuel Neves
+
+block-buffer (version 0.10.4):
+  RustCrypto Developers
+
+brotli-decompressor (version 4.0.3):
+  Daniel Reiter Horn
+  The Brotli Authors
+
+brotli (version 6.0.0):
+  Daniel Reiter Horn
+  The Brotli Authors
+
+bumpalo (version 3.19.0):
+  Nick Fitzgerald
+
+bytemuck_derive (version 1.9.3):
+  Lokathor
+
+bytemuck (version 1.23.1):
+  Lokathor
+
+byteorder (version 1.5.0):
+  Andrew Gallant
+
+bytes (version 1.10.1):
+  Carl Lerche
+  Sean McArthur
+
+castaway (version 0.2.3):
+  Stephen M. Coakley
+
+cbindgen (version 0.28.0):
+  Emilio Cobos Álvarez
+  Jeff Muizelaar
+  Kartikaya Gupta
+  Ryan Hunt
+
+cc (version 1.2.28):
+  Alex Crichton
+
+cfg_aliases (version 0.2.1):
+  Zicklag
+
+cfg-if (version 1.0.1):
+  Alex Crichton
+
+chrono-tz-build (version 0.2.1):
+  
+
+chrono-tz (version 0.8.6):
+  
+
+chrono (version 0.4.41):
+  
+
+ciborium-io (version 0.2.2):
+  Nathaniel McCallum
+
+ciborium-ll (version 0.2.2):
+  Nathaniel McCallum
+
+ciborium (version 0.2.2):
+  Nathaniel McCallum
+
+clap_builder (version 4.5.40):
+  
+
+clap_lex (version 0.7.5):
+  
+
+clap (version 4.5.40):
+  
+
+colorchoice (version 1.0.4):
+  
+
+comfy-table (version 7.1.4):
+  Arne Beer
+
+compact_str (version 0.8.1):
+  Parker Timmerman
+
+constant_time_eq (version 0.3.1):
+  Cesar Eduardo Barros
+
+core-foundation-sys (version 0.8.7):
+  The Servo Project Developers
+
+core-foundation (version 0.10.1):
+  The Servo Project Developers
+
+crc32fast (version 1.4.2):
+  Sam Rijs
+  Alex Crichton
+
+crossbeam-channel (version 0.5.15):
+  
+
+crossbeam-deque (version 0.8.6):
+  
+
+crossbeam-epoch (version 0.9.18):
+  
+
+crossbeam-queue (version 0.3.12):
+  
+
+crossbeam-utils (version 0.8.21):
+  
+
+crossterm_winapi (version 0.9.1):
+  T. Post
+
+crossterm (version 0.28.1):
+  T. Post
+
+crunchy (version 0.2.4):
+  Eira Fransham
+
+crypto-common (version 0.1.6):
+  RustCrypto Developers
+
+darling_core (version 0.20.11):
+  Ted Driggs
+
+darling_macro (version 0.20.11):
+  Ted Driggs
+
+darling (version 0.20.11):
+  Ted Driggs
+
+dashu-base (version 0.4.1):
+  Jacob Zhong
+
+dashu-float (version 0.4.3):
+  Jacob Zhong
+
+dashu-int (version 0.4.1):
+  Jacob Zhong
+  Tomek Czajka
+
+dashu-macros (version 0.4.1):
+  Jacob Zhong
+
+dashu-ratio (version 0.4.1):
+  Jacob Zhong
+
+dashu (version 0.4.2):
+  Jacob Zhong
+
+diff (version 0.1.13):
+  Utkarsh Kukreti
+
+digest (version 0.10.7):
+  RustCrypto Developers
+
+displaydoc (version 0.2.5):
+  Jane Lusby
+
+doc-comment (version 0.3.3):
+  Guillaume Gomez
+
+dyn-clone (version 1.0.19):
+  David Tolnay
+
+either (version 1.15.0):
+  bluss
+
+enum_dispatch (version 0.3.13):
+  Anton Lazarev
+
+equivalent (version 1.0.2):
+  
+
+errno (version 0.3.13):
+  Chris Wong
+  Dan Gohman
+
+ethnum (version 1.5.2):
+  Nicholas Rodrigues Lordello
+
+fallible-streaming-iterator (version 0.1.9):
+  Steven Fackler
+
+fast-float (version 0.2.0):
+  Ivan Smirnov
+
+fastrand (version 2.3.0):
+  Stjepan Glavina
+
+flate2 (version 1.1.2):
+  Alex Crichton
+  Josh Triplett
+
+float-cmp (version 0.10.0):
+  Mike Dilger
+
+fnv (version 1.0.7):
+  Alex Crichton
+
+foldhash (version 0.1.5):
+  Orson Peters
+
+foreign-types-shared (version 0.1.1):
+  Steven Fackler
+
+foreign-types (version 0.3.2):
+  Steven Fackler
+
+form_urlencoded (version 1.2.1):
+  The rust-url developers
+
+fs4 (version 0.9.1):
+  Dan Burkert
+  Al Liu
+
+funty (version 2.0.0):
+  myrrlyn
+
+futures-channel (version 0.3.31):
+  
+
+futures-core (version 0.3.31):
+  
+
+futures-executor (version 0.3.31):
+  
+
+futures-io (version 0.3.31):
+  
+
+futures-macro (version 0.3.31):
+  
+
+futures-sink (version 0.3.31):
+  
+
+futures-task (version 0.3.31):
+  
+
+futures-util (version 0.3.31):
+  
+
+futures (version 0.3.31):
+  
+
+generic-array (version 0.13.3):
+  Bartłomiej Kamiński
+  Aaron Trent
+
+generic-array (version 0.14.7):
+  Bartłomiej Kamiński
+  Aaron Trent
+
+getrandom (version 0.1.16):
+  The Rand Project Developers
+
+getrandom (version 0.2.16):
+  The Rand Project Developers
+
+getrandom (version 0.3.3):
+  The Rand Project Developers
+
+gimli (version 0.31.1):
+  
+
+glob (version 0.3.2):
+  The Rust Project Developers
+
+h2 (version 0.4.11):
+  Carl Lerche
+  Sean McArthur
+
+half (version 2.6.0):
+  Kathryn Long
+
+halfbrown (version 0.2.5):
+  Heinz N. Gies
+
+hashbrown (version 0.14.5):
+  Amanieu d'Antras
+
+hashbrown (version 0.15.4):
+  Amanieu d'Antras
+
+heck (version 0.4.1):
+  Without Boats
+
+heck (version 0.5.0):
+  
+
+hex (version 0.4.3):
+  KokaKiwi
+
+home (version 0.5.11):
+  Brian Anderson
+
+http-body-util (version 0.1.3):
+  Carl Lerche
+  Lucio Franco
+  Sean McArthur
+
+http-body (version 1.0.1):
+  Carl Lerche
+  Lucio Franco
+  Sean McArthur
+
+http (version 1.3.1):
+  Alex Crichton
+  Carl Lerche
+  Sean McArthur
+
+httparse (version 1.10.1):
+  Sean McArthur
+
+humantime (version 2.2.0):
+  
+
+hyper-rustls (version 0.27.7):
+  
+
+hyper-util (version 0.1.14):
+  Sean McArthur
+
+hyper (version 1.6.0):
+  Sean McArthur
+
+iana-time-zone-haiku (version 0.1.2):
+  René Kijewski
+
+iana-time-zone (version 0.1.63):
+  Andrew Straw
+  René Kijewski
+  Ryan Lopopolo
+
+icu_collections (version 2.0.0):
+  The ICU4X Project Developers
+
+icu_locale_core (version 2.0.0):
+  The ICU4X Project Developers
+
+icu_normalizer_data (version 2.0.0):
+  The ICU4X Project Developers
+
+icu_normalizer (version 2.0.0):
+  The ICU4X Project Developers
+
+icu_properties_data (version 2.0.1):
+  The ICU4X Project Developers
+
+icu_properties (version 2.0.1):
+  The ICU4X Project Developers
+
+icu_provider (version 2.0.0):
+  The ICU4X Project Developers
+
+ident_case (version 1.0.1):
+  Ted Driggs
+
+idna_adapter (version 1.2.1):
+  The rust-url developers
+
+idna (version 1.0.3):
+  The rust-url developers
+
+indexmap (version 2.10.0):
+  
+
+indoc (version 2.0.6):
+  David Tolnay
+
+io-uring (version 0.7.8):
+  quininer
+
+ipnet (version 2.11.0):
+  Kris Price
+
+iri-string (version 0.7.8):
+  YOSHIOKA Takuma
+
+is_terminal_polyfill (version 1.70.1):
+  
+
+iter-read (version 1.1.0):
+  Georg Brandl
+
+itertools (version 0.13.0):
+  bluss
+
+itoa (version 1.0.15):
+  David Tolnay
+
+itoap (version 1.0.1):
+  Ryohei Machida
+
+jobserver (version 0.1.33):
+  Alex Crichton
+
+js-sys (version 0.3.77):
+  The wasm-bindgen Developers
+
+lazy_static (version 1.5.0):
+  Marvin Löbel
+
+libc (version 0.2.174):
+  The Rust Project Developers
+
+libloading (version 0.8.8):
+  Simonas Kazlauskas
+
+libm (version 0.2.15):
+  Jorge Aparicio
+
+linux-raw-sys (version 0.4.15):
+  Dan Gohman
+
+linux-raw-sys (version 0.9.4):
+  Dan Gohman
+
+litemap (version 0.8.0):
+  The ICU4X Project Developers
+
+lock_api (version 0.4.13):
+  Amanieu d'Antras
+
+log (version 0.4.27):
+  The Rust Project Developers
+
+lru-slab (version 0.1.2):
+  Benjamin Saunders
+
+lz4-sys (version 1.11.1+lz4-1.10.0):
+  Jens Heyens
+  Artem V. Navrotskiy
+  Patrick Marks
+
+lz4 (version 1.28.1):
+  Jens Heyens
+  Artem V. Navrotskiy
+  Patrick Marks
+
+matrixmultiply (version 0.2.4):
+  bluss
+  R. Janis Goldschmidt
+
+md-5 (version 0.10.6):
+  RustCrypto Developers
+
+memchr (version 2.7.5):
+  Andrew Gallant
+  bluss
+
+memmap2 (version 0.7.1):
+  Dan Burkert
+  Yevhenii Reizner
+
+memoffset (version 0.9.1):
+  Gilad Naaman
+
+miniz_oxide (version 0.8.9):
+  Frommi
+  oyvindln
+  Rich Geldreich richgel99@gmail.com
+
+mio (version 1.0.4):
+  Carl Lerche
+  Thomas de Zeeuw
+  Tokio Contributors
+
+multiversion-macros (version 0.7.4):
+  Caleb Zulawski
+
+multiversion (version 0.7.4):
+  Caleb Zulawski
+
+nalgebra (version 0.19.0):
+  Sébastien Crozet
+
+now (version 0.1.3):
+  Kilerd
+
+ntapi (version 0.4.1):
+  MSxDOS
+
+num-bigint (version 0.3.3):
+  The Rust Project Developers
+
+num-bigint (version 0.4.6):
+  The Rust Project Developers
+
+num-complex (version 0.2.4):
+  The Rust Project Developers
+
+num-complex (version 0.3.1):
+  The Rust Project Developers
+
+num-integer (version 0.1.46):
+  The Rust Project Developers
+
+num-iter (version 0.1.45):
+  The Rust Project Developers
+
+num-modular (version 0.6.1):
+  
+
+num-order (version 1.2.0):
+  
+
+num-rational (version 0.2.4):
+  The Rust Project Developers
+
+num-rational (version 0.3.2):
+  The Rust Project Developers
+
+num-traits (version 0.2.19):
+  The Rust Project Developers
+
+num (version 0.3.1):
+  The Rust Project Developers
+
+object_store (version 0.10.2):
+  
+
+object (version 0.36.7):
+  
+
+once_cell_polyfill (version 1.70.1):
+  
+
+once_cell (version 1.21.3):
+  Aleksey Kladov
+
+openssl-macros (version 0.1.1):
+  
+
+openssl-probe (version 0.1.6):
+  Alex Crichton
+
+openssl-src (version 300.5.1+3.5.1):
+  Alex Crichton
+
+openssl-sys (version 0.9.109):
+  Alex Crichton
+  Steven Fackler
+
+openssl (version 0.10.73):
+  Steven Fackler
+
+parking_lot_core (version 0.9.11):
+  Amanieu d'Antras
+
+parking_lot (version 0.12.4):
+  Amanieu d'Antras
+
+parse-zoneinfo (version 0.3.1):
+  
+
+paste (version 1.0.15):
+  David Tolnay
+
+percent-encoding (version 2.3.1):
+  The rust-url developers
+
+phf_codegen (version 0.11.3):
+  Steven Fackler
+
+phf_generator (version 0.11.3):
+  Steven Fackler
+
+phf_shared (version 0.11.3):
+  Steven Fackler
+
+phf (version 0.11.3):
+  Steven Fackler
+
+pin-project-lite (version 0.2.16):
+  
+
+pin-utils (version 0.1.0):
+  Josef Brandl
+
+pkg-config (version 0.3.32):
+  Alex Crichton
+
+planus (version 0.3.1):
+  
+
+polars-arrow-format (version 0.1.0):
+  Jorge C. Leitao
+  ritchie46@gmail.com
+
+polars-arrow (version 0.44.2):
+  Jorge C. Leitao
+  Apache Arrow
+  Ritchie Vink
+
+polars-compute (version 0.44.2):
+  Ritchie Vink
+
+polars-core (version 0.44.2):
+  Ritchie Vink
+
+polars-error (version 0.44.2):
+  Ritchie Vink
+
+polars-expr (version 0.44.2):
+  Ritchie Vink
+
+polars-ffi (version 0.44.2):
+  Ritchie Vink
+
+polars-io (version 0.44.2):
+  Ritchie Vink
+
+polars-json (version 0.44.2):
+  Ritchie Vink
+
+polars-lazy (version 0.44.2):
+  Ritchie Vink
+
+polars-mem-engine (version 0.44.2):
+  Ritchie Vink
+
+polars-ops (version 0.44.2):
+  Ritchie Vink
+
+polars-parquet-format (version 0.1.0):
+  Apache Thrift contributors
+  Jorge Leitao
+  Gijs Burghoorn
+  Ritchie Vink
+
+polars-parquet (version 0.44.2):
+  Jorge C. Leitao
+  Apache Arrow
+  Ritchie Vink
+
+polars-pipe (version 0.44.2):
+  Ritchie Vink
+
+polars-plan (version 0.44.2):
+  Ritchie Vink
+
+polars-row (version 0.44.2):
+  Ritchie Vink
+
+polars-schema (version 0.44.2):
+  Ritchie Vink
+
+polars-sql (version 0.44.2):
+  Ritchie Vink
+
+polars-stream (version 0.44.2):
+  Ritchie Vink
+
+polars-time (version 0.44.2):
+  Ritchie Vink
+
+polars-utils (version 0.44.2):
+  Ritchie Vink
+
+polars (version 0.44.2):
+  Ritchie Vink
+
+portable-atomic (version 1.11.1):
+  
+
+potential_utf (version 0.1.2):
+  The ICU4X Project Developers
+
+ppv-lite86 (version 0.2.21):
+  The CryptoCorrosion Contributors
+
+pretty_assertions (version 1.4.1):
+  Colin Kiegel
+  Florent Fayolle
+  Tom Milligan
+
+proc-macro2 (version 1.0.95):
+  David Tolnay
+  Alex Crichton
+
+psm (version 0.1.26):
+  Simonas Kazlauskas
+
+pyo3-build-config (version 0.21.2):
+  PyO3 Project and Contributors
+
+pyo3-ffi (version 0.21.2):
+  PyO3 Project and Contributors
+
+pyo3-macros-backend (version 0.21.2):
+  PyO3 Project and Contributors
+
+pyo3-macros (version 0.21.2):
+  PyO3 Project and Contributors
+
+pyo3-polars-derive (version 0.12.0):
+  
+
+pyo3-polars (version 0.18.0):
+  
+
+pyo3 (version 0.21.2):
+  PyO3 Project and Contributors
+
+quick-xml (version 0.36.2):
+  
+
+quinn-proto (version 0.11.12):
+  
+
+quinn-udp (version 0.5.13):
+  
+
+quinn (version 0.11.8):
+  
+
+quote (version 1.0.40):
+  David Tolnay
+
+r-efi (version 5.3.0):
+  
+
+radium (version 0.7.0):
+  Nika Layzell
+  myrrlyn
+
+rand_chacha (version 0.2.2):
+  The Rand Project Developers
+  The Rust Project Developers
+  The CryptoCorrosion Contributors
+
+rand_chacha (version 0.3.1):
+  The Rand Project Developers
+  The Rust Project Developers
+  The CryptoCorrosion Contributors
+
+rand_chacha (version 0.9.0):
+  The Rand Project Developers
+  The Rust Project Developers
+  The CryptoCorrosion Contributors
+
+rand_core (version 0.5.1):
+  The Rand Project Developers
+  The Rust Project Developers
+
+rand_core (version 0.6.4):
+  The Rand Project Developers
+  The Rust Project Developers
+
+rand_core (version 0.9.3):
+  The Rand Project Developers
+  The Rust Project Developers
+
+rand_distr (version 0.2.2):
+  The Rand Project Developers
+
+rand_distr (version 0.4.3):
+  The Rand Project Developers
+
+rand_hc (version 0.2.0):
+  The Rand Project Developers
+
+rand (version 0.7.3):
+  The Rand Project Developers
+  The Rust Project Developers
+
+rand (version 0.8.5):
+  The Rand Project Developers
+  The Rust Project Developers
+
+rand (version 0.9.1):
+  The Rand Project Developers
+  The Rust Project Developers
+
+raw-cpuid (version 11.5.0):
+  Gerd Zellweger
+
+rawpointer (version 0.2.1):
+  bluss
+
+rayon-core (version 1.12.1):
+  Niko Matsakis
+  Josh Stone
+
+rayon (version 1.10.0):
+  Niko Matsakis
+  Josh Stone
+
+readonly (version 0.2.13):
+  David Tolnay
+
+recursive-proc-macro-impl (version 0.1.1):
+  Orson Peters
+
+recursive (version 0.1.1):
+  Orson Peters
+
+redox_syscall (version 0.5.13):
+  Jeremy Soller
+
+ref-cast-impl (version 1.0.24):
+  David Tolnay
+
+ref-cast (version 1.0.24):
+  David Tolnay
+
+regex-automata (version 0.4.9):
+  The Rust Project Developers
+  Andrew Gallant
+
+regex-syntax (version 0.8.5):
+  The Rust Project Developers
+  Andrew Gallant
+
+regex (version 1.11.1):
+  The Rust Project Developers
+  Andrew Gallant
+
+reqwest (version 0.12.22):
+  Sean McArthur
+
+ring (version 0.17.14):
+  
+
+rustc-demangle (version 0.1.25):
+  Alex Crichton
+
+rustc-hash (version 2.1.1):
+  The Rust Project Developers
+
+rustix (version 0.38.44):
+  Dan Gohman
+  Jakub Konka
+
+rustix (version 1.0.7):
+  Dan Gohman
+  Jakub Konka
+
+rustls-native-certs (version 0.8.1):
+  
+
+rustls-pki-types (version 1.12.0):
+  
+
+rustls-webpki (version 0.103.3):
+  
+
+rustls (version 0.23.28):
+  
+
+rustversion (version 1.0.21):
+  David Tolnay
+
+ryu (version 1.0.20):
+  David Tolnay
+
+same-file (version 1.0.6):
+  Andrew Gallant
+
+schannel (version 0.1.27):
+  Steven Fackler
+  Steffen Butzer
+
+scopeguard (version 1.2.0):
+  bluss
+
+security-framework-sys (version 2.14.0):
+  Steven Fackler
+  Kornel
+
+security-framework (version 3.2.0):
+  Steven Fackler
+  Kornel
+
+serde_derive (version 1.0.219):
+  Erick Tryzelaar
+  David Tolnay
+
+serde_json (version 1.0.140):
+  Erick Tryzelaar
+  David Tolnay
+
+serde_spanned (version 0.6.9):
+  
+
+serde_urlencoded (version 0.7.1):
+  Anthony Ramine
+
+serde-pickle (version 1.2.0):
+  Georg Brandl
+
+serde (version 1.0.219):
+  Erick Tryzelaar
+  David Tolnay
+
+shlex (version 1.3.0):
+  comex
+  Fenhl
+  Adrian Taylor
+  Alex Touchet
+  Daniel Parks
+  Garrett Berg
+
+simd-json (version 0.14.3):
+  Heinz N. Gies
+  Sunny Gleason
+
+simdutf8 (version 0.1.5):
+  Hans Kratz
+
+siphasher (version 1.0.1):
+  Frank Denis
+
+slab (version 0.4.10):
+  Carl Lerche
+
+slotmap (version 1.0.7):
+  Orson Peters
+
+smallvec (version 1.15.1):
+  The Servo Project Developers
+
+snafu-derive (version 0.7.5):
+  Jake Goulding
+
+snafu (version 0.7.5):
+  Jake Goulding
+
+snap (version 1.1.1):
+  Andrew Gallant
+
+socket2 (version 0.5.10):
+  Alex Crichton
+  Thomas de Zeeuw
+
+sqlparser (version 0.49.0):
+  Andy Grove
+
+stable_deref_trait (version 1.2.0):
+  Robert Grosse
+
+stacker (version 0.1.21):
+  Alex Crichton
+  Simonas Kazlauskas
+
+static_assertions (version 1.1.0):
+  Nikolai Vazquez
+
+statrs (version 0.13.0):
+  Michael Ma
+
+streaming-decompression (version 0.1.2):
+  
+
+streaming-iterator (version 0.1.9):
+  Steven Fackler
+
+strength_reduce (version 0.2.4):
+  Elliott Mahler
+
+strsim (version 0.11.1):
+  Danny Guo
+  maxbachmann
+
+strum_macros (version 0.26.4):
+  Peter Glotfelty
+
+subtle (version 2.6.1):
+  Isis Lovecruft
+  Henry de Valence
+
+syn (version 1.0.109):
+  David Tolnay
+
+syn (version 2.0.104):
+  David Tolnay
+
+sync_wrapper (version 1.0.2):
+  Actyx AG
+
+synstructure (version 0.13.2):
+  Nika Layzell
+
+sysinfo (version 0.31.4):
+  Guillaume Gomez
+
+tap (version 1.0.1):
+  Elliott Linder
+  myrrlyn
+
+target-features (version 0.1.6):
+  Caleb Zulawski
+
+target-lexicon (version 0.12.16):
+  Dan Gohman
+
+tempfile (version 3.20.0):
+  Steven Allen
+  The Rust Project Developers
+  Ashley Mannix
+  Jason White
+
+thiserror (version 1.0.69):
+  David Tolnay
+
+thiserror-impl (version 1.0.69):
+  David Tolnay
+
+thiserror-impl (version 2.0.12):
+  David Tolnay
+
+thiserror (version 2.0.12):
+  David Tolnay
+
+tinystr (version 0.8.1):
+  The ICU4X Project Developers
+
+tinyvec_macros (version 0.1.1):
+  Soveu
+
+tinyvec (version 1.9.0):
+  Lokathor
+
+tokio-macros (version 2.5.0):
+  Tokio Contributors
+
+tokio-rustls (version 0.26.2):
+  
+
+tokio-util (version 0.7.15):
+  Tokio Contributors
+
+tokio (version 1.46.1):
+  Tokio Contributors
+
+toml_datetime (version 0.6.11):
+  
+
+toml_edit (version 0.22.27):
+  
+
+toml_write (version 0.1.2):
+  
+
+toml (version 0.8.23):
+  
+
+tower-http (version 0.6.6):
+  Tower Maintainers
+
+tower-layer (version 0.3.3):
+  Tower Maintainers
+
+tower-service (version 0.3.3):
+  Tower Maintainers
+
+tower (version 0.5.2):
+  Tower Maintainers
+
+tracing-attributes (version 0.1.30):
+  Tokio Contributors
+  Eliza Weisman
+  David Barsky
+
+tracing-core (version 0.1.34):
+  Tokio Contributors
+
+tracing (version 0.1.41):
+  Eliza Weisman
+  Tokio Contributors
+
+try-lock (version 0.2.5):
+  Sean McArthur
+
+typenum (version 1.18.0):
+  Paho Lurie-Gregg
+  Andre Bogus
+
+unicode-ident (version 1.0.18):
+  David Tolnay
+
+unicode-reverse (version 1.0.9):
+  Matt Brubeck
+
+unicode-segmentation (version 1.12.0):
+  kwantam
+  Manish Goregaokar
+
+unicode-width (version 0.2.1):
+  kwantam
+  Manish Goregaokar
+
+unindent (version 0.2.4):
+  David Tolnay
+
+untrusted (version 0.9.0):
+  Brian Smith
+
+url (version 2.5.4):
+  The rust-url developers
+
+utf8_iter (version 1.0.4):
+  Henri Sivonen
+
+utf8parse (version 0.2.2):
+  Joe Wilm
+  Christian Duerr
+
+uuid (version 1.17.0):
+  Ashley Mannix<ashleymannix@live.com.au>
+  Dylan DPC<dylan.dpc@gmail.com>
+  Hunar Roop Kahlon<hunar.roop@gmail.com>
+
+value-trait (version 0.10.1):
+  Heinz N. Gies
+
+vcpkg (version 0.2.15):
+  Jim McGrath
+
+version_check (version 0.9.5):
+  Sergio Benitez
+
+walkdir (version 2.5.0):
+  Andrew Gallant
+
+want (version 0.3.1):
+  Sean McArthur
+
+wasi (version 0.11.1+wasi-snapshot-preview1):
+  The Cranelift Project Developers
+
+wasi (version 0.9.0+wasi-snapshot-preview1):
+  The Cranelift Project Developers
+
+wasi (version 0.14.2+wasi-0.2.4):
+  The Cranelift Project Developers
+
+wasm-bindgen-backend (version 0.2.100):
+  The wasm-bindgen Developers
+
+wasm-bindgen-futures (version 0.4.50):
+  The wasm-bindgen Developers
+
+wasm-bindgen-macro-support (version 0.2.100):
+  The wasm-bindgen Developers
+
+wasm-bindgen-macro (version 0.2.100):
+  The wasm-bindgen Developers
+
+wasm-bindgen-shared (version 0.2.100):
+  The wasm-bindgen Developers
+
+wasm-bindgen (version 0.2.100):
+  The wasm-bindgen Developers
+
+wasm-streams (version 0.4.2):
+  Mattias Buelens
+
+web-sys (version 0.3.77):
+  The wasm-bindgen Developers
+
+web-time (version 1.1.0):
+  
+
+winapi-i686-pc-windows-gnu (version 0.4.0):
+  Peter Atashian
+
+winapi-util (version 0.1.9):
+  Andrew Gallant
+
+winapi-x86_64-pc-windows-gnu (version 0.4.0):
+  Peter Atashian
+
+winapi (version 0.3.9):
+  Peter Atashian
+
+windows_aarch64_gnullvm (version 0.52.6):
+  Microsoft
+
+windows_aarch64_gnullvm (version 0.53.0):
+  Microsoft
+
+windows_aarch64_msvc (version 0.52.6):
+  Microsoft
+
+windows_aarch64_msvc (version 0.53.0):
+  Microsoft
+
+windows_i686_gnu (version 0.52.6):
+  Microsoft
+
+windows_i686_gnu (version 0.53.0):
+  Microsoft
+
+windows_i686_gnullvm (version 0.52.6):
+  Microsoft
+
+windows_i686_gnullvm (version 0.53.0):
+  Microsoft
+
+windows_i686_msvc (version 0.52.6):
+  Microsoft
+
+windows_i686_msvc (version 0.53.0):
+  Microsoft
+
+windows_x86_64_gnu (version 0.52.6):
+  Microsoft
+
+windows_x86_64_gnu (version 0.53.0):
+  Microsoft
+
+windows_x86_64_gnullvm (version 0.52.6):
+  Microsoft
+
+windows_x86_64_gnullvm (version 0.53.0):
+  Microsoft
+
+windows_x86_64_msvc (version 0.52.6):
+  Microsoft
+
+windows_x86_64_msvc (version 0.53.0):
+  Microsoft
+
+windows-core (version 0.57.0):
+  Microsoft
+
+windows-core (version 0.61.2):
+  Microsoft
+
+windows-implement (version 0.57.0):
+  Microsoft
+
+windows-implement (version 0.60.0):
+  Microsoft
+
+windows-interface (version 0.57.0):
+  Microsoft
+
+windows-interface (version 0.59.1):
+  Microsoft
+
+windows-link (version 0.1.3):
+  Microsoft
+
+windows-result (version 0.1.2):
+  Microsoft
+
+windows-result (version 0.3.4):
+  Microsoft
+
+windows-strings (version 0.4.2):
+  Microsoft
+
+windows-sys (version 0.52.0):
+  Microsoft
+
+windows-sys (version 0.59.0):
+  Microsoft
+
+windows-sys (version 0.60.2):
+  Microsoft
+
+windows-targets (version 0.52.6):
+  Microsoft
+
+windows-targets (version 0.53.2):
+  Microsoft
+
+windows (version 0.57.0):
+  Microsoft
+
+winnow (version 0.7.11):
+  
+
+wit-bindgen-rt (version 0.39.0):
+  
+
+writeable (version 0.6.1):
+  The ICU4X Project Developers
+
+wyz (version 0.5.1):
+  myrrlyn
+
+xxhash-rust (version 0.8.15):
+  Douman
+
+yansi (version 1.0.1):
+  Sergio Benitez
+
+yoke-derive (version 0.8.0):
+  Manish Goregaokar
+
+yoke (version 0.8.0):
+  Manish Goregaokar
+
+zerocopy-derive (version 0.8.26):
+  Joshua Liebow-Feeser
+  Jack Wrenn
+
+zerocopy (version 0.8.26):
+  Joshua Liebow-Feeser
+  Jack Wrenn
+
+zerofrom-derive (version 0.1.6):
+  Manish Goregaokar
+
+zerofrom (version 0.1.6):
+  Manish Goregaokar
+
+zeroize (version 1.8.1):
+  The RustCrypto Project Developers
+
+zerotrie (version 0.2.2):
+  The ICU4X Project Developers
+
+zerovec-derive (version 0.11.1):
+  Manish Goregaokar
+
+zerovec (version 0.11.2):
+  The ICU4X Project Developers
+
+zstd-safe (version 7.2.4):
+  Alexandre Bury
+
+zstd-sys (version 2.0.15+zstd.1.5.7):
+  Alexandre Bury
+
+zstd (version 0.13.3):
+  Alexandre Bury

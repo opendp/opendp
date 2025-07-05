@@ -1,0 +1,65 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{fn match\_num\_groups\_predicate}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle  
+
+
+\contrib
+
+Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_num\_groups\_predicate} 
+in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler Verified}
+Types matching pseudocode.
+
+\subsection*{Precondition}
+None 
+
+\subsection*{Function}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/match_num_groups_predicate.py}
+
+\subsection*{Postcondition}
+\begin{theorem}[Postcondition]
+    If \texttt{ranks} is a dense ranking of grouping columns,
+    and \texttt{partition\_by} is a singleton of \texttt{identifier},
+    then returns the bound on per-identifier contributions, 
+    or an error if the truncation is mis-specified.
+\end{theorem}
+
+\begin{proof}
+    Due to the ambiguity between matching predicates that bound \texttt{num\_groups} or \texttt{per\_group},
+    an error is only raised if the predicate is unambiguously a \texttt{per\_group} truncation predicate.
+    
+    The \texttt{per\_group} predicate is only unambiguously identified.
+    This check happens on line \ref{line:check_rank}.
+
+    Line \ref{line:check_identifier} checks that \texttt{partition\_by} is a singleton of the \texttt{identifier}, meeting the conditions of the postcondition.
+
+    We now check whether the truncation predicate is well-defined, on lines \ref{line:check_method} and \ref{line:check_input}.
+
+    Finally, line \ref{line:extract_grouping_columns} extracts the grouping columns from the predicate.
+    Special consideration is made for structs, which are considered multiple grouping columns.
+    
+    Further consideration is made if the first field is a hash of the second field, on line \ref{line:check_hash}.
+    This effectively randomizes the ranking of the grouping columns, as the ranking is based on a lexicographic ordering.
+    and gives in effect a random sample of grouping columns.
+    The second field of grouping columns is kept in the ranker for the rare case that there are hash collisions,
+    which prevents different combinations of grouping keys from being assigned the same rank, 
+    preventing more distinct groups being kept than is permitted.
+
+    This predicate corresponds to a \texttt{num\_groups} truncation predicate,
+    because the over expression groups by the \texttt{identifier} column,
+    and within each group, a dense ranking is applied to unique combinations of the grouping columns.
+    If the only rows kept are those corresponding to grouping keys assigned dense ranks less than \texttt{threshold},
+    then each user identifier will have at most \texttt{threshold} unique combinations of the grouping columns
+    after filtering by the predicate.
+
+    Therefore the bound on user contributions constructed on line \ref{line:bound} is valid.
+\end{proof}
+\end{document}
