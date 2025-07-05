@@ -1,0 +1,82 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{CompositionMeasure for ZeroConcentratedDivergence}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{combinators/sequential_composition/trait}{CompositionMeasure} 
+for \texttt{ZeroConcentratedDivergence} in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+Types matching pseudocode.
+
+
+\subsubsection*{Caller-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/CompositionMeasure_for_ZeroConcentratedDivergence.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+  \texttt{composability} returns \texttt{Ok(out)} if the composition of a vector of privacy parameters \texttt{d\_mids} 
+  is bounded above by \texttt{self.compose(d\_mids)} under \texttt{adaptivity} adaptivity and \texttt{out}-composability.
+  Otherwise returns an error.
+\end{theorem}
+
+\begin{definition}[Definition of \texttt{ZeroConcentratedDivergence}]
+  \label{def:zc-div}
+  For any two distributions $Y, Y'$ and any non-negative $d$,
+  $Y, Y'$ are $d$-close under the zero-concentrated divergence measure if,
+  for every possible choice of $\alpha \in (1, \infty)$,
+
+  \begin{equation}
+    D_\alpha(Y, Y') = \frac{1}{1 - \alpha} \mathbb{E}_{x \sim Y'} \Big[\ln \left( \dfrac{\Pr[Y = x]}{\Pr[Y' = x]} \right)^\alpha \Big] \leq d \cdot \alpha.
+  \end{equation}
+\end{definition}
+
+\begin{lemma}
+  \label{lemma:zcdp}
+  \begin{enumerate}
+    \item $\mathcal{F}(\rho_1, \rho_2, \ldots; \rho) = \mathbb{I}(\sum_i \rho_i \leq \rho)$ is a valid $\rho$-zCDP IM-filter.
+    \item $\mathcal{G}(\rho_1, \ldots, \rho_k) = \sum_{i=1}^k \rho_i$ is a valid $\rho$-zCDP IM-privacy loss accumulator.
+  \end{enumerate}
+\end{lemma}
+
+\begin{proof}
+  For any fixed choice of $\alpha > 1$, we have that $\mathcal{F}(\rho_1, \rho_2, \ldots; \rho) = \mathbb{I}(\sum_i \epsilon_i / \alpha / \leq \epsilon / \alpha)$,
+  by \ref{def:zc-div}, which by Theorem~1.22\cite{vadhan2021concurrent} is a valid $(\alpha, \epsilon)$-RDP IM-filter.
+  
+  Similarly, for any fixed choice of $\alpha > 1$, we have that $\mathcal{G}(\rho_1, \ldots, \rho_k) = \sum_i \epsilon_i / \alpha \leq \epsilon / \alpha$,
+  by \ref{def:zc-div}, which by Theorem~1.22\cite{vadhan2021concurrent} is a valid $(\alpha, \epsilon)$-RDP IM-privacy loss accumulator.
+\end{proof}
+
+\begin{proof}
+  By the postcondition of \rustdoc{traits/trait}{InfAdd} we have that $\sum_i \texttt{d\_mids}_i \le \texttt{compose(d\_mids)}$.
+
+  \begin{center}
+    \begin{tabular}{ r | l l }
+      Adaptivity & Sequential & Concurrent \\ 
+      \hline
+      Non-Adaptive & Lemma~1.7\cite{bun2016concentrated} & Corollary~1\cite{lyu2022interactive} \\  
+      Adaptive & Lemma~1.7\cite{bun2016concentrated} & Corollary~1\cite{lyu2022interactive} \\
+      Fully-Adaptive & Remark~4.4\cite{feldman2022individual} & \ref{lemma:zcdp}
+    \end{tabular}
+
+    This table is reflected in the implementation of \texttt{composability} on line~\ref{line:composability}.
+  \end{center}
+  
+\end{proof}
+
+\bibliographystyle{alpha}
+\bibliography{ref}
+
+\end{document}
