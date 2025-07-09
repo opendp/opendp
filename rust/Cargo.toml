@@ -101,8 +101,9 @@ default = ["partials", "use-openssl"]
 
 floating-point = []
 contrib = []
+contrib-continual = []
 honest-but-curious = []
-untrusted = ["floating-point", "contrib", "honest-but-curious"]
+untrusted = ["floating-point", "contrib", "contrib-continual", "honest-but-curious"]
 
 polars = [
     "dep:polars",
