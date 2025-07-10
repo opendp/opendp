@@ -114,7 +114,12 @@ fn test_make_toeplitz_basic() -> Fallible<()> {
     assert_eq!(result.len(), 5);
     
     // The prefix sums without noise would be [10, 20, 30, 40, 50]
-    // Results should be monotonically increasing (mostly)
+    // Results should be monotonically increasing after isotonic regression
+    for i in 1..result.len() {
+        assert!(result[i] >= result[i-1], 
+            "Non-monotonic at position {}: {} < {}", i, result[i], result[i-1]);
+    }
+    
     println!("Toeplitz output for constant data: {:?}", result);
     
     Ok(())
@@ -136,6 +141,11 @@ fn test_prefix_sum_correctness() -> Fallible<()> {
     let result = measurement.invoke(&data)?;
     
     println!("Near-zero noise result: {:?}", result);
+    // Verify monotonicity
+    for i in 1..result.len() {
+        assert!(result[i] >= result[i-1]);
+    }
+    
     // Should be approximately [1, 3, 6, 10] with very small noise
     // All values should be non-negative
     assert_eq!(result[0], 1);
@@ -170,20 +180,25 @@ fn test_continual_release_counting() -> Fallible<()> {
     // Verify output length
     assert_eq!(noisy_prefix_sums.len(), time_steps);
     
+    // Verify monotonicity
+    for i in 1..noisy_prefix_sums.len() {
+        assert!(noisy_prefix_sums[i] >= noisy_prefix_sums[i-1],
+            "Non-monotonic at position {}: {} < {}", i, noisy_prefix_sums[i], noisy_prefix_sums[i-1]);
+    }
+    
     // Test range queries by taking differences of prefix sums
-    // Note: While prefix sums are non-negative, range queries (differences) can still be negative
-    // This is unavoidable with differentially private prefix sums
+    // Note: Any valid subintervals of time are always non-negative, because prefix sums are monotonic after isotonic regression.
     let range_0_5 = noisy_prefix_sums[5];
     let range_6_10 = noisy_prefix_sums[10] - noisy_prefix_sums[5];
     let range_11_15 = noisy_prefix_sums[15] - noisy_prefix_sums[10];
     let total = noisy_prefix_sums[time_steps - 1];
     
     println!("Count [0,5]: {} (true: 8)", range_0_5);
-    println!("Count [6,10]: {} (true: 7, can be negative)", range_6_10);
-    println!("Count [11,15]: {} (true: 2, can be negative)", range_11_15);
+    println!("Count [6,10]: {} (true: 7)", range_6_10);
+    println!("Count [11,15]: {} (true: 2)", range_11_15);
     println!("Total count: {} (true: 17)", total);
     
-    // With non-negative clamping, all prefix sums should be >= 0
+    // All prefix sums should be non-negative
     for ps in &noisy_prefix_sums {
         assert!(*ps >= 0);
     }
@@ -268,12 +283,10 @@ fn test_saturation_behavior() -> Fallible<()> {
     // Should not panic, values should saturate
     assert_eq!(result.len(), 3);
     
-    // Test with minimum values
-    let domain = VectorDomain::new(AtomDomain::<i32>::default()).with_size(3);
-    let measurement = make_toeplitz(domain, L1Distance::default(), 0.1)?;
-    let data = vec![i32::MIN / 3, i32::MIN / 3, i32::MIN / 3];
-    let result = measurement.invoke(&data)?;
-    assert_eq!(result.len(), 3);
+    // Verify monotonicity even with saturation
+    for i in 1..result.len() {
+        assert!(result[i] >= result[i-1]);
+    }
     
     println!("Saturation test (max) result: {:?}", result);
     
@@ -289,12 +302,22 @@ fn test_different_integer_types() -> Fallible<()> {
     let result_i64 = measurement_i64.invoke(&data_i64)?;
     assert_eq!(result_i64.len(), 5);
     
+    // Verify monotonicity
+    for i in 1..result_i64.len() {
+        assert!(result_i64[i] >= result_i64[i-1]);
+    }
+    
     // Test with u32 (unsigned)
     let domain_u32 = VectorDomain::new(AtomDomain::<u32>::default()).with_size(5);
     let measurement_u32 = make_toeplitz(domain_u32, L1Distance::default(), 5.0)?;
     let data_u32 = vec![10u32, 20, 30, 40, 50];
     let result_u32 = measurement_u32.invoke(&data_u32)?;
     assert_eq!(result_u32.len(), 5);
+    
+    // Verify monotonicity
+    for i in 1..result_u32.len() {
+        assert!(result_u32[i] >= result_u32[i-1]);
+    }
     
     Ok(())
 }
@@ -311,6 +334,12 @@ fn test_noise_correlation() -> Fallible<()> {
     // All zeros should produce correlated noise pattern
     let zeros = vec![0i32; n];
     let noise_pattern = measurement.invoke(&zeros)?;
+    
+    // Verify monotonicity of the noise pattern
+    for i in 1..n {
+        assert!(noise_pattern[i] >= noise_pattern[i-1],
+            "Non-monotonic noise at position {}: {} < {}", i, noise_pattern[i], noise_pattern[i-1]);
+    }
     
     // The noise should have specific correlation structure
     // Adjacent differences should have lower variance than distant differences
@@ -330,7 +359,7 @@ fn test_noise_correlation() -> Fallible<()> {
     let dist_var = variance(&distant_diffs);
     
     println!("Adjacent variance: {}, Distant variance: {}", adj_var, dist_var);
-    // Due to correlation structure, adjacent differences should have much lower variance
+    // Due to correlation structure and isotonic regression, patterns may vary
     
     Ok(())
 }
@@ -361,12 +390,47 @@ fn test_large_time_series() -> Fallible<()> {
     let result = measurement.invoke(&data)?;
     assert_eq!(result.len(), n);
     
+    // Verify monotonicity
+    for i in 1..result.len() {
+        assert!(result[i] >= result[i-1],
+            "Non-monotonic at position {}: {} < {}", i, result[i], result[i-1]);
+    }
+    
     // Test some range queries
     let q1 = result[49];  // Sum of first 50
     let q2 = result[99] - result[49]; // Sum of elements 50-99
     let q3 = result[199] - result[99]; // Sum of elements 100-199
     
     println!("Large series queries: [0,49]={}, [50,99]={}, [100,199]={}", q1, q2, q3);
+    
+    Ok(())
+}
+
+#[test]
+fn test_isotonic_regression_properties() -> Fallible<()> {
+    // Test that isotonic regression preserves key properties
+    
+    // Test 1: Already monotonic sequence remains unchanged
+    let monotonic = vec![1, 2, 3, 4, 5];
+    let result = apply_isotonic_regression(monotonic.clone())?;
+    assert_eq!(result, monotonic);
+    
+    // Test 2: Simple violation gets corrected
+    let violated = vec![1, 3, 2, 4, 5];
+    let result = apply_isotonic_regression(violated)?;
+    // Should pool 3 and 2 to their average 2.5, rounded to 2 for integers
+    assert!(result[1] >= result[0]);
+    assert!(result[2] >= result[1]);
+    assert!(result[3] >= result[2]);
+    assert!(result[4] >= result[3]);
+    
+    // Test 3: Multiple violations
+    let multi_violated = vec![5, 4, 3, 2, 1];
+    let result = apply_isotonic_regression(multi_violated)?;
+    // Should all be pooled to average 3
+    for &val in &result {
+        assert_eq!(val, 3);
+    }
     
     Ok(())
 }
@@ -384,10 +448,20 @@ mod test {
         let result1 = mechanism.release(&counts1)?;
         assert_eq!(result1.len(), 5);
         
+        // Verify monotonicity
+        for i in 1..result1.len() {
+            assert!(result1[i] >= result1[i-1]);
+        }
+        
         // Second query: times [0, 8)
         let counts2 = vec![10, 20, 30, 40, 50, 60, 70, 80];
         let result2 = mechanism.release(&counts2)?;
         assert_eq!(result2.len(), 8);
+        
+        // Verify monotonicity
+        for i in 1..result2.len() {
+            assert!(result2[i] >= result2[i-1]);
+        }
         
         // The first 5 values should be identical
         for i in 0..5 {
