@@ -19,7 +19,7 @@ has the flexibility to explore different approaches to DP.
 
 --------------
 
-Any constructors that have not completed the proof-writing and vetting
+Any functions that have not completed the proof-writing and vetting
 process may still be accessed if you opt-in to “contrib”. Please contact
 us if you are interested in proof-writing. Thank you!
 
@@ -33,6 +33,14 @@ us if you are interested in proof-writing. Thank you!
             >>> import opendp.prelude as dp
             >>> dp.enable_features("contrib")
             
+.. note::
+    In this documentation, we'll consistently refer to OpenDP Library functions
+    as "constructors", although they are not "constructors" as that term is used in Python:
+    class names which are called to create instances.
+
+    Instead, in OpenDP these "constructors" are regular functions
+    which return a transformation or measurement,
+    and they provide a common interface across all supported languages.
 
 The Laplace Mechanism
 ---------------------
@@ -89,7 +97,6 @@ can find it under ``dp.m``:
             ...     dp.absolute_distance(T=float), 
             ...     scale=5.
             ... )
-            
 
 The supporting elements on this transformation match those described
 above:
