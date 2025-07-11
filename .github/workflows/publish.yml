@@ -75,7 +75,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.12
+          python-version: 3.13
 
       - name: Download Python wheel
         uses: actions/download-artifact@v4
@@ -143,7 +143,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.12
+          python-version: 3.13
 
       - name: Publish Rust crate
         env:
@@ -176,7 +176,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.12
+          python-version: 3.13
 
       - name: Publish GitHub Release
         if: ${{ inputs.channel == 'stable' }}
