@@ -38,13 +38,13 @@ mod test;
 /// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
 ///
 /// # Arguments
-/// * `input_domain` - Domain of the data type to be privatized.
-/// * `input_metric` - Metric of the data type to be privatized.
+/// * `input_domain` - Domain of the data type to be sanitized.
+/// * `input_metric` - Metric of the data type to be sanitized.
 /// * `scale` - Noise scale parameter for the distribution. `scale` == standard_deviation / sqrt(2).
 /// * `bounds` - Set bounds on the count to make the algorithm run in constant-time.
 ///
 /// # Generics
-/// * `DI` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
+/// * `DI` - Domain of the data type to be sanitized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 /// * `MI` - Metric used to measure distance between members of the input domain.
 /// * `MO` - Measure used to quantify privacy loss. Valid values are just `MaxDivergence`
 pub fn make_geometric<DI: NoiseDomain, MI: Metric, MO: Measure>(

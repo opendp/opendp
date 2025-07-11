@@ -22,7 +22,7 @@ use crate::traits::{ExactIntCast, Hashable, InfDiv, InfLn, InfMul, InfSub};
 // The general rule is eps = (p / p').ln(), where p' = (1 - p) / (t - 1), and t = # categories
 // See paper for more details: http://csce.uark.edu/~xintaowu/publ/DPL-2014-003.pdf
 //
-// In the case of privatizing a balanced coin flip,
+// In the case of sanitizing a balanced coin flip,
 //     t = 2, p = .75, giving eps = ln(.75 / .25) = ln(3)
 
 #[bootstrap(features("contrib"), arguments(constant_time(default = false)))]
