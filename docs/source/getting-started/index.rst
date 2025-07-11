@@ -3,8 +3,9 @@ Getting Started
 
 This is an overview of OpenDP's Python and R APIs.
 
-For a more conceptual overview of differential privacy see the :doc:`../theory/index` section,
-and for Python, R, and Rust library references see the :doc:`../api/index` documentation.
+* To interactively build OpenDP examples, try `DP Wizard <https://mccalluc-dp-wizard.share.connect.posit.cloud/>`_.
+* For a more conceptual overview of differential privacy see the :doc:`../theory/index` section.
+* For Python, R, and Rust library references see the :doc:`../api/index` documentation.
 
 .. toctree::
   :titlesonly:
