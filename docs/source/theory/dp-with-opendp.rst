@@ -38,9 +38,9 @@ us if you are interested in proof-writing. Thank you!
     as "constructors", although they are not "constructors" as that term is used in Python:
     class names which are called to create instances.
 
-    Instead, in OpenDP these "constructors" are regular functions which provide
-    a common interface across all supported languages,
-    and return wrappers around objects created in the Rust core.
+    Instead, in OpenDP these "constructors" are regular functions
+    which return a transformation or measurement,
+    and they provide a common interface across all supported languages.
 
 The Laplace Mechanism
 ---------------------
