@@ -8,5 +8,3 @@ we will demonstrate tools to help you navigate this tradeoff.
 .. toctree::
 
   accuracy
-
-Keep tuned, we have more documentation on the way!
