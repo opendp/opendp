@@ -38,7 +38,7 @@ The Laplace Mechanism
 ---------------------
 
 The Laplace mechanism is a ubiquitous algorithm in the DP ecosystem that
-is typically used to privatize an aggregate, like a sum or mean.
+is typically used to sanitize an aggregate, like a sum or mean.
 
 An instance of the Laplace mechanism is captured by a *measurement*
 containing the following five elements:

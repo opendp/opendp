@@ -6,7 +6,7 @@ the local-DP, or per-user, model. The randomized response algorithm is
 typically meant to be run on the edge, at the user’s device, before data
 is submitted to a central server. Local DP is a stronger privacy model
 than the central model, because the central data aggregator is only ever
-privileged to privatized data.
+privileged to sanitized data.
 
 OpenDP currently only provides mechanisms that may be run on the edge
 device: You must handle network communication and aggregation.
@@ -31,7 +31,7 @@ us if you are interested in proof-writing. Thank you!
 Privatization
 -------------
 
-We’ll start by privatizing a boolean response. Boolean randomized
+We’ll start by sanitizing a boolean response. Boolean randomized
 response is fully characterized by a *measurement* containing the
 following six elements:
 
@@ -113,7 +113,7 @@ custom category set:
 Aggregation: Mean
 -----------------
 
-The privatized responses from many individuals may be aggregated to form
+The sanitized responses from many individuals may be aggregated to form
 a population-level inference. In the case of the boolean randomized
 response, you may want to estimate the proportion of individuals who
 actually responded with ``True``.

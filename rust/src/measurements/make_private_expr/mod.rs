@@ -50,7 +50,7 @@ pub(crate) mod expr_report_noisy_max;
 /// * `input_domain` - The domain of the input data.
 /// * `input_metric` - How to measure distances between neighboring input data sets.
 /// * `output_measure` - How to measure privacy loss.
-/// * `expr` - The [`Expr`] to be privatized.
+/// * `expr` - The [`Expr`] to be sanitized.
 /// * `global_scale` - A tune-able parameter that affects the privacy-utility tradeoff.
 ///
 /// # Why honest-but-curious?
