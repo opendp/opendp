@@ -1,0 +1,93 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{fn make\_row\_by\_row\_fallible}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of \rustdoc{transformations/fn}{make\_row\_by\_row\_fallible} in \asOfCommit{mod.rs}{f5bb719}.
+
+\texttt{make\_row\_by\_row\_fallible} returns a Transformation that applies a user-specified function to each record in the input dataset.
+The function is permitted to return a data-independent error.
+
+\subsection*{Vetting History}
+\begin{itemize}
+    \item \vettingPR{562}
+\end{itemize}
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\begin{itemize}
+
+    \item \texttt{DI} (input domain) is a type with trait \rustdoc{transformations/trait}{RowByRowDomain}\texttt{<DO>}. 
+        This trait provides a way to apply a map function to each record in the input dataset to retrieve a dataset that is a member of the output domain, of type \texttt{DO}. The trait further implies that \texttt{DatasetDomain} is also implemented for \texttt{DI}.
+    \item \texttt{DO} (output domain) is a type with trait \rustdoc{transformations/trait}{DatasetDomain}. 
+        \texttt{DatasetDomain} is used to define the type of the row domain.
+    \item \texttt{M} (metric) is a type with trait \rustdoc{transformations/trait}{DatasetMetric}. 
+        \texttt{DatasetMetric} is used to restrict the set of valid metrics to those which measure distances between datasets.
+    \item \rustdoc{core/trait}{MetricSpace} is implemented for \texttt{(DI, M)}. Therefore \texttt{M} is a valid metric on \texttt{DI}.
+    \item \rustdoc{core/trait}{MetricSpace} is implemented for \texttt{(DO, M)}.
+    \item \texttt{row\_function} has no side-effects.
+    \item If the input to \texttt{row\_function} is a member of \texttt{input\_domain}'s row domain, then the output is a member of \texttt{output\_row\_domain}, or a data-independent error.
+\end{itemize}
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_row_by_row_fallible.py}
+
+\subsection*{Postcondition}
+\validTransformation{\texttt{(input\_domain, input\_metric, output\_domain, row\_function, DI, DO, M)}}{\texttt{make\_row\_by\_row}}
+
+\section{Proofs}
+
+\begin{proof} \textbf{(Part 1 -- appropriate output domain).}
+    By the definition of \texttt{RowByRowDomain}, \texttt{DI.apply\_rows(data, row\_function)} returns a dataset in \texttt{input\_domain.translate(output\_row\_domain)},
+    if \texttt{row\_function} is a mapping between \texttt{input\_domain}'s row domain to \texttt{output\_row\_domain}.
+    This is satisfied by the precondition on \texttt{row\_function}.
+    Thus, for all settings of input arguments, the function returns a dataset in the output domain.
+\end{proof}
+
+Before proceeding with proving the validity of the stability map, we first provide a lemma.
+
+\begin{lemma}
+    \label{f-sim}
+    Let $f$ denote the \texttt{row\_function}. 
+    For any choice $u, v$ of input arguments in the input domain, and any choice \texttt{M} for which \texttt{DatasetMetric} is implemented for,
+    $d_{M}([f(u_1), f(u_2), ...], [f(v_1), f(v_2), ...]) \le d_{M}([u_1, u_2, ...], [v_1, v_2, ...])$.
+\end{lemma}
+
+\begin{proof}
+    Assume WLOG that any source of randomness is fixed when $f$ is computed on $u$ vs $v$.
+    Given this assumption, and the precondition that $f$ has no side-effects,
+    if $u_i = v_i$, then $f(u_i) = f(v_i)$. 
+    That is, the row function cannot increase the distance between corresponding rows in any adjacent dataset.
+    On the other hand, it is possible for $f(u_i) = f(v_i)$, even if $u_i \neq v_i$.
+    For example, if $f$ is a constant function, then $f(u_i) = f(v_i)$ for all $i$.
+    Therefore, by any of the metrics that \rustdoc{transformations/trait}{DatasetMetric} is implemented for,
+    $f$ can only make datasets more similar.
+\end{proof}
+
+\begin{proof} \textbf{(Part 2 -- stability map).} 
+    Take any two elements $u, v$ in the \\\texttt{input\_domain} and any pair $(\din, \dout)$, 
+    where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \texttt{output\_metric}.
+    Assume $u, v$ are \din-close under \texttt{input\_metric} and that $\texttt{stability\_map}(\din) \leq \dout$. 
+    
+    \begin{align*}
+        d_{M}(\function(u), \function(v)) &= d_{M}([f(u_1), f(u_2), ...], [f(v_1), f(v_2), ...])  && \text{since \texttt{DO} is a }\texttt{DatasetDomain}\\
+        &\le d_{M}([u_1, u_2, ...], [v_1, v_2, ...]) && \texttt{by } \ref{f-sim} \\
+        &= d_{M}(u, v)  && \text{since \texttt{DI} is a }\texttt{DatasetDomain} \\
+        &= \din &&\text{by the first assumption} \\
+        &\leq \texttt{TO.inf\_cast}(\din) &&\text{by } \rustdoc{traits/trait}{InfCast} \\
+        &\leq \texttt{TO.one().inf\_mul(TO.inf\_cast(\din))} &&\text{by } \rustdoc{traits/trait}{InfMul} \\
+        &=\texttt{stability\_map}(\din) &&\text{by pseudocode line } \ref{line:stability-map} \\
+        &\leq \dout &&\text{by the second assumption}
+    \end{align*}
+
+    It is shown that \function(u), \function(v) are \dout-close under \texttt{output\_metric}.
+\end{proof}
+
+\end{document}
