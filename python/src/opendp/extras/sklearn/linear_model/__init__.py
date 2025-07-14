@@ -14,6 +14,7 @@ If you're interested in the underlying algorithm, we've also
 `implemented Theil-Sen Regression as a demonstration of OpenDP plugins <../user-guide/plugins/theil-sen-regression.html>`_.
 '''
 
+from typing import Iterable
 from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
     make_private_theil_sen as _make_private_theil_sen,
 )  # noqa: F401
@@ -33,7 +34,7 @@ class LinearRegression:
         self,
         X,
         y,
-        x_bounds: tuple[float, float], # TODO: Wrap this so each feature has its own bound tuple?
+        x_bounds: Iterable[tuple[float, float]],
         y_bounds: tuple[float, float],
         scale: float,
         runs: int = 1,
@@ -45,7 +46,7 @@ class LinearRegression:
 
         :param X: Training data. Array-like of shape (n_samples, 1)
         :param y: Target values. Array-like of shape (n_samples,)
-        :param x_bounds: Bounds for training data
+        :param x_bounds: Bounds for training data; For the moment, only lists containing a single tuple are supported
         :param y_bounds: Bounds for target data
         :param scale: The scale of the noise to be added
         :param runs: Controls how many times randomized pairwise predictions are computed. Increasing this value can improve the robustness and accuracy of the results; However, it can also increase computational cost and amount of noise needed later in the algorithm.
@@ -64,15 +65,17 @@ class LinearRegression:
         >>> lin_reg = dp.sklearn.linear_model.LinearRegression().fit(
         ...     X=[[1], [2], [3], [4], [5]],
         ...     y=[1, 2, 3, 4, 5],
-        ...     x_bounds=(0,10),
+        ...     x_bounds=[(0,10)],
         ...     y_bounds=(0,10),
         ...     scale=1,
         ... )
         >>> lin_reg.predict([[10]])
         array([...])
         """
+        if len(x_bounds) != 1:
+            raise Exception('For now, the x_bounds array must consist of a single tuple.')
         meas = _make_private_theil_sen(
-            x_bounds=x_bounds,
+            x_bounds=x_bounds[0],
             y_bounds=y_bounds,
             scale=scale,
             runs=runs,
