@@ -54,13 +54,13 @@ impl TryFrom<&str> for Optimize {
     arguments(optimize(c_type = "char *", rust_type = "String")),
     generics(TIA(suppress))
 )]
-/// Make a Measurement that takes a vector of scores and privately selects the index of the highest score.
+/// Make a Measurement that takes a vector of scores and makes a differentially private release of the index of the highest score.
 ///
 /// # Arguments
 /// * `input_domain` - Domain of the input vector. Must be a non-nan VectorDomain.
 /// * `input_metric` - Metric on the input domain. Must be LInfDistance
 /// * `scale` - Higher scales are more private.
-/// * `optimize` - Indicate whether to privately return the "max" or "min"
+/// * `optimize` - Indicate whether to release the "max" or "min" with DP
 ///
 /// # Generics
 /// * `TIA` - Atom Input Type. Type of each element in the score vector.

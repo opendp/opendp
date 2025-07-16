@@ -60,7 +60,7 @@ causing tail values of the distribution to round to zero.
 The inverse transform sampling is also subject to accumulated rounding errors from the arithmetic and sum, 
 which influence the likelihood of being chosen.
 
-The Gumbel-max trick may instead be used to privately select an index.
+The Gumbel-max trick may instead be used to release an index.
 Let $K = argmax_k G_k$, a random variable representing the selected index. 
 Denote the $k^{th}$ noisy score as $G_k \sim Gumbel(\mu = s_k / \tau)$.
 $K$ can be sampled via an inverse transform, where $u_k$ is sampled iid uniformly from $(0, 1)$:
