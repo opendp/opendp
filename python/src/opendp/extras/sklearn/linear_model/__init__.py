@@ -72,6 +72,7 @@ class LinearRegression:
         >>> lin_reg.predict([[10]])
         array([...])
         """
+        x_bounds = list(x_bounds) # Shouldn't be so large that this is a problem
         if len(x_bounds) != 1:
             raise Exception('For now, the x_bounds array must consist of a single tuple.')
         meas = _make_private_theil_sen(
