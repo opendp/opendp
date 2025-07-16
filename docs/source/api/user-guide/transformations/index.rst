@@ -470,7 +470,7 @@ Should you need it, the following constructors give greater control over the sum
 Quantiles via Trees
 -------------------
 
-Building off of the binning transformation, quantiles can be estimated by sanitizing a b-ary tree and then postprocessing.
+Building off of the binning transformation, quantiles can be estimated by releasing a DP b-ary tree and then postprocessing.
 See the following notebook for more information:
 
 .. toctree::

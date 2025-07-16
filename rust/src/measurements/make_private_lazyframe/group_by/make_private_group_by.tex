@@ -79,8 +79,8 @@ By the postcondition of \texttt{make\_basic\_composition},
 \texttt{m\_exprs} is a valid measurement that prepares a batch of expressions that, 
 when executed via \texttt{f\_comp}, satisfies the privacy guarantee of \texttt{f\_privacy\_map}.
 
-Now that we've prepared the necessary prerequisites for sanitizing the aggregations,
-we switch to sanitizing the keys.
+Now that we've prepared the necessary prerequisites for releasing the aggregations,
+we switch to releasing the keys.
 
 \subsection{Prepare to release \texttt{keys}}
 \texttt{key\_sanitization} needs to be updated with information that was not available in the initial match on line \ref{line:match-group-by}.
@@ -142,7 +142,7 @@ using all of the properties proven of the variables established thus far.
 The function returns a \texttt{DslPlan} that applies each expression from \texttt{m\_exprs}
 to \texttt{arg} grouped by \texttt{keys}.
 \texttt{key\_sanitizer} is conveyed into the plan, if set, 
-to ensure that the keys are also sanitized if necessary.
+to ensure that the keys are also released with differential privacy if necessary.
 
 In the case of the join sanitization, by the definition of \texttt{KeySanitizer},
 the join will either be a left or right join.

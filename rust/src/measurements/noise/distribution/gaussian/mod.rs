@@ -31,13 +31,13 @@ mod ffi;
 /// | `vector_domain(atom_domain(T))` | `Vec<T>`     | `l2_distance(QI)`       |
 ///
 /// # Arguments
-/// * `input_domain` - Domain of the data type to be sanitized.
-/// * `input_metric` - Metric of the data type to be sanitized.
+/// * `input_domain` - Domain of the data type to be released.
+/// * `input_metric` - Metric of the data type to be released.
 /// * `scale` - Noise scale parameter for the gaussian distribution. `scale` == standard_deviation.
 /// * `k` - The noise granularity in terms of 2^k.
 ///
 /// # Generics
-/// * `DI` - Domain of the data to be sanitized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
+/// * `DI` - Domain of the data to be released. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
 /// * `MI` - Input Metric to measure distances between members of the input domain.
 /// * `MO` - Output Measure. The only valid measure is `ZeroConcentratedDivergence`.
 pub fn make_gaussian<DI: Domain, MI: Metric, MO: Measure>(

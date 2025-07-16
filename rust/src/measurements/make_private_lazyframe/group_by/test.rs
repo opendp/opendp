@@ -135,7 +135,7 @@ fn test_explicit_keys() -> Fallible<()> {
         lf.clone()
             .group_by(&[col("A")])
             .agg(&[sum_expr, median_expr])
-            // add a sanitizing join (the constructor adds an imputer to the resulting onceframe)
+            // add a DP join (the constructor adds an imputer to the resulting onceframe)
             .join(keys, [col("A")], [col("A")], JoinType::Right.into()),
         Some(1.),
         None,
