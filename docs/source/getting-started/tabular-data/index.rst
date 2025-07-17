@@ -138,7 +138,7 @@ See :py:func:`opendp.context.Context.compositor` for more information.
 
   essential-statistics
   grouping
-  preparing-microdata
   identifier-truncation
+  preparing-microdata
 
 More thorough documentation can be found in the `OpenDP Polars User Guide <../../api/user-guide/polars/index.html>`_.
