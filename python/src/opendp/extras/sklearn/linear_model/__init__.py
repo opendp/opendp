@@ -74,7 +74,7 @@ class LinearRegression:
         """
         x_bounds = list(x_bounds) # Shouldn't be so large that this is a problem
         if len(x_bounds) != 1:
-            raise Exception('For now, the x_bounds array must consist of a single tuple.')
+            raise Exception(f'For now, the x_bounds array must consist of a single tuple, not {x_bounds}')
         meas = _make_private_theil_sen(
             x_bounds=x_bounds[0],
             y_bounds=y_bounds,
