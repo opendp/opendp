@@ -127,8 +127,7 @@ status, when the individual worked for pay or profit.
             └─────────┴───────────┴─────────────────┴────────┘
 
 
-See the API documentation for
-```truncate_per_group`` <../../api/python/opendp.extras.polars.html#opendp.extras.polars.LazyFrameQuery.truncate_per_group>`__
+See the API documentation for :py:func:`truncate_per_group <opendp.extras.polars.LazyFrameQuery.truncate_per_group>`
 for more informaton on configuring sorting.
 
 In this case, when computing the mean, an even better approach is to
