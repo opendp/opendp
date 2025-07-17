@@ -65,8 +65,8 @@ class LinearRegression:
         >>> lin_reg = dp.sklearn.linear_model.LinearRegression().fit(
         ...     X=[[1], [2], [3], [4], [5]],
         ...     y=[1, 2, 3, 4, 5],
-        ...     x_bounds=[(0,10)],
-        ...     y_bounds=(0,10),
+        ...     x_bounds=[(0, 10)],
+        ...     y_bounds=(0, 10),
         ...     scale=1,
         ... )
         >>> lin_reg.predict([[10]])

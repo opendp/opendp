@@ -1,8 +1,11 @@
+import re
+
+import pytest
 import numpy as np
+
 from opendp.extras.sklearn.linear_model._make_private_theil_sen import make_private_theil_sen
 import opendp.prelude as dp
-import pytest
-import re
+
 from ..helpers import optional_dependency
 
 
@@ -30,7 +33,7 @@ def test_input_validation():
             dp.sklearn.linear_model.LinearRegression().fit(
                 X=[[1], [2], [3], [4], [5]],
                 y=[1, 2, 3, 4, 5],
-                x_bounds=(0,10),
-                y_bounds=(0,10),
+                x_bounds=(0, 10),
+                y_bounds=(0, 10),
                 scale=1,
             )
