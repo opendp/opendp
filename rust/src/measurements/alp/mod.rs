@@ -255,6 +255,8 @@ where
 
     Measurement::new(
         input_domain,
+        input_metric,
+        MaxDivergence,
         Function::new_fallible(move |x: &HashMap<K, CI>| {
             let z = compute_projection(x, &hashers, alpha, scale, projection_size)?;
             Ok(AlpState {
@@ -264,8 +266,6 @@ where
                 z,
             })
         }),
-        input_metric,
-        MaxDivergence,
         PrivacyMap::new_fallible(move |(_l0, l1, _li)| f64::inf_cast(*l1)?.inf_mul(&scale)),
     )
 }

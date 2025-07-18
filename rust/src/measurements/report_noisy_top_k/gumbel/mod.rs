@@ -69,11 +69,11 @@ where
 
     Measurement::new(
         input_domain,
+        input_metric.clone(),
+        RangeDivergence,
         Function::new_fallible(move |x: &Vec<TIA>| {
             report_noisy_top_k_gumbel::<TIA>(x, k, f_scale.clone(), negate.clone())
         }),
-        input_metric.clone(),
-        RangeDivergence,
         PrivacyMap::new_fallible(move |d_in: &TIA| {
             // convert L_\infty distance to range distance
             let d_in = input_metric.range_distance(d_in.clone())?;

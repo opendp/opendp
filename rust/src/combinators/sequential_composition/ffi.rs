@@ -4,7 +4,6 @@ use crate::{
     ffi::any::{AnyMeasure, AnyObject, Downcast},
     measures::{
         Approximate, MaxDivergence, RangeDivergence, RenyiDivergence, ZeroConcentratedDivergence,
-        ffi::TypedMeasure,
     },
 };
 
@@ -45,16 +44,5 @@ impl CompositionMeasure for AnyMeasure {
         dispatch!(monomorphize, [
             (self.type_, [RangeDivergence, MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>, RenyiDivergence])
         ], (self, d_i))
-    }
-}
-
-impl<Q: 'static> CompositionMeasure for TypedMeasure<Q> {
-    fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composability> {
-        self.measure.composability(adaptivity)
-    }
-    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        self.measure
-            .compose(d_i.into_iter().map(AnyObject::new).collect())?
-            .downcast()
     }
 }

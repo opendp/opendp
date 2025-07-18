@@ -29,7 +29,7 @@ mod test;
 ///
 /// # Generics
 /// * `TIA` - Atom Input Type. Type of each element in the score vector.
-pub fn make_permute_and_flip<TIA>(
+pub fn make_report_noisy_top_k_exponential<TIA>(
     input_domain: VectorDomain<AtomDomain<TIA>>,
     input_metric: LInfDistance<TIA>,
     k: usize,
@@ -50,26 +50,24 @@ where
         return fallible!(MakeMeasurement, "scale must not be negative");
     }
 
-    let size = input_domain
-        .size
-        .ok_or_else(|| err!(MakeTransformation, "input_domain member size must be known"))?;
-
-    if size < k {
-        return fallible!(
-            MakeTransformation,
-            "k ({k}) must not be greater than the number of candidates ({size})"
-        );
+    if let Some(size) = input_domain.size {
+        if k > size {
+            return fallible!(
+                MakeMeasurement,
+                "k ({k}) must not exceed the number of candidates ({size})"
+            );
+        }
     }
 
     let scale_frac: RBig = scale.into_rational()?;
 
     Measurement::new(
         input_domain,
-        Function::new_fallible(move |arg: &Vec<TIA>| {
-            permute_and_flip(arg, k, scale_frac.clone(), negate)
-        }),
         input_metric.clone(),
         MaxDivergence::default(),
+        Function::new_fallible(move |arg: &Vec<TIA>| {
+            report_noisy_top_k_exponential(arg, k, scale_frac.clone(), negate)
+        }),
         PrivacyMap::new_fallible(move |d_in: &TIA| {
             // convert L_\infty distance to range distance
             let d_in = f64::inf_cast(input_metric.range_distance(*d_in)?)?;
@@ -88,41 +86,41 @@ where
     )
 }
 
-pub(crate) fn permute_and_flip<TIA: Clone + CastInternalRational>(
+pub(crate) fn report_noisy_top_k_exponential<TIA: Clone + CastInternalRational>(
     x: &[TIA],
     k: usize,
     scale: RBig,
     negate: bool,
 ) -> Fallible<Vec<usize>> {
     let sign = Sign::from(negate);
-    let rational_elements = x
+    let mut x = x
         .iter()
         .cloned()
         .map(|x_i| x_i.into_rational().map(|x_i| x_i * sign))
         .collect::<Fallible<Vec<RBig>>>()?;
 
     let mut permutation: Vec<usize> = (0..x.len()).collect();
-    (0..k)
+    
+    (0..k.min(x.len()))
         .map(|_| {
             permutation.shuffle()?;
 
-            // get argmax of the rational elements
-            let max_candidate = rational_elements
+            // get max of the rational elements
+            let max_candidate = x
                 .iter()
                 .max()
-                .ok_or(err!(FailedFunction, "there must be at least one candidate"))?;
+                .ok_or_else(|| err!(FailedFunction, "there must be at least one candidate"))?;
 
-            // iterate over the permutations and throw a coin for each
-            for i in &permutation {
-                let candidate = &rational_elements[*i];
+            // throw a coin for each index in the permutation until heads
+            for (idx, i) in permutation.iter().cloned().enumerate() {
+                let candidate = &x[i];
                 if sample_bernoulli_exp((max_candidate - candidate) / &scale)? {
-                    return Ok(permutation.remove(*i));
+                    permutation.remove(idx);
+                    x.remove(i);
+                    return Ok(i);
                 }
             }
-            fallible!(
-                FailedFunction,
-                "Enumerating over all the candidates will always terminate."
-            )
+            unreachable!("at least one candidate matches max_candidate")
         })
         .collect()
 }

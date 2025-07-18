@@ -25,7 +25,7 @@ pub extern "C" fn opendp_transformations__make_clamp(
         bounds: &AnyObject,
     ) -> Fallible<AnyTransformation>
     where
-        TA: 'static + Clone + ProductOrd + CheckAtom,
+        TA: 'static + Clone + ProductOrd + PartialOrd + CheckAtom,
         M: 'static + EventLevelMetric,
         (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
     {

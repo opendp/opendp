@@ -3,7 +3,7 @@ use crate::{
     core::{Measure, Measurement},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    measurements::{exponential::make_permute_and_flip, gumbel::make_report_noisy_top_k_gumbel},
+    measurements::{exponential::make_report_noisy_top_k_exponential, gumbel::make_report_noisy_top_k_gumbel},
     measures::{MaxDivergence, RangeDivergence, ZeroConcentratedDivergence},
     metrics::LInfDistance,
     traits::{CastInternalRational, InfCast, Number},
@@ -143,6 +143,6 @@ impl SelectionMeasure for MaxDivergence {
         FBig: TryFrom<TIA> + TryFrom<f64>,
         f64: InfCast<TIA> + InfCast<usize>,
     {
-        make_permute_and_flip(input_domain, input_metric, k, scale, negate)
+        make_report_noisy_top_k_exponential(input_domain, input_metric, k, scale, negate)
     }
 }

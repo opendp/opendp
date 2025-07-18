@@ -140,13 +140,13 @@ where
 
         Measurement::new(
             input_domain,
+            input_metric,
+            output_measure,
             Function::new_fallible(move |arg: &Vec<T>| {
                 arg.iter()
                     .map(|v| sample_discrete_laplace_linear::<T, f64>(*v, scale, (lower, upper)))
                     .collect()
             }),
-            input_metric,
-            output_measure,
             PrivacyMap::new_fallible(move |d_in: &QI| {
                 let d_in = RBig::try_from(d_in.clone())
                     .map_err(|_| err!(FailedMap, "d_in ({d_in:?}) must be finite"))?;

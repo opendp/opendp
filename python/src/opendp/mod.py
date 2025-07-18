@@ -632,7 +632,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
 
 Transformation = cast(Type[Transformation], Transformation) # type: ignore[misc]
 
-class Queryable(object):
+class Queryable:
     '''
     Queryables are used for interactive mechanisms like :ref:`adaptive composition <adaptive-composition>`.
 
@@ -650,18 +650,14 @@ class Queryable(object):
     def __repr__(self) -> str:
         return f"Queryable(Q={self.query_type})"
 
-class OdometerQueryable(object):
+class OdometerQueryable:
     '''
     Odometer Queryables are used for instances of odometers like :ref:`fully adaptive composition <fully-adaptive-composition>`.
 
     Can be created via :py:func:`make_fully_adaptive_composition <opendp.combinators.make_fully_adaptive_composition>`.
     '''
     def __init__(self, value):
-        from opendp.core import odometer_queryable_invoke_type, odometer_queryable_privacy_loss_type
-        from opendp.typing import RuntimeType
         self.value = value
-        self.invoke_type = RuntimeType.parse(odometer_queryable_invoke_type(value))
-        self.privacy_loss_type = RuntimeType.parse(odometer_queryable_privacy_loss_type(value))
 
     def __call__(self, query):
         from opendp.core import odometer_queryable_invoke
@@ -676,7 +672,11 @@ class OdometerQueryable(object):
         return odometer_queryable_privacy_loss(self.value, d_in)
 
     def __repr__(self) -> str:
-        return f"OdometerQueryable(Q={self.invoke_type}, QB={self.privacy_loss_type})"
+        from opendp.core import odometer_queryable_invoke_type, odometer_queryable_privacy_loss_type
+        from opendp.typing import RuntimeType
+        Q = RuntimeType.parse(odometer_queryable_invoke_type(self.value))
+        QB = RuntimeType.parse(odometer_queryable_privacy_loss_type(self.value))
+        return f"OdometerQueryable(Q={Q}, QB={QB})"
 
 
 class Function(ctypes.POINTER(AnyFunction)): # type: ignore[misc]
@@ -960,6 +960,20 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
     def __iter__(self):
         raise ValueError("Metric does not support iteration")
 
+class ExtrinsicDistance(Metric):
+    '''A user-defined metric.'''
+
+    _type_ = AnyMetric
+        
+    @property
+    def descriptor(self) -> Any:
+        '''
+        Descriptor of domain. Used to retrieve the descriptor associated with domains defined in Python 
+        '''
+        from opendp.metrics import _extrinsic_metric_descriptor
+        return _extrinsic_metric_descriptor(self)
+
+
 class FrameDistance(Metric):
     '''``FrameDistance`` is a higher-order metric that contains multiple distance bounds for different groupings of data.'''
 
@@ -1061,6 +1075,20 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
     def __iter__(self):
         raise ValueError("Measure does not support iteration")
 
+
+
+class ApproximateDivergence(Measure):
+    '''``ApproximateDivergence`` is a privacy measure representing the divergence between two distributions 
+    with respect to some inner privacy measure, except for some subset of possible outputs with probability mass no greater than delta.
+    '''
+
+    _type_ = AnyMeasure
+    
+    @property
+    def inner_measure(self) -> Measure:
+        from opendp.measures import _approximate_divergence_get_inner_measure
+        return _approximate_divergence_get_inner_measure(self)
+    
 
 class PrivacyProfile(object):
     '''

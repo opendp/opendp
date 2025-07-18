@@ -17,8 +17,10 @@ The methods of this module will then be accessible at ``dp.polars``.
 from __future__ import annotations
 from dataclasses import asdict, dataclass, field, replace
 import os
-from typing import Any, Literal, Sequence
-from opendp._lib import lib_path, import_optional_dependency
+from typing import Any, Literal, Optional, Sequence, Union
+from opendp._lib import AnyObjectPtr, lib_path, import_optional_dependency
+from opendp.extras.contingency import AIM, Fixed, then_contingency_table
+from opendp.extras.contingency._mst import MST
 from opendp.mod import (
     ChangeOneIdDistance,
     Domain,
@@ -41,6 +43,7 @@ from opendp.domains import (
 )
 from opendp.measurements import make_private_lazyframe
 from deprecated import deprecated
+from opendp.transformations import make_stable_lazyframe
 
 
 class DPExpr(object):
@@ -582,7 +585,11 @@ class OnceFrame(object):
         """Collects a DataFrame from a OnceFrame, exhausting the OnceFrame."""
         from opendp._data import onceframe_collect
 
-        return onceframe_collect(self.queryable)
+        cls = self.queryable.__class__
+        self.queryable.__class__ = AnyObjectPtr
+        df = onceframe_collect(self.queryable)
+        self.queryable.__class__ = cls
+        return df
 
     def lazy(self):
         """Extracts a ``LazyFrame`` from a ``OnceFrame``,
@@ -664,10 +671,11 @@ _LAZY_EXECUTION_METHODS = {
     "fetch",
 }
 
+
 @dataclass
 class SortBy:
     """Configuration for ``keep`` in :py:meth:`LazyFrameQuery.truncate_per_group`.
-     
+
     Follows the arguments in Polars' ``sort_by`` method.
     """
 
@@ -891,7 +899,9 @@ class LazyFrameQuery:
         input_metric = self._query._chain[1]
 
         if isinstance(by, str):
-            raise ValueError("by must be a list of strings or expressions")  # pragma: no cover
+            raise ValueError(
+                "by must be a list of strings or expressions"
+            )  # pragma: no cover
 
         if isinstance(input_metric, FrameDistance):
             input_metric = input_metric.inner_metric
@@ -929,7 +939,9 @@ class LazyFrameQuery:
         input_metric = self._query._chain[1]
 
         if isinstance(by, str):
-            raise ValueError("by must be a list of strings or expressions")  # pragma: no cover
+            raise ValueError(
+                "by must be a list of strings or expressions"
+            )  # pragma: no cover
 
         if isinstance(input_metric, FrameDistance):
             input_metric = input_metric.inner_metric
@@ -944,7 +956,9 @@ class LazyFrameQuery:
         elif keep == "last":
             ranks = struct.rank("dense", descending=True)
         else:
-            raise ValueError("keep must be 'sample', 'first' or 'last'")  # pragma: no cover
+            raise ValueError(
+                "keep must be 'sample', 'first' or 'last'"
+            )  # pragma: no cover
 
         return self.filter(ranks.over(input_metric.identifier) < k)
 
@@ -1065,6 +1079,61 @@ class LazyFrameQuery:
         from opendp.accuracy import summarize_polars_measurement
 
         return summarize_polars_measurement(self.resolve(), alpha)
+
+    def contingency_table(
+        self,
+        keys_alpha: Optional[float] = None,
+        keys: Optional[dict[str, list[Any]]] = None,
+        cuts: Optional[dict[str, list[float]]] = None,
+        config: Union[AIM, MST, Fixed] = AIM(),
+    ):
+        """Release an approximation to a contingency table across all columns.
+
+        When keys_alpha is not set, defaults to half of the proportion of columns with missing keys or cuts.
+        That is, if all columns have keys, then keys_alpha is zero,
+        and if no columns have keys, then keys_alpha is one-half.
+
+        :param keys_alpha: percent of privacy budget to use to release unknown keys
+        :param keys: dictionary of column names and unique categories
+        :param cuts: dictionary of column names and bin edges for numerical columns
+        :param config: configuration for internal estimation algorithm
+        """
+        import_optional_dependency("mbi")
+        from opendp.context import Query
+        from opendp.extras.contingency._utilities import prior
+
+        query: Query = object.__getattribute__(self, "_query")
+        input_domain, input_metric = query._chain
+        d_in, d_out = query._d_in, query._d_out
+
+        t_plan = make_stable_lazyframe(
+            input_domain,
+            input_metric,
+            lazyframe=object.__getattribute__(self, "polars_plan"),
+        )
+
+        if isinstance(d_out, float):
+            d_marginals = d_out
+            d_keys = None
+        elif isinstance(d_out, tuple):
+            p1, delta = d_out
+            if keys_alpha is None:
+                num_columns = len(t_plan.output_domain.columns)
+                keys_alpha = (num_columns - len(keys | cuts)) / num_columns / 2
+            d_marginals = keys_alpha * p1
+            d_keys = prior(prior(p1 - d_marginals)), delta
+
+        m_table = t_plan >> then_contingency_table(
+            output_measure=query._output_measure,
+            d_in=t_plan.map(d_in),
+            d_marginals=d_marginals,
+            d_keys=d_keys,
+            keys=keys,
+            cuts=cuts,
+            config=config,
+        )
+
+        return Query(chain=m_table, context=query._context)
 
 
 class LazyGroupByQuery:
@@ -1216,7 +1285,7 @@ class Margin:
 @dataclass
 class Bound(object):
     """
-    The ``Bound`` class is used to describe bounds on the number of 
+    The ``Bound`` class is used to describe bounds on the number of
     contributed rows per-group and the number of contributed groups.
     """
 
