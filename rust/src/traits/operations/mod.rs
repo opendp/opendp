@@ -68,7 +68,7 @@ pub trait HasNull: CheckNull {
 /// The framework provides a way to ensure values are non-null at runtime.
 /// This trait should only be used when the framework can rely on these assurances.
 /// ProductOrd shares the same interface as Ord, but with a total_ prefix on methods
-pub trait ProductOrd: PartialOrd + Sized {
+pub trait ProductOrd: Sized {
     /// # Proof Definition
     /// For any two values `self` and `other` of type `Self`, returns `Ok(out)` or `Err(e)`.
     /// The implementation returns `Err(e)` if either `self` or `other` are null.
@@ -96,7 +96,7 @@ pub trait ProductOrd: PartialOrd + Sized {
     /// The implementation returns `Err(e)` if any of `self`, `min` or `max` are null.
     /// Otherwise returns `Some(out)` where `out` is `min` if $self \lt min$, `max` if $self \gt max$, or else `self`.
     fn total_clamp(self, min: Self, max: Self) -> Fallible<Self> {
-        if min > max {
+        if min.total_gt(&max)? {
             return fallible!(FailedFunction, "min cannot be greater than max");
         }
         Ok(if let Ordering::Less = self.total_cmp(&min)? {

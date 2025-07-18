@@ -114,11 +114,11 @@ where
         let privacy_map = self.noise_privacy_map(&input_metric, &output_measure)?;
         Measurement::new(
             input_domain,
+            input_metric,
+            output_measure,
             Function::new_fallible(move |x: &Vec<IBig>| {
                 x.into_iter().map(|x_i| distribution.sample(x_i)).collect()
             }),
-            input_metric,
-            output_measure,
             privacy_map,
         )
     }

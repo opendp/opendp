@@ -35,7 +35,7 @@ For example:
     <class 'function'>
 '''
 from opendp.mod import *
-from opendp.extras import sklearn, numpy, polars, examples, synthetic
+from opendp.extras import sklearn, numpy, polars, examples, mbi
 from opendp.extras.polars import dp_len as len
 import opendp.transformations as t
 import opendp.measurements as m

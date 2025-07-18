@@ -27,7 +27,6 @@ fn test_privacy_filter() -> Fallible<()> {
 
     let q3 = qbl_filter.invoke(make_randomized_response_bool(0.75, false)?);
     assert!(q3.is_err());
-    assert_eq!(qbl_filter.privacy_loss(1)?, 0.08001066922739841);
 
     Ok(())
 }

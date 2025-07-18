@@ -110,17 +110,13 @@ def test_fully_adaptive_composition():
     input_metric   = SymmetricDistance(),
     output_measure = MaxDivergence)"""
 
-    print("A")
     qbl_comp: dp.OdometerQueryable = o_comp([1] * 200)
-    print("B")
     assert qbl_comp.privacy_loss(max_influence) == 0.0
 
-    print("C")
     assert str(qbl_comp) == "OdometerQueryable(Q=AnyMeasurement, QB=u32)"
     m_sum = space >> dp.t.then_clamp((0, 10)) >> dp.t.then_sum() >> dp.m.then_laplace(100.)
 
     # evaluating
-    print("D")
     assert isinstance(qbl_comp(m_sum), int)
     assert qbl_comp.privacy_loss(max_influence) == m_sum.map(max_influence)
 

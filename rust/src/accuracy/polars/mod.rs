@@ -21,7 +21,7 @@ use crate::{
         KeySanitizer, MatchGroupBy,
         expr_index_candidates::IndexCandidatesPlugin,
         expr_noise::{Distribution, NoisePlugin, Support},
-        expr_report_noisy_max::ReportNoisyMaxPlugin,
+        expr_noisy_max::NoisyMaxPlugin,
         is_threshold_predicate, match_group_by,
     },
     polars::{ExtractLazyFrame, OnceFrame, match_trusted_plugin},
@@ -219,12 +219,13 @@ fn summarize_expr<'a>(
         return summarize_expr(&inputs[0], alpha, threshold);
     }
 
-    if let Some((inputs, plugin)) = match_trusted_plugin::<ReportNoisyMaxPlugin>(&expr)? {
+    if let Some((inputs, plugin)) = match_trusted_plugin::<NoisyMaxPlugin>(&expr)? {
         return Ok(vec![UtilitySummary {
             name,
             aggregate: expr_aggregate(&inputs[0])?.to_string(),
             distribution: Some(format!(
-                "Gumbel{}",
+                "{}{}",
+                plugin.distribution,
                 if plugin.negate { "Min" } else { "Max" }
             )),
             scale: Some(plugin.scale),

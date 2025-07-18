@@ -495,7 +495,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         ...
 
     @overload
-    def __rshift__(self, other: "_PartialConstructor") -> "_PartialConstructor":
+    def __rshift__(self, other: "_PartialConstructor") -> Union["Transformation", "Measurement", "Odometer"]:
         ...
 
     def __rshift__(self, other: Union["Measurement", "Transformation", "Odometer", "_PartialConstructor", "PartialChain"]) -> Union["Measurement", "Transformation", "Odometer", "_PartialConstructor", "PartialChain"]:  # type: ignore[name-defined] # noqa F821
@@ -632,7 +632,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
 
 Transformation = cast(Type[Transformation], Transformation) # type: ignore[misc]
 
-class Queryable(object):
+class Queryable:
     '''
     Queryables are used for interactive mechanisms like :ref:`adaptive composition <adaptive-composition>`.
 
@@ -650,18 +650,14 @@ class Queryable(object):
     def __repr__(self) -> str:
         return f"Queryable(Q={self.query_type})"
 
-class OdometerQueryable(object):
+class OdometerQueryable:
     '''
     Odometer Queryables are used for instances of odometers like :ref:`fully adaptive composition <fully-adaptive-composition>`.
 
     Can be created via :py:func:`make_fully_adaptive_composition <opendp.combinators.make_fully_adaptive_composition>`.
     '''
     def __init__(self, value):
-        from opendp.core import odometer_queryable_invoke_type, odometer_queryable_privacy_loss_type
-        from opendp.typing import RuntimeType
         self.value = value
-        self.invoke_type = RuntimeType.parse(odometer_queryable_invoke_type(value))
-        self.privacy_loss_type = RuntimeType.parse(odometer_queryable_privacy_loss_type(value))
 
     def __call__(self, query):
         from opendp.core import odometer_queryable_invoke
@@ -676,7 +672,11 @@ class OdometerQueryable(object):
         return odometer_queryable_privacy_loss(self.value, d_in)
 
     def __repr__(self) -> str:
-        return f"OdometerQueryable(Q={self.invoke_type}, QB={self.privacy_loss_type})"
+        from opendp.core import odometer_queryable_invoke_type, odometer_queryable_privacy_loss_type
+        from opendp.typing import RuntimeType
+        Q = RuntimeType.parse(odometer_queryable_invoke_type(self.value))
+        QB = RuntimeType.parse(odometer_queryable_privacy_loss_type(self.value))
+        return f"OdometerQueryable(Q={Q}, QB={QB})"
 
 
 class Function(ctypes.POINTER(AnyFunction)): # type: ignore[misc]
@@ -773,6 +773,15 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
     
     def __iter__(self):
         raise ValueError("Domain does not support iteration")
+    
+    def cast(self, type_: Type[D]) -> D:
+        """Retrieve the descriptor as the prescribed type, or error."""
+        if not (
+            isinstance(self, ExtrinsicDomain)
+            and isinstance(descriptor := self.descriptor, type_)
+        ):
+            raise ValueError(f"domain descriptor must be a {type_.__name__}")
+        return descriptor
 
 
 class AtomDomain(Domain):
@@ -787,7 +796,7 @@ class AtomDomain(Domain):
     _type_ = AnyDomain
     
     @property
-    def bounds(self) -> tuple[float, float] | None:
+    def bounds(self) -> tuple[float, float]:
         '''Bounds of the domain, if they exist'''
         from opendp.domains import _atom_domain_get_bounds_closed
         return _atom_domain_get_bounds_closed(self)
@@ -891,6 +900,7 @@ class LazyFrameDomain(Domain):
 
         return _lazyframe_domain_get_margin(self, by)
 
+D = TypeVar("D")
 
 class ExtrinsicDomain(Domain):
     '''A user-defined domain.'''
@@ -959,6 +969,30 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
     
     def __iter__(self):
         raise ValueError("Metric does not support iteration")
+    
+    def cast(self, type_: Type[D]) -> D:
+        """Retrieve the descriptor as the prescribed type, or error."""
+        if not (
+            isinstance(self, ExtrinsicDistance)
+            and isinstance(descriptor := self.descriptor, type_)
+        ):
+            raise ValueError(f"metric descriptor must be a {type_.__name__}")
+        return descriptor
+
+
+class ExtrinsicDistance(Metric):
+    '''A user-defined metric.'''
+
+    _type_ = AnyMetric
+        
+    @property
+    def descriptor(self) -> Any:
+        '''
+        Descriptor of domain. Used to retrieve the descriptor associated with domains defined in Python 
+        '''
+        from opendp.metrics import _extrinsic_metric_descriptor
+        return _extrinsic_metric_descriptor(self)
+
 
 class FrameDistance(Metric):
     '''``FrameDistance`` is a higher-order metric that contains multiple distance bounds for different groupings of data.'''
@@ -1062,6 +1096,20 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
         raise ValueError("Measure does not support iteration")
 
 
+
+class ApproximateDivergence(Measure):
+    '''``ApproximateDivergence`` is a privacy measure representing the divergence between two distributions 
+    with respect to some inner privacy measure, except for some subset of possible outputs with probability mass no greater than delta.
+    '''
+
+    _type_ = AnyMeasure
+    
+    @property
+    def inner_measure(self) -> Measure:
+        from opendp.measures import _approximate_divergence_get_inner_measure
+        return _approximate_divergence_get_inner_measure(self)
+    
+
 class PrivacyProfile(object):
     '''
     Given a profile function provided by the user,
@@ -1142,7 +1190,7 @@ class OpenDPException(Exception):
     def _frames(self):
         def _format_frame(frame):
             return "\n  ".join(line.strip() for line in frame.split("\n"))
-        return [_format_frame(f) for f in self._raw_frames() if f.startswith("opendp") or f.startswith("<opendp")]
+        return [_format_frame(f) for f in self._raw_frames() if "opendp" in f]
 
     def _continued_stack_trace(self):
         # join and split by newlines because frames may be multi-line
@@ -1182,7 +1230,7 @@ class OpenDPException(Exception):
         return response
 
 
-GLOBAL_FEATURES = set()
+GLOBAL_FEATURES: set[str] = set()
 
 
 def enable_features(*features: str) -> None:

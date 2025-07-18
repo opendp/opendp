@@ -2,11 +2,11 @@ use opendp_derive::bootstrap;
 
 use crate::{
     core::{
-        Domain, Function, Measure, Measurement, Metric, MetricSpace, Odometer, OdometerQueryable,
-        PrivacyMap,
+        Domain, Function, Measure, Measurement, Metric, MetricSpace, Odometer, OdometerAnswer,
+        OdometerQuery, OdometerQueryable, PrivacyMap,
     },
     error::Fallible,
-    interactive::{Query, Queryable, Wrapper, wrap},
+    interactive::{Queryable, Wrapper, wrap},
     traits::ProductOrd,
 };
 use std::fmt::Debug;
@@ -41,7 +41,7 @@ mod ffi;
 /// # Arguments
 /// * `odometer` - A privacy odometer
 /// * `d_in` - Upper bound on the distance between adjacent datasets
-/// * `d_out` - Upper bound on the privacy loss of the odometer
+/// * `d_out` - Upper bound on the privacy loss
 pub fn make_privacy_filter<
     DI: 'static + Domain,
     MI: 'static + Metric,
@@ -54,79 +54,75 @@ pub fn make_privacy_filter<
     d_out: MO::Distance,
 ) -> Fallible<Measurement<DI, OdometerQueryable<Q, A, MI::Distance, MO::Distance>, MI, MO>>
 where
-    DI::Carrier: Clone,
-    MI::Distance: Clone + Debug + ProductOrd + Send + Sync,
-    MO::Distance: Clone + Debug + ProductOrd + Send + Sync,
+    MI::Distance: Clone + Debug + ProductOrd,
+    MO::Distance: Clone + Debug + ProductOrd,
     (DI, MI): MetricSpace,
 {
-    let odo_function = odometer.function.clone();
-    let (d_in_, d_out_) = (d_in.clone(), d_out.clone());
-
+    let continuation_rule = new_continuation_rule::<Q, A, _, _>(d_in.clone(), d_out.clone());
     Measurement::new(
         odometer.input_domain.clone(),
-        Function::new_fallible(move |arg: &DI::Carrier| {
-            let continuation_rule = new_continuation_rule::<MI, MO>(d_in.clone(), d_out.clone());
-            wrap(continuation_rule, || odo_function.eval(arg))
-        }),
         odometer.input_metric.clone(),
         odometer.output_measure.clone(),
+        Function::new_fallible(move |arg: &DI::Carrier| {
+            wrap(continuation_rule.clone(), || odometer.invoke(arg))
+        }),
         PrivacyMap::new_fallible(move |d_in_p: &MI::Distance| {
-            if d_in_p.total_gt(&d_in_)? {
+            if d_in_p.total_gt(&d_in)? {
                 fallible!(
                     RelationDebug,
                     "input distance must not be greater than d_in"
                 )
             } else {
-                Ok(d_out_.clone())
+                Ok(d_out.clone())
             }
         }),
     )
-}
-
-/// Denotes the prospective privacy loss of after releasing a query.
-#[derive(Clone)]
-pub enum PendingLoss<U> {
-    /// The pending loss is the same as the current loss
-    Same,
-    /// What the pending loss would be if the query were released
-    New(U),
 }
 
 /// # Proof Definition
 /// Returns a function that wraps a queryable.
 /// The wrapped queryable refuses to release any query
 /// that would cause the privacy loss to exceed `d_out`.
-fn new_continuation_rule<MI: 'static + Metric, MO: 'static + Measure>(
-    d_in: MI::Distance,
-    d_out: MO::Distance,
-) -> Wrapper
+fn new_continuation_rule<Q, A, QB, AB>(d_in: QB, d_out: AB) -> Wrapper
 where
-    MI::Distance: 'static,
-    MO::Distance: 'static + Clone + Debug + ProductOrd,
+    Q: 'static,
+    A: 'static,
+    QB: 'static + Clone,
+    AB: 'static + Clone + Debug + ProductOrd,
 {
-    Wrapper::new(move |mut queryable| {
+    Wrapper::new(move |queryable| {
         let d_in = d_in.clone();
-        Ok(Queryable::new_raw(enclose!(d_out, move |_, query| {
-            // Retrieve the pending privacy loss of all external queries
-            // and check if it would exceed the privacy budget
-            if let Query::External(external) = query {
-                let pending_loss: PendingLoss<PrivacyMap<MI, MO>> =
-                    queryable.eval_internal(external)?;
+        let d_out = d_out.clone();
 
-                if let PendingLoss::New(pending_map) = pending_loss {
-                    let pending_d_out = pending_map.eval(&d_in)?;
-                    if pending_d_out.total_gt(&d_out)? {
-                        return fallible!(
-                            FailedFunction,
-                            "insufficient privacy budget: {:?} > {:?}",
-                            pending_d_out,
-                            d_out
-                        );
-                    }
-                }
+        let mut state = Some(queryable);
+
+        Ok(Queryable::new_raw(move |_, query| {
+            let Some(queryable) = &mut state else {
+                return fallible!(
+                    FailedFunction,
+                    "filter is exhausted: no more queries can be answered"
+                );
+            };
+
+            let answer = queryable.eval_query(query)?;
+
+            let OdometerAnswer::<A, AB>::PrivacyLoss(pending_d_out) =
+                queryable.eval_poly(&OdometerQuery::<Q, QB>::PrivacyLoss(d_in.clone()))?
+            else {
+                return fallible!(FailedFunction, "expected privacy loss");
+            };
+
+            if pending_d_out.total_gt(&d_out)? {
+                state.take();
+                return fallible!(
+                    FailedFunction,
+                    "filter is now exhausted: pending privacy loss ({:?}) would exceed privacy budget ({:?})",
+                    pending_d_out,
+                    d_out
+                );
             }
 
-            queryable.eval_query(query)
-        })))
+            Ok(answer)
+        }))
     })
 }

@@ -57,9 +57,9 @@ where
 
     Measurement::new(
         input_domain,
-        Function::from_expr(len()).fill_with(typed_lit(0u32)),
         input_metric,
         output_measure,
+        Function::from_expr(len()).fill_with(typed_lit(0u32)),
         PrivacyMap::new(move |_| MO::Distance::zero()),
     )
 }

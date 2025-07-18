@@ -12,21 +12,19 @@ mod ffi;
 #[bootstrap(
     features("contrib"),
     arguments(meas(rust_type = "AnyMeasurement")),
-    generics(DI(suppress), TO(suppress), MI(suppress))
+    generics(DI(suppress), MI(suppress), TO(suppress))
 )]
 /// Constructs a new output measurement where the output measure
-/// is converted from `BoundedRange` to `MaxDivergence`.
-///
-/// For more details, see: https://differentialprivacy.org/exponential-mechanism-bounded-range/
+/// is converted from `RangeDivergence` to `MaxDivergence`.
 ///
 /// # Arguments
 /// * `meas` - a measurement with a privacy measure to be converted
 ///
 /// # Generics
 /// * `DI` - Input Domain
-/// * `DO` - Output Domain
 /// * `MI` - Input Metric
-pub fn make_bounded_range_to_pureDP<DI, TO, MI>(
+/// * `TO` - Output Type
+pub fn make_bounded_range_to_pureDP<DI, MI, TO>(
     meas: Measurement<DI, TO, MI, RangeDivergence>,
 ) -> Fallible<Measurement<DI, TO, MI, MaxDivergence>>
 where

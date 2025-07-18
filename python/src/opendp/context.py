@@ -670,10 +670,10 @@ class Query(object):
     def __init__(
         self,
         chain: Chain,
-        output_measure: Measure = None,  # type: ignore[assignment]
+        output_measure: Measure,
         d_in: Optional[Union[float, Sequence[Bound]]] = None,
         d_out: Optional[Union[float, tuple[float, float]]] = None,
-        context: "Context" = None,  # type: ignore[assignment]
+        context: Optional["Context"] = None,
         _wrap_release=None,
     ) -> None:
         self._chain = chain
@@ -701,7 +701,7 @@ class Query(object):
 
         if name not in constructors:
             raise AttributeError(
-                f"Unrecognized constructor: '{name}'"
+                f"Unrecognized constructor: '{name}'. Did you mean to '.release()' first?"
             )  # pragma: no cover
 
         def make(*args, **kwargs) -> "Query":

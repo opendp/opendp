@@ -491,7 +491,7 @@ Since the privacy loss is capped at 2.0, any more queries will be rejected:
             Traceback (most recent call last):
             ...
             opendp.mod.OpenDPException: 
-              FailedFunction("insufficient privacy budget: 3.0 > 2.0")
+              FailedFunction("filter is now exhausted: pending privacy loss (3.0) would exceed privacy budget (2.0)")
 
     .. tab-item:: R
         :sync: r

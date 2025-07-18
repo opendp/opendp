@@ -76,6 +76,8 @@ where
 
     Measurement::new(
         measurement.input_domain.clone(),
+        measurement.input_metric.clone(),
+        measurement.output_measure.clone(),
         Function::new_fallible(move |arg| {
             let mut remaining_iterations = (scale.clone())
                 .map(|s| sample_geometric_exp_fast(s).map(|v| v + UBig::ONE))
@@ -96,8 +98,6 @@ where
                 }
             }
         }),
-        measurement.input_metric.clone(),
-        measurement.output_measure.clone(),
         PrivacyMap::new_fallible(move |d_in| privacy_map.eval(d_in)?.inf_mul(&2.0)),
     )
 }

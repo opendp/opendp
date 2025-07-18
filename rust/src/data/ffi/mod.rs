@@ -327,7 +327,6 @@ pub extern "C" fn opendp_data__slice_as_object(
         TypeContents::PLAIN("BitVector") => raw_to_bitvector(raw),
         TypeContents::PLAIN("String") => raw_to_string(raw),
         TypeContents::PLAIN("ExtrinsicObject") => raw_to_plain::<ExtrinsicObject>(raw),
-
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("LazyFrame") => raw_to_lazyframe(raw),
         #[cfg(feature = "polars")]
@@ -1099,9 +1098,15 @@ impl ProductOrd for AnyObject {
         }
 
         let type_arg = &self.type_;
+
+        #[cfg(feature = "polars")]
+        if type_arg == &Type::of::<Bounds>() {
+            return monomorphize::<Bounds>(self, other)
+        }
+
         // type list is explicit because (f32, f32), (f64, f64) are not in @numbers
         dispatch!(monomorphize, [(type_arg, [
-            u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, (f32, f32), (f64, f64)
+            u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, (f32, f32), (f64, f64), ExtrinsicObject
         ])], (self, other))
     }
 }

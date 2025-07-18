@@ -35,9 +35,9 @@ where
 
     Measurement::new(
         input_domain,
-        Function::from_expr(expr),
         input_metric,
         MO::default(),
+        Function::from_expr(expr),
         PrivacyMap::new(|_| MO::Distance::zero()),
     )
 }

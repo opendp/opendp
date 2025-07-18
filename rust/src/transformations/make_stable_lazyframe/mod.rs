@@ -107,6 +107,7 @@ impl StableDslPlan<FrameDistance<SymmetricIdDistance>, FrameDistance<SymmetricDi
         }
 
         match &self {
+            DslPlan::IR { dsl, .. } => (**dsl).clone().make_stable(input_domain, input_metric),
             DslPlan::Filter { .. } => filter::make_stable_filter(input_domain, input_metric, self),
             DslPlan::HStack { .. } => h_stack::make_h_stack(input_domain, input_metric, self),
             DslPlan::Select { .. } => select::make_select(input_domain, input_metric, self),
@@ -136,6 +137,7 @@ impl<M: UnboundedMetric> StableDslPlan<FrameDistance<M>, FrameDistance<M>> for D
     ) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, FrameDistance<M>, FrameDistance<M>>>
     {
         match &self {
+            DslPlan::IR { dsl, .. } => (**dsl).clone().make_stable(input_domain, input_metric),
             DslPlan::DataFrameScan { .. } => {
                 source::make_stable_source(input_domain, input_metric, self)
             }

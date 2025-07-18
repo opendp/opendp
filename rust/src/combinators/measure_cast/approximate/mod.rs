@@ -30,7 +30,7 @@ where
     let privacy_map = m.privacy_map.clone();
     m.with_map(
         m.input_metric.clone(),
-        Approximate::default(),
+        Approximate(m.output_measure.clone()),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             privacy_map.eval(d_in).map(|d_out| (d_out, 0.0))
         }),

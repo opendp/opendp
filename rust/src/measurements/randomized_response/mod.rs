@@ -51,11 +51,11 @@ pub fn make_randomized_response_bool(
 
     Measurement::new(
         AtomDomain::default(),
+        DiscreteDistance,
+        MaxDivergence,
         Function::new_fallible(move |arg: &bool| {
             Ok(arg ^ !sample_bernoulli_float(prob, constant_time)?)
         }),
-        DiscreteDistance,
-        MaxDivergence,
         PrivacyMap::new(move |d_in| if *d_in == 0 { 0.0 } else { privacy_constant }),
     )
 }
@@ -108,6 +108,8 @@ pub fn make_randomized_response<T: Hashable>(
 
     Measurement::new(
         AtomDomain::default(),
+        DiscreteDistance,
+        MaxDivergence,
         Function::new_fallible(move |truth: &T| {
             // find index of truth in category set, or None
             let index = categories.iter().position(|cat| cat == truth);
@@ -129,8 +131,6 @@ pub fn make_randomized_response<T: Hashable>(
             let is_member = index.is_some();
             Ok(if be_honest && is_member { truth } else { lie }.clone())
         }),
-        DiscreteDistance,
-        MaxDivergence,
         PrivacyMap::new(move |d_in| if *d_in == 0 { 0.0 } else { privacy_constant }),
     )
 }

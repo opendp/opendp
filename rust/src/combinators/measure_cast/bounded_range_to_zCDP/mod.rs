@@ -17,7 +17,7 @@ mod ffi;
     generics(DI(suppress), TO(suppress), MI(suppress))
 )]
 /// Constructs a new output measurement where the output measure
-/// is converted from `BoundedRange` to `ZeroConcentratedDivergence`.
+/// is converted from `RangeDivergence` to `ZeroConcentratedDivergence`.
 ///
 /// For more details, see: https://differentialprivacy.org/exponential-mechanism-bounded-range/
 ///
@@ -26,9 +26,9 @@ mod ffi;
 ///
 /// # Generics
 /// * `DI` - Input Domain
-/// * `TO` - Output Type
 /// * `MI` - Input Metric
-pub fn make_bounded_range_to_zCDP<DI, TO, MI>(
+/// * `TO` - Output Type
+pub fn make_bounded_range_to_zCDP<DI, MI, TO>(
     meas: Measurement<DI, TO, MI, RangeDivergence>,
 ) -> Fallible<Measurement<DI, TO, MI, ZeroConcentratedDivergence>>
 where

@@ -249,17 +249,3 @@ impl<F: 'static + Frame> MetricSpace for (FrameDomain<F>, AnyMetric) {
         )
     }
 }
-
-
-#[bootstrap(
-    name = "lazyframe_domain_seed",
-    arguments(frame_domain(rust_type = b"null")),
-    returns(c_type = "FfiResult<LazyFrame *>")
-)]
-#[unsafe(no_mangle)]
-pub extern "C" fn opendp_domains__lazyframe_domain_seed(
-    frame_domain: *mut AnyDomain,
-) -> FfiResult<*mut AnyObject> {
-    let domain = try_as_ref!(frame_domain);
-    Ok(AnyObject::new(DataFrame::from_rows_and_schema(&[], &domain.schema())?.lazy())).into()
-}

@@ -129,13 +129,13 @@ where
 
     Measurement::new(
         m_lp.input_domain.cast_carrier(),
+        m_lp.input_metric.clone(),
+        m_lp.output_measure.clone(),
         Function::new_fallible(move |arg: &LazyFrame| {
             let lf = LazyFrame::from(f_lp.eval(&arg.logical_plan)?)
                 .with_optimizations(arg.get_current_optimizations());
             Ok(OnceFrame::from(lf))
         }),
-        m_lp.input_metric.clone(),
-        m_lp.output_measure.clone(),
         m_lp.privacy_map.clone(),
     )
 }

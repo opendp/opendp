@@ -186,9 +186,10 @@ pub(crate) fn literal_is_nullable(literal: &LiteralValue) -> bool {
 /// # Proof Definition
 /// Returns whether casting is fallible between two data types.
 pub(crate) fn is_cast_fallible(from: &DataType, to: &DataType) -> bool {
-    if let DataType::Null = from {
+    if matches!(from, DataType::Null) || matches!(to, DataType::String) {
         return false;
     }
+
     if let DataType::Unknown(child) = from {
         return match child {
             UnknownKind::Int(v) => {

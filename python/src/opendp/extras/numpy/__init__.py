@@ -180,7 +180,7 @@ def array2_domain(
         
         return True
 
-    desc = NPArray2Descriptor(
+    desc = NPArray2Domain(
         origin=origin,
         norm=norm,
         p=p,
@@ -194,7 +194,7 @@ def array2_domain(
     return _extrinsic_domain(f"NPArray2Domain({_fmt_attrs(desc)})", _member, desc)
 
 
-class NPArray2Descriptor(NamedTuple):
+class NPArray2Domain(NamedTuple):
     origin: numpy.ndarray | None
     norm: float | None
     p: Literal[1, 2, None]
@@ -240,15 +240,15 @@ def arrayd_domain(
             raise ValueError(f"must have shape {shape}")
         return True
 
-    desc = NPArrayDDescriptor(
+    desc = NPArrayDDomain(
         shape=shape,
         T=T,
     )
 
-    return _extrinsic_domain(f"NPArray2Domain({_fmt_attrs(desc)})", _member, desc)
+    return _extrinsic_domain(f"NPArrayDDomain({_fmt_attrs(desc)})", _member, desc)
 
 
-class NPArrayDDescriptor(NamedTuple):
+class NPArrayDDomain(NamedTuple):
     shape: tuple[int, ...]
     T: str | RuntimeType
 

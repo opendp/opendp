@@ -3,18 +3,17 @@ mod ffi;
 
 mod shr;
 
-use crate::combinators::PendingLoss;
 use crate::core::{
     Domain, Function, Measure, Measurement, Metric, MetricSpace, Odometer, OdometerAnswer,
     OdometerQuery, PrivacyMap, StabilityMap, Transformation,
 };
 use crate::error::{Error, ErrorVariant, Fallible};
-use crate::interactive::{Answer, PolyQueryable, Query, Queryable, Wrapper, wrap};
+use crate::interactive::{Answer, Query, Queryable};
 use std::fmt::Debug;
 
 const ERROR_URL: &str = "https://github.com/opendp/opendp/discussions/297";
 
-macro_rules! assert_components_match {
+macro_rules! assert_elements_match {
     ($variant:ident, $v1:expr, $v2:expr) => {
         if &$v1 != &$v2 {
             return Err($crate::combinators::mismatch_error(
@@ -25,7 +24,7 @@ macro_rules! assert_components_match {
         }
     };
 }
-pub(crate) use assert_components_match;
+pub(crate) use assert_elements_match;
 
 pub(crate) fn mismatch_error<T: Debug>(variant: ErrorVariant, struct1: &T, struct2: &T) -> Error {
     let str1 = format!("{:?}", struct1);
@@ -91,12 +90,12 @@ where
     (DI, MI): MetricSpace,
     (DX, MX): MetricSpace,
 {
-    assert_components_match!(
+    assert_elements_match!(
         DomainMismatch,
         transformation0.output_domain,
         measurement1.input_domain
     );
-    assert_components_match!(
+    assert_elements_match!(
         MetricMismatch,
         transformation0.output_metric,
         measurement1.input_metric
@@ -104,9 +103,9 @@ where
 
     Measurement::new(
         transformation0.input_domain.clone(),
-        Function::make_chain(&measurement1.function, &transformation0.function),
         transformation0.input_metric.clone(),
         measurement1.output_measure.clone(),
+        Function::make_chain(&measurement1.function, &transformation0.function),
         PrivacyMap::make_chain(&measurement1.privacy_map, &transformation0.stability_map),
     )
 }
@@ -141,12 +140,12 @@ where
     (DI, MI): MetricSpace,
     (DX, MX): MetricSpace,
 {
-    assert_components_match!(
+    assert_elements_match!(
         DomainMismatch,
         transformation0.output_domain,
         odometer1.input_domain
     );
-    assert_components_match!(
+    assert_elements_match!(
         MetricMismatch,
         transformation0.output_metric,
         odometer1.input_metric
@@ -161,31 +160,7 @@ where
         transformation0.input_metric.clone(),
         odometer1.output_measure.clone(),
         Function::new_fallible(move |arg: &DI::Carrier| {
-            let trans_map_wrap = trans_map.clone();
-            let wrapper = Wrapper::new(move |mut inner_qbl: PolyQueryable| {
-                let trans_map_wrap = trans_map_wrap.clone();
-                Ok(Queryable::new_raw(move |_, query| {
-                    Ok(match inner_qbl.eval_query(query)? {
-                        Answer::External(answer) => Answer::External(answer),
-                        Answer::Internal(answer) => {
-                            if let Some(d_pending) =
-                                answer.downcast_ref::<PendingLoss<PrivacyMap<MX, MO>>>()
-                            {
-                                return Ok(Answer::internal(match d_pending {
-                                    PendingLoss::New(priv_map) => PendingLoss::New(
-                                        PrivacyMap::make_chain(priv_map, &trans_map_wrap),
-                                    ),
-                                    PendingLoss::Same => PendingLoss::Same,
-                                }));
-                            }
-
-                            Answer::Internal(answer)
-                        }
-                    })
-                }))
-            });
-
-            let mut inner_qbl = wrap(wrapper, || odo_function.eval(&trans_function.eval(arg)?))?;
+            let mut inner_qbl = odo_function.eval(&trans_function.eval(arg)?)?;
             let trans_map = trans_map.clone();
             Ok(Queryable::new_raw(
                 move |_qbl, query: Query<OdometerQuery<Q, MI::Distance>>| match query {
@@ -233,13 +208,13 @@ where
     (DX, MX): MetricSpace,
     (DO, MO): MetricSpace,
 {
-    assert_components_match!(
+    assert_elements_match!(
         DomainMismatch,
         transformation0.output_domain,
         transformation1.input_domain
     );
 
-    assert_components_match!(
+    assert_elements_match!(
         MetricMismatch,
         transformation0.output_metric,
         transformation1.input_metric
@@ -286,9 +261,9 @@ where
 {
     Measurement::new(
         measurement0.input_domain.clone(),
-        Function::make_chain(postprocess1, &measurement0.function),
         measurement0.input_metric.clone(),
         measurement0.output_measure.clone(),
+        Function::make_chain(postprocess1, &measurement0.function),
         measurement0.privacy_map.clone(),
     )
 }

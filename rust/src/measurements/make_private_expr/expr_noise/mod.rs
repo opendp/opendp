@@ -3,7 +3,7 @@ use crate::domains::{
     AtomDomain, ExprDomain, ExprPlan, NumericDataType, OuterMetric, VectorDomain, WildExprDomain,
 };
 use crate::measurements::{
-    DiscreteGaussian, DiscreteLaplace, MakeNoise, make_gaussian, make_laplace,
+    DiscreteGaussian, DiscreteLaplace, MakeNoise, make_gaussian, make_laplace, make_noise,
 };
 use crate::measures::ZeroConcentratedDivergence;
 use crate::metrics::{L1Distance, L01InfDistance, L2Distance};
@@ -284,6 +284,8 @@ where
 
     let m_noise = Measurement::<_, _, MO::Metric, _>::new(
         middle_domain,
+        middle_metric,
+        MO::default(),
         Function::then_expr(move |input_expr| {
             apply_plugin(
                 vec![input_expr],
@@ -295,8 +297,6 @@ where
                 },
             )
         }),
-        middle_metric,
-        MO::default(),
         privacy_map,
     )?;
 
@@ -390,15 +390,22 @@ where
 {
     let domain = VectorDomain::new(AtomDomain::<T>::new_non_nan());
     let function = match distribution {
-        Distribution::Laplace => make_laplace(domain, L1Distance::default(), scale, None)?
-            .function
-            .clone(),
-        Distribution::Gaussian => make_gaussian(domain, L2Distance::default(), scale, None)?
-            .function
-            .clone(),
+        Distribution::Laplace => {
+            make_noise(domain, L1Distance::default(), MaxDivergence, scale, None)?
+                .function
+                .clone()
+        }
+        Distribution::Gaussian => make_noise(
+            domain,
+            L2Distance::default(),
+            ZeroConcentratedDivergence,
+            scale,
+            None,
+        )?
+        .function
+        .clone(),
     };
     let chunk_iter = series
-        // .i32()?.to_vec_null_aware()
         // unpack the series into a chunked array
         .unpack::<T::NumericPolars>()?
         .downcast_iter()
