@@ -1,7 +1,6 @@
 import re
 
 import pytest
-import numpy as np
 
 from opendp.extras.sklearn.linear_model._make_private_theil_sen import make_private_theil_sen
 import opendp.prelude as dp
@@ -10,6 +9,7 @@ from ..helpers import optional_dependency
 
 
 def test_private_theil_sen():
+    np = pytest.importorskip('numpy')
     x_bounds = -3, 3
     y_bounds = -10, 10
     meas = make_private_theil_sen(x_bounds, y_bounds, scale=1.0)
@@ -28,7 +28,7 @@ def test_private_theil_sen():
 
 
 def test_input_validation():
-    with optional_dependency('sklearn'):
+    with optional_dependency('numpy'):
         with pytest.raises(Exception, match=re.escape("For now, the x_bounds array must consist of a single tuple, not [0, 10]")):
             dp.sklearn.linear_model.LinearRegression().fit(
                 X=[[1], [2], [3], [4], [5]],
