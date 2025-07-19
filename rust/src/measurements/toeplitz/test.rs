@@ -104,7 +104,7 @@ fn test_make_toeplitz_basic() -> Fallible<()> {
     let scale = 10.0;
     
     // Create the measurement
-    let measurement = make_toeplitz(input_domain, input_metric, scale)?;
+    let measurement = make_toeplitz(input_domain, input_metric, scale, true)?;
     
     // Test with constant count data
     let data = vec![10i32; 5];
@@ -134,7 +134,7 @@ fn test_prefix_sum_correctness() -> Fallible<()> {
     let input_metric = L1Distance::default();
     let scale = 0.00000000000000001; // Very small scale for minimal noise
     
-    let measurement = make_toeplitz(input_domain, input_metric, scale)?;
+    let measurement = make_toeplitz(input_domain, input_metric, scale, true)?;
     
     // Use distinct values to verify prefix sums
     let data = vec![1, 2, 3, 4];
@@ -166,7 +166,7 @@ fn test_continual_release_counting() -> Fallible<()> {
     let input_metric = L1Distance::default();
     let scale = 1.0;
     
-    let measurement = make_toeplitz(input_domain, input_metric, scale)?;
+    let measurement = make_toeplitz(input_domain, input_metric, scale, true)?;
     
     // Simulate counting data: varying counts at each time step
     let mut counts = vec![0i32; time_steps];
@@ -214,7 +214,7 @@ fn test_privacy_guarantee() -> Fallible<()> {
     let input_metric = L1Distance::default();
     let scale = 2.0;
     
-    let measurement = make_toeplitz(input_domain.clone(), input_metric.clone(), scale)?;
+    let measurement = make_toeplitz(input_domain.clone(), input_metric.clone(), scale, true)?;
     
     // Test privacy relation
     // For L1 distance d_in and scale σ, we have ε = d_in / σ
@@ -231,7 +231,8 @@ fn test_privacy_guarantee() -> Fallible<()> {
     let measurement2 = make_toeplitz(
         input_domain.clone(), 
         input_metric.clone(), 
-        scale2
+        scale2,
+        true,
     )?;
     assert!(measurement2.check(&1, &0.1)?);  // d_in=1, ε=0.1
     assert!(measurement2.check(&5, &0.5)?);  // d_in=5, ε=0.5
@@ -243,29 +244,29 @@ fn test_privacy_guarantee() -> Fallible<()> {
 fn test_edge_cases() -> Fallible<()> {
     // Test with size 1
     let domain = VectorDomain::new(AtomDomain::<i32>::default()).with_size(1);
-    let measurement = make_toeplitz(domain, L1Distance::default(), 1.0)?;
+    let measurement = make_toeplitz(domain, L1Distance::default(), 1.0, true)?;
     let result = measurement.invoke(&vec![5])?;
     assert_eq!(result.len(), 1);
     
     // Test invalid scale
     let domain = VectorDomain::new(AtomDomain::<i32>::default()).with_size(5);
-    assert!(make_toeplitz(domain.clone(), L1Distance::default(), 0.0).is_err());
-    assert!(make_toeplitz(domain.clone(), L1Distance::default(), -1.0).is_err());
-    assert!(make_toeplitz(domain.clone(), L1Distance::default(), f64::INFINITY).is_err());
-    assert!(make_toeplitz(domain.clone(), L1Distance::default(), f64::NAN).is_err());
+    assert!(make_toeplitz(domain.clone(), L1Distance::default(), 0.0, true).is_err());
+    assert!(make_toeplitz(domain.clone(), L1Distance::default(), -1.0, true).is_err());
+    assert!(make_toeplitz(domain.clone(), L1Distance::default(), f64::INFINITY, true).is_err());
+    assert!(make_toeplitz(domain.clone(), L1Distance::default(), f64::NAN, true).is_err());
     
     // Test data length mismatch
-    let measurement = make_toeplitz(domain.clone(), L1Distance::default(), 1.0)?;
+    let measurement = make_toeplitz(domain.clone(), L1Distance::default(), 1.0, true)?;
     assert!(measurement.invoke(&vec![1, 2, 3]).is_err()); // Too short
     assert!(measurement.invoke(&vec![1, 2, 3, 4, 5, 6]).is_err()); // Too long
     
     // Test empty domain
     let empty_domain = VectorDomain::new(AtomDomain::<i32>::default()).with_size(0);
-    assert!(make_toeplitz(empty_domain, L1Distance::default(), 1.0).is_err());
+    assert!(make_toeplitz(empty_domain, L1Distance::default(), 1.0, true).is_err());
     
     // Test domain without size
     let no_size_domain = VectorDomain::new(AtomDomain::<i32>::default());
-    assert!(make_toeplitz(no_size_domain, L1Distance::default(), 1.0).is_err());
+    assert!(make_toeplitz(no_size_domain, L1Distance::default(), 1.0, true).is_err());
     
     Ok(())
 }
@@ -274,7 +275,7 @@ fn test_edge_cases() -> Fallible<()> {
 fn test_saturation_behavior() -> Fallible<()> {
     // Test integer overflow handling
     let domain = VectorDomain::new(AtomDomain::<i32>::default()).with_size(3);
-    let measurement = make_toeplitz(domain, L1Distance::default(), 0.1)?; // Very small scale for large noise
+    let measurement = make_toeplitz(domain, L1Distance::default(), 0.1, true)?; // Very small scale for large noise
     
     // Use maximum values to test saturation
     let data = vec![i32::MAX / 3, i32::MAX / 3, i32::MAX / 3];
@@ -297,7 +298,7 @@ fn test_saturation_behavior() -> Fallible<()> {
 fn test_different_integer_types() -> Fallible<()> {
     // Test with i64
     let domain_i64 = VectorDomain::new(AtomDomain::<i64>::default()).with_size(5);
-    let measurement_i64 = make_toeplitz(domain_i64, L1Distance::default(), 5.0)?;
+    let measurement_i64 = make_toeplitz(domain_i64, L1Distance::default(), 5.0, true)?;
     let data_i64 = vec![100i64, 200, 300, 400, 500];
     let result_i64 = measurement_i64.invoke(&data_i64)?;
     assert_eq!(result_i64.len(), 5);
@@ -309,7 +310,7 @@ fn test_different_integer_types() -> Fallible<()> {
     
     // Test with u32 (unsigned)
     let domain_u32 = VectorDomain::new(AtomDomain::<u32>::default()).with_size(5);
-    let measurement_u32 = make_toeplitz(domain_u32, L1Distance::default(), 5.0)?;
+    let measurement_u32 = make_toeplitz(domain_u32, L1Distance::default(), 5.0, true)?;
     let data_u32 = vec![10u32, 20, 30, 40, 50];
     let result_u32 = measurement_u32.invoke(&data_u32)?;
     assert_eq!(result_u32.len(), 5);
@@ -329,7 +330,7 @@ fn test_noise_correlation() -> Fallible<()> {
     let scale = 1.0;
     
     let domain = VectorDomain::new(AtomDomain::<i32>::default()).with_size(n);
-    let measurement = make_toeplitz(domain, L1Distance::default(), scale)?;
+    let measurement = make_toeplitz(domain, L1Distance::default(), scale, true)?;
     
     // All zeros should produce correlated noise pattern
     let zeros = vec![0i32; n];
@@ -377,7 +378,7 @@ fn test_large_time_series() -> Fallible<()> {
     let scale = 20.0;
     
     let domain = VectorDomain::new(AtomDomain::<i32>::default()).with_size(n);
-    let measurement = make_toeplitz(domain, L1Distance::default(), scale)?;
+    let measurement = make_toeplitz(domain, L1Distance::default(), scale, true)?;
     
     // Generate random-walk style data
     let mut data = vec![0i32; n];
@@ -441,7 +442,7 @@ mod test {
     
     #[test]
     fn test_continual_consistency() -> Fallible<()> {
-        let mechanism = ContinualToeplitz::<i32>::new(10.0)?;
+        let mechanism = ContinualToeplitz::<i32>::new(10.0, true)?;
         
         // First query: times [0, 5)
         let counts1 = vec![10, 20, 30, 40, 50];
@@ -473,7 +474,7 @@ mod test {
     
     #[test]
     fn test_continual_decreasing_time_error() -> Fallible<()> {
-        let mechanism = ContinualToeplitz::<i32>::new(10.0)?;
+        let mechanism = ContinualToeplitz::<i32>::new(10.0, true)?;
         
         // First query: times [0, 5)
         let counts1 = vec![10, 20, 30, 40, 50];
@@ -485,4 +486,29 @@ mod test {
         
         Ok(())
     }
+}
+
+#[test]
+fn test_toeplitz_without_isotonic() -> Fallible<()> {
+    let input_domain = VectorDomain::new(
+        AtomDomain::<i32>::default()
+    ).with_size(5);
+    let input_metric = L1Distance::default();
+    let scale = 1.0;
+    
+    let measurement = make_toeplitz(input_domain, input_metric, scale, false)?;
+    
+    let data = vec![1, 2, 3, 4, 5];
+    let result = measurement.invoke(&data)?;
+    
+    assert_eq!(result.len(), 5);
+    
+    // Results should be non-negative (still clamped) but NOT necessarily monotonic
+    for val in &result {
+        assert!(*val >= 0);
+    }
+    
+    println!("Toeplitz without isotonic: {:?}", result);
+    
+    Ok(())
 }

@@ -19,6 +19,9 @@ mod ffi;
 #[cfg(test)]
 mod test;
 
+mod isotonic;
+use isotonic::apply_isotonic_regression;
+
 #[cfg(feature = "contrib-continual")]
 mod continual;
 
@@ -43,6 +46,7 @@ pub use continual::ContinualToeplitz;
 /// * `input_domain` - VectorDomain with known size containing the time series of counts
 /// * `input_metric` - L1Distance metric for measuring sensitivity  
 /// * `scale` - Noise scale parameter ($\sigma$ as in the paper)
+/// * `enforce_monotonicity` - Whether to apply isotonic regression to ensure monotonic outputs (default: true)
 /// 
 /// # Returns
 /// A Measurement that computes differentially private prefix sums of counts.
@@ -57,7 +61,7 @@ pub use continual::ContinualToeplitz;
 /// let input_metric = L1Distance::<i32>::default();
 /// let scale = 2.0;
 /// 
-/// let measurement = make_toeplitz(input_domain, input_metric, scale)?;
+/// let measurement = make_toeplitz(input_domain, input_metric, scale, true)?;
 /// let counts = vec![5i32; 10]; // 10 time steps with 5 counts each
 /// let noisy_prefix_sums = measurement.invoke(&counts)?;
 /// # Ok::<(), opendp::error::Fallible>(())
@@ -66,6 +70,7 @@ pub fn make_toeplitz<T>(
     input_domain: VectorDomain<AtomDomain<T>>,
     input_metric: L1Distance<T>,
     scale: f64,
+    enforce_monotonicity: bool,
 ) -> Fallible<Measurement<
     VectorDomain<AtomDomain<T>>,
     Vec<T>,
@@ -113,7 +118,11 @@ where
             }
             
             // Apply isotonic regression to ensure monotonicity
-            apply_isotonic_regression(noisy_sums)
+            if enforce_monotonicity {
+                apply_isotonic_regression(noisy_sums)
+            } else {
+                Ok(noisy_sums)
+            }
         }),
         input_metric.clone(),
         MaxDivergence,
@@ -319,76 +328,6 @@ where
     }
     
     Ok(output)
-}
-
-/// Apply isotonic regression using the Pool Adjacent Violators Algorithm (PAVA)
-/// 
-/// PAVA runs in O(n) time and ensures that the output is the best MSE-fitting of the input data that respects non-decreasing monotonicity.
-/// 
-/// The post-processing property of differential privacy (Dwork et al., 2006) guarantees
-/// that this deterministic transformation preserves the ε-differential privacy of the input.
-/// Another way to think about this is: all the computations here can be done deterministically with the
-/// noisy counts after the Toeplitz mechanism, through local computations by the adversary,
-/// so the two views with or without this isotonic regression step are identical.
-fn apply_isotonic_regression<T>(mut values: Vec<T>) -> Fallible<Vec<T>>
-where
-    T: Integer + Display + FromStr + CheckedAdd + CheckedMul + CheckedSub + num::One + PartialOrd,
-{
-    if values.is_empty() {
-        return Ok(values);
-    }
-    
-    let n = values.len();
-    let mut blocks = Vec::with_capacity(n);
-    
-    // Initialize each value as its own block (start_idx, end_idx, sum, count)
-    for i in 0..n {
-        blocks.push((i, i, to_ibig(&values[i])?, 1usize));
-    }
-    
-    // Pool adjacent violators
-    let mut i = 0;
-    while i < blocks.len() - 1 {
-        let (start1, end1, sum1, count1) = &blocks[i];
-        let (start2, end2, sum2, count2) = &blocks[i + 1];
-        
-        // Check if monotonicity is violated (average of block i > average of block i+1)
-        // To avoid division, we compare sum1 * count2 > sum2 * count1
-        if sum1 * IBig::from(*count2) > sum2 * IBig::from(*count1) {
-            // Pool the blocks
-            let new_sum = sum1 + sum2;
-            let new_count = count1 + count2;
-            blocks[i] = (*start1, *end2, new_sum, new_count);
-            blocks.remove(i + 1);
-            
-            // Check if we need to pool with previous blocks
-            if i > 0 {
-                i -= 1;
-            }
-        } else {
-            i += 1;
-        }
-    }
-    
-    // Reconstruct the monotonic sequence
-    for (start, end, sum, count) in blocks {
-        let avg = sum / IBig::from(count);
-        let avg_t = from_ibig_saturating::<T>(avg)?;
-        
-        for j in start..=end {
-            values[j] = avg_t.clone();
-        }
-    }
-    
-    // Final pass to ensure strict monotonicity for prefix sums
-    // (in case of rounding issues from integer division)
-    for i in 1..n {
-        if values[i] < values[i - 1] {
-            values[i] = values[i - 1].clone();
-        }
-    }
-    
-    Ok(values)
 }
 
 /// Helper function to compute prefix sum up to time t
