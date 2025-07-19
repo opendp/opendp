@@ -1,0 +1,87 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{fn match\_truncations}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle  
+
+
+\contrib
+
+Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_truncations} 
+in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsubsection*{Compiler Verified}
+Types matching pseudocode.
+
+\subsection*{Precondition}
+None 
+
+\subsection*{Function}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/match_truncations.py}
+
+\subsection*{Postcondition}
+\begin{theorem}[Postcondition]
+    For any choice of LazyFrame plan,
+    returns the plan with the truncations removed,
+    the truncations that were removed in the order they are applied,
+    and per-id bounds on row and/or group contributions.
+\end{theorem}
+
+\begin{proof}
+
+    The algorithm maintains three invariants:
+    \begin{itemize}
+        \item \texttt{input} is the LazyFrame plan with truncations removed
+        \item \texttt{truncations} is a list of truncations in reverse-order
+        \item \texttt{bounds} is a list of per-id bounds on row and/or group contributions
+    \end{itemize}
+
+    In order to ensure that all per-id bounds remain valid after successive truncations,
+    the group by truncation may only be applied last in the truncation pipeline,
+    as the group by truncation rewrites all columns in the data,
+    and potentially overwrites user identifiers.
+
+    Since parsing the query plan happens in reverse order,
+    the algorithm starts by attempting to parse a group by truncation on line \ref{line:match_group_by_truncation}.
+    By the postcondition of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_group\_by\_truncation},
+    if the group by truncation is present, it will be returned as a tuple of
+    \texttt{input}, (the execution plan with the group by truncation removed),
+    \texttt{truncation}, (the group by truncation) and 
+    \texttt{per\_id\_bounds} (the per-id bounds on row contributions).
+    The state of the algorithm is then updated on lines \ref{line:match_group_by_truncation_start}-\ref{line:match_group_by_truncation_end},
+    maintaining the invariants on \texttt{input}, \texttt{truncations} and \texttt{bounds}.
+
+    Another limitation of the group by truncation is that bounds on row contributions when grouped by a given set of columns
+    are no longer valid if those columns are changed in the group by truncation.
+    Therefore, \texttt{allowed\_keys} on line \ref{line:allowed_keys} contains columns that are preserved through the group by truncation,
+    by virtue of being part of the grouping columns.
+    This limitation does not hinder expected use-cases, but is necessary to ensure that per-id bounds on contributions remain valid after the group by truncation.
+
+    If a group by truncation is not present, no update is made to the state.
+    
+    The algorithm then attempts to repeatedly parse filter truncations on line \ref{line:match_filter_truncation}.
+    By the postcondition of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_truncation\_predicate} on line \ref{line:match_truncation_predicate},
+    the return is a list of per-id contribution bounds if the predicate consists solely of truncations, 
+    otherwise none.
+    This ensures that the algorithm rejects predicates that contain conditions that are not truncations.
+
+    Line \ref{line:allowed_keys_check} checks that the truncation predicate is valid,
+    by ensuring that the truncation predicate is a subset of the allowed keys.
+    The algorithm then updates the state on lines \ref{line:match_filter_truncation_start}-\ref{line:match_filter_truncation_end},
+    maintaining the invariants on \texttt{input}, \texttt{truncations} and \texttt{bounds}.
+    Finally, since the descent through the query plan is in reverse order,
+    line \ref{line:truncations_reverse} ensures that the truncation order is correct.
+    Neither the check on line \ref{line:match_group_by_truncation_check} 
+    nor the reversal on line \ref{line:bounds_reverse} are necessary to match the postcondition,
+    but both are included to improve usability.
+
+    Since the invariants on \texttt{input}, \texttt{truncations} and \texttt{bounds} are maintained,
+    and the algorithm only matches through truncations,
+    the postcondition is satisfied.
+\end{proof}
+
+\end{document}
