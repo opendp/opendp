@@ -34,19 +34,19 @@ mod noise_threshold;
 pub use noise_threshold::*;
 
 #[cfg(feature = "contrib")]
+mod noisy_max;
+#[cfg(feature = "contrib")]
+pub use noisy_max::*;
+
+#[cfg(feature = "contrib")]
+mod noisy_top_k;
+#[cfg(feature = "contrib")]
+pub use noisy_top_k::*;
+
+#[cfg(feature = "contrib")]
 mod randomized_response;
 #[cfg(feature = "contrib")]
 pub use randomized_response::*;
-
-#[cfg(feature = "contrib")]
-mod randomized_response_bitvec;
-#[cfg(feature = "contrib")]
-pub use randomized_response_bitvec::*;
-
-#[cfg(feature = "contrib")]
-mod canonical_noise;
-#[cfg(feature = "contrib")]
-pub use canonical_noise::*;
 
 #[cfg(feature = "contrib")]
 mod randomized_response_bitvec;
