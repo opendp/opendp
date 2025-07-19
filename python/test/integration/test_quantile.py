@@ -15,7 +15,7 @@ def test_quantile_score_candidates():
 
     assert quant_trans(list(range(100))) == [59, 33, 19, 1, 45, 100]
 
-    expo_meas = dp.m.then_report_noisy_max(dp.max_divergence(), 1., "min")
+    expo_meas = dp.m.then_noisy_max(dp.max_divergence(), 1., negate=True)
 
     quantile_meas = quant_trans >> expo_meas
     idx = quantile_meas(list(range(100)))
@@ -30,8 +30,8 @@ def test_private_quantile():
         output_measure=dp.max_divergence(),
         candidates=[0, 25, 50, 75, 100],
         alpha=0.5,
-        scale=1.0,
+        scale=0.1,
     )
 
-    assert m_median(list(range(100))) == 50
-    assert m_median.map(1) == 1.0
+    assert (r := m_median(list(range(100)))) == 50, f"expected 50, found {r}"
+    assert m_median.map(1) == 10.0
