@@ -32,11 +32,11 @@ fn test_report_noisy_max_gumbel_udf() -> Fallible<()> {
     );
     let scores = Series::from(ArrayChunked::from(fsla)).into_column();
 
-    let actual = super::report_noisy_max_gumbel_udf(
+    let actual = super::report_noisy_max_udf(
         &[scores],
         ReportNoisyMaxPlugin {
             distribution: SelectionDistribution::Gumbel,
-            optimize: Optimize::Max,
+            negate: false,
             scale: 0.0,
         },
     )?;
@@ -64,7 +64,7 @@ fn test_report_noisy_max_gumbel_expr() -> Fallible<()> {
             .dp()
             .quantile_score(0.5, candidates)
             .dp()
-            .report_noisy_max(Optimize::Min, Some(scale)),
+            .report_noisy_max(true, Some(scale)),
         None,
     )?;
 

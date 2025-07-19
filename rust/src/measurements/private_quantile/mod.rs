@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-use super::{Optimize, SelectionMeasure, make_report_noisy_max};
+use super::{SelectionMeasure, make_report_noisy_max};
 
 #[cfg(test)]
 mod test;
@@ -72,7 +72,7 @@ where
         t_score.output_metric.clone(),
         output_measure,
         scale * denominator as f64,
-        Optimize::Min,
+        false,
     )?;
     let p_index = Function::new(move |idx: &usize| candidates[*idx]);
 

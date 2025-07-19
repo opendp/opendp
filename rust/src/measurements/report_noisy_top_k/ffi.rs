@@ -1,5 +1,3 @@
-use std::ffi::c_char;
-
 use dashu::float::FBig;
 
 use crate::{
@@ -8,10 +6,10 @@ use crate::{
     error::Fallible,
     ffi::{
         any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, Downcast},
-        util::to_str,
+        util::{c_bool, to_bool},
     },
-    measurements::{Optimize, make_report_noisy_top_k, report_noisy_top_k::SelectionMeasure},
-    measures::{MaxDivergence, RangeDivergence},
+    measurements::{make_report_noisy_top_k, report_noisy_top_k::SelectionMeasure},
+    measures::{MaxDivergence, RangeDivergence, ZeroConcentratedDivergence},
     metrics::LInfDistance,
     traits::{CastInternalRational, CheckNull, DistanceConstant, Number},
 };
@@ -23,7 +21,7 @@ pub extern "C" fn opendp_measurements__make_report_noisy_top_k(
     output_measure: *const AnyMeasure,
     k: u32,
     scale: f64,
-    optimize: *const c_char,
+    negate: c_bool,
 ) -> FfiResult<*mut AnyMeasurement> {
     let input_domain = try_as_ref!(input_domain);
     let input_metric = try_as_ref!(input_metric);
@@ -32,7 +30,7 @@ pub extern "C" fn opendp_measurements__make_report_noisy_top_k(
     let MO = output_measure.type_.clone();
     let k = k as usize;
 
-    let optimize = try_!(Optimize::try_from(try_!(to_str(optimize))));
+    let negate = to_bool(negate);
 
     fn monomorphize<MO, TIA>(
         input_domain: &AnyDomain,
@@ -40,7 +38,7 @@ pub extern "C" fn opendp_measurements__make_report_noisy_top_k(
         output_measure: &AnyMeasure,
         k: usize,
         scale: f64,
-        optimize: Optimize,
+        negate: bool,
     ) -> Fallible<AnyMeasurement>
     where
         MO: 'static + SelectionMeasure,
@@ -59,7 +57,7 @@ pub extern "C" fn opendp_measurements__make_report_noisy_top_k(
             output_measure,
             k,
             scale,
-            optimize,
+            negate,
         )
         .into_any()
     }
@@ -67,17 +65,13 @@ pub extern "C" fn opendp_measurements__make_report_noisy_top_k(
     dispatch!(
         monomorphize,
         [
-            (MO, [MaxDivergence, RangeDivergence]),
+            (
+                MO,
+                [MaxDivergence, RangeDivergence, ZeroConcentratedDivergence]
+            ),
             (TIA_, [u32, u64, i32, i64, usize, f32, f64])
         ],
-        (
-            input_domain,
-            input_metric,
-            output_measure,
-            k,
-            scale,
-            optimize
-        )
+        (input_domain, input_metric, output_measure, k, scale, negate)
     )
     .into()
 }

@@ -205,7 +205,7 @@ def test_report_noisy_max_gumbel(monotonic, epsilon, rho):
     input_domain = dp.vector_domain(dp.atom_domain(T=dp.usize))
 
     input_metric = dp.linf_distance(monotonic=monotonic, T=dp.usize)
-    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max(dp.range_divergence(), 1., "max")
+    meas = (input_domain, input_metric) >> dp.m.then_report_noisy_max(dp.range_divergence(), 1.)
     # fails with very small probability
     assert meas([0, 0, 20, 0]) == 2  # because score 2 is by far the greatest
 

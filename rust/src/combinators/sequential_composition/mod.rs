@@ -20,7 +20,9 @@ mod ffi;
 use crate::{
     core::{Function, Measure},
     error::Fallible,
-    measures::{Approximate, MaxDivergence, RangeDivergence, RenyiDivergence, ZeroConcentratedDivergence},
+    measures::{
+        Approximate, MaxDivergence, RangeDivergence, RenyiDivergence, ZeroConcentratedDivergence,
+    },
     traits::InfAdd,
 };
 
