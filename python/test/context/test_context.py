@@ -1,3 +1,4 @@
+import re
 import pytest
 import logging
 import opendp.prelude as dp

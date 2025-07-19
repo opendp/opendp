@@ -152,10 +152,9 @@ fn test_summarize_polars_measurement_quantile() -> Fallible<()> {
     let expected = df![
         "column" => &["25", "50", "75"],
         "aggregate" => &["0.25-Quantile", "0.5-Quantile", "0.75-Quantile"],
-        "distribution" => &[Some("GumbelMin"); 3],
+        "distribution" => &[Some("ExponentialMin"); 3],
         "scale" => &[Some(1.0); 3]
     ]?;
-    println!("{:?}", expected);
     assert_eq!(expected, description);
 
     Ok(())
