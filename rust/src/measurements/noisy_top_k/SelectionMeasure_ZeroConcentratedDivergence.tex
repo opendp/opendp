@@ -1,0 +1,82 @@
+\documentclass{article} 
+\input{../../lib.sty} 
+\allowdisplaybreaks
+
+\title{\texttt{impl SelectionMeasure for ZeroConcentratedDivergence}} 
+\author{Michael Shoemate} 
+\begin{document}  
+\maketitle 
+ 
+\section{Hoare Triple} 
+\subsection*{Precondition} 
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Associated Type \texttt{RV}
+        \begin{itemize}
+            \item \texttt{RV} must implement trait \rustdoc{traits/samplers/psrn/trait}{InverseCDF}.
+        \end{itemize}
+    \item Method \texttt{random\_variable}
+        \textit{Types consistent with pseudocode.}
+    \item Method \texttt{privacy\_map}
+        \textit{Types consistent with pseudocode.}
+\end{itemize}
+
+\subsubsection*{Caller-verified}
+\begin{itemize}
+    \item Associated Type \texttt{RV} (\textit{no caller verified preconditions})
+    \item Method \texttt{random\_variable}
+        \begin{itemize}
+            \item \texttt{scale} is positive (\textit{cannot be null due to \texttt{FBig} dtype}).
+        \end{itemize}
+    \item Method \texttt{privacy\_map}
+        \begin{itemize}
+            \item \texttt{d\_in} is non-null and non-negative.
+            \item \texttt{scale} is non-null and non-negative.
+        \end{itemize}
+\end{itemize}
+
+\subsection*{Pseudocode} 
+\label{sec:python-pseudocode} 
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/SelectionMeasure_ZeroConcentratedDivergence.py} 
+ 
+\subsection*{Postcondition} 
+\begin{theorem}
+    The implementation is consistent with all associated items in the \rustdoc{measurements/report\_noisy\_top\_k/trait}{SelectionMeasure} trait.
+    \begin{enumerate}
+        \item Associated Type \texttt{RV}
+        \item Method \texttt{random\_variable} 
+        \item Method \texttt{privacy\_map}
+    \end{enumerate}
+\end{theorem}
+
+\begin{definition}
+    \label{def:Gumbel}
+    A random variable follows the Gumbel distribution if it has density
+    \begin{equation}
+        f(x) = \frac{1}{\beta} e^{-e^{-e^{-z}} - z}
+    \end{equation}
+    where $z = \frac{x - \mu}{\beta}$,
+    $\mu$ is the location parameter and $\beta$ is the scale parameter.
+\end{definition}
+
+\begin{proof}[Proof of valid associated type: \texttt{RV}]
+    The associated type \texttt{RV} is defined as \texttt{GumbelRV},
+    which represents a random variable following the Gumbel distribution \ref{def:Gumbel}.
+    The compiler verifies that \texttt{GumbelRV} implements the \rustdoc{traits/samplers/psrn/trait}{InverseCDF} trait.
+\end{proof}
+
+\begin{proof}[Proof of valid method: \texttt{random\_variable}]
+    By the precondition on \texttt{scale} being positive, 
+    \texttt{random\_variable} returns a valid instance of \rustdoc{traits/samplers/psrn/gumbel/struct}{GumbelRV}.
+\end{proof}
+
+\begin{proof}[Proof of valid method: \texttt{privacy\_map}]
+    By Lemma 4.2 of \cite{Durfee2019PracticalDP}, $\mathcal{M}_{\mathrm{Gumbel}}^k(x)$ is equal in distribution to the peeling exponential mechanism,
+    which is the k-fold composition of the exponential mechanism.
+    Proposition 2 of \cite{Dong2019OptimalDP} shows that the exponential mechanism satisfies the RangeDivergence privacy guarantee.
+\end{proof}
+
+\bibliographystyle{plain} 
+\bibliography{references.bib} 
+
+\end{document} 

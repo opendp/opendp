@@ -34,7 +34,7 @@ mod expr_literal;
 mod expr_postprocess;
 
 #[cfg(feature = "contrib")]
-pub(crate) mod expr_report_noisy_max;
+pub(crate) mod expr_noisy_max;
 
 #[bootstrap(
     features("contrib", "honest-but-curious"),
