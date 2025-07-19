@@ -1,10 +1,12 @@
 use crate::core::PrivacyMap;
 use crate::domains::{ArrayDomain, AtomDomain, ExprPlan, VectorDomain, WildExprDomain};
-use crate::measurements::{Optimize, SelectionMeasure, make_report_noisy_max, report_noisy_top_k};
+use crate::measurements::gumbel::report_noisy_top_k_gumbel;
+use crate::measurements::{
+    SelectionMeasure, make_report_noisy_max, report_noisy_top_k::exponential::permute_and_flip,
+};
 use crate::metrics::{IntDistance, L0InfDistance, L01InfDistance, LInfDistance};
 use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
-use crate::traits::samplers::GumbelRV;
-use crate::traits::{InfCast, InfMul, Number};
+use crate::traits::{CastInternalRational, InfCast, InfMul, Number};
 use crate::transformations::StableExpr;
 use crate::transformations::traits::UnboundedMetric;
 use crate::{
@@ -13,6 +15,7 @@ use crate::{
 };
 use dashu::float::FBig;
 
+use dashu::rational::RBig;
 use polars::datatypes::{
     DataType, Field, Float32Type, Float64Type, Int8Type, Int16Type, Int32Type, Int64Type,
     PolarsDataType, UInt32Type, UInt64Type,
@@ -28,7 +31,6 @@ use polars_arrow::array::PrimitiveArray;
 use polars_arrow::types::NativeType;
 use polars_plan::dsl::{ColumnsUdf, GetOutput};
 use polars_plan::prelude::FunctionOptions;
-use serde::de::IntoDeserializer;
 use serde::{Deserialize, Serialize};
 
 use super::approximate_c_stability;
@@ -52,7 +54,7 @@ pub fn make_expr_report_noisy_max<MI: 'static + UnboundedMetric, MO: 'static + S
 where
     Expr: StableExpr<L01InfDistance<MI>, L0InfDistance<LInfDistance<f64>>>,
 {
-    let (input, optimize, scale) = match_report_noisy_max(&expr)?
+    let (input, negate, scale) = match_report_noisy_max(&expr)?
         .ok_or_else(|| err!(MakeMeasurement, "Expected {}", ReportNoisyMaxPlugin::NAME))?;
 
     let t_prior = input.clone().make_stable(input_domain, input_metric)?;
@@ -103,14 +105,14 @@ where
 
     use DataType::*;
     let privacy_map = match array_domain.element_domain.dtype() {
-        UInt32 => rnm_privacy_map::<u32, _>(array_domain, scale, optimize)?,
-        UInt64 => rnm_privacy_map::<u64, _>(array_domain, scale, optimize)?,
-        Int8 => rnm_privacy_map::<i8, _>(array_domain, scale, optimize)?,
-        Int16 => rnm_privacy_map::<i16, _>(array_domain, scale, optimize)?,
-        Int32 => rnm_privacy_map::<i32, _>(array_domain, scale, optimize)?,
-        Int64 => rnm_privacy_map::<i64, _>(array_domain, scale, optimize)?,
-        Float32 => rnm_privacy_map::<f32, _>(array_domain, scale, optimize)?,
-        Float64 => rnm_privacy_map::<f64, _>(array_domain, scale, optimize)?,
+        UInt32 => rnm_privacy_map::<u32, _>(array_domain, scale, negate)?,
+        UInt64 => rnm_privacy_map::<u64, _>(array_domain, scale, negate)?,
+        Int8 => rnm_privacy_map::<i8, _>(array_domain, scale, negate)?,
+        Int16 => rnm_privacy_map::<i16, _>(array_domain, scale, negate)?,
+        Int32 => rnm_privacy_map::<i32, _>(array_domain, scale, negate)?,
+        Int64 => rnm_privacy_map::<i64, _>(array_domain, scale, negate)?,
+        Float32 => rnm_privacy_map::<f32, _>(array_domain, scale, negate)?,
+        Float64 => rnm_privacy_map::<f64, _>(array_domain, scale, negate)?,
         _ => {
             return fallible!(
                 MakeMeasurement,
@@ -128,7 +130,7 @@ where
                 expr.clone(),
                 ReportNoisyMaxPlugin {
                     distribution: MO::DISTRIBUTION,
-                    optimize: optimize.clone(),
+                    negate,
                     scale,
                 },
             )
@@ -144,10 +146,10 @@ where
 fn rnm_privacy_map<T: Number, MO: SelectionMeasure>(
     array_domain: &ArrayDomain,
     scale: f64,
-    optimize: Optimize,
+    negate: bool,
 ) -> Fallible<PrivacyMap<L0InfDistance<LInfDistance<f64>>, MO>>
 where
-    T: Number + InfCast<f64>,
+    T: Number + InfCast<f64> + CastInternalRational,
     FBig: TryFrom<T> + TryFrom<f64>,
     f64: InfCast<T> + InfCast<IntDistance>,
 {
@@ -164,7 +166,7 @@ where
         LInfDistance::default(),
         MO::default(),
         scale,
-        optimize,
+        negate,
     )?;
 
     Ok(PrivacyMap::new_fallible(
@@ -182,14 +184,12 @@ where
 ///
 /// # Returns
 /// The input to the report_noisy_max_gumbel expression and the arguments to the mechanism
-pub(crate) fn match_report_noisy_max(
-    expr: &Expr,
-) -> Fallible<Option<(&Expr, Optimize, Option<f64>)>> {
+pub(crate) fn match_report_noisy_max(expr: &Expr) -> Fallible<Option<(&Expr, bool, Option<f64>)>> {
     let Some(input) = match_plugin::<ReportNoisyMaxShim>(expr)? else {
         return Ok(None);
     };
 
-    let Ok([data, optimize, scale]) = <&[_; 3]>::try_from(input.as_slice()) else {
+    let Ok([data, negate, scale]) = <&[_; 3]>::try_from(input.as_slice()) else {
         return fallible!(
             MakeMeasurement,
             "{:?} expects three inputs",
@@ -197,19 +197,16 @@ pub(crate) fn match_report_noisy_max(
         );
     };
 
-    let optimize = literal_value_of::<String>(optimize)?.ok_or_else(|| {
+    let negate = literal_value_of::<bool>(negate)?.ok_or_else(|| {
         err!(
             MakeMeasurement,
-            "Optimize must be \"max\" or \"min\", found \"{}\".",
-            optimize
+            "Negate must be true or false, found \"{}\".",
+            negate
         )
     })?;
-    let optimize = Optimize::deserialize(optimize.as_str().into_deserializer())
-        .map_err(|e: serde::de::value::Error| err!(FailedFunction, "{:?}", e))?;
-
     let scale = literal_value_of::<f64>(scale)?;
 
-    Ok(Some((data, optimize, scale)))
+    Ok(Some((data, negate, scale)))
 }
 
 /// Arguments for the Report Noisy Max Gumbel noise expression
@@ -252,8 +249,8 @@ pub(crate) struct ReportNoisyMaxPlugin {
     pub distribution: SelectionDistribution,
     /// The scale of the noise.
     pub scale: f64,
-    /// Controls whether the noisy maximum or noisy minimum candidate is selected.
-    pub optimize: Optimize,
+    /// Minimize if true
+    pub negate: bool,
 }
 
 impl OpenDPPlugin for ReportNoisyMaxPlugin {
@@ -277,24 +274,21 @@ impl ColumnsUdf for ReportNoisyMaxPlugin {
     }
 
     fn call_udf(&self, s: &mut [Column]) -> PolarsResult<Option<Column>> {
-        report_noisy_max_gumbel_udf(s, self.clone()).map(Some)
+        report_noisy_max_udf(s, self.clone()).map(Some)
     }
 }
 
-/// Implementation of the report_noisy_max_gumbel noise expression.
+/// Implementation of the report_noisy_max noise expression.
 ///
 /// The Polars engine executes this function over chunks of data.
-fn report_noisy_max_gumbel_udf(
-    inputs: &[Column],
-    kwargs: ReportNoisyMaxPlugin,
-) -> PolarsResult<Column> {
+fn report_noisy_max_udf(inputs: &[Column], kwargs: ReportNoisyMaxPlugin) -> PolarsResult<Column> {
     let Ok([series]) = <&[_; 1]>::try_from(inputs) else {
         polars_bail!(InvalidOperation: "{} expects a single input field", ReportNoisyMaxPlugin::NAME);
     };
 
     let ReportNoisyMaxPlugin {
         distribution,
-        optimize,
+        negate,
         scale,
     } = kwargs;
 
@@ -302,21 +296,17 @@ fn report_noisy_max_gumbel_udf(
         polars_bail!(InvalidOperation: "{} scale ({}) must be non-negative", ReportNoisyMaxPlugin::NAME, scale);
     }
 
-    let Ok(scale) = FBig::try_from(scale.clone()) else {
-        polars_bail!(InvalidOperation: "{} scale ({}) must be a number", ReportNoisyMaxPlugin::NAME, scale);
-    };
-
     // PT stands for Polars Type
     fn rnm_impl<PT: 'static + PolarsDataType>(
         column: &Column,
         distribution: SelectionDistribution,
-        scale: FBig,
-        optimize: Optimize,
+        scale: f64,
+        negate: bool,
     ) -> PolarsResult<Column>
     where
         // the physical (rust) dtype must be a number that can be converted into a rational
-        PT::Physical<'static>: NativeType + Number,
-        FBig: TryFrom<PT::Physical<'static>>,
+        PT::Physical<'static>: NativeType + Number + CastInternalRational,
+        FBig: TryFrom<PT::Physical<'static>> + TryFrom<f64>,
         f64: InfCast<PT::Physical<'static>>,
     {
         Ok(column
@@ -335,12 +325,18 @@ fn report_noisy_max_gumbel_udf(
                 let scores = arr.values_iter().cloned().collect::<Vec<_>>();
                 use SelectionDistribution::*;
                 let idx = match distribution {
-                    Exponential => {
-                        report_noisy_top_k::<_, ExponentialRV>(&scores, 1, scale.clone(), optimize)
-                    }
-                    Gumbel => {
-                        report_noisy_top_k::<_, GumbelRV>(&scores, 1, scale.clone(), optimize)
-                    }
+                    Exponential => permute_and_flip::<_>(
+                        &scores,
+                        1,
+                        RBig::try_from(scale.clone()).unwrap(),
+                        negate,
+                    ),
+                    Gumbel => report_noisy_top_k_gumbel::<_>(
+                        &scores,
+                        1,
+                        FBig::try_from(scale.clone()).unwrap(),
+                        negate,
+                    ),
                 }?[0] as u32;
                 PolarsResult::Ok(idx)
             })?
@@ -355,14 +351,14 @@ fn report_noisy_max_gumbel_udf(
     };
 
     match dtype.as_ref() {
-        UInt32 => rnm_impl::<UInt32Type>(series, distribution, scale, optimize),
-        UInt64 => rnm_impl::<UInt64Type>(series, distribution, scale, optimize),
-        Int8 => rnm_impl::<Int8Type>(series, distribution, scale, optimize),
-        Int16 => rnm_impl::<Int16Type>(series, distribution, scale, optimize),
-        Int32 => rnm_impl::<Int32Type>(series, distribution, scale, optimize),
-        Int64 => rnm_impl::<Int64Type>(series, distribution, scale, optimize),
-        Float32 => rnm_impl::<Float32Type>(series, distribution, scale, optimize),
-        Float64 => rnm_impl::<Float64Type>(series, distribution, scale, optimize),
+        UInt32 => rnm_impl::<UInt32Type>(series, distribution, scale, negate),
+        UInt64 => rnm_impl::<UInt64Type>(series, distribution, scale, negate),
+        Int8 => rnm_impl::<Int8Type>(series, distribution, scale, negate),
+        Int16 => rnm_impl::<Int16Type>(series, distribution, scale, negate),
+        Int32 => rnm_impl::<Int32Type>(series, distribution, scale, negate),
+        Int64 => rnm_impl::<Int64Type>(series, distribution, scale, negate),
+        Float32 => rnm_impl::<Float32Type>(series, distribution, scale, negate),
+        Float64 => rnm_impl::<Float64Type>(series, distribution, scale, negate),
         UInt8 | UInt16 => {
             polars_bail!(InvalidOperation: "u8 and u16 not supported in the OpenDP Polars plugin. Please use u32 or u64.")
         }
@@ -417,6 +413,6 @@ fn report_noisy_max_plugin(
     kwargs: ReportNoisyMaxPlugin,
 ) -> PolarsResult<Series> {
     let inputs: Vec<Column> = inputs.iter().cloned().map(|s| s.into_column()).collect();
-    let out = report_noisy_max_gumbel_udf(inputs.as_slice(), kwargs)?;
+    let out = report_noisy_max_udf(inputs.as_slice(), kwargs)?;
     Ok(out.take_materialized_series())
 }

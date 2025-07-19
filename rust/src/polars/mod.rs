@@ -6,7 +6,6 @@ use crate::{
     error::Fallible,
     interactive::{Answer, Query, Queryable},
     measurements::{
-        Optimize,
         expr_index_candidates::IndexCandidatesShim,
         expr_noise::{Distribution, NoiseShim},
         expr_report_noisy_max::ReportNoisyMaxShim,
@@ -16,7 +15,7 @@ use crate::{
 use polars::{
     frame::DataFrame,
     lazy::frame::LazyFrame,
-    prelude::{DslPlan, GetOutput, LazySerde, NamedFrom, len, repeat},
+    prelude::{AnyValue, DslPlan, GetOutput, LazySerde, NamedFrom, len, repeat},
     series::Series,
 };
 #[cfg(feature = "ffi")]
@@ -221,7 +220,7 @@ pub(crate) fn literal_value_of<T: ExtractValue>(expr: &Expr) -> Fallible<Option<
 pub(crate) trait ExtractValue: Sized {
     fn extract(literal: LiteralValue) -> Fallible<Option<Self>>;
 }
-macro_rules! impl_extract_value {
+macro_rules! impl_extract_value_number {
     ($($ty:ty)+) => {$(impl ExtractValue for $ty {
         fn extract(literal: LiteralValue) -> Fallible<Option<Self>> {
             if literal.is_null() {
@@ -235,7 +234,23 @@ macro_rules! impl_extract_value {
     })+}
 }
 
-impl_extract_value!(u32 u64 i32 i64 f32 f64);
+impl_extract_value_number!(u32 u64 i32 i64 f32 f64);
+
+impl ExtractValue for bool {
+    fn extract(literal: LiteralValue) -> Fallible<Option<Self>> {
+        let any_value = literal.to_any_value().ok_or_else(|| err!(FailedFunction))?;
+
+        if matches!(any_value, AnyValue::Null) {
+            return Ok(None);
+        }
+
+        let AnyValue::Boolean(value) = any_value else {
+            return fallible!(FailedFunction, "expected boolean, found {:?}", any_value);
+        };
+
+        Ok(Some(value))
+    }
+}
 
 impl ExtractValue for Series {
     fn extract(literal: LiteralValue) -> Fallible<Option<Self>> {
@@ -435,12 +450,12 @@ impl DPExpr {
     /// The scale calibrates the level of entropy when selecting an index.
     ///
     /// # Arguments
-    /// * `optimize` - Distinguish between argmax and argmin.
+    /// * `negate` - Flip signs to report noisy min.
     /// * `scale` - Noise scale parameter for the noise distribution.
-    pub(crate) fn report_noisy_max(self, optimize: Optimize, scale: Option<f64>) -> Expr {
-        let optimize = lit(format!("{optimize}"));
+    pub(crate) fn report_noisy_max(self, negate: bool, scale: Option<f64>) -> Expr {
+        let negate = lit(negate);
         let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
-        apply_anonymous_function(vec![self.0, optimize, scale], ReportNoisyMaxShim)
+        apply_anonymous_function(vec![self.0, negate, scale], ReportNoisyMaxShim)
     }
 
     /// Index into a candidate set.
@@ -466,7 +481,7 @@ impl DPExpr {
             .dp()
             .quantile_score(alpha, candidates.clone())
             .dp()
-            .report_noisy_max(Optimize::Min, scale)
+            .report_noisy_max(false, scale)
             .dp()
             .index_candidates(Series::new("".into(), candidates))
     }

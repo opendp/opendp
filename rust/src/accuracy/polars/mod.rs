@@ -223,7 +223,10 @@ fn summarize_expr<'a>(
         return Ok(vec![UtilitySummary {
             name,
             aggregate: expr_aggregate(&inputs[0])?.to_string(),
-            distribution: Some(format!("Gumbel{:?}", plugin.optimize)),
+            distribution: Some(format!(
+                "Gumbel{}",
+                if plugin.negate { "Min" } else { "Max" }
+            )),
             scale: Some(plugin.scale),
             accuracy: None,
             threshold: t_value,

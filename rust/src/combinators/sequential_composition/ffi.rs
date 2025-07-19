@@ -3,7 +3,8 @@ use crate::{
     error::Fallible,
     ffi::any::{AnyMeasure, AnyObject, Downcast},
     measures::{
-        ffi::TypedMeasure, Approximate, MaxDivergence, RangeDivergence, RenyiDivergence, ZeroConcentratedDivergence
+        Approximate, MaxDivergence, RangeDivergence, RenyiDivergence, ZeroConcentratedDivergence,
+        ffi::TypedMeasure,
     },
 };
 

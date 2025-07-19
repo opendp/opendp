@@ -1,9 +1,7 @@
 use num::Float;
 
 use crate::{
-    measurements::{Optimize, make_report_noisy_max},
-    measures::RangeDivergence,
-    metrics::SymmetricDistance,
+    measurements::make_report_noisy_max, measures::RangeDivergence, metrics::SymmetricDistance,
     traits::samplers::sample_uniform_uint_below,
 };
 
@@ -29,7 +27,7 @@ fn test_quantile_score_candidates_median() -> Fallible<()> {
         t_qscore.output_metric.clone(),
         RangeDivergence,
         1.0,
-        Optimize::Min,
+        true,
     )?;
 
     let m_quantile = (t_qscore >> m_rnm)?;
@@ -202,9 +200,7 @@ fn test_score_candidates_map() -> Fallible<()> {
 #[cfg(feature = "derive")]
 mod integration_tests {
     use crate::{
-        measurements::{Optimize, make_report_noisy_max},
-        measures::RangeDivergence,
-        metrics::SymmetricDistance,
+        measurements::make_report_noisy_max, measures::RangeDivergence, metrics::SymmetricDistance,
     };
 
     use super::*;
@@ -245,7 +241,7 @@ mod integration_tests {
             trans.output_metric.clone(),
             RangeDivergence,
             trans.map(&1)? as f64 * 2.,
-            Optimize::Min,
+            true,
         )?;
 
         let quantile_meas = (trans >> exp_mech)?;
@@ -267,7 +263,7 @@ mod integration_tests {
             trans_sized.output_metric.clone(),
             RangeDivergence,
             trans_sized.map(&2)? as f64 * 2.,
-            Optimize::Min,
+            true,
         )?;
 
         let quantile_sized_meas = (trans_sized >> exp_mech)?;

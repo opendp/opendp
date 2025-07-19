@@ -79,7 +79,7 @@ fn sample_bernoulli_exp1(x: RBig) -> Fallible<bool> {
 /// `sample_bernoulli_exp` either returns `Err(e)` due to a lack of system entropy,
 /// or `Ok(out)`, where `out` is distributed as $Bernoulli(exp(-x))$.
 
-fn sample_bernoulli_exp(mut x: RBig) -> Fallible<bool> {
+pub(crate) fn sample_bernoulli_exp(mut x: RBig) -> Fallible<bool> {
     // Sample floor(x) independent Bernoulli(exp(-1))
     // If all are 1, return Bernoulli(exp(-(x-floor(x))))
     while x > RBig::ONE {
