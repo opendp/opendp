@@ -1,97 +1,156 @@
-use super::*;
+use crate::core::{Function, Measurement, PrivacyMap};
+use crate::domains::{AtomDomain, VectorDomain};
+use crate::error::*;
+use crate::measures::MaxDivergence;
+use crate::metrics::L1Distance;
+use dashu::rational::RBig;
+use crate::traits::{Integer, InfCast};
+use crate::traits::samplers::sample_discrete_gaussian;
 
-#[test]
-fn test_toeplitz_coefficients_scaled() -> Fallible<()> {
-    // Test the mathematical correctness of Toeplitz coefficients
-    let scale_bits = 20usize; // Use 2^20 for scaling
-    
-    // c*_0 = 1 * 2^20
-    let c0 = compute_toeplitz_coefficient_scaled(0, scale_bits)?;
-    assert_eq!(c0, IBig::from(1) << scale_bits);
-    
-    // c*_1 = (2 choose 1) / 4^1 * 2^20 = 2/4 * 2^20 = 2^19
-    let c1 = compute_toeplitz_coefficient_scaled(1, scale_bits)?;
-    assert_eq!(c1, IBig::from(1) << (scale_bits - 1));
-    
-    // c*_2 = (4 choose 2) / 4^2 * 2^20 = 6/16 * 2^20 = 3/8 * 2^20
-    let c2 = compute_toeplitz_coefficient_scaled(2, scale_bits)?;
-    assert_eq!(c2, IBig::from(3) << (scale_bits - 3));
-    
-    // c*_3 = (6 choose 3) / 4^3 * 2^20 = 20/64 * 2^20 = 5/16 * 2^20
-    let c3 = compute_toeplitz_coefficient_scaled(3, scale_bits)?;
-    assert_eq!(c3, IBig::from(5) << (scale_bits - 4));
-    
-    // Test that coefficients decrease
-    assert!(c0 > c1);
-    assert!(c1 > c2);
-    assert!(c2 > c3);
-    
-    Ok(())
-}
+use num::{Zero, CheckedAdd, CheckedMul, CheckedSub};
+use std::fmt::Display;
+use std::str::FromStr;
 
-#[test]
-fn test_inverse_coefficients_scaled() -> Fallible<()> {
-    let scale_bits = 20usize;
-    
-    // Test inverse coefficients: c'_t = c*_{t+1} - c*_t
-    let c_prime_0 = compute_inverse_coefficient_scaled(0, scale_bits)?;
-    assert_eq!(c_prime_0, IBig::from(1) << scale_bits);
-    
-    // c'_1 should be negative (c*_2 - c*_1)
-    let c_prime_1 = compute_inverse_coefficient_scaled(1, scale_bits)?;
-    let expected = compute_toeplitz_coefficient_scaled(2, scale_bits)? 
-                 - compute_toeplitz_coefficient_scaled(1, scale_bits)?;
-    assert_eq!(c_prime_1, expected);
-    
-    // Verify the relationship holds for several values
-    for t in 0..10 {
-        let c_prime_t = compute_inverse_coefficient_scaled(t, scale_bits)?;
-        if t == 0 {
-            assert_eq!(c_prime_t, compute_toeplitz_coefficient_scaled(0, scale_bits)?);
-        } else {
-            let expected = compute_toeplitz_coefficient_scaled(t + 1, scale_bits)? 
-                         - compute_toeplitz_coefficient_scaled(t, scale_bits)?;
-            assert_eq!(c_prime_t, expected);
-        }
+use super::utils::core;
+use super::utils::isotonic;
+
+/// Make a measurement that adds correlated noise for continual release of counting statistics
+/// using the Toeplitz mechanism.
+/// 
+/// This implements the basic Toeplitz mechanism from Section 2.3 of https://arxiv.org/abs/2506.08201, 
+/// named "Correlated Noise Mechanisms for Differentially Private Learning" by Pillutla et al.,
+/// which achieves near-optimal utility for releasing prefix sums with differential privacy.
+/// Refer to chapter 2 of the linked survey for more theoretical results about continual release with DP.
+/// 
+/// The mechanism adds correlated discrete Gaussian noise to enable accurate range queries
+/// over streaming count data. A 2023 paper by Fichtenberger et al first came up with this basic 
+/// Toeplitz-based construction, with the name of "Constant matters: Fine-grained Complexity of
+/// Differentially Private Continual Observation", accessible at https://arxiv.org/abs/2202.11205.
+/// 
+/// # Arguments
+/// * `input_domain` - VectorDomain with known size containing the time series of counts
+/// * `input_metric` - L1Distance metric for measuring sensitivity  
+/// * `scale` - Noise scale parameter ($\sigma$ as in the paper)
+/// * `enforce_monotonicity` - Whether to apply isotonic regression to ensure monotonic outputs (default: true)
+/// 
+/// # Returns
+/// A Measurement that computes differentially private prefix sums of counts.
+/// 
+/// # Example
+/// ```
+/// # use opendp::prelude::*;
+/// # use opendp::measurements::make_toeplitz;
+/// let input_domain = VectorDomain::new(
+///     AtomDomain::<i32>::default()
+/// ).with_size(10);
+/// let input_metric = L1Distance::<i32>::default();
+/// let scale = 2.0;
+/// 
+/// let measurement = make_toeplitz(input_domain, input_metric, scale, true)?;
+/// let counts = vec![5i32; 10]; // 10 time steps with 5 counts each
+/// let noisy_prefix_sums = measurement.invoke(&counts)?;
+/// # Ok::<(), opendp::error::Fallible>(())
+/// ```
+pub fn make_toeplitz<T>(
+    input_domain: VectorDomain<AtomDomain<T>>,
+    input_metric: L1Distance<T>,
+    scale: f64,
+    enforce_monotonicity: bool,
+) -> Fallible<Measurement<
+    VectorDomain<AtomDomain<T>>,
+    Vec<T>,
+    L1Distance<T>,
+    MaxDivergence,
+>>
+where
+    T: Integer + Display + FromStr + CheckedAdd + CheckedMul + CheckedSub + num::One + PartialOrd,
+    f64: InfCast<T>,
+{
+    // Validate scale parameter
+    if scale.is_sign_negative() || scale.is_zero() || !scale.is_finite() {
+        return fallible!(MakeMeasurement, "scale must be positive and finite");
     }
     
-    Ok(())
-}
-
-#[test]
-fn test_coefficient_precision() -> Fallible<()> {
-    // Test with different scale_bits to ensure precision handling
-    for scale_bits in [10, 20, 30, 40, 50] {
-        let c0 = compute_toeplitz_coefficient_scaled(0, scale_bits)?;
-        assert_eq!(c0, IBig::from(1) << scale_bits);
-        
-        // Test that we don't lose precision with large scale_bits
-        let c5 = compute_toeplitz_coefficient_scaled(5, scale_bits)?;
-        assert!(c5 > IBig::zero());
+    // Check that input domain has known size
+    let n = match input_domain.size {
+        Some(size) => size,
+        None => return fallible!(MakeMeasurement, "input domain must have known size for Toeplitz mechanism"),
+    };
+    
+    if n == 0 {
+        return fallible!(MakeMeasurement, "input domain size must be positive");
     }
     
-    Ok(())
+    let scale_bits = 40usize;  // Precision for fixed-point arithmetic
+    
+    // Create the measurement
+    Measurement::new(
+        input_domain.clone(),
+        Function::new_fallible(move |data: &Vec<T>| -> Fallible<Vec<T>> {
+            // Validate data length
+            if data.len() != n {
+                return fallible!(FailedFunction, "data length {} does not match domain size {}", data.len(), n);
+            }
+            
+            // Apply the Toeplitz mechanism
+            let mut noisy_sums = compute_toeplitz_mechanism(data, scale, scale_bits)?;
+            
+            // Clamp to non-negative before isotonic regression
+            for i in 0..noisy_sums.len() {
+                if noisy_sums[i] < T::zero() {
+                    noisy_sums[i] = T::zero();
+                }
+            }
+            
+            // Apply isotonic regression to ensure monotonicity
+            if enforce_monotonicity {
+                isotonic::apply_isotonic_regression(noisy_sums)
+            } else {
+                Ok(noisy_sums)
+            }
+        }),
+        input_metric.clone(),
+        MaxDivergence,
+        PrivacyMap::new_fallible(move |d_in: &T| {
+            // For pure DP with Gaussian noise: ε = (Δ * d_in) / σ
+            // Δ = 1 for an individual is assumed, since:
+            // - We don't assume the ability to be able to identify all counts that belong to a single user.
+            // - We assume the simple use cases where an individual participates
+            let d_in_f64 = f64::inf_cast(d_in.clone())?;
+            Ok(d_in_f64 / scale)
+        }),
+    )
 }
 
-#[test]
-fn test_ibig_conversion() -> Fallible<()> {
-    // Test to_ibig conversion
-    assert_eq!(to_ibig(&42i32)?, IBig::from(42));
-    assert_eq!(to_ibig(&-100i64)?, IBig::from(-100));
-    assert_eq!(to_ibig(&i32::MAX)?, IBig::from(i32::MAX));
+/// Compute the Toeplitz mechanism for prefix sums
+/// 
+/// This implements the Toeplitz mechanism.
+/// The mechanism adds correlated discrete Gaussian noise to enable accurate
+/// range queries over streaming count data.
+fn compute_toeplitz_mechanism<T>(
+    data: &[T],
+    scale: f64,
+    scale_bits: usize,
+) -> Fallible<Vec<T>>
+where
+    T: Integer + Display + FromStr + CheckedAdd + CheckedMul + CheckedSub + num::One + PartialOrd,
+{
+    let n = data.len();
+    if n == 0 {
+        return Ok(vec![]);
+    }
     
-    // Test from_ibig_saturating
-    assert_eq!(from_ibig_saturating::<i32>(IBig::from(42))?, 42);
-    assert_eq!(from_ibig_saturating::<i32>(IBig::from(-100))?, -100);
+    // Convert scale to variance for discrete Gaussian
+    let variance = RBig::from((scale * scale * 1e9) as i64) / RBig::from(1_000_000_000i64);
     
-    // Test saturation behavior
-    let huge = IBig::from(i64::MAX) * IBig::from(2);
-    assert_eq!(from_ibig_saturating::<i32>(huge)?, i32::MAX);
+    // Step 1: Generate independent discrete Gaussian noise Z
+    let mut raw_noise = Vec::with_capacity(n);
+    for _ in 0..n {
+        raw_noise.push(sample_discrete_gaussian(variance.clone())?);
+    }
     
-    let huge_neg = IBig::from(i64::MIN) * IBig::from(2);
-    assert_eq!(from_ibig_saturating::<i32>(huge_neg)?, i32::MIN);
-    
-    Ok(())
+    // Step 2: Apply Toeplitz mechanism to compute noisy prefix sums
+    core::compute_toeplitz_range(data, &raw_noise, 0, n, scale_bits)
 }
 
 #[test]
@@ -365,12 +424,6 @@ fn test_noise_correlation() -> Fallible<()> {
     Ok(())
 }
 
-// Helper function for variance calculation
-fn variance(data: &[f64]) -> f64 {
-    let mean = data.iter().sum::<f64>() / data.len() as f64;
-    data.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / data.len() as f64
-}
-
 #[test]
 fn test_large_time_series() -> Fallible<()> {
     // Test with larger time series to ensure scalability
@@ -407,85 +460,10 @@ fn test_large_time_series() -> Fallible<()> {
     Ok(())
 }
 
-#[test]
-fn test_isotonic_regression_properties() -> Fallible<()> {
-    // Test that isotonic regression preserves key properties
-    
-    // Test 1: Already monotonic sequence remains unchanged
-    let monotonic = vec![1, 2, 3, 4, 5];
-    let result = apply_isotonic_regression(monotonic.clone())?;
-    assert_eq!(result, monotonic);
-    
-    // Test 2: Simple violation gets corrected
-    let violated = vec![1, 3, 2, 4, 5];
-    let result = apply_isotonic_regression(violated)?;
-    // Should pool 3 and 2 to their average 2.5, rounded to 2 for integers
-    assert!(result[1] >= result[0]);
-    assert!(result[2] >= result[1]);
-    assert!(result[3] >= result[2]);
-    assert!(result[4] >= result[3]);
-    
-    // Test 3: Multiple violations
-    let multi_violated = vec![5, 4, 3, 2, 1];
-    let result = apply_isotonic_regression(multi_violated)?;
-    // Should all be pooled to average 3
-    for &val in &result {
-        assert_eq!(val, 3);
-    }
-    
-    Ok(())
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    
-    #[test]
-    fn test_continual_consistency() -> Fallible<()> {
-        let mechanism = ContinualToeplitz::<i32>::new(10.0, true)?;
-        
-        // First query: times [0, 5)
-        let counts1 = vec![10, 20, 30, 40, 50];
-        let result1 = mechanism.release(&counts1, 0)?;
-        assert_eq!(result1.len(), 5);
-        
-        // Verify monotonicity
-        for i in 1..result1.len() {
-            assert!(result1[i] >= result1[i-1]);
-        }
-        
-        // Second query: times [5, 8)
-        let counts2 = vec![60, 70, 80];
-        let result2 = mechanism.release(&counts2, 5)?;
-        assert_eq!(result2.len(), 8);
-        
-        // Verify monotonicity
-        for i in 1..result2.len() {
-            assert!(result2[i] >= result2[i-1]);
-        }
-        
-        // The first 5 values should be identical
-        for i in 0..5 {
-            assert_eq!(result1[i], result2[i], "Inconsistent value at time {}", i);
-        }
-        
-        Ok(())
-    }
-    
-    #[test]
-    fn test_continual_decreasing_time_error() -> Fallible<()> {
-        let mechanism = ContinualToeplitz::<i32>::new(10.0, true)?;
-        
-        // First query: times [0, 5)
-        let counts1 = vec![10, 20, 30, 40, 50];
-        mechanism.release(&counts1, 0)?;
-        
-        // Second query with wrong expected time should fail
-        let counts2 = vec![60, 70, 80];
-        assert!(mechanism.release(&counts2, 3).is_err());  // Wrong: should be 5
-        
-        Ok(())
-    }
+// Helper function for variance calculation
+fn variance(data: &[f64]) -> f64 {
+    let mean = data.iter().sum::<f64>() / data.len() as f64;
+    data.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / data.len() as f64
 }
 
 #[test]

@@ -5,7 +5,7 @@ use num::{CheckedAdd, CheckedMul, CheckedSub};
 use std::fmt::Display;
 use std::str::FromStr;
 
-use super::{to_ibig, from_ibig_saturating};
+use super::type_conversion::{to_ibig, from_ibig_saturating};
 
 /// Apply isotonic regression using the Pool Adjacent Violators Algorithm (PAVA)
 /// 
@@ -16,7 +16,7 @@ use super::{to_ibig, from_ibig_saturating};
 /// Another way to think about this is: all the computations here can be done deterministically with the
 /// noisy counts after the Toeplitz mechanism, through local computations by the adversary,
 /// so the two views with or without this isotonic regression step are identical.
-pub fn apply_isotonic_regression<T>(mut values: Vec<T>) -> Fallible<Vec<T>>
+pub(crate) fn apply_isotonic_regression<T>(mut values: Vec<T>) -> Fallible<Vec<T>>
 where
     T: Integer + Display + FromStr + CheckedAdd + CheckedMul + CheckedSub + num::One + PartialOrd,
 {
@@ -81,7 +81,7 @@ where
 /// 
 /// This modifies the isotonic regression algorithm to treat the first k values
 /// as immutable constraints.
-pub fn apply_isotonic_regression_with_fixed_prefix<T>(
+pub(crate) fn apply_isotonic_regression_with_fixed_prefix<T>(
     mut values: Vec<T>,
     fixed_prefix: Vec<T>,
 ) -> Fallible<Vec<T>>
@@ -179,4 +179,33 @@ where
     }
     
     Ok(values)
+}
+
+#[test]
+fn test_isotonic_regression_properties() -> Fallible<()> {
+    // Test that isotonic regression preserves key properties
+    
+    // Test 1: Already monotonic sequence remains unchanged
+    let monotonic = vec![1, 2, 3, 4, 5];
+    let result = apply_isotonic_regression(monotonic.clone())?;
+    assert_eq!(result, monotonic);
+    
+    // Test 2: Simple violation gets corrected
+    let violated = vec![1, 3, 2, 4, 5];
+    let result = apply_isotonic_regression(violated)?;
+    // Should pool 3 and 2 to their average 2.5, rounded to 2 for integers
+    assert!(result[1] >= result[0]);
+    assert!(result[2] >= result[1]);
+    assert!(result[3] >= result[2]);
+    assert!(result[4] >= result[3]);
+    
+    // Test 3: Multiple violations
+    let multi_violated = vec![5, 4, 3, 2, 1];
+    let result = apply_isotonic_regression(multi_violated)?;
+    // Should all be pooled to average 3
+    for &val in &result {
+        assert_eq!(val, 3);
+    }
+    
+    Ok(())
 }

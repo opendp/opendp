@@ -8,8 +8,8 @@ use std::fmt::Display;
 use std::str::FromStr;
 use num::{CheckedAdd, CheckedMul, CheckedSub, Zero};
 
-use super::compute_toeplitz_range;
-use super::isotonic::{apply_isotonic_regression, apply_isotonic_regression_with_fixed_prefix};
+use super::utils::core::compute_toeplitz_range;
+use super::utils::isotonic::{apply_isotonic_regression, apply_isotonic_regression_with_fixed_prefix};
 
 /// Stateful container for continual release with the Toeplitz mechanism
 /// 
@@ -169,25 +169,6 @@ where
     }
 }
 
-/// Create a measurement for continual release using the Toeplitz mechanism
-/// 
-/// This maintains state across invocations to ensure consistency of noise and
-/// guarantees monotonic outputs through isotonic regression post-processing.
-pub fn make_continual_toeplitz<T>(
-    scale: f64,
-    enforce_monotonicity: bool,
-) -> Fallible<impl Fn(&Vec<T>, usize) -> Fallible<Vec<T>>>
-where
-    T: Integer + Display + FromStr + CheckedAdd + CheckedMul + CheckedSub + num::One + PartialOrd + Clone + Send + Sync + 'static,
-    f64: InfCast<T>,
-{
-    let mechanism = ContinualToeplitz::new(scale, enforce_monotonicity)?;
-    let mechanism = Arc::new(mechanism);
-    
-    Ok(move |incremental_counts: &Vec<T>, expected_previous_time: usize| {
-        mechanism.release(incremental_counts, expected_previous_time)
-    })
-}
 
 #[cfg(test)]
 mod test {
@@ -362,4 +343,22 @@ mod test {
         
         Ok(())
     }
+}
+
+#[test]
+fn test_privacy_cost_calculation() -> Fallible<()> {
+    // This test ensures the scale field is recognized as used
+    let mechanism = ContinualToeplitz::<i32>::new(10.0, true)?;
+    
+    // Verify privacy cost calculation: ε = d_in / scale
+    assert_eq!(mechanism.privacy_cost(1)?, 0.1);
+    assert_eq!(mechanism.privacy_cost(10)?, 1.0);
+    assert_eq!(mechanism.privacy_cost(20)?, 2.0);
+    
+    // Different scale
+    let mechanism2 = ContinualToeplitz::<i64>::new(5.0, false)?;
+    assert_eq!(mechanism2.privacy_cost(5)?, 1.0);
+    assert_eq!(mechanism2.privacy_cost(10)?, 2.0);
+    
+    Ok(())
 }
