@@ -3,7 +3,7 @@ use crate::traits::{Integer, InfCast};
 use crate::traits::samplers::sample_discrete_gaussian;
 use dashu::rational::RBig;
 use dashu::integer::IBig;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 use std::fmt::Display;
 use std::str::FromStr;
 use num::{CheckedAdd, CheckedMul, CheckedSub, Zero};
@@ -31,19 +31,29 @@ use super::utils::isotonic::{apply_isotonic_regression, apply_isotonic_regressio
 /// let result3 = mechanism.release(&vec![], 5)?;
 /// ```
 pub struct ContinualToeplitz<T> {
-    /// Scale parameter (\sigma). In the context of approximate DP, the privacy loss is
-    /// $\epsilon = \Delta \sqrt{2 \ln( 1.25/ \delta )} / \sigma$, where $\Delta$ is the
-    /// sensitivity of the query, and the privacy guarantee is $(\epsilon, \delta)$-DP.
-    /// So, $\sigma$ is set at a trade-off with the privacy loss.
+    /// Information that can change over time is stored in a mutex
+    /// to allow safe concurrent access
+    state: Mutex<ToeplitzState<T>>,
+    /// Information that are immutable for the lifetime of the mechanism are stored in a config
+    config: ToeplitzConfig,
+}
+
+/// Mutable state for the Toeplitz mechanism
+struct ToeplitzState<T> {
+    /// Raw noise values Z[t] as a single vector
+    raw_noise_history: Vec<IBig>,
+    /// Already-computed noisy prefix sums after isotonic regression as a vector
+    noisy_prefix_sums: Vec<T>,
+    /// Cumulative counts from all previous releases as a vector
+    cumulative_counts: Vec<T>,
+}
+
+/// Immutable configuration for the Toeplitz mechanism
+struct ToeplitzConfig {
+    /// Scale parameter (σ)
     scale: f64,
     /// Precision bits for coefficient calculations
     scale_bits: usize,
-    /// Storage for raw noise values Z[t]
-    raw_noise_history: Arc<Mutex<Vec<IBig>>>,
-    /// Storage for already-computed noisy prefix sums after isotonic regression
-    noisy_prefix_sums: Arc<Mutex<Vec<T>>>,
-    /// Storage for cumulative counts from all previous releases
-    cumulative_counts: Arc<Mutex<Vec<T>>>,
     /// Variance for noise generation
     variance: RBig,
     /// Whether to enforce monotonicity
@@ -63,13 +73,17 @@ where
         let variance = RBig::from((scale * scale * 1e9) as i64) / RBig::from(1_000_000_000i64);
         
         Ok(ContinualToeplitz {
-            scale,
-            scale_bits: 40,  // 40 bits provides ~12 decimal digits of precision
-            raw_noise_history: Arc::new(Mutex::new(Vec::new())),
-            noisy_prefix_sums: Arc::new(Mutex::new(Vec::new())),
-            cumulative_counts: Arc::new(Mutex::new(Vec::new())),
-            variance,
-            enforce_monotonicity,
+            state: Mutex::new(ToeplitzState {
+                raw_noise_history: Vec::new(),
+                noisy_prefix_sums: Vec::new(),
+                cumulative_counts: Vec::new(),
+            }),
+            config: ToeplitzConfig {
+                scale,
+                scale_bits: 40,  // 40 bits provides ~12 decimal digits of precision
+                variance,
+                enforce_monotonicity,
+            },
         })
     }
     
@@ -86,11 +100,9 @@ where
     /// # Errors
     /// Returns an error if `expected_previous_time` doesn't match the actual state
     pub fn release(&self, incremental_counts: &[T], expected_previous_time: usize) -> Fallible<Vec<T>> {
-        let mut raw_noise_history = self.raw_noise_history.lock().unwrap();
-        let mut noisy_prefix_sums = self.noisy_prefix_sums.lock().unwrap();
-        let mut cumulative_counts = self.cumulative_counts.lock().unwrap();
+        let mut state = self.state.lock().unwrap();
         
-        let current_time = cumulative_counts.len();
+        let current_time = state.cumulative_counts.len();
         
         // Verify expected state
         if expected_previous_time != current_time {
@@ -104,27 +116,27 @@ where
         
         // If no new counts, return existing results
         if incremental_counts.is_empty() {
-            return Ok(noisy_prefix_sums.clone());
+            return Ok(state.noisy_prefix_sums.clone());
         }
         
         // Append incremental counts to cumulative history
-        cumulative_counts.extend_from_slice(incremental_counts);
-        let new_time = cumulative_counts.len();
+        state.cumulative_counts.extend_from_slice(incremental_counts);
+        let new_time = state.cumulative_counts.len();
         
         // Generate new raw noise for time steps [current_time, new_time)
         for _ in current_time..new_time {
-            raw_noise_history.push(sample_discrete_gaussian(self.variance.clone())?);
+            state.raw_noise_history.push(sample_discrete_gaussian(self.config.variance.clone())?);
         }
         
         // Compute ALL noisy prefix sums from scratch to ensure consistency
         // This is necessary because the Toeplitz mechanism's correlated noise structure
         // means that noise at time t depends on all previous raw noise values
         let mut all_noisy_sums = compute_toeplitz_range(
-            &cumulative_counts,
-            &raw_noise_history,
+            &state.cumulative_counts,
+            &state.raw_noise_history,
             0,
             new_time,
-            self.scale_bits
+            self.config.scale_bits
         )?;
         
         // Clamp to non-negative before isotonic regression
@@ -135,13 +147,13 @@ where
         }
         
         // Apply isotonic regression with constraint to preserve previously released values
-        let monotonic_sums = if self.enforce_monotonicity {
+        let monotonic_sums = if self.config.enforce_monotonicity {
             if current_time == 0 {
                 // First release: standard isotonic regression
                 apply_isotonic_regression(all_noisy_sums)?
             } else {
                 // Subsequent releases: preserve the first current_time values
-                let fixed_prefix = noisy_prefix_sums[..current_time].to_vec();
+                let fixed_prefix = state.noisy_prefix_sums[..current_time].to_vec();
                 apply_isotonic_regression_with_fixed_prefix(all_noisy_sums, fixed_prefix)?
             }
         } else {
@@ -149,14 +161,14 @@ where
         };
         
         // Update the stored results
-        *noisy_prefix_sums = monotonic_sums.clone();
+        state.noisy_prefix_sums = monotonic_sums.clone();
         
         Ok(monotonic_sums)
     }
     
     /// Get the current number of time steps processed
     pub fn current_time(&self) -> usize {
-        self.cumulative_counts.lock().unwrap().len()
+        self.state.lock().unwrap().cumulative_counts.len()
     }
     
     /// Get the privacy cost for a given input distance
@@ -165,7 +177,7 @@ where
         f64: InfCast<T>,
     {
         let d_in_f64 = f64::inf_cast(d_in)?;
-        Ok(d_in_f64 / self.scale)
+        Ok(d_in_f64 / self.config.scale)
     }
 }
 
@@ -404,24 +416,39 @@ mod test {
         
         Ok(())
     }
-}
 
-#[test]
-fn test_privacy_cost_calculation() -> Fallible<()> {
-    // This test ensures the scale field is recognized as used
-    // let mechanism = ContinualToeplitz::<i32>::new(10.0, true)?;
-    let mechanism = MonotonicContinualToeplitz::<i32>::new(10.0)?;
-    
-    // Verify privacy cost calculation: ε = d_in / scale
-    assert_eq!(mechanism.privacy_cost(1)?, 0.1);
-    assert_eq!(mechanism.privacy_cost(10)?, 1.0);
-    assert_eq!(mechanism.privacy_cost(20)?, 2.0);
-    
-    // Different scale
-    // let mechanism2 = ContinualToeplitz::<i64>::new(5.0, false)?;
-    let mechanism2 = BaselineContinualToeplitz::<i64>::new(5.0)?;
-    assert_eq!(mechanism2.privacy_cost(5)?, 1.0);
-    assert_eq!(mechanism2.privacy_cost(10)?, 2.0);
-    
-    Ok(())
+    #[test]
+    fn test_baseline_current_time() -> Fallible<()> {
+        let mechanism = BaselineContinualToeplitz::<i32>::new(10.0)?;
+        
+        assert_eq!(mechanism.current_time(), 0);
+        
+        mechanism.release(&vec![1, 2, 3], 0)?;
+        assert_eq!(mechanism.current_time(), 3);
+        
+        mechanism.release(&vec![4, 5], 3)?;
+        assert_eq!(mechanism.current_time(), 5);
+        
+        Ok(())
+    }
+
+    #[test]
+    fn test_privacy_cost_calculation() -> Fallible<()> {
+        // This test ensures the scale field is recognized as used
+        // let mechanism = ContinualToeplitz::<i32>::new(10.0, true)?;
+        let mechanism = MonotonicContinualToeplitz::<i32>::new(10.0)?;
+        
+        // Verify privacy cost calculation: ε = d_in / scale
+        assert_eq!(mechanism.privacy_cost(1)?, 0.1);
+        assert_eq!(mechanism.privacy_cost(10)?, 1.0);
+        assert_eq!(mechanism.privacy_cost(20)?, 2.0);
+        
+        // Different scale
+        // let mechanism2 = ContinualToeplitz::<i64>::new(5.0, false)?;
+        let mechanism2 = BaselineContinualToeplitz::<i64>::new(5.0)?;
+        assert_eq!(mechanism2.privacy_cost(5)?, 1.0);
+        assert_eq!(mechanism2.privacy_cost(10)?, 2.0);
+        
+        Ok(())
+    }
 }
