@@ -169,6 +169,60 @@ where
     }
 }
 
+/// Baseline continual Toeplitz (no monotonicity enforcement)
+pub struct BaselineContinualToeplitz<T: crate::traits::CheckAtom>(ContinualToeplitz<T>);
+
+impl<T: crate::traits::CheckAtom> BaselineContinualToeplitz<T>
+where
+    T: Integer + Display + FromStr + CheckedAdd + CheckedMul + CheckedSub + num::One + PartialOrd + Clone,
+{
+    pub fn new(scale: f64) -> Fallible<Self> {
+        Ok(Self(ContinualToeplitz::new(scale, false)?))
+    }
+    
+    pub fn release(&self, incremental_counts: &[T], expected_previous_time: usize) -> Fallible<Vec<T>> {
+        self.0.release(incremental_counts, expected_previous_time)
+    }
+    
+    pub fn current_time(&self) -> usize {
+        self.0.current_time()
+    }
+    
+    pub fn privacy_cost(&self, d_in: T) -> Fallible<f64> 
+    where
+        f64: InfCast<T>,
+    {
+        self.0.privacy_cost(d_in)
+    }
+}
+
+/// Monotonic continual Toeplitz (with isotonic regression)
+pub struct MonotonicContinualToeplitz<T: crate::traits::CheckAtom>(ContinualToeplitz<T>);
+
+impl<T: crate::traits::CheckAtom> MonotonicContinualToeplitz<T>
+where
+    T: Integer + Display + FromStr + CheckedAdd + CheckedMul + CheckedSub + num::One + PartialOrd + Clone,
+{
+    pub fn new(scale: f64) -> Fallible<Self> {
+        Ok(Self(ContinualToeplitz::new(scale, true)?))
+    }
+    
+    pub fn release(&self, incremental_counts: &[T], expected_previous_time: usize) -> Fallible<Vec<T>> {
+        self.0.release(incremental_counts, expected_previous_time)
+    }
+    
+    pub fn current_time(&self) -> usize {
+        self.0.current_time()
+    }
+    
+    pub fn privacy_cost(&self, d_in: T) -> Fallible<f64> 
+    where
+        f64: InfCast<T>,
+    {
+        self.0.privacy_cost(d_in)
+    }
+}
+
 
 #[cfg(test)]
 mod test {
@@ -176,7 +230,8 @@ mod test {
     
     #[test]
     fn test_continual_consistency() -> Fallible<()> {
-        let mechanism = ContinualToeplitz::<i32>::new(1.0, true)?; // enforce monotonicity
+        // let mechanism = ContinualToeplitz::<i32>::new(1.0, true)?;
+        let mechanism = MonotonicContinualToeplitz::<i32>::new(1.0)?;  // enforce monotonicity
         
         // First query: times [0, 5)
         let counts1 = vec![10, 20, 30, 40, 50];
@@ -214,7 +269,8 @@ mod test {
     
     #[test]
     fn test_continual_wrong_expected_time_error() -> Fallible<()> {
-        let mechanism = ContinualToeplitz::<i32>::new(10.0, true)?;
+        // let mechanism = ContinualToeplitz::<i32>::new(10.0, true)?;
+        let mechanism = MonotonicContinualToeplitz::<i32>::new(10.0)?;
         
         // First query
         let counts1 = vec![10, 20, 30, 40, 50];
@@ -232,7 +288,8 @@ mod test {
     
     #[test]
     fn test_continual_same_query_returns_different_result() -> Fallible<()> {
-        let mechanism = ContinualToeplitz::<i32>::new(10.0, true)?;
+        // let mechanism = ContinualToeplitz::<i32>::new(10.0, true)?;
+        let mechanism = MonotonicContinualToeplitz::<i32>::new(10.0)?;
         
         // First query
         let counts = vec![10, 20, 30, 40, 50];
@@ -249,7 +306,8 @@ mod test {
     
     #[test]
     fn test_monotonicity_enforcement() -> Fallible<()> {
-        let mechanism = ContinualToeplitz::<i32>::new(1.0, true)?; // Small scale for more noise
+        // let mechanism = ContinualToeplitz::<i32>::new(1.0, true)?;
+        let mechanism = MonotonicContinualToeplitz::<i32>::new(1.0)?;  // Small scale for more noise
         
         // Initial release
         let counts = vec![5, 10, 15, 20];
@@ -287,7 +345,8 @@ mod test {
     
     #[test]
     fn test_continual_without_monotonicity() -> Fallible<()> {
-        let mechanism = ContinualToeplitz::<i32>::new(10.0, false)?; // no monotonicity
+        // let mechanism = ContinualToeplitz::<i32>::new(10.0, false)?;
+        let mechanism = BaselineContinualToeplitz::<i32>::new(10.0)?;  // no monotonicity
         
         let counts = vec![5, 10, 15, 20, 25];
         let result = mechanism.release(&counts, 0)?;
@@ -306,7 +365,8 @@ mod test {
     
     #[test]
     fn test_empty_incremental_counts() -> Fallible<()> {
-        let mechanism = ContinualToeplitz::<i32>::new(10.0, true)?;
+        // let mechanism = ContinualToeplitz::<i32>::new(10.0, true)?;
+        let mechanism = MonotonicContinualToeplitz::<i32>::new(10.0)?;
         
         // First release with some data
         let counts1 = vec![10, 20, 30];
@@ -323,7 +383,8 @@ mod test {
     
     #[test]
     fn test_state_preservation_on_error() -> Fallible<()> {
-        let mechanism = ContinualToeplitz::<i32>::new(10.0, true)?;
+        // let mechanism = ContinualToeplitz::<i32>::new(10.0, true)?;
+        let mechanism = MonotonicContinualToeplitz::<i32>::new(10.0)?;
         
         // First successful release
         let counts1 = vec![10, 20, 30];
@@ -348,7 +409,8 @@ mod test {
 #[test]
 fn test_privacy_cost_calculation() -> Fallible<()> {
     // This test ensures the scale field is recognized as used
-    let mechanism = ContinualToeplitz::<i32>::new(10.0, true)?;
+    // let mechanism = ContinualToeplitz::<i32>::new(10.0, true)?;
+    let mechanism = MonotonicContinualToeplitz::<i32>::new(10.0)?;
     
     // Verify privacy cost calculation: ε = d_in / scale
     assert_eq!(mechanism.privacy_cost(1)?, 0.1);
@@ -356,7 +418,8 @@ fn test_privacy_cost_calculation() -> Fallible<()> {
     assert_eq!(mechanism.privacy_cost(20)?, 2.0);
     
     // Different scale
-    let mechanism2 = ContinualToeplitz::<i64>::new(5.0, false)?;
+    // let mechanism2 = ContinualToeplitz::<i64>::new(5.0, false)?;
+    let mechanism2 = BaselineContinualToeplitz::<i64>::new(5.0)?;
     assert_eq!(mechanism2.privacy_cost(5)?, 1.0);
     assert_eq!(mechanism2.privacy_cost(10)?, 2.0);
     
