@@ -446,7 +446,7 @@ mod test {
         
         // First query: times [0, 5)
         let counts1 = vec![10, 20, 30, 40, 50];
-        let result1 = mechanism.release(&counts1)?;
+        let result1 = mechanism.release(&counts1, 0)?;
         assert_eq!(result1.len(), 5);
         
         // Verify monotonicity
@@ -454,9 +454,9 @@ mod test {
             assert!(result1[i] >= result1[i-1]);
         }
         
-        // Second query: times [0, 8)
-        let counts2 = vec![10, 20, 30, 40, 50, 60, 70, 80];
-        let result2 = mechanism.release(&counts2)?;
+        // Second query: times [5, 8)
+        let counts2 = vec![60, 70, 80];
+        let result2 = mechanism.release(&counts2, 5)?;
         assert_eq!(result2.len(), 8);
         
         // Verify monotonicity
@@ -478,11 +478,11 @@ mod test {
         
         // First query: times [0, 5)
         let counts1 = vec![10, 20, 30, 40, 50];
-        mechanism.release(&counts1)?;
+        mechanism.release(&counts1, 0)?;
         
-        // Second query with fewer time steps should fail
-        let counts2 = vec![10, 20, 30];
-        assert!(mechanism.release(&counts2).is_err());
+        // Second query with wrong expected time should fail
+        let counts2 = vec![60, 70, 80];
+        assert!(mechanism.release(&counts2, 3).is_err());  // Wrong: should be 5
         
         Ok(())
     }
