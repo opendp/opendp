@@ -145,7 +145,7 @@ release the query:
 
         .. code:: python
 
-            >>> print('len:', query_num_responses.release().collect().item())
+            >>> print('len:', query_num_responses.release().collect().item()) # doctest: +ELLIPSIS
             len: ...
 
 Other variations of counting queries are discussed in the `Aggregation
@@ -275,7 +275,7 @@ not take into account bias introduced by clipping responses.
 
         .. code:: python
 
-            >>> print('HWUSUAL:', query_work_hours.release().collect().item())
+            >>> print('HWUSUAL:', query_work_hours.release().collect().item()) # doctest: +ELLIPSIS 
             HWUSUAL: ...
 
 
@@ -490,7 +490,7 @@ estimates.
 
         .. code:: python
 
-            >>> print('median:', query_median_hours.release().collect())
+            >>> print('median:', query_median_hours.release().collect()) # doctest: +ELLIPSIS
             median: ...
 
 

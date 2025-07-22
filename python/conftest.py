@@ -30,13 +30,16 @@ def _norm_df(df):
 
 class CustomOutputChecker(doctest.OutputChecker):
     def check_output(self, want, got, optionflags):
-        if FUZZY_DF & optionflags:
-            others = optionflags - FUZZY_DF - doctest.ELLIPSIS
+        # ELLIPSIS can be safely ignored for our extensions.
+        if optionflags & doctest.ELLIPSIS:
+            wo_ellipsis = optionflags - doctest.ELLIPSIS
+        if FUZZY_DF & wo_ellipsis:
+            others = wo_ellipsis - FUZZY_DF
             if others:
-                raise Exception('FUZZY_DF can not be used with other flags')
+                raise Exception(f'FUZZY_DF can not be used with other flags: {others}')
             return _norm_df(want) == _norm_df(got)
-        if IGNORE & optionflags:
-            others = optionflags - IGNORE - doctest.ELLIPSIS
+        if IGNORE & wo_ellipsis:
+            others = wo_ellipsis - IGNORE
             if others:
                 raise Exception(f'IGNORE can not be used with other flags: {others}')
             return 'Traceback' not in got and bool(len(want)) == bool(len(got))

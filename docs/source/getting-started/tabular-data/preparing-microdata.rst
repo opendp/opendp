@@ -122,7 +122,7 @@ Documentation <https://docs.pola.rs/user-guide/concepts/expressions-and-contexts
             ...     .filter(pl.col.HWUSUAL != 99)
             ...     .select(pl.col.HWUSUAL.dp.sum((0, 80)))
             ... )
-            >>> print('sum:', query_total_hours_worked.release().collect().item())
+            >>> print('sum:', query_total_hours_worked.release().collect().item()) # doctest: +ELLIPSIS
             sum: ...
 
 
