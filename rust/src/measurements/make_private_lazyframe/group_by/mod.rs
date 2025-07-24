@@ -295,9 +295,9 @@ where
     t_prior
         >> Measurement::new(
             middle_domain,
-            function,
             middle_metric,
             output_measure,
+            function,
             privacy_map,
         )?
 }

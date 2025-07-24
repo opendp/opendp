@@ -46,12 +46,12 @@ pub mod samplers;
 /// assert_eq!(example_map::<f32, i8>(3.14159, 2).ok(), Some(8));
 /// ```
 pub trait DistanceConstant<TI>:
-    'static + InfCast<TI> + InfMul + ProductOrd + Zero + Send + Sync
+    'static + InfCast<TI> + InfMul + ProductOrd + PartialOrd + Zero + Send + Sync
 {
 }
 
 impl<TI, TO> DistanceConstant<TI> for TO where
-    TO: 'static + InfCast<TI> + InfMul + ProductOrd + Zero + Send + Sync
+    TO: 'static + InfCast<TI> + InfMul + ProductOrd + PartialOrd + Zero + Send + Sync
 {
 }
 

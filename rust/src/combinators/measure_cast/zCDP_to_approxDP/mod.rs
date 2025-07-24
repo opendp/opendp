@@ -37,9 +37,9 @@ where
     let privacy_map = meas.privacy_map.clone();
     Measurement::new(
         meas.input_domain.clone(),
-        meas.function.clone(),
         meas.input_metric.clone(),
         MO::ApproxMeasure::default(),
+        meas.function.clone(),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             let d_mid = privacy_map.eval(d_in)?;
 

@@ -2,7 +2,7 @@ use crate::core::PrivacyMap;
 use crate::domains::{ArrayDomain, AtomDomain, ExprPlan, VectorDomain, WildExprDomain};
 use crate::measurements::gumbel::report_noisy_top_k_gumbel;
 use crate::measurements::{
-    SelectionMeasure, make_report_noisy_max, report_noisy_top_k::exponential::permute_and_flip,
+    SelectionMeasure, make_report_noisy_max, report_noisy_top_k::exponential::report_noisy_top_k_exponential,
 };
 use crate::metrics::{IntDistance, L0InfDistance, L01InfDistance, LInfDistance};
 use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
@@ -124,6 +124,8 @@ where
 
     let m_rnm = Measurement::<_, _, L0InfDistance<LInfDistance<f64>>, _>::new(
         middle_domain,
+        middle_metric.clone(),
+        MO::default(),
         Function::then_expr(move |input_expr| {
             apply_plugin(
                 vec![input_expr],
@@ -135,8 +137,6 @@ where
                 },
             )
         }),
-        middle_metric.clone(),
-        MO::default(),
         privacy_map,
     )?;
 
@@ -333,7 +333,7 @@ fn report_noisy_max_udf(inputs: &[Column], kwargs: ReportNoisyMaxPlugin) -> Pola
                 let scores = arr.values_iter().cloned().collect::<Vec<_>>();
                 use SelectionDistribution::*;
                 let idx = match distribution {
-                    Exponential => permute_and_flip::<_>(
+                    Exponential => report_noisy_top_k_exponential::<_>(
                         &scores,
                         1,
                         RBig::try_from(scale.clone()).unwrap(),

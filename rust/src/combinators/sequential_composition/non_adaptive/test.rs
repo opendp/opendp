@@ -10,16 +10,16 @@ use super::*;
 fn test_make_composition() -> Fallible<()> {
     let measurement0 = Measurement::new(
         AtomDomain::<i32>::default(),
-        Function::new(|arg: &i32| (arg + 1) as f64),
         AbsoluteDistance::<i32>::default(),
         MaxDivergence,
+        Function::new(|arg: &i32| (arg + 1) as f64),
         PrivacyMap::new(|_d_in: &i32| f64::INFINITY),
     )?;
     let measurement1 = Measurement::new(
         AtomDomain::<i32>::default(),
-        Function::new(|arg: &i32| (arg - 1) as f64),
         AbsoluteDistance::<i32>::default(),
         MaxDivergence,
+        Function::new(|arg: &i32| (arg - 1) as f64),
         PrivacyMap::new(|_d_in: &i32| f64::INFINITY),
     )?;
     let composition = make_composition(vec![measurement0, measurement1])?;
@@ -52,9 +52,9 @@ fn test_make_composition_2() -> Fallible<()> {
 fn test_rdp_composition() -> Fallible<()> {
     let m_gauss = Measurement::new(
         AtomDomain::new_non_nan(),
-        Function::new(|arg| *arg),
         AbsoluteDistance::default(),
         RenyiDivergence,
+        Function::new(|arg| *arg),
         PrivacyMap::new(|&d_in: &f64| Function::new(move |alpha| alpha * d_in.powi(2) / 2.)),
     )?;
     let composition = make_composition(vec![m_gauss; 2])?;

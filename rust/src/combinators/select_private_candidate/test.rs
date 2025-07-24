@@ -13,12 +13,12 @@ fn make_test_scorer()
 {
     Measurement::new(
         AtomDomain::<u32>::default(),
+        AbsoluteDistance::<u32>::default(),
+        MaxDivergence,
         Function::new_fallible(|arg| {
             let noise = u32::saturating_cast(sample_discrete_laplace(RBig::ONE)?);
             Ok(((*arg + noise) as f64, "arbitrarily typed candidate info"))
         }),
-        AbsoluteDistance::<u32>::default(),
-        MaxDivergence,
         PrivacyMap::new(|d_in| *d_in as f64),
     )
 }
@@ -49,9 +49,9 @@ fn make_nan_test_scorer()
 {
     Measurement::new(
         AtomDomain::<u32>::default(),
-        Function::new_fallible(|_| Ok((f64::NAN, "arbitrarily typed candidate info"))),
         AbsoluteDistance::<u32>::default(),
         MaxDivergence,
+        Function::new_fallible(|_| Ok((f64::NAN, "arbitrarily typed candidate info"))),
         PrivacyMap::new(|d_in| *d_in as f64),
     )
 }

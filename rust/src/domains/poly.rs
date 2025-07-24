@@ -44,9 +44,9 @@ where
     pub fn into_poly(self) -> Measurement<DI, Box<dyn Any>, MI, MO> {
         Measurement::new(
             self.input_domain.clone(),
-            self.function.clone().into_poly(),
             self.input_metric.clone(),
             self.output_measure.clone(),
+            self.function.clone().into_poly(),
             self.privacy_map.clone(),
         )
         .expect("compatibility check already passed")

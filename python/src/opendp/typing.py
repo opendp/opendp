@@ -269,7 +269,7 @@ class RuntimeType(object):
         Traceback (most recent call last):
         ...
         opendp.mod.UnknownTypeException: Cannot infer atomic type when empty
-        """
+        """        
         if type(public_example) in _ELEMENTARY_TYPES:
             return _ELEMENTARY_TYPES[type(public_example)]
         

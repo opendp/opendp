@@ -292,6 +292,8 @@ where
 
     let m_noise = Measurement::<_, _, MO::Metric, _>::new(
         middle_domain,
+        middle_metric,
+        MO::default(),
         Function::then_expr(move |input_expr| {
             apply_plugin(
                 vec![input_expr],
@@ -303,8 +305,6 @@ where
                 },
             )
         }),
-        middle_metric,
-        MO::default(),
         privacy_map,
     )?;
 

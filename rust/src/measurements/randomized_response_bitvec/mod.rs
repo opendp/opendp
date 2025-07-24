@@ -53,6 +53,8 @@ pub fn make_randomized_response_bitvec(
     let f_2 = f.inf_div(&2.0)?;
     Measurement::new(
         input_domain,
+        input_metric,
+        MaxDivergence,
         Function::new_fallible(move |arg: &BitVector| {
             let n = arg.len();
             let noise_vector = (1..n)
@@ -63,8 +65,6 @@ pub fn make_randomized_response_bitvec(
             // Shouldn't use much memory anyway given bit-vecs
             Ok(arg.clone() ^ noise_vector) // xor on bit vectors
         }),
-        input_metric,
-        MaxDivergence,
         PrivacyMap::new_fallible(move |&d_in: &u32| {
             if d_in == 0 {
                 return Ok(0.0);

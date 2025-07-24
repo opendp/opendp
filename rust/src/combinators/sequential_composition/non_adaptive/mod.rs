@@ -4,6 +4,8 @@ mod ffi;
 #[cfg(test)]
 mod test;
 
+use std::{cell::RefCell, rc::Rc};
+
 use crate::{
     core::{Domain, Function, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
@@ -70,32 +72,42 @@ where
         .map(|m| m.privacy_map.clone())
         .collect::<Vec<_>>();
 
-    let sequential = matches!(
+    let require_sequentiality = matches!(
         output_measure.composability(Adaptivity::NonAdaptive)?,
         Composability::Sequential
     );
 
     Measurement::new(
         input_domain,
-        Function::new_fallible(move |arg: &DI::Carrier| {
-            let go = || functions.iter().map(|f| f.eval(arg)).collect();
-
-            if sequential {
-                wrap(
-                    Wrapper::new(|_qbl| {
-                        fallible!(
-                            FailedFunction,
-                            "output_measure must allow concurrency to spawn queryables from a noninteractive compositor"
-                        )
-                    }),
-                    go,
-                )
-            } else {
-                go()
-            }
-        }),
         input_metric,
         output_measure.clone(),
+        Function::new_fallible(move |arg: &DI::Carrier| {
+            let active_id = Rc::new(RefCell::new(0));
+
+            if require_sequentiality {
+                functions
+                    .iter()
+                    .inspect(|_| *active_id.borrow_mut() += 1)
+                    .map(|f| {
+                        // Wrap any spawned queryables with a check that no new queries have been asked.
+                        let child_id = *active_id.borrow();
+
+                        let wrapper = Wrapper::new_recursive_pre_hook(enclose!(active_id, move || {
+                            (*active_id.borrow() == child_id)
+                                .then_some(())
+                                .ok_or_else(|| err!(
+                                    FailedFunction,
+                                    "Compositor has received a new query. To satisfy the sequentiality constraint of composition, only the most recent release from the parent compositor may be interacted with."
+                                ))
+                        }));
+
+                        wrap(wrapper, || f.eval(arg))
+                    })
+                    .collect()
+            } else {
+                functions.iter().map(|f| f.eval(arg)).collect()
+            }
+        }),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             output_measure.compose(
                 maps.iter()
