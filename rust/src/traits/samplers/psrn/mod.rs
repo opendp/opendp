@@ -48,6 +48,7 @@ pub struct PartialSample<D: InverseCDF> {
     /// The denominator of the uniform sample fraction is 2^refinements.
     refinements: usize,
     /// A struct from which you can compute the inverse CDF.
+    /// Parameters about the distribution, like shift and scale, are stored in this struct.
     pub distribution: D,
 }
 
@@ -62,7 +63,7 @@ impl<D: InverseCDF> PartialSample<D> {
 }
 
 impl<D: InverseCDF> PartialSample<D> {
-    // Retrieve either the lower or upper edge of the uniform interval.
+    // Retrieve either a lower or upper bound on the sample.
     fn edge<R: ODPRound>(&self) -> Option<D::Edge> {
         let uniform_edge = RBig::from_parts(
             IBig::from(self.randomness.clone() + R::UBIG),
@@ -81,18 +82,21 @@ impl<D: InverseCDF> PartialSample<D> {
         Ok(())
     }
 
-    /// Retrieve a lower bound for the true random sample.
+    /// Retrieve a lower bound on the sample.
     fn lower(&self) -> Option<D::Edge> {
         self.edge::<Down>()
     }
 
-    /// Retrieve a upper bound for the true random sample.
+    /// Retrieve an upper bound on the sample.
     fn upper(&self) -> Option<D::Edge> {
         self.edge::<Up>()
     }
 
     /// Checks if `self` is greater than `other`,
     /// by refining the estimates for `self` and `other` until their intervals are disjoint.
+    ///
+    /// # Proof Definition
+    /// Returns `true` if `self` is greater than `other`, and `false` otherwise.
     pub fn greater_than(
         self: &mut PartialSample<D>,
         other: &mut PartialSample<D>,
