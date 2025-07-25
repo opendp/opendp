@@ -20,6 +20,7 @@ from opendp._internal import _extrinsic_domain
 import typing
 from opendp.extras.numpy._make_np_clamp import make_np_clamp, then_np_clamp # noqa: F401
 
+
 if typing.TYPE_CHECKING: # pragma: no cover
     import numpy # type: ignore[import-not-found]
 
