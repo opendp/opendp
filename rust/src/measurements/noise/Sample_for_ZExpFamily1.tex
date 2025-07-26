@@ -1,0 +1,41 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{impl Sample for ZExpFamily<1>}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise/trait}{Sample} for \texttt{ZExpFamily<1>} in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\texttt{self} represents a valid probability distribution.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/Sample_for_ZExpFamily1.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \label{postcondition}
+    Either returns \texttt{Err(e)} independently of the input \texttt{shift},
+    or \texttt{Ok(shift + Z)} where \texttt{Z} is a sample from the distribution defined by \texttt{self}.
+\end{theorem}
+
+\begin{proof}
+    By the precondition, since \texttt{self} represents a valid probability distribution, 
+    then by the definition of \rustdoc{measurements/noise/struct}{ZExpFamily},
+    \texttt{self.scale} is non-negative.
+
+    Since the preconditions for \rustdoc{traits/samplers/cks20/sample\_discrete\_laplace} are met (non-negative scale),
+    then we claim the postcondition that the returned value follows a given distribution.
+    This distribution matches that defined by \texttt{self}.
+
+    By the addition on line \ref{line:add}, the implementation satisfies the postcondition.
+\end{proof}
+
+\end{document}
