@@ -70,7 +70,10 @@ impl CompositionMeasure for MaxDivergence {
 impl CompositionMeasure for RangeDivergence {
     fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composability> {
         if matches!(adaptivity, Adaptivity::FullyAdaptive) {
-            return fallible!(FailedFunction, "bounded-range doesn't support fully adaptive composition")
+            return fallible!(
+                FailedFunction,
+                "bounded-range doesn't support fully adaptive composition"
+            );
         }
         Ok(Composability::Sequential)
     }
