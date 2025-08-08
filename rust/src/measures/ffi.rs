@@ -16,7 +16,7 @@ use crate::{
     measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
 };
 
-use super::{PrivacyProfile, RenyiDivergence, SmoothedMaxDivergence};
+use super::{PrivacyProfile, RangeDivergence, RenyiDivergence, SmoothedMaxDivergence};
 
 #[bootstrap(
     name = "_measure_free",
@@ -227,6 +227,7 @@ pub extern "C" fn opendp_measures__approximate(
                 MaxDivergence,
                 SmoothedMaxDivergence,
                 ZeroConcentratedDivergence,
+                RangeDivergence,
                 ExtrinsicDivergence
             ]
         )],
@@ -280,6 +281,21 @@ pub extern "C" fn opendp_measures__zero_concentrated_divergence() -> FfiResult<*
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_measures__renyi_divergence() -> FfiResult<*mut AnyMeasure> {
     Ok(AnyMeasure::new(RenyiDivergence)).into()
+}
+
+#[bootstrap(name = "range_divergence")]
+/// Privacy measure used to define $\eta$-Bounded Range.
+///
+/// # Proof Definition
+///
+/// ### `d`-closeness
+/// For any two distributions $Y, Y'$ and any non-negative $d$ ($\eta$),
+/// $Y, Y'$ are $d$-close under the bounded-range privacy measure whenever
+///
+/// $D_{\mathrm{BR}}(Y, Y') = \max_{y_0, y_1 \in \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y = y_0]}{\Pr[Y' = y_0]} \Big] - \Big[\ln \dfrac{\Pr[Y = y_1]}{\Pr[Y' = y_1]} \Big]$
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measures__range_divergence() -> FfiResult<*mut AnyMeasure> {
+    Ok(AnyMeasure::new(RangeDivergence)).into()
 }
 
 #[derive(Clone, Default)]
