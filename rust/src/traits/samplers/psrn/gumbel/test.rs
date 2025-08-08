@@ -13,7 +13,7 @@ fn test_sample_gumbel_interval_progression() -> Fallible<()> {
         shift: FBig::ZERO,
         scale: FBig::ONE,
     });
-    assert_ordered_progression(&mut sample, 10);
+    assert_ordered_progression(&mut sample, 400);
     Ok(())
 }
 
