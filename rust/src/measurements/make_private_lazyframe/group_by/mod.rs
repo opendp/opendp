@@ -325,7 +325,7 @@ macro_rules! impl_measure_non_catastrophic {
             fn add_delta(_d_out: Self::Distance, _delta_p: f64) -> Fallible<Self::Distance> {
                 return fallible!(
                     MakeMeasurement,
-                    "key-sets cannot be privatized under {:?}. Approximate-DP is necessary.",
+                    "key-sets cannot be released under {:?}. Approximate-DP is necessary.",
                     stringify!($ty)
                 );
             }

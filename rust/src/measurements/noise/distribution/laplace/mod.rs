@@ -41,13 +41,13 @@ mod ffi;
 /// * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2)
 ///
 /// # Arguments
-/// * `input_domain` - Domain of the data type to be privatized.
-/// * `input_metric` - Metric of the data type to be privatized.
+/// * `input_domain` - Domain of the data type to be released.
+/// * `input_metric` - Metric of the data type to be released.
 /// * `scale` - Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
 /// * `k` - The noise granularity in terms of 2^k, only valid for domains over floats.
 ///
 /// # Generics
-/// * `DI` - Domain of the data type to be privatized. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
+/// * `DI` - Domain of the data type to be released. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 /// * `MI` - Metric used to measure distance between members of the input domain.
 /// * `MO` - Measure used to quantify privacy loss. Valid values are just `MaxDivergence`
 pub fn make_laplace<DI: Domain, MI: Metric, MO: Measure>(

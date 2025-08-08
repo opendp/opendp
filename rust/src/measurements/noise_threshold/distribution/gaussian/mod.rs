@@ -34,7 +34,7 @@ mod test;
     ),
     derived_types(TV = "$get_value_type(get_carrier_type(input_domain))")
 )]
-/// Make a Measurement that uses propose-test-release to privatize a hashmap of counts.
+/// Make a Measurement that uses propose-test-release to release a hashmap of counts.
 ///
 /// This function takes a noise granularity in terms of 2^k.
 /// Larger granularities are more computationally efficient, but have a looser privacy map.
