@@ -437,7 +437,7 @@ def _make_oneway_marginals(
             return plan.group_by(name).agg(dp_len())
 
         # fold all unknown values into null
-        if keyset.dtype == pl.Categorical:
+        if isinstance(keyset.dtype, pl.Categorical):
             keyset = keyset.cast(pl.Enum(keyset.cast(pl.String)))
         replace = pl.col(name).replace_strict(keys[name], keyset, default=None)
 
