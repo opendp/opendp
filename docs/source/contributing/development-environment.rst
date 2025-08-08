@@ -145,7 +145,7 @@ If you only need to regenerate the Python bindings, this is sufficient:
 
     cargo check --all-features
 
-If you have not already, install `Python version 3.9 or higher <https://www.python.org>`_.
+If you have not already, install `Python version 3.10 or higher <https://www.python.org>`_.
 
 You can install a local Python package that uses your new OpenDP binary. 
 
