@@ -8,7 +8,7 @@ use crate::{
     measurements::{
         expr_index_candidates::IndexCandidatesShim,
         expr_noise::{Distribution, NoiseShim},
-        expr_report_noisy_max::ReportNoisyMaxShim,
+        expr_noisy_max::NoisyMaxShim,
     },
     transformations::expr_discrete_quantile_score::DiscreteQuantileScoreShim,
 };
@@ -308,7 +308,7 @@ impl<TI: 'static> Function<TI, ExprPlan> {
     pub(crate) fn fill_with(self, value: Expr) -> Self {
         // Without this repeat, the expression would be scalar-valued,
         // and broadcast later to the required length.
-        // This would cause randomized plugins, like noise and report_noisy_max,
+        // This would cause randomized plugins, like noise and noisy_max,
         // to only be applied to one row,
         // and the one noisy row would then be broadcast to the entire column.
         let fill = repeat(value.clone(), len());
@@ -452,15 +452,15 @@ impl DPExpr {
     /// # Arguments
     /// * `negate` - Flip signs to report noisy min.
     /// * `scale` - Noise scale parameter for the noise distribution.
-    pub(crate) fn report_noisy_max(self, negate: bool, scale: Option<f64>) -> Expr {
+    pub(crate) fn noisy_max(self, negate: bool, scale: Option<f64>) -> Expr {
         let negate = lit(negate);
         let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
-        apply_anonymous_function(vec![self.0, negate, scale], ReportNoisyMaxShim)
+        apply_anonymous_function(vec![self.0, negate, scale], NoisyMaxShim)
     }
 
     /// Index into a candidate set.
     ///
-    /// Typically used after `report_noisy_max` to map selected indices to candidates.
+    /// Typically used after `noisy_max` to map selected indices to candidates.
     ///
     /// # Arguments
     /// * `candidates` - The values that each selected index corresponds to.
@@ -481,7 +481,7 @@ impl DPExpr {
             .dp()
             .quantile_score(alpha, candidates.clone())
             .dp()
-            .report_noisy_max(false, scale)
+            .noisy_max(true, scale)
             .dp()
             .index_candidates(Series::new("".into(), candidates))
     }

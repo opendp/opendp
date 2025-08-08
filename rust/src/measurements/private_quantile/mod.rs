@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-use super::{SelectionMeasure, make_report_noisy_max};
+use super::{TopKMeasure, make_noisy_max};
 
 #[cfg(test)]
 mod test;
@@ -37,7 +37,7 @@ mod ffi;
 /// # Generics
 /// * `MI` - Input Metric.
 /// * `TIA` - Atomic Input Type. Type of elements in the input vector
-pub fn make_private_quantile<MI: 'static + UnboundedMetric, MO: SelectionMeasure, T: Number>(
+pub fn make_private_quantile<MI: 'static + UnboundedMetric, MO: TopKMeasure, T: Number>(
     input_domain: VectorDomain<AtomDomain<T>>,
     input_metric: MI,
     output_measure: MO,
@@ -67,12 +67,12 @@ where
     let t_score =
         make_quantile_score_candidates(input_domain, input_metric, candidates.clone(), alpha)?;
 
-    let m_rnm = make_report_noisy_max(
+    let m_rnm = make_noisy_max(
         t_score.output_domain.clone(),
         t_score.output_metric.clone(),
         output_measure,
         scale * denominator as f64,
-        false,
+        true,
     )?;
     let p_index = Function::new(move |idx: &usize| candidates[*idx]);
 

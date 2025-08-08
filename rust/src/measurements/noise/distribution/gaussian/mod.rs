@@ -14,7 +14,7 @@ use crate::{
 mod test;
 
 #[cfg(feature = "ffi")]
-mod ffi;
+pub(crate) mod ffi;
 
 #[bootstrap(
     features("contrib"),

@@ -1,3 +1,4 @@
+import re
 import pytest
 import logging
 import opendp.prelude as dp
@@ -472,9 +473,12 @@ def test_filter_pure_dp():
     assert context.remaining_privacy_loss() == 0.0
 
     # reject query because privacy budget is exhausted
-    with pytest.raises(dp.OpenDPException, match="insufficient privacy budget"):
+    msg = "filter is now exhausted: pending privacy loss (1.5) would exceed privacy budget (1.0)"
+    with pytest.raises(dp.OpenDPException, match=re.escape(msg)):
         context.query(epsilon=0.5).count().laplace().release()
-    assert context.current_privacy_loss() == 1.0
+    msg = "filter is exhausted: no more queries can be answered"
+    with pytest.raises(dp.OpenDPException, match=re.escape(msg)):
+        context.current_privacy_loss()
 
 def test_filter_approx_dp():
     context = dp.Context.compositor(

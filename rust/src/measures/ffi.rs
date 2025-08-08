@@ -1,8 +1,8 @@
-use std::{ffi::c_char, fmt::Debug, marker::PhantomData};
+use std::ffi::c_char;
 
 use crate::ffi::{
     any::{AnyObject, CallbackFn, Downcast, wrap_func},
-    util::c_bool,
+    util::{ExtrinsicObject, c_bool},
 };
 use opendp_derive::bootstrap;
 
@@ -11,7 +11,7 @@ use crate::{
     error::Fallible,
     ffi::{
         any::AnyMeasure,
-        util::{self, ExtrinsicObject, Type, into_c_char_p, to_str},
+        util::{self, into_c_char_p, to_str},
     },
     measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
 };
@@ -236,6 +236,40 @@ pub extern "C" fn opendp_measures__approximate(
     .into()
 }
 
+#[bootstrap(name = "_approximate_divergence_get_inner_measure")]
+/// Retrieve the inner privacy measure of an approximate privacy measure.
+///
+/// # Arguments
+/// * `privacy_measure` - The privacy measure to inspect
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measures___approximate_divergence_get_inner_measure(
+    privacy_measure: *const AnyMeasure,
+) -> FfiResult<*mut AnyMeasure> {
+    let privacy_measure = try_as_ref!(privacy_measure);
+    let M = privacy_measure.type_.clone();
+    let T = try_!(M.get_atom());
+
+    fn monomorphize<M: 'static + Measure>(privacy_measure: &AnyMeasure) -> Fallible<AnyMeasure> {
+        let privacy_measure = privacy_measure.downcast_ref::<Approximate<M>>()?.clone();
+        Ok(AnyMeasure::new(privacy_measure.0.clone()))
+    }
+
+    dispatch!(
+        monomorphize,
+        [(
+            T,
+            [
+                MaxDivergence,
+                SmoothedMaxDivergence,
+                ZeroConcentratedDivergence,
+                ExtrinsicDivergence
+            ]
+        )],
+        (privacy_measure)
+    )
+    .into()
+}
+
 #[bootstrap(name = "zero_concentrated_divergence")]
 /// Privacy measure used to define $\rho$-zero concentrated differential privacy.
 ///
@@ -352,59 +386,6 @@ pub extern "C" fn opendp_measures__user_divergence(
 ) -> FfiResult<*mut AnyMeasure> {
     let descriptor = try_!(to_str(descriptor)).to_string();
     Ok(AnyMeasure::new(ExtrinsicDivergence { descriptor })).into()
-}
-
-pub struct TypedMeasure<Q> {
-    pub measure: AnyMeasure,
-    marker: PhantomData<fn() -> Q>,
-}
-
-impl<Q: 'static> TypedMeasure<Q> {
-    pub fn new(measure: AnyMeasure) -> Fallible<TypedMeasure<Q>> {
-        if measure.distance_type != Type::of::<Q>() {
-            return fallible!(
-                FFI,
-                "unexpected distance type in measure. Expected {}, got {}",
-                Type::of::<Q>().to_string(),
-                measure.distance_type.to_string()
-            );
-        }
-
-        Ok(TypedMeasure {
-            measure,
-            marker: PhantomData,
-        })
-    }
-}
-
-impl<Q> PartialEq for TypedMeasure<Q> {
-    fn eq(&self, other: &Self) -> bool {
-        self.measure == other.measure
-    }
-}
-
-impl<Q> Clone for TypedMeasure<Q> {
-    fn clone(&self) -> Self {
-        Self {
-            measure: self.measure.clone(),
-            marker: self.marker.clone(),
-        }
-    }
-}
-
-impl<Q> Debug for TypedMeasure<Q> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.measure)
-    }
-}
-impl<Q> Default for TypedMeasure<Q> {
-    fn default() -> Self {
-        panic!()
-    }
-}
-
-impl<Q> Measure for TypedMeasure<Q> {
-    type Distance = Q;
 }
 
 #[bootstrap(

@@ -49,7 +49,14 @@ impl<Q: ?Sized, A> Queryable<Q, A> {
 
     #[inline]
     pub(crate) fn eval_query(&mut self, query: Query<Q>) -> Fallible<Answer<A>> {
-        return (self.0.as_ref().borrow_mut())(self, query);
+        let mut transition = self.0.as_ref().try_borrow_mut().map_err(|_| {
+            err!(
+                FailedFunction,
+                "a queryable may only execute one query at a time"
+            )
+        })?;
+
+        (transition)(self, query)
     }
 }
 
@@ -72,7 +79,7 @@ impl<A> Answer<A> {
 }
 
 thread_local! {
-    static WRAPPER: RefCell<Option<Rc<dyn Fn(PolyQueryable) -> Fallible<PolyQueryable>>>> = RefCell::new(None);
+    pub(crate) static WRAPPER: RefCell<Option<Rc<dyn Fn(PolyQueryable) -> Fallible<PolyQueryable>>>> = RefCell::new(None);
 }
 
 pub(crate) fn wrap<T>(wrapper: Wrapper, f: impl FnOnce() -> T) -> T {
@@ -102,6 +109,8 @@ where
         }
     }
 }
+
+#[derive(Clone)]
 pub struct Wrapper(pub Rc<dyn Fn(PolyQueryable) -> Fallible<PolyQueryable>>);
 
 impl Wrapper {
@@ -119,9 +128,10 @@ impl Wrapper {
                 hook()?;
 
                 // evaluate the query and wrap the answer
-                wrap(recursive_wrapper.to_wrapper(), || {
+                let out = wrap(recursive_wrapper.to_wrapper(), || {
                     inner_qbl.eval_query(query)
-                })
+                });
+                out
             }))
         }))
         .to_wrapper()

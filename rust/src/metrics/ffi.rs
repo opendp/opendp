@@ -1,9 +1,10 @@
-use std::{ffi::c_char, fmt::Debug, marker::PhantomData};
+use std::ffi::c_char;
 
 use opendp_derive::bootstrap;
 
 use crate::{
     core::{FfiResult, Metric},
+    domains::ffi::ExtrinsicElement,
     error::Fallible,
     ffi::{
         any::{AnyMetric, Downcast},
@@ -278,20 +279,20 @@ pub extern "C" fn opendp_metrics__linf_distance(
         (monotonic)
     )
 }
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct ExtrinsicDistance {
-    pub descriptor: String,
+    pub element: ExtrinsicElement,
 }
 
 impl std::fmt::Debug for ExtrinsicDistance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "UserDistance({:?})", self.descriptor)
+        write!(f, "{:?}", self.element)
     }
 }
 
 impl PartialEq for ExtrinsicDistance {
     fn eq(&self, other: &Self) -> bool {
-        self.descriptor == other.descriptor
+        self.element == other.element
     }
 }
 
@@ -302,13 +303,17 @@ impl Metric for ExtrinsicDistance {
 #[bootstrap(
     name = "user_distance",
     features("honest-but-curious"),
-    arguments(descriptor(rust_type = "String"))
+    arguments(
+        identifier(c_type = "char *", rust_type = b"null"),
+        descriptor(default = b"null", rust_type = "ExtrinsicObject")
+    )
 )]
 /// Construct a new UserDistance.
 /// Any two instances of an UserDistance are equal if their string descriptors are equal.
 ///
 /// # Arguments
-/// * `descriptor` - A string description of the metric.
+/// * `identifier` - A string description of the metric.
+/// * `descriptor` - Additional constraints on the domain.
 ///
 /// # Why honest-but-curious?
 /// Your definition of `d` must satisfy the requirements of a pseudo-metric:
@@ -319,61 +324,30 @@ impl Metric for ExtrinsicDistance {
 /// 4. for any $x, y, z$, $d(x, z) \le d(x, y) + d(y, z)$ (triangle inequality)
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__user_distance(
-    descriptor: *mut c_char,
+    identifier: *mut c_char,
+    descriptor: *mut ExtrinsicObject,
 ) -> FfiResult<*mut AnyMetric> {
-    let descriptor = try_!(to_str(descriptor)).to_string();
-    Ok(AnyMetric::new(ExtrinsicDistance { descriptor })).into()
+    let identifier = try_!(to_str(identifier)).to_string();
+    let descriptor = try_as_ref!(descriptor).clone();
+
+    Ok(AnyMetric::new(ExtrinsicDistance {
+        element: ExtrinsicElement::new(identifier, descriptor),
+    }))
+    .into()
 }
 
-pub struct TypedMetric<Q> {
-    pub metric: AnyMetric,
-    marker: PhantomData<fn() -> Q>,
-}
-
-impl<Q: 'static> TypedMetric<Q> {
-    pub fn new(metric: AnyMetric) -> Fallible<TypedMetric<Q>> {
-        if metric.distance_type != Type::of::<Q>() {
-            return fallible!(
-                FFI,
-                "unexpected distance type in metric. Expected {}, got {}",
-                Type::of::<Q>().to_string(),
-                metric.distance_type.to_string()
-            );
-        }
-
-        Ok(TypedMetric {
-            metric,
-            marker: PhantomData,
-        })
-    }
-}
-
-impl<Q> PartialEq for TypedMetric<Q> {
-    fn eq(&self, other: &Self) -> bool {
-        self.metric == other.metric
-    }
-}
-
-impl<Q> Clone for TypedMetric<Q> {
-    fn clone(&self) -> Self {
-        Self {
-            metric: self.metric.clone(),
-            marker: self.marker.clone(),
-        }
-    }
-}
-
-impl<Q> Debug for TypedMetric<Q> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.metric)
-    }
-}
-impl<Q> Default for TypedMetric<Q> {
-    fn default() -> Self {
-        panic!()
-    }
-}
-
-impl<Q: Clone> Metric for TypedMetric<Q> {
-    type Distance = Q;
+#[bootstrap(
+    name = "_extrinsic_metric_descriptor",
+    returns(c_type = "FfiResult<ExtrinsicObject *>")
+)]
+/// Retrieve the descriptor value stored in an extrinsic metric.
+///
+/// # Arguments
+/// * `domain` - The ExtrinsicDistance to extract the descriptor from
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_metrics___extrinsic_metric_descriptor(
+    metric: *mut AnyMetric,
+) -> FfiResult<*mut ExtrinsicObject> {
+    let metric = try_!(try_as_ref!(metric).downcast_ref::<ExtrinsicDistance>()).clone();
+    FfiResult::Ok(util::into_raw(metric.element.value.clone()))
 }

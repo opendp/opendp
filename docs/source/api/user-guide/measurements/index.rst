@@ -175,26 +175,21 @@ This is useful for private selection, and is one instance of the exponential mec
      - Input Domain
      - Input Metric
      - Output Measure
-   * - :func:`opendp.measurements.make_report_noisy_max`
+   * - :func:`opendp.measurements.make_noisy_max`
      - ``VectorDomain<AtomDomain<T>>``
      - ``LInfDistance<QI>``
-     - ``MaxDivergence`` or ``RangeDistance``
+     - ``MaxDivergence``or ``ZeroConcentratedDivergence``
    * - :func:`opendp.measurements.make_private_quantile`
      - ``VectorDomain<AtomDomain<T>>``
      - ``SymmetricDistance`` or ``InsertDeleteDistance``
-     - ``MaxDivergence`` or ``RangeDistance``
+     - ``MaxDivergence`` or ``ZeroConcentratedDivergence``
 
 The private quantile mechanism uses the :py:func:`opendp.transformations.make_quantile_score_candidates` scoring function,
 releases the approximate index of the quantile candidate with the best score via the report noisy max mechanism,
 and then returns the corresponding candidate.
 
 Internally, exponential noise is added to scores when the output measure is ``MaxDivergence``,
-and Gumbel noise is added when the output measure is ``RangeDivergence``. 
-
-If you ultimately want a privacy guarantee in terms of ``ZeroConcentratedDivergence``,
-it is recommended to set the output measure to ``RangeDivergence`` 
-and then convert to ``ZeroConcentratedDivergence`` via the :py:func:`opendp.combinators.make_bounded_range_to_zCDP` combinator.
-See :ref:`measure-casting` for more information on converting between privacy definitions.
+and Gumbel noise is added when the output measure is ``ZeroConcentratedDivergence``. 
 
 Randomized Response
 -------------------

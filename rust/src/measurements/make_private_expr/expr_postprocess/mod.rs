@@ -53,6 +53,8 @@ where
 
     Measurement::new(
         input_domain,
+        input_metric,
+        output_measure,
         Function::new_fallible(move |arg| {
             let plans = f_comp.eval(&arg)?;
             let plan = plans[0].plan.clone();
@@ -69,8 +71,6 @@ where
                     .transpose()?,
             })
         }),
-        input_metric,
-        output_measure,
         m_comp.privacy_map.clone(),
     )
 }

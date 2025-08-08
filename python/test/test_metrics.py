@@ -50,3 +50,32 @@ def test_group_bound():
     assert left == right
     assert not left == Bound(by=[pl.col.B], per_group=10)
     assert not left == str(right)
+
+def test_user_metric_total_cmp():
+    m_comp = dp.c.make_adaptive_composition(
+        input_domain=dp.atom_domain(T=bool),
+        input_metric=dp.user_distance("user distance"),
+        output_measure=dp.max_divergence(),
+        d_in=1,
+        d_mids=[1.0]
+    )
+    m_comp.map(0)
+    m_comp.map(1)
+    with pytest.raises(dp.OpenDPException, match="input distance must not be greater"):
+        m_comp.map(2)
+    with pytest.raises(dp.OpenDPException, match="not comparable"):
+        m_comp.map(float('nan'))
+
+    class Dist:
+        def __lt__(self, other):
+            raise ValueError("comparison failed!")
+        
+    m_comp = dp.c.make_adaptive_composition(
+        input_domain=dp.atom_domain(T=bool),
+        input_metric=dp.user_distance("user distance"),
+        output_measure=dp.max_divergence(),
+        d_in=Dist(),
+        d_mids=[1.0]
+    )
+    with pytest.raises(dp.OpenDPException, match="comparison failed!"):
+        m_comp.map(Dist())

@@ -5,8 +5,8 @@ use crate::{
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     ffi::any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject, Downcast},
-    measurements::{SelectionMeasure, make_private_quantile},
-    measures::{MaxDivergence, RangeDivergence},
+    measurements::{TopKMeasure, make_private_quantile},
+    measures::{MaxDivergence, ZeroConcentratedDivergence},
     traits::Number,
     transformations::traits::UnboundedMetric,
 };
@@ -35,7 +35,7 @@ pub extern "C" fn opendp_measurements__make_private_quantile(
     ) -> Fallible<AnyMeasurement>
     where
         MI: 'static + UnboundedMetric,
-        MO: 'static + SelectionMeasure,
+        MO: 'static + TopKMeasure,
         TIA: 'static + Number,
         (VectorDomain<AtomDomain<TIA>>, MI): MetricSpace,
     {
@@ -60,7 +60,7 @@ pub extern "C" fn opendp_measurements__make_private_quantile(
     let TIA = try_!(input_domain.type_.get_atom());
     dispatch!(monomorphize, [
         (MI, @dataset_metrics),
-        (MO, [MaxDivergence, RangeDivergence]),
+        (MO, [MaxDivergence, ZeroConcentratedDivergence]),
         (TIA, @numbers)
     ], (input_domain, input_metric, output_measure, candidates, alpha, scale))
     .into()

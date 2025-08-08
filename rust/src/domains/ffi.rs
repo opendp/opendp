@@ -261,7 +261,9 @@ pub extern "C" fn opendp_domains___atom_domain_get_bounds_closed(
 ) -> FfiResult<*mut AnyObject> {
     fn monomorphize<T: 'static + CheckAtom>(domain: &AnyDomain) -> Fallible<AnyObject> {
         let domain = domain.downcast_ref::<AtomDomain<T>>()?;
-        _atom_domain_get_bounds_closed(domain).map(|v| AnyObject::new(v.map(AnyObject::new)))
+        Ok(AnyObject::new(
+            _atom_domain_get_bounds_closed(domain)?.map(AnyObject::new),
+        ))
     }
     let domain = try_as_ref!(domain);
     let T = try_!(domain.type_.get_atom());
@@ -624,6 +626,7 @@ pub extern "C" fn opendp_domains__map_domain(
 
 /// A struct containing the essential metadata shared by extrinsic elements:
 /// UserDomain, UserMetric, UserMeasure.
+#[derive(Clone)]
 pub struct ExtrinsicElement {
     /// The name of the element, used for display and partial equality
     pub identifier: String,
@@ -631,19 +634,8 @@ pub struct ExtrinsicElement {
     pub value: ExtrinsicObject,
 }
 
-impl Clone for ExtrinsicElement {
-    fn clone(&self) -> Self {
-        (self.value.count)(self.value.ptr, true);
-        Self {
-            identifier: self.identifier.clone(),
-            value: self.value.clone(),
-        }
-    }
-}
-
 impl ExtrinsicElement {
     pub fn new(identifier: String, value: ExtrinsicObject) -> Self {
-        (value.count)(value.ptr, true);
         ExtrinsicElement { value, identifier }
     }
 }
@@ -656,11 +648,6 @@ impl Debug for ExtrinsicElement {
 impl PartialEq for ExtrinsicElement {
     fn eq(&self, other: &Self) -> bool {
         self.identifier == other.identifier
-    }
-}
-impl Drop for ExtrinsicElement {
-    fn drop(&mut self) {
-        (self.value.count)(self.value.ptr, false);
     }
 }
 

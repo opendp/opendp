@@ -44,9 +44,9 @@ pub fn make_test_measurement<T: 'static + Clone + CheckAtom>()
 -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, T, SymmetricDistance, MaxDivergence>> {
     Measurement::new(
         VectorDomain::new(AtomDomain::default()),
-        Function::new(|arg: &Vec<T>| arg[0].clone()),
         SymmetricDistance,
         MaxDivergence,
+        Function::new(|arg: &Vec<T>| arg[0].clone()),
         PrivacyMap::new(|d_in| *d_in as f64 + 1.),
     )
 }

@@ -104,6 +104,8 @@ where
     let privacy_map = m_select_expr.privacy_map.clone();
     let m_select = Measurement::new(
         middle_domain,
+        middle_metric,
+        output_measure,
         Function::new_fallible(move |arg: &DslPlan| {
             let mut output = plan.clone();
             if let DslPlan::Select {
@@ -121,8 +123,6 @@ where
             };
             Ok(output)
         }),
-        middle_metric,
-        output_measure,
         privacy_map,
     )?;
 
