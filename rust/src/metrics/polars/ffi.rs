@@ -9,7 +9,7 @@ use crate::{
         util,
     },
     metrics::{
-        ChangeOneIdDistance, FrameDistance, InsertDeleteDistance, SymmetricDistance,
+        Bounds, ChangeOneIdDistance, FrameDistance, InsertDeleteDistance, SymmetricDistance,
         SymmetricIdDistance,
     },
     transformations::traits::UnboundedMetric,
@@ -114,5 +114,24 @@ pub extern "C" fn opendp_metrics___frame_distance_get_inner_metric(
         )],
         (metric)
     )
+    .into()
+}
+
+#[bootstrap(
+    name = "_get_bound",
+    arguments(bounds(rust_type = "Bounds"), by(rust_type = "Vec<Expr>"),),
+    returns(c_type = "FfiResult<AnyObject *>")
+)]
+/// Infer a bound when grouping by `by`.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_metrics___get_bound(
+    bounds: *const AnyObject,
+    by: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    let bounds = try_!(try_as_ref!(bounds).downcast_ref::<Bounds>());
+    let by = try_!(try_as_ref!(by).downcast_ref::<Vec<Expr>>());
+    Ok(AnyObject::new(
+        bounds.get_bound(&by.iter().cloned().collect()),
+    ))
     .into()
 }

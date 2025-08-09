@@ -31,7 +31,7 @@ use crate::transformations::make_row_by_row_fallible;
 ///
 /// # Generics
 /// * `TA` - Atomic Type
-pub fn make_clamp<TA: 'static + Clone + ProductOrd + CheckAtom, M: EventLevelMetric>(
+pub fn make_clamp<TA: 'static + Clone + ProductOrd + PartialOrd + CheckAtom, M: EventLevelMetric>(
     input_domain: VectorDomain<AtomDomain<TA>>,
     input_metric: M,
     bounds: (TA, TA),

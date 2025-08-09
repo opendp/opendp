@@ -278,6 +278,11 @@ def test_custom_domain(new_domain):
 
     # can retrieve the descriptor for use in further analysis
     assert domain.descriptor == {1, 2, 3, 4}
+    # or retrieve the descriptor with type-checking
+    assert domain.cast(set) == {1, 2, 3, 4}
+
+    with pytest.raises(ValueError, match="domain descriptor must be a int"):
+        assert domain.cast(int)
 
     # nest inside a vector domain
     vec_domain = dp.vector_domain(domain)

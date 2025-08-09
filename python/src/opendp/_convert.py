@@ -3,10 +3,13 @@ from inspect import signature
 
 from opendp._lib import *
 from opendp.mod import (
+    ApproximateDivergence,
     ChangeOneIdDistance,
     Domain,
+    ExtrinsicDistance,
     ExtrinsicDomain,
     LazyFrameDomain,
+    Measure,
     Metric,
     FrameDistance,
     SeriesDomain,
@@ -107,7 +110,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
         # since the memory is allocated by python, 
         #    don't actually return an ExtrinsicObjectPtr, 
         #    which would call rust to free the Python-allocated ExtrinsicObject
-        return ctypes.pointer(ExtrinsicObject(ctypes.py_object(value), c_counter))
+        return ctypes.pointer(ExtrinsicObject(ctypes.py_object(value)))
 
     # check that the type name is consistent with the value
     if type_name is not None:
@@ -165,12 +168,12 @@ def c_to_py(value: Any) -> Any:
     :param value: data in ctypes format
     :return: copy of data in Python representation
     """
-    if isinstance(value, AnyObjectPtr):
+    if isinstance(value, ctypes.POINTER(AnyObject)):
         from opendp._data import object_type, object_as_slice, slice_free
 
         obj_type = object_type(value)
 
-        if "PrivacyProfile" == obj_type:
+        if obj_type == PrivacyProfile.__name__:
             return PrivacyProfile(value)
         
         if obj_type == "AnyOdometerQueryable":
@@ -215,20 +218,20 @@ def c_to_py(value: Any) -> Any:
         rt_type = RuntimeType.parse(domain_type(value))
 
         if isinstance(rt_type, RuntimeType):
-            if rt_type.origin == "OptionDomain":
+            if rt_type.origin == OptionDomain.__name__:
                 value.__class__ = OptionDomain
-            elif rt_type.origin == "AtomDomain":
+            elif rt_type.origin == AtomDomain.__name__:
                 value.__class__ = AtomDomain
-            elif rt_type.origin == "VectorDomain":
+            elif rt_type.origin == VectorDomain.__name__:
                 value.__class__ = VectorDomain
         else:
-            if rt_type == "SeriesDomain":
+            if rt_type == SeriesDomain.__name__:
                 value.__class__ = SeriesDomain
-            elif rt_type == "LazyFrameDomain":
+            elif rt_type == LazyFrameDomain.__name__:
                 value.__class__ = LazyFrameDomain
-            elif rt_type == "ExtrinsicDomain":
+            elif rt_type == ExtrinsicDomain.__name__:
                 value.__class__ = ExtrinsicDomain
-        # otherwise falls through to the default case, where isinstance(value, Domain) 
+        # if you fall through these cases, then it is just treated as a generic Domain
 
     if isinstance(value, Metric):
         from opendp.metrics import metric_type
@@ -236,14 +239,26 @@ def c_to_py(value: Any) -> Any:
         rt_type = RuntimeType.parse(metric_type(value))
 
         if isinstance(rt_type, RuntimeType):
-            if rt_type.origin == "FrameDistance":
+            if rt_type.origin == FrameDistance.__name__:
                 value.__class__ = FrameDistance
         else:
-            if rt_type == "SymmetricIdDistance":
+            if rt_type == SymmetricIdDistance.__name__:
                 value.__class__ = SymmetricIdDistance
-            elif rt_type == "ChangeOneIdDistance":
+            elif rt_type == ChangeOneIdDistance.__name__:
                 value.__class__ = ChangeOneIdDistance
+            elif rt_type == ExtrinsicDistance.__name__:
+                value.__class__ = ExtrinsicDistance
         # if you fall through these cases, then it is just treated as a generic Metric
+
+    if isinstance(value, Measure):
+        from opendp.measures import measure_type
+
+        rt_type = RuntimeType.parse(measure_type(value))
+
+        if isinstance(rt_type, RuntimeType):
+            if rt_type.origin == "Approximate":
+                value.__class__ = ApproximateDivergence
+        # if you fall through these cases, then it is just treated as a generic Measure
 
     if isinstance(value, ctypes.c_void_p):
         # returned void pointers are interpreted as None
@@ -395,21 +410,8 @@ def _scalar_to_slice(val, type_name: str) -> FfiSlicePtr:
 def _slice_to_scalar(raw: FfiSlicePtr, type_name: str):
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[type_name])).contents.value # type: ignore[attr-defined]
 
-
-def _refcounter(ptr, increment):
-    try:
-        if increment:
-            ctypes.pythonapi.Py_IncRef(ctypes.py_object(ptr))
-        else:
-            ctypes.pythonapi.Py_DecRef(ctypes.py_object(ptr))
-    except Exception: # pragma: no cover
-        return False
-    return True
-
-c_counter = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.py_object, ctypes.c_bool)(_refcounter)
-
 def _extrinsic_to_slice(val) -> FfiSlicePtr:
-    return _wrap_in_slice(ctypes.pointer(ExtrinsicObject(ctypes.py_object(val), c_counter)), 1)
+    return _wrap_in_slice(ctypes.pointer(ExtrinsicObject(ctypes.py_object(val))), 1)
 
 def _slice_to_extrinsic(raw: FfiSlicePtr):
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ExtrinsicObject)).contents.ptr
@@ -469,7 +471,7 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
         return ffislice
 
     if inner_type_name == "ExtrinsicObject":
-        c_repr = [ExtrinsicObject(ctypes.py_object(v), c_counter) for v in val]
+        c_repr = [ExtrinsicObject(ctypes.py_object(v)) for v in val]
         array = (ExtrinsicObject * len(val))(*c_repr)
         ffi_slice = _wrap_in_slice(array, len(val))
         ffi_slice.depends_on(c_repr)
@@ -538,7 +540,7 @@ def _tuple_to_slice(val: tuple[Any, ...], type_name: Union[RuntimeType, str]) ->
 
     if inner_type_names == ['f64', 'ExtrinsicObject']:
         score_ptr = ctypes.pointer(ctypes.c_double(val[0]))
-        ext_obj = ctypes.pointer(ExtrinsicObject(ctypes.py_object(val[1]), c_counter))
+        ext_obj = ctypes.pointer(ExtrinsicObject(ctypes.py_object(val[1])))
 
         cand_ptr = py_to_c(ext_obj, c_type=AnyObjectPtr, type_name="ExtrinsicObject")
         array = (ctypes.c_void_p * 2)(
@@ -892,7 +894,7 @@ def _wrap_py_func(func, TO):
             )
 
     c_wrapper_func = CallbackFnValue(wrapper_func)
-    lifeline = ExtrinsicObject(ctypes.py_object(c_wrapper_func), c_counter)
+    lifeline = ExtrinsicObject(ctypes.py_object(c_wrapper_func))
 
     return ctypes.pointer(CallbackFn(c_wrapper_func, lifeline))
 
@@ -951,6 +953,6 @@ def _wrap_py_transition(py_transition, A):
             )
 
     c_wrapper_func = TransitionFnValue(wrapper_func)
-    lifeline = ExtrinsicObject(ctypes.py_object(c_wrapper_func), c_counter)
+    lifeline = ExtrinsicObject(ctypes.py_object(c_wrapper_func))
 
     return ctypes.pointer(TransitionFn(c_wrapper_func, lifeline))
