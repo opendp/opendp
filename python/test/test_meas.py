@@ -37,7 +37,6 @@ def test_gaussian_curve():
     assert profile.delta(epsilon=0.1) == 0.0
 
 
-
 def test_gaussian_search():
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
 
