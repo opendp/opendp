@@ -22,7 +22,7 @@ use crate::{
 };
 
 #[cfg(feature = "ffi")]
-mod ffi;
+pub(crate) mod ffi;
 
 #[cfg(test)]
 mod test;

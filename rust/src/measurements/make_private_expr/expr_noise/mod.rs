@@ -1,14 +1,12 @@
-use crate::core::{Measure, MetricSpace, PrivacyMap};
+use crate::core::{MetricSpace, PrivacyMap};
 use crate::domains::{
     AtomDomain, ExprDomain, ExprPlan, NumericDataType, OuterMetric, VectorDomain, WildExprDomain,
 };
-use crate::measurements::{
-    DiscreteGaussian, DiscreteLaplace, MakeNoise, make_gaussian, make_laplace,
-};
+use crate::measurements::{DiscreteGaussian, DiscreteLaplace, MakeNoise, NoiseMeasure, make_noise};
 use crate::measures::ZeroConcentratedDivergence;
 use crate::metrics::{L1Distance, L01InfDistance, L2Distance};
 use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
-use crate::traits::{InfMul, Number};
+use crate::traits::{CheckAtom, InfMul, Number};
 use crate::transformations::StableExpr;
 use crate::transformations::traits::UnboundedMetric;
 use crate::{
@@ -72,7 +70,7 @@ impl OpenDPPlugin for NoiseShim {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct NoisePlugin {
     /// The distribution to sample from
-    pub distribution: Distribution,
+    pub distribution: NoiseDistribution,
 
     /// The scale of the noise
     pub scale: f64,
@@ -107,7 +105,7 @@ impl OpenDPPlugin for NoisePlugin {
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
-pub enum Distribution {
+pub enum NoiseDistribution {
     Laplace,
     Gaussian,
 }
@@ -116,64 +114,6 @@ pub enum Distribution {
 pub enum Support {
     Integer,
     Float,
-}
-
-pub trait NoiseExprMeasure: 'static + Measure<Distance = f64> {
-    type Metric: 'static + OuterMetric<Distance = f64>;
-    const DISTRIBUTION: Distribution;
-    type Dist;
-    fn map_function<T: Number>(
-        input_metric: &Self::Metric,
-        scale: f64,
-    ) -> Fallible<PrivacyMap<Self::Metric, Self>>
-    where
-        Self::Dist: MakeNoise<VectorDomain<AtomDomain<T>>, Self::Metric, Self>,
-        (VectorDomain<AtomDomain<T>>, Self::Metric): MetricSpace;
-}
-
-impl NoiseExprMeasure for MaxDivergence {
-    type Metric = L1Distance<f64>;
-    const DISTRIBUTION: Distribution = Distribution::Laplace;
-    type Dist = DiscreteLaplace;
-    fn map_function<T: Number>(
-        input_metric: &Self::Metric,
-        scale: f64,
-    ) -> Fallible<PrivacyMap<Self::Metric, Self>>
-    where
-        Self::Dist: MakeNoise<VectorDomain<AtomDomain<T>>, Self::Metric, Self>,
-        (VectorDomain<AtomDomain<T>>, Self::Metric): MetricSpace,
-    {
-        Ok(make_laplace(
-            VectorDomain::new(AtomDomain::<T>::new_non_nan()),
-            input_metric.clone(),
-            scale,
-            None,
-        )?
-        .privacy_map
-        .clone())
-    }
-}
-impl NoiseExprMeasure for ZeroConcentratedDivergence {
-    type Metric = L2Distance<f64>;
-    const DISTRIBUTION: Distribution = Distribution::Gaussian;
-    type Dist = DiscreteGaussian;
-    fn map_function<T: Number>(
-        input_metric: &Self::Metric,
-        scale: f64,
-    ) -> Fallible<PrivacyMap<Self::Metric, Self>>
-    where
-        Self::Dist: MakeNoise<VectorDomain<AtomDomain<T>>, Self::Metric, Self>,
-        (VectorDomain<AtomDomain<T>>, Self::Metric): MetricSpace,
-    {
-        Ok(make_gaussian(
-            VectorDomain::new(AtomDomain::<T>::new_non_nan()),
-            input_metric.clone(),
-            scale,
-            None,
-        )?
-        .privacy_map
-        .clone())
-    }
 }
 
 /// Make a measurement that adds noise to a Polars expression.
@@ -193,7 +133,7 @@ where
     Expr: StableExpr<L01InfDistance<MI>, MO::Metric>,
     (ExprDomain, MO::Metric): MetricSpace,
     // This is ugly, but necessary because MO is generic
-    MO::Dist: MakeNoise<VectorDomain<AtomDomain<u32>>, MO::Metric, MO>
+    MO::Distribution: MakeNoise<VectorDomain<AtomDomain<u32>>, MO::Metric, MO>
         + MakeNoise<VectorDomain<AtomDomain<u64>>, MO::Metric, MO>
         + MakeNoise<VectorDomain<AtomDomain<i8>>, MO::Metric, MO>
         + MakeNoise<VectorDomain<AtomDomain<i16>>, MO::Metric, MO>
@@ -267,14 +207,14 @@ where
 
     use DataType::*;
     let privacy_map = match middle_domain.column.dtype() {
-        UInt32 => MO::map_function::<u32>(&middle_metric, scale),
-        UInt64 => MO::map_function::<u64>(&middle_metric, scale),
-        Int8 => MO::map_function::<i8>(&middle_metric, scale),
-        Int16 => MO::map_function::<i16>(&middle_metric, scale),
-        Int32 => MO::map_function::<i32>(&middle_metric, scale),
-        Int64 => MO::map_function::<i64>(&middle_metric, scale),
-        Float32 => MO::map_function::<f32>(&middle_metric, scale),
-        Float64 => MO::map_function::<f64>(&middle_metric, scale),
+        UInt32 => map_function::<MO, u32>(&middle_metric, scale),
+        UInt64 => map_function::<MO, u64>(&middle_metric, scale),
+        Int8 => map_function::<MO, i8>(&middle_metric, scale),
+        Int16 => map_function::<MO, i16>(&middle_metric, scale),
+        Int32 => map_function::<MO, i32>(&middle_metric, scale),
+        Int64 => map_function::<MO, i64>(&middle_metric, scale),
+        Float32 => map_function::<MO, f32>(&middle_metric, scale),
+        Float64 => map_function::<MO, f64>(&middle_metric, scale),
         dtype => {
             return fallible!(
                 MakeMeasurement,
@@ -305,6 +245,17 @@ where
     t_prior >> m_noise
 }
 
+pub trait NoiseExprMeasure: 'static + NoiseMeasure<Distance = f64> {
+    type Metric: 'static + OuterMetric<Distance = f64>;
+}
+
+impl NoiseExprMeasure for MaxDivergence {
+    type Metric = L1Distance<f64>;
+}
+impl NoiseExprMeasure for ZeroConcentratedDivergence {
+    type Metric = L2Distance<f64>;
+}
+
 /// Determine if the given expression is a noise expression.
 ///
 /// # Arguments
@@ -314,7 +265,7 @@ where
 /// The input to the Noise expression and optional scale of noise
 pub(crate) fn match_noise_shim(
     expr: &Expr,
-) -> Fallible<Option<(&Expr, Option<Distribution>, Option<f64>)>> {
+) -> Fallible<Option<(&Expr, Option<NoiseDistribution>, Option<f64>)>> {
     let Some(input) = match_plugin::<NoiseShim>(expr)? else {
         return Ok(None);
     };
@@ -324,7 +275,7 @@ pub(crate) fn match_noise_shim(
     };
 
     let distribution = if let Some(dist) = literal_value_of::<String>(distribution)? {
-        let dist = Distribution::deserialize(dist.into_deserializer())
+        let dist = NoiseDistribution::deserialize(dist.into_deserializer())
             .map_err(|e: Error| err!(FailedFunction, "{:?}", e))?;
         Some(dist)
     } else {
@@ -334,6 +285,25 @@ pub(crate) fn match_noise_shim(
     let scale = literal_value_of::<f64>(scale)?;
 
     Ok(Some((data, distribution, scale)))
+}
+
+fn map_function<MO: NoiseExprMeasure, T: CheckAtom>(
+    input_metric: &MO::Metric,
+    scale: f64,
+) -> Fallible<PrivacyMap<MO::Metric, MO>>
+where
+    MO::Distribution: MakeNoise<VectorDomain<AtomDomain<T>>, MO::Metric, MO>,
+    (VectorDomain<AtomDomain<T>>, MO::Metric): MetricSpace,
+{
+    Ok(make_noise(
+        VectorDomain::new(AtomDomain::<T>::new_non_nan()),
+        input_metric.clone(),
+        MO::default(),
+        scale,
+        None,
+    )?
+    .privacy_map
+    .clone())
 }
 
 // Code comment, not documentation:
@@ -376,7 +346,7 @@ fn noise_udf(inputs: &[Column], kwargs: NoisePlugin) -> PolarsResult<Column> {
 fn noise_impl<T: NumericDataType>(
     series: &Series,
     scale: f64,
-    distribution: Distribution,
+    distribution: NoiseDistribution,
 ) -> PolarsResult<Series>
 where
     T: Number,
@@ -392,15 +362,22 @@ where
 {
     let domain = VectorDomain::new(AtomDomain::<T>::new_non_nan());
     let function = match distribution {
-        Distribution::Laplace => make_laplace(domain, L1Distance::default(), scale, None)?
-            .function
-            .clone(),
-        Distribution::Gaussian => make_gaussian(domain, L2Distance::default(), scale, None)?
-            .function
-            .clone(),
+        NoiseDistribution::Laplace => {
+            make_noise(domain, L1Distance::default(), MaxDivergence, scale, None)?
+                .function
+                .clone()
+        }
+        NoiseDistribution::Gaussian => make_noise(
+            domain,
+            L2Distance::default(),
+            ZeroConcentratedDivergence,
+            scale,
+            None,
+        )?
+        .function
+        .clone(),
     };
     let chunk_iter = series
-        // .i32()?.to_vec_null_aware()
         // unpack the series into a chunked array
         .unpack::<T::NumericPolars>()?
         .downcast_iter()
