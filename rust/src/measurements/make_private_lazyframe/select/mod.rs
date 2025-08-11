@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use crate::combinators::{SequentialCompositionMeasure, make_composition};
+use crate::combinators::{CompositionMeasure, make_composition};
 use crate::core::{Function, Measurement, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
@@ -33,7 +33,7 @@ pub fn make_private_select<MI, MO>(
 where
     MI: 'static + UnboundedMetric,
     MI::EventMetric: UnboundedMetric,
-    MO: 'static + SequentialCompositionMeasure,
+    MO: 'static + CompositionMeasure,
     Expr: PrivateExpr<L01InfDistance<MI::EventMetric>, MO>,
     DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
     (DslPlanDomain, FrameDistance<MI>): MetricSpace,

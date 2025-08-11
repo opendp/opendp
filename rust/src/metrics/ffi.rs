@@ -1,4 +1,4 @@
-use std::{ffi::c_char, fmt::Debug, marker::PhantomData};
+use std::ffi::c_char;
 
 use opendp_derive::bootstrap;
 
@@ -323,57 +323,4 @@ pub extern "C" fn opendp_metrics__user_distance(
 ) -> FfiResult<*mut AnyMetric> {
     let descriptor = try_!(to_str(descriptor)).to_string();
     Ok(AnyMetric::new(ExtrinsicDistance { descriptor })).into()
-}
-
-pub struct TypedMetric<Q> {
-    metric: AnyMetric,
-    marker: PhantomData<fn() -> Q>,
-}
-
-impl<Q: 'static> TypedMetric<Q> {
-    pub fn new(metric: AnyMetric) -> Fallible<TypedMetric<Q>> {
-        if metric.distance_type != Type::of::<Q>() {
-            return fallible!(
-                FFI,
-                "unexpected distance type in metric. Expected {}, got {}",
-                Type::of::<Q>().to_string(),
-                metric.distance_type.to_string()
-            );
-        }
-
-        Ok(TypedMetric {
-            metric,
-            marker: PhantomData,
-        })
-    }
-}
-
-impl<Q> PartialEq for TypedMetric<Q> {
-    fn eq(&self, other: &Self) -> bool {
-        self.metric == other.metric
-    }
-}
-
-impl<Q> Clone for TypedMetric<Q> {
-    fn clone(&self) -> Self {
-        Self {
-            metric: self.metric.clone(),
-            marker: self.marker.clone(),
-        }
-    }
-}
-
-impl<Q> Debug for TypedMetric<Q> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.metric)
-    }
-}
-impl<Q> Default for TypedMetric<Q> {
-    fn default() -> Self {
-        panic!()
-    }
-}
-
-impl<Q> Metric for TypedMetric<Q> {
-    type Distance = Q;
 }

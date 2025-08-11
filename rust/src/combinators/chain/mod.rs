@@ -12,7 +12,7 @@ use std::fmt::Debug;
 
 const ERROR_URL: &str = "https://github.com/opendp/opendp/discussions/297";
 
-macro_rules! assert_components_match {
+macro_rules! assert_elements_match {
     ($variant:ident, $v1:expr, $v2:expr) => {
         if &$v1 != &$v2 {
             return Err($crate::combinators::mismatch_error(
@@ -23,7 +23,7 @@ macro_rules! assert_components_match {
         }
     };
 }
-pub(crate) use assert_components_match;
+pub(crate) use assert_elements_match;
 
 pub(crate) fn mismatch_error<T: Debug>(variant: ErrorVariant, struct1: &T, struct2: &T) -> Error {
     let str1 = format!("{:?}", struct1);
@@ -89,12 +89,12 @@ where
     (DI, MI): MetricSpace,
     (DX, MX): MetricSpace,
 {
-    assert_components_match!(
+    assert_elements_match!(
         DomainMismatch,
         transformation0.output_domain,
         measurement1.input_domain
     );
-    assert_components_match!(
+    assert_elements_match!(
         MetricMismatch,
         transformation0.output_metric,
         measurement1.input_metric
@@ -138,13 +138,13 @@ where
     (DX, MX): MetricSpace,
     (DO, MO): MetricSpace,
 {
-    assert_components_match!(
+    assert_elements_match!(
         DomainMismatch,
         transformation0.output_domain,
         transformation1.input_domain
     );
 
-    assert_components_match!(
+    assert_elements_match!(
         MetricMismatch,
         transformation0.output_metric,
         transformation1.input_metric
