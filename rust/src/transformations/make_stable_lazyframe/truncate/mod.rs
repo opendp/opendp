@@ -36,8 +36,8 @@ pub fn make_stable_truncate(
 ) -> Fallible<
     Transformation<
         DslPlanDomain,
-        DslPlanDomain,
         FrameDistance<SymmetricIdDistance>,
+        DslPlanDomain,
         FrameDistance<SymmetricDistance>,
     >,
 > {
@@ -75,7 +75,9 @@ pub fn make_stable_truncate(
 
     let t_truncate = Transformation::new(
         middle_domain,
+        middle_metric.clone(),
         output_domain,
+        FrameDistance(SymmetricDistance),
         Function::new(move |plan: &DslPlan| {
             (truncations.iter()).fold(plan.clone(), |plan, truncation| match truncation {
                 Truncation::Filter(predicate) => DslPlan::Filter {
@@ -92,8 +94,6 @@ pub fn make_stable_truncate(
                 },
             })
         }),
-        middle_metric.clone(),
-        FrameDistance(SymmetricDistance),
         StabilityMap::new_fallible(move |id_bounds: &Bounds| {
             let total_num_ids = id_bounds.get_bound(&Default::default()).per_group;
 

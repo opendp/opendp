@@ -69,7 +69,7 @@ pub fn make_report_noisy_max_gumbel<TIA>(
     input_metric: LInfDistance<TIA>,
     scale: f64,
     optimize: Optimize,
-) -> Fallible<Measurement<VectorDomain<AtomDomain<TIA>>, usize, LInfDistance<TIA>, MaxDivergence>>
+) -> Fallible<Measurement<VectorDomain<AtomDomain<TIA>>, LInfDistance<TIA>, MaxDivergence, usize>>
 where
     TIA: Number,
     f64: DistanceConstant<TIA>,
@@ -88,11 +88,11 @@ where
 
     Measurement::new(
         input_domain,
+        input_metric.clone(),
+        MaxDivergence,
         Function::new_fallible(move |arg: &Vec<TIA>| {
             select_score(arg.iter().cloned(), optimize.clone(), scale_frac.clone())
         }),
-        input_metric.clone(),
-        MaxDivergence,
         PrivacyMap::new_fallible(report_noisy_max_gumbel_map(scale, input_metric)),
     )
 }

@@ -35,7 +35,7 @@ pub fn make_clamp<TA: 'static + Clone + ProductOrd + CheckAtom, M: EventLevelMet
     input_domain: VectorDomain<AtomDomain<TA>>,
     input_metric: M,
     bounds: (TA, TA),
-) -> Fallible<Transformation<VectorDomain<AtomDomain<TA>>, VectorDomain<AtomDomain<TA>>, M, M>>
+) -> Fallible<Transformation<VectorDomain<AtomDomain<TA>>, M, VectorDomain<AtomDomain<TA>>, M>>
 where
     (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
 {

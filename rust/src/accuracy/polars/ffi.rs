@@ -23,6 +23,8 @@ pub extern "C" fn opendp_accuracy__summarize_polars_measurement(
 
     let m_typed = try_!(Measurement::new(
         try_!(m_untyped.input_domain.downcast_ref::<LazyFrameDomain>()).clone(),
+        m_untyped.input_metric.clone(),
+        m_untyped.output_measure.clone(),
         Function::new_fallible(move |arg: &LazyFrame| {
             let mut qbl = f_untyped
                 .eval(&AnyObject::new(arg.clone()))?
@@ -30,8 +32,6 @@ pub extern "C" fn opendp_accuracy__summarize_polars_measurement(
             let lf: LazyFrame = qbl.eval_internal(&ExtractLazyFrame)?;
             Ok(OnceFrame::from(lf))
         }),
-        m_untyped.input_metric.clone(),
-        m_untyped.output_measure.clone(),
         m_untyped.privacy_map.clone()
     ));
 

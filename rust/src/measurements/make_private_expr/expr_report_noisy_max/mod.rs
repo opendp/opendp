@@ -51,7 +51,7 @@ pub fn make_expr_report_noisy_max<MI: 'static + UnboundedMetric>(
     input_metric: L01InfDistance<MI>,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<WildExprDomain, ExprPlan, L01InfDistance<MI>, MaxDivergence>>
+) -> Fallible<Measurement<WildExprDomain, L01InfDistance<MI>, MaxDivergence, ExprPlan>>
 where
     Expr: StableExpr<L01InfDistance<MI>, L0InfDistance<LInfDistance<f64>>>,
 {
@@ -124,8 +124,10 @@ where
     }
 
     t_prior
-        >> Measurement::<_, _, L0InfDistance<LInfDistance<f64>>, _>::new(
+        >> Measurement::<_, L0InfDistance<LInfDistance<f64>>, _, _>::new(
             middle_domain,
+            middle_metric.clone(),
+            MaxDivergence,
             Function::then_expr(move |input_expr| {
                 apply_plugin(
                     vec![input_expr],
@@ -136,8 +138,6 @@ where
                     },
                 )
             }),
-            middle_metric.clone(),
-            MaxDivergence,
             PrivacyMap::new_fallible(move |(l0, li): &(IntDistance, f64)| {
                 let linf_metric = middle_metric.0.clone();
                 let epsilon = report_noisy_max_gumbel_map(scale, linf_metric)(li)?;

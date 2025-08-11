@@ -9,16 +9,16 @@ use crate::{
 use super::*;
 
 fn make_test_scorer()
--> Fallible<Measurement<AtomDomain<u32>, (f64, &'static str), AbsoluteDistance<u32>, MaxDivergence>>
+-> Fallible<Measurement<AtomDomain<u32>, AbsoluteDistance<u32>, MaxDivergence, (f64, &'static str)>>
 {
     Measurement::new(
         AtomDomain::<u32>::default(),
+        AbsoluteDistance::<u32>::default(),
+        MaxDivergence,
         Function::new_fallible(|arg| {
             let noise = u32::saturating_cast(sample_discrete_laplace(RBig::ONE)?);
             Ok(((*arg + noise) as f64, "arbitrarily typed candidate info"))
         }),
-        AbsoluteDistance::<u32>::default(),
-        MaxDivergence,
         PrivacyMap::new(|d_in| *d_in as f64),
     )
 }
@@ -45,13 +45,13 @@ fn test_make_select_private_candidate_without_max_iters() -> Fallible<()> {
 }
 
 fn make_nan_test_scorer()
--> Fallible<Measurement<AtomDomain<u32>, (f64, &'static str), AbsoluteDistance<u32>, MaxDivergence>>
+-> Fallible<Measurement<AtomDomain<u32>, AbsoluteDistance<u32>, MaxDivergence, (f64, &'static str)>>
 {
     Measurement::new(
         AtomDomain::<u32>::default(),
-        Function::new_fallible(|_| Ok((f64::NAN, "arbitrarily typed candidate info"))),
         AbsoluteDistance::<u32>::default(),
         MaxDivergence,
+        Function::new_fallible(|_| Ok((f64::NAN, "arbitrarily typed candidate info"))),
         PrivacyMap::new(|d_in| *d_in as f64),
     )
 }

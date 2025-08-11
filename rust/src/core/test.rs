@@ -31,10 +31,10 @@ fn test_identity() -> Fallible<()> {
     let stability_map = StabilityMap::new_from_constant(1);
     let identity = Transformation::new(
         input_domain,
-        output_domain,
-        function,
         input_metric,
+        output_domain,
         output_metric,
+        function,
         stability_map,
     )?;
     let arg = 99;

@@ -50,21 +50,21 @@ use super::SequentialCompositionMeasure;
 ///
 /// # Generics
 /// * `DI` - Input Domain.
-/// * `TO` - Output Type.
 /// * `MI` - Input Metric
 /// * `MO` - Output Metric
+/// * `TO` - Output Type.
 pub fn make_adaptive_composition<
     DI: Domain + 'static,
-    TO: 'static,
     MI: Metric + 'static,
     MO: SequentialCompositionMeasure + 'static,
+    TO: 'static,
 >(
     input_domain: DI,
     input_metric: MI,
     output_measure: MO,
     d_in: MI::Distance,
     mut d_mids: Vec<MO::Distance>,
-) -> Fallible<Measurement<DI, Queryable<Measurement<DI, TO, MI, MO>, TO>, MI, MO>>
+) -> Fallible<Measurement<DI, MI, MO, Queryable<Measurement<DI, MI, MO, TO>, TO>>>
 where
     DI::Carrier: 'static + Clone,
     MI::Distance: 'static + ProductOrd + Clone + Send + Sync,
@@ -82,113 +82,110 @@ where
 
     Measurement::new(
         input_domain.clone(),
-        Function::new_fallible(enclose!(
-            (d_in, input_metric, output_measure),
-            move |arg: &DI::Carrier| {
-                // a new copy of the state variables is made each time the Function is called:
+        input_metric.clone(),
+        output_measure.clone(),
+        Function::new_fallible(enclose!(d_in, move |arg: &DI::Carrier| {
+            // a new copy of the state variables is made each time the Function is called:
 
-                // IMMUTABLE STATE VARIABLES
-                let input_domain = input_domain.clone();
-                let input_metric = input_metric.clone();
-                let output_measure = output_measure.clone();
-                let d_in = d_in.clone();
-                let arg = arg.clone();
+            // IMMUTABLE STATE VARIABLES
+            let input_domain = input_domain.clone();
+            let input_metric = input_metric.clone();
+            let output_measure = output_measure.clone();
+            let d_in = d_in.clone();
+            let arg = arg.clone();
 
-                // MUTABLE STATE VARIABLES
-                let mut d_mids = d_mids.clone();
+            // MUTABLE STATE VARIABLES
+            let mut d_mids = d_mids.clone();
 
-                // below, the queryable closure's arguments are
-                // 1. a reference to itself (which it can use to tell child queryables about their parent)
-                // 2. the query (a measurement)
+            // below, the queryable closure's arguments are
+            // 1. a reference to itself (which it can use to tell child queryables about their parent)
+            // 2. the query (a measurement)
 
-                // all state variables are moved into (or captured by) the Queryable closure here
-                Queryable::new(move |sc_qbl, query: Query<Measurement<DI, TO, MI, MO>>| {
-                    // this queryable and wrapped children communicate via an AskPermission query
-                    // defined here, where no-one else can access the type
-                    struct AskPermission(pub usize);
+            // all state variables are moved into (or captured by) the Queryable closure here
+            Queryable::new(move |sc_qbl, query: Query<Measurement<DI, MI, MO, TO>>| {
+                // this queryable and wrapped children communicate via an AskPermission query
+                // defined here, where no-one else can access the type
+                struct AskPermission(pub usize);
 
-                    // if the query is external (passed by the user), then it is a measurement
-                    if let Query::External(measurement) = query {
-                        assert_components_match!(
-                            DomainMismatch,
-                            input_domain,
-                            measurement.input_domain
+                // if the query is external (passed by the user), then it is a measurement
+                if let Query::External(measurement) = query {
+                    assert_components_match!(
+                        DomainMismatch,
+                        input_domain,
+                        measurement.input_domain
+                    );
+
+                    assert_components_match!(
+                        MetricMismatch,
+                        input_metric,
+                        measurement.input_metric
+                    );
+
+                    assert_components_match!(
+                        MeasureMismatch,
+                        output_measure,
+                        measurement.output_measure
+                    );
+
+                    // retrieve the last distance from d_mids, or bubble an error if d_mids is empty
+                    let d_mid =
+                        (d_mids.last()).ok_or_else(|| err!(FailedFunction, "out of queries"))?;
+
+                    // check that the query doesn't consume too much privacy
+                    if !measurement.check(&d_in, d_mid)? {
+                        return fallible!(
+                            FailedFunction,
+                            "insufficient budget for query: {:?} > {:?}",
+                            measurement.map(&d_in)?,
+                            d_mid
                         );
+                    }
 
-                        assert_components_match!(
-                            MetricMismatch,
-                            input_metric,
-                            measurement.input_metric
-                        );
+                    let answer = if output_measure.concurrent()? {
+                        // evaluate the query directly; no wrapping is necessary
+                        measurement.invoke(&arg)
+                    } else {
+                        // if the answer contains a queryable,
+                        // wrap it so that when the child gets a query it sends an AskPermission query to this parent queryable
+                        // it gives this sequential composition queryable (or any parent of this queryable)
+                        // a chance to deny the child permission to execute
+                        let child_id = d_mids.len() - 1;
 
-                        assert_components_match!(
-                            MeasureMismatch,
-                            output_measure,
-                            measurement.output_measure
-                        );
+                        let mut sc_qbl = sc_qbl.clone();
+                        let wrap_logic = WrapFn::new_pre_hook(move || {
+                            sc_qbl.eval_internal(&AskPermission(child_id))
+                        });
 
-                        // retrieve the last distance from d_mids, or bubble an error if d_mids is empty
-                        let d_mid = (d_mids.last())
-                            .ok_or_else(|| err!(FailedFunction, "out of queries"))?;
+                        // evaluate the query and wrap the answer
+                        measurement.invoke_wrap(&arg, wrap_logic.as_map())
+                    }?;
 
-                        // check that the query doesn't consume too much privacy
-                        if !measurement.check(&d_in, d_mid)? {
+                    // we've now consumed the last d_mid. This is our only state modification
+                    d_mids.pop();
+
+                    // done!
+                    return Ok(Answer::External(answer));
+                }
+
+                // if the query is internal (passed by the framework)
+                if let Query::Internal(query) = query {
+                    // check if the query is from a child queryable who is asking for permission to execute
+                    if let Some(AskPermission(id)) = query.downcast_ref() {
+                        // deny permission if the sequential compositor has moved on
+                        if *id != d_mids.len() {
                             return fallible!(
                                 FailedFunction,
-                                "insufficient budget for query: {:?} > {:?}",
-                                measurement.map(&d_in)?,
-                                d_mid
+                                "Adaptive compositor has received a new query. To satisfy the sequentiality constraint of adaptive composition, only the most recent release from the parent compositor may be interacted with."
                             );
                         }
-
-                        let answer = if output_measure.concurrent()? {
-                            // evaluate the query directly; no wrapping is necessary
-                            measurement.invoke(&arg)
-                        } else {
-                            // if the answer contains a queryable,
-                            // wrap it so that when the child gets a query it sends an AskPermission query to this parent queryable
-                            // it gives this sequential composition queryable (or any parent of this queryable)
-                            // a chance to deny the child permission to execute
-                            let child_id = d_mids.len() - 1;
-
-                            let mut sc_qbl = sc_qbl.clone();
-                            let wrap_logic = WrapFn::new_pre_hook(move || {
-                                sc_qbl.eval_internal(&AskPermission(child_id))
-                            });
-
-                            // evaluate the query and wrap the answer
-                            measurement.invoke_wrap(&arg, wrap_logic.as_map())
-                        }?;
-
-                        // we've now consumed the last d_mid. This is our only state modification
-                        d_mids.pop();
-
-                        // done!
-                        return Ok(Answer::External(answer));
+                        // otherwise, return Ok to approve the change
+                        return Ok(Answer::internal(()));
                     }
+                }
 
-                    // if the query is internal (passed by the framework)
-                    if let Query::Internal(query) = query {
-                        // check if the query is from a child queryable who is asking for permission to execute
-                        if let Some(AskPermission(id)) = query.downcast_ref() {
-                            // deny permission if the sequential compositor has moved on
-                            if *id != d_mids.len() {
-                                return fallible!(
-                                    FailedFunction,
-                                    "Adaptive compositor has received a new query. To satisfy the sequentiality constraint of adaptive composition, only the most recent release from the parent compositor may be interacted with."
-                                );
-                            }
-                            // otherwise, return Ok to approve the change
-                            return Ok(Answer::internal(()));
-                        }
-                    }
-
-                    fallible!(FailedFunction, "unrecognized query: {:?}", query)
-                })
-            }
-        )),
-        input_metric,
-        output_measure,
+                fallible!(FailedFunction, "unrecognized query: {:?}", query)
+            })
+        })),
         PrivacyMap::new_fallible(move |actual_d_in: &MI::Distance| {
             if actual_d_in.total_gt(&d_in)? {
                 fallible!(
@@ -235,25 +232,25 @@ where
 ///
 /// # Generics
 /// * `DI` - Input Domain.
-/// * `TO` - Output Type.
 /// * `MI` - Input Metric
 /// * `MO` - Output Metric
+/// * `TO` - Output Type.
 #[deprecated(
     since = "0.14.0",
     note = "This function has been renamed, use `make_adaptive_composition` instead."
 )]
 pub fn make_sequential_composition<
     DI: Domain + 'static,
-    TO: 'static,
     MI: Metric + 'static,
     MO: SequentialCompositionMeasure + 'static,
+    TO: 'static,
 >(
     input_domain: DI,
     input_metric: MI,
     output_measure: MO,
     d_in: MI::Distance,
     d_mids: Vec<MO::Distance>,
-) -> Fallible<Measurement<DI, Queryable<Measurement<DI, TO, MI, MO>, TO>, MI, MO>>
+) -> Fallible<Measurement<DI, MI, MO, Queryable<Measurement<DI, MI, MO, TO>, TO>>>
 where
     DI::Carrier: 'static + Clone,
     MI::Distance: 'static + ProductOrd + Clone + Send + Sync,

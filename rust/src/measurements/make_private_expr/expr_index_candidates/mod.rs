@@ -39,7 +39,7 @@ pub fn make_expr_index_candidates<MI: 'static + Metric, MO: 'static + Measure>(
     output_measure: MO,
     expr: Expr,
     param: Option<f64>,
-) -> Fallible<Measurement<WildExprDomain, ExprPlan, MI, MO>>
+) -> Fallible<Measurement<WildExprDomain, MI, MO, ExprPlan>>
 where
     Expr: PrivateExpr<MI, MO>,
     (WildExprDomain, MI): MetricSpace,
