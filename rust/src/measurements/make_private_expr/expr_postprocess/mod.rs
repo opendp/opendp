@@ -31,7 +31,7 @@ pub fn make_expr_postprocess<MI: 'static + Metric, MO: 'static + SequentialCompo
     input_exprs: Vec<Expr>,
     postprocessor: impl Fn(Vec<Expr>) -> Fallible<Expr> + 'static + Send + Sync,
     param: Option<f64>,
-) -> Fallible<Measurement<WildExprDomain, ExprPlan, MI, MO>>
+) -> Fallible<Measurement<WildExprDomain, MI, MO, ExprPlan>>
 where
     Expr: PrivateExpr<MI, MO>,
     (WildExprDomain, MI): MetricSpace,
@@ -53,6 +53,8 @@ where
 
     Measurement::new(
         input_domain,
+        input_metric,
+        output_measure,
         Function::new_fallible(move |arg| {
             let plans = f_comp.eval(&arg)?;
             let plan = plans[0].plan.clone();
@@ -69,8 +71,6 @@ where
                     .transpose()?,
             })
         }),
-        input_metric,
-        output_measure,
         m_comp.privacy_map.clone(),
     )
 }
@@ -81,7 +81,7 @@ pub fn match_postprocess<MI: 'static + Metric, MO: 'static + SequentialCompositi
     output_measure: MO,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Option<Measurement<WildExprDomain, ExprPlan, MI, MO>>>
+) -> Fallible<Option<Measurement<WildExprDomain, MI, MO, ExprPlan>>>
 where
     Expr: PrivateExpr<MI, MO>,
     (WildExprDomain, MI): MetricSpace,

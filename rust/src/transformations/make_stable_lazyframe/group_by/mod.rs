@@ -26,7 +26,7 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
     input_domain: DslPlanDomain,
     input_metric: FrameDistance<M>,
     plan: DslPlan,
-) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, FrameDistance<M>, FrameDistance<M>>> {
+) -> Fallible<Transformation<DslPlanDomain, FrameDistance<M>, DslPlanDomain, FrameDistance<M>>> {
     let DslPlan::GroupBy {
         input,
         keys,
@@ -105,7 +105,9 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
 
     let t_group_agg = Transformation::new(
         middle_domain,
+        middle_metric.clone(),
         output_domain,
+        middle_metric.clone(),
         Function::new(move |plan: &DslPlan| DslPlan::GroupBy {
             input: Arc::new(plan.clone()),
             keys: keys.clone(),
@@ -114,8 +116,6 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
             maintain_order: false,
             options: options.clone(),
         }),
-        middle_metric.clone(),
-        middle_metric.clone(),
         StabilityMap::new_fallible(move |d_in: &Bounds| {
             let contributed_rows = d_in.get_bound(&HashSet::new()).per_group;
             let contributed_groups = d_in.get_bound(&h_keys).num_groups;

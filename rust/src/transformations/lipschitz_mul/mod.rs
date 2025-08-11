@@ -39,7 +39,7 @@ pub fn make_lipschitz_float_mul<TA: Float>(
     constant: TA,
     bounds: (TA, TA),
 ) -> Fallible<
-    Transformation<AtomDomain<TA>, AtomDomain<TA>, AbsoluteDistance<TA>, AbsoluteDistance<TA>>,
+    Transformation<AtomDomain<TA>, AbsoluteDistance<TA>, AtomDomain<TA>, AbsoluteDistance<TA>>,
 > {
     if input_domain.nan() {
         return fallible!(MakeTransformation, "input_domain may not contain NaN.");
@@ -75,12 +75,12 @@ pub fn make_lipschitz_float_mul<TA: Float>(
 
     Transformation::new(
         input_domain,
+        input_metric.clone(),
         AtomDomain::new_non_nan(),
+        input_metric,
         Function::new_fallible(move |arg: &TA| {
             Ok(arg.total_clamp(lower, upper)?.saturating_mul(&constant))
         }),
-        input_metric.clone(),
-        input_metric,
         StabilityMap::new_fallible(move |d_in| {
             constant.alerting_abs()?.inf_mul(d_in)?.inf_add(&output_ulp)
         }),

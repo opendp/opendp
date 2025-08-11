@@ -50,7 +50,7 @@ fn make_user_measurement<TO>(
     output_measure: AnyMeasure,
     function: *const CallbackFn,
     privacy_map: *const CallbackFn,
-) -> Fallible<Measurement<AnyDomain, AnyObject, AnyMetric, AnyMeasure>> {
+) -> Fallible<Measurement<AnyDomain, AnyMetric, AnyMeasure, AnyObject>> {
     let _ = (
         input_domain,
         input_metric,
@@ -73,9 +73,9 @@ pub extern "C" fn opendp_measurements__make_user_measurement(
     let _TO = TO;
     Measurement::new(
         try_as_ref!(input_domain).clone(),
-        Function::new_fallible(wrap_func(try_as_ref!(function).clone())),
         try_as_ref!(input_metric).clone(),
         try_as_ref!(output_measure).clone(),
+        Function::new_fallible(wrap_func(try_as_ref!(function).clone())),
         PrivacyMap::new_fallible(wrap_func(try_as_ref!(privacy_map).clone())),
     )
     .into()

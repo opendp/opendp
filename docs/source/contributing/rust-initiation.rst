@@ -40,12 +40,12 @@ Transformations are structs (`see chapter
 .. code:: rust
 
 
-   struct Transformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric> {
+   struct Transformation<DI: Domain, MI: Metric, DO: Domain, MO: Metric> {
        pub input_domain: DI,
-       pub output_domain: DO,
-       pub function: Function<DI, DO>,
        pub input_metric: MI,
+       pub output_domain: DO,
        pub output_metric: MO,
+       pub function: Function<DI::Carrier, DO::Carrier>,
        pub stability_map: StabilityMap<MI, MO>,
    }
 
@@ -55,8 +55,8 @@ This struct has four generics (`see chapter
 ::
 
    - DI for input domain
-   - DO for output domain
    - MI for input metric
+   - DO for output domain
    - MO for output metric
 
 A generic is a type that has not yet been explicitly determined. These
@@ -78,7 +78,9 @@ We now take a closer look at each of the struct members.
 
        ...
        pub input_domain: DI,
+       pub input_metric: MI,
        pub output_domain: DO,
+       pub output_metric: MO,
        ...
 
 The input and output domains strictly define the set of permissible
@@ -91,6 +93,12 @@ trait <https://doc.rust-lang.org/std/cmp/trait.PartialEq.html>`__). The
 resulting chained transformation contains the input domain of the first
 transformation, the output domain of the second transformation, as well
 as the functional composition of the two functions.
+
+We also have input and output metrics.
+
+Examples of metrics are ``HammingDistance``, ``SymmetricDistance``,
+``AbsoluteDistance`` and ``L1Distance``. They behave in the same way
+that the input and output domains do when chaining. 
 
 .. code:: rust
 
@@ -120,19 +128,7 @@ When we invoke the following transformation:
 2. the Rust ``function`` is evaluated on a Rust ``Vec<String>``
 3. the result is shipped back out to familiar Python data structures
 
-We also have input and output metrics.
-
-.. code:: rust
-
-       ...
-       pub input_metric: MI,
-       pub output_metric: MO,
-       ...
-
-Examples of metrics are ``HammingDistance``, ``SymmetricDistance``,
-``AbsoluteDistance`` and ``L1Distance``. They behave in the same way
-that the input and output domains do when chaining. Finally, the
-stability map.
+Finally, the stability map.
 
 .. code:: rust
 
@@ -197,8 +193,8 @@ provided. I’ll break it down into three parts.
        -> Fallible<
            Transformation<
                VectorDomain<AtomDomain<TIA>>, 
-               VectorDomain<AtomDomain<TOA>>, 
                M, 
+               VectorDomain<AtomDomain<TOA>>, 
                M>>
 
        // 2.
@@ -211,11 +207,11 @@ provided. I’ll break it down into three parts.
        // 3.
        Transformation::new(
            input_domain.clone(),
+           input_metric,
            VectorDomain::new(AtomDomain::default(), input_domain.size),
+           input_metric.clone(),
            Function::new(move |arg: &Vec<TIA>|
                arg.iter().map(|v| TOA::round_cast(v.clone()).unwrap_or_default()).collect()),
-           input_metric.clone(),
-           input_metric,
            StabilityMap::new_from_constant(1))
    }
 
@@ -229,9 +225,9 @@ The first part is the function signature:
    )
        -> Fallible<
            Transformation<
-               VectorDomain<AtomDomain<TIA>>, 
-               VectorDomain<AtomDomain<TOA>>, 
-               M, 
+               VectorDomain<AtomDomain<TIA>>,
+               M,  
+               VectorDomain<AtomDomain<TOA>>,
                M>>
        ...
 
@@ -249,7 +245,7 @@ The function takes two concrete arguments, the ``input_domain`` and
 
 The constructor returns a fallible transformation. The last four lines
 specify the types of the input/output domains/metrics, that is, what
-``DI``, ``DO``, ``MI`` and ``MO`` (from the definition of a
+``DI``, ``MI``, ``DO`` and ``MO`` (from the definition of a
 Transformation) are.
 
 The second part is the where clause:
@@ -289,11 +285,11 @@ returns a Transformation struct.
        ...
        Transformation::new(
            input_domain.clone(),
+           input_metric.clone(),
            VectorDomain::new(AtomDomain::default(), input_domain.size),
+           input_metric,
            Function::new(move |arg: &Vec<TIA>|
                arg.iter().map(|v| TOA::round_cast(v.clone()).unwrap_or_default()).collect()),
-           input_metric.clone(),
-           input_metric,
            StabilityMap::new_from_constant(1))
    }
 
@@ -321,11 +317,11 @@ differences.
 
 .. code:: rust
 
-   pub struct Measurement<DI: Domain, DO: Domain, MI: Metric, MO: Measure> {
+   pub struct Measurement<DI: Domain, MI: Metric, MO: Measure, TO> {
        pub input_domain: DI,
-       pub function: Function<DI, DO>,
        pub input_metric: MI,
        pub output_measure: MO,
+       pub function: Function<DI::Carrier, TO>,
        pub privacy_map: PrivacyMap<MI, MO>,
    }
 

@@ -23,8 +23,8 @@ pub fn make_sized_bounded_covariance<S>(
 ) -> Fallible<
     Transformation<
         CovarianceDomain<S::Item>,
-        AtomDomain<S::Item>,
         SymmetricDistance,
+        AtomDomain<S::Item>,
         AbsoluteDistance<S::Item>,
     >,
 >
@@ -99,7 +99,9 @@ where
             (bounds_0.1, bounds_1.1),
         ))?)
         .with_size(size),
+        SymmetricDistance,
         AtomDomain::new_non_nan(),
+        AbsoluteDistance::default(),
         Function::new(enclose!(_size, move |arg: &Vec<(S::Item, S::Item)>| {
             let (l, r): (Vec<S::Item>, Vec<S::Item>) = arg.iter().copied().unzip();
             let (sum_l, sum_r) = (S::unchecked_sum(&l), S::unchecked_sum(&r));
@@ -114,8 +116,6 @@ where
 
             ssd / (_size - _ddof)
         })),
-        SymmetricDistance,
-        AbsoluteDistance::default(),
         // d_in / 2 * sensitivity + relaxation
         StabilityMap::new_fallible(move |d_in| {
             S::Item::inf_cast(d_in / 2)?

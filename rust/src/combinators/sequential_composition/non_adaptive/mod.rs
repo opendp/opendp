@@ -27,17 +27,17 @@ use super::SequentialCompositionMeasure;
 ///
 /// # Generics
 /// * `DI` - Input Domain.
-/// * `TO` - Output Type.
 /// * `MI` - Input Metric
 /// * `MO` - Output Measure
-pub fn make_composition<DI, TO, MI, MO>(
-    measurements: Vec<Measurement<DI, TO, MI, MO>>,
-) -> Fallible<Measurement<DI, Vec<TO>, MI, MO>>
+/// * `TO` - Output Type.
+pub fn make_composition<DI, MI, MO, TO>(
+    measurements: Vec<Measurement<DI, MI, MO, TO>>,
+) -> Fallible<Measurement<DI, MI, MO, Vec<TO>>>
 where
     DI: 'static + Domain,
-    TO: 'static,
     MI: 'static + Metric,
     MO: 'static + SequentialCompositionMeasure,
+    TO: 'static,
     (DI, MI): MetricSpace,
 {
     if measurements.is_empty() {
@@ -73,6 +73,8 @@ where
     let concurrent = output_measure.concurrent()?;
     Measurement::new(
         input_domain,
+        input_metric,
+        output_measure.clone(),
         Function::new_fallible(move |arg: &DI::Carrier| {
             let go = || functions.iter().map(|f| f.eval(arg)).collect();
 
@@ -90,8 +92,6 @@ where
                 )
             }
         }),
-        input_metric,
-        output_measure.clone(),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             output_measure.compose(
                 maps.iter()
@@ -120,14 +120,14 @@ where
     since = "0.14.0",
     note = "This function has been renamed, use `make_composition` instead."
 )]
-pub fn make_basic_composition<DI, TO, MI, MO>(
-    measurements: Vec<Measurement<DI, TO, MI, MO>>,
-) -> Fallible<Measurement<DI, Vec<TO>, MI, MO>>
+pub fn make_basic_composition<DI, MI, MO, TO>(
+    measurements: Vec<Measurement<DI, MI, MO, TO>>,
+) -> Fallible<Measurement<DI, MI, MO, Vec<TO>>>
 where
     DI: 'static + Domain,
-    TO: 'static,
     MI: 'static + Metric,
     MO: 'static + SequentialCompositionMeasure,
+    TO: 'static,
     (DI, MI): MetricSpace,
 {
     make_composition(measurements)

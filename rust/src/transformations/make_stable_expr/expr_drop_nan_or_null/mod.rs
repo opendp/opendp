@@ -21,7 +21,7 @@ pub fn make_expr_drop_nan_or_null<M: OuterMetric>(
     input_domain: WildExprDomain,
     input_metric: M,
     expr: Expr,
-) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
+) -> Fallible<Transformation<WildExprDomain, M, ExprDomain, M>>
 where
     M::InnerMetric: UnboundedMetric,
     M::Distance: Clone,
@@ -71,13 +71,13 @@ where
     t_input
         >> Transformation::new(
             middle_domain.clone(),
+            middle_metric.clone(),
             output_domain,
+            middle_metric,
             Function::then_expr(move |expr| Expr::Function {
                 input: vec![expr],
                 function: function.clone(),
             }),
-            middle_metric.clone(),
-            middle_metric,
             StabilityMap::new(Clone::clone),
         )?
 }

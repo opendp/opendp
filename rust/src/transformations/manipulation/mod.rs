@@ -66,7 +66,7 @@ pub(crate) fn make_row_by_row<DI, DO, M>(
     ) -> <DO::ElementDomain as Domain>::Carrier
     + Send
     + Sync,
-) -> Fallible<Transformation<DI, DO, M, M>>
+) -> Fallible<Transformation<DI, M, DO, M>>
 where
     DI: RowByRowDomain<DO>,
     DO: DatasetDomain,
@@ -89,7 +89,7 @@ pub(crate) fn make_row_by_row_fallible<DI, DO, M>(
     ) -> Fallible<<DO::ElementDomain as Domain>::Carrier>
     + Send
     + Sync,
-) -> Fallible<Transformation<DI, DO, M, M>>
+) -> Fallible<Transformation<DI, M, DO, M>>
 where
     DI: RowByRowDomain<DO>,
     DO: DatasetDomain,
@@ -100,10 +100,10 @@ where
     let output_domain = input_domain.translate(output_row_domain);
     Transformation::new(
         input_domain,
-        output_domain,
-        Function::new_fallible(move |arg: &DI::Carrier| DI::apply_rows(arg, &row_function)),
         input_metric.clone(),
+        output_domain,
         input_metric,
+        Function::new_fallible(move |arg: &DI::Carrier| DI::apply_rows(arg, &row_function)),
         StabilityMap::new_from_constant(1),
     )
 }
@@ -133,7 +133,7 @@ where
 /// because the metric cannot be used to measure distances between any two elements of an atom domain.
 /// Whereas, the symmetric distance metric and vector domain,
 /// or absolute distance metric and atom domain on a scalar type, both form valid metric spaces.
-pub fn make_identity<D, M>(domain: D, metric: M) -> Fallible<Transformation<D, D, M, M>>
+pub fn make_identity<D, M>(domain: D, metric: M) -> Fallible<Transformation<D, M, D, M>>
 where
     D: Domain,
     D::Carrier: Clone,
@@ -143,10 +143,10 @@ where
 {
     Transformation::new(
         domain.clone(),
-        domain,
-        Function::new(|arg: &D::Carrier| arg.clone()),
         metric.clone(),
+        domain,
         metric,
+        Function::new(|arg: &D::Carrier| arg.clone()),
         StabilityMap::new(|d_in: &M::Distance| d_in.clone()),
     )
 }
@@ -176,7 +176,7 @@ pub fn make_is_equal<TIA, M>(
     input_domain: VectorDomain<AtomDomain<TIA>>,
     input_metric: M,
     value: TIA,
-) -> Fallible<Transformation<VectorDomain<AtomDomain<TIA>>, VectorDomain<AtomDomain<bool>>, M, M>>
+) -> Fallible<Transformation<VectorDomain<AtomDomain<TIA>>, M, VectorDomain<AtomDomain<bool>>, M>>
 where
     TIA: 'static + PartialEq + CheckAtom,
     M: EventLevelMetric,
@@ -204,7 +204,7 @@ where
 pub fn make_is_null<M, DIA>(
     input_domain: VectorDomain<DIA>,
     input_metric: M,
-) -> Fallible<Transformation<VectorDomain<DIA>, VectorDomain<AtomDomain<bool>>, M, M>>
+) -> Fallible<Transformation<VectorDomain<DIA>, M, VectorDomain<AtomDomain<bool>>, M>>
 where
     DIA: Domain,
     DIA::Carrier: 'static + CheckNull,

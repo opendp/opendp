@@ -37,8 +37,8 @@ pub fn make_expr_discrete_quantile_score<MI>(
 ) -> Fallible<
     Transformation<
         WildExprDomain,
-        ExprDomain,
         L01InfDistance<MI>,
+        ExprDomain,
         L0InfDistance<LInfDistance<f64>>,
     >,
 >
@@ -134,9 +134,11 @@ where
     };
 
     t_prior
-        >> Transformation::<_, _, L01InfDistance<MI>, L0InfDistance<LInfDistance<_>>>::new(
+        >> Transformation::<_, L01InfDistance<MI>, _, L0InfDistance<LInfDistance<_>>>::new(
             middle_domain,
+            middle_metric,
             output_domain,
+            L0InfDistance(LInfDistance::new(false)),
             Function::then_expr(move |input_expr| {
                 apply_plugin(
                     vec![input_expr],
@@ -149,8 +151,6 @@ where
                 )
             })
             .fill_with(fill_value),
-            middle_metric,
-            L0InfDistance(LInfDistance::new(false)),
             StabilityMap::new_fallible(move |(l0, _, li)| {
                 let out_li = f64::inf_cast(score_candidates_map(
                     alpha_num,

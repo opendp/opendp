@@ -51,7 +51,7 @@ mod ffi;
 /// * `measurement` - computation from which you want to read noise scale parameters from
 /// * `alpha` - optional statistical significance to use to compute accuracy estimates
 pub fn summarize_polars_measurement<MI: Metric, MO: 'static + Measure>(
-    measurement: Measurement<LazyFrameDomain, OnceFrame, MI, MO>,
+    measurement: Measurement<LazyFrameDomain, MI, MO, OnceFrame>,
     alpha: Option<f64>,
 ) -> Fallible<DataFrame>
 where

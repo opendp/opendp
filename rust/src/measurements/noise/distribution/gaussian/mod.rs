@@ -45,7 +45,7 @@ pub fn make_gaussian<DI: Domain, MI: Metric, MO: Measure>(
     input_metric: MI,
     scale: f64,
     k: Option<i32>,
-) -> Fallible<Measurement<DI, DI::Carrier, MI, MO>>
+) -> Fallible<Measurement<DI, MI, MO, DI::Carrier>>
 where
     DiscreteGaussian: MakeNoise<DI, MI, MO>,
     (DI, MI): MetricSpace,
@@ -68,7 +68,7 @@ where
     DI::Atom: Nature,
     <DI::Atom as Nature>::RV<2>: MakeNoise<DI, MI, MO>,
 {
-    fn make_noise(self, input_space: (DI, MI)) -> Fallible<Measurement<DI, DI::Carrier, MI, MO>> {
+    fn make_noise(self, input_space: (DI, MI)) -> Fallible<Measurement<DI, MI, MO, DI::Carrier>> {
         DI::Atom::new_distribution(self.scale, self.k)?.make_noise(input_space)
     }
 }

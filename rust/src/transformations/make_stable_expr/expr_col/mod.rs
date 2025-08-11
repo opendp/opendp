@@ -17,7 +17,7 @@ pub fn make_expr_col<M: OuterMetric>(
     input_domain: WildExprDomain,
     input_metric: M,
     expr: Expr,
-) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
+) -> Fallible<Transformation<WildExprDomain, M, ExprDomain, M>>
 where
     M::Distance: Clone,
     (WildExprDomain, M): MetricSpace,
@@ -43,10 +43,10 @@ where
 
     Transformation::new(
         input_domain,
-        output_domain,
-        Function::from_expr(col(&*col_name)),
         input_metric.clone(),
+        output_domain,
         input_metric,
+        Function::from_expr(col(&*col_name)),
         StabilityMap::new(Clone::clone),
     )
 }

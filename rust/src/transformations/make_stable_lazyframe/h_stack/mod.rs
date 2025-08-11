@@ -23,7 +23,7 @@ pub fn make_h_stack<MI: 'static + Metric, MO: UnboundedMetric>(
     input_domain: DslPlanDomain,
     input_metric: MI,
     plan: DslPlan,
-) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, MI, FrameDistance<MO>>>
+) -> Fallible<Transformation<DslPlanDomain, MI, DslPlanDomain, FrameDistance<MO>>>
 where
     DslPlan: StableDslPlan<MI, FrameDistance<MO>>,
     Expr: StableExpr<FrameDistance<MO>, FrameDistance<MO>>,
@@ -102,7 +102,9 @@ where
 
     let t_with_columns = Transformation::new(
         middle_domain,
+        middle_metric.clone(),
         output_domain,
+        middle_metric,
         Function::new_fallible(move |plan: &DslPlan| {
             let expr_arg = plan.clone();
             Ok(DslPlan::HStack {
@@ -113,8 +115,6 @@ where
                 options,
             })
         }),
-        middle_metric.clone(),
-        middle_metric,
         StabilityMap::new(Clone::clone),
     )?;
 

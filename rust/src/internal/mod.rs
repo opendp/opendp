@@ -55,7 +55,7 @@ fn _make_measurement<TO>(
     output_measure: AnyMeasure,
     function: CallbackFn,
     privacy_map: CallbackFn,
-) -> Fallible<Measurement<AnyDomain, AnyObject, AnyMetric, AnyMeasure>> {
+) -> Fallible<Measurement<AnyDomain, AnyMetric, AnyMeasure, AnyObject>> {
     let _ = (
         input_domain,
         input_metric,
@@ -78,9 +78,9 @@ pub extern "C" fn opendp_internal___make_measurement(
     let _TO = TO;
     Measurement::new(
         try_as_ref!(input_domain).clone(),
-        Function::new_fallible(wrap_func(try_as_ref!(function).clone())),
         try_as_ref!(input_metric).clone(),
         try_as_ref!(output_measure).clone(),
+        Function::new_fallible(wrap_func(try_as_ref!(function).clone())),
         PrivacyMap::new_fallible(wrap_func(try_as_ref!(privacy_map).clone())),
     )
     .into()
@@ -121,10 +121,10 @@ pub extern "C" fn opendp_internal___make_transformation(
 ) -> FfiResult<*mut AnyTransformation> {
     Transformation::new(
         try_as_ref!(input_domain).clone(),
-        try_as_ref!(output_domain).clone(),
-        Function::new_fallible(wrap_func(try_as_ref!(function).clone())),
         try_as_ref!(input_metric).clone(),
+        try_as_ref!(output_domain).clone(),
         try_as_ref!(output_metric).clone(),
+        Function::new_fallible(wrap_func(try_as_ref!(function).clone())),
         StabilityMap::new_fallible(wrap_func(try_as_ref!(stability_map).clone())),
     )
     .into()

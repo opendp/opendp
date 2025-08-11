@@ -25,9 +25,9 @@ mod cdp_delta;
 /// * `TO` - Output Type
 /// * `MI` - Input Metric
 /// * `MO` - Privacy Measure
-pub fn make_zCDP_to_approxDP<DI, TO, MI, MO>(
-    meas: Measurement<DI, TO, MI, MO>,
-) -> Fallible<Measurement<DI, TO, MI, MO::ApproxMeasure>>
+pub fn make_zCDP_to_approxDP<DI, MI, MO, TO>(
+    meas: Measurement<DI, MI, MO, TO>,
+) -> Fallible<Measurement<DI, MI, MO::ApproxMeasure, TO>>
 where
     DI: Domain,
     MI: 'static + Metric,
@@ -37,9 +37,9 @@ where
     let privacy_map = meas.privacy_map.clone();
     Measurement::new(
         meas.input_domain.clone(),
-        meas.function.clone(),
         meas.input_metric.clone(),
         MO::ApproxMeasure::default(),
+        meas.function.clone(),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             let d_mid = privacy_map.eval(d_in)?;
 

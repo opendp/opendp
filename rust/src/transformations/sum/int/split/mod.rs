@@ -64,8 +64,8 @@ pub fn make_bounded_int_split_sum<T>(
 ) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<T>>,
-        AtomDomain<T>,
         SymmetricDistance,
+        AtomDomain<T>,
         AbsoluteDistance<T>,
     >,
 >
@@ -76,10 +76,10 @@ where
 
     Transformation::new(
         VectorDomain::new(AtomDomain::new_closed(bounds)?),
-        AtomDomain::default(),
-        Function::new(|arg: &Vec<T>| T::split_sat_sum(arg)),
         SymmetricDistance,
+        AtomDomain::default(),
         AbsoluteDistance::default(),
+        Function::new(|arg: &Vec<T>| T::split_sat_sum(arg)),
         StabilityMap::new_from_constant(lower.alerting_abs()?.total_max(upper)?),
     )
 }
@@ -106,8 +106,8 @@ pub fn make_sized_bounded_int_split_sum<T>(
 ) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<T>>,
-        AtomDomain<T>,
         SymmetricDistance,
+        AtomDomain<T>,
         AbsoluteDistance<T>,
     >,
 >
@@ -118,10 +118,10 @@ where
     let range = upper.inf_sub(&lower)?;
     Transformation::new(
         VectorDomain::new(AtomDomain::new_closed(bounds)?).with_size(size),
-        AtomDomain::default(),
-        Function::new(|arg: &Vec<T>| T::split_sat_sum(arg)),
         SymmetricDistance,
+        AtomDomain::default(),
         AbsoluteDistance::default(),
+        Function::new(|arg: &Vec<T>| T::split_sat_sum(arg)),
         StabilityMap::new_fallible(
             // If d_in is odd, we still only consider databases with (d_in - 1) / 2 substitutions,
             //    so floor division is acceptable

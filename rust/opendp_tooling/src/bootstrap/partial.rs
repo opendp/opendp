@@ -96,7 +96,7 @@ fn extract_domain_metric_types(output: &ReturnType) -> Option<(Type, Type)> {
     let supporting_types = extract_parameters(data_type.clone(), "Transformation")
         .or_else(|| extract_parameters(data_type.clone(), "Measurement"))?;
 
-    let [input_domain_type, _, input_metric_type, _] =
+    let [input_domain_type, input_metric_type, _, _] =
         <[Type; 4]>::try_from(supporting_types).ok()?;
 
     Some((input_domain_type, input_metric_type))

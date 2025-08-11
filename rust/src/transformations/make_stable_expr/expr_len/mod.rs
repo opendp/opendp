@@ -26,7 +26,7 @@ pub fn make_expr_len<MI, const P: usize>(
     input_domain: WildExprDomain,
     input_metric: L01InfDistance<MI>,
     expr: Expr,
-) -> Fallible<Transformation<WildExprDomain, ExprDomain, L01InfDistance<MI>, LpDistance<P, f64>>>
+) -> Fallible<Transformation<WildExprDomain, L01InfDistance<MI>, ExprDomain, LpDistance<P, f64>>>
 where
     MI: 'static + UnboundedMetric,
     (WildExprDomain, L01InfDistance<MI>): MetricSpace,
@@ -54,10 +54,10 @@ where
 
     Transformation::new(
         input_domain,
-        output_domain,
-        Function::from_expr(len()).fill_with(typed_lit(0u32)),
         input_metric,
+        output_domain,
         LpDistance::default(),
+        Function::from_expr(len()).fill_with(typed_lit(0u32)),
         counting_query_stability_map(margin.invariant),
     )
 }

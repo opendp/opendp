@@ -95,7 +95,7 @@ pub fn make_stable_expr<MI: 'static + Metric, MO: 'static + Metric>(
     input_domain: WildExprDomain,
     input_metric: MI,
     expr: Expr,
-) -> Fallible<Transformation<WildExprDomain, ExprDomain, MI, MO>>
+) -> Fallible<Transformation<WildExprDomain, MI, ExprDomain, MO>>
 where
     Expr: StableExpr<MI, MO>,
     (WildExprDomain, MI): MetricSpace,
@@ -109,7 +109,7 @@ pub trait StableExpr<MI: Metric, MO: Metric> {
         self,
         input_domain: WildExprDomain,
         input_metric: MI,
-    ) -> Fallible<Transformation<WildExprDomain, ExprDomain, MI, MO>>;
+    ) -> Fallible<Transformation<WildExprDomain, MI, ExprDomain, MO>>;
 }
 
 impl<M: OuterMetric> StableExpr<M, M> for Expr
@@ -123,7 +123,7 @@ where
         self,
         input_domain: WildExprDomain,
         input_metric: M,
-    ) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>> {
+    ) -> Fallible<Transformation<WildExprDomain, M, ExprDomain, M>> {
         if expr_fill_nan::match_fill_nan(&self).is_some() {
             return expr_fill_nan::make_expr_fill_nan(input_domain, input_metric, self);
         }
@@ -242,7 +242,7 @@ where
         self,
         input_domain: WildExprDomain,
         input_metric: L01InfDistance<MI>,
-    ) -> Fallible<Transformation<WildExprDomain, ExprDomain, L01InfDistance<MI>, LpDistance<P, f64>>>
+    ) -> Fallible<Transformation<WildExprDomain, L01InfDistance<MI>, ExprDomain, LpDistance<P, f64>>>
     {
         use Expr::*;
         match self {
@@ -280,8 +280,8 @@ where
     ) -> Fallible<
         Transformation<
             WildExprDomain,
-            ExprDomain,
             L01InfDistance<MI>,
+            ExprDomain,
             L0InfDistance<LInfDistance<f64>>,
         >,
     > {

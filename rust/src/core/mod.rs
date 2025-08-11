@@ -240,35 +240,35 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
 /// * `input_metric` is compatible with `input_domain`
 /// * `privacy_map` is a mapping from the input metric to the output measure
 #[readonly::make]
-pub struct Measurement<DI: Domain, TO, MI: Metric, MO: Measure> {
+pub struct Measurement<DI: Domain, MI: Metric, MO: Measure, TO> {
     pub input_domain: DI,
-    pub function: Function<DI::Carrier, TO>,
     pub input_metric: MI,
     pub output_measure: MO,
+    pub function: Function<DI::Carrier, TO>,
     pub privacy_map: PrivacyMap<MI, MO>,
 }
 
-impl<DI: Domain, TO, MI: Metric, MO: Measure> Clone for Measurement<DI, TO, MI, MO> {
+impl<DI: Domain, MI: Metric, MO: Measure, TO> Clone for Measurement<DI, MI, MO, TO> {
     fn clone(&self) -> Self {
         Self {
             input_domain: self.input_domain.clone(),
-            function: self.function.clone(),
             input_metric: self.input_metric.clone(),
             output_measure: self.output_measure.clone(),
+            function: self.function.clone(),
             privacy_map: self.privacy_map.clone(),
         }
     }
 }
 
-impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO>
+impl<DI: Domain, MI: Metric, MO: Measure, TO> Measurement<DI, MI, MO, TO>
 where
     (DI, MI): MetricSpace,
 {
     pub fn new(
         input_domain: DI,
-        function: Function<DI::Carrier, TO>,
         input_metric: MI,
         output_measure: MO,
+        function: Function<DI::Carrier, TO>,
         privacy_map: PrivacyMap<MI, MO>,
     ) -> Fallible<Self> {
         (input_domain.clone(), input_metric.clone()).check_space()?;
@@ -286,15 +286,15 @@ where
         input_metric: MI2,
         output_metric: MO2,
         privacy_map: PrivacyMap<MI2, MO2>,
-    ) -> Fallible<Measurement<DI, TO, MI2, MO2>>
+    ) -> Fallible<Measurement<DI, MI2, MO2, TO>>
     where
         (DI, MI2): MetricSpace,
     {
         Measurement::new(
             self.input_domain.clone(),
-            self.function.clone(),
             input_metric,
             output_metric,
+            self.function.clone(),
             privacy_map,
         )
     }
@@ -304,7 +304,7 @@ where
     }
 }
 
-impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
+impl<DI: Domain, MI: Metric, MO: Measure, TO> Measurement<DI, MI, MO, TO> {
     pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<TO> {
         self.function.eval(arg)
     }
@@ -321,7 +321,7 @@ impl<DI: Domain, TO, MI: Metric, MO: Measure> Measurement<DI, TO, MI, MO> {
     }
 }
 
-impl<DI: Domain, TO, MI: Metric, MO: Measure> Debug for Measurement<DI, TO, MI, MO> {
+impl<DI: Domain, MI: Metric, MO: Measure, TO> Debug for Measurement<DI, MI, MO, TO> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Measurement")
             .field("input_domain", &self.input_domain)
@@ -349,36 +349,36 @@ pub trait MetricSpace {
 /// * `stability_map` is a mapping from the input metric to the output metric
 #[derive(Clone)]
 #[readonly::make]
-pub struct Transformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric> {
+pub struct Transformation<DI: Domain, MI: Metric, DO: Domain, MO: Metric> {
     pub input_domain: DI,
-    pub output_domain: DO,
-    pub function: Function<DI::Carrier, DO::Carrier>,
     pub input_metric: MI,
+    pub output_domain: DO,
     pub output_metric: MO,
+    pub function: Function<DI::Carrier, DO::Carrier>,
     pub stability_map: StabilityMap<MI, MO>,
 }
 
-impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, MO>
+impl<DI: Domain, MI: Metric, DO: Domain, MO: Metric> Transformation<DI, MI, DO, MO>
 where
     (DI, MI): MetricSpace,
     (DO, MO): MetricSpace,
 {
     pub fn new(
         input_domain: DI,
-        output_domain: DO,
-        function: Function<DI::Carrier, DO::Carrier>,
         input_metric: MI,
+        output_domain: DO,
         output_metric: MO,
+        function: Function<DI::Carrier, DO::Carrier>,
         stability_map: StabilityMap<MI, MO>,
     ) -> Fallible<Self> {
         (input_domain.clone(), input_metric.clone()).check_space()?;
         (output_domain.clone(), output_metric.clone()).check_space()?;
         Ok(Self {
             input_domain,
-            output_domain,
-            function,
             input_metric,
+            output_domain,
             output_metric,
+            function,
             stability_map,
         })
     }
@@ -389,17 +389,17 @@ where
         input_metric: MI2,
         output_metric: MO2,
         privacy_map: StabilityMap<MI2, MO2>,
-    ) -> Fallible<Transformation<DI, DO, MI2, MO2>>
+    ) -> Fallible<Transformation<DI, MI2, DO, MO2>>
     where
         (DI, MI2): MetricSpace,
         (DO, MO2): MetricSpace,
     {
         Transformation::new(
             self.input_domain.clone(),
-            self.output_domain.clone(),
-            self.function.clone(),
             input_metric,
+            self.output_domain.clone(),
             output_metric,
+            self.function.clone(),
             privacy_map,
         )
     }
@@ -413,7 +413,7 @@ where
     }
 }
 
-impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, MO> {
+impl<DI: Domain, MI: Metric, DO: Domain, MO: Metric> Transformation<DI, MI, DO, MO> {
     pub fn invoke(&self, arg: &DI::Carrier) -> Fallible<DO::Carrier> {
         self.function.eval(arg)
     }
@@ -430,7 +430,7 @@ impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Transformation<DI, DO, MI, 
     }
 }
 
-impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> Debug for Transformation<DI, DO, MI, MO> {
+impl<DI: Domain, MI: Metric, DO: Domain, MO: Metric> Debug for Transformation<DI, MI, DO, MO> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Transformation")
             .field("input_domain", &self.input_domain)
@@ -448,17 +448,17 @@ mod test;
 mod partials {
     pub use super::*;
 
-    pub struct PartialTransformation<DI: Domain, DO: Domain, MI: Metric, MO: Metric>(
-        Box<dyn FnOnce(DI, MI) -> Fallible<Transformation<DI, DO, MI, MO>>>,
+    pub struct PartialTransformation<DI: Domain, MI: Metric, DO: Domain, MO: Metric>(
+        Box<dyn FnOnce(DI, MI) -> Fallible<Transformation<DI, MI, DO, MO>>>,
     );
 
-    impl<DI: Domain, DO: Domain, MI: Metric, MO: Metric> PartialTransformation<DI, DO, MI, MO>
+    impl<DI: Domain, MI: Metric, DO: Domain, MO: Metric> PartialTransformation<DI, MI, DO, MO>
     where
         (DI, MI): MetricSpace,
         (DO, MO): MetricSpace,
     {
         pub fn new(
-            partial: impl FnOnce(DI, MI) -> Fallible<Transformation<DI, DO, MI, MO>> + 'static,
+            partial: impl FnOnce(DI, MI) -> Fallible<Transformation<DI, MI, DO, MO>> + 'static,
         ) -> Self {
             Self(Box::new(partial))
         }
@@ -466,21 +466,21 @@ mod partials {
             self,
             input_domain: DI,
             input_metric: MI,
-        ) -> Fallible<Transformation<DI, DO, MI, MO>> {
+        ) -> Fallible<Transformation<DI, MI, DO, MO>> {
             (self.0)(input_domain, input_metric)
         }
     }
 
-    pub struct PartialMeasurement<DI: Domain, TO, MI: Metric, MO: Measure>(
-        Box<dyn FnOnce(DI, MI) -> Fallible<Measurement<DI, TO, MI, MO>>>,
+    pub struct PartialMeasurement<DI: Domain, MI: Metric, MO: Measure, TO>(
+        Box<dyn FnOnce(DI, MI) -> Fallible<Measurement<DI, MI, MO, TO>>>,
     );
 
-    impl<DI: Domain, TO, MI: Metric, MO: Measure> PartialMeasurement<DI, TO, MI, MO>
+    impl<DI: Domain, MI: Metric, MO: Measure, TO> PartialMeasurement<DI, MI, MO, TO>
     where
         (DI, MI): MetricSpace,
     {
         pub fn new(
-            partial: impl FnOnce(DI, MI) -> Fallible<Measurement<DI, TO, MI, MO>> + 'static,
+            partial: impl FnOnce(DI, MI) -> Fallible<Measurement<DI, MI, MO, TO>> + 'static,
         ) -> Self {
             Self(Box::new(partial))
         }
@@ -488,7 +488,7 @@ mod partials {
             self,
             input_domain: DI,
             input_metric: MI,
-        ) -> Fallible<Measurement<DI, TO, MI, MO>> {
+        ) -> Fallible<Measurement<DI, MI, MO, TO>> {
             (self.0)(input_domain, input_metric)
         }
     }

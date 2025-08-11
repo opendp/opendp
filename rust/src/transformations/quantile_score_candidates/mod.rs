@@ -43,8 +43,8 @@ pub fn make_quantile_score_candidates<MI: UnboundedMetric, TIA: Number>(
 ) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<TIA>>,
-        VectorDomain<AtomDomain<u64>>,
         MI,
+        VectorDomain<AtomDomain<u64>>,
         LInfDistance<u64>,
     >,
 >
@@ -65,9 +65,11 @@ where
         alpha,
     )?;
 
-    Transformation::<_, VectorDomain<AtomDomain<u64>>, _, _>::new(
+    Transformation::<_, _, VectorDomain<AtomDomain<u64>>, _>::new(
         input_domain.clone(),
+        input_metric,
         VectorDomain::default().with_size(candidates.len()),
+        LInfDistance::default(),
         Function::new(move |arg: &Vec<TIA>| {
             Vec::from_iter(score_candidates(
                 arg.iter().cloned(),
@@ -77,8 +79,6 @@ where
                 size_limit,
             ))
         }),
-        input_metric,
-        LInfDistance::default(),
         StabilityMap::new_fallible(score_candidates_map(
             alpha_num,
             alpha_den,

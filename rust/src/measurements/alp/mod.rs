@@ -222,9 +222,9 @@ pub fn make_alp_state_with_hashers<K, CI>(
 ) -> Fallible<
     Measurement<
         SparseDomain<K, CI>,
-        AlpState<K>,
         L01InfDistance<AbsoluteDistance<CI>>,
         MaxDivergence,
+        AlpState<K>,
     >,
 >
 where
@@ -255,6 +255,8 @@ where
 
     Measurement::new(
         input_domain,
+        input_metric,
+        MaxDivergence,
         Function::new_fallible(move |x: &HashMap<K, CI>| {
             let z = compute_projection(x, &hashers, alpha, scale, projection_size)?;
             Ok(AlpState {
@@ -264,8 +266,6 @@ where
                 z,
             })
         }),
-        input_metric,
-        MaxDivergence,
         PrivacyMap::new_fallible(move |(_l0, l1, _li)| f64::inf_cast(*l1)?.inf_mul(&scale)),
     )
 }
@@ -284,9 +284,9 @@ pub fn make_alp_state<K, CI>(
 ) -> Fallible<
     Measurement<
         SparseDomain<K, CI>,
-        AlpState<K>,
         L0PInfDistance<1, AbsoluteDistance<CI>>,
         MaxDivergence,
+        AlpState<K>,
     >,
 >
 where
@@ -392,9 +392,9 @@ pub fn make_alp_queryable<K, CI>(
 ) -> Fallible<
     Measurement<
         MapDomain<AtomDomain<K>, AtomDomain<CI>>,
-        Queryable<K, f64>,
         L0PInfDistance<1, AbsoluteDistance<CI>>,
         MaxDivergence,
+        Queryable<K, f64>,
     >,
 >
 where

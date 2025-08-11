@@ -50,10 +50,10 @@ pub extern "C" fn opendp_transformations__make_user_transformation(
 ) -> FfiResult<*mut AnyTransformation> {
     Transformation::new(
         try_as_ref!(input_domain).clone(),
-        try_as_ref!(output_domain).clone(),
-        Function::new_fallible(wrap_func(try_as_ref!(function).clone())),
         try_as_ref!(input_metric).clone(),
+        try_as_ref!(output_domain).clone(),
         try_as_ref!(output_metric).clone(),
+        Function::new_fallible(wrap_func(try_as_ref!(function).clone())),
         StabilityMap::new_fallible(wrap_func(try_as_ref!(stability_map).clone())),
     )
     .into()

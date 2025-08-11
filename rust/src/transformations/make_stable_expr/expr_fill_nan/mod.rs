@@ -21,7 +21,7 @@ pub fn make_expr_fill_nan<M: OuterMetric>(
     input_domain: WildExprDomain,
     input_metric: M,
     expr: Expr,
-) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
+) -> Fallible<Transformation<WildExprDomain, M, ExprDomain, M>>
 where
     M::InnerMetric: MicrodataMetric,
     M::Distance: Clone,
@@ -113,7 +113,9 @@ where
 
     Transformation::new(
         input_domain,
+        input_metric.clone(),
         output_domain,
+        input_metric,
         Function::new_fallible(move |arg| {
             let data = t_data.invoke(arg)?;
             let fill = t_fill.invoke(arg)?;
@@ -124,8 +126,6 @@ where
                 fill: data.fill.zip(fill.fill).map(|(d, f)| d.fill_nan(f)),
             })
         }),
-        input_metric.clone(),
-        input_metric,
         StabilityMap::new(Clone::clone),
     )
 }

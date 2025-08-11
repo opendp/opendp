@@ -146,8 +146,8 @@ pub trait IntoAnyMeasurementFfiResultExt {
     fn into_any(self) -> Fallible<AnyMeasurement>;
 }
 
-impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure>
-    IntoAnyMeasurementFfiResultExt for Fallible<Measurement<DI, TO, MI, MO>>
+impl<DI: 'static + Domain, MI: 'static + Metric, MO: 'static + Measure, TO: 'static>
+    IntoAnyMeasurementFfiResultExt for Fallible<Measurement<DI, MI, MO, TO>>
 where
     MO::Distance: 'static,
     (DI, MI): MetricSpace,
@@ -164,8 +164,8 @@ pub trait IntoAnyTransformationFfiResultExt {
     fn into_any(self) -> Fallible<AnyTransformation>;
 }
 
-impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Metric>
-    IntoAnyTransformationFfiResultExt for Fallible<Transformation<DI, DO, MI, MO>>
+impl<DI: 'static + Domain, MI: 'static + Metric, DO: 'static + Domain, MO: 'static + Metric>
+    IntoAnyTransformationFfiResultExt for Fallible<Transformation<DI, MI, DO, MO>>
 where
     DO::Carrier: 'static,
     MO::Distance: 'static,

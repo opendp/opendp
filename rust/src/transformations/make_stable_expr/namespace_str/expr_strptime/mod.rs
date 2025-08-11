@@ -22,7 +22,7 @@ pub fn make_expr_strptime<M: OuterMetric>(
     input_domain: WildExprDomain,
     input_metric: M,
     expr: Expr,
-) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
+) -> Fallible<Transformation<WildExprDomain, M, ExprDomain, M>>
 where
     M::InnerMetric: MicrodataMetric,
     M::Distance: Clone,
@@ -118,13 +118,13 @@ where
     t_prior
         >> Transformation::new(
             middle_domain.clone(),
+            middle_metric.clone(),
             output_domain,
+            middle_metric,
             Function::then_expr(move |expr| {
                 expr.str()
                     .strptime(to_type.clone(), strptime_options.clone(), ambiguous.clone())
             }),
-            middle_metric.clone(),
-            middle_metric,
             StabilityMap::new(Clone::clone),
         )?
 }

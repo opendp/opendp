@@ -21,7 +21,7 @@ pub fn make_expr_lit<M: OuterMetric>(
     input_domain: WildExprDomain,
     input_metric: M,
     expr: Expr,
-) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
+) -> Fallible<Transformation<WildExprDomain, M, ExprDomain, M>>
 where
     M::InnerMetric: MicrodataMetric,
     M::Distance: Clone,
@@ -68,10 +68,10 @@ where
 
     Transformation::new(
         input_domain,
-        output_domain,
-        Function::from_expr(expr),
         input_metric.clone(),
+        output_domain,
         input_metric,
+        Function::from_expr(expr),
         StabilityMap::new(Clone::clone),
     )
 }

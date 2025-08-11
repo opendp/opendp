@@ -45,7 +45,7 @@ pub fn make_private_group_by<MI, MO>(
     plan: DslPlan,
     global_scale: Option<f64>,
     threshold: Option<u32>,
-) -> Fallible<Measurement<DslPlanDomain, DslPlan, FrameDistance<MI>, MO>>
+) -> Fallible<Measurement<DslPlanDomain, FrameDistance<MI>, MO, DslPlan>>
 where
     MI: 'static + UnboundedMetric,
     MI::EventMetric: UnboundedMetric,
@@ -294,9 +294,9 @@ where
     t_prior
         >> Measurement::new(
             middle_domain,
-            function,
             middle_metric,
             output_measure,
+            function,
             privacy_map,
         )?
 }

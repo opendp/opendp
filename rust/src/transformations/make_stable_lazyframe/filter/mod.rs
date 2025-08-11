@@ -21,7 +21,7 @@ pub fn make_stable_filter<MI: UnboundedMetric, MO: UnboundedMetric>(
     input_domain: DslPlanDomain,
     input_metric: FrameDistance<MI>,
     plan: DslPlan,
-) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, FrameDistance<MI>, FrameDistance<MO>>>
+) -> Fallible<Transformation<DslPlanDomain, FrameDistance<MI>, DslPlanDomain, FrameDistance<MO>>>
 where
     DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MO>>,
 {
@@ -64,15 +64,15 @@ where
     t_prior
         >> Transformation::new(
             middle_domain,
+            middle_metric.clone(),
             output_domain,
+            middle_metric,
             Function::new_fallible(move |plan: &DslPlan| {
                 Ok(DslPlan::Filter {
                     input: Arc::new(plan.clone()),
                     predicate: function.eval(plan)?.expr,
                 })
             }),
-            middle_metric.clone(),
-            middle_metric,
             StabilityMap::new(Clone::clone),
         )?
 }

@@ -57,7 +57,7 @@ pub fn make_gaussian_threshold<DI: NoiseDomain, MI: Metric, MO: 'static + Measur
     scale: f64,
     threshold: DI::Atom,
     k: Option<i32>,
-) -> Fallible<Measurement<DI, DI::Carrier, MI, MO>>
+) -> Fallible<Measurement<DI, MI, MO, DI::Carrier>>
 where
     DiscreteGaussian: MakeNoiseThreshold<DI, MI, MO, Threshold = DI::Atom>,
     (DI, MI): MetricSpace,
@@ -80,7 +80,7 @@ where
         self,
         input_space: (DI, MI),
         threshold: DI::Atom,
-    ) -> Fallible<Measurement<DI, DI::Carrier, MI, MO>> {
+    ) -> Fallible<Measurement<DI, MI, MO, DI::Carrier>> {
         DI::Atom::new_distribution(self.scale, self.k)?.make_noise_threshold(input_space, threshold)
     }
 }

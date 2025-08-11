@@ -76,9 +76,9 @@ pub(crate) fn mismatch_error<T: Debug>(variant: ErrorVariant, struct1: &T, struc
 /// * `MX` - Intermediate Metric.
 /// * `MO` - Output Measure.
 pub fn make_chain_mt<DI, DX, TO, MI, MX, MO>(
-    measurement1: &Measurement<DX, TO, MX, MO>,
-    transformation0: &Transformation<DI, DX, MI, MX>,
-) -> Fallible<Measurement<DI, TO, MI, MO>>
+    measurement1: &Measurement<DX, MX, MO, TO>,
+    transformation0: &Transformation<DI, MI, DX, MX>,
+) -> Fallible<Measurement<DI, MI, MO, TO>>
 where
     DI: 'static + Domain,
     DX: 'static + Domain,
@@ -102,9 +102,9 @@ where
 
     Measurement::new(
         transformation0.input_domain.clone(),
-        Function::make_chain(&measurement1.function, &transformation0.function),
         transformation0.input_metric.clone(),
         measurement1.output_measure.clone(),
+        Function::make_chain(&measurement1.function, &transformation0.function),
         PrivacyMap::make_chain(&measurement1.privacy_map, &transformation0.stability_map),
     )
 }
@@ -124,9 +124,9 @@ where
 /// * `MX` - Intermediate Metric.
 /// * `MO` - Output Metric.
 pub fn make_chain_tt<DI, DX, DO, MI, MX, MO>(
-    transformation1: &Transformation<DX, DO, MX, MO>,
-    transformation0: &Transformation<DI, DX, MI, MX>,
-) -> Fallible<Transformation<DI, DO, MI, MO>>
+    transformation1: &Transformation<DX, MX, DO, MO>,
+    transformation0: &Transformation<DI, MI, DX, MX>,
+) -> Fallible<Transformation<DI, MI, DO, MO>>
 where
     DI: 'static + Domain,
     DX: 'static + Domain,
@@ -152,10 +152,10 @@ where
 
     Transformation::new(
         transformation0.input_domain.clone(),
-        transformation1.output_domain.clone(),
-        Function::make_chain(&transformation1.function, &transformation0.function),
         transformation0.input_metric.clone(),
+        transformation1.output_domain.clone(),
         transformation1.output_metric.clone(),
+        Function::make_chain(&transformation1.function, &transformation0.function),
         StabilityMap::make_chain(
             &transformation1.stability_map,
             &transformation0.stability_map,
@@ -179,8 +179,8 @@ where
 /// * `MO` - Output Measure.
 pub fn make_chain_pm<DI, TX, TO, MI, MO>(
     postprocess1: &Function<TX, TO>,
-    measurement0: &Measurement<DI, TX, MI, MO>,
-) -> Fallible<Measurement<DI, TO, MI, MO>>
+    measurement0: &Measurement<DI, MI, MO, TX>,
+) -> Fallible<Measurement<DI, MI, MO, TO>>
 where
     DI: 'static + Domain,
     TX: 'static,
@@ -191,9 +191,9 @@ where
 {
     Measurement::new(
         measurement0.input_domain.clone(),
-        Function::make_chain(postprocess1, &measurement0.function),
         measurement0.input_metric.clone(),
         measurement0.output_measure.clone(),
+        Function::make_chain(postprocess1, &measurement0.function),
         measurement0.privacy_map.clone(),
     )
 }

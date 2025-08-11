@@ -42,7 +42,7 @@ pub fn make_private_quantile<MI: 'static + UnboundedMetric, T: Number>(
     mut candidates: Vec<T>,
     alpha: f64,
     scale: f64,
-) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, T, MI, MaxDivergence>>
+) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, MI, MaxDivergence, T>>
 where
     (VectorDomain<AtomDomain<T>>, MI): MetricSpace,
 {

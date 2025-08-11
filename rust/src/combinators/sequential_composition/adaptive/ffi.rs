@@ -55,9 +55,9 @@ pub extern "C" fn opendp_combinators__make_adaptive_composition(
     ) -> Fallible<AnyMeasurement> {
         let meas = super::make_adaptive_composition::<
             AnyDomain,
-            AnyObject,
             TypedMetric<QI>,
             TypedMeasure<QO>,
+            AnyObject,
         >(
             input_domain,
             TypedMetric::<QI>::new(input_metric.clone())?,
@@ -108,19 +108,21 @@ pub extern "C" fn opendp_combinators__make_adaptive_composition(
 impl<QI: 'static + ProductOrd + Clone + Send + Sync, QO: 'static + ProductOrd + Clone + Send + Sync>
     Measurement<
         AnyDomain,
-        Queryable<Measurement<AnyDomain, AnyObject, TypedMetric<QI>, TypedMeasure<QO>>, AnyObject>,
         AnyMetric,
         AnyMeasure,
+        Queryable<Measurement<AnyDomain, TypedMetric<QI>, TypedMeasure<QO>, AnyObject>, AnyObject>,
     >
 {
     pub fn into_any_queryable_map(
         self,
-    ) -> Fallible<Measurement<AnyDomain, Queryable<AnyMeasurement, AnyObject>, AnyMetric, AnyMeasure>>
+    ) -> Fallible<Measurement<AnyDomain, AnyMetric, AnyMeasure, Queryable<AnyMeasurement, AnyObject>>>
     {
         let function = self.function.clone();
 
         Measurement::new(
             self.input_domain.clone(),
+            self.input_metric.clone(),
+            self.output_measure.clone(),
             Function::new_fallible(
                 move |arg: &AnyObject| -> Fallible<Queryable<AnyMeasurement, AnyObject>> {
                     let mut inner_qbl = function.eval(arg)?;
@@ -130,9 +132,9 @@ impl<QI: 'static + ProductOrd + Clone + Send + Sync, QO: 'static + ProductOrd + 
                             let privacy_map = query.privacy_map.clone();
                             let meas = Measurement::new(
                                 query.input_domain.clone(),
-                                query.function.clone(),
                                 TypedMetric::<QI>::new(query.input_metric.clone())?,
                                 TypedMeasure::<QO>::new(query.output_measure.clone())?,
+                                query.function.clone(),
                                 PrivacyMap::new_fallible(move |d_in: &QI| {
                                     privacy_map.eval(&AnyObject::new(d_in.clone()))?.downcast()
                                 }),
@@ -153,8 +155,6 @@ impl<QI: 'static + ProductOrd + Clone + Send + Sync, QO: 'static + ProductOrd + 
                     })
                 },
             ),
-            self.input_metric.clone(),
-            self.output_measure.clone(),
             self.privacy_map.clone(),
         )
     }

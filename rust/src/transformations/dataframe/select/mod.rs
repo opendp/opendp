@@ -28,8 +28,8 @@ pub fn make_select_column<K, TOA>(
 ) -> Fallible<
     Transformation<
         DataFrameDomain<K>,
-        VectorDomain<AtomDomain<TOA>>,
         SymmetricDistance,
+        VectorDomain<AtomDomain<TOA>>,
         SymmetricDistance,
     >,
 >
@@ -39,7 +39,9 @@ where
 {
     Transformation::new(
         DataFrameDomain::new(),
+        SymmetricDistance,
         VectorDomain::new(AtomDomain::default()),
+        SymmetricDistance,
         Function::new_fallible(move |arg: &DataFrame<K>| -> Fallible<Vec<TOA>> {
             // retrieve column from dataframe and handle error
             arg.get(&key)
@@ -48,8 +50,6 @@ where
                 .as_form::<Vec<TOA>>()
                 .map(|c| c.clone())
         }),
-        SymmetricDistance,
-        SymmetricDistance,
         StabilityMap::new_from_constant(1),
     )
 }
