@@ -80,16 +80,16 @@ impl Downcast for AnyObject {
     }
 }
 
-/// A struct wrapping a Box<dyn Any + Send + Sync>, with closures allowing it to implement Clone, PartialEq and Debug.
+/// A struct wrapping a Box<dyn Any>, with closures allowing it to implement Clone, PartialEq and Debug.
 pub struct ElementBox {
-    pub value: Box<dyn Any + Send + Sync>,
+    pub value: Box<dyn Any>,
     clone_glue: fn(&Self) -> Self,
     partial_eq_glue: fn(&Self, &Self) -> bool,
     debug_glue: fn(&Self) -> String,
 }
 
 impl ElementBox {
-    pub fn new<T: 'static + Clone + PartialEq + Debug + Send + Sync>(value: T) -> Self {
+    pub fn new<T: 'static + Clone + PartialEq + Debug>(value: T) -> Self {
         Self {
             value: Box::new(value),
             clone_glue: Self::make_clone_glue::<T>(),
@@ -98,8 +98,7 @@ impl ElementBox {
         }
     }
 
-    fn make_clone_glue<T: 'static + Clone + PartialEq + Debug + Send + Sync>() -> fn(&Self) -> Self
-    {
+    fn make_clone_glue<T: 'static + Clone + PartialEq + Debug>() -> fn(&Self) -> Self {
         |self_: &Self| {
             Self::new(
                 self_
@@ -110,13 +109,13 @@ impl ElementBox {
             )
         }
     }
-    fn make_eq_glue<T: 'static + PartialEq + Send + Sync>() -> fn(&Self, &Self) -> bool {
+    fn make_eq_glue<T: 'static + PartialEq>() -> fn(&Self, &Self) -> bool {
         |self_: &Self, other: &Self| {
             // The first downcast will always succeed, so equality check is all that's necessary.
             self_.value.downcast_ref::<T>() == other.value.downcast_ref::<T>()
         }
     }
-    fn make_debug_glue<T: 'static + Debug + Send + Sync>() -> fn(&Self) -> String {
+    fn make_debug_glue<T: 'static + Debug>() -> fn(&Self) -> String {
         |self_: &Self| {
             format!(
                 "{:?}",

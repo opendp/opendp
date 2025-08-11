@@ -1,6 +1,7 @@
 use crate::core::{Domain, Measure, Measurement, Metric, MetricSpace};
 use std::any::{Any, type_name};
 use std::cell::RefCell;
+use std::ops::Deref;
 use std::rc::Rc;
 
 use crate::error::*;
@@ -22,12 +23,12 @@ impl<Q: ?Sized, A> Queryable<Q, A> {
         }
     }
 
-    pub fn eval_wrap(
-        &mut self,
-        query: &Q,
-        wrapper: impl Fn(PolyQueryable) -> Fallible<PolyQueryable> + 'static,
-    ) -> Fallible<A> {
-        wrap(wrapper, || self.eval(query))
+    pub fn eval_wrap(&mut self, query: &Q, wrapper: Option<Wrapper>) -> Fallible<A> {
+        if let Some(w) = wrapper {
+            wrap(w, || self.eval(query))
+        } else {
+            self.eval(query)
+        }
     }
 
     pub(crate) fn eval_internal<'a, AI: 'static>(&mut self, query: &'a dyn Any) -> Fallible<AI> {
@@ -48,7 +49,14 @@ impl<Q: ?Sized, A> Queryable<Q, A> {
 
     #[inline]
     pub(crate) fn eval_query(&mut self, query: Query<Q>) -> Fallible<Answer<A>> {
-        return (self.0.as_ref().borrow_mut())(self, query);
+        let mut transition = self.0.as_ref().try_borrow_mut().map_err(|_| {
+            err!(
+                FailedFunction,
+                "a queryable may only execute one query at a time"
+            )
+        })?;
+
+        (transition)(self, query)
     }
 }
 
@@ -71,19 +79,16 @@ impl<A> Answer<A> {
 }
 
 thread_local! {
-    static WRAPPER: RefCell<Option<Rc<dyn Fn(PolyQueryable) -> Fallible<PolyQueryable>>>> = RefCell::new(None);
+    pub(crate) static WRAPPER: RefCell<Option<Rc<dyn Fn(PolyQueryable) -> Fallible<PolyQueryable>>>> = RefCell::new(None);
 }
 
-pub(crate) fn wrap<T>(
-    wrapper: impl Fn(PolyQueryable) -> Fallible<PolyQueryable> + 'static,
-    f: impl FnOnce() -> T,
-) -> T {
+pub(crate) fn wrap<T>(wrapper: Wrapper, f: impl FnOnce() -> T) -> T {
     let prev_wrapper = WRAPPER.with(|w| w.borrow_mut().take());
 
     let new_wrapper = Some(if let Some(prev) = prev_wrapper.clone() {
-        Rc::new(move |qbl| (wrapper)((prev)(qbl)?)) as Rc<_>
+        Rc::new(move |qbl| (prev)((wrapper)(qbl)?)) as Rc<_>
     } else {
-        Rc::new(wrapper) as Rc<_>
+        wrapper.0
     });
 
     WRAPPER.with(|w| *w.borrow_mut() = new_wrapper);
@@ -96,49 +101,63 @@ impl<DI: Domain, MI: Metric, MO: Measure, TO> Measurement<DI, MI, MO, TO>
 where
     (DI, MI): MetricSpace,
 {
-    pub fn invoke_wrap(
-        &self,
-        arg: &DI::Carrier,
-        wrapper: impl Fn(PolyQueryable) -> Fallible<PolyQueryable> + 'static,
-    ) -> Fallible<TO> {
-        wrap(wrapper, || self.invoke(arg))
+    pub fn invoke_wrap(&self, arg: &DI::Carrier, wrapper: Option<Wrapper>) -> Fallible<TO> {
+        if let Some(w) = wrapper {
+            wrap(w, || self.invoke(arg))
+        } else {
+            self.invoke(arg)
+        }
     }
 }
 
-/// WrapFn is a utility for constructing a closure that wraps a PolyQueryable,
-/// in a way that recursively wraps any PolyQueryables that are returned.
-///
-/// The use of a struct avoids an infinite recursion in the type system,
-/// as the first argument to the closure is the same type as the closure itself.
 #[derive(Clone)]
-pub(crate) struct WrapFn(pub Rc<dyn Fn(WrapFn, PolyQueryable) -> Fallible<PolyQueryable>>);
-impl WrapFn {
-    // constructs a closure that wraps a PolyQueryable
-    pub(crate) fn as_map(&self) -> impl Fn(PolyQueryable) -> Fallible<PolyQueryable> + use<> {
-        let wrap_logic = self.clone();
-        move |qbl| (wrap_logic.0)(wrap_logic.clone(), qbl)
+pub struct Wrapper(pub Rc<dyn Fn(PolyQueryable) -> Fallible<PolyQueryable>>);
+
+impl Wrapper {
+    pub fn new(wrapper: impl Fn(PolyQueryable) -> Fallible<PolyQueryable> + 'static) -> Self {
+        Wrapper(Rc::new(wrapper))
     }
 
-    pub(crate) fn new(
-        logic: impl Fn(WrapFn, PolyQueryable) -> Fallible<PolyQueryable> + 'static,
-    ) -> Self {
-        WrapFn(Rc::new(logic))
+    /// Creates a recursive wrapper that recursively applies itself to child queryables.
+    /// `hook` is called any time the wrapped queryable or any of its children are queried.
+    pub fn new_recursive_pre_hook(hook: impl FnMut() -> Fallible<()> + Clone + 'static) -> Wrapper {
+        RecursiveWrapper(Rc::new(move |recursive_wrapper, mut inner_qbl| {
+            let mut hook = hook.clone();
+            Ok(Queryable::new_raw(move |_, query: Query<dyn Any>| {
+                // call the hook
+                hook()?;
+
+                // evaluate the query and wrap the answer
+                let out = wrap(recursive_wrapper.to_wrapper(), || {
+                    inner_qbl.eval_query(query)
+                });
+                out
+            }))
+        }))
+        .to_wrapper()
     }
+}
 
-    pub(crate) fn new_pre_hook(pre_hook: impl FnMut() -> Fallible<()> + 'static) -> Self {
-        let pre_hook = Rc::new(RefCell::new(pre_hook));
-        WrapFn::new(move |wrap_logic, mut inner_qbl| {
-            let pre_hook = pre_hook.clone();
-            Ok(Queryable::new_raw(
-                move |_wrapper_qbl, query: Query<dyn Any>| {
-                    // check the pre_hook for permission to execute
-                    (pre_hook.as_ref().borrow_mut())()?;
+// make Wrapper callable as a function
+impl Deref for Wrapper {
+    type Target = dyn Fn(PolyQueryable) -> Fallible<PolyQueryable>;
 
-                    // evaluate the query and wrap the answer
-                    wrap(wrap_logic.as_map(), || inner_qbl.eval_query(query))
-                },
-            ))
-        })
+    fn deref(&self) -> &Self::Target {
+        &*self.0
+    }
+}
+
+/// RecursiveWrapper is a utility for constructing a closure that wraps a Queryable,
+/// in a way that recursively wraps any children of the Queryable.
+// The use of a struct avoids an infinite recursion in the type system,
+// as the first argument to the closure is the same type as the closure itself.
+#[derive(Clone)]
+struct RecursiveWrapper(pub Rc<dyn Fn(RecursiveWrapper, PolyQueryable) -> Fallible<PolyQueryable>>);
+
+impl RecursiveWrapper {
+    fn to_wrapper(&self) -> Wrapper {
+        let self_ = self.clone();
+        Wrapper::new(move |qbl: PolyQueryable| self_.0(self_.clone(), qbl))
     }
 }
 
