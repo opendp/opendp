@@ -89,29 +89,34 @@ While the dataset does not contain a unique identifier for individuals,
 we've generated a synthetic column of unique identifiers, ``PIDENT``, for the purpose of demonstrating library functionality.
 
 
-Compositor Overview
--------------------
+Mediate access with ``Context``
+-------------------------------
 
-The compositor is the foundation of our differentially private analysis. 
+The ``Context`` is the foundation of our differentially private analysis. 
 It mediates access to the sensitive data,
 ensuring that queries you would like to release satisfy necessary privacy properties. 
 
-.. testsetup::
-    >>> import polars as pl
-    >>> df = pl.LazyFrame()
+.. tab-set::
 
-.. doctest:: python
+    .. tab-item:: Python
+        :sync: python
 
-    >>> context = dp.Context.compositor(
-    ...     data=df,
-    ...     privacy_unit=dp.unit_of(contributions=36),
-    ...     privacy_loss=dp.loss_of(epsilon=1.0),
-    ...     split_evenly_over=10,
-    ... )
-    
-    >>> # Once you construct the context, you should abstain from directly accessing your data again.
-    >>> # In fact, it is good practice to delete it! 
-    >>> del df
+        .. code:: python
+          
+            >>> import polars as pl
+            >>> df = pl.LazyFrame()
+
+            >>> context = dp.Context.compositor(
+            ...     data=df,
+            ...     privacy_unit=dp.unit_of(contributions=36),
+            ...     privacy_loss=dp.loss_of(epsilon=1.0),
+            ...     split_evenly_over=10,
+            ... )
+            
+            >>> # Once you construct the context, you should abstain from
+            >>> # directly accessing your data again.
+            >>> # In fact, it is good practice to delete it! 
+            >>> del df
 
 Context Parameters
 ~~~~~~~~~~~~~~~~~~
