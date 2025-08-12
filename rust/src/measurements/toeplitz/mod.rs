@@ -1,19 +1,36 @@
 //! Toeplitz mechanism for differentially private continual release
 //! 
 //! This module provides two APIs for the Toeplitz mechanism:
-//! - One-shot API: `make_toeplitz` for single computations
-//! - Continual API: `BaselineContinualToeplitz` and `MonotonicContinualToeplitz` for stateful, incremental releases
+//! 
+//! ## One-shot API
+//! Functions that return standard OpenDP measurements for single computations:
+//! - `make_toeplitz` - Base function with monotonicity flag
+//! - `make_baseline_toeplitz` - Without monotonicity enforcement  
+//! - `make_monotonic_toeplitz` - With isotonic regression for monotonicity
+//! 
+//! ## Continual Release API
+//! Stateful structs implementing the `ContinualRelease` trait for incremental releases:
+//! - `BaselineContinualToeplitz` - Without monotonicity enforcement
+//! - `MonotonicContinualToeplitz` - With isotonic regression for monotonicity
 
 // Internal modules
 mod utils;
 
-// Public API exports
-/// One-shot Toeplitz measurement
+// Public API exports for one-shot measurements
 #[cfg(feature = "contrib-continual")]
-pub use one_shot::make_toeplitz;
-/// Continual release API (when feature enabled)
+pub use one_shot::{
+    make_toeplitz,
+    make_baseline_toeplitz,
+    make_monotonic_toeplitz,
+};
+
+// Public API exports for continual release
 #[cfg(feature = "contrib-continual")]
-pub use continual::{BaselineContinualToeplitz, MonotonicContinualToeplitz, ContinualRelease};
+pub use continual::{
+    BaselineContinualToeplitz,
+    MonotonicContinualToeplitz,
+    ContinualRelease,
+};
 
 // API modules
 #[cfg(feature = "contrib-continual")]
