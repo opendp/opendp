@@ -18,6 +18,13 @@ essential statistical measures with `Polars <https://docs.pola.rs/>`__.
 
   - Median (``.median(candidates)``)
 
+<<<<<<< HEAD
+=======
+We will use `sample
+data <https://github.com/opendp/dp-test-datasets/blob/main/data/eurostat/README.ipynb>`__
+from the Labour Force Survey in France.
+
+>>>>>>> main
 .. tab-set::
 
     .. tab-item:: Python
@@ -87,6 +94,7 @@ committing to a release:
         .. code:: python
 
             >>> query_num_responses.summarize(alpha=0.05)
+<<<<<<< HEAD
             
 
 .. raw:: html
@@ -100,6 +108,16 @@ committing to a release:
     </style>
     <small>shape: (1, 5)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th><th>accuracy</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td><td>f64</td></tr></thead><tbody><tr><td>&quot;len&quot;</td><td>&quot;Frame Length&quot;</td><td>&quot;Integer Laplace&quot;</td><td>180.0</td><td>539.731115</td></tr></tbody></table></div>
 
+=======
+            shape: (1, 5)
+            ┌────────┬──────────────┬─────────────────┬───────┬────────────┐
+            │ column ┆ aggregate    ┆ distribution    ┆ scale ┆ accuracy   │
+            │ ---    ┆ ---          ┆ ---             ┆ ---   ┆ ---        │
+            │ str    ┆ str          ┆ str             ┆ f64   ┆ f64        │
+            ╞════════╪══════════════╪═════════════════╪═══════╪════════════╡
+            │ len    ┆ Frame Length ┆ Integer Laplace ┆ 180.0 ┆ 539.731115 │
+            └────────┴──────────────┴─────────────────┴───────┴────────────┘
+>>>>>>> main
 
 
 When this query is released, Laplacian noise is added with a scale
@@ -123,6 +141,7 @@ significance becomes smaller:
         .. code:: python
 
             >>> query_num_responses.summarize(alpha=0.01)
+<<<<<<< HEAD
             
 
 .. raw:: html
@@ -136,6 +155,16 @@ significance becomes smaller:
     </style>
     <small>shape: (1, 5)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th><th>accuracy</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td><td>f64</td></tr></thead><tbody><tr><td>&quot;len&quot;</td><td>&quot;Frame Length&quot;</td><td>&quot;Integer Laplace&quot;</td><td>180.0</td><td>829.429939</td></tr></tbody></table></div>
 
+=======
+            shape: (1, 5)
+            ┌────────┬──────────────┬─────────────────┬───────┬────────────┐
+            │ column ┆ aggregate    ┆ distribution    ┆ scale ┆ accuracy   │
+            │ ---    ┆ ---          ┆ ---             ┆ ---   ┆ ---        │
+            │ str    ┆ str          ┆ str             ┆ f64   ┆ f64        │
+            ╞════════╪══════════════╪═════════════════╪═══════╪════════════╡
+            │ len    ┆ Frame Length ┆ Integer Laplace ┆ 180.0 ┆ 829.429939 │
+            └────────┴──────────────┴─────────────────┴───────┴────────────┘
+>>>>>>> main
 
 
 The DP ``len`` estimate will differ from the true ``len`` by no more
@@ -151,8 +180,13 @@ release the query:
 
         .. code:: python
 
+<<<<<<< HEAD
             >>> query_num_responses.release().collect().item()
             3811852
+=======
+            >>> print('len:', query_num_responses.release().collect().item()) # doctest: +ELLIPSIS
+            len: ...
+>>>>>>> main
 
 Other variations of counting queries are discussed in the `Aggregation
 section <../../api/user-guide/polars/expressions/aggregation.ipynb>`__.
@@ -242,6 +276,10 @@ with 35, which, based on other public information, is the average number
 of weekly work hours in France. Your choice of imputation value will
 vary depending on how you want to use the statistic.
 
+<<<<<<< HEAD
+=======
+.. note::
+>>>>>>> main
    Do not use private data to calculate imputed values or bounds: This
    could leak private information, reducing the integrity of the privacy
    guarantee. Instead, choose bounds and imputed values based on prior
@@ -255,19 +293,14 @@ vary depending on how you want to use the statistic.
         .. code:: python
 
             >>> query_work_hours.summarize(alpha=0.05)
-            
-
-.. raw:: html
-
-    <div><style>
-    .dataframe > thead > tr,
-    .dataframe > tbody > tr {
-      text-align: right;
-      white-space: pre-wrap;
-    }
-    </style>
-    <small>shape: (1, 5)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th><th>accuracy</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Sum&quot;</td><td>&quot;Integer Laplace&quot;</td><td>14400.0</td><td>43139.04473</td></tr></tbody></table></div>
-
+            shape: (1, 5)
+            ┌─────────┬───────────┬─────────────────┬─────────┬─────────────┐
+            │ column  ┆ aggregate ┆ distribution    ┆ scale   ┆ accuracy    │
+            │ ---     ┆ ---       ┆ ---             ┆ ---     ┆ ---         │
+            │ str     ┆ str       ┆ str             ┆ f64     ┆ f64         │
+            ╞═════════╪═══════════╪═════════════════╪═════════╪═════════════╡
+            │ HWUSUAL ┆ Sum       ┆ Integer Laplace ┆ 14400.0 ┆ 43139.04473 │
+            └─────────┴───────────┴─────────────────┴─────────┴─────────────┘
 
 
 The noise scale 14,400 comes from the product of 36 (number of
@@ -285,20 +318,8 @@ not take into account bias introduced by clipping responses.
 
         .. code:: python
 
-            >>> query_work_hours.release().collect()
-            
-
-.. raw:: html
-
-    <div><style>
-    .dataframe > thead > tr,
-    .dataframe > tbody > tr {
-      text-align: right;
-      white-space: pre-wrap;
-    }
-    </style>
-    <small>shape: (1, 1)</small><table border="1" class="dataframe"><thead><tr><th>HWUSUAL</th></tr><tr><td>i64</td></tr></thead><tbody><tr><td>56303875</td></tr></tbody></table></div>
-
+            >>> print('HWUSUAL:', query_work_hours.release().collect().item()) # doctest: +ELLIPSIS 
+            HWUSUAL: ...
 
 
 Even though the accuracy estimate may have seemed large, in retrospect
@@ -333,19 +354,15 @@ estimates.
             ... )
             
             >>> query_work_hours.summarize(alpha=0.05)
-            
-
-.. raw:: html
-
-    <div><style>
-    .dataframe > thead > tr,
-    .dataframe > tbody > tr {
-      text-align: right;
-      white-space: pre-wrap;
-    }
-    </style>
-    <small>shape: (2, 5)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th><th>accuracy</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Sum&quot;</td><td>&quot;Integer Laplace&quot;</td><td>28800.0</td><td>86277.589474</td></tr><tr><td>&quot;len&quot;</td><td>&quot;Frame Length&quot;</td><td>&quot;Integer Laplace&quot;</td><td>360.0</td><td>1078.963271</td></tr></tbody></table></div>
-
+            shape: (2, 5)
+            ┌─────────┬──────────────┬─────────────────┬─────────┬──────────────┐
+            │ column  ┆ aggregate    ┆ distribution    ┆ scale   ┆ accuracy     │
+            │ ---     ┆ ---          ┆ ---             ┆ ---     ┆ ---          │
+            │ str     ┆ str          ┆ str             ┆ f64     ┆ f64          │
+            ╞═════════╪══════════════╪═════════════════╪═════════╪══════════════╡
+            │ HWUSUAL ┆ Sum          ┆ Integer Laplace ┆ 28800.0 ┆ 86277.589474 │
+            │ len     ┆ Frame Length ┆ Integer Laplace ┆ 360.0   ┆ 1078.963271  │
+            └─────────┴──────────────┴─────────────────┴─────────┴──────────────┘
 
 
 This joint query satisfies the same privacy guarantee as each of the
@@ -363,20 +380,15 @@ means on different columns.
         .. code:: python
 
             >>> # release and create mean column
-            >>> query_work_hours.release().collect().with_columns(mean=pl.col.HWUSUAL / pl.col.len)
-            
-
-.. raw:: html
-
-    <div><style>
-    .dataframe > thead > tr,
-    .dataframe > tbody > tr {
-      text-align: right;
-      white-space: pre-wrap;
-    }
-    </style>
-    <small>shape: (1, 3)</small><table border="1" class="dataframe"><thead><tr><th>HWUSUAL</th><th>len</th><th>mean</th></tr><tr><td>i64</td><td>u32</td><td>f64</td></tr></thead><tbody><tr><td>56322886</td><td>1496037</td><td>37.648057</td></tr></tbody></table></div>
-
+            >>> query_work_hours.release().collect().with_columns(mean=pl.col.HWUSUAL / pl.col.len) # doctest: +FUZZY_DF
+            shape: (1, 3)
+            ┌──────────┬─────────┬───────────┐
+            │ HWUSUAL  ┆ len     ┆ mean      │
+            │ ---      ┆ ---     ┆ ---       │
+            │ i64      ┆ u32     ┆ f64       │
+            ╞══════════╪═════════╪═══════════╡
+            │ ...      ┆ ...     ┆ ...       │
+            └──────────┴─────────┴───────────┘
 
 
 If the dataset size is an invariant (bounded-DP), then only the sums
@@ -448,43 +460,18 @@ behavior can be observed in the query summary:
         .. code:: python
 
             >>> query_mean_work_hours.summarize(alpha=0.05)
-            
+            shape: (2, 5)
+            ┌─────────┬───────────┬─────────────────┬────────┬──────────────┐
+            │ column  ┆ aggregate ┆ distribution    ┆ scale  ┆ accuracy     │
+            │ ---     ┆ ---       ┆ ---             ┆ ---    ┆ ---          │
+            │ str     ┆ str       ┆ str             ┆ f64    ┆ f64          │
+            ╞═════════╪═══════════╪═════════════════╪════════╪══════════════╡
+            │ HWUSUAL ┆ Sum       ┆ Integer Laplace ┆ 7200.0 ┆ 21569.772352 │
+            │ HWUSUAL ┆ Length    ┆ Integer Laplace ┆ 0.0    ┆ NaN          │
+            └─────────┴───────────┴─────────────────┴────────┴──────────────┘
 
-.. raw:: html
-
-    <div><style>
-    .dataframe > thead > tr,
-    .dataframe > tbody > tr {
-      text-align: right;
-      white-space: pre-wrap;
-    }
-    </style>
-    <small>shape: (2, 5)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th><th>accuracy</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Sum&quot;</td><td>&quot;Integer Laplace&quot;</td><td>7200.0</td><td>21569.772352</td></tr><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Length&quot;</td><td>&quot;Integer Laplace&quot;</td><td>0.0</td><td>NaN</td></tr></tbody></table></div>
-
-
-
-.. tab-set::
-
-    .. tab-item:: Python
-        :sync: python
-
-        .. code:: python
-
-            >>> query_mean_work_hours.release().collect()
-            
-
-.. raw:: html
-
-    <div><style>
-    .dataframe > thead > tr,
-    .dataframe > tbody > tr {
-      text-align: right;
-      white-space: pre-wrap;
-    }
-    </style>
-    <small>shape: (1, 1)</small><table border="1" class="dataframe"><thead><tr><th>HWUSUAL</th></tr><tr><td>f64</td></tr></thead><tbody><tr><td>37.654558</td></tr></tbody></table></div>
-
-
+            >>> print('mean:', query_mean_work_hours.release().collect().item())
+            mean: ...
 
 To recap, we’ve shown how to estimate linear statistics like counts,
 sums and means. These estimates were all released via output
@@ -518,19 +505,14 @@ set candidates to whole numbers between 20 and 60:
             ...     .select(pl.col.HWUSUAL.cast(int).fill_null(35).dp.median(candidates))
             ... )
             >>> query_median_hours.summarize(alpha=0.05)
-            
-
-.. raw:: html
-
-    <div><style>
-    .dataframe > thead > tr,
-    .dataframe > tbody > tr {
-      text-align: right;
-      white-space: pre-wrap;
-    }
-    </style>
-    <small>shape: (1, 5)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th><th>accuracy</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;0.5-Quantile&quot;</td><td>&quot;GumbelMin&quot;</td><td>360.0</td><td>null</td></tr></tbody></table></div>
-
+            shape: (1, 5)
+            ┌─────────┬──────────────┬──────────────┬───────┬──────────┐
+            │ column  ┆ aggregate    ┆ distribution ┆ scale ┆ accuracy │
+            │ ---     ┆ ---          ┆ ---          ┆ ---   ┆ ---      │
+            │ str     ┆ str          ┆ str          ┆ f64   ┆ f64      │
+            ╞═════════╪══════════════╪══════════════╪═══════╪══════════╡
+            │ HWUSUAL ┆ 0.5-Quantile ┆ GumbelMin    ┆ 360.0 ┆ null     │
+            └─────────┴──────────────┴──────────────┴───────┴──────────┘
 
 
 The ``aggregate`` value shows “0.5-Quantile” because ``.dp.median``
@@ -551,20 +533,8 @@ estimates.
 
         .. code:: python
 
-            >>> query_median_hours.release().collect()
-            
-
-.. raw:: html
-
-    <div><style>
-    .dataframe > thead > tr,
-    .dataframe > tbody > tr {
-      text-align: right;
-      white-space: pre-wrap;
-    }
-    </style>
-    <small>shape: (1, 1)</small><table border="1" class="dataframe"><thead><tr><th>HWUSUAL</th></tr><tr><td>i64</td></tr></thead><tbody><tr><td>37</td></tr></tbody></table></div>
-
+            >>> print('median:', query_median_hours.release().collect()) # doctest: +ELLIPSIS
+            median: ...
 
 
 This median estimate is consistent with the mean estimate from the
@@ -596,20 +566,16 @@ hours:
             ...     )
             ... )
             >>> query_multi_quantiles.summarize()
-            
-
-.. raw:: html
-
-    <div><style>
-    .dataframe > thead > tr,
-    .dataframe > tbody > tr {
-      text-align: right;
-      white-space: pre-wrap;
-    }
-    </style>
-    <small>shape: (3, 4)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;0.25-Quantile&quot;</td><td>&quot;0.25-Quantile&quot;</td><td>&quot;GumbelMin&quot;</td><td>3240.0</td></tr><tr><td>&quot;0.5-Quantile&quot;</td><td>&quot;0.5-Quantile&quot;</td><td>&quot;GumbelMin&quot;</td><td>1080.0</td></tr><tr><td>&quot;0.75-Quantile&quot;</td><td>&quot;0.75-Quantile&quot;</td><td>&quot;GumbelMin&quot;</td><td>3240.0</td></tr></tbody></table></div>
-
-
+            shape: (3, 4)
+            ┌───────────────┬───────────────┬──────────────┬────────┐
+            │ column        ┆ aggregate     ┆ distribution ┆ scale  │
+            │ ---           ┆ ---           ┆ ---          ┆ ---    │
+            │ str           ┆ str           ┆ str          ┆ f64    │
+            ╞═══════════════╪═══════════════╪══════════════╪════════╡
+            │ 0.25-Quantile ┆ 0.25-Quantile ┆ GumbelMin    ┆ 3240.0 │
+            │ 0.5-Quantile  ┆ 0.5-Quantile  ┆ GumbelMin    ┆ 1080.0 │
+            │ 0.75-Quantile ┆ 0.75-Quantile ┆ GumbelMin    ┆ 3240.0 │
+            └───────────────┴───────────────┴──────────────┴────────┘
 
 When you do not set the scale parameter yourself, the privacy budget is
 distributed evenly across each statistic. Judging from the scale
@@ -624,20 +590,15 @@ implementation details.
 
         .. code:: python
 
-            >>> query_multi_quantiles.release().collect()
-            
-
-.. raw:: html
-
-    <div><style>
-    .dataframe > thead > tr,
-    .dataframe > tbody > tr {
-      text-align: right;
-      white-space: pre-wrap;
-    }
-    </style>
-    <small>shape: (1, 3)</small><table border="1" class="dataframe"><thead><tr><th>0.25-Quantile</th><th>0.5-Quantile</th><th>0.75-Quantile</th></tr><tr><td>i64</td><td>i64</td><td>i64</td></tr></thead><tbody><tr><td>35</td><td>37</td><td>40</td></tr></tbody></table></div>
-
+            >>> query_multi_quantiles.release().collect() # doctest: +FUZZY_DF
+            shape: (1, 3)
+            ┌───────────────┬──────────────┬───────────────┐
+            │ 0.25-Quantile ┆ 0.5-Quantile ┆ 0.75-Quantile │
+            │ ---           ┆ ---          ┆ ---           │
+            │ i64           ┆ i64          ┆ i64           │
+            ╞═══════════════╪══════════════╪═══════════════╡
+            │ ...           ┆ ...          ┆ ...           │
+            └───────────────┴──────────────┴───────────────┘
 
 
 Since work hours tend to be concentrated a little less than 40, this
