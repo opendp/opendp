@@ -36,8 +36,9 @@ This functionality is not enabled by default.
 Dataset Description 
 -------------------
 
-For this section of the documentation, we will use the `Labour Force Survey microdata <https://ec.europa.eu/eurostat/web/microdata/public-microdata/labour-force-survey>`_ released by Eurostat.
-The data surveys working hours of individuals in the European Union collected on a quarterly cadence.
+We will use a `Labour Force Survey microdata <https://ec.europa.eu/eurostat/web/microdata/public-microdata/labour-force-survey>`_ released by Eurostat
+for this tutorial, with some `additional preprocessing <https://github.com/opendp/dp-test-datasets/blob/main/data/eurostat/README.ipynb>`__.
+On a quarterly cadence Eurostat surveys the working hours of individuals in the European Union.
 The public microdata is protected using traditional statistical disclosure control methods such as global recoding, local suppression, and addition of noise. 
 
 We chose this dataset for a few reasons: 
@@ -48,7 +49,8 @@ We chose this dataset for a few reasons:
 
 For this tutorial, we selected a few columns of interest from the public microdata of France across 9 study years. 
 
-The `User Guide <https://www.gesis.org/missy/files/documents/EU-LFS/EULFS_Database_UserGuide_2021-3.pdf>`_ describes many variables. 
+The `User Guide <https://www.gesis.org/missy/files/documents/EU-LFS/EULFS_Database_UserGuide_2021-3.pdf>`_
+for the dataset describes many variables. 
 Our examples will use just a few. (Descriptions are copied from the User Guide.) 
 
 .. list-table:: 

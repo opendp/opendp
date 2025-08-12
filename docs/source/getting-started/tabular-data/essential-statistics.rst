@@ -18,10 +18,6 @@ essential statistical measures with `Polars <https://docs.pola.rs/>`__.
 
   - Median (``.median(candidates)``)
 
-We will use `sample
-data <https://github.com/opendp/dp-test-datasets/blob/main/data/eurostat/README.ipynb>`__
-from the Labour Force Survey in France.
-
 .. tab-set::
 
     .. tab-item:: Python
