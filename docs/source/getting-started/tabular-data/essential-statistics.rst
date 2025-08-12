@@ -18,13 +18,10 @@ essential statistical measures with `Polars <https://docs.pola.rs/>`__.
 
   - Median (``.median(candidates)``)
 
-<<<<<<< HEAD
-=======
 We will use `sample
 data <https://github.com/opendp/dp-test-datasets/blob/main/data/eurostat/README.ipynb>`__
 from the Labour Force Survey in France.
 
->>>>>>> main
 .. tab-set::
 
     .. tab-item:: Python
@@ -94,21 +91,6 @@ committing to a release:
         .. code:: python
 
             >>> query_num_responses.summarize(alpha=0.05)
-<<<<<<< HEAD
-            
-
-.. raw:: html
-
-    <div><style>
-    .dataframe > thead > tr,
-    .dataframe > tbody > tr {
-      text-align: right;
-      white-space: pre-wrap;
-    }
-    </style>
-    <small>shape: (1, 5)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th><th>accuracy</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td><td>f64</td></tr></thead><tbody><tr><td>&quot;len&quot;</td><td>&quot;Frame Length&quot;</td><td>&quot;Integer Laplace&quot;</td><td>180.0</td><td>539.731115</td></tr></tbody></table></div>
-
-=======
             shape: (1, 5)
             ┌────────┬──────────────┬─────────────────┬───────┬────────────┐
             │ column ┆ aggregate    ┆ distribution    ┆ scale ┆ accuracy   │
@@ -117,7 +99,6 @@ committing to a release:
             ╞════════╪══════════════╪═════════════════╪═══════╪════════════╡
             │ len    ┆ Frame Length ┆ Integer Laplace ┆ 180.0 ┆ 539.731115 │
             └────────┴──────────────┴─────────────────┴───────┴────────────┘
->>>>>>> main
 
 
 When this query is released, Laplacian noise is added with a scale
@@ -141,21 +122,6 @@ significance becomes smaller:
         .. code:: python
 
             >>> query_num_responses.summarize(alpha=0.01)
-<<<<<<< HEAD
-            
-
-.. raw:: html
-
-    <div><style>
-    .dataframe > thead > tr,
-    .dataframe > tbody > tr {
-      text-align: right;
-      white-space: pre-wrap;
-    }
-    </style>
-    <small>shape: (1, 5)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th><th>accuracy</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td><td>f64</td></tr></thead><tbody><tr><td>&quot;len&quot;</td><td>&quot;Frame Length&quot;</td><td>&quot;Integer Laplace&quot;</td><td>180.0</td><td>829.429939</td></tr></tbody></table></div>
-
-=======
             shape: (1, 5)
             ┌────────┬──────────────┬─────────────────┬───────┬────────────┐
             │ column ┆ aggregate    ┆ distribution    ┆ scale ┆ accuracy   │
@@ -164,7 +130,6 @@ significance becomes smaller:
             ╞════════╪══════════════╪═════════════════╪═══════╪════════════╡
             │ len    ┆ Frame Length ┆ Integer Laplace ┆ 180.0 ┆ 829.429939 │
             └────────┴──────────────┴─────────────────┴───────┴────────────┘
->>>>>>> main
 
 
 The DP ``len`` estimate will differ from the true ``len`` by no more
@@ -180,13 +145,8 @@ release the query:
 
         .. code:: python
 
-<<<<<<< HEAD
-            >>> query_num_responses.release().collect().item()
-            3811852
-=======
             >>> print('len:', query_num_responses.release().collect().item()) # doctest: +ELLIPSIS
             len: ...
->>>>>>> main
 
 Other variations of counting queries are discussed in the `Aggregation
 section <../../api/user-guide/polars/expressions/aggregation.ipynb>`__.
@@ -276,10 +236,7 @@ with 35, which, based on other public information, is the average number
 of weekly work hours in France. Your choice of imputation value will
 vary depending on how you want to use the statistic.
 
-<<<<<<< HEAD
-=======
 .. note::
->>>>>>> main
    Do not use private data to calculate imputed values or bounds: This
    could leak private information, reducing the integrity of the privacy
    guarantee. Instead, choose bounds and imputed values based on prior
@@ -603,11 +560,6 @@ implementation details.
 
 Since work hours tend to be concentrated a little less than 40, this
 release seems reasonable.
-
-Throughout this notebook, all ``.dp`` expressions take an optional scale
-parameter that can be used to more finely control how much noise is
-added to queries. The library then rescales all of these parameters up
-or down to satisfy a global privacy guarantee.
 
 Now that you have a handle on the essential statistics, the next section
 will introduce you to applying these statistics over groupings of your
