@@ -15,8 +15,8 @@ Identifier Truncation and Bounds
             >>> import polars as pl
             >>> dp.enable_features("contrib")
 
-            >>> # the PIDENT column contains individual identifiers
-            >>> # an individual may contribute data under at most 1 PIDENT identifier
+            >>> # The PIDENT column contains individual identifiers.
+            >>> # An individual may contribute data under at most 1 PIDENT identifier.
             >>> privacy_unit = dp.unit_of(contributions=1, identifier=pl.col("PIDENT"))
             >>> context = dp.Context.compositor(
             ...     data=pl.scan_csv(dp.examples.get_france_lfs_path(), ignore_errors=True),
