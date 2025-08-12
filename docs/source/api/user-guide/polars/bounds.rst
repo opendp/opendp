@@ -3,6 +3,10 @@
 Identifier Truncation and Bounds
 ================================
 
+It's also important to be mindful of the structure of our data
+when thinking about identifier truncation and bounds.
+This is another area where there are opportunities to lower the
+sensitivity of the analysis to individual contributions, and hence the noise required.
 
 .. tab-set::
 
@@ -60,8 +64,6 @@ status, when the individual worked for pay or profit.
             │ HWUSUAL ┆ Length    ┆ Integer Laplace ┆ 80.0   │
             └─────────┴───────────┴─────────────────┴────────┘
 
-
-
 In this case, when computing the mean, an even better approach is to
 group by the identifier and aggregate down to one row, before computing
 the statistics of interest.
@@ -102,12 +104,12 @@ Privacy Unit with Multiple Bounds
 It is also possible to set more fine-grained bounds on user identifier
 contributions across different levels of grouping.
 
-Take, for example, the case where your data comes from two different
+Imagine that your data comes from two different
 sources, spanning different years. This means individuals could
 contribute data under two user identifiers, which would double the
-amount of noise. However, due to the structure of the data, you know
+amount of noise. However, if you know
 that each individual only ever contributes data under one identifier
-each quarter.
+each quarter, you can take this into account in your annalysis.
 
 .. tab-set::
 
