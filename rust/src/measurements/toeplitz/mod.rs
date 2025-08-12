@@ -14,7 +14,10 @@
 //! - `MonotonicContinualToeplitz` - With isotonic regression for monotonicity
 
 // Internal modules
-mod utils;
+pub(crate) mod core;
+pub(crate) mod isotonic;
+pub(crate) mod noise_generation;
+pub(crate) mod type_conversion;
 
 // Public API exports for one-shot measurements
 #[cfg(feature = "contrib-continual")]

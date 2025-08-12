@@ -8,8 +8,8 @@ use std::fmt::Display;
 use std::str::FromStr;
 use num::{CheckedAdd, CheckedMul, CheckedSub, Zero};
 
-use super::utils::core::compute_toeplitz_range;
-use super::utils::isotonic::{apply_isotonic_regression, apply_isotonic_regression_with_fixed_prefix};
+use super::core::compute_toeplitz_range;
+use super::isotonic::{apply_isotonic_regression, apply_isotonic_regression_with_fixed_prefix};
 
 /// Continual release API
 /// 

@@ -11,8 +11,8 @@ use num::{Zero, CheckedAdd, CheckedMul, CheckedSub};
 use std::fmt::Display;
 use std::str::FromStr;
 
-use super::utils::core::compute_toeplitz_range;
-use super::utils::isotonic::apply_isotonic_regression;
+use super::core::compute_toeplitz_range;
+use super::isotonic::apply_isotonic_regression;
 
 /// Create a baseline Toeplitz measurement (no post-processing)
 /// 
