@@ -11,6 +11,11 @@ use super::type_conversion::{to_ibig, from_ibig_saturating};
 /// 
 /// PAVA runs in O(n) time and ensures that the output is the best MSE-fitting of the input data that respects non-decreasing monotonicity.
 /// 
+/// The Pool Adjacent Violators Algorithm was introduced by Barlow et al. (1972) and
+/// further developed by Robertson et al. (1988). It works by iteratively pooling
+/// adjacent values that violate the monotonicity constraint, replacing them with
+/// their weighted average.
+/// 
 /// The post-processing property of differential privacy (Dwork et al., 2006) guarantees
 /// that this deterministic transformation preserves the ε-differential privacy of the input.
 /// Another way to think about this is: all the computations here can be done deterministically with the
