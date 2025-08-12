@@ -110,40 +110,45 @@ ensuring that queries you would like to release satisfy necessary privacy proper
             ...     data=df,
             ...     privacy_unit=dp.unit_of(contributions=36),
             ...     privacy_loss=dp.loss_of(epsilon=1.0),
-            ...     split_evenly_over=10,
+            ...     split_evenly_over=1,
             ... )
             
-            >>> # Once you construct the context, you should abstain from
-            >>> # directly accessing your data again.
+            >>> # Once you construct the context, you should abstain
+            >>> # from directly accessing your data again.
             >>> # In fact, it is good practice to delete it! 
             >>> del df
 
-Context Parameters
-~~~~~~~~~~~~~~~~~~
+A number of parameters define the ``Context``:
 
-* ``privacy_unit``: The greatest influence an individual may have on your dataset.
-  In this case, the influence is measured in terms of the number of rows an individual may contribute to your dataset. 
-  Since we are analyzing quarterly data across 9 years, where an individual contributes up to one record per quarter,
-  the unit of privacy corresponds to 36 row contributions. 
-  If we were to analyze a particular quarter in a particular year, the unit of privacy would be 1 since each individual would contribute at most one row.   
-  Alternatively, if you have a identifier column ``PIDENT``, 
-  you could set the privacy unit to ``dp.unit_of(contributions=1, identifier="PIDENT")``.
-  For simplicity, examples will express the privacy unit in terms of 36 row contributions, 
-  except when demonstrating how to use identifiers.
-* ``privacy_loss``: The greatest privacy loss suffered by an individual in your dataset. 
-  The privacy loss is upper-bounded by privacy parameters; in this case epsilon (ε).
-* ``split_evenly_over``: This is the number of queries you want to distribute your privacy loss over. 
-  Configure this parameter appropriately according to how many queries you would like to release. 
+The ``privacy_unit`` describes the greatest influence one individual may have on your dataset.
+In this case we have quarterly data across 9 years, and an individual can contribute up to one row per quarter,
+so an individual can contribute up to 36 rows. 
+If we were to analyze a particular quarter in a particular year,
+the unit of privacy would be 1 since each individual would contribute at most one row.   
+(Later in this tutorial we'll make this simpler by using the identifier column ``PIDENT`` 
+to define the privacy unit.)
 
-Particular examples in the coming sections may require additional parameters, 
-and parameters to the compositor may be adjusted slightly.
-See :py:func:`opendp.context.Context.compositor` for more information.
+The ``privacy_loss`` is the greatest privacy loss an individual in the dataset can experience.
+There are different models of differential privacy.
+Pure DP, used here, has only a single parameter, epsilon (ε).
+Later in the documentation we'll introduce other models of differential privacy
+with other parameters. These other models give us flexibility and may help us use our
+privacy budget more efficiently.
+
+Finally, how many queries can we make?
+Placing a limit on the number of queries is essential if we want to bound privacy loss.
+There are two options: ``split_evenly_over`` is best if your queries are all similar.
+Alternatively, ``split_by_weights`` lets you give more of your budget to more important queries.
+
+Later examples in this tutorial will also introduce the idea of "margins".
+
+See the Polars section in the `OpenDP User Guide <../../api/user-guide/polars/index.html>`_
+for more information on any of these topics.
 
 .. toctree::
+  :maxdepth: 1
 
   essential-statistics
   grouping
   identifier-truncation
   preparing-microdata
-
-More thorough documentation can be found in the `OpenDP Polars User Guide <../../api/user-guide/polars/index.html>`_.
