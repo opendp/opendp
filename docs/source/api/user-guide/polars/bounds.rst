@@ -118,6 +118,7 @@ each quarter, you can take this into account in your annalysis.
 
         .. code:: python
 
+            >>> quarterly = [pl.col.QUARTER, pl.col.YEAR]
             >>> context = dp.Context.compositor(
             ...     data=pl.scan_csv(dp.examples.get_france_lfs_path(), ignore_errors=True),
             ...     privacy_unit=dp.unit_of(contributions=[
