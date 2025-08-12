@@ -11,68 +11,101 @@ use num::{CheckedAdd, CheckedMul, CheckedSub, Zero};
 use super::utils::core::compute_toeplitz_range;
 use super::utils::isotonic::{apply_isotonic_regression, apply_isotonic_regression_with_fixed_prefix};
 
-/// Stateful container for continual release with the Toeplitz mechanism
+/// Continual release API
 /// 
-/// ContinualToeplitz maintains state across multiple releases to ensure consistency
-/// of noise. The API only accepts incremental counts since the last release,
-/// eliminating redundant data transmission.
+/// This trait provides a consistent interface for continual release mechanisms,
+/// supporting both baseline and monotonic variants.
+/// Particularly, we provide the following APIs: `append_count_on_new_timestamp`, `fetch_privacy_preserving_sub_interval_sum`, `current_time`, and `privacy_cost`.
+/// 1. The `append_count_on_new_timestamp` method allows adding new count values to the mechanism.
+/// 2. The `fetch_privacy_preserving_sub_interval_sum` method retrieves the noisy sum for a specified time interval.
+/// 3. The `current_time` method returns the number of time steps processed so far.
+/// 4. The `privacy_cost` method calculates the privacy cost (epsilon) for a given sensitivity under pure differential privacy (DP).
+pub trait ContinualRelease<T> {
+    /// Update the mechanism with a new count value
+    /// 
+    /// # Arguments
+    /// * `value` - The new count to add
+    /// 
+    /// # Returns
+    /// The current time step after the update
+    fn append_count_on_new_timestamp(&self, value: T) -> Fallible<usize>;
+    
+    /// Release the noisy sum for a time interval
+    /// 
+    /// # Arguments
+    /// * `start_time` - Start of the interval
+    /// * `end_time` - End of the interval
+    /// 
+    /// # Returns
+    /// The noisy sum for the interval [start_time, end_time]
+    fn fetch_privacy_preserving_sub_interval_sum(&self, start_time: usize, end_time: usize) -> Fallible<T>;
+    
+    /// Get the current number of time steps processed
+    fn current_time(&self) -> usize;
+    
+    /// Get the privacy cost (epsilon) for a given sensitivity under pure DP
+    /// 
+    /// # Arguments
+    /// * `d_in` - The L1 distance between input count vectors.
+    /// 
+    /// # Returns
+    /// The privacy parameter epsilon = d_in / scale
+    fn privacy_cost(&self, d_in: T) -> Fallible<f64> 
+    where
+        f64: InfCast<T>;
+}
+
+/// Internal implementation of the Toeplitz mechanism
 /// 
-/// # Example
-/// ```
-/// let mechanism = ContinualToeplitz::<i32>::new(10.0, true)?;
-/// 
-/// // First release: provide initial counts, expect 0 previous time steps
-/// let result1 = mechanism.release(&vec![10, 20, 30], 0)?;
-/// 
-/// // Second release: provide ONLY new counts, expect 3 previous time steps  
-/// let result2 = mechanism.release(&vec![40, 50], 3)?;
-/// 
-/// // Query current state without adding new data
-/// let result3 = mechanism.release(&vec![], 5)?;
-/// ```
-pub struct ContinualToeplitz<T> {
+/// This struct contains the core logic and is wrapped by public API structs
+struct ContinualToeplitzCore<T> {
     /// Information that can change over time is stored in a mutex
     /// to allow safe concurrent access
     state: Mutex<ToeplitzState<T>>,
-    /// Information that are immutable for the lifetime of the mechanism are stored in a config
+    /// Configuration that remains constant after initialization
     config: ToeplitzConfig,
 }
 
 /// Mutable state for the Toeplitz mechanism
 struct ToeplitzState<T> {
-    /// Raw noise values Z[t] as a single vector
+    /// Storage for raw noise values Z[t]
     raw_noise_history: Vec<IBig>,
-    /// Already-computed noisy prefix sums after isotonic regression as a vector
+    /// Storage for already-computed noisy prefix sums after post-processing
     noisy_prefix_sums: Vec<T>,
-    /// Cumulative counts from all previous releases as a vector
+    /// Storage for cumulative counts from all updates
     cumulative_counts: Vec<T>,
 }
 
 /// Immutable configuration for the Toeplitz mechanism
 struct ToeplitzConfig {
-    /// Scale parameter (σ)
+    /// Scale parameter (σ) for noise generation
     scale: f64,
     /// Precision bits for coefficient calculations
     scale_bits: usize,
-    /// Variance for noise generation
+    /// Variance for discrete Gaussian noise generation
     variance: RBig,
-    /// Whether to enforce monotonicity
+    /// Whether to enforce monotonicity using isotonic regression
     enforce_monotonicity: bool,
 }
 
-impl<T> ContinualToeplitz<T> 
+impl<T> ContinualToeplitzCore<T>
 where
-    T: Integer + Display + FromStr + CheckedAdd + CheckedMul + CheckedSub + num::One + PartialOrd + Clone,
+    T: Integer + Display + FromStr + CheckedAdd + CheckedMul + CheckedSub + Zero + num::One + PartialOrd + Clone,
 {
     /// Create a new continual Toeplitz mechanism
+    /// 
+    /// # Arguments
+    /// * `scale` - Scale parameter (σ) for noise generation
+    /// * `enforce_monotonicity` - Whether to apply isotonic regression for monotonic outputs
     pub fn new(scale: f64, enforce_monotonicity: bool) -> Fallible<Self> {
-        if scale.is_sign_negative() || scale.is_zero() || !scale.is_finite() {
-            return fallible!(MakeMeasurement, "scale must be positive and finite");
+        if scale <= 0.0 {
+            return fallible!(FailedFunction, "Scale must be positive");
         }
         
+        // Compute variance for discrete Gaussian: variance = scale^2
         let variance = RBig::from((scale * scale * 1e9) as i64) / RBig::from(1_000_000_000i64);
         
-        Ok(ContinualToeplitz {
+        Ok(ContinualToeplitzCore {
             state: Mutex::new(ToeplitzState {
                 raw_noise_history: Vec::new(),
                 noisy_prefix_sums: Vec::new(),
@@ -87,73 +120,41 @@ where
         })
     }
     
-    /// Process incremental counts since the last release
-    /// 
-    /// # Arguments
-    /// * `incremental_counts` - New counts since the last release (not the full history)
-    /// * `expected_previous_time` - Expected number of time steps already processed (for verification)
-    /// 
-    /// # Returns
-    /// All noisy prefix sums from time 0 up to and including the new counts,
-    /// guaranteed to be monotonic through isotonic regression post-processing if enforce_monotonicity is true
-    /// 
-    /// # Errors
-    /// Returns an error if `expected_previous_time` doesn't match the actual state
-    pub fn release(&self, incremental_counts: &[T], expected_previous_time: usize) -> Fallible<Vec<T>> {
+    /// Update with a new value
+    fn append_count_on_new_timestamp(&self, value: T) -> Fallible<usize> {
         let mut state = self.state.lock().unwrap();
         
-        let current_time = state.cumulative_counts.len();
-        
-        // Verify expected state
-        if expected_previous_time != current_time {
-            return fallible!(
-                FailedFunction,
-                "expected previous time {} does not match actual time {}",
-                expected_previous_time,
-                current_time
-            );
-        }
-        
-        // If no new counts, return existing results
-        if incremental_counts.is_empty() {
-            return Ok(state.noisy_prefix_sums.clone());
-        }
-        
-        // Append incremental counts to cumulative history
-        state.cumulative_counts.extend_from_slice(incremental_counts);
+        // Add the new count
+        state.cumulative_counts.push(value);
         let new_time = state.cumulative_counts.len();
         
-        // Generate new raw noise for time steps [current_time, new_time)
-        for _ in current_time..new_time {
-            state.raw_noise_history.push(sample_discrete_gaussian(self.config.variance.clone())?);
-        }
+        // Generate raw noise for the new time step
+        state.raw_noise_history.push(sample_discrete_gaussian(self.config.variance.clone())?);
         
         // Compute ALL noisy prefix sums from scratch to ensure consistency
-        // This is necessary because the Toeplitz mechanism's correlated noise structure
-        // means that noise at time t depends on all previous raw noise values
         let mut all_noisy_sums = compute_toeplitz_range(
             &state.cumulative_counts,
             &state.raw_noise_history,
             0,
             new_time,
-            self.config.scale_bits
+            self.config.scale_bits,
         )?;
         
         // Clamp to non-negative before isotonic regression
-        for i in 0..all_noisy_sums.len() {
-            if all_noisy_sums[i] < T::zero() {
-                all_noisy_sums[i] = T::zero();
+        for val in &mut all_noisy_sums {
+            if *val < T::zero() {
+                *val = T::zero();
             }
         }
         
         // Apply isotonic regression with constraint to preserve previously released values
         let monotonic_sums = if self.config.enforce_monotonicity {
-            if current_time == 0 {
+            if new_time == 1 {
                 // First release: standard isotonic regression
                 apply_isotonic_regression(all_noisy_sums)?
             } else {
                 // Subsequent releases: preserve the first current_time values
-                let fixed_prefix = state.noisy_prefix_sums[..current_time].to_vec();
+                let fixed_prefix = state.noisy_prefix_sums[..new_time - 1].to_vec();
                 apply_isotonic_regression_with_fixed_prefix(all_noisy_sums, fixed_prefix)?
             }
         } else {
@@ -161,18 +162,62 @@ where
         };
         
         // Update the stored results
-        state.noisy_prefix_sums = monotonic_sums.clone();
+        state.noisy_prefix_sums = monotonic_sums;
         
-        Ok(monotonic_sums)
+        Ok(new_time)
+    }
+    
+    /// Release a range sum
+    fn fetch_privacy_preserving_sub_interval_sum(&self, start_time: usize, end_time: usize) -> Fallible<T> {
+        let state = self.state.lock().unwrap();
+        
+        // Validate inputs (1-based indexing)
+        if start_time == 0 || end_time == 0 {
+            return fallible!(
+                FailedFunction,
+                "Time indices must be 1-based (start from 1, not 0)"
+            );
+        }
+        
+        if end_time > state.noisy_prefix_sums.len() {
+            return fallible!(
+                FailedFunction,
+                "End time {} exceeds current time {}",
+                end_time,
+                state.noisy_prefix_sums.len()
+            );
+        }
+        
+        if start_time > end_time {
+            return fallible!(
+                FailedFunction,
+                "Invalid interval: start_time {} must be <= end_time {}",
+                start_time,
+                end_time
+            );
+        }
+        
+        // Convert from 1-based to 0-based indexing
+        // fetch_privacy_preserving_sub_interval_sum(1, 3) means sum of 1st, 2nd, 3rd values (indices 0, 1, 2)
+        // This is prefix_sums[2] - prefix_sums[-1] (or 0 if start_time == 1)
+        let end_sum = state.noisy_prefix_sums[end_time - 1].clone();
+        
+        if start_time == 1 {
+            Ok(end_sum)
+        } else {
+            let start_sum = state.noisy_prefix_sums[start_time - 2].clone();
+            end_sum.checked_sub(&start_sum)
+                .ok_or_else(|| err!(FailedFunction, "Subtraction overflow in range sum"))
+        }
     }
     
     /// Get the current number of time steps processed
-    pub fn current_time(&self) -> usize {
+    fn current_time(&self) -> usize {
         self.state.lock().unwrap().cumulative_counts.len()
     }
     
     /// Get the privacy cost for a given input distance
-    pub fn privacy_cost(&self, d_in: T) -> Fallible<f64> 
+    fn privacy_cost(&self, d_in: T) -> Fallible<f64> 
     where
         f64: InfCast<T>,
     {
@@ -182,56 +227,97 @@ where
 }
 
 /// Baseline continual Toeplitz (no monotonicity enforcement)
-pub struct BaselineContinualToeplitz<T: crate::traits::CheckAtom>(ContinualToeplitz<T>);
-
-impl<T: crate::traits::CheckAtom> BaselineContinualToeplitz<T>
-where
-    T: Integer + Display + FromStr + CheckedAdd + CheckedMul + CheckedSub + num::One + PartialOrd + Clone,
-{
-    pub fn new(scale: f64) -> Fallible<Self> {
-        Ok(Self(ContinualToeplitz::new(scale, false)?))
-    }
-    
-    pub fn release(&self, incremental_counts: &[T], expected_previous_time: usize) -> Fallible<Vec<T>> {
-        self.0.release(incremental_counts, expected_previous_time)
-    }
-    
-    pub fn current_time(&self) -> usize {
-        self.0.current_time()
-    }
-    
-    pub fn privacy_cost(&self, d_in: T) -> Fallible<f64> 
-    where
-        f64: InfCast<T>,
-    {
-        self.0.privacy_cost(d_in)
-    }
+/// 
+/// This variant does not enforce monotonicity in the output prefix sums,
+/// which may occasionally decrease due to noise. Use this when exact
+/// monotonicity is not required and you want slightly better utility.
+pub struct BaselineContinualToeplitz<T: crate::traits::CheckAtom> {
+    core: ContinualToeplitzCore<T>,
 }
 
 /// Monotonic continual Toeplitz (with isotonic regression)
-pub struct MonotonicContinualToeplitz<T: crate::traits::CheckAtom>(ContinualToeplitz<T>);
+/// 
+/// This variant enforces monotonicity in the output prefix sums using
+/// isotonic regression post-processing. Use this when your application
+/// requires non-decreasing counts over time (e.g., cumulative statistics).
+pub struct MonotonicContinualToeplitz<T: crate::traits::CheckAtom> {
+    core: ContinualToeplitzCore<T>,
+}
+
+// Macro to implement the trait for both variants, reducing boilerplate
+macro_rules! impl_continual_release {
+    ($struct_name:ident) => {
+        impl<T: crate::traits::CheckAtom> ContinualRelease<T> for $struct_name<T>
+        where
+            T: Integer + Display + FromStr + CheckedAdd + CheckedMul + CheckedSub + Zero + num::One + PartialOrd + Clone,
+        {
+            fn append_count_on_new_timestamp(&self, value: T) -> Fallible<usize> {
+                self.core.append_count_on_new_timestamp(value)
+            }
+            
+            fn fetch_privacy_preserving_sub_interval_sum(&self, start_time: usize, end_time: usize) -> Fallible<T> {
+                self.core.fetch_privacy_preserving_sub_interval_sum(start_time, end_time)
+            }
+            
+            fn current_time(&self) -> usize {
+                self.core.current_time()
+            }
+            
+            /// Get the privacy cost (epsilon) for a given sensitivity under pure DP
+            /// 
+            /// # Arguments
+            /// * `d_in` - The L1 distance between input count vectors.
+            /// 
+            /// # Returns
+            /// The privacy parameter epsilon = d_in / scale
+            fn privacy_cost(&self, d_in: T) -> Fallible<f64> 
+            where
+                f64: InfCast<T>,
+            {
+                self.core.privacy_cost(d_in)
+            }
+        }
+    };
+}
+
+// Single implementation for both types
+impl_continual_release!(BaselineContinualToeplitz);
+impl_continual_release!(MonotonicContinualToeplitz);
+
+// Only the constructors differ
+impl<T: crate::traits::CheckAtom> BaselineContinualToeplitz<T>
+where
+    T: Integer + Display + FromStr + CheckedAdd + CheckedMul + CheckedSub + Zero + num::One + PartialOrd + Clone,
+{
+    /// Create a new baseline continual Toeplitz mechanism
+    /// 
+    /// # Arguments
+    /// * `scale` - Scale parameter (σ) for noise generation. Larger values provide more privacy.
+    /// 
+    /// # Returns
+    /// A new baseline mechanism that does not enforce monotonicity
+    pub fn new(scale: f64) -> Fallible<Self> {
+        Ok(Self {
+            core: ContinualToeplitzCore::new(scale, false)?,
+        })
+    }
+}
 
 impl<T: crate::traits::CheckAtom> MonotonicContinualToeplitz<T>
 where
-    T: Integer + Display + FromStr + CheckedAdd + CheckedMul + CheckedSub + num::One + PartialOrd + Clone,
+    T: Integer + Display + FromStr + CheckedAdd + CheckedMul + CheckedSub + Zero + num::One + PartialOrd + Clone,
 {
+    /// Create a new monotonic continual Toeplitz mechanism
+    /// 
+    /// # Arguments
+    /// * `scale` - Scale parameter (σ) for noise generation. Larger values provide more privacy.
+    /// 
+    /// # Returns
+    /// A new monotonic mechanism that enforces non-decreasing prefix sums
     pub fn new(scale: f64) -> Fallible<Self> {
-        Ok(Self(ContinualToeplitz::new(scale, true)?))
-    }
-    
-    pub fn release(&self, incremental_counts: &[T], expected_previous_time: usize) -> Fallible<Vec<T>> {
-        self.0.release(incremental_counts, expected_previous_time)
-    }
-    
-    pub fn current_time(&self) -> usize {
-        self.0.current_time()
-    }
-    
-    pub fn privacy_cost(&self, d_in: T) -> Fallible<f64> 
-    where
-        f64: InfCast<T>,
-    {
-        self.0.privacy_cost(d_in)
+        Ok(Self {
+            core: ContinualToeplitzCore::new(scale, true)?,
+        })
     }
 }
 
@@ -241,213 +327,206 @@ mod test {
     use super::*;
     
     #[test]
-    fn test_continual_consistency() -> Fallible<()> {
-        // let mechanism = ContinualToeplitz::<i32>::new(1.0, true)?;
-        let mechanism = MonotonicContinualToeplitz::<i32>::new(1.0)?;  // enforce monotonicity
-        
-        // First query: times [0, 5)
-        let counts1 = vec![10, 20, 30, 40, 50];
-        let result1 = mechanism.release(&counts1, 0)?;
-        assert_eq!(result1.len(), 5);
-        
-        // Verify monotonicity
-        for i in 1..result1.len() {
-            assert!(result1[i] >= result1[i-1], 
-                "Non-monotonic at position {}: {} < {}", i, result1[i], result1[i-1]);
-        }
-        
-        println!("First result: {:?}, with the real counts being: {:?}", result1, counts1);
-        
-        // Second query: times [5, 8)
-        let counts2 = vec![60, 70, 80];
-        let result2 = mechanism.release(&counts2, 5)?;
-        assert_eq!(result2.len(), 8);
-        
-        // Verify monotonicity
-        for i in 1..result2.len() {
-            assert!(result2[i] >= result2[i-1], 
-                "Non-monotonic at position {}: {} < {}", i, result2[i], result2[i-1]);
-        }
-        
-        println!("Second result: {:?}, with the real counts being: {:?}", result2, counts2);
-        
-        // The first 5 values should be identical (consistency across releases)
-        for i in 0..5 {
-            assert_eq!(result1[i], result2[i], "Inconsistent value at time {}", i);
-        }
-        
-        Ok(())
-    }
-    
-    #[test]
-    fn test_continual_wrong_expected_time_error() -> Fallible<()> {
-        // let mechanism = ContinualToeplitz::<i32>::new(10.0, true)?;
+    fn test_basic_api() -> Fallible<()> {
         let mechanism = MonotonicContinualToeplitz::<i32>::new(10.0)?;
         
-        // First query
-        let counts1 = vec![10, 20, 30, 40, 50];
-        mechanism.release(&counts1, 0)?;
+        // Add individual counts (not cumulative)
+        mechanism.append_count_on_new_timestamp(7)?;   // 7 events at time 1
+        mechanism.append_count_on_new_timestamp(3)?;   // 3 events at time 2
+        mechanism.append_count_on_new_timestamp(9)?;   // 9 events at time 3
         
-        // Second query with wrong expected time should fail
-        let counts2 = vec![60, 70, 80];
-        let result = mechanism.release(&counts2, 3); // Wrong! Should be 5
+        // Test range queries (1-based, inclusive)
+        assert!(mechanism.fetch_privacy_preserving_sub_interval_sum(1, 1).is_ok()); // Single element
+        assert!(mechanism.fetch_privacy_preserving_sub_interval_sum(1, 2).is_ok()); // Range
+        assert!(mechanism.fetch_privacy_preserving_sub_interval_sum(1, 3).is_ok()); // Full range
         
-        assert!(result.is_err());
-        // Just verify it's an error - the exact message format varies
-        
-        Ok(())
-    }
-    
-    #[test]
-    fn test_continual_same_query_returns_different_result() -> Fallible<()> {
-        // let mechanism = ContinualToeplitz::<i32>::new(10.0, true)?;
-        let mechanism = MonotonicContinualToeplitz::<i32>::new(10.0)?;
-        
-        // First query
-        let counts = vec![10, 20, 30, 40, 50];
-        let result1 = mechanism.release(&counts, 0)?;
-        
-        // Same counts added again should give different result (different time range)
-        let result2 = mechanism.release(&counts, 5)?;
-        
-        assert_ne!(result1, result2);
-        assert_eq!(result2.len(), 10);
+        assert_eq!(mechanism.current_time(), 3);
         
         Ok(())
     }
     
     #[test]
     fn test_monotonicity_enforcement() -> Fallible<()> {
-        // let mechanism = ContinualToeplitz::<i32>::new(1.0, true)?;
-        let mechanism = MonotonicContinualToeplitz::<i32>::new(1.0)?;  // Small scale for more noise
+        let monotonic = MonotonicContinualToeplitz::<i32>::new(1.0)?; // Small scale for more noise
         
-        // Initial release
-        let counts = vec![5, 10, 15, 20];
-        let result1 = mechanism.release(&counts, 0)?;
-        
-        // Check monotonicity
-        for i in 1..result1.len() {
-            // Monotonicity here is not enforced by default
-            // It is enforced because mechanism is instantiasted to respect monotonicity,
-            // with the corresponding parameter set to true.
-            assert!(result1[i] >= result1[i-1], 
-                "Monotonicity violation at {}: {} < {}", i, result1[i], result1[i-1]);
+        // Add random counts between 0 and 10
+        let counts = vec![3, 8, 1, 9, 4, 2, 7, 5, 10, 6];
+        for count in counts {
+            monotonic.append_count_on_new_timestamp(count)?;
         }
         
-        // Second release
-        let counts2 = vec![25, 30, 35, 40];
-        let result2 = mechanism.release(&counts2, 4)?;
-        
-        // Check monotonicity for full result
-        for i in 1..result2.len() {
-            // Monotonicity here is not enforced by default
-            // It is enforced because mechanism is instantiasted to respect monotonicity,
-            // with the corresponding parameter set to true.
-            assert!(result2[i] >= result2[i-1], 
-                "Monotonicity violation at {}: {} < {}", i, result2[i], result2[i-1]);
-        }
-        
-        // Verify non-negative (prefix sums should never be negative)
-        for (i, &val) in result2.iter().enumerate() {
-            assert!(val >= 0, "Negative value at position {}: {}", i, val);
+        // Verify cumulative sums are monotonic
+        let mut prev_sum = 0;
+        for i in 1..=10 {
+            let curr_sum = monotonic.fetch_privacy_preserving_sub_interval_sum(1, i)?;
+            assert!(curr_sum >= prev_sum, "Non-monotonic at position {}", i);
+            prev_sum = curr_sum;
         }
         
         Ok(())
     }
     
     #[test]
-    fn test_continual_without_monotonicity() -> Fallible<()> {
-        // let mechanism = ContinualToeplitz::<i32>::new(10.0, false)?;
-        let mechanism = BaselineContinualToeplitz::<i32>::new(10.0)?;  // no monotonicity
+    fn test_baseline_vs_monotonic() -> Fallible<()> {
+        let baseline = BaselineContinualToeplitz::<i32>::new(5.0)?;
+        let monotonic = MonotonicContinualToeplitz::<i32>::new(5.0)?;
         
-        let counts = vec![5, 10, 15, 20, 25];
-        let result = mechanism.release(&counts, 0)?;
-        assert_eq!(result.len(), 5);
-        
-        // Just verify non-negative (still clamped)
-        for val in &result {
-            assert!(*val >= 0);
+        // Use varied counts to show difference
+        for count in vec![2, 7, 0, 5, 1, 8, 3] {
+            baseline.append_count_on_new_timestamp(count)?;
+            monotonic.append_count_on_new_timestamp(count)?;
         }
         
-        // Not checking monotonicity since we disabled it
-        println!("Continual without monotonicity: {:?}", result);
+        // Both should have same current time
+        assert_eq!(baseline.current_time(), monotonic.current_time());
+        
+        // Privacy costs should be identical
+        assert_eq!(baseline.privacy_cost(10)?, monotonic.privacy_cost(10)?);
+        
+        // Note: Baseline may not be monotonic, monotonic always is
+        // (actual values depend on random noise)
         
         Ok(())
     }
     
     #[test]
-    fn test_empty_incremental_counts() -> Fallible<()> {
-        // let mechanism = ContinualToeplitz::<i32>::new(10.0, true)?;
-        let mechanism = MonotonicContinualToeplitz::<i32>::new(10.0)?;
-        
-        // First release with some data
-        let counts1 = vec![10, 20, 30];
-        let result1 = mechanism.release(&counts1, 0)?;
-        assert_eq!(result1.len(), 3);
-        
-        // Release with empty incremental counts - should return same results
-        let result2 = mechanism.release(&vec![], 3)?;
-        assert_eq!(result2.len(), 3);
-        assert_eq!(result1, result2); // Should be identical
-        
-        Ok(())
-    }
-    
-    #[test]
-    fn test_state_preservation_on_error() -> Fallible<()> {
-        // let mechanism = ContinualToeplitz::<i32>::new(10.0, true)?;
-        let mechanism = MonotonicContinualToeplitz::<i32>::new(10.0)?;
-        
-        // First successful release
-        let counts1 = vec![10, 20, 30];
-        let result1 = mechanism.release(&counts1, 0)?;
-        assert_eq!(result1.len(), 3);
-        
-        // Failed release (wrong expected time)
-        let counts2 = vec![40, 50];
-        let _err = mechanism.release(&counts2, 10).unwrap_err(); // Should fail
-        
-        // Verify state wasn't modified - check using current_time
-        assert_eq!(mechanism.current_time(), 3);
-        
-        // Successful release with correct expected time should work
-        let result3 = mechanism.release(&counts2, 3)?;
-        assert_eq!(result3.len(), 5);
-        
-        Ok(())
-    }
-
-    #[test]
-    fn test_baseline_current_time() -> Fallible<()> {
+    fn test_binary_counts() -> Fallible<()> {
+        // Test with 0s and 1s (like counting binary events)
         let mechanism = BaselineContinualToeplitz::<i32>::new(10.0)?;
         
-        assert_eq!(mechanism.current_time(), 0);
+        for event in vec![1, 0, 1, 1, 0, 0, 1, 0, 1, 1] {
+            mechanism.append_count_on_new_timestamp(event)?;
+        }
         
-        mechanism.release(&vec![1, 2, 3], 0)?;
-        assert_eq!(mechanism.current_time(), 3);
+        // Should handle sparse binary data correctly
+        assert!(mechanism.fetch_privacy_preserving_sub_interval_sum(1, 10).is_ok());
         
-        mechanism.release(&vec![4, 5], 3)?;
-        assert_eq!(mechanism.current_time(), 5);
+        Ok(())
+    }
+    
+    #[test]
+    fn test_invalid_queries() -> Fallible<()> {
+        let mechanism = BaselineContinualToeplitz::<i32>::new(10.0)?;
+        
+        mechanism.append_count_on_new_timestamp(4)?;
+        mechanism.append_count_on_new_timestamp(9)?;
+        
+        // These should all fail
+        assert!(mechanism.fetch_privacy_preserving_sub_interval_sum(0, 1).is_err()); // 0-based not allowed
+        assert!(mechanism.fetch_privacy_preserving_sub_interval_sum(3, 2).is_err()); // start > end
+        assert!(mechanism.fetch_privacy_preserving_sub_interval_sum(1, 5).is_err()); // end > current_time
+        
+        Ok(())
+    }
+    
+    #[test]
+    fn test_consistency() -> Fallible<()> {
+        let mechanism = MonotonicContinualToeplitz::<i32>::new(10.0)?;
+        
+        mechanism.append_count_on_new_timestamp(6)?;
+        mechanism.append_count_on_new_timestamp(2)?;
+        mechanism.append_count_on_new_timestamp(8)?;
+        
+        // Get sum before adding more
+        let sum1 = mechanism.fetch_privacy_preserving_sub_interval_sum(1, 2)?;
+        
+        // Add more counts
+        mechanism.append_count_on_new_timestamp(3)?;
+        mechanism.append_count_on_new_timestamp(7)?;
+        
+        // Previous sum should remain unchanged
+        let sum2 = mechanism.fetch_privacy_preserving_sub_interval_sum(1, 2)?;
+        assert_eq!(sum1, sum2, "Historical sum changed");
         
         Ok(())
     }
 
     #[test]
-    fn test_privacy_cost_calculation() -> Fallible<()> {
-        // This test ensures the scale field is recognized as used
-        // let mechanism = ContinualToeplitz::<i32>::new(10.0, true)?;
+    fn test_privacy_cost() -> Fallible<()> {
         let mechanism = MonotonicContinualToeplitz::<i32>::new(10.0)?;
         
-        // Verify privacy cost calculation: ε = d_in / scale
+        // ε = sensitivity / scale
         assert_eq!(mechanism.privacy_cost(1)?, 0.1);
         assert_eq!(mechanism.privacy_cost(10)?, 1.0);
         assert_eq!(mechanism.privacy_cost(20)?, 2.0);
         
-        // Different scale
-        // let mechanism2 = ContinualToeplitz::<i64>::new(5.0, false)?;
-        let mechanism2 = BaselineContinualToeplitz::<i64>::new(5.0)?;
-        assert_eq!(mechanism2.privacy_cost(5)?, 1.0);
-        assert_eq!(mechanism2.privacy_cost(10)?, 2.0);
+        Ok(())
+    }
+    
+    #[test]
+    fn test_trait_polymorphism() -> Fallible<()> {
+        fn test_mechanism<T: ContinualRelease<i32>>(mechanism: &T) -> Fallible<()> {
+            mechanism.append_count_on_new_timestamp(47)?;
+            Ok(())
+        }
+        
+        test_mechanism(&BaselineContinualToeplitz::<i32>::new(10.0)?)?;
+        test_mechanism(&MonotonicContinualToeplitz::<i32>::new(10.0)?)?;
+        
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod demo {
+    use super::*;
+    
+    #[test]
+    fn demo_basic_usage() -> Fallible<()> {
+        println!("\n=== Basic Continual Release Demo ===");
+        
+        let mechanism = MonotonicContinualToeplitz::<i32>::new(5.0)?;
+        
+        // Simulate hourly car counts (individual counts, not cumulative)
+        let hourly_counts = vec![15, 23, 18, 30, 25, 35];
+        
+        println!("Adding hourly car counts:");
+        for (hour, &count) in hourly_counts.iter().enumerate() {
+            println!("  Hour {}: {} cars", hour + 1, count);
+            mechanism.append_count_on_new_timestamp(count)?;
+        }
+        
+        println!("\nQueries (noisy due to privacy):");
+        let morning = mechanism.fetch_privacy_preserving_sub_interval_sum(1, 3)?;
+        let afternoon = mechanism.fetch_privacy_preserving_sub_interval_sum(4, 6)?;
+        let total = mechanism.fetch_privacy_preserving_sub_interval_sum(1, 6)?;
+        
+        println!("  Morning (hours 1-3): ~{} cars", morning);
+        println!("  Afternoon (hours 4-6): ~{} cars", afternoon);
+        println!("  Total (hours 1-6): ~{} cars", total);
+        
+        println!("\nPrivacy guarantee: ε = {} per individual", mechanism.privacy_cost(1)?);
+        
+        Ok(())
+    }
+    
+    #[test]
+    fn demo_baseline_vs_monotonic_difference() -> Fallible<()> {
+        println!("\n=== Baseline vs Monotonic Comparison ===");
+        
+        let baseline = BaselineContinualToeplitz::<i32>::new(2.0)?;  // Low scale for visible noise
+        let monotonic = MonotonicContinualToeplitz::<i32>::new(2.0)?;
+        
+        // Small counts where noise is significant
+        let counts = vec![1, 0, 1, 0, 1, 1, 0];
+        println!("Input counts: {:?}", counts);
+        
+        for &count in &counts {
+            baseline.append_count_on_new_timestamp(count)?;
+            monotonic.append_count_on_new_timestamp(count)?;
+        }
+        
+        println!("\nCumulative sums:");
+        print!("  Baseline:  ");
+        for i in 1..=counts.len() {
+            print!("{:3} ", baseline.fetch_privacy_preserving_sub_interval_sum(1, i)?);
+        }
+        
+        print!("\n  Monotonic: ");
+        for i in 1..=counts.len() {
+            print!("{:3} ", monotonic.fetch_privacy_preserving_sub_interval_sum(1, i)?);
+        }
+        println!("\n\nNote: Baseline may decrease, monotonic never does.");
         
         Ok(())
     }

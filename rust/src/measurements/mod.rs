@@ -56,7 +56,7 @@ pub use canonical_noise::*;
 #[cfg(feature = "contrib-continual")]
 mod toeplitz;
 #[cfg(feature = "contrib-continual")]
-pub use toeplitz::{make_toeplitz, ContinualToeplitz};
+pub use toeplitz::{make_toeplitz, BaselineContinualToeplitz, MonotonicContinualToeplitz, ContinualRelease};
 
 #[cfg(all(feature = "floating-point", feature = "contrib"))]
 mod alp;

@@ -2,7 +2,7 @@
 //! 
 //! This module provides two APIs for the Toeplitz mechanism:
 //! - One-shot API: `make_toeplitz` for single computations
-//! - Continual API: `ContinualToeplitz` for stateful, incremental releases
+//! - Continual API: `BaselineContinualToeplitz` and `MonotonicContinualToeplitz` for stateful, incremental releases
 
 // Internal modules
 mod utils;
@@ -13,7 +13,7 @@ mod utils;
 pub use one_shot::make_toeplitz;
 /// Continual release API (when feature enabled)
 #[cfg(feature = "contrib-continual")]
-pub use continual::ContinualToeplitz;
+pub use continual::{BaselineContinualToeplitz, MonotonicContinualToeplitz, ContinualRelease};
 
 // API modules
 #[cfg(feature = "contrib-continual")]
