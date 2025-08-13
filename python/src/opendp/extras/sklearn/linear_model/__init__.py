@@ -28,7 +28,11 @@ class LinearRegression:
     The interface is parallel to that offered by sklearn's
     `LinearRegression <https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LinearRegression.html>`_.
     The ``fit`` method returns an sklearn ``LinearRegression`` object.
+
+    :param fraction_bounds: Lower and upper bounds x_bounds to retain when ``fit`` is called.
     """
+    def __init__(self, fraction_bounds: tuple[float, float] = (0.25, 0.75)):
+        self.fraction_bounds = fraction_bounds
 
     def fit(
         self,
@@ -39,7 +43,6 @@ class LinearRegression:
         scale: float,
         runs: int = 1,
         candidates_count: int = 100,
-        fraction_bounds: tuple[float, float] = (0.25, 0.75),
     ):
         """
         Fit DP linear model.
@@ -51,7 +54,6 @@ class LinearRegression:
         :param scale: The scale of the noise to be added
         :param runs: Controls how many times randomized pairwise predictions are computed. Increasing this value can improve the robustness and accuracy of the results; However, it can also increase computational cost and amount of noise needed later in the algorithm.
         :param candidates_count: How many evenly spaced candidates to generate
-        :param fraction_bounds: Lower and upper bounds x_bounds to retain.
         :return: A fitted sklearn ``LinearRegression``
 
         :example:
@@ -81,7 +83,7 @@ class LinearRegression:
             scale=scale,
             runs=runs,
             candidates_count=candidates_count,
-            fraction_bounds=fraction_bounds,
+            fraction_bounds=self.fraction_bounds,
         )
         np = import_optional_dependency("numpy")
         X = np.array(X)
