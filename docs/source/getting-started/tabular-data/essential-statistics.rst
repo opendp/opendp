@@ -27,13 +27,13 @@ from the Labour Force Survey in France.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
-            >>> import polars as pl 
+            >>> import polars as pl
             >>> import opendp.prelude as dp
-            
+
             >>> dp.enable_features("contrib")
-            
+
 
 To get started, we’ll recreate the Context from the `tabular data
 introduction <index.rst>`__.
@@ -43,10 +43,13 @@ introduction <index.rst>`__.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> context = dp.Context.compositor(
-            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path(), ignore_errors=True),
+            ...     data=pl.scan_csv(
+            ...         dp.examples.get_france_lfs_path(),
+            ...         ignore_errors=True,
+            ...     ),
             ...     privacy_unit=dp.unit_of(contributions=36),
             ...     privacy_loss=dp.loss_of(epsilon=1.0),
             ...     split_evenly_over=5,
@@ -69,10 +72,10 @@ The simplest query is a count of the number of records in a dataset.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> query_num_responses = context.query().select(dp.len())
-            
+
 
 If you have not used Polars before, please familiarize yourself with the
 query syntax by reading `Polars’ Getting
@@ -88,7 +91,7 @@ committing to a release:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> query_num_responses.summarize(alpha=0.05)
             shape: (1, 5)
@@ -119,7 +122,7 @@ significance becomes smaller:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> query_num_responses.summarize(alpha=0.01)
             shape: (1, 5)
@@ -143,9 +146,11 @@ release the query:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
-            >>> print('len:', query_num_responses.release().collect().item()) # doctest: +ELLIPSIS
+            >>> print(
+            ...     "len:", query_num_responses.release().collect().item()
+            ... )  # doctest: +ELLIPSIS
             len: ...
 
 Other variations of counting queries are discussed in the `Aggregation
@@ -170,10 +175,13 @@ know about the data.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> context = dp.Context.compositor(
-            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path(), ignore_errors=True),
+            ...     data=pl.scan_csv(
+            ...         dp.examples.get_france_lfs_path(),
+            ...         ignore_errors=True,
+            ...     ),
             ...     privacy_unit=dp.unit_of(contributions=36),
             ...     privacy_loss=dp.loss_of(epsilon=1.0),
             ...     split_evenly_over=5,
@@ -182,12 +190,13 @@ know about the data.
             ...         dp.polars.Margin(
             ...             # the length of the data is no greater than
             ...             #    average quarterly survey size (public) * number of quarters (public)
-            ...             max_length=150_000 * 36
+            ...             max_length=150_000
+            ...             * 36
             ...             # Remember to only use public information when determining max_length.
             ...         ),
             ...     ],
             ... )
-            
+
 
 Each ``dp.polars.Margin`` contains descriptors about the dataset when
 grouped by columns. Since we’re not yet grouping, the grouping columns
@@ -215,15 +224,19 @@ work hours across responses.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> query_work_hours = (
             ...     # 99 represents "Not applicable"
             ...     context.query().filter(pl.col("HWUSUAL") != 99.0)
             ...     # compute the DP sum
-            ...     .select(pl.col.HWUSUAL.cast(int).fill_null(35).dp.sum(bounds=(0, 80)))
+            ...     .select(
+            ...         pl.col.HWUSUAL.cast(int)
+            ...         .fill_null(35)
+            ...         .dp.sum(bounds=(0, 80))
+            ...     )
             ... )
-            
+
 
 This query uses an expression ``.dp.sum`` that clips the range of each
 response, sums, and then adds sufficient noise to satisfy the
@@ -247,7 +260,7 @@ vary depending on how you want to use the statistic.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> query_work_hours.summarize(alpha=0.05)
             shape: (1, 5)
@@ -273,9 +286,11 @@ not take into account bias introduced by clipping responses.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
-            >>> print('HWUSUAL:', query_work_hours.release().collect().item()) # doctest: +ELLIPSIS 
+            >>> print(
+            ...     "HWUSUAL:", query_work_hours.release().collect().item()
+            ... )  # doctest: +ELLIPSIS
             HWUSUAL: ...
 
 
@@ -302,14 +317,19 @@ estimates.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> query_work_hours = (
             ...     context.query().filter(pl.col.HWUSUAL != 99.0)
             ...     # release both the sum and length in one query
-            ...     .select(pl.col.HWUSUAL.cast(int).fill_null(35).dp.sum(bounds=(0, 80)), dp.len())
+            ...     .select(
+            ...         pl.col.HWUSUAL.cast(int)
+            ...         .fill_null(35)
+            ...         .dp.sum(bounds=(0, 80)),
+            ...         dp.len(),
+            ...     )
             ... )
-            
+
             >>> query_work_hours.summarize(alpha=0.05)
             shape: (2, 5)
             ┌─────────┬──────────────┬─────────────────┬─────────┬──────────────┐
@@ -334,10 +354,12 @@ means on different columns.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> # release and create mean column
-            >>> query_work_hours.release().collect().with_columns(mean=pl.col.HWUSUAL / pl.col.len) # doctest: +FUZZY_DF
+            >>> query_work_hours.release().collect().with_columns(
+            ...     mean=pl.col.HWUSUAL / pl.col.len
+            ... )  # doctest: +FUZZY_DF
             shape: (1, 3)
             ┌──────────┬─────────┬───────────┐
             │ HWUSUAL  ┆ len     ┆ mean      │
@@ -357,12 +379,14 @@ data invariant in the margin: ``invariant="lengths"``.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> # apply some preprocessing outside of OpenDP (see note below)
             >>> # drops "Not applicable" values
-            >>> data = pl.scan_csv(dp.examples.get_france_lfs_path(), ignore_errors=True).filter(pl.col.HWUSUAL != 99)
-            
+            >>> data = pl.scan_csv(
+            ...     dp.examples.get_france_lfs_path(), ignore_errors=True
+            ... ).filter(pl.col.HWUSUAL != 99)
+
             >>> # apply domain descriptors (margins) to preprocessed data
             >>> context_bounded_dp = dp.Context.compositor(
             ...     data=data,
@@ -378,7 +402,7 @@ data invariant in the margin: ``invariant="lengths"``.
             ...         ),
             ...     ],
             ... )
-            
+
 
 OpenDP accounts for the effect of data preparation on the privacy
 guarantee, so we generally recommend preparing data in OpenDP. However,
@@ -396,12 +420,14 @@ filtered data, as shown above.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> query_mean_work_hours = context_bounded_dp.query().select(
-            ...     pl.col.HWUSUAL.cast(int).fill_null(35).dp.mean(bounds=(0, 80))
+            ...     pl.col.HWUSUAL.cast(int)
+            ...     .fill_null(35)
+            ...     .dp.mean(bounds=(0, 80))
             ... )
-            
+
 
 When ``invariant="lengths"`` is set, the number of records in the data
 is not protected (for those familiar with DP terminology, this is
@@ -414,7 +440,7 @@ behavior can be observed in the query summary:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> query_mean_work_hours.summarize(alpha=0.05)
             shape: (2, 5)
@@ -427,7 +453,10 @@ behavior can be observed in the query summary:
             │ HWUSUAL ┆ Length    ┆ Integer Laplace ┆ 0.0    ┆ NaN          │
             └─────────┴───────────┴─────────────────┴────────┴──────────────┘
 
-            >>> print('mean:', query_mean_work_hours.release().collect().item())
+            >>> print(
+            ...     "mean:",
+            ...     query_mean_work_hours.release().collect().item(),
+            ... )
             mean: ...
 
 To recap, we’ve shown how to estimate linear statistics like counts,
@@ -452,14 +481,18 @@ set candidates to whole numbers between 20 and 60:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> candidates = list(range(20, 60))
-            
+
             >>> query_median_hours = (
             ...     context.query()
             ...     .filter(pl.col.HWUSUAL != 99.0)
-            ...     .select(pl.col.HWUSUAL.cast(int).fill_null(35).dp.median(candidates))
+            ...     .select(
+            ...         pl.col.HWUSUAL.cast(int)
+            ...         .fill_null(35)
+            ...         .dp.median(candidates)
+            ...     )
             ... )
             >>> query_median_hours.summarize(alpha=0.05)
             shape: (1, 5)
@@ -488,9 +521,11 @@ estimates.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
-            >>> print('median:', query_median_hours.release().collect()) # doctest: +ELLIPSIS
+            >>> print(
+            ...     "median:", query_median_hours.release().collect()
+            ... )  # doctest: +ELLIPSIS
             median: ...
 
 
@@ -512,13 +547,16 @@ hours:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> query_multi_quantiles = (
             ...     context.query()
             ...     .filter(pl.col.HWUSUAL != 99.0)
             ...     .select(
-            ...         pl.col.HWUSUAL.cast(int).fill_null(35).dp.quantile(a, candidates).alias(f"{a}-Quantile")
+            ...         pl.col.HWUSUAL.cast(int)
+            ...         .fill_null(35)
+            ...         .dp.quantile(a, candidates)
+            ...         .alias(f"{a}-Quantile")
             ...         for a in [0.25, 0.5, 0.75]
             ...     )
             ... )
@@ -545,9 +583,9 @@ implementation details.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
-            >>> query_multi_quantiles.release().collect() # doctest: +FUZZY_DF
+            >>> query_multi_quantiles.release().collect()  # doctest: +FUZZY_DF
             shape: (1, 3)
             ┌───────────────┬──────────────┬───────────────┐
             │ 0.25-Quantile ┆ 0.5-Quantile ┆ 0.75-Quantile │

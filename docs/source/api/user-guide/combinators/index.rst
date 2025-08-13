@@ -33,25 +33,28 @@ In the following example we chain :py:func:`opendp.measurements.make_laplace` wi
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
         >>> import opendp.prelude as dp
         >>> dp.enable_features("contrib", "floating-point")
-        ...
         >>> # call a constructor to produce a transformation
         >>> sum_trans = dp.t.make_sum(
-        ...     dp.vector_domain(dp.atom_domain(bounds=(0, 1))), 
-        ...     dp.symmetric_distance()
+        ...     dp.vector_domain(dp.atom_domain(bounds=(0, 1))),
+        ...     dp.symmetric_distance(),
         ... )
         >>> # call a constructor to produce a measurement
-        >>> lap_meas = dp.m.make_laplace(sum_trans.output_domain, sum_trans.output_metric, scale=1.0)
+        >>> lap_meas = dp.m.make_laplace(
+        ...     sum_trans.output_domain,
+        ...     sum_trans.output_metric,
+        ...     scale=1.0,
+        ... )
         >>> noisy_sum = dp.c.make_chain_mt(lap_meas, sum_trans)
-        ...
         >>> # investigate the privacy relation
         >>> symmetric_distance = 1
         >>> epsilon = 1.0
-        >>> assert noisy_sum.check(d_in=symmetric_distance, d_out=epsilon)
-        ...
+        >>> assert noisy_sum.check(
+        ...     d_in=symmetric_distance, d_out=epsilon
+        ... )
         >>> # invoke the chained measurement's function
         >>> dataset = [0, 0, 1, 1, 0, 1, 1, 1]
         >>> release = noisy_sum(dataset)
@@ -65,7 +68,7 @@ and :func:`make_chain_pm <opendp.combinators.make_chain_pm>`.
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
         >>> noisy_sum_meas = sum_trans >> lap_meas
 
@@ -84,12 +87,12 @@ In the below example, the adjustment is subtle, but the bounds were adjusted to 
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
         >>> # call a constructor to produce a transformation, but this time with float bounds
         >>> sum_trans = dp.t.make_sum(
-        ...     dp.vector_domain(dp.atom_domain(bounds=(0., 1.))), 
-        ...     dp.symmetric_distance()
+        ...     dp.vector_domain(dp.atom_domain(bounds=(0.0, 1.0))),
+        ...     dp.symmetric_distance(),
         ... )
         >>> sum_trans >> lap_meas
         Traceback (most recent call last):
@@ -172,15 +175,16 @@ This is useful if you want to compose pure-DP measurements with approximate-DP m
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
-        >>> input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
-        >>> meas_pureDP = input_space >> dp.m.then_laplace(scale=10.)
+        >>> input_space = dp.atom_domain(
+        ...     T=float, nan=False
+        ... ), dp.absolute_distance(T=float)
+        >>> meas_pureDP = input_space >> dp.m.then_laplace(scale=10.0)
         >>> # convert the output measure to `Approximate<MaxDivergence>`
         >>> meas_fixed_approxDP = dp.c.make_approximate(meas_pureDP)
-        ...
         >>> # `Approximate<MaxDivergence>` distances are (ε, δ) tuples
-        >>> meas_fixed_approxDP.map(d_in=1.)
+        >>> meas_fixed_approxDP.map(d_in=1.0)
         (0.1, 0.0)
 
 The combinator can also be used on measurements with a ``ZeroConcentratedDivergence`` privacy measure.
@@ -192,14 +196,13 @@ The combinator can also be used on measurements with a ``ZeroConcentratedDiverge
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
         >>> meas_zCDP = input_space >> dp.m.then_gaussian(scale=0.5)
         >>> # convert the output measure to `SmoothedMaxDivergence`
         >>> meas_approxDP = dp.c.make_zCDP_to_approxDP(meas_zCDP)
-        ...
         >>> # SmoothedMaxDivergence distances are privacy profiles (ε(δ) curves)
-        >>> profile = meas_approxDP.map(d_in=1.)
+        >>> profile = meas_approxDP.map(d_in=1.0)
         >>> profile.epsilon(delta=1e-6)
         11.688596249354896
 
@@ -210,13 +213,14 @@ It fixes the delta parameter in the curve, so that the resulting measurement can
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
         >>> # convert the output measure to `FixedSmoothedMaxDivergence`
-        >>> meas_fixed_approxDP = dp.c.make_fix_delta(meas_approxDP, delta=1e-8)
-        ...
+        >>> meas_fixed_approxDP = dp.c.make_fix_delta(
+        ...     meas_approxDP, delta=1e-8
+        ... )
         >>> # FixedSmoothedMaxDivergence distances are (ε, δ) tuples
-        >>> meas_fixed_approxDP.map(d_in=1.)
+        >>> meas_fixed_approxDP.map(d_in=1.0)
         (13.3861046488579, 1e-08)
 
 These last two combinators allow you to convert output distances in terms of ρ-zCDP to ε(δ)-approxDP, and then to (ε, δ)-approxDP.
@@ -233,7 +237,7 @@ you can make the privacy relation more permissive by wrapping your measurement w
 
     The amplifier requires a looser trust model, as the population size can be set arbitrarily.
 
-    .. code:: python
+    .. code:: pycon
 
 
         >>> dp.enable_features("honest-but-curious")
@@ -246,12 +250,21 @@ The resulting measurement expects the size of the input dataset to be 10.
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
-        >>> atom_domain = dp.atom_domain(bounds=(0., 10.), nan=False)
-        >>> input_space = dp.vector_domain(atom_domain, size=10), dp.symmetric_distance()
-        >>> meas = input_space >> dp.t.then_mean() >> dp.m.then_laplace(scale=0.5)
-        >>> print("standard mean:", meas([1.] * 10)) # -> 1.03 # doctest: +ELLIPSIS
+        >>> atom_domain = dp.atom_domain(bounds=(0.0, 10.0), nan=False)
+        >>> input_space = (
+        ...     dp.vector_domain(atom_domain, size=10),
+        ...     dp.symmetric_distance(),
+        ... )
+        >>> meas = (
+        ...     input_space
+        ...     >> dp.t.then_mean()
+        ...     >> dp.m.then_laplace(scale=0.5)
+        ... )
+        >>> print(
+        ...     "standard mean:", meas([1.0] * 10)
+        ... )  # -> 1.03 # doctest: +ELLIPSIS
         standard mean: ...
 
 We can now use the amplification combinator to construct an amplified measurement.
@@ -261,11 +274,15 @@ The function on the amplified measurement is identical to the standard measureme
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
       
-        >>> amplified = dp.c.make_population_amplification(meas, population_size=100)
-        >>> print("amplified mean:", amplified([1.] * 10)) # -> .97 # doctest: +ELLIPSIS
-        amplified mean: ...
+      >>> amplified = dp.c.make_population_amplification(
+      ...     meas, population_size=100
+      ... )
+      >>> print(
+      ...     "amplified mean:", amplified([1.0] * 10)
+      ... )  # -> .97 # doctest: +ELLIPSIS
+      amplified mean: ...
 
 The privacy relation on the amplified measurement takes into account that the input dataset of size 10
 is a simple sample of individuals from a theoretical larger dataset that captures the entire population, with 100 rows.
@@ -274,13 +291,12 @@ is a simple sample of individuals from a theoretical larger dataset that capture
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
         >>> # Where we once had a privacy utilization of ~2 epsilon...
-        >>> assert meas.check(2, 2. + 1e-6)
-        ...
+        >>> assert meas.check(2, 2.0 + 1e-6)
         >>> # ...we now have a privacy utilization of ~.4941 epsilon.
-        >>> assert amplified.check(2, .4941)
+        >>> assert amplified.check(2, 0.4941)
 
 The efficacy of this combinator improves as n gets larger.
 

@@ -10,11 +10,11 @@ us if you are interested in proof-writing. Thank you!
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> import opendp.prelude as dp
             >>> dp.enable_features("contrib")
-            
+
 
 Define a few queries you might want to run up-front:
 
@@ -23,19 +23,26 @@ Define a few queries you might want to run up-front:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> # define the dataset space and how distances are measured
-            >>> input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
-            
-            >>> meas_count = input_space >> dp.t.then_count() >> dp.m.then_laplace(scale=1.0)
+            >>> input_space = (
+            ...     dp.vector_domain(dp.atom_domain(T=int)),
+            ...     dp.symmetric_distance(),
+            ... )
+
+            >>> meas_count = (
+            ...     input_space
+            ...     >> dp.t.then_count()
+            ...     >> dp.m.then_laplace(scale=1.0)
+            ... )
             >>> meas_sum = (
             ...     input_space
             ...     >> dp.t.then_clamp((0, 10))
             ...     >> dp.t.then_sum()
             ...     >> dp.m.then_laplace(scale=5.0)
             ... )
-            
+
 
 Notice that both of these measurements share the same input domain,
 input metric, and output measure:
@@ -45,7 +52,7 @@ input metric, and output measure:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> print("count:", meas_count)
             count: Measurement(
@@ -73,10 +80,12 @@ When the data is passed in, all queries are evaluated together, in a single batc
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
-            >>> meas_mean_fraction = dp.c.make_composition([meas_sum, meas_count])
-            
+            >>> meas_mean_fraction = dp.c.make_composition(
+            ...     [meas_sum, meas_count]
+            ... )
+
             >>> int_dataset = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
             >>> dp_sum, dp_count = meas_mean_fraction(int_dataset)
             >>> print("dp sum:", dp_sum)
@@ -91,7 +100,7 @@ The privacy map sums the constituent output distances.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> meas_mean_fraction.map(1)
             3.0
@@ -116,16 +125,16 @@ distances (``d_in``), and the privacy consumption allowed for each query
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> meas_adaptive_comp = dp.c.make_adaptive_composition(
             ...     input_domain=dp.vector_domain(dp.atom_domain(T=int)),
             ...     input_metric=dp.symmetric_distance(),
             ...     output_measure=dp.max_divergence(),
             ...     d_in=1,
-            ...     d_mids=[2., 1.]
+            ...     d_mids=[2.0, 1.0],
             ... )
-            
+
 
 Given this information, we know the privacy consumption of the entire
 composition:
@@ -135,7 +144,7 @@ composition:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> meas_adaptive_comp.map(1)
             3.0
@@ -148,11 +157,11 @@ returns a *queryable*.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> int_dataset = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
             >>> qbl_adaptive_comp = meas_adaptive_comp(int_dataset)
-            
+
 
 A queryable is like a state machine: it takes an input query, updates
 its internal state, and returns an answer. For adaptive composition,
@@ -168,7 +177,7 @@ sum and count:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> print("dp sum:", qbl_adaptive_comp(meas_sum))
             dp sum: ...
@@ -205,13 +214,24 @@ support chaining.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
-            >>> str_space = dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()
-            >>> meas_adaptive_comp_str = str_space >> dp.t.then_cast_default(int) >> meas_adaptive_comp
-            
-            >>> qbl_adaptive_comp_str = meas_adaptive_comp_str(["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"])
-            >>> qbl_adaptive_comp_str(meas_sum), qbl_adaptive_comp_str(meas_count)
+            >>> str_space = (
+            ...     dp.vector_domain(dp.atom_domain(T=str)),
+            ...     dp.symmetric_distance(),
+            ... )
+            >>> meas_adaptive_comp_str = (
+            ...     str_space
+            ...     >> dp.t.then_cast_default(int)
+            ...     >> meas_adaptive_comp
+            ... )
+
+            >>> qbl_adaptive_comp_str = meas_adaptive_comp_str(
+            ...     ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
+            ... )
+            >>> qbl_adaptive_comp_str(meas_sum), qbl_adaptive_comp_str(
+            ...     meas_count
+            ... )
             (..., ...)
 
 ``meas_adaptive_comp_str`` is invoked with a string dataset, but returns a
@@ -226,18 +246,25 @@ the output distance from the previous transformation:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> max_contributions = 1
-            >>> sum_trans = input_space >> dp.t.then_clamp((0, 10)) >> dp.t.then_sum()
-            >>> meas_adaptive_comp = sum_trans >> dp.c.make_adaptive_composition(
-            ...     input_domain=sum_trans.output_domain,
-            ...     input_metric=sum_trans.output_metric,
-            ...     output_measure=dp.max_divergence(),
-            ...     d_in=sum_trans.map(max_contributions),
-            ...     d_mids=[2., 1.]
+            >>> sum_trans = (
+            ...     input_space
+            ...     >> dp.t.then_clamp((0, 10))
+            ...     >> dp.t.then_sum()
             ... )
-            
+            >>> meas_adaptive_comp = (
+            ...     sum_trans
+            ...     >> dp.c.make_adaptive_composition(
+            ...         input_domain=sum_trans.output_domain,
+            ...         input_metric=sum_trans.output_metric,
+            ...         output_measure=dp.max_divergence(),
+            ...         d_in=sum_trans.map(max_contributions),
+            ...         d_mids=[2.0, 1.0],
+            ...     )
+            ... )
+
 
 In this code snip, we used the supporting elements and map from the
 transformation to fill in arguments to the adaptive compositor
@@ -261,17 +288,17 @@ second (1, 0)-DP.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> meas_adaptive_comp = dp.c.make_adaptive_composition(
             ...     input_domain=dp.vector_domain(dp.atom_domain(T=int)),
             ...     input_metric=dp.symmetric_distance(),
             ...     output_measure=dp.approximate(dp.max_divergence()),
             ...     d_in=1,
-            ...     d_mids=[(2., 1e-6), (1., 0.)]
+            ...     d_mids=[(2.0, 1e-6), (1.0, 0.0)],
             ... )
             >>> qbl_adaptive_comp = meas_adaptive_comp(int_dataset)
-            
+
 
 The first query to the approximate-DP adaptive compositor must be an
 approximate-DP measurement that satisfies $(2, 10^{-6})$-DP.
@@ -283,38 +310,55 @@ that will satisfy this level of privacy, under a given set of weights.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
-            >>> # find ρ_1, ρ_2 such that ρ_1 + ρ_2 = ρ <= (2, 1e-6), 
+            >>> # find ρ_1, ρ_2 such that ρ_1 + ρ_2 = ρ <= (2, 1e-6),
             >>> #    and ρ_1 is 5 times larger than ρ_2
-            >>> weights = [5., 1.]
-            
-            
+            >>> weights = [5.0, 1.0]
+
+
             >>> def scale_weights(scale, weights):
             ...     return [scale * w for w in weights]
-            
+            ...
+
             >>> def make_zcdp_adaptive_composition(scale):
-            ...     return dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(dp.c.make_adaptive_composition(
-            ...         input_domain=dp.vector_domain(dp.atom_domain(T=int)),
-            ...         input_metric=dp.symmetric_distance(),
-            ...         output_measure=dp.zero_concentrated_divergence(),
-            ...         d_in=1,
-            ...         d_mids=scale_weights(scale, weights)
-            ...     )), delta=1e-6)
-            
+            ...     return dp.c.make_fix_delta(
+            ...         dp.c.make_zCDP_to_approxDP(
+            ...             dp.c.make_adaptive_composition(
+            ...                 input_domain=dp.vector_domain(
+            ...                     dp.atom_domain(T=int)
+            ...                 ),
+            ...                 input_metric=dp.symmetric_distance(),
+            ...                 output_measure=dp.zero_concentrated_divergence(),
+            ...                 d_in=1,
+            ...                 d_mids=scale_weights(scale, weights),
+            ...             )
+            ...         ),
+            ...         delta=1e-6,
+            ...     )
+            ...
+
             >>> # find a scale parameter for the d_mids that makes the overall compositor satisfy (2., 1e-6)-approxDP
             >>> zcdp_compositor_scale = dp.binary_search_param(
-            ...     make_zcdp_adaptive_composition, 
-            ...     d_in=1, d_out=(2., 1e-6), T=float
+            ...     make_zcdp_adaptive_composition,
+            ...     d_in=1,
+            ...     d_out=(2.0, 1e-6),
+            ...     T=float,
             ... )
-            
+
             >>> # construct a zCDP adaptive compositor that satisfies (2., 1e-6)-approxDP
-            >>> meas_adaptive_comp_zCDP = make_zcdp_adaptive_composition(zcdp_compositor_scale)
-            
+            >>> meas_adaptive_comp_zCDP = make_zcdp_adaptive_composition(
+            ...     zcdp_compositor_scale
+            ... )
+
             >>> # query the root approx-DP compositor queryable to get a child zCDP queryable
-            >>> qbl_adaptive_comp_zCDP = qbl_adaptive_comp(meas_adaptive_comp_zCDP)
-            
-            >>> rho_1, rho_2 = scale_weights(zcdp_compositor_scale, weights)
+            >>> qbl_adaptive_comp_zCDP = qbl_adaptive_comp(
+            ...     meas_adaptive_comp_zCDP
+            ... )
+
+            >>> rho_1, rho_2 = scale_weights(
+            ...     zcdp_compositor_scale, weights
+            ... )
             >>> rho_1, rho_2
             (0.0734..., 0.0146...)
 
@@ -326,7 +370,7 @@ release:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> def make_sum_zCDP(scale):
             ...     return (
@@ -335,10 +379,16 @@ release:
             ...         >> dp.t.then_sum()
             ...         >> dp.m.then_gaussian(scale)
             ...     )
-            
-            
-            >>> dg_scale = dp.binary_search_param(make_sum_zCDP, d_in=1, d_out=rho_1)
-            >>> print('zcdp sum:', qbl_adaptive_comp_zCDP(make_sum_zCDP(dg_scale)))
+            ...
+
+
+            >>> dg_scale = dp.binary_search_param(
+            ...     make_sum_zCDP, d_in=1, d_out=rho_1
+            ... )
+            >>> print(
+            ...     "zcdp sum:",
+            ...     qbl_adaptive_comp_zCDP(make_sum_zCDP(dg_scale)),
+            ... )
             zcdp sum: ...
 
 At this point, we can submit queries to both the root approx-DP
@@ -350,13 +400,16 @@ queryable (``qbl_adaptive_comp_zCDP``).
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> # convert the pure-DP count measurement to a approx-DP count measurement (where δ=0.)
             >>> meas_count_approxDP = dp.c.make_approximate(meas_count)
-            
+
             >>> # submit the count measurement to the root approx-DP compositor queryable
-            >>> print('approxDP count:', qbl_adaptive_comp(meas_count_approxDP))
+            >>> print(
+            ...     "approxDP count:",
+            ...     qbl_adaptive_comp(meas_count_approxDP),
+            ... )
             approxDP count: ...
 
 We’ve now exhausted the privacy budget of the root approx-DP queryable,
@@ -367,7 +420,7 @@ but we can still query the child zCDP queryable.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> def make_count_zCDP(scale):
             ...     return (
@@ -375,8 +428,14 @@ but we can still query the child zCDP queryable.
             ...         >> dp.t.then_count()
             ...         >> dp.m.then_gaussian(scale)
             ...     )
-            >>> dg_scale = dp.binary_search_param(make_count_zCDP, d_in=1, d_out=rho_2)
-            >>> print('zcdp count:', qbl_adaptive_comp_zCDP(make_count_zCDP(dg_scale)))
+            ...
+            >>> dg_scale = dp.binary_search_param(
+            ...     make_count_zCDP, d_in=1, d_out=rho_2
+            ... )
+            >>> print(
+            ...     "zcdp count:",
+            ...     qbl_adaptive_comp_zCDP(make_count_zCDP(dg_scale)),
+            ... )
             zcdp count: ...
 
 Now the privacy budget of both queryables have been exhausted:
@@ -386,7 +445,7 @@ Now the privacy budget of both queryables have been exhausted:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> qbl_adaptive_comp(meas_count_approxDP)
             Traceback (most recent call last):

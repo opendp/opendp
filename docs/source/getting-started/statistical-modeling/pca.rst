@@ -16,25 +16,35 @@ us if you are interested in proof-writing. Thank you!
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> import opendp.prelude as dp
-            >>> dp.enable_features("contrib", "floating-point", "honest-but-curious")
+            >>> dp.enable_features(
+            ...     "contrib", "floating-point", "honest-but-curious"
+            ... )
 
             >>> import numpy as np
-            
-            >>> def sample_microdata(*, num_columns=None, num_rows=None, cov=None):
+
+            >>> def sample_microdata(
+            ...     *, num_columns=None, num_rows=None, cov=None
+            ... ):
             ...     cov = cov or sample_covariance(num_columns)
             ...     microdata = np.random.multivariate_normal(
-            ...         np.zeros(cov.shape[0]), cov, size=num_rows or 100_000
+            ...         np.zeros(cov.shape[0]),
+            ...         cov,
+            ...         size=num_rows or 100_000,
             ...     )
             ...     microdata -= microdata.mean(axis=0)
             ...     return microdata
-            
+            ...
+
             >>> def sample_covariance(num_features):
-            ...     A = np.random.uniform(0, num_features, size=(num_features, num_features))
+            ...     A = np.random.uniform(
+            ...         0, num_features, size=(num_features, num_features)
+            ...     )
             ...     return A.T @ A
-            
+            ...
+
 
 In this notebook we’ll be working with an example dataset generated from
 a random covariance matrix.
@@ -44,12 +54,14 @@ a random covariance matrix.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> num_columns = 4
             >>> num_rows = 10_000
-            >>> example_dataset = sample_microdata(num_columns=num_columns, num_rows=num_rows)
-            
+            >>> example_dataset = sample_microdata(
+            ...     num_columns=num_columns, num_rows=num_rows
+            ... )
+
 
 Releasing a DP PCA model with the OpenDP Library is easy because it
 provides an API similar to scikit-learn:
@@ -59,15 +71,15 @@ provides an API similar to scikit-learn:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> model = dp.sklearn.decomposition.PCA(
-            ...     epsilon=1.,
-            ...     row_norm=1.,
+            ...     epsilon=1.0,
+            ...     row_norm=1.0,
             ...     n_samples=num_rows,
             ...     n_features=4,
             ... )
-            
+
 
 A private release occurs when you fit the model to the data.
 
@@ -76,7 +88,7 @@ A private release occurs when you fit the model to the data.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> model.fit(example_dataset)
             PCA(epsilon=1.0, n_components=4, n_features=4, n_samples=10000, row_norm=1.0)
@@ -89,7 +101,7 @@ non-private PCA:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> print(model.singular_values_)
             [... ... ... ...]
@@ -109,17 +121,17 @@ allocated to estimating each eigenvector internally.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> model = dp.sklearn.decomposition.PCA(
-            ...     epsilon=1.,
-            ...     row_norm=1.,
+            ...     epsilon=1.0,
+            ...     row_norm=1.0,
             ...     n_samples=num_rows,
             ...     n_features=4,
-            ...     n_components=2 # only estimate 2 of 4 components this time
+            ...     n_components=2,  # only estimate 2 of 4 components this time
             ... )
             >>> meas = model.measurement()
-            
+
 
 The measurement fits ``model`` and then returns ``model``:
 
@@ -128,11 +140,11 @@ The measurement fits ``model`` and then returns ``model``:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> meas(example_dataset)
             PCA(epsilon=1.0, n_components=2, n_features=4, n_samples=10000, row_norm=1.0)
-            
+
 ``.measurement()`` makes it more convenient to use the Scikit-Learn API
 with other combinators, like compositors.
 
@@ -141,7 +153,7 @@ with other combinators, like compositors.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> print(model.singular_values_)
             [... ...]

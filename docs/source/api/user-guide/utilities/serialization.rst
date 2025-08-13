@@ -14,12 +14,14 @@ perhaps on a remote server.
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
         >>> import polars as pl
 
-        >>> context = dp.Context.compositor( # First, on the client...
-        ...     data=pl.LazyFrame({}), # we might have dummy data here.
+        >>> context = dp.Context.compositor(  # First, on the client...
+        ...     data=pl.LazyFrame(
+        ...         {}
+        ...     ),  # we might have dummy data here.
         ...     privacy_unit=dp.unit_of(contributions=1),
         ...     privacy_loss=dp.loss_of(epsilon=1.0),
         ...     split_evenly_over=1,
@@ -27,15 +29,21 @@ perhaps on a remote server.
         >>> query = context.query().select(dp.len())
         >>> serialized_plan = query.polars_plan.serialize()
 
-        >>> new_context = dp.Context.compositor( # Then, on the server...
-        ...     data=pl.LazyFrame({}),  # real, sensitive data here.
-        ...     privacy_unit=dp.unit_of(contributions=1),
-        ...     privacy_loss=dp.loss_of(epsilon=1.0),
-        ...     split_evenly_over=1,
+        >>> new_context = (
+        ...     dp.Context.compositor(  # Then, on the server...
+        ...         data=pl.LazyFrame(
+        ...             {}
+        ...         ),  # real, sensitive data here.
+        ...         privacy_unit=dp.unit_of(contributions=1),
+        ...         privacy_loss=dp.loss_of(epsilon=1.0),
+        ...         split_evenly_over=1,
+        ...     )
         ... )
         >>> # Then use the serialized plan from the client:
-        >>> new_query = new_context.deserialize_polars_plan(serialized_plan)
-        >>> print('DP len:', new_query.release().collect().item())
+        >>> new_query = new_context.deserialize_polars_plan(
+        ...     serialized_plan
+        ... )
+        >>> print("DP len:", new_query.release().collect().item())
         DP len: ...
 
 
@@ -55,7 +63,7 @@ Where Context is used without Polars, we have ``query.resolve()`` instead of ``q
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
       >>> context = dp.Context.compositor(
       ...     data=[1, 2, 3],  # dummy data on the client
@@ -88,7 +96,7 @@ any object from the Framework API can also be serialized and deserialized the sa
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
         >>> domain = dp.vector_domain(dp.atom_domain(T=int))
         >>> serialized_domain = dp.serialize(domain)
@@ -113,9 +121,11 @@ Objects created with the plugin API and context objects, discussed above, are no
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
-        >>> dp_obj = dp.user_domain("trivial_user_domain", lambda _: True)
+        >>> dp_obj = dp.user_domain(
+        ...     "trivial_user_domain", lambda _: True
+        ... )
         >>> dp.serialize(dp_obj)
         Traceback (most recent call last):
         ...

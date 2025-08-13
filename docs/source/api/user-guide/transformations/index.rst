@@ -129,15 +129,20 @@ In other words, it transforms a categorical data vector to a vector of numeric i
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
         >>> import opendp.prelude as dp
-        >>> dp.enable_features('contrib')
+        >>> dp.enable_features("contrib")
         >>> finder = (
         ...     # define the input space
-        ...     (dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()) >>
+        ...     (
+        ...         dp.vector_domain(dp.atom_domain(T=str)),
+        ...         dp.symmetric_distance(),
+        ...     )
+        ...     >>
         ...     # find the index of each input datum in the categories list
-        ...     dp.t.then_find(categories=["A", "B", "C"]) >>
+        ...     dp.t.then_find(categories=["A", "B", "C"])
+        ...     >>
         ...     # impute any input datum that are not a part of the categories list as 3
         ...     dp.t.then_impute_constant(3)
         ... )
@@ -150,13 +155,14 @@ In other words, it transforms a categorical data vector to a vector of numeric i
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
         >>> binner = dp.t.make_find_bin(
-        ...     dp.vector_domain(dp.atom_domain(T=float, nan=False)), 
+        ...     dp.vector_domain(dp.atom_domain(T=float, nan=False)),
         ...     dp.symmetric_distance(),
-        ...     edges=[1., 2., 10.])
-        >>> binner([0., 1., 3., 15.])
+        ...     edges=[1.0, 2.0, 10.0],
+        ... )
+        >>> binner([0.0, 1.0, 3.0, 15.0])
         [0, 1, 2, 3]
 
 :func:`opendp.transformations.make_index` uses each indicial input datum as an index into a category set.
@@ -165,11 +171,14 @@ In other words, it transforms a categorical data vector to a vector of numeric i
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
         >>> indexer = dp.t.make_index(
-        ...     dp.vector_domain(dp.atom_domain(T=dp.usize)), dp.symmetric_distance(),
-        ...     categories=["A", "B", "C"], null="D")
+        ...     dp.vector_domain(dp.atom_domain(T=dp.usize)),
+        ...     dp.symmetric_distance(),
+        ...     categories=["A", "B", "C"],
+        ...     null="D",
+        ... )
         >>> indexer([0, 1, 2, 3, 2342])
         ['A', 'B', 'C', 'D', 'D']
 
