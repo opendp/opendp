@@ -89,7 +89,8 @@ In the below example, the adjustment is subtle, but the bounds were adjusted to 
 
     .. code:: pycon
 
-        >>> # call a constructor to produce a transformation, but this time with float bounds
+        >>> # call a constructor to produce a transformation, but this
+        >>> # time with float bounds
         >>> sum_trans = dp.t.make_sum(
         ...     dp.vector_domain(dp.atom_domain(bounds=(0.0, 1.0))),
         ...     dp.symmetric_distance(),
@@ -201,7 +202,8 @@ The combinator can also be used on measurements with a ``ZeroConcentratedDiverge
         >>> meas_zCDP = input_space >> dp.m.then_gaussian(scale=0.5)
         >>> # convert the output measure to `SmoothedMaxDivergence`
         >>> meas_approxDP = dp.c.make_zCDP_to_approxDP(meas_zCDP)
-        >>> # SmoothedMaxDivergence distances are privacy profiles (ε(δ) curves)
+        >>> # SmoothedMaxDivergence distances are privacy profiles
+        >>> # (ε(δ) curves)
         >>> profile = meas_approxDP.map(d_in=1.0)
         >>> profile.epsilon(delta=1e-6)
         11.688596249354896

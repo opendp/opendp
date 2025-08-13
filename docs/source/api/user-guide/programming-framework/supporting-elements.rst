@@ -26,7 +26,8 @@ To use the function, the Transformation or Measurement can be called directly:
       >>> input_domain = dp.vector_domain(
       ...     dp.atom_domain(T=float, nan=False)
       ... )
-      >>> # adjacent datasets differ by the addition or removal of records
+      >>> # adjacent datasets differ by the addition
+      >>> # or removal of records
       >>> input_metric = dp.symmetric_distance()
       >>> clamp = dp.t.make_clamp(
       ...     input_domain, input_metric, bounds=(0.0, 5.0)
@@ -256,9 +257,11 @@ Putting this to practice, the following example invokes the stability map on a c
         ...     dp.symmetric_distance(),
         ...     bounds=(1, 10),
         ... )
-        >>> # The maximum number of records that any one individual may influence in your dataset
+        >>> # The maximum number of records that any one individual may
+        >>> # influence in your dataset
         >>> in_symmetric_distance = 3
-        >>> # clamp is a 1-stable transformation, so this should pass for any symmetric_distance >= 3
+        >>> # clamp is a 1-stable transformation, so this should pass
+        >>> # for any symmetric_distance >= 3
         >>> clamper.map(d_in=in_symmetric_distance)
         3
 

@@ -203,8 +203,9 @@ it under ``dp.t``:
 
         .. code:: pycon
 
-            >>> # call the constructor to produce the transformation `bounded_sum`
-            >>> # notice that `make_sum` expects an input domain consisting of bounded data:
+            >>> # Call the constructor to produce the transformation
+            >>> # `bounded_sum`. Notice that `make_sum` expects an input
+            >>> # domain consisting of bounded data:
             >>> input_domain = dp.vector_domain(
             ...     dp.atom_domain(bounds=(0.0, 5.0))
             ... )
@@ -226,7 +227,8 @@ not a measurement, the resulting output is not differentially private.
 
         .. code:: pycon
 
-            >>> # under the condition that the input data is a member of the input domain...
+            >>> # under the condition that the input data is a member of
+            >>> # the input domain...
             >>> bounded_mock_dataset = [1.3, 3.8, 0.0, 5.0]
             >>> # ...the exact sum is:
             >>> bounded_sum(bounded_mock_dataset)
@@ -256,9 +258,11 @@ types.
 
         .. code:: pycon
 
-            >>> # under the condition that one individual may contribute up to 2 records to `bounded_mock_dataset`...
+            >>> # under the condition that one individual may contribute up
+            >>> # to 2 records to `bounded_mock_dataset`...
             >>> max_contributions = 2
-            >>> # ...then the sensitivity, expressed in terms of the absolute distance, is:
+            >>> # ...then the sensitivity, expressed in terms of the
+            >>> # absolute distance, is:
             >>> bounded_sum.map(d_in=max_contributions)
             10.0...
 
@@ -397,7 +401,8 @@ chain all of these primitives to form a new compound measurement:
             >>> print("DP sum:", dp_sum(mock_dataset))
             DP sum: ...
 
-            >>> # evaluate the privacy loss of the dp_sum, when an individual can contribute at most 2 records
+            >>> # evaluate the privacy loss of the dp_sum, when an
+            >>> # individual can contribute at most 2 records
             >>> print("epsilon:", dp_sum.map(d_in=max_contributions))
             epsilon: ...
 

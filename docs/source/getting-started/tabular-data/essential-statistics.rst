@@ -188,11 +188,13 @@ know about the data.
             ...     # NEW CODE STARTING HERE
             ...     margins=[
             ...         dp.polars.Margin(
-            ...             # the length of the data is no greater than
-            ...             #    average quarterly survey size (public) * number of quarters (public)
+            ...             # The length of the data is no greater than:
+            ...             #    average quarterly survey size * number of quarters
+            ...             # (both public)
             ...             max_length=150_000
             ...             * 36
-            ...             # Remember to only use public information when determining max_length.
+            ...             # Remember to only use public information
+            ...             # when determining max_length.
             ...         ),
             ...     ],
             ... )

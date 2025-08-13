@@ -143,7 +143,8 @@ In other words, it transforms a categorical data vector to a vector of numeric i
         ...     # find the index of each input datum in the categories list
         ...     dp.t.then_find(categories=["A", "B", "C"])
         ...     >>
-        ...     # impute any input datum that are not a part of the categories list as 3
+        ...     # impute any input datum that are not a part of the
+        ...     # categories list as 3
         ...     dp.t.then_impute_constant(3)
         ... )
         >>> finder(["A", "B", "C", "A", "D"])

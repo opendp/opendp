@@ -80,7 +80,8 @@ following six elements:
             ...     prob=0.75
             ... )
 
-            >>> # invoke the measurement on some survey response to execute the randomized response algorithm
+            >>> # invoke the measurement on some survey response to execute
+            >>> # the randomized response algorithm
             >>> alice_survey_response = True
             >>> print(
             ...     "noisy release:", rr_bool_meas(alice_survey_response)
@@ -107,7 +108,8 @@ custom category set:
             ...     categories, prob=0.75
             ... )
 
-            >>> # invoke the measurement on some survey response, to execute the randomized response algorithm
+            >>> # invoke the measurement on some survey response, to execute
+            >>> # the randomized response algorithm
             >>> alice_survey_response = "C"
             >>> print("noisy release:", rr_meas(alice_survey_response))
             noisy release: ...

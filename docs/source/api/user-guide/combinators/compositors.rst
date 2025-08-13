@@ -338,7 +338,8 @@ that will satisfy this level of privacy, under a given set of weights.
             ...     )
             ...
 
-            >>> # find a scale parameter for the d_mids that makes the overall compositor satisfy (2., 1e-6)-approxDP
+            >>> # find a scale parameter for the d_mids that makes the
+            >>> # overall compositor satisfy (2., 1e-6)-approxDP
             >>> zcdp_compositor_scale = dp.binary_search_param(
             ...     make_zcdp_adaptive_composition,
             ...     d_in=1,
@@ -346,12 +347,14 @@ that will satisfy this level of privacy, under a given set of weights.
             ...     T=float,
             ... )
 
-            >>> # construct a zCDP adaptive compositor that satisfies (2., 1e-6)-approxDP
+            >>> # construct a zCDP adaptive compositor that satisfies
+            >>> # (2., 1e-6)-approxDP
             >>> meas_adaptive_comp_zCDP = make_zcdp_adaptive_composition(
             ...     zcdp_compositor_scale
             ... )
 
-            >>> # query the root approx-DP compositor queryable to get a child zCDP queryable
+            >>> # query the root approx-DP compositor queryable to get a
+            >>> # child zCDP queryable
             >>> qbl_adaptive_comp_zCDP = qbl_adaptive_comp(
             ...     meas_adaptive_comp_zCDP
             ... )
@@ -402,10 +405,12 @@ queryable (``qbl_adaptive_comp_zCDP``).
 
         .. code:: pycon
 
-            >>> # convert the pure-DP count measurement to a approx-DP count measurement (where δ=0.)
+            >>> # convert the pure-DP count measurement to a approx-DP
+            >>> # count measurement (where δ=0.)
             >>> meas_count_approxDP = dp.c.make_approximate(meas_count)
 
-            >>> # submit the count measurement to the root approx-DP compositor queryable
+            >>> # submit the count measurement to the root approx-DP
+            >>> # compositor queryable
             >>> print(
             ...     "approxDP count:",
             ...     qbl_adaptive_comp(meas_count_approxDP),

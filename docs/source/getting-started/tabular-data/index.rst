@@ -109,7 +109,8 @@ ensuring that queries you would like to release satisfy necessary privacy proper
     ...     split_evenly_over=10,
     ... )
     
-    >>> # Once you construct the context, you should abstain from directly accessing your data again.
+    >>> # Once you construct the context, you should abstain from
+    >>> # directly accessing your data again.
     >>> # In fact, it is good practice to delete it! 
     >>> del df
 
