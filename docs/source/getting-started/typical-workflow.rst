@@ -70,7 +70,7 @@ Next, you should determine what level of privacy protection to provide to your u
 
 The level of privacy afforded to units of privacy in a data set is quantified by *privacy loss parameters*. Under *pure* differential privacy, there is a single privacy-loss parameter, typically denoted epsilon (ε). Epsilon is a non-negative number, where larger values afford less privacy. Epsilon can be viewed as a proxy for the worst-case risk to a unit of privacy. It is customary to refer to a data release with such bounded risk as epsilon-differentially private (ε-DP).
 
-A common rule-of-thumb is to limit ε to 1.0, but this limit will vary depending on the considerations mentioned above. See `Privacy Deployments Registry <https://registry.oblivious.com/#registry>`_ for examples of parameters used by real-world applications.
+A common rule-of-thumb is to limit ε to 1.0, but this limit will vary depending on the considerations mentioned above. See the `Deployments Registry <http://registry.opendp.org/deployments-registry/>`_ for examples of parameters used by real-world applications.
 
 .. tab-set::
 
