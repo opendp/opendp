@@ -23,6 +23,7 @@ Polars vs. OpenDP
 OpenDP Polars differs from typical Polars in these ways:
 
 1. **How you specify the data.**
+
    Instead of directly manipulating the data (a ``LazyFrame``),
    you now manipulate an :py:class:`opendp.extras.polars.LazyFrameQuery`
    returned by :code:`context.query()`
@@ -41,8 +42,11 @@ OpenDP Polars differs from typical Polars in these ways:
         ... )
 
 2. **How you construct the query.**
+
    OpenDP extends the Polars API to include differentially private methods and statistics.
    ``LazyFrame`` (now ``LazyFrameQuery``) has additional methods, like :code:`.summarize` and :code:`.release`.
+
+   Expressions also have an additional namespace :code:`.dp` with methods from :py:class:`opendp.extras.polars.DPExpr`.
 
 .. tab-set::
 
@@ -61,14 +65,6 @@ OpenDP Polars differs from typical Polars in these ways:
         │ len    ┆ Frame Length ┆ Integer Laplace ┆ 10.0  │
         └────────┴──────────────┴─────────────────┴───────┘
 
-Expressions also have an additional namespace :code:`.dp` with methods from :py:class:`opendp.extras.polars.DPExpr`.
-
-.. tab-set::
-
-  .. tab-item:: Python
-
-    .. code:: pycon
-
         >>> candidates = list(range(0, 100, 10))
         >>>
         >>> _ = context.query().select(
@@ -78,6 +74,7 @@ Expressions also have an additional namespace :code:`.dp` with methods from :py:
         ... )
 
 3. **How you run the query.**
+
    When used from OpenDP, you must first call :code:`.release()` before executing the computation with :code:`.collect()`.
    :code:`.release()` accounts for the privacy loss of releasing the query, and updates the privacy budget.
 
@@ -99,6 +96,7 @@ Expressions also have an additional namespace :code:`.dp` with methods from :py:
         └─────┘
 
 4. **What queries are allowed.**
+
    OpenDP only makes guarantees about query plans and expressions it knows about.
    Therefore OpenDP is somewhat like an allow-list on valid query plans.
 
