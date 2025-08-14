@@ -73,9 +73,8 @@ and checks that 1.0 is a member of the domain, but NaN is not.
 
     .. code:: pycon
 
-      >>> f64_atom_domain = dp.atom_domain(
-      ...     T=float, nan=False
-      ... )  # float defaults to f64, a double-precision 64-bit float
+      >>> # float defaults to f64, a double-precision 64-bit float
+      >>> f64_atom_domain = dp.atom_domain(T=float, nan=False)
       >>> assert f64_atom_domain.member(1.0)
       >>> assert not f64_atom_domain.member(float("nan"))
 
@@ -90,9 +89,8 @@ Other domains may be described in a similar way. For example:
 
     .. code:: pycon
 
-      >>> i32_bounded_domain = dp.atom_domain(
-      ...     bounds=(-2, 2)
-      ... )  # int defaults to i32, a 32-bit signed integer
+      >>> # int defaults to i32, a 32-bit signed integer
+      >>> i32_bounded_domain = dp.atom_domain(bounds=(-2, 2))
       >>> assert i32_bounded_domain.member(-2)
       >>> assert not i32_bounded_domain.member(3)
 

@@ -76,16 +76,12 @@ following six elements:
         .. code:: pycon
 
             >>> # construct the measurement
-            >>> rr_bool_meas = dp.m.make_randomized_response_bool(
-            ...     prob=0.75
-            ... )
+            >>> rr_bool_meas = dp.m.make_randomized_response_bool(prob=0.75)
 
             >>> # invoke the measurement on some survey response to execute
             >>> # the randomized response algorithm
             >>> alice_survey_response = True
-            >>> print(
-            ...     "noisy release:", rr_bool_meas(alice_survey_response)
-            ... )
+            >>> print("noisy release:", rr_bool_meas(alice_survey_response))
             noisy release: ...
 
             >>> # determine epsilon by invoking the map
@@ -196,8 +192,8 @@ The resulting expression is distilled into the following function:
             ...     return (mean_release + p - 1) / (2 * p - 1)
             ...
 
-            >>> estimated_bool_proportion = (
-            ...     debias_randomized_response_bool(naive_proportion, 0.75)
+            >>> estimated_bool_proportion = debias_randomized_response_bool(
+            ...     naive_proportion, 0.75
             ... )
             >>> print("estimated:", estimated_bool_proportion)
             estimated: ...

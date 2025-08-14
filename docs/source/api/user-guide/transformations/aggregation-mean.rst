@@ -175,9 +175,7 @@ postprocess the output.
             ...     >> dp.m.then_laplace(1.0)
             ... )
 
-            >>> dp_fraction_meas = dp.c.make_composition(
-            ...     [dp_sum, dp_count]
-            ... )
+            >>> dp_fraction_meas = dp.c.make_composition([dp_sum, dp_count])
 
             >>> dp_sum, dp_count = dp_fraction_meas(data)
             >>> print("dp mean:", dp_sum / dp_count)

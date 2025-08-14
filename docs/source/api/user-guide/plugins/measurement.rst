@@ -62,9 +62,7 @@ The resulting Measurement may be used interchangeably with those constructed via
         ... )
         >>> meas([2, 3, 4])
         'denied'
-        >>> meas.map(
-        ...     1
-        ... )  # computes epsilon, because the output measure is max divergence
+        >>> meas.map(1)
         0.0
 
 While this mechanism clearly has no utility, 

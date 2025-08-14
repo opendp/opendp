@@ -229,10 +229,10 @@ support chaining.
             >>> qbl_adaptive_comp_str = meas_adaptive_comp_str(
             ...     ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
             ... )
-            >>> qbl_adaptive_comp_str(meas_sum), qbl_adaptive_comp_str(
-            ...     meas_count
-            ... )
-            (..., ...)
+            >>> print("dp sum:", qbl_adaptive_comp_str(meas_sum))
+            dp sum: ...
+            >>> print("dp count:", qbl_adaptive_comp_str(meas_count))
+            dp count: ...
 
 ``meas_adaptive_comp_str`` is invoked with a string dataset, but returns a
 queryable that takes queries over integer datasets. Chaining compositors
@@ -316,7 +316,6 @@ that will satisfy this level of privacy, under a given set of weights.
             >>> #    and ρ_1 is 5 times larger than ρ_2
             >>> weights = [5.0, 1.0]
 
-
             >>> def scale_weights(scale, weights):
             ...     return [scale * w for w in weights]
             ...
@@ -359,9 +358,7 @@ that will satisfy this level of privacy, under a given set of weights.
             ...     meas_adaptive_comp_zCDP
             ... )
 
-            >>> rho_1, rho_2 = scale_weights(
-            ...     zcdp_compositor_scale, weights
-            ... )
+            >>> rho_1, rho_2 = scale_weights(zcdp_compositor_scale, weights)
             >>> rho_1, rho_2
             (0.0734..., 0.0146...)
 
