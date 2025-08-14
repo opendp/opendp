@@ -55,7 +55,7 @@ jobs:
           name: python_bindings
           path: python/src/opendp/
 
-  build-docs:
+  check-docs:
     needs: rust-build
     runs-on: ubuntu-22.04
     defaults:
