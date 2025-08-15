@@ -2,7 +2,7 @@
 \input{../../lib.sty} 
 \allowdisplaybreaks
 
-\title{\texttt{impl SelectionMeasure for ZeroConcentratedDivergence}} 
+\title{\texttt{impl TopKMeasure for ZeroConcentratedDivergence}} 
 \author{Michael Shoemate} 
 \begin{document}  
 \maketitle 
@@ -37,11 +37,11 @@
 
 \subsection*{Pseudocode} 
 \label{sec:python-pseudocode} 
-\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/SelectionMeasure_ZeroConcentratedDivergence.py} 
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/TopKMeasure_ZeroConcentratedDivergence.py} 
  
 \subsection*{Postcondition} 
 \begin{theorem}
-    The implementation is consistent with all associated items in the \rustdoc{measurements/report\_noisy\_top\_k/trait}{SelectionMeasure} trait.
+    The implementation is consistent with all associated items in the \rustdoc{measurements/noisy\_top\_k/trait}{TopKMeasure} trait.
     \begin{enumerate}
         \item Associated Type \texttt{RV}
         \item Method \texttt{random\_variable} 
@@ -73,7 +73,7 @@
 \begin{proof}[Proof of valid method: \texttt{privacy\_map}]
     By Lemma 4.2 of \cite{Durfee2019PracticalDP}, $\mathcal{M}_{\mathrm{Gumbel}}^k(x)$ is equal in distribution to the peeling exponential mechanism,
     which is the k-fold composition of the exponential mechanism.
-    Proposition 2 of \cite{Dong2019OptimalDP} shows that the exponential mechanism satisfies the RangeDivergence privacy guarantee.
+    Proposition 2 of \cite{Dong2019OptimalDP} shows that the exponential mechanism satisfies the zCDP privacy guarantee.
 \end{proof}
 
 \bibliographystyle{plain} 

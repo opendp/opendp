@@ -2,7 +2,7 @@
 \input{../../lib.sty} 
 \allowdisplaybreaks
 
-\title{\texttt{impl TopKMeasure for MaxDivergence}} 
+\title{\texttt{impl TopKMeasure for RangeDivergence}} 
 \author{Michael Shoemate} 
 \begin{document}  
 \maketitle 
@@ -11,22 +11,19 @@
 \subsection*{Precondition} 
 \subsubsection*{Compiler-verified}
 \begin{itemize}
-    \item Associated Constant \texttt{ONE\_SHOT}
-        \begin{itemize}
-            \item \texttt{ONE\_SHOT} is true if the measure supports one-shot top-$k$ composition.
-        \end{itemize}
     \item Associated Type \texttt{RV}
         \begin{itemize}
             \item \texttt{RV} must implement trait \rustdoc{traits/samplers/psrn/trait}{InverseCDF}.
         \end{itemize}
     \item Method \texttt{random\_variable}
         \textit{Types consistent with pseudocode.}
-    \item Method a\texttt{privacy\_map}
+    \item Method \texttt{privacy\_map}
         \textit{Types consistent with pseudocode.}
 \end{itemize}
 
 \subsubsection*{Caller-verified}
 \begin{itemize}
+    \item Associated Type \texttt{RV} (\textit{no caller verified preconditions})
     \item Method \texttt{random\_variable}
         \begin{itemize}
             \item \texttt{scale} is positive (\textit{cannot be null due to \texttt{FBig} dtype}).
@@ -40,48 +37,46 @@
 
 \subsection*{Pseudocode} 
 \label{sec:python-pseudocode} 
-\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/TopKMeasure_MaxDivergence.py} 
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/TopKMeasure_RangeDivergence.py} 
  
 \subsection*{Postcondition} 
 \begin{theorem}
     The implementation is consistent with all associated items in the \rustdoc{measurements/noisy\_top\_k/trait}{TopKMeasure} trait.
     \begin{enumerate}
-        \item Associated Constant \texttt{ONE\_SHOT}
         \item Associated Type \texttt{RV}
         \item Method \texttt{random\_variable} 
         \item Method \texttt{privacy\_map}
     \end{enumerate}
 \end{theorem}
 
-\begin{proof}[Proof of valid associated constant: \texttt{ONE\_SHOT}]
-    \label{proof:ONE_SHOT}
-    Since the proof of \texttt{privacy\_map} only holds if $k$ is less than two,
-    \texttt{ONE\_SHOT} is defined to be false.
-\end{proof}
-
 \begin{definition}
-    \label{def:Exponential}
-    A random variable follows the Exponential distribution if it has density
+    \label{def:Gumbel}
+    A random variable follows the Gumbel distribution if it has density
     \begin{equation}
-        f(x) = \frac{1}{\beta} e^{-z}
+        f(x) = \frac{1}{\beta} e^{-e^{-e^{-z}} - z}
     \end{equation}
     where $z = \frac{x - \mu}{\beta}$,
-    $\mu$ is the shift (location) parameter and $\beta$ is the scale parameter.
+    $\mu$ is the location parameter and $\beta$ is the scale parameter.
 \end{definition}
 
 \begin{proof}[Proof of valid associated type: \texttt{RV}]
-    The associated type \texttt{RV} is defined as \texttt{ExponentialRV},
-    which represents a random variable following the Exponential distribution \ref{def:Exponential}.
-    The compiler verifies that \texttt{ExponentialRV} implements the \rustdoc{traits/samplers/psrn/trait}{InverseCDF} trait.
+    The associated type \texttt{RV} is defined as \texttt{GumbelRV},
+    which represents a random variable following the Gumbel distribution \ref{def:Gumbel}.
+    The compiler verifies that \texttt{GumbelRV} implements the \rustdoc{traits/samplers/psrn/trait}{InverseCDF} trait.
 \end{proof}
 
 \begin{proof}[Proof of valid method: \texttt{random\_variable}]
     By the precondition on \texttt{scale} being positive, 
-    \texttt{random\_variable} returns a valid instance of \rustdoc{traits/samplers/psrn/exponential/struct}{ExponentialRV}.
+    \texttt{random\_variable} returns a valid instance of \rustdoc{traits/samplers/psrn/gumbel/struct}{GumbelRV}.
 \end{proof}
 
 \begin{proof}[Proof of valid method: \texttt{privacy\_map}]
-    To be merged from: https://github.com/opendp/opendp/pull/1678/files
+    By Lemma 4.2 of \cite{Durfee2019PracticalDP}, $\mathcal{M}_{\mathrm{Gumbel}}^k(x)$ is equal in distribution to the peeling exponential mechanism,
+    which is the k-fold composition of the exponential mechanism.
+    Proposition 2 of \cite{Dong2019OptimalDP} shows that the exponential mechanism satisfies the RangeDivergence privacy guarantee.
 \end{proof}
+
+\bibliographystyle{plain} 
+\bibliography{references.bib} 
 
 \end{document} 

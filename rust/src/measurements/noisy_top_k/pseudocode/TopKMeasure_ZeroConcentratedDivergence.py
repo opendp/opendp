@@ -1,11 +1,11 @@
 # type: ignore
-class MaxDivergence(SelectionMeasure):
-    ONE_SHOT = False
-    RV = ExponentialRV
+class ZeroConcentratedDivergence(TopKMeasure):
+    ONE_SHOT = True
+    RV = GumbelRV
 
     @staticmethod
-    def random_variable(shift: FBig, scale: FBig) -> ExponentialRV:
-        return ExponentialRV(shift=shift, scale=scale)
+    def random_variable(shift: FBig, scale: FBig) -> GumbelRV:
+        return GumbelRV(shift=shift, scale=scale)
     
     @staticmethod
     def privacy_map(d_in: f64, scale: f64, k: usize) -> f64:
