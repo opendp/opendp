@@ -180,12 +180,20 @@ impl Debug for ElementBox {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone)]
 pub struct AnyDomain {
     pub type_: Type,
     pub carrier_type: Type,
     pub domain: ElementBox,
     member_glue: fn(&Self, &<Self as Domain>::Carrier) -> Fallible<bool>,
+}
+
+impl PartialEq for AnyDomain {
+    fn eq(&self, other: &Self) -> bool {
+        self.type_ == other.type_
+            && self.carrier_type == other.carrier_type
+            && self.domain == other.domain
+    }
 }
 
 impl AnyDomain {

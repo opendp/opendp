@@ -4,7 +4,7 @@ use crate::{
     core::FfiResult,
     ffi::{
         any::{AnyDomain, AnyObject, Downcast},
-        util,
+        util::{self},
     },
 };
 

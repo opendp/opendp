@@ -107,8 +107,8 @@ fn test_polars_sum_types() -> Fallible<()> {
         "f64" => &[1f64, 2.0, 3.0],
     )?
     .lazy();
-
-    let schema = lf.select([all().sum()]).collect()?.schema();
+    let lf2 = lf.select([all().as_expr().sum()]).collect()?;
+    let schema = lf2.schema();
 
     macro_rules! test_dtype {
         ($dtype:ident, $expected:ident) => {

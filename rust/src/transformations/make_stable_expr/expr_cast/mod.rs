@@ -55,10 +55,20 @@ where
     let mut output_domain = middle_domain.clone();
     let data_column = &mut output_domain.column;
 
+    let to_type_dtype = to_type
+        .as_literal()
+        .ok_or_else(|| {
+            err!(
+                MakeTransformation,
+                "cast expression only supports literal dtype"
+            )
+        })?
+        .clone();
+
     // it is possible to tighten this:
     // in cases where casting will never fail, the nullable and/or nan bits can be left false
     // in the meantime, users will need to impute
-    data_column.set_dtype(to_type.clone())?;
+    data_column.set_dtype(to_type_dtype.clone())?;
 
     t_prior
         >> Transformation::new(

@@ -1,6 +1,5 @@
 use polars::prelude::*;
 use polars_plan::dsl::{BooleanFunction, Expr, FunctionExpr};
-use polars_plan::prelude::{ApplyOptions, FunctionOptions};
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
@@ -95,10 +94,6 @@ where
             Function::then_expr(move |expr| Expr::Function {
                 input: vec![expr],
                 function: FunctionExpr::Boolean(bool_function.clone()),
-                options: FunctionOptions {
-                    collect_groups: ApplyOptions::ElementWise,
-                    ..Default::default()
-                },
             }),
             middle_metric.clone(),
             middle_metric,

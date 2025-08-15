@@ -1,5 +1,6 @@
+use polars::prelude::DslPlan;
 use polars::prelude::LazyFrame;
-use polars_plan::{dsl::Expr, plans::DslPlan};
+use polars_plan::dsl::Expr;
 
 use group_by::ApproximateMeasure;
 use opendp_derive::bootstrap;

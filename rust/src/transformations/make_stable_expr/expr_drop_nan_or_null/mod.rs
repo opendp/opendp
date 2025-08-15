@@ -29,12 +29,7 @@ where
     (ExprDomain, M): MetricSpace,
     Expr: StableExpr<M, M>,
 {
-    let Expr::Function {
-        input,
-        function,
-        options,
-    } = expr
-    else {
+    let Expr::Function { input, function } = expr else {
         return fallible!(MakeTransformation, "expected function expression");
     };
 
@@ -80,7 +75,6 @@ where
             Function::then_expr(move |expr| Expr::Function {
                 input: vec![expr],
                 function: function.clone(),
-                options: options.clone(),
             }),
             middle_metric.clone(),
             middle_metric,

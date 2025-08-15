@@ -1,6 +1,5 @@
 use polars::prelude::*;
 use polars_plan::dsl::Expr;
-use polars_plan::prelude::{ApplyOptions, FunctionOptions};
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
@@ -81,10 +80,6 @@ where
             Function::then_expr(move |expr| Expr::Function {
                 input: vec![expr],
                 function: FunctionExpr::TemporalExpr(temporal_function.clone()),
-                options: FunctionOptions {
-                    collect_groups: ApplyOptions::ElementWise,
-                    ..Default::default()
-                },
             }),
             middle_metric.clone(),
             middle_metric,
@@ -99,8 +94,8 @@ where
 pub(super) fn match_datetime_component(temporal_function: &TemporalFunction) -> Option<DataType> {
     use TemporalFunction::*;
     Some(match temporal_function {
-        Millennium => DataType::Int8,
-        Century => DataType::Int8,
+        Millennium => DataType::Int32,
+        Century => DataType::Int32,
         Year => DataType::Int32,
         IsoYear => DataType::Int32,
         Quarter => DataType::Int8,
