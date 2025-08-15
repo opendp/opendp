@@ -1,8 +1,9 @@
 use crate::core::*;
 use crate::domains::AtomDomain;
+use crate::interactive::Queryable;
 use crate::measurements::make_laplace;
-use crate::measures::{MaxDivergence, RenyiDivergence};
-use crate::metrics::AbsoluteDistance;
+use crate::measures::{Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence};
+use crate::metrics::{AbsoluteDistance, DiscreteDistance};
 
 use super::*;
 
@@ -64,5 +65,30 @@ fn test_rdp_composition() -> Fallible<()> {
     // then we are composing two queries, so the total loss is 6. * 2. = 12.
     let rdp_curve = composition.map(&2.)?;
     assert_eq!(rdp_curve.eval(&3.0)?, 12.0);
+    Ok(())
+}
+
+#[test]
+fn test_interactive_postprocessing() -> Fallible<()> {
+    let m1 = (Measurement::new(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        Approximate(ZeroConcentratedDivergence),
+        Function::new_fallible(|&arg: &bool| Queryable::new_external(move |_: &()| Ok(arg))),
+        PrivacyMap::new(|_| (1.0, 1e-7)),
+    )? >> Function::<Queryable<(), bool>, bool>::new_fallible(|qbl: &_| {
+        qbl.clone().eval(&())
+    }))?;
+
+    let m2 = Measurement::new(
+        AtomDomain::<bool>::default(),
+        DiscreteDistance,
+        Approximate(ZeroConcentratedDivergence),
+        Function::new(|arg: &bool| *arg),
+        PrivacyMap::new(|_| (1.0, 1e-7)),
+    )?;
+    let mc = make_composition(vec![m1, m2])?;
+
+    assert!(mc.invoke(&false).is_ok());
     Ok(())
 }

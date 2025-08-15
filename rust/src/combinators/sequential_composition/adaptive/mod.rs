@@ -1,11 +1,11 @@
 use opendp_derive::bootstrap;
-use std::fmt::Debug;
+use std::{cell::RefCell, fmt::Debug, rc::Rc};
 
 use crate::{
-    combinators::assert_components_match,
+    combinators::{Adaptivity, Composability, assert_elements_match},
     core::{Domain, Function, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    interactive::{Answer, Query, Queryable, WrapFn},
+    interactive::{Answer, Query, Queryable, Wrapper},
     traits::ProductOrd,
 };
 
@@ -15,7 +15,7 @@ mod test;
 #[cfg(feature = "ffi")]
 mod ffi;
 
-use super::SequentialCompositionMeasure;
+use super::CompositionMeasure;
 
 #[bootstrap(
     features("contrib"),
@@ -56,7 +56,7 @@ use super::SequentialCompositionMeasure;
 pub fn make_adaptive_composition<
     DI: Domain + 'static,
     MI: Metric + 'static,
-    MO: SequentialCompositionMeasure + 'static,
+    MO: CompositionMeasure + 'static,
     TO: 'static,
 >(
     input_domain: DI,
@@ -67,8 +67,8 @@ pub fn make_adaptive_composition<
 ) -> Fallible<Measurement<DI, MI, MO, Queryable<Measurement<DI, MI, MO, TO>, TO>>>
 where
     DI::Carrier: 'static + Clone,
-    MI::Distance: 'static + ProductOrd + Clone + Send + Sync,
-    MO::Distance: 'static + ProductOrd + Clone + Send + Sync + Debug,
+    MI::Distance: 'static + ProductOrd + Clone,
+    MO::Distance: 'static + ProductOrd + Clone + Debug,
     (DI, MI): MetricSpace,
 {
     if d_mids.len() == 0 {
@@ -80,11 +80,19 @@ where
 
     let d_out = output_measure.compose(d_mids.clone())?;
 
+    let require_sequentiality = matches!(
+        output_measure.composability(Adaptivity::Adaptive)?,
+        Composability::Sequential
+    );
+
+    // an upper bound on the privacy unit in the privacy map
+    let d_in_constructor = d_in.clone();
+
     Measurement::new(
         input_domain.clone(),
         input_metric.clone(),
         output_measure.clone(),
-        Function::new_fallible(enclose!(d_in, move |arg: &DI::Carrier| {
+        Function::new_fallible(move |data: &DI::Carrier| {
             // a new copy of the state variables is made each time the Function is called:
 
             // IMMUTABLE STATE VARIABLES
@@ -92,7 +100,7 @@ where
             let input_metric = input_metric.clone();
             let output_measure = output_measure.clone();
             let d_in = d_in.clone();
-            let arg = arg.clone();
+            let data = data.clone();
 
             // MUTABLE STATE VARIABLES
             let mut d_mids = d_mids.clone();
@@ -102,65 +110,56 @@ where
             // 2. the query (a measurement)
 
             // all state variables are moved into (or captured by) the Queryable closure here
-            Queryable::new(move |sc_qbl, query: Query<Measurement<DI, MI, MO, TO>>| {
+            Queryable::new(move |self_, query: Query<Measurement<DI, MI, MO, TO>>| {
                 // this queryable and wrapped children communicate via an AskPermission query
                 // defined here, where no-one else can access the type
-                struct AskPermission(pub usize);
+                struct AskPermission(usize);
 
                 // if the query is external (passed by the user), then it is a measurement
-                if let Query::External(measurement) = query {
-                    assert_components_match!(
-                        DomainMismatch,
-                        input_domain,
-                        measurement.input_domain
-                    );
-
-                    assert_components_match!(
-                        MetricMismatch,
-                        input_metric,
-                        measurement.input_metric
-                    );
-
-                    assert_components_match!(
-                        MeasureMismatch,
-                        output_measure,
-                        measurement.output_measure
-                    );
+                if let Query::External(meas) = query {
+                    assert_elements_match!(DomainMismatch, input_domain, meas.input_domain);
+                    assert_elements_match!(MetricMismatch, input_metric, meas.input_metric);
+                    assert_elements_match!(MeasureMismatch, output_measure, meas.output_measure);
 
                     // retrieve the last distance from d_mids, or bubble an error if d_mids is empty
                     let d_mid =
                         (d_mids.last()).ok_or_else(|| err!(FailedFunction, "out of queries"))?;
 
                     // check that the query doesn't consume too much privacy
-                    if !measurement.check(&d_in, d_mid)? {
+                    if !meas.check(&d_in, d_mid)? {
                         return fallible!(
                             FailedFunction,
                             "insufficient budget for query: {:?} > {:?}",
-                            measurement.map(&d_in)?,
+                            meas.map(&d_in)?,
                             d_mid
                         );
                     }
 
-                    let answer = if output_measure.concurrent()? {
-                        // evaluate the query directly; no wrapping is necessary
-                        measurement.invoke(&arg)
-                    } else {
-                        // if the answer contains a queryable,
-                        // wrap it so that when the child gets a query it sends an AskPermission query to this parent queryable
-                        // it gives this sequential composition queryable (or any parent of this queryable)
-                        // a chance to deny the child permission to execute
+                    let enforce_sequentiality = Rc::new(RefCell::new(false));
+                    let seq_wrapper = require_sequentiality.then(|| {
+                        // Wrap any spawned queryables with a check that no new queries have been asked.
                         let child_id = d_mids.len() - 1;
+                        let mut self_ = self_.clone();
 
-                        let mut sc_qbl = sc_qbl.clone();
-                        let wrap_logic = WrapFn::new_pre_hook(move || {
-                            sc_qbl.eval_internal(&AskPermission(child_id))
-                        });
+                        Wrapper::new_recursive_pre_hook(enclose!(
+                            enforce_sequentiality,
+                            move || {
+                                if *enforce_sequentiality.borrow() {
+                                    self_.eval_internal(&AskPermission(child_id))
+                                } else {
+                                    Ok(())
+                                }
+                            }
+                        ))
+                    });
 
-                        // evaluate the query and wrap the answer
-                        measurement.invoke_wrap(&arg, wrap_logic.as_map())
-                    }?;
+                    // evaluate the query and wrap the answer
+                    let answer = meas.invoke_wrap(&data, seq_wrapper)?;
 
-                    // we've now consumed the last d_mid. This is our only state modification
+                    // start enforcing sequentiality
+                    *enforce_sequentiality.borrow_mut() = true;
+
+                    // we've now increased our privacy spend. This is our only state modification
                     d_mids.pop();
 
                     // done!
@@ -185,12 +184,12 @@ where
 
                 fallible!(FailedFunction, "unrecognized query: {:?}", query)
             })
-        })),
-        PrivacyMap::new_fallible(move |actual_d_in: &MI::Distance| {
-            if actual_d_in.total_gt(&d_in)? {
+        }),
+        PrivacyMap::new_fallible(move |d_in_map: &MI::Distance| {
+            if d_in_map.total_gt(&d_in_constructor)? {
                 fallible!(
                     RelationDebug,
-                    "input distance must not be greater than the d_in passed into the constructor"
+                    "d_in from the privacy map must be no greater than the d_in passed into the constructor"
                 )
             } else {
                 Ok(d_out.clone())
@@ -242,7 +241,7 @@ where
 pub fn make_sequential_composition<
     DI: Domain + 'static,
     MI: Metric + 'static,
-    MO: SequentialCompositionMeasure + 'static,
+    MO: CompositionMeasure + 'static,
     TO: 'static,
 >(
     input_domain: DI,

@@ -38,7 +38,7 @@ use std::fmt::{Debug, Display};
 ///
 /// # Proof Definition
 /// A type `Self` implements `Domain` iff it can represent a set of values that make up a domain.
-pub trait Domain: Clone + PartialEq + Debug + Send + Sync {
+pub trait Domain: Clone + PartialEq + Debug {
     /// The underlying type that the Domain specializes.
     /// This is the type of a member of a domain, where a domain is any data type that implements this trait.
     ///
@@ -69,7 +69,7 @@ pub trait Domain: Clone + PartialEq + Debug + Send + Sync {
 
 /// A mathematical function.
 pub struct Function<TI, TO> {
-    pub function: Arc<dyn Fn(&TI) -> Fallible<TO> + Send + Sync>,
+    pub function: Arc<dyn Fn(&TI) -> Fallible<TO>>,
 }
 impl<TI, TO> Clone for Function<TI, TO> {
     fn clone(&self) -> Self {
@@ -80,11 +80,11 @@ impl<TI, TO> Clone for Function<TI, TO> {
 }
 
 impl<TI, TO> Function<TI, TO> {
-    pub fn new(function: impl Fn(&TI) -> TO + 'static + Send + Sync) -> Self {
+    pub fn new(function: impl Fn(&TI) -> TO + 'static) -> Self {
         Self::new_fallible(move |arg| Ok(function(arg)))
     }
 
-    pub fn new_fallible(function: impl Fn(&TI) -> Fallible<TO> + 'static + Send + Sync) -> Self {
+    pub fn new_fallible(function: impl Fn(&TI) -> Fallible<TO> + 'static) -> Self {
         Self {
             function: Arc::new(function),
         }
@@ -110,7 +110,7 @@ impl<TI: 'static, TO: 'static> Function<TI, TO> {
 ///
 /// # Proof Definition
 /// A type `Self` has an implementation for `Metric` iff it can represent a metric for quantifying distances between values in a set.
-pub trait Metric: Clone + PartialEq + Debug + Send + Sync {
+pub trait Metric: Clone + PartialEq + Debug {
     /// # Proof Definition
     /// `Self::Distance` is a type that represents distances in terms of a metric `Self`.
     type Distance;
@@ -121,7 +121,7 @@ pub trait Metric: Clone + PartialEq + Debug + Send + Sync {
 /// # Proof Definition
 /// A type `Self` has an implementation for `Measure` iff it can represent a measure for quantifying distances between distributions.
 
-pub trait Measure: Default + Clone + PartialEq + Debug + Send + Sync {
+pub trait Measure: Default + Clone + PartialEq + Debug {
     /// # Proof Definition
     /// `Self::Distance` is a type that represents distances in terms of a measure `Self`.
     type Distance;
@@ -132,7 +132,7 @@ pub trait Measure: Default + Clone + PartialEq + Debug + Send + Sync {
 /// A `PrivacyMap` is implemented as a function that takes an input [`Metric::Distance`]
 /// and returns the smallest upper bound on distances between output distributions on neighboring input datasets.
 pub struct PrivacyMap<MI: Metric, MO: Measure>(
-    pub Arc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance> + Send + Sync>,
+    pub Arc<dyn Fn(&MI::Distance) -> Fallible<MO::Distance>>,
 );
 
 impl<MI: Metric, MO: Measure> Clone for PrivacyMap<MI, MO> {
@@ -142,12 +142,10 @@ impl<MI: Metric, MO: Measure> Clone for PrivacyMap<MI, MO> {
 }
 
 impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
-    pub fn new(map: impl Fn(&MI::Distance) -> MO::Distance + 'static + Send + Sync) -> Self {
+    pub fn new(map: impl Fn(&MI::Distance) -> MO::Distance + 'static) -> Self {
         PrivacyMap(Arc::new(move |d_in: &MI::Distance| Ok(map(d_in))))
     }
-    pub fn new_fallible(
-        map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static + Send + Sync,
-    ) -> Self {
+    pub fn new_fallible(map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static) -> Self {
         PrivacyMap(Arc::new(map))
     }
     pub fn new_from_constant(c: MO::Distance) -> Self
