@@ -134,26 +134,21 @@ pub(crate) fn literal_len(literal: &LiteralValue) -> Fallible<i128> {
     })
 }
 
+fn to_series<T: PolarsPhysicalType, N>(x: Box<[Option<N>]>) -> Series
+where
+    ChunkedArray<T>: NewChunkedArray<T, N>,
+{
+    ChunkedArray::<T>::from_iter_options("literal".into(), x.into_iter()).into_series()
+}
+
 pub(crate) fn materialize_lit_list(literal: &LiteralValue) -> Fallible<LiteralValue> {
     Ok(match literal {
         // desugar lists
         LiteralValue::Dyn(DynLiteralValue::List(list)) => {
-            LiteralValue::Series(SpecialEq::new(match list {
-                DynListLiteralValue::Int(list) => Int128Chunked::from_iter_options(
-                    PlSmallStr::from_static("literal"),
-                    list.into_iter().cloned(),
-                )
-                .into_series(),
-                DynListLiteralValue::Float(list) => Float64Chunked::from_iter_options(
-                    PlSmallStr::from_static("literal"),
-                    list.into_iter().cloned(),
-                )
-                .into_series(),
-                DynListLiteralValue::Str(list) => StringChunked::from_iter_options(
-                    PlSmallStr::from_static("literal"),
-                    list.into_iter().cloned(),
-                )
-                .into_series(),
+            LiteralValue::Series(SpecialEq::new(match list.clone() {
+                DynListLiteralValue::Int(list) => to_series::<Int128Type, _>(list),
+                DynListLiteralValue::Float(list) => to_series::<Float64Type, _>(list),
+                DynListLiteralValue::Str(list) => to_series::<StringType, _>(list),
                 DynListLiteralValue::List(_) => {
                     return fallible!(MakeTransformation, "nested lists are not supported");
                 }
