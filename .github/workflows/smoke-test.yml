@@ -42,8 +42,21 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
+          key: dependencies-${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
+          # Even if there are some changes to Cargo.toml, the cache is a useful head start:
           restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Cache Rust build
+        uses: actions/cache@v4
+        with:
+          # Unless there's an advantage to caching build artifacts separately, cache all together.
+          path: |
+            rust/target/debug/libopendp.so
+            rust/target/debug/libopendp.a
+            python/src/opendp/
+            R/opendp/
+          # All the files, and only the files, which comprise the Rust source:
+          key: builds-${{ runner.os }}-rust-${{ hashFiles('rust/Cargo.toml') }}-${{ hashFiles('rust/opendp_derive/**') }}-${{ hashFiles('rust/opendp_tooling/**') }}-${{ hashFiles('rust/src/**') }}
 
       - name: Check Rust version
         run: cargo --version
@@ -61,32 +74,32 @@ jobs:
       - name: Build (dynamic w/ polars)
         run: cargo build --verbose --features untrusted,ffi,polars
       
-      - name: Upload (dynamic w/ polars)
-        uses: actions/upload-artifact@v4
-        with:
-          name: dynamic_lib
-          path: rust/target/debug/libopendp.so
+      # - name: Upload (dynamic w/ polars)
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: dynamic_lib
+      #     path: rust/target/debug/libopendp.so
 
       - name: Build (static w/o Polars)
         run: cargo build --verbose --features untrusted,ffi
       
-      - name: Upload (static w/o Polars)
-        uses: actions/upload-artifact@v4
-        with:
-          name: static_lib
-          path: rust/target/debug/libopendp.a
+      # - name: Upload (static w/o Polars)
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: static_lib
+      #     path: rust/target/debug/libopendp.a
   
-      - name: Upload Python bindings
-        uses: actions/upload-artifact@v4
-        with:
-          name: python_bindings
-          path: python/src/opendp/
+      # - name: Upload Python bindings
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: python_bindings
+      #     path: python/src/opendp/
 
-      - name: Upload R bindings
-        uses: actions/upload-artifact@v4
-        with:
-          name: r_bindings
-          path: R/opendp/
+      # - name: Upload R bindings
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: r_bindings
+      #     path: R/opendp/
 
   rust-test:
     needs: rust-build
@@ -151,6 +164,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Cache Rust build (restore)
+        uses: actions/cache@v4
+        with:
+          path: |
+            rust/target/debug/libopendp.so
+            rust/target/debug/libopendp.a
+            python/src/opendp/
+            R/opendp/
+          # All the files, and only the files, which comprise the Rust source:
+          key: builds-${{ runner.os }}-rust-${{ hashFiles('rust/Cargo.toml') }}-${{ hashFiles('rust/opendp_derive/**') }}-${{ hashFiles('rust/opendp_tooling/**') }}-${{ hashFiles('rust/src/**') }}
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
@@ -172,18 +196,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
-
-      - name: Download dynamic lib
-        uses: actions/download-artifact@v4
-        with:
-          name: dynamic_lib
-          path: python/src/opendp/lib
-
-      - name: Download Python bindings
-        uses: actions/download-artifact@v4
-        with:
-          name: python_bindings
-          path: python/src/opendp/
 
       - name: Install package
         run: python -m pip install -e ${{ matrix.extra-install }}
@@ -238,11 +250,16 @@ jobs:
         # Negative lookahead could also be used, but it is only supported by PCRE, which not all greps support.
         run: "! ( grep 'https://docs.opendp.org' -r source --binary-file=without-match | grep -v https://docs.opendp.org/en/stable/api/r )"
 
-      - name: Download Python bindings
-        uses: actions/download-artifact@v4
+      - name: Cache Rust build (restore)
+        uses: actions/cache@v4
         with:
-          name: python_bindings
-          path: python/src/opendp/
+          path: |
+            rust/target/debug/libopendp.so
+            rust/target/debug/libopendp.a
+            python/src/opendp/
+            R/opendp/
+          # All the files, and only the files, which comprise the Rust source:
+          key: builds-${{ runner.os }}-rust-${{ hashFiles('rust/Cargo.toml') }}-${{ hashFiles('rust/opendp_derive/**') }}-${{ hashFiles('rust/opendp_tooling/**') }}-${{ hashFiles('rust/src/**') }}
 
       - name: Install Pandoc
         run: sudo apt-get install -y pandoc
@@ -268,11 +285,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download Python bindings
-        uses: actions/download-artifact@v4
+      - name: Cache Rust build (restore)
+        uses: actions/cache@v4
         with:
-          name: python_bindings
-          path: python/src/opendp/
+          path: |
+            rust/target/debug/libopendp.so
+            rust/target/debug/libopendp.a
+            python/src/opendp/
+            R/opendp/
+          # All the files, and only the files, which comprise the Rust source:
+          key: builds-${{ runner.os }}-rust-${{ hashFiles('rust/Cargo.toml') }}-${{ hashFiles('rust/opendp_derive/**') }}-${{ hashFiles('rust/opendp_tooling/**') }}-${{ hashFiles('rust/src/**') }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -296,12 +318,6 @@ jobs:
           python -m pip install flake8 pytest nbmake pytest-xdist
           python -m pip install -r requirements_notebooks.txt
 
-      - name: Download dynamic lib
-        uses: actions/download-artifact@v4
-        with:
-          name: dynamic_lib
-          path: python/src/opendp/lib
-
       - name: Install package
         run: (cd ../python && python -m pip install -e .)
 
@@ -321,19 +337,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download libs
-        uses: actions/download-artifact@v4
+      - name: Cache Rust build (restore)
+        uses: actions/cache@v4
         with:
-          # R uses a static library build that doesn't include Polars 
-          # (Polars currently links against Python)
-          name: static_lib
-          path: libs/
+          path: |
+            rust/target/debug/libopendp.so
+            rust/target/debug/libopendp.a
+            python/src/opendp/
+            R/opendp/
+          # All the files, and only the files, which comprise the Rust source:
+          key: builds-${{ runner.os }}-rust-${{ hashFiles('rust/Cargo.toml') }}-${{ hashFiles('rust/opendp_derive/**') }}-${{ hashFiles('rust/opendp_tooling/**') }}-${{ hashFiles('rust/src/**') }}
 
-      - name: Download R bindings
-        uses: actions/download-artifact@v4
-        with:
-          name: r_bindings
-          path: R/opendp/
+      # TODO: Copy static lib to libs/?
 
       - name: Set up R
         uses: r-lib/actions/setup-r@v2
