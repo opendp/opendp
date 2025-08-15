@@ -48,8 +48,6 @@ class LinearRegression:
         """
         Fit DP linear model.
 
-        Required features: ``floating-point``
-
         :param X: Training data. Array-like of shape (n_samples, 1)
         :param y: Target values. Array-like of shape (n_samples,)
         :param x_bounds: Bounds for training data; For the moment, only lists containing a single tuple are supported
@@ -78,7 +76,6 @@ class LinearRegression:
         >>> lin_reg.predict([[10]])
         array([...])
         """
-        assert_features("floating-point")
         x_bounds = list(x_bounds) # Shouldn't be so large that this is a problem
         if len(x_bounds) != 1:
             raise Exception(f'For now, the x_bounds array must consist of a single tuple, not {x_bounds}')
