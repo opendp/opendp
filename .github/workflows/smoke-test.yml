@@ -142,7 +142,7 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - '3.9'
+          - '3.10'
           - '3.13'
         extra-install:
           - '.'
@@ -279,7 +279,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version: '3.10'
 
       - name: Get pip cache dir
         id: pip-cache
