@@ -9,7 +9,7 @@ use crate::{
 #[test]
 fn test_sequential_composition() -> Fallible<()> {
     // construct sequential compositor IM
-    let root = make_adaptive_composition::<_, Box<dyn Any>, _, _>(
+    let root = make_adaptive_composition::<_, _, _, Box<dyn Any>>(
         AtomDomain::default(),
         DiscreteDistance,
         MaxDivergence,
@@ -36,7 +36,7 @@ fn test_sequential_composition() -> Fallible<()> {
     );
     // pass a sequential composition compositor into the original SC compositor
     // This compositor expects all outputs are concretely-typed (bool)
-    let sc_query_3 = make_adaptive_composition::<_, bool, _, _>(
+    let sc_query_3 = make_adaptive_composition::<_, _, _, bool>(
         AtomDomain::<bool>::default(),
         DiscreteDistance,
         MaxDivergence,
@@ -58,7 +58,7 @@ fn test_sequential_composition() -> Fallible<()> {
     // pass a sequential composition compositor into the original SC compositor
     // This compositor expects all outputs are in PolyDomain, but operates over dyn domains
     println!("\nbuild a dyn sequential composition IM and then convert to poly");
-    let sc_query_4 = make_adaptive_composition::<_, Box<dyn Any>, _, _>(
+    let sc_query_4 = make_adaptive_composition::<_, _, _, Box<dyn Any>>(
         AtomDomain::<bool>::default(),
         DiscreteDistance,
         MaxDivergence,

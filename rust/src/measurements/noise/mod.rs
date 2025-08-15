@@ -24,7 +24,7 @@ where
     /// # Proof Definition
     /// For any choice of `self`, and any `input_space`,
     /// returns a valid measurement or error.
-    fn make_noise(self, input_space: (DI, MI)) -> Fallible<Measurement<DI, DI::Carrier, MI, MO>>;
+    fn make_noise(self, input_space: (DI, MI)) -> Fallible<Measurement<DI, MI, MO, DI::Carrier>>;
 }
 
 /// Create a privacy map for a mechanism that perturbs each element in a vector with a sample from a random variable `RV`.
@@ -108,17 +108,17 @@ where
     fn make_noise(
         self,
         (input_domain, input_metric): (VectorDomain<AtomDomain<IBig>>, MI),
-    ) -> Fallible<Measurement<VectorDomain<AtomDomain<IBig>>, Vec<IBig>, MI, MO>> {
+    ) -> Fallible<Measurement<VectorDomain<AtomDomain<IBig>>, MI, MO, Vec<IBig>>> {
         let distribution = self.clone();
         let output_measure = MO::default();
         let privacy_map = self.noise_privacy_map(&input_metric, &output_measure)?;
         Measurement::new(
             input_domain,
+            input_metric,
+            output_measure,
             Function::new_fallible(move |x: &Vec<IBig>| {
                 x.into_iter().map(|x_i| distribution.sample(x_i)).collect()
             }),
-            input_metric,
-            output_measure,
             privacy_map,
         )
     }

@@ -22,7 +22,7 @@ pub fn match_postprocess<MI: 'static + Metric, MO: 'static + SequentialCompositi
     plan: DslPlan,
     global_scale: Option<f64>,
     threshold: Option<u32>,
-) -> Fallible<Option<Measurement<DslPlanDomain, DslPlan, MI, MO>>>
+) -> Fallible<Option<Measurement<DslPlanDomain, MI, MO, DslPlan>>>
 where
     DslPlan: PrivateDslPlan<MI, MO>,
     (DslPlanDomain, MI): MetricSpace,

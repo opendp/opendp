@@ -21,7 +21,7 @@ pub fn make_namespace_arr<M: OuterMetric>(
     _input_domain: WildExprDomain,
     _input_metric: M,
     expr: Expr,
-) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
+) -> Fallible<Transformation<WildExprDomain, M, ExprDomain, M>>
 where
     M::InnerMetric: MicrodataMetric,
     M::Distance: Clone,

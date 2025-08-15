@@ -61,7 +61,7 @@ pub fn make_private_expr<MI: 'static + Metric, MO: 'static + Measure>(
     output_measure: MO,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<WildExprDomain, ExprPlan, MI, MO>>
+) -> Fallible<Measurement<WildExprDomain, MI, MO, ExprPlan>>
 where
     Expr: PrivateExpr<MI, MO>,
     (WildExprDomain, MI): MetricSpace,
@@ -76,7 +76,7 @@ pub trait PrivateExpr<MI: Metric, MO: Measure> {
         input_metric: MI,
         output_metric: MO,
         global_scale: Option<f64>,
-    ) -> Fallible<Measurement<WildExprDomain, ExprPlan, MI, MO>>;
+    ) -> Fallible<Measurement<WildExprDomain, MI, MO, ExprPlan>>;
 }
 
 impl<M: 'static + UnboundedMetric> PrivateExpr<L01InfDistance<M>, MaxDivergence> for Expr {
@@ -86,7 +86,7 @@ impl<M: 'static + UnboundedMetric> PrivateExpr<L01InfDistance<M>, MaxDivergence>
         input_metric: L01InfDistance<M>,
         output_measure: MaxDivergence,
         global_scale: Option<f64>,
-    ) -> Fallible<Measurement<WildExprDomain, ExprPlan, L01InfDistance<M>, MaxDivergence>> {
+    ) -> Fallible<Measurement<WildExprDomain, L01InfDistance<M>, MaxDivergence, ExprPlan>> {
         if expr_noise::match_noise_shim(&self)?.is_some() {
             return expr_noise::make_expr_noise(input_domain, input_metric, self, global_scale);
         }
@@ -120,7 +120,7 @@ impl<M: 'static + UnboundedMetric> PrivateExpr<L01InfDistance<M>, ZeroConcentrat
         output_measure: ZeroConcentratedDivergence,
         global_scale: Option<f64>,
     ) -> Fallible<
-        Measurement<WildExprDomain, ExprPlan, L01InfDistance<M>, ZeroConcentratedDivergence>,
+        Measurement<WildExprDomain, L01InfDistance<M>, ZeroConcentratedDivergence, ExprPlan>,
     > {
         if expr_noise::match_noise_shim(&self)?.is_some() {
             return expr_noise::make_expr_noise(input_domain, input_metric, self, global_scale);
@@ -147,7 +147,7 @@ where
         input_metric: L01InfDistance<MI>,
         output_measure: Approximate<MO>,
         global_scale: Option<f64>,
-    ) -> Fallible<Measurement<WildExprDomain, ExprPlan, L01InfDistance<MI>, Approximate<MO>>> {
+    ) -> Fallible<Measurement<WildExprDomain, L01InfDistance<MI>, Approximate<MO>, ExprPlan>> {
         make_approximate(self.make_private(
             input_domain,
             input_metric,
@@ -166,7 +166,7 @@ fn make_private_measure_agnostic<
     output_measure: MO,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<WildExprDomain, ExprPlan, L01InfDistance<MI>, MO>>
+) -> Fallible<Measurement<WildExprDomain, L01InfDistance<MI>, MO, ExprPlan>>
 where
     Expr: PrivateExpr<L01InfDistance<MI>, MO>,
 {
@@ -217,7 +217,7 @@ where
 /// * one row is added/removed in unbounded-DP
 /// * one row is changed in bounded-DP
 pub(crate) fn approximate_c_stability<MI: UnboundedMetric, MO: Metric>(
-    trans: &Transformation<WildExprDomain, ExprDomain, L01InfDistance<MI>, MO>,
+    trans: &Transformation<WildExprDomain, L01InfDistance<MI>, ExprDomain, MO>,
 ) -> Fallible<MO::Distance> {
     let margin = match &trans.input_domain.context {
         Context::RowByRow { .. } => {

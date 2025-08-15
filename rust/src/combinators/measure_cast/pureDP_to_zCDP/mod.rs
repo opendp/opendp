@@ -19,11 +19,11 @@ mod ffi;
 ///
 /// # Generics
 /// * `DI` - Input Domain
-/// * `TO` - Output Type
 /// * `MI` - Input Metric
-pub fn make_pureDP_to_zCDP<DI, TO, MI>(
-    m: Measurement<DI, TO, MI, MaxDivergence>,
-) -> Fallible<Measurement<DI, TO, MI, ZeroConcentratedDivergence>>
+/// * `TO` - Output Type
+pub fn make_pureDP_to_zCDP<DI, MI, TO>(
+    m: Measurement<DI, MI, MaxDivergence, TO>,
+) -> Fallible<Measurement<DI, MI, ZeroConcentratedDivergence, TO>>
 where
     DI: Domain,
     MI: 'static + Metric,

@@ -369,17 +369,19 @@ pub fn wrap_func(func: CallbackFn) -> impl Fn(&AnyObject) -> Fallible<AnyObject>
     }
 }
 
-impl<DI: Domain, Q: 'static, A: 'static, MI: Metric, MO: Measure>
-    Measurement<DI, Queryable<Q, A>, MI, MO>
+impl<DI: Domain, MI: Metric, MO: Measure, Q: 'static, A: 'static>
+    Measurement<DI, MI, MO, Queryable<Q, A>>
 where
     DI::Carrier: 'static,
     (DI, MI): MetricSpace,
 {
-    pub fn into_any_Q(self) -> Measurement<DI, Queryable<AnyObject, A>, MI, MO> {
+    pub fn into_any_Q(self) -> Measurement<DI, MI, MO, Queryable<AnyObject, A>> {
         let function = self.function.clone();
 
         Measurement::new(
             self.input_domain.clone(),
+            self.input_metric.clone(),
+            self.output_measure.clone(),
             Function::new_fallible(
                 move |arg: &DI::Carrier| -> Fallible<Queryable<AnyObject, A>> {
                     let mut inner_qbl = function.eval(arg)?;
@@ -405,8 +407,6 @@ where
                     })
                 },
             ),
-            self.input_metric.clone(),
-            self.output_measure.clone(),
             self.privacy_map.clone(),
         )
         .expect("AnyDomain is not checked for compatibility")
@@ -415,17 +415,19 @@ where
 
 pub struct QueryType;
 
-impl<DI: Domain, Q: 'static, A: 'static, MI: Metric, MO: Measure>
-    Measurement<DI, Queryable<Q, A>, MI, MO>
+impl<DI: Domain, MI: Metric, MO: Measure, Q: 'static, A: 'static>
+    Measurement<DI, MI, MO, Queryable<Q, A>>
 where
     DI::Carrier: 'static,
     (DI, MI): MetricSpace,
 {
-    pub fn into_any_A(self) -> Measurement<DI, Queryable<Q, AnyObject>, MI, MO> {
+    pub fn into_any_A(self) -> Measurement<DI, MI, MO, Queryable<Q, AnyObject>> {
         let function = self.function.clone();
 
         Measurement::new(
             self.input_domain.clone(),
+            self.input_metric.clone(),
+            self.output_measure.clone(),
             Function::new_fallible(
                 move |arg: &DI::Carrier| -> Fallible<Queryable<Q, AnyObject>> {
                     let mut inner_qbl = function.eval(arg)?;
@@ -449,8 +451,6 @@ where
                     })
                 },
             ),
-            self.input_metric.clone(),
-            self.output_measure.clone(),
             self.privacy_map.clone(),
         )
         .expect("AnyDomain is not checked for compatibility")
@@ -522,11 +522,11 @@ where
 
 /// A Measurement with all generic types filled by Any types. This is the type of Measurements
 /// passed back and forth over FFI.
-pub type AnyMeasurement = Measurement<AnyDomain, AnyObject, AnyMetric, AnyMeasure>;
+pub type AnyMeasurement = Measurement<AnyDomain, AnyMetric, AnyMeasure, AnyObject>;
 
 /// Turn a Measurement into an AnyMeasurement.
 impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure>
-    Measurement<DI, TO, MI, MO>
+    Measurement<DI, MI, MO, TO>
 where
     DI::Carrier: 'static,
     MI::Distance: 'static,
@@ -536,22 +536,22 @@ where
     pub fn into_any(self) -> AnyMeasurement {
         AnyMeasurement::new(
             AnyDomain::new(self.input_domain.clone()),
-            self.function.clone().into_any(),
             AnyMetric::new(self.input_metric.clone()),
             AnyMeasure::new(self.output_measure.clone()),
+            self.function.clone().into_any(),
             self.privacy_map.clone().into_any(),
         )
         .expect("AnyDomain is not checked for compatibility")
     }
 }
 
-impl<TO: 'static> Measurement<AnyDomain, TO, AnyMetric, AnyMeasure> {
+impl<TO: 'static> Measurement<AnyDomain, AnyMetric, AnyMeasure, TO> {
     pub fn into_any_out(self) -> AnyMeasurement {
         Measurement::new(
             self.input_domain.clone(),
-            self.function.clone().into_any_out(),
             self.input_metric.clone(),
             self.output_measure.clone(),
+            self.function.clone().into_any_out(),
             self.privacy_map.clone(),
         )
         .expect("AnyDomain is not checked for compatibility")
@@ -560,14 +560,14 @@ impl<TO: 'static> Measurement<AnyDomain, TO, AnyMetric, AnyMeasure> {
 
 /// A Transformation with all generic types filled by Any types. This is the type of Transformation
 /// passed back and forth over FFI.
-pub type AnyTransformation = Transformation<AnyDomain, AnyDomain, AnyMetric, AnyMetric>;
+pub type AnyTransformation = Transformation<AnyDomain, AnyMetric, AnyDomain, AnyMetric>;
 
-impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Metric>
-    Transformation<DI, DO, MI, MO>
+impl<DI: 'static + Domain, MI: 'static + Metric, DO: 'static + Domain, MO: 'static + Metric>
+    Transformation<DI, MI, DO, MO>
 where
     DI::Carrier: 'static,
-    DO::Carrier: 'static,
     MI::Distance: 'static,
+    DO::Carrier: 'static,
     MO::Distance: 'static,
     (DI, MI): MetricSpace,
     (DO, MO): MetricSpace,
@@ -577,10 +577,10 @@ where
     pub fn into_any(self) -> AnyTransformation {
         AnyTransformation::new(
             AnyDomain::new(self.input_domain.clone()),
-            AnyDomain::new(self.output_domain.clone()),
-            self.function.clone().into_any(),
             AnyMetric::new(self.input_metric.clone()),
+            AnyDomain::new(self.output_domain.clone()),
             AnyMetric::new(self.output_metric.clone()),
+            self.function.clone().into_any(),
             self.stability_map.clone().into_any(),
         )
         .expect("AnyDomain is not checked")
@@ -594,10 +594,10 @@ mod partials {
     pub use super::*;
 
     pub type AnyPartialTransformation =
-        PartialTransformation<AnyDomain, AnyDomain, AnyMetric, AnyMetric>;
+        PartialTransformation<AnyDomain, AnyMetric, AnyDomain, AnyMetric>;
 
-    impl<DI: 'static + Domain, DO: 'static + Domain, MI: 'static + Metric, MO: 'static + Metric>
-        PartialTransformation<DI, DO, MI, MO>
+    impl<DI: 'static + Domain, MI: 'static + Metric, DO: 'static + Domain, MO: 'static + Metric>
+        PartialTransformation<DI, MI, DO, MO>
     where
         DI::Carrier: 'static,
         DO::Carrier: 'static,
@@ -619,10 +619,10 @@ mod partials {
     }
 
     pub type AnyPartialMeasurement =
-        PartialMeasurement<AnyDomain, AnyObject, AnyMetric, AnyMeasure>;
+        PartialMeasurement<AnyDomain, AnyMetric, AnyMeasure, AnyObject>;
 
-    impl<DI: 'static + Domain, TO: 'static, MI: 'static + Metric, MO: 'static + Measure>
-        PartialMeasurement<DI, TO, MI, MO>
+    impl<DI: 'static + Domain, MI: 'static + Metric, MO: 'static + Measure, TO: 'static>
+        PartialMeasurement<DI, MI, MO, TO>
     where
         DI::Carrier: 'static,
         MI::Distance: 'static,

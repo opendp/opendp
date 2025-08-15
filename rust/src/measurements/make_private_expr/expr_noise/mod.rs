@@ -188,7 +188,7 @@ pub fn make_expr_noise<MI: 'static + UnboundedMetric, MO: NoiseExprMeasure>(
     input_metric: L01InfDistance<MI>,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<WildExprDomain, ExprPlan, L01InfDistance<MI>, MO>>
+) -> Fallible<Measurement<WildExprDomain, L01InfDistance<MI>, MO, ExprPlan>>
 where
     Expr: StableExpr<L01InfDistance<MI>, MO::Metric>,
     (ExprDomain, MO::Metric): MetricSpace,
@@ -284,8 +284,10 @@ where
         }
     }?;
 
-    let m_noise = Measurement::<_, _, MO::Metric, _>::new(
+    let m_noise = Measurement::<_, MO::Metric, _, _>::new(
         middle_domain,
+        middle_metric,
+        MO::default(),
         Function::then_expr(move |input_expr| {
             apply_plugin(
                 vec![input_expr],
@@ -297,8 +299,6 @@ where
                 },
             )
         }),
-        middle_metric,
-        MO::default(),
         privacy_map,
     )?;
 
