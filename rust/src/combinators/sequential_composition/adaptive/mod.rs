@@ -84,7 +84,9 @@ where
         output_measure.composability(Adaptivity::Adaptive)?,
         Composability::Sequential
     );
-    let d_in_max = d_in.clone();
+
+    // an upper bound on the privacy unit in the privacy map
+    let d_in_constructor = d_in.clone();
 
     Measurement::new(
         input_domain.clone(),
@@ -183,11 +185,11 @@ where
                 fallible!(FailedFunction, "unrecognized query: {:?}", query)
             })
         }),
-        PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
-            if d_in.total_gt(&d_in_max)? {
+        PrivacyMap::new_fallible(move |d_in_map: &MI::Distance| {
+            if d_in_map.total_gt(&d_in_constructor)? {
                 fallible!(
                     RelationDebug,
-                    "input distance must not be greater than the d_in passed into the constructor"
+                    "d_in from the privacy map must be no greater than the d_in passed into the constructor"
                 )
             } else {
                 Ok(d_out.clone())

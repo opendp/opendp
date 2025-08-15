@@ -2,7 +2,9 @@ use std::any::Any;
 
 use super::*;
 use crate::{
-    domains::AtomDomain, measurements::make_randomized_response_bool, measures::MaxDivergence,
+    domains::AtomDomain,
+    measurements::make_randomized_response_bool,
+    measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
     metrics::DiscreteDistance,
 };
 
@@ -83,5 +85,30 @@ fn test_sequential_composition() -> Fallible<()> {
     );
     assert!(answer3a.eval(&rr_query).is_err());
 
+    Ok(())
+}
+
+#[test]
+fn test_adaptive_interactive_postprocessing() -> Fallible<()> {
+    let mc = make_adaptive_composition::<_, _, _, bool>(
+        AtomDomain::<bool>::default().clone(),
+        DiscreteDistance.clone(),
+        Approximate(ZeroConcentratedDivergence).clone(),
+        1,
+        vec![(1.0, 1e-7)],
+    )?;
+
+    let mut qbl = mc.invoke(&false)?;
+    let m1 = (Measurement::new(
+        AtomDomain::<bool>::default().clone(),
+        DiscreteDistance.clone(),
+        Approximate(ZeroConcentratedDivergence).clone(),
+        Function::new_fallible(|&arg: &bool| Queryable::new_external(move |_: &()| Ok(arg))),
+        PrivacyMap::new(|_| (1.0, 1e-7)),
+    )? >> Function::<Queryable<(), bool>, bool>::new_fallible(|qbl: &_| {
+        qbl.clone().eval(&())
+    }))?;
+
+    assert!(!qbl.eval(&m1)?);
     Ok(())
 }
