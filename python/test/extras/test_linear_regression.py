@@ -30,10 +30,11 @@ def test_private_theil_sen():
 def test_input_validation():
     with optional_dependency('numpy'):
         with pytest.raises(Exception, match=re.escape("For now, the x_bounds array must consist of a single tuple, not [0, 10]")):
-            dp.sklearn.linear_model.LinearRegression().fit( # type: ignore
-                X=[[1], [2], [3], [4], [5]],
-                y=[1, 2, 3, 4, 5],
+            dp.sklearn.linear_model.LinearRegression(
                 x_bounds=(0, 10), # type: ignore
                 y_bounds=(0, 10),
                 scale=1,
+            ).fit( # type: ignore
+                X=[[1], [2], [3], [4], [5]],
+                y=[1, 2, 3, 4, 5],
             )
