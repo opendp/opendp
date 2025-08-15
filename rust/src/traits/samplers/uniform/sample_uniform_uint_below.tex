@@ -1,0 +1,73 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn sample\_uniform\_uint\_below}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+\contrib
+
+This document proves that the implementation of \rustdoc{traits/samplers/uniform/fn}{sample\_uniform\_uint\_below} in \asOfCommit{mod.rs}{f5bb719} 
+satisfies its definition.
+
+\texttt{sample\_uniform\_uint\_below} uses rejection sampling. 
+In each round all bits of the integer are filled randomly, drawing an unsigned integer uniformly at random.
+The algorithm returns the sample, modulo the upper bound, so long as the sample is not one of the final "div" largest integers.
+
+\subsection*{PR History}
+\begin{itemize}
+    \item \vettingPR{473}
+\end{itemize}
+
+\subsection{Hoare Triple}
+\subsubsection*{Preconditions}
+\begin{itemize}
+    \item \textbf{Arguments}
+    \begin{itemize}
+        \item \texttt{upper} must be of type \texttt{T} and non-negative
+    \end{itemize}
+
+    \item \textbf{Type Arguments}
+    \begin{itemize}
+        \item \texttt{T} has traits \texttt{Integer + Unsigned + FromBytes<N>}, which narrows valid types to u16, u32, u64, u128, usize
+        \item \texttt{N}. By the definition of \texttt{FromBytes}, the compiler ensures this is the number of bytes in T.
+    \end{itemize}
+\end{itemize}
+
+\subsubsection*{Pseudocode}
+
+\lstinputlisting[language=Python,firstline=2]{./pseudocode/sample_uniform_uint_below.py}
+
+\subsubsection*{Postcondition}
+For any setting of the input parameter \texttt{upper},
+\texttt{sample\_uniform\_uint\_below} either
+\begin{itemize}
+    \item raises an exception if there is a lack of system entropy,
+    \item returns \texttt{out} where \texttt{out} is uniformly distributed between $[0, upper)$.
+\end{itemize}
+
+\subsection{Proof}
+\begin{proof} 
+\label{unsigned-integer-proof}
+By the postcondition of \rustdoc{traits/samplers/uniform/fn}{sample\_from\_uniform\_bytes},
+then \texttt{sample} is a sample between zero and \texttt{T.MAX} inclusive, the greatest representable number of type \texttt{T}.
+
+You could sample one of \texttt{upper} values uniformly at random by rejecting \texttt{sample} if it is larger than \texttt{upper}.
+That is, only return \texttt{sample} if \texttt{sample} is less than \texttt{upper}.
+
+It is equivalent to extend the acceptance region, 
+by returning \texttt{sample \% 2} if \texttt{sample} is less than \texttt{sample * 2}, 
+so long as \texttt{sample * 2 <= T.MAX}.
+This reduces the rejection rate, which increases algorithm performance.
+
+There are \texttt{T.MAX \% upper} remaining elements if you were to 
+extend the acceptance region to the greatest multiple of \texttt{upper} that is less than \texttt{T.MAX}.
+Therefore conditioning \texttt{sample} on being less than \texttt{T.MAX - T.MAX \% upper} 
+results in \texttt{sample \% upper} being an unbiased, uniformly distributed sample.
+
+\noindent Therefore, for any value of \texttt{upper}, the function satisfies the postcondition.
+\end{proof}
+
+\end{document}

@@ -1,0 +1,43 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{fn match\_datetime\_component}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of \rustdoc{transformations/make\_stable\_expr/namespace\_dt/expr\_datetime\_component/fn}{match\_datetime\_component} in \asOfCommit{mod.rs}{f5bb719}.
+
+\texttt{match\_datetime\_component} returns the data type and number of possible unique values of a compute operation that retrieves a datetime component.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Argument \texttt{temporal\_function} of type \texttt{TemporalFunction} 
+\end{itemize}
+
+\subsubsection*{Caller-verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/match_datetime_component.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    For any choice of \texttt{temporal\_function},
+    returns the data type of the output if the input is an infallible row-by-row temporal expression,
+    otherwise returns none.
+\end{theorem}
+
+\begin{proof}
+    For each choice of \texttt{temporal\_function}, 
+    the data type is directly verified via testing.
+    Infallible row-by-row is verified by inspection of the Polars source code.
+\end{proof}
+
+\end{document}
