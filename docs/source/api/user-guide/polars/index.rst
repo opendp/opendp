@@ -11,6 +11,7 @@ If you haven't already, please review :ref:`tabular-data` in "Getting Started" b
 
   polars-vs-opendp
   gaussian-noise
+  bounds
   data-types
   expressions/index
 
