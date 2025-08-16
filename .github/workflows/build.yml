@@ -63,8 +63,8 @@ jobs:
           android: true         # 8.7GiB
           dotnet: true          # 1.6GiB
           docker-images: true   # 3.2GiB
-          haskell: false        # no: little/no benefit
-          large-packages: false # no: slow
+          haskell: true
+          large-packages: true
           swap-storage: false   # no: having swap is useful
 
       - name: Checkout repository
@@ -132,8 +132,8 @@ jobs:
           android: true         # 8.7GiB
           dotnet: true          # 1.6GiB
           docker-images: true   # 3.2GiB
-          haskell: false        # no: little/no benefit
-          large-packages: false # no: slow
+          haskell: true
+          large-packages: true
           swap-storage: false   # no: having swap is useful
   
       - name: Checkout repository
@@ -215,8 +215,8 @@ jobs:
           android: true         # 8.7GiB
           dotnet: true          # 1.6GiB
           docker-images: true   # 3.2GiB
-          haskell: false        # no: little/no benefit
-          large-packages: false # no: slow
+          haskell: true
+          large-packages: true
           swap-storage: false   # no: having swap is useful
 
       - name: Checkout repository

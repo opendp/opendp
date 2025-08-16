@@ -29,7 +29,7 @@ jobs:
           dotnet: true          # 1.6GiB
           docker-images: true   # 3.2GiB
           haskell: true         # ?
-          large-packages: false # no: slow
+          large-packages: true
           swap-storage: false   # no: having swap is useful
 
       - name: Checkout repository
@@ -106,7 +106,7 @@ jobs:
           dotnet: true          # 1.6GiB
           docker-images: true   # 3.2GiB
           haskell: true         # 5.4GiB
-          large-packages: false # no: slow
+          large-packages: true
           swap-storage: false   # no: having swap is useful
 
       - name: Checkout repository
