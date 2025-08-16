@@ -156,7 +156,7 @@ jobs:
           key: ${{ runner.os }}-rust-source-${{ hashFiles('rust/Cargo.toml') }}-${{ hashFiles('rust/opendp_derive/**') }}-${{ hashFiles('rust/opendp_tooling/**') }}-${{ hashFiles('rust/src/**') }}
 
       - name: Move lib into place
-        run: mv rust/target/debug/libopendp.so python/src/opendp/lib
+        run: mv ../rust/target/debug/libopendp.so src/opendp/lib
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -245,7 +245,7 @@ jobs:
           key: ${{ runner.os }}-rust-source-${{ hashFiles('rust/Cargo.toml') }}-${{ hashFiles('rust/opendp_derive/**') }}-${{ hashFiles('rust/opendp_tooling/**') }}-${{ hashFiles('rust/src/**') }}
 
       - name: Move lib into place
-        run: mv rust/target/debug/libopendp.so python/src/opendp/lib
+        run: mv ../rust/target/debug/libopendp.so ../python/src/opendp/lib
 
       - name: Install Pandoc
         run: sudo apt-get install -y pandoc
@@ -283,7 +283,7 @@ jobs:
           key: ${{ runner.os }}-rust-source-${{ hashFiles('rust/Cargo.toml') }}-${{ hashFiles('rust/opendp_derive/**') }}-${{ hashFiles('rust/opendp_tooling/**') }}-${{ hashFiles('rust/src/**') }}
 
       - name: Move lib into place
-        run: mv rust/target/debug/libopendp.so python/src/opendp/lib
+        run: mv ../rust/target/debug/libopendp.so ../python/src/opendp/lib
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -338,7 +338,7 @@ jobs:
           key: ${{ runner.os }}-rust-source-${{ hashFiles('rust/Cargo.toml') }}-${{ hashFiles('rust/opendp_derive/**') }}-${{ hashFiles('rust/opendp_tooling/**') }}-${{ hashFiles('rust/src/**') }}
 
       - name: Move lib into place
-        run: mv rust/target/debug/libopendp.a libs/
+        run: mv ../rust/target/debug/libopendp.a libs/
 
       - name: Set up R
         uses: r-lib/actions/setup-r@v2
