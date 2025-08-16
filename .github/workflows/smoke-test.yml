@@ -59,6 +59,8 @@ jobs:
           key: ${{ runner.os }}-rust-source-${{ hashFiles('rust/Cargo.toml') }}-${{ hashFiles('rust/opendp_derive/**') }}-${{ hashFiles('rust/opendp_tooling/**') }}-${{ hashFiles('rust/src/**') }}
 
       - name: Check Rust version
+        # Here and in successive steps, check for prescence of last artifact
+        # to see if we had a cache hit or not.
         run: '[ -e R/opendp ] || cargo --version'
 
       - name: Check Format
@@ -73,33 +75,11 @@ jobs:
 
       - name: Build (dynamic w/ polars)
         run: '[ -e R/opendp ] || cargo build --verbose --features untrusted,ffi,polars'
-      
-      # - name: Upload (dynamic w/ polars)
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: dynamic_lib
-      #     path: rust/target/debug/libopendp.so
 
       - name: Build (static w/o Polars)
         run: '[ -e R/opendp ] || cargo build --verbose --features untrusted,ffi'
-      
-      # - name: Upload (static w/o Polars)
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: static_lib
-      #     path: rust/target/debug/libopendp.a
-  
-      # - name: Upload Python bindings
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: python_bindings
-      #     path: python/src/opendp/
 
-      # - name: Upload R bindings
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: r_bindings
-      #     path: R/opendp/
+      # Builds pushed to cache automatically, if there was not a hit earlier.
 
   rust-test:
     needs: rust-build
@@ -174,6 +154,9 @@ jobs:
             R/opendp/
           # All the files, and only the files, which comprise the Rust source:
           key: ${{ runner.os }}-rust-source-${{ hashFiles('rust/Cargo.toml') }}-${{ hashFiles('rust/opendp_derive/**') }}-${{ hashFiles('rust/opendp_tooling/**') }}-${{ hashFiles('rust/src/**') }}
+
+      - name: Move lib into place
+        run: mv rust/target/debug/libopendp.so python/src/opendp/lib
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -261,6 +244,9 @@ jobs:
           # All the files, and only the files, which comprise the Rust source:
           key: ${{ runner.os }}-rust-source-${{ hashFiles('rust/Cargo.toml') }}-${{ hashFiles('rust/opendp_derive/**') }}-${{ hashFiles('rust/opendp_tooling/**') }}-${{ hashFiles('rust/src/**') }}
 
+      - name: Move lib into place
+        run: mv rust/target/debug/libopendp.so python/src/opendp/lib
+
       - name: Install Pandoc
         run: sudo apt-get install -y pandoc
 
@@ -295,6 +281,9 @@ jobs:
             R/opendp/
           # All the files, and only the files, which comprise the Rust source:
           key: ${{ runner.os }}-rust-source-${{ hashFiles('rust/Cargo.toml') }}-${{ hashFiles('rust/opendp_derive/**') }}-${{ hashFiles('rust/opendp_tooling/**') }}-${{ hashFiles('rust/src/**') }}
+
+      - name: Move lib into place
+        run: mv rust/target/debug/libopendp.so python/src/opendp/lib
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -348,7 +337,8 @@ jobs:
           # All the files, and only the files, which comprise the Rust source:
           key: ${{ runner.os }}-rust-source-${{ hashFiles('rust/Cargo.toml') }}-${{ hashFiles('rust/opendp_derive/**') }}-${{ hashFiles('rust/opendp_tooling/**') }}-${{ hashFiles('rust/src/**') }}
 
-      # TODO: Copy static lib to libs/?
+      - name: Move lib into place
+        run: mv rust/target/debug/libopendp.a libs/
 
       - name: Set up R
         uses: r-lib/actions/setup-r@v2
