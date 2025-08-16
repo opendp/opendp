@@ -172,6 +172,7 @@ new_measurement <- function(ptr, log) {
   measurement
 }
 
+
 #' @concept mod
 #' @export
 toString.measurement <- function(x, ...) {
@@ -187,6 +188,54 @@ toString.measurement <- function(x, ...) {
 #' @concept mod
 #' @export
 print.measurement <- function(x, ...) {
+  cat(toString(x, ...))
+}
+
+#' new odometer
+#'
+#' @concept mod
+#' @param ptr pointer to the odometer struct
+#' @param log call history
+new_odometer <- function(ptr, log) {
+  odometer <- function(attr, arg) {
+    if (missing(attr) + missing(arg) != 1) {
+      stop("expected exactly one of attr or arg", call. = FALSE)
+    }
+    if (!missing(arg)) {
+      return(odometer_invoke(ptr, arg))
+    }
+    if (is.numeric(attr)) {
+      stop("numeric attr not allowed; Did you mean 'arg='?", call. = FALSE)
+    }
+    switch(attr,
+      input_domain = odometer_input_domain(ptr),
+      input_metric = odometer_input_metric(ptr),
+      output_measure = odometer_output_measure(ptr),
+      json = jsonlite::toJSON(to_ast(log), pretty = TRUE),
+      ptr = ptr,
+      log = log,
+      stop("unrecognized attribute", call. = FALSE)
+    )
+  }
+  class(odometer) <- "odometer"
+  odometer
+}
+
+#' @concept mod
+#' @export
+toString.odometer <- function(x, ...) {
+  paste0(
+    "Odometer(\n",
+    "  input_domain=", toString(x("input_domain")), ",\n",
+    "  input_metric=", toString(x("input_metric")), ",\n",
+    "  output_measure=", toString(x("output_measure")), "\n",
+    ")"
+  )
+}
+
+#' @concept mod
+#' @export
+print.odometer <- function(x, ...) {
   cat(toString(x, ...))
 }
 
@@ -372,6 +421,34 @@ new_queryable <- function(ptr) {
   class(queryable) <- "queryable"
   queryable
 }
+
+
+#' new odometer queryable
+#'
+#' @concept mod
+#' @param ptr a pointer to an odometer queryable
+new_odometer_queryable <- function(ptr) {
+  odometer_queryable <- function(attr, query, d_in) {
+    if (missing(attr) + missing(query) + missing(d_in) != 2) {
+      stop("expected exactly one of attr, query or d_in", call. = FALSE)
+    }
+
+    if (!missing(query)) {
+      return(odometer_queryable_invoke(ptr, query))
+    }
+    if (!missing(d_in)) {
+      return(odometer_queryable_privacy_loss(ptr, d_in))
+    }
+
+    switch(attr,
+      ptr = ptr,
+      stop("unrecognized attribute", call. = FALSE)
+    )
+  }
+  class(odometer_queryable) <- "odometer_queryable"
+  odometer_queryable
+}
+
 
 #' extract heterogeneously typed keys and values from a hashtab
 #'
