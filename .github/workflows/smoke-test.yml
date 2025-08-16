@@ -42,7 +42,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             rust/target
-          key: dependencies-${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
           # Even if there are some changes to Cargo.toml, the cache is a useful head start:
           restore-keys: ${{ runner.os }}-cargo-
 
@@ -56,7 +56,7 @@ jobs:
             python/src/opendp/
             R/opendp/
           # All the files, and only the files, which comprise the Rust source:
-          key: builds-${{ runner.os }}-rust-${{ hashFiles('rust/Cargo.toml') }}-${{ hashFiles('rust/opendp_derive/**') }}-${{ hashFiles('rust/opendp_tooling/**') }}-${{ hashFiles('rust/src/**') }}
+          key: ${{ runner.os }}-rust-source-${{ hashFiles('rust/Cargo.toml') }}-${{ hashFiles('rust/opendp_derive/**') }}-${{ hashFiles('rust/opendp_tooling/**') }}-${{ hashFiles('rust/src/**') }}
 
       - name: Check Rust version
         run: '[ -e R/opendp ] || cargo --version'
@@ -173,7 +173,7 @@ jobs:
             python/src/opendp/
             R/opendp/
           # All the files, and only the files, which comprise the Rust source:
-          key: builds-${{ runner.os }}-rust-${{ hashFiles('rust/Cargo.toml') }}-${{ hashFiles('rust/opendp_derive/**') }}-${{ hashFiles('rust/opendp_tooling/**') }}-${{ hashFiles('rust/src/**') }}
+          key: ${{ runner.os }}-rust-source-${{ hashFiles('rust/Cargo.toml') }}-${{ hashFiles('rust/opendp_derive/**') }}-${{ hashFiles('rust/opendp_tooling/**') }}-${{ hashFiles('rust/src/**') }}
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -259,7 +259,7 @@ jobs:
             python/src/opendp/
             R/opendp/
           # All the files, and only the files, which comprise the Rust source:
-          key: builds-${{ runner.os }}-rust-${{ hashFiles('rust/Cargo.toml') }}-${{ hashFiles('rust/opendp_derive/**') }}-${{ hashFiles('rust/opendp_tooling/**') }}-${{ hashFiles('rust/src/**') }}
+          key: ${{ runner.os }}-rust-source-${{ hashFiles('rust/Cargo.toml') }}-${{ hashFiles('rust/opendp_derive/**') }}-${{ hashFiles('rust/opendp_tooling/**') }}-${{ hashFiles('rust/src/**') }}
 
       - name: Install Pandoc
         run: sudo apt-get install -y pandoc
@@ -294,7 +294,7 @@ jobs:
             python/src/opendp/
             R/opendp/
           # All the files, and only the files, which comprise the Rust source:
-          key: builds-${{ runner.os }}-rust-${{ hashFiles('rust/Cargo.toml') }}-${{ hashFiles('rust/opendp_derive/**') }}-${{ hashFiles('rust/opendp_tooling/**') }}-${{ hashFiles('rust/src/**') }}
+          key: ${{ runner.os }}-rust-source-${{ hashFiles('rust/Cargo.toml') }}-${{ hashFiles('rust/opendp_derive/**') }}-${{ hashFiles('rust/opendp_tooling/**') }}-${{ hashFiles('rust/src/**') }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -346,7 +346,7 @@ jobs:
             python/src/opendp/
             R/opendp/
           # All the files, and only the files, which comprise the Rust source:
-          key: builds-${{ runner.os }}-rust-${{ hashFiles('rust/Cargo.toml') }}-${{ hashFiles('rust/opendp_derive/**') }}-${{ hashFiles('rust/opendp_tooling/**') }}-${{ hashFiles('rust/src/**') }}
+          key: ${{ runner.os }}-rust-source-${{ hashFiles('rust/Cargo.toml') }}-${{ hashFiles('rust/opendp_derive/**') }}-${{ hashFiles('rust/opendp_tooling/**') }}-${{ hashFiles('rust/src/**') }}
 
       # TODO: Copy static lib to libs/?
 
