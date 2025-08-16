@@ -7,7 +7,7 @@ The ``opendp.extras.polars`` module adds differential privacy to the
 For convenience, all the members of this module are also available from :py:mod:`opendp.prelude`.
 We suggest importing under the conventional name ``dp``:
 
-.. code:: python
+.. code:: pycon
 
     >>> import opendp.prelude as dp
 

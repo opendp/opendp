@@ -22,7 +22,7 @@ For instance, the atom domain constructor accepts a type argument `T`:
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
         >>> import opendp.prelude as dp
         >>> dp.atom_domain((0, 1), T=dp.i32)

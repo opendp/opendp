@@ -4,7 +4,7 @@ This module requires extra installs: ``pip install 'opendp[scikit-learn]'``
 For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
 We suggest importing under the conventional name ``dp``:
 
-.. code:: python
+.. code:: pycon
 
     >>> import opendp.prelude as dp
 

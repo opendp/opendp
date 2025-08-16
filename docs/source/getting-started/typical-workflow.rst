@@ -33,6 +33,7 @@ then the unit of privacy corresponds to one row contribution.
 
         .. literalinclude:: code/typical-workflow-context.rst
             :language: python
+            :dedent:
             :start-after: unit-of-privacy
             :end-before: /unit-of-privacy
 
@@ -41,6 +42,7 @@ then the unit of privacy corresponds to one row contribution.
 
         .. literalinclude:: code/typical-workflow-framework.rst
             :language: python
+            :dedent:
             :start-after: unit-of-privacy
             :end-before: /unit-of-privacy
 
@@ -79,6 +81,7 @@ A common rule-of-thumb is to limit ε to 1.0, but this limit will vary depending
 
         .. literalinclude:: code/typical-workflow-context.rst
             :language: python
+            :dedent:
             :start-after: privacy-loss
             :end-before: /privacy-loss
 
@@ -87,6 +90,7 @@ A common rule-of-thumb is to limit ε to 1.0, but this limit will vary depending
 
         .. literalinclude:: code/typical-workflow-framework.rst
             :language: python
+            :dedent:
             :start-after: privacy-loss
             :end-before: /privacy-loss
 
@@ -118,6 +122,7 @@ Frequently we'll specify bounds on data, based on prior knowledge of the domain.
 
         .. literalinclude:: code/typical-workflow-context.rst
             :language: python
+            :dedent:
             :start-after: public-info
             :end-before: /public-info
 
@@ -126,6 +131,7 @@ Frequently we'll specify bounds on data, based on prior knowledge of the domain.
 
         .. literalinclude:: code/typical-workflow-framework.rst
             :language: python
+            :dedent:
             :start-after: public-info
             :end-before: /public-info
 
@@ -153,6 +159,7 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
 
         .. literalinclude:: code/typical-workflow-context.rst
             :language: python
+            :dedent:
             :start-after: mediate
             :end-before: /mediate
 
@@ -164,6 +171,7 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
 
         .. literalinclude:: code/typical-workflow-framework.rst
             :language: python
+            :dedent:
             :start-after: mediate
             :end-before: /mediate
 
@@ -197,6 +205,7 @@ Here's a differentially private count:
 
         .. literalinclude:: code/typical-workflow-context.rst
             :language: python
+            :dedent:
             :start-after: count
             :end-before: /count
 
@@ -205,6 +214,7 @@ Here's a differentially private count:
 
         .. literalinclude:: code/typical-workflow-framework.rst
             :language: python
+            :dedent:
             :start-after: count
             :end-before: /count
 
@@ -225,6 +235,7 @@ Here's a differentially private mean:
 
         .. literalinclude:: code/typical-workflow-context.rst
             :language: python
+            :dedent:
             :start-after: mean
             :end-before: /mean
 
@@ -233,6 +244,7 @@ Here's a differentially private mean:
 
         .. literalinclude:: code/typical-workflow-framework.rst
             :language: python
+            :dedent:
             :start-after: mean
             :end-before: /mean
 

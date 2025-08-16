@@ -32,64 +32,82 @@ This is extremely powerful!
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
         >>> import opendp.prelude as dp
-        >>> dp.enable_features('contrib', 'floating-point')
+        >>> dp.enable_features("contrib", "floating-point")
 
 * | If you have a bound on ``d_in`` and a budget ``d_out``, you can solve for the smallest noise scale that is still differentially private.
   | This is useful when you want to determine how accurate you can make a query with a given budget.
 
 
-  .. code:: python
+  .. code:: pycon
 
-    >>> input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
-    >>> dp.binary_search_param(lambda s: dp.m.make_gaussian(*input_space, scale=s), d_in=1., d_out=1.)
+    >>> input_space = dp.atom_domain(
+    ...     T=float, nan=False
+    ... ), dp.absolute_distance(T=float)
+    >>> dp.binary_search_param(
+    ...     lambda s: dp.m.make_gaussian(*input_space, scale=s),
+    ...     d_in=1.0,
+    ...     d_out=1.0,
+    ... )
     0.7071067811865476
   
 * | If you have a bound on ``d_in`` and a noise scale, you can solve for the tightest budget ``d_out`` that is still differentially private.
   | This is useful when you want to find the smallest budget that will satisfy a target accuracy.
 
-  .. code:: python
+  .. code:: pycon
 
     >>> # in this case, a search is unnecessary. We can just use the map:
-    >>> dp.m.make_gaussian(*input_space, scale=1.).map(d_in=1.)
+    >>> dp.m.make_gaussian(*input_space, scale=1.0).map(d_in=1.0)
     0.5
 
 * | If you have a noise scale and a budget ``d_out``, you can solve for the largest bound on ``d_in`` that is still differentially private.
   | This is useful when you want to determine an upper bound on how many records can be collected from an individual before needing to truncate.
 
-  .. code:: python
+  .. code:: pycon
 
     >>> # finds the largest permissible d_in, a sensitivity
-    >>> dp.binary_search(lambda d_in: dp.m.make_gaussian(*input_space, scale=1.).check(d_in=d_in, d_out=1.))
+    >>> dp.binary_search(
+    ...     lambda d_in: dp.m.make_gaussian(
+    ...         *input_space, scale=1.0
+    ...     ).check(d_in=d_in, d_out=1.0)
+    ... )
     1.414213562373095
 
 
 * | If you have ``d_in``, ``d_out``, and noise scale derived from a target accuracy, you can solve for the smallest dataset size ``n`` that is still differentially private.
   | This is useful when you want to determine the necessary sample size when collecting data.
 
-  .. code:: python
+  .. code:: pycon
 
     >>> # finds the smallest n
     >>> dp.binary_search_param(
     ...     lambda n: dp.t.make_mean(
-    ...         dp.vector_domain(dp.atom_domain((0., 10.)), n), 
-    ...         dp.symmetric_distance()) >> dp.m.then_gaussian(scale=1.), 
-    ...     d_in=2, d_out=1.)
+    ...         dp.vector_domain(dp.atom_domain((0.0, 10.0)), n),
+    ...         dp.symmetric_distance(),
+    ...     )
+    ...     >> dp.m.then_gaussian(scale=1.0),
+    ...     d_in=2,
+    ...     d_out=1.0,
+    ... )
     8
 
 * | If you have ``d_in``, ``d_out``, and noise scale derived from a target accuracy, you can solve for the greatest clipping range that is still differentially private
   | This is useful when you want to minimize the likelihood of introducing bias.
 
-  .. code:: python
+  .. code:: pycon
 
     >>> # finds the largest clipping bounds
     >>> dp.binary_search_param(
     ...     lambda c: dp.t.make_sum(
-    ...         dp.vector_domain(dp.atom_domain(bounds=(-c, c))), 
-    ...         dp.symmetric_distance()) >> dp.m.then_gaussian(scale=1.), 
-    ...     d_in=2, d_out=1.)
+    ...         dp.vector_domain(dp.atom_domain(bounds=(-c, c))),
+    ...         dp.symmetric_distance(),
+    ...     )
+    ...     >> dp.m.then_gaussian(scale=1.0),
+    ...     d_in=2,
+    ...     d_out=1.0,
+    ... )
     0.353553389770093
 
 The API documentation on these functions have more specific usage examples.

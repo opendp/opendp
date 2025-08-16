@@ -38,11 +38,13 @@ To demonstrate, the following snippet finds the necessary gaussian scale such th
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
         >>> import opendp.prelude as dp
         >>> confidence = 95
-        >>> dp.accuracy_to_gaussian_scale(accuracy=2., alpha=1. - confidence / 100)
+        >>> dp.accuracy_to_gaussian_scale(
+        ...     accuracy=2.0, alpha=1.0 - confidence / 100
+        ... )
         1.020426913849308
 
 You can generally plug the distribution (Laplace or Gaussian), scale, accuracy and alpha

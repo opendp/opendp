@@ -15,9 +15,11 @@ The Context API will fill them in from the compositor's input space or from the 
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
-        >>> def make_anything_constant(input_domain, input_metric, constant):
+        >>> def make_anything_constant(
+        ...     input_domain, input_metric, constant
+        ... ):
         ...     return dp.m.make_user_measurement(
         ...         input_domain=input_domain,
         ...         input_metric=input_metric,
@@ -27,7 +29,6 @@ The Context API will fill them in from the compositor's input space or from the 
         ...     )
         ...
         >>> dp.register(make_anything_constant)
-        ...
         >>> context = dp.Context.compositor(
         ...     data=[1, 2, 3],
         ...     privacy_unit=dp.unit_of(contributions=36),
@@ -48,7 +49,7 @@ you can still register functions that don't follow this convention.
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
         >>> def make_int_constant(constant):
         ...     return dp.m.make_user_measurement(
@@ -60,8 +61,9 @@ you can still register functions that don't follow this convention.
         ...     )
         ...
         >>> dp.register(make_int_constant)
-        ...
-        >>> context.query().clamp((0, 5)).sum().int_constant("denied").release()
+        >>> context.query().clamp((0, 5)).sum().int_constant(
+        ...     "denied"
+        ... ).release()
         'denied'
 
 A drawback of this approach is that the constructor function is not very flexible.

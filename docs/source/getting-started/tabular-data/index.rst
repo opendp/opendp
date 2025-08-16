@@ -96,22 +96,26 @@ The compositor is the foundation of our differentially private analysis.
 It mediates access to the sensitive data,
 ensuring that queries you would like to release satisfy necessary privacy properties. 
 
-.. testsetup::
-    >>> import polars as pl
-    >>> df = pl.LazyFrame()
+.. tab-set::
 
-.. doctest:: python
+  .. tab-item:: Python
 
-    >>> context = dp.Context.compositor(
-    ...     data=df,
-    ...     privacy_unit=dp.unit_of(contributions=36),
-    ...     privacy_loss=dp.loss_of(epsilon=1.0),
-    ...     split_evenly_over=10,
-    ... )
-    
-    >>> # Once you construct the context, you should abstain from directly accessing your data again.
-    >>> # In fact, it is good practice to delete it! 
-    >>> del df
+    .. code:: pycon
+
+      >>> import polars as pl
+      >>> df = pl.LazyFrame()
+
+      >>> context = dp.Context.compositor(
+      ...     data=df,
+      ...     privacy_unit=dp.unit_of(contributions=36),
+      ...     privacy_loss=dp.loss_of(epsilon=1.0),
+      ...     split_evenly_over=10,
+      ... )
+
+      >>> # Once you construct the context, you should abstain from
+      >>> # directly accessing your data again.
+      >>> # In fact, it is good practice to delete it!
+      >>> del df
 
 Context Parameters
 ~~~~~~~~~~~~~~~~~~

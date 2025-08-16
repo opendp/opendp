@@ -42,7 +42,7 @@ def convert_block(match):
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             {indent_input.strip()}
             {indent_output.strip()}
@@ -82,7 +82,7 @@ Lorem
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> successive()
             >>> lines()
@@ -93,7 +93,7 @@ Lorem
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> or_split(
             ...     'across lines'
