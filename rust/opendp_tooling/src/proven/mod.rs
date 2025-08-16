@@ -1,4 +1,5 @@
 use darling::{Error, FromMeta, Result, ast::NestedMeta};
+use proc_macro2::Span;
 use syn::{Item, Meta, Type, TypePath};
 
 use crate::bootstrap::arguments::Features;

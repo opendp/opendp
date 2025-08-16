@@ -1,6 +1,6 @@
 use super::*;
 
-use crate::metrics::SymmetricDistance;
+use crate::{measures::ZeroConcentratedDivergence, metrics::SymmetricDistance};
 
 #[test]
 fn test_private_quantile_unsized() -> Fallible<()> {
@@ -10,6 +10,7 @@ fn test_private_quantile_unsized() -> Fallible<()> {
     let m_q75 = make_private_quantile(
         input_domain.clone(),
         SymmetricDistance,
+        ZeroConcentratedDivergence,
         candidates.clone(),
         0.75,
         0.0,
@@ -21,13 +22,14 @@ fn test_private_quantile_unsized() -> Fallible<()> {
     let m_q75 = make_private_quantile(
         input_domain,
         SymmetricDistance,
+        ZeroConcentratedDivergence,
         candidates.clone(),
         0.75,
         1.0,
     )?;
     assert!((50..100).contains(&m_q75.invoke(&(0..100).collect())?));
-    // d_in * alpha / scale * 2 = 1 * (3 / 4) / 1 * 2 = 1.5
-    assert_eq!(m_q75.map(&1)?, 1.5);
+    // (d_in * alpha / scale * 2)^2 / 8 = (1 * (3 / 4) / 1 * 2)^2 / 8
+    assert_eq!(m_q75.map(&1)?, 0.28125);
     Ok(())
 }
 
@@ -39,6 +41,7 @@ fn test_private_quantile_sized() -> Fallible<()> {
     let m_q75 = make_private_quantile(
         input_domain.clone(),
         SymmetricDistance,
+        ZeroConcentratedDivergence,
         candidates.clone(),
         0.75,
         0.0,
@@ -49,12 +52,13 @@ fn test_private_quantile_sized() -> Fallible<()> {
     let m_q75_sized = make_private_quantile(
         input_domain.clone(),
         SymmetricDistance,
+        ZeroConcentratedDivergence,
         candidates,
         0.75,
         1.0,
     )?;
     assert!((50..100).contains(&m_q75.invoke(&(0..100).collect())?));
-    // d_in / scale = 2 / 1 = 2
-    assert_eq!(m_q75_sized.map(&2)?, 2.0);
+    // (d_in / scale)^2 / 8 = (2 / 1)^2 / 8 = 1 / 2
+    assert_eq!(m_q75_sized.map(&2)?, 0.5);
     Ok(())
 }

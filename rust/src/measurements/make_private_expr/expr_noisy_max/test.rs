@@ -5,13 +5,14 @@ use polars_arrow::array::{FixedSizeListArray, UInt32Array};
 use crate::{
     error::ErrorVariant,
     measurements::make_private_expr,
+    measures::MaxDivergence,
     metrics::{L0PInfDistance, SymmetricDistance},
     polars::PrivacyNamespace,
     transformations::expr_discrete_quantile_score::test::get_quantile_test_data,
 };
 
 #[test]
-fn test_report_noisy_max_gumbel_udf() -> Fallible<()> {
+fn test_noisy_max_udf() -> Fallible<()> {
     // the scores are packed into a FixedSizeListArray with 3 elements per row
     // the max value in the first row is 3, the max value in the second row is 1, and the max value in the third row is 9
     // the indices of the max values are 0, 1, and 2 respectively
@@ -31,10 +32,11 @@ fn test_report_noisy_max_gumbel_udf() -> Fallible<()> {
     );
     let scores = Series::from(ArrayChunked::from(fsla)).into_column();
 
-    let actual = super::report_noisy_max_gumbel_udf(
+    let actual = super::noisy_max_udf(
         &[scores],
-        ReportNoisyMaxPlugin {
-            optimize: Optimize::Max,
+        NoisyMaxPlugin {
+            distribution: TopKDistribution::Gumbel,
+            negate: false,
             scale: 0.0,
         },
     )?;
@@ -46,7 +48,7 @@ fn test_report_noisy_max_gumbel_udf() -> Fallible<()> {
 }
 
 #[test]
-fn test_report_noisy_max_gumbel_expr() -> Fallible<()> {
+fn test_noisy_max_expr() -> Fallible<()> {
     let (lf_domain, lf) = get_quantile_test_data()?;
     let scale: f64 = 1e-8;
     let candidates = Series::new(
@@ -62,7 +64,7 @@ fn test_report_noisy_max_gumbel_expr() -> Fallible<()> {
             .dp()
             .quantile_score(0.5, candidates)
             .dp()
-            .report_noisy_max_gumbel(Optimize::Min, Some(scale)),
+            .noisy_max(true, Some(scale)),
         None,
     )?;
 
@@ -75,7 +77,7 @@ fn test_report_noisy_max_gumbel_expr() -> Fallible<()> {
 }
 
 #[test]
-fn test_fail_report_noisy_max_gumbel_expr_nan_scale() -> Fallible<()> {
+fn test_fail_noisy_max_expr_nan_scale() -> Fallible<()> {
     let (lf_domain, _) = get_quantile_test_data()?;
     let scale: f64 = f64::NAN;
     let candidates = Series::new(
