@@ -33,7 +33,6 @@ pub fn make_fully_adaptive_composition<
 ) -> Fallible<Odometer<DI, MI, MO, Measurement<DI, MI, MO, TO>, TO>>
 where
     DI::Carrier: Clone,
-    MO::Distance: Clone,
     (DI, MI): MetricSpace,
 {
     // check if fully adaptive composition is supported
@@ -69,7 +68,6 @@ fn new_fully_adaptive_composition_queryable<
     data: DI::Carrier,
 ) -> Fallible<OdometerQueryable<Measurement<DI, MI, MO, TO>, TO, MI::Distance, MO::Distance>>
 where
-    MO::Distance: Clone,
     (DI, MI): MetricSpace,
 {
     let require_sequentiality = matches!(
