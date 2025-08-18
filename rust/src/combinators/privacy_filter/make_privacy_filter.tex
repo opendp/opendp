@@ -1,0 +1,51 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{fn make\_privacy\_filter}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of \texttt{fn make\_privacy\_filter}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Argument \texttt{odometer} of type \texttt{Odometer<DI, MI, MO, Q, A>}.
+    \item Argument \texttt{d\_in} of type \texttt{MI\_Distance}, the associated distance type of \texttt{MI}.
+    \item Argument \texttt{d\_out} of type \texttt{MO\_Distance}, the associated distance type of \texttt{MO}.
+    \item Generic \texttt{DI} implements \rustdoc{core/trait}{Domain}.
+    \item Generic \texttt{MI} implements \rustdoc{core/trait}{Metric}.
+    \item Generic \texttt{MO} implements \rustdoc{core/trait}{Measure}.
+    \item \texttt{MI\_Distance} implements \rustdoc{traits/trait}{ProductOrd}.
+    \item \texttt{MO\_Distance} implements \rustdoc{traits/trait}{ProductOrd}.
+    \item \texttt{(DI, MI)} implements \rustdoc{core/trait}{MetricSpace}.
+\end{itemize}
+
+\subsubsection*{User-verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/make_privacy_filter.py}
+
+\subsubsection*{Postcondition}
+\validOdometer{\texttt{(odometer, d\_out, DI, MI, MO, Q, A)}}{\texttt{make\_privacy\_filter}}
+
+\begin{proof}[Proof of data-independent errors]
+    \rustdoc{core/struct}{Function}\texttt{.eval} on line \ref{eval} has data-independent exceptions,
+    because the function is from \texttt{odometer}, which is a valid odometer.
+    Since this is the only location where an exception can be raised,
+    the data-independent errors property holds.
+\end{proof}
+
+\begin{proof}[Proof of privacy guarantee]
+    By the definition of a valid odometer queryable, 
+    the output of \texttt{make\_privacy\_filter} upholds the privacy guarantee.
+\end{proof}
+
+\end{document}
