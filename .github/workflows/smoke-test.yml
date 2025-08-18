@@ -24,26 +24,20 @@ jobs:
       - name: Free disk space
         uses: jlumbroso/free-disk-space@v1.3.1
         with:
-          tool-cache: false     # no: will remove rust
+          tool-cache: true      # 5.3GiB
           android: true         # 8.7GiB
           dotnet: true          # 1.6GiB
           docker-images: true   # 3.2GiB
-          haskell: true         # ?
-          large-packages: false # no: slow
+          haskell: true         # 6.2GiB
+          large-packages: true  # 4.7GiB
           swap-storage: false   # no: having swap is useful
 
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Cache Rust dependencies
-        uses: actions/cache@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
-          restore-keys: ${{ runner.os }}-cargo-
+          rustflags: ""
 
       - name: Check Rust version
         run: cargo --version
@@ -101,26 +95,20 @@ jobs:
       - name: Free disk space
         uses: jlumbroso/free-disk-space@v1.3.1
         with:
-          tool-cache: false     # no: will remove rust
+          tool-cache: true      # 5.3GiB
           android: true         # 8.7GiB
           dotnet: true          # 1.6GiB
           docker-images: true   # 3.2GiB
-          haskell: true         # 5.4GiB
-          large-packages: false # no: slow
+          haskell: true         # 6.2GiB
+          large-packages: true  # 4.7GiB
           swap-storage: false   # no: having swap is useful
 
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Cache Rust dependencies
-        uses: actions/cache@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
-          restore-keys: ${{ runner.os }}-cargo-
+          rustflags: ""
 
       - name: Test (default)
         run: cargo test --verbose

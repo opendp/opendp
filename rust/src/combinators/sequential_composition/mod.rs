@@ -8,6 +8,12 @@ mod adaptive;
 #[cfg(feature = "contrib")]
 pub use adaptive::*;
 
+#[cfg(feature = "contrib")]
+mod fully_adaptive;
+#[cfg(feature = "contrib")]
+pub use fully_adaptive::*;
+use opendp_derive::proven;
+
 #[cfg(feature = "ffi")]
 mod ffi;
 
@@ -47,6 +53,9 @@ pub trait CompositionMeasure: Measure {
     fn compose(&self, d_mids: Vec<Self::Distance>) -> Fallible<Self::Distance>;
 }
 
+#[proven(
+    proof_path = "combinators/sequential_composition/CompositionMeasure_for_MaxDivergence.tex"
+)]
 impl CompositionMeasure for MaxDivergence {
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
         Ok(Composability::Concurrent)
@@ -56,6 +65,9 @@ impl CompositionMeasure for MaxDivergence {
     }
 }
 
+#[proven(
+    proof_path = "combinators/sequential_composition/CompositionMeasure_for_ZeroConcentratedDivergence.tex"
+)]
 impl CompositionMeasure for ZeroConcentratedDivergence {
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
         Ok(Composability::Concurrent)
@@ -65,6 +77,9 @@ impl CompositionMeasure for ZeroConcentratedDivergence {
     }
 }
 
+#[proven(
+    proof_path = "combinators/sequential_composition/CompositionMeasure_for_ApproximateMaxDivergence.tex"
+)]
 impl CompositionMeasure for Approximate<MaxDivergence> {
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
         Ok(Composability::Concurrent)
@@ -78,6 +93,9 @@ impl CompositionMeasure for Approximate<MaxDivergence> {
     }
 }
 
+#[proven(
+    proof_path = "combinators/sequential_composition/CompositionMeasure_for_ZeroConcentratedDivergence.tex"
+)]
 impl CompositionMeasure for Approximate<ZeroConcentratedDivergence> {
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
         Ok(Composability::Sequential)
@@ -91,6 +109,9 @@ impl CompositionMeasure for Approximate<ZeroConcentratedDivergence> {
     }
 }
 
+#[proven(
+    proof_path = "combinators/sequential_composition/CompositionMeasure_for_RenyiDivergence.tex"
+)]
 impl CompositionMeasure for RenyiDivergence {
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {
         Ok(Composability::Concurrent)

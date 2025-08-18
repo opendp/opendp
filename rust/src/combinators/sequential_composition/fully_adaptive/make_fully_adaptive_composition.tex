@@ -1,0 +1,49 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn make\_fully\_adaptive\_composition}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of \texttt{fn make\_fully\_adaptive\_composition}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Argument \texttt{input\_domain} of type \texttt{DI}.
+    \item Argument \texttt{input\_metric} of type \texttt{MI}.
+    \item Argument \texttt{output\_measure} of type \texttt{MO}.
+    \item Generic \texttt{DI} implements \rustdoc{core/trait}{Domain}.
+    \item Generic \texttt{MI} implements \rustdoc{core/trait}{Metric}.
+    \item Generic \texttt{MO} implements \rustdoc{combinators/sequential_composition/trait}{CompositionMeasure}.
+    \item \texttt{(DI, MI)} implements \rustdoc{core/trait}{MetricSpace}.
+\end{itemize}
+
+\subsubsection*{Caller-verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/make_fully_adaptive_composition.py}
+
+\subsubsection*{Postcondition}
+\begin{theorem}
+    \validOdometer{\texttt{(input\_domain, input\_metric, output\_measure, DI, MI, MO, TO)}}{\texttt{make\_fully\_adaptive\_composition}}
+\end{theorem}
+
+\begin{proof}[Proof of data-independent errors] 
+    Errors are data-independent by the the postcondition of \texttt{new\_sequential\_odometer\_queryable}.
+\end{proof}
+
+\begin{proof}[Proof of valid odometer queryable]
+    Under the assumption that the input data is a member of the input domain,
+    the precondition of \rustdoc{combinators/sequential_composition/fully_adaptive/fn}{new\_fully\_adaptive\_composition\_queryable} is met,
+    so by its postcondition the return is a valid odometer queryable.
+\end{proof}
+
+\end{document}
