@@ -58,7 +58,7 @@ jobs:
       - name: Upload (dynamic w/ polars)
         uses: actions/upload-artifact@v4
         with:
-          name: dynamic_lib
+          name: dynamic_lib-${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}-derive-${{ hashFiles('rust/opendp_derive/**') }}-tooling-${{ hashFiles('rust/opendp_tooling/**') }}-src-${{ hashFiles('rust/src/**') }}
           path: rust/target/debug/libopendp.so
 
       - name: Build (static w/o Polars)
@@ -67,19 +67,19 @@ jobs:
       - name: Upload (static w/o Polars)
         uses: actions/upload-artifact@v4
         with:
-          name: static_lib
+          name: static_lib-${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}-derive-${{ hashFiles('rust/opendp_derive/**') }}-tooling-${{ hashFiles('rust/opendp_tooling/**') }}-src-${{ hashFiles('rust/src/**') }}
           path: rust/target/debug/libopendp.a
   
       - name: Upload Python bindings
         uses: actions/upload-artifact@v4
         with:
-          name: python_bindings
+          name: python_bindings-${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}-derive-${{ hashFiles('rust/opendp_derive/**') }}-tooling-${{ hashFiles('rust/opendp_tooling/**') }}-src-${{ hashFiles('rust/src/**') }}
           path: python/src/opendp/
 
       - name: Upload R bindings
         uses: actions/upload-artifact@v4
         with:
-          name: r_bindings
+          name: r_bindings-${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}-derive-${{ hashFiles('rust/opendp_derive/**') }}-tooling-${{ hashFiles('rust/opendp_tooling/**') }}-src-${{ hashFiles('rust/src/**') }}
           path: R/opendp/
 
   rust-test:
@@ -166,13 +166,13 @@ jobs:
       - name: Download dynamic lib
         uses: actions/download-artifact@v4
         with:
-          name: dynamic_lib
+          name: dynamic_lib-${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}-derive-${{ hashFiles('rust/opendp_derive/**') }}-tooling-${{ hashFiles('rust/opendp_tooling/**') }}-src-${{ hashFiles('rust/src/**') }}
           path: python/src/opendp/lib
 
       - name: Download Python bindings
         uses: actions/download-artifact@v4
         with:
-          name: python_bindings
+          name: python_bindings-${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}-derive-${{ hashFiles('rust/opendp_derive/**') }}-tooling-${{ hashFiles('rust/opendp_tooling/**') }}-src-${{ hashFiles('rust/src/**') }}
           path: python/src/opendp/
 
       - name: Install package
@@ -231,7 +231,7 @@ jobs:
       - name: Download Python bindings
         uses: actions/download-artifact@v4
         with:
-          name: python_bindings
+          name: python_bindings-${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}-derive-${{ hashFiles('rust/opendp_derive/**') }}-tooling-${{ hashFiles('rust/opendp_tooling/**') }}-src-${{ hashFiles('rust/src/**') }}
           path: python/src/opendp/
 
       - name: Install Pandoc
@@ -261,7 +261,7 @@ jobs:
       - name: Download Python bindings
         uses: actions/download-artifact@v4
         with:
-          name: python_bindings
+          name: python_bindings-${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}-derive-${{ hashFiles('rust/opendp_derive/**') }}-tooling-${{ hashFiles('rust/opendp_tooling/**') }}-src-${{ hashFiles('rust/src/**') }}
           path: python/src/opendp/
 
       - name: Set up Python
@@ -289,7 +289,7 @@ jobs:
       - name: Download dynamic lib
         uses: actions/download-artifact@v4
         with:
-          name: dynamic_lib
+          name: dynamic_lib-${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}-derive-${{ hashFiles('rust/opendp_derive/**') }}-tooling-${{ hashFiles('rust/opendp_tooling/**') }}-src-${{ hashFiles('rust/src/**') }}
           path: python/src/opendp/lib
 
       - name: Install package
@@ -316,13 +316,13 @@ jobs:
         with:
           # R uses a static library build that doesn't include Polars 
           # (Polars currently links against Python)
-          name: static_lib
+          name: static_lib-${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}-derive-${{ hashFiles('rust/opendp_derive/**') }}-tooling-${{ hashFiles('rust/opendp_tooling/**') }}-src-${{ hashFiles('rust/src/**') }}
           path: libs/
 
       - name: Download R bindings
         uses: actions/download-artifact@v4
         with:
-          name: r_bindings
+          name: r_bindings-${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}-derive-${{ hashFiles('rust/opendp_derive/**') }}-tooling-${{ hashFiles('rust/opendp_tooling/**') }}-src-${{ hashFiles('rust/src/**') }}
           path: R/opendp/
 
       - name: Set up R
