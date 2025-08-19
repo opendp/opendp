@@ -1,8 +1,8 @@
 
 .. _fully-adaptive-composition:
 
-Fully Adaptive Composition
---------------------------
+Fully Adaptive Composition and Odometers
+----------------------------------------
 
 Where adaptive composition allows for queries to be chosen adaptively,
 *fully* adaptive composition also allows for the *privacy loss* of queries to be chosen adaptively.

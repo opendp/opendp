@@ -102,10 +102,12 @@ In the below example, the adjustment is subtle, but the bounds were adjusted to 
 
 Note that ``noisy_sum_trans``'s input domain and input metric come from ``sum_trans``'s input domain and input metric.
 This is intended to enable further chaining with preprocessors such as:
+
 * :py:func:`make_cast <opendp.transformations.make_cast>`
 * :py:func:`make_impute_constant <opendp.transformations.make_impute_constant>`
 * :py:func:`make_clamp <opendp.transformations.make_clamp>` 
 * :py:func:`make_resize <opendp.transformations.make_resize>`.
+
 See the section on :ref:`transformations-user-guide` for more information on how to preprocess data in OpenDP.
 
 Composition
