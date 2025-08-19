@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use opendp_derive::proven;
+use opendp_derive::{bootstrap, proven};
 
 use crate::{
     combinators::{Adaptivity, Composability, CompositionMeasure, assert_elements_match},
@@ -15,6 +15,14 @@ use crate::{
 #[cfg(test)]
 mod test;
 
+#[cfg(feature = "ffi")]
+mod ffi;
+
+#[bootstrap(
+    features("contrib"),
+    arguments(output_measure(c_type = "AnyMeasure *", rust_type = b"null"),),
+    generics(DI(suppress), TO(suppress), MI(suppress), MO(suppress))
+)]
 /// Construct an odometer that can spawn a compositor queryable.
 ///
 /// # Arguments

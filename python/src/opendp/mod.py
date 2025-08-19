@@ -13,7 +13,7 @@ from typing import Any, Literal, Sequence, Type, TypeVar, Union, Callable, Optio
 import importlib
 import json
 
-from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, import_optional_dependency, get_opendp_version
+from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, AnyOdometer, import_optional_dependency, get_opendp_version
 
 
 # https://mypy.readthedocs.io/en/stable/runtime_troubles.html#import-cycles
@@ -24,7 +24,9 @@ if TYPE_CHECKING:
 __all__ = [
     'Measurement',
     'Transformation',
+    'Odometer',
     'Queryable',
+    'OdometerQueryable',
     'Function',
     'Domain',
     'AtomDomain',
@@ -257,7 +259,142 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     def __iter__(self):
         # this overrides the implementation of __iter__ on POINTER, 
         # which yields infinitely on zero-sized types
-        raise ValueError("Measurement does not support iteration")  # pragma: no cover
+        raise ValueError("Measurement does not support iteration")
+    
+
+class Odometer(ctypes.POINTER(AnyOdometer)): # type: ignore[misc]
+    """A differentially private unit of computation with no privacy limit.
+    An Odometer can be invoked with a dataset to return an OdometerQueryable.
+
+    Differentially private queries (measurements) may be passed to the queryable,
+    and ``.privacy_loss(d_in)`` can be called to check the current privacy usage.
+
+    :example:
+
+    >>> import opendp.prelude as dp
+    >>> dp.enable_features("contrib")
+    ...
+    >>> # create a measurement that responds honestly with probability 0.6
+    >>> meas_rr = dp.m.make_randomized_response_bool(prob=0.6)
+    ...
+    >>> # create an Odometer representing a fully adaptive compositor
+    >>> odometer = dp.c.make_fully_adaptive_composition(
+    ...     input_domain=meas_rr.input_domain,
+    ...     input_metric=meas_rr.input_metric,
+    ...     output_measure=meas_rr.output_measure,
+    ... )
+    ...
+    >>> # invoke the odometer to get a queryable
+    >>> data = True # a trivial boolean dataset
+    >>> qbl_comp = odometer(data)
+    ...
+    >>> # evaluate the queryable (eval and __call__ are equivalent)
+    >>> print("Release:", qbl_comp(meas_rr))  # doctest: +ELLIPSIS
+    Release: ...
+    >>> # odometers can be repeatedly invoked without any limit on the privacy loss
+    >>> print("Release:", qbl_comp(meas_rr))  # doctest: +ELLIPSIS
+    Release: ...
+    >>> # The odometer's privacy consumption (in terms of ε) can be checked at any time.
+    >>> # Input dataset may differ by discrete distance 1.
+    >>> qbl_comp.privacy_loss(1)
+    0.8109302162163288
+    """
+    _type_ = AnyOdometer
+
+    def __call__(self, arg):
+        from opendp.core import odometer_invoke
+        return odometer_invoke(self, arg)
+
+    def invoke(self, arg):
+        """Create a differentially-private release with `arg`.
+
+        If `self` is (d_in, d_out)-close, then each invocation of this function is a d_out-DP release. 
+        
+        :param arg: Input to the measurement.
+        :return: differentially-private release
+        :raises OpenDPException: packaged error from the core OpenDP library
+        """
+        from opendp.core import odometer_invoke
+        return odometer_invoke(self, arg)
+
+    @property
+    def input_domain(self) -> "Domain":
+        '''
+        Input domain of odometer
+        '''
+        from opendp.core import odometer_input_domain
+        return odometer_input_domain(self)
+    
+    @property
+    def input_metric(self) -> "Metric":
+        '''
+        Input metric of odometer
+        '''
+        from opendp.core import odometer_input_metric
+        return odometer_input_metric(self)
+    
+    @property
+    def input_space(self) -> tuple["Domain", "Metric"]:
+        '''
+        Input domain and metric of odometer
+        '''
+        return self.input_domain, self.input_metric
+    
+    @property
+    def output_measure(self) -> "Measure":
+        '''
+        Output measure of odometer
+        '''
+        from opendp.core import odometer_output_measure
+        return odometer_output_measure(self)
+    
+    @property
+    def input_distance_type(self) -> Union["RuntimeType", str]:
+        """Retrieve the distance type of the input metric.
+        This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.
+        
+        :return: distance type
+        """
+        return self.input_metric.distance_type
+
+    @property
+    def output_distance_type(self) -> Union["RuntimeType", str]:
+        """Retrieve the distance type of the output measure.
+        This is the type that the budget is expressed in.
+        
+        :return: distance type
+        """
+        return self.output_measure.distance_type
+
+    @property
+    def input_carrier_type(self) -> Union["RuntimeType", str]:
+        """Retrieve the carrier type of the input domain.
+        Any member of the input domain is a member of the carrier type.
+        
+        :return: carrier type
+        """
+        return self.input_domain.carrier_type
+
+    def __del__(self):
+        try:
+            from opendp.core import _odometer_free
+            _odometer_free(self)
+        except (ImportError, TypeError): # pragma: no cover
+            # ImportError: sys.meta_path is None, Python is likely shutting down
+            # TypeError: similar setting as above
+            pass
+    
+    def __repr__(self) -> str:
+        return f"""Odometer(
+    input_domain   = {self.input_domain},
+    input_metric   = {self.input_metric},
+    output_measure = {self.output_measure})"""
+
+    def __iter__(self):
+        # this overrides the implementation of __iter__ on POINTER, 
+        # which yields infinitely on zero-sized types
+        raise ValueError("Odometer does not support iteration")
+
 
 class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     """A non-differentially private unit of computation.
@@ -494,7 +631,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     output_metric  = {self.output_metric})"""
     
     def __iter__(self):
-        raise ValueError("Transformation does not support iteration")  # pragma: no cover
+        raise ValueError("Transformation does not support iteration")
 
 
 Transformation = cast(Type[Transformation], Transformation) # type: ignore[misc]
@@ -513,9 +650,37 @@ class Queryable(object):
     def __call__(self, query):
         from opendp.core import queryable_eval
         return queryable_eval(self.value, query)
-
+    
     def __repr__(self) -> str:
         return f"Queryable(Q={self.query_type})"
+
+class OdometerQueryable:
+    '''
+    Odometer Queryables are used for instances of odometers like :ref:`fully adaptive composition <fully-adaptive-composition>`.
+
+    Can be created via :py:func:`make_fully_adaptive_composition <opendp.combinators.make_fully_adaptive_composition>`.
+    '''
+    def __init__(self, value):
+        self.value = value
+
+    def __call__(self, query):
+        from opendp.core import odometer_queryable_invoke
+        return odometer_queryable_invoke(self.value, query)
+    
+    def invoke(self, query):
+        from opendp.core import odometer_queryable_invoke
+        return odometer_queryable_invoke(self.value, query)
+    
+    def privacy_loss(self, d_in):
+        from opendp.core import odometer_queryable_privacy_loss
+        return odometer_queryable_privacy_loss(self.value, d_in)
+
+    def __repr__(self) -> str:
+        from opendp.core import odometer_queryable_invoke_type, odometer_queryable_privacy_loss_type
+        from opendp.typing import RuntimeType
+        Q = RuntimeType.parse(odometer_queryable_invoke_type(self.value))
+        QB = RuntimeType.parse(odometer_queryable_privacy_loss_type(self.value))
+        return f"OdometerQueryable(Q={Q}, QB={QB})"
 
 
 class Function(ctypes.POINTER(AnyFunction)): # type: ignore[misc]
@@ -539,7 +704,7 @@ class Function(ctypes.POINTER(AnyFunction)): # type: ignore[misc]
             pass
 
     def __iter__(self):
-        raise ValueError("Function does not support iteration")  # pragma: no cover
+        raise ValueError("Function does not support iteration")
 
 
 class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
@@ -797,7 +962,7 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
         return hash(str(self))
     
     def __iter__(self):
-        raise ValueError("Metric does not support iteration")  # pragma: no cover
+        raise ValueError("Metric does not support iteration")
 
 class FrameDistance(Metric):
     '''``FrameDistance`` is a higher-order metric that contains multiple distance bounds for different groupings of data.'''
@@ -898,7 +1063,7 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
         return hash(str(self))
     
     def __iter__(self):
-        raise ValueError("Measure does not support iteration")  # pragma: no cover
+        raise ValueError("Measure does not support iteration")
 
 
 class PrivacyProfile(object):
@@ -1379,7 +1544,6 @@ def exponential_bounds_search(
     except Exception:
         pass
 
-
     # predicate has thrown an exception
     # 1. Treat exceptions as a secondary decision boundary, and find the edge value
     # 2. Return a bound by searching from the exception edge, in the direction away from the exception
@@ -1389,6 +1553,7 @@ def exponential_bounds_search(
             return True
         except Exception:
             return False
+    
     exception_bounds = exponential_bounds_search(_exception_predicate, T=T)
     if exception_bounds is None:
         try:

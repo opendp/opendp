@@ -627,6 +627,13 @@ SEXP anyobjectptr_to_sexp(AnyObject *obj)
         return profile;
     }
 
+    if (str_equal(c_origin, "AnyOdometerQueryable"))
+    {
+        SEXP queryable = anyodometerqueryableptr_to_sexp(obj, R_NilValue);
+        UNPROTECT(4);
+        return queryable;
+    }
+
     if (str_equal(c_origin, "AnyQueryable"))
     {
         SEXP queryable = anyqueryableptr_to_sexp(obj, R_NilValue);

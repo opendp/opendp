@@ -7,11 +7,11 @@ use std::ffi::{CString, c_void};
 use std::os::raw::c_char;
 use std::str::Utf8Error;
 
-use crate::core::Function;
+use crate::core::{AnyOdometerAnswer, AnyOdometerQuery, Function};
 use crate::domains::ffi::ExtrinsicDomain;
 use crate::domains::{AtomDomain, BitVector, OptionDomain, VectorDomain};
 use crate::error::*;
-use crate::ffi::any::{AnyObject, AnyQueryable};
+use crate::ffi::any::{AnyObject, AnyOdometerQueryable, AnyQueryable};
 use crate::measures::ffi::ExtrinsicDivergence;
 use crate::measures::{
     Approximate, MaxDivergence, PrivacyProfile, RenyiDivergence, SmoothedMaxDivergence,
@@ -31,7 +31,7 @@ use crate::polars::{OnceFrame, OnceFrameAnswer, OnceFrameQuery};
 use crate::transformations::DataFrameDomain;
 use crate::{err, fallible};
 
-use super::any::{AnyDomain, AnyMeasurement, AnyTransformation};
+use super::any::{AnyDomain, AnyMeasurement, AnyOdometer, AnyTransformation};
 
 // If untrusted is not enabled, then these structs don't exist.
 #[cfg(feature = "untrusted")]
@@ -293,6 +293,7 @@ macro_rules! type_vec {
 }
 
 pub type AnyMeasurementPtr = *const AnyMeasurement;
+pub type AnyOdometerPtr = *const AnyOdometer;
 pub type AnyTransformationPtr = *const AnyTransformation;
 pub type AnyDomainPtr = *const AnyDomain;
 
@@ -348,8 +349,9 @@ lazy_static! {
             vec![t!((f64, AnyObject)), t!((f64, ExtrinsicObject))],
             vec![t!(Function<f64, f64>)],
 
-            type_vec![AnyMeasurementPtr, AnyTransformationPtr, AnyQueryable, AnyMeasurement],
-            type_vec![Vec, <AnyMeasurementPtr, AnyTransformationPtr>],
+            type_vec![AnyMeasurementPtr, AnyTransformationPtr, AnyOdometerPtr, AnyQueryable, AnyOdometerQueryable, AnyMeasurement, AnyOdometer],
+            type_vec![Vec, <AnyMeasurementPtr, AnyTransformationPtr, AnyOdometerPtr>],
+            type_vec![AnyOdometerQuery, AnyOdometerAnswer],
 
             // sum algorithms
             type_vec![Sequential, <f32, f64>],
