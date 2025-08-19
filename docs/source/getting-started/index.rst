@@ -14,4 +14,4 @@ This is an overview of OpenDP's Python and R APIs.
   typical-workflow
   tabular-data/index
   statistical-modeling/index
-  utility/index
+  utility
