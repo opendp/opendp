@@ -126,13 +126,17 @@ OpenDP has several compositors for making multiple releases on the same dataset:
 Composition combinators can compose Measurements with ``ZeroConcentratedDivergence``, ``MaxDivergence`` and ``FixedSmoothedMaxDivergence`` output measures,
 and arbitrary input metrics and domains.
 
-See the notebook for code examples and more thorough explanations:
+Each of these is described in more detail:
 
 .. toctree::
    :glob:
    :titlesonly:
 
-   compositors
+   non-adaptive-composition
+   adaptive-composition
+   fully-adaptive-composition
+   privacy-filters
+   compositor-chaining-and-nesting
 
 .. _measure-casting:
 
