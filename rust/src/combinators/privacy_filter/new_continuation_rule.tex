@@ -1,0 +1,45 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{fn new\_continuation\_rule}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of \texttt{fn new\_continuation\_rule}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\textit{Types consistent with pseudocode.}
+\subsubsection*{User-verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/new_continuation_rule.py}
+
+\subsubsection*{Postcondition}
+\begin{theorem}
+    Returns a function that wraps a queryable.
+    The wrapped queryable refuses to release any query
+    that would cause the privacy loss to exceed \texttt{d\_out}.
+\end{theorem}
+
+\begin{proof}
+    Line \ref{wrapper} returns a function that wraps a queryable.
+    
+    The new queryable, whose transition function is defined on line \ref{transition},
+    runs the routine on line \ref{external} for every query that changes the privacy loss.
+    This routine queries the original queryable for what the new privacy loss is,
+    after executing the query.
+    If the new privacy loss exceeds \texttt{d\_out} on line \ref{check},
+    the query is rejected, and the inner queryable is freed from memory on line \ref{free}.
+
+    Otherwise, the answer is returned on line \ref{return}.
+\end{proof}
+
+\end{document}
