@@ -13,6 +13,11 @@ that rejects any query that would cause the privacy loss to exceed 2.0:
 
         .. code:: python
 
+            >>> odom_fully_adaptive_comp = dp.c.make_fully_adaptive_composition(
+            ...     input_domain=dp.vector_domain(dp.atom_domain(T=int)),
+            ...     input_metric=dp.symmetric_distance(),
+            ...     output_measure=dp.max_divergence(),
+            ... )
             >>> meas_fully_adaptive_comp = dp.c.make_privacy_filter(
             ...     odom_fully_adaptive_comp,
             ...     d_in=1,
@@ -61,6 +66,14 @@ sum and count:
 
         .. code:: python
 
+            >>> input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
+            >>> meas_count = input_space >> dp.t.then_count() >> dp.m.then_laplace(scale=1.0)
+            >>> meas_sum = (
+            ...     input_space
+            ...     >> dp.t.then_clamp((0, 10))
+            ...     >> dp.t.then_sum()
+            ...     >> dp.m.then_laplace(scale=5.0)
+            ... )
             >>> print("dp count:", qbl_fully_adaptive_comp(meas_count))
             dp count: ...
             >>> print("dp count:", qbl_fully_adaptive_comp(meas_count))

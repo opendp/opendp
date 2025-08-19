@@ -14,9 +14,25 @@ they also support chaining.
 
         .. code:: python
 
+            >>> meas_adaptive_comp = dp.c.make_adaptive_composition(
+            ...     input_domain=dp.vector_domain(dp.atom_domain(T=int)),
+            ...     input_metric=dp.symmetric_distance(),
+            ...     output_measure=dp.max_divergence(),
+            ...     d_in=1,
+            ...     d_mids=[2., 1.]
+            ... )
+
             >>> str_space = dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance()
             >>> meas_adaptive_comp_str = str_space >> dp.t.then_cast_default(int) >> meas_adaptive_comp
             
+            >>> input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
+            >>> meas_count = input_space >> dp.t.then_count() >> dp.m.then_laplace(scale=1.0)
+            >>> meas_sum = (
+            ...     input_space
+            ...     >> dp.t.then_clamp((0, 10))
+            ...     >> dp.t.then_sum()
+            ...     >> dp.m.then_laplace(scale=5.0)
+            ... )
             >>> qbl_adaptive_comp_str = meas_adaptive_comp_str(["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"])
             >>> qbl_adaptive_comp_str(meas_sum), qbl_adaptive_comp_str(meas_count)
             (..., ...)
@@ -90,6 +106,7 @@ second (1, 0)-DP.
             ...     d_in=1,
             ...     d_mids=[(2., 1e-6), (1., 0.)]
             ... )
+            >>> int_dataset = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
             >>> qbl_adaptive_comp = meas_adaptive_comp(int_dataset)
 
 
