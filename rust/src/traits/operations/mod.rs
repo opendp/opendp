@@ -40,7 +40,7 @@ pub trait CheckAtom: CheckNull + Sized + Clone + PartialEq + Debug + Send + Sync
     }
 }
 
-/// Checks if a value is nan.
+/// Checks if a value is null.
 ///
 /// Since [`crate::domains::AtomDomain`] may or may not contain null values,
 /// this trait is necessary for its member check.

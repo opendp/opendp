@@ -3,7 +3,7 @@ use std::collections::BTreeSet;
 use crate::{
     error::Fallible,
     traits::{
-        CastInternalRational,
+        CastInternalRational, FiniteBounds, ProductOrd,
         samplers::{sample_bernoulli_exp, sample_uniform_uint_below},
     },
 };
@@ -22,7 +22,7 @@ mod test;
 /// where each $z_i \sim \mathrm{Exp}(\mathrm{shift}=y_i, \mathrm{scale}=\texttt{scale})$,
 /// and each $y_i = -x_i$ if \texttt{negate}, else $y_i = x_i$,
 /// $k$ times with removal.
-pub(crate) fn exponential_top_k<TIA: Clone + CastInternalRational>(
+pub(crate) fn exponential_top_k<TIA: Clone + CastInternalRational + ProductOrd + FiniteBounds>(
     x: &[TIA],
     scale: f64,
     k: usize,
@@ -32,7 +32,11 @@ pub(crate) fn exponential_top_k<TIA: Clone + CastInternalRational>(
     let scale = scale.into_rational()?;
 
     let y = (x.into_iter().cloned())
-        .map(|x_i| x_i.into_rational().map(|x_i| x_i * sign))
+        .map(|x_i| {
+            x_i.total_clamp(TIA::MIN_FINITE, TIA::MAX_FINITE)?
+                .into_rational()
+                .map(|x_i| x_i * sign)
+        })
         .collect::<Fallible<_>>()?;
 
     peel_permute_and_flip(y, scale, k)
