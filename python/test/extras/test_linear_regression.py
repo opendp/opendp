@@ -30,7 +30,7 @@ def test_private_theil_sen():
 def test_input_validation():
     with optional_dependency('numpy'):
         with pytest.raises(Exception, match=re.escape("For now, the x_bounds array must consist of a single tuple, not [0, 10]")):
-            dp.sklearn.linear_model.LinearRegression(
+            dp.sklearn.linear_model.LinearRegression( # type: ignore[attr-defined]
                 x_bounds=(0, 10), # type: ignore[arg-type]
                 y_bounds=(0, 10),
                 scale=1,
