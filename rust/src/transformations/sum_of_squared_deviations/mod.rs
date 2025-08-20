@@ -52,8 +52,8 @@ pub fn make_sum_of_squared_deviations<S>(
 ) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<S::Item>>,
-        AtomDomain<S::Item>,
         SymmetricDistance,
+        AtomDomain<S::Item>,
         AbsoluteDistance<S::Item>,
     >,
 >
@@ -105,7 +105,9 @@ where
 
     Transformation::new(
         input_domain,
+        input_metric,
         AtomDomain::new_non_nan(),
+        AbsoluteDistance::default(),
         Function::new(move |arg: &Vec<S::Item>| {
             let mean = S::unchecked_sum(arg) / size_;
             S::unchecked_sum(
@@ -114,8 +116,6 @@ where
                     .collect::<Vec<S::Item>>(),
             )
         }),
-        input_metric,
-        AbsoluteDistance::default(),
         // d_in / 2 * sensitivity + relaxation
         StabilityMap::new_fallible(move |d_in| {
             S::Item::inf_cast(d_in / 2)?

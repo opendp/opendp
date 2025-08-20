@@ -119,14 +119,14 @@
 //!# use opendp::core::{Transformation, StabilityMap, Function};
 //!# use opendp::metrics::AbsoluteDistance;
 //!# use opendp::domains::AtomDomain;
-//! pub fn make_i32_identity() -> Transformation<AtomDomain<i32>, AtomDomain<i32>, AbsoluteDistance<i32>, AbsoluteDistance<i32>> {
+//! pub fn make_i32_identity() -> Transformation<AtomDomain<i32>, AbsoluteDistance<i32>, AtomDomain<i32>, AbsoluteDistance<i32>> {
 //!     let input_domain = AtomDomain::default();
-//!     let output_domain = AtomDomain::default();
-//!     let function = Function::new(|arg: &i32| -> i32 { *arg });
 //!     let input_metric = AbsoluteDistance::default();
+//!     let output_domain = AtomDomain::default();
 //!     let output_metric = AbsoluteDistance::default();
+//!     let function = Function::new(|arg: &i32| -> i32 { *arg });
 //!     let stability_map = StabilityMap::new_from_constant(1);
-//!     Transformation::new(input_domain, output_domain, function, input_metric, output_metric, stability_map).unwrap()
+//!     Transformation::new(input_domain, input_metric, output_domain, output_metric, function, stability_map).unwrap()
 //! }
 //! make_i32_identity();
 //! ```
@@ -181,7 +181,6 @@ pub mod combinators;
 pub mod core;
 pub mod data;
 pub mod domains;
-#[cfg(feature = "contrib")]
 pub mod interactive;
 #[cfg(feature = "ffi")]
 pub mod internal;

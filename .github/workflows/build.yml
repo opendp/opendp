@@ -59,12 +59,12 @@ jobs:
       - name: Free disk space
         uses: jlumbroso/free-disk-space@v1.3.1
         with:
-          tool-cache: false     # no: will remove rust
+          tool-cache: true      # 5.3GiB
           android: true         # 8.7GiB
           dotnet: true          # 1.6GiB
           docker-images: true   # 3.2GiB
-          haskell: false        # no: little/no benefit
-          large-packages: false # no: slow
+          haskell: true         # 6.2GiB
+          large-packages: true  # 4.7GiB
           swap-storage: false   # no: having swap is useful
 
       - name: Checkout repository
@@ -72,18 +72,9 @@ jobs:
         with:
           ref: ${{ inputs.channel }}
 
-      - name: Cache Rust dependencies
-        if: ${{ !inputs.fake }}
-        uses: actions/cache@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          path: |
-            ~/.cargo/bin
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
-          restore-keys: ${{ runner.os }}-cargo-
+          rustflags: ""
 
       - name: Create bindings
         if: ${{ !inputs.fake }}
@@ -128,12 +119,12 @@ jobs:
       - name: Free disk space
         uses: jlumbroso/free-disk-space@v1.3.1
         with:
-          tool-cache: false     # no: will remove rust
+          tool-cache: true      # 5.3GiB
           android: true         # 8.7GiB
           dotnet: true          # 1.6GiB
           docker-images: true   # 3.2GiB
-          haskell: false        # no: little/no benefit
-          large-packages: false # no: slow
+          haskell: true         # 6.2GiB
+          large-packages: true  # 4.7GiB
           swap-storage: false   # no: having swap is useful
   
       - name: Checkout repository
@@ -152,7 +143,7 @@ jobs:
     
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version: '3.10'
           cache: pip
 
       - name: Install cibuildwheel
@@ -211,12 +202,12 @@ jobs:
       - name: Free disk space
         uses: jlumbroso/free-disk-space@v1.3.1
         with:
-          tool-cache: false     # no: will remove rust
+          tool-cache: true      # 5.3GiB
           android: true         # 8.7GiB
           dotnet: true          # 1.6GiB
           docker-images: true   # 3.2GiB
-          haskell: false        # no: little/no benefit
-          large-packages: false # no: slow
+          haskell: true         # 6.2GiB
+          large-packages: true  # 4.7GiB
           swap-storage: false   # no: having swap is useful
 
       - name: Checkout repository
@@ -228,7 +219,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version: '3.10'
           cache: pip
 
       - name: Cache Rust dependencies

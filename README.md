@@ -3,7 +3,7 @@
 [![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/license/MIT)
 
-[![Python](https://img.shields.io/badge/Python-3.9%20%E2%80%93%203.13-blue)](https://docs.opendp.org/en/stable/api/python/index.html)
+[![Python](https://img.shields.io/badge/Python-3.10%20%E2%80%93%203.13-blue)](https://docs.opendp.org/en/stable/api/python/index.html)
 [![R](https://img.shields.io/badge/R-grey)](https://docs.opendp.org/en/stable/api/r/)
 [![Rust](https://img.shields.io/badge/Rust-grey)](https://docs.rs/crate/opendp/latest)
 

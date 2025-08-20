@@ -30,7 +30,7 @@ use super::{MakeSum, make_lipschitz_float_mul, make_sum};
 pub fn make_mean<MI, T>(
     input_domain: VectorDomain<AtomDomain<T>>,
     input_metric: MI,
-) -> Fallible<Transformation<VectorDomain<AtomDomain<T>>, AtomDomain<T>, MI, AbsoluteDistance<T>>>
+) -> Fallible<Transformation<VectorDomain<AtomDomain<T>>, MI, AtomDomain<T>, AbsoluteDistance<T>>>
 where
     MI: 'static + Metric,
     T: 'static + MakeSum<MI> + ExactIntCast<usize> + Float + InfMul,

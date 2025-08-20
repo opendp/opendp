@@ -36,7 +36,7 @@ where
         self,
         input_space: (DI, MI),
         threshold: Self::Threshold,
-    ) -> Fallible<Measurement<DI, DI::Carrier, MI, MO>>;
+    ) -> Fallible<Measurement<DI, MI, MO, DI::Carrier>>;
 }
 
 pub trait NoiseThresholdPrivacyMap<MI: Metric, MO: Measure>: Sample {
@@ -87,9 +87,9 @@ where
     ) -> Fallible<
         Measurement<
             MapDomain<AtomDomain<TK>, AtomDomain<IBig>>,
-            HashMap<TK, IBig>,
             L0PInfDistance<P, AbsoluteDistance<RBig>>,
             MO,
+            HashMap<TK, IBig>,
         >,
     > {
         let output_measure = MO::default();
@@ -104,6 +104,8 @@ where
 
         Measurement::new(
             input_domain,
+            input_metric,
+            output_measure,
             Function::new_fallible(move |data: &HashMap<TK, IBig>| {
                 data.into_iter()
                     // noise output count
@@ -113,8 +115,6 @@ where
                     // fail the whole computation if any noise addition failed
                     .collect()
             }),
-            input_metric,
-            output_measure,
             privacy_map,
         )
     }

@@ -101,6 +101,7 @@ nitpick_ignore = [
     ('py:class', 'opendp.mod.LP_AnyFunction'),
     ('py:class', 'opendp.mod.LP_AnyMeasure'),
     ('py:class', 'opendp.mod.LP_AnyMeasurement'),
+    ('py:class', 'opendp.mod.LP_AnyOdometer'),
     ('py:class', 'opendp.mod.LP_AnyMetric'),
     ('py:class', 'opendp.mod.LP_AnyTransformation'),
 

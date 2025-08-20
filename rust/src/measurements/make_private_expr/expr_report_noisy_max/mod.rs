@@ -25,10 +25,12 @@ use polars::error::{PolarsError, PolarsResult};
 use polars::lazy::dsl::Expr;
 use polars::prelude::{Column, CompatLevel, IntoColumn};
 use polars::series::{IntoSeries, Series};
+#[cfg(feature = "ffi")]
+use polars_arrow as arrow;
 use polars_arrow::array::PrimitiveArray;
 use polars_arrow::types::NativeType;
 use polars_plan::dsl::{ColumnsUdf, GetOutput};
-use polars_plan::prelude::{ApplyOptions, FunctionOptions};
+use polars_plan::prelude::FunctionOptions;
 use serde::de::IntoDeserializer;
 use serde::{Deserialize, Serialize};
 
@@ -49,7 +51,7 @@ pub fn make_expr_report_noisy_max<MI: 'static + UnboundedMetric>(
     input_metric: L01InfDistance<MI>,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<WildExprDomain, ExprPlan, L01InfDistance<MI>, MaxDivergence>>
+) -> Fallible<Measurement<WildExprDomain, L01InfDistance<MI>, MaxDivergence, ExprPlan>>
 where
     Expr: StableExpr<L01InfDistance<MI>, L0InfDistance<LInfDistance<f64>>>,
 {
@@ -122,8 +124,10 @@ where
     }
 
     t_prior
-        >> Measurement::<_, _, L0InfDistance<LInfDistance<f64>>, _>::new(
+        >> Measurement::<_, L0InfDistance<LInfDistance<f64>>, _, _>::new(
             middle_domain,
+            middle_metric.clone(),
+            MaxDivergence,
             Function::then_expr(move |input_expr| {
                 apply_plugin(
                     vec![input_expr],
@@ -134,8 +138,6 @@ where
                     },
                 )
             }),
-            middle_metric.clone(),
-            MaxDivergence,
             PrivacyMap::new_fallible(move |(l0, li): &(IntDistance, f64)| {
                 let linf_metric = middle_metric.0.clone();
                 let epsilon = report_noisy_max_gumbel_map(scale, linf_metric)(li)?;
@@ -198,11 +200,7 @@ impl ColumnsUdf for ReportNoisyMaxShim {
 impl OpenDPPlugin for ReportNoisyMaxShim {
     const NAME: &'static str = "report_noisy_max";
     fn function_options() -> FunctionOptions {
-        FunctionOptions {
-            collect_groups: ApplyOptions::ElementWise,
-            fmt_str: Self::NAME,
-            ..Default::default()
-        }
+        FunctionOptions::elementwise()
     }
 
     fn get_output(&self) -> Option<GetOutput> {
@@ -224,11 +222,7 @@ pub(crate) struct ReportNoisyMaxPlugin {
 impl OpenDPPlugin for ReportNoisyMaxPlugin {
     const NAME: &'static str = "report_noisy_max_plugin";
     fn function_options() -> FunctionOptions {
-        FunctionOptions {
-            collect_groups: ApplyOptions::ElementWise,
-            fmt_str: Self::NAME,
-            ..Default::default()
-        }
+        FunctionOptions::elementwise()
     }
 
     fn get_output(&self) -> Option<GetOutput> {
@@ -377,7 +371,7 @@ fn report_noisy_max_plugin(
     inputs: &[Series],
     kwargs: ReportNoisyMaxPlugin,
 ) -> PolarsResult<Series> {
-    let inputs: Vec<Column> = inputs.iter().cloned().map(Column::Series).collect();
+    let inputs: Vec<Column> = inputs.iter().cloned().map(|s| s.into_column()).collect();
     let out = report_noisy_max_gumbel_udf(inputs.as_slice(), kwargs)?;
     Ok(out.take_materialized_series())
 }

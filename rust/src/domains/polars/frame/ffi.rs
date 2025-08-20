@@ -126,7 +126,7 @@ pub(crate) fn unpack_series_domains(
         .iter()
         .map(|x| {
             util::as_ref(x.clone())
-                .and_then(|ad| ad.downcast_ref::<SeriesDomain>().ok())
+                .and_then(|ad: &AnyDomain| ad.downcast_ref::<SeriesDomain>().ok())
                 .cloned()
         })
         .collect::<Option<Vec<SeriesDomain>>>()

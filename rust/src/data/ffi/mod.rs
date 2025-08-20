@@ -9,13 +9,15 @@ use std::ptr::null;
 use std::slice;
 
 #[cfg(feature = "polars")]
-use crate::metrics::{Bound, Bounds};
-#[cfg(feature = "polars")]
-use ::polars::export::arrow;
+use crate::metrics::polars::{Bound, Bounds};
 #[cfg(feature = "polars")]
 use ::polars::prelude::*;
 #[cfg(feature = "polars")]
-use arrow::ffi::{ArrowArray, ArrowSchema};
+use polars_arrow::ffi::ArrowArray;
+#[cfg(feature = "polars")]
+use polars_arrow::ffi::{
+    ArrowSchema, export_array_to_c, export_field_to_c, import_array_from_c, import_field_from_c,
+};
 #[cfg(feature = "polars")]
 use serde::{Deserialize, Serialize};
 
@@ -26,7 +28,9 @@ use bitvec::slice::BitSlice;
 use crate::core::{FfiError, FfiResult, FfiSlice, Function};
 use crate::domains::BitVector;
 use crate::error::Fallible;
-use crate::ffi::any::{AnyFunction, AnyMeasurement, AnyObject, AnyQueryable, Downcast};
+use crate::ffi::any::{
+    AnyFunction, AnyMeasurement, AnyObject, AnyOdometer, AnyQueryable, Downcast,
+};
 use crate::ffi::util::{self, AnyDomainPtr, ExtrinsicObject, as_ref, into_c_char_p};
 use crate::ffi::util::{AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents, c_bool};
 use crate::measures::PrivacyProfile;
@@ -212,9 +216,9 @@ pub extern "C" fn opendp_data__slice_as_object(
             let schema = try_as_ref!(slice[1] as *const ArrowSchema);
             let name = util::to_str(slice[2] as *const c_char)?;
 
-            let field = arrow::ffi::import_field_from_c(schema)
+            let field = import_field_from_c(schema)
                 .map_err(|e| err!(FFI, "failed to import field from c: {}", e.to_string()))?;
-            let array = arrow::ffi::import_array_from_c(array, field.dtype)
+            let array = import_array_from_c(array, field.dtype)
                 .map_err(|e| err!(FFI, "failed to import array from c: {}", e.to_string()))?;
             Series::try_from((PlSmallStr::from_str(name), array))
                 .map_err(|e| err!(FFI, "failed to construct Series: {}", e.to_string()))?
@@ -232,7 +236,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         raw: &FfiSlice
     ) -> Fallible<AnyObject> {
         let slices = unsafe { slice::from_raw_parts(raw.ptr as *const *const FfiSlice, raw.len) };
-        let series = slices.iter().map(|&s| raw_to_concrete_series(try_as_ref!(s)).map(Column::Series))
+        let series = slices.iter().map(|&s| raw_to_concrete_series(try_as_ref!(s)).map(|s| s.into_column()))
         .collect::<Fallible<Vec<Column>>>()?;
         
         Ok(AnyObject::new(DataFrame::new(series)?))
@@ -244,10 +248,23 @@ pub extern "C" fn opendp_data__slice_as_object(
     ) -> Fallible<T> where for<'de> T: Deserialize<'de> {
         let slice = unsafe { slice::from_raw_parts(raw.ptr as *const u8, raw.len) };
         // Error checking based on pyo3-polars:
-        // https://github.com/pola-rs/pyo3-polars/blob/5150d4ca27c287ff4be5cafef243d9a878a8879d/pyo3-polars/src/lib.rs#L147-L153
+        // https://github.com/pola-rs/polars/blob/22cff4db2bb4ee5b8ab72365b9c4b4a492df55c1/pyo3-polars/pyo3-polars/src/types.rs#L237-L238
         // the slice is lf.__getstate__ from the python side and then deserialized here
-        ciborium::de::from_reader(slice).map_err(
-            |e| err!(FFI, "Error when deserializing {}. This may be because you're using features from Polars that are not currently supported. {}", name, e)
+        polars_utils::pl_serialize::SerializeOptions::default()
+            // `false` disables forward compatibility
+            .deserialize_from_reader::<_, _, false>(slice)
+            .map_err(
+            |e| err!(FFI, "Error when deserializing '{}'. This may be because you're using features from Polars that are not currently supported. {}", name, e)
+        )
+    }
+    #[cfg(feature = "polars")]
+    pub fn deserialize_raw_dslplan(
+        raw: &FfiSlice
+    ) -> Fallible<DslPlan> {
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const u8, raw.len) };
+        DslPlan::deserialize_versioned(slice)
+            .map_err(
+            |e| err!(FFI, "Error when deserializing 'DslPlan'. This may be because you're using features from Polars that are not currently supported. {}", e)
         )
     }
     #[cfg(feature = "polars")]
@@ -256,11 +273,11 @@ pub extern "C" fn opendp_data__slice_as_object(
     }
     #[cfg(feature = "polars")]
     fn raw_to_lazyframe(raw: &FfiSlice) -> Fallible<AnyObject> {
-        Ok(AnyObject::new(LazyFrame::from(deserialize_raw::<DslPlan>(raw, "LazyFrame")?)))
+        Ok(AnyObject::new(LazyFrame::from(deserialize_raw_dslplan(raw)?)))
     }
     #[cfg(feature = "polars")]
     fn raw_to_dslplan(raw: &FfiSlice) -> Fallible<AnyObject> {
-        Ok(AnyObject::new(LazyFrame::from(deserialize_raw::<DslPlan>(raw, "LazyFrame")?).logical_plan))
+        Ok(AnyObject::new(deserialize_raw_dslplan(raw)?))
     }
     #[cfg(feature = "polars")]
     fn raw_to_margin(raw: &FfiSlice) -> Fallible<AnyObject> {
@@ -306,6 +323,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         Ok(AnyObject::new(Bounds(vec)))
     }
     match T_.contents {
+        TypeContents::PLAIN("AnyMeasurementPtr") => raw_to_plain::<AnyMeasurement>(raw),
         TypeContents::PLAIN("BitVector") => raw_to_bitvector(raw),
         TypeContents::PLAIN("String") => raw_to_string(raw),
         TypeContents::PLAIN("ExtrinsicObject") => raw_to_plain::<ExtrinsicObject>(raw),
@@ -397,7 +415,7 @@ pub extern "C" fn opendp_data__slice_as_object(
             raw_to_plain,
             [(
                 T_,
-                [u8, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, AnyMeasurement, AnyQueryable]
+                [u8, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, bool, AnyMeasurement, AnyOdometer, AnyQueryable]
             )],
             (raw)
         )},
@@ -567,7 +585,12 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         T: Serialize,
     {
         let mut buffer: Vec<u8> = vec![];
-        ciborium::ser::into_writer(&val, &mut buffer)
+
+        polars_utils::pl_serialize::SerializeOptions::default()
+            // based on:
+            // https://github.com/pola-rs/polars/blob/22cff4db2bb4ee5b8ab72365b9c4b4a492df55c1/pyo3-polars/pyo3-polars/src/types.rs#L380-L381
+            // `false` disables forward compatibility
+            .serialize_into_writer::<_, _, false>(&mut buffer, val)
             .map_err(|e| err!(FFI, "failed to serialize {}: {}", name, e))?;
 
         let slice = FfiSlice {
@@ -578,8 +601,20 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         Ok(slice)
     }
     #[cfg(feature = "polars")]
+    fn serialize_dslplan(logical_plan: &DslPlan) -> Fallible<FfiSlice> {
+        let mut buffer = vec![];
+        logical_plan.serialize_versioned(&mut buffer, Default::default())?;
+
+        let slice = FfiSlice {
+            ptr: buffer.as_ptr() as *mut c_void,
+            len: buffer.len(),
+        };
+        util::into_raw(buffer);
+        Ok(slice)
+    }
+    #[cfg(feature = "polars")]
     fn lazyframe_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        serialize_obj(&obj.downcast_ref::<LazyFrame>()?.logical_plan, "LazyFrame")
+        serialize_dslplan(&obj.downcast_ref::<LazyFrame>()?.logical_plan)
     }
     #[cfg(feature = "polars")]
     fn expr_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
@@ -610,12 +645,12 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         let series = column.as_materialized_series();
         let array = series.rechunk().to_arrow(0, CompatLevel::newest());
 
-        let schema = arrow::ffi::export_field_to_c(&ArrowField::new(
+        let schema = export_field_to_c(&ArrowField::new(
             series.name().clone(),
             array.dtype().clone(),
             true,
         ));
-        let array = arrow::ffi::export_array_to_c(array);
+        let array = export_array_to_c(array);
 
         let buffer = vec![
             util::into_raw(array) as *const c_void,
@@ -632,7 +667,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
 
     #[cfg(feature = "polars")]
     fn series_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        concrete_column_to_raw(&Column::Series(obj.downcast_ref::<Series>()?.clone()))
+        concrete_column_to_raw(&obj.downcast_ref::<Series>()?.clone().into_column())
     }
 
     #[cfg(feature = "polars")]
@@ -641,7 +676,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
 
         let expr_plan = obj.downcast_ref::<ExprPlan>()?;
 
-        let plan = util::into_raw(serialize_obj(&expr_plan.plan, "DslPlan")?) as *const c_void;
+        let plan = util::into_raw(serialize_dslplan(&expr_plan.plan)?) as *const c_void;
         let expr = util::into_raw(serialize_obj(&expr_plan.expr, "Expr")?) as *const c_void;
         Ok(if let Some(fill) = &expr_plan.fill {
             let fill = util::into_raw(serialize_obj(&fill, "Expr")?) as *const c_void;
@@ -1018,7 +1053,8 @@ impl std::fmt::Debug for AnyObject {
             (f64, f64),
             Vec<u32>, Vec<u64>, Vec<i32>, Vec<i64>, Vec<f32>, Vec<f64>, Vec<bool>, Vec<String>, Vec<u8>, Vec<Vec<String>>,
             (AnyObject, AnyObject),
-            AnyObject
+            AnyObject,
+            AnyMeasurement
         ])], (self)).unwrap_or_else(|_| "[Non-debuggable]".to_string()).as_str())
     }
 }
@@ -1065,6 +1101,11 @@ impl ProductOrd for AnyObject {
         }
 
         let type_arg = &self.type_;
+
+        #[cfg(feature = "polars")]
+        if type_arg == &Type::of::<Bounds>() {
+            return monomorphize::<Bounds>(self, other)
+        }
         // type list is explicit because (f32, f32), (f64, f64) are not in @numbers
         dispatch!(monomorphize, [(type_arg, [
             u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, (f32, f32), (f64, f64)
@@ -1125,7 +1166,8 @@ impl Clone for AnyObject {
                             bool,
                             String,
                             ExtrinsicObject,
-                            BitVector
+                            BitVector,
+                            AnyMeasurement
                         ]
                     )],
                     (self)

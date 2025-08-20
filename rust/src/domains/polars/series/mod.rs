@@ -145,11 +145,8 @@ impl SeriesDomain {
             }),
             DataType::Time => Arc::new(AtomDomain::<NaiveTime>::default()),
             DataType::Categorical(_, _) => Arc::new(CategoricalDomain::default()),
-            DataType::Enum(mapping, _) => {
-                let mapping =
-                    mapping.ok_or_else(|| err!(MakeDomain, "EnumDomain requires a mapping"))?;
-                let categories = ChunkedArray::<StringType>::from(mapping.get_categories().clone())
-                    .into_series();
+            DataType::Enum(categories, _) => {
+                let categories = categories.categories().non_null_values_iter().collect();
                 Arc::new(EnumDomain::new(categories)?)
             }
             DataType::Array(dtype, size) => {
@@ -315,7 +312,8 @@ impl SeriesElementDomain for CategoricalDomain {
     type InnerDomain = Self;
 
     fn dtype(&self) -> DataType {
-        DataType::Categorical(None, Default::default())
+        let categories = Categories::global();
+        DataType::Categorical(categories.clone(), categories.mapping())
     }
     fn inner_domain(&self) -> &Self {
         self
@@ -328,7 +326,9 @@ impl SeriesElementDomain for EnumDomain {
     type InnerDomain = Self;
 
     fn dtype(&self) -> DataType {
-        DataType::Enum(None, Default::default())
+        let categories = self.categories().str().unwrap().iter().map(|v| v.unwrap());
+        let categories = FrozenCategories::new(categories).unwrap();
+        DataType::Enum(categories.clone(), categories.mapping().clone())
     }
     fn inner_domain(&self) -> &Self {
         self
@@ -424,7 +424,7 @@ pub trait PrimitiveDataType: 'static + Send + Sync {
     ///
     /// A default implementation is provided because Polars already implements this on the marker type (Self::Polars).
     fn dtype() -> DataType {
-        Self::Polars::get_dtype()
+        Self::Polars::get_static_dtype()
     }
 }
 

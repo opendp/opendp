@@ -31,7 +31,7 @@ pub fn make_b_ary_tree<M, TA>(
     input_metric: M,
     leaf_count: u32,
     branching_factor: u32,
-) -> Fallible<Transformation<VectorDomain<AtomDomain<TA>>, VectorDomain<AtomDomain<TA>>, M, M>>
+) -> Fallible<Transformation<VectorDomain<AtomDomain<TA>>, M, VectorDomain<AtomDomain<TA>>, M>>
 where
     TA: Integer,
     M: BAryTreeMetric,
@@ -54,7 +54,9 @@ where
 
     Transformation::new(
         input_domain.clone(),
+        input_metric.clone(),
         input_domain.without_size(),
+        input_metric,
         Function::new(move |arg: &Vec<TA>| {
             // if arg.len() != num_bins, then user has a bug that will affect utility, but cannot alert
             //    if less data is passed than num_bins, then pad with extra zeros
@@ -85,8 +87,6 @@ where
                 .take(tree_length)
                 .collect()
         }),
-        input_metric.clone(),
-        input_metric,
         StabilityMap::new_from_constant(M::Distance::inf_cast(num_layers)?),
     )
 }

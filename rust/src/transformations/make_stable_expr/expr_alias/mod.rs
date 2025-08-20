@@ -19,7 +19,7 @@ pub fn make_expr_alias<M: OuterMetric>(
     input_domain: WildExprDomain,
     input_metric: M,
     expr: Expr,
-) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
+) -> Fallible<Transformation<WildExprDomain, M, ExprDomain, M>>
 where
     M::Distance: Clone,
     (WildExprDomain, M): MetricSpace,
@@ -41,10 +41,10 @@ where
 
     let t_alias = Transformation::new(
         middle_domain.clone(),
-        output_domain,
-        Function::then_expr(move |expr| expr.alias(name.clone())),
         middle_metric.clone(),
+        output_domain,
         middle_metric,
+        Function::then_expr(move |expr| expr.alias(name.clone())),
         StabilityMap::new(Clone::clone),
     )?;
 

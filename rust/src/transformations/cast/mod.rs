@@ -29,8 +29,8 @@ pub fn make_cast<M, TIA, TOA>(
 ) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<TIA>>,
-        VectorDomain<OptionDomain<AtomDomain<TOA>>>,
         M,
+        VectorDomain<OptionDomain<AtomDomain<TOA>>>,
         M,
     >,
 >
@@ -86,7 +86,7 @@ where
 pub fn make_cast_default<M, TIA, TOA>(
     input_domain: VectorDomain<AtomDomain<TIA>>,
     input_metric: M,
-) -> Fallible<Transformation<VectorDomain<AtomDomain<TIA>>, VectorDomain<AtomDomain<TOA>>, M, M>>
+) -> Fallible<Transformation<VectorDomain<AtomDomain<TIA>>, M, VectorDomain<AtomDomain<TOA>>, M>>
 where
     M: EventLevelMetric,
     TIA: 'static + Clone + CheckAtom,
@@ -117,7 +117,7 @@ where
 pub fn make_cast_inherent<M, TIA, TOA>(
     input_domain: VectorDomain<AtomDomain<TIA>>,
     input_metric: M,
-) -> Fallible<Transformation<VectorDomain<AtomDomain<TIA>>, VectorDomain<AtomDomain<TOA>>, M, M>>
+) -> Fallible<Transformation<VectorDomain<AtomDomain<TIA>>, M, VectorDomain<AtomDomain<TOA>>, M>>
 where
     M: EventLevelMetric,
     TIA: 'static + Clone + CheckAtom,

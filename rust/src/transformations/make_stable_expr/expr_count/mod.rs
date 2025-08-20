@@ -15,6 +15,7 @@ use super::StableExpr;
 #[cfg(test)]
 mod test;
 
+#[derive(Debug)]
 enum Strategy {
     Count,
     NullCount,
@@ -37,7 +38,7 @@ pub fn make_expr_count<MI, const P: usize>(
     input_domain: WildExprDomain,
     input_metric: L01InfDistance<MI>,
     expr: Expr,
-) -> Fallible<Transformation<WildExprDomain, ExprDomain, L01InfDistance<MI>, LpDistance<P, f64>>>
+) -> Fallible<Transformation<WildExprDomain, L01InfDistance<MI>, ExprDomain, LpDistance<P, f64>>>
 where
     MI: 'static + UnboundedMetric,
     (ExprDomain, L01InfDistance<MI>): MetricSpace,
@@ -80,7 +81,9 @@ where
     let t_prior = input.make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
-    let margin = middle_domain.context.aggregation("count")?;
+    let margin = middle_domain
+        .context
+        .aggregation(format!("{strategy:?}").as_str())?;
 
     let output_domain = ExprDomain {
         column: SeriesDomain::new(
@@ -112,7 +115,9 @@ where
     t_prior
         >> Transformation::new(
             middle_domain,
+            middle_metric,
             output_domain,
+            LpDistance::default(),
             Function::then_expr(move |e| match strategy {
                 Strategy::Count => e.count(),
                 Strategy::NullCount => e.null_count(),
@@ -120,8 +125,6 @@ where
                 Strategy::NUnique => e.n_unique(),
             })
             .fill_with(typed_lit(0u32)),
-            middle_metric,
-            LpDistance::default(),
             counting_query_stability_map(invariant),
         )?
 }
