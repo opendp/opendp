@@ -296,10 +296,14 @@ but drops the ``d_mids`` argument, as these will be chosen as you go.
 
         .. code:: pycon
 
-            >>> odom_fully_adaptive_comp = dp.c.make_fully_adaptive_composition(
-            ...     input_domain=dp.vector_domain(dp.atom_domain(T=int)),
-            ...     input_metric=dp.symmetric_distance(),
-            ...     output_measure=dp.max_divergence(),
+            >>> odom_fully_adaptive_comp = (
+            ...     dp.c.make_fully_adaptive_composition(
+            ...         input_domain=dp.vector_domain(
+            ...             dp.atom_domain(T=int)
+            ...         ),
+            ...         input_metric=dp.symmetric_distance(),
+            ...         output_measure=dp.max_divergence(),
+            ...     )
             ... )
 
     .. tab-item:: R
@@ -322,7 +326,9 @@ it returns an *odometer queryable*.
         .. code:: pycon
 
             >>> int_dataset = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-            >>> qbl_fully_adaptive_comp = odom_fully_adaptive_comp(int_dataset)
+            >>> qbl_fully_adaptive_comp = odom_fully_adaptive_comp(
+            ...     int_dataset
+            ... )
     
     .. tab-item:: R
         :sync: r
@@ -437,7 +443,9 @@ it still returns an *odometer queryable*, but this time the queryable will limit
         .. code:: pycon
 
             >>> int_dataset = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-            >>> qbl_fully_adaptive_comp = meas_fully_adaptive_comp(int_dataset)
+            >>> qbl_fully_adaptive_comp = meas_fully_adaptive_comp(
+            ...     int_dataset
+            ... )
 
     .. tab-item:: R
         :sync: r
