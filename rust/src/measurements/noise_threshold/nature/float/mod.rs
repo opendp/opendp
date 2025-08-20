@@ -128,7 +128,8 @@ where
         Function::new(move |arg: &HashMap<TK, TV>| {
             (arg.into_iter())
                 .map(|(key, val)| {
-                    let val = RBig::try_from(val.clone()).unwrap_or(RBig::ZERO);
+                    let val = RBig::try_from(val.clamp(TV::MIN_FINITE, TV::MAX_FINITE))
+                        .unwrap_or(RBig::ZERO);
                     (key.clone(), find_nearest_multiple_of_2k(val, k))
                 })
                 .collect()

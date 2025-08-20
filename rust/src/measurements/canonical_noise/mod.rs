@@ -15,7 +15,10 @@ use crate::{
     error::Fallible,
     measures::{Approximate, MaxDivergence},
     metrics::AbsoluteDistance,
-    traits::samplers::{CanonicalRV, PartialSample},
+    traits::{
+        FiniteBounds,
+        samplers::{CanonicalRV, PartialSample},
+    },
 };
 
 #[cfg(feature = "ffi")]
@@ -63,7 +66,8 @@ pub fn make_canonical_noise(
         Approximate(MaxDivergence),
         Function::new_fallible(move |&arg: &f64| {
             let canonical_rv = CanonicalRV {
-                shift: RBig::try_from(arg).unwrap_or(RBig::ZERO),
+                shift: RBig::try_from(arg.clamp(f64::MIN_FINITE, f64::MAX_FINITE))
+                    .unwrap_or(RBig::ZERO),
                 scale: &r_d_in,
                 tradeoff: &tradeoff,
                 fixed_point: &fixed_point,

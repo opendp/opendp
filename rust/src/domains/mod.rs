@@ -123,6 +123,7 @@ impl<T: CheckAtom> AtomDomain<T> {
         Ok(())
     }
 }
+
 impl<T: CheckAtom> AtomDomain<T> {
     pub fn new_non_nan() -> Self {
         AtomDomain {
@@ -204,6 +205,7 @@ pub struct Bounds<T> {
     lower: Bound<T>,
     upper: Bound<T>,
 }
+
 impl<T: ProductOrd + Debug> Bounds<T> {
     pub fn new_closed(bounds: (T, T)) -> Fallible<Self> {
         Self::new((Bound::Included(bounds.0), Bound::Included(bounds.1)))
