@@ -46,7 +46,7 @@ def test_code_block_language(rst_path: Path):
         if m:
             language = m.group(1)
             if language not in expected:
-                errors.append(f'line {i}: Got "{language}", expected one of: {', '.join(expected)}')
+                errors.append(f'line {i}: Got "{language}", expected one of: {", ".join(expected)}')
     assert not errors
 
 @pytest.mark.parametrize(
