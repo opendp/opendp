@@ -10,17 +10,17 @@ use super::*;
 fn test_make_chain_mt() -> Fallible<()> {
     let transformation0 = Transformation::new(
         AtomDomain::<u8>::default(),
+        AbsoluteDistance::<i32>::default(),
         AtomDomain::<i32>::default(),
+        AbsoluteDistance::<i32>::default(),
         Function::new(|a: &u8| (a + 1) as i32),
-        AbsoluteDistance::<i32>::default(),
-        AbsoluteDistance::<i32>::default(),
         StabilityMap::new_from_constant(1),
     )?;
     let measurement1 = Measurement::new(
         AtomDomain::<i32>::default(),
-        Function::new(|a: &i32| (a + 1) as f64),
         AbsoluteDistance::<i32>::default(),
         MaxDivergence,
+        Function::new(|a: &i32| (a + 1) as f64),
         PrivacyMap::new(|d_in: &i32| *d_in as f64 + 1.),
     )?;
     let chain = make_chain_mt(&measurement1, &transformation0)?;
@@ -40,18 +40,18 @@ fn test_make_chain_mt() -> Fallible<()> {
 fn test_make_chain_tt() -> Fallible<()> {
     let transformation0 = Transformation::new(
         AtomDomain::<u8>::default(),
+        AbsoluteDistance::<i32>::default(),
         AtomDomain::<i32>::default(),
+        AbsoluteDistance::<i32>::default(),
         Function::new(|a: &u8| (a + 1) as i32),
-        AbsoluteDistance::<i32>::default(),
-        AbsoluteDistance::<i32>::default(),
         StabilityMap::new_from_constant(1),
     )?;
     let transformation1 = Transformation::new(
         AtomDomain::<i32>::default(),
+        AbsoluteDistance::<i32>::default(),
         AtomDomain::<f64>::new_non_nan(),
+        AbsoluteDistance::<i32>::default(),
         Function::new(|a: &i32| (a + 1) as f64),
-        AbsoluteDistance::<i32>::default(),
-        AbsoluteDistance::<i32>::default(),
         StabilityMap::new_from_constant(1),
     )?;
     let chain = make_chain_tt(&transformation1, &transformation0).unwrap_test();
@@ -71,9 +71,9 @@ fn test_make_chain_tt() -> Fallible<()> {
 fn test_make_chain_pm() -> Fallible<()> {
     let measurement0 = Measurement::new(
         AtomDomain::<u8>::default(),
-        Function::new(|a: &u8| (a + 1) as i32),
         AbsoluteDistance::<i32>::default(),
         MaxDivergence,
+        Function::new(|a: &u8| (a + 1) as i32),
         PrivacyMap::new_from_constant(1.),
     )?;
     let function1 = Function::new(|a: &i32| (a + 1) as f64);

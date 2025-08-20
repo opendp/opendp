@@ -32,7 +32,7 @@ pub fn make_expr_sum<MI, const P: usize>(
     input_domain: WildExprDomain,
     input_metric: L01InfDistance<MI>,
     expr: Expr,
-) -> Fallible<Transformation<WildExprDomain, ExprDomain, L01InfDistance<MI>, LpDistance<P, f64>>>
+) -> Fallible<Transformation<WildExprDomain, L01InfDistance<MI>, ExprDomain, LpDistance<P, f64>>>
 where
     MI: 'static + UnboundedMetric,
     Expr: StableExpr<L01InfDistance<MI>, L01InfDistance<MI>>,
@@ -115,12 +115,12 @@ where
     };
 
     t_prior
-        >> Transformation::<_, _, L01InfDistance<MI>, LpDistance<P, _>>::new(
+        >> Transformation::<_, L01InfDistance<MI>, _, LpDistance<P, _>>::new(
             middle_domain,
-            output_domain,
-            Function::then_expr(Expr::sum).fill_with(fill_value),
             middle_metric.clone(),
+            output_domain,
             LpDistance::default(),
+            Function::then_expr(Expr::sum).fill_with(fill_value),
             stability_map,
         )?
 }

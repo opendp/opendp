@@ -44,8 +44,9 @@ fn test_expr_to_physical_categorical() -> Fallible<()> {
             .collect(),
     )?;
 
-    let in_series = Series::new("data".into(), ["A", "B", "B", "C", "D"])
-        .cast(&DataType::Categorical(None, Default::default()))?;
+    let in_series = Series::new("data".into(), ["A", "B", "B", "C", "D"]).cast(
+        &DataType::Categorical(Categories::global(), Categories::global().mapping()),
+    )?;
 
     let out_elem_domain = AtomDomain::<u32>::default();
     let out_series = Series::new("data".into(), [0u32, 1, 1, 2, 3]);

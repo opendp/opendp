@@ -2,7 +2,7 @@ import pytest
 import logging
 import opendp.prelude as dp
 from opendp._internal import _make_measurement
-
+import re
 
 def test_unit_of():
     assert dp.unit_of(contributions=3) == (dp.symmetric_distance(), 3)
@@ -85,7 +85,6 @@ def test_context_repr():
             privacy_unit=dp.unit_of(contributions=3),
             privacy_loss=dp.loss_of(epsilon=3.0),
             split_evenly_over=1,
-            domain=dp.domain_of(list[int]),
         )
     ) == '''Context(
     accountant = Measurement(
@@ -93,17 +92,54 @@ def test_context_repr():
         input_metric   = SymmetricDistance(),
         output_measure = MaxDivergence),
     d_in       = 3,
-    d_mids     = [3.0])'''
+    d_mids     = [3.0],
+    d_out      = None)'''
+
+    assert repr(
+        dp.Context.compositor(
+            data=[1, 2, 3],
+            privacy_unit=dp.unit_of(contributions=3),
+            privacy_loss=dp.loss_of(epsilon=3.0),
+        )
+    ) == '''Context(
+    accountant = Measurement(
+        input_domain   = VectorDomain(AtomDomain(T=i32)),
+        input_metric   = SymmetricDistance(),
+        output_measure = MaxDivergence),
+    d_in       = 3,
+    d_mids     = None,
+    d_out      = 3.0)'''
+
+    assert repr(
+        dp.Context.compositor(
+            data=[1, 2, 3],
+            privacy_unit=dp.unit_of(contributions=3),
+            privacy_loss=dp.loss_of(epsilon=float("inf")),
+        )
+    ) == '''Context(
+    accountant = Odometer(
+        input_domain   = VectorDomain(AtomDomain(T=i32)),
+        input_metric   = SymmetricDistance(),
+        output_measure = MaxDivergence),
+    d_in       = 3,
+    d_mids     = None,
+    d_out      = None)'''
 
 
 def test_context_init_split_by_weights():
-    dp.Context.compositor(
+    context = dp.Context.compositor(
         data=[1, 2, 3],
         privacy_unit=dp.unit_of(contributions=3),
         privacy_loss=dp.loss_of(epsilon=3.0),
         split_by_weights=[1, 1, 1],
         domain=dp.domain_of(list[int]),
     )
+
+    context.remaining_privacy_loss() == [1.0, 1.0, 1.0]
+    context.current_privacy_loss() == []
+
+    with pytest.raises(ValueError, match="Cannot specify data when the query is part of a context."):
+        context.query().count().laplace().release(data=[1, 2, 3])
 
 
 def test_context_init_split_evenly_over():
@@ -160,6 +196,14 @@ def test_middle_param():
     # a sample from Laplace(loc=6 / n, scale=1)
     assert isinstance(dp_sum.release(), float)
 
+def test_query():
+    space = dp.atom_domain(T=int), dp.absolute_distance(T=int)
+    query = dp.Query(space, dp.max_divergence(), d_in=1, d_out=1.0).laplace()
+
+    with pytest.raises(ValueError, match="Cannot release query without data or context."):
+        query.release()
+    
+    assert isinstance(query.release(10), int)
 
 def test_query_repr():
     context = dp.Context.compositor(
@@ -179,7 +223,8 @@ def test_query_repr():
             input_metric   = SymmetricDistance(),
             output_measure = MaxDivergence),
         d_in       = 1,
-        d_mids     = [1.0]))'''
+        d_mids     = [1.0],
+        d_out      = None))'''
 
 
 def test_subcontext_changes_metric():
@@ -190,7 +235,7 @@ def test_subcontext_changes_metric():
         split_evenly_over=2,
         domain=dp.vector_domain(dp.atom_domain(T=int)),
     )
-    subcontext = context.query().clamp((0, 1)).sum().compositor(split_evenly_over=1).release()
+    subcontext: dp.Context = context.query().clamp((0, 1)).sum().compositor(split_evenly_over=1).release()
 
     # This still corresponds to the top-level context:
     assert subcontext.accountant.input_domain == dp.vector_domain(dp.atom_domain(T=int))
@@ -394,3 +439,73 @@ def test_local_DP():
 
     assert query.param() == 0.6224593312018545
     assert isinstance(query.release(), str)
+
+def test_filter_pure_dp():
+    context = dp.Context.compositor(
+        data=[1, 2, 3],
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+    )
+
+    assert context.current_privacy_loss() == 0.0
+    assert context.remaining_privacy_loss() == 1.0
+
+    # query with fixed privacy loss
+    query = context.query(epsilon=0.5).count().laplace()
+    assert isinstance(query.release(), int)
+    assert context.current_privacy_loss() == 0.5
+    assert context.remaining_privacy_loss() == 0.5
+
+    # query with fixed measurement
+    query = context.query().count().laplace(scale=2.0)
+    assert isinstance(query.release(), int)
+    assert context.current_privacy_loss() == 1.0
+    assert context.remaining_privacy_loss() == 0.0
+
+    # reject query because privacy budget is exhausted
+    msg = "filter is now exhausted: pending privacy loss (1.5) would exceed privacy budget (1.0)"
+    with pytest.raises(dp.OpenDPException, match=re.escape(msg)):
+        context.query(epsilon=0.5).count().laplace().release()
+    msg = "filter is exhausted: no more queries can be answered"
+    with pytest.raises(dp.OpenDPException, match=re.escape(msg)):
+        context.current_privacy_loss()
+
+def test_filter_approx_dp():
+    context = dp.Context.compositor(
+        data=[1, 2, 3],
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-8),
+    )
+
+    assert context.current_privacy_loss() == (0.0, 0.0)
+    assert context.remaining_privacy_loss() == (1.0, 1e-8)
+
+    with pytest.raises(ValueError, match="Consider setting `delta=0.0` in your query"):
+        context.query(epsilon=0.5)
+
+    # query with fixed privacy loss
+    query = context.query(epsilon=0.5, delta=0.0).count().laplace()
+    assert isinstance(query.release(), int)
+    assert context.current_privacy_loss() == (0.5, 0.0)
+    assert context.remaining_privacy_loss() == (0.5, 1e-8)
+
+def test_odometer():
+    context = dp.Context.compositor(
+        data=[1, 2, 3],
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=float("inf")),
+    )
+    assert context.current_privacy_loss() == 0.0
+
+    # query with fixed privacy loss
+    query = context.query(epsilon=0.5).count().laplace()
+    assert isinstance(query.release(), int)
+    assert context.current_privacy_loss() == 0.5
+
+    # query with fixed measurement
+    query = context.query().count().laplace(scale=2.0)
+    assert isinstance(query.release(), int)
+    assert context.current_privacy_loss() == 1.0
+    
+    with pytest.raises(ValueError, match="The privacy loss is unbounded"):
+        context.remaining_privacy_loss()

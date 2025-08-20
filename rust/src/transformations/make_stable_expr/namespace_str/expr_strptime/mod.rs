@@ -22,7 +22,7 @@ pub fn make_expr_strptime<M: OuterMetric>(
     input_domain: WildExprDomain,
     input_metric: M,
     expr: Expr,
-) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
+) -> Fallible<Transformation<WildExprDomain, M, ExprDomain, M>>
 where
     M::InnerMetric: MicrodataMetric,
     M::Distance: Clone,
@@ -38,6 +38,9 @@ where
     else {
         return fallible!(MakeTransformation, "expected str.strptime expression");
     };
+
+    let to_type_lit = (to_type.as_literal())
+        .ok_or_else(|| err!(MakeTransformation, "output type must be a literal"))?;
 
     let Ok([input, ambiguous]) = <&[_; 2]>::try_from(inputs.as_slice()) else {
         return fallible!(
@@ -57,7 +60,7 @@ where
         );
     }
 
-    if matches!(to_type, DataType::Time) && !strptime_options.exact {
+    if matches!(to_type_lit, DataType::Time) && !strptime_options.exact {
         return fallible!(
             MakeTransformation,
             "non-exact not implemented for Time data type"
@@ -87,7 +90,7 @@ where
         );
     }
 
-    if matches!(to_type, DataType::Datetime(TimeUnit::Nanoseconds, _)) {
+    if matches!(to_type_lit, DataType::Datetime(TimeUnit::Nanoseconds, _)) {
         // Nanoseconds are not supported due to this issue:
         // https://github.com/pola-rs/polars/issues/19928
         return fallible!(
@@ -97,7 +100,7 @@ where
     }
 
     if !matches!(
-        to_type,
+        to_type_lit,
         DataType::Time
             | DataType::Datetime(TimeUnit::Microseconds | TimeUnit::Milliseconds, _)
             | DataType::Date
@@ -105,23 +108,23 @@ where
         return fallible!(
             MakeTransformation,
             "str.strptime output dtype must be Time, micro- or milli-second Datetime or Date, found {}",
-            to_type
+            to_type_lit
         );
     }
 
-    series_domain.set_dtype(to_type.clone())?;
+    series_domain.set_dtype(to_type_lit.clone())?;
     series_domain.nullable = true;
 
     t_prior
         >> Transformation::new(
             middle_domain.clone(),
+            middle_metric.clone(),
             output_domain,
+            middle_metric,
             Function::then_expr(move |expr| {
                 expr.str()
                     .strptime(to_type.clone(), strptime_options.clone(), ambiguous.clone())
             }),
-            middle_metric.clone(),
-            middle_metric,
             StabilityMap::new(Clone::clone),
         )?
 }

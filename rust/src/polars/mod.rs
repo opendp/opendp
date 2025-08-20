@@ -64,6 +64,7 @@ where
                     lib,
                     symbol,
                     kwargs, // Don't un-pickle! subjects the library to arbitrary code execution.
+                    ..
                 },
             ..
         } => {
@@ -112,6 +113,7 @@ where
                     lib,
                     symbol,
                     kwargs,
+                    ..
                 },
             ..
         } => {
@@ -153,13 +155,13 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
         Expr::Function {
             input: _, // ignore the input, as it is replaced with input_expr
             mut function,
-            options,
         } => {
             // overwrite the kwargs to update the noise scale parameter in the FFI plugin
             if let FunctionExpr::FfiPlugin {
                 lib,
                 symbol,
                 kwargs,
+                ..
             } = &mut function
             {
                 if let Ok(path) = std::env::var("OPENDP_POLARS_LIB_PATH") {
@@ -174,12 +176,12 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
             Expr::Function {
                 input: input_exprs,
                 function,
-                options,
             }
         }
         // handle the case where the expression is an AnonymousFunction from Rust
         Expr::AnonymousFunction { .. } => Expr::AnonymousFunction {
             input: input_exprs,
+            fmt_str: Box::new(KW::NAME.into()),
             output_type: kwargs_new.get_output().unwrap(),
             function: LazySerde::Deserialized(SpecialEq::new(Arc::new(kwargs_new))),
             options: KW::function_options(),
@@ -191,6 +193,7 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
 pub(crate) fn apply_anonymous_function<KW: OpenDPPlugin>(input: Vec<Expr>, kwargs: KW) -> Expr {
     Expr::AnonymousFunction {
         input,
+        fmt_str: Box::new(KW::NAME.into()),
         // pass through the constructor to activate the expression
         function: LazySerde::Deserialized(SpecialEq::new(Arc::new(kwargs.clone()))),
         // have no option but to panic in this case, since the polars api does not accept results
@@ -221,7 +224,7 @@ pub(crate) trait ExtractValue: Sized {
 macro_rules! impl_extract_value {
     ($($ty:ty)+) => {$(impl ExtractValue for $ty {
         fn extract(literal: LiteralValue) -> Fallible<Option<Self>> {
-            if let LiteralValue::Null = literal {
+            if literal.is_null() {
                 return Ok(None);
             }
             Ok(Some(literal
@@ -236,8 +239,10 @@ impl_extract_value!(u32 u64 i32 i64 f32 f64);
 
 impl ExtractValue for Series {
     fn extract(literal: LiteralValue) -> Fallible<Option<Self>> {
+        if literal.is_null() {
+            return Ok(None);
+        }
         Ok(match literal {
-            LiteralValue::Null => None,
             LiteralValue::Series(series) => Some((*series).clone()),
             _ => return fallible!(FailedFunction, "expected series, found: {:?}", literal),
         })
@@ -246,11 +251,13 @@ impl ExtractValue for Series {
 
 impl ExtractValue for String {
     fn extract(literal: LiteralValue) -> Fallible<Option<Self>> {
-        Ok(match literal {
-            LiteralValue::Null => None,
-            LiteralValue::String(string) => Some(string.into_string()),
-            _ => return fallible!(FailedFunction, "expected String, found: {:?}", literal),
-        })
+        if literal.is_null() {
+            return Ok(None);
+        }
+        literal
+            .extract_str()
+            .map(|s| Some(s.to_string()))
+            .ok_or_else(|| err!(FailedFunction, "expected String, found: {:?}", literal))
     }
 }
 

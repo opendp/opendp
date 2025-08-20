@@ -16,6 +16,7 @@ from opendp.mod import (
     Measurement,
     PrivacyProfile,
     Queryable,
+    OdometerQueryable,
     Function,
     AtomDomain,
     OptionDomain,
@@ -172,7 +173,10 @@ def c_to_py(value: Any) -> Any:
         if "PrivacyProfile" == obj_type:
             return PrivacyProfile(value)
         
-        if "Queryable" in obj_type:
+        if obj_type == "AnyOdometerQueryable":
+            return OdometerQueryable(value)
+
+        if obj_type == "AnyQueryable":
             from opendp.core import queryable_query_type
 
             query_type = RuntimeType.parse(queryable_query_type(value))

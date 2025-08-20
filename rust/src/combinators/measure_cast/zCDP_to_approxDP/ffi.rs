@@ -21,9 +21,9 @@ fn make_zCDP_to_approxDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasuremen
         let privacy_map = meas.privacy_map.clone();
         let meas = Measurement::new(
             meas.input_domain.clone(),
-            meas.function.clone(),
             meas.input_metric.clone(),
             meas.output_measure.downcast_ref::<MO>()?.clone(),
+            meas.function.clone(),
             PrivacyMap::new_fallible(move |d_in: &AnyObject| {
                 privacy_map.eval(d_in)?.downcast::<MO::Distance>()
             }),
@@ -32,9 +32,9 @@ fn make_zCDP_to_approxDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasuremen
         let privacy_map = meas.privacy_map.clone();
         Measurement::new(
             meas.input_domain.clone(),
-            meas.function.clone(),
             meas.input_metric.clone(),
             AnyMeasure::new(meas.output_measure.clone()),
+            meas.function.clone(),
             PrivacyMap::new_fallible(move |d_in: &AnyObject| {
                 Ok(AnyObject::new(privacy_map.eval(d_in)?))
             }),

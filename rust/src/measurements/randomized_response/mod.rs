@@ -34,7 +34,7 @@ use crate::traits::{ExactIntCast, Hashable, InfDiv, InfLn, InfMul, InfSub};
 pub fn make_randomized_response_bool(
     prob: f64,
     constant_time: bool,
-) -> Fallible<Measurement<AtomDomain<bool>, bool, DiscreteDistance, MaxDivergence>> {
+) -> Fallible<Measurement<AtomDomain<bool>, DiscreteDistance, MaxDivergence, bool>> {
     // number of categories t is 2, and probability is bounded below by 1/t
     if !(0.5f64..=1.0).contains(&prob) {
         return fallible!(MakeMeasurement, "probability must be within [0.5, 1]");
@@ -51,11 +51,11 @@ pub fn make_randomized_response_bool(
 
     Measurement::new(
         AtomDomain::default(),
+        DiscreteDistance,
+        MaxDivergence,
         Function::new_fallible(move |arg: &bool| {
             Ok(arg ^ !sample_bernoulli_float(prob, constant_time)?)
         }),
-        DiscreteDistance,
-        MaxDivergence,
         PrivacyMap::new(move |d_in| if *d_in == 0 { 0.0 } else { privacy_constant }),
     )
 }
@@ -76,7 +76,7 @@ pub fn make_randomized_response_bool(
 pub fn make_randomized_response<T: Hashable>(
     categories: HashSet<T>,
     prob: f64,
-) -> Fallible<Measurement<AtomDomain<T>, T, DiscreteDistance, MaxDivergence>> {
+) -> Fallible<Measurement<AtomDomain<T>, DiscreteDistance, MaxDivergence, T>> {
     use crate::traits::samplers::sample_uniform_uint_below;
 
     let categories = categories.into_iter().collect::<Vec<_>>();
@@ -108,6 +108,8 @@ pub fn make_randomized_response<T: Hashable>(
 
     Measurement::new(
         AtomDomain::default(),
+        DiscreteDistance,
+        MaxDivergence,
         Function::new_fallible(move |truth: &T| {
             // find index of truth in category set, or None
             let index = categories.iter().position(|cat| cat == truth);
@@ -129,8 +131,6 @@ pub fn make_randomized_response<T: Hashable>(
             let is_member = index.is_some();
             Ok(if be_honest && is_member { truth } else { lie }.clone())
         }),
-        DiscreteDistance,
-        MaxDivergence,
         PrivacyMap::new(move |d_in| if *d_in == 0 { 0.0 } else { privacy_constant }),
     )
 }

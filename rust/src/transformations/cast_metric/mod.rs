@@ -33,7 +33,7 @@ pub(crate) mod traits;
 pub fn make_ordered_random<D, MI>(
     input_domain: D,
     input_metric: MI,
-) -> Fallible<Transformation<D, D, MI, MI::OrderedMetric>>
+) -> Fallible<Transformation<D, MI, D, MI::OrderedMetric>>
 where
     D: Domain,
     D::Carrier: Clone + Shuffle,
@@ -43,14 +43,14 @@ where
 {
     Transformation::new(
         input_domain.clone(),
+        input_metric,
         input_domain,
+        MI::OrderedMetric::default(),
         Function::new_fallible(|arg: &D::Carrier| {
             let mut data = arg.clone();
             data.shuffle()?;
             Ok(data)
         }),
-        input_metric,
-        MI::OrderedMetric::default(),
         StabilityMap::new_from_constant(1),
     )
 }
@@ -74,7 +74,7 @@ where
 pub fn make_unordered<D, MI>(
     input_domain: D,
     input_metric: MI,
-) -> Fallible<Transformation<D, D, MI, MI::UnorderedMetric>>
+) -> Fallible<Transformation<D, MI, D, MI::UnorderedMetric>>
 where
     D: Domain,
     D::Carrier: Clone,
@@ -84,10 +84,10 @@ where
 {
     Transformation::new(
         input_domain.clone(),
-        input_domain,
-        Function::new(|val: &D::Carrier| val.clone()),
         input_metric,
+        input_domain,
         MI::UnorderedMetric::default(),
+        Function::new(|val: &D::Carrier| val.clone()),
         StabilityMap::new_from_constant(1),
     )
 }
@@ -112,7 +112,7 @@ where
 pub fn make_metric_unbounded<D, MI>(
     input_domain: D,
     input_metric: MI,
-) -> Fallible<Transformation<D, D, MI, MI::UnboundedMetric>>
+) -> Fallible<Transformation<D, MI, D, MI::UnboundedMetric>>
 where
     D: IsSizedDomain,
     D::Carrier: Clone,
@@ -123,10 +123,10 @@ where
     input_domain.get_size()?;
     Transformation::new(
         input_domain.clone(),
-        input_domain,
-        Function::new(|arg: &D::Carrier| arg.clone()),
         input_metric.clone(),
+        input_domain,
         input_metric.to_unbounded(),
+        Function::new(|arg: &D::Carrier| arg.clone()),
         StabilityMap::new(|d_in| d_in * 2),
     )
 }
@@ -158,7 +158,7 @@ where
 pub fn make_metric_bounded<D, MI>(
     input_domain: D,
     input_metric: MI,
-) -> Fallible<Transformation<D, D, MI, MI::BoundedMetric>>
+) -> Fallible<Transformation<D, MI, D, MI::BoundedMetric>>
 where
     D: IsSizedDomain,
     D::Carrier: Clone,
@@ -169,10 +169,10 @@ where
     input_domain.get_size()?;
     Transformation::new(
         input_domain.clone(),
-        input_domain,
-        Function::new(|arg: &D::Carrier| arg.clone()),
         input_metric.clone(),
+        input_domain,
         input_metric.to_bounded(),
+        Function::new(|arg: &D::Carrier| arg.clone()),
         StabilityMap::new(|d_in| d_in / 2),
     )
 }

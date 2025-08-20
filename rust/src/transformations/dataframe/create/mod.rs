@@ -75,8 +75,8 @@ pub fn make_create_dataframe<K>(
 ) -> Fallible<
     Transformation<
         VectorDomain<VectorDomain<AtomDomain<String>>>,
-        DataFrameDomain<K>,
         SymmetricDistance,
+        DataFrameDomain<K>,
         SymmetricDistance,
     >,
 >
@@ -85,13 +85,13 @@ where
 {
     Transformation::new(
         VectorDomain::new(VectorDomain::new(AtomDomain::default())),
+        SymmetricDistance,
         DataFrameDomain::new(),
+        SymmetricDistance,
         Function::new(move |arg: &Vec<Vec<String>>| -> DataFrame<K> {
             let arg: Vec<_> = arg.iter().map(|e| vec_string_to_str(e)).collect();
             create_dataframe(col_names.clone(), &arg)
         }),
-        SymmetricDistance,
-        SymmetricDistance,
         StabilityMap::new_from_constant(1),
     )
 }
@@ -121,7 +121,7 @@ pub fn make_split_dataframe<K>(
     separator: Option<&str>,
     col_names: Vec<K>,
 ) -> Fallible<
-    Transformation<AtomDomain<String>, DataFrameDomain<K>, SymmetricDistance, SymmetricDistance>,
+    Transformation<AtomDomain<String>, SymmetricDistance, DataFrameDomain<K>, SymmetricDistance>,
 >
 where
     K: Hashable,
@@ -129,10 +129,10 @@ where
     let separator = separator.unwrap_or(",").to_owned();
     Transformation::new(
         AtomDomain::default(),
+        SymmetricDistance,
         DataFrameDomain::new(),
+        SymmetricDistance,
         Function::new(move |arg: &String| split_dataframe(&separator, col_names.clone(), &arg)),
-        SymmetricDistance,
-        SymmetricDistance,
         StabilityMap::new_from_constant(1),
     )
 }
@@ -154,19 +154,19 @@ fn split_lines(s: &str) -> Vec<&str> {
 pub fn make_split_lines() -> Fallible<
     Transformation<
         AtomDomain<String>,
-        VectorDomain<AtomDomain<String>>,
         SymmetricDistance,
+        VectorDomain<AtomDomain<String>>,
         SymmetricDistance,
     >,
 > {
     Transformation::new(
         AtomDomain::<String>::default(),
+        SymmetricDistance,
         VectorDomain::new(AtomDomain::default()),
+        SymmetricDistance,
         Function::new(|arg: &String| -> Vec<String> {
             arg.lines().map(|v| v.to_owned()).collect()
         }),
-        SymmetricDistance,
-        SymmetricDistance,
         StabilityMap::new_from_constant(1),
     )
 }
@@ -194,23 +194,23 @@ pub fn make_split_records(
 ) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<String>>,
-        VectorDomain<VectorDomain<AtomDomain<String>>>,
         SymmetricDistance,
+        VectorDomain<VectorDomain<AtomDomain<String>>>,
         SymmetricDistance,
     >,
 > {
     let separator = separator.unwrap_or(",").to_owned();
     Transformation::new(
         VectorDomain::new(AtomDomain::default()),
+        SymmetricDistance,
         VectorDomain::new(VectorDomain::new(AtomDomain::default())),
+        SymmetricDistance,
         // move is necessary because it captures `separator`
         Function::new(move |arg: &Vec<String>| -> Vec<Vec<String>> {
             let arg = vec_string_to_str(arg);
             let ret = split_records(&separator, &arg);
             ret.into_iter().map(vec_str_to_string).collect()
         }),
-        SymmetricDistance,
-        SymmetricDistance,
         StabilityMap::new_from_constant(1),
     )
 }

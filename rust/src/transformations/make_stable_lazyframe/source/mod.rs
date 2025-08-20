@@ -13,7 +13,7 @@ pub fn make_stable_source<M: Metric>(
     input_domain: DslPlanDomain,
     input_metric: M,
     plan: DslPlan,
-) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, M, M>>
+) -> Fallible<Transformation<DslPlanDomain, M, DslPlanDomain, M>>
 where
     (DslPlanDomain, M): MetricSpace,
     M::Distance: 'static + Clone,
@@ -35,10 +35,10 @@ where
 
     Transformation::new(
         input_domain.clone(),
-        input_domain,
-        Function::new(Clone::clone),
         input_metric.clone(),
+        input_domain,
         input_metric,
+        Function::new(Clone::clone),
         StabilityMap::new(Clone::clone),
     )
 }

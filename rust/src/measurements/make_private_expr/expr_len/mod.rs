@@ -37,7 +37,7 @@ pub fn make_expr_private_len<MI: 'static + UnboundedMetric, MO: 'static + Measur
     input_metric: L01InfDistance<MI>,
     output_measure: MO,
     expr: Expr,
-) -> Fallible<Measurement<WildExprDomain, ExprPlan, L01InfDistance<MI>, MO>>
+) -> Fallible<Measurement<WildExprDomain, L01InfDistance<MI>, MO, ExprPlan>>
 where
     MO::Distance: Zero,
 {
@@ -57,9 +57,9 @@ where
 
     Measurement::new(
         input_domain,
-        Function::from_expr(len()).fill_with(typed_lit(0u32)),
         input_metric,
         output_measure,
+        Function::from_expr(len()).fill_with(typed_lit(0u32)),
         PrivacyMap::new(move |_| MO::Distance::zero()),
     )
 }

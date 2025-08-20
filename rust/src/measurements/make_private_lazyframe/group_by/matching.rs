@@ -1,10 +1,8 @@
 use std::{collections::BTreeSet, sync::Arc};
 
-use polars::prelude::PlSmallStr;
-use polars::prelude::{JoinOptions, JoinType};
+use polars::prelude::{DslPlan, JoinOptions, JoinType, PlSmallStr, Selector};
 use polars_plan::{
     dsl::{Expr, Operator},
-    plans::DslPlan,
     prelude::GroupbyOptions,
     utils::expr_output_name,
 };
@@ -145,7 +143,7 @@ pub fn match_grouping_columns(keys: Vec<Expr>) -> Fallible<BTreeSet<PlSmallStr>>
         .map(|e| {
             Ok(match e {
                 Expr::Column(name) => vec![name.clone()],
-                Expr::Columns(names) => names.to_vec(),
+                Expr::Selector(Selector::ByName { names, .. }) => names.to_vec(),
                 e => {
                     return fallible!(
                         MakeMeasurement,

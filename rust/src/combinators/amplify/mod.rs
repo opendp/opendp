@@ -86,10 +86,10 @@ impl AmplifiableMeasure for Approximate<MaxDivergence> {
 /// * `TO` - Output Type.
 /// * `MI` - Input Metric.
 /// * `MO` - Output Metric.
-pub fn make_population_amplification<DI, TO, MI, MO>(
-    measurement: &Measurement<DI, TO, MI, MO>,
+pub fn make_population_amplification<DI, MI, MO, TO>(
+    measurement: &Measurement<DI, MI, MO, TO>,
     population_size: usize,
-) -> Fallible<Measurement<DI, TO, MI, MO>>
+) -> Fallible<Measurement<DI, MI, MO, TO>>
 where
     DI: IsSizedDomain,
     MI: 'static + Metric,

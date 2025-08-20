@@ -30,8 +30,10 @@ use polars::lazy::dsl::Expr;
 use polars::series::{IntoSeries, Series};
 #[cfg(feature = "ffi")]
 use polars::{datatypes::CompatLevel, error::polars_err};
+#[cfg(feature = "ffi")]
+use polars_arrow as arrow;
 use polars_plan::dsl::{ColumnsUdf, GetOutput};
-use polars_plan::prelude::{ApplyOptions, FunctionOptions};
+use polars_plan::prelude::FunctionOptions;
 use serde::de::IntoDeserializer;
 use serde::{Deserialize, Serialize};
 
@@ -56,11 +58,7 @@ impl ColumnsUdf for NoiseShim {
 impl OpenDPPlugin for NoiseShim {
     const NAME: &'static str = "noise";
     fn function_options() -> FunctionOptions {
-        FunctionOptions {
-            collect_groups: ApplyOptions::ElementWise,
-            fmt_str: Self::NAME,
-            ..Default::default()
-        }
+        FunctionOptions::elementwise()
     }
 
     fn get_output(&self) -> Option<GetOutput> {
@@ -98,11 +96,7 @@ impl ColumnsUdf for NoisePlugin {
 impl OpenDPPlugin for NoisePlugin {
     const NAME: &'static str = "noise_plugin";
     fn function_options() -> FunctionOptions {
-        FunctionOptions {
-            collect_groups: ApplyOptions::ElementWise,
-            fmt_str: Self::NAME,
-            ..Default::default()
-        }
+        FunctionOptions::elementwise()
     }
 
     fn get_output(&self) -> Option<GetOutput> {
@@ -194,7 +188,7 @@ pub fn make_expr_noise<MI: 'static + UnboundedMetric, MO: NoiseExprMeasure>(
     input_metric: L01InfDistance<MI>,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<WildExprDomain, ExprPlan, L01InfDistance<MI>, MO>>
+) -> Fallible<Measurement<WildExprDomain, L01InfDistance<MI>, MO, ExprPlan>>
 where
     Expr: StableExpr<L01InfDistance<MI>, MO::Metric>,
     (ExprDomain, MO::Metric): MetricSpace,
@@ -290,8 +284,10 @@ where
         }
     }?;
 
-    let m_noise = Measurement::<_, _, MO::Metric, _>::new(
+    let m_noise = Measurement::<_, MO::Metric, _, _>::new(
         middle_domain,
+        middle_metric,
+        MO::default(),
         Function::then_expr(move |input_expr| {
             apply_plugin(
                 vec![input_expr],
@@ -303,8 +299,6 @@ where
                 },
             )
         }),
-        middle_metric,
-        MO::default(),
         privacy_map,
     )?;
 
@@ -454,7 +448,7 @@ pub(crate) fn noise_plugin_type_udf(input_fields: &[Field]) -> PolarsResult<Fiel
 #[cfg(feature = "ffi")]
 #[pyo3_polars::derive::polars_expr(output_type_func=noise_plugin_type_udf)]
 fn noise_plugin(inputs: &[Series], kwargs: NoisePlugin) -> PolarsResult<Series> {
-    let inputs: Vec<Column> = inputs.iter().cloned().map(Column::Series).collect();
+    let inputs: Vec<Column> = inputs.iter().cloned().map(|s| s.into_column()).collect();
     let out = noise_udf(inputs.as_slice(), kwargs)?;
     Ok(out.take_materialized_series())
 }
