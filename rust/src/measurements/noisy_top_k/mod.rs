@@ -177,3 +177,4 @@ impl TopKMeasure for ZeroConcentratedDivergence {
         d_in.inf_div(&scale)?.inf_powi(ibig!(2))?.inf_div(&8.0)
     }
 }
+
