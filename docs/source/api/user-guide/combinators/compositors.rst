@@ -294,7 +294,7 @@ but drops the ``d_mids`` argument, as these will be chosen as you go.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> odom_fully_adaptive_comp = dp.c.make_fully_adaptive_composition(
             ...     input_domain=dp.vector_domain(dp.atom_domain(T=int)),
@@ -319,7 +319,7 @@ it returns an *odometer queryable*.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> int_dataset = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
             >>> qbl_fully_adaptive_comp = odom_fully_adaptive_comp(int_dataset)
@@ -340,7 +340,7 @@ Since no queries have been submitted yet, the privacy loss is 0.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> qbl_fully_adaptive_comp.privacy_loss(1)
             0.0
@@ -361,7 +361,7 @@ sum and count:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> print("dp sum:", qbl_fully_adaptive_comp(meas_sum))
             dp sum: ...
@@ -383,7 +383,7 @@ Now that we have submitted two queries, we can see that the privacy loss has inc
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> qbl_fully_adaptive_comp.privacy_loss(1)
             3.0
@@ -407,7 +407,7 @@ that rejects any query that would cause the privacy loss to exceed 2.0:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> meas_fully_adaptive_comp = dp.c.make_privacy_filter(
             ...     odom_fully_adaptive_comp,
@@ -434,7 +434,7 @@ it still returns an *odometer queryable*, but this time the queryable will limit
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> int_dataset = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
             >>> qbl_fully_adaptive_comp = meas_fully_adaptive_comp(int_dataset)
@@ -455,7 +455,7 @@ sum and count:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> print("dp count:", qbl_fully_adaptive_comp(meas_count))
             dp count: ...
@@ -477,7 +477,7 @@ Now that we have submitted two queries, we can see that the privacy loss has inc
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> qbl_fully_adaptive_comp.privacy_loss(1)
             2.0
@@ -497,7 +497,7 @@ Since the privacy loss is capped at 2.0, any more queries will be rejected:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> print("dp count:", qbl_fully_adaptive_comp(meas_count))
             Traceback (most recent call last):
