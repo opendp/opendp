@@ -6,7 +6,8 @@ Identifier Truncation and Bounds
 It's also important to be mindful of the structure of our data
 when thinking about identifier truncation and bounds.
 This is another area where there are opportunities to lower the
-sensitivity of the analysis to individual contributions, and hence the noise required.
+sensitivity of the analysis to individual contributions, 
+and hence reduce the amount of noise required to meet a given privacy guarantee.
 
 .. tab-set::
 
