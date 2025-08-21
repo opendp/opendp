@@ -1,3 +1,9 @@
+Assessing Utility
+=================
+
+Finding an acceptable tradeoff between privacy and utility can be a challenge.
+In this section of the documentation, 
+we will demonstrate tools to help you navigate this tradeoff.
 
 .. _accuracy-user-guide:
 
@@ -14,7 +20,7 @@ or derive the necessary noise scale to meet a given target accuracy and statisti
     This confidence interval is specifically for the input to the noise addition mechanism.
     The library currently does not compensate for the bias introduced from clipping or other preprocessing
     (`[KMRS+23] <https://arxiv.org/pdf/2301.13334.pdf>`_ shows that this is somewhat unavoidable).
-    In the Theory section we have `a notebook demonstrating this limitation <../../theory/accuracy-pitfalls.html>`_.
+    In the Theory section we have `a notebook demonstrating this limitation <../theory/accuracy-pitfalls.html>`_.
 
 The noise distribution may be either Laplace or Gaussian.
 
