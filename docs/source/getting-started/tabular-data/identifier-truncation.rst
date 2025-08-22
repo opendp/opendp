@@ -96,7 +96,7 @@ contributions to ten.
 
 The ``.truncate_per_group(10)`` is equivalent to ``.filter(pl.int_range(pl.len()).over("PIDENT") < 10)``
 and returns the same scale parameters,
-but trucate easier to read, and keeps track of the identifier columns automatically.
+but `truncate_per_group` is easier to read and write.
 
 Previous examples with this dataset assumed the worst-case of 36
 contributed records per individual (one contribution per quarter for
