@@ -601,11 +601,6 @@ implementation details.
 Since work hours tend to be concentrated a little less than 40, this
 release seems reasonable.
 
-Throughout this notebook, all ``.dp`` expressions take an optional scale
-parameter that can be used to more finely control how much noise is
-added to queries. The library then rescales all of these parameters up
-or down to satisfy a global privacy guarantee.
-
 Now that you have a handle on the essential statistics, the next section
 will introduce you to applying these statistics over groupings of your
 data.

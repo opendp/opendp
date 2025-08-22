@@ -35,9 +35,7 @@ microdata (column addition and filtering).
             ... )
 
 
-Previous documentation sections cover the ``.select`` context for
-aggregation and the ``.agg`` context for aggregation. OpenDP allows
-expressions used in the ``.select`` context and ``.agg`` context to
+OpenDP allows expressions used in the ``.select`` context and ``.agg`` context to
 change the number and order of rows, whereas expressions used in the
 ``.with_columns`` context, ``.filter`` context and ``.group_by`` context
 must be row-by-row.
