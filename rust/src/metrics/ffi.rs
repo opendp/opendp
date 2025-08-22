@@ -4,6 +4,7 @@ use opendp_derive::bootstrap;
 
 use crate::{
     core::{FfiResult, Metric},
+    domains::ffi::ExtrinsicElement,
     error::Fallible,
     ffi::{
         any::{AnyMetric, Downcast},
@@ -278,20 +279,20 @@ pub extern "C" fn opendp_metrics__linf_distance(
         (monotonic)
     )
 }
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct ExtrinsicDistance {
-    pub descriptor: String,
+    pub element: ExtrinsicElement,
 }
 
 impl std::fmt::Debug for ExtrinsicDistance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "UserDistance({:?})", self.descriptor)
+        write!(f, "{:?}", self.element)
     }
 }
 
 impl PartialEq for ExtrinsicDistance {
     fn eq(&self, other: &Self) -> bool {
-        self.descriptor == other.descriptor
+        self.element == other.element
     }
 }
 
@@ -302,13 +303,17 @@ impl Metric for ExtrinsicDistance {
 #[bootstrap(
     name = "user_distance",
     features("honest-but-curious"),
-    arguments(descriptor(rust_type = "String"))
+    arguments(
+        identifier(c_type = "char *", rust_type = b"null"),
+        descriptor(default = b"null", rust_type = "ExtrinsicObject")
+    )
 )]
 /// Construct a new UserDistance.
 /// Any two instances of an UserDistance are equal if their string descriptors are equal.
 ///
 /// # Arguments
-/// * `descriptor` - A string description of the metric.
+/// * `identifier` - A string description of the metric.
+/// * `descriptor` - Additional constraints on the domain.
 ///
 /// # Why honest-but-curious?
 /// Your definition of `d` must satisfy the requirements of a pseudo-metric:
@@ -319,8 +324,27 @@ impl Metric for ExtrinsicDistance {
 /// 4. for any $x, y, z$, $d(x, z) \le d(x, y) + d(y, z)$ (triangle inequality)
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__user_distance(
-    descriptor: *mut c_char,
+    identifier: *mut c_char,
+    descriptor: *mut ExtrinsicObject,
 ) -> FfiResult<*mut AnyMetric> {
-    let descriptor = try_!(to_str(descriptor)).to_string();
-    Ok(AnyMetric::new(ExtrinsicDistance { descriptor })).into()
+    let identifier = try_!(to_str(identifier)).to_string();
+    let value = try_as_ref!(descriptor).clone();
+    let element = ExtrinsicElement { identifier, value };
+    Ok(AnyMetric::new(ExtrinsicDistance { element })).into()
+}
+
+#[bootstrap(
+    name = "_extrinsic_metric_descriptor",
+    returns(c_type = "FfiResult<ExtrinsicObject *>")
+)]
+/// Retrieve the descriptor value stored in an extrinsic metric.
+///
+/// # Arguments
+/// * `metric` - The ExtrinsicDistance to extract the descriptor from
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_metrics___extrinsic_metric_descriptor(
+    metric: *mut AnyMetric,
+) -> FfiResult<*mut ExtrinsicObject> {
+    let metric = try_!(try_as_ref!(metric).downcast_ref::<ExtrinsicDistance>()).clone();
+    FfiResult::Ok(util::into_raw(metric.element.value.clone()))
 }

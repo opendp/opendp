@@ -1,22 +1,25 @@
 use std::any;
 use std::any::TypeId;
+use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::ffi::{CStr, IntoStringError, NulError};
 use std::ffi::{CString, c_void};
 use std::os::raw::c_char;
 use std::str::Utf8Error;
+use std::sync::OnceLock;
 
-use crate::core::{AnyOdometerAnswer, AnyOdometerQuery, Function};
+use crate::core::{AnyOdometerAnswer, AnyOdometerQuery, FfiResult, Function};
 use crate::domains::ffi::ExtrinsicDomain;
 use crate::domains::{AtomDomain, BitVector, OptionDomain, VectorDomain};
 use crate::error::*;
-use crate::ffi::any::{AnyObject, AnyOdometerQueryable, AnyQueryable};
+use crate::ffi::any::{AnyObject, AnyOdometerQueryable, AnyQueryable, Downcast};
 use crate::measures::ffi::ExtrinsicDivergence;
 use crate::measures::{
     Approximate, MaxDivergence, PrivacyProfile, RenyiDivergence, SmoothedMaxDivergence,
     ZeroConcentratedDivergence,
 };
+use crate::metrics::ffi::ExtrinsicDistance;
 use crate::metrics::{
     AbsoluteDistance, ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance,
     L1Distance, L01InfDistance, L2Distance, L02InfDistance, SymmetricDistance,
@@ -28,6 +31,7 @@ use crate::metrics::{Bound, Bounds, ChangeOneIdDistance, FrameDistance, Symmetri
 #[cfg(feature = "polars")]
 use crate::polars::{OnceFrame, OnceFrameAnswer, OnceFrameQuery};
 
+use crate::traits::ProductOrd;
 use crate::transformations::DataFrameDomain;
 use crate::{err, fallible};
 
@@ -54,12 +58,36 @@ use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 #[cfg(feature = "polars")]
 use polars::prelude::{DataFrame, DslPlan, Expr, LazyFrame, Series};
 
-pub type RefCountFn = extern "C" fn(*const c_void, bool) -> bool;
+static REF_COUNT: OnceLock<extern "C" fn(*const c_void, bool) -> bool> = OnceLock::new();
+static TOTAL_CMP: OnceLock<
+    extern "C" fn(*const c_void, *const c_void) -> *mut FfiResult<*mut AnyObject>,
+> = OnceLock::new();
+
+#[unsafe(no_mangle)]
+extern "C" fn _set_ref_count(callback: extern "C" fn(*const c_void, bool) -> bool) {
+    REF_COUNT.set(callback).ok();
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn _set_total_cmp(
+    callback: extern "C" fn(*const c_void, *const c_void) -> *mut FfiResult<*mut AnyObject>,
+) {
+    TOTAL_CMP.set(callback).ok();
+}
 
 #[repr(C)]
-pub struct ExtrinsicObject {
-    pub(crate) ptr: *const c_void,
-    pub(crate) count: RefCountFn,
+pub struct ExtrinsicObject(pub *const c_void);
+
+impl ProductOrd for ExtrinsicObject {
+    fn total_cmp(&self, other: &Self) -> Fallible<std::cmp::Ordering> {
+        let obj = Fallible::from(into_owned(TOTAL_CMP.get().unwrap()(self.0, other.0))?)?;
+        match obj.downcast_ref::<i8>()? {
+            -1 => Ok(Ordering::Less),
+            0 => Ok(Ordering::Equal),
+            1 => Ok(Ordering::Greater),
+            _ => fallible!(FailedFunction, "failed to compare extrinsic objects"),
+        }
+    }
 }
 
 unsafe impl Send for ExtrinsicObject {}
@@ -67,17 +95,14 @@ unsafe impl Sync for ExtrinsicObject {}
 
 impl Clone for ExtrinsicObject {
     fn clone(&self) -> Self {
-        (self.count)(self.ptr, true);
-        Self {
-            ptr: self.ptr.clone(),
-            count: self.count.clone(),
-        }
+        (REF_COUNT.get().unwrap())(self.0, true);
+        Self(self.0.clone())
     }
 }
 
 impl Drop for ExtrinsicObject {
     fn drop(&mut self) {
-        (self.count)(self.ptr, false);
+        (REF_COUNT.get().unwrap())(self.0, false);
     }
 }
 
@@ -368,7 +393,7 @@ lazy_static! {
             // metrics
             type_vec![ChangeOneDistance, SymmetricDistance, InsertDeleteDistance, HammingDistance],
             type_vec![L01InfDistance, <SymmetricDistance, InsertDeleteDistance>],
-            type_vec![DiscreteDistance],
+            type_vec![DiscreteDistance, ExtrinsicDistance],
             type_vec![L01InfDistance, <
                 AbsoluteDistance<u8>, AbsoluteDistance<u16>, AbsoluteDistance<u32>, AbsoluteDistance<u64>, AbsoluteDistance<u128>,
                 AbsoluteDistance<i8>, AbsoluteDistance<i16>, AbsoluteDistance<i32>, AbsoluteDistance<i64>, AbsoluteDistance<i128>,

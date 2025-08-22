@@ -2,7 +2,7 @@ use std::ffi::c_char;
 
 use crate::ffi::{
     any::{AnyObject, CallbackFn, Downcast, wrap_func},
-    util::c_bool,
+    util::{ExtrinsicObject, c_bool},
 };
 use opendp_derive::bootstrap;
 
@@ -11,7 +11,7 @@ use crate::{
     error::Fallible,
     ffi::{
         any::AnyMeasure,
-        util::{self, ExtrinsicObject, into_c_char_p, to_str},
+        util::{self, into_c_char_p, to_str},
     },
     measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
 };
@@ -172,7 +172,7 @@ pub extern "C" fn opendp_measures__fixed_smoothed_max_divergence() -> FfiResult<
 #[bootstrap(
     generics(M(suppress)),
     arguments(measure(c_type = "AnyMeasure *", rust_type = b"null")),
-    returns(c_type = "FfiResult<AnyMeasure *>")
+    returns(c_type = "FfiResult<AnyMeasure *>", hint = "ApproximateDivergence")
 )]
 /// Privacy measure used to define $\delta$-approximate PM-differential privacy.
 ///
@@ -231,6 +231,40 @@ pub extern "C" fn opendp_measures__approximate(
             ]
         )],
         (measure)
+    )
+    .into()
+}
+
+#[bootstrap(name = "_approximate_divergence_get_inner_measure")]
+/// Retrieve the inner privacy measure of an approximate privacy measure.
+///
+/// # Arguments
+/// * `privacy_measure` - The privacy measure to inspect
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measures___approximate_divergence_get_inner_measure(
+    privacy_measure: *const AnyMeasure,
+) -> FfiResult<*mut AnyMeasure> {
+    let privacy_measure = try_as_ref!(privacy_measure);
+    let M = privacy_measure.type_.clone();
+    let T = try_!(M.get_atom());
+
+    fn monomorphize<M: 'static + Measure>(privacy_measure: &AnyMeasure) -> Fallible<AnyMeasure> {
+        let privacy_measure = privacy_measure.downcast_ref::<Approximate<M>>()?.clone();
+        Ok(AnyMeasure::new(privacy_measure.0.clone()))
+    }
+
+    dispatch!(
+        monomorphize,
+        [(
+            T,
+            [
+                MaxDivergence,
+                SmoothedMaxDivergence,
+                ZeroConcentratedDivergence,
+                ExtrinsicDivergence
+            ]
+        )],
+        (privacy_measure)
     )
     .into()
 }
