@@ -13,7 +13,7 @@ sensitivity of the analysis to individual contributions, and hence the noise req
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> import opendp.prelude as dp
             >>> import polars as pl
@@ -21,9 +21,14 @@ sensitivity of the analysis to individual contributions, and hence the noise req
 
             >>> # The PIDENT column contains individual identifiers.
             >>> # An individual may contribute data under at most 1 PIDENT identifier.
-            >>> privacy_unit = dp.unit_of(contributions=1, identifier=pl.col("PIDENT"))
+            >>> privacy_unit = dp.unit_of(
+            ...     contributions=1, identifier=pl.col("PIDENT")
+            ... )
             >>> context = dp.Context.compositor(
-            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path(), ignore_errors=True),
+            ...     data=pl.scan_csv(
+            ...         dp.examples.get_france_lfs_path(),
+            ...         ignore_errors=True,
+            ...     ),
             ...     privacy_unit=privacy_unit,
             ...     privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-8),
             ...     split_evenly_over=4,
@@ -43,15 +48,21 @@ status, when the individual worked for pay or profit.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> query = (
             ...     context.query()
             ...     .filter(pl.col.HWUSUAL != 99)
-            ...     .truncate_per_group(10, keep=dp.polars.SortBy(pl.col("ILOSTAT")))
+            ...     .truncate_per_group(
+            ...         10, keep=dp.polars.SortBy(pl.col("ILOSTAT"))
+            ...     )
             ...     # ...is equivalent to:
             ...     # .filter(pl.int_range(pl.len()).sort_by(pl.col.ILOSTAT).over("PIDENT") < 10)
-            ...     .select(pl.col.HWUSUAL.cast(int).fill_null(0).dp.mean((0, 80)))
+            ...     .select(
+            ...         pl.col.HWUSUAL.cast(int)
+            ...         .fill_null(0)
+            ...         .dp.mean((0, 80))
+            ...     )
             ... )
             >>> query.summarize()
             shape: (2, 4)
@@ -73,14 +84,20 @@ the statistics of interest.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> query = (
             ...     context.query()
             ...     .filter(pl.col.HWUSUAL != 99)
-            ...     .group_by(pl.col.PIDENT) # truncation begins here
-            ...     .agg(pl.col.HWUSUAL.mean()) # arbitrary expressions can be used here
-            ...     .select(pl.col.HWUSUAL.cast(int).fill_null(0).dp.mean((0, 80)))
+            ...     .group_by(pl.col.PIDENT)  # truncation begins here
+            ...     .agg(
+            ...         pl.col.HWUSUAL.mean()
+            ...     )  # arbitrary expressions can be used here
+            ...     .select(
+            ...         pl.col.HWUSUAL.cast(int)
+            ...         .fill_null(0)
+            ...         .dp.mean((0, 80))
+            ...     )
             ... )
             >>> query.summarize()
             shape: (2, 4)
@@ -116,29 +133,42 @@ each quarter, you can take this into account in your annalysis.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> quarterly = [pl.col.QUARTER, pl.col.YEAR]
             >>> context = dp.Context.compositor(
-            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path(), ignore_errors=True),
-            ...     privacy_unit=dp.unit_of(contributions=[
-            ...         # an individual may contribute data under up to 2 identifiers
-            ...         dp.polars.Bound(per_group=2),
-            ...         # ...but only under 1 identifier each quarter
-            ...         dp.polars.Bound(by=quarterly, per_group=1),
-            ...     ], identifier="PIDENT"),
+            ...     data=pl.scan_csv(
+            ...         dp.examples.get_france_lfs_path(),
+            ...         ignore_errors=True,
+            ...     ),
+            ...     privacy_unit=dp.unit_of(
+            ...         contributions=[
+            ...             # an individual may contribute data under up to 2 identifiers
+            ...             dp.polars.Bound(per_group=2),
+            ...             # ...but only under 1 identifier each quarter
+            ...             dp.polars.Bound(by=quarterly, per_group=1),
+            ...         ],
+            ...         identifier="PIDENT",
+            ...     ),
             ...     privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-8),
             ...     split_evenly_over=4,
             ...     margins=[dp.polars.Margin(max_length=150_000 * 36)],
             ... )
-            
+
             >>> query = (
             ...     context.query()
             ...     .filter(pl.col.HWUSUAL != 99)
             ...     .truncate_per_group(1, by=quarterly)
-            ...     .truncate_num_groups(5, by=quarterly) # each identifier may affect up to 5 groups
+            ...     .truncate_num_groups(
+            ...         5, by=quarterly
+            ...     )  # each identifier may affect up to 5 groups
             ...     .group_by(quarterly)
-            ...     .agg(dp.len(), pl.col.HWUSUAL.cast(int).fill_null(0).dp.sum((0, 80)))
+            ...     .agg(
+            ...         dp.len(),
+            ...         pl.col.HWUSUAL.cast(int)
+            ...         .fill_null(0)
+            ...         .dp.sum((0, 80)),
+            ...     )
             ... )
             >>> query.summarize()
             shape: (2, 5)
@@ -163,10 +193,10 @@ may influence in the same way.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> bound = dp.polars.Bound(by=quarterly, num_groups=10)
-            
+
 
 However, the general recommendation and best practice is to truncate—
 and not set distance bounds in the context, unless you need to. This is

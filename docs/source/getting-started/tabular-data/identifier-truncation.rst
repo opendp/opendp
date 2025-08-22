@@ -17,7 +17,7 @@ The user identifier is a part of the privacy unit.
 
             >>> import opendp.prelude as dp
             >>> import polars as pl
-            
+
             >>> # The PIDENT column contains individual identifiers.
             >>> # An individual may contribute data under at most 1 PIDENT identifier.
             >>> privacy_unit = dp.unit_of(

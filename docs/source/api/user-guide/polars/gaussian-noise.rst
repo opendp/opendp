@@ -29,20 +29,23 @@ of Laplace noise perturbation.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
-            >>> import polars as pl 
+            >>> import polars as pl
             >>> import opendp.prelude as dp
-            
+
             >>> dp.enable_features("contrib")
-            
+
             >>> context = dp.Context.compositor(
-            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path(), ignore_errors=True),
+            ...     data=pl.scan_csv(
+            ...         dp.examples.get_france_lfs_path(),
+            ...         ignore_errors=True,
+            ...     ),
             ...     privacy_unit=dp.unit_of(contributions=36),
             ...     privacy_loss=dp.loss_of(rho=0.1),
             ...     split_evenly_over=5,
             ... )
-            
+
             >>> query_num_responses = context.query().select(dp.len())
             >>> query_num_responses.summarize(alpha=0.05)
             shape: (1, 5)
@@ -109,22 +112,33 @@ privacy loss under zCDP becomes much smaller.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> context_margin = dp.Context.compositor(
-            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path(), ignore_errors=True),
+            ...     data=pl.scan_csv(
+            ...         dp.examples.get_france_lfs_path(),
+            ...         ignore_errors=True,
+            ...     ),
             ...     # tells OpenDP that individuals contribute...
-            ...     privacy_unit=dp.unit_of(contributions=[
-            ...         # ...at most 36 records overall...
-            ...         dp.polars.Bound(by=[], per_group=36),
-            ...         # ...and at most 1 record in each year-quarter.
-            ...         dp.polars.Bound(by=["YEAR", "QUARTER"], per_group=1),
-            ...     ]),
+            ...     privacy_unit=dp.unit_of(
+            ...         contributions=[
+            ...             # ...at most 36 records overall...
+            ...             dp.polars.Bound(by=[], per_group=36),
+            ...             # ...and at most 1 record in each year-quarter.
+            ...             dp.polars.Bound(
+            ...                 by=["YEAR", "QUARTER"], per_group=1
+            ...             ),
+            ...         ]
+            ...     ),
             ...     privacy_loss=dp.loss_of(rho=0.1, delta=1e-7),
             ...     split_evenly_over=5,
             ... )
-            
-            >>> query_num_responses = context_margin.query().group_by("YEAR", "QUARTER").agg(dp.len())
+
+            >>> query_num_responses = (
+            ...     context_margin.query()
+            ...     .group_by("YEAR", "QUARTER")
+            ...     .agg(dp.len())
+            ... )
             >>> query_num_responses.summarize(alpha=0.05)
             shape: (1, 6)
             ┌────────┬──────────────┬──────────────────┬───────┬──────────┬───────────┐
@@ -144,16 +158,23 @@ aware of this data descriptor.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> context = dp.Context.compositor(
-            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path(), ignore_errors=True),
+            ...     data=pl.scan_csv(
+            ...         dp.examples.get_france_lfs_path(),
+            ...         ignore_errors=True,
+            ...     ),
             ...     privacy_unit=dp.unit_of(contributions=36),
             ...     privacy_loss=dp.loss_of(rho=0.1, delta=1e-7),
             ...     split_evenly_over=5,
             ... )
-            
-            >>> query_num_responses = context.query().group_by("YEAR", "QUARTER").agg(dp.len())
+
+            >>> query_num_responses = (
+            ...     context.query()
+            ...     .group_by("YEAR", "QUARTER")
+            ...     .agg(dp.len())
+            ... )
             >>> query_num_responses.summarize(alpha=0.05)
             shape: (1, 6)
             ┌────────┬──────────────┬──────────────────┬───────┬──────────┬───────────┐
