@@ -2,17 +2,17 @@ import re
 
 import pytest
 
-from opendp.extras.sklearn.linear_model._make_private_theil_sen import make_private_theil_sen
+from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
+    make_private_theil_sen,
+)
 import opendp.prelude as dp
-
-from ..helpers import optional_dependency
 
 
 def test_private_theil_sen():
-    np = pytest.importorskip('numpy')
+    np = pytest.importorskip("numpy")
     x_bounds = -3, 3
     y_bounds = -10, 10
-    meas = make_private_theil_sen(x_bounds, y_bounds, scale=1.0)
+    meas = make_private_theil_sen(dp.max_divergence(), x_bounds, y_bounds, scale=1.0)
     assert meas.map(1) == 2
 
     def f(x):
@@ -28,13 +28,15 @@ def test_private_theil_sen():
 
 
 def test_input_validation():
-    with optional_dependency('numpy'):
-        with pytest.raises(Exception, match=re.escape("For now, the x_bounds array must consist of a single tuple, not [0, 10]")):
-            dp.sklearn.linear_model.LinearRegression( # type: ignore[attr-defined]
-                x_bounds=(0, 10), # type: ignore[arg-type]
-                y_bounds=(0, 10),
-                scale=1,
-            ).fit(
-                X=[[1], [2], [3], [4], [5]],
-                y=[1, 2, 3, 4, 5],
-            )
+    pytest.importorskip("numpy")
+    msg = "For now, the x_bounds array must consist of a single tuple, not [0, 10]"
+    with pytest.raises(Exception, match=re.escape(msg)):
+        dp.sklearn.linear_model.LinearRegression(
+            output_measure=dp.max_divergence(),
+            x_bounds=(0, 10),  # type: ignore[arg-type]
+            y_bounds=(0, 10),
+            scale=1,
+        ).fit(
+            X=[[1], [2], [3], [4], [5]],
+            y=[1, 2, 3, 4, 5],
+        )

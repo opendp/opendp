@@ -26,7 +26,7 @@ use crate::{
     core::{Domain, Metric, MetricSpace},
     domains::{AtomDomain, BitVectorDomain, MapDomain, VectorDomain, type_name},
     error::Fallible,
-    traits::{CheckAtom, InfAdd},
+    traits::CheckAtom,
 };
 #[cfg(feature = "contrib")]
 use crate::{traits::Hashable, transformations::DataFrameDomain};
@@ -591,19 +591,57 @@ impl MetricSpace for (BitVectorDomain, DiscreteDistance) {
     }
 }
 
-/// Distance between score vectors with monotonicity indicator.
+/// The $L_\infty$ distance between two vector-valued aggregates.
+///
+/// A monotonic flag can be set to indicate that all differences must share the same sign.
+/// This can be used to differentiate between the sensitivities of monotonic and non-monotonic scoring functions.
 ///
 /// # Proof Definition
 ///
-/// ### `d`-closeness
-/// For any two datasets $u, v \in$ `VectorDomain<AtomDomain<T>>` and any $d$ of type `T`,
-/// we say that $u, v$ are $d$-close under the l-infinity metric (abbreviated as $d_{\infty}$) whenever
+/// ## `d`-closeness
+/// For any two datasets $x$, $x'$ and any $d$ of type `Q`,
+/// we say that $x$, $x'$ are $d$-close under the l-infinity metric (abbreviated as $d_{\infty}$) whenever
 ///
 /// ```math
-/// d_{\infty}(u, v) = max_{i} |u_i - v_i|
+/// d_{\infty}(x, x') = max_{i} |x_i - x'_i|
 /// ```
 ///
 /// If `monotonic` is `true`, then the distance is infinity if any of the differences have opposing signs.
+///
+/// Equivalently,
+///
+/// ```math
+/// d_{\infty}(x, x') = \begin{cases}
+///     \infty & \text{if } \exists i, x_i \cdot x'_i < 0 \land \texttt{monotonic} \\
+///     \max_i \abs{x_i - x'_i} & \text{otherwise} \\
+/// \end{cases}
+/// ```
+///
+/// # Monotonicity Descriptor
+///
+/// The $L_\infty$ distance is a common metric to express the sensitivity
+/// of score vectors passed into private selection mechanisms.
+/// However, the $L_\infty$ distance does not capture whether signs of the differences are all in agreement,
+/// so many private selection mechanisms (like variations of the exponential mechanism)
+/// have a factor of two in the privacy loss.
+///
+/// This factor of two is eliminated by the more flexible range distance,
+/// which in turn has twice the sensitivity when scores may vary in different directions:
+/// ```math
+/// d_{\mathrm{Range}}(x, x') = \max_{ij} |(x_i - x'_i) - (x_j - x'_j)|.
+/// ```
+///
+/// A downside to $d_\mathrm{Range}$ is that it is a more complicated metric that is unfamiliar to many users,
+/// and in the common non-monotonic case works out to double the sensitivity of the $L_\infty$ sensitivity.
+/// Therefore if private selection mechanisms are used in a non-monotonic setting,
+/// this introduces a footgun where sensitivity may easily be underestimated by a factor of 2.
+///
+/// For this reason, we instead add a monotonicity case to the $L_\infty$ distance metric.
+/// Any bound on the $L_\infty$ distance with the monotonicity flag set to `True` is also valid with the monotonicity flag set to `False`.
+/// This design allows the sensitivity to be expressed in terms of the more familiar $L_\infty$ distance,
+/// while also enabling the tighter privacy analysis from monotonic scoring functions.
+///
+/// You can use the `range_distance` method to derive an upper bound for the range distance.
 pub struct LInfDistance<Q> {
     pub monotonic: bool,
     _marker: PhantomData<fn() -> Q>,
@@ -614,21 +652,6 @@ impl<Q> LInfDistance<Q> {
         LInfDistance {
             monotonic,
             _marker: PhantomData,
-        }
-    }
-}
-
-impl<Q: InfAdd> LInfDistance<Q> {
-    /// Translate a distance bound `d_in` wrt the $L_\infty$ metric to a distance bound wrt the range metric.
-    ///
-    /// ```math
-    /// d_{\text{Range}}(u, v) = max_{ij} |(u_i - v_i) - (u_j - v_j)|
-    /// ```
-    pub fn range_distance(&self, d_in: Q) -> Fallible<Q> {
-        if self.monotonic {
-            Ok(d_in)
-        } else {
-            d_in.inf_add(&d_in)
         }
     }
 }

@@ -161,6 +161,32 @@ Refer to :ref:`measure-casting` to convert to approximate DP.
      - ``Approximate<ZeroConcentratedDivergence>``
 
 
+Noisy Top K and Noisy Max
+-------------------------
+
+The report noisy top-k mechanism is used to privately release the indices of the maximum k values in a vector.
+This is useful for private selection, and overlaps with the exponential mechanism.
+Exponential noise is added to scores when the output measure is ``MaxDivergence``,
+and Gumbel noise is added when the output measure is ``ZeroConcentratedDivergence``. 
+
+.. list-table::
+   :header-rows: 1
+
+   * - Measurement
+     - Input Domain
+     - Input Metric
+     - Output Measure
+   * - :func:`opendp.measurements.make_noisy_top_k`
+     - ``VectorDomain<AtomDomain<T>>``
+     - ``LInfDistance<T>``
+     - ``MaxDivergence`` or ``ZeroConcentratedDivergence``
+   * - :func:`opendp.measurements.make_noisy_max`
+     - ``VectorDomain<AtomDomain<T>>``
+     - ``LInfDistance<T>``
+     - ``MaxDivergence`` or ``ZeroConcentratedDivergence``
+
+Report noisy max is a special case of noisy top k when k equals one.
+
 Randomized Response
 -------------------
 These measurements are used to randomize an individual's response to a query in the local-DP model.

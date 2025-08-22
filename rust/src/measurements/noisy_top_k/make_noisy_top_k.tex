@@ -1,0 +1,139 @@
+\documentclass{article}
+\input{../../lib.sty}
+\allowdisplaybreaks
+
+\title{\texttt{fn make\_noisy\_top\_k}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle
+
+Proves soundness of \rustdoc{measurements/fn}{make\_noisy\_top\_k}
+in \asOfCommit{mod.rs}{f5bb719}.\\
+\texttt{make\_noisy\_top\_k} returns a Measurement that
+noisily selects the indices of the greatest scores from a vector of input scores.
+
+\section{Background}
+This mechanism fulfills the same purpose as the exponential mechanism,
+where the release is the best candidate's index from a finite set.
+The naive implementation of the exponential mechanism samples an index $k$ from $[m] = {1, \ldots, m}$,
+where $m$ is the number of candidates,
+with probability $p_i$ assigned to each candidate's index $i$ as a function of their score $s_i$.
+The output is drawn via inverse transform sampling
+by outputting the smallest index $k$ for which the cumulative probability is greater than some $u \sim \mathrm{Uniform}(0, 1)$.
+\begin{equation}
+    \label{m-naive}
+    \mathcal{M}_{\mathrm{naive}}([s_1, \ldots, s_m]) = \min \{k: \sum_{i=1}^k p_i \ge u \}
+\end{equation}
+
+The probability of index $k$ being selected is the normalization of its likelihood $\exp(s_k / \tau)$.
+As a candidate's score $s_k$ increases, the candidate becomes exponentially more likely to be selected:
+\begin{equation}
+    \label{prob-of-k}
+    p_k = \frac{\exp(s_k / \tau)}{\sum_{i = 1}^m \exp(s_i / \tau)}
+\end{equation}
+
+This equation introduces a new temperature parameter, $\tau$,
+which calibrates how distinguishable scores are from each other.
+As temperature increases, the categorical output distribution tends towards higher entropy/uniformity and becomes more privacy-preserving.
+As temperature decreases, the categorical distribution tends towards a one-hot vector
+(where each candidate has zero probability, except for the candidate with the maximum score, which has probability one),
+becoming less private.
+Temperature is related to the privacy loss parameter (\dout) and sensitivity of the scoring function ($\Delta$) as follows:
+
+\begin{equation}
+    \tau = \Delta / \dout
+\end{equation}
+
+A precise definition of $\Delta$ will come later and is captured by the metrics we use on the score vector $s = [s_1, \ldots, s_m]$.
+When $\dout$ increases, temperature decreases, and candidates become more distinguishable from each other.
+We also divide scores by their global sensitivity to normalize the sensitivity to one.
+In the differential privacy literature for the exponential mechanism, the sensitivity is often multiplied by two.
+In OpenDP's \texttt{make\_noisy\_top\_k} this factor is bundled into the $\Delta$ term, which is expressed in terms of a metric that captures monotonicity.
+
+\subsection{Sampling Vulnerabilities}
+
+In practice, computing $\exp(s_i / \tau)$ is prone to
+zero underflow (where a non-zero quantity rounds down to zero)
+and overflow (where a large finite quantity is replaced with infinity)
+due to finite/limited data representation.
+Specifically, a scaled score $s_i / \tau$ of just $-709$ underflows to zero and $+710$ overflows to infinity when stored in a 64-bit float.
+
+A simple improvement is to shift the scores by subtracting the greatest score from all scores.
+In idealized arithmetic, the resulting probabilities are not affected by shifts in the underlying scores.
+On finite data types, this shift prevents a catastrophic overflow, but makes underflow more likely,
+causing tail values of the distribution to round to zero.
+The inverse transform sampling step is also subject to accumulated rounding errors from the arithmetic and sum,
+which influence the likelihood of being chosen.
+
+These potential vulnerabilities can be addressed via the Gumbel-max trick.
+The naive mechanism $\mathcal{M}_\mathrm{naive}$ implemented with infinite-precision arithmetic
+is equivalent in distribution to the following mechanism:
+\begin{equation}
+    \mathcal{M}([s_1, \ldots, s_m]) = \mathrm{argmax}_i g_i,
+\end{equation}
+where each $g_i \sim \mathrm{Gumbel}(\mu = s_i, \beta = \tau)$.
+
+\subsection{Noise Distribution}
+\texttt{make\_noisy\_top\_k} can also be configured to satisfy
+either \rustdoc{measures/struct}{MaxDivergence} or \rustdoc{measures/struct}{ZeroConcentratedDivergence}.
+Gumbel noise is used when \texttt{output\_measure} is \texttt{ZeroConcentratedDivergence},
+and exponential noise is used when \texttt{output\_measure} is \texttt{MaxDivergence}.
+These choices of noise distributions minimize the necessary noise variance for their respective privacy measures.
+
+Since the permute-and-flip mechanism is equivalent to report noisy max exponential,
+and it can be implemented with discrete distributions,
+the permute-and-flip mechanism is used instead.
+
+\subsection{Top K}
+In the case of Gumbel noise, the distribution of the top k indices is equivalent to adding gumbel noise once,
+and then returning the top k indices.
+This one-shot mechanism avoids needing to peel the selected candidate from the candidate set and re-run the mechanism.
+
+However, this peeling routine is still used for the permute-and-flip mechanism,
+to release the top k elements.
+The privacy argument proceeds via composition.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item \texttt{MO} is a type with trait \rustdoc{measurements/make\_noisy\_top\_k/trait}{TopKMeasure}
+    \item \texttt{TIA} (atomic input type) is a type with trait \rustdoc{traits/trait}{Number}
+\end{itemize}
+
+\subsubsection*{Caller-verified}
+None
+
+\subsection*{Pseudocode}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_noisy_top_k.py}
+
+\subsection*{Postcondition}
+
+\begin{theorem}
+    \label{postcondition}
+    \validMeasurement{\texttt{input\_domain, input\_metric, output\_measure, k, scale, negate, MO, TIA}}{\texttt{make\_noisy\_top\_k}}
+\end{theorem}
+
+\begin{proof}[Proof of data-independent errors.]
+    By the postcondition of \rustdoc{measurements/noisy_top_k/trait}{TopKMeasure}\texttt{noisy\_top\_k},
+    the only source of error is due to entropy exhaustion, which could be data-dependent,
+    due to differing number of expected random draws depending on the input dataset.
+
+    Therefore, the mechanism only satisfies the requirement for data-independent errors conditioned on entropy not being exhausted.
+\end{proof}
+
+\begin{proof}[Proof of privacy guarantee.]
+    When \din\ is zero, by line~\ref{din-non-zero}, the privacy loss is zero, satisfying the postcondition.
+    Otherwise when scale is zero, by line~\ref{scale-zero}, the privacy loss is infinite, also satisfying the postcondition.
+
+    By the checks on lines~\ref{check-non-nan} and \ref{check-non-negative-scale},
+    the preconditions for \rustdoc{measurements/noisy_top_k/trait}{TopKMeasure}\texttt{noisy\_top\_k} are satisfied.
+    Additionally by the checks on lines~\ref{din-non-neg}, \ref{din-non-zero} and \ref{scale-zero},
+    the preconditions for \rustdoc{measurements/noisy_top_k/trait}{TopKMeasure}\texttt{privacy\_map} are satisfied.
+
+    By the postcondition of \rustdoc{measurements/noisy_top_k/trait}{TopKMeasure} and adaptive composition,
+    the \dout on line~\ref{fn-privacy-map-call} satisfies the postcondition.
+\end{proof}
+
+\end{document}

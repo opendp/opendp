@@ -1,0 +1,49 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn exponential\_top\_k}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle\contrib
+This document proves soundness of \rustdoc{measurements/noisy_top_k/exponential/fn}{exponential\_top\_k} in \asOfCommit{mod.rs}{e62b0aa2}. 
+\texttt{exponential\_top\_k} noisily selects the index of the best score from a vector of input scores $k$ times without replacement.
+
+\section{Hoare Triple}
+\subsection*{Preconditions}
+\subsubsection*{Compiler-Verified}
+\textit{Types consistent with pseudocode.}
+
+\subsubsection*{Caller-Verified}
+\begin{itemize}
+    \item Each item of \texttt{x} is finite.
+\end{itemize}
+
+\subsection*{Pseudocode}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/exponential_top_k.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \label{postcondition}
+    \begin{itemize}
+        \item Returns the index of the top element $z_i$,
+        where each $z_i \sim \mathrm{Exp}(\mathrm{shift}=y_i, \mathrm{scale}=\texttt{scale})$,
+        and each $y_i = -x_i$ if \texttt{negate}, else $y_i = x_i$,
+        $k$ times with removal.
+        \item Errors are data-independent, except for exhaustion of entropy.
+    \end{itemize}
+\end{theorem}
+
+\begin{proof}
+    By the precondition that each element in $x$ is finite,
+    the conversion into rational is infallible.
+    
+    By the postcondition of \rustdoc{measurements/noisy_top_k/exponential/fn}{peel\_permute\_and\_flip},
+    and the potential negation on line~\ref{negate},
+    the postcondition is satisfied.
+
+    The only source of error is due to entropy exhaustion.
+\end{proof}
+
+\end{document}

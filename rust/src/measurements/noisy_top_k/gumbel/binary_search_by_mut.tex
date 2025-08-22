@@ -1,0 +1,65 @@
+\documentclass{article}
+\input{../../../lib.sty}
+\allowdisplaybreaks
+
+\title{\texttt{fn binary\_search\_by\_mut}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\textit{Types consistent with pseudocode.}
+
+\subsubsection*{Caller-verified}
+\begin{itemize}
+    \item The predicate \texttt{pred} is monotonic over \texttt{data}.
+    \item \texttt{pred} may mutate its argument, but not change its true value used for comparisons.
+\end{itemize}
+
+\subsection*{Pseudocode}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/binary_search_by_mut.py}
+
+\subsection*{Postcondition}
+
+\begin{theorem}
+    Returns the index $i$ of the first element in $x$ that is less than $f(x_i)$,
+    or an error if the comparator fails.
+\end{theorem}
+
+\begin{proof}
+    Let \( n \) be the length of the list \texttt{x}.
+
+    We perform a binary search on \texttt{x} using the comparator \texttt{f}.
+    The binary search algorithm works by repeatedly dividing the search interval in half.
+    If the value of the comparator at the midpoint is less, we narrow the interval to the lower half;
+    otherwise, we narrow it to the upper half.
+
+    On line~\ref{fn-zero-size}, the algorithm terminates early if the list is empty, to avoid an out-of-bounds error.
+    On line~\ref{fn-base}, \texttt{base} is 0 and \texttt{size} is \( n \), spanning the entire list.
+
+
+    \begin{enumerate}
+        \item \textbf{Initialization}:
+            \begin{itemize}
+                \item At the start, \texttt{base} is 0 and \texttt{size} is \( n \).
+                \item The loop invariant holds because \texttt{base} is 0 and \texttt{high} is \( n \).
+            \end{itemize}
+        \item \textbf{Loop Invariant}:
+            \begin{itemize}
+                \item At the start of each iteration, \texttt{base} is the smallest index
+                such that all indices $i$ before \texttt{base} satisfy \texttt{f(x[i]) == "less"}.
+                \item At the start of each iteration, \texttt{base + size} is the smallest index
+                such that all indices $i$ from \texttt{base + size} onwards satisfy \texttt{f(x[i]) != "less"}.
+            \end{itemize}
+        \item \textbf{Termination}:
+            The loop terminates when the width of the interval is two (\texttt{size} is one).
+    \end{enumerate}
+
+    The function determines whether to return the index of the first or second element in the length-2 interval by evaluating \texttt{f(x[base])}.
+    By the loop invariant, the index returned is the first element in the list that satisfies the predicate \texttt{f(x[i]) == "less"}.
+\end{proof}
+
+\end{document}

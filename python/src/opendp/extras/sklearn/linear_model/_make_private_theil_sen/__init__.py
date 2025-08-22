@@ -1,3 +1,4 @@
+from opendp.mod import Measure
 import opendp.prelude as dp
 from opendp._lib import import_optional_dependency
 
@@ -32,7 +33,7 @@ def pairwise_predict(data, x_cuts):
     return points.T[dx != 0]
 
 
-def make_pairwise_predict(x_cuts, runs: int = 1, T = float):
+def make_pairwise_predict(x_cuts, runs: int = 1, T=float):
     """
     The parameter `runs` controls how many times randomized pairwise predictions are computed.
     The default is 1. Increasing `runs` can improve the robustness and accuracy of the results;
@@ -57,7 +58,7 @@ def make_pairwise_predict(x_cuts, runs: int = 1, T = float):
     )
 
 
-def make_select_column(j, T = float):
+def make_select_column(j, T=float):
     return dp.t.make_user_transformation(
         input_domain=dp.numpy.array2_domain(num_columns=2, T=T),
         input_metric=dp.symmetric_distance(),
@@ -68,10 +69,11 @@ def make_select_column(j, T = float):
     )
 
 
-def make_private_percentile_medians(y_bounds, scale, candidates_count=100):
+def make_private_percentile_medians(output_measure, y_bounds, scale, candidates_count=100):
     np = import_optional_dependency("numpy")
     # this median mechanism favors candidates closest to the true median
     m_median = dp.m.then_private_quantile(
+        output_measure=output_measure,
         # Evenly spaced points between y_bounds
         candidates=np.linspace(*y_bounds, candidates_count),
         alpha=0.5,
@@ -87,6 +89,7 @@ def make_private_percentile_medians(y_bounds, scale, candidates_count=100):
 
 
 def make_private_theil_sen(
+    output_measure: Measure,
     x_bounds: tuple[float, float],
     y_bounds: tuple[float, float],
     scale: float,
@@ -99,7 +102,7 @@ def make_private_theil_sen(
     and returns a (slope, intercept) tuple.
 
     >>> import numpy as np
-    >>> meas = make_private_theil_sen((0, 100), (0, 100), scale=1.0)
+    >>> meas = make_private_theil_sen(dp.max_divergence(), (0, 100), (0, 100), scale=1.0)
     >>> slope, intercept = meas(np.array([[x, x] for x in range(100)]))
     """
     np = import_optional_dependency("numpy")
@@ -115,7 +118,9 @@ def make_private_theil_sen(
         # pairwise_predict will return a 2xN array of y values at the x_cuts.
         make_pairwise_predict(x_cuts, runs)
         # privately select median y values for each x_cut
-        >> make_private_percentile_medians(y_bounds, scale, candidates_count=candidates_count)
+        >> make_private_percentile_medians(
+            output_measure, y_bounds, scale, candidates_count=candidates_count
+        )
         # transform median y values to coefficients (slope and intercept)
         >> (lambda ys: P_inv @ ys)
     )

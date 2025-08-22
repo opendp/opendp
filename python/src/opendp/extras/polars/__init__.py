@@ -413,31 +413,33 @@ class DPExpr(object):
             changes_length=True,
         )
 
-    def _report_noisy_max(
-        self, optimize: Literal["min", "max"], scale: float | None = None
+    def _noisy_max(
+        self,
+        scale: float | None = None,
+        negate: bool = False,
     ):
-        """Report the argmax or argmin after adding Gumbel noise.
+        """Report the noisy argmax or argmin.
 
         The scale calibrates the level of entropy when selecting an index.
         If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
-        :param optimize: Distinguish between argmax and argmin.
-        :param scale: Noise scale parameter for the Gumbel distribution.
+        :param scale: Noise scale parameter for the Gumbel or Exponential distribution.
+        :param negate: Enable to report noisy min.
         """
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
         from polars import lit  # type: ignore[import-not-found]
 
         return register_plugin_function(
             plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
-            function_name="report_noisy_max",
-            args=[self.expr, lit(optimize), scale],
+            function_name="noisy_max",
+            args=[self.expr, lit(negate), scale],
             is_elementwise=True,
         )
 
     def _index_candidates(self, candidates: list[float]):
         """Index into a candidate set.
 
-        Typically used after :py:func:`_report_noisy_max` to map selected indices to candidates.
+        Typically used after :py:func:`_noisy_max` to map selected indices to candidates.
 
         :param candidates: The values that each selected index corresponds to.
         """
@@ -488,7 +490,7 @@ class DPExpr(object):
         with greater likelihood of being selected the closer the candidate is to the first quartile.
         """
         dq_score = self.expr.dp._discrete_quantile_score(alpha, candidates)
-        noisy_idx = dq_score.dp._report_noisy_max("min", scale)
+        noisy_idx = dq_score.dp._noisy_max(scale=scale, negate=True)
         return noisy_idx.dp._index_candidates(candidates)
 
     def median(self, candidates: list[float], scale: float | None = None):
@@ -872,7 +874,7 @@ class LazyFrameQuery:
             on = keys.collect_schema().names()
 
         return LazyFrameQuery(
-            keys.join(self.polars_plan, how="left", on=on),
+            keys.join(self.polars_plan, how="left", on=on, nulls_equal=True),
             self._query,
         )
 

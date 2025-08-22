@@ -1,25 +1,26 @@
-use crate::error::Fallible;
-
 use super::{InverseCDF, ODPRound};
-use dashu::{base::Sign, float::FBig, rational::RBig};
+use dashu::{float::FBig, rational::RBig};
 
 #[cfg(all(feature = "contrib", test))]
 mod test;
 
 /// A Gumbel random variable.
+/// Initializes to span all reals.
+///
+/// A random variable follows the Gumbel distribution if it has density
+///
+/// ```math
+/// f(x) = \frac{1}{\beta} e^{-e^{-z} - z}
+/// ```
+///
+/// where $z = \frac{x - \mu}{\beta}$,
+/// $\mu$ is the shift (location) parameter and $\beta$ is the scale parameter.
 #[derive(Clone)]
 pub struct GumbelRV {
-    shift: FBig,
-    scale: FBig,
-}
-
-impl GumbelRV {
-    pub fn new(shift: FBig, scale: FBig) -> Fallible<Self> {
-        if let Sign::Negative = scale.sign() {
-            return fallible!(FailedFunction, "scale ({}) must be non-negative", scale);
-        }
-        Ok(GumbelRV { shift, scale })
-    }
+    /// finite
+    pub shift: FBig,
+    /// finite non-negative
+    pub scale: FBig,
 }
 
 impl InverseCDF for GumbelRV {
@@ -48,9 +49,9 @@ impl InverseCDF for GumbelRV {
         // Return to normal rounding for shift/scale
         let mut f_gumbel = f_gumbel.with_rounding::<R>();
 
-        // Return to normal rounding for shift/scale
         f_gumbel *= self.scale.clone().with_rounding();
         f_gumbel += self.shift.clone().with_rounding();
+
         Some(f_gumbel.with_rounding())
     }
 }

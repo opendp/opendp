@@ -1,0 +1,165 @@
+\documentclass{article}
+\input{../../lib.sty}
+\allowdisplaybreaks
+
+\title{\texttt{impl TopKMeasure for MaxDivergence}}
+\author{Tudor Cebere \and Michael Shoemate}
+\begin{document}
+\maketitle
+\contrib
+
+This document proves soundness of \rustdoc{measurements/noisy_top_k/exponential}{permute\_and\_flip} \cite{mckenna2020permute} in \asOfCommit{mod.rs}{e62b0aa2}.
+\texttt{permute\_and\_flip} noisily selects the index of the greatest score from a vector of input scores.
+
+Permute and flip is equivalent to report noisy max with exponential noise \cite{ding2021permute}.
+Report noisy max exponential is implemented via permute and flip because of its discrete nature.
+Implementation-wise, we will follow permute-and-flip,
+yet prove the correctness of the algorithm via this equivalence.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Method \texttt{noisy\_top\_k}
+        \textit{Types consistent with pseudocode.}
+    \item Method \texttt{privacy\_map}
+        \textit{Types consistent with pseudocode.}
+\end{itemize}
+
+\subsubsection*{Caller-verified}
+\begin{itemize}
+    \item Method \texttt{noisy\_top\_k}
+        \begin{itemize}
+            \item \texttt{x} elements are non-null.
+            \item \texttt{scale} is finite and non-negative.
+        \end{itemize}
+    \item Method \texttt{privacy\_map}
+        \begin{itemize}
+            \item \texttt{d\_in} is non-null and positive.
+            \item \texttt{scale} is non-null and positive.
+        \end{itemize}
+\end{itemize}
+
+\subsection*{Pseudocode}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/TopKMeasure_MaxDivergence.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    The implementation is consistent with all associated items in the \rustdoc{measurements/noisy\_top\_k/trait}{TopKMeasure} trait.
+    \begin{enumerate}
+        \item Method \texttt{noisy\_top\_k}:
+        \begin{itemize}
+            \item Returns the index of the top element $z_i$,
+            where each $z_i \sim \mathrm{DISTRIBUTION}(\mathrm{shift}=y_i, \mathrm{scale}=\texttt{scale})$,
+            and each $y_i = -x_i$ if \texttt{negate}, else $y_i = x_i$,
+            $k$ times with removal.
+            \item Errors are data-independent, except for exhaustion of entropy.
+        \end{itemize}
+        \item Method \texttt{privacy\_map}:
+        For any $x, x'$ where $d_\mathrm{in} \ge d_\mathrm{Range}(x, x')$,
+        return $d_\mathrm{out} \ge D_\mathrm{self}(f(x), f(x'))$,
+        where $f(x) = \mathrm{noisy\_top\_k}(x=x, k=1, \mathrm{scale}=\mathrm{scale})$.
+    \end{enumerate}
+\end{theorem}
+
+
+\begin{definition}
+    \label{def:Exponential}
+    A random variable follows the Exponential distribution if it has density
+    \begin{equation}
+        f(x) = \frac{1}{\beta} e^{-z}
+    \end{equation}
+    where $z = \frac{x - \mu}{\beta}$,
+    $\mu$ is the shift (location) parameter and $\beta$ is the scale parameter.
+\end{definition}
+
+\begin{proof}[Proof of postcondition: \texttt{noisy\_top\_k}]
+    The preconditions of \rustdoc{measurements/noisy_top_k/exponential/fn}{exponential\_noisy\_max} are met,
+    therefore by the postcondition of \texttt{exponential\_top\_k},
+    the postcondition of \texttt{noisy\_top\_k} is satisfied.
+\end{proof}
+
+
+Before proving the privacy guarantees, we state a few required definitions and lemmas:
+\begin{definition}
+    \label{definition:rnm-exp}
+    Report noisy max with exponential noise computes the index of the maximum element from a set of candidates $u \in \din $,
+    adds isotropic exponential noise $Z_i \sim \mathrm{Exp}(1/\lambda)$ to each element in the candidate set $u$ and returns the maximum index as follows:
+    \begin{equation}
+        \texttt{RNM-Exp}(s) = \mathrm{argmax}_i(s_i + Z_i), Z_i \sim \mathrm{Exp}(\lambda)
+    \end{equation}
+\end{definition}
+
+\begin{lemma}
+    \label{lemma:equivalence_of_rnme}
+    The permute-and-flip mechanism is equivalent to the report-noisy-max with exponential noise mechanism.
+\end{lemma}
+See \cite{ding2021permute} for proof of Lemma~\ref{lemma:equivalence_of_rnme}.
+
+
+\begin{lemma}
+    \label{lemma:diff_cdf}
+    Let $X_1, X_2 \sim \mathrm{Exp}(\lambda), \Delta \geq 0$, then
+    \begin{equation}
+        \Pr[X_1 - X_2 \geq \Delta] = e^{-\Delta\lambda} \Pr[X_1 - X_2 \geq 0]
+    \end{equation}
+\end{lemma}
+
+\begin{proof}[Proof of Lemma~\ref{lemma:diff_cdf}]
+    \begin{align}
+    & \Pr[X_1 - X_2 \geq \Delta] \\
+    & = 1 - \Pr[X_1 \leq \Delta + X_2] \\
+    & = 1 - \int^\infty_0 \Pr[X_1 \leq \Delta + X_2 | X_2 = x] \Pr[X_2 = x] dx && \text{by Law of Total Probability} \\
+    & = 1 - \int^\infty_0 \Pr[X_1 \leq \Delta + x] \Pr[X_2 = x] dx  && \text{by the fact that } \Delta > 0 \\
+    & = 1 - \int^\infty_0 \lambda(1 - e^{-(x + \Delta)\lambda})e^{-x\lambda}dx  \\
+    & = 1 - \lambda \int^\infty_0 e^{-x\lambda} dx + \lambda e^{-\Delta\lambda} \int_0^\infty e^{-2x\lambda}dx \\
+    & = 1 - 1 + e^{-\Delta\lambda} / 2 && \text{$\Pr[X_1 - X_2 \leq 0] = \Pr[X_1 - X_2 \geq 0] = 1/2$} \\
+    & = e ^{-\Delta\lambda} \Pr[X_1 - X_2 \geq 0]
+    \end{align}
+\end{proof}
+
+\newcommand\logeq{\mathrel{\vcentcolon\Leftrightarrow}}
+
+\begin{lemma}
+    \label{lemma:equiv}
+    Let $u, v \in \texttt{input\_domain}$ be two vectors of scores.
+    Assume $u$, $v$ in \texttt{input\_domain} are \din-close under \rustdoc{metrics/struct}{LInfDistance} and $\texttt{privacy\_map}(\din) \le \dout$.
+    Let $Z^* = min_{Z_i} \{ u_i + Z_i \geq u_j + Z_j \}, \forall i \neq j$. Then
+    \begin{equation}
+        \ln \left(\frac{\Pr[\texttt{function}(u) = i]}{\Pr[\texttt{function}(v) = i]}\right) =
+        \ln \left(\frac{\Pr[Z_i \geq  Z^*]}{\Pr[Z_i \geq  Z^* + \din]} \right) \\
+    \end{equation}
+
+    \begin{proof}
+    \begin{align}
+        & \ln \left( \frac{{\Pr[\texttt{function}(u) = i]}}{\Pr[\texttt{function}(v) = i]} \right)  && \\
+        & = \ln \left( \frac{\Pr[\texttt{RNM-Exp(u)} = i]}{\Pr[\texttt{RNM-Exp}(v) = i]} \right) && \text{by Lemma \ref{lemma:equivalence_of_rnme}} \\
+        & = \ln \left( \frac{\Pr[\text{argmax}_k(u_k + Z_k) = i]}{\Pr[\text{argmax}_k(v_k + Z_k) = i]} \right) && \text{by Definition \ref{definition:rnm-exp}} \\
+ \intertext{Observe that for a fixed $i$, report noisy max outputs $i$ if:}
+        & u_i + Z^* \geq u_j + Z_j, \forall i \neq j & \iff && \\
+        & u_i + (v_i - v_i) + Z^* \geq u_j + (v_j - v_j) + Z_j & \iff && \\
+        & v_i + (u_i - v_i) + Z^* \geq v_j + (u_j - v_j) + Z_j & \iff && \\
+        & v_i + ((u_i - v_i) -(u_j - v_j) + Z^*) \geq v_j + Z_j & \iff && \\
+        & v_i + (\Delta + Z^*) \geq v_j + Z_j
+ \intertext{In other words, if $Z_i \geq (\Delta + Z^*)$, then $\texttt{function}(u) = \texttt{function}(v) = i$. This yields us:}
+        & \ln \left( \frac{\Pr[\text{argmax}_k(u_k + Z_k) = i]}{\Pr[\text{argmax}_k(v_k + Z_k) = i]} \right) = \ln \left( \frac{\Pr[Z_i \geq Z^*]}{\Pr[Z_i \geq \Delta + Z^*]} \right)
+    \end{align}
+\end{proof}
+\end{lemma}
+
+\begin{proof}[Proof of postcondition: \texttt{privacy\_map}]
+\begin{align}
+    & \max_{u \sim v} D_\infty(M(u) | M(v)) \\
+    & = \max_{u \sim v} max_i \ln\left(\frac{\Pr[function(u) = i]}{\Pr[function(v) = i]}\right) && \\
+    & = \max_{u \sim v} max_i \ln\left(\frac{\Pr[\texttt{RNM-Exp(u)} = i]}{\Pr[\texttt{RNM-Exp}(v) = i]} \right) &&  \text{by Lemma \ref{lemma:equivalence_of_rnme}}\\
+    & = \max_{u \sim v} max_i \ln\left(\frac{\Pr[\text{argmax}_k(u_k + Z_k) = i]}{\Pr[\text{argmax}_k(v_k + Z_k) = i]}\right) && \text{by Definition \ref{definition:rnm-exp}}  \\
+    & = \max_{u \sim v} max_i \ln\left(\frac{\Pr[Z_i \geq Z^*]}{\Pr[Z_i \geq Z^* + \din]}\right) && \text{by Lemma \ref{lemma:equiv}}\\
+    & \le \frac{\din}{\texttt{scale}} && \text{by Lemma \ref{lemma:diff_cdf}}
+\end{align}
+\end{proof}
+
+\bibliographystyle{plain}
+\bibliography{references.bib}
+
+\end{document}

@@ -1,4 +1,4 @@
-'''
+"""
 This module requires extra installs: ``pip install 'opendp[scikit-learn]'``
 
 For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
@@ -8,17 +8,20 @@ We suggest importing under the conventional name ``dp``:
 
     >>> import opendp.prelude as dp
 
-The methods of this module will then be accessible at ``dp.sklearn.linear_model``.    
+The methods of this module will then be accessible at ``dp.sklearn.linear_model``.
 
 If you're interested in the underlying algorithm, we've also
 `implemented Theil-Sen Regression as a demonstration of OpenDP plugins <../user-guide/plugins/theil-sen-regression.html>`_.
-'''
+"""
 
 from typing import Iterable
 from opendp.extras.sklearn.linear_model._make_private_theil_sen import (
     make_private_theil_sen as _make_private_theil_sen,
 )  # noqa: F401
 from opendp._lib import import_optional_dependency
+from opendp.mod import Measure
+
+__all__ = ["LinearRegression"]
 
 
 class LinearRegression:
@@ -34,22 +37,33 @@ class LinearRegression:
     :param scale: The scale of the noise to be added
     :param runs: Controls how many times randomized pairwise predictions are computed. Increasing this value can improve the robustness and accuracy of the results; However, it can also increase computational cost and amount of noise needed later in the algorithm.
     :param candidates_count: How many evenly spaced candidates to generate
-    :param fraction_bounds: Lower and upper bounds x_bounds to retain when ``fit`` is called.
+    :param fraction_bounds: predict y values at these cut percentiles of x_bounds.
     """
+
     def __init__(
-            self,
-            x_bounds: Iterable[tuple[float, float]],
-            y_bounds: tuple[float, float],
-            scale: float,
-            runs: int = 1,
-            candidates_count: int = 100,
-            fraction_bounds: tuple[float, float] = (0.25, 0.75)):
-        self.x_bounds = x_bounds
-        self.y_bounds = y_bounds
-        self.scale = scale
-        self.runs = runs
-        self.candidates_count = candidates_count 
-        self.fraction_bounds = fraction_bounds
+        self,
+        output_measure: Measure,
+        x_bounds: Iterable[tuple[float, float]],
+        y_bounds: tuple[float, float],
+        scale: float,
+        runs: int = 1,
+        candidates_count: int = 100,
+        fraction_bounds: tuple[float, float] = (0.25, 0.75),
+    ):
+        x_bounds = list(x_bounds)  # Shouldn't be so large that this is a problem
+        if len(x_bounds) != 1:
+            msg = f"For now, the x_bounds array must consist of a single tuple, not {x_bounds}"
+            raise Exception(msg)
+        
+        self.measurement = _make_private_theil_sen(
+            output_measure=output_measure,
+            x_bounds=x_bounds[0],
+            y_bounds=y_bounds,
+            scale=scale,
+            runs=runs,
+            candidates_count=candidates_count,
+            fraction_bounds=fraction_bounds,
+        )
 
     def fit(
         self,
@@ -73,6 +87,7 @@ class LinearRegression:
         ...     pytest.skip('Requires extra install')
         >>> dp.enable_features("floating-point")
         >>> lin_reg = dp.sklearn.linear_model.LinearRegression(
+        ...     dp.max_divergence(),
         ...     x_bounds=[(0, 10)],
         ...     y_bounds=(0, 10),
         ...     scale=1,
@@ -83,22 +98,11 @@ class LinearRegression:
         >>> lin_reg.predict([[10]])
         array([...])
         """
-        x_bounds = list(self.x_bounds) # Shouldn't be so large that this is a problem
-        if len(x_bounds) != 1:
-            raise Exception(f'For now, the x_bounds array must consist of a single tuple, not {x_bounds}')
-        meas = _make_private_theil_sen(
-            x_bounds=x_bounds[0],
-            y_bounds=self.y_bounds,
-            scale=self.scale,
-            runs=self.runs,
-            candidates_count=self.candidates_count,
-            fraction_bounds=self.fraction_bounds,
-        )
         np = import_optional_dependency("numpy")
-        X = np.array(X)
-        slope, intercept = meas(np.stack([X[:, 0], y], axis=1))
-
         from sklearn.linear_model import LinearRegression as LR
+
+        X = np.array(X)
+        slope, intercept = self.measurement(np.stack([X[:, 0], y], axis=1))
 
         fit_regression = LR()
         fit_regression.coef_ = np.array([slope])
@@ -126,4 +130,4 @@ class LinearRegression:
 
         :raises NotImplementedError: This method is included only for documention.
         """
-        raise NotImplementedError("Included only for documentation") # pragma: no cover
+        raise NotImplementedError("Included only for documentation")  # pragma: no cover

@@ -6,17 +6,16 @@ use crate::{
     error::Fallible,
     interactive::{Answer, Query, Queryable},
     measurements::{
-        Optimize,
         expr_index_candidates::IndexCandidatesShim,
         expr_noise::{Distribution, NoiseShim},
-        expr_report_noisy_max::ReportNoisyMaxShim,
+        expr_noisy_max::NoisyMaxShim,
     },
     transformations::expr_discrete_quantile_score::DiscreteQuantileScoreShim,
 };
 use polars::{
     frame::DataFrame,
     lazy::frame::LazyFrame,
-    prelude::{DslPlan, GetOutput, LazySerde, NamedFrom, len, repeat},
+    prelude::{AnyValue, DslPlan, GetOutput, LazySerde, NamedFrom, len, repeat},
     series::Series,
 };
 #[cfg(feature = "ffi")]
@@ -221,7 +220,7 @@ pub(crate) fn literal_value_of<T: ExtractValue>(expr: &Expr) -> Fallible<Option<
 pub(crate) trait ExtractValue: Sized {
     fn extract(literal: LiteralValue) -> Fallible<Option<Self>>;
 }
-macro_rules! impl_extract_value {
+macro_rules! impl_extract_value_number {
     ($($ty:ty)+) => {$(impl ExtractValue for $ty {
         fn extract(literal: LiteralValue) -> Fallible<Option<Self>> {
             if literal.is_null() {
@@ -235,7 +234,23 @@ macro_rules! impl_extract_value {
     })+}
 }
 
-impl_extract_value!(u32 u64 i32 i64 f32 f64);
+impl_extract_value_number!(u32 u64 i32 i64 f32 f64);
+
+impl ExtractValue for bool {
+    fn extract(literal: LiteralValue) -> Fallible<Option<Self>> {
+        let any_value = literal.to_any_value().ok_or_else(|| err!(FailedFunction))?;
+
+        if matches!(any_value, AnyValue::Null) {
+            return Ok(None);
+        }
+
+        let AnyValue::Boolean(value) = any_value else {
+            return fallible!(FailedFunction, "expected boolean, found {:?}", any_value);
+        };
+
+        Ok(Some(value))
+    }
+}
 
 impl ExtractValue for Series {
     fn extract(literal: LiteralValue) -> Fallible<Option<Self>> {
@@ -293,7 +308,7 @@ impl<TI: 'static> Function<TI, ExprPlan> {
     pub(crate) fn fill_with(self, value: Expr) -> Self {
         // Without this repeat, the expression would be scalar-valued,
         // and broadcast later to the required length.
-        // This would cause randomized plugins, like noise and report_noisy_max,
+        // This would cause randomized plugins, like noise and noisy_max,
         // to only be applied to one row,
         // and the one noisy row would then be broadcast to the entire column.
         let fill = repeat(value.clone(), len());
@@ -430,22 +445,22 @@ impl DPExpr {
         )
     }
 
-    /// Report the argmax or argmin after adding Gumbel noise.
+    /// Report the argmax or argmin after adding noise.
     ///
     /// The scale calibrates the level of entropy when selecting an index.
     ///
     /// # Arguments
-    /// * `optimize` - Distinguish between argmax and argmin.
-    /// * `scale` - Noise scale parameter for the Gumbel distribution.
-    pub(crate) fn report_noisy_max_gumbel(self, optimize: Optimize, scale: Option<f64>) -> Expr {
-        let optimize = lit(format!("{optimize}"));
+    /// * `negate` - Flip signs to report noisy min.
+    /// * `scale` - Noise scale parameter for the noise distribution.
+    pub(crate) fn noisy_max(self, negate: bool, scale: Option<f64>) -> Expr {
+        let negate = lit(negate);
         let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
-        apply_anonymous_function(vec![self.0, optimize, scale], ReportNoisyMaxShim)
+        apply_anonymous_function(vec![self.0, negate, scale], NoisyMaxShim)
     }
 
     /// Index into a candidate set.
     ///
-    /// Typically used after `rnm_gumbel` to map selected indices to candidates.
+    /// Typically used after `noisy_max` to map selected indices to candidates.
     ///
     /// # Arguments
     /// * `candidates` - The values that each selected index corresponds to.
@@ -460,13 +475,13 @@ impl DPExpr {
     /// # Arguments
     /// * `alpha` - a value in $[0, 1]$. Choose 0.5 for median
     /// * `candidates` - Potential quantiles to select from.
-    /// * `scale` - Noise scale parameter for the Gumbel distribution.
+    /// * `scale` - scale parameter for the noise distribution.
     pub fn quantile(self, alpha: f64, candidates: Series, scale: Option<f64>) -> Expr {
         self.0
             .dp()
             .quantile_score(alpha, candidates.clone())
             .dp()
-            .report_noisy_max_gumbel(Optimize::Min, scale)
+            .noisy_max(true, scale)
             .dp()
             .index_candidates(Series::new("".into(), candidates))
     }
@@ -477,7 +492,7 @@ impl DPExpr {
     ///
     /// # Arguments
     /// * `candidates` - Potential quantiles to select from.
-    /// * `scale` - Noise scale parameter for the Gumbel distribution.
+    /// * `scale` - scale parameter for the noise distribution.
     pub fn median(self, candidates: Series, scale: Option<f64>) -> Expr {
         self.0.dp().quantile(0.5, candidates, scale)
     }

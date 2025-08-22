@@ -12,4 +12,5 @@ The methods of this module will then be accessible at ``dp.sklearn``.
 Submodule organization will follow the conventions of `scikit-learn <https://scikit-learn.org/stable/api/index.html>`_.
 '''
 
-import opendp.extras.sklearn.decomposition
+import opendp.extras.sklearn.decomposition as decomposition
+import opendp.extras.sklearn.linear_model as linear_model
