@@ -105,14 +105,10 @@ nitpick_ignore = [
     ('py:class', 'opendp.mod.LP_AnyMetric'),
     ('py:class', 'opendp.mod.LP_AnyTransformation'),
 
-    # External dependencies
+    # External dependencies may not exist when building docs
     ('py:class', 'numpy.ndarray'),
     ('py:class', 'sklearn.decomposition._pca.PCA'),
 
-    # Standard library references
-    ('py:class', 'abc.ABC'),
-    ('py:class', 'collections.UserDict'),
-    ('py:class', 'pathlib._local.Path'),
 
     # I think the problem is that Sphinx is making parameter list documentation,
     # and it doesn't understand that `M`, `T`, and `D` are type parameters, not actual types.
