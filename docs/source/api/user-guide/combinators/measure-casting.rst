@@ -36,15 +36,16 @@ This is useful if you want to compose pure-DP measurements with approximate-DP m
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
-        >>> input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
-        >>> meas_pureDP = input_space >> dp.m.then_laplace(scale=10.)
+        >>> input_space = dp.atom_domain(
+        ...     T=float, nan=False
+        ... ), dp.absolute_distance(T=float)
+        >>> meas_pureDP = input_space >> dp.m.then_laplace(scale=10.0)
         >>> # convert the output measure to `Approximate<MaxDivergence>`
         >>> meas_fixed_approxDP = dp.c.make_approximate(meas_pureDP)
-        ...
         >>> # `Approximate<MaxDivergence>` distances are (ε, δ) tuples
-        >>> meas_fixed_approxDP.map(d_in=1.)
+        >>> meas_fixed_approxDP.map(d_in=1.0)
         (0.1, 0.0)
 
 The combinator can also be used on measurements with a ``ZeroConcentratedDivergence`` privacy measure.
@@ -56,14 +57,13 @@ The combinator can also be used on measurements with a ``ZeroConcentratedDiverge
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
         >>> meas_zCDP = input_space >> dp.m.then_gaussian(scale=0.5)
         >>> # convert the output measure to `SmoothedMaxDivergence`
         >>> meas_approxDP = dp.c.make_zCDP_to_approxDP(meas_zCDP)
-        ...
         >>> # SmoothedMaxDivergence distances are privacy profiles (ε(δ) curves)
-        >>> profile = meas_approxDP.map(d_in=1.)
+        >>> profile = meas_approxDP.map(d_in=1.0)
         >>> profile.epsilon(delta=1e-6)
         11.688596249354896
 
@@ -74,13 +74,14 @@ It fixes the delta parameter in the curve, so that the resulting measurement can
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
         >>> # convert the output measure to `FixedSmoothedMaxDivergence`
-        >>> meas_fixed_approxDP = dp.c.make_fix_delta(meas_approxDP, delta=1e-8)
-        ...
+        >>> meas_fixed_approxDP = dp.c.make_fix_delta(
+        ...     meas_approxDP, delta=1e-8
+        ... )
         >>> # FixedSmoothedMaxDivergence distances are (ε, δ) tuples
-        >>> meas_fixed_approxDP.map(d_in=1.)
+        >>> meas_fixed_approxDP.map(d_in=1.0)
         (13.3861046488579, 1e-08)
 
 These last two combinators allow you to convert output distances in terms of ρ-zCDP to ε(δ)-approxDP, and then to (ε, δ)-approxDP.

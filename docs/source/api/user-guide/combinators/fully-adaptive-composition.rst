@@ -14,12 +14,16 @@ but drops the ``d_mids`` argument, as these will be chosen as you go.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
-            >>> odom_fully_adaptive_comp = dp.c.make_fully_adaptive_composition(
-            ...     input_domain=dp.vector_domain(dp.atom_domain(T=int)),
-            ...     input_metric=dp.symmetric_distance(),
-            ...     output_measure=dp.max_divergence(),
+            >>> odom_fully_adaptive_comp = (
+            ...     dp.c.make_fully_adaptive_composition(
+            ...         input_domain=dp.vector_domain(
+            ...             dp.atom_domain(T=int)
+            ...         ),
+            ...         input_metric=dp.symmetric_distance(),
+            ...         output_measure=dp.max_divergence(),
+            ...     )
             ... )
 
     .. tab-item:: R
@@ -39,10 +43,12 @@ it returns an *odometer queryable*.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> int_dataset = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-            >>> qbl_fully_adaptive_comp = odom_fully_adaptive_comp(int_dataset)
+            >>> qbl_fully_adaptive_comp = odom_fully_adaptive_comp(
+            ...     int_dataset
+            ... )
     
     .. tab-item:: R
         :sync: r
@@ -60,7 +66,7 @@ Since no queries have been submitted yet, the privacy loss is 0.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> qbl_fully_adaptive_comp.privacy_loss(1)
             0.0
@@ -81,10 +87,17 @@ sum and count:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
-            >>> input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
-            >>> meas_count = input_space >> dp.t.then_count() >> dp.m.then_laplace(scale=1.0)
+            >>> input_space = (
+            ...     dp.vector_domain(dp.atom_domain(T=int)),
+            ...     dp.symmetric_distance(),
+            ... )
+            >>> meas_count = (
+            ...     input_space
+            ...     >> dp.t.then_count()
+            ...     >> dp.m.then_laplace(scale=1.0)
+            ... )
             >>> meas_sum = (
             ...     input_space
             ...     >> dp.t.then_clamp((0, 10))
@@ -111,7 +124,7 @@ Now that we have submitted two queries, we can see that the privacy loss has inc
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> qbl_fully_adaptive_comp.privacy_loss(1)
             3.0

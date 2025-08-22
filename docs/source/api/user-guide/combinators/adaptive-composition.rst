@@ -19,14 +19,14 @@ distances (``d_in``), and the privacy consumption allowed for each query
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> meas_adaptive_comp = dp.c.make_adaptive_composition(
             ...     input_domain=dp.vector_domain(dp.atom_domain(T=int)),
             ...     input_metric=dp.symmetric_distance(),
             ...     output_measure=dp.max_divergence(),
             ...     d_in=1,
-            ...     d_mids=[2., 1.]
+            ...     d_mids=[2.0, 1.0],
             ... )
 
     .. tab-item:: R
@@ -46,7 +46,7 @@ composition:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> meas_adaptive_comp.map(1)
             3.0
@@ -67,7 +67,7 @@ returns a *queryable*.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> int_dataset = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
             >>> qbl_adaptive_comp = meas_adaptive_comp(int_dataset)
@@ -94,10 +94,17 @@ sum and count:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
-            >>> input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
-            >>> meas_count = input_space >> dp.t.then_count() >> dp.m.then_laplace(scale=1.0)
+            >>> input_space = (
+            ...     dp.vector_domain(dp.atom_domain(T=int)),
+            ...     dp.symmetric_distance(),
+            ... )
+            >>> meas_count = (
+            ...     input_space
+            ...     >> dp.t.then_count()
+            ...     >> dp.m.then_laplace(scale=1.0)
+            ... )
             >>> meas_sum = (
             ...     input_space
             ...     >> dp.t.then_clamp((0, 10))

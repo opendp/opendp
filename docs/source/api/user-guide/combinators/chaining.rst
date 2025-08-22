@@ -22,25 +22,28 @@ In the following example we chain :py:func:`opendp.measurements.make_laplace` wi
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
         >>> import opendp.prelude as dp
         >>> dp.enable_features("contrib", "floating-point")
-        ...
         >>> # call a constructor to produce a transformation
         >>> sum_trans = dp.t.make_sum(
-        ...     dp.vector_domain(dp.atom_domain(bounds=(0, 1))), 
-        ...     dp.symmetric_distance()
+        ...     dp.vector_domain(dp.atom_domain(bounds=(0, 1))),
+        ...     dp.symmetric_distance(),
         ... )
         >>> # call a constructor to produce a measurement
-        >>> lap_meas = dp.m.make_laplace(sum_trans.output_domain, sum_trans.output_metric, scale=1.0)
+        >>> lap_meas = dp.m.make_laplace(
+        ...     sum_trans.output_domain,
+        ...     sum_trans.output_metric,
+        ...     scale=1.0,
+        ... )
         >>> noisy_sum = dp.c.make_chain_mt(lap_meas, sum_trans)
-        ...
         >>> # investigate the privacy relation
         >>> symmetric_distance = 1
         >>> epsilon = 1.0
-        >>> assert noisy_sum.check(d_in=symmetric_distance, d_out=epsilon)
-        ...
+        >>> assert noisy_sum.check(
+        ...     d_in=symmetric_distance, d_out=epsilon
+        ... )
         >>> # invoke the chained measurement's function
         >>> dataset = [0, 0, 1, 1, 0, 1, 1, 1]
         >>> release = noisy_sum(dataset)
@@ -54,7 +57,7 @@ and :func:`make_chain_pm <opendp.combinators.make_chain_pm>`.
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
         >>> noisy_sum_meas = sum_trans >> lap_meas
 
@@ -73,12 +76,12 @@ In the below example, the adjustment is subtle, but the bounds were adjusted to 
 
   .. tab-item:: Python
 
-    .. code:: python
+    .. code:: pycon
 
         >>> # call a constructor to produce a transformation, but this time with float bounds
         >>> sum_trans = dp.t.make_sum(
-        ...     dp.vector_domain(dp.atom_domain(bounds=(0., 1.))), 
-        ...     dp.symmetric_distance()
+        ...     dp.vector_domain(dp.atom_domain(bounds=(0.0, 1.0))),
+        ...     dp.symmetric_distance(),
         ... )
         >>> sum_trans >> lap_meas
         Traceback (most recent call last):

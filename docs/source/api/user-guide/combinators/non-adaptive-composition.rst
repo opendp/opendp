@@ -10,7 +10,7 @@ us if you are interested in proof-writing. Thank you!
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> import opendp.prelude as dp
             >>> dp.enable_features("contrib")
@@ -33,12 +33,19 @@ Define a few queries you might want to run up-front:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> # define the dataset space and how distances are measured
-            >>> input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
-            
-            >>> meas_count = input_space >> dp.t.then_count() >> dp.m.then_laplace(scale=1.0)
+            >>> input_space = (
+            ...     dp.vector_domain(dp.atom_domain(T=int)),
+            ...     dp.symmetric_distance(),
+            ... )
+
+            >>> meas_count = (
+            ...     input_space
+            ...     >> dp.t.then_count()
+            ...     >> dp.m.then_laplace(scale=1.0)
+            ... )
             >>> meas_sum = (
             ...     input_space
             ...     >> dp.t.then_clamp((0, 10))
@@ -63,7 +70,7 @@ input metric, and output measure:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> print("count:", meas_count)
             count: Measurement(
@@ -96,10 +103,12 @@ When the data is passed in, all queries are evaluated together, in a single batc
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
-            >>> meas_mean_fraction = dp.c.make_composition([meas_sum, meas_count])
-            
+            >>> meas_mean_fraction = dp.c.make_composition(
+            ...     [meas_sum, meas_count]
+            ... )
+
             >>> int_dataset = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
             >>> dp_sum, dp_count = meas_mean_fraction(int_dataset)
             >>> print("dp sum:", dp_sum)
@@ -122,7 +131,7 @@ The privacy map sums the constituent output distances.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> meas_mean_fraction.map(1)
             3.0

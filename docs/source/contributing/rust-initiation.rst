@@ -17,17 +17,19 @@ commonly in the OpenDP library.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> # we'll use this Python snip to demonstrate concepts later...
             >>> import opendp.prelude as dp
             >>> dp.enable_features("contrib")
-            
+
             >>> input_domain = dp.vector_domain(dp.atom_domain(T=str))
             >>> input_metric = dp.symmetric_distance()
-            
-            >>> default_cast_trans = dp.t.make_cast_default(input_domain, input_metric, TOA=int)
-            
+
+            >>> default_cast_trans = dp.t.make_cast_default(
+            ...     input_domain, input_metric, TOA=int
+            ... )
+
 
 Transformation Structure
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -118,7 +120,7 @@ When we invoke the following transformation:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> default_cast_trans(["null", "1.", "2", "456"])
             [0, 0, 2, 456]
@@ -149,7 +151,7 @@ Invoking this function triggers a similar process as the function did:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> default_cast_trans.map(d_in=3)
             3
