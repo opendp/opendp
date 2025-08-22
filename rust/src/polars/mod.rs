@@ -7,7 +7,7 @@ use crate::{
     interactive::{Answer, Query, Queryable},
     measurements::{
         expr_index_candidates::IndexCandidatesShim,
-        expr_noise::{Distribution, NoiseShim},
+        expr_noise::{NoiseDistribution, NoiseShim},
         expr_noisy_max::NoisyMaxShim,
     },
     transformations::expr_discrete_quantile_score::DiscreteQuantileScoreShim,
@@ -345,7 +345,7 @@ impl DPExpr {
     /// # Arguments
     /// * `scale` - Scale parameter for the noise distribution
     /// * `distribution` - Either Laplace, Gaussian or None.
-    pub fn noise(self, distribution: Option<Distribution>, scale: Option<f64>) -> Expr {
+    pub fn noise(self, distribution: Option<NoiseDistribution>, scale: Option<f64>) -> Expr {
         let distribution = distribution
             .map(|d| lit(format!("{:?}", d)))
             .unwrap_or_else(|| lit(Null {}));
@@ -361,7 +361,7 @@ impl DPExpr {
     /// # Arguments
     /// * `scale` - Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
     pub fn laplace(self, scale: Option<f64>) -> Expr {
-        self.noise(Some(Distribution::Laplace), scale)
+        self.noise(Some(NoiseDistribution::Laplace), scale)
     }
 
     /// Add Gaussian noise to the expression.
@@ -372,7 +372,7 @@ impl DPExpr {
     /// # Arguments
     /// * `scale` - Noise scale parameter for the Gaussian distribution. `scale` == standard_deviation.
     pub fn gaussian(self, scale: Option<f64>) -> Expr {
-        self.noise(Some(Distribution::Gaussian), scale)
+        self.noise(Some(NoiseDistribution::Gaussian), scale)
     }
 
     /// Compute the differentially private len (including nulls).

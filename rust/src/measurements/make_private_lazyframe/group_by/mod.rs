@@ -8,7 +8,7 @@ use crate::combinators::{CompositionMeasure, make_composition};
 use crate::core::{Function, Measurement, PrivacyMap};
 use crate::domains::{CategoricalDomain, Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
-use crate::measurements::expr_noise::Distribution;
+use crate::measurements::expr_noise::NoiseDistribution;
 use crate::measurements::make_private_expr;
 use crate::measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence};
 use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance};
@@ -345,14 +345,18 @@ where
 }
 
 fn integrate_discrete_noise_tail(
-    distribution: Distribution,
+    distribution: NoiseDistribution,
     scale: f64,
     tail_bound: u32,
 ) -> Fallible<f64> {
     let scale = RBig::try_from(scale)?;
     let tail_bound = UBig::from(tail_bound);
     match distribution {
-        Distribution::Laplace => conservative_discrete_laplacian_tail_to_alpha(scale, tail_bound),
-        Distribution::Gaussian => conservative_discrete_gaussian_tail_to_alpha(scale, tail_bound),
+        NoiseDistribution::Laplace => {
+            conservative_discrete_laplacian_tail_to_alpha(scale, tail_bound)
+        }
+        NoiseDistribution::Gaussian => {
+            conservative_discrete_gaussian_tail_to_alpha(scale, tail_bound)
+        }
     }
 }
