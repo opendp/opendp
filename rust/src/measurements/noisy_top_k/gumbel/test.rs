@@ -1,4 +1,25 @@
+use std::array::from_fn;
+
+use crate::traits::samplers::test::check_chi_square;
+
 use super::*;
+
+#[test]
+fn test_rnm_gumbel_distribution_varied() -> Fallible<()> {
+    let scores: [_; 10] = from_fn(|i| i);
+    let trials = 100;
+    let mut observed = [0.0; 10];
+    (0..trials).try_for_each(|_| {
+        observed[gumbel_top_k(&scores, 1.0, 1, false)?[0]] += 1.0;
+        Fallible::Ok(())
+    })?;
+
+    // compute softmax to get expected
+    let numer: f64 = (0..10).map(|i| (i as f64).exp()).sum();
+    let expected = from_fn(|i| (i as f64).exp() / numer * (trials as f64));
+
+    check_chi_square(observed, expected)
+}
 
 #[test]
 fn test_top() -> Fallible<()> {
