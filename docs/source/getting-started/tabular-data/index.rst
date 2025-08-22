@@ -100,25 +100,25 @@ ensuring that queries you would like to release satisfy necessary privacy proper
 
 .. tab-set::
 
-    .. tab-item:: Python
-        :sync: python
+  .. tab-item:: Python
 
-        .. code:: python
-          
-            >>> import polars as pl
-            >>> df = pl.LazyFrame()
+    .. code:: pycon
 
-            >>> context = dp.Context.compositor(
-            ...     data=df,
-            ...     privacy_unit=dp.unit_of(contributions=36),
-            ...     privacy_loss=dp.loss_of(epsilon=1.0),
-            ...     split_evenly_over=1,
-            ... )
-            
-            >>> # Once you construct the context, you should abstain
-            >>> # from directly accessing your data again.
-            >>> # In fact, it is good practice to delete it! 
-            >>> del df
+      >>> import polars as pl
+      >>> df = pl.LazyFrame()
+
+      >>> context = dp.Context.compositor(
+      ...     data=df,
+      ...     privacy_unit=dp.unit_of(contributions=36),
+      ...     privacy_loss=dp.loss_of(epsilon=1.0),
+      ...     split_evenly_over=10,
+      ... )
+
+      >>> # Once you construct the context, you should abstain from
+      >>> # directly accessing your data again.
+      >>> # In fact, it is good practice to delete it!
+      >>> del df
+
 
 A number of parameters define the ``Context``:
 

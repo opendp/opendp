@@ -207,10 +207,12 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
                 i if i == "Transformation" => "AnyTransformation *".to_string(),
                 i if i == "ExtrinsicObject" => "ExtrinsicObject *".to_string(),
                 i if i == "Measurement" => "AnyMeasurement *".to_string(),
+                i if i == "Odometer" => "AnyOdometer *".to_string(),
                 i if i == "Function" => "AnyFunction *".to_string(),
                 i if i == "AnyFunction" => "AnyFunction *".to_string(),
                 i if i == "AnyTransformation" => "AnyTransformation *".to_string(),
                 i if i == "AnyMeasurement" => "AnyMeasurement *".to_string(),
+                i if i == "AnyOdometer" => "AnyOdometer *".to_string(),
                 i if i == "AnyQueryable" => "AnyQueryable *".to_string(),
                 i if i == "AnyDomain" => "AnyDomain *".to_string(),
                 i if i == "AnyMetric" => "AnyMetric *".to_string(),
@@ -236,10 +238,10 @@ fn syn_type_to_c_type(ty: Type, generics: &HashSet<String>) -> Result<String> {
                     )
                 }
                 i if generics.contains(&i) => "AnyObject *".to_string(),
-                _ => {
-                    return Err(Error::custom(
-                        "Unrecognized rust type. Failed to convert to C type.",
-                    )
+                v => {
+                    return Err(Error::custom(format!(
+                        "Unrecognized rust type: {v:?}. Failed to convert to C type."
+                    ))
                     .with_span(segment));
                 }
             }

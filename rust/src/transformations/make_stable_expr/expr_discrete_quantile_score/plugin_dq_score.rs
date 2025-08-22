@@ -2,20 +2,23 @@ use polars::{
     datatypes::{
         ArrayChunked, ArrowDataType,
         DataType::{self, *},
-        Field, Float32Type, Float64Type, Int8Type, Int16Type, Int32Type, Int64Type, PolarsDataType,
-        StaticArray, UInt32Type, UInt64Type,
+        Field, Float32Type, Float64Type, Int8Type, Int16Type, Int32Type, Int64Type, StaticArray,
+        UInt32Type, UInt64Type,
     },
     error::{PolarsResult, polars_bail, polars_err},
-    prelude::{Column, CompatLevel, IntoColumn},
+    prelude::{Column, CompatLevel, IntoColumn, PolarsPhysicalType},
     series::Series,
 };
+#[cfg(feature = "ffi")]
+use polars_arrow as arrow;
+
 use polars_arrow::{
     array::{FixedSizeListArray, UInt64Array},
     datatypes::Field as ArrowField,
 };
 use polars_plan::{
     dsl::{ColumnsUdf, GetOutput},
-    prelude::{ApplyOptions, FunctionFlags, FunctionOptions},
+    prelude::FunctionOptions,
 };
 
 #[cfg(feature = "ffi")]
@@ -44,14 +47,7 @@ impl ColumnsUdf for DiscreteQuantileScoreShim {
 impl OpenDPPlugin for DiscreteQuantileScoreShim {
     const NAME: &'static str = "discrete_quantile_score";
     fn function_options() -> FunctionOptions {
-        FunctionOptions {
-            collect_groups: ApplyOptions::GroupWise,
-            fmt_str: Self::NAME,
-            flags: FunctionFlags::ALLOW_GROUP_AWARE
-                | FunctionFlags::RETURNS_SCALAR
-                | FunctionFlags::CHANGES_LENGTH,
-            ..Default::default()
-        }
+        FunctionOptions::aggregation()
     }
 
     fn get_output(&self) -> Option<GetOutput> {
@@ -75,14 +71,7 @@ pub(crate) struct DiscreteQuantileScorePlugin {
 impl OpenDPPlugin for DiscreteQuantileScorePlugin {
     const NAME: &'static str = "discrete_quantile_score_plugin";
     fn function_options() -> FunctionOptions {
-        FunctionOptions {
-            collect_groups: ApplyOptions::GroupWise,
-            fmt_str: Self::NAME,
-            flags: FunctionFlags::ALLOW_GROUP_AWARE
-                | FunctionFlags::RETURNS_SCALAR
-                | FunctionFlags::CHANGES_LENGTH,
-            ..Default::default()
-        }
+        FunctionOptions::aggregation()
     }
 
     fn get_output(&self) -> Option<GetOutput> {
@@ -147,7 +136,7 @@ fn discrete_quantile_score_udf(
 
 // PT stands for Polars Type
 /// Glue for calling the scorer function from Polars/Arrow dtypes.
-fn compute_scores_array<PT: 'static + PolarsDataType>(
+fn compute_scores_array<PT: 'static + PolarsPhysicalType>(
     series: &Series,
     kwargs: DiscreteQuantileScorePlugin,
 ) -> PolarsResult<UInt64Array>
@@ -167,7 +156,7 @@ where
             .unpack::<PT>()?
             .downcast_iter()
             .flat_map(StaticArray::values_iter),
-        series_to_vec::<PT>(&candidates.cast(&PT::get_dtype())?)?,
+        series_to_vec::<PT>(&candidates.cast(&PT::get_static_dtype())?)?,
         alpha_num,
         alpha_den,
         size_limit,
@@ -216,7 +205,7 @@ fn discrete_quantile_score_plugin(
     inputs: &[Series],
     kwargs: DiscreteQuantileScorePlugin,
 ) -> PolarsResult<Series> {
-    let inputs: Vec<Column> = inputs.iter().cloned().map(Column::Series).collect();
+    let inputs: Vec<Column> = inputs.iter().cloned().map(|s| s.into_column()).collect();
     let out = discrete_quantile_score_udf(inputs.as_slice(), kwargs)?;
     Ok(out.take_materialized_series())
 }

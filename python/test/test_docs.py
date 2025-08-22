@@ -1,6 +1,7 @@
 from pathlib import Path
 from json import loads
 import pytest
+import re
 from opendp import measurements, transformations
 
 @pytest.mark.parametrize(
@@ -23,9 +24,34 @@ def test_thens_are_documented(module, function):
     assert f':py:func:`{m_name}.{make_name}`' in function.__doc__, f'no link to {make_name}'
 
 
+docs_source = Path(__file__).parent.parent.parent / 'docs' / 'source'
+
+
+@pytest.mark.parametrize(
+    "rst_path",
+    list(docs_source.glob("**/*.rst")),
+    ids=lambda path: path.name
+)
+def test_code_block_language(rst_path: Path):
+    rst_lines = rst_path.read_text().splitlines()
+    expected = ['pycon', 'rust', 'latex', 'r', 'shell']
+
+    # For autoformatting of doctests, code blocks should be "pycon", not "python".
+    # https://github.com/adamchainz/blacken-docs?tab=readme-ov-file#restructuredtext
+    assert 'python' not in expected
+
+    errors = []
+    for i, line in enumerate(rst_lines):
+        m = re.search(r'\.\.\s+code::\s+(\w+)', line)
+        if m:
+            language = m.group(1)
+            if language not in expected:
+                errors.append(f'line {i}: Got "{language}", expected one of: {", ".join(expected)}')
+    assert not errors
+
 @pytest.mark.parametrize(
     "nb_path",
-    list((Path(__file__).parent.parent.parent / 'docs' / 'source').glob("**/*.ipynb")),
+    list(docs_source.glob("**/*.ipynb")),
     ids=lambda path: path.name
 )
 def test_notebooks_are_executed(nb_path):

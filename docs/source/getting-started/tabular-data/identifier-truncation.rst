@@ -13,15 +13,17 @@ The user identifier is a part of the privacy unit.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> import opendp.prelude as dp
             >>> import polars as pl
             
             >>> # The PIDENT column contains individual identifiers.
             >>> # An individual may contribute data under at most 1 PIDENT identifier.
-            >>> privacy_unit = dp.unit_of(contributions=1, identifier=pl.col("PIDENT"))
-            
+            >>> privacy_unit = dp.unit_of(
+            ...     contributions=1, identifier=pl.col("PIDENT")
+            ... )
+
 
 This ``privacy_unit`` consists of all records associated with any one
 unique identifier in the ``PIDENT`` column. OpenDP allows identifiers to
@@ -35,18 +37,21 @@ We'll use this new ``privacy_unit`` to create a context as we have previously:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> dp.enable_features("contrib")
-            
+
             >>> context = dp.Context.compositor(
-            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path(), ignore_errors=True),
+            ...     data=pl.scan_csv(
+            ...         dp.examples.get_france_lfs_path(),
+            ...         ignore_errors=True,
+            ...     ),
             ...     privacy_unit=privacy_unit,
             ...     privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-8),
             ...     split_evenly_over=4,
             ...     margins=[dp.polars.Margin(max_length=150_000 * 36)],
             ... )
-            
+
 
 Truncating Per-Group Contributions
 ----------------------------------
@@ -64,13 +69,19 @@ contributions to ten.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> query = (
             ...     context.query()
             ...     .filter(pl.col.HWUSUAL != 99)
             ...     .truncate_per_group(10)
-            ...     .select(pl.col.HWUSUAL.cast(int).fill_null(0).dp.mean((0, 80)))
+            ...     # ...is equivalent to:
+            ...     # .filter(pl.int_range(pl.len()).over("PIDENT") < 10)
+            ...     .select(
+            ...         pl.col.HWUSUAL.cast(int)
+            ...         .fill_null(0)
+            ...         .dp.mean((0, 80))
+            ...     )
             ... )
             >>> query.summarize()
             shape: (2, 4)
@@ -111,7 +122,7 @@ number of records per quarter.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> quarterly = [pl.col.QUARTER, pl.col.YEAR]
             >>> query = (
@@ -124,7 +135,12 @@ number of records per quarter.
             ...     # ...is roughly equivalent to:
             ...     # .filter(pl.struct(*quarterly).rank("dense").over("PIDENT") < 10)
             ...     .group_by(quarterly)
-            ...     .agg(dp.len(), pl.col.HWUSUAL.cast(int).fill_null(0).dp.sum((0, 80)))
+            ...     .agg(
+            ...         dp.len(),
+            ...         pl.col.HWUSUAL.cast(int)
+            ...         .fill_null(0)
+            ...         .dp.sum((0, 80)),
+            ...     )
             ... )
             >>> query.summarize()
             shape: (2, 5)

@@ -50,6 +50,7 @@ Enable ``contrib`` globally with the following snippet:
 
         .. literalinclude:: code/quickstart-context.rst
             :language: python
+            :dedent:
             :start-after: init
             :end-before: /init
 
@@ -77,6 +78,7 @@ Let's apply Laplace noise to a value.
 
         .. literalinclude:: code/quickstart-context.rst
             :language: python
+            :dedent:
             :start-after: demo
             :end-before: /demo
 

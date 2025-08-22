@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::combinators::{SequentialCompositionMeasure, make_composition};
+use crate::combinators::{CompositionMeasure, make_composition};
 use crate::core::{Metric, MetricSpace};
 use crate::domains::{ExprPlan, WildExprDomain};
 use crate::{
@@ -24,14 +24,14 @@ mod test;
 /// * `input_exprs` - expressions to be post-processed
 /// * `postprocessor` - function that applies post-processing to the expressions
 /// * `param` - global noise (re)scale parameter
-pub fn make_expr_postprocess<MI: 'static + Metric, MO: 'static + SequentialCompositionMeasure>(
+pub fn make_expr_postprocess<MI: 'static + Metric, MO: 'static + CompositionMeasure>(
     input_domain: WildExprDomain,
     input_metric: MI,
     output_measure: MO,
     input_exprs: Vec<Expr>,
     postprocessor: impl Fn(Vec<Expr>) -> Fallible<Expr> + 'static + Send + Sync,
     param: Option<f64>,
-) -> Fallible<Measurement<WildExprDomain, ExprPlan, MI, MO>>
+) -> Fallible<Measurement<WildExprDomain, MI, MO, ExprPlan>>
 where
     Expr: PrivateExpr<MI, MO>,
     (WildExprDomain, MI): MetricSpace,
@@ -53,6 +53,8 @@ where
 
     Measurement::new(
         input_domain,
+        input_metric,
+        output_measure,
         Function::new_fallible(move |arg| {
             let plans = f_comp.eval(&arg)?;
             let plan = plans[0].plan.clone();
@@ -69,19 +71,17 @@ where
                     .transpose()?,
             })
         }),
-        input_metric,
-        output_measure,
         m_comp.privacy_map.clone(),
     )
 }
 
-pub fn match_postprocess<MI: 'static + Metric, MO: 'static + SequentialCompositionMeasure>(
+pub fn match_postprocess<MI: 'static + Metric, MO: 'static + CompositionMeasure>(
     input_domain: WildExprDomain,
     input_metric: MI,
     output_measure: MO,
     expr: Expr,
     global_scale: Option<f64>,
-) -> Fallible<Option<Measurement<WildExprDomain, ExprPlan, MI, MO>>>
+) -> Fallible<Option<Measurement<WildExprDomain, MI, MO, ExprPlan>>>
 where
     Expr: PrivateExpr<MI, MO>,
     (WildExprDomain, MI): MetricSpace,

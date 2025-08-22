@@ -39,8 +39,8 @@ pub fn make_find<M, TIA>(
 ) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<TIA>>,
-        VectorDomain<OptionDomain<AtomDomain<usize>>>,
         M,
+        VectorDomain<OptionDomain<AtomDomain<usize>>>,
         M,
     >,
 >
@@ -93,7 +93,7 @@ pub fn make_find_bin<M, TIA>(
     input_domain: VectorDomain<AtomDomain<TIA>>,
     input_metric: M,
     edges: Vec<TIA>,
-) -> Fallible<Transformation<VectorDomain<AtomDomain<TIA>>, VectorDomain<AtomDomain<usize>>, M, M>>
+) -> Fallible<Transformation<VectorDomain<AtomDomain<TIA>>, M, VectorDomain<AtomDomain<usize>>, M>>
 where
     TIA: Number,
     M: EventLevelMetric,
@@ -135,7 +135,7 @@ pub fn make_index<M, TOA>(
     input_metric: M,
     categories: Vec<TOA>,
     null: TOA,
-) -> Fallible<Transformation<VectorDomain<AtomDomain<usize>>, VectorDomain<AtomDomain<TOA>>, M, M>>
+) -> Fallible<Transformation<VectorDomain<AtomDomain<usize>>, M, VectorDomain<AtomDomain<TOA>>, M>>
 where
     TOA: Primitive,
     M: EventLevelMetric,

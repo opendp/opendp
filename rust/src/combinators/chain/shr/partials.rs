@@ -11,8 +11,8 @@ use super::{make_chain_mt, make_chain_pm, make_chain_tt};
 // CHAINING TRANSFORMATION WITH TRANSFORMATION
 
 // PartialTransformation >> Transformation
-impl<DI, DX, DO, MI, MX, MO> Shr<Transformation<DX, DO, MX, MO>>
-    for PartialTransformation<DI, DX, MI, MX>
+impl<DI, DX, DO, MI, MX, MO> Shr<Transformation<DX, MX, DO, MO>>
+    for PartialTransformation<DI, MI, DX, MX>
 where
     DI: 'static + Domain,
     DX: 'static + Domain,
@@ -24,9 +24,9 @@ where
     (DX, MX): MetricSpace,
     (DO, MO): MetricSpace,
 {
-    type Output = PartialTransformation<DI, DO, MI, MO>;
+    type Output = PartialTransformation<DI, MI, DO, MO>;
 
-    fn shr(self, rhs: Transformation<DX, DO, MX, MO>) -> Self::Output {
+    fn shr(self, rhs: Transformation<DX, MX, DO, MO>) -> Self::Output {
         PartialTransformation::new(move |input_domain, input_metric| {
             let lhs = self.fix(input_domain, input_metric)?;
             make_chain_tt(&rhs, &lhs)
@@ -35,8 +35,8 @@ where
 }
 
 // Transformation >> PartialTransformation
-impl<DI, DX, DO, MI, MX, MO> Shr<PartialTransformation<DX, DO, MX, MO>>
-    for Transformation<DI, DX, MI, MX>
+impl<DI, DX, DO, MI, MX, MO> Shr<PartialTransformation<DX, MX, DO, MO>>
+    for Transformation<DI, MI, DX, MX>
 where
     DI: 'static + Domain,
     DX: 'static + Domain,
@@ -48,17 +48,17 @@ where
     (DX, MX): MetricSpace,
     (DO, MO): MetricSpace,
 {
-    type Output = Fallible<Transformation<DI, DO, MI, MO>>;
+    type Output = Fallible<Transformation<DI, MI, DO, MO>>;
 
-    fn shr(self, rhs: PartialTransformation<DX, DO, MX, MO>) -> Self::Output {
+    fn shr(self, rhs: PartialTransformation<DX, MX, DO, MO>) -> Self::Output {
         let rhs = (rhs).fix(self.output_domain.clone(), self.output_metric.clone())?;
         make_chain_tt(&rhs, &self)
     }
 }
 
 // Fallible<Transformation> >> PartialTransformation
-impl<DI, DX, DO, MI, MX, MO> Shr<PartialTransformation<DX, DO, MX, MO>>
-    for Fallible<Transformation<DI, DX, MI, MX>>
+impl<DI, DX, DO, MI, MX, MO> Shr<PartialTransformation<DX, MX, DO, MO>>
+    for Fallible<Transformation<DI, MI, DX, MX>>
 where
     DI: 'static + Domain,
     DX: 'static + Domain,
@@ -70,9 +70,9 @@ where
     (DX, MX): MetricSpace,
     (DO, MO): MetricSpace,
 {
-    type Output = Fallible<Transformation<DI, DO, MI, MO>>;
+    type Output = Fallible<Transformation<DI, MI, DO, MO>>;
 
-    fn shr(self, rhs: PartialTransformation<DX, DO, MX, MO>) -> Self::Output {
+    fn shr(self, rhs: PartialTransformation<DX, MX, DO, MO>) -> Self::Output {
         let lhs = self?;
         let rhs = rhs.fix(lhs.output_domain.clone(), lhs.output_metric.clone())?;
         make_chain_tt(&rhs, &lhs)
@@ -80,8 +80,8 @@ where
 }
 
 // PartialTransformation >> PartialTransformation
-impl<DI, DX, DO, MI, MX, MO> Shr<PartialTransformation<DX, DO, MX, MO>>
-    for PartialTransformation<DI, DX, MI, MX>
+impl<DI, DX, DO, MI, MX, MO> Shr<PartialTransformation<DX, MX, DO, MO>>
+    for PartialTransformation<DI, MI, DX, MX>
 where
     DI: 'static + Domain,
     DX: 'static + Domain,
@@ -93,9 +93,9 @@ where
     (DX, MX): MetricSpace,
     (DO, MO): MetricSpace,
 {
-    type Output = PartialTransformation<DI, DO, MI, MO>;
+    type Output = PartialTransformation<DI, MI, DO, MO>;
 
-    fn shr(self, rhs: PartialTransformation<DX, DO, MX, MO>) -> Self::Output {
+    fn shr(self, rhs: PartialTransformation<DX, MX, DO, MO>) -> Self::Output {
         PartialTransformation::new(move |input_domain, input_metric| {
             let lhs = self.fix(input_domain, input_metric)?;
             let rhs = rhs.fix(lhs.output_domain.clone(), lhs.output_metric.clone())?;
@@ -105,7 +105,7 @@ where
 }
 
 // (DI, MI) >> PartialTransformation
-impl<DI, DO, MI, MO> Shr<PartialTransformation<DI, DO, MI, MO>> for (DI, MI)
+impl<DI, DO, MI, MO> Shr<PartialTransformation<DI, MI, DO, MO>> for (DI, MI)
 where
     DI: 'static + Domain,
     DO: 'static + Domain,
@@ -114,9 +114,9 @@ where
     (DI, MI): MetricSpace,
     (DO, MO): MetricSpace,
 {
-    type Output = Fallible<Transformation<DI, DO, MI, MO>>;
+    type Output = Fallible<Transformation<DI, MI, DO, MO>>;
 
-    fn shr(self, rhs: PartialTransformation<DI, DO, MI, MO>) -> Self::Output {
+    fn shr(self, rhs: PartialTransformation<DI, MI, DO, MO>) -> Self::Output {
         (rhs).fix(self.0, self.1)
     }
 }
@@ -124,8 +124,8 @@ where
 // CHAINING TRANSFORMATION WITH MEASUREMENT
 
 // PartialTransformation >> Measurement
-impl<DI, DX, TO, MI, MX, MO> Shr<Measurement<DX, TO, MX, MO>>
-    for PartialTransformation<DI, DX, MI, MX>
+impl<DI, DX, TO, MI, MX, MO> Shr<Measurement<DX, MX, MO, TO>>
+    for PartialTransformation<DI, MI, DX, MX>
 where
     DI: 'static + Domain,
     DX: 'static + Domain,
@@ -136,9 +136,9 @@ where
     (DI, MI): MetricSpace,
     (DX, MX): MetricSpace,
 {
-    type Output = PartialMeasurement<DI, TO, MI, MO>;
+    type Output = PartialMeasurement<DI, MI, MO, TO>;
 
-    fn shr(self, rhs: Measurement<DX, TO, MX, MO>) -> Self::Output {
+    fn shr(self, rhs: Measurement<DX, MX, MO, TO>) -> Self::Output {
         PartialMeasurement::new(move |input_domain, input_metric| {
             let lhs = self.fix(input_domain, input_metric)?;
             make_chain_mt(&rhs, &lhs)
@@ -147,8 +147,8 @@ where
 }
 
 // Transformation >> PartialMeasurement
-impl<DI, DX, TO, MI, MX, MO> Shr<PartialMeasurement<DX, TO, MX, MO>>
-    for Transformation<DI, DX, MI, MX>
+impl<DI, DX, TO, MI, MX, MO> Shr<PartialMeasurement<DX, MX, MO, TO>>
+    for Transformation<DI, MI, DX, MX>
 where
     DI: 'static + Domain,
     DX: 'static + Domain,
@@ -159,17 +159,17 @@ where
     (DI, MI): MetricSpace,
     (DX, MX): MetricSpace,
 {
-    type Output = Fallible<Measurement<DI, TO, MI, MO>>;
+    type Output = Fallible<Measurement<DI, MI, MO, TO>>;
 
-    fn shr(self, rhs: PartialMeasurement<DX, TO, MX, MO>) -> Self::Output {
+    fn shr(self, rhs: PartialMeasurement<DX, MX, MO, TO>) -> Self::Output {
         let rhs = rhs.fix(self.output_domain.clone(), self.output_metric.clone())?;
         make_chain_mt(&rhs, &self)
     }
 }
 
 // Fallible<Transformation> >> PartialMeasurement
-impl<DI, DX, TO, MI, MX, MO> Shr<PartialMeasurement<DX, TO, MX, MO>>
-    for Fallible<Transformation<DI, DX, MI, MX>>
+impl<DI, DX, TO, MI, MX, MO> Shr<PartialMeasurement<DX, MX, MO, TO>>
+    for Fallible<Transformation<DI, MI, DX, MX>>
 where
     DI: 'static + Domain,
     DX: 'static + Domain,
@@ -180,9 +180,9 @@ where
     (DI, MI): MetricSpace,
     (DX, MX): MetricSpace,
 {
-    type Output = Fallible<Measurement<DI, TO, MI, MO>>;
+    type Output = Fallible<Measurement<DI, MI, MO, TO>>;
 
-    fn shr(self, rhs: PartialMeasurement<DX, TO, MX, MO>) -> Self::Output {
+    fn shr(self, rhs: PartialMeasurement<DX, MX, MO, TO>) -> Self::Output {
         let lhs = self?;
         let rhs = rhs.fix(lhs.output_domain.clone(), lhs.output_metric.clone())?;
         make_chain_mt(&rhs, &lhs)
@@ -190,8 +190,8 @@ where
 }
 
 // PartialTransformation >> PartialMeasurement
-impl<DI, DX, TO, MI, MX, MO> Shr<PartialMeasurement<DX, TO, MX, MO>>
-    for PartialTransformation<DI, DX, MI, MX>
+impl<DI, DX, TO, MI, MX, MO> Shr<PartialMeasurement<DX, MX, MO, TO>>
+    for PartialTransformation<DI, MI, DX, MX>
 where
     DI: 'static + Domain,
     DX: 'static + Domain,
@@ -202,9 +202,9 @@ where
     (DI, MI): MetricSpace,
     (DX, MX): MetricSpace,
 {
-    type Output = PartialMeasurement<DI, TO, MI, MO>;
+    type Output = PartialMeasurement<DI, MI, MO, TO>;
 
-    fn shr(self, rhs: PartialMeasurement<DX, TO, MX, MO>) -> Self::Output {
+    fn shr(self, rhs: PartialMeasurement<DX, MX, MO, TO>) -> Self::Output {
         PartialMeasurement::new(move |input_domain, input_metric| {
             let transformation = self.fix(input_domain, input_metric)?;
             transformation >> rhs
@@ -213,16 +213,16 @@ where
 }
 
 // (DI, MI) >> PartialMeasurement
-impl<DI, TO, MI, MO> Shr<PartialMeasurement<DI, TO, MI, MO>> for (DI, MI)
+impl<DI, TO, MI, MO> Shr<PartialMeasurement<DI, MI, MO, TO>> for (DI, MI)
 where
     DI: 'static + Domain,
     MI: 'static + Metric,
     MO: 'static + Measure,
     (DI, MI): MetricSpace,
 {
-    type Output = Fallible<Measurement<DI, TO, MI, MO>>;
+    type Output = Fallible<Measurement<DI, MI, MO, TO>>;
 
-    fn shr(self, rhs: PartialMeasurement<DI, TO, MI, MO>) -> Self::Output {
+    fn shr(self, rhs: PartialMeasurement<DI, MI, MO, TO>) -> Self::Output {
         (rhs).fix(self.0, self.1)
     }
 }
@@ -230,7 +230,7 @@ where
 // CHAINING POSTPROCESS WITH MEASUREMENT
 
 // PartialMeasurement >> Function
-impl<DI, TX, TO, MI, MO> Shr<Function<TX, TO>> for PartialMeasurement<DI, TX, MI, MO>
+impl<DI, TX, TO, MI, MO> Shr<Function<TX, TO>> for PartialMeasurement<DI, MI, MO, TX>
 where
     DI: 'static + Domain,
     TX: 'static,
@@ -239,7 +239,7 @@ where
     MO: 'static + Measure,
     (DI, MI): MetricSpace,
 {
-    type Output = PartialMeasurement<DI, TO, MI, MO>;
+    type Output = PartialMeasurement<DI, MI, MO, TO>;
 
     fn shr(self, rhs: Function<TX, TO>) -> Self::Output {
         PartialMeasurement::new(move |input_domain, input_metric| {
@@ -249,8 +249,8 @@ where
     }
 }
 
-impl<DI, DX, DO, MI, MO, MTI, MTO> Shr<Transformation<DX, DO, MTI, MTO>>
-    for PartialMeasurement<DI, DX::Carrier, MI, MO>
+impl<DI, DX, DO, MI, MO, MTI, MTO> Shr<Transformation<DX, MTI, DO, MTO>>
+    for PartialMeasurement<DI, MI, MO, DX::Carrier>
 where
     DI: 'static + Domain,
     DX: 'static + Domain,
@@ -263,9 +263,9 @@ where
     (DX, MTI): MetricSpace,
     (DO, MTO): MetricSpace,
 {
-    type Output = PartialMeasurement<DI, DO::Carrier, MI, MO>;
+    type Output = PartialMeasurement<DI, MI, MO, DO::Carrier>;
 
-    fn shr(self, rhs: Transformation<DX, DO, MTI, MTO>) -> Self::Output {
+    fn shr(self, rhs: Transformation<DX, MTI, DO, MTO>) -> Self::Output {
         PartialMeasurement::new(move |input_domain, input_metric| {
             let lhs = self.fix(input_domain, input_metric)?;
             make_chain_pm(&rhs.function, &lhs)

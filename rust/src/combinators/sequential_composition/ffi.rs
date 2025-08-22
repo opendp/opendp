@@ -1,29 +1,29 @@
 use crate::{
+    combinators::Composability,
     error::Fallible,
     ffi::any::{AnyMeasure, AnyObject, Downcast},
-    measures::{
-        Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence, ffi::TypedMeasure,
-    },
+    measures::{Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence},
 };
 
-use super::SequentialCompositionMeasure;
+use super::{Adaptivity, CompositionMeasure};
 
-impl SequentialCompositionMeasure for AnyMeasure {
-    fn concurrent(&self) -> Fallible<bool> {
-        fn monomorphize<M: 'static + SequentialCompositionMeasure>(
+impl CompositionMeasure for AnyMeasure {
+    fn composability(&self, adaptivity: Adaptivity) -> Fallible<Composability> {
+        fn monomorphize<M: 'static + CompositionMeasure>(
             self_: &AnyMeasure,
-        ) -> Fallible<bool>
+            adaptivity: Adaptivity,
+        ) -> Fallible<Composability>
         where
             M::Distance: Clone,
         {
-            self_.downcast_ref::<M>()?.concurrent()
+            self_.downcast_ref::<M>()?.composability(adaptivity)
         }
         dispatch!(monomorphize, [
-            (self.type_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>])
-        ], (self))
+            (self.type_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>, RenyiDivergence])
+        ], (self, adaptivity))
     }
     fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        fn monomorphize<M: 'static + SequentialCompositionMeasure>(
+        fn monomorphize<M: 'static + CompositionMeasure>(
             self_: &AnyMeasure,
             d_i: Vec<AnyObject>,
         ) -> Fallible<AnyObject>
@@ -42,16 +42,5 @@ impl SequentialCompositionMeasure for AnyMeasure {
         dispatch!(monomorphize, [
             (self.type_, [MaxDivergence, Approximate<MaxDivergence>, ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>, RenyiDivergence])
         ], (self, d_i))
-    }
-}
-
-impl<Q: 'static> SequentialCompositionMeasure for TypedMeasure<Q> {
-    fn concurrent(&self) -> Fallible<bool> {
-        self.measure.concurrent()
-    }
-    fn compose(&self, d_i: Vec<Self::Distance>) -> Fallible<Self::Distance> {
-        self.measure
-            .compose(d_i.into_iter().map(AnyObject::new).collect())?
-            .downcast()
     }
 }

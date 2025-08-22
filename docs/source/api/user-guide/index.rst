@@ -20,6 +20,7 @@ Features can be enabled via the following syntax:
       .. code-block:: python
 
          import opendp.prelude as dp
+
          dp.enable_features("contrib")
 
    .. tab-item:: R

@@ -4,7 +4,7 @@ This module requires extra installs: ``pip install 'opendp[numpy]'``
 For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
 We suggest importing under the conventional name ``dp``:
 
-.. code:: python
+.. code:: pycon
 
     >>> import opendp.prelude as dp
 
@@ -19,6 +19,7 @@ from opendp._lib import import_optional_dependency
 from opendp._internal import _extrinsic_domain
 import typing
 from opendp.extras.numpy._make_np_clamp import make_np_clamp, then_np_clamp # noqa: F401
+
 
 if typing.TYPE_CHECKING: # pragma: no cover
     import numpy # type: ignore[import-not-found]

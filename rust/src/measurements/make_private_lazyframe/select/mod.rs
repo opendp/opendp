@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use crate::combinators::{SequentialCompositionMeasure, make_composition};
+use crate::combinators::{CompositionMeasure, make_composition};
 use crate::core::{Function, Measurement, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
@@ -29,11 +29,11 @@ pub fn make_private_select<MI, MO>(
     output_measure: MO,
     plan: DslPlan,
     global_scale: Option<f64>,
-) -> Fallible<Measurement<DslPlanDomain, DslPlan, FrameDistance<MI>, MO>>
+) -> Fallible<Measurement<DslPlanDomain, FrameDistance<MI>, MO, DslPlan>>
 where
     MI: 'static + UnboundedMetric,
     MI::EventMetric: UnboundedMetric,
-    MO: 'static + SequentialCompositionMeasure,
+    MO: 'static + CompositionMeasure,
     Expr: PrivateExpr<L01InfDistance<MI::EventMetric>, MO>,
     DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
     (DslPlanDomain, FrameDistance<MI>): MetricSpace,
@@ -62,10 +62,10 @@ where
 
     let t_group_by = Transformation::new(
         middle_domain.clone(),
-        expr_domain.clone(),
-        Function::new(Clone::clone),
         middle_metric.clone(),
+        expr_domain.clone(),
         L0PInfDistance(middle_metric.0.clone()),
+        Function::new(Clone::clone),
         // the output distance triple consists of three numbers:
         // l0: number of changed groups. Only one group exists in select
         // l1: total number of contributions across all groups
@@ -104,6 +104,8 @@ where
     let privacy_map = m_select_expr.privacy_map.clone();
     let m_select = Measurement::new(
         middle_domain,
+        middle_metric,
+        output_measure,
         Function::new_fallible(move |arg: &DslPlan| {
             let mut output = plan.clone();
             if let DslPlan::Select {
@@ -121,8 +123,6 @@ where
             };
             Ok(output)
         }),
-        middle_metric,
-        output_measure,
         privacy_map,
     )?;
 

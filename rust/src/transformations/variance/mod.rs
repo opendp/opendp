@@ -42,8 +42,8 @@ pub fn make_variance<S>(
 ) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<S::Item>>,
-        AtomDomain<S::Item>,
         SymmetricDistance,
+        AtomDomain<S::Item>,
         AbsoluteDistance<S::Item>,
     >,
 >

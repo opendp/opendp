@@ -28,11 +28,11 @@ us if you are interested in proof-writing. Thank you!
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> import opendp.prelude as dp
             >>> dp.enable_features("contrib")
-            
+
 .. note::
     In this documentation, we'll consistently refer to OpenDP Library functions
     as "constructors", although they are not "constructors" as that term is used in Python:
@@ -89,13 +89,13 @@ can find it under ``dp.m``:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> # call the constructor to produce the measurement `base_lap`
             >>> base_lap = dp.m.make_laplace(
-            ...     dp.atom_domain(T=float, nan=False), 
-            ...     dp.absolute_distance(T=float), 
-            ...     scale=5.
+            ...     dp.atom_domain(T=float, nan=False),
+            ...     dp.absolute_distance(T=float),
+            ...     scale=5.0,
             ... )
 
 The supporting elements on this transformation match those described
@@ -106,7 +106,7 @@ above:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> print("input domain:  ", base_lap.input_domain)
             input domain:   AtomDomain(T=f64)
@@ -123,9 +123,9 @@ We now invoke the measurement on some aggregate ``0.``, to sample
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
-            >>> aggregate = 0.
+            >>> aggregate = 0.0
             >>> print("noisy aggregate:", base_lap(aggregate))
             noisy aggregate: ...
 
@@ -141,9 +141,9 @@ datasets.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
-            >>> absolute_distance = 10.
+            >>> absolute_distance = 10.0
             >>> print("epsilon:", base_lap.map(d_in=absolute_distance))
             epsilon: 2.0
 
@@ -201,13 +201,18 @@ it under ``dp.t``:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
-            >>> # call the constructor to produce the transformation `bounded_sum`
-            >>> # notice that `make_sum` expects an input domain consisting of bounded data:
-            >>> input_domain = dp.vector_domain(dp.atom_domain(bounds=(0., 5.)))
-            >>> bounded_sum = dp.t.make_sum(input_domain, dp.symmetric_distance())
-            
+            >>> # Call the constructor to produce the transformation
+            >>> # `bounded_sum`. Notice that `make_sum` expects an input
+            >>> # domain consisting of bounded data:
+            >>> input_domain = dp.vector_domain(
+            ...     dp.atom_domain(bounds=(0.0, 5.0))
+            ... )
+            >>> bounded_sum = dp.t.make_sum(
+            ...     input_domain, dp.symmetric_distance()
+            ... )
+
 
 According to the documentation, this transformation expects a vector of
 data with non-null elements bounded between ``0.`` and ``5.``. We now
@@ -220,10 +225,11 @@ not a measurement, the resulting output is not differentially private.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
-            >>> # under the condition that the input data is a member of the input domain...
-            >>> bounded_mock_dataset = [1.3, 3.8, 0., 5.]
+            >>> # under the condition that the input data is a member of
+            >>> # the input domain...
+            >>> bounded_mock_dataset = [1.3, 3.8, 0.0, 5.0]
             >>> # ...the exact sum is:
             >>> bounded_sum(bounded_mock_dataset)
             10.1
@@ -250,11 +256,13 @@ types.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
-            >>> # under the condition that one individual may contribute up to 2 records to `bounded_mock_dataset`...
+            >>> # under the condition that one individual may contribute up
+            >>> # to 2 records to `bounded_mock_dataset`...
             >>> max_contributions = 2
-            >>> # ...then the sensitivity, expressed in terms of the absolute distance, is:
+            >>> # ...then the sensitivity, expressed in terms of the
+            >>> # absolute distance, is:
             >>> bounded_sum.map(d_in=max_contributions)
             10.0...
 
@@ -276,7 +284,7 @@ section of the relevant API documentation entry:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> help(dp.t.make_clamp)
             Help on function make_clamp in module opendp.transformations:
@@ -294,14 +302,18 @@ links:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
-            >>> input_domain = dp.vector_domain(dp.atom_domain(T=float, nan=False))
+            >>> input_domain = dp.vector_domain(
+            ...     dp.atom_domain(T=float, nan=False)
+            ... )
             >>> input_metric = dp.symmetric_distance()
-            
+
             >>> # call the constructor to produce the transformation `clamp`
-            >>> clamp = dp.t.make_clamp(input_domain, input_metric, bounds=(0., 5.))
-            
+            >>> clamp = dp.t.make_clamp(
+            ...     input_domain, input_metric, bounds=(0.0, 5.0)
+            ... )
+
             >>> # `clamp` expects vectors of non-null, unbounded elements
             >>> mock_dataset = [1.3, 7.8, -2.5, 7.0]
             >>> # `clamp` emits data that is suitable for `bounded_sum`
@@ -324,7 +336,7 @@ The stability argument for the clamp transformation is very simple:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> # dataset distance in... dataset distance out
             >>> clamp.map(max_contributions)
@@ -381,15 +393,16 @@ chain all of these primitives to form a new compound measurement:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> dp_sum = clamp >> bounded_sum >> base_lap
-            
+
             >>> # compute the DP sum of a dataset of bounded elements
             >>> print("DP sum:", dp_sum(mock_dataset))
             DP sum: ...
-            
-            >>> # evaluate the privacy loss of the dp_sum, when an individual can contribute at most 2 records
+
+            >>> # evaluate the privacy loss of the dp_sum, when an
+            >>> # individual can contribute at most 2 records
             >>> print("epsilon:", dp_sum.map(d_in=max_contributions))
             epsilon: ...
 
@@ -404,21 +417,36 @@ can breeze through an entire release:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> # establish public info
             >>> max_contributions = 2
-            >>> bounds = (0., 5.)
-            
+            >>> bounds = (0.0, 5.0)
+
             >>> # construct the measurement
             >>> dp_sum = (
-            ...     dp.t.make_clamp(dp.vector_domain(dp.atom_domain(T=float, nan=False)), dp.symmetric_distance(), bounds) >> 
-            ...     dp.t.make_sum(dp.vector_domain(dp.atom_domain(bounds=bounds, nan=False)), dp.symmetric_distance()) >> 
-            ...     dp.m.make_laplace(dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float), 5.)
+            ...     dp.t.make_clamp(
+            ...         dp.vector_domain(
+            ...             dp.atom_domain(T=float, nan=False)
+            ...         ),
+            ...         dp.symmetric_distance(),
+            ...         bounds,
+            ...     )
+            ...     >> dp.t.make_sum(
+            ...         dp.vector_domain(
+            ...             dp.atom_domain(bounds=bounds, nan=False)
+            ...         ),
+            ...         dp.symmetric_distance(),
+            ...     )
+            ...     >> dp.m.make_laplace(
+            ...         dp.atom_domain(T=float, nan=False),
+            ...         dp.absolute_distance(T=float),
+            ...         5.0,
+            ...     )
             ... )
-            
+
             >>> # evaluate the privacy expenditure and make a DP release
-            >>> mock_dataset = [0.7, -0.3, 1., -1.]
+            >>> mock_dataset = [0.7, -0.3, 1.0, -1.0]
             >>> print("epsilon:", dp_sum.map(max_contributions))
             epsilon: ...
             >>> print("DP sum release:", dp_sum(mock_dataset))
@@ -439,15 +467,15 @@ the ``input_domain`` and ``input_metric`` arguments. We can rewrite
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> dp_sum = (
-            ...     (input_domain, input_metric) >>
-            ...     dp.t.then_clamp((0., 5.)) >>
-            ...     dp.t.then_sum() >>
-            ...     dp.m.then_laplace(5.)
+            ...     (input_domain, input_metric)
+            ...     >> dp.t.then_clamp((0.0, 5.0))
+            ...     >> dp.t.then_sum()
+            ...     >> dp.m.then_laplace(5.0)
             ... )
-            
+
 
 You’ll notice that the start of the chain is special: We provide a tuple
 to specify the ``input_domain`` and ``input_metric`` for ``then_clamp``.

@@ -4,13 +4,15 @@ mod ffi;
 #[cfg(test)]
 mod test;
 
+use std::{cell::RefCell, rc::Rc};
+
 use crate::{
     core::{Domain, Function, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    interactive::wrap,
+    interactive::{Wrapper, wrap},
 };
 
-use super::SequentialCompositionMeasure;
+use super::{Adaptivity, Composability, CompositionMeasure};
 
 /// Construct the DP composition of [`measurement0`, `measurement1`, ...].
 /// Returns a Measurement that when invoked, computes `[measurement0(x), measurement1(x), ...]`
@@ -23,21 +25,21 @@ use super::SequentialCompositionMeasure;
 /// * compositor: all privacy parameters specified up-front (via the map)
 ///
 /// # Arguments
-/// * `measurements` - A vector of Measurements to compose. All DI, MI, MO must be equivalent.
+/// * `measurements` - A vector of Measurements to compose. All input domains, input metrics and output measures must be equivalent.
 ///
 /// # Generics
-/// * `DI` - Input Domain.
-/// * `TO` - Output Type.
+/// * `DI` - Input Domain
 /// * `MI` - Input Metric
 /// * `MO` - Output Measure
-pub fn make_composition<DI, TO, MI, MO>(
-    measurements: Vec<Measurement<DI, TO, MI, MO>>,
-) -> Fallible<Measurement<DI, Vec<TO>, MI, MO>>
+/// * `TO` - Output Type.
+pub fn make_composition<DI, MI, MO, TO>(
+    measurements: Vec<Measurement<DI, MI, MO, TO>>,
+) -> Fallible<Measurement<DI, MI, MO, Vec<TO>>>
 where
     DI: 'static + Domain,
-    TO: 'static,
     MI: 'static + Metric,
-    MO: 'static + SequentialCompositionMeasure,
+    MO: 'static + CompositionMeasure,
+    TO: 'static,
     (DI, MI): MetricSpace,
 {
     if measurements.is_empty() {
@@ -70,28 +72,42 @@ where
         .map(|m| m.privacy_map.clone())
         .collect::<Vec<_>>();
 
-    let concurrent = output_measure.concurrent()?;
+    let require_sequentiality = matches!(
+        output_measure.composability(Adaptivity::NonAdaptive)?,
+        Composability::Sequential
+    );
+
     Measurement::new(
         input_domain,
-        Function::new_fallible(move |arg: &DI::Carrier| {
-            let go = || functions.iter().map(|f| f.eval(arg)).collect();
-
-            if concurrent {
-                go()
-            } else {
-                wrap(
-                    |_qbl| {
-                        fallible!(
-                            FailedFunction,
-                            "output_measure must allow concurrency to spawn queryables from a noninteractive compositor"
-                        )
-                    },
-                    go,
-                )
-            }
-        }),
         input_metric,
         output_measure.clone(),
+        Function::new_fallible(move |arg: &DI::Carrier| {
+            let active_id = Rc::new(RefCell::new(0));
+
+            if require_sequentiality {
+                functions
+                    .iter()
+                    .inspect(|_| *active_id.borrow_mut() += 1)
+                    .map(|f| {
+                        // Wrap any spawned queryables with a check that no new queries have been asked.
+                        let child_id = *active_id.borrow();
+
+                        let wrapper = Wrapper::new_recursive_pre_hook(enclose!(active_id, move || {
+                            (*active_id.borrow() == child_id)
+                                .then_some(())
+                                .ok_or_else(|| err!(
+                                    FailedFunction,
+                                    "Compositor has received a new query. To satisfy the sequentiality constraint of composition, only the most recent release from the parent compositor may be interacted with."
+                                ))
+                        }));
+
+                        wrap(wrapper, || f.eval(arg))
+                    })
+                    .collect()
+            } else {
+                functions.iter().map(|f| f.eval(arg)).collect()
+            }
+        }),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             output_measure.compose(
                 maps.iter()
@@ -120,14 +136,14 @@ where
     since = "0.14.0",
     note = "This function has been renamed, use `make_composition` instead."
 )]
-pub fn make_basic_composition<DI, TO, MI, MO>(
-    measurements: Vec<Measurement<DI, TO, MI, MO>>,
-) -> Fallible<Measurement<DI, Vec<TO>, MI, MO>>
+pub fn make_basic_composition<DI, MI, MO, TO>(
+    measurements: Vec<Measurement<DI, MI, MO, TO>>,
+) -> Fallible<Measurement<DI, MI, MO, Vec<TO>>>
 where
     DI: 'static + Domain,
-    TO: 'static,
     MI: 'static + Metric,
-    MO: 'static + SequentialCompositionMeasure,
+    MO: 'static + CompositionMeasure,
+    TO: 'static,
     (DI, MI): MetricSpace,
 {
     make_composition(measurements)

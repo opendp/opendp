@@ -21,7 +21,7 @@ pub fn make_expr_to_physical<M: OuterMetric>(
     input_domain: WildExprDomain,
     input_metric: M,
     expr: Expr,
-) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
+) -> Fallible<Transformation<WildExprDomain, M, ExprDomain, M>>
 where
     M::InnerMetric: MicrodataMetric,
     M::Distance: Clone,
@@ -99,10 +99,10 @@ where
     t_prior
         >> Transformation::new(
             middle_domain.clone(),
-            output_domain,
-            Function::then_expr(move |expr| expr.to_physical()),
             middle_metric.clone(),
+            output_domain,
             middle_metric,
+            Function::then_expr(move |expr| expr.to_physical()),
             StabilityMap::new(Clone::clone),
         )?
 }

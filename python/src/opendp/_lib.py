@@ -20,7 +20,8 @@ ATOM_EQUIVALENCE_CLASSES: MutableMapping[str, Sequence[str]] = {
 
 def _load_library():
     default_lib_dir = Path(__file__).absolute().parent / "lib"
-    lib_dir = Path(os.environ.get("OPENDP_LIB_DIR", default_lib_dir))
+    lib_envvar = "OPENDP_LIB_DIR"
+    lib_dir = Path(os.environ.get(lib_envvar, default_lib_dir))
     if not lib_dir.exists():
         # fall back to default location of binaries in a developer install
         build_dir = 'debug' if os.environ.get('OPENDP_TEST_RELEASE', "false") == "false" else 'release'
@@ -36,8 +37,10 @@ def _load_library():
             and any(p.name.endswith(suffix) for suffix in suffixes)
         ]
         
-        if len(lib_dir_file_names) != 1:
-            raise Exception(f"Expected exactly one binary to be present in {lib_dir}. Got: {lib_dir_file_names}")  # pragma: no cover
+        if len(lib_dir_file_names) != 1:  # pragma: no cover
+            value = os.environ.get(lib_envvar)
+            envvar_info = f" ({lib_envvar}='{value}')" if value is not None else ""
+            raise Exception(f"Expected exactly one binary to be present in '{lib_dir}'{envvar_info}. Got: {lib_dir_file_names}")
         
         lib_path = lib_dir / lib_dir_file_names[0]
         try:
@@ -79,7 +82,7 @@ def import_optional_dependency(name, raise_error=True):
         return None
 
 
-_np_csprng = None
+_np_csprng: Any = None
 _buffer_pos = 0 # TODO: Make this into a class rather than using ad-hoc globals.
 def get_np_csprng():
     global _np_csprng
@@ -132,6 +135,10 @@ class AnyObject(ctypes.Structure):
 
 
 class AnyMeasurement(ctypes.Structure):
+    pass  # Opaque struct
+
+
+class AnyOdometer(ctypes.Structure):
     pass  # Opaque struct
 
 

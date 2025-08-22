@@ -52,7 +52,7 @@ pub fn make_geometric<DI: NoiseDomain, MI: Metric, MO: Measure>(
     input_metric: MI,
     scale: f64,
     bounds: Option<(DI::Atom, DI::Atom)>,
-) -> Fallible<Measurement<DI, DI::Carrier, MI, MO>>
+) -> Fallible<Measurement<DI, MI, MO, DI::Carrier>>
 where
     DiscreteLaplace: MakeNoise<DI, MI, MO>,
     ConstantTimeGeometric<DI::Atom>: MakeNoise<DI, MI, MO>,
@@ -88,7 +88,7 @@ where
     fn make_noise(
         self,
         input_space: (AtomDomain<T>, AbsoluteDistance<QI>),
-    ) -> Fallible<Measurement<AtomDomain<T>, T, AbsoluteDistance<QI>, MO>> {
+    ) -> Fallible<Measurement<AtomDomain<T>, AbsoluteDistance<QI>, MO, T>> {
         let t_vec = make_vec(input_space)?;
         let m_geom = self.make_noise(t_vec.output_space())?;
         t_vec >> m_geom >> then_index_or_default(0)
@@ -112,7 +112,7 @@ where
     fn make_noise(
         self,
         (input_domain, input_metric): (VectorDomain<AtomDomain<T>>, L1Distance<QI>),
-    ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, Vec<T>, L1Distance<QI>, MO>> {
+    ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, L1Distance<QI>, MO, Vec<T>>> {
         let ConstantTimeGeometric {
             scale,
             bounds: (lower, upper),
@@ -140,13 +140,13 @@ where
 
         Measurement::new(
             input_domain,
+            input_metric,
+            output_measure,
             Function::new_fallible(move |arg: &Vec<T>| {
                 arg.iter()
                     .map(|v| sample_discrete_laplace_linear::<T, f64>(*v, scale, (lower, upper)))
                     .collect()
             }),
-            input_metric,
-            output_measure,
             PrivacyMap::new_fallible(move |d_in: &QI| {
                 let d_in = RBig::try_from(d_in.clone())
                     .map_err(|_| err!(FailedMap, "d_in ({d_in:?}) must be finite"))?;

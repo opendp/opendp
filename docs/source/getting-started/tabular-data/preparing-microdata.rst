@@ -15,22 +15,25 @@ microdata (column addition and filtering).
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> import polars as pl
             >>> import opendp.prelude as dp
             >>> dp.enable_features("contrib")
-            
+
             >>> context = dp.Context.compositor(
             ...     # Many columns contain mixtures of strings and numbers and cannot be parsed as floats,
             ...     # so we'll set `ignore_errors` to true to avoid conversion errors.
-            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path(), ignore_errors=True),
+            ...     data=pl.scan_csv(
+            ...         dp.examples.get_france_lfs_path(),
+            ...         ignore_errors=True,
+            ...     ),
             ...     privacy_unit=dp.unit_of(contributions=36),
             ...     privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
             ...     split_evenly_over=4,
-            ...     margins=[dp.polars.Margin(max_length=150_000 * 36)]
+            ...     margins=[dp.polars.Margin(max_length=150_000 * 36)],
             ... )
-            
+
 
 OpenDP allows expressions used in the ``.select`` context and ``.agg`` context to
 change the number and order of rows, whereas expressions used in the
@@ -51,16 +54,23 @@ adds those columns to the data.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> query_hwusual_binned = (
             ...     context.query()
             ...     # shadows the usual work hours "HWUSUAL" column with binned data
-            ...     .with_columns(pl.col.HWUSUAL.cut(breaks=[0, 20, 40, 60, 80, 98], left_closed=True))
+            ...     .with_columns(
+            ...         pl.col.HWUSUAL.cut(
+            ...             breaks=[0, 20, 40, 60, 80, 98],
+            ...             left_closed=True,
+            ...         )
+            ...     )
             ...     .group_by(pl.col.HWUSUAL)
             ...     .agg(dp.len())
             ... )
-            >>> query_hwusual_binned.release().collect().sort("HWUSUAL") # doctest: +FUZZY_DF
+            >>> query_hwusual_binned.release().collect().sort(
+            ...     "HWUSUAL"
+            ... )  # doctest: +FUZZY_DF
             shape: (7, 2)
             ┌───────────┬─────────┐
             │ HWUSUAL   ┆ len     │
@@ -75,7 +85,7 @@ adds those columns to the data.
             │ [80, 98)  ┆ ...     │
             │ [98, inf) ┆ ...     │
             └───────────┴─────────┘
-            
+
 
 To ensure that the privacy unit remains meaningful, expressions passed
 into ``.with_columns`` must be row-by-row, meaning that the expression
@@ -112,7 +122,7 @@ Documentation <https://docs.pola.rs/user-guide/concepts/expressions-and-contexts
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> query_total_hours_worked = (
             ...     context.query()
@@ -120,7 +130,10 @@ Documentation <https://docs.pola.rs/user-guide/concepts/expressions-and-contexts
             ...     .filter(pl.col.HWUSUAL != 99)
             ...     .select(pl.col.HWUSUAL.dp.sum((0, 80)))
             ... )
-            >>> print('sum:', query_total_hours_worked.release().collect().item()) # doctest: +ELLIPSIS
+            >>> print(
+            ...     "sum:",
+            ...     query_total_hours_worked.release().collect().item(),
+            ... )  # doctest: +ELLIPSIS
             sum: ...
 
 
@@ -146,14 +159,20 @@ these expressions must be row-by-row.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> query_hwusual_binned = (
             ...     context.query()
-            ...     .group_by(pl.col.HWUSUAL.cut([0, 20, 40, 60, 80, 98], left_closed=True))
+            ...     .group_by(
+            ...         pl.col.HWUSUAL.cut(
+            ...             [0, 20, 40, 60, 80, 98], left_closed=True
+            ...         )
+            ...     )
             ...     .agg(dp.len())
             ... )
-            >>> query_hwusual_binned.release().collect().sort("HWUSUAL") # doctest: +FUZZY_DF
+            >>> query_hwusual_binned.release().collect().sort(
+            ...     "HWUSUAL"
+            ... )  # doctest: +FUZZY_DF
             shape: (7, 2)
             ┌───────────┬─────────┐
             │ HWUSUAL   ┆ len     │
@@ -194,7 +213,7 @@ private mean.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> query_hwusual_binned = (
             ...     context.query()
@@ -203,7 +222,11 @@ private mean.
             ...     .group_by(pl.col.PIDENT % 1000)
             ...     .agg(pl.col.HWUSUAL.min())
             ...     # up to 1000 records left to work with to compute a DP mean
-            ...     .select(pl.col.HWUSUAL.cast(int).fill_null(0).dp.mean((0, 30)))
+            ...     .select(
+            ...         pl.col.HWUSUAL.cast(int)
+            ...         .fill_null(0)
+            ...         .dp.mean((0, 30))
+            ...     )
             ... )
             >>> query_hwusual_binned.summarize()
             shape: (2, 4)
@@ -226,18 +249,25 @@ the context doesn’t know that all records from a user share the same
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> context_pident = dp.Context.compositor(
-            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path(), ignore_errors=True),
-            ...     privacy_unit=dp.unit_of(contributions=[
-            ...         dp.polars.Bound(per_group=36),
-            ...         # a user can only be in one group at a time when grouped this way
-            ...         dp.polars.Bound(by=[pl.col.PIDENT % 1000], num_groups=1),
-            ...     ]),
+            ...     data=pl.scan_csv(
+            ...         dp.examples.get_france_lfs_path(),
+            ...         ignore_errors=True,
+            ...     ),
+            ...     privacy_unit=dp.unit_of(
+            ...         contributions=[
+            ...             dp.polars.Bound(per_group=36),
+            ...             # a user can only be in one group at a time when grouped this way
+            ...             dp.polars.Bound(
+            ...                 by=[pl.col.PIDENT % 1000], num_groups=1
+            ...             ),
+            ...         ]
+            ...     ),
             ...     privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
             ...     split_evenly_over=4,
-            ...     margins=[dp.polars.Margin(max_length=150_000 * 36)]
+            ...     margins=[dp.polars.Margin(max_length=150_000 * 36)],
             ... )
             >>> query_hwusual_binned = (
             ...     context_pident.query()
@@ -246,7 +276,11 @@ the context doesn’t know that all records from a user share the same
             ...     .group_by(pl.col.PIDENT % 1000)
             ...     .agg(pl.col.HWUSUAL.min())
             ...     # up to 1000 records left to work with to compute a DP mean
-            ...     .select(pl.col.HWUSUAL.cast(int).fill_null(0).dp.mean((0, 30)))
+            ...     .select(
+            ...         pl.col.HWUSUAL.cast(int)
+            ...         .fill_null(0)
+            ...         .dp.mean((0, 30))
+            ...     )
             ... )
             >>> query_hwusual_binned.summarize()
             shape: (2, 4)

@@ -22,11 +22,11 @@ us if you are interested in proof-writing. Thank you!
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> import opendp.prelude as dp
             >>> dp.enable_features("contrib")
-            
+
 
 Privatization
 -------------
@@ -73,12 +73,13 @@ following six elements:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> # construct the measurement
             >>> rr_bool_meas = dp.m.make_randomized_response_bool(prob=0.75)
-            
-            >>> # invoke the measurement on some survey response to execute the randomized response algorithm
+
+            >>> # invoke the measurement on some survey response to execute
+            >>> # the randomized response algorithm
             >>> alice_survey_response = True
             >>> print("noisy release:", rr_bool_meas(alice_survey_response))
             noisy release: ...
@@ -95,13 +96,16 @@ custom category set:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> # construct the measurement
             >>> categories = ["A", "B", "C", "D"]
-            >>> rr_meas = dp.m.make_randomized_response(categories, prob=0.75)
-            
-            >>> # invoke the measurement on some survey response, to execute the randomized response algorithm
+            >>> rr_meas = dp.m.make_randomized_response(
+            ...     categories, prob=0.75
+            ... )
+
+            >>> # invoke the measurement on some survey response, to execute
+            >>> # the randomized response algorithm
             >>> alice_survey_response = "C"
             >>> print("noisy release:", rr_meas(alice_survey_response))
             noisy release: ...
@@ -123,22 +127,25 @@ actually responded with ``True``.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> import numpy as np
             >>> num_responses = 1000
-            
-            >>> true_probability = .23
-            
+
+            >>> true_probability = 0.23
+
             >>> private_bool_responses = []
-            
+
             >>> for _ in range(num_responses):
-            ...     response = bool(np.random.binomial(n=1, p=true_probability))
+            ...     response = bool(
+            ...         np.random.binomial(n=1, p=true_probability)
+            ...     )
             ...     randomized_response = rr_bool_meas(response)
             ...     private_bool_responses.append(randomized_response)
-            
+            ...
+
             >>> naive_proportion = np.mean(private_bool_responses)
-            >>> print('naive proportion:', naive_proportion)
+            >>> print("naive proportion:", naive_proportion)
             naive proportion: ...
 
 We know the true probability is .23, so our estimate is off!
@@ -176,17 +183,19 @@ The resulting expression is distilled into the following function:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> def debias_randomized_response_bool(mean_release, p):
             ...     """Adjust for the bias of the mean of a boolean RR dataset."""
             ...     assert 0 <= mean_release <= 1
             ...     assert 0 <= p <= 1
-            ...     
             ...     return (mean_release + p - 1) / (2 * p - 1)
-            
-            >>> estimated_bool_proportion = debias_randomized_response_bool(naive_proportion, .75)
-            >>> print('estimated:', estimated_bool_proportion)
+            ...
+
+            >>> estimated_bool_proportion = debias_randomized_response_bool(
+            ...     naive_proportion, 0.75
+            ... )
+            >>> print("estimated:", estimated_bool_proportion)
             estimated: ...
 
 As expected, the bias correction admits a useful estimate of the
@@ -199,24 +208,29 @@ The categorical randomized response will suffer the same bias:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> import numpy as np
             >>> num_responses = 1000
-            
+
             >>> true_probability = [0.1, 0.4, 0.3, 0.2]
-            
+
             >>> private_cat_responses = []
-            
+
             >>> for _ in range(num_responses):
-            ...     response = np.random.choice(categories, p=true_probability)
+            ...     response = np.random.choice(
+            ...         categories, p=true_probability
+            ...     )
             ...     randomized_response = rr_meas(response)
             ...     private_cat_responses.append(randomized_response)
-            
+            ...
+
             >>> from collections import Counter
-            
+
             >>> counter = Counter(private_cat_responses)
-            >>> naive_cat_proportions = [counter[cat] / num_responses for cat in categories]
+            >>> naive_cat_proportions = [
+            ...     counter[cat] / num_responses for cat in categories
+            ... ]
             >>> naive_cat_proportions
             [..., ..., ..., ...]
 
@@ -258,17 +272,20 @@ This formula is represented in the following function:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> def debias_randomized_response(mean_releases, p):
             ...     """Adjust for the bias of the mean of a categorical RR dataset."""
             ...     mean_releases = np.array(mean_releases)
-            ...     assert all(mean_releases >= 0) and abs(sum(mean_releases) - 1) < 1e-6
+            ...     assert (
+            ...         all(mean_releases >= 0)
+            ...         and abs(sum(mean_releases) - 1) < 1e-6
+            ...     )
             ...     assert 0 <= p <= 1
-            ...     
             ...     k = len(mean_releases)
             ...     return (mean_releases * (k - 1) + p - 1) / (p * k - 1)
-            
+            ...
+
 
 We similarly estimate population parameters in the categorical setting:
 
@@ -277,10 +294,12 @@ We similarly estimate population parameters in the categorical setting:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
-            >>> estimated_cat_proportions = debias_randomized_response(naive_cat_proportions, .75)
-            
+            >>> estimated_cat_proportions = debias_randomized_response(
+            ...     naive_cat_proportions, 0.75
+            ... )
+
             >>> print("true probability:", true_probability)
             true probability: [0.1, 0.4, 0.3, 0.2]
             >>> print("estimated probability:", estimated_cat_proportions)
@@ -297,11 +316,16 @@ each category:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
-            >>> print("biased boolean count:", np.sum(private_bool_responses))
+            >>> print(
+            ...     "biased boolean count:", np.sum(private_bool_responses)
+            ... )
             biased boolean count: ...
-            >>> print("biased categorical count:", dict(sorted(Counter(private_cat_responses).items())))
+            >>> print(
+            ...     "biased categorical count:",
+            ...     dict(sorted(Counter(private_cat_responses).items())),
+            ... )
             biased categorical count: {'A': ..., 'B': ..., 'C': ..., 'D': ...}
 
 Since the dataset size is known, simply post-process the mean estimates:
@@ -311,13 +335,22 @@ Since the dataset size is known, simply post-process the mean estimates:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
-            >>> estimated_bool_count = int(estimated_bool_proportion * num_responses)
-            >>> estimated_cat_count = dict(zip(categories, (estimated_cat_proportions * num_responses).astype(int)))
-            
+            >>> estimated_bool_count = int(
+            ...     estimated_bool_proportion * num_responses
+            ... )
+            >>> estimated_cat_count = dict(
+            ...     zip(
+            ...         categories,
+            ...         (estimated_cat_proportions * num_responses).astype(
+            ...             int
+            ...         ),
+            ...     )
+            ... )
+
             >>> print("unbiased boolean count:", estimated_bool_count)
             unbiased boolean count: ...
             >>> print("unbiased categorical count:", estimated_cat_count)
             unbiased categorical count: {'A': ..., 'B': ..., 'C': ..., 'D': ...}
-            
+

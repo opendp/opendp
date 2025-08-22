@@ -6,19 +6,21 @@ For more context, see :ref:`context in the User Guide <context-user-guide>`.
 For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
 We suggest importing under the conventional name ``dp``:
 
-.. code:: python
+.. code:: pycon
 
     >>> import opendp.prelude as dp
 """
 
 import logging
-from typing import Any, Callable, Optional, Sequence, Union, MutableMapping
+from typing import Any, Callable, Optional, Sequence, Type, Union, MutableMapping
 import importlib
 from inspect import signature
 from functools import partial
 from opendp.combinators import (
     make_fix_delta,
     make_approximate,
+    make_fully_adaptive_composition,
+    make_privacy_filter,
     make_pureDP_to_zCDP,
     make_adaptive_composition,
     make_zCDP_to_approxDP,
@@ -28,7 +30,6 @@ from opendp.extras._utilities import supports_partial, to_then
 from opendp.measurements import make_laplace, make_gaussian
 from opendp.measures import (
     approximate,
-    fixed_smoothed_max_divergence,
     max_divergence,
     zero_concentrated_divergence,
 )
@@ -50,6 +51,8 @@ from opendp.mod import (
     Measurement,
     Metric,
     _PartialConstructor,
+    Odometer,
+    OdometerQueryable,
     Queryable,
     Transformation,
     Measure,
@@ -106,7 +109,7 @@ def register(
     then the input domain and input metric are omitted when called via the Context API.
 
     Constructor requirements:
-    
+
     * The constructor must return a transformation or measurement.
     * If name is None, the constructor's name must start with ``make_``.
 
@@ -342,7 +345,7 @@ def unit_of(
     ordered: bool = False,
     U=None,
 ) -> tuple[Metric, Union[float, Sequence[Bound]]]:
-    """Constructs a unit of privacy, consisting of a metric and a dataset distance. 
+    """Constructs a unit of privacy, consisting of a metric and a dataset distance.
     The parameters are mutually exclusive.
 
     >>> import opendp.prelude as dp
@@ -371,32 +374,34 @@ def unit_of(
         if identifier is not None or ordered or U is not None:
             raise ValueError('"local" must be the only parameter')
         return discrete_distance(), int(local)
-    
+
     if ordered:
         if contributions is None and changes is None:
-            raise ValueError('"ordered" is only valid with "changes" or "contributions"')
+            raise ValueError(
+                '"ordered" is only valid with "changes" or "contributions"'
+            )
         if identifier is not None:
             raise ValueError('"ordered" must be False when "identifier" is set')
-        
+
     if contributions is not None:
         if identifier is None:
             metric = insert_delete_distance() if ordered else symmetric_distance()
         else:
             metric = symmetric_id_distance(identifier)
-        
+
         if isinstance(contributions, Sequence):
             metric = frame_distance(metric)
-            
+
         return metric, contributions
-    
+
     if changes is not None:
         if identifier is None:
             metric = hamming_distance() if ordered else change_one_distance()
         else:
             metric = change_one_id_distance(identifier)
-    
+
         return metric, changes
-    
+
     if absolute is not None:
         metric = absolute_distance(T=RuntimeType.parse_or_infer(U, absolute))
         return metric, absolute
@@ -406,8 +411,8 @@ def unit_of(
     if l2 is not None:
         metric = l2_distance(T=RuntimeType.parse_or_infer(U, l2))
         return metric, l2
-    
-    raise Exception('No matching metric found')  # pragma: no cover
+
+    raise Exception("No matching metric found")  # pragma: no cover
 
 
 class Context(object):
@@ -419,13 +424,15 @@ class Context(object):
     :param queryable: Executes the queries and tracks the privacy expenditure.
     :param d_in: An upper bound on the distance between adjacent datasets.
     :param d_mids: A sequence of privacy losses for each query to be sent to the queryable. Used for compositors.
-    :param d_out: An upper bound on the overall privacy loss. Used for filters."""
+    :param d_out: An upper bound on the overall privacy loss. Used for filters.
+    :param query_space: The input space of queries to the context. If not specified, it defaults to the input space of the compositor.
+    """
 
-    accountant: Measurement  # union Odometer once merged
+    accountant: Union[Measurement, Odometer]
     """The accountant is the measurement used to spawn the queryable.
     It contains information about the queryable, 
     such as the input domain, input metric, and output measure expected of measurement queries sent to the queryable."""
-    queryable: Queryable
+    queryable: Union[Queryable, OdometerQueryable]
     """The queryable executes the queries and tracks the privacy expenditure."""
 
     def __init__(
@@ -433,38 +440,38 @@ class Context(object):
         accountant: Measurement,
         queryable: Queryable,
         d_in: Union[float, Sequence[Bound]],
-        d_mids: Optional[Sequence[float]] = None,
-        d_out: Optional[float] = None,
-        space_override: Optional[
-            tuple[Domain, Metric]
-        ] = None,  # TODO: Document or add leading underscore and explain that is is for internal use only.
+        d_mids: Optional[Union[list[float], list[tuple[float, float]]]] = None,
+        d_out: Optional[Union[float, tuple[float, float]]] = None,
+        query_space: Optional[tuple[Domain, Metric]] = None,
     ):
         self.accountant = accountant
         self.queryable = queryable
         self.d_in = d_in
         self.d_mids = d_mids
         self.d_out = d_out
-        self.space_override = space_override
+
+        self.d_mids_consumed: Union[list[float], list[tuple[float, float]]] = []
+        self.query_space = query_space
 
     def __repr__(self) -> str:
         return f"""Context(
     accountant = {indent(repr(self.accountant))},
     d_in       = {self.d_in},
-    d_mids     = {self.d_mids})"""
-
-    # TODO: Add "d_out" when filters are implemented.
+    d_mids     = {self.d_mids},
+    d_out      = {self.d_out})"""
 
     def deserialize_polars_plan(self, serialized_plan: bytes) -> "LazyFrameQuery":
-        '''
+        """
         Given a serialized Polars plan, wraps it with a LazyFrameQuery.
         See the :ref:`serialization documentation <lazyframe-serialization>`
         for context and full example.
 
         :param serialized_plan: A plan like that returned by ``query.polars_plan.serialize()``
-        '''
+        """
         import io
-        pl = import_optional_dependency('polars')
-        
+
+        pl = import_optional_dependency("polars")
+
         new_plan = pl.LazyFrame.deserialize(io.BytesIO(serialized_plan))
         new_query = self.query()
         if not isinstance(new_query, LazyFrameQuery):
@@ -513,11 +520,11 @@ class Context(object):
                     DeprecationWarning,
                 )
                 margins = [replace(margin, by=by) for by, margin in margins.items()]
-            
+
             for margin in margins:
                 domain = with_margin(domain, margin)
 
-        accountant, d_mids = _adaptive_composition_by_weights(
+        accountant, d_mids, d_out = _normalize_compositor(
             domain, privacy_unit, privacy_loss, split_evenly_over, split_by_weights
         )
 
@@ -537,13 +544,17 @@ class Context(object):
             queryable=queryable,
             d_in=privacy_unit[1],
             d_mids=d_mids,
+            d_out=d_out,
         )
 
     def __call__(self, query: Measurement):
         """Executes the given query on the context."""
         answer = self.queryable(query)
-        if self.d_mids is not None:
-            self.d_mids = self.d_mids[1:]
+
+        # pop won't fail if queryable returned an answer
+        self.d_mids_consumed.append(
+            query.map(self.d_in) if self.d_mids is None else self.d_mids.pop(0)  # type: ignore[arg-type]
+        )
         return answer
 
     def query(self, **kwargs) -> Union["Query", LazyFrameQuery]:
@@ -565,16 +576,21 @@ class Context(object):
                     "Privacy allowance has been exhausted"
                 )  # pragma: no cover
             d_query = self.d_mids[0]
-        elif kwargs:  # pragma: no cover
-            # TODO: Is there a way to reach this? The usual ways of constructing a Context will populate d_mids.
-            # TODO: Update the docstring if we do remove this.
-            measure, d_query = loss_of(**kwargs)  # type: ignore[assignment]
-            if measure != self.output_measure:  # type: ignore[attr-defined]
-                raise ValueError(
-                    f"Expected output measure {self.output_measure} but got {measure}"  # type: ignore[attr-defined]
-                )
+        elif kwargs:
+            measure, d_query = loss_of(**kwargs)
 
-        chain = self.space_override or self.accountant.input_space
+            if measure != self.accountant.output_measure:
+                measure_type = self.accountant.output_measure.type
+                msg = f"Expected output measure {self.accountant.output_measure} but got {measure}."
+                if (
+                    isinstance(measure_type, RuntimeType)
+                    and measure_type.origin == "Approximate"
+                    and "delta" not in kwargs
+                ):
+                    msg += " Consider setting `delta=0.0` in your query."
+                raise ValueError(msg)
+
+        chain = self.query_space or self.accountant.input_space
         query = Query(
             chain=chain,
             output_measure=self.accountant.output_measure,
@@ -593,8 +609,38 @@ class Context(object):
 
         return query
 
+    def current_privacy_loss(self):
+        """When the query losses are static, returns the list of consumed privacy losses,
+        otherwise returns the current privacy loss of the queryable."""
+        if isinstance(self.queryable, OdometerQueryable):
+            return self.queryable.privacy_loss(self.d_in)
+        return self.d_mids_consumed.copy()
 
-Chain = Union[tuple[Domain, Metric], Transformation, Measurement, "PartialChain"]
+    def remaining_privacy_loss(self):
+        """Returns the remaining privacy loss."""
+        if isinstance(self.queryable, OdometerQueryable):
+            if self.d_out is None:
+                raise ValueError("The privacy loss is unbounded.")
+
+            def _sub(a, b):
+                if (
+                    isinstance(a, tuple)
+                    and isinstance(b, tuple)
+                    and len(a) == len(b) == 2
+                ):
+                    return a[0] - b[0], a[1] - b[1]
+                else:
+                    return a - b
+
+            return _sub(self.d_out, self.queryable.privacy_loss(self.d_in))
+
+
+        return None if self.d_mids is None else self.d_mids.copy()
+
+
+Chain = Union[
+    tuple[Domain, Metric], Transformation, Measurement, Odometer, "PartialChain"
+]
 
 
 class Query(object):
@@ -619,14 +665,14 @@ class Query(object):
     """The context that the query is part of. ``query.release()`` submits ``_chain`` to ``_context``."""
     _wrap_release: Optional[Callable[[Any], Any]]
     """For internal use. A function that wraps the release of the query. 
-    Used to wrap the response of compositor/odometer queries in another ``Analysis``."""
+    Used to wrap the response of compositor/odometer queries in another ``Context``."""
 
     def __init__(
         self,
         chain: Chain,
-        output_measure: Measure = None, # type: ignore[assignment]
+        output_measure: Measure,
         d_in: Optional[Union[float, Sequence[Bound]]] = None,
-        d_out: Optional[float] = None,
+        d_out: Optional[Union[float, tuple[float, float]]] = None,
         context: "Context" = None,  # type: ignore[assignment]
         _wrap_release=None,
     ) -> None:
@@ -638,18 +684,21 @@ class Query(object):
         self._wrap_release = _wrap_release
 
     def __repr__(self) -> str:
+        context = ""
+        if self._context is not None:
+            context = f""",\n    context        = {indent(repr(self._context))}"""
+
         return f"""Query(
     chain          = {indent(repr(self._chain))},
     output_measure = {self._output_measure},
     d_in           = {self._d_in},
-    d_out          = {self._d_out},
-    context        = {indent(repr(self._context))})"""
+    d_out          = {self._d_out}{context})"""
 
     def __getattr__(self, name: str) -> Callable[..., "Query"]:
         """Creates a new query by applying a transformation or measurement to the current chain."""
         if name == "canonical_noise":
             return self._canonical_noise
-        
+
         if name not in constructors:
             raise AttributeError(
                 f"Unrecognized constructor: '{name}'"
@@ -690,7 +739,7 @@ class Query(object):
             return self.new_with(chain=new_chain)
 
         return make
-    
+
     def _canonical_noise(self, binomial_size: Optional[int] = None):
         """Make a measurement that adds noise from the canonical noise distribution.
 
@@ -723,7 +772,7 @@ class Query(object):
                 "Canonical noise requires all arguments in the input query to be specified."
             )
         else:
-            raise ValueError( # pragma: no cover
+            raise ValueError(  # pragma: no cover
                 f"Canonical noise expects a metric space or transformation as the prior query, found {self._chain}"
             )
 
@@ -750,39 +799,82 @@ class Query(object):
         """
         return super().__dir__() + list(constructors.keys())  # type: ignore[operator]
 
-    def resolve(self, allow_transformations: bool = False):
-        """Resolve the query into a measurement.
+    def resolve(
+        self,
+        allow_transformations: bool = False,
+        bounds: Optional[tuple[float, float]] = None,
+        T: Optional[Union[Type[float], Type[int]]] = None,
+    ) -> Union[Transformation, Measurement, Odometer]:
+        """Resolve the query into a transformation, measurement or odometer.
 
-        :param allow_transformations: If true, allow the response to be a transformation instead of a measurement.
+        :param allow_transformations: If true, allow the response to be a transformation.
+        :param bounds: Search for a potentially missing parameter of interest within these bounds.
+        :param T: The type of the parameter to search for. Either ``float`` or ``int``.
         """
         # resolve a partial chain into a measurement, by fixing the input and output distances
         if isinstance(self._chain, PartialChain):
             assert self._d_in is not None
             assert self._d_out is not None
-            chain = self._chain.fix(self._d_in, self._d_out, self._output_measure)
+            chain = self._chain.fix(
+                self._d_in, self._d_out, self._output_measure, bounds=bounds, T=T
+            )
         else:
             chain = self._chain
         if not allow_transformations and isinstance(chain, Transformation):
-            raise ValueError("Query is not yet a measurement")
+            raise ValueError("Query is not yet a measurement or odometer.")
         return _cast_measure(chain, self._output_measure, self._d_out)
 
-    def release(self) -> Any:
-        """Release the query. The query must be part of a context."""
-        # TODO: consider adding an optional `data` parameter for when _context is None
-        answer = self._context(self.resolve())  # type: ignore[misc]
+    def release(
+        self,
+        data=None,
+        bounds: Optional[tuple[float, float]] = None,
+        T: Optional[Union[Type[float], Type[int]]] = None,
+    ):
+        """Release the query. The query must be part of a context.
+
+        :param data: The data to be analyzed. If not specified, the query must be part of a context.
+        :param bounds: Search for a potentially missing parameter of interest within these bounds.
+        :param T: The type of the parameter to search for. Either ``float`` or ``int``.
+        """
+        if self._context is not None and data is not None:
+            raise ValueError("Cannot specify data when the query is part of a context.")
+
+        measurement = self.resolve(bounds=bounds, T=T)
+
+        if self._context is not None:
+            answer = self._context(measurement)
+        elif data is not None:
+            answer = measurement(data)
+        else:
+            raise ValueError("Cannot release query without data or context.")
+
         if self._wrap_release:
             answer = self._wrap_release(answer)
+
         return answer
 
-    def param(self):
-        """Returns the discovered parameter, if there is one."""
-        return getattr(self.resolve(), "param", None)
+    def param(
+        self,
+        allow_transformations=False,
+        bounds: Optional[tuple[float, float]] = None,
+        T: Optional[Union[Type[float], Type[int]]] = None,
+    ):
+        """Returns the discovered parameter, if there is one.
+
+        :param allow_transformations: If true, allow the response to be a transformation.
+        :param bounds: Search for a potentially missing parameter of interest within these bounds.
+        :param T: The type of the parameter to search for. Either ``float`` or ``int``.
+        """
+        resolved = self.resolve(
+            allow_transformations=allow_transformations, bounds=bounds, T=T
+        )
+        return getattr(resolved, "param", None)
 
     def compositor(
         self,
         split_evenly_over: Optional[int] = None,
         split_by_weights: Optional[Sequence[float]] = None,
-        d_out: Optional[float] = None,
+        d_out: Optional[Union[float, tuple[float, float]]] = None,
         output_measure: Optional[Measure] = None,
         alpha: Optional[float] = None,
     ) -> "Query":
@@ -797,15 +889,12 @@ class Query(object):
         :param alpha: Optional parameter to split delta between zCDP conversion and δ-approximate in approx-ZCDP
         """
 
-        if d_out is not None and self._d_out is not None:
-            raise ValueError(
-                "`d_out` has already been specified in query"
-            )  # pragma: no cover
-        if d_out is None and self._d_out is None:
-            raise ValueError(
-                "`d_out` has not yet been specified in the query"
-            )  # pragma: no cover
         d_out = d_out or self._d_out
+
+        if d_out is None:
+            raise ValueError(
+                "`d_out` is unknown. Please specify it in the query."
+            )  # pragma: no cover
 
         if output_measure is not None:
             d_out = _translate_measure_distance(
@@ -820,10 +909,9 @@ class Query(object):
                 d_in = chain.map(d_in)
 
             privacy_unit = input_metric, d_in
-            assert d_out is not None
             privacy_loss = output_measure or self._output_measure, d_out
 
-            accountant, d_mids = _adaptive_composition_by_weights(
+            accountant, d_mids, _ = _normalize_compositor(
                 input_domain,
                 privacy_unit,
                 privacy_loss,
@@ -839,7 +927,8 @@ class Query(object):
                     queryable=queryable,
                     d_in=d_in,
                     d_mids=d_mids,
-                    space_override=(input_domain, input_metric),
+                    d_out=d_out,
+                    query_space=(input_domain, input_metric),
                 )
 
             return self.new_with(chain=accountant, wrap_release=_wrap_release)
@@ -874,19 +963,31 @@ class PartialChain(object):
         """Returns the transformation or measurement with the given parameter."""
         return self.partial(v)
 
-    def fix(self, d_in: Union[float, Sequence[Bound]], d_out: float, output_measure: Optional[Measure] = None, T=None):
+    def fix(
+        self,
+        d_in: Union[float, Sequence[Bound]],
+        d_out: Union[float, tuple[float, float]],
+        output_measure: Optional[Measure] = None,
+        bounds: Optional[tuple[float, float]] = None,
+        T=None,
+    ):
         """Returns the closest transformation or measurement that satisfies the given stability or privacy constraint.
 
         The discovered parameter is assigned to the param attribute of the returned transformation or measurement.
 
-        :param d_in:
-        :param d_out:
-        :param output_measure:
-        :param T:
+        :param d_in: Upper bound on the distance between adjacent input datasets.
+        :param d_out: Upper bound on the distance between adjacent output distributions.
+        :param output_measure: How to measure distances between output distributions.
+        :param bounds: The bounds for the parameter search.
+        :param T: The type of the parameter to search for.
         """
         # When the output measure corresponds to approx-DP, only optimize the epsilon parameter.
         # The delta parameter should be fixed in _cast_measure, and if not, then the search will be impossible here anyways.
-        if output_measure == fixed_smoothed_max_divergence():
+        if (
+            output_measure is not None
+            and isinstance(output_measure.type, RuntimeType)
+            and output_measure.type.origin == "Approximate"
+        ):
 
             def _predicate(param):
                 meas = _cast_measure(self(param), output_measure, d_out)
@@ -898,7 +999,7 @@ class PartialChain(object):
                 meas = _cast_measure(self(param), output_measure, d_out)
                 return meas.check(d_in, d_out)
 
-        param = binary_search(_predicate)
+        param = binary_search(_predicate, bounds=bounds, T=T)
         chain = self.partial(param)
         chain.param = param
         return chain
@@ -937,23 +1038,32 @@ class PartialChain(object):
         return _inner
 
 
-def _adaptive_composition_by_weights(
+def _normalize_compositor(
     domain: Domain,
     privacy_unit: tuple[Metric, Union[float, Sequence[Bound]]],
-    privacy_loss: tuple[Measure, float],
+    privacy_loss: tuple[Measure, Union[float, tuple[float, float]]],
     split_evenly_over: Optional[int] = None,
     split_by_weights: Optional[Sequence[float]] = None,
-) -> tuple[Measurement, Sequence[Any]]:
+) -> tuple[
+    Union[Measurement, Odometer],
+    Optional[Union[list[float], list[tuple[float, float]]]],
+    Optional[Any],
+]:
     """Constructs a sequential composition measurement
     where the ``d_mids`` are proportional to the weights.
 
     ``split_evenly_over`` and ``split_by_weights`` are mutually exclusive.
+
+    * composition: returns a measurement, d_mids, and None
+    * filter: returns a measurement, None, and d_out
+    * adaptive: returns a measurement, None, and None
 
     :param domain: the domain of the data
     :param privacy_unit: a tuple of the input metric and the data distance (``d_in``)
     :param privacy_loss: a tuple of the output measure and the privacy parameter (``d_out``)
     :param split_evenly_over: The number of parts to evenly distribute the privacy loss
     :param split_by_weights: A list of weights for each intermediate privacy loss
+    :return: a tuple of the measurement, d_mids, and d_out
     """
     input_metric, d_in = privacy_unit
     output_measure, d_out = privacy_loss
@@ -973,9 +1083,17 @@ def _adaptive_composition_by_weights(
         else:
             weights = [(d_out[0] * w, d_out[1] * w) for w in split_by_weights]
     else:
-        raise ValueError(
-            "Must specify either `split_evenly_over` or `split_by_weights`"
-        )  # pragma: no cover
+        odometer = make_fully_adaptive_composition(
+            input_domain=domain,
+            input_metric=input_metric,
+            output_measure=output_measure,
+        )
+
+        inf = float("inf")
+        if d_out in {inf, (inf, inf), (inf, 1.0)}:
+            return odometer, None, None
+
+        return make_privacy_filter(odometer, d_in, d_out), None, d_out
 
     def _mul(dist, scale: float):
         if isinstance(dist, tuple):
@@ -986,7 +1104,7 @@ def _adaptive_composition_by_weights(
     def _scale_weights(scale: float, weights):
         return [_mul(w, scale) for w in weights]
 
-    def _scale_sc(scale: float):
+    def _scale_ac(scale: float):
         return make_adaptive_composition(
             input_domain=domain,
             input_metric=input_metric,
@@ -995,10 +1113,10 @@ def _adaptive_composition_by_weights(
             d_mids=_scale_weights(scale, weights),
         )
 
-    scale = binary_search_param(_scale_sc, d_in=d_in, d_out=d_out, T=float)
+    scale = binary_search_param(_scale_ac, d_in=d_in, d_out=d_out, T=float)
 
     # return the accountant and d_mids
-    return _scale_sc(scale), _scale_weights(scale, weights)
+    return _scale_ac(scale), _scale_weights(scale, weights), None
 
 
 def _cast_measure(chain, to_measure: Optional[Measure] = None, d_to=None):
@@ -1039,7 +1157,7 @@ def _cast_measure(chain, to_measure: Optional[Measure] = None, d_to=None):
 
 def _translate_measure_distance(
     d_from, from_measure: Measure, to_measure: Measure, alpha: Optional[float] = None
-):
+) -> Union[float, tuple[float, float]]:
     """Translate a privacy loss ``d_from`` from ``from_measure`` to ``to_measure``.
 
     >>> _translate_measure_distance(1, dp.max_divergence(), dp.max_divergence())
@@ -1100,7 +1218,7 @@ def _translate_measure_distance(
         rho = _translate_measure_distance(
             (epsilon, delta_zCDP), from_measure, zero_concentrated_divergence()
         )
-        return rho, delta_inf
+        return rho, delta_inf  # type: ignore[return-value]
 
     raise ValueError(
         f"Unable to translate distance from {from_to[0]} to {from_to[1]}"
