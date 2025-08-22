@@ -1,9 +1,8 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Callable, Literal, Optional
+from typing import Callable, Literal, Optional, Any, Iterator, cast
 from functools import reduce
 from math import sqrt
-from typing import Any, Iterator, Optional, cast
 from opendp._internal import (
     _extrinsic_distance,
     _extrinsic_domain,
@@ -65,7 +64,7 @@ def mirror_descent(
     
     Replicate the API of this function to `use other optimizers from Private-PGM <https://private-pgm.readthedocs.io/en/latest/_autosummary_output/mbi.estimation.html#module-mbi.estimation>`_.
     """
-    from mbi.estimation import mirror_descent  # type: ignore[import-untyped]
+    from mbi.estimation import mirror_descent  # type: ignore[import-untyped,import-not-found]
 
     return mirror_descent(domain, loss_fn, potentials=potentials)
 
@@ -207,8 +206,8 @@ def make_stable_marginals(
     """Return a transformation that computes all marginals in a workload."""
     from opendp.extras.numpy import arrayd_domain
     from opendp.extras.polars import Bound
-    import polars as pl
-    import numpy as np
+    import polars as pl  # type: ignore[import-not-found]
+    import numpy as np  # type: ignore[import-not-found]
 
     if input_metric != frame_distance(symmetric_distance()):
         message = f"input_metric ({input_metric}) must be frame_distance(symmetric_distance())"
@@ -287,8 +286,8 @@ def make_noise_marginal(
 ) -> Measurement:
     """Make a measurement that releases a DP marginal"""
     from opendp.extras.numpy import NPArrayDDomain
-    import numpy as np
-    from mbi import LinearMeasurement  # type: ignore[import-untyped]
+    import numpy as np  # type: ignore[import-not-found]
+    from mbi import LinearMeasurement  # type: ignore[import-untyped,import-not-found]
 
     clique_domain = input_domain.cast(TypedDictDomain)[clique]
     inner_metric = input_metric.cast(TypedDictDistance).inner_metric
@@ -330,7 +329,7 @@ def row_major_order(keys: Iterator):
 def weight_marginals(
     marginals: dict[tuple[str, ...], Any], *new_marginals
 ) -> dict[tuple[str, ...], Any]:
-    from mbi import LinearMeasurement  # type: ignore[import-untyped]
+    from mbi import LinearMeasurement  # type: ignore[import-untyped,import-not-found]
 
     marginals = marginals.copy()
 

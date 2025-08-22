@@ -81,8 +81,8 @@ def make_sequential_marginals(
     :param algorithm: settings for the Sequenced algorithm
     """
     import_optional_dependency("mbi")
-    from mbi import MarkovRandomField  # type: ignore[import-untyped]
-    import numpy as np
+    from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
+    import numpy as np  # type: ignore[import-not-found]
 
     get_cardinalities(input_domain)
     if input_metric != frame_distance(symmetric_distance()):

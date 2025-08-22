@@ -85,7 +85,7 @@ def make_mst_marginals(
     :param algorithm: settings for the MST algorithm
     """
     import_optional_dependency("mbi")
-    from mbi import MarkovRandomField  # type: ignore[import-untyped]
+    from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
 
     if not isinstance(model, MarkovRandomField):
         raise ValueError("model must be a MarkovRandomField")
@@ -159,8 +159,8 @@ def _make_mst_select(
     num_selections: Optional[int] = None,
 ) -> Measurement:
     """Make a measurement that selects a set of cliques that will minimize error."""
-    from mbi import MarkovRandomField
-    from scipy.cluster.hierarchy import DisjointSet  # type: ignore[import-untyped]
+    from mbi import MarkovRandomField  # type: ignore[import-not-found]
+    from scipy.cluster.hierarchy import DisjointSet  # type: ignore[import-untyped,import-not-found]
 
     model = cast(MarkovRandomField, model)
 
@@ -223,8 +223,8 @@ def _make_mst_scores(
 ):
     """Make a transformation that assigns a score representing how poorly each query is estimated."""
     from opendp.extras.numpy import NPArrayDDomain
-    import numpy as np
-    from mbi import MarkovRandomField
+    import numpy as np  # type: ignore[import-not-found]
+    from mbi import MarkovRandomField  # type: ignore[import-not-found]
 
     for value_domain in input_domain.cast(TypedDictDomain).values():
         value_domain.cast(NPArrayDDomain)

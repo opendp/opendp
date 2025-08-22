@@ -13,7 +13,6 @@ from opendp.extras.mbi._utilities import (
     typed_dict_domain,
     weight_marginals,
 )
-import pytest
 
 
 def test_count_post_init():
@@ -162,8 +161,8 @@ def test_make_noise_marginal():
 
 def test_weight_marginals():
     pytest.importorskip("mbi")
-    import numpy as np
-    from mbi import LinearMeasurement  # type: ignore[import-untyped]
+    import numpy as np  # type: ignore[import-not-found]
+    from mbi import LinearMeasurement  # type: ignore[import-untyped,import-not-found]
 
     with pytest.raises(
         ValueError, match="each new marginal must be of type LinearMeasurement"
