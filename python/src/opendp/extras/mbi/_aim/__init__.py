@@ -48,13 +48,16 @@ if TYPE_CHECKING:  # pragma: no cover
 class AIM(Algorithm):
     """AIM mechanism from `MMSM22 <https://arxiv.org/abs/2201.12677>`_.
 
-    The algorithm is similar to the Multiplicative Weights Exponential Mechanism (MWEM) introduced in `HLM10 <https://arxiv.org/abs/1012.4763>`_,
-    in that the exponential mechanism selects a marginal in each step.
-
-    AIM differs from MWEM in that the distribution is represented via a graphical model and fitted via mirror descent,
-    instead of joint distribution densities and the multiplicative weights update rule.
-    This allows AIM to support higher-dimensional datasets.
+    Adaptively chooses and estimates the least-well-approximated marginal.
+    If the error is not reduced, 
+    the next round is allocated more of the total privacy budget.
     """
+    # The algorithm is similar to the Multiplicative Weights Exponential Mechanism (MWEM) introduced in `HLM10 <https://arxiv.org/abs/1012.4763>`_,
+    # in that the exponential mechanism selects a marginal in each step.
+
+    # AIM differs from MWEM in that the distribution is represented via a graphical model and fitted via mirror descent,
+    # instead of joint distribution densities and the multiplicative weights update rule.
+    # This allows AIM to support higher-dimensional datasets.
 
     queries: list[Count] | int = 3
     """Explicit workload of interactions, or maximum degree of interactions to consider."""
@@ -110,7 +113,7 @@ def make_aim_marginals(
     :param algorithm: settings for the AIM algorithm
     """
     import_optional_dependency("mbi")
-    from mbi import MarkovRandomField  # type: ignore[import-untyped]
+    from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
 
     if not isinstance(model, MarkovRandomField):
         raise ValueError("model must be a MarkovRandomField")
@@ -183,8 +186,8 @@ def _make_aim_marginal(
     algorithm: AIM,
 ) -> Optional[Measurement]:
     """Create an interactive measurement that computes one step of the AIM algorithm."""
-    import numpy as np
-    from mbi import MarkovRandomField, LinearMeasurement
+    import numpy as np  # type: ignore[import-not-found]
+    from mbi import MarkovRandomField, LinearMeasurement  # type: ignore[import-not-found]
     from opendp.extras.numpy import NPArrayDDomain
 
     model = cast(MarkovRandomField, model)
@@ -329,7 +332,7 @@ def _make_aim_scores(
     """Make a transformation that assigns a score representing how poorly each query is estimated."""
     from opendp.extras.numpy import NPArrayDDomain
     import numpy as np
-    from mbi import MarkovRandomField
+    from mbi import MarkovRandomField  # type: ignore[import-not-found]
 
     model = cast(MarkovRandomField, model)
 

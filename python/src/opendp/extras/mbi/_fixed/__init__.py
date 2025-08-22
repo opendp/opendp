@@ -73,7 +73,7 @@ def make_fixed_marginals(
     :param algorithm: settings for the Fixed algorithm
     """
     import_optional_dependency("mbi")
-    from mbi import MarkovRandomField  # type: ignore[import-untyped]
+    from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
 
     if not isinstance(model, MarkovRandomField):
         raise ValueError("model must be a MarkovRandomField")

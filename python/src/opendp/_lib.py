@@ -113,7 +113,6 @@ install_names = {
     'sklearn': 'scikit-learn',
     'randomgen': 'numpy',
     'scipy': 'scikit-learn',
-    'mbi': 'mbi',
 }
 
 

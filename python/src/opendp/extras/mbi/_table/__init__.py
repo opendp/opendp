@@ -67,8 +67,8 @@ class ContingencyTable:
     Any category appearing fewer than threshold times is attributed to the null category."""
 
     def __post_init__(self):
-        from mbi import MarkovRandomField, Domain  # type: ignore[import-untyped]
-        import polars as pl
+        from mbi import MarkovRandomField, Domain  # type: ignore[import-untyped,import-not-found]
+        import polars as pl  # type: ignore[import-not-found]
 
         if not isinstance(self.model, MarkovRandomField):  # pragma: no cover
             raise ValueError("model must be a MarkovRandomField")
@@ -101,8 +101,8 @@ class ContingencyTable:
         :param rows: if not set, approximately matches number of rows in original data
         :param method: "round" rounds to projection, "sample" samples from densities
         """
-        import polars as pl
-        from mbi import MarkovRandomField  # type: ignore[import-untyped]
+        import polars as pl  # type: ignore[import-not-found]
+        from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
 
         model = cast(MarkovRandomField, self.model)
 
@@ -118,7 +118,7 @@ class ContingencyTable:
 
         :param attrs: attributes to preserve. All other attributes are marginalized.
         """
-        from mbi import MarkovRandomField  # type: ignore[import-untyped]
+        from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
 
         model = cast(MarkovRandomField, self.model)
         return model.project(attrs).values
@@ -157,7 +157,7 @@ class ContingencyTable:
 
         :param attrs: attributes to preserve in uncertainty estimate
         """
-        from mbi import MarkovRandomField  # type: ignore[import-untyped]
+        from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
 
         model = cast(MarkovRandomField, self.model)
 
@@ -320,7 +320,7 @@ def make_contingency_table(
 
         potentials = None
         if isinstance(model, mbi.MarkovRandomField):
-            import attr
+            import attr  # type: ignore[import-not-found]
 
             potential_factor = attr.evolve(model.potentials, domain=mbi_domain)
             potentials = potential_factor.expand(list(current_marginals.keys()))
@@ -422,10 +422,10 @@ def _make_oneway_marginals(
     """Returns a measurement that releases keys and counts for one-way marginals,
     as well as the discovered scale and threshold."""
     from opendp.extras.polars import dp_len
-    import polars as pl
-    from mbi import LinearMeasurement
-    from mbi.estimation import minimum_variance_unbiased_total  # type: ignore[import-untyped]
-    import numpy as np
+    import polars as pl  # type: ignore[import-not-found]
+    from mbi import LinearMeasurement  # type: ignore[import-not-found]
+    from mbi.estimation import minimum_variance_unbiased_total  # type: ignore[import-untyped,import-not-found]
+    import numpy as np  # type: ignore[import-not-found]
 
     def group_by_agg(plan: pl.LazyFrame, name: str) -> pl.LazyFrame:
         """Aggregate the compute plan"""

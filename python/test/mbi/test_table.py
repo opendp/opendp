@@ -1,5 +1,4 @@
 import re
-from typing import Any
 from opendp.extras.mbi import Fixed, AIM, MST, ContingencyTable, Count, Sequential
 from opendp.extras.mbi._table import _get_null_index, _increasing, _unique, _with_null
 from opendp.extras.mbi._utilities import mirror_descent
@@ -34,8 +33,8 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
     else:
         keys["C"] = [0, 1, 2, 3, 4, 5, 6, 7]
 
-    import numpy as np
-    import polars as pl
+    import numpy as np  # type: ignore[import-not-found]
+    import polars as pl  # type: ignore[import-not-found]
 
     cov = np.array([[1.0, 0.75, 0.0], [0.75, 1.0, 0.0], [0.0, 0.0, 1.0]])
 
@@ -100,9 +99,9 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
 
 def test_contingency_table_int_cuts():
     pytest.importorskip("mbi")
-    from mbi import Domain, LinearMeasurement  # type: ignore[import-untyped]
-    import numpy as np
-    import polars as pl
+    from mbi import Domain, LinearMeasurement  # type: ignore[import-untyped,import-not-found]
+    import numpy as np  # type: ignore[import-not-found]
+    import polars as pl  # type: ignore[import-not-found]
 
     exact = [100, 200, 400, 300, 200]
 
@@ -126,11 +125,11 @@ def test_contingency_table_int_cuts():
 
 
 def test_contingency_table_project():
-    pytest.importorskip("polars")
-    from mbi import LinearMeasurement, Domain
-    import numpy as np
-    import polars as pl
-    from polars.testing import assert_frame_equal
+    pytest.importorskip("mbi")
+    from mbi import LinearMeasurement, Domain  # type: ignore[import-not-found]
+    import numpy as np  # type: ignore[import-not-found]
+    import polars as pl  # type: ignore[import-not-found]
+    from polars.testing import assert_frame_equal  # type: ignore[import-not-found]
 
     A_exact = [3, 5]
     B_exact = [1, 3, 4]
@@ -173,7 +172,7 @@ def test_contingency_table_project():
 
 def test_make_contingency_table_multi_fit():
     pytest.importorskip("mbi")
-    import polars as pl
+    import polars as pl  # type: ignore[import-not-found]
 
     data = {
         "A": list(range(5)) * 100,
@@ -221,7 +220,7 @@ def test_make_contingency_table_invalid_d_out():
 
 
 def get_model(domain: dict[str, int]):
-    from mbi import CliqueVector, MarkovRandomField, Domain
+    from mbi import CliqueVector, MarkovRandomField, Domain  # type: ignore[import-not-found]
 
     clique_vector = CliqueVector(domain=Domain.fromdict(domain), cliques=[], arrays={})
     return MarkovRandomField(potentials=clique_vector, marginals=clique_vector)
@@ -264,8 +263,8 @@ def test_contingency_table_misshapen_cut():
 
 
 def test_contingency_table_delta():
-    pytest.importorskip("polars")
-    import polars as pl
+    pytest.importorskip("mbi")
+    import polars as pl  # type: ignore[import-not-found]
 
     context = dp.Context.compositor(
         data=pl.LazyFrame({"A": [1]}),
@@ -299,8 +298,8 @@ def test_contingency_table_delta():
 
 
 def test_contingency_table_len():
-    pytest.importorskip("polars")
-    import polars as pl
+    pytest.importorskip("mbi")
+    import polars as pl  # type: ignore[import-not-found]
 
     context = dp.Context.compositor(
         data=pl.LazyFrame({"len": [1]}),
@@ -314,8 +313,8 @@ def test_contingency_table_len():
 
 
 def test_contingency_table_minimum_variance_weighted_total():
-    pytest.importorskip("polars")
-    import polars as pl
+    pytest.importorskip("mbi")
+    import polars as pl  # type: ignore[import-not-found]
 
     context = dp.Context.compositor(
         data=pl.LazyFrame({"A": [1] * 1000}),
@@ -335,7 +334,7 @@ def test_contingency_table_minimum_variance_weighted_total():
 
 def test_unique():
     pytest.importorskip("pl")
-    import polars as pl
+    import polars as pl  # type: ignore[import-not-found]
 
     with pytest.raises(ValueError, match='cuts must be unique: "col" has duplicates'):
         _unique(pl.Series("col", ["A", "A"]), "cuts")
@@ -343,7 +342,7 @@ def test_unique():
 
 def test_increasing():
     pytest.importorskip("pl")
-    import polars as pl
+    import polars as pl  # type: ignore[import-not-found]
 
     message = 'cuts must be strictly increasing: "col" is not strictly increasing'
     with pytest.raises(ValueError, match=message):
@@ -352,7 +351,7 @@ def test_increasing():
 
 def test_with_null():
     pytest.importorskip("pl")
-    import polars as pl
+    import polars as pl  # type: ignore[import-not-found]
 
     assert _with_null(pl.Series(["a", "b"])) == pl.Series(["a", "b", None])
     assert _with_null(pl.Series(["a", None, "b"])) == pl.Series(["a", None, "b"])
@@ -360,7 +359,7 @@ def test_with_null():
 
 def test_get_null_index():
     pytest.importorskip("pl")
-    import polars as pl
+    import polars as pl  # type: ignore[import-not-found]
 
     assert _get_null_index(pl.Series(["a", "b", None])) == 2
     assert _get_null_index(pl.Series(["a", None, "b"])) == 1

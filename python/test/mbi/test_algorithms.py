@@ -42,7 +42,7 @@ def make_sequential_marginals(*args, **kwargs):
 )
 def test_algorithm_err_elements(constructor):
     pytest.importorskip("mbi")
-    import mbi  # type: ignore[import-untyped]
+    import mbi  # type: ignore[import-untyped,import-not-found]
 
     model = mirror_descent(mbi.Domain(("A",), (2,)), [])
 
@@ -116,8 +116,8 @@ def test_aim_init(kwargs, message):
 
 def test_aim_exhaustion():
     pytest.importorskip("mbi")
-    import mbi
-    import polars as pl
+    import mbi  # type: ignore[import-not-found]
+    import polars as pl  # type: ignore[import-not-found]
 
     m_aim = dp.mbi._aim.make_aim_marginals(
         dp.lazyframe_domain(
