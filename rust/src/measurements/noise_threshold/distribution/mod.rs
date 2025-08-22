@@ -9,10 +9,14 @@ use crate::{
     core::{Measurement, Metric, MetricSpace},
     error::Fallible,
     measurements::{MakeNoiseThreshold, NoiseDomain, NoiseMeasure},
+    measures::Approximate,
 };
 
 #[cfg(feature = "ffi")]
 mod ffi;
+
+#[cfg(test)]
+mod test;
 
 #[bootstrap(
     features("contrib"),
@@ -45,16 +49,16 @@ mod ffi;
 pub fn make_noise_threshold<DI: NoiseDomain, MI: Metric, MO: NoiseMeasure>(
     input_domain: DI,
     input_metric: MI,
-    output_measure: MO,
+    output_measure: Approximate<MO>,
     scale: f64,
     threshold: DI::Atom,
     k: Option<i32>,
-) -> Fallible<Measurement<DI, MI, MO, DI::Carrier>>
+) -> Fallible<Measurement<DI, MI, Approximate<MO>, DI::Carrier>>
 where
-    MO::Distribution: MakeNoiseThreshold<DI, MI, MO, Threshold = DI::Atom>,
+    MO::Distribution: MakeNoiseThreshold<DI, MI, Approximate<MO>, Threshold = DI::Atom>,
     (DI, MI): MetricSpace,
 {
-    output_measure
+    (output_measure.0)
         .new_distribution(scale, k)
         .make_noise_threshold((input_domain, input_metric), threshold)
 }

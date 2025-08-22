@@ -327,13 +327,13 @@ def test_gaussian_threshold_int():
     # 12.5 = (10 / 2)^2 / 2 = (Δ / σ)^2 / 2
     assert meas.map((1, 10, 10)) == (12.5, 1.1102230246251565e-16)
 
-def make_noise_threshold(domain, metric, scale, threshold):
+def make_noise_threshold_zCDP(domain, metric, scale, threshold):
     measure = dp.approximate(dp.zero_concentrated_divergence())
     return dp.m.make_noise_threshold(domain, metric, measure, scale, threshold)
 
 @pytest.mark.parametrize("constructor", [
     dp.m.make_gaussian_threshold,
-    make_noise_threshold
+    make_noise_threshold_zCDP
 ])
 def test_gaussian_threshold_float(constructor):
     domain = dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=float, nan=False))

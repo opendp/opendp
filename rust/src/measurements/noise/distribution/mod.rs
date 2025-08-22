@@ -1,5 +1,3 @@
-#[cfg(feature = "polars")]
-use crate::measurements::expr_noise::NoiseDistribution;
 use crate::{
     core::{Domain, Measure, Measurement, Metric, MetricSpace},
     domains::{AtomDomain, VectorDomain},
@@ -80,17 +78,11 @@ where
 }
 
 pub trait NoiseMeasure: Measure + 'static {
-    #[cfg(feature = "polars")]
-    const DISTRIBUTION: NoiseDistribution;
-
     type Distribution;
     fn new_distribution(self, scale: f64, k: Option<i32>) -> Self::Distribution;
 }
 
 impl NoiseMeasure for MaxDivergence {
-    #[cfg(feature = "polars")]
-    const DISTRIBUTION: NoiseDistribution = NoiseDistribution::Laplace;
-
     type Distribution = DiscreteLaplace;
 
     fn new_distribution(self, scale: f64, k: Option<i32>) -> Self::Distribution {
@@ -99,9 +91,6 @@ impl NoiseMeasure for MaxDivergence {
 }
 
 impl NoiseMeasure for ZeroConcentratedDivergence {
-    #[cfg(feature = "polars")]
-    const DISTRIBUTION: NoiseDistribution = NoiseDistribution::Gaussian;
-
     type Distribution = DiscreteGaussian;
 
     fn new_distribution(self, scale: f64, k: Option<i32>) -> Self::Distribution {

@@ -247,13 +247,16 @@ where
 
 pub trait NoiseExprMeasure: 'static + NoiseMeasure<Distance = f64> {
     type Metric: 'static + OuterMetric<Distance = f64>;
+    const DISTRIBUTION: NoiseDistribution;
 }
 
 impl NoiseExprMeasure for MaxDivergence {
     type Metric = L1Distance<f64>;
+    const DISTRIBUTION: NoiseDistribution = NoiseDistribution::Laplace;
 }
 impl NoiseExprMeasure for ZeroConcentratedDivergence {
     type Metric = L2Distance<f64>;
+    const DISTRIBUTION: NoiseDistribution = NoiseDistribution::Gaussian;
 }
 
 /// Determine if the given expression is a noise expression.
