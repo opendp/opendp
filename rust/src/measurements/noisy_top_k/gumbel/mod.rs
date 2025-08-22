@@ -58,7 +58,10 @@ where
         // Cast to FBig and discard failed casts.
         // Cast only fails on NaN scores, which are not in the input domain but could still be passed by the user.
         // If the user still passes NaN in the input data, discarding results in graceful failure.
-        .filter_map(|(i, x_i)| Some((i, FBig::try_from(*x_i).ok()?)))
+        .filter_map(|(i, x_i)| {
+            let x_i = x_i.total_clamp(T::MIN_FINITE, T::MAX_FINITE).ok()?;
+            Some((i, FBig::try_from(x_i).ok()?))
+        })
         .map(|(i, mut x_i)| {
             // Normalize sign.
             if negate {

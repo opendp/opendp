@@ -63,7 +63,7 @@ pub fn make_canonical_noise(
         Approximate(MaxDivergence),
         Function::new_fallible(move |&arg: &f64| {
             let canonical_rv = CanonicalRV {
-                shift: RBig::try_from(arg).unwrap_or(RBig::ZERO),
+                shift: RBig::try_from(arg.clamp(f64::MIN, f64::MAX)).unwrap_or(RBig::ZERO),
                 scale: &r_d_in,
                 tradeoff: &tradeoff,
                 fixed_point: &fixed_point,

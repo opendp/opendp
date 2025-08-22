@@ -86,7 +86,8 @@ where
             arg.iter()
                 .cloned()
                 .map(|x_i| {
-                    let x_i = RBig::try_from(x_i).unwrap_or(RBig::ZERO);
+                    let x_i = RBig::try_from(x_i.clamp(T::MIN_FINITE, T::MAX_FINITE))
+                        .unwrap_or(RBig::ZERO);
                     find_nearest_multiple_of_2k(x_i, k)
                 })
                 .collect()
