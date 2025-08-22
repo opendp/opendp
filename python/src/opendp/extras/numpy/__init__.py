@@ -122,7 +122,7 @@ def array2_domain(
 
     if isinstance(cardinalities, list):
         cardinalities = np.asarray(cardinalities)
-    
+
     if isinstance(cardinalities, np.ndarray):
         if cardinalities.ndim != 1:
             raise ValueError(f"cardinalities ndim ({cardinalities.ndim}) must be one")
@@ -174,10 +174,10 @@ def array2_domain(
             raise ValueError(f"must have exactly {size} rows")
         
         if cardinalities is not None:
-            x_s = np.sort(x, axis=0)
-            n_unique = (x_s[1:] != x_s[:-1]).sum(axis=0) + 1
+            n_unique = np.array([len(np.unique(x_i)) for x_i in x.T])
             if any(cardinalities < n_unique):
-                raise ValueError("unique values in data must not exceed cardinalities")
+                msg = f"unique values in data ({n_unique}) must not exceed cardinalities ({cardinalities})"
+                raise ValueError(msg)
         
         return True
 
@@ -209,7 +209,7 @@ class NPArray2Domain(NamedTuple):
 def arrayd_domain(
     *,
     shape: tuple[int, ...],
-    T: RuntimeTypeDescriptor = None,
+    T: RuntimeTypeDescriptor,
 ) -> Domain:
     """Construct a Domain representing d-dimensional numpy arrays.
 

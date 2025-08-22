@@ -1,6 +1,7 @@
 from opendp.extras.numpy import _sscp_domain, arrayd_domain
 import opendp.prelude as dp
 import pytest
+import re
 
 
 def test_array2_domain():
@@ -77,10 +78,9 @@ def test_array2_domain_cardinalities():
 
     domain = dp.numpy.array2_domain(cardinalities=[1, 2, 3], T=int)
 
-    with pytest.warns(match="unique values in data must not exceed cardinalities"):
+    with pytest.warns(match=re.escape("unique values in data ([2 1 1]) must not exceed cardinalities ([1 2 3])")):
         domain.member(np.array([[1, 1, 1], [2, 1, 1]], dtype=np.int32))
     assert domain.member(np.array([[1, 1, 1], [1, 1, 1]], dtype=np.int32))
-    # assert domain.member(np.ndarray([1, 1, 1]))
 
 def test_sscp_domain():
     np = pytest.importorskip("numpy")
