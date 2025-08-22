@@ -2,9 +2,10 @@ use polars::prelude::*;
 use polars_plan::dsl::Expr;
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
+use crate::domains::{CategoricalDomain, ExprDomain, OuterMetric, WildExprDomain};
 use crate::error::*;
 use crate::metrics::MicrodataMetric;
+use crate::polars::ExtractValue;
 use crate::transformations::expr_replace::materialize_lit_list;
 
 use super::StableExpr;
@@ -98,17 +99,39 @@ where
     // check data types
     let input_dtype = middle_domain.column.dtype();
     if matches!(input_dtype, DataType::Categorical(_, _)) {
-        return fallible!(
-            MakeTransformation,
-            "replace_strict cannot be applied to categorical data, because it may trigger a data-dependent CategoricalRemappingWarning in Polars"
-        );
+        let categories = middle_domain
+            .column
+            .element_domain::<CategoricalDomain>()?
+            .categories();
+
+        // allow replacement on categoricals when old lit matches categories
+        match (Series::extract(old_lit.clone()), categories) {
+            (Ok(Some(old_lit)), Some(categories))
+                if old_lit
+                    == Series::new(
+                        old_lit.name().clone(),
+                        categories
+                            .iter()
+                            .map(|s| s.to_string())
+                            .collect::<Vec<String>>(),
+                    ) =>
+            {
+                ()
+            }
+            _ => {
+                return fallible!(
+                    MakeTransformation,
+                    "replace_strict cannot be applied to categorical data, because it may trigger a data-dependent CategoricalRemappingWarning in Polars"
+                );
+            }
+        }
     }
 
     let old_dtype = old_lit.get_datatype();
     if is_cast_fallible(&old_dtype, &input_dtype) {
         return fallible!(
             MakeTransformation,
-            "replace_strict: old datatype ({}) must be consistent with the input datatype ({})",
+            "replace_strict: old datatype ({:?}) must be consistent with the input datatype ({:?})",
             old_dtype,
             input_dtype
         );
