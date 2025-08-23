@@ -20,18 +20,21 @@ def make_np_sum(input_domain: Domain, input_metric: Metric) -> Transformation:
 
     dp.assert_features("contrib", "floating-point")
 
-    if not str(input_domain).startswith("NPArray2Domain"):
+    if not str(input_domain).startswith("NPArray2Domain"):  # |\label{domain-check}|
         raise ValueError(f"input_domain ({input_domain}) must be NPArray2Domain")  # pragma: no cover
     
     if input_domain.descriptor.nan:
         raise ValueError(f"input_domain ({input_domain}) must not permit NaN elements")  # pragma: no cover
 
+    if input_metric != dp.symmetric_distance():  # |\label{metric-check}|
+        raise ValueError("input_metric must be the symmetric distance")  # pragma: no cover
+
     input_desc = input_domain.descriptor
     norm = input_desc.norm
-    if norm is None:
+    if norm is None: # |\label{norm-check}|
         raise ValueError(f"input_domain ({input_domain}) must have bounds. See make_np_clamp")  # pragma: no cover
 
-    output_metric = {1: dp.l1_distance, 2: dp.l2_distance}[input_desc.p]
+    output_metric = {1: dp.l1_distance, 2: dp.l2_distance}[input_desc.p]  # |\label{p-check}|
 
     if input_desc.size is None:
         origin = np.atleast_1d(input_desc.origin)
@@ -45,7 +48,7 @@ def make_np_sum(input_domain: Domain, input_metric: Metric) -> Transformation:
         input_metric,
         dp.vector_domain(dp.atom_domain(T=input_desc.T, nan=False)),
         output_metric(T=input_desc.T),
-        lambda arg: arg.sum(axis=0),
+        lambda arg: arg.sum(axis=0),  # |\label{function}|
         stability,
     )
 
