@@ -11,36 +11,22 @@ import pytest
 import re
 
 
-def make_fixed_marginals(*args, **kwargs):
-    return dp.mbi._fixed.make_fixed_marginals(
-        *args, **kwargs, algorithm=Fixed(queries=[Count(("A",))])
-    )
-
-
-def make_sequential_marginals(*args, **kwargs):
-    return dp.mbi._sequential.make_sequential_marginals(
-        *args,
-        **kwargs,
-        algorithm=Sequential(
+@pytest.mark.parametrize(
+    "algorithm",
+    (
+        dp.mbi.AIM(),
+        dp.mbi.MST(),
+        dp.mbi.Sequential(
             algorithms=[
                 Fixed(queries=[Count(("A",))]),
                 AIM(),
             ],
             weights=[2, 8],
-        )
-    )
-
-
-@pytest.mark.parametrize(
-    "constructor",
-    (
-        dp.mbi._aim.make_aim_marginals,
-        dp.mbi._mst.make_mst_marginals,
-        make_fixed_marginals,
-        make_sequential_marginals,
+        ),
+        dp.mbi.Fixed(queries=[Count(("A",))]),
     ),
 )
-def test_algorithm_err_elements(constructor):
+def test_algorithm_err_elements(algorithm):
     pytest.importorskip("mbi")
     import mbi  # type: ignore[import-untyped,import-not-found]
 
@@ -48,7 +34,7 @@ def test_algorithm_err_elements(constructor):
 
     msg = "input_domain columns must be bounded"
     with pytest.raises(ValueError, match=re.escape(msg)):
-        constructor(
+        algorithm.make_marginals(
             dp.lazyframe_domain([dp.series_domain("A", dp.atom_domain(T=int))]),
             dp.frame_distance(dp.symmetric_distance()),
             dp.zero_concentrated_divergence(),
@@ -60,7 +46,7 @@ def test_algorithm_err_elements(constructor):
 
     msg = "input_metric (DiscreteDistance()) must be frame_distance"
     with pytest.raises(ValueError, match=re.escape(msg)):
-        constructor(
+        algorithm.make_marginals(
             dp.lazyframe_domain(
                 [dp.series_domain("A", dp.atom_domain(bounds=(0, 10)))]
             ),
@@ -74,7 +60,7 @@ def test_algorithm_err_elements(constructor):
 
     msg = "output_measure (RenyiDivergence) must be max_divergence() or zero_concentrated_divergence()"
     with pytest.raises(ValueError, match=re.escape(msg)):
-        constructor(
+        algorithm.make_marginals(
             dp.lazyframe_domain(
                 [dp.series_domain("A", dp.atom_domain(bounds=(0, 10)))]
             ),
@@ -87,7 +73,7 @@ def test_algorithm_err_elements(constructor):
         )
 
     with pytest.raises(ValueError, match="model must be a MarkovRandomField"):
-        constructor(
+        algorithm.make_marginals(
             dp.lazyframe_domain(
                 [dp.series_domain("A", dp.atom_domain(T="u32", bounds=(0, 1)))]
             ),
@@ -119,7 +105,7 @@ def test_aim_exhaustion():
     import mbi  # type: ignore[import-not-found]
     import polars as pl  # type: ignore[import-not-found]
 
-    m_aim = dp.mbi._aim.make_aim_marginals(
+    m_aim = dp.mbi.AIM(max_size=1e-10).make_marginals(
         dp.lazyframe_domain(
             [dp.series_domain("A", dp.atom_domain(T="u32", bounds=(0, 1)))]
         ),
@@ -129,7 +115,6 @@ def test_aim_exhaustion():
         d_out=1.0,
         marginals={},
         model=dp.mbi.mirror_descent(mbi.Domain(("A",), (2,)), []),
-        algorithm=AIM(max_size=1e-10),
     )
 
     m_aim(pl.LazyFrame({"A": [0]}))
@@ -163,9 +148,9 @@ def test_mst_init(kwargs, message):
     "kwargs,message",
     [
         (dict(algorithms=[]), "algorithms must contain at least one element"),
-        (dict(algorithms=[False]), "algorithms must be instances of Algorithm"),
+        (dict(algorithms=[False]), "algorithms ([False]) must be instances of Algorithm"),
         (dict(algorithms=[MST()], weights=[]), "algorithms and weights must contain"),
-        (dict(algorithms=[MST()], weights=[0]), "weights must be positive"),
+        (dict(algorithms=[MST()], weights=[0]), "weights ([0]) must be positive"),
     ],
 )
 def test_sequential_init(kwargs, message):

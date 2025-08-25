@@ -16,7 +16,7 @@ from opendp.extras.mbi._utilities import (
     prior,
     make_stable_marginals,
     weight_marginals,
-    Algorithm
+    Algorithm,
 )
 from opendp.measurements import make_noisy_max
 from opendp.metrics import linf_distance
@@ -57,95 +57,91 @@ class MST(Algorithm):
         if self.num_selections is not None and self.num_selections < 1:
             raise ValueError(f"num_selections ({self.num_selections}) must be positive")
 
-    @property
-    def make(self):
-        return make_mst_marginals
+    def make_marginals(
+        self,
+        input_domain: LazyFrameDomain,
+        input_metric: FrameDistance,
+        output_measure: Measure,
+        d_in: list["Bound"],
+        d_out: float,
+        *,
+        marginals: dict[tuple[str, ...], Any],
+        model: Any,  # MarkovRandomField
+    ) -> Measurement:
+        """Implements MST (Minimum Spanning Tree) over ordinal data.
 
+        :param input_domain: domain of input data
+        :param input_metric: how to compute distance between datasets
+        :param output_measure: how to measure privacy of release
+        :param d_in: distance between adjacent input datasets
+        :param d_out: upper bound on the privacy loss
+        :param marginals: prior marginal releases
+        :param model: warm-start fit of MarkovRandomField
+        """
+        import_optional_dependency("mbi")
+        from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
 
-def make_mst_marginals(
-    input_domain: LazyFrameDomain,
-    input_metric: FrameDistance,
-    output_measure: Measure,
-    d_in: list["Bound"],
-    d_out: float,
-    *,
-    marginals: dict[tuple[str, ...], Any],
-    model: Any,  # MarkovRandomField
-    algorithm: MST = MST(),
-):
-    """Implements MST (Minimum Spanning Tree) over ordinal data.
+        if not isinstance(model, MarkovRandomField):
+            raise ValueError("model must be a MarkovRandomField")
 
-    :param input_domain: domain of input data
-    :param input_metric: how to compute distance between datasets
-    :param output_measure: how to measure privacy of release
-    :param d_in: distance between adjacent input datasets
-    :param d_out: upper bound on the privacy loss
-    :param marginals: prior marginal releases
-    :param model: warm-start fit of MarkovRandomField
-    :param algorithm: settings for the MST algorithm
-    """
-    import_optional_dependency("mbi")
-    from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
+        d_measure = d_out * self.measure_split
+        d_select = prior(prior(d_out - d_measure))
 
-    if not isinstance(model, MarkovRandomField):
-        raise ValueError("model must be a MarkovRandomField")
+        lp_metric = get_associated_metric(output_measure)
+        edges = list(itertools.combinations(input_domain.columns, 2))
 
-    d_measure = d_out * algorithm.measure_split
-    d_select = prior(prior(d_out - d_measure))
+        t_marginals = make_stable_marginals(input_domain, input_metric, lp_metric, edges)  # type: ignore[arg-type]
+        d_marginals = t_marginals.map(d_in)
 
-    lp_metric = get_associated_metric(output_measure)
-    edges = list(itertools.combinations(input_domain.columns, 2))
+        def function(
+            qbl: Queryable,
+        ) -> tuple[dict[tuple[str, ...], Any], MarkovRandomField]:
 
-    t_marginals = make_stable_marginals(input_domain, input_metric, lp_metric, edges)  # type: ignore[arg-type]
-    d_marginals = t_marginals.map(d_in)
-
-    def function(qbl: Queryable) -> tuple[dict[tuple[str, ...], Any], MarkovRandomField]:
-
-        # SELECT a set of queries that best reduces the error
-        m_select = _make_mst_select(
-            *t_marginals.output_space,
-            output_measure,
-            d_in=d_marginals,
-            d_out=d_select,
-            edges=edges,
-            model=model,
-            num_selections=algorithm.num_selections,
-        )
-
-        selected_cliques = qbl(m_select)
-
-        # MEASURE selected marginals with noise
-        m_measure = binary_search_chain(
-            lambda s: make_noise_marginals(
+            # SELECT a set of queries that best reduces the error
+            m_select = _make_mst_select(
                 *t_marginals.output_space,
                 output_measure,
-                selected_cliques,
-                scale=s,
-            ),
-            d_in=d_marginals,
-            d_out=d_measure,
-            T=float,
-        )
+                d_in=d_marginals,
+                d_out=d_select,
+                edges=edges,
+                model=model,
+                num_selections=self.num_selections,
+            )
 
-        all_marginals = weight_marginals(marginals, *qbl(m_measure))
+            selected_cliques = qbl(m_select)
 
-        # GENERATE (fit a MarkovRandomField)
-        new_model = algorithm.estimator(
-            model.domain,
-            list(all_marginals.values()),
-            potentials=model.potentials.expand(model.cliques + selected_cliques),
-        )
-        return all_marginals, new_model
+            # MEASURE selected marginals with noise
+            m_measure = binary_search_chain(
+                lambda s: make_noise_marginals(
+                    *t_marginals.output_space,
+                    output_measure,
+                    selected_cliques,
+                    scale=s,
+                ),
+                d_in=d_marginals,
+                d_out=d_measure,
+                T=float,
+            )
 
-    return (
-        t_marginals
-        >> then_adaptive_composition(
-            output_measure=output_measure,
-            d_in=t_marginals.map(d_in),
-            d_mids=[d_select, d_measure],
+            all_marginals = weight_marginals(marginals, *qbl(m_measure))
+
+            # GENERATE (fit a MarkovRandomField)
+            new_model = self.estimator(
+                model.domain,
+                list(all_marginals.values()),
+                potentials=model.potentials.expand(model.cliques + selected_cliques),
+            )
+            return all_marginals, new_model
+
+        return (
+            t_marginals
+            >> then_adaptive_composition(
+                output_measure=output_measure,
+                d_in=t_marginals.map(d_in),
+                d_mids=[d_select, d_measure],
+            )
+            >> _new_pure_function(function)
         )
-        >> _new_pure_function(function)
-    )
 
 
 def _make_mst_select(

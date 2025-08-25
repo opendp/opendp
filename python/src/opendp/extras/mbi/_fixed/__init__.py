@@ -1,7 +1,7 @@
 """Releases all queries in a fixed workload."""
 
 from dataclasses import dataclass
-from typing import Any, Literal, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 from opendp._internal import _new_pure_function
 from opendp._lib import import_optional_dependency
@@ -12,6 +12,8 @@ from opendp.extras.mbi._utilities import (
     make_stable_marginals,
     Algorithm,
     Count,
+    OnewayType,
+    ONEWAY_UNKEYED
 )
 from opendp.mod import (
     FrameDistance,
@@ -31,7 +33,7 @@ class Fixed(Algorithm):
 
     queries: list[Count]
     """Workload of queries."""
-    oneway: Literal["all", "unkeyed"] = "unkeyed"
+    oneway: OnewayType = ONEWAY_UNKEYED
     """Only fit one-way marginals for columns missing keys."""
 
     def __post_init__(self):
@@ -43,64 +45,58 @@ class Fixed(Algorithm):
         if not all(isinstance(q, Count) for q in self.queries):
             raise ValueError("queries must be of type Count")
 
-    @property
-    def make(self):
-        return make_fixed_marginals
+    def make_marginals(
+        self,
+        input_domain: LazyFrameDomain,
+        input_metric: FrameDistance,
+        output_measure: Measure,
+        d_in: list["Bound"],
+        d_out: float,
+        *,
+        marginals: dict[tuple[str, ...], Any],
+        model: Any,  # MarkovRandomField
+    ):
+        """Implements a "Fixed" algorithm over ordinal data.
 
+        The algorithm estimates fixed cliques.
 
-def make_fixed_marginals(
-    input_domain: LazyFrameDomain,
-    input_metric: FrameDistance,
-    output_measure: Measure,
-    d_in: list["Bound"],
-    d_out: float,
-    *,
-    marginals: dict[tuple[str, ...], Any],
-    model: Any,  # Optional[MarkovRandomField]
-    algorithm: Fixed,
-):
-    """Implements a "Fixed" algorithm over ordinal data.
+        :param input_domain: domain of input data
+        :param input_metric: how to compute distance between datasets
+        :param output_measure: how to measure privacy of release
+        :param d_in: distance between adjacent input datasets
+        :param d_out: upper bound on the privacy loss
+        :param marginals: prior marginal releases
+        :param model: warm-start fit of MarkovRandomField
+        """
+        import_optional_dependency("mbi")
+        from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
 
-    The algorithm estimates fixed cliques.
+        if not isinstance(model, MarkovRandomField):
+            raise ValueError("model must be a MarkovRandomField")
 
-    :param input_domain: domain of input data
-    :param input_metric: how to compute distance between datasets
-    :param output_measure: how to measure privacy of release
-    :param d_in: distance between adjacent input datasets
-    :param d_out: upper bound on the privacy loss
-    :param marginals: prior marginal releases
-    :param model: warm-start fit of MarkovRandomField
-    :param algorithm: settings for the Fixed algorithm
-    """
-    import_optional_dependency("mbi")
-    from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
+        lp_metric = get_associated_metric(output_measure)
+        cliques = [q.by for q in self.queries]
+        weights = [q.weight for q in self.queries]
 
-    if not isinstance(model, MarkovRandomField):
-        raise ValueError("model must be a MarkovRandomField")
+        def make(scale: float) -> Measurement:
+            return make_stable_marginals(
+                input_domain, input_metric, lp_metric, cliques  # type: ignore[arg-type]
+            ) >> then_noise_marginals(
+                output_measure, cliques, scale, weights
+            )  # type: ignore[return-type]
 
-    lp_metric = get_associated_metric(output_measure)
-    cliques = [q.by for q in algorithm.queries]
-    weights = [q.weight for q in algorithm.queries]
+        m_marginals = binary_search_chain(make, d_in, d_out, T=float)
 
-    def make(scale: float) -> Measurement:
-        return make_stable_marginals(
-            input_domain, input_metric, lp_metric, cliques  # type: ignore[arg-type]
-        ) >> then_noise_marginals(
-            output_measure, cliques, scale, weights
-        )  # type: ignore[return-type]
+        def function(
+            new_releases: list,
+        ) -> tuple[dict[tuple[str, ...], Any], MarkovRandomField]:
+            all_marginals = weight_marginals(marginals, *new_releases)
 
-    m_marginals = binary_search_chain(make, d_in, d_out, T=float)
+            new_model = self.estimator(
+                model.domain,
+                list(all_marginals.values()),
+                potentials=model.potentials.expand(list(all_marginals.keys())),
+            )
+            return all_marginals, new_model
 
-    def function(
-        new_releases: list,
-    ) -> tuple[dict[tuple[str, ...], Any], MarkovRandomField]:
-        all_marginals = weight_marginals(marginals, *new_releases)
-
-        new_model = algorithm.estimator(
-            model.domain,
-            list(all_marginals.values()),
-            potentials=model.potentials.expand(list(all_marginals.keys())),
-        )
-        return all_marginals, new_model
-
-    return m_marginals >> _new_pure_function(function)
+        return m_marginals >> _new_pure_function(function)

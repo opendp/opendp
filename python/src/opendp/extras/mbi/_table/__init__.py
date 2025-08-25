@@ -28,6 +28,7 @@ from opendp.extras.mbi._utilities import (
     row_major_order,
     weight_marginals,
     Algorithm,
+    ONEWAY_UNKEYED,
 )
 from opendp.measurements import make_private_lazyframe
 from opendp.mod import (
@@ -138,7 +139,7 @@ class ContingencyTable:
 
         return row_major_order(self.keys[attr] for attr in attrs).hstack(lengths)
 
-    def std(self, attrs: str | Sequence[str]) -> float:
+    def std(self, attrs: Sequence[str]) -> float:
         """Estimate the standard deviation of the count estimate.
         The estimate does not take cuts into account.
 
@@ -161,8 +162,10 @@ class ContingencyTable:
 
         model = cast(MarkovRandomField, self.model)
 
-        attrs_clique = {attrs} if isinstance(attrs, str) else set(attrs)
+        if isinstance(attrs, str):  # pragma: no cover
+            raise ValueError(f"attrs ({attrs}) must be a sequence of strings")
 
+        attrs_clique = set(attrs)
         size = model.domain.size
 
         inv_var_sum = sum(
@@ -253,13 +256,13 @@ def make_contingency_table(
 
     all_keys_known = set(input_domain.columns) <= set(keys_pl)
     if delta and all_keys_known:
-        message = "delta must be zero because keys and cuts span all columns"
+        message = f"delta ({delta}) must be zero because keys and cuts span all columns"
         raise ValueError(message)
     if not delta and not all_keys_known:
-        message = "delta must be nonzero because keys and cuts don't span all columns"
+        message = f"delta ({delta}) must be nonzero because keys and cuts don't span all columns"
         raise ValueError(message)
 
-    if algorithm.oneway == "unkeyed" and all_keys_known:
+    if algorithm.oneway == ONEWAY_UNKEYED and all_keys_known:
         d_multiway: Union[float | tuple[float, float]] = d_out
         d_mids = [d_multiway if delta is None else (d_multiway, 0.0)]
         m_oneway = None
@@ -268,7 +271,7 @@ def make_contingency_table(
     else:
         if algorithm.oneway_split is None:
             oneway_split = 0.5
-            if algorithm.oneway == "unkeyed":
+            if algorithm.oneway == ONEWAY_UNKEYED:
                 columns = set(input_domain.columns)
                 oneway_split *= len(columns - set(keys_pl)) / len(columns)
         else:
@@ -288,7 +291,7 @@ def make_contingency_table(
             d_out=d_oneway,
             keys=keys_pl,
             plan=plan,
-            unknown_only=algorithm.oneway == "unkeyed",
+            unknown_only=algorithm.oneway == ONEWAY_UNKEYED,
         )
         if threshold is not None:
             thresholds |= {
@@ -344,14 +347,14 @@ def make_contingency_table(
             ),
         )
 
-        m_marginals = algorithm.make(
-            *t_index.output_space,
+        m_marginals = algorithm.make_marginals(
+            input_domain=t_index.output_domain,
+            input_metric=t_index.output_metric,
             output_measure=inner_measure,
             d_in=t_index.map(d_in),
-            d_out=d_multiway,  # type: ignore[has-type]
+            d_out=d_multiway,  # type: ignore[arg-type]
             marginals=current_marginals,
             model=current_model,
-            algorithm=algorithm,
         )
 
         m_index_marginals = t_index >> m_marginals

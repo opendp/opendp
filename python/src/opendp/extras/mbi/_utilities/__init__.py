@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Callable, Literal, Optional, Any, Iterator, cast
+from typing import Callable, Literal, Optional, Any, Iterator, cast, get_args, TYPE_CHECKING
 from functools import reduce
 from math import sqrt
 from opendp._internal import (
@@ -35,6 +35,9 @@ from opendp.mod import (
     Transformation,
 )
 
+if TYPE_CHECKING:  # pragma: no cover
+    from opendp.extras.polars import Bound
+
 @dataclass
 class Count:
     """Denotes a count query."""
@@ -61,13 +64,15 @@ def mirror_descent(
     potentials=None,  # CliqueVector | None
 ):  # MarkovRandomField
     """Fit a MarkovRandomField over the domain and loss function using mirror descent.
-    
+
     Replicate the API of this function to `use other optimizers from Private-PGM <https://private-pgm.readthedocs.io/en/latest/_autosummary_output/mbi.estimation.html#module-mbi.estimation>`_.
     """
     from mbi.estimation import mirror_descent  # type: ignore[import-untyped,import-not-found]
 
     return mirror_descent(domain, loss_fn, potentials=potentials)
 
+OnewayType = Literal["all", "unkeyed"]
+ONEWAY_ALL, ONEWAY_UNKEYED = get_args(OnewayType)
 
 @dataclass(kw_only=True, frozen=True)
 class Algorithm(ABC):
@@ -81,7 +86,7 @@ class Algorithm(ABC):
     can be used to customize how the MarkovRandomField is optimized/estimated.
     See `mbi.estimation <https://private-pgm.readthedocs.io/en/latest/_autosummary_output/mbi.estimation.html>`_ for other optimizers.
     """
-    oneway: Literal["all", "unkeyed"] = "all"
+    oneway: OnewayType = ONEWAY_ALL
     """Fit one-way marginals for all columns, or only unkeyed columns."""
     oneway_split: Optional[float] = None
     """Proportion of budget to use for oneway release.
@@ -94,17 +99,24 @@ class Algorithm(ABC):
     """
 
     def __post_init__(self):
-        if self.oneway not in {"all", "unkeyed"}:
-            raise ValueError(f'oneway ({self.oneway}) must be "all" or "unkeyed"')
+        if self.oneway not in get_args(OnewayType):
+            raise ValueError(f'oneway ({self.oneway}) must be in {get_args(OnewayType)}')
 
         if self.oneway_split is not None and not (0 <= self.oneway_split < 1):
             raise ValueError(f"oneway_split ({self.oneway_split}) must be in [0, 1)")
 
-    @property
     @abstractmethod
-    def make(self) -> Callable:
-        """The constructor function for fitting this algorithm."""
-        ...
+    def make_marginals(
+        self,
+        input_domain: LazyFrameDomain,
+        input_metric: FrameDistance,
+        output_measure: Measure,
+        d_in: list["Bound"],
+        d_out: float,
+        *,
+        marginals: dict[tuple[str, ...], Any],
+        model,  # MarkovRandomField
+    ) -> Measurement: ...
 
 
 def typed_dict_domain(domains: dict[Any, Domain]) -> ExtrinsicDomain:

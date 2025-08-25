@@ -78,7 +78,7 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
     )
 
     try:
-        std = table.std("A")
+        std = table.std(("A",))
         assert isinstance(std, float)
         assert 1 < std < 5
     except ValueError:
@@ -272,8 +272,8 @@ def test_contingency_table_delta():
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-8),
     )
 
-    message = "delta must be zero because keys and cuts span all columns"
-    with pytest.raises(ValueError, match=message):
+    message = "delta (1e-08) must be zero because keys and cuts span all columns"
+    with pytest.raises(ValueError, match=re.escape(message)):
         context.query(epsilon=1.0, delta=1e-8).contingency_table(keys={"A": [1]})
 
     context = dp.Context.compositor(
@@ -282,8 +282,8 @@ def test_contingency_table_delta():
         privacy_loss=dp.loss_of(epsilon=1.0),
     )
 
-    message = "delta must be nonzero because keys and cuts don't span all columns"
-    with pytest.raises(ValueError, match=message):
+    message = "delta (None) must be nonzero because keys and cuts don't span all columns"
+    with pytest.raises(ValueError, match=re.escape(message)):
         context.query(epsilon=1.0).contingency_table()
 
     context = dp.Context.compositor(

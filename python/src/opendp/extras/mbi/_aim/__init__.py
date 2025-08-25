@@ -18,7 +18,7 @@ from opendp.extras.mbi._utilities import (
     make_stable_marginals,
     prior,
     weight_marginals,
-    Count, 
+    Count,
     Algorithm,
 )
 from opendp.measurements import then_noisy_max
@@ -49,15 +49,16 @@ class AIM(Algorithm):
     """AIM mechanism from `MMSM22 <https://arxiv.org/abs/2201.12677>`_.
 
     Adaptively chooses and estimates the least-well-approximated marginal.
-    If the error is not reduced, 
+    If the error is not reduced,
     the next round is allocated more of the total privacy budget.
-    """
-    # The algorithm is similar to the Multiplicative Weights Exponential Mechanism (MWEM) introduced in `HLM10 <https://arxiv.org/abs/1012.4763>`_,
-    # in that the exponential mechanism selects a marginal in each step.
 
-    # AIM differs from MWEM in that the distribution is represented via a graphical model and fitted via mirror descent,
-    # instead of joint distribution densities and the multiplicative weights update rule.
-    # This allows AIM to support higher-dimensional datasets.
+    The algorithm is similar to the Multiplicative Weights Exponential Mechanism (MWEM) introduced in `HLM10 <https://arxiv.org/abs/1012.4763>`_,
+    in that the exponential mechanism selects a marginal in each step.
+
+    AIM differs from MWEM in that the distribution is represented via a graphical model and fitted via mirror descent,
+    instead of joint distribution densities and the multiplicative weights update rule.
+    This allows AIM to support higher-dimensional datasets.
+    """
 
     queries: list[Count] | int = 3
     """Explicit workload of interactions, or maximum degree of interactions to consider."""
@@ -85,93 +86,93 @@ class AIM(Algorithm):
         if self.max_size <= 0.0:
             raise ValueError(f"max_size ({self.max_size}) must be positive")
 
-    @property
-    def make(self):
-        return make_aim_marginals
+    def make_marginals(
+        self,
+        input_domain: LazyFrameDomain,
+        input_metric: FrameDistance,
+        output_measure: Measure,
+        d_in: list["Bound"],
+        d_out: float,
+        *,
+        marginals: dict[tuple[str, ...], Any],
+        model,  # MarkovRandomField
+    ) -> Measurement:
+        """Implements AIM (Adaptive Iterative Mechanism) for ordinal data.
 
+        :param input_domain: domain of input data
+        :param input_metric: how to compute distance between datasets
+        :param output_measure: how to measure privacy of release
+        :param d_in: distance between adjacent input datasets
+        :param d_out: upper bound on the privacy loss
+        :param marginals: prior marginal releases
+        :param model: warm-start fit of MarkovRandomField
+        """
+        import_optional_dependency("mbi")
+        from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
 
-def make_aim_marginals(
-    input_domain: LazyFrameDomain,
-    input_metric: FrameDistance,
-    output_measure: Measure,
-    d_in: list["Bound"],
-    d_out: float,
-    *,
-    marginals: dict[tuple[str, ...], Any],
-    model,  # MarkovRandomField
-    algorithm: AIM = AIM(),
-) -> Measurement:
-    """Implements AIM (Adaptive Iterative Mechanism) for ordinal data.
+        if not isinstance(model, MarkovRandomField):
+            raise ValueError("model must be a MarkovRandomField")
 
-    :param input_domain: domain of input data
-    :param input_metric: how to compute distance between datasets
-    :param output_measure: how to measure privacy of release
-    :param d_in: distance between adjacent input datasets
-    :param d_out: upper bound on the privacy loss
-    :param marginals: prior marginal releases
-    :param model: warm-start fit of MarkovRandomField
-    :param algorithm: settings for the AIM algorithm
-    """
-    import_optional_dependency("mbi")
-    from mbi import MarkovRandomField  # type: ignore[import-untyped,import-not-found]
+        queries = _expand_queries(self.queries, input_domain.columns)
+        algorithm = replace(self, queries=queries)
 
-    if not isinstance(model, MarkovRandomField):
-        raise ValueError("model must be a MarkovRandomField")
+        lp_metric = get_associated_metric(output_measure)
+        cliques = [query.by for query in queries]
 
-    queries = _expand_queries(algorithm.queries, input_domain.columns)
-    algorithm = replace(algorithm, queries=queries)
-
-    lp_metric = get_associated_metric(output_measure)
-    cliques = [query.by for query in queries]
-
-    t_marginals = make_stable_marginals(input_domain, input_metric, lp_metric, cliques)
-    d_marginals = t_marginals.map(d_in)
-
-    T = algorithm.rounds or (16 * len(input_domain.columns))
-
-    def function(
-        qbl: OdometerQueryable,
-    ) -> tuple[dict[tuple[str, ...], Any], MarkovRandomField]:
-        # mutable state
-        current_model = model
-        current_marginals = marginals.copy()
-        d_step = d_out / T
-        d_spent = 0.0
-
-        while d_step:
-            m_step = _make_aim_marginal(
-                *t_marginals.output_space,
-                output_measure,
-                t_marginals.map(d_in),
-                d_step,
-                marginals=current_marginals,
-                model=current_model,
-                max_size=algorithm.max_size * (d_spent + d_step) / d_out,
-                algorithm=algorithm,
-            )
-            if not m_step:
-                break
-
-            R: TypeAlias = tuple[dict[tuple[str, ...], Any], MarkovRandomField, bool]
-            current_marginals, current_model, is_significant = cast(R, qbl(m_step))
-
-            if not is_significant:
-                d_step *= 4
-
-            d_spent = qbl.privacy_loss(d_marginals)
-            d_step = min(d_step, max(prior(d_out - d_spent), 0))
-
-        return current_marginals, current_model
-
-    return (
-        t_marginals
-        >> make_privacy_filter(
-            make_fully_adaptive_composition(*t_marginals.output_space, output_measure),
-            d_in=d_marginals,
-            d_out=d_out,
+        t_marginals = make_stable_marginals(
+            input_domain, input_metric, lp_metric, cliques
         )
-        >> _new_pure_function(function)
-    )
+        d_marginals = t_marginals.map(d_in)
+
+        T = algorithm.rounds or (16 * len(input_domain.columns))
+
+        def function(
+            qbl: OdometerQueryable,
+        ) -> tuple[dict[tuple[str, ...], Any], MarkovRandomField]:
+            # mutable state
+            current_model = model
+            current_marginals = marginals.copy()
+            d_step = d_out / T
+            d_spent = 0.0
+
+            while d_step:
+                m_step = _make_aim_marginal(
+                    *t_marginals.output_space,
+                    output_measure,
+                    t_marginals.map(d_in),
+                    d_step,
+                    marginals=current_marginals,
+                    model=current_model,
+                    max_size=algorithm.max_size * (d_spent + d_step) / d_out,
+                    algorithm=algorithm,
+                )
+                if not m_step:
+                    break
+
+                R: TypeAlias = tuple[
+                    dict[tuple[str, ...], Any], MarkovRandomField, bool
+                ]
+                current_marginals, current_model, is_significant = cast(R, qbl(m_step))
+
+                if not is_significant:
+                    d_step *= 4
+
+                d_spent = qbl.privacy_loss(d_marginals)
+                d_step = min(d_step, max(prior(d_out - d_spent), 0))
+
+            return current_marginals, current_model
+
+        return (
+            t_marginals
+            >> make_privacy_filter(
+                make_fully_adaptive_composition(
+                    *t_marginals.output_space, output_measure
+                ),
+                d_in=d_marginals,
+                d_out=d_out,
+            )
+            >> _new_pure_function(function)
+        )
 
 
 def _make_aim_marginal(
