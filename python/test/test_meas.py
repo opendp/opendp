@@ -224,7 +224,6 @@ def test_noisy_max(measure, d_out):
     input_domain = dp.vector_domain(dp.atom_domain(T=dp.usize))
     input_metric = dp.linf_distance(T=dp.usize)
 
-    input_metric = dp.linf_distance(T=dp.usize)
     meas = (input_domain, input_metric) >> dp.m.then_noisy_max(measure, 1.)
     # fails with very small probability
     assert meas([0, 0, 20, 40]) == 3  # because score 3 is by far the greatest
