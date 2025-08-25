@@ -4,7 +4,7 @@ use polars::prelude::CompatLevel;
 use polars::series::Series;
 use polars::{
     error::{PolarsResult, polars_bail},
-    prelude::{Column, ColumnsUdf, Expr, GetOutput, len},
+    prelude::{Column, ColumnsUdf, Expr, GetOutput, Selector, len},
 };
 #[cfg(feature = "ffi")]
 use polars_arrow as arrow;
@@ -17,6 +17,7 @@ use crate::{
     error::Fallible,
     measurements::{
         PrivateExpr,
+        expr_dp_counting_query::DPLenShim,
         expr_noise::{NoiseExprMeasure, NoiseShim},
     },
     metrics::L01InfDistance,
@@ -77,4 +78,39 @@ where
 #[pyo3_polars::derive::polars_expr(output_type = Null)]
 fn dp_frame_len(_: &[Series]) -> PolarsResult<Series> {
     polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")
+}
+
+pub fn make_expr_dp_len_any<MI: 'static + UnboundedMetric, MO: NoiseExprMeasure>(
+    input_domain: WildExprDomain,
+    input_metric: L01InfDistance<MI>,
+    output_measure: MO,
+    expr: Expr,
+    global_scale: Option<f64>,
+) -> Fallible<Measurement<WildExprDomain, L01InfDistance<MI>, MO, ExprPlan>>
+where
+    Expr: StableExpr<L01InfDistance<MI>, L01InfDistance<MI>> + PrivateExpr<L01InfDistance<MI>, MO>,
+    (ExprDomain, MO::Metric): MetricSpace,
+{
+    let Some([scale]) = match_shim::<DPFrameLenShim, _>(&expr)? else {
+        return fallible!(
+            MakeMeasurement,
+            "Expected {} function",
+            DPFrameLenShim::NAME
+        );
+    };
+
+    apply_plugin(vec![len(), scale], expr, NoiseShim).make_private(
+        input_domain.clone(),
+        input_metric,
+        output_measure,
+        global_scale,
+    )
+}
+
+pub fn match_dp_len_any(input: &Expr) -> Fallible<Option<Expr>> {
+    if let Some([Expr::Selector(Selector::Wildcard), scale]) = match_shim::<DPLenShim, 2>(input)? {
+        Ok(Some(scale))
+    } else {
+        Ok(None)
+    }
 }
