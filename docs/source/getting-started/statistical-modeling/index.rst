@@ -7,3 +7,4 @@ For the time being, OpenDP has PCA and we consider it a model for future functio
 .. toctree::
 
   pca
+  synthetic-data
