@@ -3,7 +3,6 @@ use polars::prelude::*;
 
 use crate::{
     domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain},
-    error::ErrorVariant,
     measurements::{PrivateExpr, make_private_expr, make_private_lazyframe},
     metrics::{FrameDistance, InsertDeleteDistance, L0PInfDistance, SymmetricDistance},
     polars::PrivacyNamespace,
@@ -19,7 +18,7 @@ fn test_make_expr_puredp() -> Fallible<()> {
         lf_domain.select(),
         L0PInfDistance(InsertDeleteDistance),
         MaxDivergence,
-        col("const_1f64").dp().sum((0., 1.), Some(scale)),
+        col("const_1f64").dp().sum((lit(0.), lit(1.)), Some(scale)),
         None,
     )?;
 
@@ -40,7 +39,7 @@ fn test_make_expr_zcdp() -> Fallible<()> {
         lf_domain.select(),
         L0PInfDistance(InsertDeleteDistance),
         ZeroConcentratedDivergence::default(),
-        col("const_1f64").dp().sum((0., 1.), Some(scale)),
+        col("const_1f64").dp().sum((lit(0.), lit(1.)), Some(scale)),
         None,
     )?;
 
@@ -48,31 +47,6 @@ fn test_make_expr_zcdp() -> Fallible<()> {
     let df_actual = lf.select([dp_expr]).collect()?;
 
     assert_eq!(df_actual, df!("const_1f64" => [1000.0])?);
-
-    Ok(())
-}
-
-#[test]
-fn test_fail_make_expr_wrong_distribution() -> Fallible<()> {
-    let (lf_domain, _) = get_test_data()?;
-    let scale: f64 = 0.0;
-
-    let variant = make_private_expr(
-        lf_domain.select(),
-        L0PInfDistance(InsertDeleteDistance),
-        MaxDivergence,
-        col("const_1f64")
-            .clip(lit(0.), lit(1.))
-            .sum()
-            .dp()
-            .gaussian(Some(scale)),
-        None,
-    )
-    .map(|_| ())
-    .unwrap_err()
-    .variant;
-
-    assert_eq!(variant, ErrorVariant::MakeMeasurement);
 
     Ok(())
 }
@@ -86,7 +60,7 @@ fn test_make_expr_gaussian() -> Fallible<()> {
         lf_domain.select(),
         L0PInfDistance(InsertDeleteDistance),
         ZeroConcentratedDivergence::default(),
-        col("const_1f64").dp().sum((0., 1.), Some(scale)),
+        col("const_1f64").dp().sum((lit(0.), lit(1.)), Some(scale)),
         None,
     )?;
 
@@ -107,7 +81,7 @@ fn test_make_laplace_grouped() -> Fallible<()> {
         .clip(lit(0), lit(8))
         .sum()
         .dp()
-        .laplace(None);
+        .noise(None);
     let m_lap = make_private_lazyframe(
         lf_domain,
         FrameDistance(SymmetricDistance),
@@ -146,7 +120,7 @@ fn check_autocalibration(
         .clip(lit(bounds.0), lit(bounds.1))
         .sum()
         .dp()
-        .noise(None, None)
+        .noise(None)
         .make_private(
             expr_domain,
             L0PInfDistance(InsertDeleteDistance),

@@ -232,11 +232,7 @@ work hours across responses.
             ...     # 99 represents "Not applicable"
             ...     context.query().filter(pl.col("HWUSUAL") != 99.0)
             ...     # compute the DP sum
-            ...     .select(
-            ...         pl.col.HWUSUAL.cast(int)
-            ...         .fill_null(35)
-            ...         .dp.sum(bounds=(0, 80))
-            ...     )
+            ...     .select(pl.col.HWUSUAL.cast(int).dp.sum(bounds=(0, 80)))
             ... )
 
 
@@ -325,9 +321,7 @@ estimates.
             ...     context.query().filter(pl.col.HWUSUAL != 99.0)
             ...     # release both the sum and length in one query
             ...     .select(
-            ...         pl.col.HWUSUAL.cast(int)
-            ...         .fill_null(35)
-            ...         .dp.sum(bounds=(0, 80)),
+            ...         pl.col.HWUSUAL.cast(int).dp.sum(bounds=(0, 80)),
             ...         dp.len(),
             ...     )
             ... )
@@ -425,9 +419,7 @@ filtered data, as shown above.
         .. code:: pycon
 
             >>> query_mean_work_hours = context_bounded_dp.query().select(
-            ...     pl.col.HWUSUAL.cast(int)
-            ...     .fill_null(35)
-            ...     .dp.mean(bounds=(0, 80))
+            ...     pl.col.HWUSUAL.cast(int).dp.mean(bounds=(0, 80))
             ... )
 
 
@@ -491,9 +483,7 @@ set candidates to whole numbers between 20 and 60:
             ...     context.query()
             ...     .filter(pl.col.HWUSUAL != 99.0)
             ...     .select(
-            ...         pl.col.HWUSUAL.cast(int)
-            ...         .fill_null(35)
-            ...         .dp.median(candidates)
+            ...         pl.col.HWUSUAL.cast(int).dp.median(candidates)
             ...     )
             ... )
             >>> query_median_hours.summarize(alpha=0.05)
@@ -556,7 +546,6 @@ hours:
             ...     .filter(pl.col.HWUSUAL != 99.0)
             ...     .select(
             ...         pl.col.HWUSUAL.cast(int)
-            ...         .fill_null(35)
             ...         .dp.quantile(a, candidates)
             ...         .alias(f"{a}-Quantile")
             ...         for a in [0.25, 0.5, 0.75]

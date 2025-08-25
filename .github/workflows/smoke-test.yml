@@ -185,7 +185,7 @@ jobs:
         run: coverage run -m pytest -v ${{ ! (contains(matrix.extra-install, 'polars') || contains(matrix.extra-install, 'mbi')) && '-k "not lazyframe and not polars and not pca and not rst"' || ''}}
 
       - name: Test replace-binary-path
-        if: ${{ contains(matrix.extra-install, 'polars') }}
+        if: contains(matrix.extra-install, 'polars')
         # Messes with envvars, so can't be run in parallel!
         run: FORCE_TEST_REPLACE_BINARY_PATH=1 pytest -k 'test_replace_binary_path'
 
