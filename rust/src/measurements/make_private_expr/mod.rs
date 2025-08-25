@@ -14,7 +14,7 @@ use crate::{
         expr_dp_median::DPMedianShim,
         expr_dp_quantile::DPQuantileShim,
         expr_dp_sum::DPSumShim,
-        expr_noise::NoiseExprMeasure,
+        expr_noise::{NoiseExprMeasure, NoiseShim},
     },
     measures::Approximate,
     metrics::L01InfDistance,
@@ -141,6 +141,17 @@ where
                 global_scale,
             );
         }
+
+        if expr_dp_frame_len::match_dp_len_any(&self)?.is_some() {
+            return expr_dp_frame_len::make_expr_dp_len_any(
+                input_domain,
+                input_metric,
+                output_measure,
+                self,
+                global_scale,
+            );
+        }
+
         macro_rules! counting_query {
             ($plugin:ident, $constructor:ident) => {
                 if match_shim::<$plugin, 2>(&self)?.is_some() {
@@ -200,7 +211,7 @@ where
             );
         }
 
-        if expr_noise::match_noise(&self)?.is_some() {
+        if match_shim::<NoiseShim, 2>(&self)?.is_some() {
             return expr_noise::make_expr_noise(input_domain, input_metric, self, global_scale);
         }
 
