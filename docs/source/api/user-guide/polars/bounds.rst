@@ -59,11 +59,7 @@ status, when the individual worked for pay or profit.
             ...     )
             ...     # ...is equivalent to:
             ...     # .filter(pl.int_range(pl.len()).sort_by(pl.col.ILOSTAT).over("PIDENT") < 10)
-            ...     .select(
-            ...         pl.col.HWUSUAL.cast(int)
-            ...         .fill_null(0)
-            ...         .dp.mean((0, 80))
-            ...     )
+            ...     .select(pl.col.HWUSUAL.cast(int).dp.mean((0, 80)))
             ... )
             >>> query.summarize()
             shape: (2, 4)
@@ -94,11 +90,7 @@ the statistics of interest.
             ...     .agg(
             ...         pl.col.HWUSUAL.mean()
             ...     )  # arbitrary expressions can be used here
-            ...     .select(
-            ...         pl.col.HWUSUAL.cast(int)
-            ...         .fill_null(0)
-            ...         .dp.mean((0, 80))
-            ...     )
+            ...     .select(pl.col.HWUSUAL.cast(int).dp.mean((0, 80)))
             ... )
             >>> query.summarize()
             shape: (2, 4)
@@ -166,9 +158,7 @@ each quarter, you can take this into account in your annalysis.
             ...     .group_by(quarterly)
             ...     .agg(
             ...         dp.len(),
-            ...         pl.col.HWUSUAL.cast(int)
-            ...         .fill_null(0)
-            ...         .dp.sum((0, 80)),
+            ...         pl.col.HWUSUAL.cast(int).dp.sum((0, 80)),
             ...     )
             ... )
             >>> query.summarize()
