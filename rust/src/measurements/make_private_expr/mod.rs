@@ -4,12 +4,22 @@ use polars_plan::dsl::Expr;
 use crate::{
     combinators::{CompositionMeasure, make_approximate},
     core::{Measure, Measurement, Metric, MetricSpace, Transformation},
-    domains::{Context, ExprDomain, ExprPlan, Invariant, WildExprDomain},
+    domains::{AtomDomain, Context, ExprDomain, ExprPlan, Invariant, VectorDomain, WildExprDomain},
     error::Fallible,
-    measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
+    measurements::{
+        MakeNoise, TopKMeasure,
+        expr_dp_counting_query::{DPCountShim, DPLenShim, DPNUniqueShim, DPNullCountShim},
+        expr_dp_frame_len::DPFrameLenShim,
+        expr_dp_mean::DPMeanShim,
+        expr_dp_median::DPMedianShim,
+        expr_dp_quantile::DPQuantileShim,
+        expr_dp_sum::DPSumShim,
+        expr_noise::NoiseExprMeasure,
+    },
+    measures::Approximate,
     metrics::L01InfDistance,
-    polars::get_disabled_features_message,
-    transformations::traits::UnboundedMetric,
+    polars::{get_disabled_features_message, match_shim},
+    transformations::{StableExpr, traits::UnboundedMetric},
 };
 
 #[cfg(feature = "ffi")]
@@ -17,6 +27,19 @@ mod ffi;
 
 #[cfg(test)]
 mod test;
+
+#[cfg(feature = "contrib")]
+pub(crate) mod expr_dp_counting_query;
+#[cfg(feature = "contrib")]
+pub(crate) mod expr_dp_frame_len;
+#[cfg(feature = "contrib")]
+pub(crate) mod expr_dp_mean;
+#[cfg(feature = "contrib")]
+pub(crate) mod expr_dp_median;
+#[cfg(feature = "contrib")]
+pub(crate) mod expr_dp_quantile;
+#[cfg(feature = "contrib")]
+pub(crate) mod expr_dp_sum;
 
 #[cfg(feature = "contrib")]
 mod expr_len;
@@ -79,20 +102,110 @@ pub trait PrivateExpr<MI: Metric, MO: Measure> {
     ) -> Fallible<Measurement<WildExprDomain, MI, MO, ExprPlan>>;
 }
 
-impl<M: 'static + UnboundedMetric> PrivateExpr<L01InfDistance<M>, MaxDivergence> for Expr {
+impl<MI: 'static + UnboundedMetric, MO: NoiseExprMeasure + TopKMeasure + CompositionMeasure>
+    PrivateExpr<L01InfDistance<MI>, MO> for Expr
+where
+    Expr: StableExpr<L01InfDistance<MI>, MO::Metric>,
+    (ExprDomain, MO::Metric): MetricSpace,
+    // This is ugly, but necessary because the necessary trait bound spans TIA
+    MO::Distribution: MakeNoise<VectorDomain<AtomDomain<u32>>, MO::Metric, MO>
+        + MakeNoise<VectorDomain<AtomDomain<u64>>, MO::Metric, MO>
+        + MakeNoise<VectorDomain<AtomDomain<i8>>, MO::Metric, MO>
+        + MakeNoise<VectorDomain<AtomDomain<i16>>, MO::Metric, MO>
+        + MakeNoise<VectorDomain<AtomDomain<i32>>, MO::Metric, MO>
+        + MakeNoise<VectorDomain<AtomDomain<i64>>, MO::Metric, MO>
+        + MakeNoise<VectorDomain<AtomDomain<f32>>, MO::Metric, MO>
+        + MakeNoise<VectorDomain<AtomDomain<f64>>, MO::Metric, MO>,
+    (VectorDomain<AtomDomain<u32>>, MO::Metric): MetricSpace,
+    (VectorDomain<AtomDomain<u64>>, MO::Metric): MetricSpace,
+    (VectorDomain<AtomDomain<i8>>, MO::Metric): MetricSpace,
+    (VectorDomain<AtomDomain<i16>>, MO::Metric): MetricSpace,
+    (VectorDomain<AtomDomain<i32>>, MO::Metric): MetricSpace,
+    (VectorDomain<AtomDomain<i64>>, MO::Metric): MetricSpace,
+    (VectorDomain<AtomDomain<f32>>, MO::Metric): MetricSpace,
+    (VectorDomain<AtomDomain<f64>>, MO::Metric): MetricSpace,
+{
     fn make_private(
         self,
         input_domain: WildExprDomain,
-        input_metric: L01InfDistance<M>,
-        output_measure: MaxDivergence,
+        input_metric: L01InfDistance<MI>,
+        output_measure: MO,
         global_scale: Option<f64>,
-    ) -> Fallible<Measurement<WildExprDomain, L01InfDistance<M>, MaxDivergence, ExprPlan>> {
-        if expr_noise::match_noise_shim(&self)?.is_some() {
+    ) -> Fallible<Measurement<WildExprDomain, L01InfDistance<MI>, MO, ExprPlan>> {
+        if match_shim::<DPFrameLenShim, 1>(&self)?.is_some() {
+            return expr_dp_frame_len::make_expr_dp_frame_len(
+                input_domain,
+                input_metric,
+                output_measure,
+                self,
+                global_scale,
+            );
+        }
+        macro_rules! counting_query {
+            ($plugin:ident, $constructor:ident) => {
+                if match_shim::<$plugin, 2>(&self)?.is_some() {
+                    return expr_dp_counting_query::$constructor(
+                        input_domain,
+                        input_metric,
+                        output_measure,
+                        self,
+                        global_scale,
+                    );
+                }
+            };
+        }
+
+        counting_query!(DPLenShim, make_expr_dp_len);
+        counting_query!(DPCountShim, make_expr_dp_count);
+        counting_query!(DPNullCountShim, make_expr_dp_null_count);
+        counting_query!(DPNUniqueShim, make_expr_dp_n_unique);
+
+        if match_shim::<DPSumShim, 4>(&self)?.is_some() {
+            return expr_dp_sum::make_expr_dp_sum(
+                input_domain,
+                input_metric,
+                output_measure,
+                self,
+                global_scale,
+            );
+        }
+
+        if match_shim::<DPMedianShim, 3>(&self)?.is_some() {
+            return expr_dp_median::make_expr_dp_median(
+                input_domain,
+                input_metric,
+                output_measure,
+                self,
+                global_scale,
+            );
+        }
+
+        if match_shim::<DPQuantileShim, 4>(&self)?.is_some() {
+            return expr_dp_quantile::make_expr_dp_quantile(
+                input_domain,
+                input_metric,
+                output_measure,
+                self,
+                global_scale,
+            );
+        }
+
+        if match_shim::<DPMeanShim, 4>(&self)?.is_some() {
+            return expr_dp_mean::make_expr_dp_mean(
+                input_domain,
+                input_metric,
+                output_measure,
+                self,
+                global_scale,
+            );
+        }
+
+        if expr_noise::match_noise(&self)?.is_some() {
             return expr_noise::make_expr_noise(input_domain, input_metric, self, global_scale);
         }
 
         if expr_noisy_max::match_noisy_max(&self)?.is_some() {
-            return expr_noisy_max::make_expr_noisy_max::<M, MaxDivergence>(
+            return expr_noisy_max::make_expr_noisy_max(
                 input_domain,
                 input_metric,
                 self,
@@ -100,39 +213,44 @@ impl<M: 'static + UnboundedMetric> PrivateExpr<L01InfDistance<M>, MaxDivergence>
             );
         }
 
-        make_private_measure_agnostic(
-            input_domain,
-            input_metric,
-            output_measure,
-            self,
-            global_scale,
-        )
-    }
-}
-
-impl<M: 'static + UnboundedMetric> PrivateExpr<L01InfDistance<M>, ZeroConcentratedDivergence>
-    for Expr
-{
-    fn make_private(
-        self,
-        input_domain: WildExprDomain,
-        input_metric: L01InfDistance<M>,
-        output_measure: ZeroConcentratedDivergence,
-        global_scale: Option<f64>,
-    ) -> Fallible<
-        Measurement<WildExprDomain, L01InfDistance<M>, ZeroConcentratedDivergence, ExprPlan>,
-    > {
-        if expr_noise::match_noise_shim(&self)?.is_some() {
-            return expr_noise::make_expr_noise(input_domain, input_metric, self, global_scale);
+        if expr_index_candidates::match_index_candidates(&self)?.is_some() {
+            return expr_index_candidates::make_expr_index_candidates(
+                input_domain,
+                input_metric,
+                output_measure,
+                self,
+                global_scale,
+            );
         }
 
-        make_private_measure_agnostic(
-            input_domain,
-            input_metric,
-            output_measure,
-            self,
+        if let Some(meas) = expr_postprocess::match_postprocess(
+            input_domain.clone(),
+            input_metric.clone(),
+            output_measure.clone(),
+            self.clone(),
             global_scale,
-        )
+        )? {
+            return Ok(meas);
+        }
+
+        match &self {
+            #[cfg(feature = "contrib")]
+            Expr::Len => {
+                expr_len::make_expr_private_len(input_domain, input_metric, output_measure, self)
+            }
+
+            #[cfg(feature = "contrib")]
+            Expr::Literal(_) => {
+                expr_literal::make_expr_private_lit(input_domain, input_metric, self)
+            }
+
+            expr => fallible!(
+                MakeMeasurement,
+                "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
+                expr,
+                get_disabled_features_message()
+            ),
+        }
     }
 }
 
@@ -154,57 +272,6 @@ where
             output_measure.0,
             global_scale,
         )?)
-    }
-}
-
-fn make_private_measure_agnostic<
-    MI: 'static + UnboundedMetric,
-    MO: 'static + CompositionMeasure<Distance = f64>,
->(
-    input_domain: WildExprDomain,
-    input_metric: L01InfDistance<MI>,
-    output_measure: MO,
-    expr: Expr,
-    global_scale: Option<f64>,
-) -> Fallible<Measurement<WildExprDomain, L01InfDistance<MI>, MO, ExprPlan>>
-where
-    Expr: PrivateExpr<L01InfDistance<MI>, MO>,
-{
-    if expr_index_candidates::match_index_candidates(&expr)?.is_some() {
-        return expr_index_candidates::make_expr_index_candidates::<L01InfDistance<MI>, _>(
-            input_domain,
-            input_metric,
-            output_measure,
-            expr,
-            global_scale,
-        );
-    }
-
-    if let Some(meas) = expr_postprocess::match_postprocess(
-        input_domain.clone(),
-        input_metric.clone(),
-        output_measure.clone(),
-        expr.clone(),
-        global_scale,
-    )? {
-        return Ok(meas);
-    }
-
-    match &expr {
-        #[cfg(feature = "contrib")]
-        Expr::Len => {
-            expr_len::make_expr_private_len(input_domain, input_metric, output_measure, expr)
-        }
-
-        #[cfg(feature = "contrib")]
-        Expr::Literal(_) => expr_literal::make_expr_private_lit(input_domain, input_metric, expr),
-
-        expr => fallible!(
-            MakeMeasurement,
-            "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
-            expr,
-            get_disabled_features_message()
-        ),
     }
 }
 

@@ -77,11 +77,7 @@ contributions to ten.
             ...     .truncate_per_group(10)
             ...     # ...is equivalent to:
             ...     # .filter(pl.int_range(pl.len()).over("PIDENT") < 10)
-            ...     .select(
-            ...         pl.col.HWUSUAL.cast(int)
-            ...         .fill_null(0)
-            ...         .dp.mean((0, 80))
-            ...     )
+            ...     .select(pl.col.HWUSUAL.cast(int).dp.mean((0, 80)))
             ... )
             >>> query.summarize()
             shape: (2, 4)
@@ -137,9 +133,7 @@ number of records per quarter.
             ...     .group_by(quarterly)
             ...     .agg(
             ...         dp.len(),
-            ...         pl.col.HWUSUAL.cast(int)
-            ...         .fill_null(0)
-            ...         .dp.sum((0, 80)),
+            ...         pl.col.HWUSUAL.cast(int).dp.sum((0, 80)),
             ...     )
             ... )
             >>> query.summarize()

@@ -48,7 +48,7 @@ fn make_expr_filter_impute() -> Fallible<()> {
         .filter(col("").is_not_null())
         .fill_null(lit(0))
         .dp()
-        .sum((1, 3), None)]);
+        .sum((lit(1), lit(3)), None)]);
 
     let t_obs = make_private_lazyframe(
         lf_domain,

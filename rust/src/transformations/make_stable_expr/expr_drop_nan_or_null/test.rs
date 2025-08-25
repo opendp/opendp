@@ -1,5 +1,5 @@
 use polars::df;
-use polars::prelude::{IntoLazy, NamedFrom, col};
+use polars::prelude::{IntoLazy, NamedFrom, col, lit};
 use polars::series::Series;
 
 use crate::domains::{AtomDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
@@ -19,7 +19,7 @@ fn make_expr_drop_nan_standard() -> Fallible<()> {
 
     let lf_filter = lf
         .clone()
-        .select([col("").drop_nans().dp().sum((0.0, 1.0), None)]);
+        .select([col("").drop_nans().dp().sum((lit(0.0), lit(1.0)), None)]);
 
     let m_obs = make_private_lazyframe(
         lf_domain,
@@ -47,7 +47,7 @@ fn make_expr_drop_null_standard() -> Fallible<()> {
 
     let lf_filter = lf
         .clone()
-        .select([col("").drop_nulls().dp().sum((0, 1), None)]);
+        .select([col("").drop_nulls().dp().sum((lit(0), lit(1)), None)]);
 
     let m_obs = make_private_lazyframe(
         lf_domain,
