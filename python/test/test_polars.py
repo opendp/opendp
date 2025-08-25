@@ -137,7 +137,7 @@ def test_private_lazyframe_sum(measure):
         max_length=50,
         max_groups=10,
     )
-    expr = pl.col("A").fill_nan(0.0).fill_null(0.0).dp.sum((1.0, 2.0), scale=0.0)
+    expr = pl.col("A").dp.sum((1.0, 2.0), scale=0.0)
     plan = seed(lf.collect_schema()).group_by("B").agg(expr)
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), measure, plan, 0.0
@@ -166,7 +166,7 @@ def test_private_lazyframe_mean(measure):
         max_groups=10,
     )
 
-    expr = pl.col("A").fill_nan(0.0).fill_null(0.0).dp.mean((1.0, 2.0), scale=(0.0, 0.0))
+    expr = pl.col("A").dp.mean((1.0, 2.0), scale=(0.0, 0.0))
     plan = seed(lf.collect_schema()).group_by("B").agg(expr)
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), measure, plan, 1.0
@@ -350,7 +350,7 @@ def test_polars_context():
         context.query()
         .with_columns(pl.col("B").is_null().alias("B_nulls"))
         .filter(pl.col("B_nulls"))
-        .select(pl.col("A").fill_null(2.0).dp.sum((0, 3)))
+        .select(pl.col("A").dp.sum((0, 3)))
         .release()
         .collect()
     )
@@ -358,7 +358,7 @@ def test_polars_context():
     (
         context.query()
         .group_by("B")
-        .agg(dp.len(), pl.col("A").fill_null(2).dp.sum((0, 3)))
+        .agg(dp.len(), pl.col("A").dp.sum((0, 3)))
         .release()
         .collect()
     )
@@ -393,7 +393,7 @@ def test_polars_describe():
         }
     )
 
-    summer = pl.col("A").fill_null(2).dp.sum((0, 3))
+    summer = pl.col("A").dp.sum((0, 3))
 
     query = context.query().group_by("B").agg(dp.len(), summer, summer.alias("B"))
 
@@ -438,7 +438,7 @@ def test_polars_accuracy_threshold():
     query = (
         context.query()
         .group_by("B")
-        .agg(dp.len(), pl.col("A").fill_null(2).dp.sum((0, 3)))
+        .agg(dp.len(), pl.col("A").dp.sum((0, 3)))
     )
 
     actual = query.summarize()
@@ -1192,7 +1192,7 @@ def test_arithmetic():
 
     observed = (
         context.query()
-        .select((pl.col.data * pl.col.weights).fill_null(0).fill_nan(0).dp.sum((0, 5)))
+        .select((pl.col.data * pl.col.weights).dp.sum((0, 5)))
         .release()
         .collect()["data"][0]
     )
@@ -1300,7 +1300,7 @@ def test_private_lazyframe_bounded_dp(privacy_unit):
         margins=[dp.polars.Margin(by=(), max_length=300)],
     )
 
-    query = context.query().select(pl.col.id.fill_null(0).dp.sum((0, 3)))
+    query = context.query().select(pl.col.id.dp.sum((0, 3)))
     assert query.summarize()["scale"][0] == 3.000000000000001  # type: ignore[index]
 
 def test_lazyframe_bounded_dp_truncation():

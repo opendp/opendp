@@ -2,7 +2,7 @@ use core::f64;
 
 use polars::{
     df,
-    prelude::{IntoLazy, NamedFrom},
+    prelude::{IntoLazy, NamedFrom, lit},
     series::Series,
 };
 use polars_plan::dsl::{col, len};
@@ -34,8 +34,8 @@ fn test_summarize_polars_measurement_basic() -> Fallible<()> {
         FrameDistance(SymmetricDistance),
         MaxDivergence,
         lf.select([
-            len().dp().noise(None, None),
-            col("A").dp().sum((0, 1), None),
+            len().dp().noise(None),
+            col("A").dp().sum((lit(0), lit(1)), None),
         ]),
         Some(1.0),
         None,
@@ -49,7 +49,6 @@ fn test_summarize_polars_measurement_basic() -> Fallible<()> {
         "distribution" => &["Integer Laplace", "Integer Laplace"],
         "scale" => &[1.0, 1.0]
     ]?;
-    println!("{:?}", expected);
     assert_eq!(expected, description);
 
     let description = summarize_polars_measurement(meas.clone(), Some(0.05))?;
@@ -80,7 +79,7 @@ fn test_summarize_polars_measurement_mean() -> Fallible<()> {
         lf_domain,
         FrameDistance(SymmetricDistance),
         MaxDivergence,
-        lf.select([col("A").dp().mean((3, 5), Some((1.0, 0.0)))]),
+        lf.select([col("A").dp().mean((lit(3), lit(5)), Some(1.0))]),
         None,
         None,
     )?;
@@ -93,7 +92,6 @@ fn test_summarize_polars_measurement_mean() -> Fallible<()> {
         "distribution" => &[Some("Integer Laplace"), Some("Integer Laplace")],
         "scale" => &[Some(1.0), Some(0.0)]
     ]?;
-    println!("{:?}", expected);
     assert_eq!(expected, description);
 
     let description = summarize_polars_measurement(meas.clone(), Some(0.05))?;

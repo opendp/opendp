@@ -1,6 +1,6 @@
 use polars::{
     df,
-    prelude::{IntoLazy, col},
+    prelude::{IntoLazy, NamedFrom, col},
 };
 
 use crate::{
