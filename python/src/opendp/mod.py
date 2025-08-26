@@ -986,7 +986,7 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
             isinstance(self, ExtrinsicDistance)
             and isinstance(descriptor := self.descriptor, type_)
         ):
-            raise ValueError(f"metric descriptor must be a {type_.__name__}")
+            raise ValueError(f"metric descriptor must be a {type_.__name__}, found {self}")
         return descriptor
 
 

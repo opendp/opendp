@@ -109,6 +109,8 @@ nitpick_ignore = [
     ('py:class', 'numpy.ndarray'),
     ('py:class', 'sklearn.decomposition._pca.PCA'),
 
+    # Standard library reference fails to resolve
+    ('py:class', 'abc.ABC'),
 
     # I think the problem is that Sphinx is making parameter list documentation,
     # and it doesn't understand that `M`, `T`, and `D` are type parameters, not actual types.
