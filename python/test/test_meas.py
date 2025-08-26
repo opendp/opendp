@@ -53,19 +53,33 @@ def test_gaussian_search():
         lambda s: make_approx_gauss(s, 1e-5),
         d_in=1., d_out=(1., 1e-5)))
 
+def new_make_noise(measure):
+    def make_noise(domain, metric, scale):
+        return dp.m.make_noise(domain, metric, measure, scale)
+    return make_noise
 
-def test_laplace():
+@pytest.mark.parametrize("constructor", [
+    dp.m.make_laplace,
+    new_make_noise(dp.max_divergence())
+])
+def test_laplace(constructor):
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
-    meas = dp.m.make_laplace(*input_space, 10.5)
-    print("base laplace:", meas(100.))
-    print("epsilon", meas.map(1.))
-    assert meas.check(1., .096)
+    meas = constructor(*input_space, 10)
+    assert -50 < meas(0.) < 50
+    assert meas.map(1.0) == 0.1
 
-def test_vector_laplace():
+
+@pytest.mark.parametrize("constructor", [
+    dp.m.make_laplace,
+    new_make_noise(dp.max_divergence())
+])
+def test_vector_laplace(constructor):
     input_space = dp.vector_domain(dp.atom_domain(T=float, nan=False)), dp.l1_distance(T=float)
-    meas = dp.m.make_laplace(*input_space, scale=10.5)
-    print("base laplace:", meas([80., 90., 100.]))
-    assert meas.check(1., 1.3)
+    meas = constructor(*input_space, scale=1.)
+    release = meas([0., 0., 0.])
+    assert -50 < min(release)
+    assert max(release) < 50
+    assert meas.map(1.0) == 1.0
 
 
 def test_gaussian_smoothed_max_divergence():
@@ -208,8 +222,8 @@ def test_gaussian():
 ])
 def test_noisy_max(measure, d_out):
     input_domain = dp.vector_domain(dp.atom_domain(T=dp.usize))
-
     input_metric = dp.linf_distance(T=dp.usize)
+
     meas = (input_domain, input_metric) >> dp.m.then_noisy_max(measure, 1.)
     # fails with very small probability
     assert meas([0, 0, 20, 40]) == 3  # because score 3 is by far the greatest
@@ -312,10 +326,18 @@ def test_gaussian_threshold_int():
     # 12.5 = (10 / 2)^2 / 2 = (Δ / σ)^2 / 2
     assert meas.map((1, 10, 10)) == (12.5, 1.1102230246251565e-16)
 
-def test_gaussian_threshold_float():
+def make_noise_threshold_zCDP(domain, metric, scale, threshold):
+    measure = dp.approximate(dp.zero_concentrated_divergence())
+    return dp.m.make_noise_threshold(domain, metric, measure, scale, threshold)
+
+@pytest.mark.parametrize("constructor", [
+    dp.m.make_gaussian_threshold,
+    make_noise_threshold_zCDP
+])
+def test_gaussian_threshold_float(constructor):
     domain = dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=float, nan=False))
     metric = dp.l02inf_distance(dp.absolute_distance(T=float))
-    meas = dp.m.make_gaussian_threshold(domain, metric, scale=2., threshold=28.)
+    meas = constructor(domain, metric, scale=2., threshold=28.)
     release = meas({str(i): i * 10.0 for i in range(10)})
     # 0 + noise is likely not over 28
     assert "0" not in release, release

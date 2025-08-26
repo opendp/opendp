@@ -158,6 +158,8 @@ polars = { version = "=0.50.0", features = [
 ], optional = true }    
 polars-plan = { version = "=0.50.0", features = ["ffi_plugin", "python"], optional = true }
 polars-utils = { version = "=0.50.0" }
+# pinned due to: https://github.com/pola-rs/polars/issues/24208
+planus = { version = "=1.1.1" }
 
 # matches the version specified in Polars: 
 #   https://github.com/pola-rs/polars/blob/main/Cargo.toml

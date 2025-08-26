@@ -20,7 +20,7 @@ use crate::{
     measurements::{
         KeySanitizer, MatchGroupBy,
         expr_index_candidates::IndexCandidatesPlugin,
-        expr_noise::{Distribution, NoisePlugin, Support},
+        expr_noise::{NoiseDistribution, NoisePlugin, Support},
         expr_noisy_max::NoisyMaxPlugin,
         is_threshold_predicate, match_group_by,
     },
@@ -193,7 +193,7 @@ fn summarize_expr<'a>(
 
     if let Some((input, plugin)) = match_trusted_plugin::<NoisePlugin>(&expr)? {
         let accuracy = if let Some(alpha) = alpha {
-            use {Distribution::*, Support::*};
+            use {NoiseDistribution::*, Support::*};
             Some(match (plugin.distribution, plugin.support) {
                 (Laplace, Float) => laplacian_scale_to_accuracy(plugin.scale, alpha),
                 (Gaussian, Float) => gaussian_scale_to_accuracy(plugin.scale, alpha),

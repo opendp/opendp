@@ -5,7 +5,7 @@ use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, Measure};
 use crate::domains::{AtomDomain, MapDomain};
 use crate::err;
 use crate::error::Fallible;
-use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, AnyObject, Downcast};
+use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::ffi::util::{Type, TypeContents, as_ref};
 use crate::measurements::nature::Nature;
 use crate::measurements::{MakeNoiseThreshold, make_laplace_threshold};
@@ -19,7 +19,7 @@ pub extern "C" fn opendp_measurements__make_laplace_threshold(
     input_metric: *const AnyMetric,
     scale: f64,
     threshold: *const c_void,
-    k: *const AnyObject,
+    k: *const i32,
     MO: *const c_char,
 ) -> FfiResult<*mut AnyMeasurement> {
     fn monomorphize<MO: 'static + Measure, TK, TV, QI>(
@@ -72,11 +72,7 @@ pub extern "C" fn opendp_measurements__make_laplace_threshold(
     let TK = try_!(Type::of_id(&args[0]));
     let TV = try_!(Type::of_id(&args[1]));
     let QI = try_!(input_metric.type_.get_atom());
-    let k = if let Some(obj) = as_ref(k) {
-        Some(*try_!(obj.downcast_ref::<i32>()))
-    } else {
-        None
-    };
+    let k = as_ref(k as *const i32).map(Clone::clone);
 
     dispatch!(monomorphize, [
         (MO, [Approximate<MaxDivergence>]),
