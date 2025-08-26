@@ -108,7 +108,7 @@ The contingency table supports counting queries over arbitrary sets of grouping 
 
 .. code:: pycon
 
-    >>> table1: dp.mbi.ContingencyTable = query.release()
+    >>> table: dp.mbi.ContingencyTable = query.release()
 
 Any keys in the data that are not present in the key-set,
 either because they are missing from the key-set (like a third category for ``SEX``)
@@ -117,7 +117,7 @@ are replaced with ``null`` when estimating higher-order marginals.
 
 .. code:: pycon
 
-    >>> table1.keys["ILOSTAT"] # doctest: +NORMALIZE_WHITESPACE
+    >>> table.keys["ILOSTAT"] # doctest: +NORMALIZE_WHITESPACE
     shape: (5,)
     Series: 'ILOSTAT' [i64]
     [
@@ -136,14 +136,14 @@ project the contingency table down to just ``ILOSTAT``.
 
 .. code:: pycon
 
-    >>> table1.project(("ILOSTAT",)).astype(int) # doctest: +SKIP
+    >>> table.project(("ILOSTAT",)).astype(int) # doctest: +SKIP
     Array([1515729,  155912, 1450748,  689452,     109], dtype=int64)
 
 The same projection can be viewed in a melted dataframe form:
 
 .. code:: pycon
 
-    >>> table1.project_melted(("ILOSTAT",)) # doctest: +SKIP
+    >>> table.project_melted(("ILOSTAT",)) # doctest: +SKIP
     shape: (5, 2)
     ┌─────────┬──────────────┐
     │ ILOSTAT ┆ len          │
@@ -165,7 +165,7 @@ so it is possible to construct a confidence interval for each scalar in the proj
 
 .. code:: pycon
 
-    >>> scale = table1.std(("ILOSTAT"),)
+    >>> scale = table.std(("ILOSTAT",))
     >>> dp.gaussian_scale_to_accuracy(scale, alpha=.05)
     446.2524232592843
 
@@ -180,7 +180,7 @@ the two specified in ``keys``, as well as ``null`` for any records not in the ke
 
 .. code:: pycon
 
-    >>> table1.keys["SEX"] # doctest: +NORMALIZE_WHITESPACE
+    >>> table.keys["SEX"] # doctest: +NORMALIZE_WHITESPACE
     shape: (3,)
     Series: 'SEX' [i64]
     [
@@ -196,10 +196,10 @@ and the standard deviation is unknown.
 
 .. code:: pycon
 
-    >>> table1.project(("SEX",)).astype(int) # doctest: +SKIP
+    >>> table.project(("SEX",)).astype(int) # doctest: +SKIP
     Array([1270561, 1270561, 1270561], dtype=int64)
 
-    >>> table1.std(("SEX",)) # doctest: +IGNORE_EXCEPTION_DETAIL
+    >>> table.std(("SEX",)) # doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ...
     ValueError: attrs (('SEX',)) are not covered by the query set
@@ -212,7 +212,7 @@ To improve the utility of this projection, you could release an updated continge
     ...     context.query(rho=0.05, delta=0.0)
     ...     .select("SEX")
     ...     .contingency_table(
-    ...         table=table1,
+    ...         table=table,
     ...         algorithm=dp.mbi.Fixed(queries=[dp.mbi.Count(("SEX",))]),
     ...     )
     ...     .release()

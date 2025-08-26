@@ -183,11 +183,11 @@ jobs:
         if: ! (contains(matrix.extra-install, 'polars') || contains(matrix.extra-install, 'mbi'))
         # There's not a "skipif" for doctests, so use "-k" to exclude based on name patterns.
         # (Even in unittests we should use "importskip" rather than "skipif".)
-        run: coverage run -m pytest -v -k "not lazyframe and not polars and not pca and not rst and not contingency and not synthetic"
+        run: pytest -v -k "not lazyframe and not polars and not pca and not rst and not contingency and not synthetic"
 
       - name: Test Polars
         if: contains(matrix.extra-install, 'polars')
-        run: coverage run -m pytest -v -k "not contingency and not synthetic"
+        run: pytest -v -k "not contingency and not synthetic"
 
       - name: Test MBI
         if: contains(matrix.extra-install, 'mbi')
