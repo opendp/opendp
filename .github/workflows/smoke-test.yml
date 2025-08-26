@@ -136,6 +136,7 @@ jobs:
           - '.'
           - '.[scikit-learn]'
           - '.[polars]'
+          - '.[mbi]'
 
     steps:
       - name: Checkout repository
@@ -181,7 +182,7 @@ jobs:
       - name: Test
         # There's not a "skipif" for doctests, so use "-k" to exclude based on name patterns.
         # (Even in unittests we should use "importskip" rather than "skipif".)
-        run: coverage run -m pytest -v ${{ ! contains(matrix.extra-install, 'polars') && '-k "not lazyframe and not polars and not pca and not rst"' || ''}}
+        run: coverage run -m pytest -v ${{ ! (contains(matrix.extra-install, 'polars') || contains(matrix.extra-install, 'mbi')) && '-k "not lazyframe and not polars and not pca and not rst"' || ''}}
 
       - name: Test replace-binary-path
         if: ${{ contains(matrix.extra-install, 'polars') }}
@@ -190,14 +191,14 @@ jobs:
 
       - name: Test coverage
         # We only expect test coverage with all extra dependencies.
-        # "polars" implies "scikit-learn": see setup.cfg.
-        if: ${{ contains(matrix.extra-install, 'polars') && contains(matrix.python-version, '3.13') }}
+        # "mbi" implies "polars" and "scikit-learn": see setup.cfg.
+        if: ${{ contains(matrix.extra-install, 'mbi') && contains(matrix.python-version, '3.13') }}
         run: |
           coverage report
           touch /tmp/coverage.txt
 
       - name: Upload coverage
-        if: ${{ contains(matrix.extra-install, 'polars') && contains(matrix.python-version, '3.13') }}
+        if: ${{ contains(matrix.extra-install, 'mbi') && contains(matrix.python-version, '3.13') }}
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
