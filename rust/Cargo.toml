@@ -155,6 +155,7 @@ polars = { version = "=0.50.0", features = [
     "hist",
     "find_many",
     "string_normalize",
+    "sql",
 ], optional = true }    
 polars-plan = { version = "=0.50.0", features = ["ffi_plugin", "python"], optional = true }
 polars-utils = { version = "=0.50.0" }
