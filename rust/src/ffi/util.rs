@@ -22,7 +22,7 @@ use crate::measures::{
 use crate::metrics::ffi::ExtrinsicDistance;
 use crate::metrics::{
     AbsoluteDistance, ChangeOneDistance, DiscreteDistance, HammingDistance, InsertDeleteDistance,
-    L1Distance, L01InfDistance, L2Distance, L02InfDistance, SymmetricDistance,
+    L1Distance, L01InfDistance, L2Distance, L02InfDistance, LInfDistance, SymmetricDistance,
 };
 
 #[cfg(feature = "polars")]
@@ -363,7 +363,7 @@ lazy_static! {
             type_vec![Vec, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject, ExtrinsicObject>],
             type_vec![Option, <AnyObject>],
             type_vec![HashMap, <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, String>, <bool, char, u8, u16, u32, i16, i32, i64, i128, f32, f64, usize, String, AnyObject, ExtrinsicObject>],
-            type_vec![ExtrinsicObject, BitVector],
+            type_vec![ExtrinsicObject, ExtrinsicDistance, BitVector],
             // OptionDomain<AtomDomain<_>>::Carrier
             type_vec![[Vec Option], <bool, char, u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, usize, f32, f64, String, AnyObject>],
             type_vec![Vec, <(f32, f32), (f64, f64), BitVector>],
@@ -407,6 +407,7 @@ lazy_static! {
             type_vec![AbsoluteDistance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![L1Distance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
             type_vec![L2Distance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
+            type_vec![LInfDistance, <u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64>],
 
             // measures
             type_vec![MaxDivergence, SmoothedMaxDivergence, ZeroConcentratedDivergence, RenyiDivergence, ExtrinsicDivergence],
