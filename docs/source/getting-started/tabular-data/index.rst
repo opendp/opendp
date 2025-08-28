@@ -154,3 +154,4 @@ for more information on any of these topics.
   grouping
   identifier-truncation
   preparing-microdata
+  contingency-tables

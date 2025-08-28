@@ -107,7 +107,7 @@ where
         // allow replacement on categoricals when old lit matches categories
         match (Series::extract(old_lit.clone()), categories) {
             (Ok(Some(old_lit)), Some(categories))
-                if old_lit
+                if old_lit.cast(&DataType::String)?
                     == Series::new(
                         old_lit.name().clone(),
                         categories
@@ -121,7 +121,8 @@ where
             _ => {
                 return fallible!(
                     MakeTransformation,
-                    "replace_strict cannot be applied to categorical data, because it may trigger a data-dependent CategoricalRemappingWarning in Polars"
+                    "replace_strict cannot be applied to categorical data ({}), because it may trigger a data-dependent CategoricalRemappingWarning in Polars",
+                    middle_domain.column.name
                 );
             }
         }

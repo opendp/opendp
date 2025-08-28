@@ -64,9 +64,9 @@ def new_make_noise(measure):
 ])
 def test_laplace(constructor):
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
-    meas = constructor(*input_space, 10)
+    meas = constructor(*input_space, 1)
     assert -50 < meas(0.) < 50
-    assert meas.map(1.0) == 0.1
+    assert meas.map(1.0) == 1.0
 
 
 @pytest.mark.parametrize("constructor", [

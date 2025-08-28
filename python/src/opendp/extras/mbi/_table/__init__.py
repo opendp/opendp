@@ -228,8 +228,8 @@ def make_contingency_table(
 
     # add cut bin labels to keys
     def get_categories(cutset):
-        base = cutset.clone().extend(pl.Series([cutset[-1] + 1]))
-        return base.cut(cutset).cat.get_categories().cast(pl.Categorical)  # type: ignore[arg-type]
+        labels = [f"({lb}, {rb}]" for lb, rb in zip(["-inf", *cutset], [*cutset, "inf"])]
+        return pl.Series(cutset.name, labels)
 
     keys_pl |= {col: get_categories(cutset) for col, cutset in cuts_pl.items()}
 
@@ -245,7 +245,7 @@ def make_contingency_table(
         thresholds = {}
 
     if cuts_pl:
-        plan = plan.with_columns(pl.col(c).cut(cutset) for c, cutset in cuts_pl.items() if c in schema)  # type: ignore[arg-type]
+        plan = plan.with_columns(pl.col(c).cut(cutset, labels=get_categories(cutset)) for c, cutset in cuts_pl.items() if c in schema)  # type: ignore[arg-type]
 
     if (QO := RuntimeType.infer(d_out)) != output_measure.distance_type:
         raise ValueError(f"d_out type ({QO}) must be {output_measure.distance_type}")
@@ -437,7 +437,7 @@ def _make_oneway_marginals(
             return plan.group_by(name).agg(dp_len())
 
         # fold all unknown values into null
-        if keyset.dtype == pl.Categorical:
+        if isinstance(keyset.dtype, pl.Categorical):  # pragma: no cover
             keyset = keyset.cast(pl.Enum(keyset.cast(pl.String)))
         replace = pl.col(name).replace_strict(keys[name], keyset, default=None)
 

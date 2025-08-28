@@ -158,7 +158,6 @@ def test_odometer_supporting_elements():
 
 
 def test_privacy_filter():
-    dp.enable_features("rust-stack-trace")
     m_filter = dp.c.make_privacy_filter(
         dp.c.make_fully_adaptive_composition(
             input_domain=dp.vector_domain(dp.atom_domain(T=int)),

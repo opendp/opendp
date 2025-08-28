@@ -7,7 +7,7 @@ use super::*;
 #[test]
 fn test_rnm_gumbel_distribution_varied() -> Fallible<()> {
     let scores: [_; 10] = from_fn(|i| i);
-    let trials = 100;
+    let trials = 1000;
     let mut observed = [0.0; 10];
     (0..trials).try_for_each(|_| {
         observed[gumbel_top_k(&scores, 1.0, 1, false)?[0]] += 1.0;
