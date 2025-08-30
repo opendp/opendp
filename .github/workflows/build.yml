@@ -149,7 +149,7 @@ jobs:
       - name: Install cibuildwheel
         run: |
           python -m pip install --upgrade pip
-          python -m pip install cibuildwheel==2.19.2
+          python -m pip install cibuildwheel==2.23.3
     
       - name: Build wheels
         working-directory: python
@@ -186,6 +186,7 @@ jobs:
             fi
           CIBW_BUILD_VERBOSITY: 1
           CIBW_TEST_COMMAND: python -c "import opendp"
+          PYO3_PYTHON: python3.10
 
       - uses: actions/upload-artifact@v4
         with:
@@ -196,8 +197,9 @@ jobs:
     needs: bindings
     runs-on: ubuntu-22.04
     env:
-      DOCKER_IMAGE: messense/manylinux_2_24-cross:aarch64
+      DOCKER_IMAGE: messense/manylinux_2_28-cross:aarch64
       TARGET: aarch64-unknown-linux-gnu
+      PYO3_PYTHON: python3.10
     steps:
       - name: Free disk space
         uses: jlumbroso/free-disk-space@v1.3.1
