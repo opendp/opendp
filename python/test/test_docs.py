@@ -70,3 +70,37 @@ def test_notebooks_are_executed(nb_path):
 To fix: jupyter nbconvert --to notebook --execute {short_path} --inplace
 First cell with missing or misordered execution:\n{bad_sources[0].splitlines()[0]}'''
 
+
+def is_public(path: Path):
+    '''
+    >>> is_public(Path('_parent/child.py'))
+    False
+    >>> is_public(Path('_parent/__init__.py'))
+    False
+    >>> is_public(Path('parent/__init__.py'))
+    True
+    >>> is_public(Path('parent/_child.py'))
+    False
+    >>> is_public(Path('parent/child.py'))
+    True
+    '''
+    return not path.parent.name.startswith('_') and (
+        not path.name.startswith('_') or path.name == '__init__.py'
+    )
+
+public_extras = [
+    path for path in 
+    Path(__file__).parent.parent.glob("src/opendp/extras/**/*.py")
+    if is_public(path)
+]
+
+@pytest.mark.parametrize(
+    "py_path",
+    public_extras,
+    ids=lambda path: f'{path.parent.name}/{path.name}'
+)
+def test_extras_boilerplate(py_path):
+    if py_path.parent.name == 'extras' and py_path.name == '__init__.py':
+        pytest.skip("top-level is a special case")
+    py = py_path.read_text()
+    assert 'For convenience' in py
