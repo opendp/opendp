@@ -6,7 +6,7 @@ but they may feel out of place in Python. These utilities try to fill that gap.
 
 For more context, see :ref:`typing in the User Guide <typing-user-guide>`.
 
-For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
+For convenience, all the members of this module are also available from :py:mod:`opendp.prelude`.
 We suggest importing under the conventional name ``dp``:
 
 .. code:: pycon

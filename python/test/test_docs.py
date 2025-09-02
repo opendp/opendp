@@ -99,8 +99,19 @@ public_extras = [
     public_extras,
     ids=lambda path: f'{path.parent.name}/{path.name}'
 )
-def test_extras_boilerplate(py_path):
+def test_extras_boilerplate_convenience(py_path):
     if py_path.parent.name == 'extras' and py_path.name == '__init__.py':
         pytest.skip("top-level is a special case")
     py = py_path.read_text()
-    assert 'For convenience' in py
+    expected_ns = f'dp.{py_path.name}'
+    expected = f"""
+For convenience, all the members of this module are also available from :py:mod:`opendp.prelude`.
+We suggest importing under the conventional name ``dp``:
+
+.. code:: pycon
+
+    >>> import opendp.prelude as dp
+"""
+    # The classes of this module will then be accessible at ``{expected_ns}``.
+
+    assert expected in py

@@ -1,8 +1,8 @@
 """
-For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
+For convenience, all the members of this module are also available from :py:mod:`opendp.prelude`.
 We suggest importing under the conventional name ``dp``:
 
-.. code:: python
+.. code:: pycon
 
     >>> import opendp.prelude as dp
 
