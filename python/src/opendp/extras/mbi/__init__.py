@@ -5,14 +5,14 @@ This module requires extra installs: ``pip install 'opendp[mbi]'``
 and is the name of the `Private-PGM <https://github.com/ryan112358/private-pgm>`_ package.
 OpenDP uses Private-PGM to postprocess DP releases made with the OpenDP Library.
 
-For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
+For convenience, all the members of this module are also available from :py:mod:`opendp.prelude`.
 We suggest importing under the conventional name ``dp``:
 
-.. code:: python
+.. code:: pycon
 
     >>> import opendp.prelude as dp
 
-The methods of this module will then be accessible at ``dp.mbi``.
+The members of this module will then be accessible at ``dp.mbi``.
 '''
 
 from ._aim import AIM

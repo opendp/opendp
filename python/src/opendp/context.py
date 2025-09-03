@@ -3,7 +3,7 @@ The ``context`` module provides :py:class:`opendp.context.Context` and supportin
 
 For more context, see :ref:`context in the User Guide <context-user-guide>`.
 
-For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
+For convenience, all the members of this module are also available from :py:mod:`opendp.prelude`.
 We suggest importing under the conventional name ``dp``:
 
 .. code:: pycon

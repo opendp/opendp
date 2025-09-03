@@ -70,3 +70,96 @@ def test_notebooks_are_executed(nb_path):
 To fix: jupyter nbconvert --to notebook --execute {short_path} --inplace
 First cell with missing or misordered execution:\n{bad_sources[0].splitlines()[0]}'''
 
+
+def is_public_and_not_top(path: Path):
+    '''
+    >>> is_public_and_not_top(Path('_parent/child.py'))
+    False
+    >>> is_public_and_not_top(Path('_parent/__init__.py'))
+    False
+    >>> is_public_and_not_top(Path('parent/__init__.py'))
+    True
+    >>> is_public_and_not_top(Path('parent/_child.py'))
+    False
+    >>> is_public_and_not_top(Path('parent/child.py'))
+    True
+    '''
+    return not path.parent.name.startswith('_') and (
+        not path.name.startswith('_') or path.name == '__init__.py'
+    ) and not (path.parent.name == 'extras' and path.name == '__init__.py')
+
+
+public_extras = [
+    path for path in 
+    Path(__file__).parent.parent.glob("src/opendp/extras/**/*.py")
+    if is_public_and_not_top(path)
+]
+
+
+def get_namespace(py_path: Path):
+    # Getting __doc__ from the module might be cleaner,
+    # but walking through the module hierarchy is trickier than path glob.
+    ns = []
+    parent_parent_name = py_path.parent.parent.name
+    parent_name = py_path.parent.name
+    stem = py_path.stem
+    if parent_parent_name != 'extras' and parent_name != 'extras':
+        ns.append(parent_parent_name)
+    if parent_name != 'extras':
+        ns.append(parent_name)
+    if stem != '__init__':
+        ns.append(stem)
+    return f'dp.{".".join(ns)}'
+
+
+def get_docstring(py_path: Path):
+    import ast
+    py = py_path.read_text()
+    module_ast = ast.parse(py)
+    # This is a little fragile, but as long as a docstring is first, it should work.
+    return module_ast.body[0].value.value.strip() # type: ignore[attr-defined]
+ 
+
+@pytest.mark.parametrize(
+    "py_path",
+    public_extras,
+    ids=get_namespace
+)
+def test_extras_docstring_convenience(py_path):
+    actual = get_docstring(py_path)
+    expected_ns = get_namespace(py_path)
+    expected = f"""
+For convenience, all the members of this module are also available from :py:mod:`opendp.prelude`.
+We suggest importing under the conventional name ``dp``:
+
+.. code:: pycon
+
+    >>> import opendp.prelude as dp
+
+The members of this module will then be accessible at ``{expected_ns}``.    
+""".strip()
+    assert expected in actual, f"expected not in actual: {expected=}\n{actual=}"
+
+
+@pytest.mark.parametrize(
+    "py_path",
+    public_extras,
+    ids=get_namespace
+)
+def test_extras_docstring_installs(py_path):
+    actual = get_docstring(py_path)
+    namespace = get_namespace(py_path)
+    if 'sklearn' in namespace:
+        extra = 'scikit-learn'
+    elif 'numpy' in namespace:
+        extra = 'numpy'
+    elif 'polars' in namespace:
+        extra = 'polars'
+    elif 'mbi' in namespace:
+        extra = 'mbi'
+    elif 'examples' in namespace:
+        pytest.skip("dp.examples does not need extra installs")
+    expected = f"""
+This module requires extra installs: ``pip install 'opendp[{extra}]'``   
+""".strip()
+    assert expected in actual, f"expected not in actual: {expected=}\n{actual=}"

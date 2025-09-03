@@ -1,12 +1,12 @@
 '''
-For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
+For convenience, all the members of this module are also available from :py:mod:`opendp.prelude`.
 We suggest importing under the conventional name ``dp``:
 
 .. code:: pycon
 
     >>> import opendp.prelude as dp
 
-The methods of this module will then be accessible at ``dp.examples``.    
+The members of this module will then be accessible at ``dp.examples``.    
 '''
 
 from pathlib import Path

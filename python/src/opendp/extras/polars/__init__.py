@@ -11,7 +11,7 @@ We suggest importing under the conventional name ``dp``:
 
     >>> import opendp.prelude as dp
 
-The methods of this module will then be accessible at ``dp.polars``.
+The members of this module will then be accessible at ``dp.polars``.
 """
 
 from __future__ import annotations
