@@ -264,6 +264,10 @@ class NPArrayDDomain(NamedTuple):
     T: str | RuntimeType
 
 
+NPArrayDDomain.shape.__doc__ = 'shape of the array'
+NPArrayDDomain.T.__doc__ = 'atom type'
+
+
 def _sscp_domain(
     *,
     norm: float | None = None,

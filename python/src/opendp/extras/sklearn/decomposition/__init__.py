@@ -37,6 +37,11 @@ class PCAEpsilons(NamedTuple):
     mean: Optional[float]
 
 
+PCAEpsilons.eigvals.__doc__ = 'ε-expenditure per changed record in the input data'
+PCAEpsilons.eigvecs.__doc__ = 'ε-expenditures per changed record in the input data'
+PCAEpsilons.mean.__doc__ = ''  # TODO
+
+
 def make_private_pca(
     input_domain: Domain,
     input_metric: Metric,
