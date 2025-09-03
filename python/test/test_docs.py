@@ -88,11 +88,13 @@ def is_public(path: Path):
         not path.name.startswith('_') or path.name == '__init__.py'
     )
 
+
 public_extras = [
     path for path in 
     Path(__file__).parent.parent.glob("src/opendp/extras/**/*.py")
     if is_public(path)
 ]
+        
 
 @pytest.mark.parametrize(
     "py_path",
@@ -103,7 +105,21 @@ def test_extras_boilerplate_convenience(py_path):
     if py_path.parent.name == 'extras' and py_path.name == '__init__.py':
         pytest.skip("top-level is a special case")
     py = py_path.read_text()
-    expected_ns = f'dp.{py_path.name}'
+    import ast
+    module_ast = ast.parse(py)
+    # Getting __doc__ from the module might be cleaner,
+    # but walking through the module hierarchy is trickier than path glob.
+    ns = []
+    parent_parent_name = py_path.parent.parent.name
+    parent_name = py_path.parent.name
+    stem = py_path.stem
+    if parent_parent_name != 'extras' and parent_name != 'extras':
+        ns.append(parent_parent_name)
+    if parent_name != 'extras':
+        ns.append(parent_name)
+    if stem != '__init__':
+        ns.append(stem)
+    expected_ns = f'dp.{".".join(ns)}'
     expected = f"""
 For convenience, all the members of this module are also available from :py:mod:`opendp.prelude`.
 We suggest importing under the conventional name ``dp``:
@@ -111,7 +127,11 @@ We suggest importing under the conventional name ``dp``:
 .. code:: pycon
 
     >>> import opendp.prelude as dp
-"""
-    # The classes of this module will then be accessible at ``{expected_ns}``.
 
-    assert expected in py
+The classes of this module will then be accessible at ``{expected_ns}``.    
+""".strip()
+    # This is a little fragile, but as long as a docstring is first, it should work.
+    actual = module_ast.body[0].value.value.strip()
+
+
+    assert expected in actual, f"expected not in actual: {expected=}\n{actual=}"
