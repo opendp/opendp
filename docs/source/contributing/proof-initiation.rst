@@ -49,7 +49,7 @@ Let’s imagine we wanted to add a new function to
 
    /// # Proof Definition
    /// For any setting of the input parameters, 
-   /// returns either `Ok(out)` where $out \ge |a - b|$, or `Err(e)`.
+   /// returns either "Ok(out)" where $out \ge |a - b|$, or "Err(e)".
    fn absolute_distance<T: InfSub + AlertingAbs>(a: T, b: T) -> Fallible<T> {
        a.inf_sub(&b)?.alerting_abs()
    }
@@ -94,7 +94,7 @@ Here’s a template for ``absolute_distance.tex``:
 .. code:: latex
 
    \documentclass{article} % necessary for Overleaf to recognize the file
-   \input{../lib.sty} % `rust/src/lib.sty` contains boilerplate and macros
+   \input{../lib.sty} % "rust/src/lib.sty" contains boilerplate and macros
 
    \title{\texttt{fn absolute\_distance}}
    \author{Your Name(s) Here}\date{}

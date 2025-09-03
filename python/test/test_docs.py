@@ -61,7 +61,7 @@ def test_single_backticks(rst_path: Path):
         m = re.search(r'[^`:]`([^`<>_:,]+)`[^`]', line)
         if m:
             content = m.group(1)
-            errors.append(f'line {i}: "{content}" will be italicized: add double-backticks, or break line.')
+            errors.append(f'line {i}: "{content}" will be italicized: add double-backticks, or change to "*".')
     assert not errors, '\n'.join(errors)
 
 @pytest.mark.parametrize(

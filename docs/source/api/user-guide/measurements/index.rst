@@ -97,7 +97,8 @@ If you need constant-time execution to protect against timing side-channels, spe
 
 Canonical Noise
 ***************
-The canonical noise mechanism (:func:`opendp.measurements.make_canonical_noise`) is discussed in detail in `these examples <canonical-noise-mechanism.html>`_
+The canonical noise mechanism (:func:`opendp.measurements.make_canonical_noise`)
+is discussed in detail in `these examples <canonical-noise-mechanism.html>`_
 
 
 Thresholded Noise Mechanisms

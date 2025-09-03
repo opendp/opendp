@@ -17,7 +17,7 @@ We also need to specify the column we'll be grouping by.
 ...         invariant="keys",
 ...         max_length=50))
 
-With that in place, we can plan the Polars computation, using the `dp` plugin. 
+With that in place, we can plan the Polars computation, using the ``dp`` plugin. 
 
 >>> plan = (
 ...     pl.LazyFrame(schema={'grade': pl.Int32, 'pet_count': pl.Int32})

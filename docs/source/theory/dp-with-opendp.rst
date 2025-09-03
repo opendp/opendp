@@ -204,7 +204,7 @@ it under ``dp.t``:
         .. code:: pycon
 
             >>> # Call the constructor to produce the transformation
-            >>> # `bounded_sum`. Notice that `make_sum` expects an input
+            >>> # "bounded_sum". Notice that "make_sum" expects an input
             >>> # domain consisting of bounded data:
             >>> input_domain = dp.vector_domain(
             ...     dp.atom_domain(bounds=(0.0, 5.0))
@@ -314,9 +314,9 @@ links:
             ...     input_domain, input_metric, bounds=(0.0, 5.0)
             ... )
 
-            >>> # `clamp` expects vectors of non-null, unbounded elements
+            >>> # "clamp" expects vectors of non-null, unbounded elements
             >>> mock_dataset = [1.3, 7.8, -2.5, 7.0]
-            >>> # `clamp` emits data that is suitable for `bounded_sum`
+            >>> # "clamp" emits data that is suitable for `bounded_sum`
             >>> clamp(mock_dataset)
             [1.3, 5.0, 0.0, 5.0]
 

@@ -187,7 +187,7 @@ This is used to count the fewest number of additions or removals to convert one 
 
 Each metric is bundled together with a domain, and :math:`A` and :math:`B` are members of that domain.
 Since the symmetric distance metric is often paired with a ``VectorDomain<D>``, :math:`A` and :math:`B` are often vectors.
-If we had a dataset where each user can influence at most k records, we would say that the symmetric distance is bounded by `k`, so ``d_in=k`` 
+If we had a dataset where each user can influence at most k records, we would say that the symmetric distance is bounded by ``k``, so ``d_in=k`` 
 (where ``d_in`` denotes an upper bound on the distance between adjacent inputs).
 
 Another example metric is ``AbsoluteDistance<f64>``.

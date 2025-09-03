@@ -9,7 +9,7 @@ The resulting Transformation contains a function that sequentially executes the 
 It also contains a privacy map that takes an input distance bound on the inner Transformation and emits an output distance bound on the outer transformation.
 
 The :py:func:`opendp.combinators.make_chain_mt` constructor similarly creates a new Measurement by combining an inner Transformation with an outer Measurement.
-Notice that `there is no` ``make_chain_mm`` for chaining measurements together!
+Notice that *there is no* ``make_chain_mm`` for chaining measurements together!
 Any computation beyond a measurement is postprocessing and need not be governed by relations.
 
 Postprocessing functionality is provided by the :py:func:`opendp.combinators.make_chain_pm` constructor that allows transformations to be chained onto a Measurement.
