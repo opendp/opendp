@@ -94,19 +94,9 @@ public_extras = [
     Path(__file__).parent.parent.glob("src/opendp/extras/**/*.py")
     if is_public(path)
 ]
-        
 
-@pytest.mark.parametrize(
-    "py_path",
-    public_extras,
-    ids=lambda path: f'{path.parent.name}/{path.name}'
-)
-def test_extras_boilerplate_convenience(py_path):
-    if py_path.parent.name == 'extras' and py_path.name == '__init__.py':
-        pytest.skip("top-level is a special case")
-    py = py_path.read_text()
-    import ast
-    module_ast = ast.parse(py)
+
+def get_namespace(py_path: Path):
     # Getting __doc__ from the module might be cleaner,
     # but walking through the module hierarchy is trickier than path glob.
     ns = []
@@ -119,7 +109,19 @@ def test_extras_boilerplate_convenience(py_path):
         ns.append(parent_name)
     if stem != '__init__':
         ns.append(stem)
-    expected_ns = f'dp.{".".join(ns)}'
+    return f'dp.{".".join(ns)}'
+        
+
+@pytest.mark.parametrize(
+    "py_path",
+    public_extras,
+    ids=lambda path: f'{path.parent.name}/{path.name}'
+)
+def test_extras_boilerplate_convenience(py_path):
+    if py_path.parent.name == 'extras' and py_path.name == '__init__.py':
+        pytest.skip("top-level is a special case")
+    py = py_path.read_text()
+    expected_ns = get_namespace(py_path)
     expected = f"""
 For convenience, all the members of this module are also available from :py:mod:`opendp.prelude`.
 We suggest importing under the conventional name ``dp``:
@@ -130,8 +132,8 @@ We suggest importing under the conventional name ``dp``:
 
 The classes of this module will then be accessible at ``{expected_ns}``.    
 """.strip()
+    import ast
+    module_ast = ast.parse(py)
     # This is a little fragile, but as long as a docstring is first, it should work.
     actual = module_ast.body[0].value.value.strip()
-
-
     assert expected in actual, f"expected not in actual: {expected=}\n{actual=}"
