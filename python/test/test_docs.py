@@ -71,7 +71,7 @@ To fix: jupyter nbconvert --to notebook --execute {short_path} --inplace
 First cell with missing or misordered execution:\n{bad_sources[0].splitlines()[0]}'''
 
 
-def is_public(path: Path):
+def is_public_and_not_top(path: Path):
     '''
     >>> is_public(Path('_parent/child.py'))
     False
@@ -86,13 +86,13 @@ def is_public(path: Path):
     '''
     return not path.parent.name.startswith('_') and (
         not path.name.startswith('_') or path.name == '__init__.py'
-    )
+    ) and not (path.parent.name == 'extras' and path.name == '__init__.py')
 
 
 public_extras = [
     path for path in 
     Path(__file__).parent.parent.glob("src/opendp/extras/**/*.py")
-    if is_public(path)
+    if is_public_and_not_top(path)
 ]
 
 
@@ -110,17 +110,23 @@ def get_namespace(py_path: Path):
     if stem != '__init__':
         ns.append(stem)
     return f'dp.{".".join(ns)}'
-        
+
+
+def get_docstring(py_path: Path):
+    import ast
+    py = py_path.read_text()
+    module_ast = ast.parse(py)
+    # This is a little fragile, but as long as a docstring is first, it should work.
+    return module_ast.body[0].value.value.strip()
+ 
 
 @pytest.mark.parametrize(
     "py_path",
     public_extras,
-    ids=lambda path: f'{path.parent.name}/{path.name}'
+    ids=get_namespace
 )
-def test_extras_boilerplate_convenience(py_path):
-    if py_path.parent.name == 'extras' and py_path.name == '__init__.py':
-        pytest.skip("top-level is a special case")
-    py = py_path.read_text()
+def test_extras_docstring_convenience(py_path):
+    actual = get_docstring(py_path)
     expected_ns = get_namespace(py_path)
     expected = f"""
 For convenience, all the members of this module are also available from :py:mod:`opendp.prelude`.
@@ -132,8 +138,28 @@ We suggest importing under the conventional name ``dp``:
 
 The classes of this module will then be accessible at ``{expected_ns}``.    
 """.strip()
-    import ast
-    module_ast = ast.parse(py)
-    # This is a little fragile, but as long as a docstring is first, it should work.
-    actual = module_ast.body[0].value.value.strip()
+    assert expected in actual, f"expected not in actual: {expected=}\n{actual=}"
+
+
+@pytest.mark.parametrize(
+    "py_path",
+    public_extras,
+    ids=get_namespace
+)
+def test_extras_docstring_installs(py_path):
+    actual = get_docstring(py_path)
+    namespace = get_namespace(py_path)
+    if 'sklearn' in namespace:
+        extra = 'scikit-learn'
+    elif 'numpy' in namespace:
+        extra = 'numpy'
+    elif 'polars' in namespace:
+        extra = 'polars'
+    elif 'mbi' in namespace:
+        extra = 'mbi'
+    elif 'examples' in namespace:
+        pytest.skip("dp.examples does not need extra installs")
+    expected = f"""
+This module requires extra installs: ``pip install 'opendp[{extra}]'``   
+""".strip()
     assert expected in actual, f"expected not in actual: {expected=}\n{actual=}"

@@ -1,4 +1,6 @@
 """
+This module requires extra installs: ``pip install 'opendp[polars]'``
+
 For convenience, all the members of this module are also available from :py:mod:`opendp.prelude`.
 We suggest importing under the conventional name ``dp``:
 
