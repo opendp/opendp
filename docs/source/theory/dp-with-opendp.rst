@@ -309,7 +309,7 @@ links:
             ... )
             >>> input_metric = dp.symmetric_distance()
 
-            >>> # call the constructor to produce the transformation `clamp`
+            >>> # call the constructor to produce the transformation "clamp"
             >>> clamp = dp.t.make_clamp(
             ...     input_domain, input_metric, bounds=(0.0, 5.0)
             ... )

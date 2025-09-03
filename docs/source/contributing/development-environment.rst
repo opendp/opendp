@@ -243,7 +243,7 @@ Then, set an environment variable to the absolute path of the OpenDP Library bin
 
 .. code-block:: bash
 
-    export OPENDP_LIB_DIR=`realpath target/debug`
+    export OPENDP_LIB_DIR=$(realpath target/debug)
 
 The default R install for MacOS also includes GUI elements like Tcl/Tk,
 so for the smoothest development experience we suggest these additional installs:

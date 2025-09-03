@@ -27,10 +27,13 @@ def test_thens_are_documented(module, function):
 docs_source = Path(__file__).parent.parent.parent / 'docs' / 'source'
 
 
+def get_self_and_parent(path: Path):
+    return f'{path.parent.name}/{path.name}'
+
 @pytest.mark.parametrize(
     "rst_path",
     list(docs_source.glob("**/*.rst")),
-    ids=lambda path: path.name
+    ids=get_self_and_parent
 )
 def test_code_block_language(rst_path: Path):
     rst_lines = rst_path.read_text().splitlines()
@@ -52,13 +55,13 @@ def test_code_block_language(rst_path: Path):
 @pytest.mark.parametrize(
     "rst_path",
     list(docs_source.glob("**/*.rst")),
-    ids=lambda path: path.name
+    ids=get_self_and_parent
 )
 def test_single_backticks(rst_path: Path):
     rst_lines = rst_path.read_text().splitlines()
     errors = []
     for i, line in enumerate(rst_lines):
-        m = re.search(r'[^`:]`([^`<>_:,]+)`[^`]', line)
+        m = re.search(r'[^`:]`([^`<>_:,]+)`([^`]|$)', line)
         if m:
             content = m.group(1)
             errors.append(f'line {i}: "{content}" will be italicized: add double-backticks, or change to "*".')
