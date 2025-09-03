@@ -6,7 +6,7 @@ We suggest importing under the conventional name ``dp``:
 
     >>> import opendp.prelude as dp
 
-The classes of this module will then be accessible at ``dp.examples``.    
+The members of this module will then be accessible at ``dp.examples``.    
 '''
 
 from pathlib import Path

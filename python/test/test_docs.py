@@ -136,7 +136,7 @@ We suggest importing under the conventional name ``dp``:
 
     >>> import opendp.prelude as dp
 
-The classes of this module will then be accessible at ``{expected_ns}``.    
+The members of this module will then be accessible at ``{expected_ns}``.    
 """.strip()
     assert expected in actual, f"expected not in actual: {expected=}\n{actual=}"
 

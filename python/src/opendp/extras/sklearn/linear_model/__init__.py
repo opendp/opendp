@@ -8,7 +8,7 @@ We suggest importing under the conventional name ``dp``:
 
     >>> import opendp.prelude as dp
 
-The classes of this module will then be accessible at ``dp.sklearn.linear_model``.
+The members of this module will then be accessible at ``dp.sklearn.linear_model``.
 
 If you're interested in the underlying algorithm, we've also
 `implemented Theil-Sen Regression as a demonstration of OpenDP plugins <../user-guide/plugins/theil-sen-regression.html>`_.

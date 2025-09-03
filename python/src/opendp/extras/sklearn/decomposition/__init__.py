@@ -8,7 +8,7 @@ We suggest importing under the conventional name ``dp``:
 
     >>> import opendp.prelude as dp
 
-The classes of this module will then be accessible at ``dp.sklearn.decomposition``.    
+The members of this module will then be accessible at ``dp.sklearn.decomposition``.    
 
 See also our :ref:`tutorial on diffentially private PCA <dp-pca>`.
 '''

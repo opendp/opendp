@@ -12,7 +12,7 @@ We suggest importing under the conventional name ``dp``:
 
     >>> import opendp.prelude as dp
 
-The classes of this module will then be accessible at ``dp.mbi``.
+The members of this module will then be accessible at ``dp.mbi``.
 '''
 
 from ._aim import AIM

@@ -8,7 +8,7 @@ We suggest importing under the conventional name ``dp``:
 
     >>> import opendp.prelude as dp
 
-The classes of this module will then be accessible at ``dp.polars.contingency_table``.
+The members of this module will then be accessible at ``dp.polars.contingency_table``.
 """
 
 from typing import Optional, Type, Union
