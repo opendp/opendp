@@ -47,7 +47,22 @@ def test_code_block_language(rst_path: Path):
             language = m.group(1)
             if language not in expected:
                 errors.append(f'line {i}: Got "{language}", expected one of: {", ".join(expected)}')
-    assert not errors
+    assert not errors, '\n'.join(errors)
+
+@pytest.mark.parametrize(
+    "rst_path",
+    list(docs_source.glob("**/*.rst")),
+    ids=lambda path: path.name
+)
+def test_single_backticks(rst_path: Path):
+    rst_lines = rst_path.read_text().splitlines()
+    errors = []
+    for i, line in enumerate(rst_lines):
+        m = re.search(r'[^`:]`([^`<>_:,]+)`[^`]', line)
+        if m:
+            content = m.group(1)
+            errors.append(f'line {i}: "{content}" will be italicized: add double-backticks, or break line.')
+    assert not errors, '\n'.join(errors)
 
 @pytest.mark.parametrize(
     "nb_path",
