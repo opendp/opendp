@@ -11,7 +11,7 @@ We suggest importing under the conventional name ``dp``:
 
     >>> import opendp.prelude as dp
 
-The classes of this module will then be accessible at ``dp.polars``.
+The members of this module will then be accessible at ``dp.polars``.
 """
 
 from __future__ import annotations
@@ -1081,7 +1081,7 @@ class LazyFrameQuery:
             ...         f"at a statistical significance level alpha of {alpha}, "
             ...         f"or with (1 - {alpha})100% = {(1 - alpha) * 100}% confidence."
             ...     )
-            
+
             >>> interpret_accuracy("Integer Laplace", 2.0, 6.429605, alpha=.05) # doctest:+SKIP
         """
         from opendp.accuracy import summarize_polars_measurement
