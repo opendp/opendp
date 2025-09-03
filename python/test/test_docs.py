@@ -61,9 +61,15 @@ def test_single_backticks(rst_path: Path):
     rst_lines = rst_path.read_text().splitlines()
     errors = []
     for i, line in enumerate(rst_lines):
-        m = re.search(r'([^`:]|^)`([^`<>_:,]+)`([^`]|$)', line)
+        m = re.search(r'''
+            ([^`:]|^)   # Non-backtick or start of line
+            `           # backtick
+            ([^`<>_:]+) # content, excluding RST links and tags
+            `           # backtick
+            ([^`]|$)    # Non-backtick or end of line
+        ''', line, re.VERBOSE)
         if m:
-            content = m.group(1)
+            content = m.group(2)
             errors.append(f'line {i+1}: "{content}" will be italicized: add double-backticks, or change to "*".')
     assert not errors, '\n'.join(errors)
 
