@@ -73,15 +73,15 @@ First cell with missing or misordered execution:\n{bad_sources[0].splitlines()[0
 
 def is_public_and_not_top(path: Path):
     '''
-    >>> is_public(Path('_parent/child.py'))
+    >>> is_public_and_not_top(Path('_parent/child.py'))
     False
-    >>> is_public(Path('_parent/__init__.py'))
+    >>> is_public_and_not_top(Path('_parent/__init__.py'))
     False
-    >>> is_public(Path('parent/__init__.py'))
+    >>> is_public_and_not_top(Path('parent/__init__.py'))
     True
-    >>> is_public(Path('parent/_child.py'))
+    >>> is_public_and_not_top(Path('parent/_child.py'))
     False
-    >>> is_public(Path('parent/child.py'))
+    >>> is_public_and_not_top(Path('parent/child.py'))
     True
     '''
     return not path.parent.name.startswith('_') and (
@@ -117,7 +117,7 @@ def get_docstring(py_path: Path):
     py = py_path.read_text()
     module_ast = ast.parse(py)
     # This is a little fragile, but as long as a docstring is first, it should work.
-    return module_ast.body[0].value.value.strip()
+    return module_ast.body[0].value.value.strip() # type: ignore[attr-defined]
  
 
 @pytest.mark.parametrize(
