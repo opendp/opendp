@@ -1199,7 +1199,7 @@ class Margin:
     """
 
     @property
-    @deprecated(reason="Use max_length instead.")
+    @deprecated(version="0.13.0", reason="Use max_length instead.")
     def max_partition_length(self):
         return self.max_length  # pragma: no cover
 
@@ -1210,6 +1210,7 @@ class Margin:
 
     @property
     @deprecated(
+        version="0.13.0",
         reason="Use max_groups instead. This was renamed to be consistent with Polars terminology."
     )
     def max_num_partitions(self):
@@ -1217,6 +1218,7 @@ class Margin:
 
     @max_num_partitions.setter
     @deprecated(
+        version="0.13.0",
         reason="Use max_groups instead. This was renamed to be consistent with Polars terminology."
     )
     def max_num_partitions(self, value):
@@ -1224,6 +1226,7 @@ class Margin:
 
     @property
     @deprecated(
+        version="0.13.0",
         reason='Use invariant instead. This was renamed because invariants are not "public information". Invariants are "unprotected information".'
     )
     def public_info(self):
@@ -1231,6 +1234,7 @@ class Margin:
 
     @public_info.setter
     @deprecated(
+        version="0.13.0",
         reason='Use invariant instead. This was renamed because invariants are not "public information". Invariants are "unprotected information".'
     )
     def public_info(self, value):
