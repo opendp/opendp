@@ -31,6 +31,7 @@ impl<Q: ?Sized, A> Queryable<Q, A> {
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn eval_internal<'a, AI: 'static>(&mut self, query: &'a dyn Any) -> Fallible<AI> {
         match self.eval_query(Query::Internal(query))? {
             Answer::Internal(value) => value.downcast::<AI>().map(|v| *v).map_err(|_| {
@@ -64,6 +65,7 @@ impl<Q: ?Sized, A> Queryable<Q, A> {
 #[derive(Debug)]
 pub(crate) enum Query<'a, Q: ?Sized> {
     External(&'a Q),
+    #[allow(dead_code)]
     Internal(&'a dyn Any),
 }
 
@@ -73,6 +75,7 @@ pub(crate) enum Answer<A> {
 }
 
 impl<A> Answer<A> {
+    #[allow(dead_code)]
     pub fn internal<T: 'static>(value: T) -> Self {
         Self::Internal(Box::new(value))
     }

@@ -42,7 +42,7 @@ on:
         required: false
         default: false
 env:
-  FEATURES: untrusted,ffi,polars
+  FEATURES: untrusted,ffi,polars,extension-module
 
 jobs:
   credential-check:
@@ -143,20 +143,21 @@ jobs:
     
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          # necessary to use cibuildwheel 3.x
+          python-version: '3.11'
           cache: pip
 
       - name: Install cibuildwheel
         run: |
           python -m pip install --upgrade pip
-          python -m pip install cibuildwheel==2.19.2
+          python -m pip install cibuildwheel==3.1.4
     
       - name: Build wheels
         working-directory: python
         run: python -m cibuildwheel --output-dir dist
         env:
-          # don't build separate wheels for pypy
-          CIBW_SKIP: "pp*"
+          # don't build separate wheels for free-threaded cpython
+          CIBW_SKIP: "cp31?t-*"
           CIBW_ENVIRONMENT: 'PATH="$HOME/.cargo/bin:$PATH"'
           CIBW_ENVIRONMENT_WINDOWS: 'PATH="$UserProfile\.cargo\bin;$PATH"'
           # first find the xcode version for the mac images:
@@ -196,7 +197,7 @@ jobs:
     needs: bindings
     runs-on: ubuntu-22.04
     env:
-      DOCKER_IMAGE: messense/manylinux_2_24-cross:aarch64
+      DOCKER_IMAGE: messense/manylinux_2_28-cross:aarch64
       TARGET: aarch64-unknown-linux-gnu
     steps:
       - name: Free disk space
@@ -222,18 +223,7 @@ jobs:
           python-version: '3.10'
           cache: pip
 
-      - name: Cache Rust dependencies
-        if: ${{ !inputs.fake }}
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
-          restore-keys: ${{ runner.os }}-cargo-
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Create Rust build for linux
         if: ${{ !inputs.fake }}
@@ -265,7 +255,7 @@ jobs:
         # continuing to use bdist_wheel for now until python's packaging story matures
         run: > 
           python -m pip install wheel &&
-          python setup.py bdist_wheel --plat-name=manylinux_2_24_aarch64 --py-limited-api=cp39
+          python setup.py bdist_wheel --plat-name=manylinux_2_28_aarch64 --py-limited-api=cp310
 
       - name: Upload Python wheel
         uses: actions/upload-artifact@v4

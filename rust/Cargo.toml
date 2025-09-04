@@ -181,7 +181,7 @@ cbindgen = { version = "0.28.0", optional = true }
 pyo3-build-config = { version = "0.25", optional = true }
 
 [features]
-default = ["partials", "use-openssl"]
+default = ["partials", "use-openssl", "extension-module"]
 
 floating-point = []
 contrib = []
@@ -205,8 +205,12 @@ ffi = ["lazy_static", "cbindgen"]
 # execute proc macros to insert proof links
 derive = ["opendp_tooling", "opendp_derive/full", "syn", "proc-macro2"]
 
+# extension-module necessary to remove requirement to statically link to libpython
+# but can't be default because it interferes with testing
+extension-module = ["pyo3/extension-module"]
+
 # generate language bindings
-bindings = ["ffi", "derive", "pyo3/extension-module", "pyo3-build-config"]
+bindings = ["ffi", "derive", "extension-module", "pyo3-build-config"]
 
 # generate "then_xxx" functions in Rust for "make_xxx" functions whose first two arguments are the metric space
 partials = ["derive", "opendp_derive/partials"]
