@@ -55,51 +55,54 @@ class AIM(Algorithm):
     The algorithm starts with a small per-step privacy budget, 
     and in each step increases the budget if the last measured marginal doesn't sufficiently improve the model.
 
-    >>> import pytest  # `pip install opendp[mbi]` is necessary
-    >>> _ = pytest.importorskip("mbi")
+    ..
+        >>> import pytest  # `pip install opendp[mbi]` is necessary
+        >>> _ = pytest.importorskip("mbi")
 
-    >>> import opendp.prelude as dp
-    >>> import polars as pl
+    .. code:: pycon
 
-    >>> dp.enable_features("contrib")
+        >>> import opendp.prelude as dp
+        >>> import polars as pl
 
-    >>> context = dp.Context.compositor(
-    ...     data=pl.scan_csv(dp.examples.get_france_lfs_path(), ignore_errors=True),
-    ...     privacy_unit=dp.unit_of(contributions=36),
-    ...     privacy_loss=dp.loss_of(rho=0.1, delta=1e-7),
-    ... )
+        >>> dp.enable_features("contrib")
 
-    >>> table_aim = (
-    ...     context.query(rho=0.1, delta=1e-7)
-    ...     # transformations/truncation may be applied here
-    ...     .select("SEX", "AGE", "HWUSUAL", "ILOSTAT")
-    ...     .contingency_table(
-    ...         keys={"SEX": [1, 2]}, 
-    ...         cuts={"AGE": [20, 40, 60], "HWUSUAL": [1, 20, 40]},
-    ...         algorithm=dp.mbi.AIM()
-    ...     )
-    ...     .release()
-    ... )
+        >>> context = dp.Context.compositor(
+        ...     data=pl.scan_csv(dp.examples.get_france_lfs_path(), ignore_errors=True),
+        ...     privacy_unit=dp.unit_of(contributions=36),
+        ...     privacy_loss=dp.loss_of(rho=0.1, delta=1e-7),
+        ... )
 
-    >>> table_aim.synthesize() # doctest: +SKIP
-    shape: (3_807_732, 4)
-    ┌─────┬───────────┬───────────┬─────────┐
-    │ SEX ┆ AGE       ┆ HWUSUAL   ┆ ILOSTAT │
-    │ --- ┆ ---       ┆ ---       ┆ ---     │
-    │ i64 ┆ f64       ┆ f64       ┆ i64     │
-    ╞═════╪═══════════╪═══════════╪═════════╡
-    │ 1   ┆ 55.446336 ┆ 20.776579 ┆ 1       │
-    │ 1   ┆ 28.21838  ┆ 40.53348  ┆ 1       │
-    │ 2   ┆ 43.291215 ┆ 34.406155 ┆ 1       │
-    │ 1   ┆ 55.106615 ┆ 22.413161 ┆ 1       │
-    │ 2   ┆ 42.585227 ┆ 40.11279  ┆ 3       │
-    │ …   ┆ …         ┆ …         ┆ …       │
-    │ 1   ┆ 58.197292 ┆ 40.139579 ┆ 1       │
-    │ 1   ┆ 59.371221 ┆ 19.671153 ┆ 1       │
-    │ 2   ┆ 19.862917 ┆ 40.339046 ┆ 9       │
-    │ 1   ┆ 19.492355 ┆ 32.233661 ┆ 1       │
-    │ 2   ┆ 60.863244 ┆ 40.737908 ┆ 3       │
-    └─────┴───────────┴───────────┴─────────┘
+        >>> table_aim = (
+        ...     context.query(rho=0.1, delta=1e-7)
+        ...     # transformations/truncation may be applied here
+        ...     .select("SEX", "AGE", "HWUSUAL", "ILOSTAT")
+        ...     .contingency_table(
+        ...         keys={"SEX": [1, 2]}, 
+        ...         cuts={"AGE": [20, 40, 60], "HWUSUAL": [1, 20, 40]},
+        ...         algorithm=dp.mbi.AIM()
+        ...     )
+        ...     .release()
+        ... )
+
+        >>> table_aim.synthesize() # doctest: +SKIP
+        shape: (3_807_732, 4)
+        ┌─────┬───────────┬───────────┬─────────┐
+        │ SEX ┆ AGE       ┆ HWUSUAL   ┆ ILOSTAT │
+        │ --- ┆ ---       ┆ ---       ┆ ---     │
+        │ i64 ┆ f64       ┆ f64       ┆ i64     │
+        ╞═════╪═══════════╪═══════════╪═════════╡
+        │ 1   ┆ 55.446336 ┆ 20.776579 ┆ 1       │
+        │ 1   ┆ 28.21838  ┆ 40.53348  ┆ 1       │
+        │ 2   ┆ 43.291215 ┆ 34.406155 ┆ 1       │
+        │ 1   ┆ 55.106615 ┆ 22.413161 ┆ 1       │
+        │ 2   ┆ 42.585227 ┆ 40.11279  ┆ 3       │
+        │ …   ┆ …         ┆ …         ┆ …       │
+        │ 1   ┆ 58.197292 ┆ 40.139579 ┆ 1       │
+        │ 1   ┆ 59.371221 ┆ 19.671153 ┆ 1       │
+        │ 2   ┆ 19.862917 ┆ 40.339046 ┆ 9       │
+        │ 1   ┆ 19.492355 ┆ 32.233661 ┆ 1       │
+        │ 2   ┆ 60.863244 ┆ 40.737908 ┆ 3       │
+        └─────┴───────────┴───────────┴─────────┘
 
     The algorithm is similar to the Multiplicative Weights Exponential Mechanism (MWEM) introduced in `HLM10 <https://arxiv.org/abs/1012.4763>`_,
     in that the exponential mechanism selects a marginal in each step.
