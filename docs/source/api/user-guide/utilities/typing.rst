@@ -81,20 +81,6 @@ OpenDP supports the following atomic data types:
 * ``String``
 * ``bool``
 
-Some types are parameterized by another type, like:
-
-* ``AtomDomain``
-* ``VectorDomain``
-* ``AbsoluteDistance``
-* ``L1Distance``
-* ``L2Distance``
-
-Examples of these types include:
-
-* ``AtomDomain[bool]``
-* ``VectorDomain[AtomDomain[f32]]``
-* ``L1Distance[u128]``
-
 The docstrings on the constructor APIs should typically guide you as to what types are permissible.
 If you aren't familiar with these concepts, it may help to review :ref:`domains-user-guide` and :ref:`metrics-user-guide`.
 
