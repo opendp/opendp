@@ -18,6 +18,7 @@ pub use psrn::*;
 mod uniform;
 pub use uniform::*;
 
+use drbg::thread::LocalCtrDrbg;
 use rand::RngCore;
 use rand::prelude::SliceRandom;
 
@@ -28,27 +29,10 @@ use crate::error::Fallible;
 /// # Proof Definition
 /// For any input `buffer`, fill the `buffer` with random bits, where each bit is an iid draw from Bernoulli(p=0.5).
 /// Return `Err(e)` if there is insufficient system entropy, otherwise return `Ok(())`.
-#[cfg(feature = "use-openssl")]
 pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
-    use openssl::rand::rand_bytes;
-    if let Err(e) = rand_bytes(buffer) {
-        fallible!(FailedFunction, "OpenSSL error: {:?}", e)
-    } else {
-        Ok(())
-    }
-}
-
-/// Non-securely fill a byte buffer with random bits.
-///
-/// Enable `use-openssl` for a secure implementation.
-#[cfg(not(feature = "use-openssl"))]
-pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
-    use rand::Rng;
-    if let Err(e) = rand::thread_rng().try_fill(buffer) {
-        fallible!(FailedFunction, "Rand error: {:?}", e)
-    } else {
-        Ok(())
-    }
+    LocalCtrDrbg::default()
+        .fill_bytes(buffer, None)
+        .map_err(|e| err!(FailedFunction, "failed to sample bits: {:?}", e))
 }
 
 /// An OpenDP random number generator that implements [`rand::RngCore`].
