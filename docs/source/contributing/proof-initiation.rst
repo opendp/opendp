@@ -49,7 +49,7 @@ Let’s imagine we wanted to add a new function to
 
    /// # Proof Definition
    /// For any setting of the input parameters, 
-   /// returns either "Ok(out)" where $out \ge |a - b|$, or "Err(e)".
+   /// returns either `Ok(out)` where $out \ge |a - b|$, or `Err(e)`.
    fn absolute_distance<T: InfSub + AlertingAbs>(a: T, b: T) -> Fallible<T> {
        a.inf_sub(&b)?.alerting_abs()
    }

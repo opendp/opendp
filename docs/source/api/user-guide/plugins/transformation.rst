@@ -23,11 +23,11 @@ In this example, we mock the typical API of the OpenDP library to make a transfo
 
         >>> import opendp.prelude as dp
         >>> def make_repeat(multiplicity):
-        ...     """Constructs a Transformation that duplicates each record ``multiplicity`` times"""
+        ...     """Constructs a Transformation that duplicates each record `multiplicity` times"""
         ...     def function(arg: list[int]) -> list[int]:
         ...         return arg * multiplicity
         ...     def stability_map(d_in: int) -> int:
-        ...         # if a user could influence at most d_in records before,
+        ...         # if a user could influence at most (d_in) records before,
         ...         # they can now influence (d_in * multiplicity) records
         ...         return d_in * multiplicity
         ...     return dp.t.make_user_transformation(
