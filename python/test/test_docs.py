@@ -62,7 +62,7 @@ def test_single_backticks(rst_path: Path):
     errors = []
     for i, line in enumerate(rst_lines):
         line = line.strip()
-        if line.startswith('#') or line.startswith('//'):
+        if line.startswith(('>>>', '...', '//')):
             # Probably in a comment in a code sample: Skip.
             continue
         m = re.search(r'''
