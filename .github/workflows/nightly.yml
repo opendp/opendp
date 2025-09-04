@@ -1,9 +1,10 @@
-# Creates a release on the nightly channel. Intended to right every day before midnight.
+# Creates a release on the nightly channel. Intended to write every Sunday before midnight.
 name: Nightly
 on:
+  # Runs every Sunday:
   schedule:
-    # 03:45 UTC = 22:45 EST/23:45 EDT (i.e., always before midnight), so nightlies will have a sensible date
-    - cron: '45 3 * * *'
+    # 03:45 UTC = 22:45 EST/23:45 EDT (i.e., always before midnight), so nightlies will have a sensible date.
+    - cron: '45 3 * * 0'
 
 jobs:
   release:
