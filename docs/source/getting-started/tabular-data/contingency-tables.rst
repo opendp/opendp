@@ -49,7 +49,10 @@ Let's get started by setting up the context for the Labor Force dataset.
     >>> dp.enable_features("contrib")
 
     >>> context = dp.Context.compositor(
-    ...     data=pl.scan_csv(dp.examples.get_france_lfs_path(), ignore_errors=True),
+    ...     data=pl.scan_csv(
+    ...         dp.examples.get_france_lfs_path(),
+    ...         ignore_errors=True,
+    ...     ),
     ...     privacy_unit=dp.unit_of(contributions=36),
     ...     privacy_loss=dp.loss_of(rho=0.2, delta=1e-7),
     ... )
@@ -66,9 +69,10 @@ The mechanism will release stable keys for any columns that don't have key- or c
     >>> query = (
     ...     context.query(rho=0.1, delta=1e-7)
     ...     # transformations/truncation may be applied here
-    ...     .select("SEX", "AGE", "HWUSUAL", "ILOSTAT")
-    ...     .contingency_table(
-    ...         keys={"SEX": [1, 2]}, 
+    ...     .select(
+    ...         "SEX", "AGE", "HWUSUAL", "ILOSTAT"
+    ...     ).contingency_table(
+    ...         keys={"SEX": [1, 2]},
     ...         cuts={"AGE": [20, 40, 60], "HWUSUAL": [1, 20, 40]},
     ...         algorithm=dp.mbi.Fixed(
     ...             queries=[
@@ -77,8 +81,8 @@ The mechanism will release stable keys for any columns that don't have key- or c
     ...             ],
     ...             # proportion of budget to spend estimating one-way marginal key-sets
     ...             #   (defaults to num_unknown / num_columns / 2)
-    ...             oneway_split=1 / 8
-    ...         )
+    ...             oneway_split=1 / 8,
+    ...         ),
     ...     )
     ... )
 
@@ -95,7 +99,7 @@ Before releasing, you can view the noise scale and threshold to be used when est
 
     >>> query.oneway_scale
     227.68399153212334
-    
+
     >>> query.oneway_threshold
     1364
 
@@ -117,7 +121,7 @@ are replaced with ``null`` when estimating higher-order marginals.
 
 .. code:: pycon
 
-    >>> table.keys["ILOSTAT"] # doctest: +NORMALIZE_WHITESPACE
+    >>> table.keys["ILOSTAT"]  # doctest: +NORMALIZE_WHITESPACE
     shape: (5,)
     Series: 'ILOSTAT' [i64]
     [
@@ -136,14 +140,14 @@ project the contingency table down to just ``ILOSTAT``.
 
 .. code:: pycon
 
-    >>> table.project(("ILOSTAT",)).astype(int) # doctest: +SKIP
+    >>> table.project(("ILOSTAT",)).astype(int)  # doctest: +SKIP
     Array([1515729,  155912, 1450748,  689452,     109], dtype=int64)
 
 The same projection can be viewed in a melted dataframe form:
 
 .. code:: pycon
 
-    >>> table.project_melted(("ILOSTAT",)) # doctest: +SKIP
+    >>> table.project_melted(("ILOSTAT",))  # doctest: +SKIP
     shape: (5, 2)
     ┌─────────┬──────────────┐
     │ ILOSTAT ┆ len          │
@@ -166,7 +170,7 @@ so it is possible to construct a confidence interval for each scalar in the proj
 .. code:: pycon
 
     >>> scale = table.std(("ILOSTAT",))
-    >>> dp.gaussian_scale_to_accuracy(scale, alpha=.05)
+    >>> dp.gaussian_scale_to_accuracy(scale, alpha=0.05)
     446.2524232592843
 
 That is, the true count differs from the estimate by no more than the accuracy estimate,
@@ -180,7 +184,7 @@ the two specified in ``keys``, as well as ``null`` for any records not in the ke
 
 .. code:: pycon
 
-    >>> table.keys["SEX"] # doctest: +NORMALIZE_WHITESPACE
+    >>> table.keys["SEX"]  # doctest: +NORMALIZE_WHITESPACE
     shape: (3,)
     Series: 'SEX' [i64]
     [
@@ -196,10 +200,10 @@ and the standard deviation is unknown.
 
 .. code:: pycon
 
-    >>> table.project(("SEX",)).astype(int) # doctest: +SKIP
+    >>> table.project(("SEX",)).astype(int)  # doctest: +SKIP
     Array([1270561, 1270561, 1270561], dtype=int64)
 
-    >>> table.std(("SEX",)) # doctest: +IGNORE_EXCEPTION_DETAIL
+    >>> table.std(("SEX",))  # doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ...
     ValueError: attrs (('SEX',)) are not covered by the query set
@@ -213,7 +217,9 @@ To improve the utility of this projection, you could release an updated continge
     ...     .select("SEX")
     ...     .contingency_table(
     ...         table=table,
-    ...         algorithm=dp.mbi.Fixed(queries=[dp.mbi.Count(("SEX",))]),
+    ...         algorithm=dp.mbi.Fixed(
+    ...             queries=[dp.mbi.Count(("SEX",))]
+    ...         ),
     ...     )
     ...     .release()
     ... )
@@ -223,7 +229,7 @@ The updated table now much more accurately reflects the distribution of counts o
 
 .. code:: pycon
 
-    >>> table2.project(("SEX",)).astype(int) # doctest: +SKIP
+    >>> table2.project(("SEX",)).astype(int)  # doctest: +SKIP
     Array([1828251, 1982295,    1228], dtype=int64)
 
     >>> table2.std(("SEX",))
