@@ -61,6 +61,10 @@ def test_single_backticks(rst_path: Path):
     rst_lines = rst_path.read_text().splitlines()
     errors = []
     for i, line in enumerate(rst_lines):
+        line = line.strip()
+        if line.startswith('#') or line.startswith('//'):
+            # Probably in a comment in a code sample: Skip.
+            continue
         m = re.search(r'''
             ([^`:]|^)   # Non-backtick or start of line
             `           # backtick
