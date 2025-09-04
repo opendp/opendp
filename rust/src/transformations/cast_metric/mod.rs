@@ -1,11 +1,10 @@
 use opendp_derive::bootstrap;
 
 use crate::{
-    combinators::IsSizedDomain,
     core::{Domain, Function, MetricSpace, StabilityMap, Transformation},
     error::Fallible,
     metrics::IntDistance,
-    traits::samplers::Shuffle,
+    traits::{IsSizedDomain, samplers::Shuffle},
 };
 
 use self::traits::{BoundedMetric, OrderedMetric, UnboundedMetric, UnorderedMetric};

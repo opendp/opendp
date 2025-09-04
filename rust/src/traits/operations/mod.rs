@@ -424,6 +424,7 @@ impl FloatBits for f32 {
     }
 }
 
+#[allow(dead_code)]
 /// # Proof Definition
 /// Return the minimum of `a` and `b` if both are `Some`,
 /// or the `Some` value if only one is `Some`.

@@ -1,28 +1,10 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
-use crate::core::{Domain, Measure, Measurement, Metric, MetricSpace, PrivacyMap};
-use crate::domains::VectorDomain;
+use crate::core::{Measure, Measurement, Metric, MetricSpace, PrivacyMap};
 use crate::error::Fallible;
 use crate::measures::{Approximate, MaxDivergence};
-use crate::traits::{ExactIntCast, InfDiv, InfExpM1, InfLn1P, InfMul};
-
-pub trait IsSizedDomain: Domain {
-    /// # Proof Definition
-    /// Returns Ok(size), if all members of the domain (`self`) have `size` elements.
-    /// Otherwise returns `Err(e)`.
-    fn get_size(&self) -> Fallible<usize>;
-}
-impl<D: Domain> IsSizedDomain for VectorDomain<D> {
-    fn get_size(&self) -> Fallible<usize> {
-        self.size.ok_or_else(|| {
-            err!(
-                FailedFunction,
-                "elements of the vector domain have unknown size"
-            )
-        })
-    }
-}
+use crate::traits::{ExactIntCast, InfDiv, InfExpM1, InfLn1P, InfMul, IsSizedDomain};
 
 /// Implemented for privacy measures that support privacy amplification by subsampling.
 pub trait AmplifiableMeasure: Measure {

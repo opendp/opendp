@@ -60,13 +60,13 @@ Substitute ``cargo build`` with ``cargo test`` to test, or ``cargo check`` to ch
 
 .. note::
 
-  If linking fails when runnning ``cargo test``, you may need to build without the ``pyo3/extension-module`` feature (`context here <https://pyo3.rs/v0.25.1/faq.html#i-cant-run-cargo-test-or-i-cant-build-in-a-cargo-workspace-im-having-linker-issues-like-symbol-not-found-or-undefined-reference-to-_pyexc_systemerror>`_):
+  If linking fails when runnning ``cargo test``, you may need to build without the ``extension-module`` feature (`context here <https://pyo3.rs/v0.25.1/faq.html#i-cant-run-cargo-test-or-i-cant-build-in-a-cargo-workspace-im-having-linker-issues-like-symbol-not-found-or-undefined-reference-to-_pyexc_systemerror>`_):
 
   .. code-block:: bash
 
-    cargo test --features=untrusted,polars,ffi,derive
+    cargo test --no-default-features --features=partials,use-openssl,untrusted,polars,ffi,derive
   
-  Since ``pyo3/extension-module`` is enabled when running ``--all-features``, 
+  Since ``extension-module`` is a default feature, 
   the other remaining features are enabled in the above command.
 
 
@@ -103,10 +103,10 @@ Setting a feature changes how the crate compiles.
         - Enable to include C foreign function interfaces.
       * - ``derive``
         - Enable to support code generation and links to proofs in documentation.
-      * - ``pyo3/extension-module``
-        - Enable creation of a python extension module for use by Python Polars. Must be disabled for Rust tests.
+      * - ``extension-module``
+        - Enable creation of a python extension module for use by Python Polars. Must be disabled for Rust tests. Enable for Python builds to skip linking to ``libpython``.
       * - ``bindings``
-        - Enable to generate Python and R source code. Also enables the ``ffi``, ``derive`` and ``pyo3/extension-module`` features. 
+        - Enable to generate Python and R source code. Also enables the ``ffi``, ``derive`` and ``extension-module`` features. 
       * - ``partials``
         - Enabled by default. When enabled, ``then_*`` functions are generated from ``make_*`` functions. Also enables the ``derive`` feature.
       * - ``use-openssl``

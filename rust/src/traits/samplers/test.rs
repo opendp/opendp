@@ -61,6 +61,7 @@ where
     passed
 }
 
+#[allow(dead_code)]
 /// Conduct a Kolmogorov-Smirnov (KS) test.
 ///
 /// Since the critical values are difficult to compute in Rust,
@@ -114,6 +115,7 @@ pub fn check_kolmogorov_smirnov(
     Ok(())
 }
 
+#[allow(dead_code)]
 /// Conduct a chi-squared test.
 ///
 /// Since the critical values are difficult to compute in Rust,

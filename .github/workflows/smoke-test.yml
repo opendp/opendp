@@ -116,7 +116,7 @@ jobs:
       - name: Test (all-features)
         # pyo3/extension-module must be disabled to run tests.
         # Context: https://pyo3.rs/v0.25.1/faq.html#i-cant-run-cargo-test-or-i-cant-build-in-a-cargo-workspace-im-having-linker-issues-like-symbol-not-found-or-undefined-reference-to-_pyexc_systemerror
-        run: cargo test --verbose --features=untrusted,polars,ffi,derive
+        run: cargo test --verbose --no-default-features --features=partials,use-openssl,untrusted,polars,ffi,derive
 
       - name: Run docs example
         run: cd ../docs/source/getting-started/code/quickstart-framework-rust; cargo run
