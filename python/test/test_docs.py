@@ -25,12 +25,16 @@ def test_thens_are_documented(module, function):
 
 
 docs_source = Path(__file__).parent.parent.parent / 'docs' / 'source'
+assert docs_source.exists()
 
+
+def get_self_and_parent(path: Path):
+    return f'{path.parent.name}/{path.name}'
 
 @pytest.mark.parametrize(
     "rst_path",
     list(docs_source.glob("**/*.rst")),
-    ids=lambda path: path.name
+    ids=get_self_and_parent
 )
 def test_code_block_language(rst_path: Path):
     rst_lines = rst_path.read_text().splitlines()
@@ -46,8 +50,53 @@ def test_code_block_language(rst_path: Path):
         if m:
             language = m.group(1)
             if language not in expected:
-                errors.append(f'line {i}: Got "{language}", expected one of: {", ".join(expected)}')
-    assert not errors
+                errors.append(f'line {i+1}: Got "{language}", expected one of: {", ".join(expected)}')
+    assert not errors, '\n'.join(errors)
+
+
+@pytest.mark.parametrize(
+    "rst_path",
+    list(docs_source.glob("**/*.rst")),
+    ids=get_self_and_parent
+)
+def test_single_backticks(rst_path: Path):
+    rst_lines = rst_path.read_text().splitlines()
+    errors = []
+    for i, line in enumerate(rst_lines):
+        line = line.strip()
+        if line.startswith(('>>>', '...', '//')):
+            # Probably in a comment in a code sample: Skip.
+            continue
+        m = re.search(r'''
+            ([^`:]|^)   # Non-backtick or start of line
+            `           # backtick
+            ([^`<>_:]+) # content, excluding RST links and tags
+            `           # backtick
+            ([^`]|$)    # Non-backtick or end of line
+        ''', line, re.VERBOSE)
+        if m:
+            content = m.group(2)
+            errors.append(f'line {i+1}: "{content}" will be italicized: add double-backticks, or change to "*".')
+    assert not errors, '\n'.join(errors)
+
+
+python_src = Path(__file__).parent.parent / 'src'
+assert python_src.exists()
+
+
+@pytest.mark.parametrize(
+    "path",
+    list(docs_source.glob("**/*.rst")) + list(python_src.glob("**/*.py")),
+    ids=get_self_and_parent
+)
+def test_doctest_empty_lines(path: Path):
+    lines = path.read_text().splitlines()
+    errors = []
+    for i, line in enumerate(lines):
+        if re.search(r'>>>\s*$', line):
+            errors.append(f'line {i+1}: wrap with "code::" block and drop empty ">>>".')
+    assert not errors, '\n'.join(errors)
+
 
 @pytest.mark.parametrize(
     "nb_path",

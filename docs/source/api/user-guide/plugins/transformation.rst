@@ -13,7 +13,7 @@ Use :func:`opendp.transformations.make_user_transformation` to construct your ow
         >>> import opendp.prelude as dp
         >>> dp.enable_features("honest-but-curious")
 
-In this example, we mock the typical API of the OpenDP library to make a transformation that duplicates each record `multiplicity` times:
+In this example, we mock the typical API of the OpenDP library to make a transformation that duplicates each record ``multiplicity`` times:
 
 .. tab-set::
 
@@ -27,8 +27,8 @@ In this example, we mock the typical API of the OpenDP library to make a transfo
         ...     def function(arg: list[int]) -> list[int]:
         ...         return arg * multiplicity
         ...     def stability_map(d_in: int) -> int:
-        ...         # if a user could influence at most `d_in` records before,
-        ...         # they can now influence `d_in` * `multiplicity` records
+        ...         # if a user could influence at most (d_in) records before,
+        ...         # they can now influence (d_in * multiplicity) records
         ...         return d_in * multiplicity
         ...     return dp.t.make_user_transformation(
         ...         input_domain=dp.vector_domain(

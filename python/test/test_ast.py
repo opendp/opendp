@@ -153,49 +153,6 @@ def check_directive_continuity(docstring):
             directives_ended = True
 
 
-def check_doctest_continuity(docstring):
-    '''
-    >>> check_doctest_continuity("""
-    ...     >>> 1 + 1
-    ...     2
-    ...     
-    ...     >>> 2 + 2
-    ...     4
-    ... """)
-    'Doctest should not be split by empty line above: >>> 2 + 2'
-
-    >>> check_doctest_continuity("""
-    ...     >>> assert True
-    ...     
-    ...     And then:
-    ...     >>> print('hello!')
-    ...     hello!
-    ... """)
-    "Doctest should have blank line above: >>> print('hello!')"
-    '''
-    in_code = False
-    after_code = False
-    in_text = False
-    for line in docstring.split('\n'):
-        line = line.strip()
-        if line.startswith('>>>'):
-            if after_code:
-                return f'Doctest should not be split by empty line above: {line}'
-            if in_text:
-                return f'Doctest should have blank line above: {line}'
-            in_code = True
-            in_text = False
-        elif in_code:
-            if not line:
-                in_code = False
-                after_code = True
-        elif line:
-            after_code = False
-            in_text = True
-        else:
-            in_text = False
-
-
 def check_list_space(docstring):
     '''
     >>> check_list_space("""
@@ -266,7 +223,6 @@ class Checker():
         checks = [
             check_directive_order,
             check_directive_continuity,
-            check_doctest_continuity,
             check_list_space,
         ]
         for check in checks:

@@ -205,6 +205,16 @@ class NPArray2Domain(NamedTuple):
     cardinalities: numpy.ndarray | None
     T: str | RuntimeType
 
+# Without these we get: "Alias for field number ..."
+NPArray2Domain.origin.__doc__ = 'center of the norm region'
+NPArray2Domain.norm.__doc__ = 'each row in x is bounded by the norm'
+NPArray2Domain.p.__doc__ = 'designates L`p` norm'
+NPArray2Domain.size.__doc__ = 'number of rows in data'
+NPArray2Domain.num_columns.__doc__ = 'number of columns in the data'
+NPArray2Domain.nan.__doc__ = 'whether NaN values are allowed'
+NPArray2Domain.cardinalities.__doc__ = 'cardinalities of the categorical columns'
+NPArray2Domain.T.__doc__ = 'atom type'
+
 
 def arrayd_domain(
     *,
@@ -252,6 +262,10 @@ def arrayd_domain(
 class NPArrayDDomain(NamedTuple):
     shape: tuple[int, ...]
     T: str | RuntimeType
+
+
+NPArrayDDomain.shape.__doc__ = 'shape of the array'
+NPArrayDDomain.T.__doc__ = 'atom type'
 
 
 def _sscp_domain(

@@ -35,8 +35,8 @@ Notice that there is a symmetric structure to the additive noise measurements:
      - :func:`make_laplace <opendp.measurements.make_laplace>`
    * - ``L2Distance<QI>``
      - :func:`make_gaussian <opendp.measurements.make_gaussian>`
-    
-`QI` can be any numeric type (the data type of the sensitivity can vary independently from the data type of the input).
+
+``QI`` can be any numeric type (the data type of the sensitivity can vary independently from the data type of the input).
 
 In the following sections, scalar-valued and vector-valued versions of each measurement are listed separately.
 You can choose whether to construct scalar or vector-valued versions of mechanisms by passing the appropriate input space.
@@ -97,7 +97,8 @@ If you need constant-time execution to protect against timing side-channels, spe
 
 Canonical Noise
 ***************
-The canonical noise mechanism (:func:`opendp.measurements.make_canonical_noise`) is discussed in detail in `these examples <canonical-noise-mechanism.html>`_
+The canonical noise mechanism (:func:`opendp.measurements.make_canonical_noise`)
+is discussed in detail in `these examples <canonical-noise-mechanism.html>`_
 
 
 Thresholded Noise Mechanisms

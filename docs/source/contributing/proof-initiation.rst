@@ -94,7 +94,7 @@ Here’s a template for ``absolute_distance.tex``:
 .. code:: latex
 
    \documentclass{article} % necessary for Overleaf to recognize the file
-   \input{../lib.sty} % `rust/src/lib.sty` contains boilerplate and macros
+   \input{../lib.sty} % "rust/src/lib.sty" contains boilerplate and macros
 
    \title{\texttt{fn absolute\_distance}}
    \author{Your Name(s) Here}\date{}
