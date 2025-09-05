@@ -115,7 +115,6 @@ the dataset with a resize transformation.
             ...     dp.symmetric_distance(),
             ... )
 
-            >>> # (where TIA stands for Atomic Input Type)
             >>> count_meas = (
             ...     input_space
             ...     >> dp.t.then_count()
