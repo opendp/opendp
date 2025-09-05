@@ -37,6 +37,21 @@ class PCAEpsilons(NamedTuple):
     mean: Optional[float]
 
 
+PCAEpsilons.eigvals.__doc__ = 'ε-expenditure to estimate the eigenvalues'
+PCAEpsilons.eigvecs.__doc__ = 'ε-expenditure to estimate the eigenvectors'
+PCAEpsilons.mean.__doc__ = ''  """ε-expenditure to estimate the mean.
+
+A portion of the budget is used to estimate the mean because the OpenDP PCA algorithm 
+releases an eigendecomposition of the sum of squares and cross-products matrix (SSCP), 
+not of the covariance matrix. 
+If the data is centered beforehand (either by a prior from the user or by privately estimating the mean and then centering), 
+then PCA will correspond to the covariance matrix, as expected, 
+because the SSCP matrix of centered data is equivalent to a scaled covariance matrix.
+
+If the data is not centered (or the mean is poorly estimated), then the first eigenvector will be dominated by the true mean.
+"""
+
+
 def make_private_pca(
     input_domain: Domain,
     input_metric: Metric,
