@@ -142,9 +142,6 @@ on github, or with the `gh` command line tool. Parameters:
     1. Update changelog
 
         ```shell
-        python channel_tool.py changelog
-
-        git fetch --tags
         python changelog.py
         ```
         Additional manual edits will be useful to arrange individual commits thematically.
