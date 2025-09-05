@@ -36,11 +36,12 @@ def log_until(tag):
 
 def reformat_log(lines):
     '''
-    >>> print('\n'.join(reformat_log([
+    >>> reformatted = reformat_log([
     ...     'abcd0000 Add: Colon and capital (#3)',
     ...     'abcd0001 add still works if missing (#2)',
     ...     'abcd0002 (tag) remove tags (#1)'
-    ... ])))
+    ... ])
+    >>> print('\\n'.join(reformatted))
     ### Add
     <BLANKLINE>
     - Colon and capital [#3](https://github.com/opendp/opendp/pull/3)
