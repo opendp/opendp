@@ -243,7 +243,7 @@ Then, set an environment variable to the absolute path of the OpenDP Library bin
 
 .. code-block:: bash
 
-    export OPENDP_LIB_DIR=`realpath target/debug`
+    export OPENDP_LIB_DIR=$(realpath target/debug)
 
 The default R install for MacOS also includes GUI elements like Tcl/Tk,
 so for the smoothest development experience we suggest these additional installs:
@@ -265,10 +265,10 @@ After each edit to the R or Rust source, run the following command in R to (re)l
     devtools::load_all("R/opendp/", recompile=TRUE)
 
 .. This function...
-.. - runs `src/Makevars`
-..     - cargo builds `libopendp.a` (rust-lib) and `opendp.h` (rust-lib header file)
-.. - compiles the c files in `src/`, which statically links with `libopendp.a`
-.. - outputs `src/opendp.so`, which is used by all R functions
+.. - runs "src/Makevars"
+..     - cargo builds "libopendp.a" (rust-lib) and "opendp.h" (rust-lib header file)
+.. - compiles the c files in "src/", which statically links with "libopendp.a"
+.. - outputs "src/opendp.so", which is used by all R functions
 .. - reloads all R functions
 
 To do a full package installation from local sources:

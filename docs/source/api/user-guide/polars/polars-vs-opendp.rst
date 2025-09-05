@@ -66,7 +66,7 @@ OpenDP Polars differs from typical Polars in these ways:
         └────────┴──────────────┴─────────────────┴───────┘
 
         >>> candidates = list(range(0, 100, 10))
-        >>>
+
         >>> _ = context.query().select(
         ...     pl.col("income")
         ...     .fill_null(0)

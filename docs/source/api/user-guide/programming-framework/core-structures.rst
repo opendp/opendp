@@ -50,7 +50,7 @@ Transformation
     :width: 75%
     :alt: Diagram representing an OpenDP transformation and its six fields: input_domain, output_domain, function, input_metric, output_metric, and stability_map.
 
-A :py:class:`Transformation <opendp.mod.Transformation>` is a `deterministic` mapping from datasets to datasets.
+A :py:class:`Transformation <opendp.mod.Transformation>` is a *deterministic* mapping from datasets to datasets.
 Transformations are used to preprocess and aggregate data.
 
 Let's assume we have a transformation called ``trans``:
@@ -77,7 +77,7 @@ Transformations need to be :ref:`chained <chaining>` with a measurement before t
 Measurement
 -----------
 
-A :py:class:`Measurement <opendp.mod.Measurement>` is, in contrast, a `randomized` mapping from datasets to outputs.
+A :py:class:`Measurement <opendp.mod.Measurement>` is, in contrast, a *randomized* mapping from datasets to outputs.
 Measurements are used to create differentially private releases.
 
 Say we have an arbitrary instance of a Measurement, called ``meas``, and a code snippet:
@@ -90,10 +90,10 @@ Say we have an arbitrary instance of a Measurement, called ``meas``, and a code 
 This should look familiar!
 
 However, instead of talking about stability, we'll say that
-"``meas`` is (``d_in``, ``d_out``)-`differentially private`"
+"``meas`` is (``d_in``, ``d_out``)-*differentially private*"
 if outputs of ``meas`` are ``d_out``-close when inputs are ``d_in``-close.
 
-The distances ``d_in`` and ``d_out`` are expressed in the units of the input metric and output `measure`, rather than `metric`.
+The distances ``d_in`` and ``d_out`` are expressed in the units of the input metric and output *measure*, rather than *metric*.
 Because measurements emit samples from a probability distribution,
 a measure is used to quantify differences between probability distributions.
 
