@@ -27,7 +27,10 @@ Let's get started by setting up the context for the Labor Force dataset.
     >>> dp.enable_features("contrib")
 
     >>> context = dp.Context.compositor(
-    ...     data=pl.scan_csv(dp.examples.get_france_lfs_path(), ignore_errors=True),
+    ...     data=pl.scan_csv(
+    ...         dp.examples.get_france_lfs_path(),
+    ...         ignore_errors=True,
+    ...     ),
     ...     privacy_unit=dp.unit_of(contributions=36),
     ...     privacy_loss=dp.loss_of(rho=0.2, delta=2e-7),
     ... )
@@ -41,9 +44,9 @@ We now release a contingency table via the :py:class:`opendp.extras.mbi.AIM` alg
     ...     # transformations/truncation may be applied here
     ...     .select("SEX", "AGE", "HWUSUAL", "ILOSTAT")
     ...     .contingency_table(
-    ...         keys={"SEX": [1, 2]}, 
+    ...         keys={"SEX": [1, 2]},
     ...         cuts={"AGE": [20, 40, 60], "HWUSUAL": [1, 20, 40]},
-    ...         algorithm=dp.mbi.AIM()
+    ...         algorithm=dp.mbi.AIM(),
     ...     )
     ...     .release()
     ... )
@@ -53,7 +56,7 @@ and thus does not affect the privacy budget.
 
 .. code:: pycon
 
-    >>> table_aim.synthesize() # doctest: +SKIP
+    >>> table_aim.synthesize()  # doctest: +SKIP
     shape: (3_807_732, 4)
     ┌─────┬───────────┬───────────┬─────────┐
     │ SEX ┆ AGE       ┆ HWUSUAL   ┆ ILOSTAT │
