@@ -119,6 +119,7 @@ class DPExpr(object):
             is_elementwise=True,
         )
 
+    @deprecated(reason="Use .noise instead.")
     def laplace(self, scale: float | None = None):
         """Add Laplace noise to the expression.
 
@@ -146,8 +147,9 @@ class DPExpr(object):
         │ ... │
         └─────┘
         """
-        return self.noise(scale=scale, distribution="Laplace")
+        return self.noise(scale=scale)
 
+    @deprecated(reason="Use .noise instead.")
     def gaussian(self, scale: float | None = None):
         """Add Gaussian noise to the expression.
 
@@ -175,7 +177,7 @@ class DPExpr(object):
         │ ... │
         └─────┘
         """
-        return self.noise(scale=scale, distribution="Gaussian")
+        return self.noise(scale=scale)
 
     def len(self, scale: float | None = None):
         """Compute a differentially private estimate of the number of elements in `self`, including null values.
@@ -211,7 +213,14 @@ class DPExpr(object):
         It can differ from frame length (``.select(dp.len())``) if the expression uses transformations that change the number of rows,
         like filtering.
         """
-        return self.expr.len().dp.noise(scale)
+        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+
+        return register_plugin_function(
+            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
+            function_name="dp_len",
+            args=(self.expr, scale),
+            returns_scalar=True,
+        )
 
     def count(self, scale: float | None = None):
         """Compute a differentially private estimate of the number of elements in `self`, not including null values.
@@ -246,7 +255,14 @@ class DPExpr(object):
 
         Output is noise added to three.
         """
-        return self.expr.count().dp.noise(scale)
+        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+
+        return register_plugin_function(
+            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
+            function_name="dp_count",
+            args=(self.expr, scale),
+            returns_scalar=True,
+        )
 
     def null_count(self, scale: float | None = None):
         """Compute a differentially private estimate of the number of null elements in `self`.
@@ -285,7 +301,14 @@ class DPExpr(object):
         consider combining the queries by constructing a boolean nullity column to group on,
         grouping by this column, and then using ``dp.len()``.
         """
-        return self.expr.null_count().dp.noise(scale)
+        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+
+        return register_plugin_function(
+            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
+            function_name="dp_null_count",
+            args=(self.expr, scale),
+            returns_scalar=True,
+        )
 
     def n_unique(self, scale: float | None = None):
         """Compute a differentially private estimate of the number of unique elements in `self`.
@@ -320,7 +343,14 @@ class DPExpr(object):
 
         Output is noise added to three.
         """
-        return self.expr.n_unique().dp.noise(scale)
+        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+
+        return register_plugin_function(
+            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
+            function_name="dp_n_unique",
+            args=(self.expr, scale),
+            returns_scalar=True,
+        )
 
     def sum(self, bounds: tuple[float, float], scale: float | None = None):
         """Compute the differentially private sum.
@@ -346,7 +376,7 @@ class DPExpr(object):
         ...     split_evenly_over=1,
         ...     margins=[dp.polars.Margin(max_length=5)]
         ... )
-        >>> query = context.query().select(pl.col("visits").fill_null(0).dp.sum((0, 1)))
+        >>> query = context.query().select(pl.col("visits").dp.sum((0, 1)))
         >>> query.release().collect()
         shape: (1, 1)
         ┌────────┐
@@ -359,12 +389,21 @@ class DPExpr(object):
 
         Output is noise added to two due to each value being clipped to (0, 1).
         """
-        return self.expr.clip(*bounds).sum().dp.noise(scale)
+        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+        from polars import lit  # type: ignore[import-not-found]
+
+        return register_plugin_function(
+            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
+            function_name="dp_sum",
+            args=(self.expr, lit(bounds[0]), lit(bounds[1]), scale),
+            returns_scalar=True,
+            changes_length=True,
+        )
 
     def mean(
         self,
         bounds: tuple[float, float],
-        scale: tuple[float | None, float | None] = (None, None),
+        scale: float | None = None,
     ):
         """Compute the differentially private mean.
 
@@ -372,7 +411,7 @@ class DPExpr(object):
         If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
 
         :param bounds: clip the input data to these lower and upper bounds
-        :param scale: parameters for the noise distributions of the numerator and denominator
+        :param scale: relative parameter for the scale of the noise distributions
 
         :example:
 
@@ -384,7 +423,7 @@ class DPExpr(object):
         ...     split_evenly_over=1,
         ...     margins=[dp.polars.Margin(max_length=5)]
         ... )
-        >>> query = context.query().select(pl.col("visits").fill_null(0).dp.mean((0, 1)))
+        >>> query = context.query().select(pl.col("visits").dp.mean((0, 1)))
         >>> with pl.Config(float_precision=0): # just to prevent doctest from failing
         ...     query.release().collect()
         shape: (1, 1)
@@ -398,68 +437,17 @@ class DPExpr(object):
 
         Privately estimates the numerator and denominator separately, and then returns their ratio.
         """
-        numer, denom = scale
-        return self.sum(bounds, numer) / self.len(denom)
-
-    def _discrete_quantile_score(self, alpha: float, candidates: list[float]):
-        """Score the utility of each candidate for representing the true quantile.
-
-        Candidates closer to the true quantile are assigned scores closer to zero.
-        Lower scores are better.
-
-        :param alpha: a value in [0, 1]. Choose 0.5 for median
-        :param candidates: Set of possible quantiles to evaluate the utility of.
-        """
-        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
-        from polars import Series  # type: ignore[import-not-found]
-
-        return register_plugin_function(
-            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
-            function_name="discrete_quantile_score",
-            args=[self.expr, alpha, Series(candidates)],
-            returns_scalar=True,
-            changes_length=True,
-        )
-
-    def _noisy_max(
-        self,
-        scale: float | None = None,
-        negate: bool = False,
-    ):
-        """Report the noisy argmax or argmin.
-
-        The scale calibrates the level of entropy when selecting an index.
-        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
-
-        :param scale: Noise scale parameter for the Gumbel or Exponential distribution.
-        :param negate: Enable to report noisy min.
-        """
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
         from polars import lit  # type: ignore[import-not-found]
 
         return register_plugin_function(
             plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
-            function_name="noisy_max",
-            args=[self.expr, lit(negate), scale],
-            is_elementwise=True,
+            function_name="dp_mean",
+            args=(self.expr, lit(bounds[0]), lit(bounds[1]), scale),
+            returns_scalar=True,
+            changes_length=True,
         )
 
-    def _index_candidates(self, candidates: list[float]):
-        """Index into a candidate set.
-
-        Typically used after :py:func:`_noisy_max` to map selected indices to candidates.
-
-        :param candidates: The values that each selected index corresponds to.
-        """
-        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
-        from polars import Series  # type: ignore[import-not-found]
-
-        return register_plugin_function(
-            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
-            function_name="index_candidates",
-            args=[self.expr, Series(candidates)],
-            is_elementwise=True,
-        )
 
     def quantile(
         self, alpha: float, candidates: list[float], scale: float | None = None
@@ -483,7 +471,7 @@ class DPExpr(object):
         ...     margins=[dp.polars.Margin(max_length=100)]
         ... )
         >>> candidates = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
-        >>> query = context.query().select(pl.col("age").cast(int).fill_null(0).dp.quantile(0.25, candidates))
+        >>> query = context.query().select(pl.col("age").cast(int).dp.quantile(0.25, candidates))
         >>> query.release().collect()
         shape: (1, 1)
         ┌─────┐
@@ -497,9 +485,16 @@ class DPExpr(object):
         Output will be one of the candidates,
         with greater likelihood of being selected the closer the candidate is to the first quartile.
         """
-        dq_score = self.expr.dp._discrete_quantile_score(alpha, candidates)
-        noisy_idx = dq_score.dp._noisy_max(scale=scale, negate=True)
-        return noisy_idx.dp._index_candidates(candidates)
+        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+        from polars import lit  # type: ignore[import-not-found]
+
+        return register_plugin_function(
+            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
+            function_name="dp_quantile",
+            args=(self.expr, lit(alpha), lit(candidates), scale),
+            returns_scalar=True,
+            changes_length=True,
+        )
 
     def median(self, candidates: list[float], scale: float | None = None):
         """Compute a differentially private median.
@@ -521,7 +516,7 @@ class DPExpr(object):
         ...     margins=[dp.polars.Margin(max_length=100)]
         ... )
         >>> candidates = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
-        >>> query = context.query().select(pl.col("age").cast(int).fill_null(0).dp.quantile(0.5, candidates))
+        >>> query = context.query().select(pl.col("age").cast(int).dp.quantile(0.5, candidates))
         >>> query.release().collect()
         shape: (1, 1)
         ┌─────┐
@@ -535,7 +530,16 @@ class DPExpr(object):
         Output will be one of the candidates,
         with greater likelihood of being selected the closer the candidate is to the median.
         """
-        return self.expr.dp.quantile(0.5, candidates, scale)
+        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+        from polars import lit  # type: ignore[import-not-found]
+
+        return register_plugin_function(
+            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
+            function_name="dp_median",
+            args=(self.expr, lit(candidates), scale),
+            returns_scalar=True,
+            changes_length=True,
+        )
 
 
 pl = import_optional_dependency("polars", raise_error=False)
@@ -572,9 +576,14 @@ def dp_len(scale: float | None = None):
     │ ... │
     └─────┘
     """
-    from polars.functions import len  # type: ignore[import-not-found]
+    from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
 
-    return DPExpr(len()).noise(scale=scale)
+    return register_plugin_function(
+        plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
+        function_name="dp_frame_len",
+        args=(scale,),
+        returns_scalar=True,
+    )
 
 
 class OnceFrame(object):
@@ -1054,7 +1063,7 @@ class LazyFrameQuery:
         >>>
         >>> query = context.query().select(
         ...     dp.len(),
-        ...     pl.col("convicted").fill_null(0).dp.sum((0, 1))
+        ...     pl.col("convicted").dp.sum((0, 1))
         ... )
         >>>
         >>> query.summarize(alpha=.05)  # type: ignore[union-attr]

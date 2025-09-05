@@ -194,7 +194,7 @@ jobs:
         run: coverage run -m pytest -v
 
       - name: Test replace-binary-path
-        if: ${{ contains(matrix.extra-install, 'polars') }}
+        if: contains(matrix.extra-install, 'polars')
         # Messes with envvars, so can't be run in parallel!
         run: FORCE_TEST_REPLACE_BINARY_PATH=1 pytest -k 'test_replace_binary_path'
 
