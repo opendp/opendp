@@ -508,13 +508,17 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         ...
 
     @overload
-    def __rshift__(self, other: "_PartialConstructor") -> Union["Transformation", "Measurement", "Odometer"]:
+    def __rshift__(self, other: "_PartialConstructor") -> "_PartialConstructor":
         ...
 
-    def __rshift__(self, other: Union["Measurement", "Transformation", "_PartialConstructor"]) -> Union["Measurement", "Transformation", "_PartialConstructor", "PartialChain"]:  # type: ignore[name-defined] # noqa F821
+    def __rshift__(self, other: Union["Measurement", "Transformation", "Odometer", "_PartialConstructor", "PartialChain"]) -> Union["Measurement", "Transformation", "Odometer", "_PartialConstructor", "PartialChain"]:  # type: ignore[name-defined] # noqa F821
         if isinstance(other, Measurement):
             from opendp.combinators import make_chain_mt
             return make_chain_mt(other, self)
+        
+        if isinstance(other, Odometer):
+            from opendp.combinators import make_chain_ot
+            return make_chain_ot(other, self)
 
         if isinstance(other, Transformation):
             from opendp.combinators import make_chain_tt
@@ -527,7 +531,7 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
         if isinstance(other, PartialChain):
             return PartialChain(lambda x: self >> other.partial(x))
 
-        raise ValueError(f"rshift expected a measurement or transformation, got {other}")  # pragma: no cover
+        raise ValueError(f"rshift expected a measurement, odometer or transformation, got {other}")  # pragma: no cover
 
 
     @property
