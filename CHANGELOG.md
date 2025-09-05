@@ -4,7 +4,7 @@ This file documents the version history of OpenDP. The links on each version num
 showing the source changes from the previous version.
 
 
-## [0.13.0-dev](https://github.com/opendp/opendp/compare/v0.12.1...HEAD) - TBD
+## [0.13.0](https://github.com/opendp/opendp/compare/v0.12.1...HEAD) - 2025-04-22
 
 
 ### Feat
