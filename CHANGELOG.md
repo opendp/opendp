@@ -4,6 +4,8 @@ This file documents the version history of OpenDP. The links on each version num
 showing the source changes from the previous version.
 
 
+## [0.14.0](https://github.com/opendp/opendp/compare/v0.13.0...HEAD) - TBD
+
 ### Feature
 
 - New:
@@ -90,7 +92,7 @@ showing the source changes from the previous version.
     - Rename "member" to "_member" [#2392](https://github.com/opendp/opendp/pull/2392)
 
 
-## [0.13.0](https://github.com/opendp/opendp/compare/v0.12.1...HEAD) - 2025-04-22
+## [0.13.0](https://github.com/opendp/opendp/compare/v0.12.1...v0.13.0) - 2025-04-22
 
 
 ### Feat

@@ -154,6 +154,8 @@ on github, or with the `gh` command line tool. Parameters:
         - If it's a minor release, run `python tools/channel_tool.py bump_version --position minor`
         - Similarly, if it's a major release, run `python tools/channel_tool.py bump_version --position major`
 
+    1. Add a header for the current version to the CHANGELOG.md.
+
     1. Commit your updates
 
         ```shell
