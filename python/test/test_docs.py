@@ -25,6 +25,7 @@ def test_thens_are_documented(module, function):
 
 
 docs_source = Path(__file__).parent.parent.parent / 'docs' / 'source'
+assert docs_source.exists()
 
 
 def get_self_and_parent(path: Path):
@@ -52,6 +53,7 @@ def test_code_block_language(rst_path: Path):
                 errors.append(f'line {i+1}: Got "{language}", expected one of: {", ".join(expected)}')
     assert not errors, '\n'.join(errors)
 
+
 @pytest.mark.parametrize(
     "rst_path",
     list(docs_source.glob("**/*.rst")),
@@ -76,6 +78,25 @@ def test_single_backticks(rst_path: Path):
             content = m.group(2)
             errors.append(f'line {i+1}: "{content}" will be italicized: add double-backticks, or change to "*".')
     assert not errors, '\n'.join(errors)
+
+
+python_src = Path(__file__).parent.parent / 'src'
+assert python_src.exists()
+
+
+@pytest.mark.parametrize(
+    "path",
+    list(docs_source.glob("**/*.rst")) + list(python_src.glob("**/*.py")),
+    ids=get_self_and_parent
+)
+def test_doctest_empty_lines(path: Path):
+    lines = path.read_text().splitlines()
+    errors = []
+    for i, line in enumerate(lines):
+        if re.search(r'>>>\s*$', line):
+            errors.append(f'line {i+1}: wrap with "code::" block and drop empty ">>>".')
+    assert not errors, '\n'.join(errors)
+
 
 @pytest.mark.parametrize(
     "nb_path",

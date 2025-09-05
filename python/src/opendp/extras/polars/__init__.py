@@ -11,7 +11,7 @@ We suggest importing under the conventional name ``dp``:
 
     >>> import opendp.prelude as dp
 
-The methods of this module will then be accessible at ``dp.polars``.
+The members of this module will then be accessible at ``dp.polars``.
 """
 
 from __future__ import annotations
@@ -1041,44 +1041,48 @@ class LazyFrameQuery:
 
         :example:
 
-        >>> import polars as pl
-        >>> data = pl.LazyFrame([pl.Series("convicted", [0, 1, 1, 0, 1] * 50, dtype=pl.Int32)])
-        >>>
-        >>> context = dp.Context.compositor(
-        ...     data=data,
-        ...     privacy_unit=dp.unit_of(contributions=1),
-        ...     privacy_loss=dp.loss_of(epsilon=1.0),
-        ...     split_evenly_over=1,
-        ...     margins=[dp.polars.Margin(by=(), max_length=1000)],
-        ... )
-        >>>
-        >>> query = context.query().select(
-        ...     dp.len(),
-        ...     pl.col("convicted").fill_null(0).dp.sum((0, 1))
-        ... )
-        >>>
-        >>> query.summarize(alpha=.05)  # type: ignore[union-attr]
-        shape: (2, 5)
-        ┌───────────┬──────────────┬─────────────────┬───────┬──────────┐
-        │ column    ┆ aggregate    ┆ distribution    ┆ scale ┆ accuracy │
-        │ ---       ┆ ---          ┆ ---             ┆ ---   ┆ ---      │
-        │ str       ┆ str          ┆ str             ┆ f64   ┆ f64      │
-        ╞═══════════╪══════════════╪═════════════════╪═══════╪══════════╡
-        │ len       ┆ Frame Length ┆ Integer Laplace ┆ 2.0   ┆ 6.429605 │
-        │ convicted ┆ Sum          ┆ Integer Laplace ┆ 2.0   ┆ 6.429605 │
-        └───────────┴──────────────┴─────────────────┴───────┴──────────┘
+        .. code:: pycon
+
+            >>> import polars as pl
+            >>> data = pl.LazyFrame([pl.Series("convicted", [0, 1, 1, 0, 1] * 50, dtype=pl.Int32)])
+
+            >>> context = dp.Context.compositor(
+            ...     data=data,
+            ...     privacy_unit=dp.unit_of(contributions=1),
+            ...     privacy_loss=dp.loss_of(epsilon=1.0),
+            ...     split_evenly_over=1,
+            ...     margins=[dp.polars.Margin(by=(), max_length=1000)],
+            ... )
+
+            >>> query = context.query().select(
+            ...     dp.len(),
+            ...     pl.col("convicted").fill_null(0).dp.sum((0, 1))
+            ... )
+
+            >>> query.summarize(alpha=.05)  # type: ignore[union-attr]
+            shape: (2, 5)
+            ┌───────────┬──────────────┬─────────────────┬───────┬──────────┐
+            │ column    ┆ aggregate    ┆ distribution    ┆ scale ┆ accuracy │
+            │ ---       ┆ ---          ┆ ---             ┆ ---   ┆ ---      │
+            │ str       ┆ str          ┆ str             ┆ f64   ┆ f64      │
+            ╞═══════════╪══════════════╪═════════════════╪═══════╪══════════╡
+            │ len       ┆ Frame Length ┆ Integer Laplace ┆ 2.0   ┆ 6.429605 │
+            │ convicted ┆ Sum          ┆ Integer Laplace ┆ 2.0   ┆ 6.429605 │
+            └───────────┴──────────────┴─────────────────┴───────┴──────────┘
 
         The accuracy in any given row can be interpreted with:
 
-        >>> def interpret_accuracy(distribution, scale, accuracy, alpha):
-        ...     return (
-        ...         f"When the {distribution} scale is {scale}, "
-        ...         f"the DP estimate differs from the true value by no more than {accuracy} "
-        ...         f"at a statistical significance level alpha of {alpha}, "
-        ...         f"or with (1 - {alpha})100% = {(1 - alpha) * 100}% confidence."
-        ...     )
-        ...
-        >>> interpret_accuracy("Integer Laplace", 2.0, 6.429605, alpha=.05) # doctest:+SKIP
+        .. code:: pycon
+
+            >>> def interpret_accuracy(distribution, scale, accuracy, alpha):
+            ...     return (
+            ...         f"When the {distribution} scale is {scale}, "
+            ...         f"the DP estimate differs from the true value by no more than {accuracy} "
+            ...         f"at a statistical significance level alpha of {alpha}, "
+            ...         f"or with (1 - {alpha})100% = {(1 - alpha) * 100}% confidence."
+            ...     )
+
+            >>> interpret_accuracy("Integer Laplace", 2.0, 6.429605, alpha=.05) # doctest:+SKIP
         """
         from opendp.accuracy import summarize_polars_measurement
 
