@@ -18,13 +18,14 @@ def get_changelog_lines():
 
 def get_prev_version(lines):
     '''
-    >>> lines = ['# Title', '', '## [v1.2.3](github link)', '', 'changes!']
+    >>> lines = ['# Title', '', '## [1.2.3](github link)', '', 'changes!']
     >>> get_prev_version(lines)
-    (2, 'v1.2.3')
+    (2, '1.2.3')
     '''
     for i, line in enumerate(lines):
-        if match := re.search(r'\[(v[^]]+)\]', line):
-            return i, match.group(1)
+        if match := re.search(r'# \[(\d+\.\d+.\d+[^]]*)\]', line):
+            return (i, match.group(1))
+    raise Exception('Could not find previous version')
 
 
 def log_until(tag):
@@ -35,11 +36,11 @@ def log_until(tag):
 
 def reformat_log(lines):
     '''
-    >>> print(reformat_log([
+    >>> print('\n'.join(reformat_log([
     ...     'abcd0000 Add: Colon and capital (#3)',
     ...     'abcd0001 add still works if missing (#2)',
     ...     'abcd0002 (tag) remove tags (#1)'
-    ... ]))
+    ... ])))
     ### Add
     <BLANKLINE>
     - Colon and capital [#3](https://github.com/opendp/opendp/pull/3)
@@ -68,7 +69,7 @@ def reformat_log(lines):
             output_lines.append(f'- {line}')
         output_lines.append('')
     
-    return '\n'.join(output_lines)
+    return output_lines
 
 
 def insert_updates(old_lines, new_lines, i):
@@ -86,8 +87,8 @@ def main():
 
     old_lines = get_changelog_lines()
 
-    i, prev_version = get_prev_version()
-    raw_new_lines = log_until(prev_version.replace('-dev', ''))
+    (i, prev_version) = get_prev_version(old_lines)
+    raw_new_lines = log_until(f'v{prev_version}'.replace('-dev', ''))
     # TODO: I'm not sure where in the process "-dev" is added or removed.
     new_lines = reformat_log(raw_new_lines)
 
