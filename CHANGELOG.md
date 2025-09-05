@@ -50,6 +50,8 @@ showing the source changes from the previous version.
     - Update thiel-sen notebook [#2360](https://github.com/opendp/opendp/pull/2360)
     - Update differencing attack notebook [#2355](https://github.com/opendp/opendp/pull/2355)
     - Document exponential quantiles in the user guide [#2358](https://github.com/opendp/opendp/pull/2358)
+    - Stats ToC in getting-started [#2494](https://github.com/opendp/opendp/pull/2494)
+    - Fill in docstrings for namedtuple params [#2492](https://github.com/opendp/opendp/pull/2492)
     - Quantiles theory section [#1734](https://github.com/opendp/opendp/pull/1734)
 - Links to outside resources:
     - Add dp-wizard link [#2413](https://github.com/opendp/opendp/pull/2413)
@@ -68,6 +70,9 @@ showing the source changes from the previous version.
     - Reformat MBI code blocks [#2479](https://github.com/opendp/opendp/pull/2479)
     - Make Markdown explicit in docs [#2399](https://github.com/opendp/opendp/pull/2399)
     - Fix link check [#2402](https://github.com/opendp/opendp/pull/2402)
+    - Fix missing backticks [#2490](https://github.com/opendp/opendp/pull/2490)
+    - Prefer empty lines in doctests [#2491](https://github.com/opendp/opendp/pull/2491)
+    - Remove old, unneeded type comment [#2502](https://github.com/opendp/opendp/pull/2502)
 
 ### Prove
 
