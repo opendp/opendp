@@ -185,13 +185,13 @@ jobs:
         # (Even in unittests we should use "importskip" rather than "skipif".)
         run: |
           case "${{ matrix.extra-install }}" in
-            PLACEHOLDER)          pytest -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst"
-            numpy)                pytest -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst"
-            scikit-learn)         pytest -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst"
-            polars)               pytest -v -k "not contingency and not synthetic"
-            mbi)  coverage run -m pytest -v
+            PLACEHOLDER)          pytest -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
+            numpy)                pytest -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
+            scikit-learn)         pytest -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
+            polars)               pytest -v -k "not contingency and not synthetic";;
+            mbi)  coverage run -m pytest -v;;
 
-            *)    print "unexpected extra-install"; exit 1
+            *)    print "unexpected extra-install"; exit 1;;
           esac
 
       - name: Test replace-binary-path
