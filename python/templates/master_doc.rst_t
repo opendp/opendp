@@ -1,0 +1,17 @@
+.. {{ project }} documentation master file, created by
+   sphinx-quickstart on {{ now }}.
+
+
+==========={{ project_underline }}=================
+
+.. toctree::
+   :maxdepth: {{ mastertocmaxdepth }}
+   :caption: Contents:
+
+   opendp
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
