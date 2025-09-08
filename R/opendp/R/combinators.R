@@ -23,7 +23,7 @@ NULL
 #'
 #' Required features: `contrib`
 #'
-#' [make_adaptive_composition in Rust documentation.](https://docs.rs/opendp/0.14.0-beta.20250908.1/opendp/combinators/fn.make_adaptive_composition.html)
+#' [make_adaptive_composition in Rust documentation.](https://docs.rs/opendp/0.14.0/opendp/combinators/fn.make_adaptive_composition.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -114,7 +114,7 @@ then_adaptive_composition <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_approximate in Rust documentation.](https://docs.rs/opendp/0.14.0-beta.20250908.1/opendp/combinators/fn.make_approximate.html)
+#' [make_approximate in Rust documentation.](https://docs.rs/opendp/0.14.0/opendp/combinators/fn.make_approximate.html)
 #'
 #' @concept combinators
 #' @param measurement a measurement with a privacy measure to be casted
@@ -250,7 +250,7 @@ then_basic_composition <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_chain_mt in Rust documentation.](https://docs.rs/opendp/0.14.0-beta.20250908.1/opendp/combinators/fn.make_chain_mt.html)
+#' [make_chain_mt in Rust documentation.](https://docs.rs/opendp/0.14.0/opendp/combinators/fn.make_chain_mt.html)
 #'
 #' @concept combinators
 #' @param measurement1 outer mechanism
@@ -316,7 +316,7 @@ then_chain_mt <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_chain_pm in Rust documentation.](https://docs.rs/opendp/0.14.0-beta.20250908.1/opendp/combinators/fn.make_chain_pm.html)
+#' [make_chain_pm in Rust documentation.](https://docs.rs/opendp/0.14.0/opendp/combinators/fn.make_chain_pm.html)
 #'
 #' @concept combinators
 #' @param postprocess1 outer postprocessor
@@ -381,7 +381,7 @@ then_chain_pm <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_chain_tt in Rust documentation.](https://docs.rs/opendp/0.14.0-beta.20250908.1/opendp/combinators/fn.make_chain_tt.html)
+#' [make_chain_tt in Rust documentation.](https://docs.rs/opendp/0.14.0/opendp/combinators/fn.make_chain_tt.html)
 #'
 #' @concept combinators
 #' @param transformation1 outer transformation
@@ -517,7 +517,7 @@ then_composition <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_fix_delta in Rust documentation.](https://docs.rs/opendp/0.14.0-beta.20250908.1/opendp/combinators/fn.make_fix_delta.html)
+#' [make_fix_delta in Rust documentation.](https://docs.rs/opendp/0.14.0/opendp/combinators/fn.make_fix_delta.html)
 #'
 #' @concept combinators
 #' @param measurement a measurement with a privacy curve to be fixed
@@ -585,7 +585,7 @@ then_fix_delta <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_fixed_approxDP_to_approxDP in Rust documentation.](https://docs.rs/opendp/0.14.0-beta.20250908.1/opendp/combinators/fn.make_fixed_approxDP_to_approxDP.html)
+#' [make_fixed_approxDP_to_approxDP in Rust documentation.](https://docs.rs/opendp/0.14.0/opendp/combinators/fn.make_fixed_approxDP_to_approxDP.html)
 #'
 #' @concept combinators
 #' @param measurement a measurement with a privacy measure to be casted
@@ -647,7 +647,7 @@ then_fixed_approxDP_to_approxDP <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_fully_adaptive_composition in Rust documentation.](https://docs.rs/opendp/0.14.0-beta.20250908.1/opendp/combinators/fn.make_fully_adaptive_composition.html)
+#' [make_fully_adaptive_composition in Rust documentation.](https://docs.rs/opendp/0.14.0/opendp/combinators/fn.make_fully_adaptive_composition.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -659,7 +659,7 @@ then_fixed_approxDP_to_approxDP <- function(
 #'
 #' **Proof Definition:**
 #'
-#' [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/combinators/sequential_composition/fully_adaptive/make_fully_adaptive_composition.pdf)
+#' [(Proof Document)](https://docs.opendp.org/en/v0.14.0/proofs/rust/src/combinators/sequential_composition/fully_adaptive/make_fully_adaptive_composition.pdf)
 #'
 #' @concept combinators
 #' @param input_domain indicates the space of valid input datasets
@@ -728,7 +728,7 @@ then_fully_adaptive_composition <- function(
 #'
 #' Required features: `contrib`, `honest-but-curious`
 #'
-#' [make_population_amplification in Rust documentation.](https://docs.rs/opendp/0.14.0-beta.20250908.1/opendp/combinators/fn.make_population_amplification.html)
+#' [make_population_amplification in Rust documentation.](https://docs.rs/opendp/0.14.0/opendp/combinators/fn.make_population_amplification.html)
 #'
 #' **Why honest-but-curious?:**
 #'
@@ -804,7 +804,7 @@ then_population_amplification <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_privacy_filter in Rust documentation.](https://docs.rs/opendp/0.14.0-beta.20250908.1/opendp/combinators/fn.make_privacy_filter.html)
+#' [make_privacy_filter in Rust documentation.](https://docs.rs/opendp/0.14.0/opendp/combinators/fn.make_privacy_filter.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -815,7 +815,7 @@ then_population_amplification <- function(
 #'
 #' **Proof Definition:**
 #'
-#' [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/combinators/privacy_filter/make_privacy_filter.pdf)
+#' [(Proof Document)](https://docs.opendp.org/en/v0.14.0/proofs/rust/src/combinators/privacy_filter/make_privacy_filter.pdf)
 #'
 #' @concept combinators
 #' @param odometer A privacy odometer
@@ -892,7 +892,7 @@ then_privacy_filter <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_pureDP_to_zCDP in Rust documentation.](https://docs.rs/opendp/0.14.0-beta.20250908.1/opendp/combinators/fn.make_pureDP_to_zCDP.html)
+#' [make_pureDP_to_zCDP in Rust documentation.](https://docs.rs/opendp/0.14.0/opendp/combinators/fn.make_pureDP_to_zCDP.html)
 #'
 #' **Citations:**
 #'
@@ -972,7 +972,7 @@ then_pureDP_to_zCDP <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_select_private_candidate in Rust documentation.](https://docs.rs/opendp/0.14.0-beta.20250908.1/opendp/combinators/fn.make_select_private_candidate.html)
+#' [make_select_private_candidate in Rust documentation.](https://docs.rs/opendp/0.14.0/opendp/combinators/fn.make_select_private_candidate.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -983,7 +983,7 @@ then_pureDP_to_zCDP <- function(
 #'
 #' **Proof Definition:**
 #'
-#' [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/combinators/select_private_candidate/make_select_private_candidate.pdf)
+#' [(Proof Document)](https://docs.opendp.org/en/v0.14.0/proofs/rust/src/combinators/select_private_candidate/make_select_private_candidate.pdf)
 #'
 #' @concept combinators
 #' @param measurement A measurement that releases a 2-tuple of (score, candidate)
@@ -1069,7 +1069,7 @@ then_select_private_candidate <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_sequential_composition in Rust documentation.](https://docs.rs/opendp/0.14.0-beta.20250908.1/opendp/combinators/fn.make_sequential_composition.html)
+#' [make_sequential_composition in Rust documentation.](https://docs.rs/opendp/0.14.0/opendp/combinators/fn.make_sequential_composition.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -1161,7 +1161,7 @@ then_sequential_composition <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_zCDP_to_approxDP in Rust documentation.](https://docs.rs/opendp/0.14.0-beta.20250908.1/opendp/combinators/fn.make_zCDP_to_approxDP.html)
+#' [make_zCDP_to_approxDP in Rust documentation.](https://docs.rs/opendp/0.14.0/opendp/combinators/fn.make_zCDP_to_approxDP.html)
 #'
 #' @concept combinators
 #' @param measurement a measurement with a privacy measure to be casted
