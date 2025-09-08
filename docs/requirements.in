@@ -8,7 +8,7 @@
 sphinx==7.2.6 # TODO: upgrade breaks "make html". https://github.com/opendp/opendp/issues/1910
 sphinx-prompt
 sphinx-design
-sphinx-multiversion
+git+https://github.com/samtygier-stfc/sphinx-multiversion.git@2910d6ed7b869ed8d3d81b7e0485a2cf3a26a358
 pydata-sphinx-theme==0.15.3rc1 # TODO: Remove version pin when RC is released.
 nbsphinx
 ipython  # for notebook syntax highlighting in docs
