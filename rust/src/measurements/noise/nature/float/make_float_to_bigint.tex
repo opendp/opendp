@@ -1,0 +1,87 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{fn make\_float\_to\_bigint}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise/nature/fn}{make\_float\_to\_bigint} in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+
+\begin{itemize}
+    \item Generic \texttt{T} implements trait \rustdoc{traits/trait}{Float}
+    \item Const-generic \texttt{P} is of type \texttt{usize}
+    \item Generic \texttt{QI} implements trait \rustdoc{traits/trait}{Number}
+    \item Type \texttt{RBig} implements traits \texttt{TryFrom<T>} and \texttt{TryFrom<QI>}.
+        This is for fallible exact casting to rationals from floats in the function and input sensitivity in the privacy map.
+    \item Type \texttt{i32} implements trait \rustdoc{traits/trait}{ExactIntCast}\texttt{<<T as FloatBits>::Bits>},
+        This requirement means that the raw bits of \texttt{T} can be exactly cast to an \texttt{i32}.
+\end{itemize}
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_float_to_bigint.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \validTransformation{(\texttt{input\_space, k, T, P, QI})}{\texttt{make\_float\_to\_bigint}}
+\end{theorem}
+
+\begin{proof}
+    In the definition of the function on line \ref{line:elementwise-function},
+    \texttt{RBig.try\_from} is infallible when the input is non-nan making the function infallible.
+    Line \ref{line:rounding-distance} checks that $k$ is not \texttt{i32.MIN},
+    which satisfies the precondition for \texttt{find\_nearest\_multiple\_of\_2k} on line \ref{line:find-nearest},
+    and ensures that negation is well-defined on line \ref{line:x-mul-2k}.
+    There are no other sources of error in the function, 
+    so the function cannot raise data-dependent errors.
+
+    The function also always returns a vector of IBigs, of the same length as the input, 
+    meaning the output of the function is always a member of the output domain,
+    as defined on line \ref{line:output-domain}.
+
+    The stability argument breaks down into three parts:
+    \begin{itemize}
+        \item The casting from float to rational on line \ref{line:try-from} is 1-stable,
+        because the real values of the numbers remain un-changed,
+        meaning the distance between adjacent inputs always remains the same.
+        \item The rounding on line \ref{line:find-nearest} can cause an increase in the sensitivity equal to $n^{1/p} \cdot (2^k - 2^{k_{min}})$.
+        \begin{align}
+            & \max_{x \sim x'} d_{Lp}(f(x), f(x'))\\
+            & = \max_{x \sim x'} |\mathrm{round}_k(x) - \mathrm{round}_k(x')|_p\\
+            & \leq \max_{x \sim x'} |(x + 2^{k - 1}) - (x' - 2^{k - 1} + 2^{k_{min}})|_p\\
+            & \leq \max_{x \sim x'} |x - x'|_p + |1_n \cdot (2^{k} - 2^{k_{min}})|_p\\
+            & = \max_{x \sim x'} d_{Lp}(x, x') + n^{1/p} \cdot (2^{k} - 2^{k_{min}})\\
+            & = \texttt{d\_in} + n^{1/p} \cdot (2^{k} - 2^{k_{min}})
+        \end{align}
+    
+        This increase in the sensitivity is reflected on line \ref{line:x-mul-2k},
+        which, by the postcondition of \rustdoc{measurements/noise/nature/float/utilities/fn}{get\_rounding\_distance},
+        returns the maximum increase in sensitivity due to rounding,
+        matching the above analysis.
+
+        \item The discarding of the denominator on line \ref{line:find-nearest} is $2^k$-stable,
+            as the denominator is $2^k$.
+            This increase in sensitivity is also reflected on line \ref{line:x-mul-2k},
+            where the sensitivity is multiplied by a factor of $2^{-k}$.
+    \end{itemize}
+
+    For every pair of elements $x, x'$ in \texttt{input\_domain} and for every pair $(\din, \dout)$, 
+    where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \\ \texttt{output\_metric}, 
+    if $x, x'$ are \din-close under \texttt{input\_metric}, $\texttt{stability\_map}(\din)$ does not raise an exception,
+    and $\texttt{stability\_map}(\din) \leq \dout$, 
+    then $\function(x), \function(x')$ are $\dout$-close under \texttt{output\_metric}.
+\end{proof}
+
+
+\end{document}
