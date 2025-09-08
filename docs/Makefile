@@ -4,7 +4,11 @@
 # You can set these variables from the command line.
 CARGO         = cargo
 SPHINXAPIDOC  = sphinx-apidoc
-SPHINXOPTS    = -W --keep-going
+
+# TODO: restore "-W": Treat warnings as errors.
+# https://github.com/opendp/opendp/issues/2509
+# https://github.com/opendp/opendp/issues/2508
+SPHINXOPTS    = --keep-going
 SPHINXBUILD   = sphinx-build
 SPHINXMULTI   = sphinx-multiversion
 PAPER         =
