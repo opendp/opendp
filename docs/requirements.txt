@@ -195,7 +195,7 @@ sphinx==7.2.6
     #   sphinx-prompt
 sphinx-design==0.6.1
     # via -r requirements.in
-sphinx-multiversion @ git+https://github.com/samtygier-stfc/sphinx-multiversion.git@prebuild_command
+sphinx-multiversion==0.2.4
     # via -r requirements.in
 sphinx-prompt==1.8.0
     # via -r requirements.in
