@@ -70,7 +70,7 @@ measure_equal <- function(
 #' The measurement's input metric defines the notion of adjacency,
 #' and the measurement's input domain defines the set of possible datasets.
 #'
-#' [approximate in Rust documentation.](https://docs.rs/opendp/0.14.0-nightly.20250908.1/opendp/measures/fn.approximate.html)
+#' [approximate in Rust documentation.](https://docs.rs/opendp/0.14.0-beta.20250908.1/opendp/measures/fn.approximate.html)
 #'
 #' **Proof Definition:**
 #'
