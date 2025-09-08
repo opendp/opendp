@@ -3,27 +3,45 @@ import subprocess
 import re
 from collections import defaultdict
 from pathlib import Path
-from channel_tool import match_first_changelog_header, get_changelog_lines
 
 
-def get_prev_version():
-    # retrieve previous version from the dev changelog entry
-    _, match = match_first_changelog_header(get_changelog_lines())
-    return match.group(2)
+changelog_path = (Path(__file__).parent.parent / 'CHANGELOG.md')
+
+
+def get_changelog_lines():
+    '''
+    >>> '# OpenDP Changelog' in get_changelog_lines()
+    True
+    '''
+    return changelog_path.read_text().splitlines()
+
+
+def get_prev_version(lines):
+    '''
+    >>> lines = ['# Title', '', '## [1.2.3](github link)', '', 'changes!']
+    >>> get_prev_version(lines)
+    (2, '1.2.3')
+    '''
+    for i, line in enumerate(lines):
+        if match := re.search(r'# \[(\d+\.\d+.\d+[^]]*)\]', line):
+            return (i, match.group(1))
+    raise Exception('Could not find previous version')
 
 
 def log_until(tag):
+    subprocess.check_output(['git', 'fetch', '--tags']) # To make sure we have tags locally.
     return subprocess.check_output(['git', 'log', f"{tag}..HEAD", '--oneline'], text=True).splitlines()
     
 
 
-def get_changelog_update(lines):
+def reformat_log(lines):
     '''
-    >>> print(parse_log([
+    >>> reformatted = reformat_log([
     ...     'abcd0000 Add: Colon and capital (#3)',
     ...     'abcd0001 add still works if missing (#2)',
     ...     'abcd0002 (tag) remove tags (#1)'
-    ... ]))
+    ... ])
+    >>> print('\\n'.join(reformatted))
     ### Add
     <BLANKLINE>
     - Colon and capital [#3](https://github.com/opendp/opendp/pull/3)
@@ -52,27 +70,32 @@ def get_changelog_update(lines):
             output_lines.append(f'- {line}')
         output_lines.append('')
     
-    return '\n'.join(output_lines)
+    return output_lines
 
+
+def insert_updates(old_lines, new_lines, i):
+    '''
+    >>> old_lines = ['a', 'b', 'c']
+    >>> new_lines = ['X', 'Y', 'Z']
+    >>> insert_updates(old_lines, new_lines, 2)
+    ['a', 'b', 'X', 'Y', 'Z', 'c']
+    '''
+    return old_lines[:i] + new_lines + old_lines[i:]
 
 def main():
     parser = argparse.ArgumentParser(description="Helps generate CHANGELOG entries")
     parser.parse_args()
 
-    old_changelog_lines = (Path(__file__).parent.parent / 'CHANGELOG.md').read_text().splitlines()
-    new_changelog_lines = []
+    old_lines = get_changelog_lines()
 
-    prev_version = get_prev_version()
-    log_lines = log_until(prev_version.replace('-dev', ''))
-    changelog_update = get_changelog_update(log_lines)
+    (i, prev_version) = get_prev_version(old_lines)
+    raw_new_lines = log_until(f'v{prev_version}'.replace('-dev', ''))
+    # TODO: I'm not sure where in the process "-dev" is added or removed.
+    new_lines = reformat_log(raw_new_lines)
 
-    for line in old_changelog_lines:
-        if prev_version in line:
-            new_changelog_lines.append(changelog_update)
-            new_changelog_lines.append('')
-        new_changelog_lines.append(line)
+    updated_changelog = '\n'.join(insert_updates(old_lines, new_lines, i))
 
-    (Path(__file__).parent.parent / 'CHANGELOG.md').write_text('\n'.join(new_changelog_lines))
+    changelog_path.write_text(updated_changelog)
 
 
 if __name__ == "__main__":
