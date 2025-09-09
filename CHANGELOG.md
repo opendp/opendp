@@ -10,7 +10,7 @@ showing the source changes from the previous version.
 
 
 
-## [0.14.0](https://github.com/opendp/opendp/compare/v0.13.0...v0.14.0) - 2025-09-09
+## [0.14.0](https://github.com/opendp/opendp/compare/v0.13.0...v0.14.0) - 2025-09-08
 
 
 ### Feature
