@@ -2,7 +2,7 @@ use num::FromPrimitive;
 
 use crate::{
     error::Fallible,
-    measurements::approximate_to_tradeoff,
+    measures::f_dp::approximate_to_tradeoff,
     traits::samplers::{
         PartialSample, psrn::test::assert_ordered_progression, test::check_kolmogorov_smirnov,
     },
