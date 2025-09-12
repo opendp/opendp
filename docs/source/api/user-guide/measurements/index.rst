@@ -17,6 +17,7 @@ This means you will need to choose a measurement that chains with your :ref:`agg
   additive-noise-mechanisms
   thresholded-noise-mechanisms
   canonical-noise-mechanism
+  noisy-max-mechanisms
   randomized-response
 
 Additive Noise Mechanisms
@@ -162,8 +163,10 @@ Refer to :ref:`measure-casting` to convert to approximate DP.
      - ``Approximate<ZeroConcentratedDivergence>``
 
 
-Noisy Top K and Noisy Max
+Noisy Max and Noisy Top K
 -------------------------
+
+See the `Noisy Max Mechanisms notebook <noisy-max-mechanisms.html>`_ for code examples and more exposition.
 
 The report noisy top-k mechanism is used to privately release the indices of the maximum k values in a vector.
 This is useful for private selection, and overlaps with the exponential mechanism.
