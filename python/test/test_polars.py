@@ -684,6 +684,20 @@ def test_pickle_bomb():
         )
 
 
+def test_execute_shim():
+    pl = pytest.importorskip("polars")
+
+    context = dp.Context.compositor(
+        data=pl.LazyFrame({"A": [1]}),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+    )
+    plan = context.query(epsilon=1.0).select(dp.len()).polars_plan
+
+    with pytest.raises(pl.exceptions.ComputeError, match="OpenDP expressions must be passed through"):
+        plan.collect()  # type: ignore[union-attr]
+
+
 def test_cut():
     pl = pytest.importorskip("polars")
     pl_testing = pytest.importorskip("polars.testing")

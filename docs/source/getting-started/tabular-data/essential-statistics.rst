@@ -232,7 +232,11 @@ work hours across responses.
             ...     # 99 represents "Not applicable"
             ...     context.query().filter(pl.col("HWUSUAL") != 99.0)
             ...     # compute the DP sum
-            ...     .select(pl.col.HWUSUAL.cast(int).dp.sum(bounds=(0, 80)))
+            ...     .select(
+            ...         pl.col.HWUSUAL.cast(int)
+            ...         .fill_null(35)
+            ...         .dp.sum(bounds=(0, 80))
+            ...     )
             ... )
 
 
@@ -321,6 +325,8 @@ estimates.
             ...     context.query().filter(pl.col.HWUSUAL != 99.0)
             ...     # release both the sum and length in one query
             ...     .select(
+            ...         # if the imputation is omitted, 
+            ...         # a midpoint imputation is inserted (40)
             ...         pl.col.HWUSUAL.cast(int).dp.sum(bounds=(0, 80)),
             ...         dp.len(),
             ...     )

@@ -50,6 +50,8 @@ if TYPE_CHECKING:  # pragma: no cover
     from opendp.context import Query
     from opendp.extras.polars.contingency_table import ContingencyTableQuery
 
+def _get_opendp_polars_lib_path():
+    return os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path)
 
 class DPExpr(object):
     """
@@ -110,13 +112,13 @@ class DPExpr(object):
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
 
         return register_plugin_function(
-            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
+            plugin_path=_get_opendp_polars_lib_path(),
             function_name="noise",
             args=(self.expr, scale),
             is_elementwise=True,
         )
 
-    @deprecated(reason="Use .noise instead.")
+    @deprecated(version="0.14.1", reason="Use .noise instead. This will now apply gaussian noise if your privacy definition is zCDP.")
     def laplace(self, scale: float | None = None):
         """Add Laplace noise to the expression.
 
@@ -126,7 +128,7 @@ class DPExpr(object):
         """
         return self.noise(scale=scale)
 
-    @deprecated(reason="Use .noise instead.")
+    @deprecated(version="0.14.1", reason="Use .noise instead. This will now apply laplace noise if your privacy definition is pure-DP.")
     def gaussian(self, scale: float | None = None):
         """Add Gaussian noise to the expression.
 
@@ -173,7 +175,7 @@ class DPExpr(object):
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
 
         return register_plugin_function(
-            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
+            plugin_path=_get_opendp_polars_lib_path(),
             function_name="dp_len",
             args=(self.expr, scale),
             returns_scalar=True,
@@ -215,7 +217,7 @@ class DPExpr(object):
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
 
         return register_plugin_function(
-            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
+            plugin_path=_get_opendp_polars_lib_path(),
             function_name="dp_count",
             args=(self.expr, scale),
             returns_scalar=True,
@@ -261,7 +263,7 @@ class DPExpr(object):
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
 
         return register_plugin_function(
-            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
+            plugin_path=_get_opendp_polars_lib_path(),
             function_name="dp_null_count",
             args=(self.expr, scale),
             returns_scalar=True,
@@ -303,7 +305,7 @@ class DPExpr(object):
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
 
         return register_plugin_function(
-            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
+            plugin_path=_get_opendp_polars_lib_path(),
             function_name="dp_n_unique",
             args=(self.expr, scale),
             returns_scalar=True,
@@ -350,7 +352,7 @@ class DPExpr(object):
         from polars import lit  # type: ignore[import-not-found]
 
         return register_plugin_function(
-            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
+            plugin_path=_get_opendp_polars_lib_path(),
             function_name="dp_sum",
             args=(self.expr, lit(bounds[0]), lit(bounds[1]), scale),
             returns_scalar=True,
@@ -398,11 +400,11 @@ class DPExpr(object):
         from polars import lit  # type: ignore[import-not-found]
 
         if isinstance(scale, tuple):  # pragma: no cover
-            raise ValueError("OpenDP 0.15 adjusts the scale to only consist of a single float. "
+            raise ValueError("OpenDP 0.14.1 adjusts the scale to only consist of a single float. "
                              "Individually estimate sum and len to tune budget distribution.")
 
         return register_plugin_function(
-            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
+            plugin_path=_get_opendp_polars_lib_path(),
             function_name="dp_mean",
             args=(self.expr, lit(bounds[0]), lit(bounds[1]), scale),
             returns_scalar=True,
@@ -450,7 +452,7 @@ class DPExpr(object):
         from polars import lit, Series # type: ignore[import-not-found]
 
         return register_plugin_function(
-            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
+            plugin_path=_get_opendp_polars_lib_path(),
             function_name="dp_quantile",
             args=(self.expr, lit(alpha), lit(Series(candidates)), scale),
             returns_scalar=True,
@@ -495,7 +497,7 @@ class DPExpr(object):
         from polars import lit, Series  # type: ignore[import-not-found]
 
         return register_plugin_function(
-            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
+            plugin_path=_get_opendp_polars_lib_path(),
             function_name="dp_median",
             args=(self.expr, lit(Series(candidates)), scale),
             returns_scalar=True,
@@ -540,7 +542,7 @@ def dp_len(scale: float | None = None):
     from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
 
     return register_plugin_function(
-        plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
+        plugin_path=_get_opendp_polars_lib_path(),
         function_name="dp_frame_len",
         args=(scale,),
         returns_scalar=True,

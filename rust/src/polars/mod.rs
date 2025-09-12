@@ -143,7 +143,6 @@ where
     }))
 }
 
-// TODO: move the `const V` into `P` once generic parameters may be used in const operations
 /// Match a shim plugin with a variadic number of arguments.
 ///
 /// # Arguments
@@ -167,6 +166,8 @@ pub(crate) fn match_shim<P: OpenDPPlugin, const V: usize>(
     }
 
     let input = [input.clone(), vec![lit(NULL); V - input.len()]].concat();
+    // NOTE: once generic parameters may be used in const expressions (compiler limitation)
+    //       then const V can be made an associated const on OpenDPPlugin
     let args = <[_; V]>::try_from(input).expect("input always has expected length");
 
     Ok(Some(args))
