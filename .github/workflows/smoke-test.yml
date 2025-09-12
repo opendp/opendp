@@ -195,20 +195,20 @@ jobs:
           esac
 
       - name: Test replace-binary-path
-        if: ${{ matrix.extra-install == 'polars' }}
+        if: matrix.extra-install == 'polars'
         # Messes with envvars, so can't be run in parallel!
         run: FORCE_TEST_REPLACE_BINARY_PATH=1 pytest -k 'test_replace_binary_path'
 
       - name: Test coverage
         # We only expect test coverage with all extra dependencies.
         # "mbi" implies "polars" and "scikit-learn": see setup.cfg.
-        if: ${{ matrix.extra-install == 'mbi' && matrix.python-version == '3.13' }}
+        if: matrix.extra-install == 'mbi' && matrix.python-version == '3.13'
         run: |
           coverage report
           touch /tmp/coverage.txt
 
       - name: Upload coverage
-        if: ${{ matrix.extra-install == 'mbi' && matrix.python-version == '3.13' }}
+        if: matrix.extra-install == 'mbi' && matrix.python-version == '3.13'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report

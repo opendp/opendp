@@ -118,6 +118,7 @@ pub(crate) struct IndexCandidatesPlugin {
 
 impl OpenDPPlugin for IndexCandidatesShim {
     const NAME: &'static str = "index_candidates";
+    const SHIM: bool = true;
     fn function_options() -> FunctionOptions {
         let mut flags = FunctionFlags::default();
         flags.set_elementwise();

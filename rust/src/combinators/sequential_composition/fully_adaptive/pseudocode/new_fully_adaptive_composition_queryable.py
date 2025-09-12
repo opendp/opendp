@@ -51,7 +51,6 @@ def new_fully_adaptive_composition_queryable(
                     child_id = privacy_maps.len()
 
                     def callback():
-                        nonlocal enforce_sequentiality
                         if enforce_sequentiality:
                             return self_.eval_internal(AskPermission(child_id))
                         else:

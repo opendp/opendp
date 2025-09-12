@@ -142,7 +142,6 @@ def make_private_pca(
     )
 
     def _function(data):
-        nonlocal input_domain
         qbl = compositor(data)
 
         # find origin

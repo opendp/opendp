@@ -18,7 +18,6 @@ use dashu::rational::RBig;
 use polars::prelude::{Column, IntoColumn, PolarsNumericType};
 
 use polars_arrow::array::PrimitiveArray;
-use serde::de::value::Error;
 
 use polars::chunked_array::ChunkedArray;
 use polars::datatypes::{ArrayFromIter, DataType, Field, PolarsDataType};
@@ -32,7 +31,7 @@ use polars::{datatypes::CompatLevel, error::polars_err};
 use polars_arrow as arrow;
 use polars_plan::dsl::{ColumnsUdf, GetOutput};
 use polars_plan::prelude::FunctionOptions;
-use serde::de::IntoDeserializer;
+
 use serde::{Deserialize, Serialize};
 
 use super::approximate_c_stability;
@@ -55,6 +54,7 @@ impl ColumnsUdf for NoiseShim {
 
 impl OpenDPPlugin for NoiseShim {
     const NAME: &'static str = "noise";
+    const SHIM: bool = true;
     fn function_options() -> FunctionOptions {
         FunctionOptions::elementwise()
     }
@@ -132,7 +132,7 @@ pub fn make_expr_noise<MI: 'static + UnboundedMetric, MO: NoiseExprMeasure>(
 where
     Expr: StableExpr<L01InfDistance<MI>, MO::Metric>,
     (ExprDomain, MO::Metric): MetricSpace,
-    // This is ugly, but necessary because MO is generic
+    // This is ugly, but necessary because the necessary trait bound spans TIA
     MO::Distribution: MakeNoise<VectorDomain<AtomDomain<u32>>, MO::Metric, MO>
         + MakeNoise<VectorDomain<AtomDomain<u64>>, MO::Metric, MO>
         + MakeNoise<VectorDomain<AtomDomain<i8>>, MO::Metric, MO>
@@ -150,7 +150,7 @@ where
     (VectorDomain<AtomDomain<f32>>, MO::Metric): MetricSpace,
     (VectorDomain<AtomDomain<f64>>, MO::Metric): MetricSpace,
 {
-    let Some((input, distribution, scale)) = match_noise_shim(&expr)? else {
+    let Some((input, scale)) = match_noise(&expr)? else {
         return fallible!(MakeMeasurement, "Expected noise function");
     };
 
@@ -182,16 +182,6 @@ where
             "Noise mechanism requires non-nullable input"
         );
     }
-    if let Some(distribution) = distribution {
-        if MO::DISTRIBUTION != distribution {
-            return fallible!(
-                MakeMeasurement,
-                "expected {:?} distribution, found {:?}",
-                MO::DISTRIBUTION,
-                distribution
-            );
-        }
-    };
 
     let support = match middle_domain.column.dtype() {
         dt if dt.is_integer() => Support::Integer,
@@ -266,28 +256,18 @@ impl NoiseExprMeasure for ZeroConcentratedDivergence {
 ///
 /// # Returns
 /// The input to the Noise expression and optional scale of noise
-pub(crate) fn match_noise_shim(
-    expr: &Expr,
-) -> Fallible<Option<(&Expr, Option<NoiseDistribution>, Option<f64>)>> {
+pub(crate) fn match_noise(expr: &Expr) -> Fallible<Option<(&Expr, Option<f64>)>> {
     let Some(input) = match_plugin::<NoiseShim>(expr)? else {
         return Ok(None);
     };
 
-    let Ok([data, distribution, scale]) = <&[_; 3]>::try_from(input.as_slice()) else {
-        return fallible!(MakeMeasurement, "Noise expects three input expressions");
-    };
-
-    let distribution = if let Some(dist) = literal_value_of::<String>(distribution)? {
-        let dist = NoiseDistribution::deserialize(dist.into_deserializer())
-            .map_err(|e: Error| err!(FailedFunction, "{:?}", e))?;
-        Some(dist)
-    } else {
-        None
+    let Ok([data, scale]) = <&[_; 2]>::try_from(input.as_slice()) else {
+        return fallible!(MakeMeasurement, "Noise expects two input expressions");
     };
 
     let scale = literal_value_of::<f64>(scale)?;
 
-    Ok(Some((data, distribution, scale)))
+    Ok(Some((data, scale)))
 }
 
 fn map_function<MO: NoiseExprMeasure, T: CheckAtom>(

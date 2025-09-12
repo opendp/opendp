@@ -226,6 +226,7 @@ impl ColumnsUdf for NoisyMaxShim {
 
 impl OpenDPPlugin for NoisyMaxShim {
     const NAME: &'static str = "noisy_max";
+    const SHIM: bool = true;
     fn function_options() -> FunctionOptions {
         FunctionOptions::elementwise()
     }

@@ -68,9 +68,7 @@ OpenDP Polars differs from typical Polars in these ways:
         >>> candidates = list(range(0, 100, 10))
 
         >>> _ = context.query().select(
-        ...     pl.col("income")
-        ...     .fill_null(0)
-        ...     .dp.median(candidates)  # "dp" namespace
+        ...     pl.col("income").dp.median(candidates)  # "dp" namespace
         ... )
 
 3. **How you run the query.**
