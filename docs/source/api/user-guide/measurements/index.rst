@@ -166,7 +166,7 @@ Refer to :ref:`measure-casting` to convert to approximate DP.
 Noisy Max and Noisy Top K
 -------------------------
 
-See the `Noisy Max Mechanisms notebook <noisy-max-mechanisms.html>`_ for code examples and more exposition.
+See `Noisy Max Mechanisms <noisy-max-mechanisms.html>`_ for code examples and more exposition.
 
 The report noisy top-k mechanism is used to privately release the indices of the maximum k values in a vector.
 This is useful for private selection, and overlaps with the exponential mechanism.
