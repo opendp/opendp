@@ -62,3 +62,8 @@ pub use canonical_noise::*;
 mod alp;
 #[cfg(all(feature = "floating-point", feature = "contrib"))]
 pub use alp::*;
+
+#[cfg(feature = "contrib")]
+mod sql;
+#[cfg(feature = "contrib")]
+pub use sql::*;

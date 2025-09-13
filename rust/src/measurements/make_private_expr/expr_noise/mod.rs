@@ -5,7 +5,7 @@ use crate::domains::{
 use crate::measurements::{DiscreteGaussian, DiscreteLaplace, MakeNoise, NoiseMeasure, make_noise};
 use crate::measures::ZeroConcentratedDivergence;
 use crate::metrics::{L1Distance, L01InfDistance, L2Distance};
-use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
+use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_shim};
 use crate::traits::{CheckAtom, InfMul, Number};
 use crate::transformations::StableExpr;
 use crate::transformations::traits::UnboundedMetric;
@@ -150,10 +150,10 @@ where
     (VectorDomain<AtomDomain<f32>>, MO::Metric): MetricSpace,
     (VectorDomain<AtomDomain<f64>>, MO::Metric): MetricSpace,
 {
-    let Some((input, scale)) = match_noise(&expr)? else {
+    let Some([input, scale]) = match_shim::<NoiseShim, 2>(&expr)? else {
         return fallible!(MakeMeasurement, "Expected noise function");
     };
-
+    let scale = literal_value_of::<f64>(&scale)?;
     let t_prior = input
         .clone()
         .make_stable(input_domain.clone(), input_metric)?;
@@ -247,27 +247,6 @@ impl NoiseExprMeasure for MaxDivergence {
 impl NoiseExprMeasure for ZeroConcentratedDivergence {
     type Metric = L2Distance<f64>;
     const DISTRIBUTION: NoiseDistribution = NoiseDistribution::Gaussian;
-}
-
-/// Determine if the given expression is a noise expression.
-///
-/// # Arguments
-/// * `expr` - The expression to check
-///
-/// # Returns
-/// The input to the Noise expression and optional scale of noise
-pub(crate) fn match_noise(expr: &Expr) -> Fallible<Option<(&Expr, Option<f64>)>> {
-    let Some(input) = match_plugin::<NoiseShim>(expr)? else {
-        return Ok(None);
-    };
-
-    let Ok([data, scale]) = <&[_; 2]>::try_from(input.as_slice()) else {
-        return fallible!(MakeMeasurement, "Noise expects two input expressions");
-    };
-
-    let scale = literal_value_of::<f64>(scale)?;
-
-    Ok(Some((data, scale)))
 }
 
 fn map_function<MO: NoiseExprMeasure, T: CheckAtom>(
