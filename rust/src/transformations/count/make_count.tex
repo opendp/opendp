@@ -1,0 +1,125 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{fn make\_count}}
+\author{S\'ilvia Casacuberta, Grace Tian, Connor Wagaman}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of \rustdoc{transformations/fn}{make\_count} in \asOfCommit{mod.rs}{f5bb719}.
+
+\texttt{make\_count} returns a Transformation that computes a count of the number of records in a vector.
+The length of the vector, of type \texttt{usize}, is exactly casted to a user specified output type \texttt{TO}.
+If the length is too large to be represented exactly by \texttt{TO}, 
+the cast saturates at the maximum value of type \texttt{TO}.
+
+\subsection*{Vetting History}
+\begin{itemize}
+    \item \vettingPR{513}
+\end{itemize}
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\begin{itemize}
+
+    \item \texttt{TIA} (atomic input type) is a type with trait \rustdoc{traits/trait}{Primitive}. \texttt{Primitive} implies \texttt{TIA} has the trait bound:
+    \begin{itemize}
+        \item \rustdoc{traits/trait}{CheckNull} so that \texttt{TIA} is a valid atomic type for \rustdoc{domains/struct}{AtomDomain}
+    \end{itemize}
+
+    \item \texttt{TO} (output type) is a type with trait \rustdoc{traits/trait}{Number}. \texttt{Number} further implies \texttt{TO} has the trait bounds:
+    \begin{itemize}
+        \item \rustdoc{traits/trait}{InfSub} so that the output domain is compatible with the output metric
+        \item \texttt{CheckNull} so that \texttt{TO} is a valid atomic type for \texttt{AtomDomain}
+        \item \rustdoc{traits/trait}{ExactIntCast} for casting a vector length index of type \texttt{usize} to \texttt{TO}. \texttt{ExactIntCast} further implies \texttt{TO} has the trait bound:
+        \begin{itemize}
+            \item \rustdoc{traits/trait}{ExactIntBounds}, which gives the \texttt{MAX\_CONSECUTIVE} value of type \texttt{TO}
+        \end{itemize}
+        
+        \item \texttt{One} provides a way to retrieve \texttt{TO}'s representation of 1
+        \item \rustdoc{traits/trait}{DistanceConstant} to satisfy the preconditions of \texttt{new\_stability\_map\_from\_constant}
+    \end{itemize}
+\end{itemize}
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_count.py}
+
+\subsection*{Postcondition}
+\validTransformation{\texttt{(TIA, TO)}}{\texttt{make\_count}}
+
+\section{Proofs}
+
+\begin{proof} \textbf{(Part 1 -- appropriate output domain).}
+    The \texttt{output\_domain} is \texttt{AtomDomain(TO)}, so it is sufficient to show that \texttt{function} always returns non-null values of type \texttt{TO}.
+    By the definition of the \texttt{ExactIntCast} trait, \texttt{TO.exact\_int\_cast} always returns a non-null value of type \texttt{TO} or raises an exception.
+    If an exception is raised, the function returns \texttt{TO.MAXIMUM\_CONSECUTIVE}, which is also a non-null value of type \texttt{TO}.
+    Thus, in all cases, the function (from line \ref{line:try-catch}) returns a non-null value of type \texttt{TO}.
+\end{proof}
+
+Before proceeding with proving the validity of the stability map, we provide a couple lemmas.
+
+\begin{lemma}
+    \label{dsym-sens}
+    $|\function(u) - \function(v)| \leq |\texttt{len(u)} - \texttt{len(v)}|$, 
+    where \texttt{len} is an alias for \\ \texttt{input\_domain.size}.
+\end{lemma}
+
+\begin{proof}
+    By \rustdoc{domains/trait}{CollectionDomain}, we know \texttt{size} on line \ref{line:size} is of type \texttt{usize}, 
+    so it is non-negative and integral.
+    Therefore, by the definition of \texttt{ExactIntCast}, 
+    the invocation of \texttt{TO.exact\_int\_cast} on line \ref{line:exact-int-cast} can only fail if the argument is greater than \texttt{TO.MAX\_CONSECUTIVE}.
+    In this case, the value is replaced with \texttt{TO.MAX\_CONSECUTIVE}.
+    Therefore, $\function(u) = min(\texttt{len(u)}, c)$, where $c = \texttt{TO.MAX\_CONSECUTIVE}$.
+    We use this equality to prove the lemma:
+
+    \begin{align*}
+        |\function(u) - \function(v)| &= |min(\texttt{len(u)}, c) - min(\texttt{len(v)}, c)| \\
+        &\leq |\texttt{len(u)} - \texttt{len(v)}| &&\text{since clamping is stable} \\
+    \end{align*}
+\end{proof}
+
+\begin{lemma}
+    \label{lemma:len-sum-equiv}
+    For vector $v$ with each element $\ell\in v$ drawn from domain $\mathcal{X}$, $\texttt{len(v)} = \sum_{z\in\mathcal{X}} h_v(z)$.
+\end{lemma}
+
+\begin{proof}
+    Every element $\ell \in v$ is drawn from domain $\mathcal{X}$, so summing over all $z\in \mathcal{X}$ will sum over every element $\ell\in x$. 
+    Recall that the definition of \texttt{SymmetricDistance} states that $h_v(z)$ will return the number of occurrences of value $z$ in vector $v$.
+    Therefore, $\sum_{z\in\mathcal{X}} h_v(z)$ is the sum of the number of occurrences of each unique value; 
+    this is equivalent to the total number of items in the vector. 
+
+    Since \rustdoc{domains/trait}{CollectionDomain} is implemented for \texttt{VectorDomain<AtomDomain<TIA>>}, 
+    we depend on the correctness of the implementation 
+    Conditioned on the correctness of the implementation of \texttt{CollectionDomain} for \texttt{VectorDomain<AtomDomain<TIA>>},
+    the variable \texttt{size} is of type \texttt{usize} containing the number of elements in \texttt{arg}.
+    Therefore, $\sum_{z\in\mathcal{X}} h_v(z)$ is equivalent to \texttt{size}.
+\end{proof}
+
+\begin{proof} \textbf{(Part 2 -- stability map).} 
+    Take any two elements $u, v$ in the \\\texttt{input\_domain} and any pair $(\din, \dout)$, 
+    where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \texttt{output\_metric}.
+    Assume $u, v$ are \din-close under \texttt{input\_metric} and that $\texttt{stability\_map}(\din) \leq \dout$. 
+    These assumptions are used to establish the following inequality:
+    \begin{align*}
+        |\function(u) - \function(v)| &\leq |\texttt{len(u)} - \texttt{len(v)}| &&\text{by }\ref{dsym-sens} \\
+        &= |\sum_{z\in \mathcal{X}} h_{\texttt{u}}(z) - \sum_{z\in \mathcal{X}} h_{\texttt{v}}(z)| &&\text{by } \ref{lemma:len-sum-equiv} \\
+        &= |\sum_{z\in \mathcal{X}}\left(h_{\texttt{u}}(z) - h_{\texttt{v}}(z)\right)| &&\text{by algebra} \\
+        &\leq \sum_{z\in \mathcal{X}}|h_{\texttt{u}}(z) - h_{\texttt{v}}(z)| &&\text{by triangle inequality} \\
+        &= d_{Sym}(u, v) &&\text{by } \rustdoc{metrics/struct}{SymmetricDistance}\\
+        &\leq \din &&\text{by the first assumption} \\
+        &\leq \texttt{TO.inf\_cast}(\din) &&\text{by } \rustdoc{traits/trait}{InfCast} \\
+        &\leq \texttt{TO.one().inf\_mul(TO.inf\_cast(\din))} &&\text{by } \rustdoc{traits/trait}{InfMul} \\
+        &=\texttt{stability\_map}(\din) &&\text{by pseudocode line } \ref{line:stability-map} \\
+        &\leq \dout &&\text{by the second assumption}
+    \end{align*}
+
+    It is shown that \function(u), \function(v) are \dout-close under \texttt{output\_metric}.
+\end{proof}
+
+\end{document}

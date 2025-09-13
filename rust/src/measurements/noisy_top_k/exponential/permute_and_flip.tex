@@ -1,0 +1,64 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn permute\_and\_flip}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle\contrib
+This document proves soundness of \rustdoc{measurements/noisy_top_k/exponential}{permute\_and\_flip} \cite{mckenna2020permute} in \asOfCommit{mod.rs}{e62b0aa2}. 
+\texttt{permute\_and\_flip} noisily selects the index of the greatest score from a vector of input scores.
+
+\section{Hoare Triple}
+\subsection*{Preconditions}
+\textit{Types consistent with pseudocode.}
+
+\subsection*{Pseudocode}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/permute_and_flip.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \label{postcondition}
+    Returns the index of the max element $z_i$,
+    where each $z_i \sim \mathrm{Exp}(\mathrm{shift}=x_i, \mathrm{scale}=\texttt{scale})$.
+\end{theorem}
+
+\begin{lemma}
+    \label{lemma:equivalence_of_rnme}
+    The permute-and-flip mechanism is equivalent to the report-noisy-max with exponential noise mechanism. 
+\end{lemma}
+See \cite{ding2021permute} for proof of Lemma~\ref{lemma:equivalence_of_rnme}.
+
+\begin{lemma}
+    \label{lemma:algorithm1}
+    The pseudocode starting from line~\ref{nonzero-scale} equivalent to Algorithm~1 in \cite{mckenna2020permute},
+    where $\texttt{scale} = \frac{2\Delta}{\epsilon}$.
+\end{lemma}
+
+\begin{proof}
+    By swapping elements on line~\ref{shuffle},
+    an online Fisher-Yates shuffle is applied up to and including index \texttt{left}.
+
+    Substituting $\texttt{scale} = \frac{2\Delta}{\epsilon}$,
+    the argument to \rustdoc{traits/samplers/cks20/fn}{sample\_bernoulli\_exp} is then $\frac{\epsilon}{2\Delta}(q_* - q_r)$,
+    which is non-negative, satisfying the precondition of \rustdoc{traits/samplers/cks20/fn}{sample\_bernoulli\_exp}.
+    Therefore by the postcondition of \rustdoc{traits/samplers/cks20/fn}{sample\_bernoulli\_exp}, 
+    the response is a sample from $\mathrm{Bern}(\exp(-x))$, where $x = \frac{\epsilon}{2\Delta}(q_* - q_r)$.
+    Therefore the response is a sample from $\mathrm{Bern}(\exp(\frac{\epsilon}{2\Delta}(q_r - q_*)))$,
+    which is equivalent to Algorithm~1 in \cite{mckenna2020permute}.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{postcondition}]
+    Consider two cases: zero scale and nonzero scale.
+    When scale is zero on line~\ref{zero-scale},
+    each $z_i = x_i$, so the argmax is returned.
+    Otherwise, by Lemma~\ref{lemma:algorithm1} the pseudocode is equivalent to Algorithm~1 in \cite{mckenna2020permute}, 
+    which is in turn equivalent to the postcondition by Lemma~\ref{lemma:equivalence_of_rnme}.
+    In all two cases, the postcondition holds.
+\end{proof}
+
+\bibliographystyle{plain}
+\bibliography{references.bib}
+
+\end{document}
