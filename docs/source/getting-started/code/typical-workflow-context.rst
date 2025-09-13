@@ -20,31 +20,23 @@
 
     # /privacy-loss
 
-
-    # public-info
-    >>> bounds = (0.0, 100.0)
-    >>> imputed_value = 50.0
-
-    # /public-info
-
-
     # mediate
     >>> from random import randint
-    >>> data = [float(randint(0, 100)) for _ in range(100)]
+    >>> data = [randint(0, 100) for _ in range(100)]
 
     >>> context = dp.Context.compositor(
     ...     data=data,
     ...     privacy_unit=privacy_unit,
     ...     privacy_loss=privacy_loss,
-    ...     split_evenly_over=3,
     ... )
 
     # /mediate
 
 
     # count
-    >>> count_query = context.query().count().laplace()
+    >>> count_query = context.query(epsilon=1 / 3).count().laplace()
 
+    >>> # before releasing, check the utility
     >>> scale = count_query.param()
     >>> scale
     3.0000000000000004
@@ -55,6 +47,9 @@
     >>> accuracy
     9.445721638273584
 
+    >>> # (with 100(1-alpha) = 95% confidence, the estimated value will differ
+    >>> #    from the true value by no more than ~9)
+
     >>> dp_count = count_query.release()
     >>> confidence_interval = (
     ...     dp_count - accuracy,
@@ -63,17 +58,19 @@
 
     # /count
 
+    # public-info
+    >>> bounds = (0, 100)
 
-    # mean
-    >>> mean_query = (
-    ...     context.query()
-    ...     .impute_constant(imputed_value)
+    # /public-info
+
+    # sum
+    >>> sum_query = (
+    ...     context.query(epsilon=1 / 3)
     ...     .clamp(bounds)
-    ...     .resize(size=dp_count, constant=imputed_value)
-    ...     .mean()
+    ...     .sum()
     ...     .laplace()
     ... )
 
-    >>> dp_mean = mean_query.release()
+    >>> dp_sum = sum_query.release()
 
-    # /mean
+    # /sum

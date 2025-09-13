@@ -9,10 +9,11 @@
     # /init
 
     # demo
-    >>> space = dp.atom_domain(
-    ...     T=float, nan=False
-    ... ), dp.absolute_distance(T=float)
-    >>> laplace_mechanism = space >> dp.m.then_laplace(scale=1.0)
-    >>> dp_value = laplace_mechanism(123.0)
+    >>> context = dp.Context.compositor(
+    ...     data=123,
+    ...     privacy_unit=dp.unit_of(absolute=1.0),
+    ...     privacy_loss=dp.loss_of(epsilon=1.0),
+    ... )
+    >>> dp_value = context.query(epsilon=1.0).laplace().release()
 
     # /demo
