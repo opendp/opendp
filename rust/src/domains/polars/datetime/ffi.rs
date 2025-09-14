@@ -12,6 +12,7 @@ use crate::{
 use super::DatetimeDomain;
 
 #[bootstrap(
+    rust_path = "domains/struct.DatetimeDomain",
     arguments(time_unit(default = "us"), time_zone(default = b"null")),
     generics(DI(suppress)),
     returns(c_type = "FfiResult<AnyDomain *>")

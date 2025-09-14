@@ -35,7 +35,7 @@ impl BootstrapDocstring {
         name: &String,
         attrs: Vec<Attribute>,
         output: &ReturnType,
-        path: Option<(&str, &str)>,
+        rust_path: Option<String>,
         features: Vec<String>,
     ) -> Result<BootstrapDocstring> {
         // look for this attr:
@@ -96,9 +96,9 @@ impl BootstrapDocstring {
         }
 
         // add a link to rust documentation (with a gap line)
-        if let Some((module, name)) = &path {
+        if let Some(rust_path) = &rust_path {
             description.push(String::new());
-            description.push(make_rustdoc_link(module, name)?)
+            description.push(make_rustdoc_link(name, rust_path)?)
         }
 
         let mut add_section_to_description = |section_name: &str| {
@@ -463,7 +463,7 @@ fn new_comment_attribute(comment: &str) -> Attribute {
     }
 }
 
-pub fn make_rustdoc_link(module: &str, name: &str) -> Result<String> {
+pub fn make_rustdoc_link(name: &str, path: &str) -> Result<String> {
     // link from foreign library docs to rust docs
     let proof_uri = if let Ok(rustdoc_port) = std::env::var("OPENDP_RUSTDOC_PORT") {
         format!("http://localhost:{rustdoc_port}")
@@ -483,6 +483,6 @@ pub fn make_rustdoc_link(module: &str, name: &str) -> Result<String> {
 
     Ok(format!(
         // RST does not support nested markup, so do not try `{name}`!
-        "[{name} in Rust documentation.]({proof_uri}/opendp/{module}/fn.{name}.html)"
+        "[{name} in Rust documentation.]({proof_uri}/opendp/{path}.html)"
     ))
 }

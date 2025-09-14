@@ -118,6 +118,7 @@ pub extern "C" fn opendp_domains__domain_carrier_type(
 }
 
 #[bootstrap(
+    rust_path = "domains/struct.AtomDomain",
     arguments(
         bounds(
             rust_type = "Option<(T, T)>",
@@ -307,6 +308,7 @@ pub extern "C" fn opendp_domains___atom_domain_nan(
 }
 
 #[bootstrap(
+    rust_path = "domains/struct.OptionDomain",
     arguments(element_domain(c_type = "AnyDomain *")),
     generics(D(example = "element_domain")),
     returns(c_type = "FfiResult<AnyDomain *>", hint = "OptionDomain")

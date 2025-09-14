@@ -65,6 +65,16 @@ mod full;
 ///     pass
 /// ```
 ///
+/// # Rust Link
+/// Set to the expected path of Rust documentation, if it can't be correctly inferred.
+///
+/// ```compile_fail
+/// #[bootstrap(rust_path = "domains/struct.AtomDomain")]
+/// fn my_func() {}
+/// ```
+///
+/// This gives a manual way to fix dead links to rust documentation in bindings language documentation.
+///
 /// # Arguments, Generics and Return
 /// You can pass additional metadata that is specific to each argument or generic.
 ///

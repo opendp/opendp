@@ -33,7 +33,7 @@ mod test;
 /// This ensures that the float value is accessible to the algorithm.
 /// The candidate, left as arbitrary Python data, is held behind the ExtrinsicObject.
 ///
-/// Algorithm 1 in `Private selection from private candidates <https://arxiv.org/pdf/1811.07971.pdf#page=7>`_ (Liu and Talwar, STOC 2019).
+/// Algorithm 1 in [Private selection from private candidates](https://arxiv.org/pdf/1811.07971.pdf#page=7) (Liu and Talwar, STOC 2019).
 ///
 /// # Arguments
 /// * `measurement` - A measurement that releases a 2-tuple of (score, candidate)

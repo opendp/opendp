@@ -22,6 +22,7 @@ use crate::{
 use super::{SeriesDomain, SeriesElementDomain};
 
 #[bootstrap(
+    rust_path = "domains/struct.SeriesDomain",
     arguments(element_domain(c_type = "AnyDomain *", rust_type = b"null")),
     generics(DI(suppress)),
     returns(c_type = "FfiResult<AnyDomain *>", hint = "SeriesDomain")
