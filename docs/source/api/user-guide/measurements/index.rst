@@ -161,6 +161,26 @@ Refer to :ref:`measure-casting` to convert to approximate DP.
      - ``L02InfDistance<AbsoluteDistance<QI>>``
      - ``Approximate<ZeroConcentratedDivergence>``
 
+Approximate Laplace Projection
+------------------------------
+
+In a similar regime as the thresholded noise mechanism, where keys themselves need to be protected,
+another approach is to release a differentially private low-dimensional projection of the key-space.
+
+See `Approximate Laplace Projection <approximate-laplace-projection.html>`_ for a demonstration of the approach.
+
+
+.. list-table::
+   :header-rows: 1
+
+   * - Measurement
+     - Input Domain
+     - Input Metric
+     - Output Measure
+   * - :func:`opendp.measurements.make_alp_queryable`
+     - ``MapDomain<AtomDomain<TK>, AtomDomain<TV>>``
+     - ``L01InfDistance<AbsoluteDistance<QI>>``
+     - ``MaxDivergence``
 
 Noisy Top K and Noisy Max
 -------------------------
@@ -192,7 +212,7 @@ Randomized Response
 -------------------
 These measurements are used to randomize an individual's response to a query in the local-DP model.
 
-See the `Randomized Response notebook <randomized-response.html>`_ for code examples and more exposition.
+See `Randomized Response <randomized-response.html>`_ for code examples and more exposition.
 
 
 .. list-table::
