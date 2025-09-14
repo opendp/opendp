@@ -35,6 +35,7 @@ const BLOCKLIST: &'static [&'static str] = &[
     "extrinsic_object_free",
     "fill_bytes",
     "erfc",
+    "debias_randomized_response_bitvec",
     // plugins
     "make_user_transformation",
     "make_user_measurement",

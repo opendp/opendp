@@ -267,23 +267,31 @@ def test_alp_histogram():
 
 def test_randomized_response_bitvec():
     np = pytest.importorskip('numpy')
-
+    f = 1e-20
+    m = 3
     m_rr = dp.m.make_randomized_response_bitvec(
-        dp.bitvector_domain(max_weight=4), dp.discrete_distance(), f=0.95
+        dp.bitvector_domain(max_weight=m), dp.discrete_distance(), f=f
     )
 
+    # the postprocessor expects little endian data
     data = np.packbits(
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0]
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0], 
+        bitorder='little'
     )
-    assert np.array_equal(data, np.array([0, 8, 12], dtype=np.uint8))
 
     # roundtrip: bytes -> mech -> numpy
     release = np.frombuffer(m_rr(data), dtype=np.uint8)
-
-    print("np.unpackbits: data vs. release", np.unpackbits(data), np.unpackbits(release))
+    assert np.array_equal(data, release)
     # epsilon is 2 * m * ln((2 - f) / f)
-    # where m = 4 and f = .95
-    assert m_rr.map(1) == 0.8006676684558611
+    assert m_rr.map(1) == 280.4690942426452
+
+    sums = dp.m.debias_randomized_response_bitvec(
+        [m_rr(data)] * 40,
+        f=f
+    )
+    signs = np.packbits((np.array(sums) > 0).astype(int), bitorder='little')
+    assert np.array_equal(signs, release)
+
 
 def test_laplace_threshold_int():
     domain = dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=int))
