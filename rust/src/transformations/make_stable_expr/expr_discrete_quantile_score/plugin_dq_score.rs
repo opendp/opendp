@@ -46,6 +46,7 @@ impl ColumnsUdf for DiscreteQuantileScoreShim {
 
 impl OpenDPPlugin for DiscreteQuantileScoreShim {
     const NAME: &'static str = "discrete_quantile_score";
+    const SHIM: bool = true;
     fn function_options() -> FunctionOptions {
         FunctionOptions::aggregation()
     }

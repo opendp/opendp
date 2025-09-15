@@ -161,7 +161,7 @@ def test_unrecognized_column():
         split_evenly_over=1,
         margins=[]
     )
-    config = pl.col("X").fill_null(0).dp.mean((0, 10))
+    config = pl.col("X").dp.mean((0, 10))
 
     plain_query = context.query().select(config)
     with pytest.raises(dp.OpenDPException, match=r"unrecognized column 'X' in output domain; expected one of: A, B"):
@@ -178,7 +178,7 @@ def test_without_max_partition_length():
         margins=[],
     )
 
-    config = pl.col("A").fill_null(0).dp.mean((0, 10))
+    config = pl.col("A").dp.mean((0, 10))
 
     plain_query = context_wo_margin.query().select(config)
     with pytest.raises(dp.OpenDPException, match=r"must specify 'max_length' in a margin with by=\[\]"):
@@ -203,7 +203,7 @@ def test_with_max_length():
         )],
     )
 
-    config = pl.col("A").fill_null(0).dp.mean((0, 10))
+    config = pl.col("A").dp.mean((0, 10))
 
     plain_query = context_w_margin.query().select(config)
     plain_query.release()
@@ -235,7 +235,7 @@ def test_with_max_length_and_invariant_keys():
         ],
     )
 
-    config = pl.col("A").fill_null(0).dp.mean((0, 10))
+    config = pl.col("A").dp.mean((0, 10))
 
     plain_query = context_w_invariant_keys.query().select(config)
     plain_query.release()

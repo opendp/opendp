@@ -21,7 +21,7 @@ fn test_select_no_margin() -> Fallible<()> {
         lf_domain,
         FrameDistance(SymmetricDistance),
         MaxDivergence,
-        lf.clone().select(&[len().dp().laplace(Some(0.))]),
+        lf.clone().select(&[len().dp().noise(Some(0.))]),
         Some(1.),
         None,
     )?;
@@ -46,8 +46,8 @@ fn test_select() -> Fallible<()> {
         FrameDistance(SymmetricDistance),
         MaxDivergence,
         lf.clone().select(&[
-            col("A").dp().sum((0, 3), Some(0.)),
-            len().dp().laplace(Some(0.)),
+            col("A").dp().sum((lit(0), lit(3)), Some(0.)),
+            len().dp().noise(Some(0.)),
         ]),
         Some(1.),
         None,

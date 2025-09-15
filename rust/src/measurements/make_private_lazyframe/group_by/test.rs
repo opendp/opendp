@@ -60,7 +60,7 @@ fn test_stable_keys_puredp() -> Fallible<()> {
         Approximate(MaxDivergence),
         lf.clone()
             .group_by(&[col("A")])
-            .agg(&[len().dp().noise(None, None)]),
+            .agg(&[len().dp().noise(None)]),
         Some(1.),
         Some(40),
     )?;
@@ -87,7 +87,7 @@ fn test_stable_keys_zcdp() -> Fallible<()> {
         Approximate(ZeroConcentratedDivergence),
         lf.clone()
             .group_by(&[col("A")])
-            .agg(&[len().dp().noise(None, None)]),
+            .agg(&[len().dp().noise(None)]),
         Some(1.),
         Some(40),
     )?;
@@ -115,12 +115,7 @@ fn test_explicit_keys() -> Fallible<()> {
     let lf = df!("A" => &[0u32], "B" => &[0.0f64])?.lazy();
     let keys = df!("A" => &(0u32..N_SAMPLES).collect::<Vec<_>>())?.lazy();
 
-    let sum_expr = col("B")
-        .fill_nan(0.0)
-        .fill_null(0.0)
-        .dp()
-        .sum((0.0, 1.0), None)
-        .alias("sum");
+    let sum_expr = col("B").dp().sum((lit(0.0), lit(1.0)), None).alias("sum");
     let candidates = (0..N_CANDIDATES).map(|v| v as f64).collect::<Vec<_>>();
     let median_expr = col("B")
         .fill_nan(0.0)

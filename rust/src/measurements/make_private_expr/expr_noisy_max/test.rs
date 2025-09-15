@@ -7,8 +7,10 @@ use crate::{
     measurements::make_private_expr,
     measures::MaxDivergence,
     metrics::{L0PInfDistance, SymmetricDistance},
-    polars::PrivacyNamespace,
-    transformations::expr_discrete_quantile_score::test::get_quantile_test_data,
+    polars::{PrivacyNamespace, apply_anonymous_function},
+    transformations::expr_discrete_quantile_score::{
+        DiscreteQuantileScoreShim, test::get_quantile_test_data,
+    },
 };
 
 #[test]
@@ -60,11 +62,17 @@ fn test_noisy_max_expr() -> Fallible<()> {
         lf_domain.select(),
         L0PInfDistance(SymmetricDistance),
         MaxDivergence,
-        col("cycle_(..101f64)")
-            .dp()
-            .quantile_score(0.5, candidates)
-            .dp()
-            .noisy_max(true, Some(scale)),
+        {
+            let this = col("cycle_(..101f64)");
+            let alpha = 0.5;
+            let candidates = candidates;
+            apply_anonymous_function(
+                vec![this, lit(alpha), lit(candidates)],
+                DiscreteQuantileScoreShim,
+            )
+        }
+        .dp()
+        .noisy_max(true, Some(scale)),
         None,
     )?;
 

@@ -126,7 +126,7 @@ Documentation <https://docs.pola.rs/user-guide/concepts/expressions-and-contexts
 
             >>> query_total_hours_worked = (
             ...     context.query()
-            ...     .with_columns(pl.col.HWUSUAL.cast(int).fill_null(0))
+            ...     .with_columns(pl.col.HWUSUAL.cast(int))
             ...     .filter(pl.col.HWUSUAL != 99)
             ...     .select(pl.col.HWUSUAL.dp.sum((0, 80)))
             ... )
@@ -222,11 +222,7 @@ private mean.
             ...     .group_by(pl.col.PIDENT % 1000)
             ...     .agg(pl.col.HWUSUAL.min())
             ...     # up to 1000 records left to work with to compute a DP mean
-            ...     .select(
-            ...         pl.col.HWUSUAL.cast(int)
-            ...         .fill_null(0)
-            ...         .dp.mean((0, 30))
-            ...     )
+            ...     .select(pl.col.HWUSUAL.cast(int).dp.mean((0, 30)))
             ... )
             >>> query_hwusual_binned.summarize()
             shape: (2, 4)
@@ -276,11 +272,7 @@ the context doesn’t know that all records from a user share the same
             ...     .group_by(pl.col.PIDENT % 1000)
             ...     .agg(pl.col.HWUSUAL.min())
             ...     # up to 1000 records left to work with to compute a DP mean
-            ...     .select(
-            ...         pl.col.HWUSUAL.cast(int)
-            ...         .fill_null(0)
-            ...         .dp.mean((0, 30))
-            ...     )
+            ...     .select(pl.col.HWUSUAL.cast(int).dp.mean((0, 30)))
             ... )
             >>> query_hwusual_binned.summarize()
             shape: (2, 4)
