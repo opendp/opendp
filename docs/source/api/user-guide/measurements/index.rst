@@ -210,3 +210,7 @@ See the `Randomized Response notebook <randomized-response.html>`_ for code exam
      - ``AtomDomain<T>``
      - ``DiscreteDistance``
      - ``MaxDivergence``
+   * - :func:`opendp.measurements.make_randomized_response_bitvec`
+     - ``AtomDomain<T>``
+     - ``DiscreteDistance``
+     - ``MaxDivergence``

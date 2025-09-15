@@ -363,6 +363,7 @@ pub extern "C" fn opendp_data__slice_as_object(
                 "Expr" => raw_to_vec_obj::<Expr>(raw),
                 #[cfg(feature = "polars")]
                 "Bound" => raw_to_vec_obj::<Bound>(raw),
+                "BitVector" => raw_to_vec_obj::<BitVector>(raw),
                 _ => dispatch!(raw_to_vec, [(element, @primitives)], (raw)),
             }
         }

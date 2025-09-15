@@ -466,7 +466,7 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
 
     inner_type_name = type_name.args[0]
 
-    if isinstance(inner_type_name, RuntimeType) or inner_type_name in {"Expr", "Bound"}:
+    if isinstance(inner_type_name, RuntimeType) or inner_type_name in {"Expr", "Bound", "BitVector"}:
         c_repr = [py_to_c(v, c_type=AnyObjectPtr, type_name=inner_type_name) for v in val]
         array = (AnyObjectPtr * len(val))(*c_repr) # type: ignore[operator]
         ffislice = _wrap_in_slice(array, len(val))

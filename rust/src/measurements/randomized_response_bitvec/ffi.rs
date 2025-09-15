@@ -32,13 +32,7 @@ pub extern "C" fn opendp_measurements__debias_randomized_response_bitvec(
     answers: *const AnyObject,
     f: c_double,
 ) -> FfiResult<*mut AnyObject> {
-    let answers = try_!(try_as_ref!(answers).downcast_ref::<Vec<*const AnyObject>>()).clone();
-    let answers: Vec<BitVector> = try_!(
-        answers
-            .into_iter()
-            .map(|ptr| try_as_ref!(ptr).clone().downcast::<BitVector>())
-            .collect()
-    );
+    let answers = try_!(try_as_ref!(answers).downcast_ref::<Vec<BitVector>>()).clone();
 
     debias_randomized_response_bitvec(answers, f)
         .map(AnyObject::new)

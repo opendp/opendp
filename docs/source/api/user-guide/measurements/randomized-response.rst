@@ -1,9 +1,9 @@
 Randomized Response
 ===================
 
-Randomized response is used to release categorical survey responses in
+Randomized response is used to release categorical data in
 the local-DP, or per-user, model. The randomized response algorithm is
-typically meant to be run on the edge, at the user’s device, before data
+typically meant to be run on the edge, at the user's device, before data
 is submitted to a central server. Local DP is a stronger privacy model
 than the central model, because the central data aggregator is only ever
 privileged to privatized data.
@@ -28,10 +28,10 @@ us if you are interested in proof-writing. Thank you!
             >>> dp.enable_features("contrib")
 
 
-Privatization
--------------
+Boolean Randomized Response
+---------------------------
 
-We’ll start by privatizing a boolean response. Boolean randomized
+We’ll start by releasing a boolean response. Boolean randomized
 response is fully characterized by a *measurement* containing the
 following six elements:
 
@@ -87,35 +87,6 @@ following six elements:
             >>> # determine epsilon by invoking the map
             >>> print("epsilon:", rr_bool_meas.map(d_in=1))
             epsilon: 1.0986...
-
-A simple generalization of the previous algorithm is to randomize over a
-custom category set:
-
-.. tab-set::
-
-    .. tab-item:: Python
-        :sync: python
-
-        .. code:: pycon
-
-            >>> # construct the measurement
-            >>> categories = ["A", "B", "C", "D"]
-            >>> rr_meas = dp.m.make_randomized_response(
-            ...     categories, prob=0.75
-            ... )
-
-            >>> # invoke the measurement on some survey response, to execute
-            >>> # the randomized response algorithm
-            >>> alice_survey_response = "C"
-            >>> print("noisy release:", rr_meas(alice_survey_response))
-            noisy release: ...
-
-            >>> # determine epsilon by invoking the map
-            >>> print("epsilon:", rr_meas.map(d_in=1))
-            epsilon: 2.197...
-
-Aggregation: Mean
------------------
 
 The privatized responses from many individuals may be aggregated to form
 a population-level inference. In the case of the boolean randomized
@@ -200,6 +171,35 @@ The resulting expression is distilled into the following function:
 
 As expected, the bias correction admits a useful estimate of the
 population proportion (``.23``).
+
+Categorical Randomized Response
+-------------------------------
+
+One way to generalize the previous algorithm is to randomize over a
+custom category set:
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. code:: pycon
+
+            >>> # construct the measurement
+            >>> categories = ["A", "B", "C", "D"]
+            >>> rr_meas = dp.m.make_randomized_response(
+            ...     categories, prob=0.75
+            ... )
+
+            >>> # invoke the measurement on some survey response, to execute
+            >>> # the randomized response algorithm
+            >>> alice_survey_response = "C"
+            >>> print("noisy release:", rr_meas(alice_survey_response))
+            noisy release: ...
+
+            >>> # determine epsilon by invoking the map
+            >>> print("epsilon:", rr_meas.map(d_in=1))
+            epsilon: 2.197...
 
 The categorical randomized response will suffer the same bias:
 
@@ -305,8 +305,6 @@ We similarly estimate population parameters in the categorical setting:
             >>> print("estimated probability:", estimated_cat_proportions)
             estimated probability: [... ... ... ...]
 
-Aggregation: Count
-------------------
 
 Just like the mean was biased, so is a simple count of responses for
 each category:
@@ -354,3 +352,61 @@ Since the dataset size is known, simply post-process the mean estimates:
             >>> print("unbiased categorical count:", estimated_cat_count)
             unbiased categorical count: {'A': ..., 'B': ..., 'C': ..., 'D': ...}
 
+Bit Vector Randomized Response
+------------------------------
+
+Another way to generalize boolean randomized response 
+is by considering bit vectors with limited weight.
+In this setting, neighboring datasets may be completely different bitvectors, 
+but all bitvectors may only have a limited number of true bits (the weight).
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. code:: pycon
+
+            >>> import pytest
+            >>> np = pytest.importorskip("numpy")
+
+            >>> # construct the measurement
+            >>> m_rr = dp.m.make_randomized_response_bitvec(
+            ...     dp.bitvector_domain(max_weight=3),
+            ...     dp.discrete_distance(),
+            ...     f=0.8,
+            ... )
+
+            >>> # the de-biaser will expect little endian data
+            >>> data = np.packbits(
+            ...     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0], # fmt: skip
+            ...     bitorder="little",
+            ... ) # fmt: skip
+
+            >>> # invoke the measurement: np -> bytes -> mechanism -> bytes -> np
+            >>> release = np.frombuffer(m_rr(data), dtype=np.uint8)
+
+            >>> # use unpackbits to visualize the bitvectors
+            >>> print("data:   ", np.unpackbits(data, bitorder="little"))
+            data:    [0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 1 1 0 0]
+            >>> print("release:", np.unpackbits(release, bitorder="little"))   # fmt: skip # doctest: +SKIP
+            release: [1 0 0 0 0 1 1 1 1 0 0 1 1 1 1 0 0 1 1 0 1 1 0 0]
+
+            >>> # epsilon is 2 * m * ln((2 - f) / f) where m = 3 and f = .8
+            >>> print("epsilon:", m_rr.map(1))
+            epsilon: 2.4327906486489863
+
+We now convert a vector of randomized response bitvec releases 
+to an unbiased frequency estimate via ``debias_randomized_response_bitvec``:
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. code:: pycon
+
+            >>> frequencies = dp.m.debias_randomized_response_bitvec(
+            ...     [m_rr(data) for _ in range(10_000)],
+            ...     f=0.8,
+            ... )
