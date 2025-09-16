@@ -211,6 +211,7 @@ pub extern "C" fn opendp_core___error_free(this: *mut FfiError) -> bool {
 }
 
 #[bootstrap(
+    rust_path = "core/struct.Function",
     features("contrib", "honest-but-curious"),
     arguments(function(rust_type = "$pass_through(TO)"))
 )]

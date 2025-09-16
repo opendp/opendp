@@ -603,7 +603,7 @@ impl MetricSpace for (BitVectorDomain, DiscreteDistance) {
 /// we say that $x$, $x'$ are $d$-close under the l-infinity metric (abbreviated as $d_{\infty}$) whenever
 ///
 /// ```math
-/// d_{\infty}(x, x') = max_{i} |x_i - x'_i|
+/// d_{\infty}(x, x') = \max_{i} |x_i - x'_i|
 /// ```
 ///
 /// If `monotonic` is `true`, then the distance is infinity if any of the differences have opposing signs.
@@ -613,7 +613,7 @@ impl MetricSpace for (BitVectorDomain, DiscreteDistance) {
 /// ```math
 /// d_{\infty}(x, x') = \begin{cases}
 ///     \infty & \text{if } \exists i, x_i \cdot x'_i < 0 \land \texttt{monotonic} \\
-///     \max_i \abs{x_i - x'_i} & \text{otherwise} \\
+///     \max_i |x_i - x'_i| & \text{otherwise} \\
 /// \end{cases}
 /// ```
 ///

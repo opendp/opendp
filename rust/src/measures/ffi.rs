@@ -170,6 +170,7 @@ pub extern "C" fn opendp_measures__fixed_smoothed_max_divergence() -> FfiResult<
 }
 
 #[bootstrap(
+    rust_path = "measures/struct.Approximate",
     generics(M(suppress)),
     arguments(measure(c_type = "AnyMeasure *", rust_type = b"null")),
     returns(c_type = "FfiResult<AnyMeasure *>", hint = "ApproximateDivergence")

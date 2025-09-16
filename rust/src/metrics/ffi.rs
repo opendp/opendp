@@ -134,7 +134,10 @@ pub extern "C" fn opendp_metrics__hamming_distance() -> FfiResult<*mut AnyMetric
     FfiResult::Ok(util::into_raw(AnyMetric::new(HammingDistance)))
 }
 
-#[bootstrap(returns(c_type = "FfiResult<AnyMetric *>"))]
+#[bootstrap(
+    rust_path = "metrics/struct.AbsoluteDistance",
+    returns(c_type = "FfiResult<AnyMetric *>")
+)]
 /// Construct an instance of the `AbsoluteDistance` metric.
 ///
 /// # Arguments
@@ -152,7 +155,10 @@ pub extern "C" fn opendp_metrics__absolute_distance(T: *const c_char) -> FfiResu
     dispatch!(monomorphize, [(T, @numbers)], ())
 }
 
-#[bootstrap(returns(c_type = "FfiResult<AnyMetric *>"))]
+#[bootstrap(
+    rust_path = "metrics/type.L1Distance",
+    returns(c_type = "FfiResult<AnyMetric *>")
+)]
 /// Construct an instance of the `L1Distance` metric.
 ///
 /// # Arguments
@@ -169,7 +175,10 @@ pub extern "C" fn opendp_metrics__l1_distance(T: *const c_char) -> FfiResult<*mu
     dispatch!(monomorphize, [(T, @numbers)], ())
 }
 
-#[bootstrap(returns(c_type = "FfiResult<AnyMetric *>"))]
+#[bootstrap(
+    rust_path = "metrics/type.L2Distance",
+    returns(c_type = "FfiResult<AnyMetric *>")
+)]
 /// Construct an instance of the `L2Distance` metric.
 ///
 /// # Arguments
@@ -194,6 +203,7 @@ pub extern "C" fn opendp_metrics__discrete_distance() -> FfiResult<*mut AnyMetri
 }
 
 #[bootstrap(
+    rust_path = "metrics/type.L01InfDistance",
     arguments(metric(c_type = "AnyMetric *", rust_type = b"null")),
     generics(M(suppress)),
     returns(c_type = "FfiResult<AnyMetric *>")
@@ -224,6 +234,7 @@ pub extern "C" fn opendp_metrics__l01inf_distance(
 }
 
 #[bootstrap(
+    rust_path = "metrics/type.L02InfDistance",
     arguments(metric(c_type = "AnyMetric *", rust_type = b"null")),
     generics(M(suppress)),
     returns(c_type = "FfiResult<AnyMetric *>")
@@ -250,6 +261,7 @@ pub extern "C" fn opendp_metrics__l02inf_distance(
 }
 
 #[bootstrap(
+    rust_path = "metrics/struct.LInfDistance",
     arguments(monotonic(default = false)),
     returns(c_type = "FfiResult<AnyMetric *>")
 )]
