@@ -5,13 +5,13 @@ labels:
 - 'bug'
 ---
 
-### Describe the bug
+## Describe the bug
 
 - What is the bug?
 - What is the desired behavior?
 
 
-### Your environment
+## Your environment
 
 If using OpenDP with Python:
 - `python --version`
@@ -19,7 +19,7 @@ If using OpenDP with Python:
 - `pip freeze` might be overkill, but is sometimes useful
 
 
-### A reproducer
+## A reproducer
 
 - Code snippet to reproduce the behavior
 - And if possible, a reference to a gist or notebook or repo where we can see the whole situation.
