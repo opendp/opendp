@@ -4,11 +4,28 @@ This file documents the version history of OpenDP. The links on each version num
 showing the source changes from the previous version.
 
 
-## [0.14.1-dev](https://github.com/opendp/opendp/compare/v0.14.0...HEAD) - TBD
+## [0.14.1](https://github.com/opendp/opendp/compare/v0.14.0...v0.14.1) - 2025-09-16
 
+### Fix
 
+- Python/r -> rust api docs links [#2534](https://github.com/opendp/opendp/pull/2534)
+- Binomialcnd link [#2518](https://github.com/opendp/opendp/pull/2518)
+- Github ci syntax: only run the tests we need [#2506](https://github.com/opendp/opendp/pull/2506)
 
+### Docs
 
+- Make_alp_queryable [#2531](https://github.com/opendp/opendp/pull/2531)
+- Noisy max mechanisms [#2525](https://github.com/opendp/opendp/pull/2525)
+- Randomized response bitvec [#2533](https://github.com/opendp/opendp/pull/2533)
+- Line wrapping in sythetic data code samples [#2500](https://github.com/opendp/opendp/pull/2500)
+
+### Feature
+
+- Add plugins for dp aggregators [#2473](https://github.com/opendp/opendp/pull/2473)
+
+### Chore
+
+- Last steps on v0.14.0 release [#2513](https://github.com/opendp/opendp/pull/2513)
 
 ## [0.14.0](https://github.com/opendp/opendp/compare/v0.13.0...v0.14.0) - 2025-09-08
 
