@@ -12,7 +12,7 @@ use crate::domains::{AtomDomain, MapDomain};
 use crate::error::Fallible;
 use crate::interactive::Queryable;
 use crate::measures::MaxDivergence;
-use crate::metrics::{AbsoluteDistance, L0PInfDistance, L01InfDistance};
+use crate::metrics::{AbsoluteDistance, L01InfDistance};
 use crate::traits::samplers::{fill_bytes, sample_bernoulli_float};
 use crate::traits::{Hashable, InfCast, InfMul, Integer, ToFloatRounded};
 use std::collections::hash_map::DefaultHasher;
@@ -275,7 +275,7 @@ where
 /// See [`make_alp_queryable`] for details.
 pub fn make_alp_state<K, CI>(
     input_domain: SparseDomain<K, CI>,
-    input_metric: L0PInfDistance<1, AbsoluteDistance<CI>>,
+    input_metric: L01InfDistance<AbsoluteDistance<CI>>,
     scale: f64,
     total_limit: CI,
     value_limit: Option<CI>,
@@ -284,7 +284,7 @@ pub fn make_alp_state<K, CI>(
 ) -> Fallible<
     Measurement<
         SparseDomain<K, CI>,
-        L0PInfDistance<1, AbsoluteDistance<CI>>,
+        L01InfDistance<AbsoluteDistance<CI>>,
         MaxDivergence,
         AlpState<K>,
     >,
@@ -293,7 +293,7 @@ where
     K: 'static + Hashable,
     CI: 'static + Integer + InfCast<f64> + ToPrimitive,
     f64: InfCast<CI> + InfCast<u32>,
-    (SparseDomain<K, CI>, L0PInfDistance<1, AbsoluteDistance<CI>>): MetricSpace,
+    (SparseDomain<K, CI>, L01InfDistance<AbsoluteDistance<CI>>): MetricSpace,
 {
     let value_limit: f64 = value_limit
         // if value limit is None, read it from the domain
@@ -383,7 +383,7 @@ where
 /// * `alpha` - Optional parameter (default of 4) for scaling and determining p in randomized response step.
 pub fn make_alp_queryable<K, CI>(
     input_domain: MapDomain<AtomDomain<K>, AtomDomain<CI>>,
-    input_metric: L0PInfDistance<1, AbsoluteDistance<CI>>,
+    input_metric: L01InfDistance<AbsoluteDistance<CI>>,
     scale: f64,
     total_limit: CI,
     value_limit: Option<CI>,
@@ -392,7 +392,7 @@ pub fn make_alp_queryable<K, CI>(
 ) -> Fallible<
     Measurement<
         MapDomain<AtomDomain<K>, AtomDomain<CI>>,
-        L0PInfDistance<1, AbsoluteDistance<CI>>,
+        L01InfDistance<AbsoluteDistance<CI>>,
         MaxDivergence,
         Queryable<K, f64>,
     >,
@@ -403,7 +403,7 @@ where
     f64: InfCast<CI>,
     (
         MapDomain<AtomDomain<K>, AtomDomain<CI>>,
-        L0PInfDistance<1, AbsoluteDistance<CI>>,
+        L01InfDistance<AbsoluteDistance<CI>>,
     ): MetricSpace,
 {
     // this constructor is a simple wrapper for make_alp_state that adds a postprocessing step
