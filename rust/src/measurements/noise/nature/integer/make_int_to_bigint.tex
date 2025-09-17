@@ -1,0 +1,46 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{fn make\_int\_to\_bigint}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise/nature/fn}{make\_int\_to\_bigint} in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+
+\begin{itemize}
+    \item Generic \texttt{T} implements trait \rustdoc{traits/trait}{SaturatingCast}\texttt{<IBig>}
+\end{itemize}
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_int_to_bigint.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \validTransformation{(\texttt{T})}{\texttt{make\_int\_to\_bigint}}
+\end{theorem}
+
+\begin{proof}
+    By the definition of the function on line \ref{line:function},
+    and since \texttt{IBig.from} is infallible, the function is infallible, 
+    meaning that the function cannot raise data-dependent errors.
+    The function also always returns a vector of IBigs, of the same length as the input, 
+    meaning the output of the function is always a member of the output domain,
+    as defined on line \ref{line:output-domain}.
+    Finally, the function is 1-stable, because the real values of the numbers remain un-changed,
+    meaning the distance between adjacent inputs always remains the same, satisfying the stability property.
+\end{proof}
+
+
+\end{document}

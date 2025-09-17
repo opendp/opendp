@@ -1,0 +1,130 @@
+# Creates a release for a channel. Calls other workflows to do all the work.
+#
+# INPUTS
+# * channel:  The release channel
+# * sync:     Whether to sync the channel branch from its upstream branch
+# * counter:  A number to append to the version, to allow multiple releases per day (for nightly/beta testing only)
+# * dry_run:  Whether to do a dry-run (don't actually publish)
+# * fake:     Whether to do a fake build (to save time, for testing only)
+#
+# EXAMPLES
+# Fake nightly release:  gh workflow run release.yml -f channel=nightly -f sync=true counter=5 -f kind=fake
+# Dry-run beta release:  gh workflow run release.yml -f channel=beta -f sync=true -f kind=dry-run
+# Final stable release:  gh workflow run release.yml -f channel=stable -f sync=true
+name: Release
+on:
+  workflow_call:
+    inputs:
+      channel:
+        type: string
+        required: true
+      sync:
+        type: boolean
+        required: false
+        default: false
+      counter:
+        type: number
+        required: false
+        default: 1
+      kind:
+        type: string
+        required: false
+        default: real
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Target Channel
+        type: choice
+        options:
+          - dev
+          - nightly
+          - beta
+          - stable
+        required: true
+        default: dev
+      sync:
+        description: Sync the Channel from Upstream?
+        type: boolean
+        required: false
+        default: false
+      counter:
+        description: Version Counter
+        type: number
+        required: false
+        default: 1
+      kind:
+        description: A "dry-run" is a complete build except for deploy, while "fake" skips every slow step.
+        type: choice
+        options:
+          - real
+          - dry-run
+          - fake
+        required: false
+        default: real
+
+jobs:
+  prepare:
+    uses: ./.github/workflows/prepare.yml
+    with:
+      channel: ${{ inputs.channel }}
+      sync: ${{ inputs.sync }}
+      # The inputs.counter is a string.
+      # To convert to integer, use fromJSON.
+      # https://docs.github.com/en/actions/learn-github-actions/expressions#example-returning-a-json-data-type
+      counter: ${{ fromJSON(inputs.counter) }}
+      dry_run: ${{ inputs.kind != 'real' }}
+
+  build:
+    needs: prepare
+    uses: ./.github/workflows/build.yml
+    with:
+      channel: ${{ inputs.channel }}
+      fake: ${{ inputs.kind == 'fake' }}
+
+  update-bindings:
+    needs: build
+    uses: ./.github/workflows/update-bindings.yml
+    if: ${{ inputs.kind != 'fake' }}
+    with:
+      channel: ${{ inputs.channel }}
+
+  sanity-test-pre:
+    needs: build
+    uses: ./.github/workflows/sanity-test.yml
+    with:
+      channel: ${{ inputs.channel }}
+      python_repository: local
+      fake: ${{ inputs.kind == 'fake' }}
+
+  publish:
+    needs: [ prepare, sanity-test-pre ]
+    uses: ./.github/workflows/publish.yml
+    with:
+      channel: ${{ inputs.channel }}
+      date: ${{ needs.prepare.outputs.date }}
+      dry_run: ${{ inputs.kind != 'real' }}
+    secrets: inherit
+
+  sanity-test-post:
+    needs: publish
+    uses: ./.github/workflows/sanity-test.yml
+    with:
+      channel: ${{ inputs.channel }}
+      # dry-runs and fake went to TestPyPI instead of PyPI
+      python_repository: ${{ ( inputs.kind == 'real' ) && 'pypi' || 'testpypi' }}
+      fake: ${{ inputs.kind == 'fake' }}
+
+  latex:
+    needs: prepare
+    # don't build latex or docs for dev builds
+    if: ${{ inputs.channel != 'dev' }}
+    uses: ./.github/workflows/latex-release.yml
+    with:
+      channel: ${{ inputs.channel }}
+    secrets: inherit
+
+  docs:
+    needs: [ sanity-test-post, update-bindings, latex ]
+    uses: ./.github/workflows/docs.yml
+    with:
+      dry_run: ${{ inputs.kind != 'real' }}

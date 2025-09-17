@@ -1,0 +1,326 @@
+# Creates a build for a channel:
+# * Compiles Rust for all platforms, and uploads lib-* artifacts
+# * Creates Python and R bindings, uploads to the python_bindings and r_bindings artifacts
+# * For Python:
+#   * Downloads the lib-* and python_bindings artifacts,
+#   * creates a Python wheel,
+#   * and uploads to the python_wheel_[platform] artifacts
+# * For R:
+#   * Downloads ONLY the r_bindings artifact,
+#   * creates an R package
+#   * uploads to the r_package artifact
+#
+# INPUTS
+# * channel:  The release channel
+# * fake:     Whether to do a fake build (to save time, for testing only)
+name: Build Channel
+on:
+  workflow_call:
+    inputs:
+      channel:
+        type: string
+        required: true
+      fake:
+        type: boolean
+        required: false
+        default: false
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Target Channel
+        type: choice
+        options:
+          - dev
+          - nightly
+          - beta
+          - stable
+        required: true
+        default: dev
+      fake:
+        description: Fake Build?
+        type: boolean
+        required: false
+        default: false
+env:
+  FEATURES: untrusted,ffi,polars,extension-module
+
+jobs:
+  credential-check:
+    uses: ./.github/workflows/credential-check.yml
+    with:
+      ref: ${{ inputs.channel }}
+      assert_version: ${{ inputs.channel != 'dev' }}
+
+
+  bindings:
+    needs: credential-check
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: true      # 5.3GiB
+          android: true         # 8.7GiB
+          dotnet: true          # 1.6GiB
+          docker-images: true   # 3.2GiB
+          haskell: true         # 6.2GiB
+          large-packages: true  # 4.7GiB
+          swap-storage: false   # no: having swap is useful
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.channel }}
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          rustflags: ""
+
+      - name: Create bindings
+        if: ${{ !inputs.fake }}
+        run: bash tools/rust_build.sh -r -n -f "$FEATURES,bindings"
+
+      - name: Upload Python bindings
+        uses: actions/upload-artifact@v4
+        with:
+          name: python_bindings
+          path: python/src/opendp/
+
+      - name: Prepare vendored sources
+        if: ${{ !inputs.fake }}
+        run: bash tools/r_stage.sh -v
+
+      - name: Prepare vendored sources (fake)
+        if: ${{ inputs.fake }}
+        run: |
+          mkdir -p R/opendp/src/
+          echo fake > R/opendp/src/vendor.tar.xz
+  
+      - name: Upload R bindings
+        uses: actions/upload-artifact@v4
+        with:
+          name: r_bindings
+          path: R/opendp/
+          
+  python:
+    needs: bindings
+    if: ${{ !inputs.fake }}
+    name: python-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # it is helpful to try to build all platforms to completion to catch any platform-specific issues
+      fail-fast: false
+      matrix:
+        # macos-13 is an intel runner, macos-14 is apple silicon
+        # https://cibuildwheel.pypa.io/en/stable/faq/#how
+        os: [ubuntu-latest, windows-latest, macos-13, macos-14]
+
+    steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: true      # 5.3GiB
+          android: true         # 8.7GiB
+          dotnet: true          # 1.6GiB
+          docker-images: true   # 3.2GiB
+          haskell: true         # 6.2GiB
+          large-packages: true  # 4.7GiB
+          swap-storage: false   # no: having swap is useful
+  
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.channel }}
+
+      - name: Stage Python source distribution
+        run: bash tools/python_stage.sh
+
+      - name: Download Python bindings
+        uses: actions/download-artifact@v4
+        with:
+          name: python_bindings
+          path: python/src/opendp/
+    
+      - uses: actions/setup-python@v5
+        with:
+          # necessary to use cibuildwheel 3.x
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install cibuildwheel
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install cibuildwheel==3.1.4
+    
+      - name: Build wheels
+        working-directory: python
+        run: python -m cibuildwheel --output-dir dist
+        env:
+          # don't build separate wheels for free-threaded cpython
+          CIBW_SKIP: "cp31?t-*"
+          CIBW_ENVIRONMENT: 'PATH="$HOME/.cargo/bin:$PATH"'
+          CIBW_ENVIRONMENT_WINDOWS: 'PATH="$UserProfile\.cargo\bin;$PATH"'
+          # first find the xcode version for the mac images:
+          #   https://github.com/actions/runner-images/blob/main/images/macos/macos-13-Readme.md
+          # then find the xcode version line, deployment target column: 
+          #   https://developer.apple.com/support/xcode/
+          CIBW_ENVIRONMENT_MACOS: 'MACOSX_DEPLOYMENT_TARGET=10.13'
+          # omits i686 because OpenSSL fails to build due to libatomic
+          # aarch64 is not added because it is not supported by cibuildwheel and qemu is too slow (6+ hours compilation)
+          #   a separate python-aarch64 job handles this below
+          CIBW_ARCHS_LINUX: x86_64
+          CIBW_BEFORE_BUILD: pip install setuptools-rust
+          CIBW_BEFORE_BUILD_LINUX: |
+            pip install setuptools-rust &&
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --profile=minimal -y
+            
+            # from: https://github.com/sfackler/rust-openssl/issues/2036#issuecomment-1724324145
+            if command -v yum &> /dev/null; then
+                # If we're running on rhel centos
+                yum update -y && yum install -y perl-core openssl openssl-devel pkgconfig libatomic
+            elif command -v apt &> /dev/null; then
+                # If we're running on debian-based system (glibc)
+                apt update -y && apt-get install -y libssl-dev openssl pkg-config
+            elif command -v apk &> /dev/null; then
+                # If we're running on alpine (musl)
+                apk update && apk add openssl pkgconfig
+            fi
+          CIBW_BUILD_VERBOSITY: 1
+          CIBW_TEST_COMMAND: python -c "import opendp"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python_wheel_${{ matrix.os }}
+          path: python/dist/*.whl
+  
+  python-aarch64:
+    needs: bindings
+    runs-on: ubuntu-22.04
+    env:
+      DOCKER_IMAGE: messense/manylinux_2_28-cross:aarch64
+      TARGET: aarch64-unknown-linux-gnu
+    steps:
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          tool-cache: true      # 5.3GiB
+          android: true         # 8.7GiB
+          dotnet: true          # 1.6GiB
+          docker-images: true   # 3.2GiB
+          haskell: true         # 6.2GiB
+          large-packages: true  # 4.7GiB
+          swap-storage: false   # no: having swap is useful
+
+      - name: Checkout repository
+        if: ${{ !inputs.fake }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.channel }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: pip
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Create Rust build for linux
+        if: ${{ !inputs.fake }}
+        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -g $TARGET -f \"$FEATURES\""
+
+      - name: Create Rust build for linux (FAKE)
+        if: ${{ inputs.fake }}
+        run: |
+          mkdir -p rust/target/${{ env.TARGET }}/release/
+          echo linux > rust/target/${{ env.TARGET }}/release/libopendp.so
+      
+      - name: Download Python bindings
+        uses: actions/download-artifact@v4
+        with:
+          name: python_bindings
+          path: python/src/opendp/
+
+      - name: Copy lib
+        run: |
+          mkdir -p python/src/opendp/lib
+          cp rust/target/${{ env.TARGET }}/release/libopendp.so python/src/opendp/lib/
+
+      - name: Create Python package
+        working-directory: python
+        # bdist_wheel is deprecated, but the replacement (build) lacks an API to pass platform tags
+        # https://github.com/pypa/setuptools/issues/3896
+        # https://github.com/pypa/build/issues/202
+        # [bdist_wheel] in setup.cfg seems to only be read by build, not by bdist_wheel, so py-limited-api needs to be repeated here
+        # continuing to use bdist_wheel for now until python's packaging story matures
+        run: > 
+          python -m pip install wheel &&
+          python setup.py bdist_wheel --plat-name=manylinux_2_28_aarch64 --py-limited-api=cp310
+
+      - name: Upload Python wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: python_wheel_aarch64
+          path: python/dist/opendp-*.whl
+
+  python-sdist:
+    needs: bindings
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.channel }}
+
+    - name: Stage Python source distribution
+      run: bash tools/python_stage.sh
+
+    - name: Download Python bindings
+      uses: actions/download-artifact@v4
+      with:
+        name: python_bindings
+        path: python/src/opendp/
+  
+    - name: Build SDist
+      run: >
+        python -m pip install build &&
+        python -m build python/. --sdist
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: python_sdist
+        path: python/dist/*.tar.gz
+
+  r:
+    needs: bindings
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.channel }}
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          # overrides packages so that dependencies for package in cwd are not installed
+          packages: RcppTOML,stringr
+      
+      - name: Download R bindings
+        uses: actions/download-artifact@v4
+        with:
+          name: r_bindings
+          path: R/opendp/
+
+      - name: Source tar
+        run: bash tools/r_stage.sh -s
+
+      - name: Notes
+        run: bash tools/r_stage.sh -n
+
+      - name: Upload R package
+        uses: actions/upload-artifact@v4
+        with:
+          name: r_package
+          path: R/opendp/

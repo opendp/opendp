@@ -1,0 +1,56 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn truncate\_domain}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle  
+
+
+\contrib
+
+Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/fn}{truncate\_domain} 
+in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Caller Verified}
+Truncation keys are stable row-by-row transformations of the data.
+
+\subsection*{Function}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/truncate_domain.py}
+
+\subsection*{Postcondition}
+\begin{theorem}[Postcondition]
+    Define \function as the function that takes in a dataset \texttt{arg} and returns a dataset with \texttt{truncation} applied to it.
+    \texttt{truncation} is either a filter or groupby operation.
+    \begin{itemize}
+        \item If \texttt{truncation} is a filter, then \function\ returns a subset of rows in the data.
+        \item If \texttt{truncation} is a groupby operation, then \function\ groups by \texttt{truncation.keys} and the identifier, and aggregates by \texttt{truncation.aggs}.
+    \end{itemize}
+
+    For every element $x$ in \texttt{domain}, $\function(x)$ is in the returned domain or raises a data-independent runtime exception.
+\end{theorem}
+
+\begin{proof}
+    First consider the case where \texttt{truncation} is a filter.
+    Since filtering is a contractive mapping,
+    the output domain is a subset of the input domain. 
+    However, any invariants on the group length and keys are no longer valid. 
+    This is reflected in line \ref{line:invariant-filter}.
+
+    Now consider the case where \texttt{truncation} is a groupby operation.
+    Since each group becomes one row in the resulting dataset, 
+    an arbitrary black-box function may be applied to each group, 
+    so long as erors from the black-box function (the aggregates) are data-independent.
+    Line \ref{line:infallible} ensures that the aggregates are infallible.
+
+    The schema of members of the output domain is determined by the keys and aggregates of the groupby operation,
+    which is computed on line \ref{line:simulate-schema}.
+    In this case, only margins that are a subset of the grouping keys remain valid,
+    as any bounds on group lengths are not preserved through the black-box aggregation function.
+    Among preserved margins, invariants are discarded.
+\end{proof}
+
+\end{document}

@@ -1,0 +1,112 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn sample\_discrete\_laplace}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+\contrib
+Proves soundness of \texttt{fn sample\_discrete\_laplace} in \asOfCommit{mod.rs}{0be3ab3e6}.
+This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2}{subsection 5.2} of \cite{CKS20}.
+
+\subsection*{Vetting history}
+\begin{itemize}
+    \item \vettingPR{519}
+    \item \vettingPR{1134}
+\end{itemize}
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+$\texttt{scale} \in \mathbb{Q} \land \texttt{scale} > 0$
+
+\subsection*{Pseudocode}        
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_discrete_laplace.py}
+
+\subsection*{Postcondition}
+\label{postcondition}
+For any setting of the input parameter \texttt{scale} such that the given preconditions hold, \\
+\texttt{sample\_discrete\_laplace} either returns \texttt{Err(e)} due to a lack of system entropy,
+or \texttt{Ok(out)}, where \texttt{out} is distributed as $\mathcal{L}_\mathbb{Z}(0, scale)$.
+
+\section{Proof}
+\begin{definition} \cite{BV17}
+    (Discrete Laplace). Let $\mu, \sigma \in \mathbb{R}$ with $\sigma > 0$. 
+    The discrete laplace distribution with location $\mu$ and scale $s$ is denoted $\mathcal{L}_\mathbb{Z}(\mu, s)$. 
+    It is a probability distribution supported on the integers and defined by
+    \begin{equation*}
+        \forall x \in \mathbb{Z} \quad  P[X = x] = \frac{e^{1/s} - 1}{e^{1/s} + 1} e^{-|x|/s} \quad \text{where } X \sim \mathcal{L}_\mathbb{Z}(\mu, s)
+    \end{equation*}
+\end{definition}
+
+Assume the preconditions are met.
+
+\begin{lemma}
+    \label{err-e}
+    \texttt{sample\_discrete\_laplace} only returns \texttt{Err(e)} when there is a lack of system entropy.
+\end{lemma}
+
+\begin{proof}
+    By the non-negativity precondition on \texttt{scale},
+    the precondition on \rustdoc{traits/samplers/cks20/fn}{sample\_geometric\_exp\_fast} is met.
+    By the definitions of \texttt{sample\_geometric\_exp\_fast} and \texttt{sample\_standard\_bernoulli}, 
+    an error is only returned when there is a lack of system entropy.
+    The only source of errors is from the invocation of these functions,
+    therefore \texttt{sample\_discrete\_gaussian} only returns \texttt{Err(e)} when there is a lack of system entropy.
+\end{proof}
+
+We now condition on not returning an error, and establish some helpful lemmas.
+\begin{lemma}\cite{CKS20}\label{P_B_Y_ne_T_0}
+    Let $B \sim Bernoulli(1/2)$ and $Y \sim Geometric(1 - e^{-1/s})$ for some $s > 0$. 
+    Then $P[(B, Y) \neq (\top, 0)] = \frac{1}{2} (e^{-1/s} + 1)$.
+\end{lemma}
+
+\begin{proof}
+    \begin{align*}
+        P[(B, Y) \neq (\top, 0)] &= P[B = \top, Y > 0] + P[B = \bot] && \text{by LOTP} \\
+        &= P[B = \top] P[Y > 0] + P[B = \bot] && \text{by independence of B, Y} \\
+        &= \frac{1}{2} e^{-1/s} + \frac{1}{2} \\
+        &= \frac{1}{2} (e^{-1/s} + 1)
+    \end{align*}
+\end{proof}
+
+\begin{lemma}\cite{CKS20}\label{P_Lx_BY_ne_T0}
+    Given random variables $B \sim Bernoulli(1/2)$ and $Y \sim Geometric(1 - e^{-1/s})$, define $X|_{B=\top} = Y$, and $X|_{B=\bot} = -Y$. 
+    If $(B, Y) \neq (\top, 0)$, then $X \sim \mathcal{L}_\mathbb{Z}(0, scale)$. 
+    That is, $P[X = x | (B, Y) \neq (\top, 0)] = \frac{e^{1/s} - 1}{e^{1/s} + 1} e^{-|x|/s}$ for any $x \in \mathbb{Z}$.
+\end{lemma}
+
+\begin{proof}
+\begin{align*}
+P[X = x | (B, Y) \neq (\top, 0)] &= \frac{P[X = x, (B, Y) \neq (\top, 0)]}{P[(B, Y) \neq (\top, 0)]} \\
+    &= \frac{P[X = |x|, B = \mathbb{I}[x < 0]]}{P[(B, Y) \neq (\top, 0)]} && \text{since x = }\pm y \\
+    &= \frac{P[X = |x|] P[B = \mathbb{I}[x < 0]]}{P[(B, Y) \neq (\top, 0)]} && \text{by independence of B, Y} \\
+    &= \frac{P[X = |x|] \frac{1}{2}}{\frac{1}{2} (e^{-1/s} + 1)} && \text{by } \ref{P_B_Y_ne_T_0} \\
+    &= \frac{1 - e^{-1/s}}{1 + e^{-1/s}} e^{-|x|/s} \\
+    &= \frac{e^{1/s} - 1}{e^{1/s} + 1} e^{-|x|/s} \\
+\end{align*}
+\end{proof}
+
+\begin{lemma}\label{ok-out}
+    If the outcome of \texttt{sample\_discrete\_laplace} is \texttt{Ok(out)}, 
+    then \texttt{out} is distributed as $\mathcal{L}_\mathbb{Z}(0, scale)$.
+\end{lemma}
+
+\begin{proof}
+    In the \ref{err-e} proof, it was established that the preconditions on \texttt{sample\_geometric\_exp\_fast} are met.
+    therefore \texttt{magnitude} on line \ref{line:magnitude} is distributed as $ Geometric(1 - e^{-1/scale})$.
+    Similarly, by the definition of \texttt{sample\_standard\_bernoulli}, \texttt{sign} is distributed according to $Bernoulli(p=1/2)$.
+    The branching logic from line \ref{line:branching} on satisfies the procedures described in \ref{P_Lx_BY_ne_T0}.
+    Therefore, by \ref{P_Lx_BY_ne_T0}, \texttt{out} is distributed as $\mathcal{L}_\mathbb{Z}(0, scale)$.
+\end{proof}
+
+\begin{proof}
+    \ref{postcondition} holds by \ref{err-e} and \ref{ok-out}.
+\end{proof}
+
+
+\bibliographystyle{alpha}
+\bibliography{mod}
+
+\end{document}

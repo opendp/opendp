@@ -1,0 +1,66 @@
+\documentclass{article}
+\input{../../../lib.sty}
+\allowdisplaybreaks
+
+\title{\texttt{fn top\_k}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+Types consistent with pseudocode.
+
+\subsubsection*{Caller-verified}
+
+\begin{itemize}
+    \item \texttt{iter} must be finite
+    \item \texttt{greater\_than} must form a total order
+\end{itemize}
+
+\subsection*{Pseudocode}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/top_k.py}
+
+\subsection*{Postcondition}
+
+\begin{theorem}
+    Returns the top $k$ elements from the iterator in sorted order.
+\end{theorem}
+
+\begin{proof}
+    Line \ref{fn-heap} initializes empty storage for the top $k$ elements.
+
+    First, consider the case where $k$ is zero.
+    By line \ref{fn-zero}, the function returns the heap, satisfying the postcondition.
+
+    Now consider the case where $k$ is greater than zero.
+    The heap has two invariants:
+    \begin{itemize}
+        \item It has at most $k$ elements
+        \item Elements are stored in descending order according to \texttt{greater\_than}
+    \end{itemize}
+
+    First, the heap will never have more than $k$ elements.
+    If there are $k$ elements in the heap, then either no element is added on line \ref{fn-greater},
+    or the smallest element is removed on line \ref{fn-pop}.
+    Therefore at line \ref{fn-insert}, the heap will always have less than $k$ elements.
+    Since only one element can be added to the heap at a time, the heap will never have more than $k$ elements,
+    satisfying the first invariant.
+
+    Next, the heap will always be sorted in descending order.
+    By the precondition that \texttt{greater\_than} forms a total order,
+    then \texttt{heap} is partitioned by the predicate function.
+    Also, by the precondition on mutability of elements in \texttt{iter},
+    the precondition for \rustdoc{measurements/noisy\_top\_k/fn}{partition\_point\_mut} is satisfied.
+    Since the preconditions for \rustdoc{measurements/noisy\_top\_k/fn}{partition\_point\_mut} are met,
+    the postcondition provides the index of the first element in the heap that is less than \texttt{value}.
+    Therefore, upon insertion on line \ref{fn-insert}, the heap will remain sorted in descending order.
+
+    Since elements smaller than the smallest element in the heap are not added,
+    and the heap is sorted in descending order,
+    the heap will always contain the top $k$ elements in sorted order.
+\end{proof}
+
+\end{document}

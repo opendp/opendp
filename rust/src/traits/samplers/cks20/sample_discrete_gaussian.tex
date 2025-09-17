@@ -1,0 +1,112 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn sample\_discrete\_gaussian}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+\contrib
+Proves soundness of \texttt{fn sample\_discrete\_gaussian} in \asOfCommit{mod.rs}{0be3ab3e6}.
+This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.5.3}{subsection 5.3} of \cite{CKS20}.
+
+\subsection*{Vetting history}
+\begin{itemize}
+    \item \vettingPR{519}
+\end{itemize}
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+$\texttt{scale} \in \mathbb{Q} \land \texttt{scale} \geq 0$
+
+\subsection*{Implementation}        
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_discrete_gaussian.py}
+
+\subsection*{Postcondition}
+\label{postcondition}
+For any setting of the input parameter \texttt{scale} such that the given preconditions hold, \\
+\texttt{sample\_discrete\_gaussian} either returns \texttt{Err(e)} due to a lack of system entropy,
+or \texttt{Ok(out)}, where \texttt{out} is distributed as $\mathcal{N}_\mathbb{Z}(0, scale^2)$.
+
+\section{Proof}
+
+\begin{definition}
+    (Discrete Gaussian). \cite{CKS20} Let $\mu, \sigma \in \mathbb{R}$ with $\sigma > 0$. 
+    The discrete gaussian distribution with location $\mu$ and scale $\sigma$ is denoted $\mathcal{N}_\mathbb{Z}(\mu, \sigma^2)$. 
+    It is a probability distribution supported on the integers and defined by
+    \begin{equation*}
+        \forall x \in \mathbb{Z} \quad  P[X = x] = \frac{e^{-\frac{(x - \mu)^2}{2\sigma^2}}}{\sum_{y\in\mathbb{Z}}e^{-\frac{(y - \mu)^2}{2\sigma^2}}} \quad \text{where } X \sim \mathcal{N}_\mathbb{Z}(\mu, \sigma^2)
+    \end{equation*}
+\end{definition}
+
+
+\begin{lemma}
+    \label{err-e}
+    \texttt{sample\_discrete\_gaussian} only returns \texttt{Err(e)} when there is a lack of system entropy.
+\end{lemma}
+
+\begin{proof}
+    By the non-negativity precondition on \texttt{scale}, \texttt{t} on line \ref{line:t} is non-negative, 
+    so the precondition on \rustdoc{traits/samplers/cks20/fn}{sample\_discrete\_laplace} is met.
+    Similarly, since \texttt{bias} on line \ref{line:bias} is non-negative, the preconditions on \rustdoc{traits/samplers/cks20/fn}{sample\_bernoulli\_exp} are met.
+    By the definitions of \texttt{sample\_discrete\_laplace} and \texttt{sample\_bernoulli\_exp}, an error is only returned when there is a lack of system entropy.
+    The only source of errors in \texttt{sample\_discrete\_gaussian} is from the invocation of these functions,
+    therefore \texttt{sample\_discrete\_gaussian} only returns \texttt{Err(e)} when there is a lack of system entropy.
+\end{proof}
+
+We now condition on not returning an error.
+Let $t = \lfloor \sigma \rfloor + 1$, and fix any iteration of the loop. 
+
+\begin{lemma}\cite{CKS20}
+    \label{E_C}
+    If $y$ is a realization of $Y \sim \mathcal{L}_\mathbb{Z}(0, t)$, and $c$ is a realization of $C \sim Bernoulli(exp(-(|y| - \sigma^2 / t)^2 / (2 \sigma^2)))$, then
+    $E[C] = \frac{1 - e^{-1/\sigma}}{1 + e^{-1/\sigma}}e^{-\frac{\sigma^2}{2t^2}} \sum_{y\in \mathbb{Z}} e^{-\frac{y^2}{2\sigma^2}}$.
+\end{lemma}
+
+\begin{proof}
+    \begin{align*}
+        E[C] &= E[E[C|Y]] \\
+        &= E[e^{-\frac{(|Y| - \sigma^2/t)^2}{2\sigma^2}}] && \text{since } E[Bernoulli(p)] = p \\
+        &= \frac{1 - e^{-1/\sigma}}{1 + e^{-1/\sigma}} \sum_{y\in \mathbb{Z}} e^{-\frac{(|y| - \sigma^2/t)^2}{2\sigma^2} - |y|/t} && \text{expectation over } Y \sim \mathcal{L}_\mathcal{Z}(0, \sigma) \\
+        &= \frac{1 - e^{-1/\sigma}}{1 + e^{-1/\sigma}}e^{-\frac{\sigma^2}{2t^2}} \sum_{y\in \mathbb{Z}} e^{-\frac{y^2}{2\sigma^2}}
+    \end{align*}
+\end{proof}
+
+We now show that conditioning $Y$ on the success of $C$ gives the desired output distribution.
+\begin{theorem}\cite{CKS20}
+    \label{P_Yy_CT} If $y$ is a realization of $Y \sim \mathcal{L}_\mathbb{Z}(0, t)$ and $c$ is a realization of $C \sim Bernoulli(exp(-(|y| - \sigma^2 / t)^2 / (2 \sigma^2)))$, then
+    $P[Y=y | C=\top] = \frac{e^{-\frac{y^2}{2\sigma^2}}}{\sum_{y' \in \mathbb{Z}} e^{-\frac{y'^2}{2\sigma^2}}}$. That is, $Y|_{C=\top} \sim \mathcal{N}_\mathbb{Z}(0, \sigma^2)$.
+\end{theorem}
+
+\begin{proof}
+    \begin{align*}
+        P[Y=y | C=\top] &= \frac{P[C=\top|Y=y]P[Y=y]}{P[C=\top]} && \text{Bayes' Theorem} \\
+        &= \frac{e^-\frac{(|y| - \sigma^2/t)^2}{2\sigma^2} \frac{1 - e^{-1/t}}{1 + e^{-1/t}} e^{-|y|/t}}{E[C]} && \text{by definition of } \mathcal{L}_\mathbb{Z}(0, \sigma) \\
+        &= \frac{e^-\frac{(|y| - \sigma^2/t)^2}{2\sigma^2} e^{-|y|/t}}{e^{-(\sigma/t)^2/2} \sum_{y' \in \mathbb{Z}} e^{-\frac{y'^2}{2\sigma^2}}} && \text{by } \ref{E_C}\\
+        &= \frac{e^{-\frac{y^2}{2\sigma^2}}}{\sum_{y' \in \mathbb{Z}} e^{-\frac{y'^2}{2\sigma^2}}}
+    \end{align*}
+\end{proof}
+
+\begin{lemma}\label{ok-out}
+    If the outcome of \texttt{sample\_discrete\_gaussian} is \texttt{Ok(out)}, 
+    then \texttt{out} is distributed as $\mathcal{N}_\mathbb{Z}(0, scale^2)$.
+\end{lemma}
+
+\begin{proof}
+    In the \ref{err-e} proof, it was established that the preconditions on \texttt{sample\_discrete\_laplace} are met, 
+    so \texttt{candidate} on line \ref{line:candidate} is distributed as $\mathcal{L}_\mathbb{Z}(0, t)$.
+    Similarly, by the definition of \texttt{sample\_bernoulli\_exp}, the outcome is distributed according to $Bernoulli(exp(-(|y| - \sigma^2 / t)^2 / (2 \sigma^2)))$.
+    Since on line \ref{line:bern}, we condition returning \texttt{candidate} on a $\top$ sample, 
+    the conditions to apply \ref{P_Yy_CT} are met. 
+    Therefore \texttt{out} is distributed as $\mathcal{N}_\mathbb{Z}(0, scale^2)$.
+\end{proof}
+
+\begin{proof}
+    \ref{postcondition} holds by \ref{err-e} and \ref{ok-out}.
+\end{proof}
+
+\bibliographystyle{alpha}
+\bibliography{mod}
+
+\end{document}

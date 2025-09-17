@@ -1,0 +1,80 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn sample\_bernoulli\_exp}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+\contrib
+Proves soundness of \rustdoc{traits/samplers/cks20/fn}{sample\_bernoulli\_exp} in \asOfCommit{mod.rs}{0be3ab3e6}.
+
+\texttt{fn sample\_bernoulli\_exp} returns a sample from the $Bernoulli(exp(-x))$ distribution for some rational, non-negative, finite \texttt{x}.
+This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.5.1}{subsection 5.1} of \cite{CKS20}.
+
+\section*{Vetting history}
+\begin{itemize}
+    \item \vettingPR{519}
+\end{itemize}
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+$\texttt{x} \in \mathbb{Q} \land \texttt{x} > 0$
+
+\subsection*{Pseudocode}        
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_bernoulli_exp.py}
+
+\subsection*{Postcondition}
+\label{postcondition}
+For any setting of the input parameters \texttt{x} such that the given preconditions hold, \\
+\texttt{sample\_bernoulli\_exp} either returns \texttt{Err(e)} due to a lack of system entropy,
+or \texttt{Ok(out)}, where \texttt{out} is distributed as $Bernoulli(exp(-x))$.
+
+\section{Proof}
+Assume the preconditions are met.
+
+\begin{lemma}
+    \label{err-e}
+    \texttt{sample\_bernoulli\_exp} only returns \texttt{Err(e)} when there is a lack of system entropy.
+\end{lemma}
+
+\begin{proof}
+    In all invocations of \rustdoc{traits/samplers/cks20/fn}{sample\_bernoulli\_exp1}, the argument passed satisfies its definition preconditions, 
+    by the preconditions on \texttt{x} and function logic.
+    Thus, by its definition, \texttt{sample\_bernoulli\_exp1} only returns an error when there is a lack of system entropy.
+    The only source of errors in \texttt{sample\_bernoulli\_exp} is from the invocation of \texttt{sample\_bernoulli\_exp1}.
+    Therefore \texttt{sample\_bernoulli\_exp} only returns \texttt{Err(e)} when there is a lack of system entropy.
+\end{proof}
+
+\begin{lemma}
+    \label{ok-out}
+    \texttt{out} is distributed as $Bernoulli(exp(-x))$.
+\end{lemma}
+
+\begin{proof}
+    For $0 \le i \le \lfloor x \rfloor$, let $b_i$ denote the $i^{th}$ outcome of \texttt{sample\_bernoulli\_exp1} on line \ref{line:B_i}.
+    By the definition of \texttt{sample\_bernoulli\_exp1}, under the established conditions and preconditions,
+    each $B_i$ is distributed as $Bernoulli(exp(-1))$.
+    Let $c$ denote the outcome of \texttt{sample\_bernoulli\_exp1} on line \ref{line:C}. 
+    Similarly as before, $C$ is distributed $Bernoulli(exp(-(x - \lfloor x \rfloor)))$.
+
+    \begin{align*}
+        P[\texttt{out} = \top] &= P[B_1 = B_2 = ... = B_{\lfloor x \rfloor} = C = \top] && \text{\texttt{out} is only $\top$ if $\forall i$, $B_i = \top$ and $C = \top$} \\
+        &= \prod_{i=1}^{\lfloor x \rfloor} P[B_i = \top] P[C = \top] && \text{all $B_i$ and $C$ are independent} \\
+        &= exp(-1)^{\lfloor x \rfloor} exp(\lfloor x \rfloor - x) \\
+        &= exp(-x)
+    \end{align*}
+
+    Therefore, \texttt{out} is distributed as $Bernoulli(exp(-x))$.
+\end{proof}
+
+
+\begin{proof}
+    \ref{postcondition} holds by \ref{err-e} and \ref{ok-out}.
+\end{proof}
+
+\bibliographystyle{alpha}
+\bibliography{mod}
+
+\end{document}

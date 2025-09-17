@@ -1,0 +1,53 @@
+\documentclass{article}
+\input{../../../../../lib.sty}
+
+\title{\texttt{fn get\_min\_k}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise/distribution/float/utilities/fn}{get\_min\_k} in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+
+\begin{itemize}
+    \item Generic \texttt{T} implements trait \rustdoc{traits/trait}{Float}
+    \item Type \texttt{i32} implements the trait \rustdoc{traits/trait}{ExactIntCast}\texttt{<T.Bits>},
+        where \texttt{T.Bits} is the type of the native bit representation of \texttt{T}.
+\end{itemize}
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/get_min_k.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    Return the $k$ where $2^k$ is the smallest distance between adjacent non-equal values in \texttt{T}.
+\end{theorem}
+
+\begin{proof}
+    The floating-point exponent distinguishes between bands of floating-point numbers,
+    where each band halves in width and halves the gap between adjacent numbers in the band.
+    The smallest such band occurs when the exponent is smallest.
+    This is the case where the unbiased exponent is all zeroes, 
+    and the biased exponent is simply the bias.
+    This band of numbers is called the subnormals.
+    The largest subnormal is almost $2^{1-b}$, where $b$ is the bias ($b$ is 1023 for 64-bit floats).
+
+    This band of subnormal numbers is further sub-divided evenly into $2^m$ values by the $m$ bits of the mantissa.
+
+    Together, the gap between the smallest adjacent non-zero values of type \texttt{T} is $2^{1-b} \cdot 2^{-m} = 2^{-b-m+1}$.
+    This is implemented with associated constants for type \texttt{T}, 
+    where \texttt{T.EXPONENT\_BIAS} is $b$ and \texttt{T.MANTISSA\_BITS} is $m$.
+\end{proof}
+
+
+\end{document}

@@ -1,0 +1,11 @@
+[build-system]
+requires = [
+    "setuptools>=42",
+    "wheel",
+    "setuptools-rust",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.pyright]
+include = ["src", "test", "../docs/source"]
+reportWildcardImportFromLibrary = false

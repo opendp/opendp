@@ -1,0 +1,65 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{MakeNoise<MapDomain<AtomDomain<TK>, AtomDomain<TV>>, L0PInfDistance<P, AbsoluteDistance<QI>>, MO> for FloatExpFamily<P>}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise_threshold/trait}{MakeNoiseThreshold} over hash maps
+for \texttt{FloatExpFamily} in \asOfCommit{mod.rs}{f5bb719}.
+
+This mechanism samples from the \texttt{FloatExpFamily} distribution, 
+where the tails saturate to the positive and negative infinity floats in the native float type.
+This is done by rounding floats to a fractional grid, 
+adding noise from from the \texttt{ZExpFamily} distribution (supported on all integers) 
+to the numerator of the fraction (with noise scale multiplied by the denominator),
+and then converting back to the nearest float, or saturating to positive or negative infinity.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+
+\begin{itemize}
+    \item Generic \texttt{TK} implements trait \rustdoc{traits/trait}{Hashable}
+    \item Generic \texttt{TV} implements trait \rustdoc{traits/trait}{Float}
+    \item Const-generic \texttt{P} is of type \texttt{usize}
+    \item Generic \texttt{QI} implements trait \rustdoc{traits/trait}{Number}
+    \item Generic \texttt{MO} implements trait \rustdoc{core/trait}{Measure}
+    \item Type \texttt{i32} implements trait \rustdoc{traits/trait}{ExactIntCast}\texttt{<<T as FloatBits>::Bits>},
+        This requirement means that the raw bits of \texttt{T} can be exactly cast to an \texttt{i32}.
+    \item Type \texttt{RBig} implements traits \texttt{TryFrom<T>} and \texttt{TryFrom<QI>}.
+        This is for fallible exact casting from input sensitivity to a rational in the privacy map.
+    \item Type \texttt{ZExpFamily<P>} implements traits \rustdoc{measurements/trait}{NoiseThresholdPrivacyMap}\texttt{<L0PInfDistance<P, AbsoluteDistance<RBig>>, MO>}
+        This bound requires that it must be possible to construct a privacy map for this combination of noise distribution, distance type and privacy measure.
+\end{itemize}
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/MakeNoiseThreshold_MapDomain_for_FloatExpFamily.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \validMeasurement{(\texttt{self, input\_space, MO, TK, TV, P, QI})}{\texttt{make\_noise}}
+\end{theorem}
+
+\begin{proof}
+    Line \ref{line:dist} constructs a new random variable following a distribution equivalent to \texttt{FloatExpFamily}, 
+    but without tails that saturate to infinity, and with gaps between adjacent point on the grid adjusted to one.
+
+    Neither constructor \rustdoc{measurements/noise_threshold/nature/float/fn}{make\_float\_to\_bigint\_threshold} nor
+    \rustdoc{measurements/noise_threshold/trait}{MakeNoiseThreshold}\texttt{.make\_noise\_threshold} have manual preconditions, 
+    and the postconditions guarantee a valid transformation and valid measurement, respectively.
+    \rustdoc{measurements/noise/nature/float/fn}{then\_deintegerize\_hashmap} also does not have preconditions,
+    and its postcondition guarantees that it returns a valid postprocessor.
+
+    The chain of a valid transformation, valid measurement and valid postprocessor is a valid measurement.
+\end{proof}
+
+\end{document}

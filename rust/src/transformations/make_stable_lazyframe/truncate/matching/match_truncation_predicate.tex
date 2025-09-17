@@ -1,0 +1,65 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{fn match\_truncation\_predicate}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle  
+
+
+\contrib
+
+Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_truncation\_predicate} 
+in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsubsection*{Compiler Verified}
+Types matching pseudocode.
+
+\subsection*{Precondition}
+\subsubsection*{Compiler Verified}
+Types matching pseudocode.
+
+\subsection*{Precondition}
+None 
+
+\subsection*{Function}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/match_truncation_predicate.py}
+
+\subsection*{Postcondition}
+\begin{theorem}[Postcondition]
+    For a given filter predicate and identifier expression,
+    returns an error if the predicate contains a mis-specified truncation,
+    none if the predicate is not a truncation,
+    otherwise the per-identifier bounds on user contribution.
+\end{theorem}
+
+\begin{proof}
+    Truncation predicates are rooted by one of three expressions:
+    \begin{enumerate}
+        \item \texttt{AllHorizontal}, which is a vector-valued ``and'' expression. If all elements of the vector are truncation predicates,
+        as checked on line \ref{line:check_all}, their intersection is also a truncation.
+        \item \texttt{BinaryExpr} where the operator is ``and''. If both operands are truncation predicates,
+        as checked on line \ref{line:check_both}, their intersection is also a truncation.
+        \item \texttt{BinaryExpr} where the operator is a comparison. The logic for this case is more involved.
+    \end{enumerate}
+
+    In the comparison case, the algorithm first matches through the comparison operator 
+    to identify what should be the ``over'' and ``threshold'' expressions.
+    Since window expressions are not valid row-by-row functions,
+    they are unambiguously truncation expressions.
+    Therefore, if the ``over'' expression is a window expression, as checked on line \ref{line:check_over},
+    then any further failures to match the truncation predicates can now be raised as errors.
+
+    \texttt{threshold\_value} on line \ref{line:threshold_value} is resolved to the literal u32 upper bound on contributions.
+    
+    By the postconditions of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_num\_groups\_predicate},
+    and \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_per\_group\_predicate},
+    \texttt{num\_groups} and \texttt{per\_group} are optional bounds on the number of groups and row contributions per-group, respectively.
+    If both are not defined, then the predicate is not a truncation,
+    and an error is raised on line \ref{line:check_bounds}.
+
+    Otherwise, the matched bound is returned on line \ref{line:return}, satisfying the postcondition.
+\end{proof}
+\end{document}

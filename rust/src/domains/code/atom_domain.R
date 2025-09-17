@@ -1,0 +1,1 @@
+atom_domain(.T = "i32")

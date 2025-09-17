@@ -1,0 +1,67 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{fn make\_is\_equal}}
+\author{S\'ilvia Casacuberta}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of \texttt{fn make\_is\_equal} in \asOfCommit{mod.rs}{0db9c6036}.
+The transformation checks if each element in a vector dataset is equivalent to a given value,
+returning a vector of booleans.
+
+\subsection*{Vetting History}
+\begin{itemize}
+    \item \vettingPR{512}
+\end{itemize}
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+To ensure the correctness of the output, we require the following preconditions:
+
+\begin{itemize}
+    \item Type \texttt{TIA} must have trait \texttt{PartialEq}.
+    \item Type \texttt{M} must have trait \texttt{DatasetMetric}.
+    \item \rustdoc{core/trait}{MetricSpace} is implemented for \texttt{(VectorDomain<AtomDomain<TIA>{}>, M)}. Therefore \texttt{M} is a valid metric on \texttt{VectorDomain<AtomDomain<TIA>{}>}.
+    \item \rustdoc{core/trait}{MetricSpace} is implemented for \texttt{(VectorDomain<AtomDomain<bool>{}>, M)}.
+\end{itemize}
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_is_equal.py}
+
+\subsubsection*{Postconditions}
+\validTransformation{\texttt{(input\_domain, input\_metric, value)}}{\texttt{make\_is\_equal}}
+
+\section{Proof}
+
+\begin{lemma}
+    The invocation of \rustdoc{transformations/manipulation/fn}{make\_row\_by\_row} (line \ref{line:row-by-row}) satisfies its preconditions.
+\end{lemma}
+
+\begin{proof}
+    \label{lemma:row-by-row-precondition}
+    The preconditions of \texttt{make\_is\_equal} and pseudocode definition (line \ref{line:def}) ensure that the type preconditions of \texttt{make\_row\_by\_row} are satisfied. 
+    The remaining preconditions of \texttt{make\_row\_by\_row} are:
+    \begin{itemize}
+        \item \texttt{row\_function} has no side-effects.
+        \item If the input to \texttt{row\_function} is a member of \texttt{input\_domain}'s row domain, then the output is a member of \texttt{output\_row\_domain}.
+    \end{itemize}
+
+    The first precondition is satisfied by the definition of \texttt{is\_equal} (line \ref{line:function}) in the pseudocode.
+
+    For the second precondition, assume the input is a member of \texttt{input\_domain}'s row domain. 
+    By the definition of \texttt{PartialEq}, the output of \texttt{is\_equal} is boolean, and \texttt{AtomDomain<bool>} includes all booleans.
+    Therefore, the output is a member of \texttt{output\_row\_domain}.
+\end{proof}
+
+We now prove the postcondition of \texttt{make\_is\_equal}.
+\begin{proof}
+By \ref{lemma:row-by-row-precondition}, the preconditions of \rustdoc{transformations/manipulation/fn}{make\_row\_by\_row} are satisfied.
+Thus, by the definition of \\\texttt{make\_row\_by\_row}, the output is a valid transformation.
+\end{proof}
+
+\end{document}

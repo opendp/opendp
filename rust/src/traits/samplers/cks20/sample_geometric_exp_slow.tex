@@ -1,0 +1,68 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn sample\_geometric\_exp\_slow}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+\contrib
+Proves soundness of \texttt{fn sample\_geometric\_exp\_slow} in \asOfCommit{mod.rs}{0be3ab3e6}.
+This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2}{subsection 5.2} of \cite{CKS20}.
+
+\subsection*{Vetting history}
+\begin{itemize}
+    \item \vettingPR{519}
+\end{itemize}
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+$\texttt{x} \in \mathbb{Q} \land \texttt{x} > 0$
+
+\subsection*{Pseudocode}        
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_geometric_exp_slow.py}
+
+\subsection*{Postcondition}\label{postcondition}
+For any setting of the input parameter \texttt{x} such that the given preconditions hold, \\
+\texttt{sample\_geometric\_exp\_slow} either returns \texttt{Err(e)} due to a lack of system entropy,
+or \texttt{Ok(out)}, where \texttt{out} is distributed as $Geometric(1 - exp(-x))$.
+
+\section{Proof}
+Assume the preconditions are met.
+
+\begin{lemma}\label{err-e}
+    \texttt{sample\_geometric\_exp\_slow} only returns \texttt{Err(e)} when there is a lack of system entropy.
+\end{lemma}
+
+\begin{proof}
+    The preconditions on \texttt{x} satisfy the preconditions on \rustdoc{traits/samplers/fn}{sample\_bernoulli\_exp},
+    so by its definition, it only returns an error if there is a lack of system entropy.
+    The only source of errors is from this function,
+    therefore \texttt{sample\_geometric\_exp\_slow} only returns \texttt{Err(e)} when there is a lack of system entropy.
+\end{proof}
+
+\begin{theorem} \label{ok-out} \cite{CKS20}
+    If the outcome of \texttt{sample\_geometric\_exp\_slow} is \texttt{Ok(out)}, 
+    then \texttt{out} is distributed as $Geometric(1 - exp(-x))$. That is, $P[\texttt{out} = k] = exp(-x) (1 - exp(-x))^{k}$ 
+\end{theorem}
+
+\begin{proof}
+    The distribution of the $i^{th}$ boolean returned on line \ref{line:B} is $B_i \sim Bernoulli(exp(x))$,
+    because the preconditions on \texttt{x} satisfy the preconditions for \texttt{sample\_bernoulli\_exp}.
+    
+    \begin{align*}
+        P[\texttt{out} = k] &= P[B_1 = B_2 = ... = B_k = \bot \land B_{k + 1} = \top] \\
+        &= P[B_{k + 1} = \top] \prod_{i=1}^{k} P[B_i = \bot] && \text{All $B_i$ are independent.} \\
+        &= exp(-x) (1 - exp(-x))^{k}
+    \end{align*}
+\end{proof}
+
+\begin{proof}
+    \ref{postcondition} holds by \ref{err-e} and \ref{ok-out}.
+\end{proof}
+
+
+\bibliographystyle{alpha}
+\bibliography{mod}
+\end{document}

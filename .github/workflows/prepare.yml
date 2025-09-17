@@ -1,0 +1,113 @@
+# Prepares a branch for a channel:
+# * Checks out the channel branch
+# * Initializes the channel branch from its upstream branch (if indicated)
+# * Configures the channel branch with the current version number
+# * Pushes the channel branch changes to origin
+#
+# INPUTS
+# * channel:  The release channel
+# * sync:     Whether to sync the channel branch from its upstream branch
+# * counter:  A number to append to the version, to allow multiple releases per day (for nightly/beta testing only)
+name: Prepare Channel
+on:
+  workflow_call:
+    inputs:
+      channel:
+        type: string
+        required: true
+      sync:
+        type: boolean
+        required: false
+        default: false
+      counter:
+        type: number
+        required: false
+        default: 1
+      dry_run:
+        type: boolean
+        required: false
+        default: false
+    outputs:
+      date:
+        value: ${{ jobs.prepare.outputs.date }}
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Target Channel
+        type: choice
+        options:
+          - dev
+          - nightly
+          - beta
+          - stable
+        required: true
+        default: nightly
+      sync:
+        description: Sync the Channel from Upstream?
+        type: boolean
+        required: false
+        default: false
+      counter:
+        description: Version Counter
+        type: number
+        required: false
+        default: 1
+      dry_run:
+        description: Dry Run?
+        type: boolean
+        required: false
+        default: false
+env:
+  # Standardize dates to Eastern time
+  TIME_ZONE: "America/New_York"
+
+jobs:
+  credential-check:
+    uses: ./.github/workflows/credential-check.yml
+    with:
+      assert_version: false
+
+  prepare:
+    needs: credential-check
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure git user
+        run: |
+          git config --global user.name "$GITHUB_ACTOR"
+          git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: pip
+
+      - name: Install requirements
+        run: pip install -r tools/requirements-tools.txt
+
+      - name: Initialize channel
+        env:
+          SYNC_FLAG: ${{ inputs.sync && '--sync' || '' }}
+        run: python tools/channel_tool.py initialize -c ${{ inputs.channel }} $SYNC_FLAG
+
+      - name: Configure channel
+        id: configure
+        run: |
+          DATE=`python tools/channel_tool.py date -z "$TIME_ZONE"`
+          python tools/channel_tool.py configure -c ${{ inputs.channel }} -d "$DATE" -i ${{ inputs.counter }}
+          echo "date=$DATE" >> $GITHUB_OUTPUT
+
+      - name: Show changes
+        run: git diff
+
+      - name: Push changes
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git add --force . # Generated files are git-ignored, so we need --force.
+          git commit -m "Initialize and configure channel"
+          git push --force origin ${{ inputs.channel }}
+    outputs:
+      date: ${{ steps.configure.outputs.date }}
