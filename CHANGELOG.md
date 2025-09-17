@@ -6,6 +6,10 @@ showing the source changes from the previous version.
 
 ## [0.14.1](https://github.com/opendp/opendp/compare/v0.14.0...v0.14.1) - 2025-09-16
 
+### Migration
+
+- `fill_null` and `fill_nan` are no longer needed, unless you need non-default behavior.
+
 ### Fix
 
 - Python/r -> rust api docs links [#2534](https://github.com/opendp/opendp/pull/2534)
@@ -29,6 +33,21 @@ showing the source changes from the previous version.
 
 ## [0.14.0](https://github.com/opendp/opendp/compare/v0.13.0...v0.14.0) - 2025-09-08
 
+### Migration
+
+- Renamed compositor APIs:
+    - `make_basic_composition` → `make_composition`
+    - `make_sequential_composition` → `make_adaptive_composition`
+- RNM Gumbel renaming and privacy measure parametrization:
+    - `make_report_noisy_max_gumbel` → `make_noisy_max`
+- `dp.polars.Margin` kwargs renamed:
+    - `public_info` → `invariant`
+    - `max_partition_length` → `max_length`
+    - `max_num_partitions` → `max_groups`
+- Other API Changes:
+    - `make_private_quantile` is parametrized with `output_measure`
+    - `make_laplace_threshold`: `input_metric` is now `L0PInfDistance`
+    - `make_gaussian_threshold`: `input_metric` is now `L0PInfDistance`
 
 ### Feature
 
@@ -123,6 +142,10 @@ showing the source changes from the previous version.
 
 ## [0.13.0](https://github.com/opendp/opendp/compare/v0.12.1...v0.13.0) - 2025-04-22
 
+### Migration
+
+- We now default to the assumption that NaN values exist in float data in all settings. You’ll notice that you now need to specify nan=Falsenan=False in atom domains, [even when building the Laplace or Gaussian measurements](https://docs.opendp.org/en/v0.13.0/api/user-guide/measurements/additive-noise-mechanisms.html#Distribution:-Laplace-vs.-Gaussian).
+- The recommended format for margins in the Context API is now a list of margins containing group by keys, instead of a dictionary of group by keys and margins. An example of the new syntax [can be found here](https://docs.opendp.org/en/v0.13.0/api/user-guide/polars/gaussian-noise.html#Max-Partition-Contributions). This allows group by keys to be arbitrary expressions. 
 
 ### Feat
 
@@ -223,6 +246,14 @@ showing the source changes from the previous version.
 
 
 ## [0.12.0](https://github.com/opendp/opendp/compare/v0.11.1...v0.12.0) - 2024-12-19
+
+### Migration
+
+Previously, OpenDP allowed arbitrary functions to be used as postprocessors. Unfortunately this could be abused to build measurements whose postprocessors introduce vulnerabilities. For instance, a post-processor that reads the system time could be used to add timing information to the output of a mechanism. OpenDP now requires `honest-but-curious` to be enabled in order to build postprocessors from Python, and states necessary conditions for valid postprocessors.
+
+Also:
+- Rename `SMDCurve` to `PrivacyProfile`
+- Remove argument for distance type on privacy measures: `max_divergence(T=float)` is now just `max_divergence()`
 
 
 ### Added
