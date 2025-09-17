@@ -76,7 +76,7 @@ def debias_randomized_response_bitvec(
 
     Required features: `contrib`
 
-    [debias_randomized_response_bitvec in Rust documentation.](https://docs.rs/opendp/0.14.1-beta.20250916.1/opendp/measurements/fn.debias_randomized_response_bitvec.html)
+    [debias_randomized_response_bitvec in Rust documentation.](https://docs.rs/opendp/0.14.1/opendp/measurements/fn.debias_randomized_response_bitvec.html)
 
     .. end-markdown
 
@@ -134,7 +134,7 @@ def make_alp_queryable(
 
     Required features: `contrib`
 
-    [make_alp_queryable in Rust documentation.](https://docs.rs/opendp/0.14.1-beta.20250916.1/opendp/measurements/fn.make_alp_queryable.html)
+    [make_alp_queryable in Rust documentation.](https://docs.rs/opendp/0.14.1/opendp/measurements/fn.make_alp_queryable.html)
 
     **Citations:**
 
@@ -248,7 +248,7 @@ def make_canonical_noise(
 
     Required features: `contrib`
 
-    [make_canonical_noise in Rust documentation.](https://docs.rs/opendp/0.14.1-beta.20250916.1/opendp/measurements/fn.make_canonical_noise.html)
+    [make_canonical_noise in Rust documentation.](https://docs.rs/opendp/0.14.1/opendp/measurements/fn.make_canonical_noise.html)
 
     **Citations:**
 
@@ -263,7 +263,7 @@ def make_canonical_noise(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/measurements/canonical_noise/make_canonical_noise.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/v0.14.1/proofs/rust/src/measurements/canonical_noise/make_canonical_noise.pdf)
 
     .. end-markdown
 
@@ -357,7 +357,7 @@ def make_gaussian(
 
     Required features: `contrib`
 
-    [make_gaussian in Rust documentation.](https://docs.rs/opendp/0.14.1-beta.20250916.1/opendp/measurements/fn.make_gaussian.html)
+    [make_gaussian in Rust documentation.](https://docs.rs/opendp/0.14.1/opendp/measurements/fn.make_gaussian.html)
 
     **Supporting Elements:**
 
@@ -368,7 +368,7 @@ def make_gaussian(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/measurements/noise/distribution/gaussian/make_gaussian.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/v0.14.1/proofs/rust/src/measurements/noise/distribution/gaussian/make_gaussian.pdf)
 
     .. end-markdown
 
@@ -497,7 +497,7 @@ def make_gaussian_threshold(
 
     Required features: `contrib`
 
-    [make_gaussian_threshold in Rust documentation.](https://docs.rs/opendp/0.14.1-beta.20250916.1/opendp/measurements/fn.make_gaussian_threshold.html)
+    [make_gaussian_threshold in Rust documentation.](https://docs.rs/opendp/0.14.1/opendp/measurements/fn.make_gaussian_threshold.html)
 
     **Supporting Elements:**
 
@@ -508,7 +508,7 @@ def make_gaussian_threshold(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/measurements/noise_threshold/distribution/gaussian/make_gaussian_threshold.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/v0.14.1/proofs/rust/src/measurements/noise_threshold/distribution/gaussian/make_gaussian_threshold.pdf)
 
     .. end-markdown
 
@@ -610,7 +610,7 @@ def make_geometric(
 
     Required features: `contrib`
 
-    [make_geometric in Rust documentation.](https://docs.rs/opendp/0.14.1-beta.20250916.1/opendp/measurements/fn.make_geometric.html)
+    [make_geometric in Rust documentation.](https://docs.rs/opendp/0.14.1/opendp/measurements/fn.make_geometric.html)
 
     **Citations:**
 
@@ -625,7 +625,7 @@ def make_geometric(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/measurements/noise/distribution/geometric/make_geometric.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/v0.14.1/proofs/rust/src/measurements/noise/distribution/geometric/make_geometric.pdf)
 
     .. end-markdown
 
@@ -761,7 +761,7 @@ def make_laplace(
 
     Required features: `contrib`
 
-    [make_laplace in Rust documentation.](https://docs.rs/opendp/0.14.1-beta.20250916.1/opendp/measurements/fn.make_laplace.html)
+    [make_laplace in Rust documentation.](https://docs.rs/opendp/0.14.1/opendp/measurements/fn.make_laplace.html)
 
     **Citations:**
 
@@ -777,7 +777,7 @@ def make_laplace(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/measurements/noise/distribution/laplace/make_laplace.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/v0.14.1/proofs/rust/src/measurements/noise/distribution/laplace/make_laplace.pdf)
 
     .. end-markdown
 
@@ -908,7 +908,7 @@ def make_laplace_threshold(
 
     Required features: `contrib`
 
-    [make_laplace_threshold in Rust documentation.](https://docs.rs/opendp/0.14.1-beta.20250916.1/opendp/measurements/fn.make_laplace_threshold.html)
+    [make_laplace_threshold in Rust documentation.](https://docs.rs/opendp/0.14.1/opendp/measurements/fn.make_laplace_threshold.html)
 
     **Supporting Elements:**
 
@@ -919,7 +919,7 @@ def make_laplace_threshold(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/measurements/noise_threshold/distribution/laplace/make_laplace_threshold.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/v0.14.1/proofs/rust/src/measurements/noise_threshold/distribution/laplace/make_laplace_threshold.pdf)
 
     .. end-markdown
 
@@ -1027,7 +1027,7 @@ def make_noise(
 
     Required features: `contrib`
 
-    [make_noise in Rust documentation.](https://docs.rs/opendp/0.14.1-beta.20250916.1/opendp/measurements/fn.make_noise.html)
+    [make_noise in Rust documentation.](https://docs.rs/opendp/0.14.1/opendp/measurements/fn.make_noise.html)
 
     **Supporting Elements:**
 
@@ -1131,7 +1131,7 @@ def make_noise_threshold(
 
     Required features: `contrib`
 
-    [make_noise_threshold in Rust documentation.](https://docs.rs/opendp/0.14.1-beta.20250916.1/opendp/measurements/fn.make_noise_threshold.html)
+    [make_noise_threshold in Rust documentation.](https://docs.rs/opendp/0.14.1/opendp/measurements/fn.make_noise_threshold.html)
 
     **Supporting Elements:**
 
@@ -1237,7 +1237,7 @@ def make_noisy_max(
 
     Required features: `contrib`
 
-    [make_noisy_max in Rust documentation.](https://docs.rs/opendp/0.14.1-beta.20250916.1/opendp/measurements/fn.make_noisy_max.html)
+    [make_noisy_max in Rust documentation.](https://docs.rs/opendp/0.14.1/opendp/measurements/fn.make_noisy_max.html)
 
     **Supporting Elements:**
 
@@ -1369,7 +1369,7 @@ def make_noisy_top_k(
 
     Required features: `contrib`
 
-    [make_noisy_top_k in Rust documentation.](https://docs.rs/opendp/0.14.1-beta.20250916.1/opendp/measurements/fn.make_noisy_top_k.html)
+    [make_noisy_top_k in Rust documentation.](https://docs.rs/opendp/0.14.1/opendp/measurements/fn.make_noisy_top_k.html)
 
     **Supporting Elements:**
 
@@ -1380,7 +1380,7 @@ def make_noisy_top_k(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/measurements/noisy_top_k/make_noisy_top_k.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/v0.14.1/proofs/rust/src/measurements/noisy_top_k/make_noisy_top_k.pdf)
 
     .. end-markdown
 
@@ -1481,7 +1481,7 @@ def make_private_expr(
 
     Required features: `contrib`, `honest-but-curious`
 
-    [make_private_expr in Rust documentation.](https://docs.rs/opendp/0.14.1-beta.20250916.1/opendp/measurements/fn.make_private_expr.html)
+    [make_private_expr in Rust documentation.](https://docs.rs/opendp/0.14.1/opendp/measurements/fn.make_private_expr.html)
 
     **Why honest-but-curious?:**
 
@@ -1586,7 +1586,7 @@ def make_private_lazyframe(
 
     Required features: `contrib`
 
-    [make_private_lazyframe in Rust documentation.](https://docs.rs/opendp/0.14.1-beta.20250916.1/opendp/measurements/fn.make_private_lazyframe.html)
+    [make_private_lazyframe in Rust documentation.](https://docs.rs/opendp/0.14.1/opendp/measurements/fn.make_private_lazyframe.html)
 
     **Supporting Elements:**
 
@@ -1823,7 +1823,7 @@ def make_private_quantile(
 
     Required features: `contrib`
 
-    [make_private_quantile in Rust documentation.](https://docs.rs/opendp/0.14.1-beta.20250916.1/opendp/measurements/fn.make_private_quantile.html)
+    [make_private_quantile in Rust documentation.](https://docs.rs/opendp/0.14.1/opendp/measurements/fn.make_private_quantile.html)
 
     **Supporting Elements:**
 
@@ -1929,7 +1929,7 @@ def make_randomized_response(
 
     Required features: `contrib`
 
-    [make_randomized_response in Rust documentation.](https://docs.rs/opendp/0.14.1-beta.20250916.1/opendp/measurements/fn.make_randomized_response.html)
+    [make_randomized_response in Rust documentation.](https://docs.rs/opendp/0.14.1/opendp/measurements/fn.make_randomized_response.html)
 
     **Supporting Elements:**
 
@@ -1940,7 +1940,7 @@ def make_randomized_response(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/measurements/randomized_response/make_randomized_response.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/v0.14.1/proofs/rust/src/measurements/randomized_response/make_randomized_response.pdf)
 
     .. end-markdown
 
@@ -2003,7 +2003,7 @@ def make_randomized_response_bitvec(
 
     Required features: `contrib`
 
-    [make_randomized_response_bitvec in Rust documentation.](https://docs.rs/opendp/0.14.1-beta.20250916.1/opendp/measurements/fn.make_randomized_response_bitvec.html)
+    [make_randomized_response_bitvec in Rust documentation.](https://docs.rs/opendp/0.14.1/opendp/measurements/fn.make_randomized_response_bitvec.html)
 
     **Citations:**
 
@@ -2018,7 +2018,7 @@ def make_randomized_response_bitvec(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/measurements/randomized_response_bitvec/make_randomized_response_bitvec.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/v0.14.1/proofs/rust/src/measurements/randomized_response_bitvec/make_randomized_response_bitvec.pdf)
 
     .. end-markdown
 
@@ -2176,7 +2176,7 @@ def make_randomized_response_bool(
 
     Required features: `contrib`
 
-    [make_randomized_response_bool in Rust documentation.](https://docs.rs/opendp/0.14.1-beta.20250916.1/opendp/measurements/fn.make_randomized_response_bool.html)
+    [make_randomized_response_bool in Rust documentation.](https://docs.rs/opendp/0.14.1/opendp/measurements/fn.make_randomized_response_bool.html)
 
     **Supporting Elements:**
 
@@ -2187,7 +2187,7 @@ def make_randomized_response_bool(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/measurements/randomized_response/make_randomized_response_bool.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/v0.14.1/proofs/rust/src/measurements/randomized_response/make_randomized_response_bool.pdf)
 
     .. end-markdown
 
@@ -2245,7 +2245,7 @@ def make_report_noisy_max_gumbel(
 
     Required features: `contrib`
 
-    [make_report_noisy_max_gumbel in Rust documentation.](https://docs.rs/opendp/0.14.1-beta.20250916.1/opendp/measurements/fn.make_report_noisy_max_gumbel.html)
+    [make_report_noisy_max_gumbel in Rust documentation.](https://docs.rs/opendp/0.14.1/opendp/measurements/fn.make_report_noisy_max_gumbel.html)
 
     **Supporting Elements:**
 
