@@ -11,22 +11,10 @@ The intermediate domains and metrics need to match when chaining.
 This means you will need to choose a measurement that chains with your :ref:`aggregator <aggregators>`.
 
 
-.. toctree::
-  :hidden:
-
-  additive-noise-mechanisms
-  thresholded-noise-mechanisms
-  canonical-noise-mechanism
-  noisy-max-mechanisms
-  approximate-laplace-projection
-  randomized-response
-
 Additive Noise Mechanisms
 -------------------------
 
-See `Additive Noise Mechanisms <additive-noise-mechanisms.html>`_ for code examples and more exposition.
-
-Note that there is a symmetric structure to the additive noise measurements:
+There is a symmetric structure to the additive noise measurements:
 
 .. list-table::
    :header-rows: 1
@@ -42,6 +30,14 @@ Note that there is a symmetric structure to the additive noise measurements:
 
 By passing the appropriate input space,
 you can construct either scalar or vector-valued mechanisms.
+
+More details on `laplacian and gaussian noise mechanisms here <additive-noise-mechanisms.html>`_.
+
+.. toctree::
+  :hidden:
+
+  additive-noise-mechanisms
+
 
 Laplacian Noise
 ***************
@@ -88,7 +84,6 @@ Use :func:`gaussian_scale_to_accuracy <opendp.accuracy.gaussian_scale_to_accurac
      - ``L2Distance<QI>``
      - ``ZeroConcentratedDivergence``
 
-
 Canonical Noise
 ***************
 
@@ -97,7 +92,13 @@ can privatize any float-valued statistic with finite sensitivity.
 Under :math:`(\epsilon, \delta)`-DP,
 the canonical noise distribution follows the Tulap distribution,
 which is a combination of discrete laplace noise and continuous uniform noise.
-More discussion `here <canonical-noise-mechanism.html>`_.
+
+More details on `the canonical noise mechanism here <canonical-noise-mechanism.html>`_.
+
+.. toctree::
+  :hidden:
+
+  canonical-noise-mechanism
 
 
 Thresholded Noise Mechanisms
@@ -105,8 +106,6 @@ Thresholded Noise Mechanisms
 
 Thresholded noise mechanisms are generalizations of the additive noise mechanisms
 that also release a set of keys, whose values are greater than the ``threshold`` parameter.
-
-See the `Thresholded Noise Mechanisms documentation <thresholded-noise-mechanisms.html>`_ for code examples and more exposition.
 
 Just like the additive noise mechanisms, the thresholded noise mechanisms have a symmetric structure:
 
@@ -120,30 +119,35 @@ Just like the additive noise mechanisms, the thresholded noise mechanisms have a
    * - ``L02InfDistance<AbsoluteDistance<T>>``
      - :func:`make_gaussian_threshold <opendp.measurements.make_gaussian_threshold>`
 
-Laplacian Noise
-***************
+More details on `thresholded noise mechanisms here <thresholded-noise-mechanisms.html>`_.
 
-The algorithm accepts ``L0``, ``L1`` and ``L∞`` sensitivities and measures privacy in terms of epsilon and delta. 
+.. toctree::
+  :hidden:
+
+  thresholded-noise-mechanisms
+
+Thresholded Laplacian Noise
+***************************
+
+:func:`make_laplace_threshold <opendp.measurements.make_laplace_threshold>` accepts ``L0``, ``L1`` and ``L∞`` sensitivities and measures privacy in terms of epsilon and delta. 
 Use the :func:`opendp.accuracy.laplacian_scale_to_accuracy` and :func:`opendp.accuracy.accuracy_to_laplacian_scale` 
 functions to convert to/from accuracy estimates.
 
 .. list-table::
    :header-rows: 1
 
-   * - Measurement
-     - Input Domain
+   * - Input Domain
      - Input Metric
      - Output Measure
-   * - :func:`opendp.measurements.make_laplace_threshold`
-     - ``MapDomain<AtomDomain<TK>, AtomDomain<TV>>``
+   * - ``MapDomain<AtomDomain<TK>, AtomDomain<TV>>``
      - ``L01InfDistance<AbsoluteDistance<QI>>``
      - ``Approximate<MaxDivergence>``
 
 
-Gaussian Noise
-**************
+Thresholded Gaussian Noise
+**************************
 
-The algorithm accepts ``L0``, ``L2`` and ``L∞`` sensitivities and measures privacy in terms of rho and delta. 
+:func:`make_gaussian_threshold <opendp.measurements.make_gaussian_threshold>` accepts ``L0``, ``L2`` and ``L∞`` sensitivities and measures privacy in terms of rho and delta. 
 Use the :func:`opendp.accuracy.gaussian_scale_to_accuracy` and :func:`opendp.accuracy.accuracy_to_gaussian_scale` 
 functions to convert to/from accuracy estimates.
 Refer to :ref:`measure-casting` to convert to approximate DP.
@@ -151,12 +155,10 @@ Refer to :ref:`measure-casting` to convert to approximate DP.
 .. list-table::
    :header-rows: 1
 
-   * - Measurement
-     - Input Domain
+   * - Input Domain
      - Input Metric
      - Output Measure
-   * - :func:`opendp.measurements.make_gaussian_threshold`
-     - ``MapDomain<AtomDomain<TK>, AtomDomain<TV>>``
+   * - ``MapDomain<AtomDomain<TK>, AtomDomain<TV>>``
      - ``L02InfDistance<AbsoluteDistance<QI>>``
      - ``Approximate<ZeroConcentratedDivergence>``
 
@@ -165,8 +167,6 @@ Approximate Laplace Projection
 
 In a similar regime as the thresholded noise mechanism, where keys themselves need to be protected,
 another approach is to release a differentially private low-dimensional projection of the key-space.
-
-See :ref:`approximate-laplace-projection` for a demonstration of the approach.
 
 
 .. list-table::
@@ -181,10 +181,15 @@ See :ref:`approximate-laplace-projection` for a demonstration of the approach.
      - ``L01InfDistance<AbsoluteDistance<QI>>``
      - ``MaxDivergence``
 
+More details on :ref:`approximate laplace projection here <approximate-laplace-projection>`.
+
+.. toctree::
+  :hidden:
+
+  approximate-laplace-projection
+
 Noisy Max and Noisy Top K
 -------------------------
-
-See `Noisy Max Mechanisms <noisy-max-mechanisms.html>`_ for code examples and more exposition.
 
 The report noisy top-k mechanism is used to privately release the indices of the maximum k values in a vector.
 This is useful for private selection, and overlaps with the exponential mechanism.
@@ -209,12 +214,16 @@ and Gumbel noise is added when the output measure is ``ZeroConcentratedDivergenc
 
 Report noisy max is a special case of noisy top k when k equals one.
 
+More details on `noisy max mechanisms here <noisy-max-mechanisms.html>`_.
+
+.. toctree::
+  :hidden:
+
+  noisy-max-mechanisms
+
 Randomized Response
 -------------------
 These measurements are used to randomize an individual's response to a query in the local-DP model.
-
-See `Randomized Response <randomized-response.html>`_ for code examples and more exposition.
-
 
 .. list-table::
    :header-rows: 1
@@ -235,3 +244,10 @@ See `Randomized Response <randomized-response.html>`_ for code examples and more
      - ``AtomDomain<T>``
      - ``DiscreteDistance``
      - ``MaxDivergence``
+
+More details on `randomized response here <randomized-response.html>`_.
+
+.. toctree::
+  :hidden:
+
+  randomized-response
