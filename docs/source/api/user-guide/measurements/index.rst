@@ -47,8 +47,11 @@ Laplacian Noise
 ***************
 
 :func:`make_laplace <opendp.measurements.make_laplace>` accepts sensitivities in terms of the absolute or L2 metrics and measure privacy in terms of epsilon. 
-Use the :func:`laplacian_scale_to_accuracy <opendp.accuracy.laplacian_scale_to_accuracy>`
-and :func:`accuracy_to_laplacian_scale <opendp.accuracy.accuracy_to_laplacian_scale>` functions to convert to/from accuracy estimates.
+Use :func:`laplacian_scale_to_accuracy <opendp.accuracy.laplacian_scale_to_accuracy>`
+and :func:`accuracy_to_laplacian_scale <opendp.accuracy.accuracy_to_laplacian_scale>` to convert to/from accuracy estimates.
+(:func:`make_geometric <opendp.measurements.make_geometric>`
+is equivalent to ``make_laplace`` but restricted to an integer support.
+If you need constant-time execution to protect against timing side-channels, specify bounds.)
 
 .. list-table::
    :header-rows: 1
@@ -68,8 +71,8 @@ Gaussian Noise
 **************
 
 :func:`make_gaussian <opendp.measurements.make_gaussian>` accepts sensitivities in terms of the absolute or L2 metrics and measure privacy in terms of rho (zero-concentrated differential privacy). 
-Use the :func:`gaussian_scale_to_accuracy <opendp.accuracy.gaussian_scale_to_accuracy>` and
-:func:`accuracy_to_gaussian_scale <opendp.accuracy.accuracy_to_gaussian_scale>` functions to convert to/from accuracy estimates.
+Use :func:`gaussian_scale_to_accuracy <opendp.accuracy.gaussian_scale_to_accuracy>` and
+:func:`accuracy_to_gaussian_scale <opendp.accuracy.accuracy_to_gaussian_scale>` to convert to/from accuracy estimates.
 (Refer to :ref:`measure-casting` to convert to approximate DP.)
 
 .. list-table::
@@ -84,12 +87,6 @@ Use the :func:`gaussian_scale_to_accuracy <opendp.accuracy.gaussian_scale_to_acc
    * - ``VectorDomain<AtomDomain<T>>``
      - ``L2Distance<QI>``
      - ``ZeroConcentratedDivergence``
-
-
-Geometric Noise
-***************
-The geometric mechanism (:func:`make_geometric <opendp.measurements.make_geometric>`) is an alias for the discrete Laplace (:func:`make_laplace <opendp.measurements.make_laplace>`).
-If you need constant-time execution to protect against timing side-channels, specify bounds!
 
 
 Canonical Noise
