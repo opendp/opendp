@@ -3,9 +3,9 @@
 Measurements
 ============
 
-This section gives a high-level overview of the measurements that are available in the library.
-Refer to the :ref:`section on measurements <measurements-user-guide>` in the discussion of core structures
-for a defintion of "measurement" in OpenDP.
+This page is a high-level overview of the measurements that are available in OpenDP.
+In OpenDP, measurements are randomized mappings from datasets to outputs;
+Measurements are used to create differentially private releases.
 
 The intermediate domains and metrics need to match when chaining.
 This means you will need to choose a measurement that chains with your :ref:`aggregator <aggregators>`.
@@ -24,7 +24,7 @@ This means you will need to choose a measurement that chains with your :ref:`agg
 Additive Noise Mechanisms
 -------------------------
 
-See the `Additive Noise Mechanisms notebook <additive-noise-mechanisms.html>`_ for code examples and more exposition.
+See the `Additive Noise Mechanisms <additive-noise-mechanisms.html>`_ for code examples and more exposition.
 
 Notice that there is a symmetric structure to the additive noise measurements:
 
