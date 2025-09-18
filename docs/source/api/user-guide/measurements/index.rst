@@ -91,8 +91,13 @@ Use :func:`gaussian_scale_to_accuracy <opendp.accuracy.gaussian_scale_to_accurac
 
 Canonical Noise
 ***************
-The canonical noise mechanism (:func:`opendp.measurements.make_canonical_noise`)
-is discussed in detail in `these examples <canonical-noise-mechanism.html>`_
+
+The canonical noise mechanism (:func:`make_canonical_noise <opendp.measurements.make_canonical_noise>`)
+can privatize any float-valued statistic with finite sensitivity.
+Under :math:`(\epsilon, \delta)`-DP,
+the canonical noise distribution follows the Tulap distribution,
+which is a combination of discrete laplace noise and continuous uniform noise.
+More discussion `here <canonical-noise-mechanism.html>`_.
 
 
 Thresholded Noise Mechanisms
