@@ -2,7 +2,7 @@
 Transformation example
 ======================
 
-Use :func:`opendp.transformations.make_user_transformation` to construct your own transformation.
+Use :func:`~opendp.transformations.make_user_transformation` to construct your own transformation.
 
 .. note::
 

@@ -22,9 +22,9 @@ because the relation itself acts as your predicate function.
 
 OpenDP comes with some utility functions to make these binary searches easier to conduct:
 
-* :func:`opendp.mod.binary_search_chain`: Pass it a function that makes a measurement or transformation from one numeric argument, as well as ``d_in`` and ``d_out``. Returns the tightest chain.
-* :func:`opendp.mod.binary_search_param`: Same as binary_search_chain, but returns the discovered parameter.
-* :func:`opendp.mod.binary_search`: Pass a predicate function and bounds. Returns the discovered parameter. Useful when you just want to solve for ``d_in`` or ``d_out``.
+* :func:`~opendp.mod.binary_search_chain`: Pass it a function that makes a measurement or transformation from one numeric argument, as well as ``d_in`` and ``d_out``. Returns the tightest chain.
+* :func:`~opendp.mod.binary_search_param`: Same as binary_search_chain, but returns the discovered parameter.
+* :func:`~opendp.mod.binary_search`: Pass a predicate function and bounds. Returns the discovered parameter. Useful when you just want to solve for ``d_in`` or ``d_out``.
 
 This is extremely powerful!
 
@@ -120,7 +120,7 @@ Generally speaking, each step the algorithm takes is exponentially larger than t
 If bounds are not passed to the binary search algorithm, an exponential search is run to find the bounds for the binary search.
 This is generally less likely to overflow than if you were to set large binary search bounds, because the magnitude of exponential bounds queries starts small.
 
-:func:`opendp.mod.exponential_bounds_search` uses a number of heuristics that tend to work well on most problems.
+:func:`~opendp.mod.exponential_bounds_search` uses a number of heuristics that tend to work well on most problems.
 If the heuristics fail you, then pass your own bounds into the binary search utilities.
 
 .. dropdown:: Algorithm Details

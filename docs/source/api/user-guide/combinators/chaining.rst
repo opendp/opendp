@@ -4,19 +4,19 @@ Chaining
 Two of the most essential constructors are the "chainers" that chain transformations with transformations, and transformations with measurements.
 Chainers are used to incrementally piece Transformations or Measurements together that represent longer computational pipelines.
 
-The :py:func:`opendp.combinators.make_chain_tt` constructor creates a new Transformation by stitching together two Transformations sequentially.
+The :py:func:`~opendp.combinators.make_chain_tt` constructor creates a new Transformation by stitching together two Transformations sequentially.
 The resulting Transformation contains a function that sequentially executes the function of the constituent Transformations.
 It also contains a privacy map that takes an input distance bound on the inner Transformation and emits an output distance bound on the outer transformation.
 
-The :py:func:`opendp.combinators.make_chain_mt` constructor similarly creates a new Measurement by combining an inner Transformation with an outer Measurement.
+The :py:func:`~opendp.combinators.make_chain_mt` constructor similarly creates a new Measurement by combining an inner Transformation with an outer Measurement.
 Notice that *there is no* ``make_chain_mm`` for chaining measurements together!
 Any computation beyond a measurement is postprocessing and need not be governed by relations.
 
-Postprocessing functionality is provided by the :py:func:`opendp.combinators.make_chain_pm` constructor that allows transformations to be chained onto a Measurement.
+Postprocessing functionality is provided by the :py:func:`~opendp.combinators.make_chain_pm` constructor that allows transformations to be chained onto a Measurement.
 Since the outer Transformation is postprocessing, the metrics and stability map of the outer Transformation are ignored.
 In this case, it is only necessary for the types to conform.
 
-In the following example we chain :py:func:`opendp.measurements.make_laplace` with :py:func:`opendp.transformations.make_sum`.
+In the following example we chain :py:func:`~opendp.measurements.make_laplace` with :py:func:`~opendp.transformations.make_sum`.
 
 .. tab-set::
 
@@ -49,9 +49,9 @@ In the following example we chain :py:func:`opendp.measurements.make_laplace` wi
         >>> release = noisy_sum(dataset)
 
 In practice, these chainers are used so frequently that we've written a shorthand (``>>``).
-The syntax automatically chooses between :func:`opendp.combinators.make_chain_mt`, 
-:func:`opendp.combinators.make_chain_tt`, 
-and :func:`opendp.combinators.make_chain_pm`.
+The syntax automatically chooses between :func:`~opendp.combinators.make_chain_mt`, 
+:func:`~opendp.combinators.make_chain_tt`, 
+and :func:`~opendp.combinators.make_chain_pm`.
 
 .. tab-set::
 
@@ -95,9 +95,9 @@ In the below example, the adjustment is subtle, but the bounds were adjusted to 
 Note that ``noisy_sum_trans``'s input domain and input metric come from ``sum_trans``'s input domain and input metric.
 This is intended to enable further chaining with preprocessors such as:
 
-* :py:func:`opendp.transformations.make_cast`
-* :py:func:`opendp.transformations.make_impute_constant`
-* :py:func:`opendp.transformations.make_clamp` 
-* :py:func:`opendp.transformations.make_resize`.
+* :py:func:`~opendp.transformations.make_cast`
+* :py:func:`~opendp.transformations.make_impute_constant`
+* :py:func:`~opendp.transformations.make_clamp` 
+* :py:func:`~opendp.transformations.make_resize`.
 
 See the section on :ref:`transformations-user-guide` for more information on how to preprocess data in OpenDP.

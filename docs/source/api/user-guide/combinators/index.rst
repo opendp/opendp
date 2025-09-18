@@ -20,13 +20,13 @@ Chainers are used to incrementally piece Transformations or Measurements togethe
    * - Function
      - From
      - To
-   * - :func:`opendp.combinators.make_chain_tt`
+   * - :func:`~opendp.combinators.make_chain_tt`
      - Transformation
      - Transformation
-   * - :func:`opendp.combinators.make_chain_mt`
+   * - :func:`~opendp.combinators.make_chain_mt`
      - Transformation
      - Measurement
-   * - :func:`opendp.combinators.make_chain_pm`
+   * - :func:`~opendp.combinators.make_chain_pm`
      - Measurement
      - Transformation
 
@@ -50,13 +50,13 @@ OpenDP has several compositors for making multiple releases on the same dataset:
    * - Function
      - Queries
      - Privacy Loss
-   * - :func:`opendp.combinators.make_composition`
+   * - :func:`~opendp.combinators.make_composition`
      - Non-interactive
      - Non-interactive
-   * - :func:`opendp.combinators.make_adaptive_composition`
+   * - :func:`~opendp.combinators.make_adaptive_composition`
      - Interactive
      - Non-interactive
-   * - :func:`opendp.combinators.make_fully_adaptive_composition`
+   * - :func:`~opendp.combinators.make_fully_adaptive_composition`
      - Interactive
      - Interactive
 

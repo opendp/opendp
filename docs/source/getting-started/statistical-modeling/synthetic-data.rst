@@ -8,14 +8,14 @@ and then generate synthetic data with the same relationships.
 
 Read the :ref:`contingency table <contingency-tables>` documentation first for install instructions,
 how to preprocess data, and how to specify and/or release keys.
-Synthetic data works in much the same way, but the query workload is no longer fixed (using the :py:class:`opendp.extras.mbi.Fixed` algorithm).
+Synthetic data works in much the same way, but the query workload is no longer fixed (using the :py:class:`~opendp.extras.mbi.Fixed` algorithm).
 
-All algorithms for differentially private contingency table estimation inherit from :py:class:`opendp.extras.mbi.Algorithm`:
+All algorithms for differentially private contingency table estimation inherit from :py:class:`~opendp.extras.mbi.Algorithm`:
 
-* :py:class:`opendp.extras.mbi.Fixed` (static, pre-defined workload) 
-* :py:class:`opendp.extras.mbi.AIM` (synthetic data: adaptive and iterative mechanism) 
-* :py:class:`opendp.extras.mbi.MST` (synthetic data: minimum spanning tree) 
-* :py:class:`opendp.extras.mbi.Sequential` (run a sequence of algorithms)
+* :py:class:`~opendp.extras.mbi.Fixed` (static, pre-defined workload) 
+* :py:class:`~opendp.extras.mbi.AIM` (synthetic data: adaptive and iterative mechanism) 
+* :py:class:`~opendp.extras.mbi.MST` (synthetic data: minimum spanning tree) 
+* :py:class:`~opendp.extras.mbi.Sequential` (run a sequence of algorithms)
 
 Let's get started by setting up the context for the Labor Force dataset.
 
@@ -35,7 +35,7 @@ Let's get started by setting up the context for the Labor Force dataset.
     ...     privacy_loss=dp.loss_of(rho=0.2, delta=2e-7),
     ... )
 
-We now release a contingency table via the :py:class:`opendp.extras.mbi.AIM` algorithm.
+We now release a contingency table via the :py:class:`~opendp.extras.mbi.AIM` algorithm.
 
 .. code:: pycon
 

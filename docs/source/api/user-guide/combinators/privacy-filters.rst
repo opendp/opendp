@@ -36,7 +36,7 @@ that rejects any query that would cause the privacy loss to exceed 2.0:
             :start-after: privacy-filter
             :end-before: /privacy-filter
 
-Privacy filters are measurements, meaning that they can be passed into :func:`opendp.combinators.make_composition`, 
+Privacy filters are measurements, meaning that they can be passed into :func:`~opendp.combinators.make_composition`, 
 adaptive composition queryables, or into other combinators.
 However, they have the added benefit of not needing to specify privacy-loss parameters ahead-of-time.
 When the privacy filter (``meas_fully_adaptive_comp``) is invoked, 

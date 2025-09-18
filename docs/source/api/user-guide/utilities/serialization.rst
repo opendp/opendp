@@ -6,7 +6,7 @@ Serialization
 LazyFrameQuery Serialization
 ----------------------------
 
-For a :py:class:`opendp.extras.polars.LazyFrameQuery`,
+For a :py:class:`~opendp.extras.polars.LazyFrameQuery`,
 the plan can be extracted and then used to create a new object,
 perhaps on a remote server.
 

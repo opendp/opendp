@@ -126,7 +126,7 @@ In addition, a ``size`` parameter may be used. For example:
       >>> assert bool_vector_2_domain.member([True, True])
       >>> assert not bool_vector_2_domain.member([True, True, True])
 
-Let's look at the Transformation returned from :py:func:`opendp.transformations.make_sum`.
+Let's look at the Transformation returned from :py:func:`~opendp.transformations.make_sum`.
 
 .. tab-set::
 
@@ -161,7 +161,7 @@ The output domain is "the set of all 32-bit signed integers."
 These domains serve two purposes:
 
 #. The stability map or privacy map depends on the input domain in its proof to restrict the set of neighboring datasets or distributions.
-   An example is the relation for :py:func:`opendp.transformations.make_sum`,
+   An example is the relation for :py:func:`~opendp.transformations.make_sum`,
    which may make use of a size descriptor in the vector domain to more tightly bound the sensitivity.
 #. Combinators also use domains to ensure that the output is well-defined.
    For instance, chainer constructors check that intermediate domains are equivalent

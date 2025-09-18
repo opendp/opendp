@@ -7,7 +7,7 @@ Core Structures
 
 OpenDP is focused on creating computations with specific privacy characteristics.
 These computations are modeled with two core classes in OpenDP:
-:py:class:`opendp.mod.Transformation` and :py:class:`opendp.mod.Measurement`.
+:py:class:`~opendp.mod.Transformation` and :py:class:`~opendp.mod.Measurement`.
 These classes are in all OpenDP programs, regardless of the underlying algorithm or definition of privacy.
 By modeling computations in this way, we're able to combine them in flexible arrangements and reason about the privacy properties of the resulting programs.
 OpenDP relates:
@@ -50,7 +50,7 @@ Transformation
     :width: 75%
     :alt: Diagram representing an OpenDP transformation and its six fields: input_domain, output_domain, function, input_metric, output_metric, and stability_map.
 
-A :py:class:`opendp.mod.Transformation` is a *deterministic* mapping from datasets to datasets.
+A :py:class:`~opendp.mod.Transformation` is a *deterministic* mapping from datasets to datasets.
 Transformations are used to preprocess and aggregate data.
 
 Let's assume we have a transformation called ``trans``:
@@ -77,7 +77,7 @@ Transformations need to be :ref:`chained <chaining>` with a measurement before t
 Measurement
 -----------
 
-A :py:class:`opendp.mod.Measurement` is, in contrast, a *randomized* mapping from datasets to outputs.
+A :py:class:`~opendp.mod.Measurement` is, in contrast, a *randomized* mapping from datasets to outputs.
 Measurements are used to create differentially private releases.
 
 Say we have an arbitrary instance of a Measurement, called ``meas``, and a code snippet:

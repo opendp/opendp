@@ -54,10 +54,10 @@ There are additional modifiers:
 
 Some examples being:
 
-* ``TA`` for the atomic type. ``float`` could be the TA for a float :py:func:`opendp.transformations.make_clamp`.
-* ``TIA`` for Atomic Input Type. ``str`` could be the TIA for a :py:func:`opendp.transformations.make_count`.
-* ``MO`` for Output Metric. ``AbsoluteDistance[int]`` could be the MO for a :py:func:`opendp.transformations.make_count_by_categories`.
-* ``QO`` for Output distance. ``float`` could be the QO for a :py:func:`opendp.measurements.make_laplace`.
+* ``TA`` for the atomic type. ``float`` could be the TA for a float :py:func:`~opendp.transformations.make_clamp`.
+* ``TIA`` for Atomic Input Type. ``str`` could be the TIA for a :py:func:`~opendp.transformations.make_count`.
+* ``MO`` for Output Metric. ``AbsoluteDistance[int]`` could be the MO for a :py:func:`~opendp.transformations.make_count_by_categories`.
+* ``QO`` for Output distance. ``float`` could be the QO for a :py:func:`~opendp.measurements.make_laplace`.
 
 The API docs should also include explanations in most contexts.
 
@@ -105,7 +105,7 @@ It can be more convenient to denote types in terms of Python types, so we've add
    * - ``bool``
      - ``bool``
 
-You can change the default type for floats and ints via :py:func:`opendp.typing.set_default_float_type` and :py:func:`opendp.typing.set_default_int_type`, respectively.
+You can change the default type for floats and ints via :py:func:`~opendp.typing.set_default_float_type` and :py:func:`~opendp.typing.set_default_int_type`, respectively.
 These functions make it easy to set the default bit depth throughout your code, all at once.
 
 This can be particularly useful when working with NumPy arrays which default to ``i64``, or when working with deep learning libraries that default to single-precision floats. 

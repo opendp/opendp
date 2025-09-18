@@ -153,6 +153,6 @@ are together in the data pipeline. OpenDP does, however, enforce that
 group-by truncations are the last truncations in the data pipeline.
 
 See :ref:`Bounds <bounds-user-guide>` in the API user guide, and
-:py:func:`opendp.extras.polars.LazyFrameQuery.truncate_per_group`
-and :py:func:`opendp.extras.polars.LazyFrameQuery.truncate_num_groups`
+:py:func:`~opendp.extras.polars.LazyFrameQuery.truncate_per_group`
+and :py:func:`~opendp.extras.polars.LazyFrameQuery.truncate_num_groups`
 in the API documentation for more on configuring truncation.
