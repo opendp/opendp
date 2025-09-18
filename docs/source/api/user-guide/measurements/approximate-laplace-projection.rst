@@ -1,3 +1,5 @@
+.. _approximate-laplace-projection:
+
 Approximate Laplace Projection
 ==============================
 

@@ -18,6 +18,7 @@ This means you will need to choose a measurement that chains with your :ref:`agg
   thresholded-noise-mechanisms
   canonical-noise-mechanism
   noisy-max-mechanisms
+  approximate-laplace-projection
   randomized-response
 
 Additive Noise Mechanisms
@@ -168,7 +169,7 @@ Approximate Laplace Projection
 In a similar regime as the thresholded noise mechanism, where keys themselves need to be protected,
 another approach is to release a differentially private low-dimensional projection of the key-space.
 
-See `Approximate Laplace Projection <approximate-laplace-projection.html>`_ for a demonstration of the approach.
+See :ref:`approximate-laplace-projection` for a demonstration of the approach.
 
 
 .. list-table::
