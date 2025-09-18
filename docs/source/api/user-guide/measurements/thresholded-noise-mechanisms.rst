@@ -44,66 +44,53 @@ mean.
 An instance of the Laplace threshold mechanism is captured by a
 *measurement* containing the following five elements:
 
-.. raw:: html
 
-   <details>
+.. dropdown:: Elements of a Laplace Threshold Measurement
 
-.. raw:: html
+    1. We first define the **function** :math:`f(\cdot)`, that applies the
+    Laplace mechanism to the values of :math:`x`, and then discards pairs
+    whose value is below the threshold.
 
-   <summary>
+    .. code:: pycon
 
-Elements of a Laplace Threshold Measurement
+        >>> from typing import Any
+        >>> def f(x: dict[Any, float]) -> dict[Any, float]:
+        ...     x = {k: Laplace(mu=v, b=scale) for k, v in x.items()}
+        ...     return {k: v for k, v in x.items() if v >= threshold}
 
-.. raw:: html
+    2. Importantly, :math:`f(\cdot)` is only well-defined for any dictionary
+    with finite float values. This set of permitted inputs is described
+    by the **input domain** (denoted
+    ``MapDomain<AtomDomain<TK>, AtomDomain<f64>>``).
 
-   </summary>
+    3. The Laplace threshold mechanism has a privacy guarantee in terms of
+    :math:`\epsilon` and :math:`\delta`. This guarantee is represented by
+    a **privacy map**, a function that computes the greatest privacy loss
+    :math:`(\epsilon, \delta)` for any choice of sensitivity
+    :math:`\Delta_0, \Delta_1, \Delta_\infty`. The privacy map is roughly
+    implemented as follows:
 
-1. We first define the **function** :math:`f(\cdot)`, that applies the
-   Laplace mechanism to the values of :math:`x`, and then discards pairs
-   whose value is below the threshold.
+    .. code:: pycon
 
-.. code:: python
+        >>> def map(d_in):
+        ...     l0, l1, li = d_in
+        ...     epsilon = l1 / scale
+        ... 
+        ...     # probability of sampling a noise value greater than: threshold - li
+        ...     delta_single = tail(scale, threshold - li)
+        ...     delta = 1 - (1 - delta_single)**l0
+        ...     return epsilon, delta
 
-       def f(x: dict[Any, float]) -> dict[Any, float]:
-           x = {k: Laplace(mu=v, b=scale) for k, v in x.items()}
-           return {k: v for k, v in x.items() if v >= threshold}
+    4. This map only promises that the privacy loss will be at most
+    :math:`\epsilon` if inputs from any two neighboring datasets may
+    differ by no more than some quantity
+    :math:`\Delta_0, \Delta_1, \Delta_\infty` under the absolute distance
+    **input metric** (``L01InfDistance<AbsoluteDistance<f64>>``).
 
-2. Importantly, :math:`f(\cdot)` is only well-defined for any dictionary
-   with finite float values. This set of permitted inputs is described
-   by the **input domain** (denoted
-   ``MapDomain<AtomDomain<TK>, AtomDomain<f64>>``).
+    5. We similarly describe units on the output
+    (:math:`(\epsilon, \delta)`) via the **output measure**
+    (``Approximate<MaxDivergence>``).
 
-3. The Laplace threshold mechanism has a privacy guarantee in terms of
-   :math:`\epsilon` and :math:`\delta`. This guarantee is represented by
-   a **privacy map**, a function that computes the greatest privacy loss
-   :math:`(\epsilon, \delta)` for any choice of sensitivity
-   :math:`\Delta_0, \Delta_1, \Delta_\infty`. The privacy map is roughly
-   implemented as follows:
-
-.. code:: python
-
-       def map(d_in):
-           l0, l1, li = d_in
-           epsilon = l1 / scale
-
-           # probability of sampling a noise value greater than: threshold - li
-           delta_single = tail(scale, threshold - li)
-           delta = 1 - (1 - delta_single)**l0
-           return epsilon, delta
-
-4. This map only promises that the privacy loss will be at most
-   :math:`\epsilon` if inputs from any two neighboring datasets may
-   differ by no more than some quantity
-   :math:`\Delta_0, \Delta_1, \Delta_\infty` under the absolute distance
-   **input metric** (``L01InfDistance<AbsoluteDistance<f64>>``).
-
-5. We similarly describe units on the output
-   (:math:`(\epsilon, \delta)`) via the **output measure**
-   (``Approximate<MaxDivergence>``).
-
-.. raw:: html
-
-   </details>
 
 The ``make_laplace_threshold`` constructor function returns the
 equivalent of the Laplace threshold measurement described above.
@@ -129,7 +116,7 @@ equivalent of the Laplace threshold measurement described above.
             ...     "c": 40.0,
             ... }
             >>> print("noisy aggregate:", m_lap(aggregated))
-            noisy aggregate: {'c': 40.17307713885866}
+            noisy aggregate: {...}
 
 As expected, pairs with small values (like ``"a": 0.0``) had too few
 people contribute to be included in the release.
@@ -176,12 +163,12 @@ The analogous constructor for gaussian noise is
             
             >>> # invoke the measurement on some aggregate hashmap, to sample Gaussian(x, 1.) noise
             >>> print("noisy aggregate:", m_gauss(aggregated))
+            noisy aggregate: {...}
             
             >>> # we must know the sensitivity of `aggregated` to determine privacy params
             >>> #  3 kinds: Δ_0, Δ_1, Δ_∞
             >>> sensitivity = 1, 1.0, 1.0
             >>> print("(ρ, δ):", m_gauss.map(d_in=sensitivity))
-            noisy aggregate: {'c': 40.93198267967212}
             (ρ, δ): (0.5, 1.1102230246251565e-16)
 
 In this case, :math:`\Delta_1` in ``d_in`` is replaced with
@@ -239,8 +226,9 @@ number of partitions.
 
             >>> sensitivity_spread = 100, 10.0, 0.001
             >>> print("laplace  (ε, δ):", m_lap.map(d_in=sensitivity_spread))
-            >>> print("gaussian (ε, δ):", m_gauss_approx.map(d_in=sensitivity_spread))
             laplace  (ε, δ): (0.1, 1.0316078580263621e-07)
+
+            >>> print("gaussian (ε, δ):", m_gauss_approx.map(d_in=sensitivity_spread))
             gaussian (ε, δ): (0.049969691134438526, 2.801398224505647e-09)
 
 In this alternative world where individuals may have a small influence
@@ -284,11 +272,11 @@ floats, while the discrete measurements accept and emit integers.
             ...     "c": 20,
             ... }
             >>> print("noisy aggregate:", m_dlap(aggregated))
-            
+            noisy aggregate: {...}
+
             >>> # in this case, the sensitivity is integral:
             >>> sensitivity = 1, 1, 1
             >>> print("(ε, δ):", m_dlap.map(d_in=sensitivity))
-            noisy aggregate: {'b': 10, 'c': 22}
             (ε, δ): (1.0, 3.319000812207484e-05)
 
 ``make_gaussian_threshold`` on a discrete support is the analogous
@@ -317,11 +305,11 @@ measurement for Gaussian noise:
             ...     "c": 20,
             ... }
             >>> print("noisy aggregate:", m_dgauss(aggregated))
-            
+            noisy aggregate: {...}
+
             >>> # in this case, the sensitivity is integral:
             >>> sensitivity = 1, 1, 1
             >>> print("(ρ, δ):", m_dgauss.map(d_in=sensitivity))
-            noisy aggregate: {'c': 20, 'b': 10}
             (ρ, δ): (0.5, 1.1102230246251565e-16)
 
 The continuous mechanisms use these discrete samplers internally.
@@ -355,11 +343,11 @@ threshold are discarded.
             ...     "c": -20,
             ... }
             >>> print("noisy aggregate:", m_dlap(aggregated))
-            
+            noisy aggregate: {...}
+
             >>> # in this case, the sensitivity is integral:
             >>> sensitivity = 1, 1, 1
             >>> print("(ε, δ):", m_dlap.map(d_in=sensitivity))
-            noisy aggregate: {'c': -20, 'b': -11}
             (ε, δ): (1.0, 3.319000812207484e-05)
 
 Bit depth

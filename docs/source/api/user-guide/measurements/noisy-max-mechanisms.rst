@@ -102,10 +102,10 @@ making gumbel noise competitive.
             ... )
             
             >>> print("noisy max:", exponential_max(scores))
+            noisy max: ...
             
             >>> #                 sensitivity * 2 / scale
             >>> print("epsilon:", exponential_max.map(d_in=sensitivity))
-            noisy max: 3
             epsilon: 1.0
 
 Both variations of the mechanism share very similar privacy maps between
@@ -128,10 +128,10 @@ additive noise mechanisms (laplace and gaussian).
             ... )
             
             >>> print("noisy max:", gumbel_max(scores))
+            noisy max: ...
             
             >>> #             (sensitivity * 2 / scale)^2 / 8
             >>> print("rho:", gumbel_max.map(d_in=sensitivity))
-            noisy max: 2
             rho: 0.125
 
 Take note that gumbel noise results in a much slower runtime on common
@@ -196,7 +196,7 @@ largest, then negate the inputs:
             ... )
             
             >>> print("noisy min:", exponential_min(scores))
-            noisy min: 0
+            noisy min: ...
 
 The negation of scores does not affect the privacy loss.
 
@@ -223,10 +223,9 @@ simultaneously:
             
             >>> scores = [0.0, 1.0, 2.0, 3.0]
             >>> print("noisy top 2:", exponential_top_k(scores))
+            noisy top 2: [...]
             
-            >>> scores = [0.0, 1.0, 2.0, 3.0]
             >>> print("epsilon:", exponential_top_k.map(d_in=sensitivity))
-            noisy top 2: [2, 1]
             epsilon: 2.0
 
 In the output, the ordering of indices is significant. That is, the
