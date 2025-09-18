@@ -3,7 +3,6 @@
 Measurements
 ============
 
-This page is a high-level overview of the measurements that are available in OpenDP.
 In OpenDP, measurements are randomized mappings from datasets to outputs;
 Measurements are used to create differentially private releases.
 
@@ -22,9 +21,9 @@ There is a symmetric structure to the additive noise measurements:
    * - Vector Input Metric
      - Constructor
    * - ``L1Distance<QI>``
-     - :func:`make_laplace <opendp.measurements.make_laplace>`
+     - :func:`~opendp.measurements.make_laplace`
    * - ``L2Distance<QI>``
-     - :func:`make_gaussian <opendp.measurements.make_gaussian>`
+     - :func:`~opendp.measurements.make_gaussian`
 
 ``QI`` can be any numeric type (the data type of the sensitivity can vary independently from the data type of the input).
 
@@ -42,10 +41,10 @@ More details on `laplacian and gaussian noise mechanisms here <additive-noise-me
 Laplacian Noise
 ***************
 
-:func:`make_laplace <opendp.measurements.make_laplace>` accepts sensitivities in terms of the absolute or L2 metrics and measure privacy in terms of epsilon. 
-Use :func:`laplacian_scale_to_accuracy <opendp.accuracy.laplacian_scale_to_accuracy>`
-and :func:`accuracy_to_laplacian_scale <opendp.accuracy.accuracy_to_laplacian_scale>` to convert to/from accuracy estimates.
-(:func:`make_geometric <opendp.measurements.make_geometric>`
+:func:`~opendp.measurements.make_laplace` accepts sensitivities in terms of the absolute or L2 metrics and measure privacy in terms of epsilon. 
+Use :func:`~opendp.accuracy.laplacian_scale_to_accuracy`
+and :func:`~opendp.accuracy.accuracy_to_laplacian_scale` to convert to/from accuracy estimates.
+(:func:`~opendp.measurements.make_geometric`
 is equivalent to ``make_laplace`` but restricted to an integer support.
 If you need constant-time execution to protect against timing side-channels, specify bounds.)
 
@@ -66,9 +65,9 @@ If you need constant-time execution to protect against timing side-channels, spe
 Gaussian Noise
 **************
 
-:func:`make_gaussian <opendp.measurements.make_gaussian>` accepts sensitivities in terms of the absolute or L2 metrics and measure privacy in terms of rho (zero-concentrated differential privacy). 
-Use :func:`gaussian_scale_to_accuracy <opendp.accuracy.gaussian_scale_to_accuracy>` and
-:func:`accuracy_to_gaussian_scale <opendp.accuracy.accuracy_to_gaussian_scale>` to convert to/from accuracy estimates.
+:func:`~opendp.measurements.make_gaussian` accepts sensitivities in terms of the absolute or L2 metrics and measure privacy in terms of rho (zero-concentrated differential privacy). 
+Use :func:`~opendp.accuracy.gaussian_scale_to_accuracy` and
+:func:`~opendp.accuracy.accuracy_to_gaussian_scale` to convert to/from accuracy estimates.
 (Refer to :ref:`measure-casting` to convert to approximate DP.)
 
 .. list-table::
@@ -87,7 +86,7 @@ Use :func:`gaussian_scale_to_accuracy <opendp.accuracy.gaussian_scale_to_accurac
 Canonical Noise
 ***************
 
-The canonical noise mechanism (:func:`make_canonical_noise <opendp.measurements.make_canonical_noise>`)
+The canonical noise mechanism (:func:`~opendp.measurements.make_canonical_noise`)
 can privatize any float-valued statistic with finite sensitivity.
 Under :math:`(\epsilon, \delta)`-DP,
 the canonical noise distribution follows the Tulap distribution,
@@ -115,9 +114,9 @@ Just like the additive noise mechanisms, the thresholded noise mechanisms have a
    * - Vector Input Metric
      - Constructor
    * - ``L01InfDistance<AbsoluteDistance<T>>``
-     - :func:`make_laplace_threshold <opendp.measurements.make_laplace_threshold>`
+     - :func:`~opendp.measurements.make_laplace_threshold`
    * - ``L02InfDistance<AbsoluteDistance<T>>``
-     - :func:`make_gaussian_threshold <opendp.measurements.make_gaussian_threshold>`
+     - :func:`~opendp.measurements.make_gaussian_threshold`
 
 More details on `thresholded noise mechanisms here <thresholded-noise-mechanisms.html>`_.
 
@@ -129,8 +128,8 @@ More details on `thresholded noise mechanisms here <thresholded-noise-mechanisms
 Thresholded Laplacian Noise
 ***************************
 
-:func:`make_laplace_threshold <opendp.measurements.make_laplace_threshold>` accepts ``L0``, ``L1`` and ``L∞`` sensitivities and measures privacy in terms of epsilon and delta. 
-Use the :func:`opendp.accuracy.laplacian_scale_to_accuracy` and :func:`opendp.accuracy.accuracy_to_laplacian_scale` 
+:func:`~opendp.measurements.make_laplace_threshold` accepts ``L0``, ``L1`` and ``L∞`` sensitivities and measures privacy in terms of epsilon and delta. 
+Use the :func:`~opendp.accuracy.laplacian_scale_to_accuracy` and :func:`~opendp.accuracy.accuracy_to_laplacian_scale` 
 functions to convert to/from accuracy estimates.
 
 .. list-table::
@@ -147,8 +146,8 @@ functions to convert to/from accuracy estimates.
 Thresholded Gaussian Noise
 **************************
 
-:func:`make_gaussian_threshold <opendp.measurements.make_gaussian_threshold>` accepts ``L0``, ``L2`` and ``L∞`` sensitivities and measures privacy in terms of rho and delta. 
-Use the :func:`opendp.accuracy.gaussian_scale_to_accuracy` and :func:`opendp.accuracy.accuracy_to_gaussian_scale` 
+:func:`~opendp.measurements.make_gaussian_threshold` accepts ``L0``, ``L2`` and ``L∞`` sensitivities and measures privacy in terms of rho and delta. 
+Use the :func:`~opendp.accuracy.gaussian_scale_to_accuracy` and :func:`~opendp.accuracy.accuracy_to_gaussian_scale` 
 functions to convert to/from accuracy estimates.
 Refer to :ref:`measure-casting` to convert to approximate DP.
 
@@ -165,19 +164,17 @@ Refer to :ref:`measure-casting` to convert to approximate DP.
 Approximate Laplace Projection
 ------------------------------
 
-In a similar regime as the thresholded noise mechanism, where keys themselves need to be protected,
+:func:`~opendp.measurements.make_alp_queryable`: In a similar regime as the thresholded noise mechanism, where keys themselves need to be protected,
 another approach is to release a differentially private low-dimensional projection of the key-space.
 
 
 .. list-table::
    :header-rows: 1
 
-   * - Measurement
-     - Input Domain
+   * - Input Domain
      - Input Metric
      - Output Measure
-   * - :func:`opendp.measurements.make_alp_queryable`
-     - ``MapDomain<AtomDomain<TK>, AtomDomain<TV>>``
+   * - ``MapDomain<AtomDomain<TK>, AtomDomain<TV>>``
      - ``L01InfDistance<AbsoluteDistance<QI>>``
      - ``MaxDivergence``
 
@@ -191,6 +188,7 @@ More details on :ref:`approximate laplace projection here <approximate-laplace-p
 Noisy Max and Noisy Top K
 -------------------------
 
+:func:`~opendp.measurements.make_noisy_top_k` and :func:`~opendp.measurements.make_noisy_max`:
 The report noisy top-k mechanism is used to privately release the indices of the maximum k values in a vector.
 This is useful for private selection, and overlaps with the exponential mechanism.
 Exponential noise is added to scores when the output measure is ``MaxDivergence``,
@@ -199,16 +197,13 @@ and Gumbel noise is added when the output measure is ``ZeroConcentratedDivergenc
 .. list-table::
    :header-rows: 1
 
-   * - Measurement
-     - Input Domain
+   * - Input Domain
      - Input Metric
      - Output Measure
-   * - :func:`opendp.measurements.make_noisy_top_k`
-     - ``VectorDomain<AtomDomain<T>>``
+   * - ``VectorDomain<AtomDomain<T>>``
      - ``LInfDistance<T>``
      - ``MaxDivergence`` or ``ZeroConcentratedDivergence``
-   * - :func:`opendp.measurements.make_noisy_max`
-     - ``VectorDomain<AtomDomain<T>>``
+   * - ``VectorDomain<AtomDomain<T>>``
      - ``LInfDistance<T>``
      - ``MaxDivergence`` or ``ZeroConcentratedDivergence``
 
@@ -232,15 +227,15 @@ These measurements are used to randomize an individual's response to a query in 
      - Input Domain
      - Input Metric
      - Output Measure
-   * - :func:`opendp.measurements.make_randomized_response_bool`
+   * - :func:`~opendp.measurements.make_randomized_response_bool`
      - ``AtomDomain<bool>``
      - ``DiscreteDistance``
      - ``MaxDivergence``
-   * - :func:`opendp.measurements.make_randomized_response`
+   * - :func:`~opendp.measurements.make_randomized_response`
      - ``AtomDomain<T>``
      - ``DiscreteDistance``
      - ``MaxDivergence``
-   * - :func:`opendp.measurements.make_randomized_response_bitvec`
+   * - :func:`~opendp.measurements.make_randomized_response_bitvec`
      - ``AtomDomain<T>``
      - ``DiscreteDistance``
      - ``MaxDivergence``
