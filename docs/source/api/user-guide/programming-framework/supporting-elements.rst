@@ -126,7 +126,7 @@ In addition, a ``size`` parameter may be used. For example:
       >>> assert bool_vector_2_domain.member([True, True])
       >>> assert not bool_vector_2_domain.member([True, True, True])
 
-Let's look at the Transformation returned from :py:func:`make_sum() <opendp.transformations.make_sum>`.
+Let's look at the Transformation returned from :py:func:`opendp.transformations.make_sum`.
 
 .. tab-set::
 

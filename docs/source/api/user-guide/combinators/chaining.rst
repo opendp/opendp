@@ -49,9 +49,9 @@ In the following example we chain :py:func:`opendp.measurements.make_laplace` wi
         >>> release = noisy_sum(dataset)
 
 In practice, these chainers are used so frequently that we've written a shorthand (``>>``).
-The syntax automatically chooses between :func:`make_chain_mt <opendp.combinators.make_chain_mt>`, 
-:func:`make_chain_tt <opendp.combinators.make_chain_tt>`, 
-and :func:`make_chain_pm <opendp.combinators.make_chain_pm>`.
+The syntax automatically chooses between :func:`opendp.combinators.make_chain_mt`, 
+:func:`opendp.combinators.make_chain_tt`, 
+and :func:`opendp.combinators.make_chain_pm`.
 
 .. tab-set::
 
@@ -95,9 +95,9 @@ In the below example, the adjustment is subtle, but the bounds were adjusted to 
 Note that ``noisy_sum_trans``'s input domain and input metric come from ``sum_trans``'s input domain and input metric.
 This is intended to enable further chaining with preprocessors such as:
 
-* :py:func:`make_cast <opendp.transformations.make_cast>`
-* :py:func:`make_impute_constant <opendp.transformations.make_impute_constant>`
-* :py:func:`make_clamp <opendp.transformations.make_clamp>` 
-* :py:func:`make_resize <opendp.transformations.make_resize>`.
+* :py:func:`opendp.transformations.make_cast`
+* :py:func:`opendp.transformations.make_impute_constant`
+* :py:func:`opendp.transformations.make_clamp` 
+* :py:func:`opendp.transformations.make_resize`.
 
 See the section on :ref:`transformations-user-guide` for more information on how to preprocess data in OpenDP.

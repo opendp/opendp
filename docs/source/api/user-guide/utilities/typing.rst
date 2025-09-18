@@ -54,10 +54,10 @@ There are additional modifiers:
 
 Some examples being:
 
-* ``TA`` for the atomic type. ``float`` could be the TA for a float :py:func:`clamp transformation <opendp.transformations.make_clamp>`.
-* ``TIA`` for Atomic Input Type. ``str`` could be the TIA for a :py:func:`count transformation <opendp.transformations.make_count>`.
-* ``MO`` for Output Metric. ``AbsoluteDistance[int]`` could be the MO for a :py:func:`histogram transformation <opendp.transformations.make_count_by_categories>`.
-* ``QO`` for Output distance. ``float`` could be the QO for a :py:func:`Laplace measurement <opendp.measurements.make_laplace>`.
+* ``TA`` for the atomic type. ``float`` could be the TA for a float :py:func:`opendp.transformations.make_clamp`.
+* ``TIA`` for Atomic Input Type. ``str`` could be the TIA for a :py:func:`opendp.transformations.make_count`.
+* ``MO`` for Output Metric. ``AbsoluteDistance[int]`` could be the MO for a :py:func:`opendp.transformations.make_count_by_categories`.
+* ``QO`` for Output distance. ``float`` could be the QO for a :py:func:`opendp.measurements.make_laplace`.
 
 The API docs should also include explanations in most contexts.
 
