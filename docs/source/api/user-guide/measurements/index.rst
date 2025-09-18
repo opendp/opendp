@@ -24,9 +24,9 @@ This means you will need to choose a measurement that chains with your :ref:`agg
 Additive Noise Mechanisms
 -------------------------
 
-See the `Additive Noise Mechanisms <additive-noise-mechanisms.html>`_ for code examples and more exposition.
+See `Additive Noise Mechanisms <additive-noise-mechanisms.html>`_ for code examples and more exposition.
 
-Notice that there is a symmetric structure to the additive noise measurements:
+Note that there is a symmetric structure to the additive noise measurements:
 
 .. list-table::
    :header-rows: 1
@@ -40,29 +40,26 @@ Notice that there is a symmetric structure to the additive noise measurements:
 
 ``QI`` can be any numeric type (the data type of the sensitivity can vary independently from the data type of the input).
 
-In the following sections, scalar-valued and vector-valued versions of each measurement are listed separately.
-You can choose whether to construct scalar or vector-valued versions of mechanisms by passing the appropriate input space.
-See the notebook above for examples.
+By passing the appropriate input space,
+you can construct either scalar or vector-valued mechanisms.
 
 Laplacian Noise
 ***************
 
-These algorithms accept sensitivities in terms of the absolute or L2 metrics and measure privacy in terms of epsilon. 
-Use the :func:`opendp.accuracy.laplacian_scale_to_accuracy` and :func:`opendp.accuracy.accuracy_to_laplacian_scale` functions to convert to/from accuracy estimates.
+:func:`make_laplace <opendp.measurements.make_laplace>` accepts sensitivities in terms of the absolute or L2 metrics and measure privacy in terms of epsilon. 
+Use the :func:`laplacian_scale_to_accuracy <opendp.accuracy.laplacian_scale_to_accuracy>`
+and :func:`accuracy_to_laplacian_scale <opendp.accuracy.accuracy_to_laplacian_scale>` functions to convert to/from accuracy estimates.
 
 .. list-table::
    :header-rows: 1
 
-   * - Measurement
-     - Input Domain
+   * - Input Domain
      - Input Metric
      - Output Measure
-   * - :func:`opendp.measurements.make_laplace`
-     - ``AtomDomain<T>``
+   * - ``AtomDomain<T>``
      - ``AbsoluteDistance<QI>``
      - ``MaxDivergence``
-   * - :func:`opendp.measurements.make_laplace`
-     - ``VectorDomain<AtomDomain<T>>``
+   * - ``VectorDomain<AtomDomain<T>>``
      - ``L1Distance<QI>``
      - ``MaxDivergence``
 
@@ -70,23 +67,21 @@ Use the :func:`opendp.accuracy.laplacian_scale_to_accuracy` and :func:`opendp.ac
 Gaussian Noise
 **************
 
-These algorithms accept sensitivities in terms of the absolute or L2 metrics and measure privacy in terms of rho (zero-concentrated differential privacy). 
-Use the :func:`opendp.accuracy.gaussian_scale_to_accuracy` and :func:`opendp.accuracy.accuracy_to_gaussian_scale` functions to convert to/from accuracy estimates.
-Refer to :ref:`measure-casting` to convert to approximate DP.
+:func:`make_gaussian <opendp.measurements.make_gaussian>` accepts sensitivities in terms of the absolute or L2 metrics and measure privacy in terms of rho (zero-concentrated differential privacy). 
+Use the :func:`gaussian_scale_to_accuracy <opendp.accuracy.gaussian_scale_to_accuracy>` and
+:func:`accuracy_to_gaussian_scale <opendp.accuracy.accuracy_to_gaussian_scale>` functions to convert to/from accuracy estimates.
+(Refer to :ref:`measure-casting` to convert to approximate DP.)
 
 .. list-table::
    :header-rows: 1
 
-   * - Measurement
-     - Input Domain
+   * - Input Domain
      - Input Metric
      - Output Measure
-   * - :func:`opendp.measurements.make_gaussian`
-     - ``AtomDomain<T>``
+   * - ``AtomDomain<T>``
      - ``AbsoluteDistance<QI>``
      - ``ZeroConcentratedDivergence``
-   * - :func:`opendp.measurements.make_gaussian`
-     - ``VectorDomain<AtomDomain<T>>``
+   * - ``VectorDomain<AtomDomain<T>>``
      - ``L2Distance<QI>``
      - ``ZeroConcentratedDivergence``
 
