@@ -59,6 +59,25 @@ def test_code_block_language(rst_path: Path):
     list(docs_source.glob("**/*.rst")),
     ids=get_self_and_parent
 )
+def test_tilde_ref(rst_path: Path):
+    rst_lines = rst_path.read_text().splitlines()
+    errors = []
+    for i, line in enumerate(rst_lines):
+        # First character in content is not a "~":
+        if m := re.search(r':(func|class):`([^~][^`]+)`', line):
+            old = m.group(2)
+            if '<' in old:
+                old = re.sub(r'.*<([^>]+)>', r'\1', old)
+            new = f'~{old}'
+            errors.append(f'line {i+1}: replace "{m.group(2)}" with "{new}"')
+    assert not errors, '\n'.join(errors)
+
+
+@pytest.mark.parametrize(
+    "rst_path",
+    list(docs_source.glob("**/*.rst")),
+    ids=get_self_and_parent
+)
 def test_single_backticks(rst_path: Path):
     rst_lines = rst_path.read_text().splitlines()
     errors = []
