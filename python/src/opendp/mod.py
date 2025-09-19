@@ -646,7 +646,7 @@ class Queryable:
     Queryables are used for interactive mechanisms like :ref:`adaptive composition <adaptive-composition>`.
 
     Queryables can be created with :py:func:`make_adaptive_composition <opendp.combinators.make_adaptive_composition>`
-    or :py:func:`new_queryable <opendp.core.new_queryable>`.
+    or :py:func:`~opendp.core.new_queryable`.
     '''
     def __init__(self, value, query_type):
         self.value = value
@@ -663,7 +663,7 @@ class OdometerQueryable:
     '''
     Odometer Queryables are used for instances of odometers like :ref:`fully adaptive composition <fully-adaptive-composition>`.
 
-    Can be created via :py:func:`make_fully_adaptive_composition <opendp.combinators.make_fully_adaptive_composition>`.
+    Can be created via :py:func:`~opendp.combinators.make_fully_adaptive_composition`.
     '''
     def __init__(self, value):
         self.value = value
@@ -798,7 +798,7 @@ class Domain(ctypes.POINTER(AnyDomain)): # type: ignore[misc]
 class AtomDomain(Domain):
     '''The domain of all values of a given atomic type.
 
-    Create an instance of this domain with :py:func:`opendp.domains.atom_domain`.
+    Create an instance of this domain with :py:func:`~opendp.domains.atom_domain`.
 
     If bounds are set, then the domain is restricted to the bounds.
     If nullable is set, then null value(s) are included in the domain.
@@ -826,7 +826,7 @@ class AtomDomain(Domain):
 class OptionDomain(Domain):
     '''A domain whose members are either members of the ``element_domain``, or ``None``.
 
-    Create an instance of this domain with :py:func:`opendp.domains.option_domain`.
+    Create an instance of this domain with :py:func:`~opendp.domains.option_domain`.
 
     The element domain is the domain of non-null values.
     '''
@@ -843,7 +843,7 @@ class OptionDomain(Domain):
 class VectorDomain(Domain):
     '''``VectorDomain`` describes the domain of all vectors whose elements are members of a given domain.
     
-    Create an instance of this domain with :py:func:`opendp.domains.vector_domain`.
+    Create an instance of this domain with :py:func:`~opendp.domains.vector_domain`.
     '''
     _type_ = AnyDomain
     
@@ -863,7 +863,7 @@ class VectorDomain(Domain):
 class SeriesDomain(Domain):
     '''``SeriesDomain`` describes the domain of all polars Series.
     
-    Create an instance of this domain with :py:func:`opendp.domains.series_domain`.
+    Create an instance of this domain with :py:func:`~opendp.domains.series_domain`.
     '''
     _type_ = AnyDomain
 
@@ -888,7 +888,7 @@ class SeriesDomain(Domain):
 class LazyFrameDomain(Domain):
     '''``LazyFrameDomain`` describes the domain of all polars LazyFrames.
     
-    Create an instance of this domain with :py:func:`opendp.domains.lazyframe_domain`.
+    Create an instance of this domain with :py:func:`~opendp.domains.lazyframe_domain`.
     '''
     _type_ = AnyDomain
 
@@ -1125,7 +1125,7 @@ class PrivacyProfile(object):
     Given a profile function provided by the user,
     gives the epsilon corresponding to a given delta, and vice versa.
 
-    :py:func:`new_privacy_profile <opendp.measures.new_privacy_profile>`
+    :py:func:`~opendp.measures.new_privacy_profile`
     should be used to create new instances.
     '''
     def __init__(self, curve):
