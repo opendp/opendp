@@ -121,7 +121,7 @@ hash-based representation of the counts of all possible names.
         .. code:: pycon
 
             >>> qbl("Michael"), qbl("James"), qbl("Sharon"), qbl("Lancelot")
-            (..., 0.0)
+            (...)
 
 These counts roughly correspond to the input data.
 
