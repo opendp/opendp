@@ -58,7 +58,7 @@ class DPExpr(object):
     If both ``opendp`` and ``polars`` have been imported,
     the methods of :py:class:`DPExpr` are registered under the ``dp`` namespace in
     `Polars expressions <https://docs.pola.rs/py-polars/html/reference/expressions/index.html>`_.
-    An expression can be used as a plan in :py:func:`opendp.measurements.make_private_lazyframe`;
+    An expression can be used as a plan in :py:func:`~opendp.measurements.make_private_lazyframe`;
     See the full example there for more information.
 
     In addition to the DP-specific methods here, many Polars ``Expr`` methods are also supported,
@@ -81,7 +81,7 @@ class DPExpr(object):
     ):
         """Add noise to the expression.
 
-        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+        If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
         The noise distribution is chosen according to the privacy definition:
 
         * Pure-DP: Laplace noise, where ``scale == standard_deviation / sqrt(2)``
@@ -122,7 +122,7 @@ class DPExpr(object):
     def laplace(self, scale: float | None = None):
         """Add Laplace noise to the expression.
 
-        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+        If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
         :param scale: Noise scale parameter for the Laplace distribution. ``scale == standard_deviation / sqrt(2)``
         """
@@ -132,7 +132,7 @@ class DPExpr(object):
     def gaussian(self, scale: float | None = None):
         """Add Gaussian noise to the expression.
 
-        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+        If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
         :param scale: Noise scale parameter for the Gaussian distribution. ``scale == standard_deviation``
         """
@@ -141,7 +141,7 @@ class DPExpr(object):
     def len(self, scale: float | None = None):
         """Compute a differentially private estimate of the number of elements in `self`, including null values.
 
-        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+        If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
         :param scale: parameter for the noise distribution.
 
@@ -186,7 +186,7 @@ class DPExpr(object):
 
         This function is a shortcut for the exact Polars ``count`` and then noise addition.
 
-        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+        If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
         :param scale: parameter for the noise distribution.
 
@@ -228,7 +228,7 @@ class DPExpr(object):
 
         This function is a shortcut for the exact Polars ``null_count`` and then noise addition.
 
-        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+        If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
         :param scale: parameter for the noise distribution.
 
@@ -274,7 +274,7 @@ class DPExpr(object):
 
         This function is a shortcut for the exact Polars ``n_unique`` and then noise addition.
 
-        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+        If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
         :param scale: parameter for the noise distribution.
 
@@ -314,7 +314,7 @@ class DPExpr(object):
     def sum(self, bounds: tuple[float, float], scale: float | None = None):
         """Compute the differentially private sum.
 
-        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+        If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
         :param bounds: clip the input data to these lower and upper bounds
         :param scale: parameter for the noise distribution
@@ -367,7 +367,7 @@ class DPExpr(object):
         """Compute the differentially private mean.
 
         The amount of noise to be added to the sum is determined by the scale.
-        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+        If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
         :param bounds: clip the input data to these lower and upper bounds
         :param scale: relative parameter for the scale of the noise distributions
@@ -463,7 +463,7 @@ class DPExpr(object):
         """Compute a differentially private median.
 
         The scale calibrates the level of entropy when selecting a candidate.
-        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+        If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
         :param candidates: Potential quantiles to select from.
         :param scale: How much noise to add to the scores of candidate.
@@ -513,7 +513,7 @@ if pl is not None:
 def dp_len(scale: float | None = None):
     """Compute a differentially private estimate of the number of rows.
 
-    If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+    If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
     :param scale: parameter for the noise distribution.
 
@@ -673,7 +673,7 @@ class SortBy:
 
 class LazyFrameQuery:
     """
-    A ``LazyFrameQuery`` may be returned by :py:func:`opendp.context.Context.query`.
+    A ``LazyFrameQuery`` may be returned by :py:func:`~opendp.context.Context.query`.
     It mimics a `Polars LazyFrame <https://docs.pola.rs/api/python/stable/reference/lazyframe/index.html>`_,
     but makes a few additions and changes as documented below."""
 
@@ -1111,7 +1111,7 @@ class LazyFrameQuery:
 
 class LazyGroupByQuery:
     """
-    A ``LazyGroupByQuery`` is returned by :py:func:`opendp.extras.polars.LazyFrameQuery.group_by`.
+    A ``LazyGroupByQuery`` is returned by :py:func:`~opendp.extras.polars.LazyFrameQuery.group_by`.
     It mimics a `Polars LazyGroupBy <https://docs.pola.rs/api/python/stable/reference/lazyframe/group_by.html>`_,
     but only supports APIs documented below."""
 
@@ -1143,7 +1143,7 @@ class Margin:
     Be aware that aspects of your data marked as "public information" are not subject to privacy protections,
     so it is important that public descriptors about the margin should be set conservatively, or not set at all.
 
-    Instances of this class are used by :py:func:`opendp.context.Context.compositor`.
+    Instances of this class are used by :py:func:`~opendp.context.Context.compositor`.
     """
 
     by: Sequence = field(default_factory=list)
