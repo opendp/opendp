@@ -67,7 +67,7 @@ pub extern "C" fn opendp_combinators__make_composition(
 /// * `measurements` - A vector of Measurements to compose.
 #[deprecated(
     since = "0.14.0",
-    note = "This function has been renamed, use `make_composition` instead."
+    note = "This function has been renamed: use :py:func:`~opendp.combinators.make_composition` instead."
 )]
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_combinators__make_basic_composition(
