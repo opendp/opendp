@@ -63,7 +63,10 @@ where
     arguments(optimize(c_type = "char *", rust_type = "String", default = "max"),),
     generics(MO(suppress), TIA(suppress))
 )]
-#[deprecated(since = "0.14.0", note = "Use :py:func:`~opendp.measurements.make_noisy_max` instead.")]
+#[deprecated(
+    since = "0.14.0",
+    note = "Use :py:func:`~opendp.measurements.make_noisy_max` instead."
+)]
 /// Make a Measurement that takes a vector of scores and privately selects the index of the highest score.
 ///
 /// # Arguments
