@@ -1,0 +1,36 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn peel\_permute\_and\_flip}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle\contrib
+This document proves soundness of \rustdoc{measurements/noisy_top_k/exponential/fn}{peel\_permute\_and\_flip} in \asOfCommit{mod.rs}{e62b0aa2}. 
+\texttt{peel\_permute\_and\_flip} noisily selects the index of the greatest score from a vector of input scores $k$ times without replacement.
+
+\section{Hoare Triple}
+\subsection*{Preconditions}
+\textit{Types consistent with pseudocode.}
+
+\subsection*{Pseudocode}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/peel_permute_and_flip.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \label{postcondition}
+    Returns the index of the max element $z_i$,
+    where each $z_i \sim \mathrm{Exp}(\mathrm{shift}=x_i, \mathrm{scale}=\texttt{scale})$, $k$ times without replacement.
+\end{theorem}
+
+\begin{proof}
+    The pseudocode applies \rustdoc{measurements/noisy_top_k/exponential/fn}{permute\_and\_flip} on line~\ref{permute-and-flip}
+    up to $k$ times (no greater than the number of scores),
+    each time removing the selected score on line~\ref{remove-score}.
+
+    Since the index in subsequent selections may be offset by an earlier removal,
+    a data-independent postprocessing of the index is performed on line~\ref{postprocess}.
+\end{proof}
+
+\end{document}

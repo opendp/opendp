@@ -1,0 +1,136 @@
+\documentclass{article}
+\input{../../../lib.sty}
+\allowdisplaybreaks
+
+\title{\texttt{fn gumbel\_top\_k}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+Types consistent with pseudocode.
+
+\begin{itemize}
+    \item Generic \texttt{T} implements \rustdoc{traits/trait}{Number}.
+\end{itemize}
+
+\subsubsection*{Caller-verified}
+\begin{enumerate}
+    \item Elements of \texttt{x} are non-null.
+    \item \texttt{scale} is positive.
+\end{enumerate}
+
+\subsection*{Pseudocode}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/gumbel_top_k.py}
+
+\subsection*{Postcondition}
+
+\begin{theorem}
+    \label{postcondition}
+    \begin{itemize}
+        \item Returns the index of the top element $z_i$,
+        where each $z_i \sim \mathrm{Gumbel}(\mathrm{shift}=y_i, \mathrm{scale}=\texttt{scale})$,
+        and each $y_i = -x_i$ if \texttt{negate}, else $y_i = x_i$,
+        $k$ times with removal.
+        \item Errors are data-independent, except for exhaustion of entropy.
+    \end{itemize}
+\end{theorem}
+
+\begin{lemma}
+    \label{lem:zero-scale}
+    The postcondition holds when the scale is zero.
+\end{lemma}
+
+\begin{proof}[Proof of Lemma~\ref{lem:zero-scale}]
+    The comparator on line \ref{fn-optimize} flips the sign of scores when \texttt{negate} is \texttt{true},
+    therefore each $y_i = -x_i$ if \texttt{negate}, else $y_i = x_i$.
+    This avoids negation of a signed integer.
+
+    Assume scores are non-null, as required by the precondition.
+    Then \texttt{max\_sample} on line \ref{fn-max-sample-exact} defines a total ordering on the scores.
+
+    Since the score vector is finite, and \texttt{max\_sample} defines a total ordering,
+    then the preconditions for \rustdoc{measurements/noisy_top_k/fn}{top} are met.
+    Therefore on line \ref{fn-top-exact} \texttt{top} returns the pairs with the top $k$ scores.
+    Line \ref{fn-top} then discards the scores, returning only the indices,
+    which is the desired output.
+
+    There is one source of error,
+    when there are no non-null scores in the input vector,
+    which is data-independent.
+\end{proof}
+
+\begin{lemma}
+    \label{lem:matching-scores}
+    The postcondition holds when all scores are the same.
+\end{lemma}
+
+\begin{proof}[Proof of Lemma~\ref{lem:matching-scores}]
+    By lemma \ref{lem:zero-scale}, the postcondition holds when the scale is zero.
+
+    When all scores are the same, the condition on line \ref{fn-all-same} is met.
+    The probability of selecting each subset of $k$ candidates is equal,
+    Therefore it is equivalent to randomly select $k$ candidates from the input vector.
+    The algorithm returns the top $k$ after shuffling the input vector,
+    satisfying the postcondition.
+
+    The only source of error is due to potential entropy exhaustion.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{postcondition}]
+    By lemma \ref{lem:zero-scale}, the postcondition holds when the scale is zero,
+    and by lemma \ref{lem:matching-scores}, the postcondition holds when all scores are the same.
+    We now consider the general case.
+
+    Assume scores are non-null, as required by the precondition.
+    Therefore casts on line \ref{fn-cast} should never fail.
+    However, if the input data is not in the input domain, and a score is null,
+    then line \ref{fn-filter-nan} will filter out failed casts.
+    This can be seen as a 1-stable transformation of the input data.
+
+    The algorithm then proceeds to line \ref{fn-normalize-sign}.
+    Assuming \texttt{negate} is \texttt{false}, the line is a no-op, otherwise it negates each score,
+    therefore each $y_i = -x_i$ if \texttt{negate} is \texttt{true}, else $y_i = x_i$.
+
+    The algorithm proceeds to line \ref{fn-init-sample}.
+    The output measure has an associated noise distribution that is encoded into the Rust type system via
+    \rustdoc{measurements/noisy\_top\_k/trait}{TopKMeasure}.
+    \texttt{MO.random\_variable} on line \ref{fn-rv} creates a random variable \texttt{rv}
+    distributed according to \texttt{MO::RV} and parameterized by \texttt{shift} (the score), and \texttt{scale}.
+
+    To sample from this random variable, line \ref{fn-partial-sample} constructs an instance of
+    \rustdoc{traits/samplers/psrn/struct}{PartialSample},
+    which represents an infinitely precise sample from the random variable \texttt{rv}.
+    We now have an iterator of pairs containing the index and noisy score of each candidate.
+
+    The algorithm proceeds to line \ref{fn-max-sample},
+    which defines a reducer based on \rustdoc{traits/samplers/psrn/struct}{PartialSample}\texttt{greater\_than}.
+    Assume the scores are non-null, as required by the returned function precondition.
+    Then \texttt{max\_sample} on line \ref{fn-max-sample} defines a total ordering on the scores.
+
+    Since the score vector is finite, and \texttt{max\_sample} defines a total ordering,
+    then the preconditions for \rustdoc{measurements/report_noisy_top_k/fn}{top} are met.
+    Therefore on line \ref{fn-top} \texttt{top} returns the pairs with the top $k$ scores.
+    Line \ref{fn-return-indices} then discards the scores, returning only the indices,
+    which is the desired output.
+
+    If entropy is exhausted, then the algorithm will return an error from \rustdoc{traits/samplers/psrn/struct}{PartialSample}\texttt{greater\_than}.
+    This kind of failure is generally considered data-independent, where a lack of system entropy would occur regardless of the choice of input datasets.
+    However, failure due to lack of entropy can be data-dependent in this case.
+
+    An input score vector with all similar scores
+    is expected to require more draws from the random number generator,
+    as the candidates will be very competitive,
+    as compared to a score vector with widely different scores.
+    This technically results in input datasets with more homogeneity being more likely to exhaust entropy and raise an error,
+    violating the data-independent runtime error requirement.
+    This is an unlikely exploit in practice, due to the difficulty of exhausting the RNG's entropy.
+\end{proof}
+
+The algorithm avoids materializing an infinitely precise sample in memory by comparing finite arbitrary-precision bounds
+on the noisy scores until the lower bound of one noisy score is greater than the upper bound of all others.
+
+\end{document}
