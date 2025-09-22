@@ -260,45 +260,67 @@ pub struct MonotonicContinualToeplitz<T: crate::traits::CheckAtom> {
     core: ContinualToeplitzCore<T>,
 }
 
-// Macro to implement the trait for both variants, reducing boilerplate
-macro_rules! impl_continual_release {
-    ($struct_name:ident) => {
-        impl<T: crate::traits::CheckAtom> ContinualRelease<T> for $struct_name<T>
-        where
-            T: Integer + Display + FromStr + CheckedAdd + CheckedMul + CheckedSub + Zero + num::One + PartialOrd + Clone,
-        {
-            fn append_count_on_new_timestamp(&self, value: T) -> Fallible<usize> {
-                self.core.append_count_on_new_timestamp(value)
-            }
+impl<T: crate::traits::CheckAtom> ContinualRelease<T> for BaselineContinualToeplitz<T>
+where
+    T: Integer + Display + FromStr + CheckedAdd + CheckedMul + CheckedSub + Zero + num::One + PartialOrd + Clone,
+{
+    fn append_count_on_new_timestamp(&self, value: T) -> Fallible<usize> {
+        self.core.append_count_on_new_timestamp(value)
+    }
 
-            fn fetch_privacy_preserving_sub_interval_sum(&self, start_time: usize, end_time: usize) -> Fallible<T> {
-                self.core.fetch_privacy_preserving_sub_interval_sum(start_time, end_time)
-            }
+    fn fetch_privacy_preserving_sub_interval_sum(&self, start_time: usize, end_time: usize) -> Fallible<T> {
+        self.core.fetch_privacy_preserving_sub_interval_sum(start_time, end_time)
+    }
 
-            fn current_time(&self) -> usize {
-                self.core.current_time()
-            }
+    fn current_time(&self) -> usize {
+        self.core.current_time()
+    }
 
-            /// Get the privacy cost (rho) for a given sensitivity under zCDP
-            /// 
-            /// # Arguments
-            /// * `d_in` - The L1 distance between input count vectors.
-            /// 
-            /// # Returns
-            /// The privacy parameter rho = (d_in / scale)^2 / 2
-            fn privacy_cost(&self, d_in: T) -> Fallible<f64>
-            where
-                f64: InfCast<T>,
-            {
-                self.core.privacy_cost(d_in)
-            }
-        }
-    };
+    /// Get the privacy cost (rho) for a given sensitivity under zCDP
+    /// 
+    /// # Arguments
+    /// * `d_in` - The L1 distance between input count vectors.
+    /// 
+    /// # Returns
+    /// The privacy parameter rho = (d_in / scale)^2 / 2
+    fn privacy_cost(&self, d_in: T) -> Fallible<f64>
+    where
+        f64: InfCast<T>,
+    {
+        self.core.privacy_cost(d_in)
+    }
 }
 
-// Single implementation for both types
-impl_continual_release!(BaselineContinualToeplitz);
-impl_continual_release!(MonotonicContinualToeplitz);
+impl<T: crate::traits::CheckAtom> ContinualRelease<T> for MonotonicContinualToeplitz<T>
+where
+    T: Integer + Display + FromStr + CheckedAdd + CheckedMul + CheckedSub + Zero + num::One + PartialOrd + Clone,
+{
+    fn append_count_on_new_timestamp(&self, value: T) -> Fallible<usize> {
+        self.core.append_count_on_new_timestamp(value)
+    }
+
+    fn fetch_privacy_preserving_sub_interval_sum(&self, start_time: usize, end_time: usize) -> Fallible<T> {
+        self.core.fetch_privacy_preserving_sub_interval_sum(start_time, end_time)
+    }
+
+    fn current_time(&self) -> usize {
+        self.core.current_time()
+    }
+
+    /// Get the privacy cost (rho) for a given sensitivity under zCDP
+    /// 
+    /// # Arguments
+    /// * `d_in` - The L1 distance between input count vectors.
+    /// 
+    /// # Returns
+    /// The privacy parameter rho = (d_in / scale)^2 / 2
+    fn privacy_cost(&self, d_in: T) -> Fallible<f64>
+    where
+        f64: InfCast<T>,
+    {
+        self.core.privacy_cost(d_in)
+    }
+}
 
 // Only the constructors differ
 impl<T: crate::traits::CheckAtom> BaselineContinualToeplitz<T>
