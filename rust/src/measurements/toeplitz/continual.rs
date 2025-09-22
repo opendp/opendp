@@ -74,6 +74,8 @@ struct ToeplitzState<T> {
     noisy_prefix_sums: Vec<T>,
     /// Storage for cumulative counts from all updates
     cumulative_counts: Vec<T>,
+    /// Indicator that input counts have included a negative value
+    has_negative_input: bool,
 }
 
 /// Immutable configuration for the Toeplitz mechanism
@@ -110,6 +112,7 @@ where
                 raw_noise_history: Vec::new(),
                 noisy_prefix_sums: Vec::new(),
                 cumulative_counts: Vec::new(),
+                has_negative_input: false,
             }),
             config: ToeplitzConfig {
                 scale,
@@ -123,6 +126,10 @@ where
     /// Update with a new value
     fn append_count_on_new_timestamp(&self, value: T) -> Fallible<usize> {
         let mut state = self.state.lock().unwrap();
+
+        if value < T::zero() {
+            state.has_negative_input = true;
+        }
 
         // Add the new count
         state.cumulative_counts.push(value);
@@ -140,10 +147,12 @@ where
             self.config.scale_bits,
         )?;
 
-        // Clamp to non-negative before isotonic regression
-        for val in &mut all_noisy_sums {
-            if *val < T::zero() {
-                *val = T::zero();
+        // Clamp to non-negative before isotonic regression if no negative inputs
+        if !state.has_negative_input {
+            for val in &mut all_noisy_sums {
+                if *val < T::zero() {
+                    *val = T::zero();
+                }
             }
         }
 
@@ -390,8 +399,54 @@ mod test {
         // Privacy costs should be identical
         assert_eq!(baseline.privacy_cost(10)?, monotonic.privacy_cost(10)?);
 
+        {
+            let state = baseline.core.state.lock().unwrap();
+            assert!(!state.has_negative_input);
+            assert!(state.noisy_prefix_sums.iter().all(|v| *v >= 0));
+        }
+
+        {
+            let state = monotonic.core.state.lock().unwrap();
+            assert!(!state.has_negative_input);
+            assert!(state.noisy_prefix_sums.iter().all(|v| *v >= 0));
+        }
+
         // Note: Baseline may not be monotonic, monotonic always is
         // (actual values depend on random noise)
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_baseline_vs_monotonic_with_negatives() -> Fallible<()> {
+        let baseline = BaselineContinualToeplitz::<i32>::new(0.001)?;
+        let monotonic = MonotonicContinualToeplitz::<i32>::new(0.001)?;
+
+        for count in vec![-5, -2, 4, -1] {
+            baseline.append_count_on_new_timestamp(count)?;
+            monotonic.append_count_on_new_timestamp(count)?;
+        }
+
+        {
+            let state = baseline.core.state.lock().unwrap();
+            assert!(state.has_negative_input);
+            if let Some(first) = state.noisy_prefix_sums.first() {
+                assert!(first < &0);
+            }
+        }
+
+        {
+            let state = monotonic.core.state.lock().unwrap();
+            assert!(state.has_negative_input);
+            if let Some(first) = state.noisy_prefix_sums.first() {
+                assert!(first < &0);
+            }
+            for window in state.noisy_prefix_sums.windows(2) {
+                if let [prev, next] = window {
+                    assert!(prev <= next);
+                }
+            }
+        }
 
         Ok(())
     }
