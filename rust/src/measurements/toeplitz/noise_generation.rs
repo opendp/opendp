@@ -86,11 +86,19 @@ fn compute_inverse_coefficient_scaled(t: usize, scale_bits: usize) -> Fallible<I
         // c'_0 = 1 (scaled by 2^{scale_bits})
         return Ok(IBig::from(1) << scale_bits);
     }
-    
-    // Using the relation: c'_t = c*_{t+1} - c*_t
-    let c_t = compute_toeplitz_coefficient_scaled(t, scale_bits)?;
-    let c_t_plus_1 = compute_toeplitz_coefficient_scaled(t + 1, scale_bits)?;
-    Ok(c_t_plus_1 - c_t)
+
+    let mut value = IBig::from(1) << scale_bits; // choose(1/2, 0)
+    for i in 1..=t {
+        let factor = IBig::from(3) - (IBig::from(2u32) * IBig::from(i as u64));
+        value *= factor;
+        value /= IBig::from(2u32) * IBig::from(i as u64);
+    }
+
+    if t % 2 == 1 {
+        value = -value;
+    }
+
+    Ok(value)
 }
 
 
@@ -133,6 +141,64 @@ fn test_coefficient_precision() -> Fallible<()> {
         // Test that we don't lose precision with large scale_bits
         let c5 = compute_toeplitz_coefficient_scaled(5, scale_bits)?;
         assert!(c5 > IBig::zero());
+    }
+    
+    Ok(())
+}
+
+#[test]
+fn test_toeplitz_factorization_matches_theory() -> Fallible<()> {
+    // Verify that C_inv * C = I and B = P * C matches theoretical A, where P is the prefix-sum matrix.
+    let scale_bits = 20usize;
+    let dimension = 10usize;
+    let scale = (IBig::from(1) << scale_bits).to_f64().unwrap();
+
+    // Construct C and C_inv matrices
+    let mut matrix_c = vec![vec![0.0f64; dimension]; dimension];
+    let mut matrix_c_inv = vec![vec![0.0f64; dimension]; dimension];
+    for row in 0..dimension {
+        for col in 0..=row {
+            matrix_c[row][col] = compute_toeplitz_coefficient_scaled(row - col, scale_bits)?.to_f64().unwrap() / scale;
+            matrix_c_inv[row][col] = compute_inverse_coefficient_scaled(row - col, scale_bits)?.to_f64().unwrap() / scale;
+        }
+    }
+
+    // Verify C_inv * C = I
+    let tolerance = 1e-9;
+    for i in 0..dimension {
+        for j in 0..=i {
+            let mut dot = 0.0;
+            for k in j..=i {
+                dot += matrix_c_inv[i][k] * matrix_c[k][j];
+            }
+            if i == j {
+                assert!((dot - 1.0).abs() < tolerance, "diagonal mismatch at ({}, {})", i, j);
+            } else {
+                assert!(dot.abs() < tolerance, "off-diagonal mismatch at ({}, {}): {}", i, j, dot);
+            }
+        }
+    }
+
+    // Verify B = P * C matches theoretical A, where P is the prefix-sum matrix.
+    let mut matrix_b = vec![vec![0.0f64; dimension]; dimension];
+    for i in 0..dimension {
+        for j in 0..=i {
+            let mut entry = 0.0;
+            for k in j..=i {
+                entry += matrix_c[k][j];
+            }
+            matrix_b[i][j] = entry;
+        }
+    }
+    // Build the theoretical A matrix entries, by A[i][j] := sum_{s=0}^{i-j} c_s
+    for i in 0..dimension {
+        for j in 0..=i {
+            let mut expected = 0.0;
+            for s in 0..=(i - j) {
+                expected += matrix_c[s][0];
+            }
+            assert!((matrix_b[i][j] - expected).abs() < tolerance, "BC mismatch at ({}, {})", i, j);
+        }
     }
     
     Ok(())
