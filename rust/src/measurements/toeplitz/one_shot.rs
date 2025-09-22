@@ -138,49 +138,60 @@ where
 
     let scale_bits = 40usize; // Precision for fixed-point arithmetic
 
-    // Create the measurement
+    /*
+     * Next, we define variables that will be used to define the measurement object:
+     * - `mechanism_function`: The core function that adds noise and computes prefix sums
+     * - `privacy_map`: The privacy map capturing the zCDP guarantee
+     * - Other variables, such as input/output domains and metrics, are already defined
+     */
+    // Function that samples random DP noise and applies the Toeplitz aggregation
+    let mechanism_function = Function::new_fallible(move |data: &Vec<T>| -> Fallible<Vec<T>> {
+        // Validate data length
+        if data.len() != n {
+            return fallible!(
+                FailedFunction,
+                "expected data of length {}, got {}",
+                n,
+                data.len()
+            );
+        }
+
+        // Convert scale to variance for discrete Gaussian
+        let variance = RBig::from((scale * scale * 1e9) as i64) / RBig::from(1_000_000_000i64);
+
+        // Step 1: Generate independent discrete Gaussian noise Z
+        let mut raw_noise = Vec::with_capacity(n);
+        for _ in 0..n {
+            raw_noise.push(sample_discrete_gaussian(variance.clone())?);
+        }
+
+        // Step 2: Apply Toeplitz mechanism to compute noisy prefix sums
+        let mut noisy_sums = compute_toeplitz_range(data, &raw_noise, 0, n, scale_bits)?;
+
+        // Apply isotonic regression if requested
+        if enforce_monotonicity {
+            noisy_sums = apply_isotonic_regression(noisy_sums)?;
+        }
+
+        Ok(noisy_sums)
+    });
+
+    // Privacy map capturing the zCDP guarantee
+    let privacy_map = PrivacyMap::new_fallible(move |d_in: &T| -> Fallible<f64> {
+        // Privacy guarantee: rho = (sensitivity / scale)^2 / 2 under zCDP
+        let d_in_f64 = f64::inf_cast(d_in.clone())?;
+        if d_in_f64.is_sign_negative() {
+            return fallible!(FailedMap, "sensitivity ({}) must be non-negative", d_in_f64);
+        }
+        Ok((d_in_f64 / scale).powi(2) / 2.0)
+    });
+
     Measurement::new(
-        input_domain.clone(),
-        Function::new_fallible(move |data: &Vec<T>| -> Fallible<Vec<T>> {
-            // Validate data length
-            if data.len() != n {
-                return fallible!(
-                    FailedFunction,
-                    "expected data of length {}, got {}",
-                    n,
-                    data.len()
-                );
-            }
-
-            // Convert scale to variance for discrete Gaussian
-            let variance = RBig::from((scale * scale * 1e9) as i64) / RBig::from(1_000_000_000i64);
-
-            // Step 1: Generate independent discrete Gaussian noise Z
-            let mut raw_noise = Vec::with_capacity(n);
-            for _ in 0..n {
-                raw_noise.push(sample_discrete_gaussian(variance.clone())?);
-            }
-
-            // Step 2: Apply Toeplitz mechanism to compute noisy prefix sums
-            let mut noisy_sums = compute_toeplitz_range(data, &raw_noise, 0, n, scale_bits)?;
-
-            // Apply isotonic regression if requested
-            if enforce_monotonicity {
-                noisy_sums = apply_isotonic_regression(noisy_sums)?;
-            }
-
-            Ok(noisy_sums)
-        }),
-        input_metric.clone(),
-        ZeroConcentratedDivergence,
-        PrivacyMap::new_fallible(move |d_in: &T| -> Fallible<f64> {
-            // Privacy guarantee: rho = (sensitivity / scale)^2 / 2 under zCDP
-            let d_in_f64 = f64::inf_cast(d_in.clone())?;
-            if d_in_f64.is_sign_negative() {
-                return fallible!(FailedMap, "sensitivity ({}) must be non-negative", d_in_f64);
-            }
-            Ok((d_in_f64 / scale).powi(2) / 2.0)
-        }),
+        /* input_domain= */ input_domain.clone(),
+        /* computation= */ mechanism_function,
+        /* input_metric= */ input_metric.clone(),
+        /* output_measure= */ ZeroConcentratedDivergence,
+        /* privacy_map= */ privacy_map,
     )
 }
 

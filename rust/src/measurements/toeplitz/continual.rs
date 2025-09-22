@@ -131,14 +131,13 @@ where
             state.has_negative_input = true;
         }
 
-        // Add the new count
+        // Record the new count and associated discrete Gaussian noise
         state.cumulative_counts.push(value);
         let new_time = state.cumulative_counts.len();
+        let new_noise = sample_discrete_gaussian(self.config.variance.clone())?;
+        state.raw_noise_history.push(new_noise);
 
-        // Generate raw noise for the new time step
-        state.raw_noise_history.push(sample_discrete_gaussian(self.config.variance.clone())?);
-
-        // Compute ALL noisy prefix sums from scratch to ensure consistency
+        // Recompute noisy prefix sums using the updated history
         let mut all_noisy_sums = compute_toeplitz_range(
             &state.cumulative_counts,
             &state.raw_noise_history,
