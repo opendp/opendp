@@ -15,9 +15,6 @@ use crate::{error::Fallible, traits::RoundCast};
 #[cfg(all(feature = "contrib", test))]
 mod test;
 
-mod gumbel;
-pub use gumbel::GumbelRV;
-
 mod canonical;
 pub use canonical::CanonicalRV;
 

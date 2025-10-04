@@ -225,7 +225,10 @@ fn summarize_expr<'a>(
             aggregate: expr_aggregate(&inputs[0])?.to_string(),
             distribution: Some(format!(
                 "{}{}",
-                plugin.distribution,
+                match plugin.replacement {
+                    false => "Exponential",
+                    true => "Gumbel",
+                },
                 if plugin.negate { "Min" } else { "Max" }
             )),
             scale: Some(plugin.scale),
