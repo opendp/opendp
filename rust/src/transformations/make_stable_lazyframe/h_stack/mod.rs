@@ -59,10 +59,11 @@ where
         let names = (t_exprs.iter())
             .map(|t| t.output_domain.column.name.clone())
             .collect::<HashSet<_>>();
-        if !names.is_disjoint(&HashSet::from_iter(identifier.meta().root_names())) {
+        let root_names = HashSet::from_iter(identifier.meta().root_names());
+        if !names.is_disjoint(&root_names) {
             return fallible!(
                 MakeTransformation,
-                "identifiers ({names:?}) may not be modified"
+                "identifiers ({root_names:?}) may not be modified"
             );
         }
     }

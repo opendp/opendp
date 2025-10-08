@@ -1086,6 +1086,7 @@ class LazyFrameQuery:
             input_domain,
             input_metric,
             lazyframe=object.__getattribute__(self, "polars_plan"),
+            MO="FrameDistance<SymmetricDistance>",
         )
 
         m_table, oneway_scale, oneway_threshold = make_contingency_table(
