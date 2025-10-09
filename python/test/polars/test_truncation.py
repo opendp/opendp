@@ -207,6 +207,7 @@ def test_truncation_contingency():
         .select("ILOSTAT")
         .contingency_table(
             keys={"ILOSTAT": []},
+            # makes it run fast!
             algorithm=dp.mbi.Fixed(queries=[dp.mbi.Count(("ILOSTAT",))]),
         )
     )

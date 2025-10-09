@@ -1038,7 +1038,7 @@ def test_replace():
 
     # this triggers construction of a lazyframe domain from the schema
     context = dp.Context.compositor(
-        data=pl.LazyFrame(pl.Series("alpha", ["A", "B", "C"] * 100)),
+        data=pl.LazyFrame(pl.Series("alpha", ["A", "B", "C"] * 1000)),
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=4,
