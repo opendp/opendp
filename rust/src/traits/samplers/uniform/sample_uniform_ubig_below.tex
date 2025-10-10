@@ -15,18 +15,17 @@ but this time the bit depth is dynamically chosen to fill the last byte of a ser
 \section{Hoare Triple} 
 \subsection*{Preconditions} 
  
-\textbf{Compiler-verified} 
+\subsubsection*{Compiler-verified} 
 Argument \texttt{upper} is of type \texttt{UBig}, a bignum 
  
-\textbf{User-verified} 
-$\texttt{upper} > 0$ 
+\subsubsection*{Caller-verified} 
+$\texttt{upper} \neq 0$ 
  
 \subsection*{Pseudocode} 
  
 \lstinputlisting[language=Python,firstline=2]{./pseudocode/sample_uniform_ubig_below.py} 
  
 \subsection*{Postcondition} 
-For any setting of the input parameter \texttt{upper}, 
 \texttt{sample\_uniform\_ubig\_below} either 
 \begin{itemize} 
     \item raises an exception if there is a lack of system entropy, 
@@ -37,11 +36,11 @@ For any setting of the input parameter \texttt{upper},
 \begin{proof} 
 \texttt{byte\_len} is the fewest number of bytes necessary to represent \texttt{upper},  
 which works out to $\mathrm{ceil}(\mathrm{ceil}(\log_2(\texttt{upper})) / 8)$. 
-Let \texttt{max} denote the largest integer representable in this many bytes ($2^{\texttt{byte\_len}} - 1$). 
-We can sample uniformly from $[0, \texttt{max})$ by filling this many bytes with bits uniformly at random. 
+Let \texttt{max} denote the largest integer representable in this many bytes ($2^{(\texttt{byte\_len} \cdot 8)} - 1$). 
+Let \texttt{sample} be a uniform sample between $[0, \texttt{max}]$ by flipping $\texttt{byte\_len} \cdot 8$ even coins. 
  
-You could (naively) sample from $[0, \texttt{upper})$ by rejecting any \texttt{sample} greater than or equal to \texttt{upper}. 
-To reduce the probability of rejecting (and improve computational performance),  
+You could then (naively) update the range of \texttt{sample} to $[0, \texttt{upper})$ by rejecting any \texttt{sample} greater than or equal to \texttt{upper}. 
+To reduce the probability of rejection (and improve computational performance),  
 partition the numbers into two sets:\ 
  
 \begin{itemize} 
@@ -56,5 +55,15 @@ then $\texttt{threshold} = \texttt{max} - (\texttt{max} \mod \texttt{upper})$.
  
 \noindent Therefore, for any value of \texttt{upper}, the function satisfies the postcondition. 
 \end{proof} 
+
+For an intuitive understanding of the sampling approach, consider when \texttt{upper} is two.
+The naive approach would sample one byte, and then reject if the integer is not zero or one, 
+with probability $\frac{2^8 - 2}{2^8} \approx .99$.
+Alternatively, two valid outcomes wrap $2^7$ times into $2^8$, with no trailing numbers.
+Never reject \texttt{sample} because there are no trailing numbers, and return $\texttt{sample} \mod 2$.
+
+Now consider when \texttt{upper} is three.
+Three valid outcomes wrap $85$ times into $2^8$, with one trailing number (255).
+Reject if \texttt{sample} is 255, otherwise return $\texttt{sample} \mod 3$.
  
 \end{document} 
