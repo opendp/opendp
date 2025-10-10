@@ -13,10 +13,10 @@ This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsec
 \section{Hoare Triple} 
  
 \subsection*{Precondition} 
-\textbf{Compiler-verified} 
+\subsubsection*{Compiler-verified} 
 Argument \texttt{x} is of type \texttt{RBig}, a bignum rational. 
  
-\textbf{User-verified} 
+\subsubsection*{Caller-verified} 
 $\texttt{x} \geq 0$ 
  
 \subsection*{Pseudocode}         
@@ -26,7 +26,7 @@ $\texttt{x} \geq 0$
 \label{postcondition} 
 For any setting of the input parameter \texttt{x} such that the given preconditions hold, \\ 
 \texttt{sample\_geometric\_exp\_fast} either returns \texttt{Err(e)} due to a lack of system entropy, 
-or \texttt{Ok(out)}, where \texttt{out} is distributed as $Geometric(1 - exp(-x))$. 
+or \texttt{Ok(out)}, where \texttt{out} is distributed as $\textrm{Geometric}(1 - exp(-x))$. 
  
 \section{Proof} 
 Assume the preconditions are met. 
@@ -49,14 +49,14 @@ Assume the preconditions are met.
 We now establish some lemmas that will be useful in proving the distribution of \texttt{out}. 
  
 \begin{itemize} 
-    \item Let $u$ be a realization of a random variable $U \sim Uniform(0, t)$, supported on $[0, t)$. 
-    \item Let $d$ be a realization of a random variable $D \sim Bernoulli(exp(-u/t))$ 
-    \item Let $v$ be a realization of a random variable $V \sim Geometric(1 - exp(-1))$ 
+    \item Let $u$ be a realization of a random variable $U \sim \textrm{Uniform}(0, t)$, supported on $[0, t)$. 
+    \item Let $d$ be a realization of a random variable $D \sim \textrm{Bernoulli}(exp(-u/t))$ 
+    \item Let $v$ be a realization of a random variable $V \sim \textrm{Geometric}(1 - exp(-1))$ 
 \end{itemize} 
  
 \begin{lemma}\label{geom_1_t}\cite{CKS20} 
     Conditioned on $d = \top$, if $z = u + t \cdot v$,  
-    then $z$ is a realization of a random variable $Z \sim Geometric(1 - exp(-1/t))$.  
+    then $z$ is a realization of a random variable $Z \sim \textrm{Geometric}(1 - exp(-1/t))$.  
     Equivalently, $P[Z=z | D=\top] = (1 - e^{-1/t}) e^{-z/t}$. 
 \end{lemma} 
  
@@ -77,13 +77,13 @@ We now establish some lemmas that will be useful in proving the distribution of 
  
  
 \begin{lemma}\label{divide_geometric}\cite{CKS20} 
-    Fix $p \in (0, 1]$. Let G be a $Geometric(1 - p)$ random variable, and $n \geq 1$ be an integer.  
-    Then $\lfloor G / n \rfloor$ is a $Geometric(1 - q)$ random variable with $q = p^n$. 
+    Fix $p \in (0, 1]$. Let G be a $\textrm{Geometric}(1 - p)$ random variable, and $n \geq 1$ be an integer.  
+    Then $\lfloor G / n \rfloor$ is a $\textrm{Geometric}(1 - q)$ random variable with $q = p^n$. 
 \end{lemma} 
  
 \begin{proof} 
     \begin{align*} 
-        P[\lfloor G/n \rfloor = k] &= P[nk < G < (k + 1)n] &&\text{any $G$ in the interval maps to $k$} \\ 
+        P[\lfloor G/n \rfloor = k] &= P[nk \le G < (k + 1)n] &&\text{any $G$ in the interval maps to $k$} \\ 
         &= \sum_{l=kn}^{(k+1)n - 1} (1 - p)p^l \\ 
         &= (1 - p^n)p^{nk} \\ 
         &= (1 - q)q^k 
