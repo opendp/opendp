@@ -63,7 +63,7 @@ pub fn sample_uniform_uint_below<T: Integer + Unsigned + FromBytes<N>, const N: 
 /// Sample an integer uniformly from `[0, upper)`
 ///
 /// # Proof Definition
-/// For any non-negative setting of `upper`,
+/// For any non-zero `upper`,
 /// return either `Err(e)` if there is insufficient system entropy,
 /// or `Some(sample)`, where `sample` is uniformly distributed over `[0, upper)`.
 pub fn sample_uniform_ubig_below(upper: UBig) -> Fallible<UBig> {
