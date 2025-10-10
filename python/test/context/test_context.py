@@ -509,3 +509,12 @@ def test_odometer():
     
     with pytest.raises(ValueError, match="The privacy loss is unbounded"):
         context.remaining_privacy_loss()
+
+
+def test_split_by_weights_with_integer_loss():
+    dp.Context.compositor(
+        data=[1, 2],
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1),
+        split_by_weights=[1, 2],
+    )
