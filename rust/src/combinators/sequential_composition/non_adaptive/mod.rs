@@ -134,7 +134,7 @@ where
 /// * `measurements` - A vector of Measurements to compose.
 #[deprecated(
     since = "0.14.0",
-    note = "This function has been renamed, use `make_composition` instead."
+    note = "This function has been renamed: use :py:func:`~opendp.combinators.make_composition` instead."
 )]
 pub fn make_basic_composition<DI, MI, MO, TO>(
     measurements: Vec<Measurement<DI, MI, MO, TO>>,

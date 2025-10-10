@@ -21,7 +21,7 @@ def test_thens_are_documented(module, function):
     make_name = then_name.replace('then_', 'make_')
 
     assert function.__doc__ is not None, 'missing documentation'
-    assert f':py:func:`{m_name}.{make_name}`' in function.__doc__, f'no link to {make_name}'
+    assert f':py:func:`~{m_name}.{make_name}`' in function.__doc__, f'no link to {make_name}'
 
 
 docs_source = Path(__file__).parent.parent.parent / 'docs' / 'source'
