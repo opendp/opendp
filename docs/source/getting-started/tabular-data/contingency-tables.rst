@@ -107,7 +107,7 @@ In this setting, the scale and threshold are reasonably small.
 To make the threshold smaller, consider adding more key-sets 
 or bounding the number of groups a user may contribute.
 
-When you release, all marginals are estimated and stored inside a :py:class:`opendp.extras.mbi.ContingencyTable`.
+When you release, all marginals are estimated and stored inside a :py:class:`~opendp.extras.mbi.ContingencyTable`.
 The contingency table supports counting queries over arbitrary sets of grouping columns.
 
 .. code:: pycon
