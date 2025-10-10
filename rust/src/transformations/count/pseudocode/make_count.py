@@ -14,7 +14,7 @@ def make_count(
 
     output_metric = AbsoluteDistance(TO)
 
-    stability_map = new_stability_map_from_constant(TO.one()) # |\label{line:stability-map}|
+    stability_map = StabilityMap.new_from_constant(TO.one()) # |\label{line:stability-map}|
 
     return Transformation(
         input_domain, output_domain, function,

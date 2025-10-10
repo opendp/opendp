@@ -85,7 +85,7 @@ Before proceeding with proving the validity of the stability map, we provide a c
 \end{proof} 
  
 \begin{proof} \textbf{(Part 2 -- stability map).}  
-    Take any two elements $x, x'$ in the \\\texttt{input\_domain} and any pair $(\din, \dout)$,  
+    Take any two elements $x, x'$ in the \texttt{input\_domain} and any pair $(\din, \dout)$,  
     where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \texttt{output\_metric}. 
     Assume $x, x'$ are \din-close under \texttt{input\_metric} and that $\texttt{stability\_map}(\din) \leq \dout$.  
     These assumptions are used to establish the following inequality: 
@@ -98,7 +98,7 @@ Before proceeding with proving the validity of the stability map, we provide a c
         &\leq \din &&\text{by the first assumption} \\ 
         &\leq \texttt{TO.inf\_cast}(\din) &&\text{by } \rustdoc{traits/trait}{InfCast} \\ 
         &\leq \texttt{TO.one().inf\_mul(TO.inf\_cast(\din))} &&\text{by } \rustdoc{traits/trait}{InfMul} \\ 
-        &=\texttt{stability\_map}(\din) &&\text{by pseudocode line } \ref{line:stability-map} \\ 
+        &=\texttt{stability\_map}(\din) &&\text{by line } \ref{line:stability-map} \text{, see } \rustdoc{core/struct}{StabilityMap} \\ 
         &\leq \dout &&\text{by the second assumption} 
     \end{align*} 
  
