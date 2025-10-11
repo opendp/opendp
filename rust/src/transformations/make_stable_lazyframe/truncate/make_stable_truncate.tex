@@ -1,0 +1,72 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn make\_stable\_truncate}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle  
+
+
+\contrib
+
+Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/fn}{make\_stable\_truncate} 
+in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Caller Verified}
+None
+
+\subsection*{Function}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_stable_truncate.py}
+
+\subsection*{Postcondition}
+\validTransformation{\texttt{(input\_domain, input\_metric, plan)}}{\\\texttt{make\_stable\_truncate}}
+
+\begin{proof}[Appropriate Output Domain]
+    By line \ref{line:stable-keys},
+    the grouping keys are stable row-by-row transformations of the data,
+    therefore the preconditions of \ref{line:truncation} are satisfied.
+    By the postcondition of \ref{line:truncation},
+    for every element $x$ in \texttt{input\_domain}, $\function(x)$ is in \texttt{output\_domain} or raises a data-independent runtime exception.
+\end{proof}
+
+\begin{proof}[Stability guarantee]
+    By line \ref{line:total-ids}, \texttt{total\_num\_ids} is the total number of ids an individual may contribute to a dataset:
+
+    \begin{equation}
+        d_{\mathrm{SymId}}(\texttt{function}(x), \texttt{function}(x')) \le \texttt{total\_num\_ids}.
+    \end{equation}
+
+    By the postcondition of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_truncations},
+    for each \texttt{truncation\_bound} on line \ref{line:truncation-bound},
+    \begin{align*}
+        \max_{id} ||d_{\mathrm{Sym}}(\texttt{function}(x)_{id,g}, \texttt{function}(x')_{id,g})||_\infty &\le \texttt{truncation.per\_group}, \\
+        \max_{id} ||d_{\mathrm{Sym}}(\texttt{function}(x)_{id,g}, \texttt{function}(x')_{id,g})||_0 &\le \texttt{truncation.num\_groups},
+    \end{align*}
+    where $g$ denotes the group when partitioned by \texttt{truncation\_bound.by}.
+    
+    The preconditions of \ref{line:truncate-id-bound} are satisfied on line \ref{line:id-bound-by}
+    (\texttt{id\_bound.by} is equal to \texttt{truncation.by}),
+    so by the postcondition of \texttt{truncate\_id\_bound},
+    \begin{align*}
+        ||d_{\mathrm{Sym}}(\texttt{function}(x)_{g}, \texttt{function}(x')_{g})||_\infty &\le \texttt{row\_bound.per\_group}, \\
+        ||d_{\mathrm{Sym}}(\texttt{function}(x)_{g}, \texttt{function}(x')_{g})||_0 &\le \texttt{row\_bound.num\_groups},
+    \end{align*}
+    where $\texttt{row\_bound}$ denotes the return value.
+
+    For each truncation on line \ref{line:truncation-bound},
+    \rustdoc{transformations/make_stable_lazyframe/truncate/fn}{truncate\_id\_bound} on line \ref{line:truncate-id-bound}
+    computes upper bounds on the resulting distance between adjacent datasets.
+    All acquired bounds are valid upper bounds on the distance between the two datasets,
+    by the postcondition of \rustdoc{transformations/make_stable_lazyframe/truncate/matching/fn}{match\_truncations},
+    that each truncation does not invalidate the truncation bounds of the previous truncations.
+
+    It is shown that for every pair of elements $x, x'$ in \texttt{input\_domain} and for every pair $(\din, \dout)$,
+    where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \\ \texttt{output\_metric},
+    if $x, x'$ are \din-close under \texttt{input\_metric}, $\texttt{stability\_map}(\din)$ does not raise an exception,
+    and $\texttt{stability\_map}(\din) \leq \dout$,
+    then $\function(x), \function(x')$ are $\dout$-close under \texttt{output\_metric}.
+\end{proof}
+\end{document}
