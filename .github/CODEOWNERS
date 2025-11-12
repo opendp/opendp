@@ -6,31 +6,31 @@
 # If no more precise mapping is available, assign all active developers.
 # (PRs still require only one approval.)
 
-*   Shoeboxam mccalluc
+*   @Shoeboxam @mccalluc
 
 
 # Docs:
 # Chuck should take a first look at changes, to ensure they align with the high-level organization.
 
-/docs/      mccalluc
+/docs/      @mccalluc
 
 
 # Proofs:
 # PRs for mechanisms should come with proofs, and eventually they should be reviewed by the Proof Review Board, but that level of review is not a requirement for the initial commit.
 
-*.tex       Shoeboxam
+*.tex       @Shoeboxam
 
 
 # Python:
 
-/python/    Shoeboxam mccalluc
+/python/    @Shoeboxam @mccalluc
 
 
 # R:
 
-/R/         Shoeboxam
+/R/         @Shoeboxam
 
 
 # Rust:
 
-/rust/      Shoeboxam
+/rust/      @Shoeboxam
