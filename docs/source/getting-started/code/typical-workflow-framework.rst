@@ -6,88 +6,102 @@
     >>> import opendp.prelude as dp
     >>> dp.enable_features("contrib")
 
-    >>> d_in = 1  # neighboring data set distance is at most d_in...
-    >>> input_metric = (
-    ...     dp.symmetric_distance()
-    ... )  # ...in terms of additions/removals
-    >>> input_domain = dp.vector_domain(dp.atom_domain(T=float))
+    >>> # neighboring data set distance is at most d_in...
+    >>> d_in = 1
+
+    >>> # ...in terms of additions/removals
+    >>> input_metric = dp.symmetric_distance()
+
+    >>> input_domain = dp.vector_domain(dp.atom_domain(T=int))
 
     # /unit-of-privacy
 
 
     # privacy-loss
-    >>> d_out = 1.0  # output distributions have distance at most d_out (ε)...
-    >>> privacy_measure = (
-    ...     dp.max_divergence()
-    ... )  # ...in terms of pure-DP
+    >>> # output distributions have distance at most d_out (ε)...
+    >>> d_out = 1.0
+
+    >>> # ...in terms of pure-DP
+    >>> privacy_measure = dp.max_divergence()
 
     # /privacy-loss
 
 
-    # public-info
-    >>> bounds = (0.0, 100.0)
-    >>> imputed_value = 50.0
-
-    # /public-info
-
-
     # mediate
     >>> from random import randint
-    >>> data = [float(randint(0, 100)) for _ in range(100)]
+    >>> data = [randint(0, 100) for _ in range(100)]
 
-    >>> m_sc = dp.c.make_adaptive_composition(
+    >>> o_ac = dp.c.make_fully_adaptive_composition(
     ...     input_domain=input_domain,
     ...     input_metric=input_metric,
     ...     output_measure=privacy_measure,
+    ... )
+
+    >>> m_ac = dp.c.make_privacy_filter(
+    ...     odometer=o_ac,
     ...     d_in=d_in,
-    ...     d_mids=[d_out / 3] * 3,
+    ...     d_out=d_out,
     ... )
 
     >>> # Call measurement with data to create a queryable:
-    >>> queryable = m_sc(data)
+    >>> queryable = m_ac(data)
 
     # /mediate
 
 
     # count
-    >>> count_transformation = dp.t.make_count(
-    ...     input_domain, input_metric
-    ... )
+    >>> def make_dp_count(scale):
+    ...     count = dp.t.make_count(input_domain, input_metric)
+    ...     return count >> dp.m.then_laplace(scale)
+    ...
 
-    >>> count_sensitivity = count_transformation.map(d_in)
-    >>> count_sensitivity
-    1
-
-    >>> count_measurement = dp.binary_search_chain(
-    ...     lambda scale: count_transformation
-    ...     >> dp.m.then_laplace(scale),
+    >>> scale = dp.binary_search_param(
+    ...     make_dp_count,
     ...     d_in,
     ...     d_out / 3,
     ... )
-    >>> dp_count = queryable(count_measurement)
+    >>> scale
+    3.0000000000000004
+
+    >>> accuracy = dp.discrete_laplacian_scale_to_accuracy(
+    ...     scale=scale, alpha=0.05
+    ... )
+    >>> accuracy
+    9.445721638273584
+
+    >>> # (with 100(1-alpha) = 95% confidence, the estimated value will differ
+    >>> #    from the true value by no more than ~9)
+
+    >>> sum_measurement = make_dp_count(scale)
+
+    >>> dp_count = queryable(sum_measurement)
+    >>> confidence_interval = (
+    ...     dp_count - accuracy,
+    ...     dp_count + accuracy,
+    ... )
 
     # /count
 
 
-    # mean
-    >>> mean_transformation = (
-    ...     dp.t.make_impute_constant(
-    ...         input_domain, input_metric, 0.0
-    ...     )
+    # public-info
+    >>> bounds = (0, 100)
+
+    # /public-info
+
+    # sum
+    >>> sum_transformation = (
+    ...     (input_domain, input_metric)
     ...     >> dp.t.then_clamp(bounds)
-    ...     >> dp.t.then_resize(
-    ...         size=dp_count, constant=imputed_value
-    ...     )
-    ...     >> dp.t.then_mean()
+    ...     >> dp.t.then_sum()
     ... )
 
-    >>> mean_measurement = dp.binary_search_chain(
-    ...     lambda scale: mean_transformation
+    >>> sum_measurement = dp.binary_search_chain(
+    ...     lambda scale: sum_transformation
     ...     >> dp.m.then_laplace(scale),
     ...     d_in,
     ...     d_out / 3,
     ... )
 
-    >>> dp_mean = queryable(mean_measurement)
+    >>> dp_sum = queryable(sum_measurement)
 
-    # /mean
+    # /sum
