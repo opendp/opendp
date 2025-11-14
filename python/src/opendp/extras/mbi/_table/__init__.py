@@ -345,6 +345,7 @@ def make_contingency_table(
                 .clip(0, len(stable_keys[c]) - 1)
                 for c in input_domain.columns
             ),
+            MO="FrameDistance<SymmetricDistance>"
         )
 
         m_marginals = algorithm.make_marginals(

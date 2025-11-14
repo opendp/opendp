@@ -40,6 +40,6 @@ def make_noisy_top_k(
         input_domain=input_domain,
         input_metric=input_metric,
         output_measure=privacy_measure,
-        function=lambda x: MO.noisy_top_k(x, scale, k, negate),
+        function=lambda x: noisy_top_k(x, scale, k, negate, MO.REPLACEMENT),
         privacy_map=privacy_map,
     )

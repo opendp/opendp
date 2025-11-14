@@ -37,7 +37,7 @@ fn test_noisy_max_udf() -> Fallible<()> {
     let actual = super::noisy_max_udf(
         &[scores],
         NoisyMaxPlugin {
-            distribution: TopKDistribution::Gumbel,
+            replacement: true,
             negate: false,
             scale: 0.0,
         },

@@ -39,7 +39,7 @@ mod truncate;
 #[bootstrap(
     features("contrib"),
     arguments(output_metric(c_type = "AnyMetric *", rust_type = b"null")),
-    generics(MI(suppress), MO(suppress))
+    generics(MI(suppress), MO(default = "MI"))
 )]
 /// Create a stable transformation from a [`LazyFrame`].
 ///
@@ -47,6 +47,9 @@ mod truncate;
 /// * `input_domain` - The domain of the input data.
 /// * `input_metric` - How to measure distances between neighboring input data sets.
 /// * `lazyframe` - The [`LazyFrame`] to be analyzed.
+///
+/// # Generics
+/// * `MO` - The type of the output metric.
 pub fn make_stable_lazyframe<MI: 'static + Metric, MO: 'static + Metric>(
     input_domain: LazyFrameDomain,
     input_metric: MI,
@@ -165,12 +168,15 @@ impl<M: UnboundedMetric> StableDslPlan<FrameDistance<M>, FrameDistance<M>> for D
     }
 }
 
-impl<M: UnboundedMetric> StableDslPlan<M, FrameDistance<M>> for DslPlan {
+impl<MI: UnboundedMetric, MO: UnboundedMetric> StableDslPlan<MI, FrameDistance<MO>> for DslPlan
+where
+    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MO>>,
+{
     fn make_stable(
         self,
         input_domain: DslPlanDomain,
-        input_metric: M,
-    ) -> Fallible<Transformation<DslPlanDomain, M, DslPlanDomain, FrameDistance<M>>> {
+        input_metric: MI,
+    ) -> Fallible<Transformation<DslPlanDomain, MI, DslPlanDomain, FrameDistance<MO>>> {
         Transformation::new(
             input_domain.clone(),
             input_metric.clone(),

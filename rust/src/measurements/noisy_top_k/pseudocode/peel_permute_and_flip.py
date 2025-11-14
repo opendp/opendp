@@ -1,10 +1,15 @@
 # type: ignore
-def peel_permute_and_flip(x: list[RBig], scale: RBig, k: usize):
+def peel_permute_and_flip(
+    x: list[RBig],
+    scale: RBig,
+    k: usize,
+    replacement: bool,
+):
     natural_order = []
     sorted_order = BTreeSet.new()
 
     for _ in range(min(k, x.len())):
-        index = permute_and_flip(x, scale)  # `\label{permute-and-flip}`
+        index = permute_and_flip(x, scale, replacement)  # `\label{permute-and-flip}`
         x.remove(index)  # `\label{remove-score}`
 
         # map index on modified x back to original x (postprocessing)
