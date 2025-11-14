@@ -304,6 +304,7 @@ fn check_infallible_function(
         FunctionExpr::Boolean(bool_expr) => match bool_expr {
             BooleanFunction::Any { .. } => check_inputs!(aggregate),
             BooleanFunction::All { .. } => check_inputs!(aggregate),
+            BooleanFunction::IsClose { .. } => check_inputs!(),
             BooleanFunction::IsNull => check_inputs!(),
             BooleanFunction::IsNotNull => check_inputs!(),
             BooleanFunction::IsFinite => check_inputs!(),

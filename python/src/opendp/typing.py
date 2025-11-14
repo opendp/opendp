@@ -494,21 +494,21 @@ def get_carrier_type(domain: Domain) -> Union[RuntimeType, str]:
     '''
     return domain.carrier_type
 
-def get_type(domain: Domain):
+def get_type(element: Union[Domain, Metric, Measure]):
     '''
-    Returns the type for a domain.
+    Returns the type for a supporting element.
 
-    :param domain: A domain
+    :param element: A supporting element
     '''
-    return domain.type
+    return element.type
 
-def get_value_type(value: Union[Metric, Measure]):
+def get_value_type(type_descriptor: RuntimeTypeDescriptor):
     '''
-    Returns the value type for a metric or measure.
+    Returns the value type for a dict type descriptor.
 
-    :param value: Metric or measure
+    :param type_descriptor: runtime type
     '''
-    return RuntimeType.parse(value).args[1] # type: ignore[union-attr]
+    return RuntimeType.parse(type_descriptor).args[1] # type: ignore[union-attr]
 
 def get_distance_type(value: Union[Metric, Measure]) -> Union[RuntimeType, str]:
     '''

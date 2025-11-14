@@ -1,25 +1,23 @@
-#[cfg(feature = "polars")]
-use crate::measurements::expr_noisy_max::TopKDistribution;
 use crate::{
     core::{Function, Measure, Measurement, PrivacyMap},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    measurements::{exponential::exponential_top_k, gumbel::gumbel_top_k},
     measures::{MaxDivergence, ZeroConcentratedDivergence},
     metrics::LInfDistance,
-    traits::{CastInternalRational, InfCast, InfDiv, InfMul, InfPowI, Number},
+    traits::{
+        CastInternalRational, FiniteBounds, InfCast, InfDiv, InfMul, InfPowI, Number, ProductOrd,
+        samplers::{sample_bernoulli_exp, sample_uniform_uint_below},
+    },
 };
-use dashu::{float::FBig, ibig};
+use dashu::{base::Sign, float::FBig, ibig, rational::RBig};
 use num::Zero;
 use opendp_derive::{bootstrap, proven};
+use std::{collections::BTreeSet, ops::Range};
 
 #[cfg(feature = "ffi")]
 mod ffi;
 #[cfg(test)]
 mod test;
-
-pub(crate) mod exponential;
-pub(crate) mod gumbel;
 
 #[bootstrap(
     features("contrib"),
@@ -81,7 +79,9 @@ where
         input_domain,
         input_metric,
         output_measure,
-        Function::new_fallible(move |x: &Vec<TIA>| MO::noisy_top_k(x, scale, k, negate)),
+        Function::new_fallible(move |x: &Vec<TIA>| {
+            noisy_top_k(x, scale, k, negate, MO::REPLACEMENT)
+        }),
         PrivacyMap::new_fallible(move |d_in: &TIA| {
             // Translate a distance bound `d_in` wrt the $L_\infty$ metric to a distance bound wrt the range metric.
             //
@@ -114,19 +114,11 @@ where
 }
 
 pub trait TopKMeasure: Measure<Distance = f64> + 'static {
-    #[cfg(feature = "polars")]
-    const DISTRIBUTION: TopKDistribution;
-
     /// # Proof Definition
-    /// Returns the index of the max element $z_i$,
-    /// where each $z_i \sim \mathrm{DISTRIBUTION}(\mathrm{shift}=y_i, \mathrm{scale}=\texttt{scale})$,
-    /// and each $y_i = -x_i$ if \texttt{negate}, else $y_i = x_i$,
-    /// $k$ times with removal.
-    fn noisy_top_k<TIA>(x: &Vec<TIA>, scale: f64, k: usize, negate: bool) -> Fallible<Vec<usize>>
-    where
-        TIA: Number + CastInternalRational,
-        f64: InfCast<TIA> + InfCast<usize>,
-        FBig: TryFrom<TIA>;
+    /// If replacement is set, the function $f$ returns a sample from $\mathcal{M}_{EM}$ (as defined in MS2020 Definition 4),
+    /// otherwise returns a sample from $\mathcal{M}_{PF}$ (as defined in MS2020 Lemma 1),
+    /// $k$ times by peeling.
+    const REPLACEMENT: bool;
 
     /// Define
     /// ```math
@@ -136,21 +128,13 @@ pub trait TopKMeasure: Measure<Distance = f64> + 'static {
     /// # Proof Definition
     /// For any $x, x'$ where $d_\mathrm{in} \ge d_\mathrm{Range}(x, x')$,
     /// return $d_\mathrm{out} \ge D_\mathrm{self}(f(x), f(x'))$,
-    /// where $f(x) = \mathrm{noisy\_top\_k}(x=x, k=1, \mathrm{scale}=\mathrm{scale})$.
+    /// where $f(x) = \mathrm{noisy\_top\_k}(x=x, k=1, \mathrm{scale}=\mathrm{scale}, \mathrm{replacement}=\mathrm{Self::REPLACEMENT})$.
     fn privacy_map(d_in: f64, scale: f64) -> Fallible<f64>;
 }
 
 #[proven(proof_path = "measurements/noisy_top_k/TopKMeasure_MaxDivergence.tex")]
 impl TopKMeasure for MaxDivergence {
-    #[cfg(feature = "polars")]
-    const DISTRIBUTION: TopKDistribution = TopKDistribution::Exponential;
-
-    fn noisy_top_k<TIA>(x: &Vec<TIA>, scale: f64, k: usize, negate: bool) -> Fallible<Vec<usize>>
-    where
-        TIA: Number + CastInternalRational,
-    {
-        exponential_top_k(x, scale, k, negate)
-    }
+    const REPLACEMENT: bool = false;
 
     fn privacy_map(d_in: f64, scale: f64) -> Fallible<f64> {
         // d_in / scale
@@ -160,20 +144,120 @@ impl TopKMeasure for MaxDivergence {
 
 #[proven(proof_path = "measurements/noisy_top_k/TopKMeasure_ZeroConcentratedDivergence.tex")]
 impl TopKMeasure for ZeroConcentratedDivergence {
-    #[cfg(feature = "polars")]
-    const DISTRIBUTION: TopKDistribution = TopKDistribution::Gumbel;
-
-    fn noisy_top_k<TIA>(x: &Vec<TIA>, scale: f64, k: usize, negate: bool) -> Fallible<Vec<usize>>
-    where
-        TIA: Number,
-        f64: InfCast<TIA>,
-        FBig: TryFrom<TIA>,
-    {
-        gumbel_top_k(x, scale, k, negate)
-    }
+    const REPLACEMENT: bool = true;
 
     fn privacy_map(d_in: f64, scale: f64) -> Fallible<f64> {
         // (d_in / scale)^2 / 8
         d_in.inf_div(&scale)?.inf_powi(ibig!(2))?.inf_div(&8.0)
+    }
+}
+
+#[proven]
+/// Returns the indices of the noisy top k elements.
+/// Gumbel noise when replacement is true, otherwise exponential noise.
+///
+/// # Proof Definition
+/// Each value in $x$ must be finite.
+///
+/// If replacement is set, returns a sample from $\mathcal{M}_{EM}$ (as defined in MS2023 Definition 4),
+/// otherwise returns a sample from $\mathcal{M}_{PF}$ (as defined in MS2023 Lemma 1),
+/// $k$ times by peeling,
+/// where $\texttt{scale} = \frac{2 \cdot \Delta}{\epsilon}$.
+pub(crate) fn noisy_top_k<TIA: Clone + CastInternalRational + ProductOrd + FiniteBounds>(
+    x: &[TIA],
+    scale: f64,
+    k: usize,
+    negate: bool,
+    replacement: bool,
+) -> Fallible<Vec<usize>> {
+    let sign = Sign::from(negate);
+    let scale = scale.into_rational()?;
+
+    let y = (x.into_iter().cloned())
+        .map(|x_i| {
+            x_i.total_clamp(TIA::MIN_FINITE, TIA::MAX_FINITE)?
+                .into_rational()
+                .map(|x_i| x_i * sign)
+        })
+        .collect::<Fallible<_>>()?;
+
+    peel_permute_and_flip(y, scale, k, replacement)
+}
+
+#[proven]
+/// # Proof Definition
+/// If replacement is set, returns a sample from $\mathcal{M}_{EM}$ (as defined in MS2023 Definition 4),
+/// otherwise returns a sample from $\mathcal{M}_{PF}$ (as defined in MS2023 Lemma 1),
+/// $k$ times by peeling,
+/// where $\texttt{scale} = \frac{2 \cdot \Delta}{\epsilon}$.
+fn peel_permute_and_flip(
+    mut x: Vec<RBig>,
+    scale: RBig,
+    k: usize,
+    replacement: bool,
+) -> Fallible<Vec<usize>> {
+    let mut natural_order = Vec::new();
+    let mut sorted_order = BTreeSet::new();
+
+    for _ in 0..k.min(x.len()) {
+        let mut index = permute_and_flip(&x, &scale, replacement)?;
+        x.remove(index);
+
+        // map index on modified x back to original x (postprocessing)
+        for &del in &sorted_order {
+            if del <= index { index += 1 } else { break }
+        }
+
+        sorted_order.insert(index);
+        natural_order.push(index);
+    }
+    Ok(natural_order)
+}
+
+#[proven]
+/// # Proof Definition
+/// If replacement is set, returns a sample from $\mathcal{M}_{EM}$ (as defined in MS2023 Definition 4),
+/// otherwise returns a sample from $\mathcal{M}_{PF}$ (as defined in MS2023 Lemma 1),
+/// where $\texttt{scale} = \frac{2 \cdot \Delta}{\epsilon}$.
+fn permute_and_flip(x: &[RBig], scale: &RBig, replacement: bool) -> Fallible<usize> {
+    let x_is_empty = || err!(FailedFunction, "x is empty");
+
+    if scale.is_zero() {
+        return (0..x.len()).max_by_key(|&i| &x[i]).ok_or_else(x_is_empty);
+    }
+
+    let x_max = x.iter().max().ok_or_else(x_is_empty)?;
+
+    let mut candidates: Vec<usize> = (0..x.len()).collect();
+
+    let sequence = match replacement {
+        false => Sequence::Range(0..x.len()),
+        true => Sequence::Zero,
+    };
+
+    for left in sequence {
+        let right = left + sample_uniform_uint_below(x.len() - left)?;
+        candidates.swap(left, right); // if w/o replacement, fisher-yates shuffle up to left
+
+        let candidate = candidates[left];
+        if sample_bernoulli_exp((x_max - &x[candidate]) / scale)? {
+            return Ok(candidate);
+        }
+    }
+    unreachable!("at least one x[candidate] is equal to x_max")
+}
+
+enum Sequence {
+    Range(Range<usize>),
+    Zero,
+}
+impl Iterator for Sequence {
+    type Item = usize;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            Sequence::Range(range) => range.next(),
+            Sequence::Zero => Some(0),
+        }
     }
 }
