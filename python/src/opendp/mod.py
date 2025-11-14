@@ -936,7 +936,7 @@ class Metric(ctypes.POINTER(AnyMetric)): # type: ignore[misc]
     _type_ = AnyMetric
 
     @property
-    def type(self):
+    def type(self) -> Union["RuntimeType", str]:
         '''
         Type of metric
         '''
@@ -1061,7 +1061,7 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
     _type_ = AnyMeasure
 
     @property
-    def type(self):
+    def type(self) -> Union["RuntimeType", str]:
         '''
         Type of measure
         '''

@@ -38,6 +38,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           rustflags: ""
+          components: rustfmt
 
       - name: Check Rust version
         run: cargo --version

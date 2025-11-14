@@ -1,9 +1,6 @@
-use std::fmt::Display;
-
 use crate::core::PrivacyMap;
 use crate::domains::{ArrayDomain, AtomDomain, ExprPlan, VectorDomain, WildExprDomain};
-use crate::measurements::{TopKMeasure, make_noisy_max};
-use crate::measures::{MaxDivergence, ZeroConcentratedDivergence};
+use crate::measurements::{TopKMeasure, make_noisy_max, noisy_top_k};
 use crate::metrics::{IntDistance, L0InfDistance, L01InfDistance, LInfDistance};
 use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
 use crate::traits::{CastInternalRational, InfCast, InfMul, Number};
@@ -132,7 +129,7 @@ where
                 vec![input_expr],
                 expr.clone(),
                 NoisyMaxPlugin {
-                    distribution: MO::DISTRIBUTION,
+                    replacement: MO::REPLACEMENT,
                     negate,
                     scale,
                 },
@@ -244,20 +241,11 @@ pub enum TopKDistribution {
     Gumbel,
 }
 
-impl Display for TopKDistribution {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TopKDistribution::Exponential => write!(f, "Exponential"),
-            TopKDistribution::Gumbel => write!(f, "Gumbel"),
-        }
-    }
-}
-
 /// Arguments for the Noisy Max expression
 #[derive(Serialize, Deserialize, Clone)]
 pub(crate) struct NoisyMaxPlugin {
-    /// The distribution to sample from.
-    pub distribution: TopKDistribution,
+    /// Whether to replace when running permute and flip
+    pub replacement: bool,
     /// The scale of the noise.
     pub scale: f64,
     /// Minimize if true
@@ -298,7 +286,7 @@ fn noisy_max_udf(inputs: &[Column], kwargs: NoisyMaxPlugin) -> PolarsResult<Colu
     };
 
     let NoisyMaxPlugin {
-        distribution,
+        replacement,
         negate,
         scale,
     } = kwargs;
@@ -310,9 +298,9 @@ fn noisy_max_udf(inputs: &[Column], kwargs: NoisyMaxPlugin) -> PolarsResult<Colu
     // PT stands for Polars Type
     fn rnm_impl<PT: 'static + PolarsDataType>(
         column: &Column,
-        distribution: TopKDistribution,
         scale: f64,
         negate: bool,
+        replacement: bool,
     ) -> PolarsResult<Column>
     where
         // the physical (rust) dtype must be a number that can be converted into a rational
@@ -320,20 +308,6 @@ fn noisy_max_udf(inputs: &[Column], kwargs: NoisyMaxPlugin) -> PolarsResult<Colu
         FBig: TryFrom<PT::Physical<'static>> + TryFrom<f64>,
         f64: InfCast<PT::Physical<'static>>,
     {
-        let domain = VectorDomain::new(AtomDomain::<PT::Physical<'static>>::new_non_nan());
-        let metric = LInfDistance::default();
-        let function = match distribution {
-            TopKDistribution::Exponential => {
-                make_noisy_max(domain, metric, MaxDivergence, scale, negate)?
-                    .function
-                    .clone()
-            }
-            TopKDistribution::Gumbel => {
-                make_noisy_max(domain, metric, ZeroConcentratedDivergence, scale, negate)?
-                    .function
-                    .clone()
-            }
-        };
         Ok(column
             .as_materialized_series()
             // unpack the series into a chunked array
@@ -348,7 +322,7 @@ fn noisy_max_udf(inputs: &[Column], kwargs: NoisyMaxPlugin) -> PolarsResult<Colu
                     })?;
 
                 let scores = arr.values_iter().cloned().collect::<Vec<_>>();
-                PolarsResult::Ok(function.eval(&scores)? as u32)
+                PolarsResult::Ok(noisy_top_k(&scores, scale, 1, negate, replacement)?[0] as u32)
             })?
             // convert the resulting chunked array back to a series
             .into_series()
@@ -361,14 +335,14 @@ fn noisy_max_udf(inputs: &[Column], kwargs: NoisyMaxPlugin) -> PolarsResult<Colu
     };
 
     match dtype.as_ref() {
-        UInt32 => rnm_impl::<UInt32Type>(series, distribution, scale, negate),
-        UInt64 => rnm_impl::<UInt64Type>(series, distribution, scale, negate),
-        Int8 => rnm_impl::<Int8Type>(series, distribution, scale, negate),
-        Int16 => rnm_impl::<Int16Type>(series, distribution, scale, negate),
-        Int32 => rnm_impl::<Int32Type>(series, distribution, scale, negate),
-        Int64 => rnm_impl::<Int64Type>(series, distribution, scale, negate),
-        Float32 => rnm_impl::<Float32Type>(series, distribution, scale, negate),
-        Float64 => rnm_impl::<Float64Type>(series, distribution, scale, negate),
+        UInt32 => rnm_impl::<UInt32Type>(series, scale, negate, replacement),
+        UInt64 => rnm_impl::<UInt64Type>(series, scale, negate, replacement),
+        Int8 => rnm_impl::<Int8Type>(series, scale, negate, replacement),
+        Int16 => rnm_impl::<Int16Type>(series, scale, negate, replacement),
+        Int32 => rnm_impl::<Int32Type>(series, scale, negate, replacement),
+        Int64 => rnm_impl::<Int64Type>(series, scale, negate, replacement),
+        Float32 => rnm_impl::<Float32Type>(series, scale, negate, replacement),
+        Float64 => rnm_impl::<Float64Type>(series, scale, negate, replacement),
         UInt8 | UInt16 => {
             polars_bail!(InvalidOperation: "u8 and u16 not supported in the OpenDP Polars plugin. Please use u32 or u64.")
         }

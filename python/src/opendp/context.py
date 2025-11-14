@@ -1077,7 +1077,7 @@ def _normalize_compositor(
     elif split_by_weights is not None:
         # TODO: Wrap d_out in an object that defines __mul__,
         # and fix the typing on the signature.
-        if isinstance(d_out, float):
+        if isinstance(d_out, (int, float)):
             weights = [d_out * w for w in split_by_weights]
         else:
             weights = [(d_out[0] * w, d_out[1] * w) for w in split_by_weights]

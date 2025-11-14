@@ -1,6 +1,5 @@
 #[cfg(feature = "ffi")]
 use polars::prelude::CompatLevel;
-#[cfg(feature = "ffi")]
 use polars::series::Series;
 use polars::{
     error::{PolarsResult, polars_bail},
