@@ -20,7 +20,7 @@
     \item Argument \texttt{param} of type \texttt{(f64, f64)}
 \end{itemize}
 
-\subsubsection*{User-verified}
+\subsubsection*{Caller-verified}
 None
 
 \subsection*{Pseudocode}
@@ -37,8 +37,8 @@ None
 \end{theorem}
 
 \begin{proof} 
-    We start with the following alternative definition of DP from~\cite{awan2023canonical}.
-\begin{definition}[\protect{\cite[Definition~2.2]{awan2023canonical}}]
+    We start with the following alternative definition of DP from~\cite{dong2019gaussian}.
+\begin{definition}[\protect{\cite[Proposition~2.5]{dong2019gaussian}}]
     \label{def-2-2}
     Let $\epsilon > 0$ and $\delta \geq 0$, and define 
     \begin{equation}
@@ -47,7 +47,7 @@ None
     Then we say that a mechanism $M$ satisfies $(\epsilon, \delta)$-DP if it satisfies $f_{\epsilon,\delta}$-DP.
 \end{definition}
 The definition assumes $\alpha \in [0, 1]$.
-For more information about tradeoff functions, see \cite{awan2023canonical}.
+For more information about tradeoff functions, see \cite{dong2019gaussian}.
 
 On lines \ref{exp-eps} and \ref{exp-neg-eps}, 
 arithmetic is computed in a manner which results in over-estimates of the privacy loss, 
