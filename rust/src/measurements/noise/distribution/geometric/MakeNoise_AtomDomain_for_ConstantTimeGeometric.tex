@@ -1,0 +1,64 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{MakeNoise<AtomDomain<T>, AbsoluteDistance<T>, MO> for ConstantTimeGeometric<T>}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise/trait}{MakeNoise} over scalars
+for \rustdoc{measurements/noise/distribution/geometric/struct}{ConstantTimeGeometric} in \asOfCommit{mod.rs}{f5bb719}.
+
+The intuition of this implementation is that a vector-valued mechanism can be used to privatize a scalar-valued input,
+by transforming the input into a singleton vector, 
+applying the vector mechanism, and then unpacking the resulting singleton vector.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+
+\texttt{MakeNoise} is parameterized as follows:
+\begin{itemize}
+    \item \texttt{DI} is of type \texttt{AtomDomain<T>}
+    \item \texttt{MI} is of type \texttt{AbsoluteDistance<T>}
+    \item \texttt{MO} implements trait \rustdoc{core/trait}{Measure}
+\end{itemize}
+
+The following trait bounds are also required:
+\begin{itemize}
+    \item Generic \texttt{T} implements trait \rustdoc{traits/trait}{Integer}
+    \item Generic \texttt{MO} implements trait \rustdoc{core/trait}{Measure}
+    \item Type \texttt{usize} implements trait \rustdoc{traits/trait}{ExactIntCast}\texttt{<T>}
+    \item Type \texttt{RBig} implements trait \texttt{TryFrom<T>}
+    \item Type \texttt{ZExpFamily<1>} implements trait \rustdoc{measurements/trait}{NoisePrivacyMap}\texttt{<L1Distance<RBig>, MO>}.
+        This bound requires that it must be possible to construct a privacy map for the combination of \texttt{ZExpFamily<1>} noise distribution, distance type and privacy measure.
+        Since the \texttt{ConstantTimeGeometric} distribution is equivalent to \texttt{ZExpFamily<1>},
+        maps built for \texttt{ZExpFamily<1>} can be used for \texttt{ConstantTimeGeometric}.
+\end{itemize}
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/MakeNoise_AtomDomain_for_ConstantTimeGeometric.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \validMeasurement{(\texttt{self, input\_space, T, MO})}{\texttt{make\_noise}}
+\end{theorem}
+
+\begin{proof}
+    Neither constructor \rustdoc{transformations/scalar_to_vector/fn}{make\_vec} nor
+    \rustdoc{measurements/noise/trait}{MakeNoise}\texttt{.make\_noise} have manual preconditions, 
+    and the postconditions guarantee a valid transformation and valid measurement, respectively.
+    \rustdoc{transformations/scalar\_to\_vector/fn}{then\_index\_or\_default} also does not have preconditions,
+    and its postcondition guarantees that it returns a valid postprocessor.
+
+    The chain of a valid transformation, valid measurement and valid postprocessor is a valid measurement.
+\end{proof}
+
+\end{document}
