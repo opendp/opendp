@@ -90,7 +90,7 @@ Before proceeding with proving the validity of the stability map, we provide a c
     Assume $x, x'$ are \din-close under \texttt{input\_metric} and that $\texttt{stability\_map}(\din) \leq \dout$.  
     These assumptions are used to establish the following inequality: 
     \begin{align*} 
-        |\function(x) - \function(x')| &\leq |\texttt{len(x')} - \texttt{len(x')}| &&\text{by }\ref{dsym-sens} \\ 
+        |\function(x) - \function(x')| &\leq |\texttt{len(x)} - \texttt{len(x')}| &&\text{by }\ref{dsym-sens} \\ 
         &= |\sum_{z\in \mathcal{X}} h_{\texttt{x}}(z) - \sum_{z\in \mathcal{X}} h_{\texttt{x'}}(z)| &&\text{by } \ref{lemma:len-sum-equiv} \\ 
         &= |\sum_{z\in \mathcal{X}}\left(h_{\texttt{x}}(z) - h_{\texttt{x'}}(z)\right)| &&\text{by algebra} \\ 
         &\leq \sum_{z\in \mathcal{X}}|h_{\texttt{x}}(z) - h_{\texttt{x'}}(z)| &&\text{by triangle inequality} \\ 
