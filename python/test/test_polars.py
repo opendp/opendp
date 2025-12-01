@@ -980,7 +980,7 @@ def test_explicit_grouping_keys_context():
     observed = observed.with_columns(D=expected["D"])
     pl_testing.assert_frame_equal(observed, expected)
 
-def test_no_grouping_keys_context():
+def test_no_grouping_keys_context_error():
     pl = pytest.importorskip("polars")
 
     lf_domain, lf = example_lf(margin=["B"], max_length=100)
@@ -1001,6 +1001,72 @@ def test_no_grouping_keys_context():
         'The key-set of {col("B")} is private and cannot be released without a filter or join.'
     )):
         query.release().collect()
+
+def test_no_grouping_keys_context_success():
+    # Based on generated code from DP Wizard:
+    pl = pytest.importorskip("polars")
+    privacy_unit = dp.unit_of(contributions=1)
+
+    privacy_loss = dp.loss_of(
+        epsilon=1,
+        delta=1 / max(1e7, 100000),
+    )
+
+    lf = pl.LazyFrame({"B": [1, 2, 3]})
+
+    stats_context = dp.Context.compositor(
+        data=lf.with_columns(
+                pl.col('B')
+                .cut([1,2,3]) 
+                .alias('b_bin')
+                .cast(pl.String)),
+        privacy_unit=privacy_unit,
+        privacy_loss=privacy_loss,
+        split_by_weights=[1],
+    )
+
+    groups = ['b_bin']
+    b_query = (
+        stats_context.query()
+        .group_by(groups)
+        .agg(pl.len().dp.noise().alias("count"))
+        .with_keys(pl.LazyFrame({}))
+    )
+    b_query.release().collect()  # Probably empty, because of the small size of the dataset.
+
+
+@pytest.mark.xfail(reason="bug?") # TODO: File new issue if not resolved before merge.
+def test_no_grouping_keys_context_from_series():
+    # Based on generated code from DP Wizard:
+    pl = pytest.importorskip("polars")
+    privacy_unit = dp.unit_of(contributions=1)
+
+    privacy_loss = dp.loss_of(
+        epsilon=1,
+        delta=1 / max(1e7, 100000),
+    )
+
+    lf = pl.LazyFrame(example_series())
+
+    stats_context = dp.Context.compositor(
+        data=lf.with_columns(
+                pl.col('B')
+                .cut([1,2,3]) 
+                .alias('b_bin')
+                .cast(pl.String)),
+        privacy_unit=privacy_unit,
+        privacy_loss=privacy_loss,
+        split_by_weights=[1],
+    )
+
+    groups = ['b_bin']
+    b_query = (
+        stats_context.query()
+        .group_by(groups)
+        .agg(pl.len().dp.noise().alias("count"))
+        .with_keys(pl.LazyFrame({}))
+    )
+    b_query.release().collect()  # Probably empty, because of the small size of the dataset.
 
 
 @pytest.mark.parametrize("dtype", ["Time", "Datetime", "Date"])
