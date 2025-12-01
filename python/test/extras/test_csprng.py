@@ -3,7 +3,7 @@ import pytest
 from ..helpers import optional_dependency
 try:
     # So randomgen will be in sys.modules, if possible.
-    import randomgen # type: ignore[import-not-found] # noqa F401
+    import randomgen # type: ignore[import-not-found,import-untyped] # noqa F401
 except ModuleNotFoundError:
     pass
 

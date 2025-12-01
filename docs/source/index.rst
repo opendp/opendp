@@ -21,7 +21,7 @@ For more background on differential privacy and its applications:
 Why OpenDP?
 -----------
 
-* OpenDP is based on a `solid conceptual framework <https://projects.iq.harvard.edu/files/opendp/files/opendp_programming_framework_11may2020_1_01.pdf>`_ for expressing privacy-aware computations.
+* OpenDP is based on a `solid conceptual framework <https://opendp.org/files/2025/11/opendp_programming_framework_11may2020_1_01.pdf>`_ for expressing privacy-aware computations.
 * OpenDP is built on a Rust core for memory and thread safety and performance.
 * OpenDP has a process for independent review of algorithms and implementations.
 * OpenDP has performed well in `independent security audits <https://www.sri.inf.ethz.ch/publications/lokna2023groupandattack>`_.
