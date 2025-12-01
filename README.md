@@ -17,7 +17,7 @@ It can be used to build applications of privacy-preserving computations, using a
 OpenDP is implemented in Rust, with bindings for easy use from Python and R.
 
 The architecture of the OpenDP Library is based on a conceptual framework for expressing privacy-aware computations.
-This framework is described in the paper [A Programming Framework for OpenDP](https://projects.iq.harvard.edu/files/opendp/files/opendp_programming_framework_11may2020_1_01.pdf).
+This framework is described in the paper [A Programming Framework for OpenDP](https://opendp.org/files/2025/11/opendp_programming_framework_11may2020_1_01.pdf).
 
 The OpenDP Library is part of the larger [OpenDP Project](https://opendp.org), a community effort to build trustworthy,
 open source software tools for analysis of private data.
