@@ -325,7 +325,7 @@ estimates.
             ...     context.query().filter(pl.col.HWUSUAL != 99.0)
             ...     # release both the sum and length in one query
             ...     .select(
-            ...         # if the imputation is omitted, 
+            ...         # if the imputation is omitted,
             ...         # a midpoint imputation is inserted (40)
             ...         pl.col.HWUSUAL.cast(int).dp.sum(bounds=(0, 80)),
             ...         dp.len(),
@@ -488,9 +488,7 @@ set candidates to whole numbers between 20 and 60:
             >>> query_median_hours = (
             ...     context.query()
             ...     .filter(pl.col.HWUSUAL != 99.0)
-            ...     .select(
-            ...         pl.col.HWUSUAL.cast(int).dp.median(candidates)
-            ...     )
+            ...     .select(pl.col.HWUSUAL.cast(int).dp.median(candidates))
             ... )
             >>> query_median_hours.summarize(alpha=0.05)
             shape: (1, 5)
