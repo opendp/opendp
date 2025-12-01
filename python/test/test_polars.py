@@ -1017,7 +1017,7 @@ def test_no_grouping_keys_context_success():
     stats_context = dp.Context.compositor(
         data=lf.with_columns(
                 pl.col('B')
-                .cut([1,2,3]) 
+                .cut([1, 2, 3])
                 .alias('b_bin')
                 .cast(pl.String)),
         privacy_unit=privacy_unit,
@@ -1051,7 +1051,7 @@ def test_no_grouping_keys_context_from_series():
     stats_context = dp.Context.compositor(
         data=lf.with_columns(
                 pl.col('B')
-                .cut([1,2,3]) 
+                .cut([1, 2, 3])
                 .alias('b_bin')
                 .cast(pl.String)),
         privacy_unit=privacy_unit,
