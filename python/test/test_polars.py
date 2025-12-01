@@ -980,6 +980,28 @@ def test_explicit_grouping_keys_context():
     observed = observed.with_columns(D=expected["D"])
     pl_testing.assert_frame_equal(observed, expected)
 
+def test_no_grouping_keys_context():
+    pl = pytest.importorskip("polars")
+
+    lf_domain, lf = example_lf(margin=["B"], max_length=100)
+
+    context = dp.Context.compositor(
+        data=lf,
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+        domain=lf_domain,
+    )
+
+    keys = pl.LazyFrame({})
+    query = (
+        context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys)
+    )
+    with pytest.raises(dp.OpenDPException, match=re.escape(
+        'The key-set of {col("B")} is private and cannot be released without a filter or join.'
+    )):
+        query.release().collect()
+
 
 @pytest.mark.parametrize("dtype", ["Time", "Datetime", "Date"])
 def test_datetime(dtype):
