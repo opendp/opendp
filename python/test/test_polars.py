@@ -1002,7 +1002,7 @@ def test_no_grouping_keys_context_error():
     )):
         query.release().collect()
 
-def test_no_grouping_keys_context_success():
+def test_no_grouping_keys_context():
     # Based on generated code from DP Wizard:
     pl = pytest.importorskip("polars")
     privacy_unit = dp.unit_of(contributions=1)
@@ -1012,7 +1012,8 @@ def test_no_grouping_keys_context_success():
         delta=1 / max(1e7, 100000),
     )
 
-    lf = pl.LazyFrame({"B": [1, 2, 3]})
+    _, series = example_series()
+    lf = pl.LazyFrame(series)
 
     stats_context = dp.Context.compositor(
         data=lf.with_columns(
@@ -1032,42 +1033,7 @@ def test_no_grouping_keys_context_success():
         .agg(pl.len().dp.noise().alias("count"))
         .with_keys(pl.LazyFrame({}))
     )
-    b_query.release().collect()  # Probably empty, because of the small size of the dataset.
-
-
-@pytest.mark.xfail(reason="bug?") # TODO: File new issue if not resolved before merge.
-def test_no_grouping_keys_context_from_series():
-    # Based on generated code from DP Wizard:
-    pl = pytest.importorskip("polars")
-    privacy_unit = dp.unit_of(contributions=1)
-
-    privacy_loss = dp.loss_of(
-        epsilon=1,
-        delta=1 / max(1e7, 100000),
-    )
-
-    lf = pl.LazyFrame(example_series())
-
-    stats_context = dp.Context.compositor(
-        data=lf.with_columns(
-                pl.col('B')
-                .cut([1, 2, 3])
-                .alias('b_bin')
-                .cast(pl.String)),
-        privacy_unit=privacy_unit,
-        privacy_loss=privacy_loss,
-        split_by_weights=[1],
-    )
-
-    groups = ['b_bin']
-    b_query = (
-        stats_context.query()
-        .group_by(groups)
-        .agg(pl.len().dp.noise().alias("count"))
-        .with_keys(pl.LazyFrame({}))
-    )
-    b_query.release().collect()  # Probably empty, because of the small size of the dataset.
-
+    assert b_query.release().collect()["count"].item() > 0
 
 @pytest.mark.parametrize("dtype", ["Time", "Datetime", "Date"])
 def test_datetime(dtype):
