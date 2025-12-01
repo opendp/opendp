@@ -592,7 +592,7 @@ unbox2 <- function(x) {
 #' # find a measurement that satisfies epsilon = 1 when datasets differ by at most one record
 #' m_sum <- binary_search_chain(\(s) t_sum |> then_laplace(s), d_in = 1L, d_out = 1.)
 binary_search_chain <- function(make_chain, d_in, d_out, bounds = NULL, .T = NULL) {
-  return(make_chain(binary_search_param(make_chain, d_in, d_out, bounds, .T)))
+  make_chain(binary_search_param(make_chain, d_in, d_out, bounds, .T))
 }
 
 
@@ -610,9 +610,9 @@ binary_search_chain <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
 #' @return the parameter to `make_chain` that results in a (`d_in`, `d_out`)-close Transformation or Measurement
 #' @export
 binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NULL) {
-  return(binary_search(function(param) {
+  binary_search(function(param) {
     make_chain(param)(d_in = d_in, d_out = d_out)
-  }, bounds, .T))
+  }, bounds, .T)
 }
 
 #' Find the closest passing value to the decision boundary of `predicate`
@@ -676,7 +676,7 @@ binary_search <- function(predicate, bounds = NULL, .T = NULL, return_sign = FAL
   if (return_sign) {
     return(c(value, ifelse(minimize, 1, -1)))
   }
-  return(value)
+  value
 }
 
 # nolint start: cyclocomp_linter
