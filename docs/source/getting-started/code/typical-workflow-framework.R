@@ -4,7 +4,8 @@ enable_features("contrib")
 
 d_in <- 1L # neighboring data set distance is at most d_in...
 input_metric <- symmetric_distance() # ...in terms of additions/removals
-input_domain <- vector_domain(atom_domain(.T = f64, nan = FALSE))
+
+input_domain <- vector_domain(atom_domain(.T = i32))
 
 # /unit-of-privacy
 
@@ -15,59 +16,73 @@ privacy_measure <- max_divergence() # ...in terms of pure-DP
 
 # /privacy-loss
 
-
-# public-info
-bounds <- c(0.0, 100.0)
-imputed_value <- 50.0
-
-# /public-info
-
-
 # mediate
-data <- runif(100L, min = 0.0, max = 100.0)
+data <- sample.int(100L, size = 100L, replace = TRUE)
 
-m_sc <- make_adaptive_composition(
+o_ac <- make_fully_adaptive_composition(
   input_domain = input_domain,
   input_metric = input_metric,
-  output_measure = privacy_measure,
+  output_measure = privacy_measure
+)
+
+m_ac <- make_privacy_filter(
+  odometer = o_ac,
   d_in = d_in,
-  d_mids = rep(d_out / 3L, 3L)
+  d_out = d_out
 )
 
 # Call measurement with data to create a queryable:
-queryable <- m_sc(arg = data) # Different from Python, which does not require "arg".
+queryable <- m_ac(arg = data) # Different from Python, which does not require "arg".
 
 # /mediate
 
 
 # count
-count_transformation <- (
-  make_count(input_domain, input_metric)
+
+make_dp_count <- function(scale) {
+  c(input_domain, input_metric) |> then_count() |> then_laplace(scale)
+}
+
+scale <- binary_search_param(
+  make_dp_count, d_in, d_out / 3L, .T = "float"
 )
 
-count_sensitivity <- count_transformation(d_in = d_in) # Different from Python, which uses ".map".
-cat("count_sensitivity:", count_sensitivity, "\n")
-# 1
-
-count_measurement <- binary_search_chain(
-  function(scale) count_transformation |> then_laplace(scale), d_in, d_out / 3L
+accuracy <- discrete_laplacian_scale_to_accuracy(
+  scale = scale, alpha = 0.05
 )
-dp_count <- queryable(query = count_measurement) # Different from Python, which does not require "query".
-cat("dp_count:", dp_count, "\n")
+accuracy
+# 9.445721638273584
+
+# (with 100(1-alpha) = 95% confidence, the estimated value will differ
+#    from the true value by no more than ~9)
+
+# Different from Python, which does not require "query = ".
+dp_count <- queryable(query = make_dp_count(scale))
+
+confidence_interval <- c(
+  dp_count - accuracy,
+  dp_count + accuracy
+)
 # /count
 
+# public-info
+bounds <- c(0L, 100L)
 
-# mean
-mean_transformation <- (
-  make_clamp(input_domain, input_metric, bounds)
-  |> then_resize(size = dp_count, constant = imputed_value)
-  |> then_mean()
+# /public-info
+
+
+# sum
+sum_transformation <- (
+  c(input_domain, input_metric)
+  |> then_clamp(bounds)
+  |> then_sum()
 )
 
-mean_measurement <- binary_search_chain(
-  function(scale) mean_transformation |> then_laplace(scale), d_in, d_out / 3L
+sum_measurement <- binary_search_chain(
+  \(scale) sum_transformation |> then_laplace(scale), d_in, d_out / 3L
 )
 
-dp_mean <- queryable(query = mean_measurement) # Different from Python, which does not require "query".
-cat("dp_mean:", dp_mean, "\n")
-# /mean
+# Different from Python, which does not require "query = ".
+dp_sum <- queryable(query = sum_measurement)
+cat("dp_sum:", dp_sum, "\n")
+# /sum
