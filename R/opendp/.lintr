@@ -1,4 +1,6 @@
 linters: all_linters(
+    # Intentional configurations, and not just to get passing tests:
+    return_linter = NULL, # We prefer explicit returns for clarity.
     # If "linters_with_defaults" is used then only these problems are reported:
     indentation_linter = indentation_linter(hanging_indent_style = "never"),
     line_length_linter = NULL, # Lines should not be more than 80 characters.
