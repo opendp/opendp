@@ -12,24 +12,24 @@ These combinators are used to cast the output measure of a Measurement.
      - Constructor
    * - ``MaxDivergence``
      - ``Approximate<MaxDivergence>``
-     - :func:`opendp.combinators.make_approximate`
+     - :func:`~opendp.combinators.make_approximate`
    * - ``ZeroConcentratedDivergence``
      - ``Approximate<ZeroConcentratedDivergence>``
-     - :func:`opendp.combinators.make_approximate`
+     - :func:`~opendp.combinators.make_approximate`
    * - ``MaxDivergence``
      - ``SmoothedMaxDivergence``
-     - :func:`opendp.combinators.make_fixed_approxDP_to_approxDP`
+     - :func:`~opendp.combinators.make_fixed_approxDP_to_approxDP`
    * - ``MaxDivergence``
      - ``ZeroConcentratedDivergence``
-     - :func:`opendp.combinators.make_pureDP_to_zCDP`
+     - :func:`~opendp.combinators.make_pureDP_to_zCDP`
    * - ``ZeroConcentratedDivergence``
      - ``SmoothedMaxDivergence``
-     - :func:`opendp.combinators.make_zCDP_to_approxDP`
+     - :func:`~opendp.combinators.make_zCDP_to_approxDP`
    * - ``SmoothedMaxDivergence``
      - ``Approximate<MaxDivergence>``
-     - :func:`opendp.combinators.make_fix_delta`
+     - :func:`~opendp.combinators.make_fix_delta`
 
-:func:`opendp.combinators.make_approximate` is used for casting an output measure from ``MaxDivergence`` to ``Approximate<MaxDivergence>``.
+:func:`~opendp.combinators.make_approximate` is used for casting an output measure from ``MaxDivergence`` to ``Approximate<MaxDivergence>``.
 This is useful if you want to compose pure-DP measurements with approximate-DP measurements.
 
 .. tab-set::
@@ -50,8 +50,8 @@ This is useful if you want to compose pure-DP measurements with approximate-DP m
 
 The combinator can also be used on measurements with a ``ZeroConcentratedDivergence`` privacy measure.
 
-:func:`opendp.combinators.make_pureDP_to_zCDP` is used for casting an output measure from ``MaxDivergence`` to ``ZeroConcentratedDivergence``.
-:func:`opendp.combinators.make_zCDP_to_approxDP` is used for casting an output measure from ``ZeroConcentratedDivergence`` to ``SmoothedMaxDivergence``.
+:func:`~opendp.combinators.make_pureDP_to_zCDP` is used for casting an output measure from ``MaxDivergence`` to ``ZeroConcentratedDivergence``.
+:func:`~opendp.combinators.make_zCDP_to_approxDP` is used for casting an output measure from ``ZeroConcentratedDivergence`` to ``SmoothedMaxDivergence``.
 
 .. tab-set::
 
@@ -67,7 +67,7 @@ The combinator can also be used on measurements with a ``ZeroConcentratedDiverge
         >>> profile.epsilon(delta=1e-6)
         11.688596249354896
 
-:func:`opendp.combinators.make_fix_delta` changes the output measure from ``SmoothedMaxDivergence`` to ``Approximate<MaxDivergence>``.
+:func:`~opendp.combinators.make_fix_delta` changes the output measure from ``SmoothedMaxDivergence`` to ``Approximate<MaxDivergence>``.
 It fixes the delta parameter in the curve, so that the resulting measurement can be composed with other ``Approximate<MaxDivergence>`` measurements.
 
 .. tab-set::
