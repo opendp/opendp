@@ -56,10 +56,11 @@ introduction <index.rst>`__.
             ... )
 
 .. note::
-    In practice, it is recommended to only ever create one Context that
-    spans all queries you may make on your data. However, to more clearly
-    explain the functionality of the library, the following examples do
-    not follow this recommendation.
+    We'll consistently use ``ignore_errors=True``:
+    Polars infers types from the first rows of a CSV, but without this setting,
+    if a later value can not be parsed as the inferred type it will error.
+    That's not the behavior we want:
+    Runtime errors would leak information and violate the DP guarantee.
             
 
 Count
@@ -169,6 +170,11 @@ present in the data. This descriptor will need to be provided when you
 first construct the Context, in the form of a *margin*. A margin is used
 to describe certain properties that a potential adversary would already
 know about the data.
+
+.. note::
+    We recommend creating just one Context for all your queries.
+    However, to help explain the functionality of the library,
+    the following examples create new Contexts with different settings.
 
 .. tab-set::
 
