@@ -236,7 +236,7 @@ where
 /// * `TO` - Output Type.
 #[deprecated(
     since = "0.14.0",
-    note = "This function has been renamed, use `make_adaptive_composition` instead."
+    note = "This function has been renamed: use :py:func:`~opendp.combinators.make_adaptive_composition` instead."
 )]
 pub fn make_sequential_composition<
     DI: Domain + 'static,
