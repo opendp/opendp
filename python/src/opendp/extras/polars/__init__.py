@@ -854,6 +854,9 @@ class LazyFrameQuery:
         if on is None:
             on = keys.collect_schema().names()
 
+        if len(on) == 0:
+            return self
+
         return LazyFrameQuery(
             keys.join(self.polars_plan, how="left", on=on, nulls_equal=True),
             self._query,
