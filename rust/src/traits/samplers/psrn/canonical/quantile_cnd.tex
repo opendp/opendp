@@ -1,0 +1,91 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\usepackage[backend=biber, style=authoryear-comp, sorting=nyt]{biblatex}
+\addbibresource{ref.bib} 
+
+\title{\texttt{fn quantile\_cnd}}
+\author{Aishwarya Ramasethu, Yu-Ju Ku, Jordan Awan, Michael Shoemate}
+\begin{document}
+
+\maketitle
+
+\contrib
+
+Compute the quantile of a canonical noise distribution, as specified by a tradeoff function \texttt{f}.
+
+\section{Hoare Triple}
+
+\subsection*{Preconditions}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Argument \texttt{uniform} of type \texttt{RBig}
+    \item Argument \texttt{f}, a function from \texttt{RBig} to \texttt{RBig}
+    \item Argument \texttt{c} of type \texttt{RBig}
+\end{itemize}
+
+\subsubsection*{User-verified}
+\begin{itemize}
+    \item Argument \texttt{uniform} is in $[0, 1]$
+    \item Argument \texttt{f} is a symmetric nontrivial tradeoff function
+    \item Argument \texttt{c} is the fixed point of \texttt{f}, where \texttt{f(c) = c}
+\end{itemize}
+
+\subsection*{Pseudocode}
+
+\lstinputlisting[language=Python,firstline=2]{./pseudocode/quantile_cnd.py}
+
+\subsection*{Postcondition}
+
+\begin{theorem}
+    \label{postcondition}
+    Evaluates the quantile function $F^{-1}_f(u)$
+    as defined in Proposition F.6 of \cite{awan2023canonical}.
+\end{theorem}
+
+\begin{proof} 
+
+We start by defining $F_f(\cdot)$:
+\begin{definition}[\protect{\cite[Definition~3.7]{awan2023canonical}}]
+    \label{def1}  % Def 3.7
+    Let $f$ be a symmetric nontrivial tradeoff function, and let {$c\in [0,1/2)$} be the unique fixed point of $f$: $f(c)=c$. 
+    We define $F_f:\mathbb{R}\rightarrow \mathbb{R}$ as
+    \begin{equation}
+        F_f(x) = \begin{cases}
+            f(1-F_f(x+1))&x<-1/2\\
+            c \cdot (1/2-x) + (1-c)(x+1/2)&-1/2\leq x\leq 1/2\\
+            1-f(F_f(x-1))&x>1/2.\\
+        \end{cases}
+    \end{equation}
+\end{definition}
+
+The preconditions for \texttt{quantile\_cnd} satisfy the preconditions for this definition.
+The quantile function $F^{-1}_f(u)$ is defined in the following lemma.
+\begin{proposition}[\protect{\cite[Proposition~F.6]{awan2023canonical}}]
+    \label{prop-f-6}
+    The quantile function $F_f^{-1}:(0,1)\rightarrow \mathbb{R}$ for $F_f$ can be expressed as
+    \begin{equation}
+        F_f^{-1}(u) = \begin{cases}
+            F_f^{-1}(1-f(u))-1&u<c\\
+            \frac{u-1/2}{1-2c}&c\leq u\leq 1-c\\
+            F_f^{-1}(f(1-u))+1&u>1-c,
+        \end{cases}
+    \end{equation}
+    
+    where $c$ is the unique fixed point of $f$. 
+    {Furthermore, for any $u\in (0,1)$, the expression $Q_f(u)$ takes a finite number of recursive steps to evaluate. Thus,} 
+    if $U\sim U(0,1)$, then $F_f^{-1}(U) \sim F_f$. 
+\end{proposition}
+
+\texttt{quantile\_cnd} is the quantile function $F^{-1}_f(u)$, 
+\texttt{f} is the tradeoff function $f$, 
+\texttt{uniform} is $u$,
+and \texttt{c} is the fixed point of $f$, as guaranteed in the precondition.
+
+Since the pseudocode uses exact arithmetic, \texttt{quantile\_cnd} implements \ref{prop-f-6},
+satisfying the postcondition.
+
+\end{proof}
+
+\printbibliography
+\end{document}

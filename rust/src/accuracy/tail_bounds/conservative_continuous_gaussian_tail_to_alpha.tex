@@ -1,0 +1,72 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{fn conservative\_continuous\_gaussian\_tail\_to\_alpha}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+\contrib
+
+Proof for \rustdoc{accuracy/tail\_bounds/fn}{conservative\_continuous\_gaussian\_tail\_to\_alpha}.
+
+\begin{definition}
+    \label{gaussian}
+    Define $X \sim \mathcal{N}(0, s)$, a random variable following the continuous gaussian distribution:
+    \begin{equation}
+        f(x) = \frac{1}{\sigma \sqrt{2 \pi}} e^{-\frac{1}{2}\left( \frac{x}{\sigma}\right)^2}
+    \end{equation}
+\end{definition}
+
+\begin{definition}
+    \label{erf}
+    The error function is defined as:
+    \begin{equation}
+        \mathrm{erf}(z) = \frac{2}{\sqrt{\pi}} \int_{0}^{z} e^{-t^2} dt
+    \end{equation}
+\end{definition}
+
+\begin{definition}
+    \label{erfc}
+    The complementary error function is defined as:
+    \begin{equation}
+        \mathrm{erfc}(z) = 1 - \mathrm{erf}(z)
+    \end{equation}
+\end{definition}
+
+\begin{lemma}
+    \label{erfc-err}
+    The implementation of \texttt{erfc} differs from a conservatively rounded implementation by no greater than one 32-bit float ulp.
+\end{lemma}
+
+\begin{proof}
+    The following code conducts an exhaustive search.
+    % the adjacent erfc_err_analysis.py file is checked-in, and runnable
+    \label{sec:erfc-err-check}
+    \lstinputlisting[language=Python,firstline=2]{./erfc_err_analysis.py}
+
+    Upon completion, the greatest discovered error is at most 1 ulp.
+\end{proof}
+
+\begin{theorem}
+    Assume $X \sim \mathcal{N}(0, s)$, and $t > 0$.
+    \begin{equation}
+        \alpha = P[X \ge t] = \frac{1}{2} \mathrm{erfc}\left(\frac{t}{\sigma \sqrt{2}}\right)
+    \end{equation}
+\end{theorem}
+
+\begin{proof}
+    \begin{align*}
+        \alpha &= P[X \ge t] \\
+        &= \frac{1}{\sigma \sqrt{2 \pi}} \int_{t}^{\infty} e^{-\frac{1}{2}\left( \frac{t}{\sigma}\right)^2} dt && \text{by } \ref{gaussian} \\
+        &= \frac{1}{2} \left(1 + \mathrm{erf}\frac{t}{\sigma \sqrt{2}}\right) && \text{by } \ref{erf} \\
+        &= \frac{1}{2} \mathrm{erfc}\left(\frac{t}{\sigma \sqrt{2}}\right) && \text{by } \ref{erfc}
+    \end{align*}
+
+    The implementation of this bound uses conservative rounding down within erfc, as erfc is monotonically decreasing.
+    The outcome of erfc is increased by one 32-bit float ulp, which guarantees a conservatively larger value, by \ref{erfc-err}.
+    Therefore the entire computation results in a conservatively larger bound on the mass of the tail of the continuous gaussian distribution.
+\end{proof}
+
+\end{document}
