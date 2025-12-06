@@ -45,10 +45,20 @@ Enable ``contrib`` globally with the following snippet:
 
 .. tab-set::
 
-    .. tab-item:: Python
+    .. tab-item:: Python (Context API)
         :sync: python
 
         .. literalinclude:: code/quickstart-context.rst
+            :language: python
+            :dedent:
+            :start-after: init
+            :end-before: /init
+
+
+    .. tab-item:: Python (Framework API)
+        :sync: python-framework
+
+        .. literalinclude:: code/quickstart-framework.rst
             :language: python
             :dedent:
             :start-after: init
@@ -73,10 +83,19 @@ Let's apply Laplace noise to a value.
 
 .. tab-set::
 
-    .. tab-item:: Python
+    .. tab-item:: Python (Context API)
         :sync: python
 
         .. literalinclude:: code/quickstart-context.rst
+            :language: python
+            :dedent:
+            :start-after: demo
+            :end-before: /demo
+
+    .. tab-item:: Python (Framework API)
+        :sync: python-framework
+
+        .. literalinclude:: code/quickstart-framework.rst
             :language: python
             :dedent:
             :start-after: demo
@@ -98,11 +117,6 @@ Let's apply Laplace noise to a value.
             :start-after: demo
             :end-before: /demo
 
-This demonstrates a number of low-level OpenDP patterns:
-
-* First, define your "metric space": a data domain and a definition of distance.
-* Then, chain operators together to construct a ``Measurement`` (aka mechanism).
-* Invoke that measurement on a value to get a DP release.
 
 OpenDP has two APIs and we'll demonstrate how to use both:
 
@@ -111,6 +125,12 @@ OpenDP has two APIs and we'll demonstrate how to use both:
 
 Because the Context API is a wrapper around the Framework API, it is easier to use but less flexible:
 All calls ultimately pass through the Framework API.
+
+The framework API example demonstrates a number of low-level OpenDP patterns:
+
+* First, define your "metric space": a data domain and a definition of distance.
+* Then, chain operators together to construct a ``Measurement`` (aka mechanism).
+* Invoke that measurement with your data to get a DP release.
 
 The next page will demonstrate usage of the Context API in Python, and Framework API in Python and R.
 After that, the remaining "Getting Started" documentation will focus just on Python.

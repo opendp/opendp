@@ -5,15 +5,8 @@ A differentially private analysis in OpenDP typically has the following steps:
 
 1. Identify the unit of privacy
 2. Set privacy loss parameters
-3. Collect public information
-4. Mediate access to data
-5. Submit DP queries
-
-.. Diagram source: https://docs.google.com/drawings/d/1W4l9x3UM3hbVLWlC0nzijqgaQ31wY5ERebp8jkYy1yc/edit
-
-.. image:: code/typical-workflow-diagram.svg
-    :width: 60%
-    :alt: Diagram representing typical data flow with OpenDP, from a raw CSV to a differentially private release. 
+3. Mediate access to data
+4. Submit DP queries (examples: count and sum)
 
 We'll illustrate these steps by releasing a differentially private mean of a small vector of random numbers.
 
@@ -56,7 +49,8 @@ then the unit of privacy corresponds to one row contribution.
 
 The privacy unit specifies how distances are computed between two data sets (``input_metric``), and how large the distance can be (``d_in``).
 
-Broadly speaking, differential privacy can be applied to any medium of data for which you can define a unit of privacy. In other contexts, the unit of privacy may correspond to multiple rows, a user ID, or nodes or edges in a graph.
+Broadly speaking, differential privacy can be applied to any medium of data for which you can define a unit of privacy. 
+In other contexts, the unit of privacy may correspond to multiple rows, a user ID, or nodes or edges in a graph.
 
 The unit of privacy may also be more general or more precise than a single individual.
 
@@ -68,11 +62,19 @@ It is highly recommended to choose a unit of privacy that is at least as general
 2. Set Privacy Loss Parameters
 ------------------------------
 
-Next, you should determine what level of privacy protection to provide to your units of privacy. This choice may be governed by a variety of factors, such as the amount of harm that individuals could experience if their data were revealed, and your ethical and legal obligations as a data custodian.
+Next, you should determine what level of privacy protection to provide to your units of privacy. 
+This choice may be governed by a variety of factors, 
+such as the amount of harm that individuals could experience if their data were revealed, 
+and your ethical and legal obligations as a data custodian.
 
-The level of privacy afforded to units of privacy in a data set is quantified by *privacy loss parameters*. Under *pure* differential privacy, there is a single privacy-loss parameter, typically denoted epsilon (ε). Epsilon is a non-negative number, where larger values afford less privacy. Epsilon can be viewed as a proxy for the worst-case risk to a unit of privacy. It is customary to refer to a data release with such bounded risk as epsilon-differentially private (ε-DP).
+The level of privacy afforded to units of privacy in a data set is quantified by *privacy loss parameters*. 
+Under *pure* differential privacy, there is a single privacy-loss parameter, typically denoted epsilon (ε). 
+Epsilon is a non-negative number, where larger values afford less privacy. 
+Epsilon can be viewed as a proxy for the worst-case risk to a unit of privacy. 
+It is customary to refer to a data release with such bounded risk as epsilon-differentially private (ε-DP).
 
-A common rule-of-thumb is to limit ε to 1.0, but this limit will vary depending on the considerations mentioned above. See the `Deployments Registry <http://registry.opendp.org/deployments-registry/>`_ for examples of parameters used by real-world applications.
+A common rule-of-thumb is to limit ε to 1.0, but this limit will vary depending on the considerations mentioned above. 
+See the `Deployments Registry <http://registry.opendp.org/deployments-registry/>`_ for examples of parameters used by real-world applications.
 
 .. tab-set::
 
@@ -102,55 +104,15 @@ A common rule-of-thumb is to limit ε to 1.0, but this limit will vary depending
             :start-after: privacy-loss
             :end-before: /privacy-loss
 
-The privacy loss specifies how distances are measured between distributions (``privacy_measure``), and how large the distance can be (``d_out``).
+The privacy loss consists of how distances are measured between distributions (``privacy_measure``), and how large the distance can be (``d_out``).
 
-3. Collect Public Information
------------------------------
-
-The next step is to identify public information about the data set. This could include:
-
-* Information that is invariant across all potential input data sets
-* Information that is publicly available from other sources
-* Information from other DP releases
-
-Frequently we'll specify bounds on data, based on prior knowledge of the domain.
-
-.. tab-set::
-
-    .. tab-item:: Context API (Python)
-        :sync: context
-
-        .. literalinclude:: code/typical-workflow-context.rst
-            :language: python
-            :dedent:
-            :start-after: public-info
-            :end-before: /public-info
-
-    .. tab-item:: Framework API (Python)
-        :sync: framework
-
-        .. literalinclude:: code/typical-workflow-framework.rst
-            :language: python
-            :dedent:
-            :start-after: public-info
-            :end-before: /public-info
-
-    .. tab-item:: Framework API (R)
-        :sync: r
-
-        .. literalinclude:: code/typical-workflow-framework.R
-            :language: r
-            :start-after: public-info
-            :end-before: /public-info
-
-A data invariant is information about your data set that you are explicitly choosing not to protect, typically because it is already public or non-sensitive. Be careful, if an invariant does contain sensitive information, then you risk violating the privacy of individuals in your data set.
-
-On the other hand, using public information significantly improves the utility of your results.
-
-4. Mediate Access to Data
+3. Mediate Access to Data
 -------------------------
 
-Ideally, at this point, you have not yet accessed the sensitive data set. This is the only point in the process where we access the sensitive data set. To ensure that your specified differential privacy protections are maintained, the OpenDP Library should mediate all access to the sensitive data set.
+Ideally, at this point, you have not yet accessed the sensitive data set. 
+This is the only point in the process where we access the sensitive data set. 
+To ensure that your specified differential privacy protections are maintained, 
+the OpenDP Library should mediate all access to the sensitive data set.
 
 .. tab-set::
 
@@ -163,8 +125,9 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
             :start-after: mediate
             :end-before: /mediate
 
-        ``dp.Context.compositor`` creates an adaptive composition measurement.
-        You can now submit up to three queries to ``context``, in the form of measurements.
+        ``dp.Context.compositor`` creates a fully adaptive composition measurement.
+        You can now submit any number of queries to ``context``,
+        so long as the privacy loss doesn't exceed ``d_out``.
 
     .. tab-item:: Framework API (Python)
         :sync: framework
@@ -175,8 +138,10 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
             :start-after: mediate
             :end-before: /mediate
 
-        ``dp.c.make_adaptive_composition`` creates an adaptive composition measurement.
-        You can now submit up to three queries to ``queryable``, in the form of measurements.
+        ``o_ac`` is a fully-adaptive composition odometer, *without* a limit on the privacy loss.
+        ``m_ac`` is a fully-adaptive composition measurement, *with* a limit on the privacy loss.
+        You can now submit any number of queries to ``queryable``, in the form of measurements,
+        so long as the privacy loss doesn't exceed ``d_out``.
 
     .. tab-item:: Framework API (R)
         :sync: r
@@ -186,17 +151,19 @@ Ideally, at this point, you have not yet accessed the sensitive data set. This i
             :start-after: mediate
             :end-before: /mediate
 
-        ``make_adaptive_composition`` creates an adaptive composition measurement.
-        You can now submit up to three queries to ``queryable``, in the form of measurements.
+        ``o_ac`` is a fully-adaptive composition odometer, *without* limit on the privacy loss.
+        ``m_ac`` is a fully-adaptive composition measurement, *with* a limit on the privacy loss.
+        You can now submit any number of queries to ``queryable``, in the form of measurements,
+        so long as the privacy loss doesn't exceed ``d_out``.
 
-Since the privacy loss budget is at most ε = 1, and we are partitioning our budget evenly amongst three queries, then each query will be calibrated to satisfy ε = 1/3.
+A good practice at this point is to drop the data so that you aren't tempted to access it.
 
-
-5. Submit DP Queries
+4. Submit DP Queries
 --------------------
 
 You can now create differentially private releases.
-Here's a differentially private count:
+Here's a differentially private count, 
+with an accuracy estimate and confidence interval:
 
 .. tab-set::
 
@@ -226,7 +193,19 @@ Here's a differentially private count:
             :start-after: count
             :end-before: /count
 
-Here's a differentially private mean:
+This differentially private mechanism simply adds discrete laplace noise to the exact count.
+
+To compute a differentially private sum, we'll need to bound the range of each data record
+to ensure that the influence each record has on the sum is bounded.
+The choice of bounds must be *public information*.
+
+Public information includes:
+
+* Information that is publicly available from other sources
+* Information from other DP releases
+
+In this case, if you know the data represents ages of individuals,
+you can make a reasonable guess as to what good data bounds would be.
 
 .. tab-set::
 
@@ -236,8 +215,8 @@ Here's a differentially private mean:
         .. literalinclude:: code/typical-workflow-context.rst
             :language: python
             :dedent:
-            :start-after: mean
-            :end-before: /mean
+            :start-after: public-info
+            :end-before: /public-info
 
     .. tab-item:: Framework API (Python)
         :sync: framework
@@ -245,18 +224,61 @@ Here's a differentially private mean:
         .. literalinclude:: code/typical-workflow-framework.rst
             :language: python
             :dedent:
-            :start-after: mean
-            :end-before: /mean
+            :start-after: public-info
+            :end-before: /public-info
 
     .. tab-item:: Framework API (R)
         :sync: r
 
         .. literalinclude:: code/typical-workflow-framework.R
             :language: r
-            :start-after: mean
-            :end-before: /mean
+            :start-after: public-info
+            :end-before: /public-info
 
-Other features
---------------
+To avoid introducing bias in your estimate, 
+your choice of bounds should include most of the values in the data.
+At the same time, the wider the bounds are, the greater the variance the estimate will be,
+because more noise will be necessary to satisfy the privacy guarantee.
 
-The OpenDP Library supports more statistics, like the variance, various ways to compute histograms and quantiles, and PCA. The library also supports other mechanisms like the Gaussian Mechanism, which provides tighter privacy accounting when releasing a large number of queries, the Thresholded Laplace Mechanism, for releasing counts on data sets with unknown key sets, and variations of randomized response.
+.. tab-set::
+
+    .. tab-item:: Context API (Python)
+        :sync: context
+
+        .. literalinclude:: code/typical-workflow-context.rst
+            :language: python
+            :dedent:
+            :start-after: sum
+            :end-before: /sum
+
+    .. tab-item:: Framework API (Python)
+        :sync: framework
+
+        .. literalinclude:: code/typical-workflow-framework.rst
+            :language: python
+            :dedent:
+            :start-after: sum
+            :end-before: /sum
+
+    .. tab-item:: Framework API (R)
+        :sync: r
+
+        .. literalinclude:: code/typical-workflow-framework.R
+            :language: r
+            :start-after: sum
+            :end-before: /sum
+
+Altogether, the data flow of this analysis looks like:
+
+.. Diagram source: https://docs.google.com/drawings/d/1W4l9x3UM3hbVLWlC0nzijqgaQ31wY5ERebp8jkYy1yc/edit
+
+.. image:: code/typical-workflow-diagram.svg
+    :width: 100%
+    :alt: Diagram representing typical data flow with OpenDP, raw data to differentially private releases. 
+
+The plugin estimates can then be used together to estimate the mean.
+
+The following sections cover APIs for building differentially private queries.
+The OpenDP Library supports a more idiomatic API for working with tabular data through Polars,
+approaches for statistical modeling in the style of scikit-learn,
+as well as building-block mechanisms that can be embedded in your own data pipelines.
