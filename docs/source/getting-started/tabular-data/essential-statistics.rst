@@ -35,7 +35,7 @@ from the Labour Force Survey in France.
             >>> dp.enable_features("contrib")
 
 
-To get started, we’ll recreate the Context from the `tabular data
+To get started, we’ll load data and recreate the Context from the `tabular data
 introduction <index.rst>`__.
 
 .. tab-set::
@@ -45,23 +45,29 @@ introduction <index.rst>`__.
 
         .. code:: pycon
 
+            >>> lazyframe = pl.scan_csv(
+            ...     dp.examples.get_france_lfs_path(),
+            ... )
             >>> context = dp.Context.compositor(
-            ...     data=pl.scan_csv(
-            ...         dp.examples.get_france_lfs_path(),
-            ...         ignore_errors=True,
-            ...     ),
+            ...     data=lazyframe,
             ...     privacy_unit=dp.unit_of(contributions=36),
             ...     privacy_loss=dp.loss_of(epsilon=1.0),
             ...     split_evenly_over=5,
             ... )
 
 .. note::
-    We'll consistently use ``ignore_errors=True``:
-    Polars infers types from the first rows of a CSV, but without this setting,
-    if a later value can not be parsed as the inferred type it will error.
-    That's not the behavior we want:
-    Runtime errors would leak information and violate the DP guarantee.
-            
+    Typically, data loading will be outside the scope of the privacy guarantee.
+    While it's possible for a CSV's column names and data types to contain
+    private information (perhaps because of a one-hot encoding, or pivot operation),
+    those aren't scenarios we'll worry about here.
+
+    By default, polars will infer the schema from the first rows of a CSV.
+    Other options include:
+
+    * If you know the column types ahead of time, you may use the ``schema`` kwarg;
+    * Alternatively, if you need to avoid data dependent errors, the ``ignore_errors`` kwarg can be used.
+
+    See the `Polars scan_csv docs <https://docs.pola.rs/api/python/stable/reference/api/polars.scan_csv.html>`_ for more information.
 
 Count
 -----
