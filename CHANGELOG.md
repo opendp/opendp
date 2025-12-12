@@ -249,7 +249,7 @@ showing the source changes from the previous version.
 
 ### Migration
 
-Previously, OpenDP allowed arbitrary functions to be used as postprocessors. Unfortunately this could be abused to build measurements whose postprocessors introduce vulnerabilities. For instance, a post-processor that reads the system time could be used to add timing information to the output of a mechanism. OpenDP now requires `honest-but-curious` to be enabled in order to build postprocessors from Python, and states necessary conditions for valid postprocessors.
+Previously, OpenDP allowed arbitrary functions to be used as postprocessors. Unfortunately this could be abused to build measurements whose postprocessors introduce vulnerabilities. For instance, a postprocessor that reads the system time could be used to add timing information to the output of a mechanism. OpenDP now requires `honest-but-curious` to be enabled in order to build postprocessors from Python, and states necessary conditions for valid postprocessors.
 
 Also:
 - Replace `SMDCurve`, which represented the function ε(δ), with `PrivacyProfile`, which represents the function δ(ε).
