@@ -145,7 +145,7 @@ showing the source changes from the previous version.
 ### Migration
 
 - We now default to the assumption that NaN values exist in float data in all settings. You’ll notice that you now need to specify `nan=False` in atom domains, [even when building the Laplace or Gaussian measurements](https://docs.opendp.org/en/v0.13.0/api/user-guide/measurements/additive-noise-mechanisms.html#Distribution:-Laplace-vs.-Gaussian).
-- The recommended format for margins in the Context API is now a list of margins containing group by keys, instead of a dictionary of group by keys and margins. An example of the new syntax [can be found here](https://docs.opendp.org/en/v0.13.0/api/user-guide/polars/gaussian-noise.html#Max-Partition-Contributions). This allows group by keys to be arbitrary expressions. 
+- The recommended format for margins in the Context API is now a list of margins containing group-by keys, instead of a dictionary of group-by keys and margins. An example of the new syntax [can be found here](https://docs.opendp.org/en/v0.13.0/api/user-guide/polars/gaussian-noise.html#Max-Partition-Contributions). This allows group-by keys to be arbitrary expressions. 
 
 ### Feat
 
