@@ -33,7 +33,7 @@ us if you are interested in proof-writing. Thank you!
 
             >>> import opendp.prelude as dp
             >>> dp.enable_features("contrib")
-            
+
 
 Distribution: Laplace vs. Gaussian
 ----------------------------------
@@ -57,6 +57,7 @@ An instance of the Laplace threshold mechanism is captured by a
         >>> def f(x: dict[Any, float]) -> dict[Any, float]:
         ...     x = {k: Laplace(mu=v, b=scale) for k, v in x.items()}
         ...     return {k: v for k, v in x.items() if v >= threshold}
+        ...
 
     2. Importantly, :math:`f(\cdot)` is only well-defined for any dictionary
     with finite float values. This set of permitted inputs is described
@@ -75,11 +76,11 @@ An instance of the Laplace threshold mechanism is captured by a
         >>> def map(d_in):
         ...     l0, l1, li = d_in
         ...     epsilon = l1 / scale
-        ... 
         ...     # probability of sampling a noise value greater than: threshold - li
         ...     delta_single = tail(scale, threshold - li)
-        ...     delta = 1 - (1 - delta_single)**l0
+        ...     delta = 1 - (1 - delta_single) ** l0
         ...     return epsilon, delta
+        ...
 
     4. This map only promises that the privacy loss will be at most
     :math:`\epsilon` if inputs from any two neighboring datasets may
@@ -103,12 +104,15 @@ equivalent of the Laplace threshold measurement described above.
         .. code:: pycon
 
             >>> m_lap = dp.m.make_laplace_threshold(
-            ...     dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=float, nan=False)),
+            ...     dp.map_domain(
+            ...         dp.atom_domain(T=str),
+            ...         dp.atom_domain(T=float, nan=False),
+            ...     ),
             ...     dp.l01inf_distance(dp.absolute_distance(T=float)),
-            ...     scale=1.,
-            ...     threshold=20.0
+            ...     scale=1.0,
+            ...     threshold=20.0,
             ... )
-            
+
             >>> # invoke the measurement on some aggregate hashmap, to sample Laplace(x, 1.) noise
             >>> aggregated = {
             ...     "a": 0.0,
@@ -154,17 +158,20 @@ The analogous constructor for gaussian noise is
         .. code:: pycon
 
             >>> m_gauss = dp.m.make_gaussian_threshold(
-            ...     dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=float, nan=False)),
+            ...     dp.map_domain(
+            ...         dp.atom_domain(T=str),
+            ...         dp.atom_domain(T=float, nan=False),
+            ...     ),
             ...     # NOTE: L1 is changed to L2 in the input metric
             ...     dp.l02inf_distance(dp.absolute_distance(T=float)),
-            ...     scale=1.,
-            ...     threshold=20.0
+            ...     scale=1.0,
+            ...     threshold=20.0,
             ... )
-            
+
             >>> # invoke the measurement on some aggregate hashmap, to sample Gaussian(x, 1.) noise
             >>> print("noisy aggregate:", m_gauss(aggregated))
             noisy aggregate: {...}
-            
+
             >>> # we must know the sensitivity of `aggregated` to determine privacy params
             >>> #  3 kinds: Δ_0, Δ_1, Δ_∞
             >>> sensitivity = 1, 1.0, 1.0
@@ -204,8 +211,10 @@ compare with the thresholded laplace mechanism:
             >>> # convert ρ to an ε(δ_2) privacy profile, where total privacy loss is (ε(δ_2), δ_1 + δ_2)
             >>> m_gauss_profile = dp.c.make_zCDP_to_approxDP(m_gauss)
             >>> # fix overall δ to that used by the laplace threshold, for comparison
-            >>> m_gauss_approx = dp.c.make_fix_delta(m_gauss_profile, delta=lap_eps_del[1])
-            
+            >>> m_gauss_approx = dp.c.make_fix_delta(
+            ...     m_gauss_profile, delta=lap_eps_del[1]
+            ... )
+
             >>> print("(ε, δ):", m_gauss_approx.map(sensitivity))
             (ε, δ): (6.3035767282855915, 2.801398224505647e-09)
 
@@ -225,10 +234,15 @@ number of partitions.
         .. code:: pycon
 
             >>> sensitivity_spread = 100, 10.0, 0.001
-            >>> print("laplace  (ε, δ):", m_lap.map(d_in=sensitivity_spread))
+            >>> print(
+            ...     "laplace  (ε, δ):", m_lap.map(d_in=sensitivity_spread)
+            ... )
             laplace  (ε, δ): (0.1, 1.0316078580263621e-07)
 
-            >>> print("gaussian (ε, δ):", m_gauss_approx.map(d_in=sensitivity_spread))
+            >>> print(
+            ...     "gaussian (ε, δ):",
+            ...     m_gauss_approx.map(d_in=sensitivity_spread),
+            ... )
             gaussian (ε, δ): (0.049969691134438526, 2.801398224505647e-09)
 
 In this alternative world where individuals may have a small influence
@@ -257,14 +271,18 @@ floats, while the discrete measurements accept and emit integers.
         .. code:: pycon
 
             >>> # call the constructor to produce the measurement `m_dlap`
-            >>> input_space = dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=int)), dp.absolute_distance(T=int)
+            >>> input_space = dp.map_domain(
+            ...     dp.atom_domain(T=str), dp.atom_domain(T=int)
+            ... ), dp.absolute_distance(T=int)
             >>> m_dlap = dp.m.make_laplace_threshold(
-            ...     dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=int)), 
-            ...     dp.l01inf_distance(dp.absolute_distance(T=int)), 
+            ...     dp.map_domain(
+            ...         dp.atom_domain(T=str), dp.atom_domain(T=int)
+            ...     ),
+            ...     dp.l01inf_distance(dp.absolute_distance(T=int)),
             ...     scale=1.0,
             ...     threshold=10,
             ... )
-            
+
             >>> # invoke the measurement on some integer aggregate hashmap, to sample DiscreteLaplace(x, 1.) noise
             >>> aggregated = {
             ...     "a": 0,
@@ -290,14 +308,18 @@ measurement for Gaussian noise:
         .. code:: pycon
 
             >>> # call the constructor to produce the measurement `m_dgauss`
-            >>> input_space = dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=int)), dp.absolute_distance(T=int)
+            >>> input_space = dp.map_domain(
+            ...     dp.atom_domain(T=str), dp.atom_domain(T=int)
+            ... ), dp.absolute_distance(T=int)
             >>> m_dgauss = dp.m.make_gaussian_threshold(
-            ...     dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=int)), 
-            ...     dp.l02inf_distance(dp.absolute_distance(T=float)), 
+            ...     dp.map_domain(
+            ...         dp.atom_domain(T=str), dp.atom_domain(T=int)
+            ...     ),
+            ...     dp.l02inf_distance(dp.absolute_distance(T=float)),
             ...     scale=1.0,
             ...     threshold=10,
             ... )
-            
+
             >>> # invoke the measurement on some integer aggregate hashmap, to sample DiscreteGaussian(x, 1.) noise
             >>> aggregated = {
             ...     "a": 0,
@@ -328,14 +350,18 @@ threshold are discarded.
         .. code:: pycon
 
             >>> # call the constructor to produce the measurement `m_dlap`
-            >>> input_space = dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=int)), dp.absolute_distance(T=int)
+            >>> input_space = dp.map_domain(
+            ...     dp.atom_domain(T=str), dp.atom_domain(T=int)
+            ... ), dp.absolute_distance(T=int)
             >>> m_dlap = dp.m.make_laplace_threshold(
-            ...     dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=int)), 
-            ...     dp.l01inf_distance(dp.absolute_distance(T=int)), 
+            ...     dp.map_domain(
+            ...         dp.atom_domain(T=str), dp.atom_domain(T=int)
+            ...     ),
+            ...     dp.l01inf_distance(dp.absolute_distance(T=int)),
             ...     scale=1.0,
             ...     threshold=-10,
             ... )
-            
+
             >>> # invoke the measurement on some integer aggregate hashmap, to sample DiscreteLaplace(x, 1.) noise
             >>> aggregated = {
             ...     "a": 0,

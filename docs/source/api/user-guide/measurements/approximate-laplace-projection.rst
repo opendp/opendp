@@ -29,7 +29,7 @@ us if you are interested in proof-writing. Thank you!
 
             >>> import opendp.prelude as dp
             >>> dp.enable_features("contrib")
-            
+
 
 The mechanism takes as input a hash map, typically where the keys
 represent grouping keys, and values represent the number of occurences
@@ -46,11 +46,13 @@ people with that name in a dataset.
 
         .. code:: pycon
 
-            >>> # Based on real-world name frequencies. 
+            >>> # Based on real-world name frequencies.
             >>> # The data could just as well consist of many hundreds of more names.
-            >>> names = {'Michael': 750, 'James': 500, 'Sharon': 50}
-            >>> input_domain = dp.map_domain(dp.atom_domain(T=str), dp.atom_domain(T=int))
-            
+            >>> names = {"Michael": 750, "James": 500, "Sharon": 50}
+            >>> input_domain = dp.map_domain(
+            ...     dp.atom_domain(T=str), dp.atom_domain(T=int)
+            ... )
+
 
 Just like the thresholded noise mechanism, the sensitivity is expressed
 in terms of a triple:
@@ -71,8 +73,10 @@ Naturally, in this setting, all three of these quantities are one:
         .. code:: pycon
 
             >>> sensitivity = 1, 1, 1
-            >>> input_metric = dp.l01inf_distance(dp.absolute_distance(T=int))
-            
+            >>> input_metric = dp.l01inf_distance(
+            ...     dp.absolute_distance(T=int)
+            ... )
+
 
 A key part of the mechanism is determining how large the projected space
 should be. The size of the projected space is associated with a
@@ -98,17 +102,21 @@ space are:
         .. code:: pycon
 
             >>> epsilon = 1.0
-            
+
             >>> m_alp = dp.binary_search_chain(
             ...     lambda s: dp.m.make_alp_queryable(
-            ...         input_domain, input_metric, scale=s, total_limit=50000, value_limit=1000
+            ...         input_domain,
+            ...         input_metric,
+            ...         scale=s,
+            ...         total_limit=50000,
+            ...         value_limit=1000,
             ...     ),
             ...     d_in=sensitivity,
             ...     d_out=epsilon,
             ... )
-            
+
             >>> qbl = m_alp(names)
-            
+
 
 This mechanism releases a queryable containing a differentially private,
 hash-based representation of the counts of all possible names.
