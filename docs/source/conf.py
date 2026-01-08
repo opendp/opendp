@@ -167,7 +167,7 @@ html_last_updated_fmt = '%b %d, %Y'
 html_theme_options = {
     "github_url": "https://github.com/opendp",
     "article_header_end": ["questions-feedback", "old-version-warning"],
-    "announcement": "https://opendp.github.io/opendp-announcement/index.html",
+    "announcement": "https://raw.githubusercontent.com/opendp/opendp-announcement/refs/heads/main/index.html",
 }
 
 html_theme = 'pydata_sphinx_theme'
