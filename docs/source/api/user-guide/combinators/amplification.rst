@@ -3,7 +3,7 @@ Amplification
 
 If your dataset is a simple sample from a larger population,
 you can make the privacy relation more permissive by wrapping your measurement with a privacy amplification combinator:
-:func:`opendp.combinators.make_population_amplification`.
+:func:`~opendp.combinators.make_population_amplification`.
 
 .. note::
 

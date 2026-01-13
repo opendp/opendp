@@ -3,7 +3,7 @@
 Measurement example
 ===================
 
-Use :func:`opendp.measurements.make_user_measurement` to construct a measurement for your own mechanism.
+Use :func:`~opendp.measurements.make_user_measurement` to construct a measurement for your own mechanism.
 
 .. note::
 

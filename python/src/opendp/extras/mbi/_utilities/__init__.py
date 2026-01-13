@@ -81,7 +81,7 @@ class Algorithm(ABC):
     estimator: Callable = mirror_descent
     """Optimizer to use to fit a MarkovRandomField.
 
-    Defaults to :py:func:`opendp.extras.mbi.mirror_descent`.
+    Defaults to :py:func:`~opendp.extras.mbi.mirror_descent`.
     Any function matching the signature of ``mirror_descent`` 
     can be used to customize how the MarkovRandomField is optimized/estimated.
     See `mbi.estimation <https://private-pgm.readthedocs.io/en/latest/_autosummary_output/mbi.estimation.html>`_ for other optimizers.

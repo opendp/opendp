@@ -2,7 +2,7 @@
 Polars vs. OpenDP
 =================
 
-(For the examples which follow create a :py:class:`opendp.context.Context` named :code:`context`.)
+(For the examples which follow create a :py:class:`~opendp.context.Context` named :code:`context`.)
 
 .. tab-set::
 
@@ -25,7 +25,7 @@ OpenDP Polars differs from typical Polars in these ways:
 1. **How you specify the data.**
 
    Instead of directly manipulating the data (a ``LazyFrame``),
-   you now manipulate an :py:class:`opendp.extras.polars.LazyFrameQuery`
+   you now manipulate an :py:class:`~opendp.extras.polars.LazyFrameQuery`
    returned by :code:`context.query()`
    You can think of :code:`context.query()` as a mock for the real data
    (although in reality, a ``LazyFrameQuery`` is an empty ``LazyFrame`` with some extra methods).
@@ -46,7 +46,7 @@ OpenDP Polars differs from typical Polars in these ways:
    OpenDP extends the Polars API to include differentially private methods and statistics.
    ``LazyFrame`` (now ``LazyFrameQuery``) has additional methods, like :code:`.summarize` and :code:`.release`.
 
-   Expressions also have an additional namespace :code:`.dp` with methods from :py:class:`opendp.extras.polars.DPExpr`.
+   Expressions also have an additional namespace :code:`.dp` with methods from :py:class:`~opendp.extras.polars.DPExpr`.
 
 .. tab-set::
 
