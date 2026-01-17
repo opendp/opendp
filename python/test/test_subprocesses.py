@@ -11,6 +11,7 @@ tests = {
     # (for f-string). Negative lookahead would be more precise.
     '"print" in test/ should be explained': "! egrep 'print\\(([^\"'\"'\"'f]' -r test",
     '"print" in src/ should be log instead': "! egrep '^\\s+print\\(' -r src",
+    'check formatting of code in docs': "find ../docs/source/ -name '*.rst' | xargs blacken-docs -l 60 --check",
 }
 
 @pytest.mark.skipif(sys.version_info < (3, 11), reason='mypy will fail on 3.9')
