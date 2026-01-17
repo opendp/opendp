@@ -177,7 +177,7 @@ pub(crate) fn generate_function(
         .map(|v| format!(" -> {}", v))
         .unwrap_or_else(String::new);
 
-    let docstring = tab_py(generate_docstring(module_name, func, hierarchy));
+    let docstring = tab_py(generate_docstring(module_name, func));
     let body = tab_py(generate_body(module_name, func, typemap));
 
     let example_path = format!("src/{}/code/{}.rst", &module_name, func.name);
@@ -219,7 +219,7 @@ def {then_name}(
                 func.args
                     .iter()
                     .skip(2)
-                    .map(|v| generate_docstring_arg(v, hierarchy))
+                    .map(|v| generate_docstring_arg(v))
                     .collect::<Vec<String>>()
                     .join("\n")
             ),
@@ -324,7 +324,6 @@ fn generate_input_argument(
 fn generate_docstring(
     module_name: &str,
     func: &Function,
-    hierarchy: &HashMap<String, Vec<String>>,
 ) -> String {
     let description = (func.description.as_ref())
         .map(|v| format!("{}\n", v))
@@ -333,7 +332,7 @@ fn generate_docstring(
     let doc_args = func
         .args
         .iter()
-        .map(|v| generate_docstring_arg(v, hierarchy))
+        .map(|v| generate_docstring_arg(v))
         .collect::<Vec<String>>()
         .join("\n");
 
@@ -368,20 +367,11 @@ fn generate_docstring(
 }
 
 /// generate the part of a docstring corresponding to an argument
-fn generate_docstring_arg(arg: &Argument, hierarchy: &HashMap<String, Vec<String>>) -> String {
+fn generate_docstring_arg(arg: &Argument) -> String {
     let name = arg.name.clone().unwrap_or_default();
     format!(
-        r#":param {name}: {description}{type_}"#,
+        r#":param {name}: {description}"#,
         name = name,
-        type_ = arg
-            .python_type_hint(hierarchy)
-            .map(|v| if v.as_str() == "RuntimeTypeDescriptor" {
-                ":py:ref:`RuntimeTypeDescriptor`".to_string()
-            } else {
-                v
-            })
-            .map(|v| format!("\n:type {}: {}", name, v))
-            .unwrap_or_default(),
         description = arg
             .description
             .clone()
