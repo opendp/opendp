@@ -216,7 +216,7 @@ pub extern "C" fn opendp_core___error_free(this: *mut FfiError) -> bool {
     arguments(function(rust_type = "$pass_through(TO)"))
 )]
 /// Construct a Function from a user-defined callback.
-/// Can be used to build a post-processor.
+/// Can be used to build a postprocessor.
 ///
 /// # Why honest-but-curious?
 /// An OpenDP `function` must satisfy two criteria.
