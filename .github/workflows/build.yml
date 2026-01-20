@@ -111,9 +111,11 @@ jobs:
       # it is helpful to try to build all platforms to completion to catch any platform-specific issues
       fail-fast: false
       matrix:
-        # macos-13 is an intel runner, macos-14 is apple silicon
+        # macos-14 is apple silicon;
+        # macos-15-intel is intel, and will be available until August 2027.
+        # https://github.com/actions/runner-images/issues/13046
         # https://cibuildwheel.pypa.io/en/stable/faq/#how
-        os: [ubuntu-latest, windows-latest, macos-13, macos-14]
+        os: [ubuntu-latest, windows-latest, macos-14, macos-15-intel]
 
     steps:
       - name: Free disk space
