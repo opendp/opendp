@@ -506,8 +506,27 @@ class DPExpr(object):
 
 
 pl = import_optional_dependency("polars", raise_error=False)
-if pl is not None:
-    pl.api.register_expr_namespace("dp")(DPExpr)
+_POLARS_REGISTERED = False
+
+
+def _register_polars_namespace() -> None:
+    global _POLARS_REGISTERED
+    if pl is None or _POLARS_REGISTERED:
+        return
+    if not hasattr(pl.Expr, "dp"):
+        pl.api.register_expr_namespace("dp")(DPExpr)
+    _POLARS_REGISTERED = True
+
+
+def _get_polars():
+    global pl
+    if pl is None:
+        pl = import_optional_dependency("polars", raise_error=False)
+    _register_polars_namespace()
+    return pl
+
+
+_register_polars_namespace()
 
 
 def dp_len(scale: float | None = None):
@@ -709,6 +728,7 @@ class LazyFrameQuery:
             def _wrap(*args, **kwargs):
                 out = attr(*args, **kwargs)
 
+                pl = _get_polars()
                 if pl is not None:
                     # re-wrap any lazy outputs to keep the conveniences afforded by this class
                     if isinstance(out, pl.lazyframe.frame.LazyFrame):
@@ -847,9 +867,9 @@ class LazyFrameQuery:
         # 2. Left joins are more likely to be supported by database backends.
         # 3. Easier to use; with the Polars API the key set needs to be lazy, user must specify they want a right join and the join keys.
 
-        if pl is not None:
-            if isinstance(keys, pl.dataframe.frame.DataFrame):
-                keys = keys.lazy()
+        pl = _get_polars()
+        if pl is not None and isinstance(keys, pl.dataframe.frame.DataFrame):
+            keys = keys.lazy()
 
         if on is None:
             on = keys.collect_schema().names()
