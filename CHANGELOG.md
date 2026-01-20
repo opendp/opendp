@@ -8,7 +8,7 @@ showing the source changes from the previous version.
 
 ### Migration
 
-- `fill_null` and `fill_nan` are no longer needed, unless you need non-default behavior.
+- If null or nan values are encountered, the default behavior is now to impute the mean of the upper and lower clipping bounds. Use `fill_null` and `fill_nan` if a different value would be appropriate.
 
 ### Fix
 
