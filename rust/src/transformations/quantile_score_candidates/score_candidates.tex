@@ -1,0 +1,96 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{fn score\_candidates}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle  
+
+
+\contrib
+
+Proves soundness of \rustdoc{transformations/quantile\_score\_candidates/fn}{score\_candidates} 
+in \asOfCommit{mod.rs}{f5bb719}.
+\texttt{score\_candidates} returns a score for each candidate passed in, 
+where the score is the distance between the candidate and the ideal alpha-quantile.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler Verified}
+\begin{itemize}
+    \item Generic \texttt{TI} (input atom type) is a type with trait \texttt{PartialOrd}.
+\end{itemize}
+
+\subsubsection*{Caller Verified}
+\begin{itemize}
+    \item \texttt{x} has at most $2^{64}$ elements.
+    \item \texttt{x} elements are totally ordered (excluding non-nan/non-null).
+    \item \texttt{candidates} is strictly increasing
+    \item $\texttt{alpha\_numer / alpha\_denom} \le 1$
+    \item $\texttt{size\_limit} \cdot \texttt{alpha\_denom < u64.MAX}$
+\end{itemize}
+
+
+\subsection*{Function}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/score_candidates.py}
+
+
+\subsection*{Postcondition}
+
+\begin{theorem}
+    Let $C$ denote \texttt{candidates} and let $l$ denote \texttt{size\_limit}.
+    For each index $i$ in $\{1, \ldots, |C|\}$,
+
+    \begin{equation*}
+        \mathrm{score\_candidates}_i(x, C, \alpha_{num}, \alpha_{den}, l) = |\alpha_{den} \cdot \min(\#(x < C_i), l) - \alpha_{num} \cdot \min(\#(x > C_i), l)|
+    \end{equation*}
+
+    where $\#(x < C_i)$ is the number of elements in $x$ less than $C_i$,
+    $\#(x > C_i)$ is the number of elements in $x$ greater than $C_i$.
+\end{theorem}
+
+\begin{proof}
+    The function breaks down into two parts:
+    \begin{itemize}
+        \item Compute histograms, where the edges are the candidates.
+        \item Uses the histograms to compute scores.
+    \end{itemize}
+
+    The histograms are initialized at zero, with one more bin than candidates,
+    since the bins start at $-\infty$ and end at $+\infty$.
+
+    The bins in \texttt{hist\_ro} are closed on the left, and open on the right.
+    The bins in \texttt{hist\_lo} are open on the left, and closed on the right.
+
+    This is reflected in line \ref{hist-lo-increment}, where \texttt{idx\_lt} is the index of the first bin smaller than \texttt{x\_i}.
+    Similarly, \texttt{idx\_eq} is the index of the first bin greater than or equal to \texttt{x\_i}.
+    It is sufficient to search on equality, because if no candidate is equal to \texttt{x\_i},
+    then the partition point will be zero, so \texttt{idx\_eq} will be equal to \texttt{idx\_lt}, as expected.
+
+    Line \ref{n-sum} computes the total number of elements in the data as each element in \texttt{x} incremented a bin in \texttt{hist\_lo}.
+    No arithmetic thus far can overflow due to the precondition that \texttt{x} has at most $2^64$ elements.
+
+    Notice that there is one more bin than candidates.
+    With \texttt{n}, the last bin in each of the histograms (the number of elements beyond the largest candidate),
+    is not needed to compute the score.
+    Therefore, the last bin is discarded on lines \ref{pop-ro} and \ref{pop-lo}.
+
+    The scores can now be computed in one linear pass over the histograms on line \ref{zip-hist}.
+    The number of elements less than the candidate \texttt{lt} is the cumulative sum of \texttt{hist\_lo},
+    and the number of elements less than or equal to the candidate \texttt{le} is the cumulative sum of \texttt{hist\_ro}.
+    
+    The number of elements greater than the candidate \texttt{gt} is then simply \texttt{n - le} on line \ref{gt}.
+
+    To ensure that the score computation does not overflow, the counts are bounded by \texttt{size\_limit} on line \ref{lt-gt-lim}.
+
+    By the precondition that $\texttt{alpha\_numer / alpha\_denom} \le 1$,
+    then both \texttt{alpha\_den - alpha\_num} and \texttt{alpha\_num} are less than or equal to \texttt{alpha\_den}.
+    Using this, and the precondition that $\texttt{size\_limit} \cdot \texttt{alpha\_denom < u64.MAX}$,
+    then the computation of the score on line \ref{score} is guaranteed to not overflow.
+
+    The computation on line \ref{score} directly satisfies the postcondition.
+\end{proof}
+
+
+\end{document}

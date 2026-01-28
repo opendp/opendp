@@ -1,0 +1,50 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{fn noisy\_top\_k}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle\contrib
+This document proves soundness of \rustdoc{measurements/noisy_top_k/fn}{noisy\_top\_k} in \asOfCommit{mod.rs}{e62b0aa2}. 
+\texttt{noisy\_top\_k} noisily selects the index of the best score from a vector of input scores $k$ times.
+
+\section{Hoare Triple}
+\subsection*{Preconditions}
+\subsubsection*{Compiler-Verified}
+\textit{Types consistent with pseudocode.}
+
+\subsubsection*{Caller-Verified}
+\begin{itemize}
+    \item Each item of \texttt{x} is finite.
+\end{itemize}
+
+\subsection*{Pseudocode}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/noisy_top_k.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \label{postcondition}
+
+    \begin{itemize}
+        \item If replacement is set, returns a sample from $\mathcal{M}_{EM}$ (as defined in MS2023 Definition 4),
+            otherwise returns a sample from $\mathcal{M}_{PF}$ (as defined in MS2023 Lemma 1),
+            $k$ times by peeling,
+            where $\texttt{scale} = \frac{2 \cdot \Delta}{\epsilon}$.
+        \item Errors are data-independent, except for exhaustion of entropy.
+    \end{itemize}
+\end{theorem}
+
+\begin{proof}
+    By the precondition that each element in $x$ is finite,
+    the conversion into rational is infallible.
+    
+    By the postcondition of \rustdoc{measurements/noisy_top_k/exponential/fn}{peel\_permute\_and\_flip},
+    and the potential negation on line~\ref{negate},
+    the postcondition is satisfied.
+
+    The only source of error is due to entropy exhaustion.
+\end{proof}
+
+\end{document}
