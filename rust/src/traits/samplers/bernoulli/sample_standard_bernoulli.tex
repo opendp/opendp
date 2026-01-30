@@ -1,0 +1,83 @@
+\documentclass{article} % necessary for Overleaf to recognize the file
+\input{../lib.sty} % "rust/src/lib.sty" contains boilerplate and macros
+
+\title{\texttt{fn sample\_standard\_bernoulli}}
+\author{Pranav S Ramanujam}\date{18/01/2026}
+
+\begin{document}
+\maketitle\contrib
+Proves soundness of \rustdoc{traits/samplers/bernoulli/fn}{sample\_standard\_bernoulli}
+in \asOfCommit{rust/src/traits/samplers/bernoulli/mod.rs}{655696c}.
+
+
+\subsection*{Vetting history}
+\begin{itemize}
+    \item \vettingPR{XXXX}
+\end{itemize}
+
+\section{Hoare Triple}
+
+\subsection*{Preconditions}
+\begin{itemize}
+    \item The function \rustdoc{traits/samplers/uniform/fn}{fill\_bytes} either
+    \begin{itemize}
+        \item returns \texttt{Err(e)} if there is insufficient system entropy, or
+        \item fills the provided buffer with uniformly random bytes.
+    \end{itemize}
+\end{itemize}
+
+\subsection*{Pseudocode}
+\begin{lstlisting}[language = Python, escapechar=|]
+def sample_standard_bernoulli():
+    buffer = sample_uniform_byte()
+    return (buffer & 1) == 1   |\label{line:out}|
+\end{lstlisting}
+
+\subsection*{Postcondition}
+For any setting of the input parameters for which the preconditions hold,
+\texttt{sample\_standard\_bernoulli} either:
+\begin{itemize}
+    \item returns \texttt{Err(e)} if there is insufficient system entropy, or
+    \item returns \texttt{Ok(sample)} where \texttt{sample} is a draw from
+    $\texttt{Bernoulli}(0.5)$.
+\end{itemize}
+
+\section{Proof}
+
+Assume the preconditions are met.
+
+We first consider the behavior of the function
+\rustdoc{traits/samplers/uniform/fn}{fill\_bytes}. By the precondition, if
+\texttt{fill\_bytes} returns \texttt{Err(e)}, then
+\texttt{sample\_standard\_bernoulli} immediately returns \texttt{Err(e)} via
+the error-propagation operator \texttt{?}. This satisfies the postcondition.
+
+We now consider the case where \texttt{fill\_bytes} succeeds. In this case,
+the function fills the single-byte buffer \texttt{buffer} with a uniformly
+random value in the set $\{0,1,\dots,255\}$.
+
+The function then evaluates the expression
+\texttt{buffer[0] \& 1 == 1}. The bitwise AND operation \texttt{\& 1} extracts
+the least significant bit of \texttt{buffer[0]}. Therefore, the returned value
+is \texttt{true} if and only if the least significant bit of \texttt{buffer[0]}
+is equal to 1.
+
+Among the integers $\{0,1,\dots,255\}$, exactly half are even and half are odd.
+Even integers have least significant bit equal to 0, and odd integers have least
+significant bit equal to 1. Since \texttt{buffer[0]} is uniformly distributed
+over $\{0,1,\dots,255\}$, it follows that
+\[
+\Pr[\texttt{buffer[0] \& 1 == 1}] = \frac{128}{256} = \frac{1}{2}.
+\]
+
+Thus, conditioned on \texttt{fill\_bytes} succeeding,
+\texttt{sample\_standard\_bernoulli} returns \texttt{Ok(true)} with probability
+$1/2$ and \texttt{Ok(false)} with probability $1/2$, which is exactly the
+distribution $\texttt{Bernoulli}(0.5)$.
+
+Therefore, in all cases,
+\texttt{sample\_standard\_bernoulli} either returns \texttt{Err(e)} if there is
+insufficient system entropy, or returns a sample drawn from
+$\texttt{Bernoulli}(0.5)$, as required by the postcondition.
+
+\end{document}
