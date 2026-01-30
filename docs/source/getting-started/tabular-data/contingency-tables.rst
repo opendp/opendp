@@ -12,6 +12,9 @@ This results in the contingency table becoming too large to hold in memory or me
 For this reason, it is recommended to instead estimate specific relationships between smaller sets of two or maybe three columns
 by releasing *marginals* (counts when data is grouped by some subset of the columns).
 
+Unlike releasing these grouped counts separately, with marginals the results will be internally consistent.
+This makes them a good basis for hierarchical queries.
+
 OpenDP uses `Private-PGM <https://private-pgm.readthedocs.io/en/latest/introduction.html>`_ 
 to build a contingency table that is consistent with a set of marginal queries via a process called model-based inference (``mbi``).
 This functionality is not enabled by default.
