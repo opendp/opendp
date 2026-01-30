@@ -180,12 +180,6 @@ pub(crate) fn generate_function(
     let docstring = tab_py(generate_docstring(module_name, func, hierarchy));
     let body = tab_py(generate_body(module_name, func, typemap));
 
-    let example_path = format!("src/{}/code/{}.rst", &module_name, func.name);
-    let example = match fs::read_to_string(example_path) {
-        Ok(string) => tab_py(format!("\n\n:example:\n\n{string}\n")),
-        Err(_) => "".to_string(),
-    };
-
     let then_name = func.name.replacen("make_", "then_", 1);
     let then_func = if func.supports_partial {
         format!(
@@ -201,7 +195,7 @@ def {then_name}(
     .. seealso:: 
       Delays application of ``input_domain`` and ``input_metric`` in :py:func:`~opendp.{module_name}.{func_name}`
 
-{doc_params}{example}
+{doc_params}
     """
     output = _PartialConstructor(lambda {dom_met}: {name}(
 {args}))
@@ -348,8 +342,11 @@ fn generate_docstring(
     );
 
     let example_path = format!("src/{}/code/{}.rst", &module_name, &func.name);
-    let example = match fs::read_to_string(example_path) {
-        Ok(string) => format!("\n\n:example:\n\n{string}\n"),
+    let example_block = match fs::read_to_string(example_path) {
+        Ok(example_code) => {
+            let indented_example_code = tab_py(example_code);
+            format!("\n\n:example:\n\n{indented_example_code}\n")
+        }
         Err(_) => "".to_string(),
     };
 
@@ -358,7 +355,7 @@ fn generate_docstring(
 .. end-markdown
 
 {doc_args}{ret_arg}
-{raises}{example}
+{raises}{example_block}
 """"#,
         description = description,
         doc_args = doc_args,
