@@ -1,0 +1,30 @@
+\documentclass{article}
+\input{../lib.sty}
+
+\title{\texttt{fn accuracy\_to\_discrete\_laplacian\_scale}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+This document contains materials associated with \rustdoc{accuracy/fn}{accuracy\_to\_discrete\_laplacian\_scale}.
+
+By \rustdoc{accuracy/fn}{discrete\_laplacian\_scale\_to\_accuracy}, 
+the relationship between $\alpha$, $a$ and $scale$, is:
+
+\begin{equation*}
+    \alpha = 2 \frac{e^{(1 - a)/s}}{e^{1/s} + 1}
+\end{equation*}
+
+A closed-form expression for $s$ doesn't exist, 
+so we use a numerical approach by a binary search.
+
+A loose upper bound is provided by \rustdoc{accuracy/fn}{accuracy\_to\_laplacian\_scale}.
+
+The binary search finds the smallest $s$ such that
+
+\begin{equation*}
+    \alpha \le 2 \frac{e^{(1 - a)/s}}{e^{1/s} + 1}
+\end{equation*}
+
+\end{document}

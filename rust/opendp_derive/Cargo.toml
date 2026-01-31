@@ -1,0 +1,25 @@
+[package]
+name = "opendp_derive"
+description = "Minimal proc-macro wrappers around the opendp_tooling crate."
+version.workspace = true
+license-file.workspace = true
+readme.workspace = true
+homepage.workspace = true
+repository.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+# proc-macro crates can only export proc-macros
+[lib]
+proc-macro = true
+
+# we need to reuse the tooling logic in the opendp build script, so it is factored into a separate crate
+[dependencies]
+syn = { workspace = true, optional = true }
+quote = { workspace = true, optional = true }
+opendp_tooling = { path = "../opendp_tooling", optional = true, version = "0.14.1-nightly.20260130.1" }
+
+[features]
+full = ["syn", "quote", "opendp_tooling"]
+partials = ["full"]
