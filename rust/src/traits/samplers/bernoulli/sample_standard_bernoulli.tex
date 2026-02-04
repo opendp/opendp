@@ -9,22 +9,15 @@
 Proves soundness of \rustdoc{traits/samplers/bernoulli/fn}{sample\_standard\_bernoulli}
 in \asOfCommit{rust/src/traits/samplers/bernoulli/mod.rs}{655696c}.
 
-
-\subsection*{Vetting history}
-\begin{itemize}
-    \item \vettingPR{XXXX}
-\end{itemize}
-
 \section{Hoare Triple}
 
 \subsection*{Preconditions}
-\begin{itemize}
-    \item The function \rustdoc{traits/samplers/uniform/fn}{fill\_bytes} either
-    \begin{itemize}
-        \item returns \texttt{Err(e)} if there is insufficient system entropy, or
-        \item fills the provided buffer with uniformly random bytes.
-    \end{itemize}
-\end{itemize}
+\noindent
+There are no preconditions for \texttt{sample\_standard\_bernoulli}, since the function takes no arguments and is therefore well-defined for all inputs.
+
+\noindent
+Similarly, \rustdoc{traits/samplers/uniform/fn}{fill\_bytes} has no preconditions. As a result, its postcondition—that it either returns \texttt{Err(e)} if there is insufficient system entropy or fills the provided buffer with uniformly random bytes—may be used directly in the proof below.
+
 
 \subsection*{Pseudocode}
 \begin{lstlisting}[language = Python, escapechar=|]
