@@ -950,6 +950,38 @@ def test_explicit_grouping_keys():
     pl_testing.assert_frame_equal(df_act.sort("B"), df_exp)
 
 
+def test_large_keys_warns(monkeypatch, recwarn):
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+    local_limit = 5
+    local_scale_factor = 5 * 1000 ** 2
+    monkeypatch.setenv("OPENDP_POLARS_KEY_SIZE_THRESHOLD_MB", local_limit)
+
+    lf_domain, lf = example_lf(margin=["B"], max_length=100)
+
+    context = dp.Context.compositor(
+        data=lf,
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+        domain=lf_domain,
+    )
+
+    keys_small = pl.DataFrame(pl.Series("B", [2, 3, 4, 5, 6], dtype=pl.Int32))
+    before_warns = len(recwarn)
+    query = (
+        context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys_small)
+    )
+    after_warns = len(recwarn)
+    assert before_warns == after_warns, "There should be no warning if keys are below the threshold"
+
+    keys_large = pl.DataFrame(pl.Series("B", [x for x in range(local_scale_factor)], dtype=pl.Int32))
+    with pytest.warns(UserWarning):
+        query = (
+            context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys_large)
+        )
+
+
 def test_explicit_grouping_keys_context():
     pl = pytest.importorskip("polars")
     pl_testing = pytest.importorskip("polars.testing")
