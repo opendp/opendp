@@ -69,7 +69,7 @@ def _size_warning(keys):
         est_size = (sys.getsizeof(lower_bound_col_name) * width) / mb_factor
 
     if est_size > _KEY_SIZE_THRESHOLD_MB:
-        warn(f"Large (key-set: ~{est_size}mb > {_KEY_SIZE_THRESHOLD_MB}mb loaded into memory. Consider writing it to disk for the plan to read it in via scan_parquet.")
+        warn(f"Large key-set (~{est_size}mb > {_KEY_SIZE_THRESHOLD_MB}mb) loaded into memory. Consider writing it to disk for the plan to read it in via scan_parquet.")
 
 class DPExpr(object):
     """
