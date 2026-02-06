@@ -968,17 +968,13 @@ def test_large_keys_warns(monkeypatch, recwarn):
 
     keys_small = pl.DataFrame(pl.Series("B", [2, 3, 4, 5, 6], dtype=pl.Int32))
     before_warns = len(recwarn)
-    query = (
-        context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys_small)
-    )
+    context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys_small)
     after_warns = len(recwarn)
     assert before_warns == after_warns, "There should be no warning if keys are below the threshold"
 
     keys_large = pl.DataFrame(pl.Series("B", [x for x in range(local_scale_factor)], dtype=pl.Int32))
     with pytest.warns(UserWarning):
-        query = (
-            context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys_large)
-        )
+        context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys_large)
 
 
 def test_explicit_grouping_keys_context():
