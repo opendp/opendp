@@ -69,7 +69,7 @@ def _size_warning(keys):
     elif hasattr(keys, "width"):
         lower_bound_col_name = "key"  # Assume columns have > 3 characters on average for lowerbound
         width = keys.width  # number of column names
-        est_size = (sys.getsizeof(lower_bound_col_names) * width) / mb_factor
+        est_size = (sys.getsizeof(lower_bound_col_name) * width) / mb_factor
 
     if est_size > _get_key_size_threshold():
         warn(f"Large (key-set: ~{est_size}mb) loaded into memory. Consider writing it to disk for the plan to read it in via scan_parquet.")
