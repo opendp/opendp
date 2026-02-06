@@ -954,7 +954,7 @@ def test_large_keys_warns(monkeypatch, recwarn):
     pl = pytest.importorskip("polars")
     local_limit = 5
     local_scale_factor = 5 * 1000 ** 2
-    monkeypatch.setenv("OPENDP_POLARS_KEY_SIZE_THRESHOLD_MB", local_limit)
+    monkeypatch.setattr("opendp.extras.polars._KEY_SIZE_THRESHOLD_MB", local_limit)
 
     lf_domain, lf = example_lf(margin=["B"], max_length=100)
 

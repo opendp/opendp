@@ -52,14 +52,11 @@ if TYPE_CHECKING:  # pragma: no cover
     from opendp.context import Query
     from opendp.extras.polars.contingency_table import ContingencyTableQuery
 
+
+_KEY_SIZE_THRESHOLD_MB = 1 << 10
+
 def _get_opendp_polars_lib_path():
     return os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path)
-
-def _get_key_size_threshold() -> int:  # in mb
-    try:
-        return int(os.environ["OPENDP_POLARS_KEY_SIZE_THRESHOLD_MB"])
-    except (KeyError, ValueError):
-        return 1 << 10
 
 def _size_warning(keys):
     mb_factor = 1024**2  # For scaling to mb to shorten warnings
@@ -71,8 +68,8 @@ def _size_warning(keys):
         width = keys.width  # number of column names
         est_size = (sys.getsizeof(lower_bound_col_name) * width) / mb_factor
 
-    if est_size > _get_key_size_threshold():
-        warn(f"Large (key-set: ~{est_size}mb) loaded into memory. Consider writing it to disk for the plan to read it in via scan_parquet.")
+    if est_size > _KEY_SIZE_THRESHOLD_MB:
+        warn(f"Large (key-set: ~{est_size}mb > {_KEY_SIZE_THRESHOLD_MB}mb loaded into memory. Consider writing it to disk for the plan to read it in via scan_parquet.")
 
 class DPExpr(object):
     """
