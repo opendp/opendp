@@ -63,7 +63,7 @@ def _get_key_size_threshold() -> int:  # in mb
 
 def _size_warning(keys):
     mb_factor = 1024**2  # For scaling to mb to shorten warnings
-    est_size: int = sys.getsizeof(keys) / mb_factor # A rough underestimate of size, does not include referenced objects sizes
+    est_size: int = sys.getsizeof(keys) // mb_factor # A rough underestimate of size, does not include referenced objects sizes
     if hasattr(keys, "estimated_size"):
         est_size = keys.estimated_size("mb")
     elif hasattr(keys, "width"):
