@@ -13,11 +13,7 @@ in \asOfCommit{rust/src/traits/samplers/bernoulli/mod.rs}{655696c}.
 
 \subsection*{Preconditions}
 \noindent
-There are no preconditions for \texttt{sample\_standard\_bernoulli}, since the function takes no arguments and is therefore well-defined for all inputs.
-
-\noindent
-Similarly, \rustdoc{traits/samplers/uniform/fn}{fill\_bytes} has no preconditions. As a result, its postcondition—that it either returns \texttt{Err(e)} if there is insufficient system entropy or fills the provided buffer with uniformly random bytes—may be used directly in the proof below.
-
+There are no preconditions for \texttt{sample\_standard\_bernoulli}.
 
 \subsection*{Pseudocode}
 \begin{lstlisting}[language = Python, escapechar=|]
@@ -37,40 +33,67 @@ For any setting of the input parameters for which the preconditions hold,
 
 \section{Proof}
 
-Assume the preconditions are met.
-
 We first consider the behavior of the function
-\rustdoc{traits/samplers/uniform/fn}{fill\_bytes}. By the precondition, if
-\texttt{fill\_bytes} returns \texttt{Err(e)}, then
-\texttt{sample\_standard\_bernoulli} immediately returns \texttt{Err(e)} via
-the error-propagation operator \texttt{?}. This satisfies the postcondition.
+\rustdoc{traits/samplers/uniform/fn}{fill\_bytes}, which is invoked inside
+\texttt{fn sample_standard_bernoulli}. 
+The precondition of \rustdoc{traits/samplers/uniform/fn}{fill_bytes}
+is trivially satisfied. Hence, we may assume its postcondition, which states:
 
-We now consider the case where \texttt{fill\_bytes} succeeds. In this case,
-the function fills the single-byte buffer \texttt{buffer} with a uniformly
-random value in the set $\{0,1,\dots,255\}$.
+\begin{enumerate}
+    \item If sufficient system entropy is available, 
+    \texttt{fill_bytes} succeeds and fills the single-byte buffer
+    \texttt{buffer} with a uniformly random value in the set
+    $\{0,1,\dots,255\}$.
 
-The function then evaluates the expression
-\texttt{buffer[0] \& 1 == 1}. The bitwise AND operation \texttt{\& 1} extracts
-the least significant bit of \texttt{buffer[0]}. Therefore, the returned value
-is \texttt{true} if and only if the least significant bit of \texttt{buffer[0]}
-is equal to 1.
+    \item If insufficient system entropy is available,
+    \texttt{fill_bytes} fails and returns \texttt{Err(e)}.
+\end{enumerate}
 
-Among the integers $\{0,1,\dots,255\}$, exactly half are even and half are odd.
-Even integers have least significant bit equal to 0, and odd integers have least
-significant bit equal to 1. Since \texttt{buffer[0]} is uniformly distributed
-over $\{0,1,\dots,255\}$, it follows that
+We now analyze the behavior of
+\texttt{fn sample_standard_bernoulli} under these two cases.
+
+\paragraph{Case 1: \texttt{fill_bytes} succeeds.}
+
+In this case, \texttt{buffer[0]} is uniformly distributed over
+$\{0,1,\dots,255\}$. The function evaluates the expression
+
+\[
+\texttt{buffer[0] \& 1 == 1}.
+\]
+
+The bitwise AND operation \texttt{\& 1} extracts the least significant bit
+of \texttt{buffer[0]}. Therefore, the function returns \texttt{true} if and
+only if the least significant bit of \texttt{buffer[0]} equals $1$.
+
+Among the integers $\{0,1,\dots,255\}$, exactly half (128 values) are even
+and half are odd. Even integers have least significant bit equal to $0$,
+and odd integers have least significant bit equal to $1$. Since
+\texttt{buffer[0]} is uniformly distributed over this set, we obtain
+
 \[
 \Pr[\texttt{buffer[0] \& 1 == 1}] = \frac{128}{256} = \frac{1}{2}.
 \]
 
-Thus, conditioned on \texttt{fill\_bytes} succeeding,
-\texttt{sample\_standard\_bernoulli} returns \texttt{Ok(true)} with probability
-$1/2$ and \texttt{Ok(false)} with probability $1/2$, which is exactly the
-distribution $\texttt{Bernoulli}(0.5)$.
+Hence, conditioned on success of \texttt{fill_bytes},
+\texttt{sample_standard_bernoulli} returns:
+\[
+\Pr[\texttt{Ok(true)}] = \frac{1}{2},
+\qquad
+\Pr[\texttt{Ok(false)}] = \frac{1}{2}.
+\]
+
+Thus, the output distribution is exactly
+$\texttt{Bernoulli}(0.5)$.
+
+\paragraph{Case 2: \texttt{fill_bytes} fails.}
+
+If \texttt{fill_bytes} returns \texttt{Err(e)}, then
+\texttt{sample_standard_bernoulli} immediately propagates the error via the
+\texttt{?} operator and returns \texttt{Err(e)}.
 
 Therefore, in all cases,
 \texttt{sample\_standard\_bernoulli} either returns \texttt{Err(e)} if there is
 insufficient system entropy, or returns a sample drawn from
-$\texttt{Bernoulli}(0.5)$, as required by the postcondition.
+$\texttt{Bernoulli}(0.5)$, as required by the postcondition. Thus, the postcondition is satisfied.
 
 \end{document}
