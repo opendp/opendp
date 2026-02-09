@@ -1,9 +1,13 @@
 # Creates a release on the nightly channel. Intended to right every day before midnight.
 name: Nightly
 on:
-  schedule:
-    # 03:45 UTC = 22:45 EST/23:45 EDT (i.e., always before midnight), so nightlies will have a sensible date
-    - cron: '45 3 * * *'
+  # JUST FOR DEBUGGING!
+  # Confirm that the nightly build failure is an upstream dependency problem,
+  # rather a bug we introduced but didn't notice because nighly was failing.
+  pull_request:
+  # schedule:
+  #   # 03:45 UTC = 22:45 EST/23:45 EDT (i.e., always before midnight), so nightlies will have a sensible date
+  #   - cron: '45 3 * * *'
 
 jobs:
   release:
