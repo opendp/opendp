@@ -89,13 +89,13 @@ jobs:
           name: python_sdist
           path: python/dist
 
-      - name: Publish Python package
-        env:
-          # twine doesn't support dry-runs, so if that's what we're doing, simulate it by using TestPyPI instead of PyPI
-          REPOSITORY: ${{ inputs.dry_run && 'testpypi' || 'pypi' }}
-        run: |
-          pip install -r tools/requirements-tools.txt
-          python tools/publish_tool.py python -r $REPOSITORY
+      # - name: Publish Python package
+      #   env:
+      #     # twine doesn't support dry-runs, so if that's what we're doing, simulate it by using TestPyPI instead of PyPI
+      #     REPOSITORY: ${{ inputs.dry_run && 'testpypi' || 'pypi' }}
+      #   run: |
+      #     pip install -r tools/requirements-tools.txt
+      #     python tools/publish_tool.py python -r $REPOSITORY
 
   publish-r:
     if: 
@@ -113,21 +113,21 @@ jobs:
           name: r_package
           path: R/opendp/
 
-      - name: Push to R branch
-        run: |
-          git fetch
-          git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
-          git config --global user.name "$GITHUB_ACTOR"
+      # - name: Push to R branch
+      #   run: |
+      #     git fetch
+      #     git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
+      #     git config --global user.name "$GITHUB_ACTOR"
 
-          # create brand new history each time
-          BRANCH=r-universe${{ (inputs.dry_run || inputs.channel != 'stable') && '-dev' || '' }}
-          git checkout --orphan $BRANCH
+      #     # create brand new history each time
+      #     BRANCH=r-universe${{ (inputs.dry_run || inputs.channel != 'stable') && '-dev' || '' }}
+      #     git checkout --orphan $BRANCH
 
-          git add R/opendp/ --force
-          echo "Push R package to $BRANCH branch"
-          git commit --allow-empty-message --message "$(git log $(git rev-parse origin/main) --oneline --format=%B -n1 | head -n1)"
-          git remote set-url origin "https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY"
-          git push --force origin $BRANCH
+      #     git add R/opendp/ --force
+      #     echo "Push R package to $BRANCH branch"
+      #     git commit --allow-empty-message --message "$(git log $(git rev-parse origin/main) --oneline --format=%B -n1 | head -n1)"
+      #     git remote set-url origin "https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY"
+      #     git push --force origin $BRANCH
 
   publish-rust:
     needs: publish-python
@@ -145,12 +145,12 @@ jobs:
         with:
           python-version: 3.13
 
-      - name: Publish Rust crate
-        env:
-          DRY_RUN_FLAG: ${{ inputs.dry_run && '--dry_run' || '' }}
-        run: |
-          pip install -r tools/requirements-tools.txt
-          python tools/publish_tool.py rust $DRY_RUN_FLAG
+      # - name: Publish Rust crate
+      #   env:
+      #     DRY_RUN_FLAG: ${{ inputs.dry_run && '--dry_run' || '' }}
+      #   run: |
+      #     pip install -r tools/requirements-tools.txt
+      #     python tools/publish_tool.py rust $DRY_RUN_FLAG
 
   publish-github:
     needs: publish-rust
@@ -178,12 +178,12 @@ jobs:
         with:
           python-version: 3.13
 
-      - name: Publish GitHub Release
-        if: ${{ inputs.channel == 'stable' }}
-        env:
-          DRY_RUN_FLAG: ${{ inputs.dry_run && '--dry_run' || '' }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          pip install -r tools/requirements-tools.txt
-          python tools/publish_tool.py github -d ${{ inputs.date }} $DRY_RUN_FLAG
+      # - name: Publish GitHub Release
+      #   if: ${{ inputs.channel == 'stable' }}
+      #   env:
+      #     DRY_RUN_FLAG: ${{ inputs.dry_run && '--dry_run' || '' }}
+      #     GH_TOKEN: ${{ github.token }}
+      #   run: |
+      #     pip install -r tools/requirements-tools.txt
+      #     python tools/publish_tool.py github -d ${{ inputs.date }} $DRY_RUN_FLAG
   
