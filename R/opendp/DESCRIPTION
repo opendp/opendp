@@ -17,7 +17,8 @@ Description: The OpenDP Library is a modular collection of statistical algorithm
     It can be used to build applications of privacy-preserving computations, using a number of different models of privacy.
 License: MIT + file LICENSE
 Depends:
-    R (>= 4.2)
+    R (>= 4.2),
+    pkgdown (< 2.2.0)
 Suggests:
     testthat (>= 3.0.0),
     jsonlite
