@@ -43,6 +43,9 @@ jobs:
           working-directory: R/opendp
           extra-packages: devtools
 
+      - name: Downgrade pkgdown (UGLY HACK)
+        run: Rscript -e 'utils::install.packages(pkgs="https://cran.r-project.org/package=pkgdown&version=2.1.3", repos=NULL)'
+
       - name: Build docs
         run: bash tools/r_stage.sh -u
 
