@@ -7,6 +7,8 @@ import os
 import io
 from datetime import date, time, datetime
 
+from .helpers import ids
+
 
 def test_polars_version():
     pl = pytest.importorskip("polars")
@@ -76,7 +78,11 @@ def test_domains():
 
 
 # data loaders
-@pytest.mark.parametrize("domain,series", zip(*example_series()))
+@pytest.mark.parametrize(
+    "domain,series",
+    zip(*example_series()),
+    ids=ids,
+)
 def test_series_ffi(domain, series):
     """ensure that series can be passed to/from Rust"""
     pl_testing = pytest.importorskip("polars.testing")
@@ -95,7 +101,8 @@ def test_lazyframe_ffi():
 
 
 @pytest.mark.parametrize(
-    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()]
+    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()],
+    ids=ids,
 )
 def test_private_lazyframe_explicit_sum(measure):
     pl = pytest.importorskip("polars")
@@ -125,7 +132,9 @@ def test_private_lazyframe_explicit_sum(measure):
 
 
 @pytest.mark.parametrize(
-    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()]
+    "measure",
+    [dp.max_divergence(), dp.zero_concentrated_divergence()],
+    ids=ids,
 )
 def test_private_lazyframe_sum(measure):
     pl = pytest.importorskip("polars")
@@ -153,7 +162,9 @@ def test_private_lazyframe_sum(measure):
 
 
 @pytest.mark.parametrize(
-    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()]
+    "measure",
+    [dp.max_divergence(), dp.zero_concentrated_divergence()],
+    ids=ids,
 )
 def test_private_lazyframe_mean(measure):
     pl = pytest.importorskip("polars")
@@ -241,7 +252,9 @@ def test_private_lazyframe_median():
 
 
 @pytest.mark.parametrize(
-    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()]
+    "measure",
+    [dp.max_divergence(), dp.zero_concentrated_divergence()],
+    ids=ids,
 )
 def test_filter(measure):
     """ensure that expr domain's carrier type can be passed to/from Rust"""
@@ -287,7 +300,9 @@ def test_onceframe_lazy():
 
 
 @pytest.mark.parametrize(
-    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()]
+    "measure",
+    [dp.max_divergence(), dp.zero_concentrated_divergence()],
+    ids=ids,
 )
 def test_mechanisms(measure):
     pl_testing = pytest.importorskip("polars.testing")
@@ -1197,7 +1212,11 @@ def test_arithmetic():
     # expectation is 330.0
     assert 260 < observed < 400
 
-@pytest.mark.parametrize("privacy_unit", [dp.unit_of(changes=1), dp.unit_of(changes=1, ordered=True)])
+@pytest.mark.parametrize(
+    "privacy_unit",
+    [dp.unit_of(changes=1), dp.unit_of(changes=1, ordered=True)],
+    ids=ids,
+)
 def test_private_lazyframe_bounded_dp(privacy_unit):
     pl = pytest.importorskip("polars")
 
