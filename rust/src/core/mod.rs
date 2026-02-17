@@ -150,6 +150,11 @@ impl<MI: Metric, MO: Measure> PrivacyMap<MI, MO> {
     pub fn new_fallible(map: impl Fn(&MI::Distance) -> Fallible<MO::Distance> + 'static) -> Self {
         PrivacyMap(Arc::new(map))
     }
+
+    /// # Proof Definition
+    /// Creates a privacy map from `d_in` to `d_out`
+    /// where `d_out = MO.inf_cast(d_in).inf_mul(c) >= d_in * c`,
+    /// or returns an error.
     pub fn new_from_constant(c: MO::Distance) -> Self
     where
         MI::Distance: Clone,
@@ -201,6 +206,11 @@ impl<MI: Metric, MO: Metric> StabilityMap<MI, MO> {
     ) -> Self {
         StabilityMap(Arc::new(map))
     }
+
+    /// # Proof Definition
+    /// Creates a stability map from `d_in` to `d_out`
+    /// where `d_out = MO.inf_cast(d_in).inf_mul(c) >= d_in * c`,
+    /// or returns an error.
     pub fn new_from_constant(c: MO::Distance) -> Self
     where
         MI::Distance: Clone,

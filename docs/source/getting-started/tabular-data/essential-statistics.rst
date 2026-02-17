@@ -163,6 +163,29 @@ release the query:
 Other variations of counting queries are discussed in the `Aggregation
 section <../../api/user-guide/polars/expressions/aggregation.ipynb>`__.
 
+Bounds Estimation
+-----------------
+
+All the operations which follow require some information about
+the expected range of values: sum and mean need upper and lower bounds,
+while median and quantile take a set of candidate values.
+If you set bounds too wide, the additional noise will mean less accurate results;
+If you set bounds too narrow, clipping may produced biased results.
+
+In some cases, for instance age in a demographic dataset, you will have prior
+knowledge that allows you to set bounds. In others, there may be a comparable
+public dataset which allows you to determine bounds for the private dataset.
+
+If you don't have either of these, another option is to use some of your budget
+to release bound values, and then use the remainder of your budget on the
+actual statistic of interest. One option is to use very widely spaced candidate
+values to estimate the 5th and 95th percentiles (see :ref:`quantile`),
+or you could estimate a histogram using exponentially increasing bin widths.
+
+There are several good options;
+The only bad option is look at the data to determine bounds.
+
+
 Sum
 ---
 
@@ -337,7 +360,7 @@ estimates.
             ...     context.query().filter(pl.col.HWUSUAL != 99.0)
             ...     # release both the sum and length in one query
             ...     .select(
-            ...         # if the imputation is omitted, 
+            ...         # if the imputation is omitted,
             ...         # a midpoint imputation is inserted (40)
             ...         pl.col.HWUSUAL.cast(int).dp.sum(bounds=(0, 80)),
             ...         dp.len(),
@@ -500,9 +523,7 @@ set candidates to whole numbers between 20 and 60:
             >>> query_median_hours = (
             ...     context.query()
             ...     .filter(pl.col.HWUSUAL != 99.0)
-            ...     .select(
-            ...         pl.col.HWUSUAL.cast(int).dp.median(candidates)
-            ...     )
+            ...     .select(pl.col.HWUSUAL.cast(int).dp.median(candidates))
             ... )
             >>> query_median_hours.summarize(alpha=0.05)
             shape: (1, 5)
@@ -541,6 +562,8 @@ estimates.
 
 This median estimate is consistent with the mean estimate from the
 previous section.
+
+.. _quantile:
 
 Quantile
 --------

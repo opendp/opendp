@@ -87,6 +87,10 @@ function docs() {
 
   log "***** DOCS *****"
 
+  log "downgrade pkgdown"
+  # TODO: Fix this the right way. https://github.com/opendp/opendp/issues/2615
+  Rscript -e 'utils::install.packages(pkgs="https://cran.r-project.org/package=pkgdown&version=2.1.3", repos=NULL)'
+
   log "build the docs, and then website"
   Rscript -e 'devtools::document("R/opendp")'
   Rscript -e 'pkgdown::build_site("R/opendp")'
@@ -113,6 +117,10 @@ function dummydocs() {
   sed "/#' @useDynLib opendp, .registration = TRUE/d" R/opendp-docs/R/opendp-package.R > R/opendp-docs/R/opendp-package.R
   rm -f R/opendp-docs/configure
   rm -f R/opendp-docs/NAMESPACE
+
+  log "downgrade pkgdown"
+  # TODO: Fix this the right way. https://github.com/opendp/opendp/issues/2615
+  Rscript -e 'utils::install.packages(pkgs="https://cran.r-project.org/package=pkgdown&version=2.1.3", repos=NULL)'
 
   log "build the docs, and then website"
   Rscript -e 'devtools::document("R/opendp-docs")'

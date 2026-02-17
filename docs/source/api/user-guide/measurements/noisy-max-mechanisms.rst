@@ -30,7 +30,7 @@ us if you are interested in proof-writing. Thank you!
 
             >>> import opendp.prelude as dp
             >>> dp.enable_features("contrib")
-            
+
 
 The goal of mechanisms in this notebook will be to release the argument
 or index of the best score in the following vector:
@@ -43,7 +43,7 @@ or index of the best score in the following vector:
         .. code:: pycon
 
             >>> scores = [0.0, 2.0, 4.0, 6.0]
-            
+
 
 We’ll also define the sensitivity once, for all examples:
 
@@ -55,7 +55,7 @@ We’ll also define the sensitivity once, for all examples:
         .. code:: pycon
 
             >>> sensitivity = 1.0
-            
+
 
 The score vectors on adjacent datasets differ by at most one in each
 position.
@@ -95,15 +95,17 @@ making gumbel noise competitive.
 
             >>> # call the constructor to produce the measurement
             >>> exponential_max = dp.m.make_noisy_max(
-            ...     input_domain=dp.vector_domain(dp.atom_domain(T=float, nan=False)),
+            ...     input_domain=dp.vector_domain(
+            ...         dp.atom_domain(T=float, nan=False)
+            ...     ),
             ...     input_metric=dp.linf_distance(T=float),
             ...     output_measure=dp.max_divergence(),
             ...     scale=2.0,
             ... )
-            
+
             >>> print("noisy max:", exponential_max(scores))
             noisy max: ...
-            
+
             >>> #                 sensitivity * 2 / scale
             >>> print("epsilon:", exponential_max.map(d_in=sensitivity))
             epsilon: 1.0
@@ -121,15 +123,17 @@ additive noise mechanisms (laplace and gaussian).
 
             >>> # call the constructor to produce the measurement `base_rnm_gumbel`
             >>> gumbel_max = dp.m.make_noisy_max(
-            ...     input_domain=dp.vector_domain(dp.atom_domain(T=float, nan=False)),
+            ...     input_domain=dp.vector_domain(
+            ...         dp.atom_domain(T=float, nan=False)
+            ...     ),
             ...     input_metric=dp.linf_distance(T=float),
             ...     output_measure=dp.zero_concentrated_divergence(),
             ...     scale=2.0,
             ... )
-            
+
             >>> print("noisy max:", gumbel_max(scores))
             noisy max: ...
-            
+
             >>> #             (sensitivity * 2 / scale)^2 / 8
             >>> print("rho:", gumbel_max.map(d_in=sensitivity))
             rho: 0.125
@@ -151,21 +155,26 @@ monotonic, the privacy loss is halved:
 
         .. code:: pycon
 
-            >>> # when monotonic=True, the distance between score vectors 
+            >>> # when monotonic=True, the distance between score vectors
             >>> # that differ in different directions is defined to be infinity
             >>> input_metric = dp.linf_distance(T=float, monotonic=True)
-            
+
             >>> # construct the measurement with a monotonic metric
             >>> monotonic_exponential_max = dp.m.make_noisy_max(
-            ...     input_domain=dp.vector_domain(dp.atom_domain(T=float, nan=False)),
+            ...     input_domain=dp.vector_domain(
+            ...         dp.atom_domain(T=float, nan=False)
+            ...     ),
             ...     input_metric=input_metric,
             ...     output_measure=dp.max_divergence(),
             ...     scale=2.0,
             ... )
-            
+
             >>> # factor of 2 goes away in privacy map:
             >>> #                 sensitivity * 1 / scale
-            >>> print("epsilon:", monotonic_exponential_max.map(d_in=sensitivity))
+            >>> print(
+            ...     "epsilon:",
+            ...     monotonic_exponential_max.map(d_in=sensitivity),
+            ... )
             epsilon: 0.5
 
 Under these conditions, the privacy map now matches the laplace
@@ -187,14 +196,16 @@ largest, then negate the inputs:
 
             >>> # construct the report noisy min measurement
             >>> exponential_min = dp.m.make_noisy_max(
-            ...     input_domain=dp.vector_domain(dp.atom_domain(T=float, nan=False)),
+            ...     input_domain=dp.vector_domain(
+            ...         dp.atom_domain(T=float, nan=False)
+            ...     ),
             ...     input_metric=dp.linf_distance(T=float),
             ...     output_measure=dp.max_divergence(),
             ...     scale=2.0,
             ...     # negate input scores
             ...     negate=True,
             ... )
-            
+
             >>> print("noisy min:", exponential_min(scores))
             noisy min: ...
 
@@ -214,17 +225,19 @@ simultaneously:
         .. code:: pycon
 
             >>> exponential_top_k = dp.m.make_noisy_top_k(
-            ...     input_domain=dp.vector_domain(dp.atom_domain(T=float, nan=False)),
+            ...     input_domain=dp.vector_domain(
+            ...         dp.atom_domain(T=float, nan=False)
+            ...     ),
             ...     input_metric=dp.linf_distance(T=float),
             ...     output_measure=dp.max_divergence(),
             ...     k=2,
             ...     scale=2.0,
             ... )
-            
+
             >>> scores = [0.0, 1.0, 2.0, 3.0]
             >>> print("noisy top 2:", exponential_top_k(scores))
             noisy top 2: [...]
-            
+
             >>> print("epsilon:", exponential_top_k.map(d_in=sensitivity))
             epsilon: 2.0
 

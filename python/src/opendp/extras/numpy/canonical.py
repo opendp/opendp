@@ -23,7 +23,7 @@ class BinomialCND:
     """
     Utilities to conduct statistical inference on the output of the canonical noise mechanism on binomially-distributed data.
 
-    Use :func:`opendp.measurements.make_canonical_noise` to instantiate the canonical noise mechanism.
+    Use :func:`~opendp.measurements.make_canonical_noise` to instantiate the canonical noise mechanism.
 
     The mechanism outputs a sample from X + N,
     where X ~ Binomial(n=size, p=theta), N ~ CND(0, d_in, d_out).

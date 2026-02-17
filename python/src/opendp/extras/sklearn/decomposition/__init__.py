@@ -320,7 +320,7 @@ if _decomposition is not None:
         def _postprocess(self, values):
             """A function that applies a release of the mean and eigendecomposition to self"""
             np = import_optional_dependency('numpy')
-            from sklearn.utils.extmath import stable_cumsum, svd_flip # type: ignore[import]
+            from sklearn.utils.extmath import svd_flip # type: ignore[import]
             from sklearn.decomposition._pca import _infer_dimension # type: ignore[import]
 
             self.mean_, S, Vt = values
@@ -350,7 +350,7 @@ if _decomposition is not None:
                 # their variance is always greater than n_components float
                 # passed. More discussion in issue: https://github.com/scikit-learn/scikit-learn/pull/15669
                 explained_variance_ratio_np = explained_variance_ratio_
-                ratio_cumsum = stable_cumsum(explained_variance_ratio_np)
+                ratio_cumsum = np.cumsum(explained_variance_ratio_np)
                 n_components = np.searchsorted(ratio_cumsum, n_components, side="right") + 1
 
             # Compute noise covariance using Probabilistic PCA model
