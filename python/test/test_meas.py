@@ -1,7 +1,7 @@
 import pytest
 import opendp.prelude as dp
 
-from helpers import ids
+from .helpers import ids
 
 
 def test_gaussian_curve():
