@@ -57,9 +57,6 @@ jobs:
       - credential-check
       - r-docs
     runs-on: ubuntu-22.04
-    env:
-      # don't attempt to load binaries when sourcing the library
-      OPENDP_HEADLESS: true
 
     steps:
       - name: Checkout repository
