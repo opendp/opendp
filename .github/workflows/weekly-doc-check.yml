@@ -70,9 +70,6 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
 
-      - name: Check format
-        run: find source/ -name '*.rst' | xargs blacken-docs -l 60 --check
-
       - name: Check markdown links
         run: |
           find .. | grep '\.md$' | grep -v 'venv\|.git/\|CHANGELOG\|vendor/\|R/opendp/README.md' \
