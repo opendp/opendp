@@ -14,7 +14,8 @@ See also our :ref:`tutorial on diffentially private PCA <dp-pca>`.
 '''
 
 from __future__ import annotations
-from typing import NamedTuple, Optional, TYPE_CHECKING, Sequence
+from typing import Optional, TYPE_CHECKING, Sequence
+from dataclasses import dataclass, asdict, astuple
 from opendp.extras.numpy import then_np_clamp
 from opendp.context import register
 from opendp.extras._utilities import to_then
@@ -28,18 +29,17 @@ if TYPE_CHECKING: # pragma: no cover
     import numpy # type: ignore[import-not-found]
 
 
-class PCAEpsilons(NamedTuple):
+@dataclass(kw_only=True, frozen=True)
+class PCAEpsilons:
     '''
     Tuple used to describe the ε-expenditure per changed record in the input data
     '''
     eigvals: float
+    '''ε-expenditure to estimate the eigenvalues'''
     eigvecs: Sequence[float]
+    '''ε-expenditure to estimate the eigenvectors'''
     mean: Optional[float]
-
-
-PCAEpsilons.eigvals.__doc__ = 'ε-expenditure to estimate the eigenvalues'
-PCAEpsilons.eigvecs.__doc__ = 'ε-expenditure to estimate the eigenvectors'
-PCAEpsilons.mean.__doc__ = ''  """ε-expenditure to estimate the mean.
+    """ε-expenditure to estimate the mean.
 
 A portion of the budget is used to estimate the mean because the OpenDP PCA algorithm 
 releases an eigendecomposition of the sum of squares and cross-products matrix (SSCP), 
@@ -74,7 +74,8 @@ def make_private_pca(
 
     dp.assert_features("contrib", "floating-point")
 
-    class PCAResult(NamedTuple):
+    @dataclass(kw_only=True, frozen=True)
+    class PCAResult:
         mean: numpy.ndarray
         S: numpy.ndarray
         Vt: numpy.ndarray
@@ -105,24 +106,22 @@ def make_private_pca(
     if not isinstance(unit_epsilon, PCAEpsilons):
         raise ValueError("epsilon must be a float or instance of PCAEpsilons")  # pragma: no cover
 
-    eigvals_epsilon, eigvecs_epsilons, mean_epsilon = unit_epsilon
-
-    def _eig_to_SVt(decomp):
-        eigvals, eigvecs = decomp
-        return np.sqrt(np.maximum(eigvals, 0))[::-1], eigvecs.T
-
     def _make_eigdecomp(norm, origin):
         return (
             (input_domain, input_metric)
             >> then_np_clamp(norm, p=2, origin=origin)
             >> then_center()
-            >> then_private_np_eigendecomposition(eigvals_epsilon, eigvecs_epsilons)
-            >> (lambda out: PCAResult(origin, *_eig_to_SVt(out)))
+            >> then_private_np_eigendecomposition(unit_epsilon.eigvals, unit_epsilon.eigvecs)
+            >> (lambda out: PCAResult(
+                mean=origin,
+                S=np.sqrt(np.maximum(out[0], 0))[::-1],
+                Vt=out[1].T
+            ))
         )
 
     if input_desc.norm is not None:
-        if mean_epsilon is not None:
-            raise ValueError("mean_epsilon should be zero because origin is known")  # pragma: no cover
+        if unit_epsilon.mean is not None:
+            raise ValueError("unit_epsilon.mean should be zero because origin is known")  # pragma: no cover
         norm = input_desc.norm if norm is None else norm
         norm = min(input_desc.norm, norm)
         return _make_eigdecomp(norm, input_desc.origin)
@@ -138,7 +137,7 @@ def make_private_pca(
         input_metric,
         dp.max_divergence(),
         d_in=unit_d_in,
-        d_mids=[mean_epsilon, _make_eigdecomp(norm, 0).map(unit_d_in)],
+        d_mids=[unit_epsilon.mean, _make_eigdecomp(norm, 0).map(unit_d_in)],
     )
 
     def _function(data):
@@ -150,7 +149,7 @@ def make_private_pca(
                 input_domain, input_metric, s, norm=norm, p=1
             ),
             d_in=unit_d_in,
-            d_out=mean_epsilon,
+            d_out=unit_epsilon.mean,
             T=float,
         )
         origin = qbl(m_mean)
@@ -323,7 +322,7 @@ if _decomposition is not None:
             from sklearn.utils.extmath import svd_flip # type: ignore[import]
             from sklearn.decomposition._pca import _infer_dimension # type: ignore[import]
 
-            self.mean_, S, Vt = values
+            self.mean_, S, Vt = astuple(values)
             U = Vt.T
             n_samples, n_features = self.n_samples, self.n_features_in_
             n_components = self.n_components
@@ -410,7 +409,7 @@ def _make_center(input_domain, input_metric):
 
     input_desc = input_domain.descriptor
 
-    kwargs = input_desc._asdict() | {"origin": np.zeros(input_desc.num_columns)}
+    kwargs = asdict(input_desc) | {"origin": np.zeros(input_desc.num_columns)}
     return _make_transformation(
         input_domain,
         input_metric,
