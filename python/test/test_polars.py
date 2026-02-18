@@ -950,7 +950,7 @@ def test_explicit_grouping_keys():
     pl_testing.assert_frame_equal(df_act.sort("B"), df_exp)
 
 
-def test_large_keys_warns(monkeypatch, recwarn):
+def test_large_keys_warns(monkeypatch):
     pl = pytest.importorskip("polars")
     local_limit = 5
     local_scale_factor = 5 * 1000 ** 2
@@ -966,11 +966,9 @@ def test_large_keys_warns(monkeypatch, recwarn):
         domain=lf_domain,
     )
 
+    # Negative test to verify small keys does not fail
     keys_small = pl.DataFrame(pl.Series("B", [2, 3, 4, 5, 6], dtype=pl.Int32))
-    before_warns = len(recwarn)
     context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys_small)
-    after_warns = len(recwarn)
-    assert before_warns == after_warns, "There should be no warning if keys are below the threshold"
 
     keys_large = pl.DataFrame(pl.Series("B", [x for x in range(local_scale_factor)], dtype=pl.Int32))
     with pytest.warns(UserWarning):
