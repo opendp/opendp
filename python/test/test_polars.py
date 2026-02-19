@@ -970,7 +970,7 @@ def test_large_keys_warns(monkeypatch):
     keys_small = pl.DataFrame(pl.Series("B", [2, 3, 4, 5, 6], dtype=pl.Int32))
     context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys_small)
 
-    keys_large = pl.DataFrame([pl.Series(str(x), [2, 3, 4 ,5, 6], dtype=pl.Int32) for x in range(local_scale_factor)])
+    keys_large = pl.DataFrame([pl.Series(str(x), [2, 3, 4, 5, 6], dtype=pl.Int32) for x in range(local_scale_factor)])
     with pytest.warns(UserWarning):
         context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys_large)
 
