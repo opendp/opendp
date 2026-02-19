@@ -6,7 +6,7 @@ NULL
 
 #' Convert a desired `accuracy` (tolerance) into a discrete gaussian noise scale at a statistical significance level `alpha`.
 #'
-#' [accuracy_to_discrete_gaussian_scale in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.1/opendp/accuracy/fn.accuracy_to_discrete_gaussian_scale.html)
+#' [accuracy_to_discrete_gaussian_scale in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.2/opendp/accuracy/fn.accuracy_to_discrete_gaussian_scale.html)
 #'
 #' **Proof Definition:**
 #'
@@ -45,7 +45,7 @@ accuracy_to_discrete_gaussian_scale <- function(
 
 #' Convert a desired `accuracy` (tolerance) into a discrete Laplacian noise scale at a statistical significance level `alpha`.
 #'
-#' [accuracy_to_discrete_laplacian_scale in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.1/opendp/accuracy/fn.accuracy_to_discrete_laplacian_scale.html)
+#' [accuracy_to_discrete_laplacian_scale in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.2/opendp/accuracy/fn.accuracy_to_discrete_laplacian_scale.html)
 #'
 #' **Proof Definition:**
 #'
@@ -85,7 +85,7 @@ accuracy_to_discrete_laplacian_scale <- function(
 
 #' Convert a desired `accuracy` (tolerance) into a gaussian noise scale at a statistical significance level `alpha`.
 #'
-#' [accuracy_to_gaussian_scale in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.1/opendp/accuracy/fn.accuracy_to_gaussian_scale.html)
+#' [accuracy_to_gaussian_scale in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.2/opendp/accuracy/fn.accuracy_to_gaussian_scale.html)
 #'
 #' @concept accuracy
 #' @param accuracy Desired accuracy. A tolerance for how far values may diverge from the input to the mechanism.
@@ -120,7 +120,7 @@ accuracy_to_gaussian_scale <- function(
 
 #' Convert a desired `accuracy` (tolerance) into a Laplacian noise scale at a statistical significance level `alpha`.
 #'
-#' [accuracy_to_laplacian_scale in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.1/opendp/accuracy/fn.accuracy_to_laplacian_scale.html)
+#' [accuracy_to_laplacian_scale in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.2/opendp/accuracy/fn.accuracy_to_laplacian_scale.html)
 #'
 #' @concept accuracy
 #' @param accuracy Desired accuracy. A tolerance for how far values may diverge from the input to the mechanism.
@@ -156,7 +156,7 @@ accuracy_to_laplacian_scale <- function(
 
 #' Convert a discrete gaussian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
 #'
-#' [discrete_gaussian_scale_to_accuracy in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.1/opendp/accuracy/fn.discrete_gaussian_scale_to_accuracy.html)
+#' [discrete_gaussian_scale_to_accuracy in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.2/opendp/accuracy/fn.discrete_gaussian_scale_to_accuracy.html)
 #'
 #' **Proof Definition:**
 #'
@@ -201,7 +201,7 @@ discrete_gaussian_scale_to_accuracy <- function(
 #' This function returns a float accuracy.
 #' You can take the floor without affecting the coverage probability.
 #'
-#' [discrete_laplacian_scale_to_accuracy in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.1/opendp/accuracy/fn.discrete_laplacian_scale_to_accuracy.html)
+#' [discrete_laplacian_scale_to_accuracy in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.2/opendp/accuracy/fn.discrete_laplacian_scale_to_accuracy.html)
 #'
 #' **Proof Definition:**
 #'
@@ -240,7 +240,7 @@ discrete_laplacian_scale_to_accuracy <- function(
 
 #' Convert a gaussian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
 #'
-#' [gaussian_scale_to_accuracy in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.1/opendp/accuracy/fn.gaussian_scale_to_accuracy.html)
+#' [gaussian_scale_to_accuracy in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.2/opendp/accuracy/fn.gaussian_scale_to_accuracy.html)
 #'
 #' @concept accuracy
 #' @param scale Gaussian noise scale.
@@ -275,7 +275,7 @@ gaussian_scale_to_accuracy <- function(
 
 #' Convert a Laplacian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
 #'
-#' [laplacian_scale_to_accuracy in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.1/opendp/accuracy/fn.laplacian_scale_to_accuracy.html)
+#' [laplacian_scale_to_accuracy in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.2/opendp/accuracy/fn.laplacian_scale_to_accuracy.html)
 #'
 #' @concept accuracy
 #' @param scale Laplacian noise scale.

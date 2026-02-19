@@ -310,7 +310,7 @@ def absolute_distance(
 ) -> Metric:
     r"""Construct an instance of the `AbsoluteDistance` metric.
 
-    [absolute_distance in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.1/opendp/metrics/struct.AbsoluteDistance.html)
+    [absolute_distance in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.2/opendp/metrics/struct.AbsoluteDistance.html)
 
     .. end-markdown
 
@@ -553,7 +553,7 @@ def l01inf_distance(
 ) -> Metric:
     r"""Construct an instance of the `L01InfDistance` metric.
 
-    [l01inf_distance in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.1/opendp/metrics/type.L01InfDistance.html)
+    [l01inf_distance in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.2/opendp/metrics/type.L01InfDistance.html)
 
     .. end-markdown
 
@@ -591,7 +591,7 @@ def l02inf_distance(
 ) -> Metric:
     r"""Construct an instance of the `L02InfDistance` metric.
 
-    [l02inf_distance in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.1/opendp/metrics/type.L02InfDistance.html)
+    [l02inf_distance in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.2/opendp/metrics/type.L02InfDistance.html)
 
     .. end-markdown
 
@@ -629,7 +629,7 @@ def l1_distance(
 ) -> Metric:
     r"""Construct an instance of the `L1Distance` metric.
 
-    [l1_distance in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.1/opendp/metrics/type.L1Distance.html)
+    [l1_distance in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.2/opendp/metrics/type.L1Distance.html)
 
     .. end-markdown
 
@@ -669,7 +669,7 @@ def l2_distance(
 ) -> Metric:
     r"""Construct an instance of the `L2Distance` metric.
 
-    [l2_distance in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.1/opendp/metrics/type.L2Distance.html)
+    [l2_distance in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.2/opendp/metrics/type.L2Distance.html)
 
     .. end-markdown
 
@@ -710,7 +710,7 @@ def linf_distance(
 ) -> Metric:
     r"""Construct an instance of the `LInfDistance` metric.
 
-    [linf_distance in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.1/opendp/metrics/struct.LInfDistance.html)
+    [linf_distance in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.2/opendp/metrics/struct.LInfDistance.html)
 
     .. end-markdown
 
