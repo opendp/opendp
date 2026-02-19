@@ -38,7 +38,7 @@ def accuracy_to_discrete_gaussian_scale(
 ):
     r"""Convert a desired `accuracy` (tolerance) into a discrete gaussian noise scale at a statistical significance level `alpha`.
 
-    [accuracy_to_discrete_gaussian_scale in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.3/opendp/accuracy/fn.accuracy_to_discrete_gaussian_scale.html)
+    [accuracy_to_discrete_gaussian_scale in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.5/opendp/accuracy/fn.accuracy_to_discrete_gaussian_scale.html)
 
     **Proof Definition:**
 
@@ -88,7 +88,7 @@ def accuracy_to_discrete_laplacian_scale(
 ):
     r"""Convert a desired `accuracy` (tolerance) into a discrete Laplacian noise scale at a statistical significance level `alpha`.
 
-    [accuracy_to_discrete_laplacian_scale in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.3/opendp/accuracy/fn.accuracy_to_discrete_laplacian_scale.html)
+    [accuracy_to_discrete_laplacian_scale in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.5/opendp/accuracy/fn.accuracy_to_discrete_laplacian_scale.html)
 
     **Proof Definition:**
 
@@ -139,7 +139,7 @@ def accuracy_to_gaussian_scale(
 ):
     r"""Convert a desired `accuracy` (tolerance) into a gaussian noise scale at a statistical significance level `alpha`.
 
-    [accuracy_to_gaussian_scale in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.3/opendp/accuracy/fn.accuracy_to_gaussian_scale.html)
+    [accuracy_to_gaussian_scale in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.5/opendp/accuracy/fn.accuracy_to_gaussian_scale.html)
 
     .. end-markdown
 
@@ -185,7 +185,7 @@ def accuracy_to_laplacian_scale(
 ):
     r"""Convert a desired `accuracy` (tolerance) into a Laplacian noise scale at a statistical significance level `alpha`.
 
-    [accuracy_to_laplacian_scale in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.3/opendp/accuracy/fn.accuracy_to_laplacian_scale.html)
+    [accuracy_to_laplacian_scale in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.5/opendp/accuracy/fn.accuracy_to_laplacian_scale.html)
 
     .. end-markdown
 
@@ -232,7 +232,7 @@ def discrete_gaussian_scale_to_accuracy(
 ):
     r"""Convert a discrete gaussian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
 
-    [discrete_gaussian_scale_to_accuracy in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.3/opendp/accuracy/fn.discrete_gaussian_scale_to_accuracy.html)
+    [discrete_gaussian_scale_to_accuracy in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.5/opendp/accuracy/fn.discrete_gaussian_scale_to_accuracy.html)
 
     **Proof Definition:**
 
@@ -288,7 +288,7 @@ def discrete_laplacian_scale_to_accuracy(
     This function returns a float accuracy.
     You can take the floor without affecting the coverage probability.
 
-    [discrete_laplacian_scale_to_accuracy in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.3/opendp/accuracy/fn.discrete_laplacian_scale_to_accuracy.html)
+    [discrete_laplacian_scale_to_accuracy in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.5/opendp/accuracy/fn.discrete_laplacian_scale_to_accuracy.html)
 
     **Proof Definition:**
 
@@ -338,7 +338,7 @@ def gaussian_scale_to_accuracy(
 ):
     r"""Convert a gaussian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
 
-    [gaussian_scale_to_accuracy in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.3/opendp/accuracy/fn.gaussian_scale_to_accuracy.html)
+    [gaussian_scale_to_accuracy in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.5/opendp/accuracy/fn.gaussian_scale_to_accuracy.html)
 
     .. end-markdown
 
@@ -384,7 +384,7 @@ def laplacian_scale_to_accuracy(
 ):
     r"""Convert a Laplacian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
 
-    [laplacian_scale_to_accuracy in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.3/opendp/accuracy/fn.laplacian_scale_to_accuracy.html)
+    [laplacian_scale_to_accuracy in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.5/opendp/accuracy/fn.laplacian_scale_to_accuracy.html)
 
     .. end-markdown
 

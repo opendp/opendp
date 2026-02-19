@@ -18,7 +18,7 @@ NULL
 #'
 #' Required features: `contrib`
 #'
-#' [make_alp_queryable in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.3/opendp/measurements/fn.make_alp_queryable.html)
+#' [make_alp_queryable in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.5/opendp/measurements/fn.make_alp_queryable.html)
 #'
 #' **Citations:**
 #'
@@ -128,7 +128,7 @@ then_alp_queryable <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_canonical_noise in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.3/opendp/measurements/fn.make_canonical_noise.html)
+#' [make_canonical_noise in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.5/opendp/measurements/fn.make_canonical_noise.html)
 #'
 #' **Citations:**
 #'
@@ -226,7 +226,7 @@ then_canonical_noise <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_gaussian in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.3/opendp/measurements/fn.make_gaussian.html)
+#' [make_gaussian in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.5/opendp/measurements/fn.make_gaussian.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -369,7 +369,7 @@ then_gaussian <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_gaussian_threshold in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.3/opendp/measurements/fn.make_gaussian_threshold.html)
+#' [make_gaussian_threshold in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.5/opendp/measurements/fn.make_gaussian_threshold.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -471,7 +471,7 @@ then_gaussian_threshold <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_geometric in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.3/opendp/measurements/fn.make_geometric.html)
+#' [make_geometric in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.5/opendp/measurements/fn.make_geometric.html)
 #'
 #' **Citations:**
 #'
@@ -579,7 +579,7 @@ then_geometric <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_laplace in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.3/opendp/measurements/fn.make_laplace.html)
+#' [make_laplace in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.5/opendp/measurements/fn.make_laplace.html)
 #'
 #' **Citations:**
 #'
@@ -681,7 +681,7 @@ then_laplace <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_laplace_threshold in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.3/opendp/measurements/fn.make_laplace_threshold.html)
+#' [make_laplace_threshold in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.5/opendp/measurements/fn.make_laplace_threshold.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -789,7 +789,7 @@ then_laplace_threshold <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_noise in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.3/opendp/measurements/fn.make_noise.html)
+#' [make_noise in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.5/opendp/measurements/fn.make_noise.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -881,7 +881,7 @@ then_noise <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_noise_threshold in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.3/opendp/measurements/fn.make_noise_threshold.html)
+#' [make_noise_threshold in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.5/opendp/measurements/fn.make_noise_threshold.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -976,7 +976,7 @@ then_noise_threshold <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_noisy_max in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.3/opendp/measurements/fn.make_noisy_max.html)
+#' [make_noisy_max in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.5/opendp/measurements/fn.make_noisy_max.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -1062,7 +1062,7 @@ then_noisy_max <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_noisy_top_k in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.3/opendp/measurements/fn.make_noisy_top_k.html)
+#' [make_noisy_top_k in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.5/opendp/measurements/fn.make_noisy_top_k.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -1158,7 +1158,7 @@ then_noisy_top_k <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_private_quantile in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.3/opendp/measurements/fn.make_private_quantile.html)
+#' [make_private_quantile in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.5/opendp/measurements/fn.make_private_quantile.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -1253,7 +1253,7 @@ then_private_quantile <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_randomized_response in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.3/opendp/measurements/fn.make_randomized_response.html)
+#' [make_randomized_response in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.5/opendp/measurements/fn.make_randomized_response.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -1342,7 +1342,7 @@ then_randomized_response <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_randomized_response_bitvec in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.3/opendp/measurements/fn.make_randomized_response_bitvec.html)
+#' [make_randomized_response_bitvec in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.5/opendp/measurements/fn.make_randomized_response_bitvec.html)
 #'
 #' **Citations:**
 #'
@@ -1431,7 +1431,7 @@ then_randomized_response_bitvec <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_randomized_response_bool in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.3/opendp/measurements/fn.make_randomized_response_bool.html)
+#' [make_randomized_response_bool in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.5/opendp/measurements/fn.make_randomized_response_bool.html)
 #'
 #' **Supporting Elements:**
 #'
@@ -1510,7 +1510,7 @@ then_randomized_response_bool <- function(
 #'
 #' Required features: `contrib`
 #'
-#' [make_report_noisy_max_gumbel in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.3/opendp/measurements/fn.make_report_noisy_max_gumbel.html)
+#' [make_report_noisy_max_gumbel in Rust documentation.](https://docs.rs/opendp/0.14.1-dev.20260219.5/opendp/measurements/fn.make_report_noisy_max_gumbel.html)
 #'
 #' **Supporting Elements:**
 #'
