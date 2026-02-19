@@ -62,10 +62,16 @@ def _size_warning(keys):
     est_size: int = sys.getsizeof(keys) // mb_factor # A rough underestimate of size, does not include referenced objects sizes
     if hasattr(keys, "estimated_size"):
         est_size = keys.estimated_size("mb")
-    elif hasattr(keys, "width"):
-        lower_bound_col_name = "key"  # Assume columns have > 3 characters on average for lowerbound
-        width = keys.width  # number of column names
-        est_size = (sys.getsizeof(lower_bound_col_name) * width) / mb_factor
+    else:  # Graceful degradation, older python versions do not support df.estimated_size
+        num_keys = None
+        if hasattr(keys, "shape") and len(keys.shape) > 1:
+            num_keys = keys.shape[1]
+        elif hasattr(keys, "width"):
+            num_keys = keys.width  # number of column names
+
+        if num_keys is not None:
+            lower_bound_col_name = "key"  # Assume columns have > 3 characters on average for lowerbound
+            est_size = (sys.getsizeof(lower_bound_col_name) * num_keys) / mb_factor
 
     if est_size > _KEY_SIZE_THRESHOLD_MB:
         warn(f"Large key-set (~{est_size}mb > {_KEY_SIZE_THRESHOLD_MB}mb) loaded into memory. Consider writing it to disk for the plan to read it in via scan_parquet.")

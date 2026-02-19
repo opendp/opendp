@@ -952,8 +952,8 @@ def test_explicit_grouping_keys():
 
 def test_large_keys_warns(monkeypatch):
     pl = pytest.importorskip("polars")
-    local_limit = 5
-    local_scale_factor = 5 * 1000 ** 2
+    local_limit = .001
+    local_scale_factor = int(local_limit * 1000 ** 2)  # for mb comparison
     monkeypatch.setattr("opendp.extras.polars._KEY_SIZE_THRESHOLD_MB", local_limit)
 
     lf_domain, lf = example_lf(margin=["B"], max_length=100)
@@ -970,9 +970,20 @@ def test_large_keys_warns(monkeypatch):
     keys_small = pl.DataFrame(pl.Series("B", [2, 3, 4, 5, 6], dtype=pl.Int32))
     context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys_small)
 
-    keys_large = pl.DataFrame(pl.Series("B", [x for x in range(local_scale_factor)], dtype=pl.Int32))
+    keys_large = pl.DataFrame([pl.Series(str(x), [2, 3, 4 ,5, 6], dtype=pl.Int32) for x in range(local_scale_factor)])
     with pytest.warns(UserWarning):
         context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys_large)
+
+    # Verify warning for older python version, uses shape[1]
+    if hasattr(keys_large, "estimated_size"):
+        monkeypatch.delattr(pl.DataFrame, "estimated_size")
+        with pytest.warns(UserWarning):
+            context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys_large)
+
+        if hasattr(keys_large, "shape"):
+            monkeypatch.delattr(pl.DataFrame, "shape")
+            with pytest.warns(UserWarning):
+                context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys_large)
 
 
 def test_explicit_grouping_keys_context():
