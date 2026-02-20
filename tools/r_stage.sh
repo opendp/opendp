@@ -91,8 +91,17 @@ function docs() {
   # TODO: Fix this the right way. https://github.com/opendp/opendp/issues/2615
   Rscript -e 'utils::install.packages(pkgs="https://cran.r-project.org/package=pkgdown&version=2.1.3", repos=NULL)'
 
+  # Upgrade pandoc
+  # Suggested by https://github.com/r-lib/pkgdown/issues/2954
+  # Probably requires pandoc R package, which I don't think we use?
+  # My sense is that pkgdown calls pandoc directly, rather than going through R wrapper package;
+  # Could be wrong!
+  Rscript -e 'pandoc::pandoc_install("2.19.2")'
+
   log "build the docs, and then website"
   Rscript -e 'devtools::document("R/opendp")'
+  # TODO: Might add this... but since this is just R, not RStudio, doesn't seem necessary?
+  # Sys.setenv(RSTUDIO_PANDOC = pandoc::pandoc_locate()); 
   Rscript -e 'pkgdown::build_site("R/opendp")'
 
   log "R package docs are ready in R/opendp/docs/index.html"
