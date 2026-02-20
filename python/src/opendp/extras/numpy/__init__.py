@@ -12,7 +12,9 @@ The members of this module will then be accessible at ``dp.numpy``.
 '''
 
 from __future__ import annotations
-from typing import NamedTuple, Literal, Optional
+from typing import Literal, Optional
+from dataclasses import dataclass, asdict
+
 from opendp.mod import Domain
 from opendp.typing import RuntimeType, RuntimeTypeDescriptor, _ELEMENTARY_TYPES, _PRIMITIVE_TYPES
 from opendp._lib import import_optional_dependency
@@ -49,8 +51,8 @@ def _check_nonnegative_int(v: int | None, name: str):
             raise ValueError(f"{name} must be non-negative")  # pragma: no cover
 
 
-def _fmt_attrs(attrs: NamedTuple) -> str:
-    return ", ".join(f"{k}={v}" for k, v in attrs._asdict().items() if v is not None)
+def _fmt_attrs(attrs: dataclass) -> str:
+    return ", ".join(f"{k}={v}" for k, v in asdict(attrs).items() if v is not None)
 
 
 def array2_domain(
@@ -195,25 +197,24 @@ def array2_domain(
     return _extrinsic_domain(f"NPArray2Domain({_fmt_attrs(desc)})", _member, desc)
 
 
-class NPArray2Domain(NamedTuple):
+@dataclass(kw_only=True, frozen=True)
+class NPArray2Domain:
     origin: numpy.ndarray | None
+    '''center of the norm region'''
     norm: float | None
+    '''each row in x is bounded by the norm'''
     p: Literal[1, 2, None]
+    '''designates L`p` norm'''
     size: int | None
+    '''number of rows in data'''
     num_columns: int | None
+    '''number of columns in the data'''
     nan: bool
+    '''whether NaN values are allowed'''
     cardinalities: numpy.ndarray | None
+    '''cardinalities of the categorical columns'''
     T: str | RuntimeType
-
-# Without these we get: "Alias for field number ..."
-NPArray2Domain.origin.__doc__ = 'center of the norm region'
-NPArray2Domain.norm.__doc__ = 'each row in x is bounded by the norm'
-NPArray2Domain.p.__doc__ = 'designates L`p` norm'
-NPArray2Domain.size.__doc__ = 'number of rows in data'
-NPArray2Domain.num_columns.__doc__ = 'number of columns in the data'
-NPArray2Domain.nan.__doc__ = 'whether NaN values are allowed'
-NPArray2Domain.cardinalities.__doc__ = 'cardinalities of the categorical columns'
-NPArray2Domain.T.__doc__ = 'atom type'
+    '''atom type'''
 
 
 def arrayd_domain(
@@ -259,13 +260,13 @@ def arrayd_domain(
     return _extrinsic_domain(f"NPArrayDDomain({_fmt_attrs(desc)})", _member, desc)
 
 
-class NPArrayDDomain(NamedTuple):
+
+@dataclass(kw_only=True, frozen=True)
+class NPArrayDDomain:
     shape: tuple[int, ...]
+    '''shape of the array'''
     T: str | RuntimeType
-
-
-NPArrayDDomain.shape.__doc__ = 'shape of the array'
-NPArrayDDomain.T.__doc__ = 'atom type'
+    '''atom type'''
 
 
 def _sscp_domain(
@@ -316,7 +317,8 @@ def _sscp_domain(
             raise ValueError("must be positive semi-definite")
         return True
 
-    class NPSSCPDescriptor(NamedTuple):
+    @dataclass(kw_only=True, frozen=True)
+    class NPSSCPDescriptor:
         num_features: int | None
         norm: float | None
         p: Literal[1, 2, None]
