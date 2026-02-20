@@ -28,12 +28,19 @@ jobs:
 
   r-docs:
     needs: credential-check
+    # As of 2026-02-19, this is the latest Ubuntu image.
+    # https://github.com/actions/runner-images
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ref: stable
+
+      - name: Install latest pandoc
+        run: |
+          sudo apt-get install -y pandoc
+          pandoc --version
 
       - name: Set up R
         uses: r-lib/actions/setup-r@v2
