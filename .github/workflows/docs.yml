@@ -35,6 +35,11 @@ jobs:
         with:
           ref: stable
 
+      - name: Setup Pandoc
+        uses: r-lib/actions/setup-pandoc@v2
+        with:
+          pandoc-version: 2.19.2
+
       - name: Set up R
         uses: r-lib/actions/setup-r@v2
 
