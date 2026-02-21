@@ -37,8 +37,8 @@ None
     and exits without a match if not.
 
     A valid group by truncation is a group by where the grouping keys contain a user identifier.
-    So line \ref{line:partition} splits the group by keys into two sets, 
-    and line \ref{line:check_ids} rejects the match if the user identifier is not in the group by keys.
+    So line \ref{line:partition} splits the group-by keys into two sets, 
+    and line \ref{line:check_ids} rejects the match if the user identifier is not in the group-by keys.
 
     The remaining grouping columns are then reflected in the bound on user contributions,
     on line \ref{line:bound}.
