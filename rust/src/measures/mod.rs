@@ -13,6 +13,8 @@ use crate::{
     error::Fallible,
 };
 
+pub(crate) mod f_dp;
+
 /// Privacy measure used to define $\epsilon$-pure differential privacy.
 ///
 /// In the following proof definition, $d$ corresponds to $\epsilon$ when also quantified over all adjacent datasets.
@@ -79,10 +81,20 @@ impl Measure for SmoothedMaxDivergence {
 pub struct PrivacyProfile(Arc<dyn Fn(f64) -> Fallible<f64> + Send + Sync>);
 
 impl PrivacyProfile {
+    /// Create a new `PrivacyProfile`
+    ///
+    /// # Arguments
+    /// * `delta` - A function mapping from $\epsilon$ to $\delta$
     pub fn new(delta: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync) -> Self {
         PrivacyProfile(Arc::new(delta))
     }
 
+    /// Compute the $\epsilon$ corresponding to a given $\delta$.
+    ///
+    /// This function conducts a binary search to find the smallest $\epsilon$ such that $\mathrm{PrivacyProfile}(\epsilon) \leq \delta$.
+    ///
+    /// # Arguments
+    /// * `delta` - Allowance for an additive difference between the distributions of releases on adjacent datasets
     pub fn epsilon(&self, delta: f64) -> Fallible<f64> {
         // reject negative zero
         if delta.is_sign_negative() {
@@ -154,6 +166,10 @@ impl PrivacyProfile {
         }
     }
 
+    /// Compute the $\delta$ corresponding to a given $\epsilon$.
+    ///
+    /// # Arguments
+    /// * `epsilon` - Allowance for a multiplicative difference between the distributions of releases on adjacent datasets
     pub fn delta(&self, epsilon: f64) -> Fallible<f64> {
         (self.0)(epsilon)
     }
