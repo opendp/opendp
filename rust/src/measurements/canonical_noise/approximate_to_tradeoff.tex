@@ -1,0 +1,76 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\usepackage[backend=biber, style=authoryear-comp, sorting=nyt]{biblatex}
+\addbibresource{ref.bib} 
+
+\title{\texttt{fn approximate\_to\_tradeoff}}
+\author{Aishwarya Ramasethu, Yu-Ju Ku, Jordan Awan, Michael Shoemate}
+\begin{document}
+
+\maketitle
+
+\contrib
+
+\section{Hoare Triple}
+
+\subsection*{Preconditions}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Argument \texttt{param} of type \texttt{(f64, f64)}
+\end{itemize}
+
+\subsubsection*{User-verified}
+None
+
+\subsection*{Pseudocode}
+
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/approximate_to_tradeoff.py}
+
+\subsection*{Postcondition}
+
+\begin{theorem}
+    Given a pair of epsilon and delta, the pseudocode returns an error if epsilon or delta are invalid,
+    otherwise returns the corresponding symmetric nontrivial $f$-DP tradeoff curve
+    with conservative arithmetic, 
+    as well as the fixed point $c$ where $c = f(c)$.
+\end{theorem}
+
+\begin{proof} 
+    We start with the following alternative definition of DP from~\cite{awan2023canonical}.
+\begin{definition}[\protect{\cite[Definition~2.2]{awan2023canonical}}]
+    \label{def-2-2}
+    Let $\epsilon > 0$ and $\delta \geq 0$, and define 
+    \begin{equation}
+        f_{\epsilon,\delta}(\alpha) = \max(0, 1 - \delta - \exp(\epsilon) \alpha, \exp(-\epsilon) (1 - \delta - \alpha)).
+    \end{equation}
+    Then we say that a mechanism $M$ satisfies $(\epsilon, \delta)$-DP if it satisfies $f_{\epsilon,\delta}$-DP.
+\end{definition}
+The definition assumes $\alpha \in [0, 1]$.
+For more information about tradeoff functions, see \cite{awan2023canonical}.
+
+On lines \ref{exp-eps} and \ref{exp-neg-eps}, 
+arithmetic is computed in a manner which results in over-estimates of the privacy loss, 
+and therefore a tradeoff curve that bows further away from $1 - \alpha$.
+The results of these constants are converted exactly into rationals to be used in the tradeoff function.
+The function defined on line \ref{tradeoff} implements the formula in Definition~\ref{def-2-2} with exact fractional arithmetic.
+The implementation of the tradeoff function in the pseudocode is the corresponding symmetric nontrivial $f$-DP tradeoff curve with conservative arithmetic,
+satisfying the postcondition.
+
+We now show that the second return value of the pseudocode is the fixed point $c$ of the tradeoff function.
+The fixed-point $c$ of the tradeoff function is $(1 - \delta) / (1 + e^\epsilon)$, because $f_{\epsilon,\delta}(c) = c$:
+
+\begin{align}
+    &f_{\epsilon,\delta}((1 - \delta) / (1 + e^\epsilon)) \\
+    &= \max(0, 1 - \delta - \exp(\epsilon) ((1 - \delta) / (1 + e^\epsilon)), \exp(-\epsilon) (1 - \delta - ((1 - \delta) / (1 + e^\epsilon)))) \\
+    &= \max(0, (1 - \delta) / (1 + e^\epsilon), (1 - \delta) / (1 + e^\epsilon)) \\
+    &= (1 - \delta) / (1 + e^\epsilon)
+\end{align}
+
+As shown, the tradeoff function, when invoked with the fixed point $c$, returns the fixed point $c$.
+
+Therefore both return values satisfy their respective requirements specified in the postcondition.
+\end{proof}
+
+\printbibliography
+\end{document}

@@ -1,0 +1,93 @@
+\documentclass{article}
+\input{../../../../../lib.sty}
+
+\title{\texttt{fn get\_rounding\_distance}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise/distribution/float/utilities/fn}{get\_rounding\_distance} in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+
+\begin{itemize}
+    \item Generic \texttt{T} implements trait \rustdoc{traits/trait}{Float}
+    \item Type \texttt{i32} implements the trait \rustdoc{traits/trait}{ExactIntCast}\texttt{<T.Bits>},
+        where \texttt{T.Bits} is the type of the native bit representation of \texttt{T}.
+\end{itemize}
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/get_rounding_distance.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    Let $D$ denote the space of \texttt{size}-dimensional vectors whose elements are in $\mathbb{Z} 2^{k_{min}}$,
+    where $2^{k_{min}}$ is the smallest distance between adjacent non-equal values in \texttt{T}.
+    Let $\mathrm{round}_k$ be a function that rounds each element to the nearest multiple of $2^k$,
+    with ties rounding down.
+    Return $\max_{x, x' \in D} ||\mathrm{round}_k(x) - \mathrm{round}_k(x')||_P - ||x - x'||_P$,
+    the increase in the sensitivity due to rounding.
+\end{theorem}
+
+\begin{proof}
+    We first consider the increase in sensitivity due to rounding one element.
+    The greatest increase in sensitivity occurs when one value $x$ is rounded down, and $x'$ rounded up.
+    The greatest round down occurs when $x$ is offset from the output grid by $2^{k-1}$,
+    and the greatest round up occurs when $x'$ is offset from the output grid by $2^{k-1} + 2^{k_{min}}$.
+
+    \begin{align}
+        &\max_{x, x'} |\mathrm{round}_k(x) - \mathrm{round}_k(x')| \\
+        &\leq \max_{x, x'} |(x - 2^{k - 1}) - (x' + 2^{k - 1} - 2^{k_{min}})| \\
+        &= \max_{x, x'} |(x - x') - 2 \cdot 2^{k - 1} + 2^{k_{min}}| \\
+        &= \max_{x, x'} |x - x'| + 2^{k} - 2^{k_{min}} \\
+    \end{align}
+    
+    Now apply this same logic to a vector of rounded values.
+    \begin{align}
+        &\max_{x, x'} ||\mathrm{round}_k(x) - \mathrm{round}_k(x')||_P \\
+        &\leq \max_{x, x'} ||x - x' + r||_P &&\text{where } r \text{ is a vector of } 2^k - 2^{k_{min}} \\
+        &\leq \max_{x, x'} ||x, x'||_P + ||r||_P &&\text{triangle inequality} \\
+        &= \max_{x, x'} ||x, x'||_P + n^{1/P} \cdot (2^k - 2^{k_{min}}) \\
+    \end{align}
+
+    Substituting into the return criteria of the postcondition, the return value is:
+    \begin{align}
+        &\max_{x, x'} ||\mathrm{round}_k(x) - \mathrm{round}_k(x')||_P - ||x - x'||_p \\
+        &\leq \max_{x, x'} ||x, x'||_P + n^{1/P} \cdot (2^k - 2^{k_{min}})  + \max_{x, x'} ||x, x'||_P\\
+        &= n^{1/P} \cdot (2^k - 2^{k_{min}})
+    \end{align}
+    
+    We now focus on showing correctness of the implementation.
+    By the postcondition of \rustdoc{measurements/noise/nature/float/utilities/fn}{get\_min\_k} on line \ref{line:get-min-k},
+    \texttt{min\_k} is the $k$ such that the smallest distance between adjacent non-equal values of type \texttt{T} is $2^k$
+    (the distance between subnormals).
+
+    Line \ref{line:check-k} ensures that $k$ is not too small, 
+    as any smaller $k$ would result in unused precision in the noise sample 
+    due to the output being rounded to the nearest \texttt{T}.
+    This check is not necessary for privacy; it prevents wasted performance.
+
+    Since the precondition for \rustdoc{measurements/noise/nature/float/utilities/fn}{x\_mul\_2k} that $k \neq \texttt{i32.MIN}$ is satisfied on line \ref{line:check-k},
+    then by the postcondition of \texttt{x\_mul\_2k} on line \ref{line:input-gran},
+    \texttt{input\_gran} is the distance between subnormals, $2^k$.
+    Similarly, \texttt{output\_gran} on line \ref{line:output-gran} is the distance between adjacent values in the rounded space.
+
+    The greatest possible increase in distances between rounded values is thus $2^{k} - 2^{k_{min}}$,
+    as defined on line \ref{line:distance}.
+    
+    When $k = k_{min}$, the rounding is a no-op and $2^k - 2^{k_{min}}$ is zero, 
+    so line \ref{line:zero-distance} skips the vector calculations.
+    Otherwise line \ref{line:unknown-size} ensures the vector size $n$ is known,
+    and the following lines increase the distance by a factor of $n^{1/P}$,
+    resulting in a conservative upper estimate of the expected bound.
+\end{proof}
+\end{document}
