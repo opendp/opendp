@@ -238,13 +238,14 @@ class Checker():
             if k_missing_v:
                 self.errors.append(f'params missing descriptions: {", ".join(k_missing_v)}')
 
-        ast_arg_names = {arg.arg for arg in self.all_ast_args}
+        ast_arg_names = [arg.arg for arg in self.all_ast_args]
         if doc_param_dict or is_public:
             # Private functions don't need to document params,
             # but if they do, they should be consistent with signature.
-            if doc_param_dict.keys() != ast_arg_names:
+            doc_params = list(doc_param_dict.keys())
+            if doc_params != ast_arg_names:
                 self.errors.append(
-                    f'docstring params ({", ".join(doc_param_dict.keys())}) '
+                    f'docstring params ({", ".join(doc_params)}) '
                     f'!= function signature ({", ".join(ast_arg_names)})'
                 )
 
