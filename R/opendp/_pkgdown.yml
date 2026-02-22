@@ -1,9 +1,6 @@
 url: https://docs.opendp.org
 title: 'R Documentation'
 
-# Suggested by https://github.com/r-lib/pkgdown/blob/main/R/build-llm.R
-llm-docs: false
-
 template:
   bootstrap: 5
   includes:
