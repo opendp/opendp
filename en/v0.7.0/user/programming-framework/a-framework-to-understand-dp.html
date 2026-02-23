@@ -1,0 +1,1231 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>A Framework to Understand DP &#8212; OpenDP</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=eafc0fe6" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/nbsphinx-code-cells.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=4f92a2c4" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+    <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'user/programming-framework/a-framework-to-understand-dp';</script>
+    <link rel="icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Getting Started" href="../getting-started.html" />
+    <link rel="prev" title="Supporting Elements" href="supporting-elements.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Feb 23, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+
+
+<script>
+document.write(`<aside class="bd-header-announcement" aria-label="Announcement"></aside>`);
+fetch("https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html")
+  .then(res => {return res.text();})
+  .then(data => {
+    if (data.length === 0) {
+      console.log("[PST]: Empty announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+      return;
+    }
+    div = document.querySelector(".bd-header-announcement");
+    div.classList.add(...["bd-header-announcement", "container-fluid", "init"]);
+    div.innerHTML = `<div class="bd-header-announcement__content">${data}</div>`;
+    // At least 3rem height
+    const autoHeight = Math.min(
+      div.offsetHeight,
+      3 * parseFloat(getComputedStyle(document.documentElement).fontSize));
+    // Set height and vertical padding to 0 to prepare the height transition
+    div.style.setProperty("height", 0);
+    div.style.setProperty("padding-top", 0);
+    div.style.setProperty("padding-bottom", 0);
+    div.classList.remove("init");
+    // Set height to the computed height with a small timeout to activate the transition
+    setTimeout(() => {
+      div.style.setProperty("height", `${autoHeight}px`);
+      // Wait for a bit more than 300ms (the transition duration) then remove the
+      // forcefully set styles and let CSS take over
+      setTimeout(() => {
+        div.style.removeProperty("padding-top");
+        div.style.removeProperty("padding-bottom");
+        div.style.removeProperty("height");
+        div.style.setProperty("min-height", "3rem");
+      }, 320);
+    }, 10);
+  })
+  .catch(error => {
+    console.log("[PST]: Failed to load announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+  });
+</script>
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <button class="sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/opendp-logo.png" class="logo__image only-light" alt="OpenDP - Home"/>
+    <script>document.write(`<img src="../../_static/opendp-logo.png" class="logo__image only-dark" alt="OpenDP - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../quickstart.html">
+                        Quickstart
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="../index.html">
+                        User Guide
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../examples/index.html">
+                        Examples
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../api/index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../contributor/index.html">
+                        Contributor Guide
+                      </a>
+                    </li>
+                
+            <li class="nav-item dropdown pst-header-nav-item">
+                <button class="btn dropdown-toggle nav-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../../resources/index.html">
+                        Resources
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../../opendp-commons/index.html">
+                        OpenDP Commons
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../../contact.html">
+                        Contact
+                      </a>
+                    </li>
+                
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+    <button class="sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../quickstart.html">
+                        Quickstart
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="../index.html">
+                        User Guide
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../examples/index.html">
+                        Examples
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../api/index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../contributor/index.html">
+                        Contributor Guide
+                      </a>
+                    </li>
+                
+            <li class="nav-item dropdown pst-header-nav-item">
+                <button class="btn dropdown-toggle nav-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-controls="pst-nav-more-links-2">
+                    More
+                </button>
+                <ul id="pst-nav-more-links-2" class="dropdown-menu">
+                    
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../../resources/index.html">
+                        Resources
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../../opendp-commons/index.html">
+                        OpenDP Commons
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../../contact.html">
+                        Contact
+                      </a>
+                    </li>
+                
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../limitations.html">Limitations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../first-look-at-DP.html">First Look at DP</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Programming Framework</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="core-structures.html">Core Structures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="supporting-elements.html">Supporting Elements</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">A Framework to Understand DP</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../transformations.html">Transformations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../transformations/aggregation-sum.html">Aggregation: Sum</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../transformations/aggregation-mean.html">Aggregation: Mean</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../transformations/aggregation-quantile.html">Aggregation: Quantile</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../measurements.html">Measurements</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../measurements/additive-noise-mechanisms.html">Additive Noise Mechanisms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../measurements/randomized-response.html">Randomized Response</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../combinators.html">Combinators</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../combinators/compositors.html">Compositors</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../utilities/index.html">Utilities</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../utilities/typing.html">Typing</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../utilities/accuracy/index.html">Accuracy</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../utilities/accuracy/accuracy-pitfalls.html">Accuracy: Pitfalls and Edge Cases</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../utilities/parameter-search.html">Parameter Search</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../putting-it-together.html">Putting It Together</a></li>
+</ul>
+</div>
+</nav></div>
+        <div class="sidebar-primary-item">
+<h6>Branches</h6>
+<ul>
+    <li><a href="../../../beta/index.html" style="font-weight: normal">beta</a></li>
+    <li><a href="../../../nightly/index.html" style="font-weight: normal">nightly</a></li>
+    <li><a href="../../../stable/index.html" style="font-weight: normal">stable</a></li>
+</ul>
+
+
+<h6 id="releases_header">Releases
+    <div id="releases_symbol" style="float:right"></div>
+</h6>
+<ul id="releases_content">
+    <li><a href="../../../v0.14.1/index.html" style="font-weight: normal">v0.14.1</a></li>
+    <li><a href="../../../v0.14.0/index.html" style="font-weight: normal">v0.14.0</a></li>
+    <li><a href="../../../v0.13.0/index.html" style="font-weight: normal">v0.13.0</a></li>
+    <li><a href="../../../v0.12.1/index.html" style="font-weight: normal">v0.12.1</a></li>
+    <li><a href="../../../v0.12.0/index.html" style="font-weight: normal">v0.12.0</a></li>
+    <li><a href="../../../v0.11.1/index.html" style="font-weight: normal">v0.11.1</a></li>
+    <li><a href="../../../v0.11.0/index.html" style="font-weight: normal">v0.11.0</a></li>
+    <li><a href="../../../v0.10.0/index.html" style="font-weight: normal">v0.10.0</a></li>
+    <li><a href="../../../v0.9.2/index.html" style="font-weight: normal">v0.9.2</a></li>
+    <li><a href="../../../v0.9.1/index.html" style="font-weight: normal">v0.9.1</a></li>
+    <li><a href="../../../v0.9.0/index.html" style="font-weight: normal">v0.9.0</a></li>
+    <li><a href="../../../v0.8.0/index.html" style="font-weight: normal">v0.8.0</a></li>
+    <li><a href="a-framework-to-understand-dp.html" style="font-weight: bold">v0.7.0</a></li>
+    <li><a href="../../../v0.6.2/index.html" style="font-weight: normal">v0.6.2</a></li>
+    <li><a href="../../../v0.6.1/index.html" style="font-weight: normal">v0.6.1</a></li>
+    <li><a href="../../../v0.6.0/index.html" style="font-weight: normal">v0.6.0</a></li>
+    <li><a href="../../../v0.5.0/index.html" style="font-weight: normal">v0.5.0</a></li>
+    <li><a href="../../../v0.4.0/index.html" style="font-weight: normal">v0.4.0</a></li>
+    <li><a href="../../../v0.3.0/index.html" style="font-weight: normal">v0.3.0</a></li>
+    <li><a href="../../../v0.2.4/index.html" style="font-weight: normal">v0.2.4</a></li>
+    <li><a href="../../../v0.2.3/index.html" style="font-weight: normal">v0.2.3</a></li>
+    <li><a href="../../../v0.2.2/index.html" style="font-weight: normal">v0.2.2</a></li>
+    <li><a href="../../../v0.2.1/index.html" style="font-weight: normal">v0.2.1</a></li>
+    <li><a href="../../../v0.2.0/index.html" style="font-weight: normal">v0.2.0</a></li>
+    <li><a href="../../../v0.1.0/index.html" style="font-weight: normal">v0.1.0</a></li>
+</ul>
+<script>
+    let expanded = !!JSON.parse(localStorage.getItem('expanded'));
+
+    let releasesHeader = document.getElementById("releases_header");
+    let releasesSymbol = document.getElementById("releases_symbol");
+    let releasesContent = document.getElementById("releases_content");
+
+    function setReleasesState() {
+        localStorage.setItem("expanded", JSON.stringify(expanded))
+        releasesContent.style.display = expanded ? "block" : "none";
+        releasesSymbol.classList.add(expanded ? 'minus' : 'plus')
+        releasesSymbol.classList.remove(expanded ? 'plus' : 'minus')
+    }
+
+    setReleasesState()
+    releasesHeader.addEventListener("click", function() {
+        expanded = !expanded;
+        setReleasesState()
+    })
+</script>
+<style>
+    .plus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .plus:before,
+    .plus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .plus:before {
+        left:50%;
+        top:4px;
+        bottom:4px;
+        width:3px;
+        transform:translateX(-50%);
+    }
+
+    .plus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+
+
+
+    .minus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .minus:before,
+    .minus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .minus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+</style>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">User Guide</a></li>
+    
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Programming Framework</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">A Framework...</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item"><div class="admonition warning" style="position: relative;">
+    <!--
+     Without the style, the region for the article title overlaps, and the link is unclickable.
+    -->
+    <details>
+        <summary>Questions or feedback?</summary>
+        <!--
+            All of these lists should be in sync:
+            - README.md
+            - docs/source/contributing/contact.rst
+            - docs/source/_templates/questions-feedback.html
+            - .github/ISSUE_TEMPLATE/config.yml
+        -->
+        <ul>
+            <li>Report a bug or request a feature on <a href="https://github.com/opendp/opendp/issues">Github</a>.</li>
+            <li>Send general queries to <a href="mailto:info@opendp.org">info@opendp.org</a>, or email <a href="mailto:security@opendp.org">security@opendp.org</a> if it is related to security.</li>
+            <li>Join the conversation on <a href="https://join.slack.com/t/opendp/shared_invite/zt-1t8rrbqhd-z8LiZiP06vVE422HJd6ciQ">Slack</a>, or the <a href="https://groups.google.com/a/g.harvard.edu/g/opendp-community">mailing list</a>.</li>
+        </ul>
+    </details>
+</div></div>
+      
+        <div class="header-article-item">
+<div class="admonition warning" style="position: relative;" id="old-version-warning">
+  <!--
+   To work with this locally, in conf.py uncomment the entry under "html_context".
+
+   Without the style, the region for the article title overlaps, and the link is unclickable.
+  -->
+  <p class="admonition-title">
+  
+  This documentation is for an old version of OpenDP.
+  
+  </p>
+  <p>The current release of OpenDP is <a href="/">v0.14.1</a>.</p>
+</div>
+<script>
+  window.addEventListener("load", (event) => {
+    document.getElementById('old-version-warning').style.top = `${window.visualViewport.pageTop}px`;
+  });
+</script>
+</div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="A-Framework-to-Understand-DP">
+<h1>A Framework to Understand DP<a class="headerlink" href="#A-Framework-to-Understand-DP" title="Link to this heading">#</a></h1>
+<p>This resource introduces differential privacy from the perspective of the OpenDP programming framework. No prior knowledge is assumed of differential privacy (DP), but you will likely still find this resource useful for understanding DP even if you already have a background in DP. Prior knowledge in basic probability, like random variables, will be useful.</p>
+<p>Assume we have a vector dataset <span class="math notranslate nohighlight">\(u\)</span> where each record contains sensitive information about a different individual.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="c1"># u is a small vector dataset with contributions from:</span>
+<span class="c1">#   [Alice, Jane, John, Jack, ...]</span>
+<span class="n">u</span> <span class="o">=</span> <span class="p">[</span><span class="mi">12</span><span class="p">,</span>    <span class="mi">10</span><span class="p">,</span>   <span class="mi">8</span><span class="p">,</span>    <span class="mi">7</span><span class="p">,</span>       <span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<p>We can use differential privacy to collect measurements (statistics such as means and histograms) on this dataset, without revealing information about specific individuals.</p>
+<div class="line-block">
+<div class="line">To understand DP, it is important to first understand:</div>
+<div class="line">1. distance between datasets</div>
+<div class="line">2. distance between distributions</div>
+</div>
+<section id="Distance-Between-Datasets---Adjacency">
+<h2>Distance Between Datasets - Adjacency<a class="headerlink" href="#Distance-Between-Datasets---Adjacency" title="Link to this heading">#</a></h2>
+<p>An adjacent dataset is any dataset that differs from our dataset by a single individual. Returning to our vector dataset example, assume our dataset <span class="math notranslate nohighlight">\(u\)</span> has one record that contains information about a person, Alice. Then one adjacent dataset <span class="math notranslate nohighlight">\(v\)</span> would contain every row in <span class="math notranslate nohighlight">\(u\)</span> except for the row with Alice’s information.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="c1"># v is one (of many) datasets that are adjacent to u</span>
+<span class="c1">#   [Jane, John, Jack, ...] (without Alice!)</span>
+<span class="n">v</span> <span class="o">=</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span>   <span class="mi">8</span><span class="p">,</span>    <span class="mi">7</span><span class="p">,</span>       <span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<p>You can construct other datasets adjacent to <span class="math notranslate nohighlight">\(u\)</span> by dropping a different row or adding a new row. When one person may contribute up to <span class="math notranslate nohighlight">\(k\)</span> rows, adjacent datasets differ by up to <span class="math notranslate nohighlight">\(k\)</span> additions and removals.</p>
+<p>The number of additions/removals between any two datasets is equivalent to the cardinality of the symmetric difference between the multisets <span class="math notranslate nohighlight">\(u\)</span> and <span class="math notranslate nohighlight">\(v\)</span>. We call this metric the symmetric distance.</p>
+<div class="math notranslate nohighlight">
+\[d_{\mathrm{Sym}}(u, v) = |u \triangle v| = \sum_x |\# \{ i : x = u_i \} - \# \{ i : x = v_i \}|\]</div>
+<p>And in code:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="k">def</span> <span class="nf">d_SymmetricDistance</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;symmetric distance between multisets u and v&quot;&quot;&quot;</span>
+    <span class="c1"># NOT this, as sets are not multisets. Loses multiplicity:</span>
+    <span class="c1"># return len(set(u).symmetric_difference(set(v)))</span>
+
+    <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">Counter</span>
+    <span class="n">u</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">(</span><span class="n">u</span><span class="p">),</span> <span class="n">Counter</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+    <span class="c1"># indirectly compute symmetric difference via the union of asymmetric differences</span>
+    <span class="k">return</span> <span class="nb">sum</span><span class="p">(((</span><span class="n">u</span> <span class="o">-</span> <span class="n">v</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">v</span> <span class="o">-</span> <span class="n">u</span><span class="p">))</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+
+
+<span class="c1"># compute the symmetric distance between our two example datasets:</span>
+<span class="n">d_SymmetricDistance</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[4]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+1
+</pre></div></div>
+</div>
+<p><span class="math notranslate nohighlight">\(d_{\mathrm{Sym}}(\{12, 10, 8, 7\}, \{10, 8, 7\}) = |\{12, 10, 8, 7\} \triangle \{10, 8, 7\}| = |\{12\}| = 1\)</span></p>
+<p>If the second dataset <span class="math notranslate nohighlight">\(v\)</span> were to differ from <span class="math notranslate nohighlight">\(u\)</span> by changing the 12 to 10, then we would still count the multiplicity of 10:</p>
+<p><span class="math notranslate nohighlight">\(d_{\mathrm{Sym}}(\{12, 10, 8, 7\}, \{10, 10, 8, 7\}) = |\{12, 10, 8, 7\} \triangle \{10, 10, 8, 7\}| = |\{12, 10\}| = 2\)</span></p>
+<p>In practice, we never directly compute these distances. In order to apply differentially private methods, you need to establish an upper bound on the distance between adjacent datasets. For example, if each individual person may affect up to five records in the dataset, then setting a distance <span class="math notranslate nohighlight">\(d_in = 5\)</span> allows us to ensure individual-level privacy.</p>
+<p>For instance, in the vector dataset example, it was stipulated that each element contains sensitive information about a different individual. This statement implies that the symmetric distance between adjacent datasets, where one individual is added or removed, is at most one. That is, for any choice of datasets <span class="math notranslate nohighlight">\(u\)</span> and <span class="math notranslate nohighlight">\(v\)</span> such that <span class="math notranslate nohighlight">\(u\)</span> is adjacent to <span class="math notranslate nohighlight">\(v\)</span> (denoted <span class="math notranslate nohighlight">\(u \sim_{\mathrm{Sym}} v\)</span>), we have that <span class="math notranslate nohighlight">\(d_{\mathrm{Sym}}(u, v) \leq 1\)</span>.</p>
+<p>Before moving on, there are some trivial generalizations. A dataset need not be a vector, it could be a dataframe or any other collection with a concept of records. There are also other dataset metrics aside from <code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code> (used for unbounded DP), such as <code class="docutils literal notranslate"><span class="pre">ChangeOneDistance</span></code> (used for bounded DP). There are also variations of metrics that are sensitive to data ordering, metrics for describing distances between graphs, and more!</p>
+<p>You should now have a sense for what an adjacent dataset means, how dataset distances work, and an intuitive understanding of the symmetric distance metric.</p>
+</section>
+<section id="Distance-Between-Distributions---Divergence">
+<h2>Distance Between Distributions - Divergence<a class="headerlink" href="#Distance-Between-Distributions---Divergence" title="Link to this heading">#</a></h2>
+<p>You can think of a measurement <span class="math notranslate nohighlight">\(M(\cdot)\)</span> as a differentially private statistic. Measurements are described by random variables (RVs), that is, they sample from noise distributions. The outputs of a measurement are realizations of a random variable that follow a known probability distribution. Measurements only have one input: a dataset; other parameters are fixed when the measurement is constructed. For context, a Laplace RV has parameters for shift and scale. This section describes how
+to measure distance between the distributions of measurements on adjacent datasets.</p>
+<p>A common measurement is the Laplace DP sum, which is a sample from the Laplace distribution centered at the dataset sum with a fixed noise scale. The following plot compares the distribution of the DP sum on dataset <span class="math notranslate nohighlight">\(u\)</span> with the distribution of the DP sum on dataset <span class="math notranslate nohighlight">\(v\)</span>, when the noise scale is fixed to <code class="docutils literal notranslate"><span class="pre">25</span></code>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+
+<span class="n">scale</span> <span class="o">=</span> <span class="mi">25</span>
+
+<span class="c1"># while in this case the support theoretically includes all reals,</span>
+<span class="c1">#     we only bother plotting part of the support</span>
+<span class="n">support</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">-</span> <span class="n">scale</span><span class="p">,</span> <span class="nb">sum</span><span class="p">(</span><span class="n">u</span><span class="p">)</span> <span class="o">+</span> <span class="n">scale</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">rv_M</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;returns a random variable, M(x)&quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="kn">import</span> <span class="n">laplace</span>
+    <span class="k">return</span> <span class="n">laplace</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="nb">sum</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">plot_pdfs</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">output_domain</span><span class="p">):</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">output_domain</span><span class="p">,</span> <span class="n">rv_M</span><span class="p">(</span><span class="n">u</span><span class="p">)</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">output_domain</span><span class="p">),</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;$p_{M(u)}(x)$&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">output_domain</span><span class="p">,</span> <span class="n">rv_M</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">output_domain</span><span class="p">),</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;$p_{M(v)}(x)$&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;density: $p_</span><span class="si">{RV}</span><span class="s1">(x)$&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;support: x&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">prop</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;size&#39;</span><span class="p">:</span> <span class="mi">15</span><span class="p">})</span>
+<span class="n">plot_pdfs</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">support</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../_images/user_programming-framework_a-framework-to-understand-dp_9_0.png" src="../../_images/user_programming-framework_a-framework-to-understand-dp_9_0.png" />
+</div>
+</div>
+<p>We are interested in the greatest divergence, a measure of the dissimilarity of these two distributions. While divergences are not necessarily distances, we informally refer to them as distances. A common measure of divergence is based on the log ratio of probabilities:</p>
+<div class="math notranslate nohighlight">
+\[D_{\mathrm{MaxDivergence}}(M(u), M(v)) = \max\limits_{S \subseteq \mathrm{supp}(M(u))} \log\left(\frac{\Pr[M(u) \in S]}{\Pr[M(v) \in S]}\right)\]</div>
+<p>In this equation we define the distance between the RVs of <span class="math notranslate nohighlight">\(M(u)\)</span> and <span class="math notranslate nohighlight">\(M(v)\)</span> to be the maximum divergence among all possible subsets of the support.</p>
+<p>For our DP sum with Laplacian noise example, the output domain of <span class="math notranslate nohighlight">\(M(\cdot)\)</span> is the set of all real numbers, <span class="math notranslate nohighlight">\(\mathbb{R}\)</span>. In the plot below, I illustrate this equation for one randomly chosen subset <span class="math notranslate nohighlight">\(S\)</span> of the output domain:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[20]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="k">def</span> <span class="nf">plot_S</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">S</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;draw the probability regions spanned by S&quot;&quot;&quot;</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">S</span><span class="p">,</span> <span class="n">rv_M</span><span class="p">(</span><span class="n">u</span><span class="p">)</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">S</span><span class="p">),</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;$\Pr[M(u) \in S]$&quot;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">.4</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">S</span><span class="p">,</span> <span class="n">rv_M</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">S</span><span class="p">),</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;$\Pr[M(v) \in S]$&quot;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">.4</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">S</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">S</span><span class="p">)],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;S&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+
+<span class="c1"># re-run this notebook to see different choices of S</span>
+<span class="n">S</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">*</span><span class="nb">sorted</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">support</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">)))</span>
+
+<span class="n">plot_pdfs</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">support</span><span class="p">)</span>
+<span class="n">plot_S</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">S</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../_images/user_programming-framework_a-framework-to-understand-dp_11_0.png" src="../../_images/user_programming-framework_a-framework-to-understand-dp_11_0.png" />
+</div>
+</div>
+<p>The area of the blue region is the probability that <span class="math notranslate nohighlight">\(M(u)\)</span> is in <span class="math notranslate nohighlight">\(S\)</span>… and similarly the area of the orange region is <span class="math notranslate nohighlight">\(\Pr[M(v) \in S]\)</span>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[21]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="k">def</span> <span class="nf">divergence_over_S</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">S</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;prints the Divergence(M(u), M(v)) over some interval S, assuming M(x) = Laplace(sum(x), scale)&quot;&quot;&quot;</span>
+
+    <span class="c1"># integrate over both regions</span>
+    <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">S</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">S</span><span class="p">)</span>
+    <span class="n">pr_Mu_in_S</span> <span class="o">=</span> <span class="n">rv_M</span><span class="p">(</span><span class="n">u</span><span class="p">)</span><span class="o">.</span><span class="n">cdf</span><span class="p">(</span><span class="n">upper</span><span class="p">)</span> <span class="o">-</span> <span class="n">rv_M</span><span class="p">(</span><span class="n">u</span><span class="p">)</span><span class="o">.</span><span class="n">cdf</span><span class="p">(</span><span class="n">lower</span><span class="p">)</span> <span class="c1"># blue</span>
+    <span class="n">pr_Mv_in_S</span> <span class="o">=</span> <span class="n">rv_M</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="o">.</span><span class="n">cdf</span><span class="p">(</span><span class="n">upper</span><span class="p">)</span> <span class="o">-</span> <span class="n">rv_M</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="o">.</span><span class="n">cdf</span><span class="p">(</span><span class="n">lower</span><span class="p">)</span> <span class="c1"># orange</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;area of blue region:  &quot;</span><span class="p">,</span> <span class="n">pr_Mu_in_S</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;area of orange region:&quot;</span><span class="p">,</span> <span class="n">pr_Mv_in_S</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;divergence for this S:&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">pr_Mu_in_S</span> <span class="o">/</span> <span class="n">pr_Mv_in_S</span><span class="p">)))</span>
+<span class="n">divergence_over_S</span><span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">S</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+area of blue region:   0.2276049566440389
+area of orange region: 0.14083816706408814
+divergence for this S: 0.4799999999999992
+</pre></div></div>
+</div>
+<p>This shows the divergence between the RVs of <span class="math notranslate nohighlight">\(M(u)\)</span> and <span class="math notranslate nohighlight">\(M(v)\)</span> for one choice of S, but keep in mind that <span class="math notranslate nohighlight">\(D_{\mathrm{MaxDivergence}}(M(u), M(v))\)</span> is the greatest divergence over any choice of <span class="math notranslate nohighlight">\(S\)</span>. Intuitively, the divergence between the RVs of <span class="math notranslate nohighlight">\(M(u)\)</span> and <span class="math notranslate nohighlight">\(M(v)\)</span> for the same <span class="math notranslate nohighlight">\(S\)</span> must increase if Alice made a greater contribution to the statistic:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[22]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="c1"># hypothetical: what if Alice&#39;s contribution was 100, instead of 12?</span>
+<span class="n">u_prime</span> <span class="o">=</span> <span class="p">[</span><span class="mi">100</span><span class="p">,</span> <span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">:]]</span>
+<span class="n">divergence_over_S</span><span class="p">(</span><span class="n">u_prime</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">S</span><span class="p">)</span>
+
+<span class="n">output_domain</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">-</span> <span class="n">scale</span><span class="p">,</span> <span class="nb">sum</span><span class="p">(</span><span class="n">u_prime</span><span class="p">)</span> <span class="o">+</span> <span class="n">scale</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">plot_pdfs</span><span class="p">(</span><span class="n">u_prime</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">output_domain</span><span class="p">)</span>
+<span class="n">plot_S</span><span class="p">(</span><span class="n">u_prime</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">S</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+area of blue region:   0.017594942096975916
+area of orange region: 0.14083816706408814
+divergence for this S: 2.080000000000001
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../_images/user_programming-framework_a-framework-to-understand-dp_15_1.png" src="../../_images/user_programming-framework_a-framework-to-understand-dp_15_1.png" />
+</div>
+</div>
+<p>As we can see, when the divergence between probability distributions is greater, we can more confidently distinguish which distribution a sample came from. These examples help to form an intuition for how the max divergence measure relates to privacy.</p>
+<p>Moreso, the max divergence qualifies as a measure of privacy because it provides immunity from post-processing. There is no further computation that can be made on the release that will make it easier to distinguish which distribution a sample came from. That is, the divergence cannot increase after applying <span class="math notranslate nohighlight">\(f\)</span> to a release:</p>
+<div class="math notranslate nohighlight">
+\[\forall f \quad D\Bigl(M(u), M(v)\Bigr) \ge D\Bigl(f(M(u)), f(M(v))\Bigr)\]</div>
+<p>This property is the crucial distinction between measures, as discussed in this section, and metrics, as discussed in the previous section. Measurements and transformations share the same distinction.</p>
+</section>
+<section id="Definition-of-Privacy">
+<h2>Definition of Privacy<a class="headerlink" href="#Definition-of-Privacy" title="Link to this heading">#</a></h2>
+<p>Now that we have an understanding of distances between datasets, and distances between distributions, we can define the privacy of a measurement, <span class="math notranslate nohighlight">\(M(\cdot)\)</span>:</p>
+<blockquote>
+<div><p><span class="math notranslate nohighlight">\(M(\cdot)\)</span> is <span class="math notranslate nohighlight">\(\boldsymbol\epsilon\textbf{-differentially private}\)</span> at distance <span class="math notranslate nohighlight">\(k\)</span> if, for every pair of datasets <span class="math notranslate nohighlight">\(u\)</span> and <span class="math notranslate nohighlight">\(v\)</span> such that <span class="math notranslate nohighlight">\(d_{\mathrm{Sym}}(u, v) \leq k\)</span>, we have that <span class="math notranslate nohighlight">\(D_{\mathrm{MaxDivergence}}(M(u), M(v)) \leq \epsilon\)</span>.</p>
+</div></blockquote>
+<p>In this definition, we relate a dataset distance <span class="math notranslate nohighlight">\(k\)</span> to another distance <span class="math notranslate nohighlight">\(\epsilon\)</span>. This <span class="math notranslate nohighlight">\(\epsilon\)</span> is more general than the max divergence we computed in the previous section because it is the greatest divergence over all possible choices of <span class="math notranslate nohighlight">\(S\)</span>, <em>and over all possible pairs of adjacent datasets</em> <span class="math notranslate nohighlight">\(u\)</span> and <span class="math notranslate nohighlight">\(v\)</span>. <span class="math notranslate nohighlight">\(\epsilon\)</span> is often referred to as a bound on the privacy loss of <span class="math notranslate nohighlight">\(M(\cdot)\)</span>.</p>
+<p>This has a very practical interpretation: Let’s say I have a dataset <span class="math notranslate nohighlight">\(x\)</span> for which an individual user can contribute at most <span class="math notranslate nohighlight">\(k\)</span> rows, and a statistic <span class="math notranslate nohighlight">\(M(\cdot)\)</span> that is <span class="math notranslate nohighlight">\(\epsilon\)</span>-DP when user contribution is at most <span class="math notranslate nohighlight">\(k\)</span>. By the DP guarantee, it is proven that the influence of any one individual on the data release induces a divergence no greater than <span class="math notranslate nohighlight">\(\epsilon\)</span>. Thus, assuming a reasonably small choice of <span class="math notranslate nohighlight">\(\epsilon\)</span>, the individual’s participation in
+the statistical release is kept private, because their influence on the data release is at most <span class="math notranslate nohighlight">\(\epsilon\)</span>-distinguishable.</p>
+<p>If you have some background in differential privacy you may be more familiar with a definition of privacy worded like this:</p>
+<blockquote>
+<div><p><span class="math notranslate nohighlight">\(M(\cdot)\)</span> is <span class="math notranslate nohighlight">\(\boldsymbol\epsilon\textbf{-differentially private}\)</span> if, for every pair of adjacent datasets <span class="math notranslate nohighlight">\(u\)</span> and <span class="math notranslate nohighlight">\(v\)</span>, we have that <span class="math notranslate nohighlight">\(\Pr[M(u) \in S] \leq e^\epsilon \cdot \Pr[M(v) \in S]\)</span>.</p>
+</div></blockquote>
+<p>This is mostly equivalent, because of the way we’ve defined <span class="math notranslate nohighlight">\(D_{\mathrm{MaxDivergence}}(M(u), M(v))\)</span> in the previous section. However, this formulation of the definition is ambiguous about what makes a dataset adjacent. To obtain well-defined privacy guarantees, it is important to specify the dataset metric and dataset distance.</p>
+<p>We further generalize the definition of privacy:</p>
+<blockquote>
+<div><p><span class="math notranslate nohighlight">\(M(\cdot)\)</span> is <span class="math notranslate nohighlight">\((d_{in}, d_{out})\textbf{-differentially private}\)</span> with respect to input metric <span class="math notranslate nohighlight">\(MI\)</span> and output measure <span class="math notranslate nohighlight">\(MO\)</span> if, for any choice of datasets <span class="math notranslate nohighlight">\(u\)</span> and <span class="math notranslate nohighlight">\(v\)</span> such that <span class="math notranslate nohighlight">\(d_{MI}(u, v) \leq d_{in}\)</span>, we have that <span class="math notranslate nohighlight">\(D_{MO}(M(u), M(v)) \leq d_{out}\)</span>.</p>
+</div></blockquote>
+<p>The first definition can be reclaimed by letting <span class="math notranslate nohighlight">\(MI\)</span> be <code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code> and <span class="math notranslate nohighlight">\(MO\)</span> be <code class="docutils literal notranslate"><span class="pre">MaxDivergence</span></code>. <span class="math notranslate nohighlight">\(MO\)</span> can be set to other measures of divergence to represent approximate (<span class="math notranslate nohighlight">\(\epsilon, \delta\)</span>)-differential privacy, or zero-concentrated <span class="math notranslate nohighlight">\(\rho\)</span>-differential privacy. Similarly, our choice of <code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code> represents unbounded DP, but we can represent bounded DP by letting <span class="math notranslate nohighlight">\(MI\)</span> be <code class="docutils literal notranslate"><span class="pre">ChangeOneDistance</span></code>.</p>
+</section>
+<section id="Distance-Between-Aggregates---Sensitivity">
+<h2>Distance Between Aggregates - Sensitivity<a class="headerlink" href="#Distance-Between-Aggregates---Sensitivity" title="Link to this heading">#</a></h2>
+<p>The <em>sensitivity</em> is the greatest amount an aggregate can change when computed on an adjacent dataset. Aggregators are typically deterministic statistics (like the sum or histogram functions), and their exact outputs are aggregates. More generally, a transformation <span class="math notranslate nohighlight">\(T(\cdot)\)</span> is a function from a data domain to a data domain. Aggregators are a kind of transformation in which the output domain consists of aggregates.</p>
+<p>One example of a sensitivity metric is the <code class="docutils literal notranslate"><span class="pre">AbsoluteDistance</span></code>, which is used to measure the distance between scalar aggregates.</p>
+<div class="math notranslate nohighlight">
+\[d_{\mathrm{Abs}}(a, b) = |a - b|\]</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="k">def</span> <span class="nf">d_Abs</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;absolute distance between a and b&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">abs</span><span class="p">(</span><span class="n">a</span> <span class="o">-</span> <span class="n">b</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>We can use the absolute distance metric to express the sensitivity of the sum aggregator. In our vector dataset example, we know each individual can contribute at most one record. Since this record is unbounded, it can perturb the sum an arbitrarily large amount towards positive or negative infinity. This is unfortunate, because it implies that the divergence is also infinite!</p>
+<p>In order to attain a finite sensitivity, it is customary to clamp— that is, to replace any value less than a lower bound with the lower bound, and any value greater than an upper bound with the upper bound.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="k">def</span> <span class="nf">clamped_sum_0_12</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;a naive function that computes the sum, where each element is clamped within [0, 12]&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">12</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<p>Broadly speaking, if the transformation clamps data to the interval <span class="math notranslate nohighlight">\([L, U]\)</span>, and we know each individual contributes at most <span class="math notranslate nohighlight">\(d_{in}\)</span> records, then the clamped sum sensitivity (<span class="math notranslate nohighlight">\(d_{out}\)</span>) is</p>
+<div class="math notranslate nohighlight">
+\[\max_{u \sim_{Sym} v} |\mathrm{clamped\_sum}(u) - \mathrm{clamped\_sum}(v)| = d_{in} \cdot \max(|L|, U)\]</div>
+<p>We can use this to solve for the sensitivity of <span class="math notranslate nohighlight">\(clamped\_sum\_0\_12\)</span>, by letting <span class="math notranslate nohighlight">\([L, U] = [0, 12]\)</span>. Thus its sensitivity is <span class="math notranslate nohighlight">\(1 \cdot max(|0|, 12) = 12\)</span>. For any conceivable dataset <span class="math notranslate nohighlight">\(u\)</span>, adding or removing any individual (to get some dataset <span class="math notranslate nohighlight">\(v\)</span>) can change the sum by at most <span class="math notranslate nohighlight">\(12\)</span>.</p>
+<p>Our current choice of <span class="math notranslate nohighlight">\(u\)</span> and <span class="math notranslate nohighlight">\(v\)</span> is an example that maximizes the absolute distance:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">d_Abs</span><span class="p">(</span><span class="n">clamped_sum_0_12</span><span class="p">(</span><span class="n">u</span><span class="p">),</span> <span class="n">clamped_sum_0_12</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[10]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+12
+</pre></div></div>
+</div>
+<p>You can even use the <code class="docutils literal notranslate"><span class="pre">AbsoluteDistance</span></code> as the input metric <span class="math notranslate nohighlight">\(MI\)</span> of a measurement <span class="math notranslate nohighlight">\(M(\cdot)\)</span> (see the definition of privacy). Let’s define a new function <span class="math notranslate nohighlight">\(laplace\_noise\)</span> to illustrate this:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="k">def</span> <span class="nf">laplace_noise</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;a naive function that adds an approximation to Laplace noise&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">laplace</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>We let <span class="math notranslate nohighlight">\(MI\)</span> be <code class="docutils literal notranslate"><span class="pre">AbsoluteDistance</span></code> and <span class="math notranslate nohighlight">\(MO\)</span> be <code class="docutils literal notranslate"><span class="pre">MaxDivergence</span></code>. It can be shown that for any choice of <span class="math notranslate nohighlight">\(u, v \in \mathbb{R}\)</span> such that <span class="math notranslate nohighlight">\(d_{\mathrm{Abs}}(u, v) \leq d_{in}\)</span>, and <span class="math notranslate nohighlight">\(d_{out} = d_{in} / scale\)</span>, then:</p>
+<div class="math notranslate nohighlight">
+\[D_{\mathrm{MaxDivergence}}(\mathrm{laplace\_noise}(u), \mathrm{laplace\_noise}(v)) \leq d_{out}\]</div>
+<p>Therefore, if the data types in this function had infinite precision, then <span class="math notranslate nohighlight">\(laplace\_noise\)</span> would be a measurement. Other common metrics to express sensitivities are <code class="docutils literal notranslate"><span class="pre">L1Distance</span></code> and <code class="docutils literal notranslate"><span class="pre">L2Distance</span></code>.</p>
+</section>
+<section id="Definition-of-Stability">
+<h2>Definition of Stability<a class="headerlink" href="#Definition-of-Stability" title="Link to this heading">#</a></h2>
+<p>Similar to how we defined the privacy of a measurement <span class="math notranslate nohighlight">\(M(\cdot)\)</span>, we can also define the stability of a transformation, <span class="math notranslate nohighlight">\(T(\cdot)\)</span>:</p>
+<blockquote>
+<div><p><span class="math notranslate nohighlight">\(T(\cdot)\)</span> is <span class="math notranslate nohighlight">\((d_{in}, d_{out})\textbf{-stable}\)</span> with respect to input metric <span class="math notranslate nohighlight">\(MI\)</span> and output metric <span class="math notranslate nohighlight">\(MO\)</span> if, for any choice of datasets <span class="math notranslate nohighlight">\(u\)</span> and <span class="math notranslate nohighlight">\(v\)</span> such that <span class="math notranslate nohighlight">\(d_{MI}(u, v) \leq d_{in}\)</span>, we have that <span class="math notranslate nohighlight">\(d_{MO}(T(u), T(v)) \leq d_{out}\)</span>.</p>
+</div></blockquote>
+<p>An example is the <span class="math notranslate nohighlight">\(clamped\_sum\_0\_12\)</span> function from the previous section. If the data types in <span class="math notranslate nohighlight">\(clamped\_sum\_0\_12\)</span> had infinite precision, it would be a stable transformation where <span class="math notranslate nohighlight">\(MI\)</span> is <code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code> and <span class="math notranslate nohighlight">\(MO\)</span> is <code class="docutils literal notranslate"><span class="pre">AbsoluteDistance</span></code>. We’ve previously shown that when <span class="math notranslate nohighlight">\(d_{in} = 1\)</span>, the sensitivity <span class="math notranslate nohighlight">\(d_{out} = 12\)</span>.</p>
+<p>This stability guarantee does not carry privacy guarantees on its own, but it lets us construct building blocks that can be chained together. If the output metric <span class="math notranslate nohighlight">\(MO\)</span> and output domain <span class="math notranslate nohighlight">\(DO\)</span> of a transformation <span class="math notranslate nohighlight">\(T(\cdot)\)</span> conform with the input metric <span class="math notranslate nohighlight">\(MI\)</span> and input domain <span class="math notranslate nohighlight">\(DI\)</span> of a measurement <span class="math notranslate nohighlight">\(M(\cdot)\)</span>, then it is valid to construct a new measurement <span class="math notranslate nohighlight">\(M_{\mathrm{chained}}(\cdot) = M(T(\cdot))\)</span>. We can similarly construct a new transformation
+<span class="math notranslate nohighlight">\(T_{\mathrm{chained}}(\cdot) = T_2(T_1(\cdot))\)</span>.</p>
+<p>Notice that the output domain and metric of the <span class="math notranslate nohighlight">\(clamped\_sum\_0\_12\)</span> transformation conform with the input metric and domain of the <span class="math notranslate nohighlight">\(laplace\_noise\)</span> measurement, so we can chain these together:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="k">def</span> <span class="nf">laplace_sum</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;a naive function that computes the noisy clamped sum&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">laplace_noise</span><span class="p">(</span><span class="n">clamped_sum_0_12</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<p>Since this function was constructed by chaining a stable transformation and private measurement, it is trivial to prove that it is a private measurement (if the data types had infinite precision). The new chained measurement’s <span class="math notranslate nohighlight">\(MI\)</span> is <code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code>, and <span class="math notranslate nohighlight">\(MO\)</span> is <code class="docutils literal notranslate"><span class="pre">MaxDivergence</span></code>, and when the dataset distance <span class="math notranslate nohighlight">\(d_{in} = 1\)</span>, we have that <span class="math notranslate nohighlight">\(\epsilon = d_{out} = d_{in} \cdot \max(|0|, 12) / 25 = d_{in} \cdot 0.48 = 0.48\)</span>. That is, when an individual can contribute at
+most one record, the maximum observable divergence among the output distributions is <span class="math notranslate nohighlight">\(0.48\)</span>.</p>
+</section>
+<section id="Stability-Maps-and-Privacy-Maps">
+<h2>Stability Maps and Privacy Maps<a class="headerlink" href="#Stability-Maps-and-Privacy-Maps" title="Link to this heading">#</a></h2>
+<p>A crucial takeaway from this notebook is a high-level understanding that <em>differential privacy is a system to relate distances</em> (<span class="math notranslate nohighlight">\(d_{in}\)</span> and <span class="math notranslate nohighlight">\(d_{out}\)</span>). If you can establish a bound on the distance to adjacent datasets <span class="math notranslate nohighlight">\(d_{in}\)</span> (in terms of some metric <span class="math notranslate nohighlight">\(MI\)</span>) then you can work out the stability or privacy properties <span class="math notranslate nohighlight">\(d_{out}\)</span> (in terms of some metric or measure <span class="math notranslate nohighlight">\(MO\)</span>) of computations made on your data.</p>
+<p>We encapsulate this relationship between distances with one last abstraction, a <em>map</em>. A <em>map</em> is a function, associated with your computation, that computes a <span class="math notranslate nohighlight">\(d_{out}\)</span> for any given <span class="math notranslate nohighlight">\(d_{in}\)</span>. Thus, if <span class="math notranslate nohighlight">\(map(d_{in}) \le d_{out}\)</span>, then a computation is <span class="math notranslate nohighlight">\(d_{out}\)</span>-DP.</p>
+<p>The stability map for the <span class="math notranslate nohighlight">\(clamped\_sum\_0\_12\)</span> function is as follows:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="k">def</span> <span class="nf">clamped_sum_0_12_map</span><span class="p">(</span><span class="n">d_in</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">d_in</span> <span class="o">*</span> <span class="nb">max</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="mi">12</span><span class="p">)</span>
+
+<span class="c1"># find the smallest d_out (absolute distance) of clamped_sum_0_12 when d_in (symmetric distance) is 1</span>
+<span class="n">clamped_sum_0_12_map</span><span class="p">(</span><span class="n">d_in</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[13]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+12
+</pre></div></div>
+</div>
+<p>This map is just a repackaging of our previous formula for the clamped sum sensitivity, so that <span class="math notranslate nohighlight">\(d_{in}\)</span> can be set later. It is referred to as a <em>stability</em> map because stability is a more general term than sensitivity, namely a bound on on how much outputs can change as a function of input distances.</p>
+<p>The same pattern holds for the privacy map of the <span class="math notranslate nohighlight">\(laplace\_noise\)</span> measurement:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="k">def</span> <span class="nf">laplace_noise_map</span><span class="p">(</span><span class="n">d_in</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">d_in</span> <span class="o">/</span> <span class="n">scale</span>
+
+<span class="c1"># find the smallest d_out (epsilon) of laplace_noise when d_in (absolute distance) is 12</span>
+<span class="n">laplace_noise_map</span><span class="p">(</span><span class="n">d_in</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[14]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+0.48
+</pre></div></div>
+</div>
+<p>This time we refer to it as a privacy map, because the output distance is in terms of a privacy measure, which captures distance between output <em>distributions</em> (like <code class="docutils literal notranslate"><span class="pre">MaxDivergence</span></code>) and hence offers privacy guarantees. Now that we have the stability map for the clamped sum transformation and the privacy map for the Laplace noise measurement, we can automatically construct the privacy map for the Laplace sum measurement:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="k">def</span> <span class="nf">laplace_sum_map</span><span class="p">(</span><span class="n">d_in</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">laplace_noise_map</span><span class="p">(</span><span class="n">clamped_sum_0_12_map</span><span class="p">(</span><span class="n">d_in</span><span class="p">))</span>
+
+<span class="c1"># find the smallest d_out (epsilon) of laplace_noise when d_in (symmetric distance) is 1</span>
+<span class="n">laplace_sum_map</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[15]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+0.48
+</pre></div></div>
+</div>
+<p>We’ve now come full-circle. In the “Distance Between Distributions” section, we computed an example divergence for one choice of <span class="math notranslate nohighlight">\(S\)</span>. We have now indirectly computed an upper bound for that divergence of <span class="math notranslate nohighlight">\(0.48\)</span>. You may notice that some choices of <span class="math notranslate nohighlight">\(S\)</span> in that section can give divergences very slightly larger than <span class="math notranslate nohighlight">\(0.48\)</span>. This is because floating-point numbers have finite precision, so intermediate computations were subject to rounding that introduced error.</p>
+<p>The transformation and measurement examples in this notebook are only <span class="math notranslate nohighlight">\((d_{in}, d_{out})\)</span>-differentially private if we assume the data types have infinite precision— and they don’t! Building transformations or measurements that have proven stability or privacy properties is nontrivial, especially if you account for finite precision in data types. This is the purpose of the OpenDP library: to help you build robust transformations and measurements with rigorous privacy properties.</p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="supporting-elements.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Supporting Elements</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../getting-started.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Getting Started</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Distance-Between-Datasets---Adjacency">Distance Between Datasets - Adjacency</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Distance-Between-Distributions---Divergence">Distance Between Distributions - Divergence</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Definition-of-Privacy">Definition of Privacy</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Distance-Between-Aggregates---Sensitivity">Distance Between Aggregates - Sensitivity</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Definition-of-Stability">Definition of Stability</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Stability-Maps-and-Privacy-Maps">Stability Maps and Privacy Maps</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../../_sources/user/programming-framework/a-framework-to-understand-dp.ipynb.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.3rc1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

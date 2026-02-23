@@ -1,0 +1,1343 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Manipulation &#8212; OpenDP</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../../../_static/styles/bootstrap.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+
+  
+  <link href="../../../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/graphviz.css?v=eafc0fe6" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/nbsphinx-code-cells.css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=4f92a2c4" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f" />
+<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f" />
+  <script src="../../../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+    <script src="../../../../_static/documentation_options.js?v=3a3a8e7f"></script>
+    <script src="../../../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/user-guide/polars/expressions/manipulation';</script>
+    <link rel="icon" href="../../../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="Operators" href="operators.html" />
+    <link rel="prev" title="Columns" href="columns.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Feb 23, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+
+
+<script>
+document.write(`<aside class="bd-header-announcement" aria-label="Announcement"></aside>`);
+fetch("https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html")
+  .then(res => {return res.text();})
+  .then(data => {
+    if (data.length === 0) {
+      console.log("[PST]: Empty announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+      return;
+    }
+    div = document.querySelector(".bd-header-announcement");
+    div.classList.add(...["bd-header-announcement", "container-fluid", "init"]);
+    div.innerHTML = `<div class="bd-header-announcement__content">${data}</div>`;
+    // At least 3rem height
+    const autoHeight = Math.min(
+      div.offsetHeight,
+      3 * parseFloat(getComputedStyle(document.documentElement).fontSize));
+    // Set height and vertical padding to 0 to prepare the height transition
+    div.style.setProperty("height", 0);
+    div.style.setProperty("padding-top", 0);
+    div.style.setProperty("padding-bottom", 0);
+    div.classList.remove("init");
+    // Set height to the computed height with a small timeout to activate the transition
+    setTimeout(() => {
+      div.style.setProperty("height", `${autoHeight}px`);
+      // Wait for a bit more than 300ms (the transition duration) then remove the
+      // forcefully set styles and let CSS take over
+      setTimeout(() => {
+        div.style.removeProperty("padding-top");
+        div.style.removeProperty("padding-bottom");
+        div.style.removeProperty("height");
+        div.style.setProperty("min-height", "3rem");
+      }, 320);
+    }, 10);
+  })
+  .catch(error => {
+    console.log("[PST]: Failed to load announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+  });
+</script>
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <button class="sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+
+<a class="navbar-brand logo" href="../../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../../_static/opendp-logo.png" class="logo__image only-light" alt="OpenDP - Home"/>
+    <script>document.write(`<img src="../../../../_static/opendp-logo.png" class="logo__image only-dark" alt="OpenDP - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../../getting-started/index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="../../../index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../../theory/index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+    <button class="sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../../getting-started/index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="../../../index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../../theory/index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../../index.html">API User Guide</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../../limitations.html">Limitations</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../programming-framework/index.html">Programming Framework</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../programming-framework/core-structures.html">Core Structures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../programming-framework/supporting-elements.html">Supporting Elements</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../transformations/index.html">Transformations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../transformations/preprocess-resize.html">Preprocessing: Resize</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../transformations/aggregation-sum.html">Aggregation: Sum</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../transformations/aggregation-mean.html">Aggregation: Mean</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../transformations/aggregation-quantile.html">Aggregation: Quantile</a></li>
+
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../measurements/index.html">Measurements</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../measurements/additive-noise-mechanisms.html">Additive Noise Mechanisms</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../measurements/thresholded-noise-mechanisms.html">Thresholded Noise Mechanisms</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../measurements/canonical-noise-mechanism.html">Canonical Noise Mechanism</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../measurements/noisy-max-mechanisms.html">Report Noisy Max Mechanisms</a></li>
+
+
+
+<li class="toctree-l3"><a class="reference internal" href="../../measurements/randomized-response.html">Randomized Response</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../combinators/index.html">Combinators</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../combinators/chaining.html">Chaining</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../combinators/non-adaptive-composition.html">(Non-Adaptive) Composition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../combinators/adaptive-composition.html">Adaptive Composition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../combinators/fully-adaptive-composition.html">Fully Adaptive Composition and Odometers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../combinators/privacy-filters.html">Privacy Filters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../combinators/compositor-chaining-and-nesting.html">Compositor Chaining and Nesting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../combinators/measure-casting.html">Measure Casting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../combinators/amplification.html">Amplification</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../utilities/index.html">Utilities</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../utilities/typing.html">Typing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../utilities/parameter-search.html">Parameter Search</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../utilities/serialization.html">Serialization</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../../context/index.html">Context</a></li>
+<li class="toctree-l2 current active has-children"><a class="reference internal" href="../index.html">Polars</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../polars-vs-opendp.html">Polars vs. OpenDP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../gaussian-noise.html">Gaussian Noise</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../bounds.html">Identifier Truncation and Bounds</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../data-types.html">Data Types</a></li>
+<li class="toctree-l3 current active has-children"><a class="reference internal" href="index.html">Expressions</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="aggregation.html">Aggregation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="boolean.html">Boolean</a></li>
+<li class="toctree-l4"><a class="reference internal" href="columns.html">Columns</a></li>
+<li class="toctree-l4 current active"><a class="current reference internal" href="#">Manipulation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="operators.html">Operators</a></li>
+<li class="toctree-l4"><a class="reference internal" href="string.html">String</a></li>
+<li class="toctree-l4"><a class="reference internal" href="temporal.html">Temporal</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../plugins/index.html">Plugins</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../plugins/measurement.html">Measurement example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../plugins/transformation.html">Transformation example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../plugins/context-api-plugins.html">Context API Plugins</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../plugins/theil-sen-regression.html">Thiel-Sen Regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../plugins/selecting-grouping-columns.html">Privately Selecting Grouping Columns</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../python/index.html">Python API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../../python/opendp.html">opendp package</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../../../python/opendp.extras.html">opendp.extras package</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../../python/opendp.extras.examples.html">opendp.extras.examples package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../python/opendp.extras.mbi.html">opendp.extras.mbi package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../python/opendp.extras.numpy.html">opendp.extras.numpy package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../python/opendp.extras.polars.html">opendp.extras.polars package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../../python/opendp.extras.sklearn.html">opendp.extras.sklearn package</a></li>
+</ul>
+</details></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../python/opendp.accuracy.html">opendp.accuracy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../python/opendp.combinators.html">opendp.combinators module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../python/opendp.context.html">opendp.context module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../python/opendp.core.html">opendp.core module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../python/opendp.domains.html">opendp.domains module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../python/opendp.measurements.html">opendp.measurements module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../python/opendp.measures.html">opendp.measures module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../python/opendp.metrics.html">opendp.metrics module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../python/opendp.mod.html">opendp.mod module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../python/opendp.prelude.html">opendp.prelude module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../python/opendp.transformations.html">opendp.transformations module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../../python/opendp.typing.html">opendp.typing module</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference external" href="https://docs.opendp.org/en/stable/api/r">R API Reference</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://docs.rs/opendp">Rust API Reference</a></li>
+</ul>
+</div>
+</nav></div>
+        <div class="sidebar-primary-item">
+<h6>Branches</h6>
+<ul>
+    <li><a href="../../../../../beta/index.html" style="font-weight: normal">beta</a></li>
+    <li><a href="../../../../../nightly/index.html" style="font-weight: normal">nightly</a></li>
+    <li><a href="manipulation.html" style="font-weight: bold">stable</a></li>
+</ul>
+
+
+<h6 id="releases_header">Releases
+    <div id="releases_symbol" style="float:right"></div>
+</h6>
+<ul id="releases_content">
+    <li><a href="../../../../../v0.14.1/index.html" style="font-weight: normal">v0.14.1</a></li>
+    <li><a href="../../../../../v0.14.0/index.html" style="font-weight: normal">v0.14.0</a></li>
+    <li><a href="../../../../../v0.13.0/index.html" style="font-weight: normal">v0.13.0</a></li>
+    <li><a href="../../../../../v0.12.1/index.html" style="font-weight: normal">v0.12.1</a></li>
+    <li><a href="../../../../../v0.12.0/index.html" style="font-weight: normal">v0.12.0</a></li>
+    <li><a href="../../../../../v0.11.1/index.html" style="font-weight: normal">v0.11.1</a></li>
+    <li><a href="../../../../../v0.11.0/index.html" style="font-weight: normal">v0.11.0</a></li>
+    <li><a href="../../../../../v0.10.0/index.html" style="font-weight: normal">v0.10.0</a></li>
+    <li><a href="../../../../../v0.9.2/index.html" style="font-weight: normal">v0.9.2</a></li>
+    <li><a href="../../../../../v0.9.1/index.html" style="font-weight: normal">v0.9.1</a></li>
+    <li><a href="../../../../../v0.9.0/index.html" style="font-weight: normal">v0.9.0</a></li>
+    <li><a href="../../../../../v0.8.0/index.html" style="font-weight: normal">v0.8.0</a></li>
+    <li><a href="../../../../../v0.7.0/index.html" style="font-weight: normal">v0.7.0</a></li>
+    <li><a href="../../../../../v0.6.2/index.html" style="font-weight: normal">v0.6.2</a></li>
+    <li><a href="../../../../../v0.6.1/index.html" style="font-weight: normal">v0.6.1</a></li>
+    <li><a href="../../../../../v0.6.0/index.html" style="font-weight: normal">v0.6.0</a></li>
+    <li><a href="../../../../../v0.5.0/index.html" style="font-weight: normal">v0.5.0</a></li>
+    <li><a href="../../../../../v0.4.0/index.html" style="font-weight: normal">v0.4.0</a></li>
+    <li><a href="../../../../../v0.3.0/index.html" style="font-weight: normal">v0.3.0</a></li>
+    <li><a href="../../../../../v0.2.4/index.html" style="font-weight: normal">v0.2.4</a></li>
+    <li><a href="../../../../../v0.2.3/index.html" style="font-weight: normal">v0.2.3</a></li>
+    <li><a href="../../../../../v0.2.2/index.html" style="font-weight: normal">v0.2.2</a></li>
+    <li><a href="../../../../../v0.2.1/index.html" style="font-weight: normal">v0.2.1</a></li>
+    <li><a href="../../../../../v0.2.0/index.html" style="font-weight: normal">v0.2.0</a></li>
+    <li><a href="../../../../../v0.1.0/index.html" style="font-weight: normal">v0.1.0</a></li>
+</ul>
+<script>
+    let expanded = !!JSON.parse(localStorage.getItem('expanded'));
+
+    let releasesHeader = document.getElementById("releases_header");
+    let releasesSymbol = document.getElementById("releases_symbol");
+    let releasesContent = document.getElementById("releases_content");
+
+    function setReleasesState() {
+        localStorage.setItem("expanded", JSON.stringify(expanded))
+        releasesContent.style.display = expanded ? "block" : "none";
+        releasesSymbol.classList.add(expanded ? 'minus' : 'plus')
+        releasesSymbol.classList.remove(expanded ? 'plus' : 'minus')
+    }
+
+    setReleasesState()
+    releasesHeader.addEventListener("click", function() {
+        expanded = !expanded;
+        setReleasesState()
+    })
+</script>
+<style>
+    .plus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .plus:before,
+    .plus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .plus:before {
+        left:50%;
+        top:4px;
+        bottom:4px;
+        width:3px;
+        transform:translateX(-50%);
+    }
+
+    .plus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+
+
+
+    .minus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .minus:before,
+    .minus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .minus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+</style>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+
+
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../../index.html" class="nav-link">API</a></li>
+    
+    
+    <li class="breadcrumb-item"><i class="fa-solid fa-ellipsis"></i></li>
+    
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Expressions</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">Manipulation</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item"><div class="admonition warning" style="position: relative;">
+    <!--
+     Without the style, the region for the article title overlaps, and the link is unclickable.
+    -->
+    <details>
+        <summary>Questions or feedback?</summary>
+        <!--
+            All of these lists should be in sync:
+            - README.md
+            - docs/source/contributing/contact.rst
+            - docs/source/_templates/questions-feedback.html
+            - .github/ISSUE_TEMPLATE/config.yml
+        -->
+        <ul>
+            <li>Report a bug or request a feature on <a href="https://github.com/opendp/opendp/issues">Github</a>.</li>
+            <li>Send general queries to <a href="mailto:info@opendp.org">info@opendp.org</a>, or email <a href="mailto:security@opendp.org">security@opendp.org</a> if it is related to security.</li>
+            <li>Join the conversation on <a href="https://join.slack.com/t/opendp/shared_invite/zt-1t8rrbqhd-z8LiZiP06vVE422HJd6ciQ">Slack</a>, or the <a href="https://groups.google.com/a/g.harvard.edu/g/opendp-community">mailing list</a>.</li>
+        </ul>
+    </details>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="Manipulation">
+<h1>Manipulation<a class="headerlink" href="#Manipulation" title="Link to this heading">#</a></h1>
+<p>[<a class="reference external" href="https://docs.pola.rs/api/python/dev/reference/lazyframe/modify_select.html">Polars Documentation</a>]</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="kn">import</span> <span class="nn">polars</span> <span class="k">as</span> <span class="nn">pl</span>
+<span class="kn">import</span> <span class="nn">opendp.prelude</span> <span class="k">as</span> <span class="nn">dp</span>
+
+<span class="n">dp</span><span class="o">.</span><span class="n">enable_features</span><span class="p">(</span><span class="s2">&quot;contrib&quot;</span><span class="p">)</span>
+
+<span class="n">context</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">Context</span><span class="o">.</span><span class="n">compositor</span><span class="p">(</span>
+    <span class="c1"># Many columns contain mixtures of strings and numbers and cannot be parsed as floats,</span>
+    <span class="c1"># so we&#39;ll set `ignore_errors` to true to avoid conversion errors.</span>
+    <span class="n">data</span><span class="o">=</span><span class="n">pl</span><span class="o">.</span><span class="n">scan_csv</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">examples</span><span class="o">.</span><span class="n">get_france_lfs_path</span><span class="p">(),</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+    <span class="n">privacy_unit</span><span class="o">=</span><span class="n">dp</span><span class="o">.</span><span class="n">unit_of</span><span class="p">(</span><span class="n">contributions</span><span class="o">=</span><span class="mi">36</span><span class="p">),</span>
+    <span class="n">privacy_loss</span><span class="o">=</span><span class="n">dp</span><span class="o">.</span><span class="n">loss_of</span><span class="p">(</span><span class="n">epsilon</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="mf">1e-7</span><span class="p">),</span>
+    <span class="n">split_evenly_over</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+    <span class="n">margins</span><span class="o">=</span><span class="p">[</span><span class="n">dp</span><span class="o">.</span><span class="n">polars</span><span class="o">.</span><span class="n">Margin</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">150_000</span> <span class="o">*</span> <span class="mi">36</span><span class="p">)]</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<section id="Cast">
+<h2>Cast<a class="headerlink" href="#Cast" title="Link to this heading">#</a></h2>
+<p>When a Polars LazyFrame is passed to the Context API, the data schema is read off of the dataframe. This means that in common usage, the OpenDP Library considers the data schema to be public information, and that the columns are already correctly typed.</p>
+<p>While the OpenDP Library supports cast expressions, a drawback to their usage is that cast expressions on grouping columns will void any margin descriptors for those columns.</p>
+<p>One setting where you may find cast expressions useful is when computing a float sum on a large dataset. OpenDP accounts for inexact floating-point arithmetic when computing the float sum, and on data with large bounds and hundreds of thousands of records, this term can dominate the sensitivity.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="p">(</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">query</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">HWUSUAL</span><span class="o">.</span><span class="n">dp</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">)))</span>
+    <span class="o">.</span><span class="n">summarize</span><span class="p">()</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[2]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (1, 4)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Sum&quot;</td><td>&quot;Float Laplace&quot;</td><td>14405.179857</td></tr></tbody></table></div></div>
+</div>
+<p>Casting to integers avoids this term, resulting in a much smaller noise scale to satisfy the same level of privacy.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">context</span><span class="o">.</span><span class="n">query</span><span class="p">()</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">HWUSUAL</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span><span class="o">.</span><span class="n">dp</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">)))</span><span class="o">.</span><span class="n">summarize</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[3]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (1, 4)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Sum&quot;</td><td>&quot;Integer Laplace&quot;</td><td>14400.0</td></tr></tbody></table></div></div>
+</div>
+<p>The OpenDP Library forces that failed casts do not throw a (data-dependent) exception, instead returning a null. Therefore using this cast operation updates the output domain to indicate that there may potentially be nulls. You’ll probably need to apply <code class="docutils literal notranslate"><span class="pre">.fill_null</span></code> before computing statistics with casted data.</p>
+</section>
+<section id="Clip">
+<h2>Clip<a class="headerlink" href="#Clip" title="Link to this heading">#</a></h2>
+<p>Computing the sum and mean privately requires input data to be restricted between some lower and upper bound. DP expressions like <code class="docutils literal notranslate"><span class="pre">.dp.sum</span></code> and <code class="docutils literal notranslate"><span class="pre">.dp.mean</span></code> automatically insert imputation when necessary and <code class="docutils literal notranslate"><span class="pre">.clip</span></code> based on given data bounds. However, a <code class="docutils literal notranslate"><span class="pre">.clip</span></code> transformation may be used anywhere, and it will establish a domain descriptor for the column being clipped. When an aggregation is conducted, the library will check for the presence of this descriptor if it is necessary to bound
+the sensitivity of the query.</p>
+<p>This is demonstrated in the following query, where the preprocessing is broken apart into different data processing phases.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="p">(</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">query</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">with_columns</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">HWUSUAL</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span><span class="o">.</span><span class="n">fill_null</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">HWUSUAL</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="o">.</span><span class="n">dp</span><span class="o">.</span><span class="n">noise</span><span class="p">())</span>
+    <span class="o">.</span><span class="n">summarize</span><span class="p">()</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[4]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (1, 4)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Sum&quot;</td><td>&quot;Integer Laplace&quot;</td><td>14400.0</td></tr></tbody></table></div></div>
+</div>
+</section>
+<section id="Cut">
+<h2>Cut<a class="headerlink" href="#Cut" title="Link to this heading">#</a></h2>
+<p>Cut is a transformation that bins numerical data according to a list of breaks. The following example releases counts of the number of individuals working each hour range.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">breaks</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">60</span><span class="p">,</span> <span class="mi">80</span><span class="p">,</span> <span class="mi">98</span><span class="p">]</span>
+
+<span class="n">query</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">query</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">with_columns</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">HWUSUAL</span><span class="o">.</span><span class="n">cut</span><span class="p">(</span><span class="n">breaks</span><span class="o">=</span><span class="n">breaks</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="s2">&quot;HWUSUAL&quot;</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">agg</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">len</span><span class="p">())</span>
+<span class="p">)</span>
+<span class="n">query</span><span class="o">.</span><span class="n">release</span><span class="p">()</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="s2">&quot;HWUSUAL&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[5]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (7, 2)</small><table border="1" class="dataframe"><thead><tr><th>HWUSUAL</th><th>len</th></tr><tr><td>cat</td><td>u32</td></tr></thead><tbody><tr><td>null</td><td>20828</td></tr><tr><td>&quot;(-inf, 0]&quot;</td><td>6212</td></tr><tr><td>&quot;(0, 20]&quot;</td><td>120914</td></tr><tr><td>&quot;(20, 40]&quot;</td><td>1026819</td></tr><tr><td>&quot;(40, 60]&quot;</td><td>292128</td></tr><tr><td>&quot;(60, 80]&quot;</td><td>50453</td></tr><tr><td>&quot;(98, inf]&quot;</td><td>2295210</td></tr></tbody></table></div></div>
+</div>
+<p>In this setting it is not necessary to spend an additional <span class="math notranslate nohighlight">\(\delta\)</span> parameter to privately release the keys. Instead we can construct an explicit key set based on the bin labels from grouping:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="k">def</span> <span class="nf">cut_labels</span><span class="p">(</span><span class="n">breaks</span><span class="p">,</span> <span class="n">left_closed</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="n">edges</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;-inf&quot;</span><span class="p">,</span> <span class="o">*</span><span class="n">breaks</span><span class="p">,</span> <span class="s2">&quot;inf&quot;</span><span class="p">]</span>
+    <span class="n">bl</span><span class="p">,</span> <span class="n">br</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;[&quot;</span><span class="p">,</span> <span class="s2">&quot;)&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">left_closed</span> <span class="k">else</span> <span class="p">(</span><span class="s2">&quot;(&quot;</span><span class="p">,</span> <span class="s2">&quot;]&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">bl</span><span class="si">}{</span><span class="n">l</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">r</span><span class="si">}{</span><span class="n">br</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">l</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">edges</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">edges</span><span class="p">[</span><span class="mi">1</span><span class="p">:])]</span>
+
+<span class="n">labels</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="s2">&quot;HWUSUAL&quot;</span><span class="p">,</span> <span class="n">cut_labels</span><span class="p">(</span><span class="n">breaks</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">pl</span><span class="o">.</span><span class="n">Categorical</span><span class="p">)</span>
+
+<span class="n">query</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">query</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">with_columns</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">HWUSUAL</span><span class="o">.</span><span class="n">cut</span><span class="p">(</span><span class="n">breaks</span><span class="o">=</span><span class="n">breaks</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="s2">&quot;HWUSUAL&quot;</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">agg</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">len</span><span class="p">())</span>
+    <span class="o">.</span><span class="n">with_keys</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">LazyFrame</span><span class="p">([</span><span class="n">labels</span><span class="p">]))</span>
+<span class="p">)</span>
+<span class="n">query</span><span class="o">.</span><span class="n">summarize</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[6]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (1, 4)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;len&quot;</td><td>&quot;Frame Length&quot;</td><td>&quot;Integer Laplace&quot;</td><td>144.0</td></tr></tbody></table></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">query</span><span class="o">.</span><span class="n">release</span><span class="p">()</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="s2">&quot;HWUSUAL&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[7]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (7, 2)</small><table border="1" class="dataframe"><thead><tr><th>HWUSUAL</th><th>len</th></tr><tr><td>cat</td><td>u32</td></tr></thead><tbody><tr><td>&quot;(-inf, 0]&quot;</td><td>6412</td></tr><tr><td>&quot;(0, 20]&quot;</td><td>120732</td></tr><tr><td>&quot;(20, 40]&quot;</td><td>1026819</td></tr><tr><td>&quot;(40, 60]&quot;</td><td>292358</td></tr><tr><td>&quot;(60, 80]&quot;</td><td>50671</td></tr><tr><td>&quot;(80, 98]&quot;</td><td>0</td></tr><tr><td>&quot;(98, inf]&quot;</td><td>2294912</td></tr></tbody></table></div></div>
+</div>
+<p>The output type is categorical, but with a data-independent encoding, meaning OpenDP allows grouping by these keys.</p>
+</section>
+<section id="Drop-NaNs">
+<h2>Drop NaNs<a class="headerlink" href="#Drop-NaNs" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">.drop_nans</span></code> removes NaN float values from the data. Not to be confused with <code class="docutils literal notranslate"><span class="pre">.drop_nulls</span></code>. While this guarantees that the data does not have NaNs, it also drops data invariants on dataset size. This expression may not be used in a row-by-row context.</p>
+<p>See <code class="docutils literal notranslate"><span class="pre">.drop_nulls</span></code> for a usage example.</p>
+</section>
+<section id="Drop-Nulls">
+<h2>Drop Nulls<a class="headerlink" href="#Drop-Nulls" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">.drop_nulls</span></code> removes null values from the data. Not to be confused with <code class="docutils literal notranslate"><span class="pre">.drop_nans</span></code> for float data. While this guarantees that the data does not have nulls, it also drops data invariants on dataset size. This expression may not be used in a row-by-row context.</p>
+<p>In the following example, all nans and nulls are dropped from the <code class="docutils literal notranslate"><span class="pre">HWUSUAL</span></code> column.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="p">(</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">query</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">HWUSUAL</span><span class="o">.</span><span class="n">drop_nans</span><span class="p">()</span><span class="o">.</span><span class="n">drop_nulls</span><span class="p">()</span><span class="o">.</span><span class="n">dp</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">)))</span>
+    <span class="o">.</span><span class="n">summarize</span><span class="p">()</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[8]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (1, 4)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Sum&quot;</td><td>&quot;Float Laplace&quot;</td><td>14405.179857</td></tr></tbody></table></div></div>
+</div>
+</section>
+<section id="Fill-NaN">
+<h2>Fill NaN<a class="headerlink" href="#Fill-NaN" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">.fill_nan</span></code> replaces NaN float values. Not to be confused with <code class="docutils literal notranslate"><span class="pre">.fill_null</span></code>. The output data is only considered non-nan if the fill expression is both non-null and non-nan.</p>
+<p>In common use throughout the documentation, the fill value has been simply a single scalar, but more complicated expressions are valid:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="p">(</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">query</span><span class="p">()</span>
+    <span class="c1"># prepare actual work hours as a valid fill column</span>
+    <span class="o">.</span><span class="n">with_columns</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">HWACTUAL</span><span class="o">.</span><span class="n">fill_nan</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span><span class="o">.</span><span class="n">fill_null</span><span class="p">(</span><span class="mf">0.0</span><span class="p">))</span>
+    <span class="c1"># prepare usual work hours with actual work hours as a fill</span>
+    <span class="o">.</span><span class="n">with_columns</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">HWUSUAL</span><span class="o">.</span><span class="n">fill_nan</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">HWACTUAL</span><span class="p">)</span><span class="o">.</span><span class="n">fill_null</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">HWACTUAL</span><span class="p">))</span>
+    <span class="c1"># compute the dp sum</span>
+    <span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">HWUSUAL</span><span class="o">.</span><span class="n">dp</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">)))</span>
+    <span class="o">.</span><span class="n">summarize</span><span class="p">()</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[9]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (1, 4)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Sum&quot;</td><td>&quot;Float Laplace&quot;</td><td>14405.179857</td></tr></tbody></table></div></div>
+</div>
+<p>If the fill expression is not a scalar literal, then the input expression and fill expression must both by row-by-row. This is to prevent a mismatch in lengths that results in data-dependent errors.</p>
+<p>At this time <code class="docutils literal notranslate"><span class="pre">.fill_nan</span></code> always drops data bounds, so make sure your data is non-nan before running <code class="docutils literal notranslate"><span class="pre">.clip</span></code>.</p>
+<p>Even if you are in an aggregation context like <code class="docutils literal notranslate"><span class="pre">.select</span></code> or <code class="docutils literal notranslate"><span class="pre">.agg</span></code>, OpenDP enforces that inputs to <code class="docutils literal notranslate"><span class="pre">.fill_nan</span></code> are row-by-row. This is to ensure that the left and right arguments of binary operators have meaningful row alignment, and that inputs share the same number of records, to avoid data-dependent errors that would violate the privacy guarantee.</p>
+</section>
+<section id="Fill-Null">
+<h2>Fill Null<a class="headerlink" href="#Fill-Null" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">.fill_null</span></code> replaces null values. Not to be confused with <code class="docutils literal notranslate"><span class="pre">.fill_nan</span></code>. All data types in Polars may be null. The output data is only considered non-null if the fill expression is non-null.</p>
+<p>In common use throughout the documentation, the fill value has been simply a single scalar, but more complicated expressions are valid:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="p">(</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">query</span><span class="p">()</span>
+    <span class="c1"># prepare actual work hours as a valid fill column</span>
+    <span class="o">.</span><span class="n">with_columns</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">HWACTUAL</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span><span class="o">.</span><span class="n">fill_null</span><span class="p">(</span><span class="mf">0.0</span><span class="p">))</span>
+    <span class="c1"># prepare usual work hours with actual work hours as a fill</span>
+    <span class="o">.</span><span class="n">with_columns</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">HWUSUAL</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span><span class="o">.</span><span class="n">fill_null</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">HWACTUAL</span><span class="p">))</span>
+    <span class="c1"># compute the dp sum</span>
+    <span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">HWUSUAL</span><span class="o">.</span><span class="n">dp</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">)))</span>
+    <span class="o">.</span><span class="n">summarize</span><span class="p">()</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[10]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (1, 4)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Sum&quot;</td><td>&quot;Integer Laplace&quot;</td><td>14400.0</td></tr></tbody></table></div></div>
+</div>
+<p>If the fill expression is not a scalar literal, then the input expression and fill expression must both by row-by-row. This is to prevent a mismatch in lengths that results in data-dependent errors.</p>
+<p>At this time <code class="docutils literal notranslate"><span class="pre">.fill_null</span></code> always drops data bounds, so make sure your data is non-null before running <code class="docutils literal notranslate"><span class="pre">.clip</span></code>.</p>
+<p>Just like <code class="docutils literal notranslate"><span class="pre">.fill_nan</span></code>, even if you are in an aggregation context like <code class="docutils literal notranslate"><span class="pre">.select</span></code> or <code class="docutils literal notranslate"><span class="pre">.agg</span></code>, OpenDP enforces that inputs to <code class="docutils literal notranslate"><span class="pre">.fill_nan</span></code> are row-by-row.</p>
+</section>
+<section id="Filter">
+<h2>Filter<a class="headerlink" href="#Filter" title="Link to this heading">#</a></h2>
+<p>In addition to the full-dataframe filter, you can also filter expressions in contexts with aggregators. The filter is not row-by-row, but it requires that its inputs are row-by-row; this is to ensure the data and predicate match.</p>
+<p>The following query counts the number of respondents over retirement age:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="p">(</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">query</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">with_columns</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">HWUSUAL</span><span class="o">.</span><span class="n">fill_nan</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">fill_null</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+    <span class="c1"># compute the dp sum of individuals over 64 years old</span>
+    <span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">HWUSUAL</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">AGE</span> <span class="o">&gt;</span> <span class="mi">64</span><span class="p">)</span><span class="o">.</span><span class="n">dp</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">)))</span>
+    <span class="o">.</span><span class="n">summarize</span><span class="p">()</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[11]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (1, 4)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Sum&quot;</td><td>&quot;Float Laplace&quot;</td><td>14405.179857</td></tr></tbody></table></div></div>
+</div>
+<p>This is a setting where the query can be answered via a group by instead, with the benefit of also getting a count of the number of individuals less than 65:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="p">(</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">query</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">AGE</span> <span class="o">&gt;</span> <span class="mi">64</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">agg</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">len</span><span class="p">())</span>
+    <span class="o">.</span><span class="n">with_keys</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">LazyFrame</span><span class="p">({</span><span class="s2">&quot;AGE&quot;</span><span class="p">:</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">]}))</span>
+    <span class="o">.</span><span class="n">summarize</span><span class="p">()</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[12]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (1, 4)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;len&quot;</td><td>&quot;Frame Length&quot;</td><td>&quot;Integer Laplace&quot;</td><td>144.0</td></tr></tbody></table></div></div>
+</div>
+<p>OpenDP doesn’t infer descriptors from the filtering criteria, so the filtered data is not considered non-null (or non-NaN) even if you filter nulls (or NaNs). In the following code snip, that preprocessing is added by <code class="docutils literal notranslate"><span class="pre">.dp.sum</span></code>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="p">(</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">query</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">with_columns</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">HWUSUAL</span><span class="o">.</span><span class="n">fill_nan</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+    <span class="c1"># compute the dp sum of individuals over 64 years old</span>
+    <span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">HWUSUAL</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">HWUSUAL</span><span class="o">.</span><span class="n">is_not_null</span><span class="p">())</span><span class="o">.</span><span class="n">dp</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">98</span><span class="p">)))</span>
+    <span class="o">.</span><span class="n">summarize</span><span class="p">()</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[13]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (1, 4)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Sum&quot;</td><td>&quot;Float Laplace&quot;</td><td>14117.076259</td></tr></tbody></table></div></div>
+</div>
+<p>In this query, <code class="docutils literal notranslate"><span class="pre">.fill_null</span></code> has a broadcast-able filler, so it doesn’t require its input to be row-by-row. Since the input does not need to be row-by-row, OpenDP accepts the filter.</p>
+</section>
+<section id="Replace">
+<h2>Replace<a class="headerlink" href="#Replace" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">replace</span></code> replaces all <code class="docutils literal notranslate"><span class="pre">old</span></code> values with the respective <code class="docutils literal notranslate"><span class="pre">new</span></code> values. Useful for recoding, in cases where you want to preserve the same data type. The following recodes <code class="docutils literal notranslate"><span class="pre">99</span></code> and null in the <code class="docutils literal notranslate"><span class="pre">HWUSUAL</span></code> column to <code class="docutils literal notranslate"><span class="pre">0</span></code>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="p">(</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">query</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">select</span><span class="p">(</span>
+        <span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">ILOSTAT</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">old</span><span class="o">=</span><span class="p">[</span><span class="mi">99</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span> <span class="n">new</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># replace 99 and None with 0</span>
+        <span class="o">.</span><span class="n">dp</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">98</span><span class="p">))</span>
+    <span class="p">)</span>
+    <span class="o">.</span><span class="n">summarize</span><span class="p">()</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[14]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (1, 4)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;ILOSTAT&quot;</td><td>&quot;Sum&quot;</td><td>&quot;Integer Laplace&quot;</td><td>14112.0</td></tr></tbody></table></div></div>
+</div>
+<p>When passed <code class="docutils literal notranslate"><span class="pre">old</span></code> and <code class="docutils literal notranslate"><span class="pre">new</span></code> arguments, <code class="docutils literal notranslate"><span class="pre">new</span></code> can either match the length of <code class="docutils literal notranslate"><span class="pre">old</span></code>, or be a single value that is then broadcast.</p>
+<p>Alternatively, <code class="docutils literal notranslate"><span class="pre">replace</span></code> can be passed a dictionary, where the keys are <code class="docutils literal notranslate"><span class="pre">old</span></code> and values are <code class="docutils literal notranslate"><span class="pre">new</span></code>. An example of this is shown for <code class="docutils literal notranslate"><span class="pre">replace_strict</span></code>, which has a very similar API.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">old</span></code> contains null, and <code class="docutils literal notranslate"><span class="pre">new</span></code> doesn’t, then this expression considers the output domain to not contain nulls.</p>
+<p>Replace cannot be used on categorical data because Polars raises a data-dependent <a class="reference external" href="https://docs.pola.rs/api/python/stable/reference/api/polars.exceptions.CategoricalRemappingWarning.html">categorical remapping warning</a>. OpenDP is also “pickier” about the data type of the input than Polars is: OpenDP will reject the query if fallible casting of old or new values is necessary.</p>
+</section>
+<section id="Replace-Strict">
+<h2>Replace Strict<a class="headerlink" href="#Replace-Strict" title="Link to this heading">#</a></h2>
+<p>Unlike <code class="docutils literal notranslate"><span class="pre">replace</span></code>, which just replaces the specified <code class="docutils literal notranslate"><span class="pre">old</span></code> values, <code class="docutils literal notranslate"><span class="pre">replace_strict</span></code> replaces all values in a column. Since <code class="docutils literal notranslate"><span class="pre">replace_strict</span></code> replaces all values, the data type of the output may differ from that of the input.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">ilostat_labels</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="mi">1</span><span class="p">:</span> <span class="s2">&quot;Working for pay or profit&quot;</span><span class="p">,</span>
+    <span class="mi">2</span><span class="p">:</span> <span class="s2">&quot;Employed but not working&quot;</span><span class="p">,</span>
+    <span class="mi">3</span><span class="p">:</span> <span class="s2">&quot;Unemployed&quot;</span><span class="p">,</span>
+    <span class="mi">9</span><span class="p">:</span> <span class="s2">&quot;Not in labor force&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="p">(</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">query</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">ILOSTAT</span><span class="o">.</span><span class="n">replace_strict</span><span class="p">(</span><span class="n">ilostat_labels</span><span class="p">))</span>
+    <span class="o">.</span><span class="n">agg</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">len</span><span class="p">())</span>
+    <span class="o">.</span><span class="n">summarize</span><span class="p">()</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[15]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (1, 5)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th><th>threshold</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td><td>u32</td></tr></thead><tbody><tr><td>&quot;len&quot;</td><td>&quot;Frame Length&quot;</td><td>&quot;Integer Laplace&quot;</td><td>144.0</td><td>2973</td></tr></tbody></table></div></div>
+</div>
+<p>Values that are not in <code class="docutils literal notranslate"><span class="pre">old</span></code> are filled with <code class="docutils literal notranslate"><span class="pre">default</span></code>. If a value is not in <code class="docutils literal notranslate"><span class="pre">old</span></code> and <code class="docutils literal notranslate"><span class="pre">default</span></code> is not specified, Polars raises a data-dependent error. To protect against this, OpenDP changes <code class="docutils literal notranslate"><span class="pre">default</span></code> to null if <code class="docutils literal notranslate"><span class="pre">default</span></code> is not specified.</p>
+<p>If the new values don’t contain null, and a non-null default value is supplied, then OpenDP considers the output to be non-null.</p>
+</section>
+<section id="To-Physical">
+<h2>To Physical<a class="headerlink" href="#To-Physical" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">.to_physical</span></code> returns the underlying representation of categorical (<code class="docutils literal notranslate"><span class="pre">pl.Categorical</span></code>, <code class="docutils literal notranslate"><span class="pre">pl.Enum</span></code>) or temporal (<code class="docutils literal notranslate"><span class="pre">pl.Date</span></code>, <code class="docutils literal notranslate"><span class="pre">pl.Time</span></code>, <code class="docutils literal notranslate"><span class="pre">pl.Datetime</span></code>) data. For example, you can use the <code class="docutils literal notranslate"><span class="pre">.to_physical</span></code> expression to retrieve the bin indices of the <code class="docutils literal notranslate"><span class="pre">.cut</span></code> expression.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">breaks</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">60</span><span class="p">,</span> <span class="mi">80</span><span class="p">,</span> <span class="mi">98</span><span class="p">]</span>
+<span class="n">labels</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="s2">&quot;HWUSUAL&quot;</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">breaks</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">pl</span><span class="o">.</span><span class="n">UInt32</span><span class="p">)</span>
+
+<span class="n">query</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">query</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">with_columns</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">HWUSUAL</span><span class="o">.</span><span class="n">cut</span><span class="p">(</span><span class="n">breaks</span><span class="o">=</span><span class="n">breaks</span><span class="p">)</span><span class="o">.</span><span class="n">to_physical</span><span class="p">())</span>
+    <span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="s2">&quot;HWUSUAL&quot;</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">agg</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">len</span><span class="p">())</span>
+    <span class="o">.</span><span class="n">with_keys</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">LazyFrame</span><span class="p">([</span><span class="n">labels</span><span class="p">]))</span>
+<span class="p">)</span>
+<span class="n">query</span><span class="o">.</span><span class="n">release</span><span class="p">()</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="s2">&quot;HWUSUAL&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[16]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (7, 2)</small><table border="1" class="dataframe"><thead><tr><th>HWUSUAL</th><th>len</th></tr><tr><td>u32</td><td>u32</td></tr></thead><tbody><tr><td>0</td><td>5690</td></tr><tr><td>1</td><td>120886</td></tr><tr><td>2</td><td>1026524</td></tr><tr><td>3</td><td>292169</td></tr><tr><td>4</td><td>50467</td></tr><tr><td>5</td><td>329</td></tr><tr><td>6</td><td>2294774</td></tr></tbody></table></div></div>
+</div>
+<p>In the case of categorical data types, OpenDP only allows this expression if the encoding is data-independent. More information can be found in <a class="reference internal" href="../data-types.html"><span class="doc">Data Types</span></a>.</p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="columns.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Columns</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="operators.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Operators</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Cast">Cast</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Clip">Clip</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Cut">Cut</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Drop-NaNs">Drop NaNs</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Drop-Nulls">Drop Nulls</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Fill-NaN">Fill NaN</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Fill-Null">Fill Null</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Filter">Filter</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Replace">Replace</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Replace-Strict">Replace Strict</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#To-Physical">To Physical</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../../../../_sources/api/user-guide/polars/expressions/manipulation.ipynb.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f"></script>
+<script src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.3rc1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,1455 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>opendp.extras.mbi package &#8212; OpenDP</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=eafc0fe6" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=4f92a2c4" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+    <script src="../../_static/documentation_options.js?v=9e420a66"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/python/opendp.extras.mbi';</script>
+    <link rel="icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="opendp.extras.numpy package" href="opendp.extras.numpy.html" />
+    <link rel="prev" title="opendp.extras.examples package" href="opendp.extras.examples.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Feb 23, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+
+
+<script>
+document.write(`<aside class="bd-header-announcement" aria-label="Announcement"></aside>`);
+fetch("https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html")
+  .then(res => {return res.text();})
+  .then(data => {
+    if (data.length === 0) {
+      console.log("[PST]: Empty announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+      return;
+    }
+    div = document.querySelector(".bd-header-announcement");
+    div.classList.add(...["bd-header-announcement", "container-fluid", "init"]);
+    div.innerHTML = `<div class="bd-header-announcement__content">${data}</div>`;
+    // At least 3rem height
+    const autoHeight = Math.min(
+      div.offsetHeight,
+      3 * parseFloat(getComputedStyle(document.documentElement).fontSize));
+    // Set height and vertical padding to 0 to prepare the height transition
+    div.style.setProperty("height", 0);
+    div.style.setProperty("padding-top", 0);
+    div.style.setProperty("padding-bottom", 0);
+    div.classList.remove("init");
+    // Set height to the computed height with a small timeout to activate the transition
+    setTimeout(() => {
+      div.style.setProperty("height", `${autoHeight}px`);
+      // Wait for a bit more than 300ms (the transition duration) then remove the
+      // forcefully set styles and let CSS take over
+      setTimeout(() => {
+        div.style.removeProperty("padding-top");
+        div.style.removeProperty("padding-bottom");
+        div.style.removeProperty("height");
+        div.style.setProperty("min-height", "3rem");
+      }, 320);
+    }, 10);
+  })
+  .catch(error => {
+    console.log("[PST]: Failed to load announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+  });
+</script>
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <button class="sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/opendp-logo.png" class="logo__image only-light" alt="OpenDP - Home"/>
+    <script>document.write(`<img src="../../_static/opendp-logo.png" class="logo__image only-dark" alt="OpenDP - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../getting-started/index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="../index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../theory/index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+    <button class="sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../getting-started/index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="../index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../theory/index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../user-guide/index.html">API User Guide</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/limitations.html">Limitations</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/programming-framework/index.html">Programming Framework</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/programming-framework/core-structures.html">Core Structures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/programming-framework/supporting-elements.html">Supporting Elements</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/transformations/index.html">Transformations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/transformations/preprocess-resize.html">Preprocessing: Resize</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/transformations/aggregation-sum.html">Aggregation: Sum</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/transformations/aggregation-mean.html">Aggregation: Mean</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/transformations/aggregation-quantile.html">Aggregation: Quantile</a></li>
+
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/measurements/index.html">Measurements</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/measurements/additive-noise-mechanisms.html">Additive Noise Mechanisms</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/measurements/thresholded-noise-mechanisms.html">Thresholded Noise Mechanisms</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/measurements/canonical-noise-mechanism.html">Canonical Noise Mechanism</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/measurements/randomized-response.html">Randomized Response</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/combinators/index.html">Combinators</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/combinators/chaining.html">Chaining</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/combinators/non-adaptive-composition.html">(Non-Adaptive) Composition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/combinators/adaptive-composition.html">Adaptive Composition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/combinators/fully-adaptive-composition.html">Fully Adaptive Composition and Odometers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/combinators/privacy-filters.html">Privacy Filters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/combinators/compositor-chaining-and-nesting.html">Compositor Chaining and Nesting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/combinators/measure-casting.html">Measure Casting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/combinators/amplification.html">Amplification</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/utilities/index.html">Utilities</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/utilities/typing.html">Typing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/utilities/parameter-search.html">Parameter Search</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/utilities/serialization.html">Serialization</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/context/index.html">Context</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/polars/index.html">Polars</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/polars/polars-vs-opendp.html">Polars vs. OpenDP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/polars/gaussian-noise.html">Gaussian Noise</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/polars/bounds.html">Identifier Truncation and Bounds</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/polars/data-types.html">Data Types</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../user-guide/polars/expressions/index.html">Expressions</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/aggregation.html">Aggregation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/boolean.html">Boolean</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/columns.html">Columns</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/manipulation.html">Manipulation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/operators.html">Operators</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/string.html">String</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/temporal.html">Temporal</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/plugins/index.html">Plugins</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/plugins/measurement.html">Measurement example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/plugins/transformation.html">Transformation example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/plugins/context-api-plugins.html">Context API Plugins</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/plugins/theil-sen-regression.html">Thiel-Sen Regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/plugins/selecting-grouping-columns.html">Privately Selecting Grouping Columns</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Python API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2 current active has-children"><a class="reference internal" href="opendp.html">opendp package</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l3 current active has-children"><a class="reference internal" href="opendp.extras.html">opendp.extras package</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="opendp.extras.examples.html">opendp.extras.examples package</a></li>
+<li class="toctree-l4 current active"><a class="current reference internal" href="#">opendp.extras.mbi package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="opendp.extras.numpy.html">opendp.extras.numpy package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="opendp.extras.polars.html">opendp.extras.polars package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="opendp.extras.sklearn.html">opendp.extras.sklearn package</a></li>
+</ul>
+</details></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.accuracy.html">opendp.accuracy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.combinators.html">opendp.combinators module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.context.html">opendp.context module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.core.html">opendp.core module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.domains.html">opendp.domains module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.measurements.html">opendp.measurements module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.measures.html">opendp.measures module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.metrics.html">opendp.metrics module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html">opendp.mod module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.prelude.html">opendp.prelude module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.transformations.html">opendp.transformations module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.typing.html">opendp.typing module</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference external" href="https://docs.opendp.org/en/stable/api/r">R API Reference</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://docs.rs/opendp">Rust API Reference</a></li>
+</ul>
+</div>
+</nav></div>
+        <div class="sidebar-primary-item">
+<h6>Branches</h6>
+<ul>
+    <li><a href="../../../beta/index.html" style="font-weight: normal">beta</a></li>
+    <li><a href="../../../nightly/index.html" style="font-weight: normal">nightly</a></li>
+    <li><a href="../../../stable/index.html" style="font-weight: normal">stable</a></li>
+</ul>
+
+
+<h6 id="releases_header">Releases
+    <div id="releases_symbol" style="float:right"></div>
+</h6>
+<ul id="releases_content">
+    <li><a href="../../../v0.14.1/index.html" style="font-weight: normal">v0.14.1</a></li>
+    <li><a href="opendp.extras.mbi.html" style="font-weight: bold">v0.14.0</a></li>
+    <li><a href="../../../v0.13.0/index.html" style="font-weight: normal">v0.13.0</a></li>
+    <li><a href="../../../v0.12.1/index.html" style="font-weight: normal">v0.12.1</a></li>
+    <li><a href="../../../v0.12.0/index.html" style="font-weight: normal">v0.12.0</a></li>
+    <li><a href="../../../v0.11.1/index.html" style="font-weight: normal">v0.11.1</a></li>
+    <li><a href="../../../v0.11.0/index.html" style="font-weight: normal">v0.11.0</a></li>
+    <li><a href="../../../v0.10.0/index.html" style="font-weight: normal">v0.10.0</a></li>
+    <li><a href="../../../v0.9.2/index.html" style="font-weight: normal">v0.9.2</a></li>
+    <li><a href="../../../v0.9.1/index.html" style="font-weight: normal">v0.9.1</a></li>
+    <li><a href="../../../v0.9.0/index.html" style="font-weight: normal">v0.9.0</a></li>
+    <li><a href="../../../v0.8.0/index.html" style="font-weight: normal">v0.8.0</a></li>
+    <li><a href="../../../v0.7.0/index.html" style="font-weight: normal">v0.7.0</a></li>
+    <li><a href="../../../v0.6.2/index.html" style="font-weight: normal">v0.6.2</a></li>
+    <li><a href="../../../v0.6.1/index.html" style="font-weight: normal">v0.6.1</a></li>
+    <li><a href="../../../v0.6.0/index.html" style="font-weight: normal">v0.6.0</a></li>
+    <li><a href="../../../v0.5.0/index.html" style="font-weight: normal">v0.5.0</a></li>
+    <li><a href="../../../v0.4.0/index.html" style="font-weight: normal">v0.4.0</a></li>
+    <li><a href="../../../v0.3.0/index.html" style="font-weight: normal">v0.3.0</a></li>
+    <li><a href="../../../v0.2.4/index.html" style="font-weight: normal">v0.2.4</a></li>
+    <li><a href="../../../v0.2.3/index.html" style="font-weight: normal">v0.2.3</a></li>
+    <li><a href="../../../v0.2.2/index.html" style="font-weight: normal">v0.2.2</a></li>
+    <li><a href="../../../v0.2.1/index.html" style="font-weight: normal">v0.2.1</a></li>
+    <li><a href="../../../v0.2.0/index.html" style="font-weight: normal">v0.2.0</a></li>
+    <li><a href="../../../v0.1.0/index.html" style="font-weight: normal">v0.1.0</a></li>
+</ul>
+<script>
+    let expanded = !!JSON.parse(localStorage.getItem('expanded'));
+
+    let releasesHeader = document.getElementById("releases_header");
+    let releasesSymbol = document.getElementById("releases_symbol");
+    let releasesContent = document.getElementById("releases_content");
+
+    function setReleasesState() {
+        localStorage.setItem("expanded", JSON.stringify(expanded))
+        releasesContent.style.display = expanded ? "block" : "none";
+        releasesSymbol.classList.add(expanded ? 'minus' : 'plus')
+        releasesSymbol.classList.remove(expanded ? 'plus' : 'minus')
+    }
+
+    setReleasesState()
+    releasesHeader.addEventListener("click", function() {
+        expanded = !expanded;
+        setReleasesState()
+    })
+</script>
+<style>
+    .plus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .plus:before,
+    .plus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .plus:before {
+        left:50%;
+        top:4px;
+        bottom:4px;
+        width:3px;
+        transform:translateX(-50%);
+    }
+
+    .plus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+
+
+
+    .minus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .minus:before,
+    .minus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .minus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+</style>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+
+
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">API</a></li>
+    
+    
+    <li class="breadcrumb-item"><i class="fa-solid fa-ellipsis"></i></li>
+    
+    
+    <li class="breadcrumb-item"><a href="opendp.extras.html" class="nav-link">opendp.extras package</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">opendp.extra...</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item"><div class="admonition warning" style="position: relative;">
+    <!--
+     Without the style, the region for the article title overlaps, and the link is unclickable.
+    -->
+    <details>
+        <summary>Questions or feedback?</summary>
+        <!--
+            All of these lists should be in sync:
+            - README.md
+            - docs/source/contributing/contact.rst
+            - docs/source/_templates/questions-feedback.html
+            - .github/ISSUE_TEMPLATE/config.yml
+        -->
+        <ul>
+            <li>Report a bug or request a feature on <a href="https://github.com/opendp/opendp/issues">Github</a>.</li>
+            <li>Send general queries to <a href="mailto:info@opendp.org">info@opendp.org</a>, or email <a href="mailto:security@opendp.org">security@opendp.org</a> if it is related to security.</li>
+            <li>Join the conversation on <a href="https://join.slack.com/t/opendp/shared_invite/zt-1t8rrbqhd-z8LiZiP06vVE422HJd6ciQ">Slack</a>, or the <a href="https://groups.google.com/a/g.harvard.edu/g/opendp-community">mailing list</a>.</li>
+        </ul>
+    </details>
+</div></div>
+      
+        <div class="header-article-item">
+<div class="admonition warning" style="position: relative;" id="old-version-warning">
+  <!--
+   To work with this locally, in conf.py uncomment the entry under "html_context".
+
+   Without the style, the region for the article title overlaps, and the link is unclickable.
+  -->
+  <p class="admonition-title">
+  
+  This documentation is for an old version of OpenDP.
+  
+  </p>
+  <p>The current release of OpenDP is <a href="/">v0.14.1</a>.</p>
+</div>
+<script>
+  window.addEventListener("load", (event) => {
+    document.getElementById('old-version-warning').style.top = `${window.visualViewport.pageTop}px`;
+  });
+</script>
+</div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="opendp-extras-mbi-package">
+<h1>opendp.extras.mbi package<a class="headerlink" href="#opendp-extras-mbi-package" title="Link to this heading">#</a></h1>
+<section id="module-opendp.extras.mbi">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-opendp.extras.mbi" title="Link to this heading">#</a></h2>
+<p>This module requires extra installs: <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">'opendp[mbi]'</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">mbi</span></code> is short for “marginal-based inference”, 
+and is the name of the <a class="reference external" href="https://github.com/ryan112358/private-pgm">Private-PGM</a> package.
+OpenDP uses Private-PGM to postprocess DP releases made with the OpenDP Library.</p>
+<p>For convenience, all the members of this module are also available from <a class="reference internal" href="opendp.prelude.html#module-opendp.prelude" title="opendp.prelude"><code class="xref py py-mod docutils literal notranslate"><span class="pre">opendp.prelude</span></code></a>.
+We suggest importing under the conventional name <code class="docutils literal notranslate"><span class="pre">dp</span></code>:</p>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">opendp.prelude</span> <span class="k">as</span> <span class="nn">dp</span>
+</pre></div>
+</div>
+<p>The members of this module will then be accessible at <code class="docutils literal notranslate"><span class="pre">dp.mbi</span></code>.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.extras.mbi.AIM">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.extras.mbi.</span></span><span class="sig-name descname"><span class="pre">AIM</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">estimator=&lt;function</span> <span class="pre">mirror_descent&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">oneway='all'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">oneway_split=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">queries=3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">measure_split=0.9</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_size=80.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rounds=None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/extras/mbi/_aim.html#AIM"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.extras.mbi.AIM" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#opendp.extras.mbi.Algorithm" title="opendp.extras.mbi._utilities.Algorithm"><code class="xref py py-class docutils literal notranslate"><span class="pre">Algorithm</span></code></a></p>
+<p>AIM mechanism from <a class="reference external" href="https://arxiv.org/abs/2201.12677">MMSM22</a>.</p>
+<p>Adaptively chooses and estimates the least-well-approximated marginal.
+The stronger the correlation amongst a clique of columns, 
+the more likely AIM is to select the clique.</p>
+<p>The algorithm starts with a small per-step privacy budget, 
+and in each step increases the budget if the last measured marginal doesn’t sufficiently improve the model.</p>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">opendp.prelude</span> <span class="k">as</span> <span class="nn">dp</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">polars</span> <span class="k">as</span> <span class="nn">pl</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span><span class="o">.</span><span class="n">enable_features</span><span class="p">(</span><span class="s2">&quot;contrib&quot;</span><span class="p">)</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">context</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">Context</span><span class="o">.</span><span class="n">compositor</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">data</span><span class="o">=</span><span class="n">pl</span><span class="o">.</span><span class="n">scan_csv</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">examples</span><span class="o">.</span><span class="n">get_france_lfs_path</span><span class="p">(),</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+<span class="gp">... </span>    <span class="n">privacy_unit</span><span class="o">=</span><span class="n">dp</span><span class="o">.</span><span class="n">unit_of</span><span class="p">(</span><span class="n">contributions</span><span class="o">=</span><span class="mi">36</span><span class="p">),</span>
+<span class="gp">... </span>    <span class="n">privacy_loss</span><span class="o">=</span><span class="n">dp</span><span class="o">.</span><span class="n">loss_of</span><span class="p">(</span><span class="n">rho</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="mf">1e-7</span><span class="p">),</span>
+<span class="gp">... </span><span class="p">)</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">table_aim</span> <span class="o">=</span> <span class="p">(</span>
+<span class="gp">... </span>    <span class="n">context</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">rho</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="mf">1e-7</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="c1"># transformations/truncation may be applied here</span>
+<span class="gp">... </span>    <span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="s2">&quot;SEX&quot;</span><span class="p">,</span> <span class="s2">&quot;AGE&quot;</span><span class="p">,</span> <span class="s2">&quot;HWUSUAL&quot;</span><span class="p">,</span> <span class="s2">&quot;ILOSTAT&quot;</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="o">.</span><span class="n">contingency_table</span><span class="p">(</span>
+<span class="gp">... </span>        <span class="n">keys</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;SEX&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]},</span> 
+<span class="gp">... </span>        <span class="n">cuts</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;AGE&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">20</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">60</span><span class="p">],</span> <span class="s2">&quot;HWUSUAL&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">40</span><span class="p">]},</span>
+<span class="gp">... </span>        <span class="n">algorithm</span><span class="o">=</span><span class="n">dp</span><span class="o">.</span><span class="n">mbi</span><span class="o">.</span><span class="n">AIM</span><span class="p">()</span>
+<span class="gp">... </span>    <span class="p">)</span>
+<span class="gp">... </span>    <span class="o">.</span><span class="n">release</span><span class="p">()</span>
+<span class="gp">... </span><span class="p">)</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">table_aim</span><span class="o">.</span><span class="n">synthesize</span><span class="p">()</span> 
+<span class="go">shape: (3_807_732, 4)</span>
+<span class="go">┌─────┬───────────┬───────────┬─────────┐</span>
+<span class="go">│ SEX ┆ AGE       ┆ HWUSUAL   ┆ ILOSTAT │</span>
+<span class="go">│ --- ┆ ---       ┆ ---       ┆ ---     │</span>
+<span class="go">│ i64 ┆ f64       ┆ f64       ┆ i64     │</span>
+<span class="go">╞═════╪═══════════╪═══════════╪═════════╡</span>
+<span class="go">│ 1   ┆ 55.446336 ┆ 20.776579 ┆ 1       │</span>
+<span class="go">│ 1   ┆ 28.21838  ┆ 40.53348  ┆ 1       │</span>
+<span class="go">│ 2   ┆ 43.291215 ┆ 34.406155 ┆ 1       │</span>
+<span class="go">│ 1   ┆ 55.106615 ┆ 22.413161 ┆ 1       │</span>
+<span class="go">│ 2   ┆ 42.585227 ┆ 40.11279  ┆ 3       │</span>
+<span class="go">│ …   ┆ …         ┆ …         ┆ …       │</span>
+<span class="go">│ 1   ┆ 58.197292 ┆ 40.139579 ┆ 1       │</span>
+<span class="go">│ 1   ┆ 59.371221 ┆ 19.671153 ┆ 1       │</span>
+<span class="go">│ 2   ┆ 19.862917 ┆ 40.339046 ┆ 9       │</span>
+<span class="go">│ 1   ┆ 19.492355 ┆ 32.233661 ┆ 1       │</span>
+<span class="go">│ 2   ┆ 60.863244 ┆ 40.737908 ┆ 3       │</span>
+<span class="go">└─────┴───────────┴───────────┴─────────┘</span>
+</pre></div>
+</div>
+<p>The algorithm is similar to the Multiplicative Weights Exponential Mechanism (MWEM) introduced in <a class="reference external" href="https://arxiv.org/abs/1012.4763">HLM10</a>,
+in that the exponential mechanism selects a marginal in each step.</p>
+<p>AIM differs from MWEM in that the distribution is represented via a graphical model and fitted via mirror descent,
+instead of joint distribution densities and the multiplicative weights update rule.
+This allows AIM to support higher-dimensional datasets.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>estimator</strong> (<em>Callable</em>) – </p></li>
+<li><p><strong>oneway</strong> (<em>Literal</em><em>[</em><em>'all'</em><em>, </em><em>'unkeyed'</em><em>]</em>) – </p></li>
+<li><p><strong>oneway_split</strong> (<em>float</em><em> | </em><em>None</em>) – </p></li>
+<li><p><strong>queries</strong> (<em>list</em><em>[</em><a class="reference internal" href="#opendp.extras.mbi.Count" title="opendp.extras.mbi._utilities.Count"><em>Count</em></a><em>] </em><em>| </em><em>int</em>) – </p></li>
+<li><p><strong>measure_split</strong> (<em>float</em>) – </p></li>
+<li><p><strong>max_size</strong> (<em>float</em>) – </p></li>
+<li><p><strong>rounds</strong> (<em>int</em><em> | </em><em>None</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.extras.mbi.AIM.make_marginals">
+<span class="sig-name descname"><span class="pre">make_marginals</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_domain</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_metric</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_measure</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_out</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">marginals</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/extras/mbi/_aim.html#AIM.make_marginals"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.extras.mbi.AIM.make_marginals" title="Link to this definition">#</a></dt>
+<dd><p>Implements AIM (Adaptive Iterative Mechanism) for ordinal data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_domain</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.LazyFrameDomain" title="opendp.mod.LazyFrameDomain"><em>LazyFrameDomain</em></a>) – domain of input data</p></li>
+<li><p><strong>input_metric</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.FrameDistance" title="opendp.mod.FrameDistance"><em>FrameDistance</em></a>) – how to compute distance between datasets</p></li>
+<li><p><strong>output_measure</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Measure" title="opendp.mod.Measure"><em>Measure</em></a>) – how to measure privacy of release</p></li>
+<li><p><strong>d_in</strong> (<em>list</em><em>[</em><a class="reference internal" href="opendp.extras.polars.html#opendp.extras.polars.Bound" title="opendp.extras.polars.Bound"><em>Bound</em></a><em>]</em>) – distance between adjacent input datasets</p></li>
+<li><p><strong>d_out</strong> (<em>float</em>) – upper bound on the privacy loss</p></li>
+<li><p><strong>marginals</strong> (<em>dict</em><em>[</em><em>tuple</em><em>[</em><em>str</em><em>, </em><em>...</em><em>]</em><em>, </em><em>Any</em><em>]</em>) – prior marginal releases</p></li>
+<li><p><strong>model</strong> – warm-start fit of MarkovRandomField</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement" title="opendp.mod.Measurement"><em>Measurement</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.extras.mbi.AIM.max_size">
+<span class="sig-name descname"><span class="pre">max_size</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">80.0</span></em><a class="headerlink" href="#opendp.extras.mbi.AIM.max_size" title="Link to this definition">#</a></dt>
+<dd><p>Maximum memory constraint in MB for the marginal selection.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.extras.mbi.AIM.measure_split">
+<span class="sig-name descname"><span class="pre">measure_split</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.9</span></em><a class="headerlink" href="#opendp.extras.mbi.AIM.measure_split" title="Link to this definition">#</a></dt>
+<dd><p>Remaining proportion of budget to allocate to measuring marginals.</p>
+<p>The complement is spent on selecting marginals.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.extras.mbi.AIM.queries">
+<span class="sig-name descname"><span class="pre">queries</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#opendp.extras.mbi.Count" title="opendp.extras.mbi._utilities.Count"><span class="pre">Count</span></a><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">3</span></em><a class="headerlink" href="#opendp.extras.mbi.AIM.queries" title="Link to this definition">#</a></dt>
+<dd><p>Explicit workload of interactions, or maximum degree of interactions to consider.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.extras.mbi.AIM.rounds">
+<span class="sig-name descname"><span class="pre">rounds</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#opendp.extras.mbi.AIM.rounds" title="Link to this definition">#</a></dt>
+<dd><p>Maximum number of rounds to run the algorithm.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.extras.mbi.Algorithm">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.extras.mbi.</span></span><span class="sig-name descname"><span class="pre">Algorithm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">estimator=&lt;function</span> <span class="pre">mirror_descent&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">oneway='all'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">oneway_split=None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/extras/mbi/_utilities.html#Algorithm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.extras.mbi.Algorithm" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></p>
+<p>Base class for configuration of contingency table algorithms.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>estimator</strong> (<em>Callable</em>) – </p></li>
+<li><p><strong>oneway</strong> (<em>Literal</em><em>[</em><em>'all'</em><em>, </em><em>'unkeyed'</em><em>]</em>) – </p></li>
+<li><p><strong>oneway_split</strong> (<em>float</em><em> | </em><em>None</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.extras.mbi.Algorithm.estimator">
+<span class="sig-name descname"><span class="pre">estimator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">loss_fn</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">potentials</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#opendp.extras.mbi.Algorithm.estimator" title="Link to this definition">#</a></dt>
+<dd><p>Optimizer to use to fit a MarkovRandomField.</p>
+<p>Defaults to <a class="reference internal" href="#opendp.extras.mbi.mirror_descent" title="opendp.extras.mbi.mirror_descent"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.extras.mbi.mirror_descent()</span></code></a>.
+Any function matching the signature of <code class="docutils literal notranslate"><span class="pre">mirror_descent</span></code> 
+can be used to customize how the MarkovRandomField is optimized/estimated.
+See <a class="reference external" href="https://private-pgm.readthedocs.io/en/latest/_autosummary_output/mbi.estimation.html">mbi.estimation</a> for other optimizers.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.extras.mbi.Algorithm.make_marginals">
+<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">make_marginals</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_domain</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_metric</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_measure</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_out</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">marginals</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/extras/mbi/_utilities.html#Algorithm.make_marginals"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.extras.mbi.Algorithm.make_marginals" title="Link to this definition">#</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_domain</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.LazyFrameDomain" title="opendp.mod.LazyFrameDomain"><em>LazyFrameDomain</em></a>) – </p></li>
+<li><p><strong>input_metric</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.FrameDistance" title="opendp.mod.FrameDistance"><em>FrameDistance</em></a>) – </p></li>
+<li><p><strong>output_measure</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Measure" title="opendp.mod.Measure"><em>Measure</em></a>) – </p></li>
+<li><p><strong>d_in</strong> (<em>list</em><em>[</em><a class="reference internal" href="opendp.extras.polars.html#opendp.extras.polars.Bound" title="opendp.extras.polars.Bound"><em>Bound</em></a><em>]</em>) – </p></li>
+<li><p><strong>d_out</strong> (<em>float</em>) – </p></li>
+<li><p><strong>marginals</strong> (<em>dict</em><em>[</em><em>tuple</em><em>[</em><em>str</em><em>, </em><em>...</em><em>]</em><em>, </em><em>Any</em><em>]</em>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement" title="opendp.mod.Measurement"><em>Measurement</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.extras.mbi.Algorithm.oneway">
+<span class="sig-name descname"><span class="pre">oneway</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'all'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'unkeyed'</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'all'</span></em><a class="headerlink" href="#opendp.extras.mbi.Algorithm.oneway" title="Link to this definition">#</a></dt>
+<dd><p>Fit one-way marginals for all columns, or only unkeyed columns.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.extras.mbi.Algorithm.oneway_split">
+<span class="sig-name descname"><span class="pre">oneway_split</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#opendp.extras.mbi.Algorithm.oneway_split" title="Link to this definition">#</a></dt>
+<dd><p>Proportion of budget to use for oneway release.</p>
+<p>When <code class="docutils literal notranslate"><span class="pre">oneway_split</span></code> is not set, defaults to half of the budget.</p>
+<p>If oneway is <code class="docutils literal notranslate"><span class="pre">unkeyed</span></code>, budget is further reduced by the proportion of columns with missing keys or cuts.
+That is, when all columns have keys, then <code class="docutils literal notranslate"><span class="pre">oneway_split</span></code> is zero,
+and when no columns have keys, then <code class="docutils literal notranslate"><span class="pre">oneway_split</span></code> is one-half.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.extras.mbi.ContingencyTable">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.extras.mbi.</span></span><span class="sig-name descname"><span class="pre">ContingencyTable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">keys</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cuts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">marginals</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresholds=&lt;factory&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/extras/mbi/_table.html#ContingencyTable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.extras.mbi.ContingencyTable" title="Link to this definition">#</a></dt>
+<dd><p>Approximate a k-way contingency table via low-order marginals.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>keys</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – </p></li>
+<li><p><strong>cuts</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – </p></li>
+<li><p><strong>marginals</strong> (<em>dict</em><em>[</em><em>tuple</em><em>[</em><em>str</em><em>, </em><em>...</em><em>]</em><em>, </em><em>Any</em><em>]</em>) – </p></li>
+<li><p><strong>model</strong> (<em>Any</em>) – </p></li>
+<li><p><strong>thresholds</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>int</em><em>]</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.extras.mbi.ContingencyTable.cuts">
+<span class="sig-name descname"><span class="pre">cuts</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#opendp.extras.mbi.ContingencyTable.cuts" title="Link to this definition">#</a></dt>
+<dd><p>Cut points (left-open) for each numeric column</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.extras.mbi.ContingencyTable.keys">
+<span class="sig-name descname"><span class="pre">keys</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#opendp.extras.mbi.ContingencyTable.keys" title="Link to this definition">#</a></dt>
+<dd><p>Unique keys for each column</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.extras.mbi.ContingencyTable.marginals">
+<span class="sig-name descname"><span class="pre">marginals</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#opendp.extras.mbi.ContingencyTable.marginals" title="Link to this definition">#</a></dt>
+<dd><p>Mapping from clique name to LinearMeasurement used to fit the model</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.extras.mbi.ContingencyTable.model">
+<span class="sig-name descname"><span class="pre">model</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Any</span></em><a class="headerlink" href="#opendp.extras.mbi.ContingencyTable.model" title="Link to this definition">#</a></dt>
+<dd><p>MarkovRandomField spanning the same columns as keys</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.extras.mbi.ContingencyTable.project">
+<span class="sig-name descname"><span class="pre">project</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">attrs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/extras/mbi/_table.html#ContingencyTable.project"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.extras.mbi.ContingencyTable.project" title="Link to this definition">#</a></dt>
+<dd><p>Return counts corresponding to each combination of self.keys in <cite>attrs</cite> in an ndarray.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>attrs</strong> (<em>str</em><em> | </em><em>Sequence</em><em>[</em><em>str</em><em>]</em>) – attributes to preserve. All other attributes are marginalized.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.extras.mbi.ContingencyTable.project_melted">
+<span class="sig-name descname"><span class="pre">project_melted</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">attrs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/extras/mbi/_table.html#ContingencyTable.project_melted"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.extras.mbi.ContingencyTable.project_melted" title="Link to this definition">#</a></dt>
+<dd><p>Return counts corresponding to each combination of self.keys in <cite>attrs</cite> in a dataframe.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>attrs</strong> (<em>str</em><em> | </em><em>Sequence</em><em>[</em><em>str</em><em>]</em>) – attributes to preserve. All other attributes are marginalized.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.extras.mbi.ContingencyTable.schema">
+<span class="sig-name descname"><span class="pre">schema</span></span><a class="headerlink" href="#opendp.extras.mbi.ContingencyTable.schema" title="Link to this definition">#</a></dt>
+<dd><p>Returns the data schema.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.extras.mbi.ContingencyTable.std">
+<span class="sig-name descname"><span class="pre">std</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">attrs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/extras/mbi/_table.html#ContingencyTable.std"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.extras.mbi.ContingencyTable.std" title="Link to this definition">#</a></dt>
+<dd><p>Estimate the standard deviation of the count estimate.
+The estimate does not take cuts into account.</p>
+<p>When marginals are estimated with gaussian noise,
+the consistent (variance-weighted) marginals are also gaussian-distributed.
+Therefore the standard deviation matches the noise scale parameter.</p>
+<p>When marginals are estimated with laplace noise,
+the consistent marginals are a sum of laplacians, which is not laplace-distributed.
+Therefore the standard deviation doesn’t correspond to the laplace distribution.
+Under the central limit theorem, the distribution will tend towards gaussian.</p>
+<p>If the estimate is gaussian-distributed,
+use <a class="reference internal" href="opendp.accuracy.html#opendp.accuracy.gaussian_scale_to_accuracy" title="opendp.accuracy.gaussian_scale_to_accuracy"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.accuracy.gaussian_scale_to_accuracy()</span></code></a>
+to construct a confidence interval.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>attrs</strong> (<em>Sequence</em><em>[</em><em>str</em><em>]</em>) – attributes to preserve in uncertainty estimate</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.extras.mbi.ContingencyTable.synthesize">
+<span class="sig-name descname"><span class="pre">synthesize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rows</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'round'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/extras/mbi/_table.html#ContingencyTable.synthesize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.extras.mbi.ContingencyTable.synthesize" title="Link to this definition">#</a></dt>
+<dd><p>Generate synthetic data that is consistent with the contingency table.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rows</strong> (<em>int</em><em> | </em><em>None</em>) – if not set, approximately matches number of rows in original data</p></li>
+<li><p><strong>method</strong> (<em>Literal</em><em>[</em><em>'round'</em><em>, </em><em>'sample'</em><em>]</em>) – “round” rounds to projection, “sample” samples from densities</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.extras.mbi.ContingencyTable.thresholds">
+<span class="sig-name descname"><span class="pre">thresholds</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#opendp.extras.mbi.ContingencyTable.thresholds" title="Link to this definition">#</a></dt>
+<dd><p>Cut-off point for discovered stable keys. 
+Any category appearing fewer than threshold times is attributed to the null category.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.extras.mbi.Count">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.extras.mbi.</span></span><span class="sig-name descname"><span class="pre">Count</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">by</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weight</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/extras/mbi/_utilities.html#Count"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.extras.mbi.Count" title="Link to this definition">#</a></dt>
+<dd><p>Denotes a count query.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>by</strong> (<em>tuple</em><em>[</em><em>str</em><em>, </em><em>...</em><em>]</em>) – </p></li>
+<li><p><strong>weight</strong> (<em>float</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.extras.mbi.Count.by">
+<span class="sig-name descname"><span class="pre">by</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#opendp.extras.mbi.Count.by" title="Link to this definition">#</a></dt>
+<dd><p>Columns to group by.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.extras.mbi.Count.weight">
+<span class="sig-name descname"><span class="pre">weight</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1.0</span></em><a class="headerlink" href="#opendp.extras.mbi.Count.weight" title="Link to this definition">#</a></dt>
+<dd><p>Importance of this count query.</p>
+<ul class="simple">
+<li><p>Used by AIM to prioritize cliques.</p></li>
+<li><p>Used by Fixed to distribute privacy budget.</p></li>
+</ul>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.extras.mbi.Fixed">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.extras.mbi.</span></span><span class="sig-name descname"><span class="pre">Fixed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">estimator=&lt;function</span> <span class="pre">mirror_descent&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">oneway='unkeyed'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">oneway_split=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">queries</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/extras/mbi/_fixed.html#Fixed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.extras.mbi.Fixed" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#opendp.extras.mbi.Algorithm" title="opendp.extras.mbi._utilities.Algorithm"><code class="xref py py-class docutils literal notranslate"><span class="pre">Algorithm</span></code></a></p>
+<p>Releases all queries in a fixed workload.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>estimator</strong> (<em>Callable</em>) – </p></li>
+<li><p><strong>oneway</strong> (<em>Literal</em><em>[</em><em>'all'</em><em>, </em><em>'unkeyed'</em><em>]</em>) – </p></li>
+<li><p><strong>oneway_split</strong> (<em>float</em><em> | </em><em>None</em>) – </p></li>
+<li><p><strong>queries</strong> (<em>list</em><em>[</em><a class="reference internal" href="#opendp.extras.mbi.Count" title="opendp.extras.mbi._utilities.Count"><em>Count</em></a><em>]</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.extras.mbi.Fixed.make_marginals">
+<span class="sig-name descname"><span class="pre">make_marginals</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_domain</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_metric</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_measure</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_out</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">marginals</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/extras/mbi/_fixed.html#Fixed.make_marginals"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.extras.mbi.Fixed.make_marginals" title="Link to this definition">#</a></dt>
+<dd><p>Implements a “Fixed” algorithm over ordinal data.</p>
+<p>The algorithm estimates fixed cliques.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_domain</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.LazyFrameDomain" title="opendp.mod.LazyFrameDomain"><em>LazyFrameDomain</em></a>) – domain of input data</p></li>
+<li><p><strong>input_metric</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.FrameDistance" title="opendp.mod.FrameDistance"><em>FrameDistance</em></a>) – how to compute distance between datasets</p></li>
+<li><p><strong>output_measure</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Measure" title="opendp.mod.Measure"><em>Measure</em></a>) – how to measure privacy of release</p></li>
+<li><p><strong>d_in</strong> (<em>list</em><em>[</em><a class="reference internal" href="opendp.extras.polars.html#opendp.extras.polars.Bound" title="opendp.extras.polars.Bound"><em>Bound</em></a><em>]</em>) – distance between adjacent input datasets</p></li>
+<li><p><strong>d_out</strong> (<em>float</em>) – upper bound on the privacy loss</p></li>
+<li><p><strong>marginals</strong> (<em>dict</em><em>[</em><em>tuple</em><em>[</em><em>str</em><em>, </em><em>...</em><em>]</em><em>, </em><em>Any</em><em>]</em>) – prior marginal releases</p></li>
+<li><p><strong>model</strong> (<em>Any</em>) – warm-start fit of MarkovRandomField</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.extras.mbi.Fixed.oneway">
+<span class="sig-name descname"><span class="pre">oneway</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'all'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'unkeyed'</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'unkeyed'</span></em><a class="headerlink" href="#opendp.extras.mbi.Fixed.oneway" title="Link to this definition">#</a></dt>
+<dd><p>Only fit one-way marginals for columns missing keys.</p>
+<p>The fixed algorithm differs from other algorithms
+in that it only estimates marginals with missing keys, 
+not all unknown first-order marginals.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.extras.mbi.Fixed.queries">
+<span class="sig-name descname"><span class="pre">queries</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#opendp.extras.mbi.Count" title="opendp.extras.mbi._utilities.Count"><span class="pre">Count</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#opendp.extras.mbi.Fixed.queries" title="Link to this definition">#</a></dt>
+<dd><p>Workload of queries.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.extras.mbi.MST">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.extras.mbi.</span></span><span class="sig-name descname"><span class="pre">MST</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">estimator=&lt;function</span> <span class="pre">mirror_descent&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">oneway='all'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">oneway_split=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">measure_split=0.9</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_selections=None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/extras/mbi/_mst.html#MST"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.extras.mbi.MST" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#opendp.extras.mbi.Algorithm" title="opendp.extras.mbi._utilities.Algorithm"><code class="xref py py-class docutils literal notranslate"><span class="pre">Algorithm</span></code></a></p>
+<p>MST mechanism from <a class="reference external" href="https://arxiv.org/abs/2108.04978">MMS21</a>.</p>
+<p>MST greedily chooses pairs of columns that are most poorly represented 
+by the DP contingency table in a way that guarantees all columns become 
+connected by a minimum spanning tree.
+MST then releases all of the selected marginals.</p>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">opendp.prelude</span> <span class="k">as</span> <span class="nn">dp</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">polars</span> <span class="k">as</span> <span class="nn">pl</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span><span class="o">.</span><span class="n">enable_features</span><span class="p">(</span><span class="s2">&quot;contrib&quot;</span><span class="p">)</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">context</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">Context</span><span class="o">.</span><span class="n">compositor</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">data</span><span class="o">=</span><span class="n">pl</span><span class="o">.</span><span class="n">scan_csv</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">examples</span><span class="o">.</span><span class="n">get_france_lfs_path</span><span class="p">(),</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+<span class="gp">... </span>    <span class="n">privacy_unit</span><span class="o">=</span><span class="n">dp</span><span class="o">.</span><span class="n">unit_of</span><span class="p">(</span><span class="n">contributions</span><span class="o">=</span><span class="mi">36</span><span class="p">),</span>
+<span class="gp">... </span>    <span class="n">privacy_loss</span><span class="o">=</span><span class="n">dp</span><span class="o">.</span><span class="n">loss_of</span><span class="p">(</span><span class="n">rho</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="mf">1e-7</span><span class="p">),</span>
+<span class="gp">... </span><span class="p">)</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">table_mst</span> <span class="o">=</span> <span class="p">(</span>
+<span class="gp">... </span>    <span class="n">context</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">rho</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="mf">1e-7</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="c1"># transformations/truncation may be applied here</span>
+<span class="gp">... </span>    <span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="s2">&quot;SEX&quot;</span><span class="p">,</span> <span class="s2">&quot;AGE&quot;</span><span class="p">,</span> <span class="s2">&quot;HWUSUAL&quot;</span><span class="p">,</span> <span class="s2">&quot;ILOSTAT&quot;</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="o">.</span><span class="n">contingency_table</span><span class="p">(</span>
+<span class="gp">... </span>        <span class="n">keys</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;SEX&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]},</span> 
+<span class="gp">... </span>        <span class="n">cuts</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;AGE&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">20</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="mi">60</span><span class="p">],</span> <span class="s2">&quot;HWUSUAL&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">40</span><span class="p">]},</span>
+<span class="gp">... </span>        <span class="n">algorithm</span><span class="o">=</span><span class="n">dp</span><span class="o">.</span><span class="n">mbi</span><span class="o">.</span><span class="n">MST</span><span class="p">()</span>
+<span class="gp">... </span>    <span class="p">)</span>
+<span class="gp">... </span>    <span class="o">.</span><span class="n">release</span><span class="p">()</span>
+<span class="gp">... </span><span class="p">)</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="n">table_mst</span><span class="o">.</span><span class="n">synthesize</span><span class="p">()</span> 
+<span class="go">shape: (3_807_732, 4)</span>
+<span class="go">┌─────┬───────────┬───────────┬─────────┐</span>
+<span class="go">│ SEX ┆ AGE       ┆ HWUSUAL   ┆ ILOSTAT │</span>
+<span class="go">│ --- ┆ ---       ┆ ---       ┆ ---     │</span>
+<span class="go">│ i64 ┆ f64       ┆ f64       ┆ i64     │</span>
+<span class="go">╞═════╪═══════════╪═══════════╪═════════╡</span>
+<span class="go">│ 1   ┆ 55.446336 ┆ 20.776579 ┆ 1       │</span>
+<span class="go">│ 1   ┆ 28.21838  ┆ 40.53348  ┆ 1       │</span>
+<span class="go">│ 2   ┆ 43.291215 ┆ 34.406155 ┆ 1       │</span>
+<span class="go">│ 1   ┆ 55.106615 ┆ 22.413161 ┆ 1       │</span>
+<span class="go">│ 2   ┆ 42.585227 ┆ 40.11279  ┆ 3       │</span>
+<span class="go">│ …   ┆ …         ┆ …         ┆ …       │</span>
+<span class="go">│ 1   ┆ 58.197292 ┆ 40.139579 ┆ 1       │</span>
+<span class="go">│ 1   ┆ 59.371221 ┆ 19.671153 ┆ 1       │</span>
+<span class="go">│ 2   ┆ 19.862917 ┆ 40.339046 ┆ 9       │</span>
+<span class="go">│ 1   ┆ 19.492355 ┆ 32.233661 ┆ 1       │</span>
+<span class="go">│ 2   ┆ 60.863244 ┆ 40.737908 ┆ 3       │</span>
+<span class="go">└─────┴───────────┴───────────┴─────────┘</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>estimator</strong> (<em>Callable</em>) – </p></li>
+<li><p><strong>oneway</strong> (<em>Literal</em><em>[</em><em>'all'</em><em>, </em><em>'unkeyed'</em><em>]</em>) – </p></li>
+<li><p><strong>oneway_split</strong> (<em>float</em><em> | </em><em>None</em>) – </p></li>
+<li><p><strong>measure_split</strong> (<em>float</em>) – </p></li>
+<li><p><strong>num_selections</strong> (<em>int</em><em> | </em><em>None</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.extras.mbi.MST.make_marginals">
+<span class="sig-name descname"><span class="pre">make_marginals</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_domain</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_metric</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_measure</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_out</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">marginals</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/extras/mbi/_mst.html#MST.make_marginals"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.extras.mbi.MST.make_marginals" title="Link to this definition">#</a></dt>
+<dd><p>Implements MST (Minimum Spanning Tree) over ordinal data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_domain</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.LazyFrameDomain" title="opendp.mod.LazyFrameDomain"><em>LazyFrameDomain</em></a>) – domain of input data</p></li>
+<li><p><strong>input_metric</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.FrameDistance" title="opendp.mod.FrameDistance"><em>FrameDistance</em></a>) – how to compute distance between datasets</p></li>
+<li><p><strong>output_measure</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Measure" title="opendp.mod.Measure"><em>Measure</em></a>) – how to measure privacy of release</p></li>
+<li><p><strong>d_in</strong> (<em>list</em><em>[</em><a class="reference internal" href="opendp.extras.polars.html#opendp.extras.polars.Bound" title="opendp.extras.polars.Bound"><em>Bound</em></a><em>]</em>) – distance between adjacent input datasets</p></li>
+<li><p><strong>d_out</strong> (<em>float</em>) – upper bound on the privacy loss</p></li>
+<li><p><strong>marginals</strong> (<em>dict</em><em>[</em><em>tuple</em><em>[</em><em>str</em><em>, </em><em>...</em><em>]</em><em>, </em><em>Any</em><em>]</em>) – prior marginal releases</p></li>
+<li><p><strong>model</strong> (<em>Any</em>) – warm-start fit of MarkovRandomField</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement" title="opendp.mod.Measurement"><em>Measurement</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.extras.mbi.MST.measure_split">
+<span class="sig-name descname"><span class="pre">measure_split</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.9</span></em><a class="headerlink" href="#opendp.extras.mbi.MST.measure_split" title="Link to this definition">#</a></dt>
+<dd><p>Remaining proportion of budget to allocate to measuring marginals.</p>
+<p>The complement is spent on selecting marginals.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.extras.mbi.MST.num_selections">
+<span class="sig-name descname"><span class="pre">num_selections</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#opendp.extras.mbi.MST.num_selections" title="Link to this definition">#</a></dt>
+<dd><p>Number of second-order marginals to estimate.</p>
+<p>Defaults to one fewer than the number of columns in the data.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.extras.mbi.Sequential">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.extras.mbi.</span></span><span class="sig-name descname"><span class="pre">Sequential</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">estimator=&lt;function</span> <span class="pre">mirror_descent&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">oneway='all'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">oneway_split=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">algorithms</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weights=None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/extras/mbi/_sequential.html#Sequential"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.extras.mbi.Sequential" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#opendp.extras.mbi.Algorithm" title="opendp.extras.mbi._utilities.Algorithm"><code class="xref py py-class docutils literal notranslate"><span class="pre">Algorithm</span></code></a></p>
+<p>Release multiple algorithms sequentially.</p>
+<p>Use this in conjunction with Fixed to ensure specific marginals are estimated.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>estimator</strong> (<em>Callable</em>) – </p></li>
+<li><p><strong>oneway</strong> (<em>Literal</em><em>[</em><em>'all'</em><em>, </em><em>'unkeyed'</em><em>]</em>) – </p></li>
+<li><p><strong>oneway_split</strong> (<em>float</em><em> | </em><em>None</em>) – </p></li>
+<li><p><strong>algorithms</strong> (<em>list</em><em>[</em><a class="reference internal" href="#opendp.extras.mbi.Algorithm" title="opendp.extras.mbi._utilities.Algorithm"><em>Algorithm</em></a><em>]</em>) – </p></li>
+<li><p><strong>weights</strong> (<em>list</em><em>[</em><em>float</em><em>] </em><em>| </em><em>None</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.extras.mbi.Sequential.algorithms">
+<span class="sig-name descname"><span class="pre">algorithms</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#opendp.extras.mbi.Algorithm" title="opendp.extras.mbi._utilities.Algorithm"><span class="pre">Algorithm</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#opendp.extras.mbi.Sequential.algorithms" title="Link to this definition">#</a></dt>
+<dd><p>Sequence of algorithms.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.extras.mbi.Sequential.make_marginals">
+<span class="sig-name descname"><span class="pre">make_marginals</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_domain</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_metric</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_measure</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_out</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">marginals</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/extras/mbi/_sequential.html#Sequential.make_marginals"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.extras.mbi.Sequential.make_marginals" title="Link to this definition">#</a></dt>
+<dd><p>Implements a “Sequential” algorithm over ordinal data.</p>
+<p>The algorithm applies each algorithm sequentially.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_domain</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.LazyFrameDomain" title="opendp.mod.LazyFrameDomain"><em>LazyFrameDomain</em></a>) – domain of input data</p></li>
+<li><p><strong>input_metric</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.FrameDistance" title="opendp.mod.FrameDistance"><em>FrameDistance</em></a>) – how to compute distance between datasets</p></li>
+<li><p><strong>output_measure</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Measure" title="opendp.mod.Measure"><em>Measure</em></a>) – how to measure privacy of release</p></li>
+<li><p><strong>d_in</strong> (<em>list</em><em>[</em><a class="reference internal" href="opendp.extras.polars.html#opendp.extras.polars.Bound" title="opendp.extras.polars.Bound"><em>Bound</em></a><em>]</em>) – distance between adjacent input datasets</p></li>
+<li><p><strong>d_out</strong> (<em>float</em>) – upper bound on the privacy loss</p></li>
+<li><p><strong>marginals</strong> (<em>dict</em><em>[</em><em>tuple</em><em>[</em><em>str</em><em>, </em><em>...</em><em>]</em><em>, </em><em>Any</em><em>]</em>) – prior marginal releases</p></li>
+<li><p><strong>model</strong> (<em>Any</em>) – warm-start fit of MarkovRandomField</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.extras.mbi.Sequential.weights">
+<span class="sig-name descname"><span class="pre">weights</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#opendp.extras.mbi.Sequential.weights" title="Link to this definition">#</a></dt>
+<dd><p>Budget allocation amongst algorithms.</p>
+<p>Defaults to equal budget for each algorithm.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.extras.mbi.make_contingency_table">
+<span class="sig-prename descclassname"><span class="pre">opendp.extras.mbi.</span></span><span class="sig-name descname"><span class="pre">make_contingency_table</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_domain</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_metric</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_measure</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_out</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keys=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cuts=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">algorithm=AIM(estimator=&lt;function</span> <span class="pre">mirror_descent&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">oneway='all'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">oneway_split=None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">queries=3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">measure_split=0.9</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_size=80.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rounds=None)</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/extras/mbi/_table.html#make_contingency_table"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.extras.mbi.make_contingency_table" title="Link to this definition">#</a></dt>
+<dd><p>Return a measurement that releases a <a class="reference internal" href="#opendp.extras.mbi.ContingencyTable" title="opendp.extras.mbi.ContingencyTable"><code class="xref py py-class docutils literal notranslate"><span class="pre">ContingencyTable</span></code></a>,
+as well as the noise scale and optional threshold for one-way marginals.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_domain</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.LazyFrameDomain" title="opendp.mod.LazyFrameDomain"><em>LazyFrameDomain</em></a>) – domain of input data</p></li>
+<li><p><strong>input_metric</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.FrameDistance" title="opendp.mod.FrameDistance"><em>FrameDistance</em></a>) – how to compute distance between datasets</p></li>
+<li><p><strong>output_measure</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Measure" title="opendp.mod.Measure"><em>Measure</em></a>) – how to measure privacy of release</p></li>
+<li><p><strong>d_in</strong> (<em>list</em><em>[</em><a class="reference internal" href="opendp.extras.polars.html#opendp.extras.polars.Bound" title="opendp.extras.polars.Bound"><em>Bound</em></a><em>]</em>) – bounds on distances between adjacent input datasets</p></li>
+<li><p><strong>d_out</strong> (<em>float</em><em> | </em><em>tuple</em><em>[</em><em>float</em><em>, </em><em>float</em><em>]</em>) – upper bound on the privacy loss</p></li>
+<li><p><strong>keys</strong> (<em>Mapping</em><em>[</em><em>str</em><em>, </em><em>Sequence</em><em>] </em><em>| </em><em>None</em>) – dictionary of column names and unique categories</p></li>
+<li><p><strong>cuts</strong> (<em>Mapping</em><em>[</em><em>str</em><em>, </em><em>Sequence</em><em>[</em><em>float</em><em>]</em><em>] </em><em>| </em><em>None</em>) – dictionary of column names and left-open bin edges</p></li>
+<li><p><strong>table</strong> (<a class="reference internal" href="#opendp.extras.mbi.ContingencyTable" title="opendp.extras.mbi._table.ContingencyTable"><em>ContingencyTable</em></a><em> | </em><em>None</em>) – ContingencyTable from prior release</p></li>
+<li><p><strong>algorithm</strong> (<a class="reference internal" href="#opendp.extras.mbi.Algorithm" title="opendp.extras.mbi._utilities.Algorithm"><em>Algorithm</em></a>) – configuration for internal estimation algorithm</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>tuple[<a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement" title="opendp.mod.Measurement"><em>Measurement</em></a>, float | None, int | None]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.extras.mbi.mirror_descent">
+<span class="sig-prename descclassname"><span class="pre">opendp.extras.mbi.</span></span><span class="sig-name descname"><span class="pre">mirror_descent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">domain</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loss_fn</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">potentials</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/extras/mbi/_utilities.html#mirror_descent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.extras.mbi.mirror_descent" title="Link to this definition">#</a></dt>
+<dd><p>Fit a MarkovRandomField over the domain and loss function using mirror descent.</p>
+<p>Replicate the API of this function to <a class="reference external" href="https://private-pgm.readthedocs.io/en/latest/_autosummary_output/mbi.estimation.html#module-mbi.estimation">use other optimizers from Private-PGM</a>.</p>
+</dd></dl>
+
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="opendp.extras.examples.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">opendp.extras.examples package</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="opendp.extras.numpy.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">opendp.extras.numpy package</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-opendp.extras.mbi">Module contents</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.AIM"><code class="docutils literal notranslate"><span class="pre">AIM</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.AIM.make_marginals"><code class="docutils literal notranslate"><span class="pre">AIM.make_marginals()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.AIM.max_size"><code class="docutils literal notranslate"><span class="pre">AIM.max_size</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.AIM.measure_split"><code class="docutils literal notranslate"><span class="pre">AIM.measure_split</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.AIM.queries"><code class="docutils literal notranslate"><span class="pre">AIM.queries</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.AIM.rounds"><code class="docutils literal notranslate"><span class="pre">AIM.rounds</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.Algorithm"><code class="docutils literal notranslate"><span class="pre">Algorithm</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.Algorithm.estimator"><code class="docutils literal notranslate"><span class="pre">Algorithm.estimator()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.Algorithm.make_marginals"><code class="docutils literal notranslate"><span class="pre">Algorithm.make_marginals()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.Algorithm.oneway"><code class="docutils literal notranslate"><span class="pre">Algorithm.oneway</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.Algorithm.oneway_split"><code class="docutils literal notranslate"><span class="pre">Algorithm.oneway_split</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.ContingencyTable"><code class="docutils literal notranslate"><span class="pre">ContingencyTable</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.ContingencyTable.cuts"><code class="docutils literal notranslate"><span class="pre">ContingencyTable.cuts</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.ContingencyTable.keys"><code class="docutils literal notranslate"><span class="pre">ContingencyTable.keys</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.ContingencyTable.marginals"><code class="docutils literal notranslate"><span class="pre">ContingencyTable.marginals</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.ContingencyTable.model"><code class="docutils literal notranslate"><span class="pre">ContingencyTable.model</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.ContingencyTable.project"><code class="docutils literal notranslate"><span class="pre">ContingencyTable.project()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.ContingencyTable.project_melted"><code class="docutils literal notranslate"><span class="pre">ContingencyTable.project_melted()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.ContingencyTable.schema"><code class="docutils literal notranslate"><span class="pre">ContingencyTable.schema</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.ContingencyTable.std"><code class="docutils literal notranslate"><span class="pre">ContingencyTable.std()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.ContingencyTable.synthesize"><code class="docutils literal notranslate"><span class="pre">ContingencyTable.synthesize()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.ContingencyTable.thresholds"><code class="docutils literal notranslate"><span class="pre">ContingencyTable.thresholds</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.Count"><code class="docutils literal notranslate"><span class="pre">Count</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.Count.by"><code class="docutils literal notranslate"><span class="pre">Count.by</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.Count.weight"><code class="docutils literal notranslate"><span class="pre">Count.weight</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.Fixed"><code class="docutils literal notranslate"><span class="pre">Fixed</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.Fixed.make_marginals"><code class="docutils literal notranslate"><span class="pre">Fixed.make_marginals()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.Fixed.oneway"><code class="docutils literal notranslate"><span class="pre">Fixed.oneway</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.Fixed.queries"><code class="docutils literal notranslate"><span class="pre">Fixed.queries</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.MST"><code class="docutils literal notranslate"><span class="pre">MST</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.MST.make_marginals"><code class="docutils literal notranslate"><span class="pre">MST.make_marginals()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.MST.measure_split"><code class="docutils literal notranslate"><span class="pre">MST.measure_split</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.MST.num_selections"><code class="docutils literal notranslate"><span class="pre">MST.num_selections</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.Sequential"><code class="docutils literal notranslate"><span class="pre">Sequential</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.Sequential.algorithms"><code class="docutils literal notranslate"><span class="pre">Sequential.algorithms</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.Sequential.make_marginals"><code class="docutils literal notranslate"><span class="pre">Sequential.make_marginals()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.Sequential.weights"><code class="docutils literal notranslate"><span class="pre">Sequential.weights</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.make_contingency_table"><code class="docutils literal notranslate"><span class="pre">make_contingency_table()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.extras.mbi.mirror_descent"><code class="docutils literal notranslate"><span class="pre">mirror_descent()</span></code></a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../../_sources/api/python/opendp.extras.mbi.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.3rc1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

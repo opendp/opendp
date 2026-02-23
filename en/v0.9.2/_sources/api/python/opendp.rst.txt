@@ -1,0 +1,29 @@
+opendp package
+==============
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 3
+
+   opendp.accuracy
+   opendp.combinators
+   opendp.context
+   opendp.core
+   opendp.domains
+   opendp.measurements
+   opendp.measures
+   opendp.metrics
+   opendp.mod
+   opendp.prelude
+   opendp.transformations
+   opendp.typing
+
+Module contents
+---------------
+
+.. automodule:: opendp
+   :members:
+   :undoc-members:
+   :show-inheritance:

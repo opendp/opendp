@@ -1,0 +1,1884 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Grouping &#8212; OpenDP</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=eafc0fe6" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/nbsphinx-code-cells.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=4f92a2c4" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+    <script src="../../_static/documentation_options.js?v=9e420a66"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'getting-started/tabular-data/grouping';</script>
+    <link rel="icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Identifier Truncation" href="identifier-truncation.html" />
+    <link rel="prev" title="Essential Statistics" href="essential-statistics.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Feb 23, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+
+
+<script>
+document.write(`<aside class="bd-header-announcement" aria-label="Announcement"></aside>`);
+fetch("https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html")
+  .then(res => {return res.text();})
+  .then(data => {
+    if (data.length === 0) {
+      console.log("[PST]: Empty announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+      return;
+    }
+    div = document.querySelector(".bd-header-announcement");
+    div.classList.add(...["bd-header-announcement", "container-fluid", "init"]);
+    div.innerHTML = `<div class="bd-header-announcement__content">${data}</div>`;
+    // At least 3rem height
+    const autoHeight = Math.min(
+      div.offsetHeight,
+      3 * parseFloat(getComputedStyle(document.documentElement).fontSize));
+    // Set height and vertical padding to 0 to prepare the height transition
+    div.style.setProperty("height", 0);
+    div.style.setProperty("padding-top", 0);
+    div.style.setProperty("padding-bottom", 0);
+    div.classList.remove("init");
+    // Set height to the computed height with a small timeout to activate the transition
+    setTimeout(() => {
+      div.style.setProperty("height", `${autoHeight}px`);
+      // Wait for a bit more than 300ms (the transition duration) then remove the
+      // forcefully set styles and let CSS take over
+      setTimeout(() => {
+        div.style.removeProperty("padding-top");
+        div.style.removeProperty("padding-bottom");
+        div.style.removeProperty("height");
+        div.style.setProperty("min-height", "3rem");
+      }, 320);
+    }, 10);
+  })
+  .catch(error => {
+    console.log("[PST]: Failed to load announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+  });
+</script>
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <button class="sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/opendp-logo.png" class="logo__image only-light" alt="OpenDP - Home"/>
+    <script>document.write(`<img src="../../_static/opendp-logo.png" class="logo__image only-dark" alt="OpenDP - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="../index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../api/index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../theory/index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+    <button class="sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="../index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../api/index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../theory/index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../typical-workflow.html">Typical Workflow</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Working with Tabular Data</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="essential-statistics.html">Essential Statistics</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Grouping</a></li>
+<li class="toctree-l2"><a class="reference internal" href="identifier-truncation.html">Identifier Truncation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="preparing-microdata.html">Preparing Microdata</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contingency-tables.html">Contingency Tables</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../statistical-modeling/index.html">Statistical Modeling</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../statistical-modeling/linear-regression.html">Linear Regression</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../statistical-modeling/pca.html">Differentially Private PCA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../statistical-modeling/synthetic-data.html">Synthetic Data</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../utility.html">Assessing Utility</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../next-steps.html">Next Steps</a></li>
+</ul>
+</div>
+</nav></div>
+        <div class="sidebar-primary-item">
+<h6>Branches</h6>
+<ul>
+    <li><a href="../../../beta/index.html" style="font-weight: normal">beta</a></li>
+    <li><a href="../../../nightly/index.html" style="font-weight: normal">nightly</a></li>
+    <li><a href="../../../stable/index.html" style="font-weight: normal">stable</a></li>
+</ul>
+
+
+<h6 id="releases_header">Releases
+    <div id="releases_symbol" style="float:right"></div>
+</h6>
+<ul id="releases_content">
+    <li><a href="../../../v0.14.1/index.html" style="font-weight: normal">v0.14.1</a></li>
+    <li><a href="grouping.html" style="font-weight: bold">v0.14.0</a></li>
+    <li><a href="../../../v0.13.0/index.html" style="font-weight: normal">v0.13.0</a></li>
+    <li><a href="../../../v0.12.1/index.html" style="font-weight: normal">v0.12.1</a></li>
+    <li><a href="../../../v0.12.0/index.html" style="font-weight: normal">v0.12.0</a></li>
+    <li><a href="../../../v0.11.1/index.html" style="font-weight: normal">v0.11.1</a></li>
+    <li><a href="../../../v0.11.0/index.html" style="font-weight: normal">v0.11.0</a></li>
+    <li><a href="../../../v0.10.0/index.html" style="font-weight: normal">v0.10.0</a></li>
+    <li><a href="../../../v0.9.2/index.html" style="font-weight: normal">v0.9.2</a></li>
+    <li><a href="../../../v0.9.1/index.html" style="font-weight: normal">v0.9.1</a></li>
+    <li><a href="../../../v0.9.0/index.html" style="font-weight: normal">v0.9.0</a></li>
+    <li><a href="../../../v0.8.0/index.html" style="font-weight: normal">v0.8.0</a></li>
+    <li><a href="../../../v0.7.0/index.html" style="font-weight: normal">v0.7.0</a></li>
+    <li><a href="../../../v0.6.2/index.html" style="font-weight: normal">v0.6.2</a></li>
+    <li><a href="../../../v0.6.1/index.html" style="font-weight: normal">v0.6.1</a></li>
+    <li><a href="../../../v0.6.0/index.html" style="font-weight: normal">v0.6.0</a></li>
+    <li><a href="../../../v0.5.0/index.html" style="font-weight: normal">v0.5.0</a></li>
+    <li><a href="../../../v0.4.0/index.html" style="font-weight: normal">v0.4.0</a></li>
+    <li><a href="../../../v0.3.0/index.html" style="font-weight: normal">v0.3.0</a></li>
+    <li><a href="../../../v0.2.4/index.html" style="font-weight: normal">v0.2.4</a></li>
+    <li><a href="../../../v0.2.3/index.html" style="font-weight: normal">v0.2.3</a></li>
+    <li><a href="../../../v0.2.2/index.html" style="font-weight: normal">v0.2.2</a></li>
+    <li><a href="../../../v0.2.1/index.html" style="font-weight: normal">v0.2.1</a></li>
+    <li><a href="../../../v0.2.0/index.html" style="font-weight: normal">v0.2.0</a></li>
+    <li><a href="../../../v0.1.0/index.html" style="font-weight: normal">v0.1.0</a></li>
+</ul>
+<script>
+    let expanded = !!JSON.parse(localStorage.getItem('expanded'));
+
+    let releasesHeader = document.getElementById("releases_header");
+    let releasesSymbol = document.getElementById("releases_symbol");
+    let releasesContent = document.getElementById("releases_content");
+
+    function setReleasesState() {
+        localStorage.setItem("expanded", JSON.stringify(expanded))
+        releasesContent.style.display = expanded ? "block" : "none";
+        releasesSymbol.classList.add(expanded ? 'minus' : 'plus')
+        releasesSymbol.classList.remove(expanded ? 'plus' : 'minus')
+    }
+
+    setReleasesState()
+    releasesHeader.addEventListener("click", function() {
+        expanded = !expanded;
+        setReleasesState()
+    })
+</script>
+<style>
+    .plus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .plus:before,
+    .plus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .plus:before {
+        left:50%;
+        top:4px;
+        bottom:4px;
+        width:3px;
+        transform:translateX(-50%);
+    }
+
+    .plus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+
+
+
+    .minus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .minus:before,
+    .minus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .minus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+</style>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Getting Started</a></li>
+    
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Working with Tabular Data</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">Grouping</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item"><div class="admonition warning" style="position: relative;">
+    <!--
+     Without the style, the region for the article title overlaps, and the link is unclickable.
+    -->
+    <details>
+        <summary>Questions or feedback?</summary>
+        <!--
+            All of these lists should be in sync:
+            - README.md
+            - docs/source/contributing/contact.rst
+            - docs/source/_templates/questions-feedback.html
+            - .github/ISSUE_TEMPLATE/config.yml
+        -->
+        <ul>
+            <li>Report a bug or request a feature on <a href="https://github.com/opendp/opendp/issues">Github</a>.</li>
+            <li>Send general queries to <a href="mailto:info@opendp.org">info@opendp.org</a>, or email <a href="mailto:security@opendp.org">security@opendp.org</a> if it is related to security.</li>
+            <li>Join the conversation on <a href="https://join.slack.com/t/opendp/shared_invite/zt-1t8rrbqhd-z8LiZiP06vVE422HJd6ciQ">Slack</a>, or the <a href="https://groups.google.com/a/g.harvard.edu/g/opendp-community">mailing list</a>.</li>
+        </ul>
+    </details>
+</div></div>
+      
+        <div class="header-article-item">
+<div class="admonition warning" style="position: relative;" id="old-version-warning">
+  <!--
+   To work with this locally, in conf.py uncomment the entry under "html_context".
+
+   Without the style, the region for the article title overlaps, and the link is unclickable.
+  -->
+  <p class="admonition-title">
+  
+  This documentation is for an old version of OpenDP.
+  
+  </p>
+  <p>The current release of OpenDP is <a href="/">v0.14.1</a>.</p>
+</div>
+<script>
+  window.addEventListener("load", (event) => {
+    document.getElementById('old-version-warning').style.top = `${window.visualViewport.pageTop}px`;
+  });
+</script>
+</div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="Grouping">
+<h1>Grouping<a class="headerlink" href="#Grouping" title="Link to this heading">#</a></h1>
+<p>The OpenDP Library allows you to compute statistics over grouped data. We’ll examine three approaches used to release queries that involve grouping:</p>
+<ul class="simple">
+<li><p>Stable keys</p></li>
+<li><p>Explicit keys</p></li>
+<li><p>Invariant keys</p></li>
+</ul>
+<p>The <a class="reference internal" href="../../api/python/opendp.extras.polars.html"><span class="doc">API Reference</span></a> provides more information about the methods. We will use the <a class="reference external" href="https://github.com/opendp/dp-test-datasets/blob/main/data/eurostat/README.ipynb">sample data</a> from the Labour Force Survey in France.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="kn">import</span> <span class="nn">polars</span> <span class="k">as</span> <span class="nn">pl</span>
+<span class="kn">import</span> <span class="nn">opendp.prelude</span> <span class="k">as</span> <span class="nn">dp</span>
+<span class="kn">import</span> <span class="nn">hvplot.polars</span>
+
+<span class="n">dp</span><span class="o">.</span><span class="n">enable_features</span><span class="p">(</span><span class="s2">&quot;contrib&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<script type="esms-options">{"shimMode": true}</script><style>*[data-root-id],
+*[data-root-id] > * {
+  box-sizing: border-box;
+  font-family: var(--jp-ui-font-family);
+  font-size: var(--jp-ui-font-size1);
+  color: var(--vscode-editor-foreground, var(--jp-ui-font-color1));
+}
+
+/* Override VSCode background color */
+.cell-output-ipywidget-background:has(
+    > .cell-output-ipywidget-background > .lm-Widget > *[data-root-id]
+  ),
+.cell-output-ipywidget-background:has(> .lm-Widget > *[data-root-id]) {
+  background-color: transparent !important;
+}
+</style></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="output_javascript"></div>
+<script type="text/javascript">
+var element = document.currentScript.previousSibling.previousSibling;
+(function(root) {
+  function now() {
+    return new Date();
+  }
+
+  const force = true;
+  const py_version = '3.7.3'.replace('rc', '-rc.').replace('.dev', '-dev.');
+  const reloading = false;
+  const Bokeh = root.Bokeh;
+
+  // Set a timeout for this load but only if we are not already initializing
+  if (typeof (root._bokeh_timeout) === "undefined" || (force || !root._bokeh_is_initializing)) {
+    root._bokeh_timeout = Date.now() + 5000;
+    root._bokeh_failed_load = false;
+  }
+
+  function run_callbacks() {
+    try {
+      root._bokeh_onload_callbacks.forEach(function(callback) {
+        if (callback != null)
+          callback();
+      });
+    } finally {
+      delete root._bokeh_onload_callbacks;
+    }
+    console.debug("Bokeh: all callbacks have finished");
+  }
+
+  function load_libs(css_urls, js_urls, js_modules, js_exports, callback) {
+    if (css_urls == null) css_urls = [];
+    if (js_urls == null) js_urls = [];
+    if (js_modules == null) js_modules = [];
+    if (js_exports == null) js_exports = {};
+
+    root._bokeh_onload_callbacks.push(callback);
+
+    if (root._bokeh_is_loading > 0) {
+      // Don't load bokeh if it is still initializing
+      console.debug("Bokeh: BokehJS is being loaded, scheduling callback at", now());
+      return null;
+    } else if (js_urls.length === 0 && js_modules.length === 0 && Object.keys(js_exports).length === 0) {
+      // There is nothing to load
+      run_callbacks();
+      return null;
+    }
+
+    function on_load() {
+      root._bokeh_is_loading--;
+      if (root._bokeh_is_loading === 0) {
+        console.debug("Bokeh: all BokehJS libraries/stylesheets loaded");
+        run_callbacks()
+      }
+    }
+    window._bokeh_on_load = on_load
+
+    function on_error(e) {
+      const src_el = e.srcElement
+      console.error("failed to load " + (src_el.href || src_el.src));
+    }
+
+    const skip = [];
+    if (window.requirejs) {
+      window.requirejs.config({'packages': {}, 'paths': {}, 'shim': {}});
+      root._bokeh_is_loading = css_urls.length + 0;
+    } else {
+      root._bokeh_is_loading = css_urls.length + js_urls.length + js_modules.length + Object.keys(js_exports).length;
+    }
+
+    const existing_stylesheets = []
+    const links = document.getElementsByTagName('link')
+    for (let i = 0; i < links.length; i++) {
+      const link = links[i]
+      if (link.href != null) {
+        existing_stylesheets.push(link.href)
+      }
+    }
+    for (let i = 0; i < css_urls.length; i++) {
+      const url = css_urls[i];
+      const escaped = encodeURI(url)
+      if (existing_stylesheets.indexOf(escaped) !== -1) {
+        on_load()
+        continue;
+      }
+      const element = document.createElement("link");
+      element.onload = on_load;
+      element.onerror = on_error;
+      element.rel = "stylesheet";
+      element.type = "text/css";
+      element.href = url;
+      console.debug("Bokeh: injecting link tag for BokehJS stylesheet: ", url);
+      document.body.appendChild(element);
+    }    var existing_scripts = []
+    const scripts = document.getElementsByTagName('script')
+    for (let i = 0; i < scripts.length; i++) {
+      var script = scripts[i]
+      if (script.src != null) {
+        existing_scripts.push(script.src)
+      }
+    }
+    for (let i = 0; i < js_urls.length; i++) {
+      const url = js_urls[i];
+      const escaped = encodeURI(url)
+      if (skip.indexOf(escaped) !== -1 || existing_scripts.indexOf(escaped) !== -1) {
+        if (!window.requirejs) {
+          on_load();
+        }
+        continue;
+      }
+      const element = document.createElement('script');
+      element.onload = on_load;
+      element.onerror = on_error;
+      element.async = false;
+      element.src = url;
+      console.debug("Bokeh: injecting script tag for BokehJS library: ", url);
+      document.head.appendChild(element);
+    }
+    for (let i = 0; i < js_modules.length; i++) {
+      const url = js_modules[i];
+      const escaped = encodeURI(url)
+      if (skip.indexOf(escaped) !== -1 || existing_scripts.indexOf(escaped) !== -1) {
+        if (!window.requirejs) {
+          on_load();
+        }
+        continue;
+      }
+      var element = document.createElement('script');
+      element.onload = on_load;
+      element.onerror = on_error;
+      element.async = false;
+      element.src = url;
+      element.type = "module";
+      console.debug("Bokeh: injecting script tag for BokehJS library: ", url);
+      document.head.appendChild(element);
+    }
+    for (const name in js_exports) {
+      const url = js_exports[name];
+      const escaped = encodeURI(url)
+      if (skip.indexOf(escaped) >= 0 || root[name] != null) {
+        if (!window.requirejs) {
+          on_load();
+        }
+        continue;
+      }
+      var element = document.createElement('script');
+      element.onerror = on_error;
+      element.async = false;
+      element.type = "module";
+      console.debug("Bokeh: injecting script tag for BokehJS library: ", url);
+      element.textContent = `
+      import ${name} from "${url}"
+      window.${name} = ${name}
+      window._bokeh_on_load()
+      `
+      document.head.appendChild(element);
+    }
+    if (!js_urls.length && !js_modules.length) {
+      on_load()
+    }
+  };
+
+  function inject_raw_css(css) {
+    const element = document.createElement("style");
+    element.appendChild(document.createTextNode(css));
+    document.body.appendChild(element);
+  }
+
+  const js_urls = ["https://cdn.holoviz.org/panel/1.7.1/dist/bundled/reactiveesm/es-module-shims@^1.10.0/dist/es-module-shims.min.js", "https://cdn.bokeh.org/bokeh/release/bokeh-3.7.3.min.js", "https://cdn.bokeh.org/bokeh/release/bokeh-gl-3.7.3.min.js", "https://cdn.bokeh.org/bokeh/release/bokeh-widgets-3.7.3.min.js", "https://cdn.bokeh.org/bokeh/release/bokeh-tables-3.7.3.min.js", "https://cdn.holoviz.org/panel/1.7.1/dist/panel.min.js"];
+  const js_modules = [];
+  const js_exports = {};
+  const css_urls = [];
+  const inline_js = [    function(Bokeh) {
+      Bokeh.set_log_level("info");
+    },
+function(Bokeh) {} // ensure no trailing comma for IE
+  ];
+
+  function run_inline_js() {
+    if ((root.Bokeh !== undefined) || (force === true)) {
+      for (let i = 0; i < inline_js.length; i++) {
+        try {
+          inline_js[i].call(root, root.Bokeh);
+        } catch(e) {
+          if (!reloading) {
+            throw e;
+          }
+        }
+      }
+      // Cache old bokeh versions
+      if (Bokeh != undefined && !reloading) {
+        var NewBokeh = root.Bokeh;
+        if (Bokeh.versions === undefined) {
+          Bokeh.versions = new Map();
+        }
+        if (NewBokeh.version !== Bokeh.version) {
+          Bokeh.versions.set(NewBokeh.version, NewBokeh)
+        }
+        root.Bokeh = Bokeh;
+      }
+    } else if (Date.now() < root._bokeh_timeout) {
+      setTimeout(run_inline_js, 100);
+    } else if (!root._bokeh_failed_load) {
+      console.log("Bokeh: BokehJS failed to load within specified timeout.");
+      root._bokeh_failed_load = true;
+    }
+    root._bokeh_is_initializing = false
+  }
+
+  function load_or_wait() {
+    // Implement a backoff loop that tries to ensure we do not load multiple
+    // versions of Bokeh and its dependencies at the same time.
+    // In recent versions we use the root._bokeh_is_initializing flag
+    // to determine whether there is an ongoing attempt to initialize
+    // bokeh, however for backward compatibility we also try to ensure
+    // that we do not start loading a newer (Panel>=1.0 and Bokeh>3) version
+    // before older versions are fully initialized.
+    if (root._bokeh_is_initializing && Date.now() > root._bokeh_timeout) {
+      // If the timeout and bokeh was not successfully loaded we reset
+      // everything and try loading again
+      root._bokeh_timeout = Date.now() + 5000;
+      root._bokeh_is_initializing = false;
+      root._bokeh_onload_callbacks = undefined;
+      root._bokeh_is_loading = 0
+      console.log("Bokeh: BokehJS was loaded multiple times but one version failed to initialize.");
+      load_or_wait();
+    } else if (root._bokeh_is_initializing || (typeof root._bokeh_is_initializing === "undefined" && root._bokeh_onload_callbacks !== undefined)) {
+      setTimeout(load_or_wait, 100);
+    } else {
+      root._bokeh_is_initializing = true
+      root._bokeh_onload_callbacks = []
+      const bokeh_loaded = root.Bokeh != null && (root.Bokeh.version === py_version || (root.Bokeh.versions !== undefined && root.Bokeh.versions.has(py_version)));
+      if (!reloading && !bokeh_loaded) {
+        if (root.Bokeh) {
+          root.Bokeh = undefined;
+        }
+        console.debug("Bokeh: BokehJS not loaded, scheduling load and callback at", now());
+      }
+      load_libs(css_urls, js_urls, js_modules, js_exports, function() {
+        console.debug("Bokeh: BokehJS plotting callback run at", now());
+        run_inline_js();
+      });
+    }
+  }
+  // Give older versions of the autoload script a head-start to ensure
+  // they initialize before we start loading newer version.
+  setTimeout(load_or_wait, 100)
+}(window));
+</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="output_javascript"></div>
+<script type="text/javascript">
+var element = document.currentScript.previousSibling.previousSibling;
+
+if ((window.PyViz === undefined) || (window.PyViz instanceof HTMLElement)) {
+  window.PyViz = {comms: {}, comm_status:{}, kernels:{}, receivers: {}, plot_index: []}
+}
+
+
+    function JupyterCommManager() {
+    }
+
+    JupyterCommManager.prototype.register_target = function(plot_id, comm_id, msg_handler) {
+      if (window.comm_manager || ((window.Jupyter !== undefined) && (Jupyter.notebook.kernel != null))) {
+        var comm_manager = window.comm_manager || Jupyter.notebook.kernel.comm_manager;
+        comm_manager.register_target(comm_id, function(comm) {
+          comm.on_msg(msg_handler);
+        });
+      } else if ((plot_id in window.PyViz.kernels) && (window.PyViz.kernels[plot_id])) {
+        window.PyViz.kernels[plot_id].registerCommTarget(comm_id, function(comm) {
+          comm.onMsg = msg_handler;
+        });
+      } else if (typeof google != 'undefined' && google.colab.kernel != null) {
+        google.colab.kernel.comms.registerTarget(comm_id, (comm) => {
+          var messages = comm.messages[Symbol.asyncIterator]();
+          function processIteratorResult(result) {
+            var message = result.value;
+            console.log(message)
+            var content = {data: message.data, comm_id};
+            var buffers = []
+            for (var buffer of message.buffers || []) {
+              buffers.push(new DataView(buffer))
+            }
+            var metadata = message.metadata || {};
+            var msg = {content, buffers, metadata}
+            msg_handler(msg);
+            return messages.next().then(processIteratorResult);
+          }
+          return messages.next().then(processIteratorResult);
+        })
+      }
+    }
+
+    JupyterCommManager.prototype.get_client_comm = function(plot_id, comm_id, msg_handler) {
+      if (comm_id in window.PyViz.comms) {
+        return window.PyViz.comms[comm_id];
+      } else if (window.comm_manager || ((window.Jupyter !== undefined) && (Jupyter.notebook.kernel != null))) {
+        var comm_manager = window.comm_manager || Jupyter.notebook.kernel.comm_manager;
+        var comm = comm_manager.new_comm(comm_id, {}, {}, {}, comm_id);
+        if (msg_handler) {
+          comm.on_msg(msg_handler);
+        }
+      } else if ((plot_id in window.PyViz.kernels) && (window.PyViz.kernels[plot_id])) {
+        var comm = window.PyViz.kernels[plot_id].connectToComm(comm_id);
+        comm.open();
+        if (msg_handler) {
+          comm.onMsg = msg_handler;
+        }
+      } else if (typeof google != 'undefined' && google.colab.kernel != null) {
+        var comm_promise = google.colab.kernel.comms.open(comm_id)
+        comm_promise.then((comm) => {
+          window.PyViz.comms[comm_id] = comm;
+          if (msg_handler) {
+            var messages = comm.messages[Symbol.asyncIterator]();
+            function processIteratorResult(result) {
+              var message = result.value;
+              var content = {data: message.data};
+              var metadata = message.metadata || {comm_id};
+              var msg = {content, metadata}
+              msg_handler(msg);
+              return messages.next().then(processIteratorResult);
+            }
+            return messages.next().then(processIteratorResult);
+          }
+        })
+        var sendClosure = (data, metadata, buffers, disposeOnDone) => {
+          return comm_promise.then((comm) => {
+            comm.send(data, metadata, buffers, disposeOnDone);
+          });
+        };
+        var comm = {
+          send: sendClosure
+        };
+      }
+      window.PyViz.comms[comm_id] = comm;
+      return comm;
+    }
+    window.PyViz.comm_manager = new JupyterCommManager();
+
+
+
+var JS_MIME_TYPE = 'application/javascript';
+var HTML_MIME_TYPE = 'text/html';
+var EXEC_MIME_TYPE = 'application/vnd.holoviews_exec.v0+json';
+var CLASS_NAME = 'output';
+
+/**
+ * Render data to the DOM node
+ */
+function render(props, node) {
+  var div = document.createElement("div");
+  var script = document.createElement("script");
+  node.appendChild(div);
+  node.appendChild(script);
+}
+
+/**
+ * Handle when a new output is added
+ */
+function handle_add_output(event, handle) {
+  var output_area = handle.output_area;
+  var output = handle.output;
+  if ((output.data == undefined) || (!output.data.hasOwnProperty(EXEC_MIME_TYPE))) {
+    return
+  }
+  var id = output.metadata[EXEC_MIME_TYPE]["id"];
+  var toinsert = output_area.element.find("." + CLASS_NAME.split(' ')[0]);
+  if (id !== undefined) {
+    var nchildren = toinsert.length;
+    var html_node = toinsert[nchildren-1].children[0];
+    html_node.innerHTML = output.data[HTML_MIME_TYPE];
+    var scripts = [];
+    var nodelist = html_node.querySelectorAll("script");
+    for (var i in nodelist) {
+      if (nodelist.hasOwnProperty(i)) {
+        scripts.push(nodelist[i])
+      }
+    }
+
+    scripts.forEach( function (oldScript) {
+      var newScript = document.createElement("script");
+      var attrs = [];
+      var nodemap = oldScript.attributes;
+      for (var j in nodemap) {
+        if (nodemap.hasOwnProperty(j)) {
+          attrs.push(nodemap[j])
+        }
+      }
+      attrs.forEach(function(attr) { newScript.setAttribute(attr.name, attr.value) });
+      newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+      oldScript.parentNode.replaceChild(newScript, oldScript);
+    });
+    if (JS_MIME_TYPE in output.data) {
+      toinsert[nchildren-1].children[1].textContent = output.data[JS_MIME_TYPE];
+    }
+    output_area._hv_plot_id = id;
+    if ((window.Bokeh !== undefined) && (id in Bokeh.index)) {
+      window.PyViz.plot_index[id] = Bokeh.index[id];
+    } else {
+      window.PyViz.plot_index[id] = null;
+    }
+  } else if (output.metadata[EXEC_MIME_TYPE]["server_id"] !== undefined) {
+    var bk_div = document.createElement("div");
+    bk_div.innerHTML = output.data[HTML_MIME_TYPE];
+    var script_attrs = bk_div.children[0].attributes;
+    for (var i = 0; i < script_attrs.length; i++) {
+      toinsert[toinsert.length - 1].childNodes[1].setAttribute(script_attrs[i].name, script_attrs[i].value);
+    }
+    // store reference to server id on output_area
+    output_area._bokeh_server_id = output.metadata[EXEC_MIME_TYPE]["server_id"];
+  }
+}
+
+/**
+ * Handle when an output is cleared or removed
+ */
+function handle_clear_output(event, handle) {
+  var id = handle.cell.output_area._hv_plot_id;
+  var server_id = handle.cell.output_area._bokeh_server_id;
+  if (((id === undefined) || !(id in PyViz.plot_index)) && (server_id !== undefined)) { return; }
+  var comm = window.PyViz.comm_manager.get_client_comm("hv-extension-comm", "hv-extension-comm", function () {});
+  if (server_id !== null) {
+    comm.send({event_type: 'server_delete', 'id': server_id});
+    return;
+  } else if (comm !== null) {
+    comm.send({event_type: 'delete', 'id': id});
+  }
+  delete PyViz.plot_index[id];
+  if ((window.Bokeh !== undefined) & (id in window.Bokeh.index)) {
+    var doc = window.Bokeh.index[id].model.document
+    doc.clear();
+    const i = window.Bokeh.documents.indexOf(doc);
+    if (i > -1) {
+      window.Bokeh.documents.splice(i, 1);
+    }
+  }
+}
+
+/**
+ * Handle kernel restart event
+ */
+function handle_kernel_cleanup(event, handle) {
+  delete PyViz.comms["hv-extension-comm"];
+  window.PyViz.plot_index = {}
+}
+
+/**
+ * Handle update_display_data messages
+ */
+function handle_update_output(event, handle) {
+  handle_clear_output(event, {cell: {output_area: handle.output_area}})
+  handle_add_output(event, handle)
+}
+
+function register_renderer(events, OutputArea) {
+  function append_mime(data, metadata, element) {
+    // create a DOM node to render to
+    var toinsert = this.create_output_subarea(
+    metadata,
+    CLASS_NAME,
+    EXEC_MIME_TYPE
+    );
+    this.keyboard_manager.register_events(toinsert);
+    // Render to node
+    var props = {data: data, metadata: metadata[EXEC_MIME_TYPE]};
+    render(props, toinsert[0]);
+    element.append(toinsert);
+    return toinsert
+  }
+
+  events.on('output_added.OutputArea', handle_add_output);
+  events.on('output_updated.OutputArea', handle_update_output);
+  events.on('clear_output.CodeCell', handle_clear_output);
+  events.on('delete.Cell', handle_clear_output);
+  events.on('kernel_ready.Kernel', handle_kernel_cleanup);
+
+  OutputArea.prototype.register_mime_type(EXEC_MIME_TYPE, append_mime, {
+    safe: true,
+    index: 0
+  });
+}
+
+if (window.Jupyter !== undefined) {
+  try {
+    var events = require('base/js/events');
+    var OutputArea = require('notebook/js/outputarea').OutputArea;
+    if (OutputArea.prototype.mime_types().indexOf(EXEC_MIME_TYPE) == -1) {
+      register_renderer(events, OutputArea);
+    }
+  } catch(err) {
+  }
+}
+
+</script></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<div id='8567d419-1519-448a-8be8-088273bd7eb3'>
+  <div id="cf7c142b-00dc-431c-b665-ab746f16cdeb" data-root-id="8567d419-1519-448a-8be8-088273bd7eb3" style="display: contents;"></div>
+</div>
+<script type="application/javascript">(function(root) {
+  var docs_json = {"84a2ce14-b52c-47c4-9538-d3ebad2d3b74":{"version":"3.7.3","title":"Bokeh Application","roots":[{"type":"object","name":"panel.models.browser.BrowserInfo","id":"8567d419-1519-448a-8be8-088273bd7eb3"},{"type":"object","name":"panel.models.comm_manager.CommManager","id":"73e8ac04-209e-4161-995e-819c6db88c54","attributes":{"plot_id":"8567d419-1519-448a-8be8-088273bd7eb3","comm_id":"a13d6e13c153461f9c8b23926bea7e07","client_comm_id":"b23bab77b64c417ba73c9a66feb81a24"}}],"defs":[{"type":"model","name":"ReactiveHTML1"},{"type":"model","name":"FlexBox1","properties":[{"name":"align_content","kind":"Any","default":"flex-start"},{"name":"align_items","kind":"Any","default":"flex-start"},{"name":"flex_direction","kind":"Any","default":"row"},{"name":"flex_wrap","kind":"Any","default":"wrap"},{"name":"gap","kind":"Any","default":""},{"name":"justify_content","kind":"Any","default":"flex-start"}]},{"type":"model","name":"FloatPanel1","properties":[{"name":"config","kind":"Any","default":{"type":"map"}},{"name":"contained","kind":"Any","default":true},{"name":"position","kind":"Any","default":"right-top"},{"name":"offsetx","kind":"Any","default":null},{"name":"offsety","kind":"Any","default":null},{"name":"theme","kind":"Any","default":"primary"},{"name":"status","kind":"Any","default":"normalized"}]},{"type":"model","name":"GridStack1","properties":[{"name":"ncols","kind":"Any","default":null},{"name":"nrows","kind":"Any","default":null},{"name":"allow_resize","kind":"Any","default":true},{"name":"allow_drag","kind":"Any","default":true},{"name":"state","kind":"Any","default":[]}]},{"type":"model","name":"drag1","properties":[{"name":"slider_width","kind":"Any","default":5},{"name":"slider_color","kind":"Any","default":"black"},{"name":"value","kind":"Any","default":50}]},{"type":"model","name":"click1","properties":[{"name":"terminal_output","kind":"Any","default":""},{"name":"debug_name","kind":"Any","default":""},{"name":"clears","kind":"Any","default":0}]},{"type":"model","name":"FastWrapper1","properties":[{"name":"object","kind":"Any","default":null},{"name":"style","kind":"Any","default":null}]},{"type":"model","name":"NotificationArea1","properties":[{"name":"js_events","kind":"Any","default":{"type":"map"}},{"name":"max_notifications","kind":"Any","default":5},{"name":"notifications","kind":"Any","default":[]},{"name":"position","kind":"Any","default":"bottom-right"},{"name":"_clear","kind":"Any","default":0},{"name":"types","kind":"Any","default":[{"type":"map","entries":[["type","warning"],["background","#ffc107"],["icon",{"type":"map","entries":[["className","fas fa-exclamation-triangle"],["tagName","i"],["color","white"]]}]]},{"type":"map","entries":[["type","info"],["background","#007bff"],["icon",{"type":"map","entries":[["className","fas fa-info-circle"],["tagName","i"],["color","white"]]}]]}]}]},{"type":"model","name":"Notification","properties":[{"name":"background","kind":"Any","default":null},{"name":"duration","kind":"Any","default":3000},{"name":"icon","kind":"Any","default":null},{"name":"message","kind":"Any","default":""},{"name":"notification_type","kind":"Any","default":null},{"name":"_rendered","kind":"Any","default":false},{"name":"_destroyed","kind":"Any","default":false}]},{"type":"model","name":"TemplateActions1","properties":[{"name":"open_modal","kind":"Any","default":0},{"name":"close_modal","kind":"Any","default":0}]},{"type":"model","name":"BootstrapTemplateActions1","properties":[{"name":"open_modal","kind":"Any","default":0},{"name":"close_modal","kind":"Any","default":0}]},{"type":"model","name":"TemplateEditor1","properties":[{"name":"layout","kind":"Any","default":[]}]},{"type":"model","name":"MaterialTemplateActions1","properties":[{"name":"open_modal","kind":"Any","default":0},{"name":"close_modal","kind":"Any","default":0}]},{"type":"model","name":"ReactiveESM1","properties":[{"name":"esm_constants","kind":"Any","default":{"type":"map"}}]},{"type":"model","name":"JSComponent1","properties":[{"name":"esm_constants","kind":"Any","default":{"type":"map"}}]},{"type":"model","name":"ReactComponent1","properties":[{"name":"esm_constants","kind":"Any","default":{"type":"map"}}]},{"type":"model","name":"AnyWidgetComponent1","properties":[{"name":"esm_constants","kind":"Any","default":{"type":"map"}}]},{"type":"model","name":"request_value1","properties":[{"name":"fill","kind":"Any","default":"none"},{"name":"_synced","kind":"Any","default":null},{"name":"_request_sync","kind":"Any","default":0}]}]}};
+  var render_items = [{"docid":"84a2ce14-b52c-47c4-9538-d3ebad2d3b74","roots":{"8567d419-1519-448a-8be8-088273bd7eb3":"cf7c142b-00dc-431c-b665-ab746f16cdeb"},"root_ids":["8567d419-1519-448a-8be8-088273bd7eb3"]}];
+  var docs = Object.values(docs_json)
+  if (!docs) {
+    return
+  }
+  const py_version = docs[0].version.replace('rc', '-rc.').replace('.dev', '-dev.')
+  async function embed_document(root) {
+    var Bokeh = get_bokeh(root)
+    await Bokeh.embed.embed_items_notebook(docs_json, render_items);
+    for (const render_item of render_items) {
+      for (const root_id of render_item.root_ids) {
+    const id_el = document.getElementById(root_id)
+    if (id_el.children.length && id_el.children[0].hasAttribute('data-root-id')) {
+      const root_el = id_el.children[0]
+      root_el.id = root_el.id + '-rendered'
+      for (const child of root_el.children) {
+            // Ensure JupyterLab does not capture keyboard shortcuts
+            // see: https://jupyterlab.readthedocs.io/en/4.1.x/extension/notebook.html#keyboard-interaction-model
+        child.setAttribute('data-lm-suppress-shortcuts', 'true')
+      }
+    }
+      }
+    }
+  }
+  function get_bokeh(root) {
+    if (root.Bokeh === undefined) {
+      return null
+    } else if (root.Bokeh.version !== py_version) {
+      if (root.Bokeh.versions === undefined || !root.Bokeh.versions.has(py_version)) {
+    return null
+      }
+      return root.Bokeh.versions.get(py_version);
+    } else if (root.Bokeh.version === py_version) {
+      return root.Bokeh
+    }
+    return null
+  }
+  function is_loaded(root) {
+    var Bokeh = get_bokeh(root)
+    return (Bokeh != null && Bokeh.Panel !== undefined)
+  }
+  if (is_loaded(root)) {
+    embed_document(root);
+  } else {
+    var attempts = 0;
+    var timer = setInterval(function(root) {
+      if (is_loaded(root)) {
+        clearInterval(timer);
+        embed_document(root);
+      } else if (document.readyState == "complete") {
+        attempts++;
+        if (attempts > 200) {
+          clearInterval(timer);
+      var Bokeh = get_bokeh(root)
+      if (Bokeh == null || Bokeh.Panel == null) {
+            console.warn("Panel: ERROR: Unable to run Panel code because Bokeh or Panel library is missing");
+      } else {
+        console.warn("Panel: WARNING: Attempting to render but not all required libraries could be resolved.")
+        embed_document(root)
+      }
+        }
+      }
+    }, 25, root)
+  }
+})(window);</script></div>
+</div>
+<section id="Stable-Keys">
+<h2>Stable Keys<a class="headerlink" href="#Stable-Keys" title="Link to this heading">#</a></h2>
+<p>Partition keys can be extremely sensitive. For example, sharing a noisy count query grouped by social security number or credit card number would catastrophically violate the privacy of individuals in the data. Similarly, re-identification of individuals can be accomplished with very small combinations of grouping columns that may seem benign (for reference, see how <a class="reference external" href="https://arstechnica.com/tech-policy/2009/09/your-secrets-live-online-in-databases-of-ruin/">Latanya Sweeney reidentified the Governor of Massachusetts in healthcare
+data</a>).</p>
+<p>For this reason, by default, the OpenDP Library discards any groups that may be unique to an individual by filtering out groups with too few records. This is why the set of released groups is considered “stable”: the algorithm only releases groups that remain stable (won’t disappear) when any one individual is removed. OpenDP calibrates the filtering threshold such that the probability of releasing a group with one individual is no greater than the privacy parameter delta (δ).</p>
+<p>In the following example, only counts for combinations of year and sex that are common among many workers are released.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">context</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">Context</span><span class="o">.</span><span class="n">compositor</span><span class="p">(</span>
+    <span class="c1"># Many columns contain mixtures of strings and numbers and cannot be parsed as floats,</span>
+    <span class="c1"># so we&#39;ll set `ignore_errors` to true to avoid conversion errors.</span>
+    <span class="n">data</span><span class="o">=</span><span class="n">pl</span><span class="o">.</span><span class="n">scan_csv</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">examples</span><span class="o">.</span><span class="n">get_france_lfs_path</span><span class="p">(),</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+    <span class="n">privacy_unit</span><span class="o">=</span><span class="n">dp</span><span class="o">.</span><span class="n">unit_of</span><span class="p">(</span><span class="n">contributions</span><span class="o">=</span><span class="mi">36</span><span class="p">),</span>
+    <span class="n">privacy_loss</span><span class="o">=</span><span class="n">dp</span><span class="o">.</span><span class="n">loss_of</span><span class="p">(</span><span class="n">epsilon</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="mi">4</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="mf">1e-7</span><span class="p">),</span>
+    <span class="c1"># allow for one query</span>
+    <span class="n">split_evenly_over</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">query_age_ilostat</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">query</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="s2">&quot;AGE&quot;</span><span class="p">,</span> <span class="s2">&quot;ILOSTAT&quot;</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">agg</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">len</span><span class="p">())</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Before releasing the query, let’s take a look at properties we can expect of the output:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">query_age_ilostat</span><span class="o">.</span><span class="n">summarize</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="mf">.05</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[3]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (1, 6)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th><th>accuracy</th><th>threshold</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td><td>f64</td><td>u32</td></tr></thead><tbody><tr><td>&quot;len&quot;</td><td>&quot;Frame Length&quot;</td><td>&quot;Integer Laplace&quot;</td><td>144.0</td><td>431.884579</td><td>2773</td></tr></tbody></table></div></div>
+</div>
+<p>Judging from the query description, noisy group lengths returned by this query will differ by no more than the given accuracy with 1 - alpha = 95% confidence. Any group with a noisy length below the given threshold will be filtered from the release.</p>
+<p>This level of utility seems suitable, so we’ll go ahead and release the query:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">query_age_ilostat</span><span class="o">.</span><span class="n">release</span><span class="p">()</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
+
+<span class="n">line</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="s2">&quot;AGE&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">hvplot</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s2">&quot;AGE&quot;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">&quot;len&quot;</span><span class="p">,</span> <span class="n">by</span><span class="o">=</span><span class="s2">&quot;ILOSTAT&quot;</span><span class="p">)</span>
+<span class="n">scatter</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="s2">&quot;AGE&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">hvplot</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s2">&quot;AGE&quot;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">&quot;len&quot;</span><span class="p">,</span> <span class="n">by</span><span class="o">=</span><span class="s2">&quot;ILOSTAT&quot;</span><span class="p">)</span>
+<span class="n">line</span> <span class="o">*</span> <span class="n">scatter</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[4]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div id='5c66d94c-e745-437e-bd02-cfaf92ab005a'>
+  <div id="f866e94f-360f-4de1-bf6c-e02e62b82dd6" data-root-id="5c66d94c-e745-437e-bd02-cfaf92ab005a" style="display: contents;"></div>
+</div>
+<script type="application/javascript">(function(root) {
+  var docs_json = {"23e75207-2ef9-4d53-aa7e-1ce935e73182":{"version":"3.7.3","title":"Bokeh Application","roots":[{"type":"object","name":"Row","id":"5c66d94c-e745-437e-bd02-cfaf92ab005a","attributes":{"name":"Row00357","tags":["embedded"],"stylesheets":["\n:host(.pn-loading):before, .pn-loading:before {\n  background-color: #c3c3c3;\n  mask-size: auto calc(min(50%, 400px));\n  -webkit-mask-size: auto calc(min(50%, 400px));\n}",{"type":"object","name":"ImportedStyleSheet","id":"d04e5d85-aa2b-4a2b-8fd5-a4fd2adc9a48","attributes":{"url":"https://cdn.holoviz.org/panel/1.7.1/dist/css/loading.css"}},{"type":"object","name":"ImportedStyleSheet","id":"3df9fb95-854f-457d-af32-c12ba0fec039","attributes":{"url":"https://cdn.holoviz.org/panel/1.7.1/dist/css/listpanel.css"}},{"type":"object","name":"ImportedStyleSheet","id":"a5cd00aa-74a5-450d-9039-f36d2cffe9bf","attributes":{"url":"https://cdn.holoviz.org/panel/1.7.1/dist/bundled/theme/default.css"}},{"type":"object","name":"ImportedStyleSheet","id":"b64e65c1-fbb2-4ebb-ae5a-e32ea99909ac","attributes":{"url":"https://cdn.holoviz.org/panel/1.7.1/dist/bundled/theme/native.css"}}],"min_width":700,"margin":0,"sizing_mode":"stretch_width","align":"start","children":[{"type":"object","name":"Spacer","id":"05b1b9c5-3dac-4db1-b3ba-9f708a0d3669","attributes":{"name":"HSpacer00361","stylesheets":["\n:host(.pn-loading):before, .pn-loading:before {\n  background-color: #c3c3c3;\n  mask-size: auto calc(min(50%, 400px));\n  -webkit-mask-size: auto calc(min(50%, 400px));\n}",{"id":"d04e5d85-aa2b-4a2b-8fd5-a4fd2adc9a48"},{"id":"a5cd00aa-74a5-450d-9039-f36d2cffe9bf"},{"id":"b64e65c1-fbb2-4ebb-ae5a-e32ea99909ac"}],"min_width":0,"margin":0,"sizing_mode":"stretch_width","align":"start"}},{"type":"object","name":"Figure","id":"916c34e6-15ff-4c06-bdba-566260327d7f","attributes":{"width":700,"height":300,"margin":[5,10],"sizing_mode":"fixed","align":"start","x_range":{"type":"object","name":"Range1d","id":"26a43b2c-db26-4959-9a7d-60bcdb4c713d","attributes":{"name":"AGE","tags":[[["AGE",null]],[]],"start":7.0,"end":75.0,"reset_start":7.0,"reset_end":75.0}},"y_range":{"type":"object","name":"Range1d","id":"dd18165c-fa49-425b-b823-7ef009ed11e5","attributes":{"name":"len","tags":[[["len",null]],{"type":"map","entries":[["invert_yaxis",false],["autorange",false]]}],"start":-54372.90000000001,"end":756729.9,"reset_start":-54372.90000000001,"reset_end":756729.9}},"x_scale":{"type":"object","name":"LinearScale","id":"2888aee0-59fb-4494-a80b-1b19160ad87c"},"y_scale":{"type":"object","name":"LinearScale","id":"3a452bfc-9a38-48f6-9c0f-c3543699766d"},"title":{"type":"object","name":"Title","id":"1858de5f-4dc4-4c0c-bfce-eac28c4dda69","attributes":{"text_color":"black","text_font_size":"12pt"}},"renderers":[{"type":"object","name":"GlyphRenderer","id":"9f8a125c-ddda-4f87-8c5c-345cf7c1604b","attributes":{"name":"9","data_source":{"type":"object","name":"ColumnDataSource","id":"efcf4921-76c9-41ee-a07a-b0d4bdba110f","attributes":{"selected":{"type":"object","name":"Selection","id":"4de15be8-8ca2-4734-abde-11372c79be90","attributes":{"indices":[],"line_indices":[]}},"selection_policy":{"type":"object","name":"UnionRenderers","id":"4208a252-4fe3-4c0c-a305-7edfb2143fed"},"data":{"type":"map","entries":[["AGE",{"type":"ndarray","array":{"type":"bytes","data":"AAAAAAAAHEA="},"shape":[1],"dtype":"float64","order":"little"}],["len",{"type":"ndarray","array":{"type":"bytes","data":"8oMKAA=="},"shape":[1],"dtype":"uint32","order":"little"}],["ILOSTAT",[9]]]}}},"view":{"type":"object","name":"CDSView","id":"8a83d60c-82c1-4ca1-8130-aace4bbc871e","attributes":{"filter":{"type":"object","name":"AllIndices","id":"b29ceed1-a0b3-4286-88ab-61a978bd95c1"}}},"glyph":{"type":"object","name":"Line","id":"35339dd4-a832-4ccf-84fb-b19cc51db73c","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"line_color":"#30a2da","line_width":2}},"selection_glyph":{"type":"object","name":"Line","id":"ea71d7a5-bd28-4ff8-a0dc-e3c1bae2280d","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"line_color":"#30a2da","line_width":2}},"nonselection_glyph":{"type":"object","name":"Line","id":"405fe6c8-3cda-445f-9780-4c5f15ab6356","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"line_color":"#30a2da","line_alpha":0.1,"line_width":2}},"muted_glyph":{"type":"object","name":"Line","id":"a9ba1845-a9cd-4a20-8ed4-4368950c0623","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"line_color":"#30a2da","line_alpha":0.2,"line_width":2}}}},{"type":"object","name":"GlyphRenderer","id":"e9798db5-2e04-4df5-879d-48531990f149","attributes":{"name":"3","data_source":{"type":"object","name":"ColumnDataSource","id":"2364a6be-70f5-4245-9d35-2d151318c3a9","attributes":{"selected":{"type":"object","name":"Selection","id":"2627602f-24e3-48b3-b186-7ecda4798dad","attributes":{"indices":[],"line_indices":[]}},"selection_policy":{"type":"object","name":"UnionRenderers","id":"2b4a5534-e178-4f19-997b-c4ff92489624"},"data":{"type":"map","entries":[["AGE",{"type":"ndarray","array":{"type":"bytes","data":"AAAAAAAANEAAAAAAAABAQAAAAAAAgEdAAAAAAABAUEAAAAAAAMBSQA=="},"shape":[5],"dtype":"float64","order":"little"}],["len",{"type":"ndarray","array":{"type":"bytes","data":"k5cEAHNLAQBLegEAc24JABJTBQA="},"shape":[5],"dtype":"uint32","order":"little"}],["ILOSTAT",[3,3,3,3,3]]]}}},"view":{"type":"object","name":"CDSView","id":"428fe535-9def-4d06-8ba3-35191257e900","attributes":{"filter":{"type":"object","name":"AllIndices","id":"12d82b17-f117-499e-be8c-e1fe2b4cbfa3"}}},"glyph":{"type":"object","name":"Line","id":"1d660633-cb2a-4a0e-8da0-9370f931e4d1","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"line_color":"#fc4f30","line_width":2}},"selection_glyph":{"type":"object","name":"Line","id":"d59938bc-54a0-49eb-95ec-66c82992b17e","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"line_color":"#fc4f30","line_width":2}},"nonselection_glyph":{"type":"object","name":"Line","id":"193f36b1-9ee1-42af-b185-8e20457e67d2","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"line_color":"#fc4f30","line_alpha":0.1,"line_width":2}},"muted_glyph":{"type":"object","name":"Line","id":"2bccba5c-b6e8-4332-9b2b-421c17ab5d7e","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"line_color":"#fc4f30","line_alpha":0.2,"line_width":2}}}},{"type":"object","name":"GlyphRenderer","id":"7ae50fe3-34e7-4c59-b225-7d033b5f6cbf","attributes":{"name":"1","data_source":{"type":"object","name":"ColumnDataSource","id":"0fef1a14-f640-4175-b842-51a792e01bf2","attributes":{"selected":{"type":"object","name":"Selection","id":"6c498ad3-9d99-4fb8-ba0b-9458968d8d2e","attributes":{"indices":[],"line_indices":[]}},"selection_policy":{"type":"object","name":"UnionRenderers","id":"5cf1b457-de7c-414d-9820-102ad3f14ec9"},"data":{"type":"map","entries":[["AGE",{"type":"ndarray","array":{"type":"bytes","data":"AAAAAAAANEAAAAAAAABAQAAAAAAAgEdAAAAAAABAUEA="},"shape":[4],"dtype":"float64","order":"little"}],["len",{"type":"ndarray","array":{"type":"bytes","data":"kwkCAG/vBwBw9wkA8jMDAA=="},"shape":[4],"dtype":"uint32","order":"little"}],["ILOSTAT",[1,1,1,1]]]}}},"view":{"type":"object","name":"CDSView","id":"5dee4918-2366-4a21-a86c-c969d1589b8d","attributes":{"filter":{"type":"object","name":"AllIndices","id":"28bd0885-29fa-4dd2-a9a5-8a3248cebedd"}}},"glyph":{"type":"object","name":"Line","id":"6cd677d9-7bfe-41ab-b38a-703fa3cb26a6","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"line_color":"#e5ae38","line_width":2}},"selection_glyph":{"type":"object","name":"Line","id":"82ee89ba-ae37-47c2-8f66-349fb7591ff5","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"line_color":"#e5ae38","line_width":2}},"nonselection_glyph":{"type":"object","name":"Line","id":"be7b0eb1-e50a-403c-8471-020ed2328627","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"line_color":"#e5ae38","line_alpha":0.1,"line_width":2}},"muted_glyph":{"type":"object","name":"Line","id":"550bc03d-1790-49d9-b1db-fc12254ff850","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"line_color":"#e5ae38","line_alpha":0.2,"line_width":2}}}},{"type":"object","name":"GlyphRenderer","id":"8aad1651-3e0a-4cc2-a6e4-b2787b5e1b53","attributes":{"name":"2","data_source":{"type":"object","name":"ColumnDataSource","id":"7726a00c-c40f-4961-9e63-b6455d25f470","attributes":{"selected":{"type":"object","name":"Selection","id":"25bfb559-fda3-4c54-becf-376406e73d5f","attributes":{"indices":[],"line_indices":[]}},"selection_policy":{"type":"object","name":"UnionRenderers","id":"31e87108-fb3d-4e34-a470-2ff632ebeb3e"},"data":{"type":"map","entries":[["AGE",{"type":"ndarray","array":{"type":"bytes","data":"AAAAAAAANEAAAAAAAABAQAAAAAAAgEdAAAAAAABAUEA="},"shape":[4],"dtype":"float64","order":"little"}],["len",{"type":"ndarray","array":{"type":"bytes","data":"Ep4AACnfAABXrwAAozMAAA=="},"shape":[4],"dtype":"uint32","order":"little"}],["ILOSTAT",[2,2,2,2]]]}}},"view":{"type":"object","name":"CDSView","id":"a6c00c7c-ebb5-48bb-88b1-8bc63aa11e9e","attributes":{"filter":{"type":"object","name":"AllIndices","id":"9b4f6aef-cda1-4092-909d-6f130b3777ac"}}},"glyph":{"type":"object","name":"Line","id":"4608def6-3822-4dc0-9ac3-2e040cef7209","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"line_color":"#6d904f","line_width":2}},"selection_glyph":{"type":"object","name":"Line","id":"c586c358-e3d4-40e4-97a6-dc7b84774a7d","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"line_color":"#6d904f","line_width":2}},"nonselection_glyph":{"type":"object","name":"Line","id":"1b444b52-77f1-456a-8aa7-8f937aa6d300","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"line_color":"#6d904f","line_alpha":0.1,"line_width":2}},"muted_glyph":{"type":"object","name":"Line","id":"d1aa0fe5-a109-4262-8068-95b9943eff2d","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"line_color":"#6d904f","line_alpha":0.2,"line_width":2}}}},{"type":"object","name":"GlyphRenderer","id":"ca9fee8a-2d95-4d0e-a298-f55638d864dd","attributes":{"name":"9","data_source":{"type":"object","name":"ColumnDataSource","id":"e0e57d33-4173-4d11-829b-b81c29ae6a1e","attributes":{"selected":{"type":"object","name":"Selection","id":"b8c73824-4cb9-4b58-b000-ce54e3f5dddb","attributes":{"indices":[],"line_indices":[]}},"selection_policy":{"type":"object","name":"UnionRenderers","id":"edf80492-d741-4fd4-a2f9-3e04d3867b00"},"data":{"type":"map","entries":[["AGE",{"type":"ndarray","array":{"type":"bytes","data":"AAAAAAAAHEA="},"shape":[1],"dtype":"float64","order":"little"}],["len",{"type":"ndarray","array":{"type":"bytes","data":"8oMKAA=="},"shape":[1],"dtype":"uint32","order":"little"}],["ILOSTAT",[9]]]}}},"view":{"type":"object","name":"CDSView","id":"cbcae060-96b6-4ea9-8780-55f586e8b465","attributes":{"filter":{"type":"object","name":"AllIndices","id":"c8e199d9-0308-4334-93cc-6b37e928d541"}}},"glyph":{"type":"object","name":"Scatter","id":"bad0a4d8-23f7-4496-ae31-7573b7f2709e","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"size":{"type":"value","value":5.477225575051661},"line_color":{"type":"value","value":"#30a2da"},"fill_color":{"type":"value","value":"#30a2da"},"hatch_color":{"type":"value","value":"#30a2da"}}},"selection_glyph":{"type":"object","name":"Scatter","id":"791b2ed0-95b0-4788-869d-d606c3f64d46","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"size":{"type":"value","value":5.477225575051661},"angle":{"type":"value","value":0.0},"line_color":{"type":"value","value":"#30a2da"},"line_alpha":{"type":"value","value":1.0},"line_width":{"type":"value","value":1},"line_join":{"type":"value","value":"bevel"},"line_cap":{"type":"value","value":"butt"},"line_dash":{"type":"value","value":[]},"line_dash_offset":{"type":"value","value":0},"fill_color":{"type":"value","value":"#30a2da"},"fill_alpha":{"type":"value","value":1.0},"hatch_color":{"type":"value","value":"#30a2da"},"hatch_alpha":{"type":"value","value":1.0},"hatch_scale":{"type":"value","value":12.0},"hatch_pattern":{"type":"value","value":null},"hatch_weight":{"type":"value","value":1.0},"marker":{"type":"value","value":"circle"}}},"nonselection_glyph":{"type":"object","name":"Scatter","id":"3bdc2ad9-730e-4ebd-b45e-c324af0f9851","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"size":{"type":"value","value":5.477225575051661},"line_color":{"type":"value","value":"#30a2da"},"line_alpha":{"type":"value","value":0.1},"fill_color":{"type":"value","value":"#30a2da"},"fill_alpha":{"type":"value","value":0.1},"hatch_color":{"type":"value","value":"#30a2da"},"hatch_alpha":{"type":"value","value":0.1}}},"muted_glyph":{"type":"object","name":"Scatter","id":"426fc4f4-e5ff-44a7-a3f4-a6455315cb61","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"size":{"type":"value","value":5.477225575051661},"line_color":{"type":"value","value":"#30a2da"},"line_alpha":{"type":"value","value":0.2},"fill_color":{"type":"value","value":"#30a2da"},"fill_alpha":{"type":"value","value":0.2},"hatch_color":{"type":"value","value":"#30a2da"},"hatch_alpha":{"type":"value","value":0.2}}}}},{"type":"object","name":"GlyphRenderer","id":"1da3a199-a323-4099-8df6-021de08e060b","attributes":{"name":"3","data_source":{"type":"object","name":"ColumnDataSource","id":"17b20442-1b0f-4df5-89c3-083794bbf049","attributes":{"selected":{"type":"object","name":"Selection","id":"5a18b20d-0613-42e4-ad44-1563828ceb7f","attributes":{"indices":[],"line_indices":[]}},"selection_policy":{"type":"object","name":"UnionRenderers","id":"59e558d4-a527-4f48-90d1-16399ed6f888"},"data":{"type":"map","entries":[["AGE",{"type":"ndarray","array":{"type":"bytes","data":"AAAAAAAANEAAAAAAAABAQAAAAAAAgEdAAAAAAABAUEAAAAAAAMBSQA=="},"shape":[5],"dtype":"float64","order":"little"}],["len",{"type":"ndarray","array":{"type":"bytes","data":"k5cEAHNLAQBLegEAc24JABJTBQA="},"shape":[5],"dtype":"uint32","order":"little"}],["ILOSTAT",[3,3,3,3,3]]]}}},"view":{"type":"object","name":"CDSView","id":"f95a63ae-2b84-42cc-bddd-e3b5afb0e422","attributes":{"filter":{"type":"object","name":"AllIndices","id":"bf804d5d-ac08-492b-92f7-987bd83b29da"}}},"glyph":{"type":"object","name":"Scatter","id":"11dcbca5-854f-4600-8853-6b9258f7944c","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"size":{"type":"value","value":5.477225575051661},"line_color":{"type":"value","value":"#fc4f30"},"fill_color":{"type":"value","value":"#fc4f30"},"hatch_color":{"type":"value","value":"#fc4f30"}}},"selection_glyph":{"type":"object","name":"Scatter","id":"cd5693ce-eda5-45d3-adf9-a0541fe82a94","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"size":{"type":"value","value":5.477225575051661},"angle":{"type":"value","value":0.0},"line_color":{"type":"value","value":"#fc4f30"},"line_alpha":{"type":"value","value":1.0},"line_width":{"type":"value","value":1},"line_join":{"type":"value","value":"bevel"},"line_cap":{"type":"value","value":"butt"},"line_dash":{"type":"value","value":[]},"line_dash_offset":{"type":"value","value":0},"fill_color":{"type":"value","value":"#fc4f30"},"fill_alpha":{"type":"value","value":1.0},"hatch_color":{"type":"value","value":"#fc4f30"},"hatch_alpha":{"type":"value","value":1.0},"hatch_scale":{"type":"value","value":12.0},"hatch_pattern":{"type":"value","value":null},"hatch_weight":{"type":"value","value":1.0},"marker":{"type":"value","value":"circle"}}},"nonselection_glyph":{"type":"object","name":"Scatter","id":"da5559ee-ad87-4126-9a39-648b372ce6b4","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"size":{"type":"value","value":5.477225575051661},"line_color":{"type":"value","value":"#fc4f30"},"line_alpha":{"type":"value","value":0.1},"fill_color":{"type":"value","value":"#fc4f30"},"fill_alpha":{"type":"value","value":0.1},"hatch_color":{"type":"value","value":"#fc4f30"},"hatch_alpha":{"type":"value","value":0.1}}},"muted_glyph":{"type":"object","name":"Scatter","id":"b6ab3b8a-45e8-4623-88c5-4f76691f4245","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"size":{"type":"value","value":5.477225575051661},"line_color":{"type":"value","value":"#fc4f30"},"line_alpha":{"type":"value","value":0.2},"fill_color":{"type":"value","value":"#fc4f30"},"fill_alpha":{"type":"value","value":0.2},"hatch_color":{"type":"value","value":"#fc4f30"},"hatch_alpha":{"type":"value","value":0.2}}}}},{"type":"object","name":"GlyphRenderer","id":"57f55624-5776-4083-9dc4-662c6dcb9549","attributes":{"name":"1","data_source":{"type":"object","name":"ColumnDataSource","id":"944c2518-311c-4ba2-bee7-e2dff8fe77b5","attributes":{"selected":{"type":"object","name":"Selection","id":"f33646c0-880e-49c6-8fa3-4987e825a4c9","attributes":{"indices":[],"line_indices":[]}},"selection_policy":{"type":"object","name":"UnionRenderers","id":"39d921aa-940f-4fa0-8db9-d85df7f5d087"},"data":{"type":"map","entries":[["AGE",{"type":"ndarray","array":{"type":"bytes","data":"AAAAAAAANEAAAAAAAABAQAAAAAAAgEdAAAAAAABAUEA="},"shape":[4],"dtype":"float64","order":"little"}],["len",{"type":"ndarray","array":{"type":"bytes","data":"kwkCAG/vBwBw9wkA8jMDAA=="},"shape":[4],"dtype":"uint32","order":"little"}],["ILOSTAT",[1,1,1,1]]]}}},"view":{"type":"object","name":"CDSView","id":"2652d7d9-4135-475e-8aec-9c1f0b32be55","attributes":{"filter":{"type":"object","name":"AllIndices","id":"5f55ed51-c6a5-45a2-a9f7-4eb6f062fe56"}}},"glyph":{"type":"object","name":"Scatter","id":"fc7f2f6f-90cd-4634-a553-48edb53c3c8f","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"size":{"type":"value","value":5.477225575051661},"line_color":{"type":"value","value":"#e5ae38"},"fill_color":{"type":"value","value":"#e5ae38"},"hatch_color":{"type":"value","value":"#e5ae38"}}},"selection_glyph":{"type":"object","name":"Scatter","id":"a9a3cf25-760b-4afe-ad46-6d5d1c03d425","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"size":{"type":"value","value":5.477225575051661},"angle":{"type":"value","value":0.0},"line_color":{"type":"value","value":"#e5ae38"},"line_alpha":{"type":"value","value":1.0},"line_width":{"type":"value","value":1},"line_join":{"type":"value","value":"bevel"},"line_cap":{"type":"value","value":"butt"},"line_dash":{"type":"value","value":[]},"line_dash_offset":{"type":"value","value":0},"fill_color":{"type":"value","value":"#e5ae38"},"fill_alpha":{"type":"value","value":1.0},"hatch_color":{"type":"value","value":"#e5ae38"},"hatch_alpha":{"type":"value","value":1.0},"hatch_scale":{"type":"value","value":12.0},"hatch_pattern":{"type":"value","value":null},"hatch_weight":{"type":"value","value":1.0},"marker":{"type":"value","value":"circle"}}},"nonselection_glyph":{"type":"object","name":"Scatter","id":"fe918039-2f1e-42a5-87ef-45f8adcf2c1d","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"size":{"type":"value","value":5.477225575051661},"line_color":{"type":"value","value":"#e5ae38"},"line_alpha":{"type":"value","value":0.1},"fill_color":{"type":"value","value":"#e5ae38"},"fill_alpha":{"type":"value","value":0.1},"hatch_color":{"type":"value","value":"#e5ae38"},"hatch_alpha":{"type":"value","value":0.1}}},"muted_glyph":{"type":"object","name":"Scatter","id":"1355ad0a-ff6a-4ffe-b412-ca9250977c38","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"size":{"type":"value","value":5.477225575051661},"line_color":{"type":"value","value":"#e5ae38"},"line_alpha":{"type":"value","value":0.2},"fill_color":{"type":"value","value":"#e5ae38"},"fill_alpha":{"type":"value","value":0.2},"hatch_color":{"type":"value","value":"#e5ae38"},"hatch_alpha":{"type":"value","value":0.2}}}}},{"type":"object","name":"GlyphRenderer","id":"4d4459fc-9eac-43f9-9ed6-0b58b67286b2","attributes":{"name":"2","data_source":{"type":"object","name":"ColumnDataSource","id":"e70850d5-8b83-4ba2-a849-206c844fe9a0","attributes":{"selected":{"type":"object","name":"Selection","id":"6c50a338-f888-48de-b7f9-8e06f7a49058","attributes":{"indices":[],"line_indices":[]}},"selection_policy":{"type":"object","name":"UnionRenderers","id":"36e3d51a-11f0-4977-be7c-10262d47a51f"},"data":{"type":"map","entries":[["AGE",{"type":"ndarray","array":{"type":"bytes","data":"AAAAAAAANEAAAAAAAABAQAAAAAAAgEdAAAAAAABAUEA="},"shape":[4],"dtype":"float64","order":"little"}],["len",{"type":"ndarray","array":{"type":"bytes","data":"Ep4AACnfAABXrwAAozMAAA=="},"shape":[4],"dtype":"uint32","order":"little"}],["ILOSTAT",[2,2,2,2]]]}}},"view":{"type":"object","name":"CDSView","id":"36b00937-009d-482d-8bcc-5db9878df742","attributes":{"filter":{"type":"object","name":"AllIndices","id":"98647374-2019-4ab4-8ba5-a9b4f1f89efa"}}},"glyph":{"type":"object","name":"Scatter","id":"0fb0d5cb-6aea-4387-b1ab-088d22065506","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"size":{"type":"value","value":5.477225575051661},"line_color":{"type":"value","value":"#6d904f"},"fill_color":{"type":"value","value":"#6d904f"},"hatch_color":{"type":"value","value":"#6d904f"}}},"selection_glyph":{"type":"object","name":"Scatter","id":"52030b65-1055-4035-86f6-50ecf8a57eeb","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"size":{"type":"value","value":5.477225575051661},"angle":{"type":"value","value":0.0},"line_color":{"type":"value","value":"#6d904f"},"line_alpha":{"type":"value","value":1.0},"line_width":{"type":"value","value":1},"line_join":{"type":"value","value":"bevel"},"line_cap":{"type":"value","value":"butt"},"line_dash":{"type":"value","value":[]},"line_dash_offset":{"type":"value","value":0},"fill_color":{"type":"value","value":"#6d904f"},"fill_alpha":{"type":"value","value":1.0},"hatch_color":{"type":"value","value":"#6d904f"},"hatch_alpha":{"type":"value","value":1.0},"hatch_scale":{"type":"value","value":12.0},"hatch_pattern":{"type":"value","value":null},"hatch_weight":{"type":"value","value":1.0},"marker":{"type":"value","value":"circle"}}},"nonselection_glyph":{"type":"object","name":"Scatter","id":"721915ae-328e-454e-affb-b2f74e44ca2f","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"size":{"type":"value","value":5.477225575051661},"line_color":{"type":"value","value":"#6d904f"},"line_alpha":{"type":"value","value":0.1},"fill_color":{"type":"value","value":"#6d904f"},"fill_alpha":{"type":"value","value":0.1},"hatch_color":{"type":"value","value":"#6d904f"},"hatch_alpha":{"type":"value","value":0.1}}},"muted_glyph":{"type":"object","name":"Scatter","id":"d225d05b-ef9d-48e0-942e-d3f40487d5d5","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"AGE"},"y":{"type":"field","field":"len"},"size":{"type":"value","value":5.477225575051661},"line_color":{"type":"value","value":"#6d904f"},"line_alpha":{"type":"value","value":0.2},"fill_color":{"type":"value","value":"#6d904f"},"fill_alpha":{"type":"value","value":0.2},"hatch_color":{"type":"value","value":"#6d904f"},"hatch_alpha":{"type":"value","value":0.2}}}}}],"toolbar":{"type":"object","name":"Toolbar","id":"eb539631-cb38-4ff0-b66a-9ca0377f87cd","attributes":{"tools":[{"type":"object","name":"WheelZoomTool","id":"67c843ac-6ac6-4ff3-8f2a-b4b6b6ba9866","attributes":{"tags":["hv_created"],"renderers":"auto","zoom_together":"none"}},{"type":"object","name":"HoverTool","id":"7ee9906f-b6fd-460a-8d69-3d37deeba669","attributes":{"tags":["hv_created"],"renderers":[{"id":"9f8a125c-ddda-4f87-8c5c-345cf7c1604b"},{"id":"e9798db5-2e04-4df5-879d-48531990f149"},{"id":"7ae50fe3-34e7-4c59-b225-7d033b5f6cbf"},{"id":"8aad1651-3e0a-4cc2-a6e4-b2787b5e1b53"},{"id":"ca9fee8a-2d95-4d0e-a298-f55638d864dd"},{"id":"1da3a199-a323-4099-8df6-021de08e060b"},{"id":"57f55624-5776-4083-9dc4-662c6dcb9549"},{"id":"4d4459fc-9eac-43f9-9ed6-0b58b67286b2"}],"tooltips":[["ILOSTAT","@{ILOSTAT}"],["AGE","@{AGE}"],["len","@{len}"]]}},{"type":"object","name":"SaveTool","id":"367c90f8-d2db-4bc3-974b-0e8093cfd0c8"},{"type":"object","name":"PanTool","id":"29c9051b-0071-48d3-ac5e-ff6e4e065c4a"},{"type":"object","name":"BoxZoomTool","id":"fe3004c9-98a2-4317-b526-8eea1954336d","attributes":{"dimensions":"both","overlay":{"type":"object","name":"BoxAnnotation","id":"587557be-8e6f-48be-9790-22a8ad8a1e9e","attributes":{"syncable":false,"line_color":"black","line_alpha":1.0,"line_width":2,"line_dash":[4,4],"fill_color":"lightgrey","fill_alpha":0.5,"level":"overlay","visible":false,"left":{"type":"number","value":"nan"},"right":{"type":"number","value":"nan"},"top":{"type":"number","value":"nan"},"bottom":{"type":"number","value":"nan"},"left_units":"canvas","right_units":"canvas","top_units":"canvas","bottom_units":"canvas","handles":{"type":"object","name":"BoxInteractionHandles","id":"d9184171-0bda-496d-9fa9-2ff43cf3e499","attributes":{"all":{"type":"object","name":"AreaVisuals","id":"6af11faf-b53b-4087-a0ab-7e46e4a7d938","attributes":{"fill_color":"white","hover_fill_color":"lightgray"}}}}}}}},{"type":"object","name":"ResetTool","id":"e97ec807-b879-49a6-b90f-5beb6cae73b0"}],"active_drag":{"id":"29c9051b-0071-48d3-ac5e-ff6e4e065c4a"},"active_scroll":{"id":"67c843ac-6ac6-4ff3-8f2a-b4b6b6ba9866"}}},"left":[{"type":"object","name":"LinearAxis","id":"fa29da14-1a01-4b06-8f43-d95e5c728f67","attributes":{"ticker":{"type":"object","name":"BasicTicker","id":"efb3bc9b-a970-44ec-951a-6fe38397fc7b","attributes":{"mantissas":[1,2,5]}},"formatter":{"type":"object","name":"BasicTickFormatter","id":"26533df0-0305-4533-a324-94f348b530b2"},"axis_label":"len","major_label_policy":{"type":"object","name":"AllLabels","id":"95c06fb0-3c4e-4f5e-8ad6-814c152d1275"}}}],"right":[{"type":"object","name":"Legend","id":"98bd04ba-a262-4cbf-92e7-f04862abed6e","attributes":{"location":[0,0],"click_policy":"mute","items":[{"type":"object","name":"LegendItem","id":"cff879e2-bb12-40c2-a78a-2a1addfd3465","attributes":{"label":{"type":"value","value":"9"},"renderers":[{"id":"9f8a125c-ddda-4f87-8c5c-345cf7c1604b"},{"id":"ca9fee8a-2d95-4d0e-a298-f55638d864dd"}]}},{"type":"object","name":"LegendItem","id":"5dbc79e7-ce79-423b-93da-9b58e3d3ef5d","attributes":{"label":{"type":"value","value":"3"},"renderers":[{"id":"e9798db5-2e04-4df5-879d-48531990f149"},{"id":"1da3a199-a323-4099-8df6-021de08e060b"}]}},{"type":"object","name":"LegendItem","id":"577551b2-a1c6-4533-adcb-e52c1a010d0d","attributes":{"label":{"type":"value","value":"1"},"renderers":[{"id":"7ae50fe3-34e7-4c59-b225-7d033b5f6cbf"},{"id":"57f55624-5776-4083-9dc4-662c6dcb9549"}]}},{"type":"object","name":"LegendItem","id":"1eac4dee-a2ae-4909-9be4-6218644b7a57","attributes":{"label":{"type":"value","value":"2"},"renderers":[{"id":"8aad1651-3e0a-4cc2-a6e4-b2787b5e1b53"},{"id":"4d4459fc-9eac-43f9-9ed6-0b58b67286b2"}]}}]}}],"below":[{"type":"object","name":"LinearAxis","id":"d63fd311-ea3a-463c-8cee-543d8e2c8179","attributes":{"ticker":{"type":"object","name":"BasicTicker","id":"c554262d-87af-43dd-b109-1c676e3ec77e","attributes":{"mantissas":[1,2,5]}},"formatter":{"type":"object","name":"BasicTickFormatter","id":"de58ad32-23bf-4a45-a8ba-9aa4eacbe724"},"axis_label":"AGE","major_label_policy":{"type":"object","name":"AllLabels","id":"a01e9282-5c7f-460f-a2c5-c0a4bf750e3f"}}}],"center":[{"type":"object","name":"Grid","id":"72e0e85a-ae21-4a03-9719-20189822605f","attributes":{"axis":{"id":"d63fd311-ea3a-463c-8cee-543d8e2c8179"},"grid_line_color":null}},{"type":"object","name":"Grid","id":"33d10f16-b209-4ba6-b029-5aa2e3ada178","attributes":{"dimension":1,"axis":{"id":"fa29da14-1a01-4b06-8f43-d95e5c728f67"},"grid_line_color":null}}],"min_border_top":10,"min_border_bottom":10,"min_border_left":10,"min_border_right":10,"output_backend":"webgl"}},{"type":"object","name":"Spacer","id":"3c0cbd6b-e078-4c8f-9203-2fb485fef183","attributes":{"name":"HSpacer00362","stylesheets":["\n:host(.pn-loading):before, .pn-loading:before {\n  background-color: #c3c3c3;\n  mask-size: auto calc(min(50%, 400px));\n  -webkit-mask-size: auto calc(min(50%, 400px));\n}",{"id":"d04e5d85-aa2b-4a2b-8fd5-a4fd2adc9a48"},{"id":"a5cd00aa-74a5-450d-9039-f36d2cffe9bf"},{"id":"b64e65c1-fbb2-4ebb-ae5a-e32ea99909ac"}],"min_width":0,"margin":0,"sizing_mode":"stretch_width","align":"start"}}]}}],"defs":[{"type":"model","name":"ReactiveHTML1"},{"type":"model","name":"FlexBox1","properties":[{"name":"align_content","kind":"Any","default":"flex-start"},{"name":"align_items","kind":"Any","default":"flex-start"},{"name":"flex_direction","kind":"Any","default":"row"},{"name":"flex_wrap","kind":"Any","default":"wrap"},{"name":"gap","kind":"Any","default":""},{"name":"justify_content","kind":"Any","default":"flex-start"}]},{"type":"model","name":"FloatPanel1","properties":[{"name":"config","kind":"Any","default":{"type":"map"}},{"name":"contained","kind":"Any","default":true},{"name":"position","kind":"Any","default":"right-top"},{"name":"offsetx","kind":"Any","default":null},{"name":"offsety","kind":"Any","default":null},{"name":"theme","kind":"Any","default":"primary"},{"name":"status","kind":"Any","default":"normalized"}]},{"type":"model","name":"GridStack1","properties":[{"name":"ncols","kind":"Any","default":null},{"name":"nrows","kind":"Any","default":null},{"name":"allow_resize","kind":"Any","default":true},{"name":"allow_drag","kind":"Any","default":true},{"name":"state","kind":"Any","default":[]}]},{"type":"model","name":"drag1","properties":[{"name":"slider_width","kind":"Any","default":5},{"name":"slider_color","kind":"Any","default":"black"},{"name":"value","kind":"Any","default":50}]},{"type":"model","name":"click1","properties":[{"name":"terminal_output","kind":"Any","default":""},{"name":"debug_name","kind":"Any","default":""},{"name":"clears","kind":"Any","default":0}]},{"type":"model","name":"FastWrapper1","properties":[{"name":"object","kind":"Any","default":null},{"name":"style","kind":"Any","default":null}]},{"type":"model","name":"NotificationArea1","properties":[{"name":"js_events","kind":"Any","default":{"type":"map"}},{"name":"max_notifications","kind":"Any","default":5},{"name":"notifications","kind":"Any","default":[]},{"name":"position","kind":"Any","default":"bottom-right"},{"name":"_clear","kind":"Any","default":0},{"name":"types","kind":"Any","default":[{"type":"map","entries":[["type","warning"],["background","#ffc107"],["icon",{"type":"map","entries":[["className","fas fa-exclamation-triangle"],["tagName","i"],["color","white"]]}]]},{"type":"map","entries":[["type","info"],["background","#007bff"],["icon",{"type":"map","entries":[["className","fas fa-info-circle"],["tagName","i"],["color","white"]]}]]}]}]},{"type":"model","name":"Notification","properties":[{"name":"background","kind":"Any","default":null},{"name":"duration","kind":"Any","default":3000},{"name":"icon","kind":"Any","default":null},{"name":"message","kind":"Any","default":""},{"name":"notification_type","kind":"Any","default":null},{"name":"_rendered","kind":"Any","default":false},{"name":"_destroyed","kind":"Any","default":false}]},{"type":"model","name":"TemplateActions1","properties":[{"name":"open_modal","kind":"Any","default":0},{"name":"close_modal","kind":"Any","default":0}]},{"type":"model","name":"BootstrapTemplateActions1","properties":[{"name":"open_modal","kind":"Any","default":0},{"name":"close_modal","kind":"Any","default":0}]},{"type":"model","name":"TemplateEditor1","properties":[{"name":"layout","kind":"Any","default":[]}]},{"type":"model","name":"MaterialTemplateActions1","properties":[{"name":"open_modal","kind":"Any","default":0},{"name":"close_modal","kind":"Any","default":0}]},{"type":"model","name":"ReactiveESM1","properties":[{"name":"esm_constants","kind":"Any","default":{"type":"map"}}]},{"type":"model","name":"JSComponent1","properties":[{"name":"esm_constants","kind":"Any","default":{"type":"map"}}]},{"type":"model","name":"ReactComponent1","properties":[{"name":"esm_constants","kind":"Any","default":{"type":"map"}}]},{"type":"model","name":"AnyWidgetComponent1","properties":[{"name":"esm_constants","kind":"Any","default":{"type":"map"}}]},{"type":"model","name":"request_value1","properties":[{"name":"fill","kind":"Any","default":"none"},{"name":"_synced","kind":"Any","default":null},{"name":"_request_sync","kind":"Any","default":0}]}]}};
+  var render_items = [{"docid":"23e75207-2ef9-4d53-aa7e-1ce935e73182","roots":{"5c66d94c-e745-437e-bd02-cfaf92ab005a":"f866e94f-360f-4de1-bf6c-e02e62b82dd6"},"root_ids":["5c66d94c-e745-437e-bd02-cfaf92ab005a"]}];
+  var docs = Object.values(docs_json)
+  if (!docs) {
+    return
+  }
+  const py_version = docs[0].version.replace('rc', '-rc.').replace('.dev', '-dev.')
+  async function embed_document(root) {
+    var Bokeh = get_bokeh(root)
+    await Bokeh.embed.embed_items_notebook(docs_json, render_items);
+    for (const render_item of render_items) {
+      for (const root_id of render_item.root_ids) {
+    const id_el = document.getElementById(root_id)
+    if (id_el.children.length && id_el.children[0].hasAttribute('data-root-id')) {
+      const root_el = id_el.children[0]
+      root_el.id = root_el.id + '-rendered'
+      for (const child of root_el.children) {
+            // Ensure JupyterLab does not capture keyboard shortcuts
+            // see: https://jupyterlab.readthedocs.io/en/4.1.x/extension/notebook.html#keyboard-interaction-model
+        child.setAttribute('data-lm-suppress-shortcuts', 'true')
+      }
+    }
+      }
+    }
+  }
+  function get_bokeh(root) {
+    if (root.Bokeh === undefined) {
+      return null
+    } else if (root.Bokeh.version !== py_version) {
+      if (root.Bokeh.versions === undefined || !root.Bokeh.versions.has(py_version)) {
+    return null
+      }
+      return root.Bokeh.versions.get(py_version);
+    } else if (root.Bokeh.version === py_version) {
+      return root.Bokeh
+    }
+    return null
+  }
+  function is_loaded(root) {
+    var Bokeh = get_bokeh(root)
+    return (Bokeh != null && Bokeh.Panel !== undefined)
+  }
+  if (is_loaded(root)) {
+    embed_document(root);
+  } else {
+    var attempts = 0;
+    var timer = setInterval(function(root) {
+      if (is_loaded(root)) {
+        clearInterval(timer);
+        embed_document(root);
+      } else if (document.readyState == "complete") {
+        attempts++;
+        if (attempts > 200) {
+          clearInterval(timer);
+      var Bokeh = get_bokeh(root)
+      if (Bokeh == null || Bokeh.Panel == null) {
+            console.warn("Panel: ERROR: Unable to run Panel code because Bokeh or Panel library is missing");
+      } else {
+        console.warn("Panel: WARNING: Attempting to render but not all required libraries could be resolved.")
+        embed_document(root)
+      }
+        }
+      }
+    }, 25, root)
+  }
+})(window);</script></div>
+</div>
+<p>Referring back to the ILOSTAT legend:</p>
+<table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>ILOSTAT</p></th>
+<th class="head"><p>Legend</p></th>
+<th class="head"><p>Comments</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>1</p></td>
+<td><p>did any work for pay or profit</p></td>
+<td><p>most common among people between 30 and 50</p></td>
+</tr>
+<tr class="row-odd"><td><p>2</p></td>
+<td><p>employed but not working</p></td>
+<td><p>slightly more commonly observed among young adults</p></td>
+</tr>
+<tr class="row-even"><td><p>3</p></td>
+<td><p>was not working because of lay-off</p></td>
+<td><p>clearly influenced by retirement</p></td>
+</tr>
+<tr class="row-odd"><td><p>9</p></td>
+<td><p>not applicable, less than 15 years old</p></td>
+<td><p>only present for the youngest age group</p></td>
+</tr>
+</tbody>
+</table>
+<p>Where points are missing in the graph, there are not enough individuals for that combination of age and employment status to pass threshold.</p>
+</section>
+<section id="Explicit-Keys">
+<h2>Explicit Keys<a class="headerlink" href="#Explicit-Keys" title="Link to this heading">#</a></h2>
+<p>If you know the grouping keys ahead-of-time, you can avoid spending the privacy parameter <span class="math notranslate nohighlight">\(\delta\)</span> to release them.</p>
+<blockquote>
+<div><p>It is recommended to only ever create one Context that spans all queries you may make on your data. We create another context here to demonstrate how grouping queries can be released without the use of the privacy parameter delta.</p>
+</div></blockquote>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">context</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">Context</span><span class="o">.</span><span class="n">compositor</span><span class="p">(</span>
+    <span class="c1"># Many columns contain mixtures of strings and numbers and cannot be parsed as floats,</span>
+    <span class="c1"># so we&#39;ll set `ignore_errors` to true to avoid conversion errors.</span>
+    <span class="n">data</span><span class="o">=</span><span class="n">pl</span><span class="o">.</span><span class="n">scan_csv</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">examples</span><span class="o">.</span><span class="n">get_france_lfs_path</span><span class="p">(),</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+    <span class="n">privacy_unit</span><span class="o">=</span><span class="n">dp</span><span class="o">.</span><span class="n">unit_of</span><span class="p">(</span><span class="n">contributions</span><span class="o">=</span><span class="mi">36</span><span class="p">),</span>
+    <span class="n">privacy_loss</span><span class="o">=</span><span class="n">dp</span><span class="o">.</span><span class="n">loss_of</span><span class="p">(</span><span class="n">epsilon</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="mi">4</span><span class="p">),</span>
+    <span class="c1"># allow for one query</span>
+    <span class="n">split_evenly_over</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>For example, you can reuse the stable groups released in the previous query:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">query_age_ilostat</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">query</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="s2">&quot;AGE&quot;</span><span class="p">,</span> <span class="s2">&quot;ILOSTAT&quot;</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">agg</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">len</span><span class="p">())</span>
+    <span class="o">.</span><span class="n">with_keys</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;AGE&quot;</span><span class="p">,</span> <span class="s2">&quot;ILOSTAT&quot;</span><span class="p">])</span>
+<span class="p">)</span>
+
+<span class="n">query_age_ilostat</span><span class="o">.</span><span class="n">summarize</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[6]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (1, 4)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;len&quot;</td><td>&quot;Frame Length&quot;</td><td>&quot;Integer Laplace&quot;</td><td>144.0</td></tr></tbody></table></div></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">.with_keys</span></code> adds a left join where the left dataset is your explicit list of group keys and the right dataset contains the results of the grouped aggregation. You can also write the join yourself! When using the context API, this is easier to express through a right join:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">query_age_ilostat</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">query</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="s2">&quot;AGE&quot;</span><span class="p">,</span> <span class="s2">&quot;ILOSTAT&quot;</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">agg</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">len</span><span class="p">())</span>
+    <span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;AGE&quot;</span><span class="p">,</span> <span class="s2">&quot;ILOSTAT&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lazy</span><span class="p">(),</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;right&quot;</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;AGE&quot;</span><span class="p">,</span> <span class="s2">&quot;ILOSTAT&quot;</span><span class="p">])</span>
+<span class="p">)</span>
+
+<span class="n">query_age_ilostat</span><span class="o">.</span><span class="n">summarize</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[7]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (1, 4)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;len&quot;</td><td>&quot;Frame Length&quot;</td><td>&quot;Integer Laplace&quot;</td><td>144.0</td></tr></tbody></table></div></div>
+</div>
+<p>The OpenDP Library rewrites these kinds of queries to impute any missing statistics corresponding to explicit group keys that don’t exist in the real data. The imputed values are as if you released the differentially private statistics on a group with no data.</p>
+</section>
+<section id="Invariant-Group-Keys">
+<h2>Invariant Group Keys<a class="headerlink" href="#Invariant-Group-Keys" title="Link to this heading">#</a></h2>
+<p>The OpenDP Library has the option to explicitly describe group keys as an “invariant” that can be released in the clear. Be aware that any aspect of your data labeled an “invariant” is not subject to privacy protections. Invariants <strong>weaken</strong> the integrity of the privacy guarantee, and open a potential vulnerability to privacy attacks. For this reason, you should be very reluctant to use invariants.</p>
+<p>In the case of invariant keys, even the absence of a group key can constitute a privacy violation. On the other hand, invariants have been used in some high-profile data releases, including by the US Census Bureau.</p>
+<p>To demonstrate this functionality, make the assumption that the quarters in which data has been collected is an invariant. You can mark group keys for the combination of year and quarter as invariant by setting <code class="docutils literal notranslate"><span class="pre">invariant=&quot;keys&quot;</span></code> as follows:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">context</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">Context</span><span class="o">.</span><span class="n">compositor</span><span class="p">(</span>
+    <span class="n">data</span><span class="o">=</span><span class="n">pl</span><span class="o">.</span><span class="n">scan_csv</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">examples</span><span class="o">.</span><span class="n">get_france_lfs_path</span><span class="p">(),</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+    <span class="n">privacy_unit</span><span class="o">=</span><span class="n">dp</span><span class="o">.</span><span class="n">unit_of</span><span class="p">(</span><span class="n">contributions</span><span class="o">=</span><span class="mi">36</span><span class="p">),</span>
+    <span class="n">privacy_loss</span><span class="o">=</span><span class="n">dp</span><span class="o">.</span><span class="n">loss_of</span><span class="p">(</span><span class="n">epsilon</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="mi">4</span><span class="p">),</span>
+    <span class="n">split_evenly_over</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">margins</span><span class="o">=</span><span class="p">[</span>
+        <span class="c1"># group keys when grouped by &quot;YEAR&quot; and &quot;QUARTER&quot; are invariant</span>
+        <span class="n">dp</span><span class="o">.</span><span class="n">polars</span><span class="o">.</span><span class="n">Margin</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;YEAR&quot;</span><span class="p">,</span> <span class="s2">&quot;QUARTER&quot;</span><span class="p">],</span> <span class="n">invariant</span><span class="o">=</span><span class="s2">&quot;keys&quot;</span><span class="p">)</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<blockquote>
+<div><p>It is recommended to only ever create one Context that spans all queries you may make on your data. We create another context here to demonstrate how an invariant will influence the analysis.</p>
+</div></blockquote>
+<p>Due to the existence of this invariant, the library will now release these quarterly keys in the clear.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">query_quarterly_counts</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">query</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="s2">&quot;YEAR&quot;</span><span class="p">,</span> <span class="s2">&quot;QUARTER&quot;</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">agg</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">len</span><span class="p">())</span>
+<span class="p">)</span>
+
+<span class="n">summary</span> <span class="o">=</span> <span class="n">query_quarterly_counts</span><span class="o">.</span><span class="n">summarize</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="mf">.05</span><span class="p">)</span>
+<span class="n">summary</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[9]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (1, 5)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th><th>accuracy</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td><td>f64</td></tr></thead><tbody><tr><td>&quot;len&quot;</td><td>&quot;Frame Length&quot;</td><td>&quot;Integer Laplace&quot;</td><td>144.0</td><td>431.884579</td></tr></tbody></table></div></div>
+</div>
+<p>This query description no longer has a “threshold” field: all noisy statistics computed on each group will be released.</p>
+<p>This visualization includes error bars showing 95% confidence intervals for the true value by pulling the accuracy estimate from the query description above.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">query_quarterly_counts</span><span class="o">.</span><span class="n">release</span><span class="p">()</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
+
+<span class="c1"># build a date column</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">with_columns</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">date</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;YEAR&quot;</span><span class="p">),</span> <span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;QUARTER&quot;</span><span class="p">)</span> <span class="o">*</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+
+<span class="n">line</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">hvplot</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s2">&quot;date&quot;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">&quot;len&quot;</span><span class="p">)</span>
+<span class="n">errorbars</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">with_columns</span><span class="p">(</span><span class="n">accuracy</span><span class="o">=</span><span class="n">summary</span><span class="p">[</span><span class="s2">&quot;accuracy&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span> \
+    <span class="o">.</span><span class="n">hvplot</span><span class="o">.</span><span class="n">errorbars</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="s2">&quot;date&quot;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">&quot;len&quot;</span><span class="p">,</span> <span class="n">yerr1</span><span class="o">=</span><span class="s2">&quot;accuracy&quot;</span><span class="p">)</span>
+<span class="n">line</span> <span class="o">*</span> <span class="n">errorbars</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[10]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div id='47cd09e4-6197-4828-85e0-4c0e2add9c09'>
+  <div id="fbf1386a-8047-4c46-99c5-d4b741bbb9ec" data-root-id="47cd09e4-6197-4828-85e0-4c0e2add9c09" style="display: contents;"></div>
+</div>
+<script type="application/javascript">(function(root) {
+  var docs_json = {"2bd445ce-9a5d-4a07-a9fe-309491228f0a":{"version":"3.7.3","title":"Bokeh Application","roots":[{"type":"object","name":"Row","id":"47cd09e4-6197-4828-85e0-4c0e2add9c09","attributes":{"name":"Row00545","tags":["embedded"],"stylesheets":["\n:host(.pn-loading):before, .pn-loading:before {\n  background-color: #c3c3c3;\n  mask-size: auto calc(min(50%, 400px));\n  -webkit-mask-size: auto calc(min(50%, 400px));\n}",{"type":"object","name":"ImportedStyleSheet","id":"d42389c6-96d0-47ec-99d9-d8e0c8222b36","attributes":{"url":"https://cdn.holoviz.org/panel/1.7.1/dist/css/loading.css"}},{"type":"object","name":"ImportedStyleSheet","id":"b300a3c2-9c11-4931-a126-edc302229ad9","attributes":{"url":"https://cdn.holoviz.org/panel/1.7.1/dist/css/listpanel.css"}},{"type":"object","name":"ImportedStyleSheet","id":"cbb0b8e5-47e2-4952-bbcc-6044fce31680","attributes":{"url":"https://cdn.holoviz.org/panel/1.7.1/dist/bundled/theme/default.css"}},{"type":"object","name":"ImportedStyleSheet","id":"cd117945-cd2e-4f72-b952-7e4cfed00d81","attributes":{"url":"https://cdn.holoviz.org/panel/1.7.1/dist/bundled/theme/native.css"}}],"min_width":700,"margin":0,"sizing_mode":"stretch_width","align":"start","children":[{"type":"object","name":"Spacer","id":"001554e3-cdd5-447f-80a6-351eeb855db1","attributes":{"name":"HSpacer00549","stylesheets":["\n:host(.pn-loading):before, .pn-loading:before {\n  background-color: #c3c3c3;\n  mask-size: auto calc(min(50%, 400px));\n  -webkit-mask-size: auto calc(min(50%, 400px));\n}",{"id":"d42389c6-96d0-47ec-99d9-d8e0c8222b36"},{"id":"cbb0b8e5-47e2-4952-bbcc-6044fce31680"},{"id":"cd117945-cd2e-4f72-b952-7e4cfed00d81"}],"min_width":0,"margin":0,"sizing_mode":"stretch_width","align":"start"}},{"type":"object","name":"Figure","id":"958bce66-6d41-4ebf-a8da-a0842d1a59d9","attributes":{"width":700,"height":300,"margin":[5,10],"sizing_mode":"fixed","align":"start","x_range":{"type":"object","name":"Range1d","id":"f793f5d3-8a4f-4b6d-aab1-0b019b0d8680","attributes":{"name":"date","tags":[[["date",null]],[]],"start":1112313600000.0,"end":1385856000000.0,"reset_start":1112313600000.0,"reset_end":1385856000000.0}},"y_range":{"type":"object","name":"Range1d","id":"627c9a56-ca84-4fed-a640-09bde657d42a","attributes":{"name":"len","tags":[[["len",null]],{"type":"map","entries":[["invert_yaxis",false],["autorange",false]]}],"start":77042.73850479446,"end":137107.26149520554,"reset_start":77042.73850479446,"reset_end":137107.26149520554}},"x_scale":{"type":"object","name":"LinearScale","id":"b4256b9d-8894-47c4-8319-28e598a755c2"},"y_scale":{"type":"object","name":"LinearScale","id":"624329d3-e603-404f-b11d-56684afd2988"},"title":{"type":"object","name":"Title","id":"0b3cae74-ecab-49c1-9471-1f047aa2bd8c","attributes":{"text_color":"black","text_font_size":"12pt"}},"renderers":[{"type":"object","name":"GlyphRenderer","id":"282174c4-878c-4b8e-a1e3-7fb5aa0458ce","attributes":{"data_source":{"type":"object","name":"ColumnDataSource","id":"fae7e293-d6d6-4b85-b096-2cea414b5256","attributes":{"selected":{"type":"object","name":"Selection","id":"5bff3f84-4dc5-4e61-86bd-1bbb91936980","attributes":{"indices":[],"line_indices":[]}},"selection_policy":{"type":"object","name":"UnionRenderers","id":"87e3f63a-6548-42e2-8bea-8daf74a58c28"},"data":{"type":"map","entries":[["date",{"type":"ndarray","array":{"type":"bytes","data":"AACA6bAvcEIAAABn9VZwQgAAgOQ5fnBCAABA/CulcEIAAMB5cMxwQgAAQPe083BCAAAAD6cacUIAAICM60FxQgAAAAowaXFCAACAh3SQcUIAAAAFubdxQgAAgIL93nFCAABAmu8FckIAAMAXNC1yQgAAQJV4VHJCAAAArWp7ckIAAIAqr6JyQgAAAKjzyXJCAADAv+XwckIAAEA9KhhzQgAAwLpuP3NCAABAOLNmc0IAAMC1941zQgAAQDM8tXNCAAAASy7cc0IAAIDIcgN0QgAAAEa3KnRCAAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh/AAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh/AAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh/"},"shape":[36],"dtype":"float64","order":"little"}],["len",{"type":"ndarray","array":{"type":"bytes","data":"eVQBAPtSAQA4RgEAr1EBAPRKAQAwQgEAj1kBAHBaAQBlTQEA0FwBADVWAQC3SgEA53MBANaNAQDWmwEAM9wBAH/yAQCs4gEAJ/oBAEz5AQDF7wEAdPQBAJP4AQAK8AEAo+8BAFneAQBrwQEAg8YBABP/AQAqSwEAVgICAIhWAQBiTgEAH1MBAIbCAQAW8AEA"},"shape":[36],"dtype":"uint32","order":"little"}]]}}},"view":{"type":"object","name":"CDSView","id":"c4e0c27f-cca4-4179-9f32-d7b3a76f5ff3","attributes":{"filter":{"type":"object","name":"AllIndices","id":"7059d4b0-9e9a-4466-904d-84c94b155156"}}},"glyph":{"type":"object","name":"Line","id":"8da59c29-6402-48e4-9a8a-e3e8bb4644b5","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"date"},"y":{"type":"field","field":"len"},"line_color":"#30a2da","line_width":2}},"selection_glyph":{"type":"object","name":"Line","id":"305b9727-3465-44ea-bb1f-5f7044132572","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"date"},"y":{"type":"field","field":"len"},"line_color":"#30a2da","line_width":2}},"nonselection_glyph":{"type":"object","name":"Line","id":"6cf0b4fa-ce71-4b3d-a1df-e5571eec7943","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"date"},"y":{"type":"field","field":"len"},"line_color":"#30a2da","line_alpha":0.1,"line_width":2}},"muted_glyph":{"type":"object","name":"Line","id":"397ea22f-bf9c-4e8f-98af-344200b48395","attributes":{"tags":["apply_ranges"],"x":{"type":"field","field":"date"},"y":{"type":"field","field":"len"},"line_color":"#30a2da","line_alpha":0.2,"line_width":2}}}}],"toolbar":{"type":"object","name":"Toolbar","id":"b2f48733-73e3-4d80-9cae-7ea65e9d79c7","attributes":{"tools":[{"type":"object","name":"WheelZoomTool","id":"492c09c7-b4ff-4fb5-b922-ac920383bf50","attributes":{"tags":["hv_created"],"renderers":"auto","zoom_together":"none"}},{"type":"object","name":"HoverTool","id":"df510c20-d081-4d09-803e-79932e948ab3","attributes":{"tags":["hv_created"],"renderers":[{"id":"282174c4-878c-4b8e-a1e3-7fb5aa0458ce"}],"tooltips":[["date","@{date}{%F %T}"],["len","@{len}"]],"formatters":{"type":"map","entries":[["@{date}","datetime"]]}}},{"type":"object","name":"SaveTool","id":"e21655b4-a2f0-460a-b2bf-79463896dc9b"},{"type":"object","name":"PanTool","id":"ba132f70-4aef-4285-89a1-0dcaba6e1a72"},{"type":"object","name":"BoxZoomTool","id":"c82906ec-cc8e-4a28-b76a-59de30a111ee","attributes":{"dimensions":"both","overlay":{"type":"object","name":"BoxAnnotation","id":"7f545620-1f99-442e-8a80-306c66b11f4d","attributes":{"syncable":false,"line_color":"black","line_alpha":1.0,"line_width":2,"line_dash":[4,4],"fill_color":"lightgrey","fill_alpha":0.5,"level":"overlay","visible":false,"left":{"type":"number","value":"nan"},"right":{"type":"number","value":"nan"},"top":{"type":"number","value":"nan"},"bottom":{"type":"number","value":"nan"},"left_units":"canvas","right_units":"canvas","top_units":"canvas","bottom_units":"canvas","handles":{"type":"object","name":"BoxInteractionHandles","id":"c2403703-ff8d-405a-a2ba-09ffc52fc249","attributes":{"all":{"type":"object","name":"AreaVisuals","id":"624fc82a-4268-4873-be0d-626112a57248","attributes":{"fill_color":"white","hover_fill_color":"lightgray"}}}}}}}},{"type":"object","name":"ResetTool","id":"5c8f01c2-a4b8-4868-9d36-211ea2bc226a"}],"active_drag":{"id":"ba132f70-4aef-4285-89a1-0dcaba6e1a72"},"active_scroll":{"id":"492c09c7-b4ff-4fb5-b922-ac920383bf50"}}},"left":[{"type":"object","name":"LinearAxis","id":"a2a62ced-fe74-4cac-8c0b-ffeac4f799fd","attributes":{"ticker":{"type":"object","name":"BasicTicker","id":"09df439f-7efc-4a12-b614-0a33a55eb360","attributes":{"mantissas":[1,2,5]}},"formatter":{"type":"object","name":"BasicTickFormatter","id":"a7f3d1e5-3e90-436c-a81e-85eda522b025"},"axis_label":"len","major_label_policy":{"type":"object","name":"AllLabels","id":"273e98c9-9c0e-4e25-afc8-1fe3926e7329"}}}],"below":[{"type":"object","name":"DatetimeAxis","id":"aaa037fe-1ff6-4469-b204-7b11e27c7d1b","attributes":{"ticker":{"type":"object","name":"DatetimeTicker","id":"e151fa4d-5deb-4553-b6e0-407b7eb23af3","attributes":{"num_minor_ticks":5,"tickers":[{"type":"object","name":"AdaptiveTicker","id":"88c4da2d-089b-4b17-802d-48470facd399","attributes":{"num_minor_ticks":0,"mantissas":[1,2,5],"max_interval":500.0}},{"type":"object","name":"AdaptiveTicker","id":"7cf1735a-c58d-453f-a32a-1244ccb0eddf","attributes":{"num_minor_ticks":0,"base":60,"mantissas":[1,2,5,10,15,20,30],"min_interval":1000.0,"max_interval":1800000.0}},{"type":"object","name":"AdaptiveTicker","id":"7e3e35de-3bc2-4f9b-bc9a-713b85a828ac","attributes":{"num_minor_ticks":0,"base":24,"mantissas":[1,2,4,6,8,12],"min_interval":3600000.0,"max_interval":43200000.0}},{"type":"object","name":"DaysTicker","id":"f97daacc-16b4-4911-8d5b-ffffebed86e2","attributes":{"days":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31]}},{"type":"object","name":"DaysTicker","id":"5b94b19a-5dbf-4bb8-bd1e-1946fa817c59","attributes":{"days":[1,4,7,10,13,16,19,22,25,28]}},{"type":"object","name":"DaysTicker","id":"2e48683d-6b9a-4163-a530-8065543a2a90","attributes":{"days":[1,8,15,22]}},{"type":"object","name":"DaysTicker","id":"edc8a481-e432-4160-80b4-2c32b86e5030","attributes":{"days":[1,15]}},{"type":"object","name":"MonthsTicker","id":"535224cc-c382-4002-9ea3-0a880836c7f4","attributes":{"months":[0,1,2,3,4,5,6,7,8,9,10,11]}},{"type":"object","name":"MonthsTicker","id":"c096271f-9600-4aac-830f-152c6cccc536","attributes":{"months":[0,2,4,6,8,10]}},{"type":"object","name":"MonthsTicker","id":"1725f6fe-d942-4639-9a2e-59edeb22f18d","attributes":{"months":[0,4,8]}},{"type":"object","name":"MonthsTicker","id":"5c083781-252c-4a20-ab56-b6c654ba4646","attributes":{"months":[0,6]}},{"type":"object","name":"YearsTicker","id":"7ccb4aff-6214-442e-9411-e6b8caebefcf"}]}},"formatter":{"type":"object","name":"DatetimeTickFormatter","id":"a57391f2-2900-4930-b713-376d8cbbc6de","attributes":{"seconds":"%T","minsec":"%T","minutes":"%H:%M","hours":"%H:%M","days":"%b %d","months":"%b %Y","strip_leading_zeros":["microseconds","milliseconds","seconds"],"boundary_scaling":false,"context":{"type":"object","name":"DatetimeTickFormatter","id":"29c7d248-d534-4e3e-8dbb-a1c0d2a72b9b","attributes":{"microseconds":"%T","milliseconds":"%T","seconds":"%b %d, %Y","minsec":"%b %d, %Y","minutes":"%b %d, %Y","hourmin":"%b %d, %Y","hours":"%b %d, %Y","days":"%Y","months":"","years":"","boundary_scaling":false,"hide_repeats":true,"context":{"type":"object","name":"DatetimeTickFormatter","id":"cdcef408-5483-472e-9f03-96e3f1cc8a62","attributes":{"microseconds":"%b %d, %Y","milliseconds":"%b %d, %Y","seconds":"","minsec":"","minutes":"","hourmin":"","hours":"","days":"","months":"","years":"","boundary_scaling":false,"hide_repeats":true}},"context_which":"all"}},"context_which":"all"}},"axis_label":"date","major_label_policy":{"type":"object","name":"AllLabels","id":"ac670b6e-b0f3-4956-9b98-2f16f0213f60"}}}],"center":[{"type":"object","name":"Grid","id":"0b5e4e93-edf5-46bd-a63f-2b57f782b9b6","attributes":{"axis":{"id":"aaa037fe-1ff6-4469-b204-7b11e27c7d1b"},"grid_line_color":null}},{"type":"object","name":"Grid","id":"3c6a6b3b-9636-4866-8c1a-099ab6c38fe2","attributes":{"dimension":1,"axis":{"id":"a2a62ced-fe74-4cac-8c0b-ffeac4f799fd"},"grid_line_color":null}},{"type":"object","name":"Whisker","id":"95386b91-9aad-4ebc-9b21-97000c276ada","attributes":{"source":{"type":"object","name":"ColumnDataSource","id":"169712a0-d800-4116-844e-8c3c18dda755","attributes":{"selected":{"type":"object","name":"Selection","id":"84a5b624-1f24-461b-b97e-9886037f2f2a","attributes":{"indices":[],"line_indices":[]}},"selection_policy":{"type":"object","name":"UnionRenderers","id":"e6605065-7f23-4f33-88ec-eaa23cc2b67e"},"data":{"type":"map","entries":[["base",{"type":"ndarray","array":{"type":"bytes","data":"AACA6bAvcEIAAABn9VZwQgAAgOQ5fnBCAABA/CulcEIAAMB5cMxwQgAAQPe083BCAAAAD6cacUIAAICM60FxQgAAAAowaXFCAACAh3SQcUIAAAAFubdxQgAAgIL93nFCAABAmu8FckIAAMAXNC1yQgAAQJV4VHJCAAAArWp7ckIAAIAqr6JyQgAAAKjzyXJCAADAv+XwckIAAEA9KhhzQgAAwLpuP3NCAABAOLNmc0IAAMC1941zQgAAQDM8tXNCAAAASy7cc0IAAIDIcgN0QgAAAEa3KnRCAAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh/AAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh/AAAAAAAA+H8AAAAAAAD4fwAAAAAAAPh/"},"shape":[36],"dtype":"float64","order":"little"}],["lower",{"type":"ndarray","array":{"type":"bytes","data":"DFbD2JEs9UAMVsPYsRT1QAxWw9iBSPRADFbD2PH/9EAMVsPYQZT0QAxWw9gBCPRADFbD2PF99UAMVsPYAYz1QAxWw9hRu/RADFbD2AGy9UAMVsPYUUj1QAxWw9hxkPRADFbD2HEj90AMVsPYYcL4QAxWw9hhovlADFbD2DGo/UAMVsPY8Qz/QAxWw9jBD/5ADFbD2HGH/0AMVsPYwXn/QAxWw9hR4f5ADFbD2EEs/0AMVsPYMW7/QAxWw9ih5f5ADFbD2DHf/kAMVsPYkcr9QAxWw9ix+/tADFbD2DFN/EAMVsPYMdb/QAxWw9ihl/RABqth7DAFAEEMVsPYgU31QAxWw9ghy/RADFbD2PEW9UAMVsPYYQ38QAxWw9hh5v5A"},"shape":[36],"dtype":"float64","order":"little"}],["upper",{"type":"ndarray","array":{"type":"bytes","data":"9Kk8J45i9UD0qTwnrkr1QPSpPCd+fvRA9Kk8J+419UD0qTwnPsr0QPSpPCf+PfRA9Kk8J+6z9UD0qTwn/sH1QPSpPCdO8fRA9Kk8J/7n9UD0qTwnTn71QPSpPCduxvRA9Kk8J25Z90D0qTwnXvj4QPSpPCde2PlA9Kk8Jy7e/UD0qTwn7kL/QPSpPCe+Rf5A9Kk8J269/0D0qTwnvq//QPSpPCdOF/9A9Kk8Jz5i/0D0qTwnLqT/QPSpPCeeG/9A9Kk8Jy4V/0D0qTwnjgD+QPSpPCeuMfxA9Kk8Jy6D/ED6VJ4TFwYAQfSpPCeezfRA+lSeEy8gAEH0qTwnfoP1QPSpPCceAfVA9Kk8J+5M9UD0qTwnXkP8QPSpPCdeHP9A"},"shape":[36],"dtype":"float64","order":"little"}]]}}},"lower":{"type":"field","field":"lower"},"lower_head":{"type":"object","name":"TeeHead","id":"798a843d-f13b-401d-adb5-043d39087470","attributes":{"size":{"type":"value","value":10}}},"upper":{"type":"field","field":"upper"},"upper_head":{"type":"object","name":"TeeHead","id":"0d2b836d-7739-476c-a645-5814cca6344c","attributes":{"size":{"type":"value","value":10}}},"base":{"type":"field","field":"base"}}}],"min_border_top":10,"min_border_bottom":10,"min_border_left":10,"min_border_right":10,"output_backend":"webgl"}},{"type":"object","name":"Spacer","id":"935921e1-6716-4869-847a-9ff620496464","attributes":{"name":"HSpacer00550","stylesheets":["\n:host(.pn-loading):before, .pn-loading:before {\n  background-color: #c3c3c3;\n  mask-size: auto calc(min(50%, 400px));\n  -webkit-mask-size: auto calc(min(50%, 400px));\n}",{"id":"d42389c6-96d0-47ec-99d9-d8e0c8222b36"},{"id":"cbb0b8e5-47e2-4952-bbcc-6044fce31680"},{"id":"cd117945-cd2e-4f72-b952-7e4cfed00d81"}],"min_width":0,"margin":0,"sizing_mode":"stretch_width","align":"start"}}]}}],"defs":[{"type":"model","name":"ReactiveHTML1"},{"type":"model","name":"FlexBox1","properties":[{"name":"align_content","kind":"Any","default":"flex-start"},{"name":"align_items","kind":"Any","default":"flex-start"},{"name":"flex_direction","kind":"Any","default":"row"},{"name":"flex_wrap","kind":"Any","default":"wrap"},{"name":"gap","kind":"Any","default":""},{"name":"justify_content","kind":"Any","default":"flex-start"}]},{"type":"model","name":"FloatPanel1","properties":[{"name":"config","kind":"Any","default":{"type":"map"}},{"name":"contained","kind":"Any","default":true},{"name":"position","kind":"Any","default":"right-top"},{"name":"offsetx","kind":"Any","default":null},{"name":"offsety","kind":"Any","default":null},{"name":"theme","kind":"Any","default":"primary"},{"name":"status","kind":"Any","default":"normalized"}]},{"type":"model","name":"GridStack1","properties":[{"name":"ncols","kind":"Any","default":null},{"name":"nrows","kind":"Any","default":null},{"name":"allow_resize","kind":"Any","default":true},{"name":"allow_drag","kind":"Any","default":true},{"name":"state","kind":"Any","default":[]}]},{"type":"model","name":"drag1","properties":[{"name":"slider_width","kind":"Any","default":5},{"name":"slider_color","kind":"Any","default":"black"},{"name":"value","kind":"Any","default":50}]},{"type":"model","name":"click1","properties":[{"name":"terminal_output","kind":"Any","default":""},{"name":"debug_name","kind":"Any","default":""},{"name":"clears","kind":"Any","default":0}]},{"type":"model","name":"FastWrapper1","properties":[{"name":"object","kind":"Any","default":null},{"name":"style","kind":"Any","default":null}]},{"type":"model","name":"NotificationArea1","properties":[{"name":"js_events","kind":"Any","default":{"type":"map"}},{"name":"max_notifications","kind":"Any","default":5},{"name":"notifications","kind":"Any","default":[]},{"name":"position","kind":"Any","default":"bottom-right"},{"name":"_clear","kind":"Any","default":0},{"name":"types","kind":"Any","default":[{"type":"map","entries":[["type","warning"],["background","#ffc107"],["icon",{"type":"map","entries":[["className","fas fa-exclamation-triangle"],["tagName","i"],["color","white"]]}]]},{"type":"map","entries":[["type","info"],["background","#007bff"],["icon",{"type":"map","entries":[["className","fas fa-info-circle"],["tagName","i"],["color","white"]]}]]}]}]},{"type":"model","name":"Notification","properties":[{"name":"background","kind":"Any","default":null},{"name":"duration","kind":"Any","default":3000},{"name":"icon","kind":"Any","default":null},{"name":"message","kind":"Any","default":""},{"name":"notification_type","kind":"Any","default":null},{"name":"_rendered","kind":"Any","default":false},{"name":"_destroyed","kind":"Any","default":false}]},{"type":"model","name":"TemplateActions1","properties":[{"name":"open_modal","kind":"Any","default":0},{"name":"close_modal","kind":"Any","default":0}]},{"type":"model","name":"BootstrapTemplateActions1","properties":[{"name":"open_modal","kind":"Any","default":0},{"name":"close_modal","kind":"Any","default":0}]},{"type":"model","name":"TemplateEditor1","properties":[{"name":"layout","kind":"Any","default":[]}]},{"type":"model","name":"MaterialTemplateActions1","properties":[{"name":"open_modal","kind":"Any","default":0},{"name":"close_modal","kind":"Any","default":0}]},{"type":"model","name":"ReactiveESM1","properties":[{"name":"esm_constants","kind":"Any","default":{"type":"map"}}]},{"type":"model","name":"JSComponent1","properties":[{"name":"esm_constants","kind":"Any","default":{"type":"map"}}]},{"type":"model","name":"ReactComponent1","properties":[{"name":"esm_constants","kind":"Any","default":{"type":"map"}}]},{"type":"model","name":"AnyWidgetComponent1","properties":[{"name":"esm_constants","kind":"Any","default":{"type":"map"}}]},{"type":"model","name":"request_value1","properties":[{"name":"fill","kind":"Any","default":"none"},{"name":"_synced","kind":"Any","default":null},{"name":"_request_sync","kind":"Any","default":0}]}]}};
+  var render_items = [{"docid":"2bd445ce-9a5d-4a07-a9fe-309491228f0a","roots":{"47cd09e4-6197-4828-85e0-4c0e2add9c09":"fbf1386a-8047-4c46-99c5-d4b741bbb9ec"},"root_ids":["47cd09e4-6197-4828-85e0-4c0e2add9c09"]}];
+  var docs = Object.values(docs_json)
+  if (!docs) {
+    return
+  }
+  const py_version = docs[0].version.replace('rc', '-rc.').replace('.dev', '-dev.')
+  async function embed_document(root) {
+    var Bokeh = get_bokeh(root)
+    await Bokeh.embed.embed_items_notebook(docs_json, render_items);
+    for (const render_item of render_items) {
+      for (const root_id of render_item.root_ids) {
+    const id_el = document.getElementById(root_id)
+    if (id_el.children.length && id_el.children[0].hasAttribute('data-root-id')) {
+      const root_el = id_el.children[0]
+      root_el.id = root_el.id + '-rendered'
+      for (const child of root_el.children) {
+            // Ensure JupyterLab does not capture keyboard shortcuts
+            // see: https://jupyterlab.readthedocs.io/en/4.1.x/extension/notebook.html#keyboard-interaction-model
+        child.setAttribute('data-lm-suppress-shortcuts', 'true')
+      }
+    }
+      }
+    }
+  }
+  function get_bokeh(root) {
+    if (root.Bokeh === undefined) {
+      return null
+    } else if (root.Bokeh.version !== py_version) {
+      if (root.Bokeh.versions === undefined || !root.Bokeh.versions.has(py_version)) {
+    return null
+      }
+      return root.Bokeh.versions.get(py_version);
+    } else if (root.Bokeh.version === py_version) {
+      return root.Bokeh
+    }
+    return null
+  }
+  function is_loaded(root) {
+    var Bokeh = get_bokeh(root)
+    return (Bokeh != null && Bokeh.Panel !== undefined)
+  }
+  if (is_loaded(root)) {
+    embed_document(root);
+  } else {
+    var attempts = 0;
+    var timer = setInterval(function(root) {
+      if (is_loaded(root)) {
+        clearInterval(timer);
+        embed_document(root);
+      } else if (document.readyState == "complete") {
+        attempts++;
+        if (attempts > 200) {
+          clearInterval(timer);
+      var Bokeh = get_bokeh(root)
+      if (Bokeh == null || Bokeh.Panel == null) {
+            console.warn("Panel: ERROR: Unable to run Panel code because Bokeh or Panel library is missing");
+      } else {
+        console.warn("Panel: WARNING: Attempting to render but not all required libraries could be resolved.")
+        embed_document(root)
+      }
+        }
+      }
+    }, 25, root)
+  }
+})(window);</script></div>
+</div>
+<p>Even though the noise scale and accuracy estimate is the same as in the previous protected group keys query, the relative error is now much larger because the group sizes are much smaller. In spite of this, the release clearly still shows that the number of respondents increased significantly from 2008 to 2010.</p>
+<section id="Invariant-Group-Lengths">
+<h3>Invariant Group Lengths<a class="headerlink" href="#Invariant-Group-Lengths" title="Link to this heading">#</a></h3>
+<p>It is also possible to declare group lengths as invariant. Setting this value implies that group keys are public, and thus implies an even greater risk of damaging the integrity of the privacy guarantee than if you were to declare group keys as invariant.</p>
+<p>One way this could be used is as part of a release for the mean number of hours worked <code class="docutils literal notranslate"><span class="pre">HWUSUAL</span></code> by sex. Referring back to the <code class="docutils literal notranslate"><span class="pre">HWUSUAL</span></code> legend, a value of <code class="docutils literal notranslate"><span class="pre">99</span></code> means not applicable, and this encoding will significantly bias the outcome of the query.</p>
+<p>Unfortunately, filtering the data within the query results in the margin info being invalidated. One way to work around this limitation is to preprocess your data before passing it into the context:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">lf_preprocessed</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">scan_csv</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">examples</span><span class="o">.</span><span class="n">get_france_lfs_path</span><span class="p">(),</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> \
+    <span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">&quot;HWUSUAL&quot;</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">99</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>You can now set up your analysis such that the margin applies to the preprocessed data:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">context</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">Context</span><span class="o">.</span><span class="n">compositor</span><span class="p">(</span>
+    <span class="n">data</span><span class="o">=</span><span class="n">lf_preprocessed</span><span class="p">,</span>
+    <span class="n">privacy_unit</span><span class="o">=</span><span class="n">dp</span><span class="o">.</span><span class="n">unit_of</span><span class="p">(</span><span class="n">contributions</span><span class="o">=</span><span class="mi">36</span><span class="p">),</span>
+    <span class="n">privacy_loss</span><span class="o">=</span><span class="n">dp</span><span class="o">.</span><span class="n">loss_of</span><span class="p">(</span><span class="n">epsilon</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="mf">1e-7</span><span class="p">),</span>
+    <span class="n">split_evenly_over</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">margins</span><span class="o">=</span><span class="p">[</span>
+        <span class="c1"># total number of responses when grouped by &quot;SEX&quot; is public information</span>
+        <span class="n">dp</span><span class="o">.</span><span class="n">polars</span><span class="o">.</span><span class="n">Margin</span><span class="p">(</span>
+            <span class="n">by</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;SEX&quot;</span><span class="p">],</span>
+            <span class="n">invariant</span><span class="o">=</span><span class="s2">&quot;lengths&quot;</span><span class="p">,</span>
+            <span class="n">max_length</span><span class="o">=</span><span class="mi">150_000</span> <span class="o">*</span> <span class="mi">36</span><span class="p">,</span>
+            <span class="n">max_groups</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="c1"># encoding is M, F or null</span>
+        <span class="p">)</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>You can now prepare a query that computes mean working hours by gender, where each response is clipped between 0 and 98:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">query_work_hours</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">query</span><span class="p">()</span>
+    <span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="s2">&quot;SEX&quot;</span><span class="p">)</span>
+    <span class="o">.</span><span class="n">agg</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="o">.</span><span class="n">HWUSUAL</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span><span class="o">.</span><span class="n">fill_null</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">dp</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">98</span><span class="p">)))</span>
+<span class="p">)</span>
+
+<span class="n">query_work_hours</span><span class="o">.</span><span class="n">summarize</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="mf">.05</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[13]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (2, 5)</small><table border="1" class="dataframe"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th><th>accuracy</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Sum&quot;</td><td>&quot;Integer Laplace&quot;</td><td>1764.0</td><td>5284.97166</td></tr><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Length&quot;</td><td>&quot;Integer Laplace&quot;</td><td>0.0</td><td>NaN</td></tr></tbody></table></div></div>
+</div>
+<p>This time the query description breaks down into two separate statistics for the resulting <code class="docutils literal notranslate"><span class="pre">HWUSUAL</span></code> column. The mean is computed by dividing separate sum and length estimates. Since the group length is marked as public information, the length is released in the clear, without any noise.</p>
+<p>Reading the table, the smallest suitable noise scale parameter for the sum is 7056. This may seem large, but remember this noisy sum will be divided by the length, reducing the variance of the final estimate. You can divide the sum accuracy estimate by the public group sizes to get disaggregated accuracy estimates for each group.</p>
+<p>Be mindful that accuracy estimates for sums and means do not take into account bias introduced from clipping. However, for this specific dataset, the codebook limits the range of work hours in <code class="docutils literal notranslate"><span class="pre">HWUSUAL</span></code> to between 0 and 98, so the clipping introduced for differential privacy will not further increase bias.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">df</span> <span class="o">=</span> <span class="n">query_work_hours</span><span class="o">.</span><span class="n">release</span><span class="p">()</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
+
+<span class="c1"># released dataframes from the OpenDP Library are shuffled to conceal the ordering of rows in the original dataset</span>
+<span class="c1"># therefore, to ensure proper alignment, we use join instead of hstack to add labels</span>
+<span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;SEX&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="s2">&quot;SEX_STR&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;male&quot;</span><span class="p">,</span> <span class="s2">&quot;female&quot;</span><span class="p">]})</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="s2">&quot;SEX&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[14]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div><style>
+.dataframe > thead > tr,
+.dataframe > tbody > tr {
+  text-align: right;
+  white-space: pre-wrap;
+}
+</style>
+<small>shape: (2, 3)</small><table border="1" class="dataframe"><thead><tr><th>SEX</th><th>SEX_STR</th><th>HWUSUAL</th></tr><tr><td>i64</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>1</td><td>&quot;male&quot;</td><td>40.77328</td></tr><tr><td>2</td><td>&quot;female&quot;</td><td>34.22547</td></tr></tbody></table></div></div>
+</div>
+<p>Throughout this analysis, observe how the noise scale always remained fixed, regardless of group size. Also observe how the more individuals there are in the data, the greater the magnitude of the statistic. Therefore, as there are more individuals in a bin, the relative amount of noise decreases.</p>
+<p>Breaking the data down into too many groups, however, can result in groups having too few records and a loss of signal/poor utility.</p>
+<p>While grouping is a very useful strategy to conduct meaningful data analysis, there must be a balance, because excessive grouping can lead to most of your groups being filtered, and/or results that are too noisy and misleading.</p>
+<p>While not used in this section, remember that you can request multiple different statistics in one query. Batching multiple statistics together can not only result in computational speedups, but also more balanced allocation of privacy budget across queries, and can help you avoid releasing the same protected group keys multiple times (further dividing your privacy budget).</p>
+<p>In a real data setting where you want to mediate all access to the data through one Context, you can provide domain descriptors for many margins, allowing you to relax protections over specific grouping columns, while enforcing full protections for all other grouping columns.</p>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="essential-statistics.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Essential Statistics</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="identifier-truncation.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Identifier Truncation</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Stable-Keys">Stable Keys</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Explicit-Keys">Explicit Keys</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Invariant-Group-Keys">Invariant Group Keys</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#Invariant-Group-Lengths">Invariant Group Lengths</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../../_sources/getting-started/tabular-data/grouping.ipynb.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.3rc1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

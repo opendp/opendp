@@ -1,0 +1,1862 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>opendp.mod &#8212; OpenDP</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=eafc0fe6" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=4f92a2c4" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+    <script src="../../_static/documentation_options.js?v=9174f098"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/opendp/mod';</script>
+    <link rel="icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Feb 23, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+
+
+<script>
+document.write(`<aside class="bd-header-announcement" aria-label="Announcement"></aside>`);
+fetch("https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html")
+  .then(res => {return res.text();})
+  .then(data => {
+    if (data.length === 0) {
+      console.log("[PST]: Empty announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+      return;
+    }
+    div = document.querySelector(".bd-header-announcement");
+    div.classList.add(...["bd-header-announcement", "container-fluid", "init"]);
+    div.innerHTML = `<div class="bd-header-announcement__content">${data}</div>`;
+    // At least 3rem height
+    const autoHeight = Math.min(
+      div.offsetHeight,
+      3 * parseFloat(getComputedStyle(document.documentElement).fontSize));
+    // Set height and vertical padding to 0 to prepare the height transition
+    div.style.setProperty("height", 0);
+    div.style.setProperty("padding-top", 0);
+    div.style.setProperty("padding-bottom", 0);
+    div.classList.remove("init");
+    // Set height to the computed height with a small timeout to activate the transition
+    setTimeout(() => {
+      div.style.setProperty("height", `${autoHeight}px`);
+      // Wait for a bit more than 300ms (the transition duration) then remove the
+      // forcefully set styles and let CSS take over
+      setTimeout(() => {
+        div.style.removeProperty("padding-top");
+        div.style.removeProperty("padding-bottom");
+        div.style.removeProperty("height");
+        div.style.setProperty("min-height", "3rem");
+      }, 320);
+    }, 10);
+  })
+  .catch(error => {
+    console.log("[PST]: Failed to load announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+  });
+</script>
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <button class="sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/opendp-logo.png" class="logo__image only-light" alt="OpenDP - Home"/>
+    <script>document.write(`<img src="../../_static/opendp-logo.png" class="logo__image only-dark" alt="OpenDP - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../quickstart.html">
+                        Quickstart
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../user/index.html">
+                        User Guide
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../examples/index.html">
+                        Examples
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../api/index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../contributor/index.html">
+                        Contributor Guide
+                      </a>
+                    </li>
+                
+            <li class="nav-item dropdown pst-header-nav-item">
+                <button class="btn dropdown-toggle nav-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../../resources/index.html">
+                        Resources
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../../opendp-commons/index.html">
+                        OpenDP Commons
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../../contact.html">
+                        Contact
+                      </a>
+                    </li>
+                
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../quickstart.html">
+                        Quickstart
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../user/index.html">
+                        User Guide
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../examples/index.html">
+                        Examples
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../api/index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../contributor/index.html">
+                        Contributor Guide
+                      </a>
+                    </li>
+                
+            <li class="nav-item dropdown pst-header-nav-item">
+                <button class="btn dropdown-toggle nav-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-controls="pst-nav-more-links-2">
+                    More
+                </button>
+                <ul id="pst-nav-more-links-2" class="dropdown-menu">
+                    
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../../resources/index.html">
+                        Resources
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../../opendp-commons/index.html">
+                        OpenDP Commons
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../../contact.html">
+                        Contact
+                      </a>
+                    </li>
+                
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<h6>Branches</h6>
+<ul>
+    <li><a href="../../../beta/index.html" style="font-weight: normal">beta</a></li>
+    <li><a href="../../../nightly/index.html" style="font-weight: normal">nightly</a></li>
+    <li><a href="../../../stable/index.html" style="font-weight: normal">stable</a></li>
+</ul>
+
+
+<h6 id="releases_header">Releases
+    <div id="releases_symbol" style="float:right"></div>
+</h6>
+<ul id="releases_content">
+    <li><a href="../../../v0.14.1/index.html" style="font-weight: normal">v0.14.1</a></li>
+    <li><a href="../../../v0.14.0/index.html" style="font-weight: normal">v0.14.0</a></li>
+    <li><a href="../../../v0.13.0/index.html" style="font-weight: normal">v0.13.0</a></li>
+    <li><a href="../../../v0.12.1/index.html" style="font-weight: normal">v0.12.1</a></li>
+    <li><a href="../../../v0.12.0/index.html" style="font-weight: normal">v0.12.0</a></li>
+    <li><a href="../../../v0.11.1/index.html" style="font-weight: normal">v0.11.1</a></li>
+    <li><a href="../../../v0.11.0/index.html" style="font-weight: normal">v0.11.0</a></li>
+    <li><a href="../../../v0.10.0/index.html" style="font-weight: normal">v0.10.0</a></li>
+    <li><a href="../../../v0.9.2/index.html" style="font-weight: normal">v0.9.2</a></li>
+    <li><a href="mod.html" style="font-weight: bold">v0.9.1</a></li>
+    <li><a href="../../../v0.9.0/index.html" style="font-weight: normal">v0.9.0</a></li>
+    <li><a href="../../../v0.8.0/index.html" style="font-weight: normal">v0.8.0</a></li>
+    <li><a href="../../../v0.7.0/index.html" style="font-weight: normal">v0.7.0</a></li>
+    <li><a href="../../../v0.6.2/index.html" style="font-weight: normal">v0.6.2</a></li>
+    <li><a href="../../../v0.6.1/index.html" style="font-weight: normal">v0.6.1</a></li>
+    <li><a href="../../../v0.6.0/index.html" style="font-weight: normal">v0.6.0</a></li>
+    <li><a href="../../../v0.5.0/index.html" style="font-weight: normal">v0.5.0</a></li>
+    <li><a href="../../../v0.4.0/index.html" style="font-weight: normal">v0.4.0</a></li>
+    <li><a href="../../../v0.3.0/index.html" style="font-weight: normal">v0.3.0</a></li>
+    <li><a href="../../../v0.2.4/index.html" style="font-weight: normal">v0.2.4</a></li>
+    <li><a href="../../../v0.2.3/index.html" style="font-weight: normal">v0.2.3</a></li>
+    <li><a href="../../../v0.2.2/index.html" style="font-weight: normal">v0.2.2</a></li>
+    <li><a href="../../../v0.2.1/index.html" style="font-weight: normal">v0.2.1</a></li>
+    <li><a href="../../../v0.2.0/index.html" style="font-weight: normal">v0.2.0</a></li>
+    <li><a href="../../../v0.1.0/index.html" style="font-weight: normal">v0.1.0</a></li>
+</ul>
+<script>
+    let expanded = !!JSON.parse(localStorage.getItem('expanded'));
+
+    let releasesHeader = document.getElementById("releases_header");
+    let releasesSymbol = document.getElementById("releases_symbol");
+    let releasesContent = document.getElementById("releases_content");
+
+    function setReleasesState() {
+        localStorage.setItem("expanded", JSON.stringify(expanded))
+        releasesContent.style.display = expanded ? "block" : "none";
+        releasesSymbol.classList.add(expanded ? 'minus' : 'plus')
+        releasesSymbol.classList.remove(expanded ? 'plus' : 'minus')
+    }
+
+    setReleasesState()
+    releasesHeader.addEventListener("click", function() {
+        expanded = !expanded;
+        setReleasesState()
+    })
+</script>
+<style>
+    .plus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .plus:before,
+    .plus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .plus:before {
+        left:50%;
+        top:4px;
+        bottom:4px;
+        width:3px;
+        transform:translateX(-50%);
+    }
+
+    .plus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+
+
+
+    .minus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .minus:before,
+    .minus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .minus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+</style>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">opendp.mod</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item"><div class="admonition warning" style="position: relative;">
+    <!--
+     Without the style, the region for the article title overlaps, and the link is unclickable.
+    -->
+    <details>
+        <summary>Questions or feedback?</summary>
+        <!--
+            All of these lists should be in sync:
+            - README.md
+            - docs/source/contributing/contact.rst
+            - docs/source/_templates/questions-feedback.html
+            - .github/ISSUE_TEMPLATE/config.yml
+        -->
+        <ul>
+            <li>Report a bug or request a feature on <a href="https://github.com/opendp/opendp/issues">Github</a>.</li>
+            <li>Send general queries to <a href="mailto:info@opendp.org">info@opendp.org</a>, or email <a href="mailto:security@opendp.org">security@opendp.org</a> if it is related to security.</li>
+            <li>Join the conversation on <a href="https://join.slack.com/t/opendp/shared_invite/zt-1t8rrbqhd-z8LiZiP06vVE422HJd6ciQ">Slack</a>, or the <a href="https://groups.google.com/a/g.harvard.edu/g/opendp-community">mailing list</a>.</li>
+        </ul>
+    </details>
+</div></div>
+      
+        <div class="header-article-item">
+<div class="admonition warning" style="position: relative;" id="old-version-warning">
+  <!--
+   To work with this locally, in conf.py uncomment the entry under "html_context".
+
+   Without the style, the region for the article title overlaps, and the link is unclickable.
+  -->
+  <p class="admonition-title">
+  
+  This documentation is for an old version of OpenDP.
+  
+  </p>
+  <p>The current release of OpenDP is <a href="/">v0.14.1</a>.</p>
+</div>
+<script>
+  window.addEventListener("load", (event) => {
+    document.getElementById('old-version-warning').style.top = `${window.visualViewport.pageTop}px`;
+  });
+</script>
+</div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for opendp.mod</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">The ``mod`` module provides the classes which implement the</span>
+<span class="sd">`OpenDP Programming Framework &lt;../../user/programming-framework/index.html&gt;`_,</span>
+<span class="sd">as well as utilities for enabling features and finding parameter values.</span>
+
+<span class="sd">The classes here correspond to other top-level modules: For example,</span>
+<span class="sd">instances of :py:class:`opendp.mod.Domain` are either inputs or outputs for functions in :py:mod:`opendp.domains`.</span>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">import</span> <span class="nn">ctypes</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Type</span><span class="p">,</span> <span class="n">TypeVar</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">overload</span><span class="p">,</span> <span class="n">TYPE_CHECKING</span>
+
+<span class="kn">from</span> <span class="nn">opendp._lib</span> <span class="kn">import</span> <span class="n">AnyMeasurement</span><span class="p">,</span> <span class="n">AnyTransformation</span><span class="p">,</span> <span class="n">AnyDomain</span><span class="p">,</span> <span class="n">AnyMetric</span><span class="p">,</span> <span class="n">AnyMeasure</span><span class="p">,</span> <span class="n">AnyFunction</span>
+
+<span class="c1"># https://mypy.readthedocs.io/en/stable/runtime_troubles.html#import-cycles</span>
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">opendp.typing</span> <span class="kn">import</span> <span class="n">RuntimeType</span> <span class="c1"># pragma: no cover</span>
+
+
+<div class="viewcode-block" id="Measurement">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.Measurement">[docs]</a>
+<span class="k">class</span> <span class="nc">Measurement</span><span class="p">(</span><span class="n">ctypes</span><span class="o">.</span><span class="n">POINTER</span><span class="p">(</span><span class="n">AnyMeasurement</span><span class="p">)):</span> <span class="c1"># type: ignore[misc]</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A differentially private unit of computation.</span>
+<span class="sd">    A measurement contains a function and a privacy relation.</span>
+<span class="sd">    The function releases a differentially-private release.</span>
+<span class="sd">    The privacy relation maps from an input metric to an output measure.</span>
+
+<span class="sd">    See the `Measurement &lt;../../user/programming-framework/core-structures.html#measurement&gt;`_</span>
+<span class="sd">    section in the Programming Framework docs for more context.</span>
+
+<span class="sd">    Functions for creating measurements are in :py:mod:`opendp.measurements`.</span>
+
+<span class="sd">    :example:</span>
+
+<span class="sd">    &gt;&gt;&gt; import opendp.prelude as dp</span>
+<span class="sd">    &gt;&gt;&gt; dp.enable_features(&quot;contrib&quot;)</span>
+
+<span class="sd">    &gt;&gt;&gt; # create an instance of Measurement using a constructor from the meas module</span>
+<span class="sd">    &gt;&gt;&gt; base_dl: dp.Measurement = dp.m.make_base_discrete_laplace(</span>
+<span class="sd">    ...     dp.atom_domain(T=int), dp.absolute_distance(T=int),</span>
+<span class="sd">    ...     scale=2.)</span>
+
+<span class="sd">    &gt;&gt;&gt; # invoke the measurement (invoke and __call__ are equivalent)</span>
+<span class="sd">    &gt;&gt;&gt; print(&#39;explicit: &#39;, base_dl.invoke(100))  # -&gt; 101   # doctest: +ELLIPSIS</span>
+<span class="sd">    explicit: ...</span>
+<span class="sd">    &gt;&gt;&gt; print(&#39;concise: &#39;, base_dl(100))  # -&gt; 99            # doctest: +ELLIPSIS</span>
+<span class="sd">    concise: ...</span>
+<span class="sd">    &gt;&gt;&gt; # check the measurement&#39;s relation at</span>
+<span class="sd">    &gt;&gt;&gt; #     (1, 0.5): (AbsoluteDistance&lt;u32&gt;, MaxDivergence)</span>
+<span class="sd">    &gt;&gt;&gt; assert base_dl.check(1, 0.5)</span>
+
+<span class="sd">    &gt;&gt;&gt; # chain with a transformation from the trans module</span>
+<span class="sd">    &gt;&gt;&gt; chained = (</span>
+<span class="sd">    ...     (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()) &gt;&gt;</span>
+<span class="sd">    ...     dp.t.then_count() &gt;&gt;</span>
+<span class="sd">    ...     base_dl</span>
+<span class="sd">    ... )</span>
+
+<span class="sd">    &gt;&gt;&gt; # the resulting measurement has the same features</span>
+<span class="sd">    &gt;&gt;&gt; print(&#39;dp count: &#39;, chained([1, 2, 3]))  # -&gt; 4     # doctest: +ELLIPSIS</span>
+<span class="sd">    dp count: ...</span>
+
+<span class="sd">    &gt;&gt;&gt; # check the chained measurement&#39;s relation at</span>
+<span class="sd">    &gt;&gt;&gt; #     (1, 0.5): (SymmetricDistance, MaxDivergence)</span>
+<span class="sd">    &gt;&gt;&gt; assert chained.check(1, 0.5)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_type_</span> <span class="o">=</span> <span class="n">AnyMeasurement</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">arg</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">measurement_invoke</span>
+        <span class="k">return</span> <span class="n">measurement_invoke</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">arg</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Measurement.invoke">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.Measurement.invoke">[docs]</a>
+    <span class="k">def</span> <span class="nf">invoke</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">arg</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a differentially-private release with `arg`.</span>
+
+<span class="sd">        If `self` is (d_in, d_out)-close, then each invocation of this function is a d_out-DP release. </span>
+<span class="sd">        </span>
+<span class="sd">        :param arg: Input to the measurement.</span>
+<span class="sd">        :return: differentially-private release</span>
+<span class="sd">        :raises OpenDPException: packaged error from the core OpenDP library</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">measurement_invoke</span>
+        <span class="k">return</span> <span class="n">measurement_invoke</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">arg</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Measurement.map">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.Measurement.map">[docs]</a>
+    <span class="k">def</span> <span class="nf">map</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d_in</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Map an input distance `d_in` to an output distance.&quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">measurement_map</span>
+        <span class="k">return</span> <span class="n">measurement_map</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d_in</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Measurement.check">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.Measurement.check">[docs]</a>
+    <span class="k">def</span> <span class="nf">check</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d_in</span><span class="p">,</span> <span class="n">d_out</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if the measurement is (`d_in`, `d_out`)-close.</span>
+<span class="sd">        If true, implies that if the distance between inputs is at most `d_in`, then the privacy usage is at most `d_out`.</span>
+<span class="sd">        See also :func:`~Transformation.check`, a similar check for transformations.</span>
+<span class="sd">        </span>
+<span class="sd">        :param d_in: Distance in terms of the input metric.</span>
+<span class="sd">        :param d_out: Distance in terms of the output measure.</span>
+<span class="sd">        :param debug: Enable to raise Exceptions to help identify why the privacy relation failed.</span>
+<span class="sd">        :return: If True, a release is differentially private at `d_in`, `d_out`.</span>
+<span class="sd">        :rtype: bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">measurement_check</span>
+
+        <span class="k">if</span> <span class="n">debug</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">measurement_check</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d_in</span><span class="p">,</span> <span class="n">d_out</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">measurement_check</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d_in</span><span class="p">,</span> <span class="n">d_out</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">OpenDPException</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">err</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">&quot;RelationDebug&quot;</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+            <span class="k">raise</span></div>
+
+
+    <span class="k">def</span> <span class="fm">__rshift__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="s2">&quot;Function&quot;</span><span class="p">,</span> <span class="s2">&quot;Transformation&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s2">&quot;Measurement&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Transformation</span><span class="p">):</span>
+            <span class="n">other</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">function</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Function</span><span class="p">):</span>
+            <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">new_function</span>
+            <span class="n">other</span> <span class="o">=</span> <span class="n">new_function</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">TO</span><span class="o">=</span><span class="s2">&quot;ExtrinsicObject&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Function</span><span class="p">):</span>
+            <span class="kn">from</span> <span class="nn">opendp.combinators</span> <span class="kn">import</span> <span class="n">make_chain_pm</span>
+            <span class="k">return</span> <span class="n">make_chain_pm</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;rshift expected a postprocessing transformation, got </span><span class="si">{</span><span class="n">other</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">input_domain</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Domain&quot;</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">measurement_input_domain</span>
+        <span class="k">return</span> <span class="n">measurement_input_domain</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">input_metric</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Metric&quot;</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">measurement_input_metric</span>
+        <span class="k">return</span> <span class="n">measurement_input_metric</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">input_space</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="s2">&quot;Domain&quot;</span><span class="p">,</span> <span class="s2">&quot;Metric&quot;</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_domain</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_metric</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">output_measure</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Measure&quot;</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">measurement_output_measure</span>
+        <span class="k">return</span> <span class="n">measurement_output_measure</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">function</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Function&quot;</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">measurement_function</span>
+        <span class="k">return</span> <span class="n">measurement_function</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">input_distance_type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s2">&quot;RuntimeType&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieve the distance type of the input metric.</span>
+<span class="sd">        This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.</span>
+<span class="sd">        </span>
+<span class="sd">        :return: distance type</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">measurement_input_distance_type</span>
+        <span class="kn">from</span> <span class="nn">opendp.typing</span> <span class="kn">import</span> <span class="n">RuntimeType</span>
+        <span class="k">return</span> <span class="n">RuntimeType</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">measurement_input_distance_type</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">output_distance_type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s2">&quot;RuntimeType&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieve the distance type of the output measure.</span>
+<span class="sd">        This is the type that the budget is expressed in.</span>
+<span class="sd">        </span>
+<span class="sd">        :return: distance type</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">measurement_output_distance_type</span>
+        <span class="kn">from</span> <span class="nn">opendp.typing</span> <span class="kn">import</span> <span class="n">RuntimeType</span>
+        <span class="k">return</span> <span class="n">RuntimeType</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">measurement_output_distance_type</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">input_carrier_type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s2">&quot;RuntimeType&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieve the carrier type of the input domain.</span>
+<span class="sd">        Any member of the input domain is a member of the carrier type.</span>
+<span class="sd">        </span>
+<span class="sd">        :return: carrier type</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">measurement_input_carrier_type</span>
+        <span class="kn">from</span> <span class="nn">opendp.typing</span> <span class="kn">import</span> <span class="n">RuntimeType</span>
+        <span class="k">return</span> <span class="n">RuntimeType</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">measurement_input_carrier_type</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_depends_on</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Extends the memory lifetime of args to the lifetime of self.&quot;&quot;&quot;</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_dependencies&quot;</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">_measurement_free</span>
+            <span class="n">_measurement_free</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">ImportError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+            <span class="c1"># an example error that this catches:</span>
+            <span class="c1">#   ImportError: sys.meta_path is None, Python is likely shutting down</span>
+            <span class="k">pass</span>
+    
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Measurement(</span><span class="se">\n</span><span class="s2">    input_domain   = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">input_domain</span><span class="si">}</span><span class="s2">, </span><span class="se">\n</span><span class="s2">    input_metric   = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">input_metric</span><span class="si">}</span><span class="s2">, </span><span class="se">\n</span><span class="s2">    output_measure = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">output_measure</span><span class="si">}</span><span class="se">\n</span><span class="s2">)&quot;</span> <span class="c1"># pragma: no cover</span></div>
+
+
+
+<div class="viewcode-block" id="Transformation">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.Transformation">[docs]</a>
+<span class="k">class</span> <span class="nc">Transformation</span><span class="p">(</span><span class="n">ctypes</span><span class="o">.</span><span class="n">POINTER</span><span class="p">(</span><span class="n">AnyTransformation</span><span class="p">)):</span> <span class="c1"># type: ignore[misc]</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A non-differentially private unit of computation.</span>
+<span class="sd">    A transformation contains a function and a stability relation.</span>
+<span class="sd">    The function maps from an input domain to an output domain.</span>
+<span class="sd">    The stability relation maps from an input metric to an output metric.</span>
+
+<span class="sd">    See the `Transformation &lt;../../user/programming-framework/core-structures.html#transformation&gt;`_</span>
+<span class="sd">    section in the Programming Framework docs for more context.</span>
+
+<span class="sd">    Functions for creating transformations are in :py:mod:`opendp.transformations`.</span>
+
+<span class="sd">    :example:</span>
+
+<span class="sd">    &gt;&gt;&gt; import opendp.prelude as dp</span>
+<span class="sd">    &gt;&gt;&gt; dp.enable_features(&quot;contrib&quot;)</span>
+
+<span class="sd">    &gt;&gt;&gt; # create an instance of Transformation using a constructor from the trans module</span>
+<span class="sd">    &gt;&gt;&gt; input_space = (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())</span>
+<span class="sd">    &gt;&gt;&gt; count: dp.Transformation = input_space &gt;&gt; dp.t.then_count()</span>
+
+<span class="sd">    &gt;&gt;&gt; # invoke the transformation (invoke and __call__ are equivalent)</span>
+<span class="sd">    &gt;&gt;&gt; count.invoke([1, 2, 3])</span>
+<span class="sd">    3</span>
+<span class="sd">    &gt;&gt;&gt; count([1, 2, 3])</span>
+<span class="sd">    3</span>
+<span class="sd">    &gt;&gt;&gt; # check the transformation&#39;s relation at</span>
+<span class="sd">    &gt;&gt;&gt; #     (1, 1): (SymmetricDistance, AbsoluteDistance&lt;u32&gt;)</span>
+<span class="sd">    &gt;&gt;&gt; assert count.check(1, 1)</span>
+
+<span class="sd">    &gt;&gt;&gt; # chain with more transformations from the trans module</span>
+<span class="sd">    &gt;&gt;&gt; chained = (</span>
+<span class="sd">    ...     dp.t.make_split_lines() &gt;&gt;</span>
+<span class="sd">    ...     dp.t.then_cast_default(TOA=int) &gt;&gt;</span>
+<span class="sd">    ...     count</span>
+<span class="sd">    ... )</span>
+
+<span class="sd">    &gt;&gt;&gt; # the resulting transformation has the same features</span>
+<span class="sd">    &gt;&gt;&gt; chained(&quot;1\\n2\\n3&quot;)</span>
+<span class="sd">    3</span>
+<span class="sd">    &gt;&gt;&gt; assert chained.check(1, 1)  # both chained transformations were 1-stable</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_type_</span> <span class="o">=</span> <span class="n">AnyTransformation</span>
+
+<div class="viewcode-block" id="Transformation.invoke">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.Transformation.invoke">[docs]</a>
+    <span class="k">def</span> <span class="nf">invoke</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">arg</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Execute a non-differentially-private query with `arg`.</span>
+
+<span class="sd">        :param arg: Input to the transformation.</span>
+<span class="sd">        :return: non-differentially-private answer</span>
+<span class="sd">        :raises OpenDPException: packaged error from the core OpenDP library</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">transformation_invoke</span> <span class="c1"># pragma: no cover</span>
+        <span class="k">return</span> <span class="n">transformation_invoke</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">arg</span><span class="p">)</span>  <span class="c1"># pragma: no cover</span></div>
+
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">arg</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">transformation_invoke</span>
+        <span class="k">return</span> <span class="n">transformation_invoke</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">arg</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Transformation.map">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.Transformation.map">[docs]</a>
+    <span class="k">def</span> <span class="nf">map</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d_in</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Map an input distance `d_in` to an output distance.&quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">transformation_map</span>
+        <span class="k">return</span> <span class="n">transformation_map</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d_in</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Transformation.check">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.Transformation.check">[docs]</a>
+    <span class="k">def</span> <span class="nf">check</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d_in</span><span class="p">,</span> <span class="n">d_out</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if the transformation is (`d_in`, `d_out`)-close.</span>
+<span class="sd">        If true, implies that if the distance between inputs is at most `d_in`, then the distance between outputs is at most `d_out`.</span>
+<span class="sd">        See also :func:`~Measurement.check`, a similar check for measurements.</span>
+
+<span class="sd">        :param d_in: Distance in terms of the input metric.</span>
+<span class="sd">        :param d_out: Distance in terms of the output metric.</span>
+<span class="sd">        :param debug: Enable to raise Exceptions to help identify why the stability relation failed.</span>
+<span class="sd">        :return: True if the relation passes. False if the relation failed.</span>
+<span class="sd">        :rtype: bool</span>
+<span class="sd">        :raises OpenDPException: packaged error from the core OpenDP library</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">transformation_check</span>
+
+        <span class="k">if</span> <span class="n">debug</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">transformation_check</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d_in</span><span class="p">,</span> <span class="n">d_out</span><span class="p">)</span> <span class="c1"># pragma: no cover</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">transformation_check</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d_in</span><span class="p">,</span> <span class="n">d_out</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">OpenDPException</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">err</span><span class="o">.</span><span class="n">variant</span> <span class="o">==</span> <span class="s2">&quot;RelationDebug&quot;</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+            <span class="k">raise</span></div>
+
+
+    <span class="nd">@overload</span>
+    <span class="k">def</span> <span class="fm">__rshift__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="s2">&quot;Transformation&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Transformation&quot;</span><span class="p">:</span>
+        <span class="o">...</span>
+
+    <span class="nd">@overload</span>
+    <span class="k">def</span> <span class="fm">__rshift__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="s2">&quot;Measurement&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Measurement&quot;</span><span class="p">:</span>
+        <span class="o">...</span>
+
+    <span class="nd">@overload</span>
+    <span class="k">def</span> <span class="fm">__rshift__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="s2">&quot;PartialConstructor&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;PartialConstructor&quot;</span><span class="p">:</span>
+        <span class="o">...</span>
+
+    <span class="k">def</span> <span class="fm">__rshift__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="s2">&quot;Measurement&quot;</span><span class="p">,</span> <span class="s2">&quot;Transformation&quot;</span><span class="p">,</span> <span class="s2">&quot;PartialConstructor&quot;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s2">&quot;Measurement&quot;</span><span class="p">,</span> <span class="s2">&quot;Transformation&quot;</span><span class="p">,</span> <span class="s2">&quot;PartialConstructor&quot;</span><span class="p">,</span> <span class="s2">&quot;PartialChain&quot;</span><span class="p">]:</span>  <span class="c1"># type: ignore[name-defined] # noqa F821</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Measurement</span><span class="p">):</span>
+            <span class="kn">from</span> <span class="nn">opendp.combinators</span> <span class="kn">import</span> <span class="n">make_chain_mt</span>
+            <span class="k">return</span> <span class="n">make_chain_mt</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Transformation</span><span class="p">):</span>
+            <span class="kn">from</span> <span class="nn">opendp.combinators</span> <span class="kn">import</span> <span class="n">make_chain_tt</span>
+            <span class="k">return</span> <span class="n">make_chain_tt</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">PartialConstructor</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span> <span class="o">&gt;&gt;</span> <span class="n">other</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output_domain</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_metric</span><span class="p">)</span> <span class="c1"># type: ignore[call-arg]</span>
+
+        <span class="kn">from</span> <span class="nn">opendp.context</span> <span class="kn">import</span> <span class="n">PartialChain</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">PartialChain</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">PartialChain</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="bp">self</span> <span class="o">&gt;&gt;</span> <span class="n">other</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;rshift expected a measurement or transformation, got </span><span class="si">{</span><span class="n">other</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">input_domain</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Domain&quot;</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">transformation_input_domain</span>
+        <span class="k">return</span> <span class="n">transformation_input_domain</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+    
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">output_domain</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Domain&quot;</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">transformation_output_domain</span>
+        <span class="k">return</span> <span class="n">transformation_output_domain</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+    
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">input_metric</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Metric&quot;</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">transformation_input_metric</span>
+        <span class="k">return</span> <span class="n">transformation_input_metric</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">output_metric</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Metric&quot;</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">transformation_output_metric</span>
+        <span class="k">return</span> <span class="n">transformation_output_metric</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">input_space</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="s2">&quot;Domain&quot;</span><span class="p">,</span> <span class="s2">&quot;Metric&quot;</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_domain</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_metric</span> <span class="c1"># pragma: no cover</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">output_space</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="s2">&quot;Domain&quot;</span><span class="p">,</span> <span class="s2">&quot;Metric&quot;</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_domain</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_metric</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">function</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Function&quot;</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">transformation_function</span> <span class="c1"># pragma: no cover</span>
+        <span class="k">return</span> <span class="n">transformation_function</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="c1"># pragma: no cover</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">input_distance_type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s2">&quot;RuntimeType&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieve the distance type of the input metric.</span>
+<span class="sd">        This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.</span>
+
+<span class="sd">        :return: distance type</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">transformation_input_distance_type</span>
+        <span class="kn">from</span> <span class="nn">opendp.typing</span> <span class="kn">import</span> <span class="n">RuntimeType</span>
+        <span class="k">return</span> <span class="n">RuntimeType</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">transformation_input_distance_type</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">output_distance_type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s2">&quot;RuntimeType&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieve the distance type of the output metric.</span>
+<span class="sd">        This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.</span>
+
+<span class="sd">        :return: distance type</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">transformation_output_distance_type</span>
+        <span class="kn">from</span> <span class="nn">opendp.typing</span> <span class="kn">import</span> <span class="n">RuntimeType</span>
+        <span class="k">return</span> <span class="n">RuntimeType</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">transformation_output_distance_type</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">input_carrier_type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s2">&quot;RuntimeType&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieve the carrier type of the input domain.</span>
+<span class="sd">        Any member of the input domain is a member of the carrier type.</span>
+
+<span class="sd">        :return: carrier type</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">transformation_input_carrier_type</span>
+        <span class="kn">from</span> <span class="nn">opendp.typing</span> <span class="kn">import</span> <span class="n">RuntimeType</span>
+        <span class="k">return</span> <span class="n">RuntimeType</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">transformation_input_carrier_type</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_depends_on</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Extends the memory lifetime of args to the lifetime of self.&quot;&quot;&quot;</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_dependencies&quot;</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">_transformation_free</span>
+            <span class="n">_transformation_free</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">ImportError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+            <span class="c1"># an example error that this catches:</span>
+            <span class="c1">#   ImportError: sys.meta_path is None, Python is likely shutting down</span>
+            <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Transformation(</span><span class="se">\n</span><span class="s2">    input_domain   = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">input_domain</span><span class="si">}</span><span class="s2">,</span><span class="se">\n</span><span class="s2">    output_domain  = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">output_domain</span><span class="si">}</span><span class="s2">,</span><span class="se">\n</span><span class="s2">    input_metric   = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">input_metric</span><span class="si">}</span><span class="s2">,</span><span class="se">\n</span><span class="s2">    output_metric  = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">output_metric</span><span class="si">}</span><span class="se">\n</span><span class="s2">)&quot;</span></div>
+
+
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">cast</span>
+<span class="n">Transformation</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">Type</span><span class="p">[</span><span class="n">Transformation</span><span class="p">],</span> <span class="n">Transformation</span><span class="p">)</span> <span class="c1"># type: ignore[misc]</span>
+
+<div class="viewcode-block" id="Queryable">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.Queryable">[docs]</a>
+<span class="k">class</span> <span class="nc">Queryable</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">queryable_eval</span>
+        <span class="k">return</span> <span class="n">queryable_eval</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">query</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="Queryable.eval">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.Queryable.eval">[docs]</a>
+    <span class="k">def</span> <span class="nf">eval</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">queryable_eval</span> <span class="c1"># pragma: no cover</span>
+        <span class="k">return</span> <span class="n">queryable_eval</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">query</span><span class="p">)</span> <span class="c1"># pragma: no cover</span></div>
+
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">query_type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">queryable_query_type</span>
+        <span class="kn">from</span> <span class="nn">opendp.typing</span> <span class="kn">import</span> <span class="n">RuntimeType</span>
+        <span class="k">return</span> <span class="n">RuntimeType</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">queryable_query_type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">value</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Queryable(Q=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">query_type</span><span class="si">}</span><span class="s2">)&quot;</span>
+
+    <span class="k">def</span> <span class="nf">_depends_on</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Extends the memory lifetime of args to the lifetime of self.&quot;&quot;&quot;</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_dependencies&quot;</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span></div>
+
+        
+
+<div class="viewcode-block" id="Function">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.Function">[docs]</a>
+<span class="k">class</span> <span class="nc">Function</span><span class="p">(</span><span class="n">ctypes</span><span class="o">.</span><span class="n">POINTER</span><span class="p">(</span><span class="n">AnyFunction</span><span class="p">)):</span> <span class="c1"># type: ignore[misc]</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    See the `Function &lt;../../user/programming-framework/supporting-elements.html#function&gt;`_</span>
+<span class="sd">    section in the Programming Framework docs for more context.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">_type_</span> <span class="o">=</span> <span class="n">AnyFunction</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">arg</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">function_eval</span>
+        <span class="k">return</span> <span class="n">function_eval</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">arg</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">_depends_on</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Extends the memory lifetime of args to the lifetime of self.&quot;&quot;&quot;</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_dependencies&quot;</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">opendp.core</span> <span class="kn">import</span> <span class="n">_function_free</span>
+            <span class="n">_function_free</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">ImportError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+            <span class="c1"># an example error that this catches:</span>
+            <span class="c1">#   ImportError: sys.meta_path is None, Python is likely shutting down</span>
+            <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="Domain">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.Domain">[docs]</a>
+<span class="k">class</span> <span class="nc">Domain</span><span class="p">(</span><span class="n">ctypes</span><span class="o">.</span><span class="n">POINTER</span><span class="p">(</span><span class="n">AnyDomain</span><span class="p">)):</span> <span class="c1"># type: ignore[misc]</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    See the `Domain &lt;../../user/programming-framework/supporting-elements.html#domain&gt;`_</span>
+<span class="sd">    section in the Programming Framework docs for more context.</span>
+
+<span class="sd">    Functions for creating domains are in :py:mod:`opendp.domains`.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">_type_</span> <span class="o">=</span> <span class="n">AnyDomain</span>
+
+<div class="viewcode-block" id="Domain.member">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.Domain.member">[docs]</a>
+    <span class="k">def</span> <span class="nf">member</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">opendp.domains</span> <span class="kn">import</span> <span class="n">member</span>
+        <span class="k">return</span> <span class="n">member</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span></div>
+
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s2">&quot;RuntimeType&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+        <span class="kn">from</span> <span class="nn">opendp.domains</span> <span class="kn">import</span> <span class="n">domain_type</span>
+        <span class="kn">from</span> <span class="nn">opendp.typing</span> <span class="kn">import</span> <span class="n">RuntimeType</span>
+        <span class="k">return</span> <span class="n">RuntimeType</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">domain_type</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">carrier_type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s2">&quot;RuntimeType&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+        <span class="kn">from</span> <span class="nn">opendp.domains</span> <span class="kn">import</span> <span class="n">domain_carrier_type</span>
+        <span class="kn">from</span> <span class="nn">opendp.typing</span> <span class="kn">import</span> <span class="n">RuntimeType</span>
+        <span class="k">return</span> <span class="n">RuntimeType</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">domain_carrier_type</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">descriptor</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">opendp.domains</span> <span class="kn">import</span> <span class="n">_user_domain_descriptor</span>
+        <span class="k">return</span> <span class="n">_user_domain_descriptor</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">opendp.domains</span> <span class="kn">import</span> <span class="n">domain_debug</span>
+        <span class="k">return</span> <span class="n">domain_debug</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">opendp.domains</span> <span class="kn">import</span> <span class="n">_domain_free</span>
+            <span class="n">_domain_free</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">ImportError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+            <span class="c1"># an example error that this catches:</span>
+            <span class="c1">#   ImportError: sys.meta_path is None, Python is likely shutting down</span>
+            <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="c1"># TODO: consider adding ffi equality</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+    
+    <span class="k">def</span> <span class="nf">_depends_on</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Extends the memory lifetime of args to the lifetime of self.&quot;&quot;&quot;</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_dependencies&quot;</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span></div>
+
+
+
+
+<div class="viewcode-block" id="Metric">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.Metric">[docs]</a>
+<span class="k">class</span> <span class="nc">Metric</span><span class="p">(</span><span class="n">ctypes</span><span class="o">.</span><span class="n">POINTER</span><span class="p">(</span><span class="n">AnyMetric</span><span class="p">)):</span> <span class="c1"># type: ignore[misc]</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    See the `Metric &lt;../../user/programming-framework/supporting-elements.html#metric&gt;`_</span>
+<span class="sd">    section in the Programming Framework docs for more context.</span>
+
+<span class="sd">    Functions for creating metrics are in :py:mod:`opendp.metrics`.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">_type_</span> <span class="o">=</span> <span class="n">AnyMetric</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">opendp.metrics</span> <span class="kn">import</span> <span class="n">metric_type</span>
+        <span class="kn">from</span> <span class="nn">opendp.typing</span> <span class="kn">import</span> <span class="n">RuntimeType</span>
+        <span class="k">return</span> <span class="n">RuntimeType</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">metric_type</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">distance_type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s2">&quot;RuntimeType&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+        <span class="kn">from</span> <span class="nn">opendp.metrics</span> <span class="kn">import</span> <span class="n">metric_distance_type</span>
+        <span class="kn">from</span> <span class="nn">opendp.typing</span> <span class="kn">import</span> <span class="n">RuntimeType</span>
+        <span class="k">return</span> <span class="n">RuntimeType</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">metric_distance_type</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">opendp.metrics</span> <span class="kn">import</span> <span class="n">metric_debug</span>
+        <span class="k">return</span> <span class="n">metric_debug</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">opendp.metrics</span> <span class="kn">import</span> <span class="n">_metric_free</span>
+            <span class="n">_metric_free</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">ImportError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+            <span class="c1"># an example error that this catches:</span>
+            <span class="c1">#   ImportError: sys.meta_path is None, Python is likely shutting down</span>
+            <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="c1"># TODO: consider adding ffi equality</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="Measure">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.Measure">[docs]</a>
+<span class="k">class</span> <span class="nc">Measure</span><span class="p">(</span><span class="n">ctypes</span><span class="o">.</span><span class="n">POINTER</span><span class="p">(</span><span class="n">AnyMeasure</span><span class="p">)):</span> <span class="c1"># type: ignore[misc]</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    See the `Measure &lt;../../user/programming-framework/supporting-elements.html#measure&gt;`_</span>
+<span class="sd">    section in the Programming Framework docs for more context.</span>
+
+<span class="sd">    Functions for creating measures are in :py:mod:`opendp.measures`.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">_type_</span> <span class="o">=</span> <span class="n">AnyMeasure</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">opendp.measures</span> <span class="kn">import</span> <span class="n">measure_type</span>
+        <span class="kn">from</span> <span class="nn">opendp.typing</span> <span class="kn">import</span> <span class="n">RuntimeType</span>
+        <span class="k">return</span> <span class="n">RuntimeType</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">measure_type</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+    
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">distance_type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s2">&quot;RuntimeType&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+        <span class="kn">from</span> <span class="nn">opendp.measures</span> <span class="kn">import</span> <span class="n">measure_distance_type</span>
+        <span class="kn">from</span> <span class="nn">opendp.typing</span> <span class="kn">import</span> <span class="n">RuntimeType</span>
+        <span class="k">return</span> <span class="n">RuntimeType</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">measure_distance_type</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">opendp.measures</span> <span class="kn">import</span> <span class="n">measure_debug</span>
+        <span class="k">return</span> <span class="n">measure_debug</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">opendp.measures</span> <span class="kn">import</span> <span class="n">_measure_free</span>
+            <span class="n">_measure_free</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">ImportError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+            <span class="c1"># an example error that this catches:</span>
+            <span class="c1">#   ImportError: sys.meta_path is None, Python is likely shutting down</span>
+            <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="SMDCurve">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.SMDCurve">[docs]</a>
+<span class="k">class</span> <span class="nc">SMDCurve</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curve</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">curve</span> <span class="o">=</span> <span class="n">curve</span>
+
+<div class="viewcode-block" id="SMDCurve.epsilon">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.SMDCurve.epsilon">[docs]</a>
+    <span class="k">def</span> <span class="nf">epsilon</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">delta</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">opendp._data</span> <span class="kn">import</span> <span class="n">smd_curve_epsilon</span>
+        <span class="k">return</span> <span class="n">smd_curve_epsilon</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">curve</span><span class="p">,</span> <span class="n">delta</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="PartialConstructor">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.PartialConstructor">[docs]</a>
+<span class="k">class</span> <span class="nc">PartialConstructor</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">constructor</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constructor</span> <span class="o">=</span> <span class="n">constructor</span>
+    
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_domain</span><span class="p">:</span> <span class="n">Domain</span><span class="p">,</span> <span class="n">input_metric</span><span class="p">:</span> <span class="n">Metric</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">constructor</span><span class="p">(</span><span class="n">input_domain</span><span class="p">,</span> <span class="n">input_metric</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="fm">__rshift__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">PartialConstructor</span><span class="p">(</span><span class="k">lambda</span> <span class="n">input_domain</span><span class="p">,</span> <span class="n">input_metric</span><span class="p">:</span> <span class="bp">self</span><span class="p">(</span><span class="n">input_domain</span><span class="p">,</span> <span class="n">input_metric</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="n">other</span><span class="p">)</span> <span class="c1"># pragma: no cover</span>
+
+    <span class="k">def</span> <span class="fm">__rrshift__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">type</span><span class="p">,</span> <span class="n">other</span><span class="p">))</span> <span class="o">==</span> <span class="p">[</span><span class="n">Domain</span><span class="p">,</span> <span class="n">Metric</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="p">(</span><span class="n">other</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">other</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cannot chain </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="si">}</span><span class="s2"> with </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="UnknownTypeException">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.UnknownTypeException">[docs]</a>
+<span class="k">class</span> <span class="nc">UnknownTypeException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+
+<div class="viewcode-block" id="OpenDPException">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.OpenDPException">[docs]</a>
+<span class="k">class</span> <span class="nc">OpenDPException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;General exception for errors originating from the underlying OpenDP library.</span>
+<span class="sd">    The variant attribute corresponds to `one of the following variants &lt;https://github.com/opendp/opendp/blob/53ec58d01762ca5ceee08590d7e7b725bbdafcf6/rust/opendp/src/error.rs#L46-L87&gt;`_ and can be matched on.</span>
+<span class="sd">    Error variants may change in library updates.</span>
+
+<span class="sd">    See `Rust ErrorVariant &lt;https://docs.rs/opendp/latest/opendp/error/enum.ErrorVariant.html&gt;`_ for values variant may take on.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">raw_traceback</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">variant</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">raw_traceback</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">variant</span> <span class="o">=</span> <span class="n">variant</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">=</span> <span class="n">message</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">raw_traceback</span> <span class="o">=</span> <span class="n">raw_traceback</span>
+
+<div class="viewcode-block" id="OpenDPException.raw_frames">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.OpenDPException.raw_frames">[docs]</a>
+    <span class="k">def</span> <span class="nf">raw_frames</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="c1"># pragma: no cover</span>
+        <span class="kn">import</span> <span class="nn">re</span>
+        <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\s*[0-9]+: &quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_traceback</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span></div>
+
+    
+<div class="viewcode-block" id="OpenDPException.frames">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.OpenDPException.frames">[docs]</a>
+    <span class="k">def</span> <span class="nf">frames</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="c1"># pragma: no cover</span>
+        <span class="k">def</span> <span class="nf">format_frame</span><span class="p">(</span><span class="n">frame</span><span class="p">):</span>
+            <span class="k">return</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">  &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">l</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">format_frame</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_frames</span><span class="p">()</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;opendp&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">f</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;&lt;opendp&quot;</span><span class="p">)]</span></div>
+
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span> <span class="c1"># pragma: no cover</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_traceback</span> <span class="ow">and</span> <span class="s1">&#39;rust-stack-trace&#39;</span> <span class="ow">in</span> <span class="n">GLOBAL_FEATURES</span><span class="p">:</span>
+            <span class="c1"># join and split by newlines because frames may be multi-line</span>
+            <span class="n">lines</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">frames</span><span class="p">()[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">response</span> <span class="o">+=</span> <span class="s2">&quot;Continued Rust stack trace:</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;    &#39;</span> <span class="o">+</span> <span class="n">line</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">)</span>
+
+        <span class="n">response</span> <span class="o">+=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">  &#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">variant</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;(&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s1">&quot;)&#39;</span>
+            
+        <span class="k">return</span> <span class="n">response</span></div>
+
+
+
+<span class="n">GLOBAL_FEATURES</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="enable_features">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.enable_features">[docs]</a>
+<span class="k">def</span> <span class="nf">enable_features</span><span class="p">(</span><span class="o">*</span><span class="n">features</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">GLOBAL_FEATURES</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">features</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="disable_features">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.disable_features">[docs]</a>
+<span class="k">def</span> <span class="nf">disable_features</span><span class="p">(</span><span class="o">*</span><span class="n">features</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">GLOBAL_FEATURES</span><span class="o">.</span><span class="n">difference_update</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">features</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="assert_features">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.assert_features">[docs]</a>
+<span class="k">def</span> <span class="nf">assert_features</span><span class="p">(</span><span class="o">*</span><span class="n">features</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">feature</span> <span class="ow">in</span> <span class="n">features</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="n">feature</span> <span class="ow">in</span> <span class="n">GLOBAL_FEATURES</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Attempted to use function that requires </span><span class="si">{</span><span class="n">feature</span><span class="si">}</span><span class="s2">, but </span><span class="si">{</span><span class="n">feature</span><span class="si">}</span><span class="s2"> is not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features(</span><span class="se">\&quot;</span><span class="si">{</span><span class="n">feature</span><span class="si">}</span><span class="se">\&quot;</span><span class="s2">)&quot;</span></div>
+
+
+
+<span class="n">M</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s2">&quot;M&quot;</span><span class="p">,</span> <span class="n">Transformation</span><span class="p">,</span> <span class="n">Measurement</span><span class="p">)</span>
+
+<div class="viewcode-block" id="binary_search_chain">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.binary_search_chain">[docs]</a>
+<span class="k">def</span> <span class="nf">binary_search_chain</span><span class="p">(</span>
+        <span class="n">make_chain</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="n">M</span><span class="p">],</span>
+        <span class="n">d_in</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">d_out</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+        <span class="n">bounds</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">T</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">M</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Find the highest-utility (`d_in`, `d_out`)-close Transformation or Measurement.</span>
+<span class="sd">    </span>
+<span class="sd">    Searches for the numeric parameter to `make_chain` that results in a computation</span>
+<span class="sd">    that most tightly satisfies `d_out` when datasets differ by at most `d_in`,</span>
+<span class="sd">    then returns the Transformation or Measurement corresponding to said parameter.</span>
+
+<span class="sd">    See `binary_search_param` to retrieve the discovered parameter instead of the complete computation chain.</span>
+
+<span class="sd">    :param make_chain: a function that takes a number and returns a Transformation or Measurement</span>
+<span class="sd">    :param d_in: how far apart input datasets can be</span>
+<span class="sd">    :param d_out: how far apart output datasets or distributions can be</span>
+<span class="sd">    :param bounds: a 2-tuple of the lower and upper bounds on the input of `make_chain`</span>
+<span class="sd">    :param T: type of argument to `make_chain`, one of {float, int}</span>
+<span class="sd">    :return: a chain parameterized at the nearest passing value to the decision point of the relation</span>
+<span class="sd">    :rtype: Union[Transformation, Measurement]</span>
+<span class="sd">    :raises TypeError: if the type is not inferrable (pass T) or the type is invalid</span>
+<span class="sd">    :raises ValueError: if the predicate function is constant, bounds cannot be inferred, or decision boundary is not within `bounds`.</span>
+
+
+<span class="sd">    :examples:</span>
+
+<span class="sd">    Find a base_laplace measurement with the smallest noise scale that is still (d_in, d_out)-close.</span>
+
+<span class="sd">    &gt;&gt;&gt; from typing import List</span>
+<span class="sd">    &gt;&gt;&gt; import opendp.prelude as dp</span>
+<span class="sd">    &gt;&gt;&gt; dp.enable_features(&quot;floating-point&quot;, &quot;contrib&quot;)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; # The majority of the chain only needs to be defined once.</span>
+<span class="sd">    &gt;&gt;&gt; pre = (</span>
+<span class="sd">    ...     dp.space_of(List[float]) &gt;&gt;</span>
+<span class="sd">    ...     dp.t.then_clamp(bounds=(0., 1.)) &gt;&gt;</span>
+<span class="sd">    ...     dp.t.then_resize(size=10, constant=0.) &gt;&gt;</span>
+<span class="sd">    ...     dp.t.then_mean()</span>
+<span class="sd">    ... )</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain nearest the decision boundary.</span>
+<span class="sd">    &gt;&gt;&gt; # The lambda function returns the complete computation chain when given a single numeric parameter.</span>
+<span class="sd">    &gt;&gt;&gt; chain = dp.binary_search_chain(</span>
+<span class="sd">    ...     lambda s: pre &gt;&gt; dp.m.then_base_laplace(scale=s), </span>
+<span class="sd">    ...     d_in=1, d_out=1.)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; # The resulting computation chain is always (`d_in`, `d_out`)-close, but we can still double-check:</span>
+<span class="sd">    &gt;&gt;&gt; assert chain.check(1, 1.)</span>
+
+
+<span class="sd">    Build a (2 neighboring, 1. epsilon)-close sized bounded sum with discrete_laplace(100.) noise.</span>
+<span class="sd">    It should have the widest possible admissible clamping bounds (-b, b).</span>
+
+<span class="sd">    &gt;&gt;&gt; def make_sum(b):</span>
+<span class="sd">    ...     space = dp.vector_domain(dp.atom_domain((-b, b)), 10_000), dp.symmetric_distance()</span>
+<span class="sd">    ...     return space &gt;&gt; dp.t.then_sum() &gt;&gt; dp.m.then_laplace(100.)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; # `meas` is a Measurement with the widest possible clamping bounds.</span>
+<span class="sd">    &gt;&gt;&gt; meas = dp.binary_search_chain(make_sum, d_in=2, d_out=1., bounds=(0, 10_000))</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; # If you want the discovered clamping bound, use `binary_search_param` instead.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">make_chain</span><span class="p">(</span><span class="n">binary_search_param</span><span class="p">(</span><span class="n">make_chain</span><span class="p">,</span> <span class="n">d_in</span><span class="p">,</span> <span class="n">d_out</span><span class="p">,</span> <span class="n">bounds</span><span class="p">,</span> <span class="n">T</span><span class="p">))</span></div>
+
+
+
+<div class="viewcode-block" id="binary_search_param">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.binary_search_param">[docs]</a>
+<span class="k">def</span> <span class="nf">binary_search_param</span><span class="p">(</span>
+        <span class="n">make_chain</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="n">Union</span><span class="p">[</span><span class="n">Transformation</span><span class="p">,</span> <span class="n">Measurement</span><span class="p">]],</span>
+        <span class="n">d_in</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">d_out</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+        <span class="n">bounds</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">T</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Solve for the ideal constructor argument to `make_chain`.</span>
+<span class="sd">    </span>
+<span class="sd">    Optimizes a parameterized chain `make_chain` within float or integer `bounds`,</span>
+<span class="sd">    subject to the chained relation being (`d_in`, `d_out`)-close.</span>
+
+<span class="sd">    :param make_chain: a function that takes a number and returns a Transformation or Measurement</span>
+<span class="sd">    :param d_in: how far apart input datasets can be</span>
+<span class="sd">    :param d_out: how far apart output datasets or distributions can be</span>
+<span class="sd">    :param bounds: a 2-tuple of the lower and upper bounds on the input of `make_chain`</span>
+<span class="sd">    :param T: type of argument to `make_chain`, one of {float, int}</span>
+<span class="sd">    :return: the nearest passing value to the decision point of the relation</span>
+<span class="sd">    :raises TypeError: if the type is not inferrable (pass T) or the type is invalid</span>
+<span class="sd">    :raises ValueError: if the predicate function is constant, bounds cannot be inferred, or decision boundary is not within `bounds`.</span>
+
+<span class="sd">    :example:</span>
+
+<span class="sd">    &gt;&gt;&gt; import opendp.prelude as dp</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; # Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain nearest the decision boundary.</span>
+<span class="sd">    &gt;&gt;&gt; # The first argument is any function that returns your complete computation chain</span>
+<span class="sd">    &gt;&gt;&gt; #     when passed a single numeric parameter.</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; def make_fixed_laplace(scale):</span>
+<span class="sd">    ...     # fixes the input domain and metric, but parameterizes the noise scale</span>
+<span class="sd">    ...     return dp.m.make_base_laplace(dp.atom_domain(T=float), dp.absolute_distance(T=float), scale)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; scale = dp.binary_search_param(make_fixed_laplace, d_in=0.1, d_out=1.)</span>
+<span class="sd">    &gt;&gt;&gt; assert scale == 0.1</span>
+<span class="sd">    &gt;&gt;&gt; # Constructing the same chain with the discovered parameter will always be (0.1, 1.)-close.</span>
+<span class="sd">    &gt;&gt;&gt; assert make_fixed_laplace(scale).check(0.1, 1.)</span>
+
+<span class="sd">    A policy research organization wants to know the smallest sample size necessary to release an &quot;accurate&quot; epsilon=1 DP mean income. </span>
+<span class="sd">    Determine the smallest dataset size such that, with 95% confidence, </span>
+<span class="sd">    the DP release differs from the clipped dataset&#39;s mean by no more than 1000. </span>
+<span class="sd">    Assume that neighboring datasets have a symmetric distance at most 2. </span>
+<span class="sd">    Also assume a clipping bound of 500,000.</span>
+
+<span class="sd">    &gt;&gt;&gt; # we first work out the necessary noise scale to satisfy the above constraints.</span>
+<span class="sd">    &gt;&gt;&gt; necessary_scale = dp.accuracy_to_laplacian_scale(accuracy=1000., alpha=.05)</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; # we then write a function that make a computation chain with a given data size</span>
+<span class="sd">    &gt;&gt;&gt; def make_mean(data_size):</span>
+<span class="sd">    ...    return (</span>
+<span class="sd">    ...        (dp.vector_domain(dp.atom_domain(bounds=(0., 500_000.)), data_size), dp.symmetric_distance()) &gt;&gt;</span>
+<span class="sd">    ...        dp.t.then_mean() &gt;&gt; </span>
+<span class="sd">    ...        dp.m.then_base_laplace(necessary_scale)</span>
+<span class="sd">    ...    )</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; # solve for the smallest dataset size that admits a (2 neighboring, 1. epsilon)-close measurement</span>
+<span class="sd">    &gt;&gt;&gt; dp.binary_search_param(</span>
+<span class="sd">    ...     make_mean, </span>
+<span class="sd">    ...     d_in=2, d_out=1.,</span>
+<span class="sd">    ...     bounds=(1, 1000000))</span>
+<span class="sd">    1498</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># one might think running scipy.optimize.brent* would be better, but </span>
+    <span class="c1"># 1. benchmarking showed no difference or minor regressions</span>
+    <span class="c1"># 2. brentq is more complicated</span>
+
+    <span class="k">return</span> <span class="n">binary_search</span><span class="p">(</span><span class="k">lambda</span> <span class="n">param</span><span class="p">:</span> <span class="n">make_chain</span><span class="p">(</span><span class="n">param</span><span class="p">)</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">d_in</span><span class="p">,</span> <span class="n">d_out</span><span class="p">),</span> <span class="n">bounds</span><span class="p">,</span> <span class="n">T</span><span class="p">)</span></div>
+
+
+<span class="c1"># when return sign is false, only return float</span>
+<span class="nd">@overload</span>
+<span class="k">def</span> <span class="nf">binary_search</span><span class="p">(</span>
+        <span class="n">predicate</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">bool</span><span class="p">],</span>
+        <span class="n">bounds</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="o">...</span><span class="p">,</span>
+        <span class="n">T</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="o">...</span><span class="p">,</span>
+        <span class="n">return_sign</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">False</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+    <span class="o">...</span>
+
+
+<span class="c1"># when setting return sign to true as a keyword argument, return both</span>
+<span class="nd">@overload</span>
+<span class="k">def</span> <span class="nf">binary_search</span><span class="p">(</span>
+        <span class="n">predicate</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">bool</span><span class="p">],</span>
+        <span class="n">bounds</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="o">...</span><span class="p">,</span>
+        <span class="n">T</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="o">...</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span> <span class="c1"># see https://stackoverflow.com/questions/66435480/overload-following-optional-argument</span>
+        <span class="n">return_sign</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">True</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+    <span class="o">...</span>
+
+<span class="c1"># when setting return sign to true as a positional argument, return both</span>
+<span class="nd">@overload</span>
+<span class="k">def</span> <span class="nf">binary_search</span><span class="p">(</span>
+        <span class="n">predicate</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">bool</span><span class="p">],</span>
+        <span class="n">bounds</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">T</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">return_sign</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="kc">True</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+    <span class="o">...</span>
+
+
+<div class="viewcode-block" id="binary_search">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.binary_search">[docs]</a>
+<span class="k">def</span> <span class="nf">binary_search</span><span class="p">(</span>
+        <span class="n">predicate</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">bool</span><span class="p">],</span>
+        <span class="n">bounds</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">T</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">return_sign</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span> <span class="o">|</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Find the closest passing value to the decision boundary of `predicate`.</span>
+
+<span class="sd">    If bounds are not passed, conducts an exponential search.</span>
+<span class="sd">    </span>
+<span class="sd">    :param predicate: a monotonic unary function from a number to a boolean</span>
+<span class="sd">    :param bounds: a 2-tuple of the lower and upper bounds to the input of `predicate`</span>
+<span class="sd">    :param T: type of argument to `predicate`, one of {float, int}</span>
+<span class="sd">    :param return_sign: if True, also return the direction away from the decision boundary</span>
+<span class="sd">    :return: the discovered parameter within the bounds</span>
+<span class="sd">    :raises TypeError: if the type is not inferrable (pass T) or the type is invalid</span>
+<span class="sd">    :raises ValueError: if the predicate function is constant, bounds cannot be inferred, or decision boundary is not within `bounds`.</span>
+
+<span class="sd">    :example:</span>
+
+<span class="sd">    &gt;&gt;&gt; from opendp.mod import binary_search</span>
+<span class="sd">    &gt;&gt;&gt; binary_search(lambda x: x &gt;= 5.)</span>
+<span class="sd">    5.0</span>
+<span class="sd">    &gt;&gt;&gt; binary_search(lambda x: x &lt;= 5.)</span>
+<span class="sd">    5.0</span>
+
+<span class="sd">    &gt;&gt;&gt; binary_search(lambda x: x &gt; 5, T=int)</span>
+<span class="sd">    6</span>
+<span class="sd">    &gt;&gt;&gt; binary_search(lambda x: x &lt; 5, T=int)</span>
+<span class="sd">    4</span>
+
+<span class="sd">    Find epsilon usage of the gaussian(scale=1.) mechanism applied on a dp mean.</span>
+<span class="sd">    Assume neighboring datasets differ by up to three additions/removals, and fix delta to 1e-8.</span>
+
+<span class="sd">    &gt;&gt;&gt; # build a histogram that emits float counts</span>
+<span class="sd">    &gt;&gt;&gt; import opendp.prelude as dp</span>
+<span class="sd">    &gt;&gt;&gt; input_space = dp.vector_domain(dp.atom_domain(bounds=(0., 100.)), 1000), dp.symmetric_distance()</span>
+<span class="sd">    &gt;&gt;&gt; dp_mean = dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(</span>
+<span class="sd">    ...     input_space &gt;&gt; dp.t.then_mean() &gt;&gt; dp.m.then_gaussian(1.)), </span>
+<span class="sd">    ...     1e-8</span>
+<span class="sd">    ... )</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; dp.binary_search(</span>
+<span class="sd">    ...     lambda d_out: dp_mean.check(3, (d_out, 1e-8)), </span>
+<span class="sd">    ...     bounds = (0., 1.))</span>
+<span class="sd">    0.5235561269546629</span>
+
+<span class="sd">    Find the L2 distance sensitivity of a histogram when neighboring datasets differ by up to 3 additions/removals.</span>
+
+<span class="sd">    &gt;&gt;&gt; from opendp.transformations import make_count_by_categories</span>
+<span class="sd">    &gt;&gt;&gt; histogram = dp.t.make_count_by_categories(</span>
+<span class="sd">    ...     dp.vector_domain(dp.atom_domain(T=str)), dp.symmetric_distance(),</span>
+<span class="sd">    ...     categories=[&quot;a&quot;], MO=dp.L2Distance[int])</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; dp.binary_search(</span>
+<span class="sd">    ...     lambda d_out: histogram.check(3, d_out), </span>
+<span class="sd">    ...     bounds = (0, 100))</span>
+<span class="sd">    3</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">bounds</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">bounds</span> <span class="o">=</span> <span class="n">exponential_bounds_search</span><span class="p">(</span><span class="n">predicate</span><span class="p">,</span> <span class="n">T</span><span class="p">)</span> <span class="c1"># type: ignore</span>
+
+    <span class="k">if</span> <span class="n">bounds</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;unable to infer bounds&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">type</span><span class="p">,</span> <span class="n">bounds</span><span class="p">)))</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;bounds must share the same type&quot;</span><span class="p">)</span>
+    <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">bounds</span><span class="p">)</span>
+
+    <span class="n">maximize</span> <span class="o">=</span> <span class="n">predicate</span><span class="p">(</span><span class="n">lower</span><span class="p">)</span>  <span class="c1"># if the lower bound passes, we should maximize</span>
+    <span class="n">minimize</span> <span class="o">=</span> <span class="n">predicate</span><span class="p">(</span><span class="n">upper</span><span class="p">)</span>  <span class="c1"># if the upper bound passes, we should minimize</span>
+    <span class="k">if</span> <span class="n">maximize</span> <span class="o">==</span> <span class="n">minimize</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;the decision boundary of the predicate is outside the bounds&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">lower</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
+        <span class="n">tolerance</span> <span class="o">=</span> <span class="mf">0.</span>
+        <span class="n">half</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">/</span> <span class="mf">2.</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">lower</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="n">tolerance</span> <span class="o">=</span> <span class="mi">1</span>  <span class="c1"># the lower and upper bounds never meet due to int truncation</span>
+        <span class="n">half</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">//</span> <span class="mi">2</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;bounds must be either float or int&quot;</span><span class="p">)</span>
+
+    <span class="n">mid</span> <span class="o">=</span> <span class="n">lower</span>
+    <span class="k">while</span> <span class="n">upper</span> <span class="o">-</span> <span class="n">lower</span> <span class="o">&gt;</span> <span class="n">tolerance</span><span class="p">:</span>
+        <span class="n">new_mid</span> <span class="o">=</span> <span class="n">lower</span> <span class="o">+</span> <span class="n">half</span><span class="p">(</span><span class="n">upper</span> <span class="o">-</span> <span class="n">lower</span><span class="p">)</span>  <span class="c1"># avoid overflow</span>
+
+        <span class="c1"># avoid an infinite loop from float roundoff</span>
+        <span class="k">if</span> <span class="n">new_mid</span> <span class="o">==</span> <span class="n">mid</span><span class="p">:</span>
+            <span class="k">break</span>
+
+        <span class="n">mid</span> <span class="o">=</span> <span class="n">new_mid</span>
+        <span class="k">if</span> <span class="n">predicate</span><span class="p">(</span><span class="n">mid</span><span class="p">)</span> <span class="o">==</span> <span class="n">minimize</span><span class="p">:</span>
+            <span class="n">upper</span> <span class="o">=</span> <span class="n">mid</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">lower</span> <span class="o">=</span> <span class="n">mid</span>
+
+    <span class="c1"># one bound is always false, the other true. Return the truthy bound</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="n">upper</span> <span class="k">if</span> <span class="n">minimize</span> <span class="k">else</span> <span class="n">lower</span>
+
+    <span class="c1"># optionally return sign</span>
+    <span class="k">if</span> <span class="n">return_sign</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">value</span><span class="p">,</span> <span class="mi">1</span> <span class="k">if</span> <span class="n">minimize</span> <span class="k">else</span> <span class="o">-</span><span class="mi">1</span> <span class="c1"># type: ignore</span>
+    
+    <span class="k">return</span> <span class="n">value</span></div>
+
+
+
+<div class="viewcode-block" id="exponential_bounds_search">
+<a class="viewcode-back" href="../../api/python/opendp.mod.html#opendp.mod.exponential_bounds_search">[docs]</a>
+<span class="k">def</span> <span class="nf">exponential_bounds_search</span><span class="p">(</span>
+    <span class="n">predicate</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]],</span> <span class="nb">bool</span><span class="p">],</span> 
+    <span class="n">T</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Type</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">Type</span><span class="p">[</span><span class="nb">int</span><span class="p">]]])</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Determine bounds for a binary search via an exponential search,</span>
+<span class="sd">    in large bands of [2^((k - 1)^2), 2^(k^2)] for k in [0, 8).</span>
+<span class="sd">    Will attempt to recover once if `predicate` throws an exception, </span>
+<span class="sd">    by searching bands on the ok side of the exception boundary.</span>
+<span class="sd">    </span>
+
+<span class="sd">    :param predicate: a monotonic unary function from a number to a boolean</span>
+<span class="sd">    :param T: type of argument to predicate, one of {float, int}</span>
+<span class="sd">    :return: a tuple of float or int bounds that the decision boundary lies within</span>
+<span class="sd">    :raises TypeError: if the type is not inferrable (pass T)</span>
+<span class="sd">    :raises ValueError: if the predicate function is constant</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># try to infer T</span>
+    <span class="k">if</span> <span class="n">T</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">def</span> <span class="nf">check_type</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">predicate</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">TypeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+            <span class="k">except</span> <span class="n">OpenDPException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">if</span> <span class="s2">&quot;No match for concrete type&quot;</span> <span class="ow">in</span> <span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">message</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">):</span>
+                    <span class="k">return</span> <span class="kc">False</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        
+        <span class="k">if</span> <span class="n">check_type</span><span class="p">(</span><span class="mf">0.</span><span class="p">):</span>
+            <span class="n">T</span> <span class="o">=</span> <span class="nb">float</span>
+        <span class="k">elif</span> <span class="n">check_type</span><span class="p">(</span><span class="mi">0</span><span class="p">):</span>
+            <span class="n">T</span> <span class="o">=</span> <span class="nb">int</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;unable to infer type `T`; pass the type `T` or bounds&quot;</span><span class="p">)</span>
+
+    <span class="c1"># core search functionality</span>
+    <span class="k">def</span> <span class="nf">signed_band_search</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">at_center</span><span class="p">,</span> <span class="n">sign</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;identify which band (of eight) the decision boundary lies in, </span>
+<span class="sd">        starting from `center` in the direction indicated by `sign`&quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">T</span> <span class="o">==</span> <span class="nb">int</span><span class="p">:</span>
+            <span class="c1"># searching bands of [(k - 1) * 2^16, k * 2^16].</span>
+            <span class="c1"># center + 1 included because zero is prone to error</span>
+            <span class="n">bands</span> <span class="o">=</span> <span class="p">[</span><span class="n">center</span><span class="p">,</span> <span class="n">center</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="o">*</span><span class="p">(</span><span class="n">center</span> <span class="o">+</span> <span class="n">sign</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">**</span> <span class="mi">16</span> <span class="o">*</span> <span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">9</span><span class="p">))]</span>
+
+        <span class="k">elif</span> <span class="n">T</span> <span class="o">==</span> <span class="nb">float</span><span class="p">:</span>
+            <span class="c1"># searching bands of [2^((k - 1)^2), 2^(k^2)].</span>
+            <span class="c1"># exponent has ten bits (2.^1024 overflows) so k must be in [0, 32).</span>
+            <span class="c1"># unlikely to need numbers greater than 2**64, and to avoid overflow from shifted centers,</span>
+            <span class="c1">#    only check k in [0, 8). Set your own bounds if this is not sufficient</span>
+            <span class="n">bands</span> <span class="o">=</span> <span class="p">[</span><span class="n">center</span><span class="p">,</span> <span class="o">*</span><span class="p">(</span><span class="n">center</span> <span class="o">+</span> <span class="n">sign</span> <span class="o">*</span> <span class="mf">2.</span> <span class="o">**</span> <span class="n">k</span> <span class="o">**</span> <span class="mi">2</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1024</span> <span class="o">//</span> <span class="mi">32</span> <span class="o">//</span> <span class="mi">4</span><span class="p">))]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;unknown type </span><span class="si">{</span><span class="n">T</span><span class="si">}</span><span class="s2">. Must be one of int, float&quot;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">bands</span><span class="p">)):</span>
+            <span class="c1"># looking for a change in sign that indicates the decision boundary is within this band</span>
+            <span class="k">if</span> <span class="n">at_center</span> <span class="o">!=</span> <span class="n">predicate</span><span class="p">(</span><span class="n">bands</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span>
+                <span class="c1"># return the band</span>
+                <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">bands</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]))</span>
+        
+        <span class="c1"># No band found!</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="n">center</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">float</span><span class="p">:</span> <span class="mf">0.</span><span class="p">}[</span><span class="n">T</span><span class="p">]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">at_center</span> <span class="o">=</span> <span class="n">predicate</span><span class="p">(</span><span class="n">center</span><span class="p">)</span>
+        <span class="c1"># search positive bands, then negative bands</span>
+        <span class="k">return</span> <span class="n">signed_band_search</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">at_center</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="ow">or</span> <span class="n">signed_band_search</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">at_center</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="k">pass</span>
+
+
+    <span class="c1"># predicate has thrown an exception</span>
+    <span class="c1"># 1. Treat exceptions as a secondary decision boundary, and find the edge value</span>
+    <span class="c1"># 2. Return a bound by searching from the exception edge, in the direction away from the exception</span>
+    <span class="k">def</span> <span class="nf">exception_predicate</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">predicate</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+    <span class="n">exception_bounds</span> <span class="o">=</span> <span class="n">exponential_bounds_search</span><span class="p">(</span><span class="n">exception_predicate</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="n">T</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">exception_bounds</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">predicate</span><span class="p">(</span><span class="n">center</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;predicate always fails. An example traceback is shown above at </span><span class="si">{</span><span class="n">center</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+    
+
+    <span class="n">center</span><span class="p">,</span> <span class="n">sign</span> <span class="o">=</span> <span class="n">binary_search</span><span class="p">(</span><span class="n">exception_predicate</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="n">exception_bounds</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="n">T</span><span class="p">,</span> <span class="n">return_sign</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">at_center</span> <span class="o">=</span> <span class="n">predicate</span><span class="p">(</span><span class="n">center</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">signed_band_search</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">at_center</span><span class="p">,</span> <span class="n">sign</span><span class="p">)</span></div>
+
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.3rc1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

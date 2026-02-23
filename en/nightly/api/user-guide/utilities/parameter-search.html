@@ -1,0 +1,968 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Parameter Search &#8212; OpenDP</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../../_static/styles/bootstrap.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+
+  
+  <link href="../../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=eafc0fe6" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=4f92a2c4" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f" />
+  <script src="../../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+    <script src="../../../_static/documentation_options.js?v=818b74dc"></script>
+    <script src="../../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/user-guide/utilities/parameter-search';</script>
+    <link rel="icon" href="../../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="Serialization" href="serialization.html" />
+    <link rel="prev" title="Typing" href="typing.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Feb 23, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+
+
+<script>
+document.write(`<aside class="bd-header-announcement" aria-label="Announcement"></aside>`);
+fetch("https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html")
+  .then(res => {return res.text();})
+  .then(data => {
+    if (data.length === 0) {
+      console.log("[PST]: Empty announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+      return;
+    }
+    div = document.querySelector(".bd-header-announcement");
+    div.classList.add(...["bd-header-announcement", "container-fluid", "init"]);
+    div.innerHTML = `<div class="bd-header-announcement__content">${data}</div>`;
+    // At least 3rem height
+    const autoHeight = Math.min(
+      div.offsetHeight,
+      3 * parseFloat(getComputedStyle(document.documentElement).fontSize));
+    // Set height and vertical padding to 0 to prepare the height transition
+    div.style.setProperty("height", 0);
+    div.style.setProperty("padding-top", 0);
+    div.style.setProperty("padding-bottom", 0);
+    div.classList.remove("init");
+    // Set height to the computed height with a small timeout to activate the transition
+    setTimeout(() => {
+      div.style.setProperty("height", `${autoHeight}px`);
+      // Wait for a bit more than 300ms (the transition duration) then remove the
+      // forcefully set styles and let CSS take over
+      setTimeout(() => {
+        div.style.removeProperty("padding-top");
+        div.style.removeProperty("padding-bottom");
+        div.style.removeProperty("height");
+        div.style.setProperty("min-height", "3rem");
+      }, 320);
+    }, 10);
+  })
+  .catch(error => {
+    console.log("[PST]: Failed to load announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+  });
+</script>
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <button class="sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/opendp-logo.png" class="logo__image only-light" alt="OpenDP - Home"/>
+    <script>document.write(`<img src="../../../_static/opendp-logo.png" class="logo__image only-dark" alt="OpenDP - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../getting-started/index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="../../index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../theory/index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+    <button class="sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../getting-started/index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="../../index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../theory/index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../index.html">API User Guide</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../limitations.html">Limitations</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../programming-framework/index.html">Programming Framework</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../programming-framework/core-structures.html">Core Structures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../programming-framework/supporting-elements.html">Supporting Elements</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../transformations/index.html">Transformations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../transformations/preprocess-resize.html">Preprocessing: Resize</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../transformations/aggregation-sum.html">Aggregation: Sum</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../transformations/aggregation-mean.html">Aggregation: Mean</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../transformations/aggregation-quantile.html">Aggregation: Quantile</a></li>
+
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../measurements/index.html">Measurements</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../measurements/additive-noise-mechanisms.html">Additive Noise Mechanisms</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../measurements/canonical-noise-mechanism.html">Canonical Noise Mechanism</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../measurements/thresholded-noise-mechanisms.html">Thresholded Noise Mechanisms</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../measurements/approximate-laplace-projection.html">Approximate Laplace Projection</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../measurements/noisy-max-mechanisms.html">Report Noisy Max Mechanisms</a></li>
+
+
+
+<li class="toctree-l3"><a class="reference internal" href="../measurements/randomized-response.html">Randomized Response</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../combinators/index.html">Combinators</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../combinators/chaining.html">Chaining</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../combinators/non-adaptive-composition.html">(Non-Adaptive) Composition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../combinators/adaptive-composition.html">Adaptive Composition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../combinators/fully-adaptive-composition.html">Fully Adaptive Composition and Odometers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../combinators/privacy-filters.html">Privacy Filters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../combinators/compositor-chaining-and-nesting.html">Compositor Chaining and Nesting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../combinators/measure-casting.html">Measure Casting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../combinators/amplification.html">Amplification</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 current active has-children"><a class="reference internal" href="index.html">Utilities</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="typing.html">Typing</a></li>
+<li class="toctree-l3 current active"><a class="current reference internal" href="#">Parameter Search</a></li>
+<li class="toctree-l3"><a class="reference internal" href="serialization.html">Serialization</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../context/index.html">Context</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../polars/index.html">Polars</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../polars/polars-vs-opendp.html">Polars vs. OpenDP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../polars/gaussian-noise.html">Gaussian Noise</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../polars/bounds.html">Identifier Truncation and Bounds</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../polars/data-types.html">Data Types</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../polars/expressions/index.html">Expressions</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="../polars/expressions/aggregation.html">Aggregation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../polars/expressions/boolean.html">Boolean</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../polars/expressions/columns.html">Columns</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../polars/expressions/manipulation.html">Manipulation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../polars/expressions/operators.html">Operators</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../polars/expressions/string.html">String</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../polars/expressions/temporal.html">Temporal</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../plugins/index.html">Plugins</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../plugins/measurement.html">Measurement example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../plugins/transformation.html">Transformation example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../plugins/context-api-plugins.html">Context API Plugins</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../plugins/theil-sen-regression.html">Thiel-Sen Regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../plugins/selecting-grouping-columns.html">Privately Selecting Grouping Columns</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../python/index.html">Python API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../python/opendp.html">opendp package</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../../python/opendp.extras.html">opendp.extras package</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../python/opendp.extras.examples.html">opendp.extras.examples package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../python/opendp.extras.mbi.html">opendp.extras.mbi package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../python/opendp.extras.numpy.html">opendp.extras.numpy package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../python/opendp.extras.polars.html">opendp.extras.polars package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../python/opendp.extras.sklearn.html">opendp.extras.sklearn package</a></li>
+</ul>
+</details></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.accuracy.html">opendp.accuracy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.combinators.html">opendp.combinators module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.context.html">opendp.context module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.core.html">opendp.core module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.domains.html">opendp.domains module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.measurements.html">opendp.measurements module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.measures.html">opendp.measures module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.metrics.html">opendp.metrics module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.mod.html">opendp.mod module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.prelude.html">opendp.prelude module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.transformations.html">opendp.transformations module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.typing.html">opendp.typing module</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference external" href="https://docs.opendp.org/en/stable/api/r">R API Reference</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://docs.rs/opendp">Rust API Reference</a></li>
+</ul>
+</div>
+</nav></div>
+        <div class="sidebar-primary-item">
+<h6>Branches</h6>
+<ul>
+    <li><a href="../../../../beta/api/user-guide/utilities/parameter-search.html" style="font-weight: normal">beta</a></li>
+    <li><a href="parameter-search.html" style="font-weight: bold">nightly</a></li>
+    <li><a href="../../../../stable/api/user-guide/utilities/parameter-search.html" style="font-weight: normal">stable</a></li>
+</ul>
+
+
+<h6 id="releases_header">Releases
+    <div id="releases_symbol" style="float:right"></div>
+</h6>
+<ul id="releases_content">
+    <li><a href="../../../../v0.14.1/api/user-guide/utilities/parameter-search.html" style="font-weight: normal">v0.14.1</a></li>
+    <li><a href="../../../../v0.14.0/api/user-guide/utilities/parameter-search.html" style="font-weight: normal">v0.14.0</a></li>
+    <li><a href="../../../../v0.13.0/api/user-guide/utilities/parameter-search.html" style="font-weight: normal">v0.13.0</a></li>
+    <li><a href="../../../../v0.12.1/api/user-guide/utilities/parameter-search.html" style="font-weight: normal">v0.12.1</a></li>
+    <li><a href="../../../../v0.12.0/api/user-guide/utilities/parameter-search.html" style="font-weight: normal">v0.12.0</a></li>
+    <li><a href="../../../../v0.11.1/api/user-guide/utilities/parameter-search.html" style="font-weight: normal">v0.11.1</a></li>
+    <li><a href="../../../../v0.11.0/api/user-guide/utilities/parameter-search.html" style="font-weight: normal">v0.11.0</a></li>
+    <li><a href="../../../../v0.10.0/api/user-guide/utilities/parameter-search.html" style="font-weight: normal">v0.10.0</a></li>
+    <li><a href="../../../../v0.9.2/index.html" style="font-weight: normal">v0.9.2</a></li>
+    <li><a href="../../../../v0.9.1/index.html" style="font-weight: normal">v0.9.1</a></li>
+    <li><a href="../../../../v0.9.0/index.html" style="font-weight: normal">v0.9.0</a></li>
+    <li><a href="../../../../v0.8.0/index.html" style="font-weight: normal">v0.8.0</a></li>
+    <li><a href="../../../../v0.7.0/index.html" style="font-weight: normal">v0.7.0</a></li>
+    <li><a href="../../../../v0.6.2/index.html" style="font-weight: normal">v0.6.2</a></li>
+    <li><a href="../../../../v0.6.1/index.html" style="font-weight: normal">v0.6.1</a></li>
+    <li><a href="../../../../v0.6.0/index.html" style="font-weight: normal">v0.6.0</a></li>
+    <li><a href="../../../../v0.5.0/index.html" style="font-weight: normal">v0.5.0</a></li>
+    <li><a href="../../../../v0.4.0/index.html" style="font-weight: normal">v0.4.0</a></li>
+    <li><a href="../../../../v0.3.0/index.html" style="font-weight: normal">v0.3.0</a></li>
+    <li><a href="../../../../v0.2.4/index.html" style="font-weight: normal">v0.2.4</a></li>
+    <li><a href="../../../../v0.2.3/index.html" style="font-weight: normal">v0.2.3</a></li>
+    <li><a href="../../../../v0.2.2/index.html" style="font-weight: normal">v0.2.2</a></li>
+    <li><a href="../../../../v0.2.1/index.html" style="font-weight: normal">v0.2.1</a></li>
+    <li><a href="../../../../v0.2.0/index.html" style="font-weight: normal">v0.2.0</a></li>
+    <li><a href="../../../../v0.1.0/index.html" style="font-weight: normal">v0.1.0</a></li>
+</ul>
+<script>
+    let expanded = !!JSON.parse(localStorage.getItem('expanded'));
+
+    let releasesHeader = document.getElementById("releases_header");
+    let releasesSymbol = document.getElementById("releases_symbol");
+    let releasesContent = document.getElementById("releases_content");
+
+    function setReleasesState() {
+        localStorage.setItem("expanded", JSON.stringify(expanded))
+        releasesContent.style.display = expanded ? "block" : "none";
+        releasesSymbol.classList.add(expanded ? 'minus' : 'plus')
+        releasesSymbol.classList.remove(expanded ? 'plus' : 'minus')
+    }
+
+    setReleasesState()
+    releasesHeader.addEventListener("click", function() {
+        expanded = !expanded;
+        setReleasesState()
+    })
+</script>
+<style>
+    .plus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .plus:before,
+    .plus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .plus:before {
+        left:50%;
+        top:4px;
+        bottom:4px;
+        width:3px;
+        transform:translateX(-50%);
+    }
+
+    .plus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+
+
+
+    .minus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .minus:before,
+    .minus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .minus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+</style>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+
+
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">API</a></li>
+    
+    
+    <li class="breadcrumb-item"><i class="fa-solid fa-ellipsis"></i></li>
+    
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Utilities</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">Parameter Search</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item"><div class="admonition warning" style="position: relative;">
+    <!--
+     Without the style, the region for the article title overlaps, and the link is unclickable.
+    -->
+    <details>
+        <summary>Questions or feedback?</summary>
+        <!--
+            All of these lists should be in sync:
+            - README.md
+            - docs/source/contributing/contact.rst
+            - docs/source/_templates/questions-feedback.html
+            - .github/ISSUE_TEMPLATE/config.yml
+        -->
+        <ul>
+            <li>Report a bug or request a feature on <a href="https://github.com/opendp/opendp/issues">Github</a>.</li>
+            <li>Send general queries to <a href="mailto:info@opendp.org">info@opendp.org</a>, or email <a href="mailto:security@opendp.org">security@opendp.org</a> if it is related to security.</li>
+            <li>Join the conversation on <a href="https://join.slack.com/t/opendp/shared_invite/zt-1t8rrbqhd-z8LiZiP06vVE422HJd6ciQ">Slack</a>, or the <a href="https://groups.google.com/a/g.harvard.edu/g/opendp-community">mailing list</a>.</li>
+        </ul>
+    </details>
+</div></div>
+      
+        <div class="header-article-item">
+<div class="admonition warning" style="position: relative;" id="old-version-warning">
+  <!--
+   To work with this locally, in conf.py uncomment the entry under "html_context".
+
+   Without the style, the region for the article title overlaps, and the link is unclickable.
+  -->
+  <p class="admonition-title">
+  
+  This documentation is for a development version of OpenDP.
+  
+  </p>
+  <p>The current release of OpenDP is <a href="/">v0.14.1</a>.</p>
+</div>
+<script>
+  window.addEventListener("load", (event) => {
+    document.getElementById('old-version-warning').style.top = `${window.visualViewport.pageTop}px`;
+  });
+</script>
+</div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="parameter-search">
+<span id="id1"></span><h1>Parameter Search<a class="headerlink" href="#parameter-search" title="Link to this heading">#</a></h1>
+<p>The OpenDP library provides two different kinds of search algorithms to aid in finding free parameters.
+The primary being the binary search functions, and secondary an exponential search.</p>
+<section id="binary-search">
+<h2>Binary Search<a class="headerlink" href="#binary-search" title="Link to this heading">#</a></h2>
+<p>There are many parameters in a typical DP measurement:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">d_in</span></code> input distance (oftentimes how many records differ when you perturb one individual)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">d_out</span></code> output distance (oftentimes the privacy budget)</p></li>
+<li><p>noise scale and any other parameters passed to the constructors</p></li>
+</ul>
+<p>To evaluate a <a class="reference internal" href="../programming-framework/supporting-elements.html#maps"><span class="std std-ref">privacy relation</span></a>, you must fix all of these parameters.
+The relation simply returns a boolean indicating if it passed.
+If the relation passes for a given <code class="docutils literal notranslate"><span class="pre">d_out</span></code>, it will also pass for any value greater than <code class="docutils literal notranslate"><span class="pre">d_out</span></code>.
+This behavior makes it possible to solve for any one parameter using a binary search
+because the relation itself acts as your predicate function.</p>
+<p>OpenDP comes with some utility functions to make these binary searches easier to conduct:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="../../python/opendp.mod.html#opendp.mod.binary_search_chain" title="opendp.mod.binary_search_chain"><code class="xref py py-func docutils literal notranslate"><span class="pre">binary_search_chain()</span></code></a>: Pass it a function that makes a measurement or transformation from one numeric argument, as well as <code class="docutils literal notranslate"><span class="pre">d_in</span></code> and <code class="docutils literal notranslate"><span class="pre">d_out</span></code>. Returns the tightest chain.</p></li>
+<li><p><a class="reference internal" href="../../python/opendp.mod.html#opendp.mod.binary_search_param" title="opendp.mod.binary_search_param"><code class="xref py py-func docutils literal notranslate"><span class="pre">binary_search_param()</span></code></a>: Same as binary_search_chain, but returns the discovered parameter.</p></li>
+<li><p><a class="reference internal" href="../../python/opendp.mod.html#opendp.mod.binary_search" title="opendp.mod.binary_search"><code class="xref py py-func docutils literal notranslate"><span class="pre">binary_search()</span></code></a>: Pass a predicate function and bounds. Returns the discovered parameter. Useful when you just want to solve for <code class="docutils literal notranslate"><span class="pre">d_in</span></code> or <code class="docutils literal notranslate"><span class="pre">d_out</span></code>.</p></li>
+</ul>
+<p>This is extremely powerful!</p>
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-0" name="sd-tab-set-0" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-0">
+Python</label><div class="sd-tab-content docutils">
+<div class="highlight-pycon notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">opendp.prelude</span> <span class="k">as</span> <span class="nn">dp</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span><span class="o">.</span><span class="n">enable_features</span><span class="p">(</span><span class="s2">&quot;contrib&quot;</span><span class="p">,</span> <span class="s2">&quot;floating-point&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<ul>
+<li><div class="line-block">
+<div class="line">If you have a bound on <code class="docutils literal notranslate"><span class="pre">d_in</span></code> and a budget <code class="docutils literal notranslate"><span class="pre">d_out</span></code>, you can solve for the smallest noise scale that is still differentially private.</div>
+<div class="line">This is useful when you want to determine how accurate you can make a query with a given budget.</div>
+</div>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">input_space</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">nan</span><span class="o">=</span><span class="kc">False</span>
+<span class="gp">... </span><span class="p">),</span> <span class="n">dp</span><span class="o">.</span><span class="n">absolute_distance</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span><span class="o">.</span><span class="n">binary_search_param</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">make_gaussian</span><span class="p">(</span><span class="o">*</span><span class="n">input_space</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="n">s</span><span class="p">),</span>
+<span class="gp">... </span>    <span class="n">d_in</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">d_out</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="go">0.7071067811865476</span>
+</pre></div>
+</div>
+</li>
+<li><div class="line-block">
+<div class="line">If you have a bound on <code class="docutils literal notranslate"><span class="pre">d_in</span></code> and a noise scale, you can solve for the tightest budget <code class="docutils literal notranslate"><span class="pre">d_out</span></code> that is still differentially private.</div>
+<div class="line">This is useful when you want to find the smallest budget that will satisfy a target accuracy.</div>
+</div>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># in this case, a search is unnecessary. We can just use the map:</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">make_gaussian</span><span class="p">(</span><span class="o">*</span><span class="n">input_space</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">d_in</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+<span class="go">0.5</span>
+</pre></div>
+</div>
+</li>
+<li><div class="line-block">
+<div class="line">If you have a noise scale and a budget <code class="docutils literal notranslate"><span class="pre">d_out</span></code>, you can solve for the largest bound on <code class="docutils literal notranslate"><span class="pre">d_in</span></code> that is still differentially private.</div>
+<div class="line">This is useful when you want to determine an upper bound on how many records can be collected from an individual before needing to truncate.</div>
+</div>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># finds the largest permissible d_in, a sensitivity</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span><span class="o">.</span><span class="n">binary_search</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="k">lambda</span> <span class="n">d_in</span><span class="p">:</span> <span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">make_gaussian</span><span class="p">(</span>
+<span class="gp">... </span>        <span class="o">*</span><span class="n">input_space</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span>
+<span class="gp">... </span>    <span class="p">)</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">d_in</span><span class="o">=</span><span class="n">d_in</span><span class="p">,</span> <span class="n">d_out</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="go">1.414213562373095</span>
+</pre></div>
+</div>
+</li>
+<li><div class="line-block">
+<div class="line">If you have <code class="docutils literal notranslate"><span class="pre">d_in</span></code>, <code class="docutils literal notranslate"><span class="pre">d_out</span></code>, and noise scale derived from a target accuracy, you can solve for the smallest dataset size <code class="docutils literal notranslate"><span class="pre">n</span></code> that is still differentially private.</div>
+<div class="line">This is useful when you want to determine the necessary sample size when collecting data.</div>
+</div>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># finds the smallest n</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span><span class="o">.</span><span class="n">binary_search_param</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="k">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">make_mean</span><span class="p">(</span>
+<span class="gp">... </span>        <span class="n">dp</span><span class="o">.</span><span class="n">vector_domain</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">)),</span> <span class="n">n</span><span class="p">),</span>
+<span class="gp">... </span>        <span class="n">dp</span><span class="o">.</span><span class="n">symmetric_distance</span><span class="p">(),</span>
+<span class="gp">... </span>    <span class="p">)</span>
+<span class="gp">... </span>    <span class="o">&gt;&gt;</span> <span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">then_gaussian</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">),</span>
+<span class="gp">... </span>    <span class="n">d_in</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">d_out</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="go">8</span>
+</pre></div>
+</div>
+</li>
+<li><div class="line-block">
+<div class="line">If you have <code class="docutils literal notranslate"><span class="pre">d_in</span></code>, <code class="docutils literal notranslate"><span class="pre">d_out</span></code>, and noise scale derived from a target accuracy, you can solve for the greatest clipping range that is still differentially private</div>
+<div class="line">This is useful when you want to minimize the likelihood of introducing bias.</div>
+</div>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># finds the largest clipping bounds</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span><span class="o">.</span><span class="n">binary_search_param</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="k">lambda</span> <span class="n">c</span><span class="p">:</span> <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">make_sum</span><span class="p">(</span>
+<span class="gp">... </span>        <span class="n">dp</span><span class="o">.</span><span class="n">vector_domain</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="n">c</span><span class="p">,</span> <span class="n">c</span><span class="p">))),</span>
+<span class="gp">... </span>        <span class="n">dp</span><span class="o">.</span><span class="n">symmetric_distance</span><span class="p">(),</span>
+<span class="gp">... </span>    <span class="p">)</span>
+<span class="gp">... </span>    <span class="o">&gt;&gt;</span> <span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">then_gaussian</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">),</span>
+<span class="gp">... </span>    <span class="n">d_in</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">d_out</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="go">0.353553389770093</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<p>The API documentation on these functions have more specific usage examples.</p>
+</section>
+<section id="exponential-search">
+<h2>Exponential Search<a class="headerlink" href="#exponential-search" title="Link to this heading">#</a></h2>
+<p>An exponential search starts at an origin location in the search space, and finds the first step where a predicate function changes value.
+Generally speaking, each step the algorithm takes is exponentially larger than the previous one.
+If bounds are not passed to the binary search algorithm, an exponential search is run to find the bounds for the binary search.
+This is generally less likely to overflow than if you were to set large binary search bounds, because the magnitude of exponential bounds queries starts small.</p>
+<p><a class="reference internal" href="../../python/opendp.mod.html#opendp.mod.exponential_bounds_search" title="opendp.mod.exponential_bounds_search"><code class="xref py py-func docutils literal notranslate"><span class="pre">exponential_bounds_search()</span></code></a> uses a number of heuristics that tend to work well on most problems.
+If the heuristics fail you, then pass your own bounds into the binary search utilities.</p>
+<details class="sd-sphinx-override sd-dropdown sd-card sd-mb-3">
+<summary class="sd-summary-title sd-card-header">
+<span class="sd-summary-text">Algorithm Details</span><span class="sd-summary-state-marker sd-summary-chevron-right"><svg version="1.1" width="1.5em" height="1.5em" class="sd-octicon sd-octicon-chevron-right" viewBox="0 0 24 24" aria-hidden="true"><path d="M8.72 18.78a.75.75 0 0 1 0-1.06L14.44 12 8.72 6.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018l6.25 6.25a.75.75 0 0 1 0 1.06l-6.25 6.25a.75.75 0 0 1-1.06 0Z"></path></svg></span></summary><div class="sd-summary-content sd-card-body docutils">
+<p class="sd-card-text">If it is unkown whether the algorithm needs integer or float bounds, the algorithm first checks the predicate at a float zero.
+If a type error is thrown, it similarly checks the predicate function at an integer zero.
+If the predicate function fails both times, you’ll have to pass a type argument <code class="docutils literal notranslate"><span class="pre">T</span></code> of either <code class="docutils literal notranslate"><span class="pre">float</span></code> or <code class="docutils literal notranslate"><span class="pre">int</span></code>.
+This heuristic can fail if the predicate function is invalid at zero.</p>
+<p class="sd-card-text">The integer bounds search doesn’t actually take exponential steps, it checks the predicate function along zero, one, and eight even steps of size 2^16.
+On the other hand, since floats are logarithmically distributed, 8 steps are made along 2^(k^2).
+This explores a parameter regime that is unlikely to overflow, even when the origin is offset.</p>
+<p class="sd-card-text">If the positive band search fails to find a change in sign, then the same procedure is run in the negative direction.
+In the case that no acceptance region crosses the edge of a search band, the algorithm gives up,
+and you’ll have to work out a reasonable set of bounds that intersect the acceptance region on your own.
+Luckily, most predicate functions are monotonic, so this is unlikely to happen.</p>
+<p class="sd-card-text">If at any time the predicate function throws an exception, then a search is run for the decision boundary of the exception.
+We can safely consider the exception region invalid, and attempt to exclude it from the search space.
+An example of this is when searching for a suitable size, n, for which the predicate function outright throws an exception if negative due to being malformed.</p>
+<p class="sd-card-text">If this search fails to find an edge to the exception region, we give up, and claim that the predicate function always fails.
+Otherwise, we shift the origin of the bounds search to the exception boundary, and try one more directional bounds search away from the exception.</p>
+</div>
+</details></section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="typing.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Typing</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="serialization.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Serialization</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#binary-search">Binary Search</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#exponential-search">Exponential Search</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../../../_sources/api/user-guide/utilities/parameter-search.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f"></script>
+<script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.3rc1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

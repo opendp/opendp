@@ -1,0 +1,1180 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>opendp package &#8212; OpenDP</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=eafc0fe6" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=4f92a2c4" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+    <script src="../../_static/documentation_options.js?v=c5b435e8"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/python/opendp';</script>
+    <link rel="icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="opendp.extras package" href="opendp.extras.html" />
+    <link rel="prev" title="Python API Documentation" href="index.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Feb 23, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+
+
+<script>
+document.write(`<aside class="bd-header-announcement" aria-label="Announcement"></aside>`);
+fetch("https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html")
+  .then(res => {return res.text();})
+  .then(data => {
+    if (data.length === 0) {
+      console.log("[PST]: Empty announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+      return;
+    }
+    div = document.querySelector(".bd-header-announcement");
+    div.classList.add(...["bd-header-announcement", "container-fluid", "init"]);
+    div.innerHTML = `<div class="bd-header-announcement__content">${data}</div>`;
+    // At least 3rem height
+    const autoHeight = Math.min(
+      div.offsetHeight,
+      3 * parseFloat(getComputedStyle(document.documentElement).fontSize));
+    // Set height and vertical padding to 0 to prepare the height transition
+    div.style.setProperty("height", 0);
+    div.style.setProperty("padding-top", 0);
+    div.style.setProperty("padding-bottom", 0);
+    div.classList.remove("init");
+    // Set height to the computed height with a small timeout to activate the transition
+    setTimeout(() => {
+      div.style.setProperty("height", `${autoHeight}px`);
+      // Wait for a bit more than 300ms (the transition duration) then remove the
+      // forcefully set styles and let CSS take over
+      setTimeout(() => {
+        div.style.removeProperty("padding-top");
+        div.style.removeProperty("padding-bottom");
+        div.style.removeProperty("height");
+        div.style.setProperty("min-height", "3rem");
+      }, 320);
+    }, 10);
+  })
+  .catch(error => {
+    console.log("[PST]: Failed to load announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+  });
+</script>
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <button class="sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/opendp-logo.png" class="logo__image only-light" alt="OpenDP - Home"/>
+    <script>document.write(`<img src="../../_static/opendp-logo.png" class="logo__image only-dark" alt="OpenDP - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../getting-started/index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="../index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../theory/index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+    <button class="sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../getting-started/index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="../index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../theory/index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../user-guide/index.html">API User Guide</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/limitations.html">Limitations</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/programming-framework/index.html">Programming Framework</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/programming-framework/core-structures.html">Core Structures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/programming-framework/supporting-elements.html">Supporting Elements</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/transformations/index.html">Transformations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/transformations/aggregation-sum.html">Aggregation: Sum</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/transformations/aggregation-mean.html">Aggregation: Mean</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/transformations/aggregation-quantile.html">Aggregation: Quantile</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/measurements/index.html">Measurements</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/measurements/additive-noise-mechanisms.html">Additive Noise Mechanisms</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/measurements/randomized-response.html">Randomized Response</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/combinators/index.html">Combinators</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/combinators/compositors.html">Compositors</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/utilities/index.html">Utilities</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/utilities/typing.html">Typing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/utilities/parameter-search.html">Parameter Search</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/utilities/serialization.html">Serialization</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/context/index.html">Context</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/polars/index.html">Polars</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/polars/polars-vs-opendp.html">Polars vs. OpenDP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/polars/gaussian-noise.html">Gaussian Noise</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/polars/data-types.html">Data Types</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../user-guide/polars/expressions/index.html">Expressions</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/aggregation.html">Aggregation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/boolean.html">Boolean</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/columns.html">Columns</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/manipulation.html">Manipulation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/operators.html">Operators</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/string.html">String</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/temporal.html">Temporal</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/plugins/index.html">Plugins</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/plugins/measurement.html">Measurement example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/plugins/transformation.html">Transformation example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/plugins/selecting-grouping-columns.html">Privately Selecting Grouping Columns</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Python API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2 current active has-children"><a class="current reference internal" href="#">opendp package</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3 has-children"><a class="reference internal" href="opendp.extras.html">opendp.extras package</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="opendp.extras.examples.html">opendp.extras.examples package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="opendp.extras.numpy.html">opendp.extras.numpy package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="opendp.extras.polars.html">opendp.extras.polars package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="opendp.extras.sklearn.html">opendp.extras.sklearn package</a></li>
+</ul>
+</details></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.accuracy.html">opendp.accuracy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.combinators.html">opendp.combinators module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.context.html">opendp.context module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.core.html">opendp.core module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.domains.html">opendp.domains module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.measurements.html">opendp.measurements module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.measures.html">opendp.measures module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.metrics.html">opendp.metrics module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html">opendp.mod module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.prelude.html">opendp.prelude module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.transformations.html">opendp.transformations module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.typing.html">opendp.typing module</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference external" href="https://docs.opendp.org/en/stable/api/r">R API Reference</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://docs.rs/opendp">Rust API Reference</a></li>
+</ul>
+</div>
+</nav></div>
+        <div class="sidebar-primary-item">
+<h6>Branches</h6>
+<ul>
+    <li><a href="../../../beta/index.html" style="font-weight: normal">beta</a></li>
+    <li><a href="../../../nightly/index.html" style="font-weight: normal">nightly</a></li>
+    <li><a href="../../../stable/index.html" style="font-weight: normal">stable</a></li>
+</ul>
+
+
+<h6 id="releases_header">Releases
+    <div id="releases_symbol" style="float:right"></div>
+</h6>
+<ul id="releases_content">
+    <li><a href="../../../v0.14.1/index.html" style="font-weight: normal">v0.14.1</a></li>
+    <li><a href="../../../v0.14.0/index.html" style="font-weight: normal">v0.14.0</a></li>
+    <li><a href="../../../v0.13.0/index.html" style="font-weight: normal">v0.13.0</a></li>
+    <li><a href="opendp.html" style="font-weight: bold">v0.12.1</a></li>
+    <li><a href="../../../v0.12.0/index.html" style="font-weight: normal">v0.12.0</a></li>
+    <li><a href="../../../v0.11.1/index.html" style="font-weight: normal">v0.11.1</a></li>
+    <li><a href="../../../v0.11.0/index.html" style="font-weight: normal">v0.11.0</a></li>
+    <li><a href="../../../v0.10.0/index.html" style="font-weight: normal">v0.10.0</a></li>
+    <li><a href="../../../v0.9.2/index.html" style="font-weight: normal">v0.9.2</a></li>
+    <li><a href="../../../v0.9.1/index.html" style="font-weight: normal">v0.9.1</a></li>
+    <li><a href="../../../v0.9.0/index.html" style="font-weight: normal">v0.9.0</a></li>
+    <li><a href="../../../v0.8.0/index.html" style="font-weight: normal">v0.8.0</a></li>
+    <li><a href="../../../v0.7.0/index.html" style="font-weight: normal">v0.7.0</a></li>
+    <li><a href="../../../v0.6.2/index.html" style="font-weight: normal">v0.6.2</a></li>
+    <li><a href="../../../v0.6.1/index.html" style="font-weight: normal">v0.6.1</a></li>
+    <li><a href="../../../v0.6.0/index.html" style="font-weight: normal">v0.6.0</a></li>
+    <li><a href="../../../v0.5.0/index.html" style="font-weight: normal">v0.5.0</a></li>
+    <li><a href="../../../v0.4.0/index.html" style="font-weight: normal">v0.4.0</a></li>
+    <li><a href="../../../v0.3.0/index.html" style="font-weight: normal">v0.3.0</a></li>
+    <li><a href="../../../v0.2.4/index.html" style="font-weight: normal">v0.2.4</a></li>
+    <li><a href="../../../v0.2.3/index.html" style="font-weight: normal">v0.2.3</a></li>
+    <li><a href="../../../v0.2.2/index.html" style="font-weight: normal">v0.2.2</a></li>
+    <li><a href="../../../v0.2.1/index.html" style="font-weight: normal">v0.2.1</a></li>
+    <li><a href="../../../v0.2.0/index.html" style="font-weight: normal">v0.2.0</a></li>
+    <li><a href="../../../v0.1.0/index.html" style="font-weight: normal">v0.1.0</a></li>
+</ul>
+<script>
+    let expanded = !!JSON.parse(localStorage.getItem('expanded'));
+
+    let releasesHeader = document.getElementById("releases_header");
+    let releasesSymbol = document.getElementById("releases_symbol");
+    let releasesContent = document.getElementById("releases_content");
+
+    function setReleasesState() {
+        localStorage.setItem("expanded", JSON.stringify(expanded))
+        releasesContent.style.display = expanded ? "block" : "none";
+        releasesSymbol.classList.add(expanded ? 'minus' : 'plus')
+        releasesSymbol.classList.remove(expanded ? 'plus' : 'minus')
+    }
+
+    setReleasesState()
+    releasesHeader.addEventListener("click", function() {
+        expanded = !expanded;
+        setReleasesState()
+    })
+</script>
+<style>
+    .plus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .plus:before,
+    .plus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .plus:before {
+        left:50%;
+        top:4px;
+        bottom:4px;
+        width:3px;
+        transform:translateX(-50%);
+    }
+
+    .plus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+
+
+
+    .minus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .minus:before,
+    .minus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .minus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+</style>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">API</a></li>
+    
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Python API Documentation</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">opendp package</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item"><div class="admonition warning" style="position: relative;">
+    <!--
+     Without the style, the region for the article title overlaps, and the link is unclickable.
+    -->
+    <details>
+        <summary>Questions or feedback?</summary>
+        <!--
+            All of these lists should be in sync:
+            - README.md
+            - docs/source/contributing/contact.rst
+            - docs/source/_templates/questions-feedback.html
+            - .github/ISSUE_TEMPLATE/config.yml
+        -->
+        <ul>
+            <li>Report a bug or request a feature on <a href="https://github.com/opendp/opendp/issues">Github</a>.</li>
+            <li>Send general queries to <a href="mailto:info@opendp.org">info@opendp.org</a>, or email <a href="mailto:security@opendp.org">security@opendp.org</a> if it is related to security.</li>
+            <li>Join the conversation on <a href="https://join.slack.com/t/opendp/shared_invite/zt-1t8rrbqhd-z8LiZiP06vVE422HJd6ciQ">Slack</a>, or the <a href="https://groups.google.com/a/g.harvard.edu/g/opendp-community">mailing list</a>.</li>
+        </ul>
+    </details>
+</div></div>
+      
+        <div class="header-article-item">
+<div class="admonition warning" style="position: relative;" id="old-version-warning">
+  <!--
+   To work with this locally, in conf.py uncomment the entry under "html_context".
+
+   Without the style, the region for the article title overlaps, and the link is unclickable.
+  -->
+  <p class="admonition-title">
+  
+  This documentation is for an old version of OpenDP.
+  
+  </p>
+  <p>The current release of OpenDP is <a href="/">v0.14.1</a>.</p>
+</div>
+<script>
+  window.addEventListener("load", (event) => {
+    document.getElementById('old-version-warning').style.top = `${window.visualViewport.pageTop}px`;
+  });
+</script>
+</div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="opendp-package">
+<h1>opendp package<a class="headerlink" href="#opendp-package" title="Link to this heading">#</a></h1>
+<section id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Link to this heading">#</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="opendp.extras.html">opendp.extras package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="opendp.extras.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="opendp.extras.examples.html">opendp.extras.examples package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.extras.numpy.html">opendp.extras.numpy package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.extras.polars.html">opendp.extras.polars package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.extras.sklearn.html">opendp.extras.sklearn package</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.extras.html#module-opendp.extras">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading">#</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="opendp.accuracy.html">opendp.accuracy module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="opendp.accuracy.html#opendp.accuracy.accuracy_to_discrete_gaussian_scale"><code class="docutils literal notranslate"><span class="pre">accuracy_to_discrete_gaussian_scale()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.accuracy.html#opendp.accuracy.accuracy_to_discrete_laplacian_scale"><code class="docutils literal notranslate"><span class="pre">accuracy_to_discrete_laplacian_scale()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.accuracy.html#opendp.accuracy.accuracy_to_gaussian_scale"><code class="docutils literal notranslate"><span class="pre">accuracy_to_gaussian_scale()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.accuracy.html#opendp.accuracy.accuracy_to_laplacian_scale"><code class="docutils literal notranslate"><span class="pre">accuracy_to_laplacian_scale()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.accuracy.html#opendp.accuracy.discrete_gaussian_scale_to_accuracy"><code class="docutils literal notranslate"><span class="pre">discrete_gaussian_scale_to_accuracy()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.accuracy.html#opendp.accuracy.discrete_laplacian_scale_to_accuracy"><code class="docutils literal notranslate"><span class="pre">discrete_laplacian_scale_to_accuracy()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.accuracy.html#opendp.accuracy.gaussian_scale_to_accuracy"><code class="docutils literal notranslate"><span class="pre">gaussian_scale_to_accuracy()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.accuracy.html#opendp.accuracy.laplacian_scale_to_accuracy"><code class="docutils literal notranslate"><span class="pre">laplacian_scale_to_accuracy()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.accuracy.html#opendp.accuracy.summarize_polars_measurement"><code class="docutils literal notranslate"><span class="pre">summarize_polars_measurement()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="opendp.combinators.html">opendp.combinators module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="opendp.combinators.html#opendp.combinators.make_approximate"><code class="docutils literal notranslate"><span class="pre">make_approximate()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.combinators.html#opendp.combinators.make_basic_composition"><code class="docutils literal notranslate"><span class="pre">make_basic_composition()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.combinators.html#opendp.combinators.make_chain_mt"><code class="docutils literal notranslate"><span class="pre">make_chain_mt()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.combinators.html#opendp.combinators.make_chain_pm"><code class="docutils literal notranslate"><span class="pre">make_chain_pm()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.combinators.html#opendp.combinators.make_chain_tt"><code class="docutils literal notranslate"><span class="pre">make_chain_tt()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.combinators.html#opendp.combinators.make_fix_delta"><code class="docutils literal notranslate"><span class="pre">make_fix_delta()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.combinators.html#opendp.combinators.make_population_amplification"><code class="docutils literal notranslate"><span class="pre">make_population_amplification()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.combinators.html#opendp.combinators.make_pureDP_to_zCDP"><code class="docutils literal notranslate"><span class="pre">make_pureDP_to_zCDP()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.combinators.html#opendp.combinators.make_select_private_candidate"><code class="docutils literal notranslate"><span class="pre">make_select_private_candidate()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.combinators.html#opendp.combinators.make_sequential_composition"><code class="docutils literal notranslate"><span class="pre">make_sequential_composition()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.combinators.html#opendp.combinators.make_zCDP_to_approxDP"><code class="docutils literal notranslate"><span class="pre">make_zCDP_to_approxDP()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.combinators.html#opendp.combinators.then_sequential_composition"><code class="docutils literal notranslate"><span class="pre">then_sequential_composition()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="opendp.context.html">opendp.context module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="opendp.context.html#opendp.context.Context"><code class="docutils literal notranslate"><span class="pre">Context</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="opendp.context.html#opendp.context.Context.accountant"><code class="docutils literal notranslate"><span class="pre">Context.accountant</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.context.html#opendp.context.Context.compositor"><code class="docutils literal notranslate"><span class="pre">Context.compositor()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.context.html#opendp.context.Context.query"><code class="docutils literal notranslate"><span class="pre">Context.query()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.context.html#opendp.context.Context.queryable"><code class="docutils literal notranslate"><span class="pre">Context.queryable</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.context.html#opendp.context.PartialChain"><code class="docutils literal notranslate"><span class="pre">PartialChain</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="opendp.context.html#opendp.context.PartialChain.fix"><code class="docutils literal notranslate"><span class="pre">PartialChain.fix()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.context.html#opendp.context.PartialChain.partial"><code class="docutils literal notranslate"><span class="pre">PartialChain.partial</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.context.html#opendp.context.PartialChain.wrap"><code class="docutils literal notranslate"><span class="pre">PartialChain.wrap()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.context.html#opendp.context.Query"><code class="docutils literal notranslate"><span class="pre">Query</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="opendp.context.html#opendp.context.Query.compositor"><code class="docutils literal notranslate"><span class="pre">Query.compositor()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.context.html#opendp.context.Query.new_with"><code class="docutils literal notranslate"><span class="pre">Query.new_with()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.context.html#opendp.context.Query.param"><code class="docutils literal notranslate"><span class="pre">Query.param()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.context.html#opendp.context.Query.release"><code class="docutils literal notranslate"><span class="pre">Query.release()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.context.html#opendp.context.Query.resolve"><code class="docutils literal notranslate"><span class="pre">Query.resolve()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.context.html#opendp.context.domain_of"><code class="docutils literal notranslate"><span class="pre">domain_of()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.context.html#opendp.context.loss_of"><code class="docutils literal notranslate"><span class="pre">loss_of()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.context.html#opendp.context.metric_of"><code class="docutils literal notranslate"><span class="pre">metric_of()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.context.html#opendp.context.space_of"><code class="docutils literal notranslate"><span class="pre">space_of()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.context.html#opendp.context.unit_of"><code class="docutils literal notranslate"><span class="pre">unit_of()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="opendp.core.html">opendp.core module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.function_eval"><code class="docutils literal notranslate"><span class="pre">function_eval()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.measurement_check"><code class="docutils literal notranslate"><span class="pre">measurement_check()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.measurement_function"><code class="docutils literal notranslate"><span class="pre">measurement_function()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.measurement_input_carrier_type"><code class="docutils literal notranslate"><span class="pre">measurement_input_carrier_type()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.measurement_input_distance_type"><code class="docutils literal notranslate"><span class="pre">measurement_input_distance_type()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.measurement_input_domain"><code class="docutils literal notranslate"><span class="pre">measurement_input_domain()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.measurement_input_metric"><code class="docutils literal notranslate"><span class="pre">measurement_input_metric()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.measurement_invoke"><code class="docutils literal notranslate"><span class="pre">measurement_invoke()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.measurement_map"><code class="docutils literal notranslate"><span class="pre">measurement_map()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.measurement_output_distance_type"><code class="docutils literal notranslate"><span class="pre">measurement_output_distance_type()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.measurement_output_measure"><code class="docutils literal notranslate"><span class="pre">measurement_output_measure()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.new_function"><code class="docutils literal notranslate"><span class="pre">new_function()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.new_queryable"><code class="docutils literal notranslate"><span class="pre">new_queryable()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.queryable_eval"><code class="docutils literal notranslate"><span class="pre">queryable_eval()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.queryable_query_type"><code class="docutils literal notranslate"><span class="pre">queryable_query_type()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.transformation_check"><code class="docutils literal notranslate"><span class="pre">transformation_check()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.transformation_function"><code class="docutils literal notranslate"><span class="pre">transformation_function()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.transformation_input_carrier_type"><code class="docutils literal notranslate"><span class="pre">transformation_input_carrier_type()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.transformation_input_distance_type"><code class="docutils literal notranslate"><span class="pre">transformation_input_distance_type()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.transformation_input_domain"><code class="docutils literal notranslate"><span class="pre">transformation_input_domain()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.transformation_input_metric"><code class="docutils literal notranslate"><span class="pre">transformation_input_metric()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.transformation_invoke"><code class="docutils literal notranslate"><span class="pre">transformation_invoke()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.transformation_map"><code class="docutils literal notranslate"><span class="pre">transformation_map()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.transformation_output_distance_type"><code class="docutils literal notranslate"><span class="pre">transformation_output_distance_type()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.transformation_output_domain"><code class="docutils literal notranslate"><span class="pre">transformation_output_domain()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.core.html#opendp.core.transformation_output_metric"><code class="docutils literal notranslate"><span class="pre">transformation_output_metric()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="opendp.domains.html">opendp.domains module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="opendp.domains.html#opendp.domains.atom_domain"><code class="docutils literal notranslate"><span class="pre">atom_domain()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.domains.html#opendp.domains.bitvector_domain"><code class="docutils literal notranslate"><span class="pre">bitvector_domain()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.domains.html#opendp.domains.categorical_domain"><code class="docutils literal notranslate"><span class="pre">categorical_domain()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.domains.html#opendp.domains.datetime_domain"><code class="docutils literal notranslate"><span class="pre">datetime_domain()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.domains.html#opendp.domains.domain_carrier_type"><code class="docutils literal notranslate"><span class="pre">domain_carrier_type()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.domains.html#opendp.domains.domain_debug"><code class="docutils literal notranslate"><span class="pre">domain_debug()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.domains.html#opendp.domains.domain_type"><code class="docutils literal notranslate"><span class="pre">domain_type()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.domains.html#opendp.domains.lazyframe_domain"><code class="docutils literal notranslate"><span class="pre">lazyframe_domain()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.domains.html#opendp.domains.map_domain"><code class="docutils literal notranslate"><span class="pre">map_domain()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.domains.html#opendp.domains.member"><code class="docutils literal notranslate"><span class="pre">member()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.domains.html#opendp.domains.option_domain"><code class="docutils literal notranslate"><span class="pre">option_domain()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.domains.html#opendp.domains.series_domain"><code class="docutils literal notranslate"><span class="pre">series_domain()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.domains.html#opendp.domains.user_domain"><code class="docutils literal notranslate"><span class="pre">user_domain()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.domains.html#opendp.domains.vector_domain"><code class="docutils literal notranslate"><span class="pre">vector_domain()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.domains.html#opendp.domains.wild_expr_domain"><code class="docutils literal notranslate"><span class="pre">wild_expr_domain()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.domains.html#opendp.domains.with_margin"><code class="docutils literal notranslate"><span class="pre">with_margin()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="opendp.measurements.html">opendp.measurements module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measurements.html#opendp.measurements.debias_randomized_response_bitvec"><code class="docutils literal notranslate"><span class="pre">debias_randomized_response_bitvec()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measurements.html#opendp.measurements.make_alp_queryable"><code class="docutils literal notranslate"><span class="pre">make_alp_queryable()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measurements.html#opendp.measurements.make_gaussian"><code class="docutils literal notranslate"><span class="pre">make_gaussian()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measurements.html#opendp.measurements.make_geometric"><code class="docutils literal notranslate"><span class="pre">make_geometric()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measurements.html#opendp.measurements.make_laplace"><code class="docutils literal notranslate"><span class="pre">make_laplace()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measurements.html#opendp.measurements.make_laplace_threshold"><code class="docutils literal notranslate"><span class="pre">make_laplace_threshold()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measurements.html#opendp.measurements.make_private_expr"><code class="docutils literal notranslate"><span class="pre">make_private_expr()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measurements.html#opendp.measurements.make_private_lazyframe"><code class="docutils literal notranslate"><span class="pre">make_private_lazyframe()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measurements.html#opendp.measurements.make_randomized_response"><code class="docutils literal notranslate"><span class="pre">make_randomized_response()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measurements.html#opendp.measurements.make_randomized_response_bitvec"><code class="docutils literal notranslate"><span class="pre">make_randomized_response_bitvec()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measurements.html#opendp.measurements.make_randomized_response_bool"><code class="docutils literal notranslate"><span class="pre">make_randomized_response_bool()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measurements.html#opendp.measurements.make_report_noisy_max_gumbel"><code class="docutils literal notranslate"><span class="pre">make_report_noisy_max_gumbel()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measurements.html#opendp.measurements.make_user_measurement"><code class="docutils literal notranslate"><span class="pre">make_user_measurement()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measurements.html#opendp.measurements.then_alp_queryable"><code class="docutils literal notranslate"><span class="pre">then_alp_queryable()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measurements.html#opendp.measurements.then_gaussian"><code class="docutils literal notranslate"><span class="pre">then_gaussian()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measurements.html#opendp.measurements.then_geometric"><code class="docutils literal notranslate"><span class="pre">then_geometric()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measurements.html#opendp.measurements.then_laplace"><code class="docutils literal notranslate"><span class="pre">then_laplace()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measurements.html#opendp.measurements.then_laplace_threshold"><code class="docutils literal notranslate"><span class="pre">then_laplace_threshold()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measurements.html#opendp.measurements.then_private_expr"><code class="docutils literal notranslate"><span class="pre">then_private_expr()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measurements.html#opendp.measurements.then_private_lazyframe"><code class="docutils literal notranslate"><span class="pre">then_private_lazyframe()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measurements.html#opendp.measurements.then_randomized_response_bitvec"><code class="docutils literal notranslate"><span class="pre">then_randomized_response_bitvec()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measurements.html#opendp.measurements.then_report_noisy_max_gumbel"><code class="docutils literal notranslate"><span class="pre">then_report_noisy_max_gumbel()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measurements.html#opendp.measurements.then_user_measurement"><code class="docutils literal notranslate"><span class="pre">then_user_measurement()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="opendp.measures.html">opendp.measures module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measures.html#opendp.measures.approximate"><code class="docutils literal notranslate"><span class="pre">approximate()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measures.html#opendp.measures.fixed_smoothed_max_divergence"><code class="docutils literal notranslate"><span class="pre">fixed_smoothed_max_divergence()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measures.html#opendp.measures.max_divergence"><code class="docutils literal notranslate"><span class="pre">max_divergence()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measures.html#opendp.measures.measure_debug"><code class="docutils literal notranslate"><span class="pre">measure_debug()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measures.html#opendp.measures.measure_distance_type"><code class="docutils literal notranslate"><span class="pre">measure_distance_type()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measures.html#opendp.measures.measure_type"><code class="docutils literal notranslate"><span class="pre">measure_type()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measures.html#opendp.measures.new_privacy_profile"><code class="docutils literal notranslate"><span class="pre">new_privacy_profile()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measures.html#opendp.measures.renyi_divergence"><code class="docutils literal notranslate"><span class="pre">renyi_divergence()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measures.html#opendp.measures.smoothed_max_divergence"><code class="docutils literal notranslate"><span class="pre">smoothed_max_divergence()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measures.html#opendp.measures.user_divergence"><code class="docutils literal notranslate"><span class="pre">user_divergence()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.measures.html#opendp.measures.zero_concentrated_divergence"><code class="docutils literal notranslate"><span class="pre">zero_concentrated_divergence()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="opendp.metrics.html">opendp.metrics module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="opendp.metrics.html#opendp.metrics.absolute_distance"><code class="docutils literal notranslate"><span class="pre">absolute_distance()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.metrics.html#opendp.metrics.change_one_distance"><code class="docutils literal notranslate"><span class="pre">change_one_distance()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.metrics.html#opendp.metrics.discrete_distance"><code class="docutils literal notranslate"><span class="pre">discrete_distance()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.metrics.html#opendp.metrics.hamming_distance"><code class="docutils literal notranslate"><span class="pre">hamming_distance()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.metrics.html#opendp.metrics.insert_delete_distance"><code class="docutils literal notranslate"><span class="pre">insert_delete_distance()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.metrics.html#opendp.metrics.l1_distance"><code class="docutils literal notranslate"><span class="pre">l1_distance()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.metrics.html#opendp.metrics.l2_distance"><code class="docutils literal notranslate"><span class="pre">l2_distance()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.metrics.html#opendp.metrics.linf_distance"><code class="docutils literal notranslate"><span class="pre">linf_distance()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.metrics.html#opendp.metrics.metric_debug"><code class="docutils literal notranslate"><span class="pre">metric_debug()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.metrics.html#opendp.metrics.metric_distance_type"><code class="docutils literal notranslate"><span class="pre">metric_distance_type()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.metrics.html#opendp.metrics.metric_type"><code class="docutils literal notranslate"><span class="pre">metric_type()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.metrics.html#opendp.metrics.partition_distance"><code class="docutils literal notranslate"><span class="pre">partition_distance()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.metrics.html#opendp.metrics.symmetric_distance"><code class="docutils literal notranslate"><span class="pre">symmetric_distance()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.metrics.html#opendp.metrics.user_distance"><code class="docutils literal notranslate"><span class="pre">user_distance()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="opendp.mod.html">opendp.mod module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="opendp.mod.html#opendp.mod.Domain"><code class="docutils literal notranslate"><span class="pre">Domain</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Domain.carrier_type"><code class="docutils literal notranslate"><span class="pre">Domain.carrier_type</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Domain.descriptor"><code class="docutils literal notranslate"><span class="pre">Domain.descriptor</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Domain.member"><code class="docutils literal notranslate"><span class="pre">Domain.member()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Domain.type"><code class="docutils literal notranslate"><span class="pre">Domain.type</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.mod.html#opendp.mod.Function"><code class="docutils literal notranslate"><span class="pre">Function</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.mod.html#opendp.mod.Measure"><code class="docutils literal notranslate"><span class="pre">Measure</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Measure.distance_type"><code class="docutils literal notranslate"><span class="pre">Measure.distance_type</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Measure.type"><code class="docutils literal notranslate"><span class="pre">Measure.type</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement"><code class="docutils literal notranslate"><span class="pre">Measurement</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement.check"><code class="docutils literal notranslate"><span class="pre">Measurement.check()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement.function"><code class="docutils literal notranslate"><span class="pre">Measurement.function</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement.input_carrier_type"><code class="docutils literal notranslate"><span class="pre">Measurement.input_carrier_type</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement.input_distance_type"><code class="docutils literal notranslate"><span class="pre">Measurement.input_distance_type</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement.input_domain"><code class="docutils literal notranslate"><span class="pre">Measurement.input_domain</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement.input_metric"><code class="docutils literal notranslate"><span class="pre">Measurement.input_metric</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement.input_space"><code class="docutils literal notranslate"><span class="pre">Measurement.input_space</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement.invoke"><code class="docutils literal notranslate"><span class="pre">Measurement.invoke()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement.map"><code class="docutils literal notranslate"><span class="pre">Measurement.map()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement.output_distance_type"><code class="docutils literal notranslate"><span class="pre">Measurement.output_distance_type</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement.output_measure"><code class="docutils literal notranslate"><span class="pre">Measurement.output_measure</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.mod.html#opendp.mod.Metric"><code class="docutils literal notranslate"><span class="pre">Metric</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Metric.distance_type"><code class="docutils literal notranslate"><span class="pre">Metric.distance_type</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Metric.type"><code class="docutils literal notranslate"><span class="pre">Metric.type</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException"><code class="docutils literal notranslate"><span class="pre">OpenDPException</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException.raw_traceback"><code class="docutils literal notranslate"><span class="pre">OpenDPException.raw_traceback</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.mod.html#opendp.mod.PrivacyProfile"><code class="docutils literal notranslate"><span class="pre">PrivacyProfile</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.PrivacyProfile.delta"><code class="docutils literal notranslate"><span class="pre">PrivacyProfile.delta()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.PrivacyProfile.epsilon"><code class="docutils literal notranslate"><span class="pre">PrivacyProfile.epsilon()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.mod.html#opendp.mod.Queryable"><code class="docutils literal notranslate"><span class="pre">Queryable</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.mod.html#opendp.mod.Transformation"><code class="docutils literal notranslate"><span class="pre">Transformation</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Transformation.check"><code class="docutils literal notranslate"><span class="pre">Transformation.check()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Transformation.function"><code class="docutils literal notranslate"><span class="pre">Transformation.function</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Transformation.input_carrier_type"><code class="docutils literal notranslate"><span class="pre">Transformation.input_carrier_type</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Transformation.input_distance_type"><code class="docutils literal notranslate"><span class="pre">Transformation.input_distance_type</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Transformation.input_domain"><code class="docutils literal notranslate"><span class="pre">Transformation.input_domain</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Transformation.input_metric"><code class="docutils literal notranslate"><span class="pre">Transformation.input_metric</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Transformation.input_space"><code class="docutils literal notranslate"><span class="pre">Transformation.input_space</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Transformation.invoke"><code class="docutils literal notranslate"><span class="pre">Transformation.invoke()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Transformation.map"><code class="docutils literal notranslate"><span class="pre">Transformation.map()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Transformation.output_distance_type"><code class="docutils literal notranslate"><span class="pre">Transformation.output_distance_type</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Transformation.output_domain"><code class="docutils literal notranslate"><span class="pre">Transformation.output_domain</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Transformation.output_metric"><code class="docutils literal notranslate"><span class="pre">Transformation.output_metric</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html#opendp.mod.Transformation.output_space"><code class="docutils literal notranslate"><span class="pre">Transformation.output_space</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException"><code class="docutils literal notranslate"><span class="pre">UnknownTypeException</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.mod.html#opendp.mod.assert_features"><code class="docutils literal notranslate"><span class="pre">assert_features()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.mod.html#opendp.mod.binary_search"><code class="docutils literal notranslate"><span class="pre">binary_search()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.mod.html#opendp.mod.binary_search_chain"><code class="docutils literal notranslate"><span class="pre">binary_search_chain()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.mod.html#opendp.mod.binary_search_param"><code class="docutils literal notranslate"><span class="pre">binary_search_param()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.mod.html#opendp.mod.deserialize"><code class="docutils literal notranslate"><span class="pre">deserialize()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.mod.html#opendp.mod.disable_features"><code class="docutils literal notranslate"><span class="pre">disable_features()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.mod.html#opendp.mod.enable_features"><code class="docutils literal notranslate"><span class="pre">enable_features()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.mod.html#opendp.mod.exponential_bounds_search"><code class="docutils literal notranslate"><span class="pre">exponential_bounds_search()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.mod.html#opendp.mod.serialize"><code class="docutils literal notranslate"><span class="pre">serialize()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="opendp.prelude.html">opendp.prelude module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="opendp.transformations.html">opendp.transformations module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.choose_branching_factor"><code class="docutils literal notranslate"><span class="pre">choose_branching_factor()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_b_ary_tree"><code class="docutils literal notranslate"><span class="pre">make_b_ary_tree()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_bounded_float_checked_sum"><code class="docutils literal notranslate"><span class="pre">make_bounded_float_checked_sum()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_bounded_float_ordered_sum"><code class="docutils literal notranslate"><span class="pre">make_bounded_float_ordered_sum()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_bounded_int_monotonic_sum"><code class="docutils literal notranslate"><span class="pre">make_bounded_int_monotonic_sum()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_bounded_int_ordered_sum"><code class="docutils literal notranslate"><span class="pre">make_bounded_int_ordered_sum()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_bounded_int_split_sum"><code class="docutils literal notranslate"><span class="pre">make_bounded_int_split_sum()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_cast"><code class="docutils literal notranslate"><span class="pre">make_cast()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_cast_default"><code class="docutils literal notranslate"><span class="pre">make_cast_default()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_cast_inherent"><code class="docutils literal notranslate"><span class="pre">make_cast_inherent()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_cdf"><code class="docutils literal notranslate"><span class="pre">make_cdf()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_clamp"><code class="docutils literal notranslate"><span class="pre">make_clamp()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_consistent_b_ary_tree"><code class="docutils literal notranslate"><span class="pre">make_consistent_b_ary_tree()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_count"><code class="docutils literal notranslate"><span class="pre">make_count()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_count_by"><code class="docutils literal notranslate"><span class="pre">make_count_by()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_count_by_categories"><code class="docutils literal notranslate"><span class="pre">make_count_by_categories()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_count_distinct"><code class="docutils literal notranslate"><span class="pre">make_count_distinct()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_create_dataframe"><code class="docutils literal notranslate"><span class="pre">make_create_dataframe()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_df_cast_default"><code class="docutils literal notranslate"><span class="pre">make_df_cast_default()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_df_is_equal"><code class="docutils literal notranslate"><span class="pre">make_df_is_equal()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_drop_null"><code class="docutils literal notranslate"><span class="pre">make_drop_null()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_find"><code class="docutils literal notranslate"><span class="pre">make_find()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_find_bin"><code class="docutils literal notranslate"><span class="pre">make_find_bin()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_identity"><code class="docutils literal notranslate"><span class="pre">make_identity()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_impute_constant"><code class="docutils literal notranslate"><span class="pre">make_impute_constant()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_impute_uniform_float"><code class="docutils literal notranslate"><span class="pre">make_impute_uniform_float()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_index"><code class="docutils literal notranslate"><span class="pre">make_index()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_is_equal"><code class="docutils literal notranslate"><span class="pre">make_is_equal()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_is_null"><code class="docutils literal notranslate"><span class="pre">make_is_null()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_lipschitz_float_mul"><code class="docutils literal notranslate"><span class="pre">make_lipschitz_float_mul()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_mean"><code class="docutils literal notranslate"><span class="pre">make_mean()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_metric_bounded"><code class="docutils literal notranslate"><span class="pre">make_metric_bounded()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_metric_unbounded"><code class="docutils literal notranslate"><span class="pre">make_metric_unbounded()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_ordered_random"><code class="docutils literal notranslate"><span class="pre">make_ordered_random()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_quantile_score_candidates"><code class="docutils literal notranslate"><span class="pre">make_quantile_score_candidates()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_quantiles_from_counts"><code class="docutils literal notranslate"><span class="pre">make_quantiles_from_counts()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_resize"><code class="docutils literal notranslate"><span class="pre">make_resize()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_select_column"><code class="docutils literal notranslate"><span class="pre">make_select_column()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_sized_bounded_float_checked_sum"><code class="docutils literal notranslate"><span class="pre">make_sized_bounded_float_checked_sum()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_sized_bounded_float_ordered_sum"><code class="docutils literal notranslate"><span class="pre">make_sized_bounded_float_ordered_sum()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_sized_bounded_int_checked_sum"><code class="docutils literal notranslate"><span class="pre">make_sized_bounded_int_checked_sum()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_sized_bounded_int_monotonic_sum"><code class="docutils literal notranslate"><span class="pre">make_sized_bounded_int_monotonic_sum()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_sized_bounded_int_ordered_sum"><code class="docutils literal notranslate"><span class="pre">make_sized_bounded_int_ordered_sum()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_sized_bounded_int_split_sum"><code class="docutils literal notranslate"><span class="pre">make_sized_bounded_int_split_sum()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_split_dataframe"><code class="docutils literal notranslate"><span class="pre">make_split_dataframe()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_split_lines"><code class="docutils literal notranslate"><span class="pre">make_split_lines()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_split_records"><code class="docutils literal notranslate"><span class="pre">make_split_records()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_stable_expr"><code class="docutils literal notranslate"><span class="pre">make_stable_expr()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_stable_lazyframe"><code class="docutils literal notranslate"><span class="pre">make_stable_lazyframe()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_subset_by"><code class="docutils literal notranslate"><span class="pre">make_subset_by()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_sum"><code class="docutils literal notranslate"><span class="pre">make_sum()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_sum_of_squared_deviations"><code class="docutils literal notranslate"><span class="pre">make_sum_of_squared_deviations()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_unordered"><code class="docutils literal notranslate"><span class="pre">make_unordered()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_user_transformation"><code class="docutils literal notranslate"><span class="pre">make_user_transformation()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.make_variance"><code class="docutils literal notranslate"><span class="pre">make_variance()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_b_ary_tree"><code class="docutils literal notranslate"><span class="pre">then_b_ary_tree()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_cast"><code class="docutils literal notranslate"><span class="pre">then_cast()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_cast_default"><code class="docutils literal notranslate"><span class="pre">then_cast_default()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_cast_inherent"><code class="docutils literal notranslate"><span class="pre">then_cast_inherent()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_clamp"><code class="docutils literal notranslate"><span class="pre">then_clamp()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_count"><code class="docutils literal notranslate"><span class="pre">then_count()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_count_by"><code class="docutils literal notranslate"><span class="pre">then_count_by()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_count_by_categories"><code class="docutils literal notranslate"><span class="pre">then_count_by_categories()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_count_distinct"><code class="docutils literal notranslate"><span class="pre">then_count_distinct()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_df_cast_default"><code class="docutils literal notranslate"><span class="pre">then_df_cast_default()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_df_is_equal"><code class="docutils literal notranslate"><span class="pre">then_df_is_equal()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_drop_null"><code class="docutils literal notranslate"><span class="pre">then_drop_null()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_find"><code class="docutils literal notranslate"><span class="pre">then_find()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_find_bin"><code class="docutils literal notranslate"><span class="pre">then_find_bin()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_identity"><code class="docutils literal notranslate"><span class="pre">then_identity()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_impute_constant"><code class="docutils literal notranslate"><span class="pre">then_impute_constant()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_impute_uniform_float"><code class="docutils literal notranslate"><span class="pre">then_impute_uniform_float()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_index"><code class="docutils literal notranslate"><span class="pre">then_index()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_is_equal"><code class="docutils literal notranslate"><span class="pre">then_is_equal()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_is_null"><code class="docutils literal notranslate"><span class="pre">then_is_null()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_mean"><code class="docutils literal notranslate"><span class="pre">then_mean()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_metric_bounded"><code class="docutils literal notranslate"><span class="pre">then_metric_bounded()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_metric_unbounded"><code class="docutils literal notranslate"><span class="pre">then_metric_unbounded()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_ordered_random"><code class="docutils literal notranslate"><span class="pre">then_ordered_random()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_quantile_score_candidates"><code class="docutils literal notranslate"><span class="pre">then_quantile_score_candidates()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_resize"><code class="docutils literal notranslate"><span class="pre">then_resize()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_stable_expr"><code class="docutils literal notranslate"><span class="pre">then_stable_expr()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_stable_lazyframe"><code class="docutils literal notranslate"><span class="pre">then_stable_lazyframe()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_sum"><code class="docutils literal notranslate"><span class="pre">then_sum()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_sum_of_squared_deviations"><code class="docutils literal notranslate"><span class="pre">then_sum_of_squared_deviations()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_unordered"><code class="docutils literal notranslate"><span class="pre">then_unordered()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.transformations.html#opendp.transformations.then_variance"><code class="docutils literal notranslate"><span class="pre">then_variance()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="opendp.typing.html">opendp.typing module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="opendp.typing.html#opendp.typing.Carrier"><code class="docutils literal notranslate"><span class="pre">Carrier</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.typing.html#opendp.typing.DomainDescriptor"><code class="docutils literal notranslate"><span class="pre">DomainDescriptor</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.typing.html#opendp.typing.RuntimeType"><code class="docutils literal notranslate"><span class="pre">RuntimeType</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="opendp.typing.html#opendp.typing.RuntimeType.args"><code class="docutils literal notranslate"><span class="pre">RuntimeType.args</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.typing.html#opendp.typing.RuntimeType.infer"><code class="docutils literal notranslate"><span class="pre">RuntimeType.infer()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.typing.html#opendp.typing.RuntimeType.origin"><code class="docutils literal notranslate"><span class="pre">RuntimeType.origin</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.typing.html#opendp.typing.RuntimeType.parse"><code class="docutils literal notranslate"><span class="pre">RuntimeType.parse()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.typing.html#opendp.typing.RuntimeType.parse_or_infer"><code class="docutils literal notranslate"><span class="pre">RuntimeType.parse_or_infer()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.typing.html#opendp.typing.RuntimeType.substitute"><code class="docutils literal notranslate"><span class="pre">RuntimeType.substitute()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.typing.html#opendp.typing.SensitivityMetric"><code class="docutils literal notranslate"><span class="pre">SensitivityMetric</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.typing.html#opendp.typing.get_atom"><code class="docutils literal notranslate"><span class="pre">get_atom()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.typing.html#opendp.typing.get_atom_or_infer"><code class="docutils literal notranslate"><span class="pre">get_atom_or_infer()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.typing.html#opendp.typing.get_carrier_type"><code class="docutils literal notranslate"><span class="pre">get_carrier_type()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.typing.html#opendp.typing.get_distance_type"><code class="docutils literal notranslate"><span class="pre">get_distance_type()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.typing.html#opendp.typing.get_first"><code class="docutils literal notranslate"><span class="pre">get_first()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.typing.html#opendp.typing.get_type"><code class="docutils literal notranslate"><span class="pre">get_type()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.typing.html#opendp.typing.get_value_type"><code class="docutils literal notranslate"><span class="pre">get_value_type()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.typing.html#opendp.typing.parse_or_infer"><code class="docutils literal notranslate"><span class="pre">parse_or_infer()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.typing.html#opendp.typing.pass_through"><code class="docutils literal notranslate"><span class="pre">pass_through()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.typing.html#opendp.typing.set_default_float_type"><code class="docutils literal notranslate"><span class="pre">set_default_float_type()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="opendp.typing.html#opendp.typing.set_default_int_type"><code class="docutils literal notranslate"><span class="pre">set_default_int_type()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="module-opendp">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-opendp" title="Link to this heading">#</a></h2>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="index.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Python API Documentation</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="opendp.extras.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">opendp.extras package</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#subpackages">Subpackages</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#submodules">Submodules</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-opendp">Module contents</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../../_sources/api/python/opendp.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.3rc1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

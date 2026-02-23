@@ -1,0 +1,307 @@
+{
+ "cells": [
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Aggregation: Mean\n",
+    "\n",
+    "Any constructors that have not completed the proof-writing and vetting process may still be accessed if you opt-in to \"contrib\".\n",
+    "Please contact us if you are interested in proof-writing. Thank you!"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import opendp.prelude as dp\n",
+    "dp.enable_features(\"contrib\")"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Known Dataset Size\n",
+    "The much easier case to consider is when the dataset size is known:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "5.0"
+      ]
+     },
+     "execution_count": 2,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "input_space = dp.vector_domain(dp.atom_domain(bounds=(0., 10.)), size=10), dp.symmetric_distance()\n",
+    "sb_mean_trans = dp.t.make_mean(*input_space)\n",
+    "sb_mean_trans([5.] * 10)"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The sensitivity of this transformation is the same as in `make_sum` (when dataset size is known), \n",
+    "but is divided by `size`.\n",
+    "\n",
+    "That is, $map(d_{in}) = (d_{in} // 2) \\cdot max(|L|, U) / size$, where $//$ denotes integer division with truncation."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "1.0000000000000169"
+      ]
+     },
+     "execution_count": 3,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# since we are in the bounded-DP model, d_in should be a multiple of 2, \n",
+    "# because it takes one removal and one addition to change one record\n",
+    "sb_mean_trans.map(2)"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Note that this operation does not divide by the length of the input data, \n",
+    "it divides by the size parameter passed to the constructor.\n",
+    "As in any other context, it is expected that the data passed into the function is a member of the input domain,\n",
+    "so no promises of privacy or correctness are guaranteed when the data is not in the input domain.\n",
+    "In particular, the function may give a result with no error message."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "0.5"
+      ]
+     },
+     "execution_count": 4,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "sb_mean_trans = dp.t.make_mean(*input_space)\n",
+    "sb_mean_trans([5.])"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "You can check that a dataset is a member of a domain by calling `.member`:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "False"
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "sb_mean_trans.input_domain.member([5.])"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "In this case, `[5.]` is not a member because the input domain consists of vectors of length ten."
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Unknown Dataset Size\n",
+    "\n",
+    "There are several approaches for releasing the mean when the dataset size is unknown.\n",
+    "\n",
+    "The first approach is to use the resize transformation.\n",
+    "You can separately release an estimate for the dataset size, and then preprocess the dataset with a resize transformation."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "6.862637830873848"
+      ]
+     },
+     "execution_count": 6,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "data = [5.] * 10\n",
+    "bounds = (0., 10.)\n",
+    "\n",
+    "input_space = dp.vector_domain(dp.atom_domain(T=float)), dp.symmetric_distance()\n",
+    "\n",
+    "# (where TIA stands for Atomic Input Type)\n",
+    "count_meas = input_space >> dp.t.then_count() >> dp.m.then_laplace(1.)\n",
+    "\n",
+    "dp_count = count_meas(data)\n",
+    "\n",
+    "mean_meas = (\n",
+    "    input_space >>\n",
+    "    dp.t.then_clamp(bounds) >>\n",
+    "    dp.t.then_resize(dp_count, constant=5.) >> \n",
+    "    dp.t.then_mean() >>\n",
+    "    dp.m.then_laplace(1.)\n",
+    ")\n",
+    "\n",
+    "mean_meas(data)\n"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The total privacy expenditure is the composition of the `count_meas` and `mean_meas` releases."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "2.000000000000017"
+      ]
+     },
+     "execution_count": 7,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "from opendp.combinators import make_basic_composition\n",
+    "make_basic_composition([count_meas, mean_meas]).map(1)"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Another approach is to compute the DP sum and DP count, and then postprocess the output."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "dp mean: 7.778118283305409\n",
+      "epsilon: 2.000000009313226\n"
+     ]
+    }
+   ],
+   "source": [
+    "dp_sum = input_space >> dp.t.then_clamp(bounds) >> dp.t.then_sum() >> dp.m.then_laplace(10.)\n",
+    "dp_count = input_space >> dp.t.then_count() >> dp.m.then_laplace(1.)\n",
+    "\n",
+    "dp_fraction_meas = dp.c.make_basic_composition([dp_sum, dp_count])\n",
+    "\n",
+    "dp_sum, dp_count = dp_fraction_meas(data)\n",
+    "print(\"dp mean:\", dp_sum / dp_count)\n",
+    "print(\"epsilon:\", dp_fraction_meas.map(1))"
+   ]
+  },
+  {
+   "attachments": {},
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The same approaches are valid for the variance estimator.\n",
+    "The [Unknown Dataset Size notebook](../../examples/unknown-dataset-size.ipynb) goes into greater detail on the tradeoffs of these approaches."
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "psi",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.11.3"
+  },
+  "orig_nbformat": 4,
+  "vscode": {
+   "interpreter": {
+    "hash": "3220da548452ac41acb293d0d6efded0f046fab635503eb911c05f743e930f34"
+   }
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

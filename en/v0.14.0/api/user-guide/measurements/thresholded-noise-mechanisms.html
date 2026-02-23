@@ -1,0 +1,1154 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Thresholded Noise Mechanisms &#8212; OpenDP</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../../_static/styles/bootstrap.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+
+  
+  <link href="../../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=eafc0fe6" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/nbsphinx-code-cells.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=4f92a2c4" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f" />
+  <script src="../../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+    <script src="../../../_static/documentation_options.js?v=9e420a66"></script>
+    <script src="../../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/user-guide/measurements/thresholded-noise-mechanisms';</script>
+    <link rel="icon" href="../../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="Canonical Noise Mechanism" href="canonical-noise-mechanism.html" />
+    <link rel="prev" title="Additive Noise Mechanisms" href="additive-noise-mechanisms.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Feb 23, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+
+
+<script>
+document.write(`<aside class="bd-header-announcement" aria-label="Announcement"></aside>`);
+fetch("https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html")
+  .then(res => {return res.text();})
+  .then(data => {
+    if (data.length === 0) {
+      console.log("[PST]: Empty announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+      return;
+    }
+    div = document.querySelector(".bd-header-announcement");
+    div.classList.add(...["bd-header-announcement", "container-fluid", "init"]);
+    div.innerHTML = `<div class="bd-header-announcement__content">${data}</div>`;
+    // At least 3rem height
+    const autoHeight = Math.min(
+      div.offsetHeight,
+      3 * parseFloat(getComputedStyle(document.documentElement).fontSize));
+    // Set height and vertical padding to 0 to prepare the height transition
+    div.style.setProperty("height", 0);
+    div.style.setProperty("padding-top", 0);
+    div.style.setProperty("padding-bottom", 0);
+    div.classList.remove("init");
+    // Set height to the computed height with a small timeout to activate the transition
+    setTimeout(() => {
+      div.style.setProperty("height", `${autoHeight}px`);
+      // Wait for a bit more than 300ms (the transition duration) then remove the
+      // forcefully set styles and let CSS take over
+      setTimeout(() => {
+        div.style.removeProperty("padding-top");
+        div.style.removeProperty("padding-bottom");
+        div.style.removeProperty("height");
+        div.style.setProperty("min-height", "3rem");
+      }, 320);
+    }, 10);
+  })
+  .catch(error => {
+    console.log("[PST]: Failed to load announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+  });
+</script>
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <button class="sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/opendp-logo.png" class="logo__image only-light" alt="OpenDP - Home"/>
+    <script>document.write(`<img src="../../../_static/opendp-logo.png" class="logo__image only-dark" alt="OpenDP - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../getting-started/index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="../../index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../theory/index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+    <button class="sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../getting-started/index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="../../index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../theory/index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../index.html">API User Guide</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../limitations.html">Limitations</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../programming-framework/index.html">Programming Framework</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../programming-framework/core-structures.html">Core Structures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../programming-framework/supporting-elements.html">Supporting Elements</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../transformations/index.html">Transformations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../transformations/preprocess-resize.html">Preprocessing: Resize</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../transformations/aggregation-sum.html">Aggregation: Sum</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../transformations/aggregation-mean.html">Aggregation: Mean</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../transformations/aggregation-quantile.html">Aggregation: Quantile</a></li>
+
+</ul>
+</details></li>
+<li class="toctree-l2 current active has-children"><a class="reference internal" href="index.html">Measurements</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="additive-noise-mechanisms.html">Additive Noise Mechanisms</a></li>
+<li class="toctree-l3 current active"><a class="current reference internal" href="#">Thresholded Noise Mechanisms</a></li>
+<li class="toctree-l3"><a class="reference internal" href="canonical-noise-mechanism.html">Canonical Noise Mechanism</a></li>
+<li class="toctree-l3"><a class="reference internal" href="randomized-response.html">Randomized Response</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../combinators/index.html">Combinators</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../combinators/chaining.html">Chaining</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../combinators/non-adaptive-composition.html">(Non-Adaptive) Composition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../combinators/adaptive-composition.html">Adaptive Composition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../combinators/fully-adaptive-composition.html">Fully Adaptive Composition and Odometers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../combinators/privacy-filters.html">Privacy Filters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../combinators/compositor-chaining-and-nesting.html">Compositor Chaining and Nesting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../combinators/measure-casting.html">Measure Casting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../combinators/amplification.html">Amplification</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../utilities/index.html">Utilities</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../utilities/typing.html">Typing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../utilities/parameter-search.html">Parameter Search</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../utilities/serialization.html">Serialization</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../context/index.html">Context</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../polars/index.html">Polars</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../polars/polars-vs-opendp.html">Polars vs. OpenDP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../polars/gaussian-noise.html">Gaussian Noise</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../polars/bounds.html">Identifier Truncation and Bounds</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../polars/data-types.html">Data Types</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../polars/expressions/index.html">Expressions</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="../polars/expressions/aggregation.html">Aggregation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../polars/expressions/boolean.html">Boolean</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../polars/expressions/columns.html">Columns</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../polars/expressions/manipulation.html">Manipulation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../polars/expressions/operators.html">Operators</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../polars/expressions/string.html">String</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../polars/expressions/temporal.html">Temporal</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../plugins/index.html">Plugins</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../plugins/measurement.html">Measurement example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../plugins/transformation.html">Transformation example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../plugins/context-api-plugins.html">Context API Plugins</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../plugins/theil-sen-regression.html">Thiel-Sen Regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../plugins/selecting-grouping-columns.html">Privately Selecting Grouping Columns</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../python/index.html">Python API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../python/opendp.html">opendp package</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../../python/opendp.extras.html">opendp.extras package</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../python/opendp.extras.examples.html">opendp.extras.examples package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../python/opendp.extras.mbi.html">opendp.extras.mbi package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../python/opendp.extras.numpy.html">opendp.extras.numpy package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../python/opendp.extras.polars.html">opendp.extras.polars package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../python/opendp.extras.sklearn.html">opendp.extras.sklearn package</a></li>
+</ul>
+</details></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.accuracy.html">opendp.accuracy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.combinators.html">opendp.combinators module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.context.html">opendp.context module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.core.html">opendp.core module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.domains.html">opendp.domains module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.measurements.html">opendp.measurements module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.measures.html">opendp.measures module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.metrics.html">opendp.metrics module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.mod.html">opendp.mod module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.prelude.html">opendp.prelude module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.transformations.html">opendp.transformations module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.typing.html">opendp.typing module</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference external" href="https://docs.opendp.org/en/stable/api/r">R API Reference</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://docs.rs/opendp">Rust API Reference</a></li>
+</ul>
+</div>
+</nav></div>
+        <div class="sidebar-primary-item">
+<h6>Branches</h6>
+<ul>
+    <li><a href="../../../../beta/api/user-guide/measurements/thresholded-noise-mechanisms.html" style="font-weight: normal">beta</a></li>
+    <li><a href="../../../../nightly/api/user-guide/measurements/thresholded-noise-mechanisms.html" style="font-weight: normal">nightly</a></li>
+    <li><a href="../../../../stable/index.html" style="font-weight: normal">stable</a></li>
+</ul>
+
+
+<h6 id="releases_header">Releases
+    <div id="releases_symbol" style="float:right"></div>
+</h6>
+<ul id="releases_content">
+    <li><a href="../../../../v0.14.1/index.html" style="font-weight: normal">v0.14.1</a></li>
+    <li><a href="thresholded-noise-mechanisms.html" style="font-weight: bold">v0.14.0</a></li>
+    <li><a href="../../../../v0.13.0/index.html" style="font-weight: normal">v0.13.0</a></li>
+    <li><a href="../../../../v0.12.1/index.html" style="font-weight: normal">v0.12.1</a></li>
+    <li><a href="../../../../v0.12.0/index.html" style="font-weight: normal">v0.12.0</a></li>
+    <li><a href="../../../../v0.11.1/index.html" style="font-weight: normal">v0.11.1</a></li>
+    <li><a href="../../../../v0.11.0/index.html" style="font-weight: normal">v0.11.0</a></li>
+    <li><a href="../../../../v0.10.0/index.html" style="font-weight: normal">v0.10.0</a></li>
+    <li><a href="../../../../v0.9.2/index.html" style="font-weight: normal">v0.9.2</a></li>
+    <li><a href="../../../../v0.9.1/index.html" style="font-weight: normal">v0.9.1</a></li>
+    <li><a href="../../../../v0.9.0/index.html" style="font-weight: normal">v0.9.0</a></li>
+    <li><a href="../../../../v0.8.0/index.html" style="font-weight: normal">v0.8.0</a></li>
+    <li><a href="../../../../v0.7.0/index.html" style="font-weight: normal">v0.7.0</a></li>
+    <li><a href="../../../../v0.6.2/index.html" style="font-weight: normal">v0.6.2</a></li>
+    <li><a href="../../../../v0.6.1/index.html" style="font-weight: normal">v0.6.1</a></li>
+    <li><a href="../../../../v0.6.0/index.html" style="font-weight: normal">v0.6.0</a></li>
+    <li><a href="../../../../v0.5.0/index.html" style="font-weight: normal">v0.5.0</a></li>
+    <li><a href="../../../../v0.4.0/index.html" style="font-weight: normal">v0.4.0</a></li>
+    <li><a href="../../../../v0.3.0/index.html" style="font-weight: normal">v0.3.0</a></li>
+    <li><a href="../../../../v0.2.4/index.html" style="font-weight: normal">v0.2.4</a></li>
+    <li><a href="../../../../v0.2.3/index.html" style="font-weight: normal">v0.2.3</a></li>
+    <li><a href="../../../../v0.2.2/index.html" style="font-weight: normal">v0.2.2</a></li>
+    <li><a href="../../../../v0.2.1/index.html" style="font-weight: normal">v0.2.1</a></li>
+    <li><a href="../../../../v0.2.0/index.html" style="font-weight: normal">v0.2.0</a></li>
+    <li><a href="../../../../v0.1.0/index.html" style="font-weight: normal">v0.1.0</a></li>
+</ul>
+<script>
+    let expanded = !!JSON.parse(localStorage.getItem('expanded'));
+
+    let releasesHeader = document.getElementById("releases_header");
+    let releasesSymbol = document.getElementById("releases_symbol");
+    let releasesContent = document.getElementById("releases_content");
+
+    function setReleasesState() {
+        localStorage.setItem("expanded", JSON.stringify(expanded))
+        releasesContent.style.display = expanded ? "block" : "none";
+        releasesSymbol.classList.add(expanded ? 'minus' : 'plus')
+        releasesSymbol.classList.remove(expanded ? 'plus' : 'minus')
+    }
+
+    setReleasesState()
+    releasesHeader.addEventListener("click", function() {
+        expanded = !expanded;
+        setReleasesState()
+    })
+</script>
+<style>
+    .plus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .plus:before,
+    .plus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .plus:before {
+        left:50%;
+        top:4px;
+        bottom:4px;
+        width:3px;
+        transform:translateX(-50%);
+    }
+
+    .plus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+
+
+
+    .minus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .minus:before,
+    .minus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .minus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+</style>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+
+
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">API</a></li>
+    
+    
+    <li class="breadcrumb-item"><i class="fa-solid fa-ellipsis"></i></li>
+    
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Measurements</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">Thresholded...</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item"><div class="admonition warning" style="position: relative;">
+    <!--
+     Without the style, the region for the article title overlaps, and the link is unclickable.
+    -->
+    <details>
+        <summary>Questions or feedback?</summary>
+        <!--
+            All of these lists should be in sync:
+            - README.md
+            - docs/source/contributing/contact.rst
+            - docs/source/_templates/questions-feedback.html
+            - .github/ISSUE_TEMPLATE/config.yml
+        -->
+        <ul>
+            <li>Report a bug or request a feature on <a href="https://github.com/opendp/opendp/issues">Github</a>.</li>
+            <li>Send general queries to <a href="mailto:info@opendp.org">info@opendp.org</a>, or email <a href="mailto:security@opendp.org">security@opendp.org</a> if it is related to security.</li>
+            <li>Join the conversation on <a href="https://join.slack.com/t/opendp/shared_invite/zt-1t8rrbqhd-z8LiZiP06vVE422HJd6ciQ">Slack</a>, or the <a href="https://groups.google.com/a/g.harvard.edu/g/opendp-community">mailing list</a>.</li>
+        </ul>
+    </details>
+</div></div>
+      
+        <div class="header-article-item">
+<div class="admonition warning" style="position: relative;" id="old-version-warning">
+  <!--
+   To work with this locally, in conf.py uncomment the entry under "html_context".
+
+   Without the style, the region for the article title overlaps, and the link is unclickable.
+  -->
+  <p class="admonition-title">
+  
+  This documentation is for an old version of OpenDP.
+  
+  </p>
+  <p>The current release of OpenDP is <a href="/">v0.14.1</a>.</p>
+</div>
+<script>
+  window.addEventListener("load", (event) => {
+    document.getElementById('old-version-warning').style.top = `${window.visualViewport.pageTop}px`;
+  });
+</script>
+</div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="Thresholded-Noise-Mechanisms">
+<h1>Thresholded Noise Mechanisms<a class="headerlink" href="#Thresholded-Noise-Mechanisms" title="Link to this heading">#</a></h1>
+<p>Thresholded noise mechanisms are used to privately release a hashmap, where the keys are unknown and values are numbers, for example, a histogram of counts or a set of frequencies.</p>
+<p>The mechanism only releases key-value pairs that are “stable”. When the value is large enough in magnitude to represent contributions from many different individuals, then the key is not specific to any one individual and can be released privately. The intuition is that the key is present among all neighboring datasets.</p>
+<p>We’ll look at the various thresholded noise mechanisms in OpenDP:</p>
+<ul class="simple">
+<li><p>Distribution: Laplace vs. Gaussian</p></li>
+<li><p>Support: float vs. integer</p></li>
+<li><p>Threshold: positive vs. negative</p></li>
+<li><p>Bit-depth</p></li>
+</ul>
+<hr class="docutils" />
+<p>Any functions that have not completed the proof-writing and vetting process may still be accessed if you opt-in to “contrib”. Please contact us if you are interested in proof-writing. Thank you!</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="kn">import</span> <span class="nn">opendp.prelude</span> <span class="k">as</span> <span class="nn">dp</span>
+<span class="n">dp</span><span class="o">.</span><span class="n">enable_features</span><span class="p">(</span><span class="s2">&quot;contrib&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<section id="Distribution:-Laplace-vs.-Gaussian">
+<h2>Distribution: Laplace vs. Gaussian<a class="headerlink" href="#Distribution:-Laplace-vs.-Gaussian" title="Link to this heading">#</a></h2>
+<p>The Laplace mechanism is used to privatize an aggregate, like a sum or mean.</p>
+<p>An instance of the Laplace threshold mechanism is captured by a <em>measurement</em> containing the following five elements:</p>
+<details><p>Elements of a Laplace Threshold Measurement</p>
+<ol class="arabic simple">
+<li><p>We first define the <strong>function</strong> <span class="math notranslate nohighlight">\(f(\cdot)\)</span>, that applies the Laplace mechanism to the values of <span class="math notranslate nohighlight">\(x\)</span>, and then discards pairs whose value is below the threshold.</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="nb">float</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">Laplace</span><span class="p">(</span><span class="n">mu</span><span class="o">=</span><span class="n">v</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="n">scale</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">x</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">x</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">v</span> <span class="o">&gt;=</span> <span class="n">threshold</span><span class="p">}</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Importantly, <span class="math notranslate nohighlight">\(f(\cdot)\)</span> is only well-defined for any dictionary with finite float values. This set of permitted inputs is described by the <strong>input domain</strong> (denoted <code class="docutils literal notranslate"><span class="pre">MapDomain&lt;AtomDomain&lt;TK&gt;,</span> <span class="pre">AtomDomain&lt;f64&gt;&gt;</span></code>).</p></li>
+<li><p>The Laplace threshold mechanism has a privacy guarantee in terms of <span class="math notranslate nohighlight">\(\epsilon\)</span> and <span class="math notranslate nohighlight">\(\delta\)</span>. This guarantee is represented by a <strong>privacy map</strong>, a function that computes the greatest privacy loss <span class="math notranslate nohighlight">\((\epsilon, \delta)\)</span> for any choice of sensitivity <span class="math notranslate nohighlight">\(\Delta_0, \Delta_1, \Delta_\infty\)</span>. The privacy map is roughly implemented as follows:</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="k">def</span> <span class="nf">map</span><span class="p">(</span><span class="n">d_in</span><span class="p">):</span>
+    <span class="n">l0</span><span class="p">,</span> <span class="n">l1</span><span class="p">,</span> <span class="n">li</span> <span class="o">=</span> <span class="n">d_in</span>
+    <span class="n">epsilon</span> <span class="o">=</span> <span class="n">l1</span> <span class="o">/</span> <span class="n">scale</span>
+
+    <span class="c1"># probability of sampling a noise value greater than: threshold - li</span>
+    <span class="n">delta_single</span> <span class="o">=</span> <span class="n">tail</span><span class="p">(</span><span class="n">scale</span><span class="p">,</span> <span class="n">threshold</span> <span class="o">-</span> <span class="n">li</span><span class="p">)</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">delta_single</span><span class="p">)</span><span class="o">**</span><span class="n">l0</span>
+    <span class="k">return</span> <span class="n">epsilon</span><span class="p">,</span> <span class="n">delta</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="4">
+<li><p>This map only promises that the privacy loss will be at most <span class="math notranslate nohighlight">\(\epsilon\)</span> if inputs from any two neighboring datasets may differ by no more than some quantity <span class="math notranslate nohighlight">\(\Delta_0, \Delta_1, \Delta_\infty\)</span> under the absolute distance <strong>input metric</strong> (<code class="docutils literal notranslate"><span class="pre">L01InfDistance&lt;AbsoluteDistance&lt;f64&gt;&gt;</span></code>).</p></li>
+<li><p>We similarly describe units on the output (<span class="math notranslate nohighlight">\((\epsilon, \delta)\)</span>) via the <strong>output measure</strong> (<code class="docutils literal notranslate"><span class="pre">Approximate&lt;MaxDivergence&gt;</span></code>).</p></li>
+</ol>
+</details><p>The <code class="docutils literal notranslate"><span class="pre">make_laplace_threshold</span></code> constructor function returns the equivalent of the Laplace threshold measurement described above.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">m_lap</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">make_laplace_threshold</span><span class="p">(</span>
+    <span class="n">dp</span><span class="o">.</span><span class="n">map_domain</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">str</span><span class="p">),</span> <span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">nan</span><span class="o">=</span><span class="kc">False</span><span class="p">)),</span>
+    <span class="n">dp</span><span class="o">.</span><span class="n">l01inf_distance</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">absolute_distance</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">)),</span>
+    <span class="n">scale</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span>
+    <span class="n">threshold</span><span class="o">=</span><span class="mf">20.0</span>
+<span class="p">)</span>
+
+<span class="c1"># invoke the measurement on some aggregate hashmap, to sample Laplace(x, 1.) noise</span>
+<span class="n">aggregated</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="s2">&quot;b&quot;</span><span class="p">:</span> <span class="mf">20.0</span><span class="p">,</span>
+    <span class="s2">&quot;c&quot;</span><span class="p">:</span> <span class="mf">40.0</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;noisy aggregate:&quot;</span><span class="p">,</span> <span class="n">m_lap</span><span class="p">(</span><span class="n">aggregated</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+noisy aggregate: {&#39;c&#39;: 40.17307713885866}
+</pre></div></div>
+</div>
+<p>As expected, pairs with small values (like <code class="docutils literal notranslate"><span class="pre">&quot;a&quot;:</span> <span class="pre">0.0</span></code>) had too few people contribute to be included in the release.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="c1"># we must know the sensitivity of `aggregated` to determine privacy params</span>
+<span class="c1">#  3 kinds: Δ_0, Δ_1, Δ_∞</span>
+<span class="n">sensitivity</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span>
+<span class="n">lap_eps_del</span> <span class="o">=</span> <span class="n">m_lap</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">d_in</span><span class="o">=</span><span class="n">sensitivity</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;(ε, δ):&quot;</span><span class="p">,</span> <span class="n">lap_eps_del</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(ε, δ): (1.0, 2.801398224505647e-09)
+</pre></div></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">d_in</span></code> carries three different kinds of sensitivity.</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(\Delta_0\)</span>: how many values an individual may influence</p></li>
+<li><p><span class="math notranslate nohighlight">\(\Delta_1\)</span>: the total influence an individual may have over all values</p></li>
+<li><p><span class="math notranslate nohighlight">\(\Delta_\infty\)</span>: the influence an individual may have on any one value</p></li>
+</ul>
+<p>The analogous constructor for gaussian noise is <code class="docutils literal notranslate"><span class="pre">make_gaussian_threshold</span></code>:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">m_gauss</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">make_gaussian_threshold</span><span class="p">(</span>
+    <span class="n">dp</span><span class="o">.</span><span class="n">map_domain</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">str</span><span class="p">),</span> <span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">nan</span><span class="o">=</span><span class="kc">False</span><span class="p">)),</span>
+    <span class="c1"># NOTE: L1 is changed to L2 in the input metric</span>
+    <span class="n">dp</span><span class="o">.</span><span class="n">l02inf_distance</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">absolute_distance</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">)),</span>
+    <span class="n">scale</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span>
+    <span class="n">threshold</span><span class="o">=</span><span class="mf">20.0</span>
+<span class="p">)</span>
+
+<span class="c1"># invoke the measurement on some aggregate hashmap, to sample Gaussian(x, 1.) noise</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;noisy aggregate:&quot;</span><span class="p">,</span> <span class="n">m_gauss</span><span class="p">(</span><span class="n">aggregated</span><span class="p">))</span>
+
+<span class="c1"># we must know the sensitivity of `aggregated` to determine privacy params</span>
+<span class="c1">#  3 kinds: Δ_0, Δ_1, Δ_∞</span>
+<span class="n">sensitivity</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;(ρ, δ):&quot;</span><span class="p">,</span> <span class="n">m_gauss</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">d_in</span><span class="o">=</span><span class="n">sensitivity</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+noisy aggregate: {&#39;c&#39;: 40.93198267967212}
+(ρ, δ): (0.5, 1.1102230246251565e-16)
+</pre></div></div>
+</div>
+<p>In this case, <span class="math notranslate nohighlight">\(\Delta_1\)</span> in <code class="docutils literal notranslate"><span class="pre">d_in</span></code> is replaced with <span class="math notranslate nohighlight">\(\Delta_2\)</span>.</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(\Delta_0\)</span>: how many values an individual may influence</p></li>
+<li><p><span class="math notranslate nohighlight">\(\Delta_2\)</span>: the euclidean influence an individual may have over all values</p></li>
+<li><p><span class="math notranslate nohighlight">\(\Delta_\infty\)</span>: the influence an individual may have on any one value</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">m_lap</span></code> measures privacy with <span class="math notranslate nohighlight">\(\epsilon\)</span> and <span class="math notranslate nohighlight">\(\delta\)</span> (in the <code class="docutils literal notranslate"><span class="pre">Approximate&lt;MaxDivergence&gt;</span></code> measure), and <code class="docutils literal notranslate"><span class="pre">m_gauss</span></code> measures privacy with <span class="math notranslate nohighlight">\(\rho\)</span> and <span class="math notranslate nohighlight">\(\delta\)</span> (in the <code class="docutils literal notranslate"><span class="pre">Approximate&lt;ZeroConcentratedDivergence&gt;</span></code> measure).</p>
+<p>Notice how much smaller <span class="math notranslate nohighlight">\(\delta\)</span> is this time (<code class="docutils literal notranslate"><span class="pre">2.8e-9</span></code> vs <code class="docutils literal notranslate"><span class="pre">1.1e-16</span></code>). This is because the laplace distribution is a “fat-tailed” distribution, meaning more of the mass of the distribution is in the tails. The tails of the gaussian distribution decay much more quickly, resulting in a much smaller <span class="math notranslate nohighlight">\(\delta\)</span>.</p>
+<p>For comparison, let’s convert the privacy guarantee from approx-zCDP to compare with the thresholded laplace mechanism:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="c1"># convert ρ to an ε(δ_2) privacy profile, where total privacy loss is (ε(δ_2), δ_1 + δ_2)</span>
+<span class="n">m_gauss_profile</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">make_zCDP_to_approxDP</span><span class="p">(</span><span class="n">m_gauss</span><span class="p">)</span>
+<span class="c1"># fix overall δ to that used by the laplace threshold, for comparison</span>
+<span class="n">m_gauss_approx</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">make_fix_delta</span><span class="p">(</span><span class="n">m_gauss_profile</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="n">lap_eps_del</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;(ε, δ):&quot;</span><span class="p">,</span> <span class="n">m_gauss_approx</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">sensitivity</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(ε, δ): (6.3035767282855915, 2.801398224505647e-09)
+</pre></div></div>
+</div>
+<p>In this setting, at the same level of <span class="math notranslate nohighlight">\(\delta\)</span> as the thresholded laplace mechanism, the privacy loss of the thresholded gaussian mechanism is over four times larger. On the other hand, the thresholded gaussian mechanism will perform much better than the thresholded laplace mechanism when <span class="math notranslate nohighlight">\(\Delta_\infty\)</span> is small and <span class="math notranslate nohighlight">\(\Delta_0\)</span> is large. This arises when an individual has a small influence over a large number of partitions.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">sensitivity_spread</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">,</span> <span class="mf">0.001</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;laplace  (ε, δ):&quot;</span><span class="p">,</span> <span class="n">m_lap</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">d_in</span><span class="o">=</span><span class="n">sensitivity_spread</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;gaussian (ε, δ):&quot;</span><span class="p">,</span> <span class="n">m_gauss_approx</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">d_in</span><span class="o">=</span><span class="n">sensitivity_spread</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+laplace  (ε, δ): (0.1, 1.0316078580263621e-07)
+gaussian (ε, δ): (0.049969691134438526, 2.801398224505647e-09)
+</pre></div></div>
+</div>
+<p>In this alternative world where individuals may have a small influence on many partitions, the thresholded gaussian mechanism dominates in utility over the thresholded laplace mechanism.</p>
+<p>Notice that there is some redundancy in the sensitivity. Above, when an individual may only influence 100 partitions by at most 0.001, then a user’s total influence (<span class="math notranslate nohighlight">\(\Delta_1\)</span>) could only be 0.1! Instead of using 10, OpenDP infers <span class="math notranslate nohighlight">\(\Delta_1\)</span> is <span class="math notranslate nohighlight">\(100 \cdot 0.001 = 0.1\)</span>, and <span class="math notranslate nohighlight">\(\Delta_2\)</span> is <span class="math notranslate nohighlight">\(\sqrt{100} \cdot 0.001 = .01\)</span>.</p>
+</section>
+<section id="Support:-Float-vs.-Integer">
+<h2>Support: Float vs. Integer<a class="headerlink" href="#Support:-Float-vs.-Integer" title="Link to this heading">#</a></h2>
+<p>There are also discrete analogues of the continuous Laplace and Gaussian threshold measurements. The continuous measurements accept and emit floats, while the discrete measurements accept and emit integers.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="c1"># call the constructor to produce the measurement `m_dlap`</span>
+<span class="n">input_space</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">map_domain</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">str</span><span class="p">),</span> <span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">int</span><span class="p">)),</span> <span class="n">dp</span><span class="o">.</span><span class="n">absolute_distance</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+<span class="n">m_dlap</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">make_laplace_threshold</span><span class="p">(</span>
+    <span class="n">dp</span><span class="o">.</span><span class="n">map_domain</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">str</span><span class="p">),</span> <span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">int</span><span class="p">)),</span>
+    <span class="n">dp</span><span class="o">.</span><span class="n">l01inf_distance</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">absolute_distance</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">int</span><span class="p">)),</span>
+    <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">threshold</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># invoke the measurement on some integer aggregate hashmap, to sample DiscreteLaplace(x, 1.) noise</span>
+<span class="n">aggregated</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;b&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="s2">&quot;c&quot;</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;noisy aggregate:&quot;</span><span class="p">,</span> <span class="n">m_dlap</span><span class="p">(</span><span class="n">aggregated</span><span class="p">))</span>
+
+<span class="c1"># in this case, the sensitivity is integral:</span>
+<span class="n">sensitivity</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;(ε, δ):&quot;</span><span class="p">,</span> <span class="n">m_dlap</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">d_in</span><span class="o">=</span><span class="n">sensitivity</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+noisy aggregate: {&#39;b&#39;: 10, &#39;c&#39;: 22}
+(ε, δ): (1.0, 3.319000812207484e-05)
+</pre></div></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">make_gaussian_threshold</span></code> on a discrete support is the analogous measurement for Gaussian noise:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="c1"># call the constructor to produce the measurement `m_dgauss`</span>
+<span class="n">input_space</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">map_domain</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">str</span><span class="p">),</span> <span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">int</span><span class="p">)),</span> <span class="n">dp</span><span class="o">.</span><span class="n">absolute_distance</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+<span class="n">m_dgauss</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">make_gaussian_threshold</span><span class="p">(</span>
+    <span class="n">dp</span><span class="o">.</span><span class="n">map_domain</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">str</span><span class="p">),</span> <span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">int</span><span class="p">)),</span>
+    <span class="n">dp</span><span class="o">.</span><span class="n">l02inf_distance</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">absolute_distance</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">)),</span>
+    <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">threshold</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># invoke the measurement on some integer aggregate hashmap, to sample DiscreteGaussian(x, 1.) noise</span>
+<span class="n">aggregated</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;b&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="s2">&quot;c&quot;</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;noisy aggregate:&quot;</span><span class="p">,</span> <span class="n">m_dgauss</span><span class="p">(</span><span class="n">aggregated</span><span class="p">))</span>
+
+<span class="c1"># in this case, the sensitivity is integral:</span>
+<span class="n">sensitivity</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;(ρ, δ):&quot;</span><span class="p">,</span> <span class="n">m_dgauss</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">d_in</span><span class="o">=</span><span class="n">sensitivity</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+noisy aggregate: {&#39;c&#39;: 20, &#39;b&#39;: 10}
+(ρ, δ): (0.5, 1.1102230246251565e-16)
+</pre></div></div>
+</div>
+<p>The continuous mechanisms use these discrete samplers internally.</p>
+</section>
+<section id="Threshold:-Positive-vs.-Negative">
+<h2>Threshold: Positive vs. Negative<a class="headerlink" href="#Threshold:-Positive-vs.-Negative" title="Link to this heading">#</a></h2>
+<p>When the threshold is negative, pairs with noisy values greater than the threshold are discarded.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="c1"># call the constructor to produce the measurement `m_dlap`</span>
+<span class="n">input_space</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">map_domain</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">str</span><span class="p">),</span> <span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">int</span><span class="p">)),</span> <span class="n">dp</span><span class="o">.</span><span class="n">absolute_distance</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+<span class="n">m_dlap</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">make_laplace_threshold</span><span class="p">(</span>
+    <span class="n">dp</span><span class="o">.</span><span class="n">map_domain</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">str</span><span class="p">),</span> <span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">int</span><span class="p">)),</span>
+    <span class="n">dp</span><span class="o">.</span><span class="n">l01inf_distance</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">absolute_distance</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">int</span><span class="p">)),</span>
+    <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">threshold</span><span class="o">=-</span><span class="mi">10</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="c1"># invoke the measurement on some integer aggregate hashmap, to sample DiscreteLaplace(x, 1.) noise</span>
+<span class="n">aggregated</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;b&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mi">10</span><span class="p">,</span>
+    <span class="s2">&quot;c&quot;</span><span class="p">:</span> <span class="o">-</span><span class="mi">20</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;noisy aggregate:&quot;</span><span class="p">,</span> <span class="n">m_dlap</span><span class="p">(</span><span class="n">aggregated</span><span class="p">))</span>
+
+<span class="c1"># in this case, the sensitivity is integral:</span>
+<span class="n">sensitivity</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;(ε, δ):&quot;</span><span class="p">,</span> <span class="n">m_dlap</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">d_in</span><span class="o">=</span><span class="n">sensitivity</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+noisy aggregate: {&#39;c&#39;: -20, &#39;b&#39;: -11}
+(ε, δ): (1.0, 3.319000812207484e-05)
+</pre></div></div>
+</div>
+</section>
+<section id="Bit-depth">
+<h2>Bit depth<a class="headerlink" href="#Bit-depth" title="Link to this heading">#</a></h2>
+<p>By default, all floating-point data types default to 64-bit double-precision (denoted <code class="docutils literal notranslate"><span class="pre">&quot;f64&quot;</span></code>), and all integral data types default to 32-bit (denoted <code class="docutils literal notranslate"><span class="pre">&quot;i32&quot;</span></code>). The atomic data type expected by the function and privacy units can be further configured to operate over specific bit-depths by explicitly specifying <code class="docutils literal notranslate"><span class="pre">&quot;f32&quot;</span></code> instead of <code class="docutils literal notranslate"><span class="pre">&quot;float&quot;</span></code>, or <code class="docutils literal notranslate"><span class="pre">&quot;i64&quot;</span></code> instead of <code class="docutils literal notranslate"><span class="pre">&quot;int&quot;</span></code>.</p>
+<p>More information on acceptable data types can be found in the <a class="reference internal" href="../utilities/typing.html"><span class="doc">Typing section of the User Guide</span></a>.</p>
+</section>
+<section id="Desideratum:-Floating-Point-Granularity">
+<h2>Desideratum: Floating-Point Granularity<a class="headerlink" href="#Desideratum:-Floating-Point-Granularity" title="Link to this heading">#</a></h2>
+<details><p>Excerpt from Additive Noise Mechanism notebook The “continuous” Laplace and Gaussian measurements convert their float values to a rational representation, and then add integer noise to the numerator via the respective discrete distribution. In the OpenDP Library’s default configuration, this rational representation of a float is exact. Therefore the privacy analysis is as tight as if you were to sample truly continuous noise and then postprocess by rounding to the nearest float.</p>
+<p>For most use-cases the sampling algorithm is sufficiently fast when the rational representation is exact. That is, when noise is sampled with a granularity of <span class="math notranslate nohighlight">\(2^{-1074}\)</span>, the same granularity as the distance between subnormal 64-bit floats. However, the granularity can be adjusted to <span class="math notranslate nohighlight">\(2^k\)</span>, for some choice of k, for a faster runtime. Adjusting this parameter comes with a small penalty to the sensitivity (to account for rounding to the nearest rational), and subsequently, to the
+privacy parameters.</p>
+</details><ul class="simple">
+<li><p>In the case of additive noise mechanisms, the sensitivity from rounding increases as a function of the vector length.</p></li>
+<li><p>In the case of thresholded noise mechanisms, the sensitivity from rounding increases as a function of <span class="math notranslate nohighlight">\(\Delta_0\)</span>, as only <span class="math notranslate nohighlight">\(\Delta_0\)</span> different values can round in different directions.</p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="additive-noise-mechanisms.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Additive Noise Mechanisms</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="canonical-noise-mechanism.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Canonical Noise Mechanism</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Distribution:-Laplace-vs.-Gaussian">Distribution: Laplace vs. Gaussian</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Support:-Float-vs.-Integer">Support: Float vs. Integer</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Threshold:-Positive-vs.-Negative">Threshold: Positive vs. Negative</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Bit-depth">Bit depth</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Desideratum:-Floating-Point-Granularity">Desideratum: Floating-Point Granularity</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../../../_sources/api/user-guide/measurements/thresholded-noise-mechanisms.ipynb.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f"></script>
+<script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.3rc1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

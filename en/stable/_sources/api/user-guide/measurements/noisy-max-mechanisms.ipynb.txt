@@ -1,0 +1,379 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "id": "ade45f1e",
+   "metadata": {},
+   "source": [
+    "# Report Noisy Max Mechanisms\n",
+    "\n",
+    "The report noisy max mechanism takes as input a vector of scores,\n",
+    "adds noise to each score,\n",
+    "and then releases the index of the greatest score.\n",
+    "\n",
+    "The specific case of report noisy max with gumbel noise\n",
+    "is equivalent to the exponential mechanism with a finite support.\n",
+    "\n",
+    "This notebook documents the variations on report noisy max mechanisms in OpenDP:\n",
+    "\n",
+    "* Distribution: exponential vs gumbel\n",
+    "* Monotonicity\n",
+    "* Objective: maximize vs. minimize\n",
+    "* Composition: max vs. top-k"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "40eff3c1",
+   "metadata": {},
+   "source": [
+    "----\n",
+    "Any constructors that have not completed the proof-writing and vetting process may still be accessed if you opt-in to \"contrib\".\n",
+    "Please contact us if you are interested in proof-writing. Thank you!"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "id": "c6a59d6d",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import opendp.prelude as dp\n",
+    "dp.enable_features(\"contrib\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "cccad0ba",
+   "metadata": {},
+   "source": [
+    "The goal of mechanisms in this notebook will be to release the argument or index of the best score in the following vector:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "id": "2ec0fca9",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "scores = [0.0, 2.0, 4.0, 6.0]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "dc5774f9",
+   "metadata": {},
+   "source": [
+    "We'll also define the sensitivity once, for all examples:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "id": "39d97efa",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "sensitivity = 1.0"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "5f5a97bc",
+   "metadata": {},
+   "source": [
+    "The score vectors on adjacent datasets differ by at most one in each position."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "4cfe9e4f",
+   "metadata": {},
+   "source": [
+    "## Distribution: Exponential vs. Gumbel\n",
+    "\n",
+    "Based on the choice of privacy measure passed into `report_noisy_max`,\n",
+    "the OpenDP Library chooses the corresponding distribution to maximize utility: \n",
+    "\n",
+    "| Privacy Definition | `privacy_measure`                   | distribution |\n",
+    "|--------------------|-------------------------------------|--------------|\n",
+    "| pure-DP            | `dp.max_divergence()`               | exponential  |\n",
+    "| zCDP               | `dp.zero_concentrated_divergence()` | gumbel       |\n",
+    "\n",
+    "In the case of pure-DP, many noise distributions have been considered.\n",
+    "Report noisy max was initially introduced to the differential privacy literature with *laplace* noise,\n",
+    "and the exponential mechanism is equivalent to report noisy max with *gumbel* noise,\n",
+    "but *exponential* noise satisfies the same privacy guarantee as both with less error than both.\n",
+    "However, in the case of zCDP, using gumbel noise results in a stronger zCDP guarantee \n",
+    "than can be derived with exponential noise, making gumbel noise competitive."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "id": "bc7de1ee",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "noisy max: 3\n",
+      "epsilon: 1.0\n"
+     ]
+    }
+   ],
+   "source": [
+    "# call the constructor to produce the measurement\n",
+    "exponential_max = dp.m.make_noisy_max(\n",
+    "    input_domain=dp.vector_domain(dp.atom_domain(T=float, nan=False)),\n",
+    "    input_metric=dp.linf_distance(T=float),\n",
+    "    output_measure=dp.max_divergence(),\n",
+    "    scale=2.0,\n",
+    ")\n",
+    "\n",
+    "print(\"noisy max:\", exponential_max(scores))\n",
+    "\n",
+    "#                 sensitivity * 2 / scale\n",
+    "print(\"epsilon:\", exponential_max.map(d_in=sensitivity))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "88f87f35",
+   "metadata": {},
+   "source": [
+    "Both variations of the mechanism share very similar privacy maps between the sensitivity and privacy parameters guarantees as the respective additive noise mechanisms (laplace and gaussian)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "76f50230",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "noisy max: 2\n",
+      "rho: 0.125\n"
+     ]
+    }
+   ],
+   "source": [
+    "# call the constructor to produce the measurement `base_rnm_gumbel`\n",
+    "gumbel_max = dp.m.make_noisy_max(\n",
+    "    input_domain=dp.vector_domain(dp.atom_domain(T=float, nan=False)),\n",
+    "    input_metric=dp.linf_distance(T=float),\n",
+    "    output_measure=dp.zero_concentrated_divergence(),\n",
+    "    scale=2.0,\n",
+    ")\n",
+    "\n",
+    "print(\"noisy max:\", gumbel_max(scores))\n",
+    "\n",
+    "#             (sensitivity * 2 / scale)^2 / 8\n",
+    "print(\"rho:\", gumbel_max.map(d_in=sensitivity))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "5e5f5638",
+   "metadata": {},
+   "source": [
+    "Take note that gumbel noise results in a much slower runtime on common workloads."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "4ef3d389",
+   "metadata": {},
+   "source": [
+    "# Monotonicity\n",
+    "If all entries in the score vector may only differ in one direction, \n",
+    "then we can say that the scores are *monotonic*. \n",
+    "When scores are monotonic, the privacy loss is halved:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "id": "b99c1e65",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "epsilon: 0.5\n"
+     ]
+    }
+   ],
+   "source": [
+    "# when monotonic=True, the distance between score vectors \n",
+    "# that differ in different directions is defined to be infinity\n",
+    "input_metric = dp.linf_distance(T=float, monotonic=True)\n",
+    "\n",
+    "# construct the measurement with a monotonic metric\n",
+    "monotonic_exponential_max = dp.m.make_noisy_max(\n",
+    "    input_domain=dp.vector_domain(dp.atom_domain(T=float, nan=False)),\n",
+    "    input_metric=input_metric,\n",
+    "    output_measure=dp.max_divergence(),\n",
+    "    scale=2.0,\n",
+    ")\n",
+    "\n",
+    "# factor of 2 goes away in privacy map:\n",
+    "#                 sensitivity * 1 / scale\n",
+    "print(\"epsilon:\", monotonic_exponential_max.map(d_in=sensitivity))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "10d1b037",
+   "metadata": {},
+   "source": [
+    "Under these conditions, the privacy map now matches the laplace mechanism.\n",
+    "Under monotonicity, in zCDP, the noisy max mechanism differs only by a factor of a fourth."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "185010cd",
+   "metadata": {},
+   "source": [
+    "# Objective: Maximize vs. Minimize\n",
+    "\n",
+    "If the mechanism should choose the smallest score, instead of the largest, then negate the inputs:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "id": "b57bd715",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "noisy min: 0\n"
+     ]
+    }
+   ],
+   "source": [
+    "# construct the report noisy min measurement\n",
+    "exponential_min = dp.m.make_noisy_max(\n",
+    "    input_domain=dp.vector_domain(dp.atom_domain(T=float, nan=False)),\n",
+    "    input_metric=dp.linf_distance(T=float),\n",
+    "    output_measure=dp.max_divergence(),\n",
+    "    scale=2.0,\n",
+    "    # negate input scores\n",
+    "    negate=True,\n",
+    ")\n",
+    "\n",
+    "print(\"noisy min:\", exponential_min(scores))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "193dd7a2",
+   "metadata": {},
+   "source": [
+    "The negation of scores does not affect the privacy loss."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "47b7f07d",
+   "metadata": {},
+   "source": [
+    "# Composition: Max vs. Top-k\n",
+    "Use the `make_noisy_top_k` constructor to select multiple indices simultaneously:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "id": "717b3e81",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "noisy top 2: [2, 1]\n",
+      "epsilon: 2.0\n"
+     ]
+    }
+   ],
+   "source": [
+    "exponential_top_k = dp.m.make_noisy_top_k(\n",
+    "    input_domain=dp.vector_domain(dp.atom_domain(T=float, nan=False)),\n",
+    "    input_metric=dp.linf_distance(T=float),\n",
+    "    output_measure=dp.max_divergence(),\n",
+    "    k=2,\n",
+    "    scale=2.0,\n",
+    ")\n",
+    "\n",
+    "scores = [0.0, 1.0, 2.0, 3.0]\n",
+    "print(\"noisy top 2:\", exponential_top_k(scores))\n",
+    "\n",
+    "scores = [0.0, 1.0, 2.0, 3.0]\n",
+    "print(\"epsilon:\", exponential_top_k.map(d_in=sensitivity))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "id": "aa39fc30",
+   "metadata": {},
+   "source": [
+    "In the output, the ordering of indices is significant. \n",
+    "That is, the noisy score at the first index is greater than the noisy score at the second index.\n",
+    "\n",
+    "The privacy loss increases linearly in `k`, by sequential composition.\n",
+    "Assuming the number of candidates in the score vector is `d`, \n",
+    "then the time complexities of the algorithms are as follows:\n",
+    "\n",
+    "| Privacy Definition | algorithm             | time complexity         |\n",
+    "|--------------------|-----------------------|-------------------------|\n",
+    "| pure-DP            | peel permute and flip | $\\mathcal{O}(dk)$       |\n",
+    "| zCDP               | oneshot gumbel        | $\\mathcal{O}(d \\ln(k))$ |\n",
+    "\n",
+    "The noisy max exponential mechanism is internally implemented via the permute and flip algorithm, \n",
+    "which runs in time $\\mathcal{O}(d)$.\n",
+    "To compute top-k, the permute and flip algorithm is then run k times, \n",
+    "where the previous selection is repeatedly \"peeled\" off of the score vector.\n",
+    "\n",
+    "In contrast, in the case of zCDP, gumbel noise is added to each score, \n",
+    "and a min-heap is used to find the top k in one shot.\n",
+    "\n",
+    "Even though the oneshot gumbel has better time complexity, \n",
+    "the permute and flip algorithm has a much faster discrete implementation, \n",
+    "so is likely to still be faster for reasonable values of k."
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": ".venv (3.13.7)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.13.7"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

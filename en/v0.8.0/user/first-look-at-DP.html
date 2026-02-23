@@ -1,0 +1,1244 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>First Look at DP &#8212; OpenDP</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=eafc0fe6" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=4f92a2c4" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+    <script src="../_static/documentation_options.js?v=486e5634"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'user/first-look-at-DP';</script>
+    <link rel="icon" href="../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Programming Framework" href="programming-framework/index.html" />
+    <link rel="prev" title="Installation" href="installation.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Feb 23, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+
+
+<script>
+document.write(`<aside class="bd-header-announcement" aria-label="Announcement"></aside>`);
+fetch("https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html")
+  .then(res => {return res.text();})
+  .then(data => {
+    if (data.length === 0) {
+      console.log("[PST]: Empty announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+      return;
+    }
+    div = document.querySelector(".bd-header-announcement");
+    div.classList.add(...["bd-header-announcement", "container-fluid", "init"]);
+    div.innerHTML = `<div class="bd-header-announcement__content">${data}</div>`;
+    // At least 3rem height
+    const autoHeight = Math.min(
+      div.offsetHeight,
+      3 * parseFloat(getComputedStyle(document.documentElement).fontSize));
+    // Set height and vertical padding to 0 to prepare the height transition
+    div.style.setProperty("height", 0);
+    div.style.setProperty("padding-top", 0);
+    div.style.setProperty("padding-bottom", 0);
+    div.classList.remove("init");
+    // Set height to the computed height with a small timeout to activate the transition
+    setTimeout(() => {
+      div.style.setProperty("height", `${autoHeight}px`);
+      // Wait for a bit more than 300ms (the transition duration) then remove the
+      // forcefully set styles and let CSS take over
+      setTimeout(() => {
+        div.style.removeProperty("padding-top");
+        div.style.removeProperty("padding-bottom");
+        div.style.removeProperty("height");
+        div.style.setProperty("min-height", "3rem");
+      }, 320);
+    }, 10);
+  })
+  .catch(error => {
+    console.log("[PST]: Failed to load announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+  });
+</script>
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <button class="sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/opendp-logo.png" class="logo__image only-light" alt="OpenDP - Home"/>
+    <script>document.write(`<img src="../_static/opendp-logo.png" class="logo__image only-dark" alt="OpenDP - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../quickstart.html">
+                        Quickstart
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="index.html">
+                        User Guide
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../examples/index.html">
+                        Examples
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../api/index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../contributor/index.html">
+                        Contributor Guide
+                      </a>
+                    </li>
+                
+            <li class="nav-item dropdown pst-header-nav-item">
+                <button class="btn dropdown-toggle nav-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../resources/index.html">
+                        Resources
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../opendp-commons/index.html">
+                        OpenDP Commons
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../contact.html">
+                        Contact
+                      </a>
+                    </li>
+                
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+    <button class="sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../quickstart.html">
+                        Quickstart
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="index.html">
+                        User Guide
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../examples/index.html">
+                        Examples
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../api/index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../contributor/index.html">
+                        Contributor Guide
+                      </a>
+                    </li>
+                
+            <li class="nav-item dropdown pst-header-nav-item">
+                <button class="btn dropdown-toggle nav-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-controls="pst-nav-more-links-2">
+                    More
+                </button>
+                <ul id="pst-nav-more-links-2" class="dropdown-menu">
+                    
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../resources/index.html">
+                        Resources
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../opendp-commons/index.html">
+                        OpenDP Commons
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../contact.html">
+                        Contact
+                      </a>
+                    </li>
+                
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="limitations.html">Limitations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">First Look at DP</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="programming-framework/index.html">Programming Framework</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="programming-framework/core-structures.html">Core Structures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="programming-framework/supporting-elements.html">Supporting Elements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="programming-framework/a-framework-to-understand-dp.html">A Framework to Understand DP</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting Started</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="transformations.html">Transformations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="transformations/aggregation-sum.html">Aggregation: Sum</a></li>
+<li class="toctree-l2"><a class="reference internal" href="transformations/aggregation-mean.html">Aggregation: Mean</a></li>
+<li class="toctree-l2"><a class="reference internal" href="transformations/aggregation-quantile.html">Aggregation: Quantile</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="measurements.html">Measurements</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="measurements/additive-noise-mechanisms.html">Additive Noise Mechanisms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="measurements/randomized-response.html">Randomized Response</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="combinators.html">Combinators</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="combinators/compositors.html">Compositors</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="utilities/index.html">Utilities</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="utilities/typing.html">Typing</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="utilities/accuracy/index.html">Accuracy</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="utilities/accuracy/accuracy-pitfalls.html">Accuracy: Pitfalls and Edge Cases</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="utilities/parameter-search.html">Parameter Search</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="putting-it-together.html">Putting It Together</a></li>
+</ul>
+</div>
+</nav></div>
+        <div class="sidebar-primary-item">
+<h6>Branches</h6>
+<ul>
+    <li><a href="../../beta/index.html" style="font-weight: normal">beta</a></li>
+    <li><a href="../../nightly/index.html" style="font-weight: normal">nightly</a></li>
+    <li><a href="../../stable/index.html" style="font-weight: normal">stable</a></li>
+</ul>
+
+
+<h6 id="releases_header">Releases
+    <div id="releases_symbol" style="float:right"></div>
+</h6>
+<ul id="releases_content">
+    <li><a href="../../v0.14.1/index.html" style="font-weight: normal">v0.14.1</a></li>
+    <li><a href="../../v0.14.0/index.html" style="font-weight: normal">v0.14.0</a></li>
+    <li><a href="../../v0.13.0/index.html" style="font-weight: normal">v0.13.0</a></li>
+    <li><a href="../../v0.12.1/index.html" style="font-weight: normal">v0.12.1</a></li>
+    <li><a href="../../v0.12.0/index.html" style="font-weight: normal">v0.12.0</a></li>
+    <li><a href="../../v0.11.1/index.html" style="font-weight: normal">v0.11.1</a></li>
+    <li><a href="../../v0.11.0/index.html" style="font-weight: normal">v0.11.0</a></li>
+    <li><a href="../../v0.10.0/index.html" style="font-weight: normal">v0.10.0</a></li>
+    <li><a href="../../v0.9.2/index.html" style="font-weight: normal">v0.9.2</a></li>
+    <li><a href="../../v0.9.1/index.html" style="font-weight: normal">v0.9.1</a></li>
+    <li><a href="../../v0.9.0/index.html" style="font-weight: normal">v0.9.0</a></li>
+    <li><a href="first-look-at-DP.html" style="font-weight: bold">v0.8.0</a></li>
+    <li><a href="../../v0.7.0/index.html" style="font-weight: normal">v0.7.0</a></li>
+    <li><a href="../../v0.6.2/index.html" style="font-weight: normal">v0.6.2</a></li>
+    <li><a href="../../v0.6.1/index.html" style="font-weight: normal">v0.6.1</a></li>
+    <li><a href="../../v0.6.0/index.html" style="font-weight: normal">v0.6.0</a></li>
+    <li><a href="../../v0.5.0/index.html" style="font-weight: normal">v0.5.0</a></li>
+    <li><a href="../../v0.4.0/index.html" style="font-weight: normal">v0.4.0</a></li>
+    <li><a href="../../v0.3.0/index.html" style="font-weight: normal">v0.3.0</a></li>
+    <li><a href="../../v0.2.4/index.html" style="font-weight: normal">v0.2.4</a></li>
+    <li><a href="../../v0.2.3/index.html" style="font-weight: normal">v0.2.3</a></li>
+    <li><a href="../../v0.2.2/index.html" style="font-weight: normal">v0.2.2</a></li>
+    <li><a href="../../v0.2.1/index.html" style="font-weight: normal">v0.2.1</a></li>
+    <li><a href="../../v0.2.0/index.html" style="font-weight: normal">v0.2.0</a></li>
+    <li><a href="../../v0.1.0/index.html" style="font-weight: normal">v0.1.0</a></li>
+</ul>
+<script>
+    let expanded = !!JSON.parse(localStorage.getItem('expanded'));
+
+    let releasesHeader = document.getElementById("releases_header");
+    let releasesSymbol = document.getElementById("releases_symbol");
+    let releasesContent = document.getElementById("releases_content");
+
+    function setReleasesState() {
+        localStorage.setItem("expanded", JSON.stringify(expanded))
+        releasesContent.style.display = expanded ? "block" : "none";
+        releasesSymbol.classList.add(expanded ? 'minus' : 'plus')
+        releasesSymbol.classList.remove(expanded ? 'plus' : 'minus')
+    }
+
+    setReleasesState()
+    releasesHeader.addEventListener("click", function() {
+        expanded = !expanded;
+        setReleasesState()
+    })
+</script>
+<style>
+    .plus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .plus:before,
+    .plus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .plus:before {
+        left:50%;
+        top:4px;
+        bottom:4px;
+        width:3px;
+        transform:translateX(-50%);
+    }
+
+    .plus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+
+
+
+    .minus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .minus:before,
+    .minus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .minus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+</style>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">User Guide</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">First Look at DP</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item"><div class="admonition warning" style="position: relative;">
+    <!--
+     Without the style, the region for the article title overlaps, and the link is unclickable.
+    -->
+    <details>
+        <summary>Questions or feedback?</summary>
+        <!--
+            All of these lists should be in sync:
+            - README.md
+            - docs/source/contributing/contact.rst
+            - docs/source/_templates/questions-feedback.html
+            - .github/ISSUE_TEMPLATE/config.yml
+        -->
+        <ul>
+            <li>Report a bug or request a feature on <a href="https://github.com/opendp/opendp/issues">Github</a>.</li>
+            <li>Send general queries to <a href="mailto:info@opendp.org">info@opendp.org</a>, or email <a href="mailto:security@opendp.org">security@opendp.org</a> if it is related to security.</li>
+            <li>Join the conversation on <a href="https://join.slack.com/t/opendp/shared_invite/zt-1t8rrbqhd-z8LiZiP06vVE422HJd6ciQ">Slack</a>, or the <a href="https://groups.google.com/a/g.harvard.edu/g/opendp-community">mailing list</a>.</li>
+        </ul>
+    </details>
+</div></div>
+      
+        <div class="header-article-item">
+<div class="admonition warning" style="position: relative;" id="old-version-warning">
+  <!--
+   To work with this locally, in conf.py uncomment the entry under "html_context".
+
+   Without the style, the region for the article title overlaps, and the link is unclickable.
+  -->
+  <p class="admonition-title">
+  
+  This documentation is for an old version of OpenDP.
+  
+  </p>
+  <p>The current release of OpenDP is <a href="/">v0.14.1</a>.</p>
+</div>
+<script>
+  window.addEventListener("load", (event) => {
+    document.getElementById('old-version-warning').style.top = `${window.visualViewport.pageTop}px`;
+  });
+</script>
+</div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="First-Look-at-DP">
+<h1>First Look at DP<a class="headerlink" href="#First-Look-at-DP" title="Link to this heading">#</a></h1>
+<p>Differential privacy (DP) is a technique used to release information about a population in a way that limits the exposure of any one individual’s personal information.</p>
+<p>In this notebook, we’ll conduct a differentially-private analysis on a teacher survey (a tabular dataset).</p>
+<p>The raw data consists of survey responses from teachers in primary and secondary schools in an unspecified U.S. state.</p>
+<section id="Why-Differential-Privacy?">
+<h2>Why Differential Privacy?<a class="headerlink" href="#Why-Differential-Privacy?" title="Link to this heading">#</a></h2>
+<p>Protecting the privacy of individuals while sharing information is nontrivial. Lets say I naively “anonymized” the teacher survey by removing the person’s name.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;../data/teacher_survey/teacher_survey.csv&quot;</span><span class="p">)</span>
+<span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;sex&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;age&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;maritalStatus&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;hasChildren&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;highestEducationLevel&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;sourceOfStress&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;smoker&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;optimism&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;lifeSatisfaction&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;selfEsteem&#39;</span><span class="p">]</span>
+
+<span class="c1"># naively &quot;anonymize&quot; by removing the name column</span>
+<span class="k">del</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<p>It would still be very easy to re-identify individuals via quasi-identifiers. Say I was curious about my non-binary co-worker Chris, and I knew their age (27).</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">chris</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;sex&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;age&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">27</span><span class="p">)]</span>
+<span class="n">chris</span><span class="p">[[</span><span class="s2">&quot;sex&quot;</span><span class="p">,</span> <span class="s2">&quot;age&quot;</span><span class="p">,</span> <span class="s2">&quot;maritalStatus&quot;</span><span class="p">,</span> <span class="s2">&quot;smoker&quot;</span><span class="p">]]</span> <span class="c1"># print a few columns of interest</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[16]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>sex</th>
+      <th>age</th>
+      <th>maritalStatus</th>
+      <th>smoker</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>2251</th>
+      <td>3</td>
+      <td>27</td>
+      <td>3</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p>In a dataset of 7,000 records, these two identifiers alone uniquely identified my coworker, allowing me to see their responses— they are unmarried, but living with their partner. In addition I can also see that they are a smoker.</p>
+<p>In other situations there are more nuanced techniques that can be used to determine if an individual exists in a dataset (called a membership attack) or reconstruct parts of, or even the entire dataset, from summary statistics.</p>
+<p>Giving strong formal privacy guarantees requires the rigorous mathematical grounding that differential privacy provides.</p>
+</section>
+<section id="Steps-of-a-DP-Analysis">
+<h2>Steps of a DP Analysis<a class="headerlink" href="#Steps-of-a-DP-Analysis" title="Link to this heading">#</a></h2>
+<p>A differentially private analysis is usually conducted in the following steps:</p>
+<ol class="arabic simple">
+<li><p>Identify the unit of privacy</p></li>
+<li><p>Consider privacy risk</p></li>
+<li><p>Collect public information</p></li>
+<li><p>Construct a measurement</p></li>
+<li><p>Make a DP release</p></li>
+</ol>
+<p>It is common to return to prior steps to make further releases.</p>
+<section id="1.-Identify-the-Unit-of-Privacy">
+<h3>1. Identify the Unit of Privacy<a class="headerlink" href="#1.-Identify-the-Unit-of-Privacy" title="Link to this heading">#</a></h3>
+<p>We first need to isolate exactly what we’re protecting.</p>
+<p>In the teacher survey, the unit of privacy is the addition or removal of one teacher. Since each teacher contributes at most one row to the dataset, the unit of privacy corresponds to defining the maximum number of row contributions to be one.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[17]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">max_contributions</span> <span class="o">=</span> <span class="mi">1</span>
+</pre></div>
+</div>
+</div>
+<p>We will use this bound to tune our methods such that data releases are quantifiably indistinguishable upon the addition or removal of any one teacher from any input dataset.</p>
+<p>Broadly speaking, differential privacy can be applied to any medium of data for which you can define a unit of privacy. In other contexts, the unit of privacy may correspond to multiple rows, a user ID, or nodes or edges in a graph.</p>
+<p>The unit of privacy may also be more general or more precise than a single individual. In the data analysis conducted in this notebook, we’ll refer to an individual and the unit of privacy interchangeably, because in this example we’ve defined the unit of privacy to be one individual.</p>
+</section>
+<section id="2.-Consider-Privacy-Risk">
+<h3>2. Consider Privacy Risk<a class="headerlink" href="#2.-Consider-Privacy-Risk" title="Link to this heading">#</a></h3>
+<p>The next step is to consider the risk of disclosing information about your sensitive dataset.</p>
+<p>If the dataset is available to the public, then differentially private methods are not necessary. Whereas, if the dataset could place individuals at severe risk of harm, then you should reconsider making any data release at all. Differentially private methods are used to make releases on data with a risk profile somewhere between these two extremes.</p>
+<p>The level of privacy afforded to individuals in a dataset under analysis is quantified by <em>privacy parameters</em>. One such privacy parameter is epsilon (<span class="math notranslate nohighlight">\(\epsilon\)</span>), a non-negative number, where larger values afford less privacy. <span class="math notranslate nohighlight">\(\epsilon\)</span> can be viewed as a proxy to quantify the worst-case risk to any individual. It is customary to refer to a data release with such bounded risk as <span class="math notranslate nohighlight">\(\epsilon\)</span>-DP.</p>
+<p>A common rule-of-thumb is to limit your overall <span class="math notranslate nohighlight">\(\epsilon\)</span> spend to 1.0. However, this limit will vary depending on the risk profile associated with the disclosure of information. In many cases, the privacy parameters are not finalized until the data owner is preparing to make a disclosure.</p>
+</section>
+<section id="3.-Collect-Public-Information">
+<h3>3. Collect Public Information<a class="headerlink" href="#3.-Collect-Public-Information" title="Link to this heading">#</a></h3>
+<p>The next step is to identify public information about the dataset.</p>
+<ul class="simple">
+<li><p>information that is invariant across all potential input datasets (may include column names and per-column categories)</p></li>
+<li><p>information that is publicly available from other sources</p></li>
+<li><p>information from other DP releases</p></li>
+</ul>
+<p>For convenience, I’ve collected metadata from the teacher survey dataset codebook <a class="reference external" href="../data/teacher_survey/public_metadata.json">into a JSON file</a>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[18]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="kn">import</span> <span class="nn">json</span>
+<span class="n">metadata</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="s2">&quot;../data/teacher_survey/public_metadata.json&quot;</span><span class="p">))</span>
+<span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;column_names&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[18]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+[&#39;name&#39;,
+ &#39;sex&#39;,
+ &#39;age&#39;,
+ &#39;maritalStatus&#39;,
+ &#39;hasChildren&#39;,
+ &#39;highestEducationLevel&#39;,
+ &#39;sourceOfStress&#39;,
+ &#39;smoker&#39;,
+ &#39;optimism&#39;,
+ &#39;lifeSatisfaction&#39;,
+ &#39;selfEsteem&#39;]
+</pre></div></div>
+</div>
+<p>In this case (and in most cases), we consider column names public/invariant to the data because they weren’t picked in response to the data, they were “fixed” before collecting the data.</p>
+<p>A data invariant is information about your dataset that you are explicitly choosing not to protect, under the basis that it does not contain sensitive information. Be careful because, if an invariant does, indeed, contain sensitive information, then you expose individuals in the dataset to unbounded privacy loss.</p>
+<p>This public metadata will significantly improve the utility of our results.</p>
+</section>
+<section id="4.-Construct-a-Measurement">
+<h3>4. Construct a Measurement<a class="headerlink" href="#4.-Construct-a-Measurement" title="Link to this heading">#</a></h3>
+<p>A measurement is a randomized function that takes a dataset and returns a differentially private release. The OpenDP Library provides building-blocks that can be functionally composed (called “chaining”).</p>
+<p>Building blocks that do not yet privatize the output are called “transformations” instead of “measurements”. Transformations are how we compute statistical summaries in a way that can be privatized. They roughly correspond to the kind of operations you’d expect of pandas dataframes or NumPy arrays.</p>
+<p>The following transformation loads the age column from a CSV:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[19]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="kn">from</span> <span class="nn">opendp.mod</span> <span class="kn">import</span> <span class="n">enable_features</span>
+<span class="n">enable_features</span><span class="p">(</span><span class="s2">&quot;contrib&quot;</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">opendp.transformations</span> <span class="kn">import</span> <span class="n">make_split_dataframe</span><span class="p">,</span> <span class="n">make_select_column</span>
+<span class="c1"># the `&gt;&gt;` operator denotes the functional composition</span>
+<span class="c1"># takes a csv string input and emits a vector of strings</span>
+<span class="n">age_trans</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">make_split_dataframe</span><span class="p">(</span><span class="n">separator</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">,</span> <span class="n">col_names</span><span class="o">=</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;column_names&quot;</span><span class="p">])</span> <span class="o">&gt;&gt;</span>
+    <span class="n">make_select_column</span><span class="p">(</span><span class="s2">&quot;age&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>The next cell will chain this <code class="docutils literal notranslate"><span class="pre">age_trans</span></code> transformation with a count transformation, and then privatize the count with a measurement.</p>
+<p>In this case we add noise from a discretized version of the Laplace distribution. All differentially private measurements involve sampling from a carefully-calibrated probability distribution that is concentrated around the quantity of interest.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[20]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="kn">from</span> <span class="nn">opendp.transformations</span> <span class="kn">import</span> <span class="n">then_count</span>
+<span class="kn">from</span> <span class="nn">opendp.measurements</span> <span class="kn">import</span> <span class="n">then_laplace</span>
+
+<span class="n">count_meas</span> <span class="o">=</span> <span class="n">age_trans</span> <span class="o">&gt;&gt;</span> <span class="n">then_count</span><span class="p">()</span> <span class="o">&gt;&gt;</span> <span class="n">then_laplace</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="mf">2.</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Each invocation of a measurement incurs some privacy loss, and we can use the privacy map to tell us how much. Recalling the “Unit of Privacy” section, we know that each teacher contributed at most one row to the survey.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[21]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">count_meas</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">d_in</span><span class="o">=</span><span class="n">max_contributions</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[21]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+0.5
+</pre></div></div>
+</div>
+<p>The privacy map tells us that passing data through this transformation will incur an <span class="math notranslate nohighlight">\(\epsilon = 0.5\)</span> privacy spend to any individual in a dataset passed in. The privacy spend is based on how noisy this distribution is, and how sensitive the transformation is to changes to the input data.</p>
+<p>In this case, the sensitivity of the count is simple: if a teacher contributes at most one row, then the additional or removal of a teacher can change the count by at most one. The mathematics for this distribution work out such that the epsilon expenditure (0.5) is the sensitivity (1) divided by the noise scale (2).</p>
+</section>
+<section id="5.-Make-a-DP-Release">
+<h3>5. Make a DP Release<a class="headerlink" href="#5.-Make-a-DP-Release" title="Link to this heading">#</a></h3>
+<p>At this point, we still haven’t touched the sensitive dataset we’re analyzing. This is the first and only point where we access the sensitive dataset in this process. In order to obtain accurate privacy guarantees, the OpenDP Library should mediate all access to the sensitive dataset.</p>
+<p>We now invoke the measurement on our dataset, and consume <span class="math notranslate nohighlight">\(\epsilon = 0.5\)</span>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[22]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">csv_data</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;../data/teacher_survey/teacher_survey.csv&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+<span class="n">dp_count</span> <span class="o">=</span> <span class="n">count_meas</span><span class="p">(</span><span class="n">csv_data</span><span class="p">)</span>
+<span class="n">dp_count</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[22]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+7000
+</pre></div></div>
+</div>
+<p>The result is a random draw from the discrete Laplace distribution, centered at the true count of the number of records in the underlying dataset.</p>
+<p>We can also give a <span class="math notranslate nohighlight">\((1 - \alpha)100\)</span>% confidence interval for this release:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[23]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="kn">from</span> <span class="nn">opendp.accuracy</span> <span class="kn">import</span> <span class="n">discrete_laplacian_scale_to_accuracy</span>
+<span class="n">discrete_laplacian_scale_to_accuracy</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="mf">2.</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[23]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+6.42960493986766
+</pre></div></div>
+</div>
+<p>When the discrete Laplace distribution’s scale is 2, the DP estimate differs from the exact estimate by no more than 6.43, at a 95% confidence level.</p>
+<p>This concludes the process of making a DP release.</p>
+<p>Lets repeat this process more briefly for estimating the mean age. This time we benefit from having a DP count estimate in our public information: It is used to help calibrate the privacy guarantees for the mean.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[24]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="kn">from</span> <span class="nn">opendp.transformations</span> <span class="kn">import</span> <span class="n">then_cast_default</span><span class="p">,</span> <span class="n">then_clamp</span><span class="p">,</span> <span class="n">then_resize</span><span class="p">,</span> <span class="n">then_mean</span>
+<span class="kn">from</span> <span class="nn">opendp.measurements</span> <span class="kn">import</span> <span class="n">then_base_laplace</span>
+<span class="kn">from</span> <span class="nn">opendp.domains</span> <span class="kn">import</span> <span class="n">atom_domain</span>
+<span class="n">age_bounds</span> <span class="o">=</span> <span class="p">(</span><span class="mf">18.</span><span class="p">,</span> <span class="mf">70.</span><span class="p">)</span> <span class="c1"># a best-guess based on public information</span>
+<span class="k">def</span> <span class="nf">make_mean_age</span><span class="p">(</span><span class="n">scale</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="n">age_trans</span> <span class="o">&gt;&gt;</span>
+        <span class="n">then_cast_default</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+        <span class="n">then_clamp</span><span class="p">(</span><span class="n">bounds</span><span class="o">=</span><span class="n">age_bounds</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+        <span class="n">then_resize</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">dp_count</span><span class="p">,</span> <span class="n">constant</span><span class="o">=</span><span class="mf">42.</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+        <span class="n">then_mean</span><span class="p">()</span> <span class="o">&gt;&gt;</span>
+        <span class="n">then_base_laplace</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">)</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>This measurement involves more preprocessing than the count did (clamping, and dataset resize). The purpose of this preprocessing is to bound the sensitivity of the mean: the mean should only change by a limited amount when any teacher is added or removed from the dataset.</p>
+<p><code class="docutils literal notranslate"><span class="pre">make_mean_age</span></code> allows the scale parameter to vary. Before we choose a scale parameter, lets take a closer look at the privacy vs. utility tradeoff.</p>
+</section>
+</section>
+<section id="Privacy-vs.-Utility">
+<h2>Privacy vs. Utility<a class="headerlink" href="#Privacy-vs.-Utility" title="Link to this heading">#</a></h2>
+<p>There is a tradeoff between privacy and utility in all differentially private methods. Greater privacy corresponds to lower utility.</p>
+<p>It is a good practice to explore this tradeoff before making a differentially private release. Had we done this before releasing the DP count, we may have decided to use a larger noise scale so as to preserve more of the <span class="math notranslate nohighlight">\(\epsilon\)</span> budget for later use.</p>
+<p>Generally speaking, you never want to make a release with a greater level of accuracy than you need, because you can never “un-spend” an epsilon. If you later decide you need to improve the accuracy, you can usually do so by taking the weighted average of multiple DP estimates of the same quantity.</p>
+<p>The following plot shows how this privacy/utility tradeoff looks for the mean:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[25]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">opendp.accuracy</span> <span class="kn">import</span> <span class="n">laplacian_scale_to_accuracy</span>
+
+<span class="n">scales</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.01</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+<span class="n">epsilons</span> <span class="o">=</span> <span class="p">[</span><span class="n">make_mean_age</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">max_contributions</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">scales</span><span class="p">]</span>
+<span class="n">accuracies</span> <span class="o">=</span> <span class="p">[</span><span class="n">laplacian_scale_to_accuracy</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="n">s</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">scales</span><span class="p">]</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">epsilons</span><span class="p">,</span> <span class="n">accuracies</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Epsilon vs. Accuracy at 95</span><span class="si">% c</span><span class="s2">onfidence&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;epsilon&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;accuracy&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/user_first-look-at-DP_29_0.png" src="../_images/user_first-look-at-DP_29_0.png" />
+</div>
+</div>
+<p>When the privacy guarantees become looser, the confidence intervals for your estimate become tighter. Your needs will determine the ideal tradeoff between privacy and utility. The OpenDP Library provides methods that make this tradeoff as tight as possible.</p>
+<p>Lets commit to a noise scale of 0.05.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[26]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">mean_age_meas</span> <span class="o">=</span> <span class="n">make_mean_age</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[27]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="c1"># what would the epsilon expenditure be, if the scale were 0.05?</span>
+<span class="n">mean_age_meas</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">d_in</span><span class="o">=</span><span class="n">max_contributions</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[27]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+0.1485714285796542
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[28]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="c1"># what would the accuracy be, if the scale were 0.05?</span>
+<span class="n">laplacian_scale_to_accuracy</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[28]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+0.14978661367769955
+</pre></div></div>
+</div>
+<p>When the Laplace distribution’s scale is 0.05, the DP estimate will differ from the exact estimate by no more than 0.15, at a 95% confidence level. This accuracy estimate doesn’t include potential bias incurred by the preprocessing: in this case, the clamping (and resize) may bias the the exact estimate away from the true mean in a way that isn’t characterized by this accuracy estimate.</p>
+</section>
+<section id="Composition">
+<h2>Composition<a class="headerlink" href="#Composition" title="Link to this heading">#</a></h2>
+<p>When you make multiple releases on the same dataset, the epsilons for each release “add up”.</p>
+<p>The total epsilon spend is the sum of the epsilon consumption of each measurement we make on the sensitive dataset.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[29]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">count_meas</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">max_contributions</span><span class="p">)</span> <span class="o">+</span> <span class="n">mean_age_meas</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">max_contributions</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[29]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+0.6485714285796542
+</pre></div></div>
+</div>
+<p>With this release, the overall privacy expenditure will become <span class="math notranslate nohighlight">\(\epsilon = 0.65\)</span>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[30]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">mean_age_meas</span><span class="p">(</span><span class="n">csv_data</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[30]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+37.35189240747976
+</pre></div></div>
+</div>
+<p>The mean age of individuals in the sensitive dataset is 37.35.</p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="installation.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Installation</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="programming-framework/index.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Programming Framework</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Why-Differential-Privacy?">Why Differential Privacy?</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Steps-of-a-DP-Analysis">Steps of a DP Analysis</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#1.-Identify-the-Unit-of-Privacy">1. Identify the Unit of Privacy</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#2.-Consider-Privacy-Risk">2. Consider Privacy Risk</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#3.-Collect-Public-Information">3. Collect Public Information</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#4.-Construct-a-Measurement">4. Construct a Measurement</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#5.-Make-a-DP-Release">5. Make a DP Release</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Privacy-vs.-Utility">Privacy vs. Utility</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Composition">Composition</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/user/first-look-at-DP.ipynb.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.3rc1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

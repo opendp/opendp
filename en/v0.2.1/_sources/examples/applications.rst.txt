@@ -1,0 +1,5 @@
+Applications
+============
+
+.. contents:: |toctitle|
+	:local:

@@ -1,0 +1,936 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Essential Statistics\n",
+    "\n",
+    "This section demonstrates how to use the OpenDP Library to compute essential statistical measures with [Polars](https://docs.pola.rs/).\n",
+    "\n",
+    "* Count\n",
+    "    * of rows in frame, including nulls (`len()`)\n",
+    "    * of rows in column, including nulls (`.len()`)\n",
+    "    * of rows in column, excluding nulls (`.count()`)\n",
+    "    * of rows in column, exclusively nulls (`.null_count()`)\n",
+    "    * of _unique_ rows in column, including null (`.n_unique()`)\n",
+    "* Sum (`.sum(bounds)`)\n",
+    "* Mean (`.mean(bounds)`)\n",
+    "* Quantile (`.quantile(alpha, candidates)`)\n",
+    "    * Median (`.median(candidates)`)\n",
+    "\n",
+    "We will use [sample data](https://github.com/opendp/dp-test-datasets/blob/main/data/eurostat/README.ipynb) \n",
+    "from the Labour Force Survey in France."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import polars as pl \n",
+    "import opendp.prelude as dp\n",
+    "\n",
+    "dp.enable_features(\"contrib\")\n",
+    "\n",
+    "# Fetch and unpack the data. \n",
+    "![ -e sample_FR_LFS.csv ] || ( curl 'https://github.com/opendp/dp-test-datasets/blob/main/data/sample_FR_LFS.csv.zip?raw=true' --location --output sample_FR_LFS.csv.zip; unzip sample_FR_LFS.csv.zip )"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "To get started, we'll recreate the Context from the [tabular data introduction](index.rst)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "context = dp.Context.compositor(\n",
+    "    data=pl.scan_csv(\"sample_FR_LFS.csv\", ignore_errors=True),\n",
+    "    privacy_unit=dp.unit_of(contributions=36),\n",
+    "    privacy_loss=dp.loss_of(epsilon=1.0),\n",
+    "    split_evenly_over=5,\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "> In practice, it is recommended to only ever create one Context that spans all queries you may make on your data.\n",
+    "> However, to more clearly explain the functionality of the library, the following examples do not follow this recommendation."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Count\n",
+    "\n",
+    "The simplest query is a count of the number of records in a dataset."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "query_num_responses = context.query().select(dp.len())"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "If you have not used Polars before, please familiarize yourself with the query syntax by reading [Polars' Getting Started](https://docs.pola.rs/user-guide/getting-started/).\n",
+    "OpenDP specifically targets the [lazy API, not the eager API](https://docs.pola.rs/user-guide/concepts/lazy-vs-eager/).\n",
+    "\n",
+    "You can retrieve information about the noise scale and mechanism before committing to a release:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (1, 5)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th><th>accuracy</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td><td>f64</td></tr></thead><tbody><tr><td>&quot;len&quot;</td><td>&quot;Frame Length&quot;</td><td>&quot;Integer Laplace&quot;</td><td>180.0</td><td>539.731115</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (1, 5)\n",
+       "┌────────┬──────────────┬─────────────────┬───────┬────────────┐\n",
+       "│ column ┆ aggregate    ┆ distribution    ┆ scale ┆ accuracy   │\n",
+       "│ ---    ┆ ---          ┆ ---             ┆ ---   ┆ ---        │\n",
+       "│ str    ┆ str          ┆ str             ┆ f64   ┆ f64        │\n",
+       "╞════════╪══════════════╪═════════════════╪═══════╪════════════╡\n",
+       "│ len    ┆ Frame Length ┆ Integer Laplace ┆ 180.0 ┆ 539.731115 │\n",
+       "└────────┴──────────────┴─────────────────┴───────┴────────────┘"
+      ]
+     },
+     "execution_count": 4,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "query_num_responses.summarize(alpha=0.05)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "When this query is released, Laplacian noise is added with a scale parameter of 180\n",
+    "(for those interested in the math, the scale in this case is the sensitivity divided by epsilon, where sensitivity is 36 and ε is 0.2).\n",
+    "\n",
+    "Since alpha was specified, if you were to release `query_num_responses`, \n",
+    "then the DP `len` estimate will differ from the true `len` by no more than the given accuracy with 1 - alpha = 95% confidence.\n",
+    "\n",
+    "For comparison, the accuracy interval becomes _larger_ when the level of significance becomes smaller:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (1, 5)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th><th>accuracy</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td><td>f64</td></tr></thead><tbody><tr><td>&quot;len&quot;</td><td>&quot;Frame Length&quot;</td><td>&quot;Integer Laplace&quot;</td><td>180.0</td><td>829.429939</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (1, 5)\n",
+       "┌────────┬──────────────┬─────────────────┬───────┬────────────┐\n",
+       "│ column ┆ aggregate    ┆ distribution    ┆ scale ┆ accuracy   │\n",
+       "│ ---    ┆ ---          ┆ ---             ┆ ---   ┆ ---        │\n",
+       "│ str    ┆ str          ┆ str             ┆ f64   ┆ f64        │\n",
+       "╞════════╪══════════════╪═════════════════╪═══════╪════════════╡\n",
+       "│ len    ┆ Frame Length ┆ Integer Laplace ┆ 180.0 ┆ 829.429939 │\n",
+       "└────────┴──────────────┴─────────────────┴───────┴────────────┘"
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "query_num_responses.summarize(alpha=0.01)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The DP `len` estimate will differ from the true `len` by no more than the given accuracy with 1 - alpha = 99% confidence.\n",
+    "\n",
+    "Assuming this level of utility justifies the loss of privacy (ε = 0.2), release the query:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "200215"
+      ]
+     },
+     "execution_count": 6,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "query_num_responses.release().collect().item()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Other variations of counting queries are discussed in the [Aggregation section](../../api/user-guide/polars/expressions/aggregation.ipynb)."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Sum\n",
+    "In this section we compute a privacy-preserving total of work hours across all responses."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The OpenDP Library ensures that privacy guarantees take into account the potential for overflow and/or numerical instability.\n",
+    "For this reason, many statistics require a known upper bound on how many records can be present in the data.\n",
+    "This descriptor will need to be provided when you first construct the Context, in the form of a *margin*.\n",
+    "A margin is used to describe certain properties that a potential adversary would already know about the data."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "context = dp.Context.compositor(\n",
+    "    data=pl.scan_csv(\"sample_FR_LFS.csv\", ignore_errors=True),\n",
+    "    privacy_unit=dp.unit_of(contributions=36),\n",
+    "    privacy_loss=dp.loss_of(epsilon=1.0),\n",
+    "    split_evenly_over=5,\n",
+    "    # NEW CODE STARTING HERE\n",
+    "    margins={\n",
+    "        # when data is not grouped (empty tuple)...\n",
+    "        (): dp.polars.Margin(\n",
+    "            # ...the biggest (and only) partition is no larger than\n",
+    "            #    France population * number of quarters\n",
+    "            max_partition_length=60_000_000 * 36\n",
+    "        ),\n",
+    "    },\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Each `dp.polars.Margin` contains descriptors about the dataset when grouped by columns.\n",
+    "Since we're not yet grouping, the tuple of grouping columns is empty: `()`.\n",
+    "The OpenDP Library references this margin when you use `.select` in a query.\n",
+    "\n",
+    "This margin provides an upper bound on how large any partition can be (`max_partition_length`).\n",
+    "An adversary could very reasonably surmise that there are no more responses in each quarter than the population of France.\n",
+    "The population of France was about 60 million in 2004 so we'll use that as our maximum partition length. \n",
+    "Source: [World Bank](https://datatopics.worldbank.org/world-development-indicators/).\n",
+    "By giving up this relatively inconsequential fact about the data to a potential adversary, \n",
+    "the library is able to ensure that overflow and/or numerical instability won't undermine privacy guarantees.\n",
+    "\n",
+    "Now that you've become acquainted with margins, lets release some queries that make use of it.\n",
+    "We start by releasing the total number of work hours across responses."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "query_work_hours = (\n",
+    "    # 99 represents \"Not applicable\"\n",
+    "    context.query().filter(pl.col(\"HWUSUAL\") != 99.0)\n",
+    "    # compute the DP sum\n",
+    "    .select(pl.col.HWUSUAL.cast(int).fill_null(35).dp.sum(bounds=(0, 80)))\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "This query uses an expression `.dp.sum` that clips the range of each response, sums, \n",
+    "and then adds sufficient noise to satisfy the differential privacy guarantee.\n",
+    "\n",
+    "Since the sum is sensitive to null values, OpenDP also requires that inputs are not null.\n",
+    "`.fill_null` fulfills this requirement by imputing null values with the provided expression.\n",
+    "In this case we fill with 35, which, based on other public information, \n",
+    "is the average number of weekly work hours in France.\n",
+    "Your choice of imputation value will vary depending on how you want to use the statistic.\n",
+    "\n",
+    "> Do not use private data to calculate imputed values or bounds: \n",
+    "> This could leak private information, reducing the integrity of the privacy guarantee. \n",
+    "> Instead, choose bounds and imputed values based on prior domain knowledge."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (1, 5)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th><th>accuracy</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Sum&quot;</td><td>&quot;Integer Laplace&quot;</td><td>14400.0</td><td>43139.04473</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (1, 5)\n",
+       "┌─────────┬───────────┬─────────────────┬─────────┬─────────────┐\n",
+       "│ column  ┆ aggregate ┆ distribution    ┆ scale   ┆ accuracy    │\n",
+       "│ ---     ┆ ---       ┆ ---             ┆ ---     ┆ ---         │\n",
+       "│ str     ┆ str       ┆ str             ┆ f64     ┆ f64         │\n",
+       "╞═════════╪═══════════╪═════════════════╪═════════╪═════════════╡\n",
+       "│ HWUSUAL ┆ Sum       ┆ Integer Laplace ┆ 14400.0 ┆ 43139.04473 │\n",
+       "└─────────┴───────────┴─────────────────┴─────────┴─────────────┘"
+      ]
+     },
+     "execution_count": 9,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "query_work_hours.summarize(alpha=0.05)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The noise scale 1440 comes from the product of 36 (number of contributions), 80 (max number of work hours) and 5 (number of queries).\n",
+    "\n",
+    "If you were to release `query_work_hours`, \n",
+    "then the DP sum estimate will differ from the *clipped* sum by no more than the given accuracy with 1 - alpha = 95% confidence.\n",
+    "Notice that the accuracy estimate does not take into account bias introduced by clipping responses."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (1, 1)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>HWUSUAL</th></tr><tr><td>i64</td></tr></thead><tbody><tr><td>2964398</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (1, 1)\n",
+       "┌─────────┐\n",
+       "│ HWUSUAL │\n",
+       "│ ---     │\n",
+       "│ i64     │\n",
+       "╞═════════╡\n",
+       "│ 2964398 │\n",
+       "└─────────┘"
+      ]
+     },
+     "execution_count": 10,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "query_work_hours.release().collect()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Even though the accuracy estimate may have seemed large, in retrospect we see it is actually quite tight.\n",
+    "Our noisy release of nearly 3 million work hours likely only differs from total clipped work hours by no more than 43k.\n",
+    "\n",
+    "One adjustment made to get better utility was to change the data type we are summing to an integer.\n",
+    "When the `max_partition_length` is very large, \n",
+    "the worst-case error from summing floating-point numbers also becomes very large.\n",
+    "This numerical imprecision can significantly impact the utility of the release."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Mean"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Under the default setting where individuals may add or remove records,\n",
+    "we recommended estimating means by separately releasing sum and count estimates."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (2, 5)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th><th>accuracy</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Sum&quot;</td><td>&quot;Integer Laplace&quot;</td><td>28800.0</td><td>86277.589474</td></tr><tr><td>&quot;len&quot;</td><td>&quot;Frame Length&quot;</td><td>&quot;Integer Laplace&quot;</td><td>360.0</td><td>1078.963271</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (2, 5)\n",
+       "┌─────────┬──────────────┬─────────────────┬─────────┬──────────────┐\n",
+       "│ column  ┆ aggregate    ┆ distribution    ┆ scale   ┆ accuracy     │\n",
+       "│ ---     ┆ ---          ┆ ---             ┆ ---     ┆ ---          │\n",
+       "│ str     ┆ str          ┆ str             ┆ f64     ┆ f64          │\n",
+       "╞═════════╪══════════════╪═════════════════╪═════════╪══════════════╡\n",
+       "│ HWUSUAL ┆ Sum          ┆ Integer Laplace ┆ 28800.0 ┆ 86277.589474 │\n",
+       "│ len     ┆ Frame Length ┆ Integer Laplace ┆ 360.0   ┆ 1078.963271  │\n",
+       "└─────────┴──────────────┴─────────────────┴─────────┴──────────────┘"
+      ]
+     },
+     "execution_count": 11,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "query_work_hours = (\n",
+    "    context.query().filter(pl.col.HWUSUAL != 99.0)\n",
+    "    # release both the sum and length in one query\n",
+    "    .select(pl.col.HWUSUAL.cast(int).fill_null(35).dp.sum(bounds=(0, 80)), dp.len())\n",
+    ")\n",
+    "\n",
+    "query_work_hours.summarize(alpha=0.05)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "This joint query satisfies the same privacy guarantee as each of the previous individual queries, \n",
+    "by adding twice as much noise to each query.\n",
+    "\n",
+    "You can also reuse the same noisy count estimate to estimate several means on different columns."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (1, 3)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>HWUSUAL</th><th>len</th><th>mean</th></tr><tr><td>i64</td><td>u32</td><td>f64</td></tr></thead><tbody><tr><td>2974264</td><td>78140</td><td>38.063271</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (1, 3)\n",
+       "┌─────────┬───────┬───────────┐\n",
+       "│ HWUSUAL ┆ len   ┆ mean      │\n",
+       "│ ---     ┆ ---   ┆ ---       │\n",
+       "│ i64     ┆ u32   ┆ f64       │\n",
+       "╞═════════╪═══════╪═══════════╡\n",
+       "│ 2974264 ┆ 78140 ┆ 38.063271 │\n",
+       "└─────────┴───────┴───────────┘"
+      ]
+     },
+     "execution_count": 12,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# release and create mean column\n",
+    "query_work_hours.release().collect().with_columns(mean=pl.col.HWUSUAL / pl.col.len)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "If the dataset size is an invariant (bounded-DP), then only the sums need to be released, \n",
+    "so we recommend using `.dp.mean`.\n",
+    "Specify this data invariant in the margin: `public_info=\"lengths\"`."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# apply some preprocessing outside of OpenDP (see note below)\n",
+    "# drops \"Not applicable\" values\n",
+    "data = pl.scan_csv(\"sample_FR_LFS.csv\", ignore_errors=True).filter(pl.col.HWUSUAL != 99)\n",
+    "\n",
+    "# apply domain descriptors (margins) to preprocessed data\n",
+    "context_bounded_dp = dp.Context.compositor(\n",
+    "    data=data,\n",
+    "    privacy_unit=dp.unit_of(contributions=36),\n",
+    "    privacy_loss=dp.loss_of(epsilon=1.0),\n",
+    "    split_evenly_over=5,\n",
+    "    margins={\n",
+    "        (): dp.polars.Margin(\n",
+    "            max_partition_length=60_000_000 * 36,\n",
+    "            # ADDITIONAL CODE STARTING HERE\n",
+    "            # make partition size public (bounded-DP)\n",
+    "            public_info=\"lengths\",\n",
+    "        ),\n",
+    "    },\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "OpenDP accounts for the effect of data preparation on the privacy guarantee,\n",
+    "so we generally recommend preparing data in OpenDP.\n",
+    "However, in this setting the filter makes the number of records unknown to the adversary, \n",
+    "dropping the `\"lengths\"` descriptor from the margin metadata that we intended to use for the mean release.\n",
+    "\n",
+    "Assuming that it is truly the number of *applicable* `HWUSUAL` responses that is public information,\n",
+    "and that the filter won't affect the privacy guarantee,\n",
+    "then you could initialize the context with filtered data, as shown above."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "query_mean_work_hours = context_bounded_dp.query().select(\n",
+    "    pl.col.HWUSUAL.cast(int).fill_null(35).dp.mean(bounds=(0, 80))\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "When `public_info=\"lengths\"` is set, the number of records in the data is not protected\n",
+    "(for those familiar with DP terminology, this is equivalent to bounded-DP).\n",
+    "Therefore when computing the mean, a noisy sum is released and subsequently divided by the exact length.\n",
+    "This behavior can be observed in the query summary:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (2, 5)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th><th>accuracy</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Sum&quot;</td><td>&quot;Integer Laplace&quot;</td><td>7200.0</td><td>21569.772352</td></tr><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;Length&quot;</td><td>&quot;Integer Laplace&quot;</td><td>0.0</td><td>NaN</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (2, 5)\n",
+       "┌─────────┬───────────┬─────────────────┬────────┬──────────────┐\n",
+       "│ column  ┆ aggregate ┆ distribution    ┆ scale  ┆ accuracy     │\n",
+       "│ ---     ┆ ---       ┆ ---             ┆ ---    ┆ ---          │\n",
+       "│ str     ┆ str       ┆ str             ┆ f64    ┆ f64          │\n",
+       "╞═════════╪═══════════╪═════════════════╪════════╪══════════════╡\n",
+       "│ HWUSUAL ┆ Sum       ┆ Integer Laplace ┆ 7200.0 ┆ 21569.772352 │\n",
+       "│ HWUSUAL ┆ Length    ┆ Integer Laplace ┆ 0.0    ┆ NaN          │\n",
+       "└─────────┴───────────┴─────────────────┴────────┴──────────────┘"
+      ]
+     },
+     "execution_count": 15,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "query_mean_work_hours.summarize(alpha=0.05)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (1, 1)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>HWUSUAL</th></tr><tr><td>f64</td></tr></thead><tbody><tr><td>37.642692</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (1, 1)\n",
+       "┌───────────┐\n",
+       "│ HWUSUAL   │\n",
+       "│ ---       │\n",
+       "│ f64       │\n",
+       "╞═══════════╡\n",
+       "│ 37.642692 │\n",
+       "└───────────┘"
+      ]
+     },
+     "execution_count": 16,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "query_mean_work_hours.release().collect()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "To recap, we've shown how to estimate linear statistics like counts, sums and means.\n",
+    "These estimates were all released via output perturbation (adding noise to a value)."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Median\n",
+    "\n",
+    "Unfortunately, output perturbation does not work well \n",
+    "for releasing private medians (`.dp.median`) and quantiles (`.dp.quantile`).\n",
+    "Instead of passing bounds, the technique used to release these quantities requires you specify `candidates`, \n",
+    "which are potential outcomes to be selected from.\n",
+    "The expression privately selects the candidate that is nearest to the true median (or quantile).\n",
+    "\n",
+    "For example, to privately release the median over `HWUSUAL` you might set candidates to whole numbers between 20 and 60:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (1, 5)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th><th>accuracy</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td><td>f64</td></tr></thead><tbody><tr><td>&quot;HWUSUAL&quot;</td><td>&quot;0.5-Quantile&quot;</td><td>&quot;GumbelMin&quot;</td><td>360.0</td><td>null</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (1, 5)\n",
+       "┌─────────┬──────────────┬──────────────┬───────┬──────────┐\n",
+       "│ column  ┆ aggregate    ┆ distribution ┆ scale ┆ accuracy │\n",
+       "│ ---     ┆ ---          ┆ ---          ┆ ---   ┆ ---      │\n",
+       "│ str     ┆ str          ┆ str          ┆ f64   ┆ f64      │\n",
+       "╞═════════╪══════════════╪══════════════╪═══════╪══════════╡\n",
+       "│ HWUSUAL ┆ 0.5-Quantile ┆ GumbelMin    ┆ 360.0 ┆ null     │\n",
+       "└─────────┴──────────────┴──────────────┴───────┴──────────┘"
+      ]
+     },
+     "execution_count": 17,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "candidates = list(range(20, 60))\n",
+    "\n",
+    "query_median_hours = (\n",
+    "    context.query()\n",
+    "    .filter(pl.col.HWUSUAL != 99.0)\n",
+    "    .select(pl.col.HWUSUAL.fill_null(35).dp.median(candidates))\n",
+    ")\n",
+    "query_median_hours.summarize(alpha=0.05)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The `aggregate` value shows \"0.5-Quantile\" because `.dp.median` internally just calls `.dp.quantile` with an alpha parameter set to 0.5.\n",
+    "\n",
+    "This time the accuracy estimate is unknown because the algorithm isn't directly adding noise:\n",
+    "it's scoring each candidate, adding noise to each score, and then releasing the candidate with the best noisy score. \n",
+    "While this approach results in much better utility than output perturbation would for this kind of query,\n",
+    "it prevents us from providing accuracy estimates."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (1, 1)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>HWUSUAL</th></tr><tr><td>i64</td></tr></thead><tbody><tr><td>37</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (1, 1)\n",
+       "┌─────────┐\n",
+       "│ HWUSUAL │\n",
+       "│ ---     │\n",
+       "│ i64     │\n",
+       "╞═════════╡\n",
+       "│ 37      │\n",
+       "└─────────┘"
+      ]
+     },
+     "execution_count": 18,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "query_median_hours.release().collect()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "This median estimate is consistent with the mean estimate from the previous section."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Quantile\n",
+    "\n",
+    "`.dp.quantile` additionally requires an alpha parameter between zero and one, \n",
+    "designating the proportion of records less than the desired release.\n",
+    "\n",
+    "For example, the following query computes the three quartiles of work hours:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 19,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (3, 4)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>column</th><th>aggregate</th><th>distribution</th><th>scale</th></tr><tr><td>str</td><td>str</td><td>str</td><td>f64</td></tr></thead><tbody><tr><td>&quot;0.25-Quantile&quot;</td><td>&quot;0.25-Quantile&quot;</td><td>&quot;GumbelMin&quot;</td><td>3240.0</td></tr><tr><td>&quot;0.5-Quantile&quot;</td><td>&quot;0.5-Quantile&quot;</td><td>&quot;GumbelMin&quot;</td><td>1080.0</td></tr><tr><td>&quot;0.75-Quantile&quot;</td><td>&quot;0.75-Quantile&quot;</td><td>&quot;GumbelMin&quot;</td><td>3240.0</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (3, 4)\n",
+       "┌───────────────┬───────────────┬──────────────┬────────┐\n",
+       "│ column        ┆ aggregate     ┆ distribution ┆ scale  │\n",
+       "│ ---           ┆ ---           ┆ ---          ┆ ---    │\n",
+       "│ str           ┆ str           ┆ str          ┆ f64    │\n",
+       "╞═══════════════╪═══════════════╪══════════════╪════════╡\n",
+       "│ 0.25-Quantile ┆ 0.25-Quantile ┆ GumbelMin    ┆ 3240.0 │\n",
+       "│ 0.5-Quantile  ┆ 0.5-Quantile  ┆ GumbelMin    ┆ 1080.0 │\n",
+       "│ 0.75-Quantile ┆ 0.75-Quantile ┆ GumbelMin    ┆ 3240.0 │\n",
+       "└───────────────┴───────────────┴──────────────┴────────┘"
+      ]
+     },
+     "execution_count": 19,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "query_multi_quantiles = (\n",
+    "    context.query()\n",
+    "    .filter(pl.col.HWUSUAL != 99.0)\n",
+    "    .select(\n",
+    "        pl.col.HWUSUAL.fill_null(35).dp.quantile(a, candidates).alias(f\"{a}-Quantile\")\n",
+    "        for a in [0.25, 0.5, 0.75]\n",
+    "    )\n",
+    ")\n",
+    "query_multi_quantiles.summarize()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "When you do not set the scale parameter yourself, the privacy budget is distributed evenly across each statistic. \n",
+    "Judging from the scale parameters in the summary table, \n",
+    "it may seem that more of the privacy budget was allocated for the median,\n",
+    "but this is only due to internal implementation details."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 20,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div><style>\n",
+       ".dataframe > thead > tr,\n",
+       ".dataframe > tbody > tr {\n",
+       "  text-align: right;\n",
+       "  white-space: pre-wrap;\n",
+       "}\n",
+       "</style>\n",
+       "<small>shape: (1, 3)</small><table border=\"1\" class=\"dataframe\"><thead><tr><th>0.25-Quantile</th><th>0.5-Quantile</th><th>0.75-Quantile</th></tr><tr><td>i64</td><td>i64</td><td>i64</td></tr></thead><tbody><tr><td>35</td><td>37</td><td>40</td></tr></tbody></table></div>"
+      ],
+      "text/plain": [
+       "shape: (1, 3)\n",
+       "┌───────────────┬──────────────┬───────────────┐\n",
+       "│ 0.25-Quantile ┆ 0.5-Quantile ┆ 0.75-Quantile │\n",
+       "│ ---           ┆ ---          ┆ ---           │\n",
+       "│ i64           ┆ i64          ┆ i64           │\n",
+       "╞═══════════════╪══════════════╪═══════════════╡\n",
+       "│ 35            ┆ 37           ┆ 40            │\n",
+       "└───────────────┴──────────────┴───────────────┘"
+      ]
+     },
+     "execution_count": 20,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "query_multi_quantiles.release().collect()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Since work hours tend to be concentrated a little less than 40, \n",
+    "this release seems reasonable."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "\n",
+    "Throughout this notebook, all `.dp` expressions take an optional scale parameter \n",
+    "that can be used to more finely control how much noise is added to queries.\n",
+    "The library then rescales all of these parameters up or down to satisfy a global privacy guarantee.\n",
+    "\n",
+    "Now that you have a handle on the essential statistics,\n",
+    "the next section will introduce you to applying these statistics over groupings of your data."
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": ".venv",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.13.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

@@ -1,0 +1,1387 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Transformations &#8212; OpenDP</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=eafc0fe6" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=4f92a2c4" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+    <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'user/constructors/transformations';</script>
+    <link rel="icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Measurements" href="measurements.html" />
+    <link rel="prev" title="Constructors" href="index.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Feb 23, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+
+
+<script>
+document.write(`<aside class="bd-header-announcement" aria-label="Announcement"></aside>`);
+fetch("https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html")
+  .then(res => {return res.text();})
+  .then(data => {
+    if (data.length === 0) {
+      console.log("[PST]: Empty announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+      return;
+    }
+    div = document.querySelector(".bd-header-announcement");
+    div.classList.add(...["bd-header-announcement", "container-fluid", "init"]);
+    div.innerHTML = `<div class="bd-header-announcement__content">${data}</div>`;
+    // At least 3rem height
+    const autoHeight = Math.min(
+      div.offsetHeight,
+      3 * parseFloat(getComputedStyle(document.documentElement).fontSize));
+    // Set height and vertical padding to 0 to prepare the height transition
+    div.style.setProperty("height", 0);
+    div.style.setProperty("padding-top", 0);
+    div.style.setProperty("padding-bottom", 0);
+    div.classList.remove("init");
+    // Set height to the computed height with a small timeout to activate the transition
+    setTimeout(() => {
+      div.style.setProperty("height", `${autoHeight}px`);
+      // Wait for a bit more than 300ms (the transition duration) then remove the
+      // forcefully set styles and let CSS take over
+      setTimeout(() => {
+        div.style.removeProperty("padding-top");
+        div.style.removeProperty("padding-bottom");
+        div.style.removeProperty("height");
+        div.style.setProperty("min-height", "3rem");
+      }, 320);
+    }, 10);
+  })
+  .catch(error => {
+    console.log("[PST]: Failed to load announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+  });
+</script>
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <button class="sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/opendp-logo.png" class="logo__image only-light" alt="OpenDP - Home"/>
+    <script>document.write(`<img src="../../_static/opendp-logo.png" class="logo__image only-dark" alt="OpenDP - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../quickstart.html">
+                        Quickstart
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="../index.html">
+                        User Guide
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../examples/index.html">
+                        Examples
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../api/index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../developer/index.html">
+                        Developer Guide
+                      </a>
+                    </li>
+                
+            <li class="nav-item dropdown pst-header-nav-item">
+                <button class="btn dropdown-toggle nav-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../../resources/index.html">
+                        Resources
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../../opendp-commons/index.html">
+                        OpenDP Commons
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../../contact.html">
+                        Contact
+                      </a>
+                    </li>
+                
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+    <button class="sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../quickstart.html">
+                        Quickstart
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="../index.html">
+                        User Guide
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../examples/index.html">
+                        Examples
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../api/index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../developer/index.html">
+                        Developer Guide
+                      </a>
+                    </li>
+                
+            <li class="nav-item dropdown pst-header-nav-item">
+                <button class="btn dropdown-toggle nav-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-controls="pst-nav-more-links-2">
+                    More
+                </button>
+                <ul id="pst-nav-more-links-2" class="dropdown-menu">
+                    
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../../resources/index.html">
+                        Resources
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../../opendp-commons/index.html">
+                        OpenDP Commons
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../../contact.html">
+                        Contact
+                      </a>
+                    </li>
+                
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../intro.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../limitations.html">Limitations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../programming-framework/index.html">Programming Framework</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../programming-framework/core-structures.html">Core Structures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../programming-framework/supporting-elements.html">Supporting Elements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../programming-framework/a-framework-to-understand-dp.html">A Framework to Understand DP</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Constructors</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Transformations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="measurements.html">Measurements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="combinators.html">Combinators</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../utilities/index.html">Utilities</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../utilities/typing.html">Typing</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../utilities/accuracy/index.html">Accuracy</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../utilities/accuracy/accuracy-pitfalls.html">Accuracy: Pitfalls and Edge Cases</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../utilities/parameter-search.html">Parameter Search</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../putting-it-together.html">Putting It Together</a></li>
+</ul>
+</div>
+</nav></div>
+        <div class="sidebar-primary-item">
+<h6>Branches</h6>
+<ul>
+    <li><a href="../../../beta/index.html" style="font-weight: normal">beta</a></li>
+    <li><a href="../../../nightly/index.html" style="font-weight: normal">nightly</a></li>
+    <li><a href="../../../stable/index.html" style="font-weight: normal">stable</a></li>
+</ul>
+
+
+<h6 id="releases_header">Releases
+    <div id="releases_symbol" style="float:right"></div>
+</h6>
+<ul id="releases_content">
+    <li><a href="../../../v0.14.1/index.html" style="font-weight: normal">v0.14.1</a></li>
+    <li><a href="../../../v0.14.0/index.html" style="font-weight: normal">v0.14.0</a></li>
+    <li><a href="../../../v0.13.0/index.html" style="font-weight: normal">v0.13.0</a></li>
+    <li><a href="../../../v0.12.1/index.html" style="font-weight: normal">v0.12.1</a></li>
+    <li><a href="../../../v0.12.0/index.html" style="font-weight: normal">v0.12.0</a></li>
+    <li><a href="../../../v0.11.1/index.html" style="font-weight: normal">v0.11.1</a></li>
+    <li><a href="../../../v0.11.0/index.html" style="font-weight: normal">v0.11.0</a></li>
+    <li><a href="../../../v0.10.0/index.html" style="font-weight: normal">v0.10.0</a></li>
+    <li><a href="../../../v0.9.2/index.html" style="font-weight: normal">v0.9.2</a></li>
+    <li><a href="../../../v0.9.1/index.html" style="font-weight: normal">v0.9.1</a></li>
+    <li><a href="../../../v0.9.0/index.html" style="font-weight: normal">v0.9.0</a></li>
+    <li><a href="../../../v0.8.0/index.html" style="font-weight: normal">v0.8.0</a></li>
+    <li><a href="../../../v0.7.0/index.html" style="font-weight: normal">v0.7.0</a></li>
+    <li><a href="../../../v0.6.2/index.html" style="font-weight: normal">v0.6.2</a></li>
+    <li><a href="../../../v0.6.1/user/constructors/transformations.html" style="font-weight: normal">v0.6.1</a></li>
+    <li><a href="transformations.html" style="font-weight: bold">v0.6.0</a></li>
+    <li><a href="../../../v0.5.0/index.html" style="font-weight: normal">v0.5.0</a></li>
+    <li><a href="../../../v0.4.0/index.html" style="font-weight: normal">v0.4.0</a></li>
+    <li><a href="../../../v0.3.0/index.html" style="font-weight: normal">v0.3.0</a></li>
+    <li><a href="../../../v0.2.4/index.html" style="font-weight: normal">v0.2.4</a></li>
+    <li><a href="../../../v0.2.3/index.html" style="font-weight: normal">v0.2.3</a></li>
+    <li><a href="../../../v0.2.2/index.html" style="font-weight: normal">v0.2.2</a></li>
+    <li><a href="../../../v0.2.1/index.html" style="font-weight: normal">v0.2.1</a></li>
+    <li><a href="../../../v0.2.0/index.html" style="font-weight: normal">v0.2.0</a></li>
+    <li><a href="../../../v0.1.0/index.html" style="font-weight: normal">v0.1.0</a></li>
+</ul>
+<script>
+    let expanded = !!JSON.parse(localStorage.getItem('expanded'));
+
+    let releasesHeader = document.getElementById("releases_header");
+    let releasesSymbol = document.getElementById("releases_symbol");
+    let releasesContent = document.getElementById("releases_content");
+
+    function setReleasesState() {
+        localStorage.setItem("expanded", JSON.stringify(expanded))
+        releasesContent.style.display = expanded ? "block" : "none";
+        releasesSymbol.classList.add(expanded ? 'minus' : 'plus')
+        releasesSymbol.classList.remove(expanded ? 'plus' : 'minus')
+    }
+
+    setReleasesState()
+    releasesHeader.addEventListener("click", function() {
+        expanded = !expanded;
+        setReleasesState()
+    })
+</script>
+<style>
+    .plus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .plus:before,
+    .plus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .plus:before {
+        left:50%;
+        top:4px;
+        bottom:4px;
+        width:3px;
+        transform:translateX(-50%);
+    }
+
+    .plus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+
+
+
+    .minus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .minus:before,
+    .minus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .minus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+</style>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">User Guide</a></li>
+    
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Constructors</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">Transformations</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item"><div class="admonition warning" style="position: relative;">
+    <!--
+     Without the style, the region for the article title overlaps, and the link is unclickable.
+    -->
+    <details>
+        <summary>Questions or feedback?</summary>
+        <!--
+            All of these lists should be in sync:
+            - README.md
+            - docs/source/contributing/contact.rst
+            - docs/source/_templates/questions-feedback.html
+            - .github/ISSUE_TEMPLATE/config.yml
+        -->
+        <ul>
+            <li>Report a bug or request a feature on <a href="https://github.com/opendp/opendp/issues">Github</a>.</li>
+            <li>Send general queries to <a href="mailto:info@opendp.org">info@opendp.org</a>, or email <a href="mailto:security@opendp.org">security@opendp.org</a> if it is related to security.</li>
+            <li>Join the conversation on <a href="https://join.slack.com/t/opendp/shared_invite/zt-1t8rrbqhd-z8LiZiP06vVE422HJd6ciQ">Slack</a>, or the <a href="https://groups.google.com/a/g.harvard.edu/g/opendp-community">mailing list</a>.</li>
+        </ul>
+    </details>
+</div></div>
+      
+        <div class="header-article-item">
+<div class="admonition warning" style="position: relative;" id="old-version-warning">
+  <!--
+   To work with this locally, in conf.py uncomment the entry under "html_context".
+
+   Without the style, the region for the article title overlaps, and the link is unclickable.
+  -->
+  <p class="admonition-title">
+  
+  This documentation is for an old version of OpenDP.
+  
+  </p>
+  <p>The current release of OpenDP is <a href="/">v0.14.1</a>.</p>
+</div>
+<script>
+  window.addEventListener("load", (event) => {
+    document.getElementById('old-version-warning').style.top = `${window.visualViewport.pageTop}px`;
+  });
+</script>
+</div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="transformations">
+<span id="transformation-constructors"></span><h1>Transformations<a class="headerlink" href="#transformations" title="Link to this heading">#</a></h1>
+<p>This section gives a high-level overview of the transformations that are available in the library.
+Refer to the <a class="reference internal" href="../programming-framework/core-structures.html#transformation"><span class="std std-ref">Transformation</span></a> section for an explanation of what a transformation is.</p>
+<p>As covered in the <a class="reference internal" href="combinators.html#chaining"><span class="std std-ref">Chaining</span></a> section, the intermediate <a class="reference internal" href="../programming-framework/supporting-elements.html#domains"><span class="std std-ref">domains</span></a> need to match when chaining.
+Each transformation has a carefully chosen input domain and output domain that supports their relation.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If you pass information collected directly from the dataset into constructors, the privacy budget will be underestimated.
+Constructor arguments should be either:</p>
+<ul class="simple">
+<li><p>Public information, like information from a codebook or prior domain expertise</p></li>
+<li><p>Other DP releases on the data</p></li>
+</ul>
+</div>
+<p>Preprocessing is the series of transformations that shape the data into a domain that is conformable with the aggregator.</p>
+<p>You will need to choose the proper transformations from the sections below in order to chain with the aggregator you intend to use.
+The sections below are in the order you would typically chain transformations together,
+but you may want to peek at the aggregator section at the end first,
+to identify the input domain that you’ll need to preprocess to.</p>
+<section id="dataframe">
+<h2>Dataframe<a class="headerlink" href="#dataframe" title="Link to this heading">#</a></h2>
+<p>These transformations are for loading data into a dataframe and retrieving columns from a dataframe.
+If you just want to load data from a CSV or TSV into a dataframe,
+you’ll probably want to use <a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_split_dataframe" title="opendp.transformations.make_split_dataframe"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_split_dataframe()</span></code></a>.</p>
+<p>Use <a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_select_column" title="opendp.transformations.make_select_column"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_select_column()</span></code></a> to retrieve a column from the dataframe.</p>
+<p>The other dataframe transformations are more situational.</p>
+<p>Be warned that it is not currently possible to directly load and unload dataframes from the library in bindings languages!
+You need to chain with <code class="docutils literal notranslate"><span class="pre">make_select_column</span></code> first.</p>
+<table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Preprocessor</p></th>
+<th class="head"><p>Input Domain</p></th>
+<th class="head"><p>Output Domain</p></th>
+<th class="head"><p>Input/Output Metric</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_split_dataframe" title="opendp.transformations.make_split_dataframe"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_split_dataframe()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AllDomain&lt;String&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">DataFrameDomain&lt;K&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_split_lines" title="opendp.transformations.make_split_lines"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_split_lines()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AllDomain&lt;String&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;String&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_split_records" title="opendp.transformations.make_split_records"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_split_records()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;String&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;VectorDomain&lt;AllDomain&lt;String&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_create_dataframe" title="opendp.transformations.make_create_dataframe"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_create_dataframe()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;VectorDomain&lt;AllDomain&lt;String&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">DataFrameDomain&lt;K&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_select_column" title="opendp.transformations.make_select_column"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_select_column()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">DataFrameDomain&lt;K&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;TOA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="dataframe-subsetting">
+<h2>Dataframe Subsetting<a class="headerlink" href="#dataframe-subsetting" title="Link to this heading">#</a></h2>
+<p>It can be useful to subset to data that meets a certain condition.
+The library contains some transformations that can be used to create a predicate column,
+and <a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_subset_by" title="opendp.transformations.make_subset_by"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_subset_by()</span></code></a> to filter by the predicate column.</p>
+<table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Preprocessor</p></th>
+<th class="head"><p>Input Domain</p></th>
+<th class="head"><p>Output Domain</p></th>
+<th class="head"><p>Input/Output Metric</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_df_cast_default" title="opendp.transformations.make_df_cast_default"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_df_cast_default()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">DataFrameDomain&lt;K&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">DataFrameDomain&lt;K&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_df_is_equal" title="opendp.transformations.make_df_is_equal"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_df_is_equal()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">DataFrameDomain&lt;K&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">DataFrameDomain&lt;K&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_subset_by" title="opendp.transformations.make_subset_by"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_subset_by()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">DataFrameDomain&lt;K&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">DataFrameDomain&lt;K&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="casting">
+<h2>Casting<a class="headerlink" href="#casting" title="Link to this heading">#</a></h2>
+<p>Any time you want to convert between data types, you’ll want to use a casting transformation.
+In particular, in pipelines that load dataframes from CSV files, it is very common to cast from Strings to some other type.</p>
+<p>Depending on the caster you choose, the output data may be null and you will be required to chain with an imputer.</p>
+<table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Caster</p></th>
+<th class="head"><p>Input Domain</p></th>
+<th class="head"><p>Output Domain</p></th>
+<th class="head"><p>Input/Output Metric</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_cast" title="opendp.transformations.make_cast"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_cast()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;TIA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;OptionNullDomain&lt;AllDomain&lt;TOA&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_cast_default" title="opendp.transformations.make_cast_default"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_cast_default()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;TIA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;TOA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_cast_inherent" title="opendp.transformations.make_cast_inherent"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_cast_inherent()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;TIA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;InherentNullDomain&lt;AllDomain&lt;TOA&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_is_equal" title="opendp.transformations.make_is_equal"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_is_equal()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;TIA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;bool&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_is_null" title="opendp.transformations.make_is_null"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_is_null()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;TIA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;bool&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="imputation">
+<h2>Imputation<a class="headerlink" href="#imputation" title="Link to this heading">#</a></h2>
+<p>Null values are tricky to handle in a differentially private manner.
+If we were to allow aggregations to propagate null,
+then aggregations provide a non-differentially-private bit revealing the existence of nullity in the dataset.
+If we were to implicitly drop nulls from sized aggregations, then the sensitivity of non-null individuals is underestimated.
+Therefore, aggregators must be fed completely non-null data.
+We can ensure data is non-null by imputing.</p>
+<p>When you cast with <a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_cast" title="opendp.transformations.make_cast"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_cast()</span></code></a> or <a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_cast_default" title="opendp.transformations.make_cast_default"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_cast_default()</span></code></a>,
+the cast may fail, so the output domain may include null values (<code class="docutils literal notranslate"><span class="pre">OptionNullDomain</span></code> and <code class="docutils literal notranslate"><span class="pre">InherentNullDomain</span></code>).
+We have provided imputation transformations to transform the data domain to the non-null <code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;TA&gt;&gt;</span></code>.</p>
+<p>You may also be in a situation where you want to bypass dataframe loading and casting
+because you already have a vector of floats loaded into memory.
+In this case, you should start your chain with an imputer if the floats are potentially null.</p>
+<dl class="field-list simple">
+<dt class="field-odd">OptionNullDomain<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A representation of nulls using an Option type (<code class="docutils literal notranslate"><span class="pre">Option&lt;bool&gt;</span></code>, <code class="docutils literal notranslate"><span class="pre">Option&lt;i32&gt;</span></code>, etc).</p>
+</dd>
+<dt class="field-even">InherentNullDomain<span class="colon">:</span></dt>
+<dd class="field-even"><p>A representation of nulls using the data type itself (<code class="docutils literal notranslate"><span class="pre">f32</span></code> and <code class="docutils literal notranslate"><span class="pre">f64</span></code>).</p>
+</dd>
+</dl>
+<p>The <a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_impute_constant" title="opendp.transformations.make_impute_constant"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_impute_constant()</span></code></a> transformation supports imputing on either of these representations of nullity,
+so long as you pass the DA (atomic domain) type argument.</p>
+<table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Imputer</p></th>
+<th class="head"><p>Input Domain</p></th>
+<th class="head"><p>Output Domain</p></th>
+<th class="head"><p>Input/Output Metric</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_impute_constant" title="opendp.transformations.make_impute_constant"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_impute_constant()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;OptionNullDomain&lt;AllDomain&lt;TA&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;TA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_impute_constant" title="opendp.transformations.make_impute_constant"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_impute_constant()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;InherentNullDomain&lt;AllDomain&lt;TA&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;TA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_impute_uniform_float" title="opendp.transformations.make_impute_uniform_float"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_impute_uniform_float()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;InherentNullDomain&lt;AllDomain&lt;TA&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;TA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_drop_null" title="opendp.transformations.make_drop_null"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_drop_null()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;OptionNullDomain&lt;AllDomain&lt;TA&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;TA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_drop_null" title="opendp.transformations.make_drop_null"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_drop_null()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;InherentNullDomain&lt;AllDomain&lt;TA&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;TA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="indexing">
+<h2>Indexing<a class="headerlink" href="#indexing" title="Link to this heading">#</a></h2>
+<p>Indexing operations provide a way to relabel categorical data, or bin numeric data into categorical data.
+These operations work with <cite>usize</cite> data types: an integral data type representing an index.
+<a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_find" title="opendp.transformations.make_find"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_find()</span></code></a> finds the index of each input datum in a set of categories.
+In other words, it transforms a categorical data vector to a vector of numeric indices.</p>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">finder</span> <span class="o">=</span> <span class="p">(</span>
+<span class="gp">... </span>    <span class="n">make_find</span><span class="p">(</span><span class="n">categories</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;B&quot;</span><span class="p">,</span> <span class="s2">&quot;C&quot;</span><span class="p">])</span> <span class="o">&gt;&gt;</span>
+<span class="gp">... </span>    <span class="c1"># impute any input datum that are not a part of the categories list as 3</span>
+<span class="gp">... </span>    <span class="n">make_impute_constant</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">DIA</span><span class="o">=</span><span class="n">OptionNullDomain</span><span class="p">[</span><span class="n">AllDomain</span><span class="p">[</span><span class="s2">&quot;usize&quot;</span><span class="p">]])</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">finder</span><span class="p">([</span><span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;B&quot;</span><span class="p">,</span> <span class="s2">&quot;C&quot;</span><span class="p">,</span> <span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;D&quot;</span><span class="p">])</span>
+<span class="go">[0, 1, 2, 0, 3]</span>
+</pre></div>
+</div>
+<p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_find_bin" title="opendp.transformations.make_find_bin"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_find_bin()</span></code></a> is a binning operation that transforms numerical input data to a vector of bin indices.</p>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">binner</span> <span class="o">=</span> <span class="n">make_find_bin</span><span class="p">(</span><span class="n">edges</span><span class="o">=</span><span class="p">[</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">2.</span><span class="p">,</span> <span class="mf">10.</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">binner</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">3.</span><span class="p">,</span> <span class="mf">15.</span><span class="p">])</span>
+<span class="go">[0, 1, 2, 3]</span>
+</pre></div>
+</div>
+<p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_index" title="opendp.transformations.make_index"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_index()</span></code></a> uses each indicial input datum as an index into a category set.</p>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">indexer</span> <span class="o">=</span> <span class="n">make_index</span><span class="p">(</span><span class="n">categories</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;B&quot;</span><span class="p">,</span> <span class="s2">&quot;C&quot;</span><span class="p">],</span> <span class="n">null</span><span class="o">=</span><span class="s2">&quot;D&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">indexer</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2342</span><span class="p">])</span>
+<span class="go">[&#39;A&#39;, &#39;B&#39;, &#39;C&#39;, &#39;D&#39;, &#39;D&#39;]</span>
+</pre></div>
+</div>
+<p>You can use combinations of the indicial transformers to map hashable data to integers, bin numeric types, relabel hashable types, and label bins.</p>
+<table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Indexer</p></th>
+<th class="head"><p>Input Domain</p></th>
+<th class="head"><p>Output Domain</p></th>
+<th class="head"><p>Input/Output Metric</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_find" title="opendp.transformations.make_find"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_find()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;TIA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;OptionNullDomain&lt;AllDomain&lt;usize&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_find_bin" title="opendp.transformations.make_find_bin"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_find_bin()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;TIA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;usize&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_index" title="opendp.transformations.make_index"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_index()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;usize&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;TOA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="clamping">
+<h2>Clamping<a class="headerlink" href="#clamping" title="Link to this heading">#</a></h2>
+<p>Many aggregators depend on bounded data to limit the influence that perturbing an individual may have on a query.
+For example, the relation downstream for the <a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_bounded_sum" title="opendp.transformations.make_bounded_sum"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_bounded_sum()</span></code></a> aggregator is <code class="docutils literal notranslate"><span class="pre">d_out</span> <span class="pre">&gt;=</span> <span class="pre">d_in</span> <span class="pre">*</span> <span class="pre">max(|L|,</span> <span class="pre">|U|)</span></code>.
+This relation states that adding or removing <code class="docutils literal notranslate"><span class="pre">d_in</span></code> records may influence the sum by <code class="docutils literal notranslate"><span class="pre">d_in</span></code> * the greatest magnitude of a record.</p>
+<p>Any aggregator that needs bounded data will indicate it in the function name.
+In these kinds of aggregators the relations make use of the clamping bounds <code class="docutils literal notranslate"><span class="pre">L</span></code> and <code class="docutils literal notranslate"><span class="pre">U</span></code> to translate <code class="docutils literal notranslate"><span class="pre">d_in</span></code> to <code class="docutils literal notranslate"><span class="pre">d_out</span></code>.</p>
+<p>Clamping happens after casting and imputation but before resizing.
+Only chain with a clamp transformation if the aggregator you intend to use needs bounded data.</p>
+<table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Clamper</p></th>
+<th class="head"><p>Input Domain</p></th>
+<th class="head"><p>Output Domain</p></th>
+<th class="head"><p>Input/Output Metric</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_clamp" title="opendp.transformations.make_clamp"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_clamp()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;TA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;BoundedDomain&lt;TA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_unclamp" title="opendp.transformations.make_unclamp"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_unclamp()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;BoundedDomain&lt;TA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;TA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="dataset-ordering">
+<h2>Dataset Ordering<a class="headerlink" href="#dataset-ordering" title="Link to this heading">#</a></h2>
+<p>Most dataset-to-dataset transformations are not sensitive to the order of elements within the dataset.
+This includes all row-by-row transformations.
+These transformations that are not sensitive to operate with SymmetricDistances.</p>
+<p>Transformations that are sensitive to the order of elements in the dataset use the InsertDeleteDistance metric instead.
+It is common for aggregators to be sensitive to the dataset ordering.</p>
+<p>The following transformations are used to relate dataset metrics that are not sensitive to ordering (<code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code> and <code class="docutils literal notranslate"><span class="pre">ChangeOneDistance</span></code>)
+to metrics that are sensitive to ordering (<code class="docutils literal notranslate"><span class="pre">InsertDeleteDistance</span></code> and <code class="docutils literal notranslate"><span class="pre">HammingDistance</span></code> respectively).</p>
+<p>Take note that there are separate constructors for metric casts on sized vs unsized datasets.</p>
+<table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Caster</p></th>
+<th class="head"><p>Input/Output Domain</p></th>
+<th class="head"><p>Input Metric</p></th>
+<th class="head"><p>Output Metric</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_ordered_random" title="opendp.transformations.make_ordered_random"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_ordered_random()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;TA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">InsertDeleteDistance</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_sized_ordered_random" title="opendp.transformations.make_sized_ordered_random"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_sized_ordered_random()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SizedDomain&lt;VectorDomain&lt;AllDomain&lt;TA&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance/ChangeOneDistance</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">InsertDeleteDistance/HammingDistance</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_sized_bounded_ordered_random" title="opendp.transformations.make_sized_bounded_ordered_random"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_sized_bounded_ordered_random()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SizedDomain&lt;VectorDomain&lt;BoundedDomain&lt;TA&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance/ChangeOneDistance</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">InsertDeleteDistance/HammingDistance</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_unordered" title="opendp.transformations.make_unordered"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_unordered()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;TA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">InsertDeleteDistance</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_sized_unordered" title="opendp.transformations.make_sized_unordered"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_sized_unordered()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SizedDomain&lt;VectorDomain&lt;AllDomain&lt;TA&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance/ChangeOneDistance</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">InsertDeleteDistance/HammingDistance</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_sized_bounded_unordered" title="opendp.transformations.make_sized_bounded_unordered"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_sized_bounded_unordered()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SizedDomain&lt;VectorDomain&lt;AllDomain&lt;TA&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance/ChangeOneDistance</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">InsertDeleteDistance/HammingDistance</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="bounded-metrics">
+<h2>Bounded Metrics<a class="headerlink" href="#bounded-metrics" title="Link to this heading">#</a></h2>
+<p>You may be more familiar with “bounded” differential privacy, where dataset distances are expressed in terms of the number of changed rows.
+Expressing dataset distances in this manner is more restrictive, as edit distances are only valid for datasets with a fixed size.
+Generally speaking, if a dataset differs from a neighboring dataset by no more than <code class="docutils literal notranslate"><span class="pre">k</span></code> edits, then they differ by no more than <code class="docutils literal notranslate"><span class="pre">2k</span></code> additions and removals.
+We therefore write all transformations in terms of the more general “unbounded”-dp metrics <code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code> and <code class="docutils literal notranslate"><span class="pre">InsertDeleteDistance</span></code>,
+and provide the following constructors to convert to/from “bounded”-dp metrics <code class="docutils literal notranslate"><span class="pre">ChangeOneDistance</span></code> and <code class="docutils literal notranslate"><span class="pre">HammingDistance</span></code> respectively.</p>
+<table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Caster</p></th>
+<th class="head"><p>Input/Output Domain</p></th>
+<th class="head"><p>Input Metric</p></th>
+<th class="head"><p>Output Metric</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_metric_bounded" title="opendp.transformations.make_metric_bounded"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_metric_bounded()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SizedDomain&lt;VectorDomain&lt;AllDomain&lt;TA&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ChangeOneDistance</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_metric_bounded" title="opendp.transformations.make_metric_bounded"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_metric_bounded()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SizedDomain&lt;VectorDomain&lt;AllDomain&lt;TA&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">InsertDeleteDistance</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">HammingDistance</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_metric_unbounded" title="opendp.transformations.make_metric_unbounded"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_metric_unbounded()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SizedDomain&lt;VectorDomain&lt;AllDomain&lt;TA&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ChangeOneDistance</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_metric_unbounded" title="opendp.transformations.make_metric_unbounded"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_metric_unbounded()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SizedDomain&lt;VectorDomain&lt;AllDomain&lt;TA&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">HammingDistance</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">InsertDeleteDistance</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="resizing">
+<h2>Resizing<a class="headerlink" href="#resizing" title="Link to this heading">#</a></h2>
+<p>Similarly to data bounds, many aggregators depend on a known dataset size in their relation as well.
+For example, the relation downstream for the <a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_sized_bounded_mean" title="opendp.transformations.make_sized_bounded_mean"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_sized_bounded_mean()</span></code></a> aggregator is <code class="docutils literal notranslate"><span class="pre">d_out</span> <span class="pre">&gt;=</span> <span class="pre">d_in</span> <span class="pre">*</span> <span class="pre">(U</span> <span class="pre">-</span> <span class="pre">L)</span> <span class="pre">/</span> <span class="pre">n</span> <span class="pre">/</span> <span class="pre">2</span></code>.
+Notice that any addition and removal may, in the worst case, change a record from <code class="docutils literal notranslate"><span class="pre">L</span></code> to <code class="docutils literal notranslate"><span class="pre">U</span></code>.
+Such a substitution would influence the mean by <code class="docutils literal notranslate"><span class="pre">(U</span> <span class="pre">-</span> <span class="pre">L)</span> <span class="pre">/</span> <span class="pre">n</span></code>.</p>
+<p>Any aggregator that needs sized data will indicate it in the function name.
+In these kinds of aggregators, the relations need knowledge about the dataset size <code class="docutils literal notranslate"><span class="pre">n</span></code> to translate <code class="docutils literal notranslate"><span class="pre">d_in</span></code> to <code class="docutils literal notranslate"><span class="pre">d_out</span></code>.</p>
+<p>Resizing happens after clamping.
+Only chain with a resize transformation if the aggregator you intend to use needs sized data.</p>
+<p>At this time, there are two separate resize transforms:
+one that works on unbounded data, and one that works on bounded data.
+We intend to merge these in the future.</p>
+<p>The input and output metrics may be configured to any combination of <code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code> and <code class="docutils literal notranslate"><span class="pre">InsertDeleteDistance</span></code>.</p>
+<table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Resizer</p></th>
+<th class="head"><p>Input Domain</p></th>
+<th class="head"><p>Output Domain</p></th>
+<th class="head"><p>Input/Output Metric</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_resize" title="opendp.transformations.make_resize"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_resize()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;TA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SizedDomain&lt;VectorDomain&lt;AllDomain&lt;TA&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance/InsertDeleteDistance</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_bounded_resize" title="opendp.transformations.make_bounded_resize"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_bounded_resize()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;BoundedDomain&lt;TA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;BoundedDomain&lt;TA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance/InsertDeleteDistance</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="aggregators">
+<span id="id1"></span><h2>Aggregators<a class="headerlink" href="#aggregators" title="Link to this heading">#</a></h2>
+<p>Aggregators compute a summary statistic on individual-level data.</p>
+<p>Aggregators that produce scalar-valued statistics have a output_metric of <code class="docutils literal notranslate"><span class="pre">AbsoluteDistance[TO]</span></code>.
+This output metric can be chained with most noise-addition measurements interchangeably.</p>
+<p>However, aggregators that produce vector-valued statistics like <a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_count_by_categories" title="opendp.transformations.make_count_by_categories"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_count_by_categories()</span></code></a>
+provide the option to choose the output metric: <code class="docutils literal notranslate"><span class="pre">L1Distance[TOA]</span></code> or <code class="docutils literal notranslate"><span class="pre">L2Distance[TOA]</span></code>.
+These default to <code class="docutils literal notranslate"><span class="pre">L1Distance[TOA]</span></code>, which chains with L1 noise mechanisms like <a class="reference internal" href="../../api/python/opendp.measurements.html#opendp.measurements.make_base_discrete_laplace" title="opendp.measurements.make_base_discrete_laplace"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.measurements.make_base_discrete_laplace()</span></code></a> and <a class="reference internal" href="../../api/python/opendp.measurements.html#opendp.measurements.make_base_laplace" title="opendp.measurements.make_base_laplace"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.measurements.make_base_laplace()</span></code></a>.
+If you set the output metric to <code class="docutils literal notranslate"><span class="pre">L2Distance[TOA]</span></code>, you can chain with L2 mechanisms like <a class="reference internal" href="../../api/python/opendp.measurements.html#opendp.measurements.make_base_gaussian" title="opendp.measurements.make_base_gaussian"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.measurements.make_base_gaussian()</span></code></a>.</p>
+<p>The constructor <code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.measurements.make_count_by()</span></code> does a similar aggregation as <code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_count_by_categories</span></code>,
+but does not need a category set (you instead chain with <a class="reference internal" href="../../api/python/opendp.measurements.html#opendp.measurements.make_base_ptr" title="opendp.measurements.make_base_ptr"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.measurements.make_base_ptr()</span></code></a>, which uses the propose-test-release framework).</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">make_sized_bounded_covariance</span></code> aggregator is Rust-only at this time because data loaders for data of type <code class="docutils literal notranslate"><span class="pre">Vec&lt;(T,</span> <span class="pre">T)&gt;</span></code> are not implemented.</p>
+<table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Aggregator</p></th>
+<th class="head"><p>Input Domain</p></th>
+<th class="head"><p>Output Domain</p></th>
+<th class="head"><p>Input Metric</p></th>
+<th class="head"><p>Output Metric</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_count" title="opendp.transformations.make_count"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_count()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;TIA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AllDomain&lt;TO&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AbsoluteDistance&lt;TO&gt;</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_count_distinct" title="opendp.transformations.make_count_distinct"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_count_distinct()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;TIA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AllDomain&lt;TO&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AbsoluteDistance&lt;TO&gt;</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_count_by_categories" title="opendp.transformations.make_count_by_categories"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_count_by_categories()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;BoundedDomain&lt;TIA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;AllDomain&lt;TOA&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">L1Distance&lt;TOA&gt;/L2Distance&lt;TOA&gt;</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_count_by" title="opendp.transformations.make_count_by"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_count_by()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;BoundedDomain&lt;TI&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">MapDomain&lt;AllDomain&lt;TI&gt;,AllDomain&lt;TO&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">L1Distance&lt;TO&gt;</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_bounded_sum" title="opendp.transformations.make_bounded_sum"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_bounded_sum()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;BoundedDomain&lt;T&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AllDomain&lt;T&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance/InsertDeleteDistance</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AbsoluteDistance&lt;TO&gt;</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_sized_bounded_sum" title="opendp.transformations.make_sized_bounded_sum"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_sized_bounded_sum()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SizedDomain&lt;VectorDomain&lt;BoundedDomain&lt;T&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AllDomain&lt;T&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance/InsertDeleteDistance</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AbsoluteDistance&lt;TO&gt;</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_sized_bounded_mean" title="opendp.transformations.make_sized_bounded_mean"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_sized_bounded_mean()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SizedDomain&lt;VectorDomain&lt;BoundedDomain&lt;T&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AllDomain&lt;T&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AbsoluteDistance&lt;TO&gt;</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_sized_bounded_variance" title="opendp.transformations.make_sized_bounded_variance"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_sized_bounded_variance()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SizedDomain&lt;VectorDomain&lt;BoundedDomain&lt;T&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AllDomain&lt;T&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AbsoluteDistance&lt;TO&gt;</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>make_sized_bounded_covariance (Rust only)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SizedDomain&lt;VectorDomain&lt;BoundedDomain&lt;(T,T)&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AllDomain&lt;T&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AbsoluteDistance&lt;TO&gt;</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_bounded_sum" title="opendp.transformations.make_bounded_sum"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_bounded_sum()</span></code></a> and <a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_sized_bounded_sum" title="opendp.transformations.make_sized_bounded_sum"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_sized_bounded_sum()</span></code></a> make a best guess as to which summation strategy to use.
+Should you need it, the following constructors give greater control over the sum.</p>
+<details style="margin:-1em 0 2em 4em">
+<summary><a>Expand Me</a></summary><p>The following strategies are ordered by computational efficiency:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">checked</span></code> can be used when the dataset size multiplied by the bounds doesn’t overflow.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">monotonic</span></code> can be used when the bounds share the same sign.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ordered</span></code> can be used when the input metric is <code class="docutils literal notranslate"><span class="pre">InsertDeleteDistance</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">split</span></code> separately sums positive and negative numbers, and then adds these sums together.</p></li>
+</ul>
+<p>All four algorithms are valid for integers, but only <code class="docutils literal notranslate"><span class="pre">checked</span></code> and <code class="docutils literal notranslate"><span class="pre">ordered</span></code> are available for floats.
+There are separate constructors for integers and floats, because floats additionally need a dataset truncation and a slightly larger sensitivity.
+The increase in float sensitivity accounts for inexact floating-point arithmetic, and is calibrated according to the length of the mantissa and underlying summation algorithm.</p>
+<p>Floating-point summation may be further configured to either <code class="docutils literal notranslate"><span class="pre">Sequential&lt;T&gt;</span></code> or <code class="docutils literal notranslate"><span class="pre">Pairwise&lt;T&gt;</span></code> (default).
+Sequential summation results in an <code class="docutils literal notranslate"><span class="pre">O(n^2)</span></code> increase in sensitivity, while pairwise summation results only in a <code class="docutils literal notranslate"><span class="pre">O(log_2(n)n))</span></code> increase.</p>
+<table class="table">
+<thead>
+<tr class="row-odd"><th class="head"><p>Aggregator</p></th>
+<th class="head"><p>Input Domain</p></th>
+<th class="head"><p>Input Metric</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_sized_bounded_int_checked_sum" title="opendp.transformations.make_sized_bounded_int_checked_sum"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_sized_bounded_int_checked_sum()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SizedDomain&lt;VectorDomain&lt;BoundedDomain&lt;T&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_bounded_int_monotonic_sum" title="opendp.transformations.make_bounded_int_monotonic_sum"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_bounded_int_monotonic_sum()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;BoundedDomain&lt;T&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_sized_bounded_int_monotonic_sum" title="opendp.transformations.make_sized_bounded_int_monotonic_sum"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_sized_bounded_int_monotonic_sum()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SizedDomain&lt;VectorDomain&lt;BoundedDomain&lt;T&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_bounded_int_ordered_sum" title="opendp.transformations.make_bounded_int_ordered_sum"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_bounded_int_ordered_sum()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;BoundedDomain&lt;T&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">InsertDeleteDistance</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_sized_bounded_int_ordered_sum" title="opendp.transformations.make_sized_bounded_int_ordered_sum"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_sized_bounded_int_ordered_sum()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SizedDomain&lt;VectorDomain&lt;BoundedDomain&lt;T&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">InsertDeleteDistance</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_bounded_int_split_sum" title="opendp.transformations.make_bounded_int_split_sum"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_bounded_int_split_sum()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;BoundedDomain&lt;T&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_sized_bounded_int_split_sum" title="opendp.transformations.make_sized_bounded_int_split_sum"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_sized_bounded_int_split_sum()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SizedDomain&lt;VectorDomain&lt;BoundedDomain&lt;T&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_bounded_float_checked_sum" title="opendp.transformations.make_bounded_float_checked_sum"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_bounded_float_checked_sum()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;BoundedDomain&lt;T&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_sized_bounded_float_checked_sum" title="opendp.transformations.make_sized_bounded_float_checked_sum"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_sized_bounded_float_checked_sum()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SizedDomain&lt;VectorDomain&lt;BoundedDomain&lt;T&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SymmetricDistance</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_bounded_float_ordered_sum" title="opendp.transformations.make_bounded_float_ordered_sum"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_bounded_float_ordered_sum()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VectorDomain&lt;BoundedDomain&lt;T&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">InsertDeleteDistance</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../../api/python/opendp.transformations.html#opendp.transformations.make_sized_bounded_float_ordered_sum" title="opendp.transformations.make_sized_bounded_float_ordered_sum"><code class="xref py py-func docutils literal notranslate"><span class="pre">opendp.transformations.make_sized_bounded_float_ordered_sum()</span></code></a></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SizedDomain&lt;VectorDomain&lt;BoundedDomain&lt;T&gt;&gt;&gt;</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">InsertDeleteDistance</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</details></section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="index.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Constructors</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="measurements.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Measurements</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#dataframe">Dataframe</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#dataframe-subsetting">Dataframe Subsetting</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#casting">Casting</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#imputation">Imputation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#indexing">Indexing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#clamping">Clamping</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#dataset-ordering">Dataset Ordering</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#bounded-metrics">Bounded Metrics</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#resizing">Resizing</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#aggregators">Aggregators</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../../_sources/user/constructors/transformations.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.3rc1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

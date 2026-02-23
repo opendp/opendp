@@ -1,0 +1,144 @@
+# Generates the documentation for all channels and historical releases, then pushes to the gh-pages branch.
+#
+# INPUTS
+# * dry_run:  Whether to do a dry-run (don't actually push to the gh-pages branch)
+name: Documentation
+on:
+  workflow_call:
+    inputs:
+      # Doesn't take a channel input, because we generate docs for all channels and releases.
+      dry_run:
+        type: boolean
+        required: false
+        default: false
+  workflow_dispatch:
+    inputs:
+      # Doesn't take a channel input, because we generate docs for all channels and releases.
+      dry_run:
+        description: Dry Run?
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  credential-check:
+    uses: ./.github/workflows/credential-check.yml
+    with:
+      assert_version: false
+
+  r-docs:
+    needs: credential-check
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: stable
+
+      - name: Setup Pandoc
+        uses: pandoc/actions/setup@v1
+        with:
+          version: 2.19.2
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          working-directory: R/opendp
+          extra-packages: devtools
+
+      - name: Build docs
+        run: bash tools/r_stage.sh -u
+
+      - name: Upload docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: r_docs
+          path: R/opendp/docs
+
+  docs:
+    needs:
+      - credential-check
+      - r-docs
+    runs-on: ubuntu-22.04
+    env:
+      # don't attempt to load binaries when sourcing the library
+      OPENDP_HEADLESS: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Make sure we get all refs needed to build docs for different versions
+          fetch-depth: 0
+
+      - name: Build docs site
+        run: |
+          sudo apt-get install -y pandoc
+          echo "Install Sphinx and deploy docs..."
+          cd docs
+          python --version
+          python -m venv .venv-docs
+          source .venv-docs/bin/activate
+          
+          echo "Upgrade pip and install requirements."
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+          echo "Create docs."
+          make versions
+          cp -r build /tmp
+          cd ..
+          git fetch
+          git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          git config --global user.name "$GITHUB_ACTOR"
+
+          # create brand new history each time
+          git checkout --orphan gh-pages
+          
+          # sudo to have sufficient permission to delete files created by the docker user while compiling .tex
+          sudo rm -rf *
+          echo docs.opendp.org > CNAME
+          echo "for underscore directories" > .nojekyll
+          cp -r /tmp/build/html/* .
+      
+      - name: Download R Docs
+        uses: actions/download-artifact@v4
+        with:
+          name: r_docs
+          path: en/stable/api/r
+      
+      - name: Checkout artifacts
+        uses: actions/checkout@v4
+        with:
+          repository: 'opendp/artifacts'
+          path: ./artifacts
+
+      - name: Populate docs site with pdfs
+        run: |
+          # copy each folder over
+          for folder in en/*; do
+            release=$(basename $folder)
+            source=artifacts/release/$release
+            target=$folder/proofs
+
+            if [ -d "$source" ]; then
+              echo "moving $source/* to $target"
+              mkdir -p "$target"
+              mv "$source"/* "$target"
+            fi
+          done
+          
+          # discard unused pdfs
+          rm -r artifacts
+
+      - name: Push docs to gh-pages branch
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git add --all --force
+          echo "Push docs to gh-pages branch"
+          git commit --allow-empty-message --message "$(git log $(git rev-parse origin/main) --oneline --format=%B -n1 | head -n1)"
+          git remote set-url origin "https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY"
+          git push --force origin gh-pages
+        continue-on-error: true

@@ -1,0 +1,1946 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>opendp.context &#8212; OpenDP</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=eafc0fe6" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=4f92a2c4" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+    <script src="../../_static/documentation_options.js?v=9e420a66"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/opendp/context';</script>
+    <link rel="icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Feb 23, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+
+
+<script>
+document.write(`<aside class="bd-header-announcement" aria-label="Announcement"></aside>`);
+fetch("https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html")
+  .then(res => {return res.text();})
+  .then(data => {
+    if (data.length === 0) {
+      console.log("[PST]: Empty announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+      return;
+    }
+    div = document.querySelector(".bd-header-announcement");
+    div.classList.add(...["bd-header-announcement", "container-fluid", "init"]);
+    div.innerHTML = `<div class="bd-header-announcement__content">${data}</div>`;
+    // At least 3rem height
+    const autoHeight = Math.min(
+      div.offsetHeight,
+      3 * parseFloat(getComputedStyle(document.documentElement).fontSize));
+    // Set height and vertical padding to 0 to prepare the height transition
+    div.style.setProperty("height", 0);
+    div.style.setProperty("padding-top", 0);
+    div.style.setProperty("padding-bottom", 0);
+    div.classList.remove("init");
+    // Set height to the computed height with a small timeout to activate the transition
+    setTimeout(() => {
+      div.style.setProperty("height", `${autoHeight}px`);
+      // Wait for a bit more than 300ms (the transition duration) then remove the
+      // forcefully set styles and let CSS take over
+      setTimeout(() => {
+        div.style.removeProperty("padding-top");
+        div.style.removeProperty("padding-bottom");
+        div.style.removeProperty("height");
+        div.style.setProperty("min-height", "3rem");
+      }, 320);
+    }, 10);
+  })
+  .catch(error => {
+    console.log("[PST]: Failed to load announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+  });
+</script>
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <button class="sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/opendp-logo.png" class="logo__image only-light" alt="OpenDP - Home"/>
+    <script>document.write(`<img src="../../_static/opendp-logo.png" class="logo__image only-dark" alt="OpenDP - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../getting-started/index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../api/index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../theory/index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../getting-started/index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../api/index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../theory/index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<h6>Branches</h6>
+<ul>
+    <li><a href="../../../beta/index.html" style="font-weight: normal">beta</a></li>
+    <li><a href="../../../nightly/index.html" style="font-weight: normal">nightly</a></li>
+    <li><a href="../../../stable/index.html" style="font-weight: normal">stable</a></li>
+</ul>
+
+
+<h6 id="releases_header">Releases
+    <div id="releases_symbol" style="float:right"></div>
+</h6>
+<ul id="releases_content">
+    <li><a href="../../../v0.14.1/index.html" style="font-weight: normal">v0.14.1</a></li>
+    <li><a href="context.html" style="font-weight: bold">v0.14.0</a></li>
+    <li><a href="../../../v0.13.0/index.html" style="font-weight: normal">v0.13.0</a></li>
+    <li><a href="../../../v0.12.1/index.html" style="font-weight: normal">v0.12.1</a></li>
+    <li><a href="../../../v0.12.0/index.html" style="font-weight: normal">v0.12.0</a></li>
+    <li><a href="../../../v0.11.1/index.html" style="font-weight: normal">v0.11.1</a></li>
+    <li><a href="../../../v0.11.0/index.html" style="font-weight: normal">v0.11.0</a></li>
+    <li><a href="../../../v0.10.0/index.html" style="font-weight: normal">v0.10.0</a></li>
+    <li><a href="../../../v0.9.2/index.html" style="font-weight: normal">v0.9.2</a></li>
+    <li><a href="../../../v0.9.1/index.html" style="font-weight: normal">v0.9.1</a></li>
+    <li><a href="../../../v0.9.0/index.html" style="font-weight: normal">v0.9.0</a></li>
+    <li><a href="../../../v0.8.0/index.html" style="font-weight: normal">v0.8.0</a></li>
+    <li><a href="../../../v0.7.0/index.html" style="font-weight: normal">v0.7.0</a></li>
+    <li><a href="../../../v0.6.2/index.html" style="font-weight: normal">v0.6.2</a></li>
+    <li><a href="../../../v0.6.1/index.html" style="font-weight: normal">v0.6.1</a></li>
+    <li><a href="../../../v0.6.0/index.html" style="font-weight: normal">v0.6.0</a></li>
+    <li><a href="../../../v0.5.0/index.html" style="font-weight: normal">v0.5.0</a></li>
+    <li><a href="../../../v0.4.0/index.html" style="font-weight: normal">v0.4.0</a></li>
+    <li><a href="../../../v0.3.0/index.html" style="font-weight: normal">v0.3.0</a></li>
+    <li><a href="../../../v0.2.4/index.html" style="font-weight: normal">v0.2.4</a></li>
+    <li><a href="../../../v0.2.3/index.html" style="font-weight: normal">v0.2.3</a></li>
+    <li><a href="../../../v0.2.2/index.html" style="font-weight: normal">v0.2.2</a></li>
+    <li><a href="../../../v0.2.1/index.html" style="font-weight: normal">v0.2.1</a></li>
+    <li><a href="../../../v0.2.0/index.html" style="font-weight: normal">v0.2.0</a></li>
+    <li><a href="../../../v0.1.0/index.html" style="font-weight: normal">v0.1.0</a></li>
+</ul>
+<script>
+    let expanded = !!JSON.parse(localStorage.getItem('expanded'));
+
+    let releasesHeader = document.getElementById("releases_header");
+    let releasesSymbol = document.getElementById("releases_symbol");
+    let releasesContent = document.getElementById("releases_content");
+
+    function setReleasesState() {
+        localStorage.setItem("expanded", JSON.stringify(expanded))
+        releasesContent.style.display = expanded ? "block" : "none";
+        releasesSymbol.classList.add(expanded ? 'minus' : 'plus')
+        releasesSymbol.classList.remove(expanded ? 'plus' : 'minus')
+    }
+
+    setReleasesState()
+    releasesHeader.addEventListener("click", function() {
+        expanded = !expanded;
+        setReleasesState()
+    })
+</script>
+<style>
+    .plus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .plus:before,
+    .plus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .plus:before {
+        left:50%;
+        top:4px;
+        bottom:4px;
+        width:3px;
+        transform:translateX(-50%);
+    }
+
+    .plus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+
+
+
+    .minus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .minus:before,
+    .minus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .minus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+</style>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">opendp.context</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item"><div class="admonition warning" style="position: relative;">
+    <!--
+     Without the style, the region for the article title overlaps, and the link is unclickable.
+    -->
+    <details>
+        <summary>Questions or feedback?</summary>
+        <!--
+            All of these lists should be in sync:
+            - README.md
+            - docs/source/contributing/contact.rst
+            - docs/source/_templates/questions-feedback.html
+            - .github/ISSUE_TEMPLATE/config.yml
+        -->
+        <ul>
+            <li>Report a bug or request a feature on <a href="https://github.com/opendp/opendp/issues">Github</a>.</li>
+            <li>Send general queries to <a href="mailto:info@opendp.org">info@opendp.org</a>, or email <a href="mailto:security@opendp.org">security@opendp.org</a> if it is related to security.</li>
+            <li>Join the conversation on <a href="https://join.slack.com/t/opendp/shared_invite/zt-1t8rrbqhd-z8LiZiP06vVE422HJd6ciQ">Slack</a>, or the <a href="https://groups.google.com/a/g.harvard.edu/g/opendp-community">mailing list</a>.</li>
+        </ul>
+    </details>
+</div></div>
+      
+        <div class="header-article-item">
+<div class="admonition warning" style="position: relative;" id="old-version-warning">
+  <!--
+   To work with this locally, in conf.py uncomment the entry under "html_context".
+
+   Without the style, the region for the article title overlaps, and the link is unclickable.
+  -->
+  <p class="admonition-title">
+  
+  This documentation is for an old version of OpenDP.
+  
+  </p>
+  <p>The current release of OpenDP is <a href="/">v0.14.1</a>.</p>
+</div>
+<script>
+  window.addEventListener("load", (event) => {
+    document.getElementById('old-version-warning').style.top = `${window.visualViewport.pageTop}px`;
+  });
+</script>
+</div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for opendp.context</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">The ``context`` module provides :py:class:`opendp.context.Context` and supporting utilities.</span>
+
+<span class="sd">For more context, see :ref:`context in the User Guide &lt;context-user-guide&gt;`.</span>
+
+<span class="sd">For convenience, all the members of this module are also available from :py:mod:`opendp.prelude`.</span>
+<span class="sd">We suggest importing under the conventional name ``dp``:</span>
+
+<span class="sd">.. code:: pycon</span>
+
+<span class="sd">    &gt;&gt;&gt; import opendp.prelude as dp</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Type</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">MutableMapping</span>
+<span class="kn">import</span> <span class="nn">importlib</span>
+<span class="kn">from</span> <span class="nn">inspect</span> <span class="kn">import</span> <span class="n">signature</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">partial</span>
+<span class="kn">from</span> <span class="nn">opendp.combinators</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">make_fix_delta</span><span class="p">,</span>
+    <span class="n">make_approximate</span><span class="p">,</span>
+    <span class="n">make_fully_adaptive_composition</span><span class="p">,</span>
+    <span class="n">make_privacy_filter</span><span class="p">,</span>
+    <span class="n">make_pureDP_to_zCDP</span><span class="p">,</span>
+    <span class="n">make_adaptive_composition</span><span class="p">,</span>
+    <span class="n">make_zCDP_to_approxDP</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">opendp.domains</span> <span class="kn">import</span> <span class="n">atom_domain</span><span class="p">,</span> <span class="n">vector_domain</span><span class="p">,</span> <span class="n">with_margin</span>
+<span class="kn">from</span> <span class="nn">opendp.extras._utilities</span> <span class="kn">import</span> <span class="n">supports_partial</span><span class="p">,</span> <span class="n">to_then</span>
+<span class="kn">from</span> <span class="nn">opendp.measurements</span> <span class="kn">import</span> <span class="n">make_laplace</span><span class="p">,</span> <span class="n">make_gaussian</span>
+<span class="kn">from</span> <span class="nn">opendp.measures</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">approximate</span><span class="p">,</span>
+    <span class="n">max_divergence</span><span class="p">,</span>
+    <span class="n">zero_concentrated_divergence</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">opendp.metrics</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">absolute_distance</span><span class="p">,</span>
+    <span class="n">change_one_distance</span><span class="p">,</span>
+    <span class="n">change_one_id_distance</span><span class="p">,</span>
+    <span class="n">discrete_distance</span><span class="p">,</span>
+    <span class="n">hamming_distance</span><span class="p">,</span>
+    <span class="n">insert_delete_distance</span><span class="p">,</span>
+    <span class="n">l1_distance</span><span class="p">,</span>
+    <span class="n">l2_distance</span><span class="p">,</span>
+    <span class="n">frame_distance</span><span class="p">,</span>
+    <span class="n">symmetric_distance</span><span class="p">,</span>
+    <span class="n">symmetric_id_distance</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">opendp.mod</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ApproximateDivergence</span><span class="p">,</span>
+    <span class="n">Domain</span><span class="p">,</span>
+    <span class="n">Measurement</span><span class="p">,</span>
+    <span class="n">Metric</span><span class="p">,</span>
+    <span class="n">_PartialConstructor</span><span class="p">,</span>
+    <span class="n">Odometer</span><span class="p">,</span>
+    <span class="n">OdometerQueryable</span><span class="p">,</span>
+    <span class="n">Queryable</span><span class="p">,</span>
+    <span class="n">Transformation</span><span class="p">,</span>
+    <span class="n">Measure</span><span class="p">,</span>
+    <span class="n">binary_search</span><span class="p">,</span>
+    <span class="n">binary_search_param</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">opendp.typing</span> <span class="kn">import</span> <span class="n">RuntimeType</span>
+<span class="kn">from</span> <span class="nn">opendp._lib</span> <span class="kn">import</span> <span class="n">indent</span><span class="p">,</span> <span class="n">import_optional_dependency</span>
+<span class="kn">from</span> <span class="nn">opendp.extras.polars</span> <span class="kn">import</span> <span class="n">Bound</span><span class="p">,</span> <span class="n">LazyFrameQuery</span><span class="p">,</span> <span class="n">Margin</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">replace</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;space_of&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;domain_of&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;metric_of&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;loss_of&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;unit_of&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Context&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Query&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Chain&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;PartialChain&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;register&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<span class="c1"># a dictionary of &quot;constructor name&quot; -&gt; (constructor_function, is_partial)</span>
+<span class="c1"># &quot;constructor name&quot; is the name of the constructor without the &quot;make_&quot; prefix</span>
+<span class="c1"># constructor_function is the partial version if is_partial is True</span>
+<span class="n">constructors</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="k">for</span> <span class="n">module_name</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;transformations&quot;</span><span class="p">,</span> <span class="s2">&quot;measurements&quot;</span><span class="p">]:</span>
+    <span class="n">module</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;opendp.</span><span class="si">{</span><span class="n">module_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">module</span><span class="o">.</span><span class="n">__all__</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;make_&quot;</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="n">partial_name</span> <span class="o">=</span> <span class="s2">&quot;then_&quot;</span> <span class="o">+</span> <span class="n">name</span><span class="p">[</span><span class="mi">5</span><span class="p">:]</span>
+        <span class="n">make_func</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+
+        <span class="n">is_partial</span> <span class="o">=</span> <span class="n">partial_name</span> <span class="ow">in</span> <span class="n">module</span><span class="o">.</span><span class="n">__all__</span>
+        <span class="n">constructor</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">partial_name</span> <span class="k">if</span> <span class="n">is_partial</span> <span class="k">else</span> <span class="n">name</span><span class="p">)</span>
+
+        <span class="n">constructors</span><span class="p">[</span><span class="n">name</span><span class="p">[</span><span class="mi">5</span><span class="p">:]]</span> <span class="o">=</span> <span class="n">constructor</span><span class="p">,</span> <span class="n">is_partial</span>
+
+
+<div class="viewcode-block" id="register">
+<a class="viewcode-back" href="../../api/python/opendp.context.html#opendp.context.register">[docs]</a>
+<span class="k">def</span> <span class="nf">register</span><span class="p">(</span>
+    <span class="n">constructor</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="n">Transformation</span><span class="p">,</span> <span class="n">Measurement</span><span class="p">]],</span>
+    <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Register a constructor function to be used in the Context API.</span>
+
+<span class="sd">    If the constructor supports partial application (first two arguments are ``input_domain`` and ``input_metric``),</span>
+<span class="sd">    then the input domain and input metric are omitted when called via the Context API.</span>
+
+<span class="sd">    Constructor requirements:</span>
+
+<span class="sd">    * The constructor must return a transformation or measurement.</span>
+<span class="sd">    * If name is None, the constructor&#39;s name must start with ``make_``.</span>
+
+<span class="sd">    :param constructor: The constructor function to register.</span>
+<span class="sd">    :param name: The name to register the constructor under in the Context API. If None, the name will be derived from the constructor&#39;s name.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">constructor</span><span class="o">.</span><span class="vm">__name__</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;make_&quot;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;constructor.__name__ must start with &#39;make_&#39;, found </span><span class="si">{</span><span class="n">constructor</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">constructor</span><span class="o">.</span><span class="vm">__name__</span><span class="p">[</span><span class="mi">5</span><span class="p">:]</span>
+
+    <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">constructors</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; is already registered in the Context API. Please choose a different name.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">supports_partial</span><span class="p">(</span><span class="n">constructor</span><span class="p">):</span>
+        <span class="n">constructors</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">to_then</span><span class="p">(</span><span class="n">constructor</span><span class="p">),</span> <span class="kc">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">constructors</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">constructor</span><span class="p">,</span> <span class="kc">False</span></div>
+
+
+
+<div class="viewcode-block" id="space_of">
+<a class="viewcode-back" href="../../api/python/opendp.context.html#opendp.context.space_of">[docs]</a>
+<span class="k">def</span> <span class="nf">space_of</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="n">M</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">infer</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Domain</span><span class="p">,</span> <span class="n">Metric</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A shorthand for building a metric space.</span>
+
+<span class="sd">    A metric space consists of a domain and a metric.</span>
+
+<span class="sd">    &gt;&gt;&gt; import opendp.prelude as dp</span>
+<span class="sd">    ...</span>
+<span class="sd">    &gt;&gt;&gt; dp.space_of(list[int])</span>
+<span class="sd">    (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())</span>
+<span class="sd">    &gt;&gt;&gt; # the verbose form allows greater control:</span>
+<span class="sd">    &gt;&gt;&gt; (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.symmetric_distance())</span>
+<span class="sd">    (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())</span>
+
+<span class="sd">    :param T: carrier type (the type of members in the domain)</span>
+<span class="sd">    :param M: metric type</span>
+<span class="sd">    :param infer: if True, ``T`` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">opendp.typing</span> <span class="k">as</span> <span class="nn">ty</span>
+
+    <span class="n">domain</span> <span class="o">=</span> <span class="n">domain_of</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="n">infer</span><span class="o">=</span><span class="n">infer</span><span class="p">)</span>
+    <span class="n">D</span> <span class="o">=</span> <span class="n">domain</span><span class="o">.</span><span class="n">type</span>
+
+    <span class="c1"># choose a metric type if not set</span>
+    <span class="k">if</span> <span class="n">M</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">D</span><span class="o">.</span><span class="n">origin</span> <span class="o">==</span> <span class="s2">&quot;VectorDomain&quot;</span><span class="p">:</span>  <span class="c1"># type: ignore[union-attr]</span>
+            <span class="n">M</span> <span class="o">=</span> <span class="n">ty</span><span class="o">.</span><span class="n">SymmetricDistance</span>
+        <span class="k">elif</span> <span class="n">D</span><span class="o">.</span><span class="n">origin</span> <span class="o">==</span> <span class="s2">&quot;AtomDomain&quot;</span> <span class="ow">and</span> <span class="n">ty</span><span class="o">.</span><span class="n">get_atom</span><span class="p">(</span><span class="n">D</span><span class="p">)</span> <span class="ow">in</span> <span class="n">ty</span><span class="o">.</span><span class="n">_NUMERIC_TYPES</span><span class="p">:</span>  <span class="c1"># type: ignore[union-attr]</span>
+            <span class="n">M</span> <span class="o">=</span> <span class="n">ty</span><span class="o">.</span><span class="n">AbsoluteDistance</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;no default metric for domain </span><span class="si">{</span><span class="n">D</span><span class="si">}</span><span class="s2">. Please set `M`&quot;</span>
+            <span class="p">)</span>  <span class="c1"># pragma: no cover</span>
+
+    <span class="c1"># choose a distance type if not set</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">ty</span><span class="o">.</span><span class="n">RuntimeType</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">M</span><span class="o">.</span><span class="n">args</span><span class="p">:</span>
+        <span class="n">M</span> <span class="o">=</span> <span class="n">M</span><span class="p">[</span><span class="n">ty</span><span class="o">.</span><span class="n">get_atom</span><span class="p">(</span><span class="n">D</span><span class="p">)]</span>  <span class="c1"># type: ignore[index]</span>
+
+    <span class="k">return</span> <span class="n">domain</span><span class="p">,</span> <span class="n">metric_of</span><span class="p">(</span><span class="n">M</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="domain_of">
+<a class="viewcode-back" href="../../api/python/opendp.context.html#opendp.context.domain_of">[docs]</a>
+<span class="k">def</span> <span class="nf">domain_of</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="n">infer</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Domain</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Constructs an instance of a domain from carrier type ``T``, or from an example.</span>
+
+<span class="sd">    Accepts a limited set of Python type expressions:</span>
+
+<span class="sd">    &gt;&gt;&gt; import opendp.prelude as dp</span>
+<span class="sd">    &gt;&gt;&gt; dp.domain_of(list[int])</span>
+<span class="sd">    VectorDomain(AtomDomain(T=i32))</span>
+
+<span class="sd">    As well as strings representing types in the underlying Rust syntax:</span>
+
+<span class="sd">    &gt;&gt;&gt; dp.domain_of(&#39;Vec&lt;int&gt;&#39;)</span>
+<span class="sd">    VectorDomain(AtomDomain(T=i32))</span>
+
+<span class="sd">    Dictionaries, optional types, and a range of primitive types are supported:</span>
+
+<span class="sd">    &gt;&gt;&gt; dp.domain_of(dict[str, int])</span>
+<span class="sd">    MapDomain { key_domain: AtomDomain(T=String), value_domain: AtomDomain(T=i32) }</span>
+
+<span class="sd">    .. TODO: Support python syntax for Option: https://github.com/opendp/opendp/issues/1389</span>
+
+<span class="sd">    &gt;&gt;&gt; dp.domain_of(&#39;Option&lt;int&gt;&#39;)  # Python&#39;s `Optional` is not supported.</span>
+<span class="sd">    OptionDomain(AtomDomain(T=i32))</span>
+<span class="sd">    &gt;&gt;&gt; dp.domain_of(dp.i32)</span>
+<span class="sd">    AtomDomain(T=i32)</span>
+
+<span class="sd">    More complex types are not supported:</span>
+
+<span class="sd">    &gt;&gt;&gt; dp.domain_of(list[list[int]]) # doctest: +IGNORE_EXCEPTION_DETAIL</span>
+<span class="sd">    Traceback (most recent call last):</span>
+<span class="sd">    ...</span>
+<span class="sd">    opendp.mod.OpenDPException:</span>
+<span class="sd">      FFI(&quot;Inner domain of VectorDomain must be AtomDomain or ExtrinsicDomain (created via user_domain)&quot;)</span>
+
+<span class="sd">    Alternatively, an example of the data can be provided, but note that passing sensitive data may result in a privacy violation:</span>
+
+<span class="sd">    &gt;&gt;&gt; dp.domain_of([1, 2, 3], infer=True)</span>
+<span class="sd">    VectorDomain(AtomDomain(T=i32))</span>
+
+<span class="sd">    :param T: carrier type</span>
+<span class="sd">    :param infer: if True, ``T`` is an example of the sensitive dataset. Passing sensitive data may result in a privacy violation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">opendp.typing</span> <span class="k">as</span> <span class="nn">ty</span>
+    <span class="kn">from</span> <span class="nn">opendp.domains</span> <span class="kn">import</span> <span class="n">vector_domain</span><span class="p">,</span> <span class="n">atom_domain</span><span class="p">,</span> <span class="n">option_domain</span><span class="p">,</span> <span class="n">map_domain</span>
+
+    <span class="k">if</span> <span class="n">infer</span><span class="p">:</span>
+        <span class="n">pl</span> <span class="o">=</span> <span class="n">import_optional_dependency</span><span class="p">(</span><span class="s2">&quot;polars&quot;</span><span class="p">,</span> <span class="n">raise_error</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">pl</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="n">pl</span><span class="o">.</span><span class="n">LazyFrame</span><span class="p">):</span>
+            <span class="kn">from</span> <span class="nn">opendp.extras.polars</span> <span class="kn">import</span> <span class="n">_lazyframe_domain_from_schema</span>
+
+            <span class="k">return</span> <span class="n">_lazyframe_domain_from_schema</span><span class="p">(</span><span class="n">T</span><span class="o">.</span><span class="n">collect_schema</span><span class="p">())</span>
+
+    <span class="c1"># normalize to a type descriptor</span>
+    <span class="k">if</span> <span class="n">infer</span><span class="p">:</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="n">ty</span><span class="o">.</span><span class="n">RuntimeType</span><span class="o">.</span><span class="n">infer</span><span class="p">(</span><span class="n">T</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="n">ty</span><span class="o">.</span><span class="n">RuntimeType</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">T</span><span class="p">)</span>
+
+    <span class="c1"># construct the domain</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="n">ty</span><span class="o">.</span><span class="n">RuntimeType</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">T</span><span class="o">.</span><span class="n">origin</span> <span class="o">==</span> <span class="s2">&quot;Vec&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">vector_domain</span><span class="p">(</span><span class="n">domain_of</span><span class="p">(</span><span class="n">T</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">T</span><span class="o">.</span><span class="n">origin</span> <span class="o">==</span> <span class="s2">&quot;HashMap&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">map_domain</span><span class="p">(</span><span class="n">domain_of</span><span class="p">(</span><span class="n">T</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">domain_of</span><span class="p">(</span><span class="n">T</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">T</span><span class="o">.</span><span class="n">origin</span> <span class="o">==</span> <span class="s2">&quot;Option&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">option_domain</span><span class="p">(</span><span class="n">domain_of</span><span class="p">(</span><span class="n">T</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+    <span class="k">if</span> <span class="n">T</span> <span class="ow">in</span> <span class="n">ty</span><span class="o">.</span><span class="n">_PRIMITIVE_TYPES</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="n">T</span><span class="p">)</span>
+
+    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;unrecognized carrier type: </span><span class="si">{</span><span class="n">T</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>  <span class="c1"># pragma: no cover</span></div>
+
+
+
+<div class="viewcode-block" id="metric_of">
+<a class="viewcode-back" href="../../api/python/opendp.context.html#opendp.context.metric_of">[docs]</a>
+<span class="k">def</span> <span class="nf">metric_of</span><span class="p">(</span><span class="n">M</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Metric</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Constructs an instance of a metric from metric type ``M``.</span>
+
+<span class="sd">    :param M: Metric type</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">opendp.typing</span> <span class="k">as</span> <span class="nn">ty</span>
+    <span class="kn">import</span> <span class="nn">opendp.metrics</span> <span class="k">as</span> <span class="nn">metrics</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">Metric</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">M</span>
+    <span class="n">M</span> <span class="o">=</span> <span class="n">ty</span><span class="o">.</span><span class="n">RuntimeType</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">M</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">ty</span><span class="o">.</span><span class="n">RuntimeType</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">M</span><span class="o">.</span><span class="n">origin</span> <span class="o">==</span> <span class="s2">&quot;AbsoluteDistance&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">metrics</span><span class="o">.</span><span class="n">absolute_distance</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="n">M</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">M</span><span class="o">.</span><span class="n">origin</span> <span class="o">==</span> <span class="s2">&quot;L1Distance&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">metrics</span><span class="o">.</span><span class="n">l1_distance</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="n">M</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">M</span><span class="o">.</span><span class="n">origin</span> <span class="o">==</span> <span class="s2">&quot;L2Distance&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">metrics</span><span class="o">.</span><span class="n">l2_distance</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="n">M</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="k">if</span> <span class="n">M</span> <span class="o">==</span> <span class="n">ty</span><span class="o">.</span><span class="n">HammingDistance</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">metrics</span><span class="o">.</span><span class="n">hamming_distance</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">M</span> <span class="o">==</span> <span class="n">ty</span><span class="o">.</span><span class="n">SymmetricDistance</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">metrics</span><span class="o">.</span><span class="n">symmetric_distance</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">M</span> <span class="o">==</span> <span class="n">ty</span><span class="o">.</span><span class="n">InsertDeleteDistance</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">metrics</span><span class="o">.</span><span class="n">insert_delete_distance</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">M</span> <span class="o">==</span> <span class="n">ty</span><span class="o">.</span><span class="n">ChangeOneDistance</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">metrics</span><span class="o">.</span><span class="n">change_one_distance</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">M</span> <span class="o">==</span> <span class="n">ty</span><span class="o">.</span><span class="n">DiscreteDistance</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">metrics</span><span class="o">.</span><span class="n">discrete_distance</span><span class="p">()</span>
+
+    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;unrecognized metric: </span><span class="si">{</span><span class="n">M</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>  <span class="c1"># pragma: no cover</span></div>
+
+
+
+<div class="viewcode-block" id="loss_of">
+<a class="viewcode-back" href="../../api/python/opendp.context.html#opendp.context.loss_of">[docs]</a>
+<span class="k">def</span> <span class="nf">loss_of</span><span class="p">(</span>
+    <span class="n">epsilon</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">delta</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">rho</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Measure</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Constructs a privacy loss, consisting of a privacy measure and a privacy loss parameter.</span>
+
+<span class="sd">    &gt;&gt;&gt; import opendp.prelude as dp</span>
+<span class="sd">    &gt;&gt;&gt; dp.loss_of(epsilon=1.0)</span>
+<span class="sd">    (MaxDivergence, 1.0)</span>
+<span class="sd">    &gt;&gt;&gt; dp.loss_of(epsilon=1.0, delta=1e-9)</span>
+<span class="sd">    (Approximate(MaxDivergence), (1.0, 1e-09))</span>
+<span class="sd">    &gt;&gt;&gt; dp.loss_of(rho=1.0)</span>
+<span class="sd">    (ZeroConcentratedDivergence, 1.0)</span>
+
+<span class="sd">    :param epsilon: Parameter for pure ε-DP.</span>
+<span class="sd">    :param delta: Parameter for δ-approximate DP.</span>
+<span class="sd">    :param rho: Parameter for zero-concentrated ρ-DP.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">_range_warning</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">info_level</span><span class="p">,</span> <span class="n">warn_level</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="o">&gt;</span> <span class="n">warn_level</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">info_level</span> <span class="o">==</span> <span class="n">warn_level</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> should be less than or equal to </span><span class="si">{</span><span class="n">warn_level</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> should be less than or equal to </span><span class="si">{</span><span class="n">warn_level</span><span class="si">}</span><span class="s2">, and is typically less than or equal to </span><span class="si">{</span><span class="n">info_level</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">value</span> <span class="o">&gt;</span> <span class="n">info_level</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> is typically less than or equal to </span><span class="si">{</span><span class="n">info_level</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="p">[</span><span class="n">rho</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">,</span> <span class="n">epsilon</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">]</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;Either epsilon or rho must be specified, and they are mutually exclusive.&quot;</span>
+        <span class="p">)</span>  <span class="c1"># pragma: no cover</span>
+
+    <span class="k">if</span> <span class="n">epsilon</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">_range_warning</span><span class="p">(</span><span class="s2">&quot;epsilon&quot;</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">measure</span><span class="p">,</span> <span class="n">loss</span> <span class="o">=</span> <span class="n">max_divergence</span><span class="p">(),</span> <span class="n">epsilon</span>
+
+    <span class="k">if</span> <span class="n">rho</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">_range_warning</span><span class="p">(</span><span class="s2">&quot;rho&quot;</span><span class="p">,</span> <span class="n">rho</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)</span>
+        <span class="n">measure</span><span class="p">,</span> <span class="n">loss</span> <span class="o">=</span> <span class="n">zero_concentrated_divergence</span><span class="p">(),</span> <span class="n">rho</span>
+
+    <span class="k">if</span> <span class="n">delta</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">measure</span><span class="p">,</span> <span class="n">loss</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">_range_warning</span><span class="p">(</span><span class="s2">&quot;delta&quot;</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="mf">1e-6</span><span class="p">,</span> <span class="mf">1e-6</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">approximate</span><span class="p">(</span><span class="n">measure</span><span class="p">),</span> <span class="p">(</span><span class="n">loss</span><span class="p">,</span> <span class="n">delta</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="unit_of">
+<a class="viewcode-back" href="../../api/python/opendp.context.html#opendp.context.unit_of">[docs]</a>
+<span class="k">def</span> <span class="nf">unit_of</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">contributions</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Bound</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">changes</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">absolute</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">l1</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">l2</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">local</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">identifier</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">ordered</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">U</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Metric</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Bound</span><span class="p">]]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Constructs a unit of privacy, consisting of a metric and a dataset distance.</span>
+<span class="sd">    The parameters are mutually exclusive.</span>
+
+<span class="sd">    &gt;&gt;&gt; import opendp.prelude as dp</span>
+<span class="sd">    &gt;&gt;&gt; dp.unit_of(contributions=3)</span>
+<span class="sd">    (SymmetricDistance(), 3)</span>
+<span class="sd">    &gt;&gt;&gt; dp.unit_of(l1=2.0)</span>
+<span class="sd">    (L1Distance(f64), 2.0)</span>
+
+<span class="sd">    :param contributions: Greatest number of records or identifiers a privacy unit may contribute to microdata</span>
+<span class="sd">    :param changes: Greatest number of records a privacy unit may change in microdata</span>
+<span class="sd">    :param absolute: Greatest absolute distance a privacy unit can influence a scalar aggregate data set</span>
+<span class="sd">    :param l1: Greatest l1 distance a privacy unit can influence a vector aggregate data set</span>
+<span class="sd">    :param l2: Greatest l2 distance a privacy unit can influence a vector aggregate data set</span>
+<span class="sd">    :param local: Set to true if the dataset consists of one individual (for local-DP)</span>
+<span class="sd">    :param identifier: Can be a column name or Polars expression.</span>
+<span class="sd">    :param ordered: Set to ``True`` to use ``InsertDeleteDistance`` instead of ``SymmetricDistance``, or ``HammingDistance`` instead of ``ChangeOneDistance``.</span>
+<span class="sd">    :param U: The type of the dataset distance.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">_is_distance</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">p</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;ordered&quot;</span><span class="p">,</span> <span class="s2">&quot;U&quot;</span><span class="p">,</span> <span class="s2">&quot;_is_distance&quot;</span><span class="p">,</span> <span class="s2">&quot;identifier&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+
+    <span class="k">if</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">p</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">locals</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">_is_distance</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">v</span><span class="p">))</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Must specify exactly one distance.&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">local</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">identifier</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">ordered</span> <span class="ow">or</span> <span class="n">U</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;&quot;local&quot; must be the only parameter&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">discrete_distance</span><span class="p">(),</span> <span class="nb">int</span><span class="p">(</span><span class="n">local</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">ordered</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">contributions</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">changes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s1">&#39;&quot;ordered&quot; is only valid with &quot;changes&quot; or &quot;contributions&quot;&#39;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">identifier</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;&quot;ordered&quot; must be False when &quot;identifier&quot; is set&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">contributions</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">identifier</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">metric</span> <span class="o">=</span> <span class="n">insert_delete_distance</span><span class="p">()</span> <span class="k">if</span> <span class="n">ordered</span> <span class="k">else</span> <span class="n">symmetric_distance</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">metric</span> <span class="o">=</span> <span class="n">symmetric_id_distance</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">contributions</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">):</span>
+            <span class="n">metric</span> <span class="o">=</span> <span class="n">frame_distance</span><span class="p">(</span><span class="n">metric</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">metric</span><span class="p">,</span> <span class="n">contributions</span>
+
+    <span class="k">if</span> <span class="n">changes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">identifier</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">metric</span> <span class="o">=</span> <span class="n">hamming_distance</span><span class="p">()</span> <span class="k">if</span> <span class="n">ordered</span> <span class="k">else</span> <span class="n">change_one_distance</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">metric</span> <span class="o">=</span> <span class="n">change_one_id_distance</span><span class="p">(</span><span class="n">identifier</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">metric</span><span class="p">,</span> <span class="n">changes</span>
+
+    <span class="k">if</span> <span class="n">absolute</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">metric</span> <span class="o">=</span> <span class="n">absolute_distance</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="n">RuntimeType</span><span class="o">.</span><span class="n">parse_or_infer</span><span class="p">(</span><span class="n">U</span><span class="p">,</span> <span class="n">absolute</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">metric</span><span class="p">,</span> <span class="n">absolute</span>
+    <span class="k">if</span> <span class="n">l1</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">metric</span> <span class="o">=</span> <span class="n">l1_distance</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="n">RuntimeType</span><span class="o">.</span><span class="n">parse_or_infer</span><span class="p">(</span><span class="n">U</span><span class="p">,</span> <span class="n">l1</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">metric</span><span class="p">,</span> <span class="n">l1</span>
+    <span class="k">if</span> <span class="n">l2</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">metric</span> <span class="o">=</span> <span class="n">l2_distance</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="n">RuntimeType</span><span class="o">.</span><span class="n">parse_or_infer</span><span class="p">(</span><span class="n">U</span><span class="p">,</span> <span class="n">l2</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">metric</span><span class="p">,</span> <span class="n">l2</span>
+
+    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;No matching metric found&quot;</span><span class="p">)</span>  <span class="c1"># pragma: no cover</span></div>
+
+
+
+<div class="viewcode-block" id="Context">
+<a class="viewcode-back" href="../../api/python/opendp.context.html#opendp.context.Context">[docs]</a>
+<span class="k">class</span> <span class="nc">Context</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A Context coordinates queries to an instance of a privacy :py:attr:`accountant`.</span>
+
+<span class="sd">    It is recommended to use :py:meth:`Context.compositor` constructor instead of this one.</span>
+
+<span class="sd">    :param accountant: The measurement used to spawn the queryable.</span>
+<span class="sd">    :param queryable: Executes the queries and tracks the privacy expenditure.</span>
+<span class="sd">    :param d_in: An upper bound on the distance between adjacent datasets.</span>
+<span class="sd">    :param d_mids: A sequence of privacy losses for each query to be sent to the queryable. Used for compositors.</span>
+<span class="sd">    :param d_out: An upper bound on the overall privacy loss. Used for filters.</span>
+<span class="sd">    :param query_space: The input space of queries to the context. If not specified, it defaults to the input space of the compositor.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">accountant</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Measurement</span><span class="p">,</span> <span class="n">Odometer</span><span class="p">]</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The accountant is the measurement used to spawn the queryable.</span>
+<span class="sd">    It contains information about the queryable, </span>
+<span class="sd">    such as the input domain, input metric, and output measure expected of measurement queries sent to the queryable.&quot;&quot;&quot;</span>
+    <span class="n">queryable</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Queryable</span><span class="p">,</span> <span class="n">OdometerQueryable</span><span class="p">]</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The queryable executes the queries and tracks the privacy expenditure.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">accountant</span><span class="p">:</span> <span class="n">Measurement</span><span class="p">,</span>
+        <span class="n">queryable</span><span class="p">:</span> <span class="n">Queryable</span><span class="p">,</span>
+        <span class="n">d_in</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Bound</span><span class="p">]],</span>
+        <span class="n">d_mids</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">d_out</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">query_space</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Domain</span><span class="p">,</span> <span class="n">Metric</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">accountant</span> <span class="o">=</span> <span class="n">accountant</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">queryable</span> <span class="o">=</span> <span class="n">queryable</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">d_in</span> <span class="o">=</span> <span class="n">d_in</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">d_mids</span> <span class="o">=</span> <span class="n">d_mids</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">d_out</span> <span class="o">=</span> <span class="n">d_out</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">d_mids_consumed</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">query_space</span> <span class="o">=</span> <span class="n">query_space</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;Context(</span>
+<span class="s2">    accountant = </span><span class="si">{</span><span class="n">indent</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">accountant</span><span class="p">))</span><span class="si">}</span><span class="s2">,</span>
+<span class="s2">    d_in       = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">d_in</span><span class="si">}</span><span class="s2">,</span>
+<span class="s2">    d_mids     = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">d_mids</span><span class="si">}</span><span class="s2">,</span>
+<span class="s2">    d_out      = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">d_out</span><span class="si">}</span><span class="s2">)&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Context.deserialize_polars_plan">
+<a class="viewcode-back" href="../../api/python/opendp.context.html#opendp.context.Context.deserialize_polars_plan">[docs]</a>
+    <span class="k">def</span> <span class="nf">deserialize_polars_plan</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">serialized_plan</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;LazyFrameQuery&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Given a serialized Polars plan, wraps it with a LazyFrameQuery.</span>
+<span class="sd">        See the :ref:`serialization documentation &lt;lazyframe-serialization&gt;`</span>
+<span class="sd">        for context and full example.</span>
+
+<span class="sd">        :param serialized_plan: A plan like that returned by ``query.polars_plan.serialize()``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">import</span> <span class="nn">io</span>
+
+        <span class="n">pl</span> <span class="o">=</span> <span class="n">import_optional_dependency</span><span class="p">(</span><span class="s2">&quot;polars&quot;</span><span class="p">)</span>
+
+        <span class="n">new_plan</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">LazyFrame</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">serialized_plan</span><span class="p">))</span>
+        <span class="n">new_query</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">new_query</span><span class="p">,</span> <span class="n">LazyFrameQuery</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;&#39;data&#39; of context must be a LazyFrame&quot;</span><span class="p">)</span>
+
+        <span class="n">new_query</span><span class="o">.</span><span class="n">polars_plan</span> <span class="o">=</span> <span class="n">new_plan</span>
+        <span class="k">return</span> <span class="n">new_query</span></div>
+
+
+<div class="viewcode-block" id="Context.compositor">
+<a class="viewcode-back" href="../../api/python/opendp.context.html#opendp.context.Context.compositor">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">compositor</span><span class="p">(</span>
+        <span class="n">data</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+        <span class="n">privacy_unit</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Metric</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Bound</span><span class="p">]]],</span>
+        <span class="n">privacy_loss</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Measure</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+        <span class="n">split_evenly_over</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">split_by_weights</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">domain</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Domain</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">margins</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="n">Margin</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Context&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Constructs a new context containing a sequential compositor with the given weights.</span>
+
+<span class="sd">        If the domain is not specified, it will be inferred from the data.</span>
+<span class="sd">        This makes the assumption that the structure of the data is public information.</span>
+
+<span class="sd">        ``split_evenly_over`` and ``split_by_weights`` are mutually exclusive.</span>
+
+<span class="sd">        When ``data`` is a Polars LazyFrame, queries are specified as a Polars compute plan.</span>
+<span class="sd">        In addition, ``margins`` may be specified, which contain descriptors for the data under grouping.</span>
+
+<span class="sd">        :param data: The data to be analyzed.</span>
+<span class="sd">        :param privacy_unit: The privacy unit of the compositor.</span>
+<span class="sd">        :param privacy_loss: The privacy loss of the compositor.</span>
+<span class="sd">        :param split_evenly_over: The number of parts to evenly distribute the privacy loss.</span>
+<span class="sd">        :param split_by_weights: A list of weights for each intermediate privacy loss.</span>
+<span class="sd">        :param domain: The domain of the data.</span>
+<span class="sd">        :param margins: Descriptors for grouped data.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">domain</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">domain</span> <span class="o">=</span> <span class="n">domain_of</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">infer</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">margins</span><span class="p">:</span>
+            <span class="c1"># allows dictionaries of {[by]: [margin]}</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">margins</span><span class="p">,</span> <span class="n">MutableMapping</span><span class="p">):</span>
+                <span class="kn">from</span> <span class="nn">warnings</span> <span class="kn">import</span> <span class="n">warn</span>
+
+                <span class="n">warn</span><span class="p">(</span>
+                    <span class="s1">&#39;Margin dicts should be replaced with lists, with the key supplied as the &quot;by&quot; kwarg&#39;</span><span class="p">,</span>
+                    <span class="ne">DeprecationWarning</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">margins</span> <span class="o">=</span> <span class="p">[</span><span class="n">replace</span><span class="p">(</span><span class="n">margin</span><span class="p">,</span> <span class="n">by</span><span class="o">=</span><span class="n">by</span><span class="p">)</span> <span class="k">for</span> <span class="n">by</span><span class="p">,</span> <span class="n">margin</span> <span class="ow">in</span> <span class="n">margins</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
+
+            <span class="k">for</span> <span class="n">margin</span> <span class="ow">in</span> <span class="n">margins</span><span class="p">:</span>
+                <span class="n">domain</span> <span class="o">=</span> <span class="n">with_margin</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="n">margin</span><span class="p">)</span>
+
+        <span class="n">accountant</span><span class="p">,</span> <span class="n">d_mids</span><span class="p">,</span> <span class="n">d_out</span> <span class="o">=</span> <span class="n">_normalize_compositor</span><span class="p">(</span>
+            <span class="n">domain</span><span class="p">,</span> <span class="n">privacy_unit</span><span class="p">,</span> <span class="n">privacy_loss</span><span class="p">,</span> <span class="n">split_evenly_over</span><span class="p">,</span> <span class="n">split_by_weights</span>
+        <span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">queryable</span> <span class="o">=</span> <span class="n">accountant</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">TypeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">inferred_domain</span> <span class="o">=</span> <span class="n">domain_of</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">infer</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">vector_domain</span><span class="p">(</span><span class="n">domain</span><span class="p">)</span> <span class="o">==</span> <span class="n">inferred_domain</span><span class="p">:</span>
+                <span class="c1"># With Python 3.11, add_note is available, but pytest.raises doesn&#39;t see notes.</span>
+                <span class="n">e</span><span class="o">.</span><span class="n">args</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">e</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;; To fix, wrap domain kwarg with dp.vector_domain()&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="k">raise</span> <span class="n">e</span>
+
+        <span class="k">return</span> <span class="n">Context</span><span class="p">(</span>
+            <span class="n">accountant</span><span class="o">=</span><span class="n">accountant</span><span class="p">,</span>
+            <span class="n">queryable</span><span class="o">=</span><span class="n">queryable</span><span class="p">,</span>
+            <span class="n">d_in</span><span class="o">=</span><span class="n">privacy_unit</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">d_mids</span><span class="o">=</span><span class="n">d_mids</span><span class="p">,</span>
+            <span class="n">d_out</span><span class="o">=</span><span class="n">d_out</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="n">Measurement</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Executes the given query on the context.&quot;&quot;&quot;</span>
+        <span class="n">answer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">queryable</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+
+        <span class="c1"># pop won&#39;t fail if queryable returned an answer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">d_mids_consumed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">query</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">d_in</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">d_mids</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">d_mids</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># type: ignore[arg-type]</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">answer</span>
+
+<div class="viewcode-block" id="Context.query">
+<a class="viewcode-back" href="../../api/python/opendp.context.html#opendp.context.Context.query">[docs]</a>
+    <span class="k">def</span> <span class="nf">query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="s2">&quot;Query&quot;</span><span class="p">,</span> <span class="n">LazyFrameQuery</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Starts a new Query to be executed in this context.</span>
+
+<span class="sd">        If the context has been constructed with a sequence of privacy losses,</span>
+<span class="sd">        the next loss will be used. Otherwise, the loss will be computed from the kwargs.</span>
+
+<span class="sd">        :param kwargs: The privacy loss to use for the query. Passed directly into :py:func:`loss_of`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">d_query</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">d_mids</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">kwargs</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Expected no privacy arguments but got </span><span class="si">{</span><span class="n">kwargs</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>  <span class="c1"># pragma: no cover</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">d_mids</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;Privacy allowance has been exhausted&quot;</span>
+                <span class="p">)</span>  <span class="c1"># pragma: no cover</span>
+            <span class="n">d_query</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">d_mids</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">kwargs</span><span class="p">:</span>
+            <span class="n">observed_measure</span><span class="p">,</span> <span class="n">d_query</span> <span class="o">=</span> <span class="n">loss_of</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+            <span class="n">expected_measure</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">accountant</span><span class="o">.</span><span class="n">output_measure</span>
+            <span class="k">if</span> <span class="n">observed_measure</span> <span class="o">!=</span> <span class="n">expected_measure</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Expected output measure </span><span class="si">{</span><span class="n">expected_measure</span><span class="si">}</span><span class="s2"> but got </span><span class="si">{</span><span class="n">observed_measure</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="k">if</span> <span class="p">(</span>
+                    <span class="nb">isinstance</span><span class="p">(</span><span class="n">expected_measure</span><span class="p">,</span> <span class="n">ApproximateDivergence</span><span class="p">)</span>
+                    <span class="ow">and</span> <span class="s2">&quot;delta&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kwargs</span>
+                <span class="p">):</span>
+                    <span class="n">msg</span> <span class="o">+=</span> <span class="s2">&quot; Consider setting `delta=0.0` in your query.&quot;</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="n">chain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_space</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">accountant</span><span class="o">.</span><span class="n">input_space</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">Query</span><span class="p">(</span>
+            <span class="n">chain</span><span class="o">=</span><span class="n">chain</span><span class="p">,</span>
+            <span class="n">output_measure</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">accountant</span><span class="o">.</span><span class="n">output_measure</span><span class="p">,</span>
+            <span class="n">d_in</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">d_in</span><span class="p">,</span>
+            <span class="n">d_out</span><span class="o">=</span><span class="n">d_query</span><span class="p">,</span>
+            <span class="n">context</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># return a LazyFrameQuery when dealing with Polars data, to better mimic the Polars API</span>
+        <span class="k">if</span> <span class="n">chain</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;LazyFrameDomain&quot;</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">opendp.domains</span> <span class="kn">import</span> <span class="n">_lazyframe_from_domain</span>
+
+            <span class="c1"># creates an empty lazyframe to hold the query plan</span>
+            <span class="n">polars_plan</span> <span class="o">=</span> <span class="n">_lazyframe_from_domain</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">accountant</span><span class="o">.</span><span class="n">input_domain</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">LazyFrameQuery</span><span class="p">(</span><span class="n">polars_plan</span><span class="p">,</span> <span class="n">query</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">query</span></div>
+
+
+<div class="viewcode-block" id="Context.current_privacy_loss">
+<a class="viewcode-back" href="../../api/python/opendp.context.html#opendp.context.Context.current_privacy_loss">[docs]</a>
+    <span class="k">def</span> <span class="nf">current_privacy_loss</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;When the query losses are static, returns the list of consumed privacy losses,</span>
+<span class="sd">        otherwise returns the current privacy loss of the queryable.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">queryable</span><span class="p">,</span> <span class="n">OdometerQueryable</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">queryable</span><span class="o">.</span><span class="n">privacy_loss</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">d_in</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">d_mids_consumed</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="Context.remaining_privacy_loss">
+<a class="viewcode-back" href="../../api/python/opendp.context.html#opendp.context.Context.remaining_privacy_loss">[docs]</a>
+    <span class="k">def</span> <span class="nf">remaining_privacy_loss</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the remaining privacy loss.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">queryable</span><span class="p">,</span> <span class="n">OdometerQueryable</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">d_out</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The privacy loss is unbounded.&quot;</span><span class="p">)</span>
+
+            <span class="k">def</span> <span class="nf">_sub</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+                <span class="k">if</span> <span class="p">(</span>
+                    <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span>
+                    <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span>
+                    <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
+                <span class="p">):</span>
+                    <span class="k">return</span> <span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">b</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">a</span> <span class="o">-</span> <span class="n">b</span>
+
+            <span class="k">return</span> <span class="n">_sub</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">d_out</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">queryable</span><span class="o">.</span><span class="n">privacy_loss</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">d_in</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">d_mids</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">d_mids</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span></div>
+</div>
+
+
+
+<span class="n">Chain</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span>
+    <span class="nb">tuple</span><span class="p">[</span><span class="n">Domain</span><span class="p">,</span> <span class="n">Metric</span><span class="p">],</span> <span class="n">Transformation</span><span class="p">,</span> <span class="n">Measurement</span><span class="p">,</span> <span class="n">Odometer</span><span class="p">,</span> <span class="s2">&quot;PartialChain&quot;</span>
+<span class="p">]</span>
+
+
+<div class="viewcode-block" id="Query">
+<a class="viewcode-back" href="../../api/python/opendp.context.html#opendp.context.Query">[docs]</a>
+<span class="k">class</span> <span class="nc">Query</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Initializes the query with the given chain and output measure.</span>
+
+<span class="sd">    It is more convenient to use the ``context.query()`` constructor than this one.</span>
+<span class="sd">    However, this can be used stand-alone to help build a transformation/measurement that is not part of a context.</span>
+
+<span class="sd">    :param chain: an initial metric space (tuple of domain and metric) or transformation</span>
+<span class="sd">    :param output_measure: how privacy will be measured on the output of the query</span>
+<span class="sd">    :param d_in: an upper bound on the distance between adjacent datasets</span>
+<span class="sd">    :param d_out: an upper bound on the overall privacy loss</span>
+<span class="sd">    :param context: if specified, then when the query is released, the chain will be submitted to this context</span>
+<span class="sd">    :param _wrap_release: for internal use only</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">_chain</span><span class="p">:</span> <span class="n">Chain</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The current chain of transformations and measurements.&quot;&quot;&quot;</span>
+    <span class="n">_output_measure</span><span class="p">:</span> <span class="n">Measure</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The output measure of the query.&quot;&quot;&quot;</span>
+    <span class="n">_context</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="s2">&quot;Context&quot;</span><span class="p">]</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The context that the query is part of. ``query.release()`` submits ``_chain`` to ``_context``.&quot;&quot;&quot;</span>
+    <span class="n">_wrap_release</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">]]</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;For internal use. A function that wraps the release of the query. </span>
+<span class="sd">    Used to wrap the response of compositor/odometer queries in another ``Context``.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">chain</span><span class="p">:</span> <span class="n">Chain</span><span class="p">,</span>
+        <span class="n">output_measure</span><span class="p">:</span> <span class="n">Measure</span><span class="p">,</span>
+        <span class="n">d_in</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Bound</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">d_out</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">context</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="s2">&quot;Context&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">_wrap_release</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_chain</span> <span class="o">=</span> <span class="n">chain</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_output_measure</span> <span class="o">=</span> <span class="n">output_measure</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_d_in</span> <span class="o">=</span> <span class="n">d_in</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_d_out</span> <span class="o">=</span> <span class="n">d_out</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_context</span> <span class="o">=</span> <span class="n">context</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_wrap_release</span> <span class="o">=</span> <span class="n">_wrap_release</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_context</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">context</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;,</span><span class="se">\n</span><span class="s2">    context        = </span><span class="si">{</span><span class="n">indent</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_context</span><span class="p">))</span><span class="si">}</span><span class="s2">&quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;&quot;&quot;Query(</span>
+<span class="s2">    chain          = </span><span class="si">{</span><span class="n">indent</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_chain</span><span class="p">))</span><span class="si">}</span><span class="s2">,</span>
+<span class="s2">    output_measure = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_output_measure</span><span class="si">}</span><span class="s2">,</span>
+<span class="s2">    d_in           = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_d_in</span><span class="si">}</span><span class="s2">,</span>
+<span class="s2">    d_out          = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_d_out</span><span class="si">}{</span><span class="n">context</span><span class="si">}</span><span class="s2">)&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="s2">&quot;Query&quot;</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates a new query by applying a transformation or measurement to the current chain.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;canonical_noise&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_canonical_noise</span>
+
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">constructors</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Unrecognized constructor: &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;. Did you mean to &#39;.release()&#39; first?&quot;</span>
+            <span class="p">)</span>  <span class="c1"># pragma: no cover</span>
+
+        <span class="k">def</span> <span class="nf">make</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Query&quot;</span><span class="p">:</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;Wraps the ``make_{name}`` constructor to allow one optional parameter and chains it to the current query.</span>
+
+<span class="sd">            This function will be called when the user calls ``query.{name}(...)``.</span>
+
+<span class="sd">            :param args: arguments for the constructor function</span>
+<span class="sd">            :param kwargs: keyword arguments for the constructor function</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="n">constructor</span><span class="p">,</span> <span class="n">is_partial</span> <span class="o">=</span> <span class="n">constructors</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+
+            <span class="c1"># determine how many parameters are missing</span>
+            <span class="n">param_diff</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">signature</span><span class="p">(</span><span class="n">constructor</span><span class="p">)</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">param</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="n">param</span><span class="o">.</span><span class="n">default</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">param</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+                    <span class="k">break</span>
+                <span class="n">param_diff</span> <span class="o">-=</span> <span class="mi">1</span>
+
+            <span class="k">if</span> <span class="n">param_diff</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_chain</span><span class="p">,</span> <span class="n">PartialChain</span><span class="p">):</span>
+                <span class="n">constructor</span> <span class="o">=</span> <span class="n">PartialChain</span><span class="o">.</span><span class="n">wrap</span><span class="p">(</span><span class="n">constructor</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">param_diff</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> is missing </span><span class="si">{</span><span class="o">-</span><span class="n">param_diff</span><span class="si">}</span><span class="s2"> parameter(s).&quot;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">param_diff</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> has </span><span class="si">{</span><span class="n">param_diff</span><span class="si">}</span><span class="s2"> parameter(s) too many.&quot;</span>
+                <span class="p">)</span>  <span class="c1"># pragma: no cover</span>
+
+            <span class="n">new_chain</span> <span class="o">=</span> <span class="n">constructor</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">is_partial</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_chain</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+                <span class="n">new_chain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_chain</span> <span class="o">&gt;&gt;</span> <span class="n">new_chain</span>
+
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">new_with</span><span class="p">(</span><span class="n">chain</span><span class="o">=</span><span class="n">new_chain</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">make</span>
+
+    <span class="k">def</span> <span class="nf">_canonical_noise</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">binomial_size</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Make a measurement that adds noise from the canonical noise distribution.</span>
+
+<span class="sd">        :param binomial_size: (approximate) total number of records if dataset consists of bernoulli draws</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># left as private method so that it behaves like other constructors in IDEs</span>
+        <span class="c1"># this is getting a special wrapper because</span>
+        <span class="c1"># - its d_in argument is the stability of the prior transformation</span>
+        <span class="c1"># - its d_out argument is already stored in the chain</span>
+        <span class="c1"># - it has a special postprocessor</span>
+        <span class="kn">from</span> <span class="nn">opendp.measurements</span> <span class="kn">import</span> <span class="n">then_canonical_noise</span>
+        <span class="kn">from</span> <span class="nn">opendp._internal</span> <span class="kn">import</span> <span class="n">_new_pure_function</span>
+        <span class="kn">from</span> <span class="nn">opendp.extras.numpy.canonical</span> <span class="kn">import</span> <span class="n">BinomialCND</span>
+
+        <span class="k">def</span> <span class="nf">then</span><span class="p">(</span><span class="n">d_in</span><span class="p">,</span> <span class="n">d_out</span><span class="p">):</span>
+            <span class="n">m_noise</span> <span class="o">=</span> <span class="n">then_canonical_noise</span><span class="p">(</span><span class="n">d_in</span><span class="p">,</span> <span class="n">d_out</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">binomial_size</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">m_noise</span> <span class="o">=</span> <span class="n">m_noise</span> <span class="o">&gt;&gt;</span> <span class="n">_new_pure_function</span><span class="p">(</span>
+                    <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">BinomialCND</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">d_in</span><span class="p">,</span> <span class="n">d_out</span><span class="p">,</span> <span class="n">binomial_size</span><span class="p">),</span>
+                    <span class="n">TO</span><span class="o">=</span><span class="s2">&quot;ExtrinsicObject&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="k">return</span> <span class="n">m_noise</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_chain</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+            <span class="n">d_mid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_in</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_chain</span><span class="p">,</span> <span class="n">Transformation</span><span class="p">):</span>
+            <span class="n">d_mid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_chain</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_d_in</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_chain</span><span class="p">,</span> <span class="n">PartialChain</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Canonical noise requires all arguments in the input query to be specified.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>  <span class="c1"># pragma: no cover</span>
+                <span class="sa">f</span><span class="s2">&quot;Canonical noise expects a metric space or transformation as the prior query, found </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_chain</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">new_with</span><span class="p">(</span><span class="n">chain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_chain</span> <span class="o">&gt;&gt;</span> <span class="n">then</span><span class="p">(</span><span class="n">d_mid</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_out</span><span class="p">))</span>
+
+<div class="viewcode-block" id="Query.new_with">
+<a class="viewcode-back" href="../../api/python/opendp.context.html#opendp.context.Query.new_with">[docs]</a>
+    <span class="k">def</span> <span class="nf">new_with</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">chain</span><span class="p">:</span> <span class="n">Chain</span><span class="p">,</span> <span class="n">wrap_release</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Query&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Convenience constructor that creates a new query with a different chain.</span>
+
+<span class="sd">        :param chain: the prior query. Either a metric space or transformation</span>
+<span class="sd">        :param wrap_release: a function to apply to apply to releases</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">Query</span><span class="p">(</span>
+            <span class="n">chain</span><span class="o">=</span><span class="n">chain</span><span class="p">,</span>
+            <span class="n">output_measure</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_output_measure</span><span class="p">,</span>
+            <span class="n">d_in</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_d_in</span><span class="p">,</span>
+            <span class="n">d_out</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_d_out</span><span class="p">,</span>
+            <span class="n">context</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_context</span><span class="p">,</span>  <span class="c1"># type: ignore[arg-type]</span>
+            <span class="n">_wrap_release</span><span class="o">=</span><span class="n">wrap_release</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wrap_release</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+    <span class="k">def</span> <span class="fm">__dir__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the list of available constructors. Used by Python&#39;s error suggestion mechanism.</span>
+<span class="sd">        Without this, none of the transformations or measument methods are listed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__dir__</span><span class="p">()</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">constructors</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>  <span class="c1"># type: ignore[operator]</span>
+
+<div class="viewcode-block" id="Query.resolve">
+<a class="viewcode-back" href="../../api/python/opendp.context.html#opendp.context.Query.resolve">[docs]</a>
+    <span class="k">def</span> <span class="nf">resolve</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">allow_transformations</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">bounds</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">T</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Type</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">Type</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Transformation</span><span class="p">,</span> <span class="n">Measurement</span><span class="p">,</span> <span class="n">Odometer</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Resolve the query into a transformation, measurement or odometer.</span>
+
+<span class="sd">        :param allow_transformations: If true, allow the response to be a transformation.</span>
+<span class="sd">        :param bounds: Search for a potentially missing parameter of interest within these bounds.</span>
+<span class="sd">        :param T: The type of the parameter to search for. Either ``float`` or ``int``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># resolve a partial chain into a measurement, by fixing the input and output distances</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_chain</span><span class="p">,</span> <span class="n">PartialChain</span><span class="p">):</span>
+            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_in</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_out</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="n">chain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_chain</span><span class="o">.</span><span class="n">fix</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_d_in</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_out</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_output_measure</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="n">bounds</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="n">T</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">chain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_chain</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">allow_transformations</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">chain</span><span class="p">,</span> <span class="n">Transformation</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Query is not yet a measurement or odometer.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_cast_measure</span><span class="p">(</span><span class="n">chain</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_output_measure</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_out</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Query.release">
+<a class="viewcode-back" href="../../api/python/opendp.context.html#opendp.context.Query.release">[docs]</a>
+    <span class="k">def</span> <span class="nf">release</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">bounds</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">T</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Type</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">Type</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Release the query. The query must be part of a context.</span>
+
+<span class="sd">        :param data: The data to be analyzed. If not specified, the query must be part of a context.</span>
+<span class="sd">        :param bounds: Search for a potentially missing parameter of interest within these bounds.</span>
+<span class="sd">        :param T: The type of the parameter to search for. Either ``float`` or ``int``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_context</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot specify data when the query is part of a context.&quot;</span><span class="p">)</span>
+
+        <span class="n">measurement</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="n">bounds</span><span class="o">=</span><span class="n">bounds</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="n">T</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_context</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">answer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_context</span><span class="p">(</span><span class="n">measurement</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">answer</span> <span class="o">=</span> <span class="n">measurement</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot release query without data or context.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wrap_release</span><span class="p">:</span>
+            <span class="n">answer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wrap_release</span><span class="p">(</span><span class="n">answer</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">answer</span></div>
+
+
+<div class="viewcode-block" id="Query.param">
+<a class="viewcode-back" href="../../api/python/opendp.context.html#opendp.context.Query.param">[docs]</a>
+    <span class="k">def</span> <span class="nf">param</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">allow_transformations</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">bounds</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">T</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Type</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">Type</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the discovered parameter, if there is one.</span>
+
+<span class="sd">        :param allow_transformations: If true, allow the response to be a transformation.</span>
+<span class="sd">        :param bounds: Search for a potentially missing parameter of interest within these bounds.</span>
+<span class="sd">        :param T: The type of the parameter to search for. Either ``float`` or ``int``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">resolved</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span>
+            <span class="n">allow_transformations</span><span class="o">=</span><span class="n">allow_transformations</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="n">bounds</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="n">T</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">resolved</span><span class="p">,</span> <span class="s2">&quot;param&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Query.compositor">
+<a class="viewcode-back" href="../../api/python/opendp.context.html#opendp.context.Query.compositor">[docs]</a>
+    <span class="k">def</span> <span class="nf">compositor</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">split_evenly_over</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">split_by_weights</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">d_out</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">output_measure</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Measure</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">alpha</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Query&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Constructs a new context containing a sequential compositor with the given weights.</span>
+
+<span class="sd">        ``split_evenly_over`` and ``split_by_weights`` are mutually exclusive.</span>
+
+<span class="sd">        :param split_evenly_over: The number of parts to evenly distribute the privacy loss</span>
+<span class="sd">        :param split_by_weights: A list of weights for each intermediate privacy loss</span>
+<span class="sd">        :param d_out: Optional upper bound on privacy loss.</span>
+<span class="sd">        :param output_measure: Optional method of accounting to be used by this compositor. Defaults to same.</span>
+<span class="sd">        :param alpha: Optional parameter to split delta between zCDP conversion and δ-approximate in approx-ZCDP</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">d_out</span> <span class="o">=</span> <span class="n">d_out</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_out</span>
+
+        <span class="k">if</span> <span class="n">d_out</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;`d_out` is unknown. Please specify it in the query.&quot;</span>
+            <span class="p">)</span>  <span class="c1"># pragma: no cover</span>
+
+        <span class="k">if</span> <span class="n">output_measure</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">d_out</span> <span class="o">=</span> <span class="n">_translate_measure_distance</span><span class="p">(</span>
+                <span class="n">d_out</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_output_measure</span><span class="p">,</span> <span class="n">output_measure</span><span class="p">,</span> <span class="n">alpha</span>
+            <span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">_compositor</span><span class="p">(</span><span class="n">chain</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Domain</span><span class="p">,</span> <span class="n">Metric</span><span class="p">],</span> <span class="n">Transformation</span><span class="p">],</span> <span class="n">d_in</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">chain</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+                <span class="n">input_domain</span><span class="p">,</span> <span class="n">input_metric</span> <span class="o">=</span> <span class="n">chain</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">chain</span><span class="p">,</span> <span class="n">Transformation</span><span class="p">):</span>
+                <span class="n">input_domain</span><span class="p">,</span> <span class="n">input_metric</span> <span class="o">=</span> <span class="n">chain</span><span class="o">.</span><span class="n">output_domain</span><span class="p">,</span> <span class="n">chain</span><span class="o">.</span><span class="n">output_metric</span>
+                <span class="n">d_in</span> <span class="o">=</span> <span class="n">chain</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">d_in</span><span class="p">)</span>
+
+            <span class="n">privacy_unit</span> <span class="o">=</span> <span class="n">input_metric</span><span class="p">,</span> <span class="n">d_in</span>
+            <span class="n">privacy_loss</span> <span class="o">=</span> <span class="n">output_measure</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_output_measure</span><span class="p">,</span> <span class="n">d_out</span>
+
+            <span class="n">accountant</span><span class="p">,</span> <span class="n">d_mids</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_normalize_compositor</span><span class="p">(</span>
+                <span class="n">input_domain</span><span class="p">,</span>
+                <span class="n">privacy_unit</span><span class="p">,</span>
+                <span class="n">privacy_loss</span><span class="p">,</span>
+                <span class="n">split_evenly_over</span><span class="p">,</span>
+                <span class="n">split_by_weights</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">chain</span><span class="p">,</span> <span class="n">Transformation</span><span class="p">):</span>
+                <span class="n">accountant</span> <span class="o">=</span> <span class="n">chain</span> <span class="o">&gt;&gt;</span> <span class="n">accountant</span>
+
+            <span class="k">def</span> <span class="nf">_wrap_release</span><span class="p">(</span><span class="n">queryable</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">Context</span><span class="p">(</span>
+                    <span class="n">accountant</span><span class="o">=</span><span class="n">accountant</span><span class="p">,</span>
+                    <span class="n">queryable</span><span class="o">=</span><span class="n">queryable</span><span class="p">,</span>
+                    <span class="n">d_in</span><span class="o">=</span><span class="n">d_in</span><span class="p">,</span>
+                    <span class="n">d_mids</span><span class="o">=</span><span class="n">d_mids</span><span class="p">,</span>
+                    <span class="n">d_out</span><span class="o">=</span><span class="n">d_out</span><span class="p">,</span>
+                    <span class="n">query_space</span><span class="o">=</span><span class="p">(</span><span class="n">input_domain</span><span class="p">,</span> <span class="n">input_metric</span><span class="p">),</span>
+                <span class="p">)</span>
+
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">new_with</span><span class="p">(</span><span class="n">chain</span><span class="o">=</span><span class="n">accountant</span><span class="p">,</span> <span class="n">wrap_release</span><span class="o">=</span><span class="n">_wrap_release</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compose_context</span><span class="p">(</span><span class="n">_compositor</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_compose_context</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">compositor</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Helper function for composition in a context.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_chain</span><span class="p">,</span> <span class="n">PartialChain</span><span class="p">):</span>
+            <span class="c1"># TODO: Can we exercise this?</span>
+            <span class="k">return</span> <span class="n">PartialChain</span><span class="p">(</span>
+                <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">compositor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_chain</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_in</span><span class="p">)</span>
+            <span class="p">)</span>  <span class="c1"># pragma: no cover</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">compositor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_chain</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_d_in</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="PartialChain">
+<a class="viewcode-back" href="../../api/python/opendp.context.html#opendp.context.PartialChain">[docs]</a>
+<span class="k">class</span> <span class="nc">PartialChain</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A partial chain is a transformation or measurement that is missing one numeric parameter.</span>
+
+<span class="sd">    The parameter can be solved for by calling the fix method,</span>
+<span class="sd">    which returns the closest transformation or measurement that satisfies the given stability or privacy constraint.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">partial</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">float</span><span class="p">],</span> <span class="n">Union</span><span class="p">[</span><span class="n">Transformation</span><span class="p">,</span> <span class="n">Measurement</span><span class="p">]]</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The partial transformation or measurement.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">partial</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the transformation or measurement with the given parameter.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+
+<div class="viewcode-block" id="PartialChain.fix">
+<a class="viewcode-back" href="../../api/python/opendp.context.html#opendp.context.PartialChain.fix">[docs]</a>
+    <span class="k">def</span> <span class="nf">fix</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">d_in</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Bound</span><span class="p">]],</span>
+        <span class="n">d_out</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span>
+        <span class="n">output_measure</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Measure</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">bounds</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">T</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the closest transformation or measurement that satisfies the given stability or privacy constraint.</span>
+
+<span class="sd">        The discovered parameter is assigned to the param attribute of the returned transformation or measurement.</span>
+
+<span class="sd">        :param d_in: Upper bound on the distance between adjacent input datasets.</span>
+<span class="sd">        :param d_out: Upper bound on the distance between adjacent output distributions.</span>
+<span class="sd">        :param output_measure: How to measure distances between output distributions.</span>
+<span class="sd">        :param bounds: The bounds for the parameter search.</span>
+<span class="sd">        :param T: The type of the parameter to search for.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># When the output measure corresponds to approx-DP, only optimize the epsilon parameter.</span>
+        <span class="c1"># The delta parameter should be fixed in _cast_measure, and if not, then the search will be impossible here anyways.</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="n">output_measure</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output_measure</span><span class="o">.</span><span class="n">type</span><span class="p">,</span> <span class="n">RuntimeType</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="n">output_measure</span><span class="o">.</span><span class="n">type</span><span class="o">.</span><span class="n">origin</span> <span class="o">==</span> <span class="s2">&quot;Approximate&quot;</span>
+        <span class="p">):</span>
+
+            <span class="k">def</span> <span class="nf">_predicate</span><span class="p">(</span><span class="n">param</span><span class="p">):</span>
+                <span class="n">meas</span> <span class="o">=</span> <span class="n">_cast_measure</span><span class="p">(</span><span class="bp">self</span><span class="p">(</span><span class="n">param</span><span class="p">),</span> <span class="n">output_measure</span><span class="p">,</span> <span class="n">d_out</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">meas</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">d_in</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">d_out</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># type: ignore[index]</span>
+
+        <span class="k">else</span><span class="p">:</span>
+
+            <span class="k">def</span> <span class="nf">_predicate</span><span class="p">(</span><span class="n">param</span><span class="p">):</span>
+                <span class="n">meas</span> <span class="o">=</span> <span class="n">_cast_measure</span><span class="p">(</span><span class="bp">self</span><span class="p">(</span><span class="n">param</span><span class="p">),</span> <span class="n">output_measure</span><span class="p">,</span> <span class="n">d_out</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">meas</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">d_in</span><span class="p">,</span> <span class="n">d_out</span><span class="p">)</span>
+
+        <span class="n">param</span> <span class="o">=</span> <span class="n">binary_search</span><span class="p">(</span><span class="n">_predicate</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="n">bounds</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="n">T</span><span class="p">)</span>
+        <span class="n">chain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span><span class="n">param</span><span class="p">)</span>
+        <span class="n">chain</span><span class="o">.</span><span class="n">param</span> <span class="o">=</span> <span class="n">param</span>
+        <span class="k">return</span> <span class="n">chain</span></div>
+
+
+    <span class="k">def</span> <span class="fm">__rshift__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Transformation</span><span class="p">,</span> <span class="n">Measurement</span><span class="p">,</span> <span class="n">_PartialConstructor</span><span class="p">]</span>
+    <span class="p">):</span>
+        <span class="c1"># partials may be chained with other transformations or measurements to form a new partial</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="p">(</span><span class="n">Transformation</span><span class="p">,</span> <span class="n">Measurement</span><span class="p">,</span> <span class="n">_PartialConstructor</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="n">PartialChain</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="bp">self</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="n">other</span><span class="p">)</span>
+
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;At most one parameter may be missing at a time&quot;</span>
+        <span class="p">)</span>  <span class="c1"># pragma: no cover</span>
+
+    <span class="k">def</span> <span class="fm">__rrshift__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Domain</span><span class="p">,</span> <span class="n">Metric</span><span class="p">],</span> <span class="n">Transformation</span><span class="p">,</span> <span class="n">Measurement</span><span class="p">]</span>
+    <span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="n">Transformation</span><span class="p">,</span> <span class="n">Measurement</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="n">PartialChain</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">other</span> <span class="o">&gt;&gt;</span> <span class="bp">self</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;At most one parameter may be missing at a time&quot;</span>
+        <span class="p">)</span>  <span class="c1"># pragma: no cover</span>
+
+<div class="viewcode-block" id="PartialChain.wrap">
+<a class="viewcode-back" href="../../api/python/opendp.context.html#opendp.context.PartialChain.wrap">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">wrap</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">f</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Wraps a constructor for a transformation or measurement to return a partial chain instead.</span>
+
+<span class="sd">        :param f: function to wrap</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">_inner</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">_inner</span></div>
+</div>
+
+
+
+<span class="k">def</span> <span class="nf">_normalize_compositor</span><span class="p">(</span>
+    <span class="n">domain</span><span class="p">:</span> <span class="n">Domain</span><span class="p">,</span>
+    <span class="n">privacy_unit</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Metric</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Bound</span><span class="p">]]],</span>
+    <span class="n">privacy_loss</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Measure</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]],</span>
+    <span class="n">split_evenly_over</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">split_by_weights</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span>
+    <span class="n">Union</span><span class="p">[</span><span class="n">Measurement</span><span class="p">,</span> <span class="n">Odometer</span><span class="p">],</span>
+    <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]]],</span>
+    <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span>
+<span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Constructs a sequential composition measurement</span>
+<span class="sd">    where the ``d_mids`` are proportional to the weights.</span>
+
+<span class="sd">    ``split_evenly_over`` and ``split_by_weights`` are mutually exclusive.</span>
+
+<span class="sd">    * composition: returns a measurement, d_mids, and None</span>
+<span class="sd">    * filter: returns a measurement, None, and d_out</span>
+<span class="sd">    * adaptive: returns a measurement, None, and None</span>
+
+<span class="sd">    :param domain: the domain of the data</span>
+<span class="sd">    :param privacy_unit: a tuple of the input metric and the data distance (``d_in``)</span>
+<span class="sd">    :param privacy_loss: a tuple of the output measure and the privacy parameter (``d_out``)</span>
+<span class="sd">    :param split_evenly_over: The number of parts to evenly distribute the privacy loss</span>
+<span class="sd">    :param split_by_weights: A list of weights for each intermediate privacy loss</span>
+<span class="sd">    :return: a tuple of the measurement, d_mids, and d_out</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">input_metric</span><span class="p">,</span> <span class="n">d_in</span> <span class="o">=</span> <span class="n">privacy_unit</span>
+    <span class="n">output_measure</span><span class="p">,</span> <span class="n">d_out</span> <span class="o">=</span> <span class="n">privacy_loss</span>
+
+    <span class="k">if</span> <span class="n">split_evenly_over</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">split_by_weights</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;Cannot specify both `split_evenly_over` and `split_by_weights`&quot;</span>
+        <span class="p">)</span>  <span class="c1"># pragma: no cover</span>
+
+    <span class="k">if</span> <span class="n">split_evenly_over</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="p">[</span><span class="n">d_out</span><span class="p">]</span> <span class="o">*</span> <span class="n">split_evenly_over</span>
+    <span class="k">elif</span> <span class="n">split_by_weights</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># TODO: Wrap d_out in an object that defines __mul__,</span>
+        <span class="c1"># and fix the typing on the signature.</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">d_out</span><span class="p">,</span> <span class="nb">float</span><span class="p">):</span>
+            <span class="n">weights</span> <span class="o">=</span> <span class="p">[</span><span class="n">d_out</span> <span class="o">*</span> <span class="n">w</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">split_by_weights</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">weights</span> <span class="o">=</span> <span class="p">[(</span><span class="n">d_out</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">w</span><span class="p">,</span> <span class="n">d_out</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">w</span><span class="p">)</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">split_by_weights</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">odometer</span> <span class="o">=</span> <span class="n">make_fully_adaptive_composition</span><span class="p">(</span>
+            <span class="n">input_domain</span><span class="o">=</span><span class="n">domain</span><span class="p">,</span>
+            <span class="n">input_metric</span><span class="o">=</span><span class="n">input_metric</span><span class="p">,</span>
+            <span class="n">output_measure</span><span class="o">=</span><span class="n">output_measure</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">inf</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">d_out</span> <span class="ow">in</span> <span class="p">{</span><span class="n">inf</span><span class="p">,</span> <span class="p">(</span><span class="n">inf</span><span class="p">,</span> <span class="n">inf</span><span class="p">),</span> <span class="p">(</span><span class="n">inf</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)}:</span>
+            <span class="k">return</span> <span class="n">odometer</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+        <span class="k">return</span> <span class="n">make_privacy_filter</span><span class="p">(</span><span class="n">odometer</span><span class="p">,</span> <span class="n">d_in</span><span class="p">,</span> <span class="n">d_out</span><span class="p">),</span> <span class="kc">None</span><span class="p">,</span> <span class="n">d_out</span>
+
+    <span class="k">def</span> <span class="nf">_mul</span><span class="p">(</span><span class="n">dist</span><span class="p">,</span> <span class="n">scale</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dist</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">dist</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">scale</span><span class="p">,</span> <span class="n">dist</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">scale</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">dist</span> <span class="o">*</span> <span class="n">scale</span>
+
+    <span class="k">def</span> <span class="nf">_scale_weights</span><span class="p">(</span><span class="n">scale</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">weights</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">_mul</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span> <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="n">weights</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_scale_ac</span><span class="p">(</span><span class="n">scale</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">make_adaptive_composition</span><span class="p">(</span>
+            <span class="n">input_domain</span><span class="o">=</span><span class="n">domain</span><span class="p">,</span>
+            <span class="n">input_metric</span><span class="o">=</span><span class="n">input_metric</span><span class="p">,</span>
+            <span class="n">output_measure</span><span class="o">=</span><span class="n">output_measure</span><span class="p">,</span>
+            <span class="n">d_in</span><span class="o">=</span><span class="n">d_in</span><span class="p">,</span>
+            <span class="n">d_mids</span><span class="o">=</span><span class="n">_scale_weights</span><span class="p">(</span><span class="n">scale</span><span class="p">,</span> <span class="n">weights</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="n">scale</span> <span class="o">=</span> <span class="n">binary_search_param</span><span class="p">(</span><span class="n">_scale_ac</span><span class="p">,</span> <span class="n">d_in</span><span class="o">=</span><span class="n">d_in</span><span class="p">,</span> <span class="n">d_out</span><span class="o">=</span><span class="n">d_out</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+    <span class="c1"># return the accountant and d_mids</span>
+    <span class="k">return</span> <span class="n">_scale_ac</span><span class="p">(</span><span class="n">scale</span><span class="p">),</span> <span class="n">_scale_weights</span><span class="p">(</span><span class="n">scale</span><span class="p">,</span> <span class="n">weights</span><span class="p">),</span> <span class="kc">None</span>
+
+
+<span class="k">def</span> <span class="nf">_cast_measure</span><span class="p">(</span><span class="n">chain</span><span class="p">,</span> <span class="n">to_measure</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Measure</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">d_to</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Casts the output measure of a given ``chain`` to ``to_measure``.</span>
+
+<span class="sd">    If provided, ``d_to`` is the privacy loss wrt the new measure.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">to_measure</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">chain</span><span class="o">.</span><span class="n">output_measure</span> <span class="o">==</span> <span class="n">to_measure</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">chain</span>
+
+    <span class="n">from_to</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">chain</span><span class="o">.</span><span class="n">output_measure</span><span class="o">.</span><span class="n">type</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">to_measure</span><span class="o">.</span><span class="n">type</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">from_to</span> <span class="o">==</span> <span class="p">(</span><span class="s2">&quot;MaxDivergence&quot;</span><span class="p">,</span> <span class="s2">&quot;Approximate&lt;MaxDivergence&gt;&quot;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">make_approximate</span><span class="p">(</span><span class="n">chain</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">from_to</span> <span class="o">==</span> <span class="p">(</span>
+        <span class="s2">&quot;ZeroConcentratedDivergence&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;Approximate&lt;ZeroConcentratedDivergence&gt;&quot;</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">return</span> <span class="n">make_approximate</span><span class="p">(</span><span class="n">chain</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">from_to</span> <span class="o">==</span> <span class="p">(</span><span class="s2">&quot;MaxDivergence&quot;</span><span class="p">,</span> <span class="s2">&quot;ZeroConcentratedDivergence&quot;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">make_pureDP_to_zCDP</span><span class="p">(</span><span class="n">chain</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">from_to</span> <span class="o">==</span> <span class="p">(</span>
+        <span class="s2">&quot;ZeroConcentratedDivergence&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;Approximate&lt;MaxDivergence&gt;&quot;</span><span class="p">,</span>
+    <span class="p">)</span> <span class="ow">or</span> <span class="n">from_to</span> <span class="o">==</span> <span class="p">(</span>
+        <span class="s2">&quot;Approximate&lt;ZeroConcentratedDivergence&gt;&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;Approximate&lt;MaxDivergence&gt;&quot;</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">return</span> <span class="n">make_fix_delta</span><span class="p">(</span><span class="n">make_zCDP_to_approxDP</span><span class="p">(</span><span class="n">chain</span><span class="p">),</span> <span class="n">d_to</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Unable to cast measure from </span><span class="si">{</span><span class="n">from_to</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">from_to</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>  <span class="c1"># pragma: no cover</span>
+
+
+<span class="k">def</span> <span class="nf">_translate_measure_distance</span><span class="p">(</span>
+    <span class="n">d_from</span><span class="p">,</span> <span class="n">from_measure</span><span class="p">:</span> <span class="n">Measure</span><span class="p">,</span> <span class="n">to_measure</span><span class="p">:</span> <span class="n">Measure</span><span class="p">,</span> <span class="n">alpha</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Translate a privacy loss ``d_from`` from ``from_measure`` to ``to_measure``.</span>
+
+<span class="sd">    &gt;&gt;&gt; _translate_measure_distance(1, dp.max_divergence(), dp.max_divergence())</span>
+<span class="sd">    1</span>
+<span class="sd">    &gt;&gt;&gt; _translate_measure_distance(1, dp.max_divergence(), dp.approximate(dp.max_divergence()))</span>
+<span class="sd">    (1, 0.0)</span>
+<span class="sd">    &gt;&gt;&gt; _translate_measure_distance((1.5, 5e-07), dp.approximate(dp.max_divergence()), dp.zero_concentrated_divergence())</span>
+<span class="sd">    0.0489...</span>
+<span class="sd">    &gt;&gt;&gt; _translate_measure_distance(0.05, dp.zero_concentrated_divergence(), dp.max_divergence())</span>
+<span class="sd">    0.316...</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">from_measure</span> <span class="o">==</span> <span class="n">to_measure</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">d_from</span>
+
+    <span class="n">from_to</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">from_measure</span><span class="o">.</span><span class="n">type</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">to_measure</span><span class="o">.</span><span class="n">type</span><span class="p">)</span>
+
+    <span class="n">constant</span> <span class="o">=</span> <span class="mf">1.0</span>  <span class="c1"># the choice of constant doesn&#39;t matter</span>
+
+    <span class="k">if</span> <span class="n">from_to</span> <span class="o">==</span> <span class="p">(</span><span class="s2">&quot;MaxDivergence&quot;</span><span class="p">,</span> <span class="s2">&quot;Approximate&lt;MaxDivergence&gt;&quot;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">d_from</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">from_to</span> <span class="o">==</span> <span class="p">(</span><span class="s2">&quot;ZeroConcentratedDivergence&quot;</span><span class="p">,</span> <span class="s2">&quot;MaxDivergence&quot;</span><span class="p">):</span>
+        <span class="n">space</span> <span class="o">=</span> <span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">nan</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span> <span class="n">absolute_distance</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">scale</span> <span class="o">=</span> <span class="n">binary_search_param</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">scale</span><span class="p">:</span> <span class="n">make_pureDP_to_zCDP</span><span class="p">(</span><span class="n">make_laplace</span><span class="p">(</span><span class="o">*</span><span class="n">space</span><span class="p">,</span> <span class="n">scale</span><span class="p">)),</span>
+            <span class="n">d_in</span><span class="o">=</span><span class="n">constant</span><span class="p">,</span>
+            <span class="n">d_out</span><span class="o">=</span><span class="n">d_from</span><span class="p">,</span>
+            <span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">make_laplace</span><span class="p">(</span><span class="o">*</span><span class="n">space</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">constant</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">from_to</span> <span class="o">==</span> <span class="p">(</span>
+        <span class="s2">&quot;Approximate&lt;MaxDivergence&gt;&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;ZeroConcentratedDivergence&quot;</span><span class="p">,</span>
+    <span class="p">):</span>
+
+        <span class="k">def</span> <span class="nf">_caster</span><span class="p">(</span><span class="n">measurement</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">make_fix_delta</span><span class="p">(</span><span class="n">make_zCDP_to_approxDP</span><span class="p">(</span><span class="n">measurement</span><span class="p">),</span> <span class="n">delta</span><span class="o">=</span><span class="n">d_from</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="n">space</span> <span class="o">=</span> <span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">int</span><span class="p">),</span> <span class="n">absolute_distance</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">scale</span> <span class="o">=</span> <span class="n">binary_search_param</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">scale</span><span class="p">:</span> <span class="n">_caster</span><span class="p">(</span><span class="n">make_gaussian</span><span class="p">(</span><span class="o">*</span><span class="n">space</span><span class="p">,</span> <span class="n">scale</span><span class="p">)),</span>
+            <span class="n">d_in</span><span class="o">=</span><span class="n">constant</span><span class="p">,</span>
+            <span class="n">d_out</span><span class="o">=</span><span class="n">d_from</span><span class="p">,</span>
+            <span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">make_gaussian</span><span class="p">(</span><span class="o">*</span><span class="n">space</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">constant</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">from_to</span> <span class="o">==</span> <span class="p">(</span>
+        <span class="s2">&quot;Approximate&lt;MaxDivergence&gt;&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;Approximate&lt;ZeroConcentratedDivergence&gt;&quot;</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="n">epsilon</span><span class="p">,</span> <span class="n">delta</span> <span class="o">=</span> <span class="n">d_from</span>
+        <span class="k">if</span> <span class="n">alpha</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="p">(</span><span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">alpha</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;alpha (</span><span class="si">{</span><span class="n">alpha</span><span class="si">}</span><span class="s2">) must be in [0, 1)&quot;</span><span class="p">)</span>  <span class="c1"># pragma: no cover</span>
+        <span class="n">delta_zCDP</span><span class="p">,</span> <span class="n">delta_inf</span> <span class="o">=</span> <span class="n">delta</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">alpha</span><span class="p">),</span> <span class="n">delta</span> <span class="o">*</span> <span class="n">alpha</span>
+
+        <span class="n">rho</span> <span class="o">=</span> <span class="n">_translate_measure_distance</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">epsilon</span><span class="p">,</span> <span class="n">delta_zCDP</span><span class="p">),</span> <span class="n">from_measure</span><span class="p">,</span> <span class="n">zero_concentrated_divergence</span><span class="p">()</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">rho</span><span class="p">,</span> <span class="n">delta_inf</span>  <span class="c1"># type: ignore[return-value]</span>
+
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Unable to translate distance from </span><span class="si">{</span><span class="n">from_to</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">from_to</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>  <span class="c1"># pragma: no cover</span>
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.3rc1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

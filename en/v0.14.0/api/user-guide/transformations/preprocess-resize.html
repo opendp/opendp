@@ -1,0 +1,1221 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Preprocessing: Resize &#8212; OpenDP</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../../_static/styles/bootstrap.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+
+  
+  <link href="../../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=eafc0fe6" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/nbsphinx-code-cells.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=4f92a2c4" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f" />
+  <script src="../../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+    <script src="../../../_static/documentation_options.js?v=9e420a66"></script>
+    <script src="../../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/user-guide/transformations/preprocess-resize';</script>
+    <link rel="icon" href="../../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="Aggregation: Sum" href="aggregation-sum.html" />
+    <link rel="prev" title="Transformations" href="index.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Feb 23, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+
+
+<script>
+document.write(`<aside class="bd-header-announcement" aria-label="Announcement"></aside>`);
+fetch("https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html")
+  .then(res => {return res.text();})
+  .then(data => {
+    if (data.length === 0) {
+      console.log("[PST]: Empty announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+      return;
+    }
+    div = document.querySelector(".bd-header-announcement");
+    div.classList.add(...["bd-header-announcement", "container-fluid", "init"]);
+    div.innerHTML = `<div class="bd-header-announcement__content">${data}</div>`;
+    // At least 3rem height
+    const autoHeight = Math.min(
+      div.offsetHeight,
+      3 * parseFloat(getComputedStyle(document.documentElement).fontSize));
+    // Set height and vertical padding to 0 to prepare the height transition
+    div.style.setProperty("height", 0);
+    div.style.setProperty("padding-top", 0);
+    div.style.setProperty("padding-bottom", 0);
+    div.classList.remove("init");
+    // Set height to the computed height with a small timeout to activate the transition
+    setTimeout(() => {
+      div.style.setProperty("height", `${autoHeight}px`);
+      // Wait for a bit more than 300ms (the transition duration) then remove the
+      // forcefully set styles and let CSS take over
+      setTimeout(() => {
+        div.style.removeProperty("padding-top");
+        div.style.removeProperty("padding-bottom");
+        div.style.removeProperty("height");
+        div.style.setProperty("min-height", "3rem");
+      }, 320);
+    }, 10);
+  })
+  .catch(error => {
+    console.log("[PST]: Failed to load announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+  });
+</script>
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <button class="sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/opendp-logo.png" class="logo__image only-light" alt="OpenDP - Home"/>
+    <script>document.write(`<img src="../../../_static/opendp-logo.png" class="logo__image only-dark" alt="OpenDP - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../getting-started/index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="../../index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../theory/index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+    <button class="sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../getting-started/index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="../../index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../theory/index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="../index.html">API User Guide</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../limitations.html">Limitations</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../programming-framework/index.html">Programming Framework</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../programming-framework/core-structures.html">Core Structures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../programming-framework/supporting-elements.html">Supporting Elements</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 current active has-children"><a class="reference internal" href="index.html">Transformations</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l3 current active"><a class="current reference internal" href="#">Preprocessing: Resize</a></li>
+<li class="toctree-l3"><a class="reference internal" href="aggregation-sum.html">Aggregation: Sum</a></li>
+<li class="toctree-l3"><a class="reference internal" href="aggregation-mean.html">Aggregation: Mean</a></li>
+<li class="toctree-l3"><a class="reference internal" href="aggregation-quantile.html">Aggregation: Quantile</a></li>
+
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../measurements/index.html">Measurements</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../measurements/additive-noise-mechanisms.html">Additive Noise Mechanisms</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../measurements/thresholded-noise-mechanisms.html">Thresholded Noise Mechanisms</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../measurements/canonical-noise-mechanism.html">Canonical Noise Mechanism</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../measurements/randomized-response.html">Randomized Response</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../combinators/index.html">Combinators</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../combinators/chaining.html">Chaining</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../combinators/non-adaptive-composition.html">(Non-Adaptive) Composition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../combinators/adaptive-composition.html">Adaptive Composition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../combinators/fully-adaptive-composition.html">Fully Adaptive Composition and Odometers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../combinators/privacy-filters.html">Privacy Filters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../combinators/compositor-chaining-and-nesting.html">Compositor Chaining and Nesting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../combinators/measure-casting.html">Measure Casting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../combinators/amplification.html">Amplification</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../utilities/index.html">Utilities</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../utilities/typing.html">Typing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../utilities/parameter-search.html">Parameter Search</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../utilities/serialization.html">Serialization</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../context/index.html">Context</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../polars/index.html">Polars</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../polars/polars-vs-opendp.html">Polars vs. OpenDP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../polars/gaussian-noise.html">Gaussian Noise</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../polars/bounds.html">Identifier Truncation and Bounds</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../polars/data-types.html">Data Types</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../polars/expressions/index.html">Expressions</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="../polars/expressions/aggregation.html">Aggregation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../polars/expressions/boolean.html">Boolean</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../polars/expressions/columns.html">Columns</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../polars/expressions/manipulation.html">Manipulation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../polars/expressions/operators.html">Operators</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../polars/expressions/string.html">String</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../polars/expressions/temporal.html">Temporal</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../plugins/index.html">Plugins</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../plugins/measurement.html">Measurement example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../plugins/transformation.html">Transformation example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../plugins/context-api-plugins.html">Context API Plugins</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../plugins/theil-sen-regression.html">Thiel-Sen Regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../plugins/selecting-grouping-columns.html">Privately Selecting Grouping Columns</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../python/index.html">Python API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../python/opendp.html">opendp package</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../../python/opendp.extras.html">opendp.extras package</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../python/opendp.extras.examples.html">opendp.extras.examples package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../python/opendp.extras.mbi.html">opendp.extras.mbi package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../python/opendp.extras.numpy.html">opendp.extras.numpy package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../python/opendp.extras.polars.html">opendp.extras.polars package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../python/opendp.extras.sklearn.html">opendp.extras.sklearn package</a></li>
+</ul>
+</details></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.accuracy.html">opendp.accuracy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.combinators.html">opendp.combinators module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.context.html">opendp.context module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.core.html">opendp.core module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.domains.html">opendp.domains module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.measurements.html">opendp.measurements module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.measures.html">opendp.measures module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.metrics.html">opendp.metrics module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.mod.html">opendp.mod module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.prelude.html">opendp.prelude module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.transformations.html">opendp.transformations module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../python/opendp.typing.html">opendp.typing module</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference external" href="https://docs.opendp.org/en/stable/api/r">R API Reference</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://docs.rs/opendp">Rust API Reference</a></li>
+</ul>
+</div>
+</nav></div>
+        <div class="sidebar-primary-item">
+<h6>Branches</h6>
+<ul>
+    <li><a href="../../../../beta/index.html" style="font-weight: normal">beta</a></li>
+    <li><a href="../../../../nightly/index.html" style="font-weight: normal">nightly</a></li>
+    <li><a href="../../../../stable/index.html" style="font-weight: normal">stable</a></li>
+</ul>
+
+
+<h6 id="releases_header">Releases
+    <div id="releases_symbol" style="float:right"></div>
+</h6>
+<ul id="releases_content">
+    <li><a href="../../../../v0.14.1/index.html" style="font-weight: normal">v0.14.1</a></li>
+    <li><a href="preprocess-resize.html" style="font-weight: bold">v0.14.0</a></li>
+    <li><a href="../../../../v0.13.0/index.html" style="font-weight: normal">v0.13.0</a></li>
+    <li><a href="../../../../v0.12.1/index.html" style="font-weight: normal">v0.12.1</a></li>
+    <li><a href="../../../../v0.12.0/index.html" style="font-weight: normal">v0.12.0</a></li>
+    <li><a href="../../../../v0.11.1/index.html" style="font-weight: normal">v0.11.1</a></li>
+    <li><a href="../../../../v0.11.0/index.html" style="font-weight: normal">v0.11.0</a></li>
+    <li><a href="../../../../v0.10.0/index.html" style="font-weight: normal">v0.10.0</a></li>
+    <li><a href="../../../../v0.9.2/index.html" style="font-weight: normal">v0.9.2</a></li>
+    <li><a href="../../../../v0.9.1/index.html" style="font-weight: normal">v0.9.1</a></li>
+    <li><a href="../../../../v0.9.0/index.html" style="font-weight: normal">v0.9.0</a></li>
+    <li><a href="../../../../v0.8.0/index.html" style="font-weight: normal">v0.8.0</a></li>
+    <li><a href="../../../../v0.7.0/index.html" style="font-weight: normal">v0.7.0</a></li>
+    <li><a href="../../../../v0.6.2/index.html" style="font-weight: normal">v0.6.2</a></li>
+    <li><a href="../../../../v0.6.1/index.html" style="font-weight: normal">v0.6.1</a></li>
+    <li><a href="../../../../v0.6.0/index.html" style="font-weight: normal">v0.6.0</a></li>
+    <li><a href="../../../../v0.5.0/index.html" style="font-weight: normal">v0.5.0</a></li>
+    <li><a href="../../../../v0.4.0/index.html" style="font-weight: normal">v0.4.0</a></li>
+    <li><a href="../../../../v0.3.0/index.html" style="font-weight: normal">v0.3.0</a></li>
+    <li><a href="../../../../v0.2.4/index.html" style="font-weight: normal">v0.2.4</a></li>
+    <li><a href="../../../../v0.2.3/index.html" style="font-weight: normal">v0.2.3</a></li>
+    <li><a href="../../../../v0.2.2/index.html" style="font-weight: normal">v0.2.2</a></li>
+    <li><a href="../../../../v0.2.1/index.html" style="font-weight: normal">v0.2.1</a></li>
+    <li><a href="../../../../v0.2.0/index.html" style="font-weight: normal">v0.2.0</a></li>
+    <li><a href="../../../../v0.1.0/index.html" style="font-weight: normal">v0.1.0</a></li>
+</ul>
+<script>
+    let expanded = !!JSON.parse(localStorage.getItem('expanded'));
+
+    let releasesHeader = document.getElementById("releases_header");
+    let releasesSymbol = document.getElementById("releases_symbol");
+    let releasesContent = document.getElementById("releases_content");
+
+    function setReleasesState() {
+        localStorage.setItem("expanded", JSON.stringify(expanded))
+        releasesContent.style.display = expanded ? "block" : "none";
+        releasesSymbol.classList.add(expanded ? 'minus' : 'plus')
+        releasesSymbol.classList.remove(expanded ? 'plus' : 'minus')
+    }
+
+    setReleasesState()
+    releasesHeader.addEventListener("click", function() {
+        expanded = !expanded;
+        setReleasesState()
+    })
+</script>
+<style>
+    .plus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .plus:before,
+    .plus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .plus:before {
+        left:50%;
+        top:4px;
+        bottom:4px;
+        width:3px;
+        transform:translateX(-50%);
+    }
+
+    .plus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+
+
+
+    .minus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .minus:before,
+    .minus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .minus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+</style>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+
+
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">API</a></li>
+    
+    
+    <li class="breadcrumb-item"><i class="fa-solid fa-ellipsis"></i></li>
+    
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Transformations</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">Preprocessin...</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item"><div class="admonition warning" style="position: relative;">
+    <!--
+     Without the style, the region for the article title overlaps, and the link is unclickable.
+    -->
+    <details>
+        <summary>Questions or feedback?</summary>
+        <!--
+            All of these lists should be in sync:
+            - README.md
+            - docs/source/contributing/contact.rst
+            - docs/source/_templates/questions-feedback.html
+            - .github/ISSUE_TEMPLATE/config.yml
+        -->
+        <ul>
+            <li>Report a bug or request a feature on <a href="https://github.com/opendp/opendp/issues">Github</a>.</li>
+            <li>Send general queries to <a href="mailto:info@opendp.org">info@opendp.org</a>, or email <a href="mailto:security@opendp.org">security@opendp.org</a> if it is related to security.</li>
+            <li>Join the conversation on <a href="https://join.slack.com/t/opendp/shared_invite/zt-1t8rrbqhd-z8LiZiP06vVE422HJd6ciQ">Slack</a>, or the <a href="https://groups.google.com/a/g.harvard.edu/g/opendp-community">mailing list</a>.</li>
+        </ul>
+    </details>
+</div></div>
+      
+        <div class="header-article-item">
+<div class="admonition warning" style="position: relative;" id="old-version-warning">
+  <!--
+   To work with this locally, in conf.py uncomment the entry under "html_context".
+
+   Without the style, the region for the article title overlaps, and the link is unclickable.
+  -->
+  <p class="admonition-title">
+  
+  This documentation is for an old version of OpenDP.
+  
+  </p>
+  <p>The current release of OpenDP is <a href="/">v0.14.1</a>.</p>
+</div>
+<script>
+  window.addEventListener("load", (event) => {
+    document.getElementById('old-version-warning').style.top = `${window.visualViewport.pageTop}px`;
+  });
+</script>
+</div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="Preprocessing:-Resize">
+<h1>Preprocessing: Resize<a class="headerlink" href="#Preprocessing:-Resize" title="Link to this heading">#</a></h1>
+<p>This section demonstrates the resize transformation used to convert unbounded-DP queries into bounded-DP queries.</p>
+<p>There are situations where knowing the number of observations itself can leak private information. For example, if a dataset contained all the individuals with a rare disease in a community, then knowing the size of the dataset would reveal how many people in the community had that condition. In general, any given dataset may be some well-defined subset of a population. The given dataset’s size is equivalent to a count query on that subset, so we should protect the dataset size just as we would
+protect any other query we want to provide privacy guarantees for.</p>
+<section id="Load-example-dataset">
+<h2>Load example dataset<a class="headerlink" href="#Load-example-dataset" title="Link to this heading">#</a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="c1"># Define parameters up-front</span>
+<span class="c1"># Each parameter is either a guess, a DP release, or public information</span>
+<span class="n">var_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">,</span> <span class="s2">&quot;sex&quot;</span><span class="p">,</span> <span class="s2">&quot;educ&quot;</span><span class="p">,</span> <span class="s2">&quot;race&quot;</span><span class="p">,</span> <span class="s2">&quot;income&quot;</span><span class="p">,</span> <span class="s2">&quot;married&quot;</span><span class="p">]</span> <span class="c1"># public information</span>
+<span class="n">age_bounds</span> <span class="o">=</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">120.</span> <span class="c1"># an educated guess</span>
+<span class="n">age_prior</span> <span class="o">=</span> <span class="mf">38.</span> <span class="c1"># average age for entire US population (public information)</span>
+
+<span class="c1"># Load data</span>
+<span class="kn">import</span> <span class="nn">opendp.prelude</span> <span class="k">as</span> <span class="nn">dp</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="n">age</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">genfromtxt</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">examples</span><span class="o">.</span><span class="n">get_california_pums_path</span><span class="p">(),</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">,</span> <span class="n">names</span><span class="o">=</span><span class="n">var_names</span><span class="p">)[:][</span><span class="s1">&#39;age&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="c1"># type: ignore</span>
+</pre></div>
+</div>
+</div>
+<section id="When-dataset-size-is-known">
+<h3>When dataset size is known<a class="headerlink" href="#When-dataset-size-is-known" title="Link to this heading">#</a></h3>
+<p>To set a baseline for comparison, we’ll first assume that we <em>do</em> know the dataset size. We’ll provide <code class="docutils literal notranslate"><span class="pre">size</span></code> in the domain.</p>
+<p>OpenDP treats any descriptors in the input domain as public information. We incorporate the <code class="docutils literal notranslate"><span class="pre">size</span></code> descriptor into the input domain in the analysis below.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="kn">import</span> <span class="nn">opendp.prelude</span> <span class="k">as</span> <span class="nn">dp</span>
+
+<span class="n">dp</span><span class="o">.</span><span class="n">enable_features</span><span class="p">(</span><span class="s2">&quot;contrib&quot;</span><span class="p">)</span>
+
+<span class="n">input_domain</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">vector_domain</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="n">size</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+<span class="n">input_metric</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">symmetric_distance</span><span class="p">()</span>
+
+<span class="n">dp_mean</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="p">(</span><span class="n">input_domain</span><span class="p">,</span> <span class="n">input_metric</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+    <span class="c1"># Impute NaN values</span>
+    <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_impute_constant</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+    <span class="c1"># Clamp age values</span>
+    <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_clamp</span><span class="p">(</span><span class="n">bounds</span><span class="o">=</span><span class="n">age_bounds</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+    <span class="c1"># Aggregate</span>
+    <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_mean</span><span class="p">()</span> <span class="o">&gt;&gt;</span>
+    <span class="c1"># Noise</span>
+    <span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">then_laplace</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="mf">1.</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DP mean:&quot;</span><span class="p">,</span> <span class="n">dp_mean</span><span class="p">(</span><span class="n">age</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+DP mean: 43.84811402354421
+</pre></div></div>
+</div>
+<p>In this case, OpenDP assumes that you truthfully and correctly know the size of the dataset.</p>
+</section>
+</section>
+<section id="When-dataset-size-is-unknown">
+<h2>When dataset size is unknown<a class="headerlink" href="#When-dataset-size-is-unknown" title="Link to this heading">#</a></h2>
+<p>We now assume that size is not known. If you don’t have a prior, ballpark estimate for <code class="docutils literal notranslate"><span class="pre">size</span></code>, you can first spend some of your privacy budget to estimate the dataset size. Here is an example:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="c1"># First, estimate the number of records in the dataset.</span>
+<span class="n">dp_count</span> <span class="o">=</span> <span class="p">(</span><span class="n">input_domain</span><span class="p">,</span> <span class="n">input_metric</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_count</span><span class="p">()</span> <span class="o">&gt;&gt;</span> <span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">then_laplace</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="mf">1.</span><span class="p">)</span>
+<span class="n">dp_count_release</span> <span class="o">=</span> <span class="n">dp_count</span><span class="p">(</span><span class="n">age</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DP count:&quot;</span><span class="p">,</span> <span class="n">dp_count_release</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+DP count: 1001
+</pre></div></div>
+</div>
+<p>If we want to conduct a bounded-DP analysis, we can establish the size descriptor via the “resize” transformation. The resize is a 2-stable dataset transformation, where you pass a fixed target size into the constructor. If the true dataset has more records than the underlying dataset, it is sampled down, and if the true dataset has fewer records than the underlying dataset, additional constant rows are imputed.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="k">def</span> <span class="nf">make_mean_measurement</span><span class="p">(</span><span class="n">target_size</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;a convenience constructor for building a mean measurement that resizes to `target_size`&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">((</span><span class="n">dp</span><span class="o">.</span><span class="n">vector_domain</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">)),</span> <span class="n">dp</span><span class="o">.</span><span class="n">symmetric_distance</span><span class="p">())</span> <span class="o">&gt;&gt;</span>
+            <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_impute_constant</span><span class="p">(</span><span class="n">age_prior</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+            <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_resize</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">target_size</span><span class="p">,</span> <span class="n">constant</span><span class="o">=</span><span class="n">age_prior</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+            <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_clamp</span><span class="p">(</span><span class="n">age_bounds</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+            <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_mean</span><span class="p">()</span> <span class="o">&gt;&gt;</span>
+            <span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">then_laplace</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">))</span>
+
+
+<span class="n">dp_mean</span> <span class="o">=</span> <span class="n">make_mean_measurement</span><span class="p">(</span><span class="n">dp_count_release</span><span class="p">)</span>
+<span class="n">dp_mean_release</span> <span class="o">=</span> <span class="n">dp_mean</span><span class="p">(</span><span class="n">age</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DP mean:&quot;</span><span class="p">,</span> <span class="n">dp_mean_release</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+DP mean: 44.60152231817973
+</pre></div></div>
+</div>
+</section>
+<section id="Providing-incorrect-dataset-size-values">
+<h2>Providing incorrect dataset size values<a class="headerlink" href="#Providing-incorrect-dataset-size-values" title="Link to this heading">#</a></h2>
+<p>The resize transformation does not assume you truthfully or correctly know the size of the dataset. Moreover, it cannot respond with an error message if you get the size incorrect; doing so would permit an attack whereby an analyst could repeatedly guess different dataset sizes until the error message went away, thereby leaking the exact dataset size.</p>
+<p>In this example, we intentionally provide under-estimates and over-estimates of <code class="docutils literal notranslate"><span class="pre">size</span></code> and still receive an answer.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">lower_n</span> <span class="o">=</span> <span class="n">make_mean_measurement</span><span class="p">(</span><span class="n">target_size</span><span class="o">=</span><span class="mi">200</span><span class="p">)(</span><span class="n">age</span><span class="p">)</span>
+<span class="n">real_n</span> <span class="o">=</span> <span class="n">make_mean_measurement</span><span class="p">(</span><span class="n">target_size</span><span class="o">=</span><span class="mi">1000</span><span class="p">)(</span><span class="n">age</span><span class="p">)</span>
+<span class="n">higher_n</span> <span class="o">=</span> <span class="n">make_mean_measurement</span><span class="p">(</span><span class="n">target_size</span><span class="o">=</span><span class="mi">2000</span><span class="p">)(</span><span class="n">age</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DP mean (n=200): &quot;</span><span class="p">,</span> <span class="n">lower_n</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DP mean (n=1000):&quot;</span><span class="p">,</span> <span class="n">real_n</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DP mean (n=2000):&quot;</span><span class="p">,</span> <span class="n">higher_n</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+DP mean (n=200):  43.09883682992345
+DP mean (n=1000): 44.671207844903705
+DP mean (n=2000): 41.396972829360706
+</pre></div></div>
+</div>
+<p>There is an interesting trade-off to this approach, that can be demonstrated visually via simulations. Before we move on to the visualizations, let’s make a few helper functions for building measurements that consume a specified privacy budget.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">lru_cache</span>
+
+<span class="n">input_space</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">vector_domain</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">)),</span> <span class="n">input_metric</span>
+
+<span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">make_count_with</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">):</span>
+    <span class="n">counter</span> <span class="o">=</span> <span class="n">input_space</span> <span class="o">&gt;&gt;</span> <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_count</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">dp</span><span class="o">.</span><span class="n">binary_search_chain</span><span class="p">(</span>
+        <span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">counter</span> <span class="o">&gt;&gt;</span> <span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">then_laplace</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="n">s</span><span class="p">),</span>
+        <span class="n">d_in</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">d_out</span><span class="o">=</span><span class="n">epsilon</span><span class="p">,</span>
+        <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">10000.</span><span class="p">))</span>
+
+<span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">make_mean_with</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">target_size</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">):</span>
+    <span class="n">mean_chain</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">input_space</span> <span class="o">&gt;&gt;</span>
+        <span class="c1"># Impute NaN values</span>
+        <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_impute_constant</span><span class="p">(</span><span class="n">age_prior</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+        <span class="c1"># Resize the dataset to length `target_size`.</span>
+        <span class="c1">#     If there are fewer than `target_size` rows in the data, fill with a constant.</span>
+        <span class="c1">#     If there are more than `target_size` rows in the data, only keep `data_size` rows</span>
+        <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_resize</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">target_size</span><span class="p">,</span> <span class="n">constant</span><span class="o">=</span><span class="n">age_prior</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+        <span class="c1"># Clamp age values</span>
+        <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_clamp</span><span class="p">(</span><span class="n">bounds</span><span class="o">=</span><span class="n">age_bounds</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+        <span class="c1"># Compute the mean</span>
+        <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_mean</span><span class="p">()</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">dp</span><span class="o">.</span><span class="n">binary_search_chain</span><span class="p">(</span>
+        <span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">mean_chain</span> <span class="o">&gt;&gt;</span> <span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">then_laplace</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="n">s</span><span class="p">),</span>
+        <span class="n">d_in</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">d_out</span><span class="o">=</span><span class="n">epsilon</span><span class="p">,</span>
+        <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">10.</span><span class="p">))</span>
+
+<span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">make_sum_with</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">):</span>
+    <span class="n">bounded_age_sum</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">input_space</span> <span class="o">&gt;&gt;</span>
+        <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_impute_constant</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+        <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_clamp</span><span class="p">(</span><span class="n">bounds</span><span class="o">=</span><span class="n">age_bounds</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+        <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_sum</span><span class="p">()</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">dp</span><span class="o">.</span><span class="n">binary_search_chain</span><span class="p">(</span>
+        <span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">bounded_age_sum</span> <span class="o">&gt;&gt;</span> <span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">then_laplace</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="n">s</span><span class="p">),</span>
+        <span class="n">d_in</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">d_out</span><span class="o">=</span><span class="n">epsilon</span><span class="p">,</span>
+        <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">1000.</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<p>In this simulation, we are running the same procedure <code class="docutils literal notranslate"><span class="pre">n_simulations</span></code> times. In each iteration, we collect the estimated count and mean.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">n_simulations</span> <span class="o">=</span> <span class="mi">1000</span>
+
+<span class="n">history_count</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">history_mean</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Status:&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_simulations</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">100</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">n_simulations</span><span class="si">:</span><span class="s2">.0%</span><span class="si">}</span><span class="s2"> &quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+    <span class="n">count_chain</span> <span class="o">=</span> <span class="n">make_count_with</span><span class="p">(</span><span class="n">epsilon</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+    <span class="n">history_count</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">count_chain</span><span class="p">(</span><span class="n">age</span><span class="p">))</span>
+
+    <span class="n">mean_chain</span> <span class="o">=</span> <span class="n">make_mean_with</span><span class="p">(</span><span class="n">target_size</span><span class="o">=</span><span class="n">history_count</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+    <span class="n">history_mean</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mean_chain</span><span class="p">(</span><span class="n">age</span><span class="p">))</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;100%&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Status:
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+</pre></div></div>
+</div>
+<p>Now we plot our simulation data, with counts on the X axis and means on the Y axis.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">statistics</span>
+
+<span class="n">size</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="n">true_mean_age</span> <span class="o">=</span> <span class="n">statistics</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">age</span><span class="p">)</span>
+
+<span class="c1"># The light blue circles are DP means</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">history_count</span><span class="p">,</span> <span class="n">history_mean</span><span class="p">,</span> <span class="s1">&#39;o&#39;</span><span class="p">,</span> <span class="n">fillstyle</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span> <span class="n">color</span> <span class="o">=</span> <span class="s1">&#39;cornflowerblue&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">compute_expected_mean</span><span class="p">(</span><span class="n">count</span><span class="p">):</span>
+    <span class="n">count</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">count</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">((</span><span class="n">true_mean_age</span> <span class="o">*</span> <span class="n">size</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">count</span> <span class="o">-</span> <span class="n">size</span><span class="p">)</span> <span class="o">*</span> <span class="n">age_prior</span><span class="p">)</span> <span class="o">/</span> <span class="n">count</span>
+
+<span class="n">expected_count</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">history_count</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">history_count</span><span class="p">)))</span>
+<span class="n">expected_mean</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">compute_expected_mean</span><span class="p">,</span> <span class="n">expected_count</span><span class="p">))</span>
+
+<span class="c1"># The dark blue dots are the average DP mean per dataset size</span>
+<span class="k">for</span> <span class="n">count</span> <span class="ow">in</span> <span class="n">expected_count</span><span class="p">:</span>
+    <span class="n">sims</span> <span class="o">=</span> <span class="p">[</span><span class="n">m</span> <span class="k">for</span> <span class="n">c</span><span class="p">,</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">history_count</span><span class="p">,</span> <span class="n">history_mean</span><span class="p">)</span> <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="n">count</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sims</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">6</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">count</span><span class="p">,</span> <span class="n">statistics</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">sims</span><span class="p">),</span> <span class="s1">&#39;o&#39;</span><span class="p">,</span> <span class="n">color</span> <span class="o">=</span> <span class="s1">&#39;indigo&#39;</span><span class="p">)</span>
+
+<span class="c1"># The red line is the expected value by dp release of dataset size</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">expected_count</span><span class="p">,</span> <span class="n">expected_mean</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">color</span> <span class="o">=</span> <span class="s1">&#39;tomato&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;DP Release of Age&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;DP estimate of row count&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../_images/api_user-guide_transformations_preprocess-resize_17_0.png" src="../../../_images/api_user-guide_transformations_preprocess-resize_17_0.png" />
+</div>
+</div>
+<p>In this plot, the red dashed line is the expected outcome, and each of the points represents a <code class="docutils literal notranslate"><span class="pre">(count,</span> <span class="pre">mean)</span></code> tuple from one iteration of the simulation. Due to the behavior of the resize preprocess transformation, underestimated counts lead to higher variance means, and overestimated counts bias the mean closer to the imputation constant. On the other hand, underestimated counts are unbiased, and overestimated counts have reduced variance.</p>
+<p>Keep in mind that it is valid to postprocess the count to be smaller, reducing the likelihood of introducing bias by imputing. If the count is overestimated, the amount of bias introduced to the statistic by imputation when resizing depends on how much the count estimate differs from the true dataset count, and how much the imputation constant differs from the true dataset mean. Since both of these quantities are private (and unknowable), they are not accounted for in accuracy estimates.</p>
+<p>In the next plot, we see the range of DP means calculated as a function of the resized row count. Note that the range of possible DP mean values decreases as the resized count increases, and that the DP mean gets closer to the prior for the true value: 38.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
+
+<span class="n">releases</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="c1"># X axis ticks</span>
+<span class="n">n_range</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">2001</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+<span class="c1"># Number of samples per boxplot</span>
+<span class="n">n_simulations</span> <span class="o">=</span> <span class="mi">50</span>
+
+<span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">n_range</span><span class="p">:</span>
+    <span class="n">mean_chain</span> <span class="o">=</span> <span class="n">make_mean_with</span><span class="p">(</span><span class="n">target_size</span><span class="o">=</span><span class="n">n</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">1.</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_simulations</span><span class="p">):</span>
+
+        <span class="c1"># get mean of age at the given n</span>
+        <span class="n">releases</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="n">mean_chain</span><span class="p">(</span><span class="n">age</span><span class="p">)))</span>
+
+<span class="c1"># get released values</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="o">.</span><span class="n">from_records</span><span class="p">(</span><span class="n">releases</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;resize to row count&#39;</span><span class="p">,</span> <span class="s1">&#39;DP mean&#39;</span><span class="p">])</span>
+
+<span class="c1"># The boxplots show the distribution of releases per n</span>
+<span class="n">plot</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">boxplot</span><span class="p">(</span><span class="n">x</span> <span class="o">=</span> <span class="s1">&#39;resize to row count&#39;</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="s1">&#39;DP mean&#39;</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="n">df</span><span class="p">)</span>
+<span class="c1"># The blue line is the true mean</span>
+<span class="n">plot</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="n">true_mean_age</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../_images/api_user-guide_transformations_preprocess-resize_20_0.png" src="../../../_images/api_user-guide_transformations_preprocess-resize_20_0.png" />
+</div>
+</div>
+<p>The results from this approach have a similar interpretation as in the prior plot. Underestimated counts lead to higher variance means, and overestimated counts lead to greater bias in means. Thankfully, the count is a low-sensitivity query, so count estimates are usually very close to the true count.</p>
+</section>
+<section id="OpenDP-resize-vs.-other-approaches">
+<h2>OpenDP <code class="docutils literal notranslate"><span class="pre">resize</span></code> vs. other approaches<a class="headerlink" href="#OpenDP-resize-vs.-other-approaches" title="Link to this heading">#</a></h2>
+<p>The standard formula for the mean of a variable is: <span class="math notranslate nohighlight">\(\bar{x} = \frac{\sum{x}}{n}\)</span></p>
+<p>The conventional, and simpler, approach in the differential privacy literature, is to:</p>
+<ol class="arabic simple">
+<li><p>compute a DP sum of the variable for the numerator</p></li>
+<li><p>compute a DP count of the dataset rows for the denominator</p></li>
+<li><p>take their ratio</p></li>
+</ol>
+<p>This is sometimes called a ‘plug-in’ approach, as we are plugging-in differentially private answers for each of the terms in the original formula, without any additional modifications, and using the resulting answer as our estimate while ignoring the noise processes of differential privacy. While this ‘plug-in’ approach does result in a differentially private value, the utility here is generally lower than the solution in OpenDP. Because the number of terms summed in the numerator does not agree
+with the value in the denominator, the variance is increased and the resulting distribution becomes both biased and asymmetrical, which is visually noticeable in smaller samples.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">n_simulations</span> <span class="o">=</span> <span class="mi">1_000</span>
+<span class="n">history_plugin</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">history_resize</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="c1"># sized estimators are more robust to noisy counts, so epsilon is small</span>
+<span class="c1"># the less epsilon provided to this count, the more the result will be biased towards the prior</span>
+<span class="n">resize_count</span> <span class="o">=</span> <span class="n">make_count_with</span><span class="p">(</span><span class="n">epsilon</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+
+<span class="c1"># plugin estimators want a much more accurate count</span>
+<span class="n">plugin_count</span> <span class="o">=</span> <span class="n">make_count_with</span><span class="p">(</span><span class="n">epsilon</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="n">plugin_sum</span> <span class="o">=</span> <span class="n">make_sum_with</span><span class="p">(</span><span class="n">epsilon</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Status:&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_simulations</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">100</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">n_simulations</span><span class="si">:</span><span class="s2">.0%</span><span class="si">}</span><span class="s2"> &quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+    <span class="n">history_plugin</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">plugin_sum</span><span class="p">(</span><span class="n">age</span><span class="p">)</span> <span class="o">/</span> <span class="n">plugin_count</span><span class="p">(</span><span class="n">age</span><span class="p">))</span>
+
+    <span class="n">resize_mean</span> <span class="o">=</span> <span class="n">make_mean_with</span><span class="p">(</span><span class="n">target_size</span><span class="o">=</span><span class="n">resize_count</span><span class="p">(</span><span class="n">age</span><span class="p">),</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">.8</span><span class="p">)</span>
+    <span class="n">history_resize</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">resize_mean</span><span class="p">(</span><span class="n">age</span><span class="p">))</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;100%&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Status:
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100%
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">kdeplot</span><span class="p">(</span><span class="n">history_resize</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+                 <span class="n">label</span> <span class="o">=</span> <span class="s1">&#39;Resize Mean&#39;</span><span class="p">)</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">kdeplot</span><span class="p">(</span><span class="n">history_plugin</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+                 <span class="n">label</span> <span class="o">=</span> <span class="s1">&#39;Plug-in Mean&#39;</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="n">true_mean_age</span><span class="p">,</span><span class="n">true_mean_age</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">],</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">color</span> <span class="o">=</span> <span class="s1">&#39;forestgreen&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;DP Release of Age&#39;</span><span class="p">)</span>
+<span class="n">leg</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../../_images/api_user-guide_transformations_preprocess-resize_24_0.png" src="../../../_images/api_user-guide_transformations_preprocess-resize_24_0.png" />
+</div>
+</div>
+<p>We have noticed that for the same privacy loss, the distribution of answers from OpenDP’s resizing approach to the mean is tighter around the true dataset value (thus lower in error) than the conventional plug-in approach.</p>
+<p><em>Note, in these simulations, we’ve shown equal division of the epsilon for all constituent releases, but higher utility (lower error) can be generally gained by moving more of the epsilon into the sum, and using less in the count of the dataset rows, as in earlier examples.</em></p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="index.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Transformations</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="aggregation-sum.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Aggregation: Sum</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Load-example-dataset">Load example dataset</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#When-dataset-size-is-known">When dataset size is known</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#When-dataset-size-is-unknown">When dataset size is unknown</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Providing-incorrect-dataset-size-values">Providing incorrect dataset size values</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#OpenDP-resize-vs.-other-approaches">OpenDP <code class="docutils literal notranslate"><span class="pre">resize</span></code> vs. other approaches</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../../../_sources/api/user-guide/transformations/preprocess-resize.ipynb.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f"></script>
+<script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.3rc1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

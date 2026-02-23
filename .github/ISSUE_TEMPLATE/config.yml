@@ -1,0 +1,15 @@
+blank_issues_enabled: true
+contact_links:
+  # All of these lists should be in sync:
+  # - README.md
+  # - docs/source/contributing/contact.rst
+  # - docs/source/_templates/questions-feedback.html
+  # - .github/ISSUE_TEMPLATE/config.yml
+  - name: Blank issue
+    url: https://github.com/opendp/opendp/issues/new
+  - name: Email
+    url: mailto:info@opendp.org
+  - name: Slack
+    url: https://join.slack.com/t/opendp/shared_invite/zt-1t8rrbqhd-z8LiZiP06vVE422HJd6ciQ
+  - name: Mailing list
+    url: https://groups.google.com/a/g.harvard.edu/g/opendp-community

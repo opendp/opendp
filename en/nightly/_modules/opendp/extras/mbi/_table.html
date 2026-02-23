@@ -1,0 +1,1229 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>opendp.extras.mbi._table &#8212; OpenDP</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../../../_static/styles/bootstrap.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+
+  
+  <link href="../../../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/graphviz.css?v=eafc0fe6" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css?v=4f92a2c4" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f" />
+<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f" />
+  <script src="../../../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+    <script src="../../../../_static/documentation_options.js?v=818b74dc"></script>
+    <script src="../../../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/opendp/extras/mbi/_table';</script>
+    <link rel="icon" href="../../../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Feb 23, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+
+
+<script>
+document.write(`<aside class="bd-header-announcement" aria-label="Announcement"></aside>`);
+fetch("https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html")
+  .then(res => {return res.text();})
+  .then(data => {
+    if (data.length === 0) {
+      console.log("[PST]: Empty announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+      return;
+    }
+    div = document.querySelector(".bd-header-announcement");
+    div.classList.add(...["bd-header-announcement", "container-fluid", "init"]);
+    div.innerHTML = `<div class="bd-header-announcement__content">${data}</div>`;
+    // At least 3rem height
+    const autoHeight = Math.min(
+      div.offsetHeight,
+      3 * parseFloat(getComputedStyle(document.documentElement).fontSize));
+    // Set height and vertical padding to 0 to prepare the height transition
+    div.style.setProperty("height", 0);
+    div.style.setProperty("padding-top", 0);
+    div.style.setProperty("padding-bottom", 0);
+    div.classList.remove("init");
+    // Set height to the computed height with a small timeout to activate the transition
+    setTimeout(() => {
+      div.style.setProperty("height", `${autoHeight}px`);
+      // Wait for a bit more than 300ms (the transition duration) then remove the
+      // forcefully set styles and let CSS take over
+      setTimeout(() => {
+        div.style.removeProperty("padding-top");
+        div.style.removeProperty("padding-bottom");
+        div.style.removeProperty("height");
+        div.style.setProperty("min-height", "3rem");
+      }, 320);
+    }, 10);
+  })
+  .catch(error => {
+    console.log("[PST]: Failed to load announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+  });
+</script>
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <button class="sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+
+<a class="navbar-brand logo" href="../../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../../_static/opendp-logo.png" class="logo__image only-light" alt="OpenDP - Home"/>
+    <script>document.write(`<img src="../../../../_static/opendp-logo.png" class="logo__image only-dark" alt="OpenDP - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../../getting-started/index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../../api/index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../../theory/index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../../getting-started/index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../../api/index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../../theory/index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<h6>Branches</h6>
+<ul>
+    <li><a href="../../../../../beta/index.html" style="font-weight: normal">beta</a></li>
+    <li><a href="_table.html" style="font-weight: bold">nightly</a></li>
+    <li><a href="../../../../../stable/index.html" style="font-weight: normal">stable</a></li>
+</ul>
+
+
+<h6 id="releases_header">Releases
+    <div id="releases_symbol" style="float:right"></div>
+</h6>
+<ul id="releases_content">
+    <li><a href="../../../../../v0.14.1/index.html" style="font-weight: normal">v0.14.1</a></li>
+    <li><a href="../../../../../v0.14.0/index.html" style="font-weight: normal">v0.14.0</a></li>
+    <li><a href="../../../../../v0.13.0/index.html" style="font-weight: normal">v0.13.0</a></li>
+    <li><a href="../../../../../v0.12.1/index.html" style="font-weight: normal">v0.12.1</a></li>
+    <li><a href="../../../../../v0.12.0/index.html" style="font-weight: normal">v0.12.0</a></li>
+    <li><a href="../../../../../v0.11.1/index.html" style="font-weight: normal">v0.11.1</a></li>
+    <li><a href="../../../../../v0.11.0/index.html" style="font-weight: normal">v0.11.0</a></li>
+    <li><a href="../../../../../v0.10.0/index.html" style="font-weight: normal">v0.10.0</a></li>
+    <li><a href="../../../../../v0.9.2/index.html" style="font-weight: normal">v0.9.2</a></li>
+    <li><a href="../../../../../v0.9.1/index.html" style="font-weight: normal">v0.9.1</a></li>
+    <li><a href="../../../../../v0.9.0/index.html" style="font-weight: normal">v0.9.0</a></li>
+    <li><a href="../../../../../v0.8.0/index.html" style="font-weight: normal">v0.8.0</a></li>
+    <li><a href="../../../../../v0.7.0/index.html" style="font-weight: normal">v0.7.0</a></li>
+    <li><a href="../../../../../v0.6.2/index.html" style="font-weight: normal">v0.6.2</a></li>
+    <li><a href="../../../../../v0.6.1/index.html" style="font-weight: normal">v0.6.1</a></li>
+    <li><a href="../../../../../v0.6.0/index.html" style="font-weight: normal">v0.6.0</a></li>
+    <li><a href="../../../../../v0.5.0/index.html" style="font-weight: normal">v0.5.0</a></li>
+    <li><a href="../../../../../v0.4.0/index.html" style="font-weight: normal">v0.4.0</a></li>
+    <li><a href="../../../../../v0.3.0/index.html" style="font-weight: normal">v0.3.0</a></li>
+    <li><a href="../../../../../v0.2.4/index.html" style="font-weight: normal">v0.2.4</a></li>
+    <li><a href="../../../../../v0.2.3/index.html" style="font-weight: normal">v0.2.3</a></li>
+    <li><a href="../../../../../v0.2.2/index.html" style="font-weight: normal">v0.2.2</a></li>
+    <li><a href="../../../../../v0.2.1/index.html" style="font-weight: normal">v0.2.1</a></li>
+    <li><a href="../../../../../v0.2.0/index.html" style="font-weight: normal">v0.2.0</a></li>
+    <li><a href="../../../../../v0.1.0/index.html" style="font-weight: normal">v0.1.0</a></li>
+</ul>
+<script>
+    let expanded = !!JSON.parse(localStorage.getItem('expanded'));
+
+    let releasesHeader = document.getElementById("releases_header");
+    let releasesSymbol = document.getElementById("releases_symbol");
+    let releasesContent = document.getElementById("releases_content");
+
+    function setReleasesState() {
+        localStorage.setItem("expanded", JSON.stringify(expanded))
+        releasesContent.style.display = expanded ? "block" : "none";
+        releasesSymbol.classList.add(expanded ? 'minus' : 'plus')
+        releasesSymbol.classList.remove(expanded ? 'plus' : 'minus')
+    }
+
+    setReleasesState()
+    releasesHeader.addEventListener("click", function() {
+        expanded = !expanded;
+        setReleasesState()
+    })
+</script>
+<style>
+    .plus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .plus:before,
+    .plus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .plus:before {
+        left:50%;
+        top:4px;
+        bottom:4px;
+        width:3px;
+        transform:translateX(-50%);
+    }
+
+    .plus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+
+
+
+    .minus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .minus:before,
+    .minus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .minus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+</style>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">opendp.extra...</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item"><div class="admonition warning" style="position: relative;">
+    <!--
+     Without the style, the region for the article title overlaps, and the link is unclickable.
+    -->
+    <details>
+        <summary>Questions or feedback?</summary>
+        <!--
+            All of these lists should be in sync:
+            - README.md
+            - docs/source/contributing/contact.rst
+            - docs/source/_templates/questions-feedback.html
+            - .github/ISSUE_TEMPLATE/config.yml
+        -->
+        <ul>
+            <li>Report a bug or request a feature on <a href="https://github.com/opendp/opendp/issues">Github</a>.</li>
+            <li>Send general queries to <a href="mailto:info@opendp.org">info@opendp.org</a>, or email <a href="mailto:security@opendp.org">security@opendp.org</a> if it is related to security.</li>
+            <li>Join the conversation on <a href="https://join.slack.com/t/opendp/shared_invite/zt-1t8rrbqhd-z8LiZiP06vVE422HJd6ciQ">Slack</a>, or the <a href="https://groups.google.com/a/g.harvard.edu/g/opendp-community">mailing list</a>.</li>
+        </ul>
+    </details>
+</div></div>
+      
+        <div class="header-article-item">
+<div class="admonition warning" style="position: relative;" id="old-version-warning">
+  <!--
+   To work with this locally, in conf.py uncomment the entry under "html_context".
+
+   Without the style, the region for the article title overlaps, and the link is unclickable.
+  -->
+  <p class="admonition-title">
+  
+  This documentation is for a development version of OpenDP.
+  
+  </p>
+  <p>The current release of OpenDP is <a href="/">v0.14.1</a>.</p>
+</div>
+<script>
+  window.addEventListener("load", (event) => {
+    document.getElementById('old-version-warning').style.top = `${window.visualViewport.pageTop}px`;
+  });
+</script>
+</div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for opendp.extras.mbi._table</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;High-level mechanism for applying mbi mechanisms to dataframes with mixed types.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">sqrt</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Any</span><span class="p">,</span>
+    <span class="n">Iterator</span><span class="p">,</span>
+    <span class="n">Literal</span><span class="p">,</span>
+    <span class="n">Mapping</span><span class="p">,</span>
+    <span class="n">Optional</span><span class="p">,</span>
+    <span class="n">Sequence</span><span class="p">,</span>
+    <span class="n">TypeAlias</span><span class="p">,</span>
+    <span class="n">Union</span><span class="p">,</span>
+    <span class="n">cast</span><span class="p">,</span>
+    <span class="n">TYPE_CHECKING</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">opendp._internal</span> <span class="kn">import</span> <span class="n">_new_pure_function</span>
+<span class="kn">from</span> <span class="nn">opendp._lib</span> <span class="kn">import</span> <span class="n">import_optional_dependency</span>
+<span class="kn">from</span> <span class="nn">opendp.combinators</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">make_adaptive_composition</span><span class="p">,</span>
+    <span class="n">make_approximate</span><span class="p">,</span>
+    <span class="n">make_composition</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">opendp.extras.mbi._aim</span> <span class="kn">import</span> <span class="n">AIM</span>
+<span class="kn">from</span> <span class="nn">opendp.extras.mbi._utilities</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">prior</span><span class="p">,</span>
+    <span class="n">get_std</span><span class="p">,</span>
+    <span class="n">row_major_order</span><span class="p">,</span>
+    <span class="n">weight_marginals</span><span class="p">,</span>
+    <span class="n">Algorithm</span><span class="p">,</span>
+    <span class="n">ONEWAY_UNKEYED</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">opendp.measurements</span> <span class="kn">import</span> <span class="n">make_private_lazyframe</span>
+<span class="kn">from</span> <span class="nn">opendp.mod</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ApproximateDivergence</span><span class="p">,</span>
+    <span class="n">FrameDistance</span><span class="p">,</span>
+    <span class="n">LazyFrameDomain</span><span class="p">,</span>
+    <span class="n">Measure</span><span class="p">,</span>
+    <span class="n">Measurement</span><span class="p">,</span>
+    <span class="n">OpenDPException</span><span class="p">,</span>
+    <span class="n">Queryable</span><span class="p">,</span>
+    <span class="n">binary_search</span><span class="p">,</span>
+    <span class="n">binary_search_param</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">opendp.domains</span> <span class="kn">import</span> <span class="n">_lazyframe_from_domain</span>
+<span class="kn">from</span> <span class="nn">opendp.transformations</span> <span class="kn">import</span> <span class="n">make_stable_lazyframe</span>
+<span class="kn">from</span> <span class="nn">opendp.typing</span> <span class="kn">import</span> <span class="n">RuntimeType</span>
+
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+    <span class="kn">from</span> <span class="nn">opendp.extras.polars</span> <span class="kn">import</span> <span class="n">Bound</span>
+
+
+<div class="viewcode-block" id="ContingencyTable">
+<a class="viewcode-back" href="../../../../api/python/opendp.extras.mbi.html#opendp.extras.mbi.ContingencyTable">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">ContingencyTable</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Approximate a k-way contingency table via low-order marginals.&quot;&quot;&quot;</span>
+
+    <span class="n">keys</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>  <span class="c1"># dict[str, Series]</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Unique keys for each column&quot;&quot;&quot;</span>
+    <span class="n">cuts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>  <span class="c1"># dict[str, Series]</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Cut points (left-open) for each numeric column&quot;&quot;&quot;</span>
+    <span class="n">marginals</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n">Any</span><span class="p">]</span>  <span class="c1"># dict[tuple[str, ...], LinearMeasurement]</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Mapping from clique name to LinearMeasurement used to fit the model&quot;&quot;&quot;</span>
+    <span class="n">model</span><span class="p">:</span> <span class="n">Any</span>  <span class="c1"># MarkovRandomField</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;MarkovRandomField spanning the same columns as keys&quot;&quot;&quot;</span>
+    <span class="n">thresholds</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Cut-off point for discovered stable keys. </span>
+<span class="sd">    Any category appearing fewer than threshold times is attributed to the null category.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">mbi</span> <span class="kn">import</span> <span class="n">MarkovRandomField</span><span class="p">,</span> <span class="n">Domain</span>  <span class="c1"># type: ignore[import-untyped,import-not-found]</span>
+        <span class="kn">import</span> <span class="nn">polars</span> <span class="k">as</span> <span class="nn">pl</span>  <span class="c1"># type: ignore[import-not-found]</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">,</span> <span class="n">MarkovRandomField</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;model must be a MarkovRandomField&quot;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">[</span><span class="n">col</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cuts</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cuts</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cuts</span><span class="p">[</span><span class="n">col</span><span class="p">])</span>
+
+        <span class="n">key_shape</span> <span class="o">=</span> <span class="nb">set</span><span class="p">((</span><span class="n">c</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">k</span><span class="p">))</span> <span class="k">for</span> <span class="n">c</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+        <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">domain</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">items</span><span class="p">())</span> <span class="o">!=</span> <span class="n">key_shape</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Model domain must match key attrs and sizes.</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;  Model shape: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">domain</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;  Key shape:   </span><span class="si">{</span><span class="n">Domain</span><span class="o">.</span><span class="n">fromdict</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">key_shape</span><span class="p">))</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">col</span><span class="p">,</span> <span class="n">cutset</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cuts</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;&quot;</span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s1">&quot; in cuts is not present in keys&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">[</span><span class="n">col</span><span class="p">])</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">cutset</span><span class="p">):</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;&quot;</span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s1">&quot; keyset length (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">[</span><span class="n">col</span><span class="p">])</span><span class="si">}</span><span class="s1">) must be one greater than the number of cuts (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">cutset</span><span class="p">)</span><span class="si">}</span><span class="s1">)&#39;</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ContingencyTable.synthesize">
+<a class="viewcode-back" href="../../../../api/python/opendp.extras.mbi.html#opendp.extras.mbi.ContingencyTable.synthesize">[docs]</a>
+    <span class="k">def</span> <span class="nf">synthesize</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">rows</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">method</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;round&quot;</span><span class="p">,</span> <span class="s2">&quot;sample&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;round&quot;</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Generate synthetic data that is consistent with the contingency table.</span>
+
+<span class="sd">        :param rows: if not set, approximately matches number of rows in original data</span>
+<span class="sd">        :param method: &quot;round&quot; rounds to projection, &quot;sample&quot; samples from densities</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">import</span> <span class="nn">polars</span> <span class="k">as</span> <span class="nn">pl</span>  <span class="c1"># type: ignore[import-not-found]</span>
+        <span class="kn">from</span> <span class="nn">mbi</span> <span class="kn">import</span> <span class="n">MarkovRandomField</span>  <span class="c1"># type: ignore[import-untyped,import-not-found]</span>
+
+        <span class="n">model</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">MarkovRandomField</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
+
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">synthetic_data</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">method</span><span class="p">)</span><span class="o">.</span><span class="n">df</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">c</span><span class="p">:</span> <span class="n">_deindex</span><span class="p">(</span><span class="n">indices</span><span class="p">[</span><span class="n">c</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">[</span><span class="n">c</span><span class="p">],</span> <span class="n">cuts</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cuts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">c</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">keys</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ContingencyTable.project">
+<a class="viewcode-back" href="../../../../api/python/opendp.extras.mbi.html#opendp.extras.mbi.ContingencyTable.project">[docs]</a>
+    <span class="k">def</span> <span class="nf">project</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attrs</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return counts corresponding to each combination of self.keys in `attrs` in an ndarray.</span>
+
+<span class="sd">        :param attrs: attributes to preserve. All other attributes are marginalized.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">mbi</span> <span class="kn">import</span> <span class="n">MarkovRandomField</span>  <span class="c1"># type: ignore[import-untyped,import-not-found]</span>
+
+        <span class="n">model</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">MarkovRandomField</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">model</span><span class="o">.</span><span class="n">project</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span><span class="o">.</span><span class="n">values</span></div>
+
+
+<div class="viewcode-block" id="ContingencyTable.project_melted">
+<a class="viewcode-back" href="../../../../api/python/opendp.extras.mbi.html#opendp.extras.mbi.ContingencyTable.project_melted">[docs]</a>
+    <span class="k">def</span> <span class="nf">project_melted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attrs</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return counts corresponding to each combination of self.keys in `attrs` in a dataframe.</span>
+
+<span class="sd">        :param attrs: attributes to preserve. All other attributes are marginalized.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">import</span> <span class="nn">polars</span> <span class="k">as</span> <span class="nn">pl</span>
+        <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+        <span class="n">attrs</span> <span class="o">=</span> <span class="p">[</span><span class="n">attrs</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">attrs</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
+
+        <span class="n">lengths_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+        <span class="n">lengths</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="s2">&quot;len&quot;</span><span class="p">,</span> <span class="n">lengths_arr</span><span class="p">)</span><span class="o">.</span><span class="n">to_frame</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">row_major_order</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="p">[</span><span class="n">attr</span><span class="p">]</span> <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">attrs</span><span class="p">)</span><span class="o">.</span><span class="n">hstack</span><span class="p">(</span><span class="n">lengths</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ContingencyTable.std">
+<a class="viewcode-back" href="../../../../api/python/opendp.extras.mbi.html#opendp.extras.mbi.ContingencyTable.std">[docs]</a>
+    <span class="k">def</span> <span class="nf">std</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attrs</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Estimate the standard deviation of the count estimate.</span>
+<span class="sd">        The estimate does not take cuts into account.</span>
+
+<span class="sd">        When marginals are estimated with gaussian noise,</span>
+<span class="sd">        the consistent (variance-weighted) marginals are also gaussian-distributed.</span>
+<span class="sd">        Therefore the standard deviation matches the noise scale parameter.</span>
+
+<span class="sd">        When marginals are estimated with laplace noise,</span>
+<span class="sd">        the consistent marginals are a sum of laplacians, which is not laplace-distributed.</span>
+<span class="sd">        Therefore the standard deviation doesn&#39;t correspond to the laplace distribution.</span>
+<span class="sd">        Under the central limit theorem, the distribution will tend towards gaussian.</span>
+
+<span class="sd">        If the estimate is gaussian-distributed,</span>
+<span class="sd">        use :py:func:`~opendp.accuracy.gaussian_scale_to_accuracy`</span>
+<span class="sd">        to construct a confidence interval.</span>
+
+<span class="sd">        :param attrs: attributes to preserve in uncertainty estimate</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">mbi</span> <span class="kn">import</span> <span class="n">MarkovRandomField</span>  <span class="c1"># type: ignore[import-untyped,import-not-found]</span>
+
+        <span class="n">model</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">MarkovRandomField</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">attrs</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;attrs (</span><span class="si">{</span><span class="n">attrs</span><span class="si">}</span><span class="s2">) must be a sequence of strings&quot;</span><span class="p">)</span>
+
+        <span class="n">attrs_clique</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">domain</span><span class="o">.</span><span class="n">size</span>
+
+        <span class="n">inv_var_sum</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span>
+            <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="n">lm</span><span class="o">.</span><span class="n">stddev</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">size</span><span class="p">(</span><span class="n">clique</span><span class="p">)</span> <span class="o">/</span> <span class="n">size</span><span class="p">(</span><span class="n">attrs_clique</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">clique</span><span class="p">,</span> <span class="n">lm</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">marginals</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">attrs_clique</span><span class="o">.</span><span class="n">issuperset</span><span class="p">(</span><span class="n">clique</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">inv_var_sum</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;attrs (</span><span class="si">{</span><span class="n">attrs</span><span class="si">}</span><span class="s2">) are not covered by the query set&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">inv_var_sum</span><span class="p">)</span></div>
+
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">schema</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the data schema.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">keyset</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">keyset</span><span class="o">.</span><span class="n">dtype</span> <span class="k">for</span> <span class="n">keyset</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">keys</span><span class="o">.</span><span class="n">values</span><span class="p">()}</span></div>
+
+
+
+<div class="viewcode-block" id="make_contingency_table">
+<a class="viewcode-back" href="../../../../api/python/opendp.extras.mbi.html#opendp.extras.mbi.make_contingency_table">[docs]</a>
+<span class="k">def</span> <span class="nf">make_contingency_table</span><span class="p">(</span>
+    <span class="n">input_domain</span><span class="p">:</span> <span class="n">LazyFrameDomain</span><span class="p">,</span>
+    <span class="n">input_metric</span><span class="p">:</span> <span class="n">FrameDistance</span><span class="p">,</span>
+    <span class="n">output_measure</span><span class="p">:</span> <span class="n">Measure</span><span class="p">,</span>
+    <span class="n">d_in</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="s2">&quot;Bound&quot;</span><span class="p">],</span>
+    <span class="n">d_out</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span>
+    <span class="n">keys</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">cuts</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">table</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ContingencyTable</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">algorithm</span><span class="p">:</span> <span class="n">Algorithm</span> <span class="o">=</span> <span class="n">AIM</span><span class="p">(),</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Measurement</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a measurement that releases a :class:`.ContingencyTable`,</span>
+<span class="sd">    as well as the noise scale and optional threshold for one-way marginals.</span>
+
+<span class="sd">    :param input_domain: domain of input data</span>
+<span class="sd">    :param input_metric: how to compute distance between datasets</span>
+<span class="sd">    :param output_measure: how to measure privacy of release</span>
+<span class="sd">    :param d_in: bounds on distances between adjacent input datasets</span>
+<span class="sd">    :param d_out: upper bound on the privacy loss</span>
+<span class="sd">    :param keys: dictionary of column names and unique categories</span>
+<span class="sd">    :param cuts: dictionary of column names and left-open bin edges</span>
+<span class="sd">    :param table: ContingencyTable from prior release</span>
+<span class="sd">    :param algorithm: configuration for internal estimation algorithm</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">import_optional_dependency</span><span class="p">(</span><span class="s2">&quot;mbi&quot;</span><span class="p">)</span>
+    <span class="kn">import</span> <span class="nn">polars</span> <span class="k">as</span> <span class="nn">pl</span>
+    <span class="kn">import</span> <span class="nn">mbi</span>
+
+    <span class="n">plan</span> <span class="o">=</span> <span class="n">_lazyframe_from_domain</span><span class="p">(</span><span class="n">input_domain</span><span class="p">)</span>
+    <span class="n">schema</span> <span class="o">=</span> <span class="n">plan</span><span class="o">.</span><span class="n">collect_schema</span><span class="p">()</span>
+
+    <span class="n">keys_pl</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">pl</span><span class="o">.</span><span class="n">Series</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">col</span><span class="p">:</span> <span class="n">_unique</span><span class="p">(</span><span class="n">_with_null</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">keyset</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">schema</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">col</span><span class="p">))),</span> <span class="s2">&quot;keys&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">col</span><span class="p">,</span> <span class="n">keyset</span> <span class="ow">in</span> <span class="p">(</span><span class="n">keys</span> <span class="ow">or</span> <span class="nb">dict</span><span class="p">())</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+    <span class="p">}</span>
+
+    <span class="n">cuts_pl</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">pl</span><span class="o">.</span><span class="n">Series</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">col</span><span class="p">:</span> <span class="n">_unique</span><span class="p">(</span><span class="n">_increasing</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">cutset</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">schema</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">col</span><span class="p">))),</span> <span class="s2">&quot;cuts&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">col</span><span class="p">,</span> <span class="n">cutset</span> <span class="ow">in</span> <span class="p">(</span><span class="n">cuts</span> <span class="ow">or</span> <span class="nb">dict</span><span class="p">())</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+    <span class="p">}</span>
+
+    <span class="c1"># add cut bin labels to keys</span>
+    <span class="k">def</span> <span class="nf">get_categories</span><span class="p">(</span><span class="n">cutset</span><span class="p">):</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">lb</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">rb</span><span class="si">}</span><span class="s2">]&quot;</span> <span class="k">for</span> <span class="n">lb</span><span class="p">,</span> <span class="n">rb</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">([</span><span class="s2">&quot;-inf&quot;</span><span class="p">,</span> <span class="o">*</span><span class="n">cutset</span><span class="p">],</span> <span class="p">[</span><span class="o">*</span><span class="n">cutset</span><span class="p">,</span> <span class="s2">&quot;inf&quot;</span><span class="p">])]</span>
+        <span class="k">return</span> <span class="n">pl</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">cutset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">labels</span><span class="p">)</span>
+
+    <span class="n">keys_pl</span> <span class="o">|=</span> <span class="p">{</span><span class="n">col</span><span class="p">:</span> <span class="n">get_categories</span><span class="p">(</span><span class="n">cutset</span><span class="p">)</span> <span class="k">for</span> <span class="n">col</span><span class="p">,</span> <span class="n">cutset</span> <span class="ow">in</span> <span class="n">cuts_pl</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+    <span class="k">if</span> <span class="n">table</span><span class="p">:</span>
+        <span class="n">keys_pl</span> <span class="o">|=</span> <span class="n">table</span><span class="o">.</span><span class="n">keys</span>
+        <span class="n">cuts_pl</span> <span class="o">|=</span> <span class="n">table</span><span class="o">.</span><span class="n">cuts</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">mbi</span><span class="o">.</span><span class="n">MarkovRandomField</span><span class="p">,</span> <span class="n">table</span><span class="o">.</span><span class="n">model</span><span class="p">)</span>
+        <span class="n">marginals</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">marginals</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">thresholds</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">thresholds</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">marginals</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">thresholds</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">if</span> <span class="n">cuts_pl</span><span class="p">:</span>
+        <span class="n">plan</span> <span class="o">=</span> <span class="n">plan</span><span class="o">.</span><span class="n">with_columns</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="o">.</span><span class="n">cut</span><span class="p">(</span><span class="n">cutset</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">get_categories</span><span class="p">(</span><span class="n">cutset</span><span class="p">))</span> <span class="k">for</span> <span class="n">c</span><span class="p">,</span> <span class="n">cutset</span> <span class="ow">in</span> <span class="n">cuts_pl</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">schema</span><span class="p">)</span>  <span class="c1"># type: ignore[arg-type]</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">QO</span> <span class="o">:=</span> <span class="n">RuntimeType</span><span class="o">.</span><span class="n">infer</span><span class="p">(</span><span class="n">d_out</span><span class="p">))</span> <span class="o">!=</span> <span class="n">output_measure</span><span class="o">.</span><span class="n">distance_type</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;d_out type (</span><span class="si">{</span><span class="n">QO</span><span class="si">}</span><span class="s2">) must be </span><span class="si">{</span><span class="n">output_measure</span><span class="o">.</span><span class="n">distance_type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">delta</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">d_out</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+        <span class="n">d_out</span><span class="p">,</span> <span class="n">delta</span> <span class="o">=</span> <span class="n">d_out</span>
+
+    <span class="n">all_keys_known</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">input_domain</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="nb">set</span><span class="p">(</span><span class="n">keys_pl</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">delta</span> <span class="ow">and</span> <span class="n">all_keys_known</span><span class="p">:</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;delta (</span><span class="si">{</span><span class="n">delta</span><span class="si">}</span><span class="s2">) must be zero because keys and cuts span all columns&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">delta</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">all_keys_known</span><span class="p">:</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;delta (</span><span class="si">{</span><span class="n">delta</span><span class="si">}</span><span class="s2">) must be nonzero because keys and cuts don&#39;t span all columns&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">algorithm</span><span class="o">.</span><span class="n">oneway</span> <span class="o">==</span> <span class="n">ONEWAY_UNKEYED</span> <span class="ow">and</span> <span class="n">all_keys_known</span><span class="p">:</span>
+        <span class="n">d_multiway</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="n">d_out</span>
+        <span class="n">d_mids</span> <span class="o">=</span> <span class="p">[</span><span class="n">d_multiway</span> <span class="k">if</span> <span class="n">delta</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">(</span><span class="n">d_multiway</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)]</span>
+        <span class="n">m_oneway</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">scale</span><span class="p">,</span> <span class="n">threshold</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">algorithm</span><span class="o">.</span><span class="n">oneway_split</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">oneway_split</span> <span class="o">=</span> <span class="mf">0.5</span>
+            <span class="k">if</span> <span class="n">algorithm</span><span class="o">.</span><span class="n">oneway</span> <span class="o">==</span> <span class="n">ONEWAY_UNKEYED</span><span class="p">:</span>
+                <span class="n">columns</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">input_domain</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+                <span class="n">oneway_split</span> <span class="o">*=</span> <span class="nb">len</span><span class="p">(</span><span class="n">columns</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">keys_pl</span><span class="p">))</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">oneway_split</span> <span class="o">=</span> <span class="n">algorithm</span><span class="o">.</span><span class="n">oneway_split</span>
+
+        <span class="n">d_oneway</span> <span class="o">=</span> <span class="n">d_out</span> <span class="o">*</span> <span class="n">oneway_split</span>
+        <span class="n">d_multiway</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">prior</span><span class="p">(</span><span class="n">prior</span><span class="p">(</span><span class="n">d_out</span> <span class="o">-</span> <span class="n">d_oneway</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="n">delta</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">d_oneway</span> <span class="o">=</span> <span class="n">d_oneway</span><span class="p">,</span> <span class="n">delta</span>  <span class="c1"># type: ignore[assignment]</span>
+
+        <span class="n">d_mids</span> <span class="o">=</span> <span class="p">[</span><span class="n">d_oneway</span><span class="p">,</span> <span class="n">d_multiway</span> <span class="k">if</span> <span class="n">delta</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">(</span><span class="n">d_multiway</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)]</span>  <span class="c1"># type: ignore[has-type]</span>
+        <span class="n">m_oneway</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">threshold</span> <span class="o">=</span> <span class="n">_make_oneway_marginals</span><span class="p">(</span>
+            <span class="n">input_domain</span><span class="p">,</span>
+            <span class="n">input_metric</span><span class="p">,</span>
+            <span class="n">output_measure</span><span class="p">,</span>
+            <span class="n">d_in</span><span class="o">=</span><span class="n">d_in</span><span class="p">,</span>
+            <span class="n">d_out</span><span class="o">=</span><span class="n">d_oneway</span><span class="p">,</span>
+            <span class="n">keys</span><span class="o">=</span><span class="n">keys_pl</span><span class="p">,</span>
+            <span class="n">plan</span><span class="o">=</span><span class="n">plan</span><span class="p">,</span>
+            <span class="n">unknown_only</span><span class="o">=</span><span class="n">algorithm</span><span class="o">.</span><span class="n">oneway</span> <span class="o">==</span> <span class="n">ONEWAY_UNKEYED</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">threshold</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">thresholds</span> <span class="o">|=</span> <span class="p">{</span>
+                <span class="n">c</span><span class="p">:</span> <span class="n">threshold</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">input_domain</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">keys_pl</span>
+            <span class="p">}</span>
+
+    <span class="n">m_comp</span> <span class="o">=</span> <span class="n">make_adaptive_composition</span><span class="p">(</span>
+        <span class="n">input_domain</span><span class="p">,</span> <span class="n">input_metric</span><span class="p">,</span> <span class="n">output_measure</span><span class="p">,</span> <span class="n">d_in</span><span class="p">,</span> <span class="n">d_mids</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output_measure</span><span class="p">,</span> <span class="n">ApproximateDivergence</span><span class="p">):</span>
+        <span class="n">inner_measure</span> <span class="o">=</span> <span class="n">output_measure</span><span class="o">.</span><span class="n">inner_measure</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">inner_measure</span> <span class="o">=</span> <span class="n">output_measure</span>
+
+    <span class="k">if</span> <span class="s2">&quot;len&quot;</span> <span class="ow">in</span> <span class="n">input_domain</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;input_domain must not contain a column named &quot;len&quot;&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">postprocess</span><span class="p">(</span><span class="n">qbl</span><span class="p">:</span> <span class="n">Queryable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ContingencyTable</span><span class="p">:</span>
+        <span class="n">stable_keys</span> <span class="o">=</span> <span class="n">keys_pl</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">current_marginals</span> <span class="o">=</span> <span class="n">marginals</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">m_oneway</span><span class="p">:</span>
+            <span class="n">new_keys</span><span class="p">,</span> <span class="n">oneway_releases</span> <span class="o">=</span> <span class="n">qbl</span><span class="p">(</span><span class="n">m_oneway</span><span class="p">)</span>
+            <span class="n">stable_keys</span> <span class="o">|=</span> <span class="n">new_keys</span>
+            <span class="n">current_marginals</span> <span class="o">=</span> <span class="n">weight_marginals</span><span class="p">(</span><span class="n">current_marginals</span><span class="p">,</span> <span class="o">*</span><span class="n">oneway_releases</span><span class="p">)</span>
+
+        <span class="n">mbi_domain</span> <span class="o">=</span> <span class="n">mbi</span><span class="o">.</span><span class="n">Domain</span><span class="o">.</span><span class="n">fromdict</span><span class="p">({</span><span class="n">c</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">stable_keys</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
+
+        <span class="n">potentials</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">mbi</span><span class="o">.</span><span class="n">MarkovRandomField</span><span class="p">):</span>
+            <span class="kn">import</span> <span class="nn">attr</span>  <span class="c1"># type: ignore[import-not-found]</span>
+
+            <span class="n">potential_factor</span> <span class="o">=</span> <span class="n">attr</span><span class="o">.</span><span class="n">evolve</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">potentials</span><span class="p">,</span> <span class="n">domain</span><span class="o">=</span><span class="n">mbi_domain</span><span class="p">)</span>
+            <span class="n">potentials</span> <span class="o">=</span> <span class="n">potential_factor</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">current_marginals</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+
+        <span class="n">current_model</span> <span class="o">=</span> <span class="n">algorithm</span><span class="o">.</span><span class="n">estimator</span><span class="p">(</span>
+            <span class="n">mbi_domain</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">current_marginals</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span> <span class="n">potentials</span><span class="o">=</span><span class="n">potentials</span>
+        <span class="p">)</span>
+
+        <span class="n">t_index</span> <span class="o">=</span> <span class="n">make_stable_lazyframe</span><span class="p">(</span>
+            <span class="n">input_domain</span><span class="p">,</span>
+            <span class="n">input_metric</span><span class="p">,</span>
+            <span class="n">plan</span><span class="o">.</span><span class="n">with_columns</span><span class="p">(</span>
+                <span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+                <span class="o">.</span><span class="n">replace_strict</span><span class="p">(</span>
+                    <span class="n">stable_keys</span><span class="p">[</span><span class="n">c</span><span class="p">],</span>
+                    <span class="n">pl</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">stable_keys</span><span class="p">[</span><span class="n">c</span><span class="p">])),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">pl</span><span class="o">.</span><span class="n">UInt32</span><span class="p">),</span>
+                    <span class="n">default</span><span class="o">=</span><span class="n">_get_null_index</span><span class="p">(</span><span class="n">stable_keys</span><span class="p">[</span><span class="n">c</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="n">stable_keys</span><span class="p">[</span><span class="n">c</span><span class="p">])</span> <span class="o">-</span> <span class="mi">1</span><span class="p">),</span>
+                <span class="p">)</span>
+                <span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">stable_keys</span><span class="p">[</span><span class="n">c</span><span class="p">])</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">input_domain</span><span class="o">.</span><span class="n">columns</span>
+            <span class="p">),</span>
+            <span class="n">MO</span><span class="o">=</span><span class="s2">&quot;FrameDistance&lt;SymmetricDistance&gt;&quot;</span>
+        <span class="p">)</span>
+
+        <span class="n">m_marginals</span> <span class="o">=</span> <span class="n">algorithm</span><span class="o">.</span><span class="n">make_marginals</span><span class="p">(</span>
+            <span class="n">input_domain</span><span class="o">=</span><span class="n">t_index</span><span class="o">.</span><span class="n">output_domain</span><span class="p">,</span>
+            <span class="n">input_metric</span><span class="o">=</span><span class="n">t_index</span><span class="o">.</span><span class="n">output_metric</span><span class="p">,</span>
+            <span class="n">output_measure</span><span class="o">=</span><span class="n">inner_measure</span><span class="p">,</span>
+            <span class="n">d_in</span><span class="o">=</span><span class="n">t_index</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">d_in</span><span class="p">),</span>
+            <span class="n">d_out</span><span class="o">=</span><span class="n">d_multiway</span><span class="p">,</span>  <span class="c1"># type: ignore[arg-type]</span>
+            <span class="n">marginals</span><span class="o">=</span><span class="n">current_marginals</span><span class="p">,</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">current_model</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">m_index_marginals</span> <span class="o">=</span> <span class="n">t_index</span> <span class="o">&gt;&gt;</span> <span class="n">m_marginals</span>
+
+        <span class="k">if</span> <span class="n">delta</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">m_index_marginals</span> <span class="o">=</span> <span class="n">make_approximate</span><span class="p">(</span><span class="n">m_index_marginals</span><span class="p">)</span>
+
+        <span class="n">T</span><span class="p">:</span> <span class="n">TypeAlias</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="n">Any</span><span class="p">],</span> <span class="n">mbi</span><span class="o">.</span><span class="n">MarkovRandomField</span><span class="p">]</span>
+        <span class="n">current_marginals</span><span class="p">,</span> <span class="n">current_model</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="n">qbl</span><span class="p">(</span><span class="n">m_index_marginals</span><span class="p">))</span>
+
+        <span class="n">ordered_keys</span> <span class="o">=</span> <span class="p">{</span><span class="n">c</span><span class="p">:</span> <span class="n">stable_keys</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">input_domain</span><span class="o">.</span><span class="n">columns</span><span class="p">}</span>
+        <span class="n">ordered_keys</span> <span class="o">|=</span> <span class="n">stable_keys</span>
+
+        <span class="k">return</span> <span class="n">ContingencyTable</span><span class="p">(</span>
+            <span class="n">keys</span><span class="o">=</span><span class="n">ordered_keys</span><span class="p">,</span>
+            <span class="n">cuts</span><span class="o">=</span><span class="n">cuts_pl</span><span class="p">,</span>
+            <span class="n">marginals</span><span class="o">=</span><span class="n">current_marginals</span><span class="p">,</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">current_model</span><span class="p">,</span>
+            <span class="n">thresholds</span><span class="o">=</span><span class="n">thresholds</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">m_comp</span> <span class="o">&gt;&gt;</span> <span class="n">_new_pure_function</span><span class="p">(</span><span class="n">postprocess</span><span class="p">),</span> <span class="n">scale</span><span class="p">,</span> <span class="n">threshold</span></div>
+
+
+
+<span class="k">def</span> <span class="nf">_unique</span><span class="p">(</span><span class="n">series</span><span class="p">,</span> <span class="n">arg</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;raise error if elements are not unique&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">series</span><span class="o">.</span><span class="n">n_unique</span><span class="p">()</span> <span class="o">!=</span> <span class="n">series</span><span class="o">.</span><span class="n">len</span><span class="p">():</span>  <span class="c1"># pragma: no cover</span>
+        <span class="c1"># this is actually tested, but coverage doesn&#39;t see it</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">arg</span><span class="si">}</span><span class="s1"> must be unique: &quot;</span><span class="si">{</span><span class="n">series</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1">&quot; has duplicates&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">series</span>
+
+
+<span class="k">def</span> <span class="nf">_increasing</span><span class="p">(</span><span class="n">series</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;raise error if elements are not increasing&quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">polars</span> <span class="k">as</span> <span class="nn">pl</span>
+
+    <span class="n">diff</span> <span class="o">=</span> <span class="n">series</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">Float64</span><span class="p">)</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">null_behavior</span><span class="o">=</span><span class="s2">&quot;drop&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">diff</span><span class="o">.</span><span class="n">le</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>  <span class="c1"># pragma: no cover</span>
+        <span class="c1"># this is actually tested, but coverage doesn&#39;t see it</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;cuts must be strictly increasing: &quot;</span><span class="si">{</span><span class="n">series</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1">&quot; is not strictly increasing&#39;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">series</span>
+
+
+<span class="k">def</span> <span class="nf">_with_null</span><span class="p">(</span><span class="n">series</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;create new series leading with null if null is not present&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="n">series</span> <span class="k">if</span> <span class="n">series</span><span class="o">.</span><span class="n">is_null</span><span class="p">()</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="k">else</span> <span class="n">series</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">series</span><span class="o">.</span><span class="n">clear</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_get_null_index</span><span class="p">(</span><span class="n">series</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;returns the index of null in a polars `series`, else `default`&quot;&quot;&quot;</span>
+    <span class="n">null_indices</span> <span class="o">=</span> <span class="n">series</span><span class="o">.</span><span class="n">is_null</span><span class="p">()</span><span class="o">.</span><span class="n">arg_true</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">null_indices</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="k">if</span> <span class="n">null_indices</span><span class="o">.</span><span class="n">len</span><span class="p">()</span> <span class="k">else</span> <span class="n">default</span>
+
+
+<span class="k">def</span> <span class="nf">_make_oneway_marginals</span><span class="p">(</span>
+    <span class="n">input_domain</span><span class="p">:</span> <span class="n">LazyFrameDomain</span><span class="p">,</span>
+    <span class="n">input_metric</span><span class="p">:</span> <span class="n">FrameDistance</span><span class="p">,</span>
+    <span class="n">output_measure</span><span class="p">:</span> <span class="n">Measure</span><span class="p">,</span>
+    <span class="n">d_in</span><span class="p">,</span>
+    <span class="n">d_out</span><span class="p">,</span>
+    <span class="n">keys</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">plan</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">unknown_only</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Measurement</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns a measurement that releases keys and counts for one-way marginals,</span>
+<span class="sd">    as well as the discovered scale and threshold.&quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">opendp.extras.polars</span> <span class="kn">import</span> <span class="n">dp_len</span>
+    <span class="kn">import</span> <span class="nn">polars</span> <span class="k">as</span> <span class="nn">pl</span>  <span class="c1"># type: ignore[import-not-found]</span>
+    <span class="kn">from</span> <span class="nn">mbi</span> <span class="kn">import</span> <span class="n">LinearMeasurement</span>  <span class="c1"># type: ignore[import-not-found]</span>
+    <span class="kn">from</span> <span class="nn">mbi.estimation</span> <span class="kn">import</span> <span class="n">minimum_variance_unbiased_total</span>  <span class="c1"># type: ignore[import-untyped,import-not-found]</span>
+    <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>  <span class="c1"># type: ignore[import-not-found]</span>
+
+    <span class="k">def</span> <span class="nf">group_by_agg</span><span class="p">(</span><span class="n">plan</span><span class="p">:</span> <span class="n">pl</span><span class="o">.</span><span class="n">LazyFrame</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pl</span><span class="o">.</span><span class="n">LazyFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Aggregate the compute plan&quot;&quot;&quot;</span>
+        <span class="n">keyset</span> <span class="o">=</span> <span class="n">keys</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">keyset</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">plan</span><span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">agg</span><span class="p">(</span><span class="n">dp_len</span><span class="p">())</span>
+
+        <span class="c1"># fold all unknown values into null</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">keyset</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">pl</span><span class="o">.</span><span class="n">Categorical</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
+            <span class="n">keyset</span> <span class="o">=</span> <span class="n">keyset</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">Enum</span><span class="p">(</span><span class="n">keyset</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">String</span><span class="p">)))</span>
+        <span class="n">replace</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">replace_strict</span><span class="p">(</span><span class="n">keys</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">keyset</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">pl</span><span class="o">.</span><span class="n">LazyFrame</span><span class="p">([</span><span class="n">keyset</span><span class="p">])</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+            <span class="n">plan</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">replace</span><span class="p">)</span><span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">agg</span><span class="p">(</span><span class="n">dp_len</span><span class="p">()),</span>
+            <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="n">name</span><span class="p">],</span>
+            <span class="n">how</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">,</span>
+            <span class="n">nulls_equal</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_make</span><span class="p">(</span><span class="n">scale</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">threshold</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Measurement</span><span class="p">:</span>
+        <span class="n">std</span> <span class="o">=</span> <span class="n">get_std</span><span class="p">(</span><span class="n">output_measure</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span>
+
+        <span class="c1"># all columns that should be estimated</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">name</span>
+            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">input_domain</span><span class="o">.</span><span class="n">columns</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">keys</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">unknown_only</span>
+        <span class="p">]</span>
+        <span class="c1"># estimating the total is necessary if there are no keyed columns</span>
+        <span class="n">should_total</span> <span class="o">=</span> <span class="nb">all</span><span class="p">(</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">keys</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">input_domain</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+
+        <span class="n">one_way_measurements</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">make_private_lazyframe</span><span class="p">(</span>
+                <span class="n">input_domain</span><span class="p">,</span>
+                <span class="n">input_metric</span><span class="p">,</span>
+                <span class="n">output_measure</span><span class="p">,</span>
+                <span class="n">group_by_agg</span><span class="p">(</span><span class="n">plan</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span>
+                <span class="n">global_scale</span><span class="o">=</span><span class="n">scale</span><span class="p">,</span>
+                <span class="n">threshold</span><span class="o">=</span><span class="n">threshold</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="o">&gt;&gt;</span> <span class="n">_new_pure_function</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">collect</span><span class="p">())</span>
+            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span>
+        <span class="p">]</span>
+        <span class="k">if</span> <span class="n">should_total</span><span class="p">:</span>
+            <span class="n">m_total</span> <span class="o">=</span> <span class="n">make_private_lazyframe</span><span class="p">(</span>
+                <span class="n">input_domain</span><span class="p">,</span>
+                <span class="n">input_metric</span><span class="p">,</span>
+                <span class="n">output_measure</span><span class="p">,</span>
+                <span class="n">plan</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">dp_len</span><span class="p">()),</span>
+                <span class="n">global_scale</span><span class="o">=</span><span class="n">scale</span><span class="p">,</span>
+            <span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="n">_new_pure_function</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">collect</span><span class="p">())</span>
+            <span class="n">one_way_measurements</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">m_total</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">postprocess</span><span class="p">(</span><span class="n">counts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]):</span>
+            <span class="n">new_keys</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+            <span class="n">lm_counts</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="k">if</span> <span class="n">should_total</span><span class="p">:</span>
+                <span class="n">total</span> <span class="o">=</span> <span class="n">counts</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">total</span> <span class="o">=</span> <span class="n">minimum_variance_unbiased_total</span><span class="p">(</span>
+                    <span class="n">LinearMeasurement</span><span class="p">(</span><span class="n">count</span><span class="p">[</span><span class="s2">&quot;len&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">stddev</span><span class="o">=</span><span class="n">std</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="n">counts</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">keys</span>
+                <span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="n">counts</span><span class="p">):</span>
+                <span class="n">count</span> <span class="o">=</span> <span class="n">count</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+                <span class="n">lookup</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">count</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">count</span><span class="p">[</span><span class="s2">&quot;len&quot;</span><span class="p">]))</span>
+
+                <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+                    <span class="n">values_iter</span><span class="p">:</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">lookup</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">lookup</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                    <span class="n">lookup</span><span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">+=</span> <span class="nb">max</span><span class="p">(</span><span class="n">total</span> <span class="o">-</span> <span class="n">count</span><span class="p">[</span><span class="s2">&quot;len&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">(),</span> <span class="mi">0</span><span class="p">)</span>
+                    <span class="n">dtype</span> <span class="o">=</span> <span class="n">count</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span>
+
+                    <span class="n">new_keys</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">lookup</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+                    <span class="n">values_iter</span> <span class="o">=</span> <span class="n">lookup</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>  <span class="c1"># type: ignore[assignment]</span>
+
+                <span class="n">values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fromiter</span><span class="p">(</span><span class="n">values_iter</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">)</span>
+                <span class="n">lm_counts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LinearMeasurement</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">clique</span><span class="o">=</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">stddev</span><span class="o">=</span><span class="n">std</span><span class="p">))</span>
+
+            <span class="k">return</span> <span class="n">new_keys</span><span class="p">,</span> <span class="n">lm_counts</span>
+
+        <span class="k">return</span> <span class="n">make_composition</span><span class="p">(</span><span class="n">one_way_measurements</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="n">_new_pure_function</span><span class="p">(</span><span class="n">postprocess</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output_measure</span><span class="p">,</span> <span class="n">ApproximateDivergence</span><span class="p">):</span>
+        <span class="n">compare_s</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">_make</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mi">2</span><span class="o">**</span><span class="mi">32</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">d_in</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">d_out</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># type: ignore[index]</span>
+        <span class="n">scale</span> <span class="o">=</span> <span class="n">binary_search</span><span class="p">(</span><span class="n">compare_s</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">_make</span><span class="p">(</span><span class="n">scale</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+            <span class="n">threshold</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># pragma: no cover</span>
+        <span class="k">except</span> <span class="n">OpenDPException</span><span class="p">:</span>
+            <span class="n">compare_t</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">_make</span><span class="p">(</span><span class="n">scale</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">d_in</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">d_out</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># type: ignore[index,arg-type]</span>
+            <span class="n">threshold</span> <span class="o">=</span> <span class="n">binary_search</span><span class="p">(</span><span class="n">compare_t</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>  <span class="c1"># type: ignore[assignment]</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">scale</span> <span class="o">=</span> <span class="n">binary_search_param</span><span class="p">(</span><span class="n">_make</span><span class="p">,</span> <span class="n">d_in</span><span class="p">,</span> <span class="n">d_out</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">threshold</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">return</span> <span class="n">_make</span><span class="p">(</span><span class="n">scale</span><span class="p">,</span> <span class="n">threshold</span><span class="p">),</span> <span class="n">scale</span><span class="p">,</span> <span class="n">threshold</span>
+
+
+<span class="k">def</span> <span class="nf">_deindex</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="n">keys</span><span class="p">,</span> <span class="n">cuts</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Translate keyset indices into categorical data.&quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+    <span class="k">if</span> <span class="n">cuts</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">keys</span><span class="p">[</span><span class="n">indices</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">cuts</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">is_integer</span><span class="p">():</span>
+        <span class="c1"># cuts are left-open</span>
+        <span class="n">sampler</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">lower</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">upper</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">cuts</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">is_float</span><span class="p">():</span>
+        <span class="n">sampler</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span>  <span class="c1"># type: ignore[assignment]</span>
+
+    <span class="n">edges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">cuts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="o">*</span><span class="n">cuts</span><span class="p">,</span> <span class="n">cuts</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">sampler</span><span class="p">(</span><span class="n">edges</span><span class="p">[</span><span class="n">indices</span><span class="p">],</span> <span class="n">edges</span><span class="p">[</span><span class="n">indices</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f"></script>
+<script src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.3rc1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

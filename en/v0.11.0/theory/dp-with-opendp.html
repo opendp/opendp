@@ -1,0 +1,1157 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Differential Privacy with OpenDP &#8212; OpenDP</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=eafc0fe6" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=4f92a2c4" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+    <script src="../_static/documentation_options.js?v=f3b36f1a"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'theory/dp-with-opendp';</script>
+    <link rel="icon" href="../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Accuracy: Pitfalls and Edge Cases" href="accuracy-pitfalls.html" />
+    <link rel="prev" title="A Framework to Understand DP" href="a-framework-to-understand-dp.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Feb 23, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+
+
+<script>
+document.write(`<aside class="bd-header-announcement" aria-label="Announcement"></aside>`);
+fetch("https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html")
+  .then(res => {return res.text();})
+  .then(data => {
+    if (data.length === 0) {
+      console.log("[PST]: Empty announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+      return;
+    }
+    div = document.querySelector(".bd-header-announcement");
+    div.classList.add(...["bd-header-announcement", "container-fluid", "init"]);
+    div.innerHTML = `<div class="bd-header-announcement__content">${data}</div>`;
+    // At least 3rem height
+    const autoHeight = Math.min(
+      div.offsetHeight,
+      3 * parseFloat(getComputedStyle(document.documentElement).fontSize));
+    // Set height and vertical padding to 0 to prepare the height transition
+    div.style.setProperty("height", 0);
+    div.style.setProperty("padding-top", 0);
+    div.style.setProperty("padding-bottom", 0);
+    div.classList.remove("init");
+    // Set height to the computed height with a small timeout to activate the transition
+    setTimeout(() => {
+      div.style.setProperty("height", `${autoHeight}px`);
+      // Wait for a bit more than 300ms (the transition duration) then remove the
+      // forcefully set styles and let CSS take over
+      setTimeout(() => {
+        div.style.removeProperty("padding-top");
+        div.style.removeProperty("padding-bottom");
+        div.style.removeProperty("height");
+        div.style.setProperty("min-height", "3rem");
+      }, 320);
+    }, 10);
+  })
+  .catch(error => {
+    console.log("[PST]: Failed to load announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+  });
+</script>
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <button class="sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/opendp-logo.png" class="logo__image only-light" alt="OpenDP - Home"/>
+    <script>document.write(`<img src="../_static/opendp-logo.png" class="logo__image only-dark" alt="OpenDP - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../getting-started/index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../api/index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+    <button class="sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../getting-started/index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../api/index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="a-framework-to-understand-dp.html">A Framework to Understand DP</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Differential Privacy with OpenDP</a></li>
+<li class="toctree-l1"><a class="reference internal" href="accuracy-pitfalls.html">Accuracy: Pitfalls and Edge Cases</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="attacks/index.html">Attacks</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="attacks/differencing.html">Differencing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="attacks/membership.html">Membership</a></li>
+<li class="toctree-l2"><a class="reference internal" href="attacks/reconstruction.html">Reconstruction</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="resources.html">Resources List</a></li>
+</ul>
+</div>
+</nav></div>
+        <div class="sidebar-primary-item">
+<h6>Branches</h6>
+<ul>
+    <li><a href="../../beta/theory/dp-with-opendp.html" style="font-weight: normal">beta</a></li>
+    <li><a href="../../nightly/theory/dp-with-opendp.html" style="font-weight: normal">nightly</a></li>
+    <li><a href="../../stable/theory/dp-with-opendp.html" style="font-weight: normal">stable</a></li>
+</ul>
+
+
+<h6 id="releases_header">Releases
+    <div id="releases_symbol" style="float:right"></div>
+</h6>
+<ul id="releases_content">
+    <li><a href="../../v0.14.1/theory/dp-with-opendp.html" style="font-weight: normal">v0.14.1</a></li>
+    <li><a href="../../v0.14.0/theory/dp-with-opendp.html" style="font-weight: normal">v0.14.0</a></li>
+    <li><a href="../../v0.13.0/theory/dp-with-opendp.html" style="font-weight: normal">v0.13.0</a></li>
+    <li><a href="../../v0.12.1/theory/dp-with-opendp.html" style="font-weight: normal">v0.12.1</a></li>
+    <li><a href="../../v0.12.0/theory/dp-with-opendp.html" style="font-weight: normal">v0.12.0</a></li>
+    <li><a href="../../v0.11.1/theory/dp-with-opendp.html" style="font-weight: normal">v0.11.1</a></li>
+    <li><a href="dp-with-opendp.html" style="font-weight: bold">v0.11.0</a></li>
+    <li><a href="../../v0.10.0/index.html" style="font-weight: normal">v0.10.0</a></li>
+    <li><a href="../../v0.9.2/index.html" style="font-weight: normal">v0.9.2</a></li>
+    <li><a href="../../v0.9.1/index.html" style="font-weight: normal">v0.9.1</a></li>
+    <li><a href="../../v0.9.0/index.html" style="font-weight: normal">v0.9.0</a></li>
+    <li><a href="../../v0.8.0/index.html" style="font-weight: normal">v0.8.0</a></li>
+    <li><a href="../../v0.7.0/index.html" style="font-weight: normal">v0.7.0</a></li>
+    <li><a href="../../v0.6.2/index.html" style="font-weight: normal">v0.6.2</a></li>
+    <li><a href="../../v0.6.1/index.html" style="font-weight: normal">v0.6.1</a></li>
+    <li><a href="../../v0.6.0/index.html" style="font-weight: normal">v0.6.0</a></li>
+    <li><a href="../../v0.5.0/index.html" style="font-weight: normal">v0.5.0</a></li>
+    <li><a href="../../v0.4.0/index.html" style="font-weight: normal">v0.4.0</a></li>
+    <li><a href="../../v0.3.0/index.html" style="font-weight: normal">v0.3.0</a></li>
+    <li><a href="../../v0.2.4/index.html" style="font-weight: normal">v0.2.4</a></li>
+    <li><a href="../../v0.2.3/index.html" style="font-weight: normal">v0.2.3</a></li>
+    <li><a href="../../v0.2.2/index.html" style="font-weight: normal">v0.2.2</a></li>
+    <li><a href="../../v0.2.1/index.html" style="font-weight: normal">v0.2.1</a></li>
+    <li><a href="../../v0.2.0/index.html" style="font-weight: normal">v0.2.0</a></li>
+    <li><a href="../../v0.1.0/index.html" style="font-weight: normal">v0.1.0</a></li>
+</ul>
+<script>
+    let expanded = !!JSON.parse(localStorage.getItem('expanded'));
+
+    let releasesHeader = document.getElementById("releases_header");
+    let releasesSymbol = document.getElementById("releases_symbol");
+    let releasesContent = document.getElementById("releases_content");
+
+    function setReleasesState() {
+        localStorage.setItem("expanded", JSON.stringify(expanded))
+        releasesContent.style.display = expanded ? "block" : "none";
+        releasesSymbol.classList.add(expanded ? 'minus' : 'plus')
+        releasesSymbol.classList.remove(expanded ? 'plus' : 'minus')
+    }
+
+    setReleasesState()
+    releasesHeader.addEventListener("click", function() {
+        expanded = !expanded;
+        setReleasesState()
+    })
+</script>
+<style>
+    .plus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .plus:before,
+    .plus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .plus:before {
+        left:50%;
+        top:4px;
+        bottom:4px;
+        width:3px;
+        transform:translateX(-50%);
+    }
+
+    .plus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+
+
+
+    .minus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .minus:before,
+    .minus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .minus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+</style>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Theory</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">Differential...</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item"><div class="admonition warning" style="position: relative;">
+    <!--
+     Without the style, the region for the article title overlaps, and the link is unclickable.
+    -->
+    <details>
+        <summary>Questions or feedback?</summary>
+        <!--
+            All of these lists should be in sync:
+            - README.md
+            - docs/source/contributing/contact.rst
+            - docs/source/_templates/questions-feedback.html
+            - .github/ISSUE_TEMPLATE/config.yml
+        -->
+        <ul>
+            <li>Report a bug or request a feature on <a href="https://github.com/opendp/opendp/issues">Github</a>.</li>
+            <li>Send general queries to <a href="mailto:info@opendp.org">info@opendp.org</a>, or email <a href="mailto:security@opendp.org">security@opendp.org</a> if it is related to security.</li>
+            <li>Join the conversation on <a href="https://join.slack.com/t/opendp/shared_invite/zt-1t8rrbqhd-z8LiZiP06vVE422HJd6ciQ">Slack</a>, or the <a href="https://groups.google.com/a/g.harvard.edu/g/opendp-community">mailing list</a>.</li>
+        </ul>
+    </details>
+</div></div>
+      
+        <div class="header-article-item">
+<div class="admonition warning" style="position: relative;" id="old-version-warning">
+  <!--
+   To work with this locally, in conf.py uncomment the entry under "html_context".
+
+   Without the style, the region for the article title overlaps, and the link is unclickable.
+  -->
+  <p class="admonition-title">
+  
+  This documentation is for an old version of OpenDP.
+  
+  </p>
+  <p>The current release of OpenDP is <a href="/">v0.14.1</a>.</p>
+</div>
+<script>
+  window.addEventListener("load", (event) => {
+    document.getElementById('old-version-warning').style.top = `${window.visualViewport.pageTop}px`;
+  });
+</script>
+</div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="differential-privacy-with-opendp">
+<h1>Differential Privacy with OpenDP<a class="headerlink" href="#differential-privacy-with-opendp" title="Link to this heading">#</a></h1>
+<p>This notebook brings together two threads:</p>
+<ul class="simple">
+<li><p>The <a class="reference internal" href="a-framework-to-understand-dp.html"><span class="doc">previous page</span></a> introduced
+basic DP ideas like <em>sensitivity</em> and <em>epsilon</em>, as well as terms
+that have particular meaning in OpenDP: <em>transformations</em>,
+<em>measures</em>, <em>measurements</em>, and <em>stability</em>.</p></li>
+<li><p>The <a class="reference internal" href="../api/user-guide/programming-framework/index.html"><span class="doc">User
+Guide</span></a>
+introduced OpenDP as a programming framework, without diving into the
+mathematics.</p></li>
+</ul>
+<p>Here we’ll see how the programming framework is related to the
+underlying mathematics of differential privacy. The modular framework
+helps ensure that we’re using the tools of DP appropriately, but also
+has the flexibility to explore different approaches to DP.</p>
+<hr class="docutils" />
+<p>Any constructors that have not completed the proof-writing and vetting
+process may still be accessed if you opt-in to “contrib”. Please contact
+us if you are interested in proof-writing. Thank you!</p>
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-0" name="sd-tab-set-0" type="radio">
+<label class="sd-tab-label" data-sync-group="tab" data-sync-id="python" for="sd-tab-item-0">
+Python</label><div class="sd-tab-content docutils">
+<div class="highlight-python notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">opendp.prelude</span> <span class="k">as</span> <span class="nn">dp</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span><span class="o">.</span><span class="n">enable_features</span><span class="p">(</span><span class="s2">&quot;contrib&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<section id="the-laplace-mechanism">
+<h2>The Laplace Mechanism<a class="headerlink" href="#the-laplace-mechanism" title="Link to this heading">#</a></h2>
+<p>The Laplace mechanism is a ubiquitous algorithm in the DP ecosystem that
+is typically used to privatize an aggregate, like a sum or mean.</p>
+<p>An instance of the Laplace mechanism is captured by a <em>measurement</em>
+containing the following five elements:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>We first define the <strong>function</strong> <span class="math notranslate nohighlight">\(f(\cdot)\)</span>, that applies
+the Laplace mechanism to some argument <span class="math notranslate nohighlight">\(x\)</span>. This function
+simply samples from the Laplace distribution centered at
+<span class="math notranslate nohighlight">\(x\)</span>, with a fixed noise scale.</p></li>
+</ol>
+<div class="math notranslate nohighlight">
+\[f(x) = Laplace(\mu=x, b=scale)\]</div>
+<ol class="arabic simple" start="2">
+<li><p>Importantly, <span class="math notranslate nohighlight">\(f(\cdot)\)</span> is only well-defined for any finite
+float input. This set of permitted inputs is described by the
+<strong>input domain</strong> <code class="docutils literal notranslate"><span class="pre">atom_domain(T=f64)</span></code>.</p></li>
+<li><p>The Laplace mechanism has a privacy guarantee in terms of epsilon.
+This guarantee is represented by a <strong>privacy map</strong>, a function
+that computes the privacy loss <span class="math notranslate nohighlight">\(\epsilon\)</span> for any choice of
+sensitivity <span class="math notranslate nohighlight">\(\Delta\)</span>.</p></li>
+</ol>
+<div class="math notranslate nohighlight">
+\[map(\Delta) = \Delta / scale \le \epsilon\]</div>
+<ol class="arabic simple" start="4">
+<li><p>This map only promises that the privacy loss will be at most
+<span class="math notranslate nohighlight">\(\epsilon\)</span> if inputs from any two neighboring datasets may
+differ by no more than some quantity <span class="math notranslate nohighlight">\(\Delta\)</span> under the
+absolute distance <strong>input metric</strong> <code class="docutils literal notranslate"><span class="pre">absolute_distance(T=f64)</span></code>.</p></li>
+<li><p>We similarly describe units on the output (<span class="math notranslate nohighlight">\(\epsilon\)</span>) via
+the <strong>output measure</strong> <code class="docutils literal notranslate"><span class="pre">max_divergence(T=f64)</span></code>.</p></li>
+</ol>
+</div></blockquote>
+<p>The OpenDP Library consists of <em>constructor functions</em> that can be
+called with simple arguments and always return valid measurements. The
+<code class="docutils literal notranslate"><span class="pre">make_laplace</span></code> constructor function returns the equivalent of the
+Laplace measurement described above. Since it returns a measurement, you
+can find it under <code class="docutils literal notranslate"><span class="pre">dp.m</span></code>:</p>
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-1" name="sd-tab-set-1" type="radio">
+<label class="sd-tab-label" data-sync-group="tab" data-sync-id="python" for="sd-tab-item-1">
+Python</label><div class="sd-tab-content docutils">
+<div class="highlight-python notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># call the constructor to produce the measurement `base_lap`</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">base_lap</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">make_laplace</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
+<span class="gp">... </span>    <span class="n">dp</span><span class="o">.</span><span class="n">absolute_distance</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span>
+<span class="gp">... </span>    <span class="n">scale</span><span class="o">=</span><span class="mf">5.</span>
+<span class="gp">... </span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>The supporting elements on this transformation match those described
+above:</p>
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-2" name="sd-tab-set-2" type="radio">
+<label class="sd-tab-label" data-sync-group="tab" data-sync-id="python" for="sd-tab-item-2">
+Python</label><div class="sd-tab-content docutils">
+<div class="highlight-python notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;input domain:  &quot;</span><span class="p">,</span> <span class="n">base_lap</span><span class="o">.</span><span class="n">input_domain</span><span class="p">)</span>
+<span class="go">input domain:   AtomDomain(T=f64)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;input metric:  &quot;</span><span class="p">,</span> <span class="n">base_lap</span><span class="o">.</span><span class="n">input_metric</span><span class="p">)</span>
+<span class="go">input metric:   AbsoluteDistance(f64)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;output measure:&quot;</span><span class="p">,</span> <span class="n">base_lap</span><span class="o">.</span><span class="n">output_measure</span><span class="p">)</span>
+<span class="go">output measure: MaxDivergence(f64)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>We now invoke the measurement on some aggregate <code class="docutils literal notranslate"><span class="pre">0.</span></code>, to sample
+<span class="math notranslate nohighlight">\(Laplace(\mu=0., scale=5.)\)</span> noise:</p>
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-3" name="sd-tab-set-3" type="radio">
+<label class="sd-tab-label" data-sync-group="tab" data-sync-id="python" for="sd-tab-item-3">
+Python</label><div class="sd-tab-content docutils">
+<div class="highlight-python notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">aggregate</span> <span class="o">=</span> <span class="mf">0.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;noisy aggregate:&quot;</span><span class="p">,</span> <span class="n">base_lap</span><span class="p">(</span><span class="n">aggregate</span><span class="p">))</span>
+<span class="go">noisy aggregate: ...</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>If we are using <code class="docutils literal notranslate"><span class="pre">base_lap</span></code> on its own, we must know the sensitivity of
+<code class="docutils literal notranslate"><span class="pre">aggregate</span></code> (i.e. how much the aggregate can differ on two adjacent
+datasets) to determine epsilon. In this case, we know <code class="docutils literal notranslate"><span class="pre">base_lap</span></code> has
+an absolute distance input metric, so the sensitivity should represent
+the greatest possible absolute distance between aggregates on adjacent
+datasets.</p>
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-4" name="sd-tab-set-4" type="radio">
+<label class="sd-tab-label" data-sync-group="tab" data-sync-id="python" for="sd-tab-item-4">
+Python</label><div class="sd-tab-content docutils">
+<div class="highlight-python notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">absolute_distance</span> <span class="o">=</span> <span class="mf">10.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;epsilon:&quot;</span><span class="p">,</span> <span class="n">base_lap</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">d_in</span><span class="o">=</span><span class="n">absolute_distance</span><span class="p">))</span>
+<span class="go">epsilon: 2.0</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>This tells us that when the sensitivity is <code class="docutils literal notranslate"><span class="pre">10</span></code>, and the noise scale
+is <code class="docutils literal notranslate"><span class="pre">5</span></code>, the epsilon consumption of a release is <code class="docutils literal notranslate"><span class="pre">2</span></code>.</p>
+</section>
+<section id="transformation-example-sum">
+<h2>Transformation Example: Sum<a class="headerlink" href="#transformation-example-sum" title="Link to this heading">#</a></h2>
+<p>We package computations with bounded stability into <em>transformations</em>.</p>
+<p>A transformation that computes the sum of a vector dataset contains a
+very similar set of six elements:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>We first define the <strong>function</strong> <span class="math notranslate nohighlight">\(f(\cdot)\)</span>, that computes
+the sum of some argument <span class="math notranslate nohighlight">\(x\)</span>.</p></li>
+</ol>
+<div class="math notranslate nohighlight">
+\[f(x) = \sum x_i\]</div>
+<ol class="arabic simple" start="2">
+<li><p><span class="math notranslate nohighlight">\(f(\cdot)\)</span> is only well-defined for any vector input of a
+specific type. Each element must be bounded between some lower
+bound <code class="docutils literal notranslate"><span class="pre">L</span></code> and upper bound <code class="docutils literal notranslate"><span class="pre">U</span></code>. Thus the <strong>input domain</strong> is of
+type <code class="docutils literal notranslate"><span class="pre">vector_domain(atom_domain(T=f64))</span></code> with elements
+restricted between <code class="docutils literal notranslate"><span class="pre">L</span></code> and <code class="docutils literal notranslate"><span class="pre">U</span></code>.</p></li>
+<li><p>The <strong>output domain</strong> consists of any single finite <code class="docutils literal notranslate"><span class="pre">f64</span></code>
+scalar: <code class="docutils literal notranslate"><span class="pre">atom_domain(T=f64)</span></code>.</p></li>
+<li><p>The sum transformation has a stability guarantee in terms of
+sensitivity. This guarantee is represented by a <strong>stability map</strong>,
+which is a function that computes the stability <span class="math notranslate nohighlight">\(d_{out}\)</span>
+for any choice of dataset distance <span class="math notranslate nohighlight">\(d_{in}\)</span>. In this case
+<span class="math notranslate nohighlight">\(d_{out}\)</span> is in terms of the sensitivity.</p></li>
+</ol>
+<div class="math notranslate nohighlight">
+\[map(d_{in}) = d_{in} \cdot \max(|L|, U) \le d_{out}\]</div>
+<ol class="arabic simple" start="5">
+<li><p>This map only promises a sensitivity of <span class="math notranslate nohighlight">\(d_{out}\)</span> under the
+assumption that neighboring datasets differ by no more than some
+quantity <span class="math notranslate nohighlight">\(d_{in}\)</span> under the symmetric distance <strong>input
+metric</strong> <code class="docutils literal notranslate"><span class="pre">symmetric_distance()</span></code>.</p></li>
+<li><p>The sensitivity is computed with respect to the absolute distance.
+This gives units to the output (<span class="math notranslate nohighlight">\(d_{out}\)</span>) via the <strong>output
+metric</strong> <code class="docutils literal notranslate"><span class="pre">absolute_distance(T=f64)</span></code>.</p></li>
+</ol>
+</div></blockquote>
+<p><code class="docutils literal notranslate"><span class="pre">make_sum</span></code> constructs the equivalent of the sum transformation
+described above. It is important to note that since the bounds are
+float, the resulting transformation is calibrated to work for
+floating-point numbers. You will need to be careful and intentional
+about the types you use. Since it returns a transformation, you can find
+it under <code class="docutils literal notranslate"><span class="pre">dp.t</span></code>:</p>
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-5" name="sd-tab-set-5" type="radio">
+<label class="sd-tab-label" data-sync-group="tab" data-sync-id="python" for="sd-tab-item-5">
+Python</label><div class="sd-tab-content docutils">
+<div class="highlight-python notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># call the constructor to produce the transformation `bounded_sum`</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># notice that `make_sum` expects an input domain consisting of bounded data:</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">input_domain</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">vector_domain</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">5.</span><span class="p">)))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">bounded_sum</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">make_sum</span><span class="p">(</span><span class="n">input_domain</span><span class="p">,</span> <span class="n">dp</span><span class="o">.</span><span class="n">symmetric_distance</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>According to the documentation, this transformation expects a vector of
+data with non-null elements bounded between <code class="docutils literal notranslate"><span class="pre">0.</span></code> and <code class="docutils literal notranslate"><span class="pre">5.</span></code>. We now
+invoke the transformation on some mock dataset that satisfies this
+constraint. Remember that since this component is a transformation, and
+not a measurement, the resulting output is not differentially private.</p>
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-6" name="sd-tab-set-6" type="radio">
+<label class="sd-tab-label" data-sync-group="tab" data-sync-id="python" for="sd-tab-item-6">
+Python</label><div class="sd-tab-content docutils">
+<div class="highlight-python notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># under the condition that the input data is a member of the input domain...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">bounded_mock_dataset</span> <span class="o">=</span> <span class="p">[</span><span class="mf">1.3</span><span class="p">,</span> <span class="mf">3.8</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">5.</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># ...the exact sum is:</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">bounded_sum</span><span class="p">(</span><span class="n">bounded_mock_dataset</span><span class="p">)</span>
+<span class="go">10.1</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>It can help to understand a simple example of how a stability map works,
+but going forward you don’t need to understand why the maps give the
+numbers they give in order to use the library.</p>
+<p>The stability argument for this transformation’s advertised sensitivity
+goes roughly as follows:</p>
+<blockquote>
+<div><div class="line-block">
+<div class="line">If the input data consists of numbers bounded between 0. and 5.,</div>
+<div class="line">then the addition or removal of any one row can influence the sum
+by <span class="math notranslate nohighlight">\(max(|0.|, 5.)\)</span>.</div>
+<div class="line">In addition, if one individual may contribute up to k rows,</div>
+<div class="line">then the sensitivity should further be multiplied by k.</div>
+</div>
+</div></blockquote>
+<p>In practice, the calculated sensitivity may be larger under certain
+conditions to account for the inexactness of arithmetic on finite data
+types.</p>
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-7" name="sd-tab-set-7" type="radio">
+<label class="sd-tab-label" data-sync-group="tab" data-sync-id="python" for="sd-tab-item-7">
+Python</label><div class="sd-tab-content docutils">
+<div class="highlight-python notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># under the condition that one individual may contribute up to 2 records to `bounded_mock_dataset`...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">max_contributions</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># ...then the sensitivity, expressed in terms of the absolute distance, is:</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">bounded_sum</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">d_in</span><span class="o">=</span><span class="n">max_contributions</span><span class="p">)</span>
+<span class="go">10.0...</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>As we would expect, the sensitivity is roughly <code class="docutils literal notranslate"><span class="pre">2</span> <span class="pre">*</span> <span class="pre">max(|0.|,</span> <span class="pre">5.)</span></code>.</p>
+</section>
+<section id="transformation-example-clamp">
+<h2>Transformation Example: Clamp<a class="headerlink" href="#transformation-example-clamp" title="Link to this heading">#</a></h2>
+<p>The sum transformation has an input domain of vectors with bounded
+elements. We now construct a transformation that clamps/clips each
+element to a given set of bounds.</p>
+<p>Instead of listing the components of a clamp transformation as I’ve done
+above, going forward you can check the <code class="docutils literal notranslate"><span class="pre">**Supporting</span> <span class="pre">Elements**</span></code>
+section of the relevant API documentation entry:</p>
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-8" name="sd-tab-set-8" type="radio">
+<label class="sd-tab-label" data-sync-group="tab" data-sync-id="python" for="sd-tab-item-8">
+Python</label><div class="sd-tab-content docutils">
+<div class="highlight-python notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">help</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">make_clamp</span><span class="p">)</span>
+<span class="go">Help on function make_clamp in module opendp.transformations:</span>
+<span class="go">...</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>Documentation for specific types may be found behind the following
+links:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://docs.rs/opendp/latest/opendp/metrics/index.html">metrics</a></p></li>
+<li><p><a class="reference external" href="https://docs.rs/opendp/latest/opendp/measures/index.html">measures</a></p></li>
+<li><p><a class="reference external" href="https://docs.rs/opendp/latest/opendp/domains/index.html">domains</a></p></li>
+</ul>
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-9" name="sd-tab-set-9" type="radio">
+<label class="sd-tab-label" data-sync-group="tab" data-sync-id="python" for="sd-tab-item-9">
+Python</label><div class="sd-tab-content docutils">
+<div class="highlight-python notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">input_domain</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">vector_domain</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">input_metric</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">symmetric_distance</span><span class="p">()</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># call the constructor to produce the transformation `clamp`</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">clamp</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">make_clamp</span><span class="p">(</span><span class="n">input_domain</span><span class="p">,</span> <span class="n">input_metric</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">5.</span><span class="p">))</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># `clamp` expects vectors of non-null, unbounded elements</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mock_dataset</span> <span class="o">=</span> <span class="p">[</span><span class="mf">1.3</span><span class="p">,</span> <span class="mf">7.8</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.5</span><span class="p">,</span> <span class="mf">7.0</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># `clamp` emits data that is suitable for `bounded_sum`</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">clamp</span><span class="p">(</span><span class="n">mock_dataset</span><span class="p">)</span>
+<span class="go">[1.3, 5.0, 0.0, 5.0]</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>According to the API documentation, the input and output metric is set
+by the user. We passed in a symmetric distance metric. Therefore, the
+stability map accepts a dataset distance describing the maximum number
+of contributions an individual may make, and emits the same.</p>
+<p>The stability argument for the clamp transformation is very simple:</p>
+<blockquote>
+<div><div class="line-block">
+<div class="line">If an individual may influence at most k records in a dataset, then
+after clamping each element,</div>
+<div class="line">an individual may still influence at most k records in a dataset.</div>
+</div>
+</div></blockquote>
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-10" name="sd-tab-set-10" type="radio">
+<label class="sd-tab-label" data-sync-group="tab" data-sync-id="python" for="sd-tab-item-10">
+Python</label><div class="sd-tab-content docutils">
+<div class="highlight-python notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># dataset distance in... dataset distance out</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">clamp</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">max_contributions</span><span class="p">)</span>
+<span class="go">2</span>
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="chaining">
+<h2>Chaining<a class="headerlink" href="#chaining" title="Link to this heading">#</a></h2>
+<p>The OpenDP library supports chaining a transformation with a
+transformation to produce a compound transformation, or a transformation
+with a measurement to produce a compound measurement.</p>
+<p>When any two compatible computations are chained, all six components of
+each primitive are used to construct the new primitive.</p>
+<p>A measurement produced from chaining a transformation with a measurement
+contains the same set of six elements as in previous examples:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>A <strong>function</strong> <span class="math notranslate nohighlight">\(f(\cdot)\)</span>. When you chain, the output domain
+of the transformation must match the input domain of the
+measurement.</p></li>
+</ol>
+<div class="math notranslate nohighlight">
+\[f(x) = measurement(transformation(x))\]</div>
+<ol class="arabic simple" start="2">
+<li><p>The <strong>input domain</strong> from the transformation.</p></li>
+<li><p>The <strong>output domain</strong> from the measurement.</p></li>
+<li><p>A <strong>privacy_map</strong> <span class="math notranslate nohighlight">\(map(\cdot)\)</span>. When you chain, the output
+metric of the transformation must match the input metric of the
+measurement.</p></li>
+</ol>
+<div class="math notranslate nohighlight">
+\[map(d_{in}) = measurement.map(transformation.map(d_{in}))\]</div>
+<ol class="arabic simple" start="5">
+<li><p>The <strong>input metric</strong> from the transformation.</p></li>
+<li><p>The <strong>output measure</strong> from the measurement.</p></li>
+</ol>
+</div></blockquote>
+<p>A similar logic is used when chaining a transformation with a
+transformation.</p>
+<p>We know that the</p>
+<ul class="simple">
+<li><p>output domain of <code class="docutils literal notranslate"><span class="pre">bounded_sum</span></code> matches the input domain of
+<code class="docutils literal notranslate"><span class="pre">base_lap</span></code>, and the</p></li>
+<li><p>output metric of <code class="docutils literal notranslate"><span class="pre">bounded_sum</span></code> matches the input metric of
+<code class="docutils literal notranslate"><span class="pre">base_lap</span></code>.</p></li>
+</ul>
+<p>The same holds for <code class="docutils literal notranslate"><span class="pre">clamp</span></code> and <code class="docutils literal notranslate"><span class="pre">bounded_sum</span></code>. Therefore, we can
+chain all of these primitives to form a new compound measurement:</p>
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-11" name="sd-tab-set-11" type="radio">
+<label class="sd-tab-label" data-sync-group="tab" data-sync-id="python" for="sd-tab-item-11">
+Python</label><div class="sd-tab-content docutils">
+<div class="highlight-python notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">dp_sum</span> <span class="o">=</span> <span class="n">clamp</span> <span class="o">&gt;&gt;</span> <span class="n">bounded_sum</span> <span class="o">&gt;&gt;</span> <span class="n">base_lap</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># compute the DP sum of a dataset of bounded elements</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DP sum:&quot;</span><span class="p">,</span> <span class="n">dp_sum</span><span class="p">(</span><span class="n">mock_dataset</span><span class="p">))</span>
+<span class="go">DP sum: ...</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># evaluate the privacy loss of the dp_sum, when an individual can contribute at most 2 records</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;epsilon:&quot;</span><span class="p">,</span> <span class="n">dp_sum</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">d_in</span><span class="o">=</span><span class="n">max_contributions</span><span class="p">))</span>
+<span class="go">epsilon: ...</span>
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="retrospective">
+<h2>Retrospective<a class="headerlink" href="#retrospective" title="Link to this heading">#</a></h2>
+<p>Now that you have a more thorough understanding of what’s going on, we
+can breeze through an entire release:</p>
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-12" name="sd-tab-set-12" type="radio">
+<label class="sd-tab-label" data-sync-group="tab" data-sync-id="python" for="sd-tab-item-12">
+Python</label><div class="sd-tab-content docutils">
+<div class="highlight-python notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># establish public info</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">max_contributions</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">bounds</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">5.</span><span class="p">)</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># construct the measurement</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp_sum</span> <span class="o">=</span> <span class="p">(</span>
+<span class="gp">... </span>    <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">make_clamp</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">vector_domain</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">)),</span> <span class="n">dp</span><span class="o">.</span><span class="n">symmetric_distance</span><span class="p">(),</span> <span class="n">bounds</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+<span class="gp">... </span>    <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">make_sum</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">vector_domain</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">bounds</span><span class="o">=</span><span class="n">bounds</span><span class="p">)),</span> <span class="n">dp</span><span class="o">.</span><span class="n">symmetric_distance</span><span class="p">())</span> <span class="o">&gt;&gt;</span>
+<span class="gp">... </span>    <span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">make_laplace</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="n">dp</span><span class="o">.</span><span class="n">absolute_distance</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="mf">5.</span><span class="p">)</span>
+<span class="gp">... </span><span class="p">)</span>
+
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># evaluate the privacy expenditure and make a DP release</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mock_dataset</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.7</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.3</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;epsilon:&quot;</span><span class="p">,</span> <span class="n">dp_sum</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">max_contributions</span><span class="p">))</span>
+<span class="go">epsilon: ...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;DP sum release:&quot;</span><span class="p">,</span> <span class="n">dp_sum</span><span class="p">(</span><span class="n">mock_dataset</span><span class="p">))</span>
+<span class="go">DP sum release: ...</span>
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<section id="partial-constructors">
+<h2>Partial Constructors<a class="headerlink" href="#partial-constructors" title="Link to this heading">#</a></h2>
+<p>You may notice some redundancy in the code for <code class="docutils literal notranslate"><span class="pre">dp_sum</span></code> above: The
+output domain of a transformation will always match the input of its
+successor. We can make this shorter by using <code class="docutils literal notranslate"><span class="pre">then_*</span></code> constructors:
+These are paired with <code class="docutils literal notranslate"><span class="pre">make_*</span></code> constructors, but delay application of
+the <code class="docutils literal notranslate"><span class="pre">input_domain</span></code> and <code class="docutils literal notranslate"><span class="pre">input_metric</span></code> arguments. We can rewrite
+<code class="docutils literal notranslate"><span class="pre">dp_sum</span></code> in an equivalent but more concise form:</p>
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-13" name="sd-tab-set-13" type="radio">
+<label class="sd-tab-label" data-sync-group="tab" data-sync-id="python" for="sd-tab-item-13">
+Python</label><div class="sd-tab-content docutils">
+<div class="highlight-python notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">dp_sum</span> <span class="o">=</span> <span class="p">(</span>
+<span class="gp">... </span>    <span class="p">(</span><span class="n">input_domain</span><span class="p">,</span> <span class="n">input_metric</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+<span class="gp">... </span>    <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_clamp</span><span class="p">((</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">5.</span><span class="p">))</span> <span class="o">&gt;&gt;</span>
+<span class="gp">... </span>    <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_sum</span><span class="p">()</span> <span class="o">&gt;&gt;</span>
+<span class="gp">... </span>    <span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">then_laplace</span><span class="p">(</span><span class="mf">5.</span><span class="p">)</span>
+<span class="gp">... </span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>You’ll notice that the start of the chain is special: We provide a tuple
+to specify the <code class="docutils literal notranslate"><span class="pre">input_domain</span></code> and <code class="docutils literal notranslate"><span class="pre">input_metric</span></code> for <code class="docutils literal notranslate"><span class="pre">then_clamp</span></code>.</p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="a-framework-to-understand-dp.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">A Framework to Understand DP</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="accuracy-pitfalls.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Accuracy: Pitfalls and Edge Cases</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-laplace-mechanism">The Laplace Mechanism</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#transformation-example-sum">Transformation Example: Sum</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#transformation-example-clamp">Transformation Example: Clamp</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#chaining">Chaining</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#retrospective">Retrospective</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#partial-constructors">Partial Constructors</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/theory/dp-with-opendp.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.3rc1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

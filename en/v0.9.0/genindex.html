@@ -1,0 +1,1638 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Index &#8212; OpenDP</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+
+  
+  <link href="_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=eafc0fe6" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=4f92a2c4" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f" />
+  <script src="_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+    <script src="_static/documentation_options.js?v=6c04cfde"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'genindex';</script>
+    <link rel="icon" href="_static/favicon.ico"/>
+    <link rel="index" title="Index" href="#" />
+    <link rel="search" title="Search" href="search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Feb 23, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+
+
+<script>
+document.write(`<aside class="bd-header-announcement" aria-label="Announcement"></aside>`);
+fetch("https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html")
+  .then(res => {return res.text();})
+  .then(data => {
+    if (data.length === 0) {
+      console.log("[PST]: Empty announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+      return;
+    }
+    div = document.querySelector(".bd-header-announcement");
+    div.classList.add(...["bd-header-announcement", "container-fluid", "init"]);
+    div.innerHTML = `<div class="bd-header-announcement__content">${data}</div>`;
+    // At least 3rem height
+    const autoHeight = Math.min(
+      div.offsetHeight,
+      3 * parseFloat(getComputedStyle(document.documentElement).fontSize));
+    // Set height and vertical padding to 0 to prepare the height transition
+    div.style.setProperty("height", 0);
+    div.style.setProperty("padding-top", 0);
+    div.style.setProperty("padding-bottom", 0);
+    div.classList.remove("init");
+    // Set height to the computed height with a small timeout to activate the transition
+    setTimeout(() => {
+      div.style.setProperty("height", `${autoHeight}px`);
+      // Wait for a bit more than 300ms (the transition duration) then remove the
+      // forcefully set styles and let CSS take over
+      setTimeout(() => {
+        div.style.removeProperty("padding-top");
+        div.style.removeProperty("padding-bottom");
+        div.style.removeProperty("height");
+        div.style.setProperty("min-height", "3rem");
+      }, 320);
+    }, 10);
+  })
+  .catch(error => {
+    console.log("[PST]: Failed to load announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+  });
+</script>
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <button class="sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="_static/opendp-logo.png" class="logo__image only-light" alt="OpenDP - Home"/>
+    <script>document.write(`<img src="_static/opendp-logo.png" class="logo__image only-dark" alt="OpenDP - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="quickstart.html">
+                        Quickstart
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="user/index.html">
+                        User Guide
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="examples/index.html">
+                        Examples
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="api/index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="contributor/index.html">
+                        Contributor Guide
+                      </a>
+                    </li>
+                
+            <li class="nav-item dropdown pst-header-nav-item">
+                <button class="btn dropdown-toggle nav-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="resources/index.html">
+                        Resources
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="opendp-commons/index.html">
+                        OpenDP Commons
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="contact.html">
+                        Contact
+                      </a>
+                    </li>
+                
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="quickstart.html">
+                        Quickstart
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="user/index.html">
+                        User Guide
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="examples/index.html">
+                        Examples
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="api/index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="contributor/index.html">
+                        Contributor Guide
+                      </a>
+                    </li>
+                
+            <li class="nav-item dropdown pst-header-nav-item">
+                <button class="btn dropdown-toggle nav-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-controls="pst-nav-more-links-2">
+                    More
+                </button>
+                <ul id="pst-nav-more-links-2" class="dropdown-menu">
+                    
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="resources/index.html">
+                        Resources
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="opendp-commons/index.html">
+                        OpenDP Commons
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="contact.html">
+                        Contact
+                      </a>
+                    </li>
+                
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<h6>Branches</h6>
+<ul>
+    <li><a href="../beta/index.html" style="font-weight: normal">beta</a></li>
+    <li><a href="../nightly/index.html" style="font-weight: normal">nightly</a></li>
+    <li><a href="../stable/index.html" style="font-weight: normal">stable</a></li>
+</ul>
+
+
+<h6 id="releases_header">Releases
+    <div id="releases_symbol" style="float:right"></div>
+</h6>
+<ul id="releases_content">
+    <li><a href="../v0.14.1/index.html" style="font-weight: normal">v0.14.1</a></li>
+    <li><a href="../v0.14.0/index.html" style="font-weight: normal">v0.14.0</a></li>
+    <li><a href="../v0.13.0/index.html" style="font-weight: normal">v0.13.0</a></li>
+    <li><a href="../v0.12.1/index.html" style="font-weight: normal">v0.12.1</a></li>
+    <li><a href="../v0.12.0/index.html" style="font-weight: normal">v0.12.0</a></li>
+    <li><a href="../v0.11.1/index.html" style="font-weight: normal">v0.11.1</a></li>
+    <li><a href="../v0.11.0/index.html" style="font-weight: normal">v0.11.0</a></li>
+    <li><a href="../v0.10.0/index.html" style="font-weight: normal">v0.10.0</a></li>
+    <li><a href="../v0.9.2/index.html" style="font-weight: normal">v0.9.2</a></li>
+    <li><a href="../v0.9.1/index.html" style="font-weight: normal">v0.9.1</a></li>
+    <li><a href="genindex.html" style="font-weight: bold">v0.9.0</a></li>
+    <li><a href="../v0.8.0/index.html" style="font-weight: normal">v0.8.0</a></li>
+    <li><a href="../v0.7.0/index.html" style="font-weight: normal">v0.7.0</a></li>
+    <li><a href="../v0.6.2/index.html" style="font-weight: normal">v0.6.2</a></li>
+    <li><a href="../v0.6.1/index.html" style="font-weight: normal">v0.6.1</a></li>
+    <li><a href="../v0.6.0/index.html" style="font-weight: normal">v0.6.0</a></li>
+    <li><a href="../v0.5.0/index.html" style="font-weight: normal">v0.5.0</a></li>
+    <li><a href="../v0.4.0/index.html" style="font-weight: normal">v0.4.0</a></li>
+    <li><a href="../v0.3.0/index.html" style="font-weight: normal">v0.3.0</a></li>
+    <li><a href="../v0.2.4/index.html" style="font-weight: normal">v0.2.4</a></li>
+    <li><a href="../v0.2.3/index.html" style="font-weight: normal">v0.2.3</a></li>
+    <li><a href="../v0.2.2/index.html" style="font-weight: normal">v0.2.2</a></li>
+    <li><a href="../v0.2.1/index.html" style="font-weight: normal">v0.2.1</a></li>
+    <li><a href="../v0.2.0/index.html" style="font-weight: normal">v0.2.0</a></li>
+    <li><a href="../v0.1.0/index.html" style="font-weight: normal">v0.1.0</a></li>
+</ul>
+<script>
+    let expanded = !!JSON.parse(localStorage.getItem('expanded'));
+
+    let releasesHeader = document.getElementById("releases_header");
+    let releasesSymbol = document.getElementById("releases_symbol");
+    let releasesContent = document.getElementById("releases_content");
+
+    function setReleasesState() {
+        localStorage.setItem("expanded", JSON.stringify(expanded))
+        releasesContent.style.display = expanded ? "block" : "none";
+        releasesSymbol.classList.add(expanded ? 'minus' : 'plus')
+        releasesSymbol.classList.remove(expanded ? 'plus' : 'minus')
+    }
+
+    setReleasesState()
+    releasesHeader.addEventListener("click", function() {
+        expanded = !expanded;
+        setReleasesState()
+    })
+</script>
+<style>
+    .plus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .plus:before,
+    .plus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .plus:before {
+        left:50%;
+        top:4px;
+        bottom:4px;
+        width:3px;
+        transform:translateX(-50%);
+    }
+
+    .plus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+
+
+
+    .minus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .minus:before,
+    .minus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .minus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+</style>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item"><div class="admonition warning" style="position: relative;">
+    <!--
+     Without the style, the region for the article title overlaps, and the link is unclickable.
+    -->
+    <details>
+        <summary>Questions or feedback?</summary>
+        <!--
+            All of these lists should be in sync:
+            - README.md
+            - docs/source/contributing/contact.rst
+            - docs/source/_templates/questions-feedback.html
+            - .github/ISSUE_TEMPLATE/config.yml
+        -->
+        <ul>
+            <li>Report a bug or request a feature on <a href="https://github.com/opendp/opendp/issues">Github</a>.</li>
+            <li>Send general queries to <a href="mailto:info@opendp.org">info@opendp.org</a>, or email <a href="mailto:security@opendp.org">security@opendp.org</a> if it is related to security.</li>
+            <li>Join the conversation on <a href="https://join.slack.com/t/opendp/shared_invite/zt-1t8rrbqhd-z8LiZiP06vVE422HJd6ciQ">Slack</a>, or the <a href="https://groups.google.com/a/g.harvard.edu/g/opendp-community">mailing list</a>.</li>
+        </ul>
+    </details>
+</div></div>
+      
+        <div class="header-article-item">
+<div class="admonition warning" style="position: relative;" id="old-version-warning">
+  <!--
+   To work with this locally, in conf.py uncomment the entry under "html_context".
+
+   Without the style, the region for the article title overlaps, and the link is unclickable.
+  -->
+  <p class="admonition-title">
+  
+  This documentation is for an old version of OpenDP.
+  
+  </p>
+  <p>The current release of OpenDP is <a href="/">v0.14.1</a>.</p>
+</div>
+<script>
+  window.addEventListener("load", (event) => {
+    document.getElementById('old-version-warning').style.top = `${window.visualViewport.pageTop}px`;
+  });
+</script>
+</div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+
+<h1 id="index">Index</h1>
+
+<div class="genindex-jumpbox">
+ <a href="#A"><strong>A</strong></a>
+ | <a href="#B"><strong>B</strong></a>
+ | <a href="#C"><strong>C</strong></a>
+ | <a href="#D"><strong>D</strong></a>
+ | <a href="#E"><strong>E</strong></a>
+ | <a href="#F"><strong>F</strong></a>
+ | <a href="#G"><strong>G</strong></a>
+ | <a href="#H"><strong>H</strong></a>
+ | <a href="#I"><strong>I</strong></a>
+ | <a href="#L"><strong>L</strong></a>
+ | <a href="#M"><strong>M</strong></a>
+ | <a href="#N"><strong>N</strong></a>
+ | <a href="#O"><strong>O</strong></a>
+ | <a href="#P"><strong>P</strong></a>
+ | <a href="#Q"><strong>Q</strong></a>
+ | <a href="#R"><strong>R</strong></a>
+ | <a href="#S"><strong>S</strong></a>
+ | <a href="#T"><strong>T</strong></a>
+ | <a href="#U"><strong>U</strong></a>
+ | <a href="#V"><strong>V</strong></a>
+ | <a href="#W"><strong>W</strong></a>
+ | <a href="#Z"><strong>Z</strong></a>
+ 
+</div>
+<h2 id="A">A</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.metrics.html#opendp.metrics.absolute_distance">absolute_distance() (in module opendp.metrics)</a>
+</li>
+      <li><a href="api/python/opendp.context.html#opendp.context.Context.accountant">accountant (opendp.context.Context attribute)</a>
+</li>
+      <li><a href="api/python/opendp.accuracy.html#opendp.accuracy.accuracy_to_discrete_gaussian_scale">accuracy_to_discrete_gaussian_scale() (in module opendp.accuracy)</a>
+</li>
+      <li><a href="api/python/opendp.accuracy.html#opendp.accuracy.accuracy_to_discrete_laplacian_scale">accuracy_to_discrete_laplacian_scale() (in module opendp.accuracy)</a>
+</li>
+      <li><a href="api/python/opendp.accuracy.html#opendp.accuracy.accuracy_to_gaussian_scale">accuracy_to_gaussian_scale() (in module opendp.accuracy)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.accuracy.html#opendp.accuracy.accuracy_to_laplacian_scale">accuracy_to_laplacian_scale() (in module opendp.accuracy)</a>
+</li>
+      <li><a href="api/python/opendp.typing.html#opendp.typing.RuntimeType.args">args (opendp.typing.RuntimeType attribute)</a>
+
+      <ul>
+        <li><a href="api/python/opendp.typing.html#opendp.typing.UnknownType.args">(opendp.typing.UnknownType attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.assert_features">assert_features() (in module opendp.mod)</a>
+</li>
+      <li><a href="api/python/opendp.domains.html#opendp.domains.atom_domain">atom_domain() (in module opendp.domains)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="B">B</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.binary_search">binary_search() (in module opendp.mod)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.binary_search_chain">binary_search_chain() (in module opendp.mod)</a>
+</li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.binary_search_param">binary_search_param() (in module opendp.mod)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="C">C</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.typing.html#opendp.typing.Carrier">Carrier (class in opendp.typing)</a>
+</li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Domain.carrier_type">carrier_type (opendp.mod.Domain property)</a>
+</li>
+      <li><a href="api/python/opendp.metrics.html#opendp.metrics.change_one_distance">change_one_distance() (in module opendp.metrics)</a>
+</li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Measurement.check">check() (opendp.mod.Measurement method)</a>
+
+      <ul>
+        <li><a href="api/python/opendp.mod.html#opendp.mod.Transformation.check">(opendp.mod.Transformation method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.choose_branching_factor">choose_branching_factor() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.context.html#opendp.context.Context.compositor">compositor() (opendp.context.Context static method)</a>
+
+      <ul>
+        <li><a href="api/python/opendp.context.html#opendp.context.Query.compositor">(opendp.context.Query method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/python/opendp.context.html#opendp.context.Context">Context (class in opendp.context)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="D">D</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Domain.descriptor">descriptor (opendp.mod.Domain property)</a>
+</li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.disable_features">disable_features() (in module opendp.mod)</a>
+</li>
+      <li><a href="api/python/opendp.metrics.html#opendp.metrics.discrete_distance">discrete_distance() (in module opendp.metrics)</a>
+</li>
+      <li><a href="api/python/opendp.accuracy.html#opendp.accuracy.discrete_gaussian_scale_to_accuracy">discrete_gaussian_scale_to_accuracy() (in module opendp.accuracy)</a>
+</li>
+      <li><a href="api/python/opendp.accuracy.html#opendp.accuracy.discrete_laplacian_scale_to_accuracy">discrete_laplacian_scale_to_accuracy() (in module opendp.accuracy)</a>
+</li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Measure.distance_type">distance_type (opendp.mod.Measure property)</a>
+
+      <ul>
+        <li><a href="api/python/opendp.mod.html#opendp.mod.Metric.distance_type">(opendp.mod.Metric property)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Domain">Domain (class in opendp.mod)</a>
+</li>
+      <li><a href="api/python/opendp.domains.html#opendp.domains.domain_carrier_type">domain_carrier_type() (in module opendp.domains)</a>
+</li>
+      <li><a href="api/python/opendp.domains.html#opendp.domains.domain_debug">domain_debug() (in module opendp.domains)</a>
+</li>
+      <li><a href="api/python/opendp.context.html#opendp.context.domain_of">domain_of() (in module opendp.context)</a>
+</li>
+      <li><a href="api/python/opendp.domains.html#opendp.domains.domain_type">domain_type() (in module opendp.domains)</a>
+</li>
+      <li><a href="api/python/opendp.typing.html#opendp.typing.DomainDescriptor">DomainDescriptor (class in opendp.typing)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="E">E</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.enable_features">enable_features() (in module opendp.mod)</a>
+</li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.SMDCurve.epsilon">epsilon() (opendp.mod.SMDCurve method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Queryable.eval">eval() (opendp.mod.Queryable method)</a>
+</li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.exponential_bounds_search">exponential_bounds_search() (in module opendp.mod)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="F">F</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.context.html#opendp.context.PartialChain.fix">fix() (opendp.context.PartialChain method)</a>
+</li>
+      <li><a href="api/python/opendp.measures.html#opendp.measures.fixed_smoothed_max_divergence">fixed_smoothed_max_divergence() (in module opendp.measures)</a>
+</li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.OpenDPException.frames">frames() (opendp.mod.OpenDPException method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Function">Function (class in opendp.mod)</a>
+</li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Measurement.function">function (opendp.mod.Measurement property)</a>
+
+      <ul>
+        <li><a href="api/python/opendp.mod.html#opendp.mod.Transformation.function">(opendp.mod.Transformation property)</a>
+</li>
+      </ul></li>
+      <li><a href="api/python/opendp.core.html#opendp.core.function_eval">function_eval() (in module opendp.core)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="G">G</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.accuracy.html#opendp.accuracy.gaussian_scale_to_accuracy">gaussian_scale_to_accuracy() (in module opendp.accuracy)</a>
+</li>
+      <li><a href="api/python/opendp.typing.html#opendp.typing.GenericType">GenericType (class in opendp.typing)</a>
+</li>
+      <li><a href="api/python/opendp.typing.html#opendp.typing.get_atom">get_atom() (in module opendp.typing)</a>
+</li>
+      <li><a href="api/python/opendp.typing.html#opendp.typing.get_atom_or_infer">get_atom_or_infer() (in module opendp.typing)</a>
+</li>
+      <li><a href="api/python/opendp.typing.html#opendp.typing.get_carrier_type">get_carrier_type() (in module opendp.typing)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.typing.html#opendp.typing.get_dependencies">get_dependencies() (in module opendp.typing)</a>
+</li>
+      <li><a href="api/python/opendp.typing.html#opendp.typing.get_dependencies_iterable">get_dependencies_iterable() (in module opendp.typing)</a>
+</li>
+      <li><a href="api/python/opendp.typing.html#opendp.typing.get_distance_type">get_distance_type() (in module opendp.typing)</a>
+</li>
+      <li><a href="api/python/opendp.typing.html#opendp.typing.get_first">get_first() (in module opendp.typing)</a>
+</li>
+      <li><a href="api/python/opendp.typing.html#opendp.typing.get_type">get_type() (in module opendp.typing)</a>
+</li>
+      <li><a href="api/python/opendp.typing.html#opendp.typing.get_value_type">get_value_type() (in module opendp.typing)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="H">H</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.metrics.html#opendp.metrics.hamming_distance">hamming_distance() (in module opendp.metrics)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="I">I</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.typing.html#opendp.typing.RuntimeType.infer">infer() (opendp.typing.RuntimeType class method)</a>
+</li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Measurement.input_carrier_type">input_carrier_type (opendp.mod.Measurement property)</a>
+
+      <ul>
+        <li><a href="api/python/opendp.mod.html#opendp.mod.Transformation.input_carrier_type">(opendp.mod.Transformation property)</a>
+</li>
+      </ul></li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Measurement.input_distance_type">input_distance_type (opendp.mod.Measurement property)</a>
+
+      <ul>
+        <li><a href="api/python/opendp.mod.html#opendp.mod.Transformation.input_distance_type">(opendp.mod.Transformation property)</a>
+</li>
+      </ul></li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Measurement.input_domain">input_domain (opendp.mod.Measurement property)</a>
+
+      <ul>
+        <li><a href="api/python/opendp.mod.html#opendp.mod.Transformation.input_domain">(opendp.mod.Transformation property)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Measurement.input_metric">input_metric (opendp.mod.Measurement property)</a>
+
+      <ul>
+        <li><a href="api/python/opendp.mod.html#opendp.mod.Transformation.input_metric">(opendp.mod.Transformation property)</a>
+</li>
+      </ul></li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Measurement.input_space">input_space (opendp.mod.Measurement property)</a>
+
+      <ul>
+        <li><a href="api/python/opendp.mod.html#opendp.mod.Transformation.input_space">(opendp.mod.Transformation property)</a>
+</li>
+      </ul></li>
+      <li><a href="api/python/opendp.metrics.html#opendp.metrics.insert_delete_distance">insert_delete_distance() (in module opendp.metrics)</a>
+</li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Measurement.invoke">invoke() (opendp.mod.Measurement method)</a>
+
+      <ul>
+        <li><a href="api/python/opendp.mod.html#opendp.mod.Transformation.invoke">(opendp.mod.Transformation method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="L">L</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.metrics.html#opendp.metrics.l1_distance">l1_distance() (in module opendp.metrics)</a>
+</li>
+      <li><a href="api/python/opendp.metrics.html#opendp.metrics.l2_distance">l2_distance() (in module opendp.metrics)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.accuracy.html#opendp.accuracy.laplacian_scale_to_accuracy">laplacian_scale_to_accuracy() (in module opendp.accuracy)</a>
+</li>
+      <li><a href="api/python/opendp.metrics.html#opendp.metrics.linf_distance">linf_distance() (in module opendp.metrics)</a>
+</li>
+      <li><a href="api/python/opendp.context.html#opendp.context.loss_of">loss_of() (in module opendp.context)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="M">M</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.make_alp_queryable">make_alp_queryable() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_b_ary_tree">make_b_ary_tree() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.make_base_discrete_gaussian">make_base_discrete_gaussian() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.make_base_discrete_laplace">make_base_discrete_laplace() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.make_base_discrete_laplace_cks20">make_base_discrete_laplace_cks20() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.make_base_discrete_laplace_linear">make_base_discrete_laplace_linear() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.make_base_gaussian">make_base_gaussian() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.make_base_geometric">make_base_geometric() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.make_base_laplace">make_base_laplace() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.make_base_laplace_threshold">make_base_laplace_threshold() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.combinators.html#opendp.combinators.make_basic_composition">make_basic_composition() (in module opendp.combinators)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_bounded_float_checked_sum">make_bounded_float_checked_sum() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_bounded_float_ordered_sum">make_bounded_float_ordered_sum() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_bounded_int_monotonic_sum">make_bounded_int_monotonic_sum() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_bounded_int_ordered_sum">make_bounded_int_ordered_sum() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_bounded_int_split_sum">make_bounded_int_split_sum() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_cast">make_cast() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_cast_default">make_cast_default() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_cast_inherent">make_cast_inherent() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_cdf">make_cdf() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.combinators.html#opendp.combinators.make_chain_mt">make_chain_mt() (in module opendp.combinators)</a>
+</li>
+      <li><a href="api/python/opendp.combinators.html#opendp.combinators.make_chain_pm">make_chain_pm() (in module opendp.combinators)</a>
+</li>
+      <li><a href="api/python/opendp.combinators.html#opendp.combinators.make_chain_tt">make_chain_tt() (in module opendp.combinators)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_clamp">make_clamp() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_consistent_b_ary_tree">make_consistent_b_ary_tree() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_count">make_count() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_count_by">make_count_by() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_count_by_categories">make_count_by_categories() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_count_distinct">make_count_distinct() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_create_dataframe">make_create_dataframe() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_df_cast_default">make_df_cast_default() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_df_is_equal">make_df_is_equal() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_drop_null">make_drop_null() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_find">make_find() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_find_bin">make_find_bin() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.combinators.html#opendp.combinators.make_fix_delta">make_fix_delta() (in module opendp.combinators)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.make_gaussian">make_gaussian() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_identity">make_identity() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_impute_constant">make_impute_constant() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_impute_uniform_float">make_impute_uniform_float() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_index">make_index() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_is_equal">make_is_equal() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_is_null">make_is_null() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.make_laplace">make_laplace() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_lipschitz_float_mul">make_lipschitz_float_mul() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_mean">make_mean() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_metric_bounded">make_metric_bounded() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_metric_unbounded">make_metric_unbounded() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_ordered_random">make_ordered_random() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.combinators.html#opendp.combinators.make_population_amplification">make_population_amplification() (in module opendp.combinators)</a>
+</li>
+      <li><a href="api/python/opendp.combinators.html#opendp.combinators.make_pureDP_to_fixed_approxDP">make_pureDP_to_fixed_approxDP() (in module opendp.combinators)</a>
+</li>
+      <li><a href="api/python/opendp.combinators.html#opendp.combinators.make_pureDP_to_zCDP">make_pureDP_to_zCDP() (in module opendp.combinators)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_quantile_score_candidates">make_quantile_score_candidates() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_quantiles_from_counts">make_quantiles_from_counts() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.make_randomized_response">make_randomized_response() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.make_randomized_response_bool">make_randomized_response_bool() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.make_report_noisy_max_gumbel">make_report_noisy_max_gumbel() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_resize">make_resize() (in module opendp.transformations)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_select_column">make_select_column() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.combinators.html#opendp.combinators.make_sequential_composition">make_sequential_composition() (in module opendp.combinators)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_sized_bounded_float_checked_sum">make_sized_bounded_float_checked_sum() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_sized_bounded_float_ordered_sum">make_sized_bounded_float_ordered_sum() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_sized_bounded_int_checked_sum">make_sized_bounded_int_checked_sum() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_sized_bounded_int_monotonic_sum">make_sized_bounded_int_monotonic_sum() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_sized_bounded_int_ordered_sum">make_sized_bounded_int_ordered_sum() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_sized_bounded_int_split_sum">make_sized_bounded_int_split_sum() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_split_dataframe">make_split_dataframe() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_split_lines">make_split_lines() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_split_records">make_split_records() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_subset_by">make_subset_by() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_sum">make_sum() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_sum_of_squared_deviations">make_sum_of_squared_deviations() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_unordered">make_unordered() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.make_user_measurement">make_user_measurement() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_user_transformation">make_user_transformation() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.make_variance">make_variance() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.combinators.html#opendp.combinators.make_zCDP_to_approxDP">make_zCDP_to_approxDP() (in module opendp.combinators)</a>
+</li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Measurement.map">map() (opendp.mod.Measurement method)</a>
+
+      <ul>
+        <li><a href="api/python/opendp.mod.html#opendp.mod.Transformation.map">(opendp.mod.Transformation method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/python/opendp.domains.html#opendp.domains.map_domain">map_domain() (in module opendp.domains)</a>
+</li>
+      <li><a href="api/python/opendp.measures.html#opendp.measures.max_divergence">max_divergence() (in module opendp.measures)</a>
+</li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Measure">Measure (class in opendp.mod)</a>
+</li>
+      <li><a href="api/python/opendp.measures.html#opendp.measures.measure_debug">measure_debug() (in module opendp.measures)</a>
+</li>
+      <li><a href="api/python/opendp.measures.html#opendp.measures.measure_distance_type">measure_distance_type() (in module opendp.measures)</a>
+</li>
+      <li><a href="api/python/opendp.measures.html#opendp.measures.measure_type">measure_type() (in module opendp.measures)</a>
+</li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Measurement">Measurement (class in opendp.mod)</a>
+</li>
+      <li><a href="api/python/opendp.core.html#opendp.core.measurement_check">measurement_check() (in module opendp.core)</a>
+</li>
+      <li><a href="api/python/opendp.core.html#opendp.core.measurement_function">measurement_function() (in module opendp.core)</a>
+</li>
+      <li><a href="api/python/opendp.core.html#opendp.core.measurement_input_carrier_type">measurement_input_carrier_type() (in module opendp.core)</a>
+</li>
+      <li><a href="api/python/opendp.core.html#opendp.core.measurement_input_distance_type">measurement_input_distance_type() (in module opendp.core)</a>
+</li>
+      <li><a href="api/python/opendp.core.html#opendp.core.measurement_input_domain">measurement_input_domain() (in module opendp.core)</a>
+</li>
+      <li><a href="api/python/opendp.core.html#opendp.core.measurement_input_metric">measurement_input_metric() (in module opendp.core)</a>
+</li>
+      <li><a href="api/python/opendp.core.html#opendp.core.measurement_invoke">measurement_invoke() (in module opendp.core)</a>
+</li>
+      <li><a href="api/python/opendp.core.html#opendp.core.measurement_map">measurement_map() (in module opendp.core)</a>
+</li>
+      <li><a href="api/python/opendp.core.html#opendp.core.measurement_output_distance_type">measurement_output_distance_type() (in module opendp.core)</a>
+</li>
+      <li><a href="api/python/opendp.core.html#opendp.core.measurement_output_measure">measurement_output_measure() (in module opendp.core)</a>
+</li>
+      <li><a href="api/python/opendp.domains.html#opendp.domains.member">member() (in module opendp.domains)</a>
+
+      <ul>
+        <li><a href="api/python/opendp.mod.html#opendp.mod.Domain.member">(opendp.mod.Domain method)</a>
+</li>
+      </ul></li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Metric">Metric (class in opendp.mod)</a>
+</li>
+      <li><a href="api/python/opendp.metrics.html#opendp.metrics.metric_debug">metric_debug() (in module opendp.metrics)</a>
+</li>
+      <li><a href="api/python/opendp.metrics.html#opendp.metrics.metric_distance_type">metric_distance_type() (in module opendp.metrics)</a>
+</li>
+      <li><a href="api/python/opendp.context.html#opendp.context.metric_of">metric_of() (in module opendp.context)</a>
+</li>
+      <li><a href="api/python/opendp.metrics.html#opendp.metrics.metric_type">metric_type() (in module opendp.metrics)</a>
+</li>
+      <li>
+    module
+
+      <ul>
+        <li><a href="api/python/opendp.html#module-opendp">opendp</a>
+</li>
+        <li><a href="api/python/opendp.accuracy.html#module-opendp.accuracy">opendp.accuracy</a>
+</li>
+        <li><a href="api/python/opendp.combinators.html#module-opendp.combinators">opendp.combinators</a>
+</li>
+        <li><a href="api/python/opendp.context.html#module-opendp.context">opendp.context</a>
+</li>
+        <li><a href="api/python/opendp.core.html#module-opendp.core">opendp.core</a>
+</li>
+        <li><a href="api/python/opendp.domains.html#module-opendp.domains">opendp.domains</a>
+</li>
+        <li><a href="api/python/opendp.measurements.html#module-opendp.measurements">opendp.measurements</a>
+</li>
+        <li><a href="api/python/opendp.measures.html#module-opendp.measures">opendp.measures</a>
+</li>
+        <li><a href="api/python/opendp.metrics.html#module-opendp.metrics">opendp.metrics</a>
+</li>
+        <li><a href="api/python/opendp.mod.html#module-opendp.mod">opendp.mod</a>
+</li>
+        <li><a href="api/python/opendp.prelude.html#module-opendp.prelude">opendp.prelude</a>
+</li>
+        <li><a href="api/python/opendp.transformations.html#module-opendp.transformations">opendp.transformations</a>
+</li>
+        <li><a href="api/python/opendp.typing.html#module-opendp.typing">opendp.typing</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="N">N</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.core.html#opendp.core.new_function">new_function() (in module opendp.core)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.core.html#opendp.core.new_queryable">new_queryable() (in module opendp.core)</a>
+</li>
+      <li><a href="api/python/opendp.context.html#opendp.context.Query.new_with">new_with() (opendp.context.Query method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="O">O</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    opendp
+
+      <ul>
+        <li><a href="api/python/opendp.html#module-opendp">module</a>
+</li>
+      </ul></li>
+      <li>
+    opendp.accuracy
+
+      <ul>
+        <li><a href="api/python/opendp.accuracy.html#module-opendp.accuracy">module</a>
+</li>
+      </ul></li>
+      <li>
+    opendp.combinators
+
+      <ul>
+        <li><a href="api/python/opendp.combinators.html#module-opendp.combinators">module</a>
+</li>
+      </ul></li>
+      <li>
+    opendp.context
+
+      <ul>
+        <li><a href="api/python/opendp.context.html#module-opendp.context">module</a>
+</li>
+      </ul></li>
+      <li>
+    opendp.core
+
+      <ul>
+        <li><a href="api/python/opendp.core.html#module-opendp.core">module</a>
+</li>
+      </ul></li>
+      <li>
+    opendp.domains
+
+      <ul>
+        <li><a href="api/python/opendp.domains.html#module-opendp.domains">module</a>
+</li>
+      </ul></li>
+      <li>
+    opendp.measurements
+
+      <ul>
+        <li><a href="api/python/opendp.measurements.html#module-opendp.measurements">module</a>
+</li>
+      </ul></li>
+      <li>
+    opendp.measures
+
+      <ul>
+        <li><a href="api/python/opendp.measures.html#module-opendp.measures">module</a>
+</li>
+      </ul></li>
+      <li>
+    opendp.metrics
+
+      <ul>
+        <li><a href="api/python/opendp.metrics.html#module-opendp.metrics">module</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    opendp.mod
+
+      <ul>
+        <li><a href="api/python/opendp.mod.html#module-opendp.mod">module</a>
+</li>
+      </ul></li>
+      <li>
+    opendp.prelude
+
+      <ul>
+        <li><a href="api/python/opendp.prelude.html#module-opendp.prelude">module</a>
+</li>
+      </ul></li>
+      <li>
+    opendp.transformations
+
+      <ul>
+        <li><a href="api/python/opendp.transformations.html#module-opendp.transformations">module</a>
+</li>
+      </ul></li>
+      <li>
+    opendp.typing
+
+      <ul>
+        <li><a href="api/python/opendp.typing.html#module-opendp.typing">module</a>
+</li>
+      </ul></li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.OpenDPException">OpenDPException</a>
+</li>
+      <li><a href="api/python/opendp.domains.html#opendp.domains.option_domain">option_domain() (in module opendp.domains)</a>
+</li>
+      <li><a href="api/python/opendp.typing.html#opendp.typing.RuntimeType.origin">origin (opendp.typing.RuntimeType attribute)</a>
+
+      <ul>
+        <li><a href="api/python/opendp.typing.html#opendp.typing.UnknownType.origin">(opendp.typing.UnknownType attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Measurement.output_distance_type">output_distance_type (opendp.mod.Measurement property)</a>
+
+      <ul>
+        <li><a href="api/python/opendp.mod.html#opendp.mod.Transformation.output_distance_type">(opendp.mod.Transformation property)</a>
+</li>
+      </ul></li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Transformation.output_domain">output_domain (opendp.mod.Transformation property)</a>
+</li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Measurement.output_measure">output_measure (opendp.mod.Measurement property)</a>
+</li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Transformation.output_metric">output_metric (opendp.mod.Transformation property)</a>
+</li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Transformation.output_space">output_space (opendp.mod.Transformation property)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="P">P</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.context.html#opendp.context.Query.param">param() (opendp.context.Query method)</a>
+</li>
+      <li><a href="api/python/opendp.typing.html#opendp.typing.RuntimeType.parse">parse() (opendp.typing.RuntimeType class method)</a>
+</li>
+      <li><a href="api/python/opendp.typing.html#opendp.typing.parse_or_infer">parse_or_infer() (in module opendp.typing)</a>
+
+      <ul>
+        <li><a href="api/python/opendp.typing.html#opendp.typing.RuntimeType.parse_or_infer">(opendp.typing.RuntimeType class method)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.context.html#opendp.context.PartialChain.partial">partial (opendp.context.PartialChain attribute)</a>
+</li>
+      <li><a href="api/python/opendp.context.html#opendp.context.PartialChain">PartialChain (class in opendp.context)</a>
+</li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.PartialConstructor">PartialConstructor (class in opendp.mod)</a>
+</li>
+      <li><a href="api/python/opendp.typing.html#opendp.typing.pass_through">pass_through() (in module opendp.typing)</a>
+</li>
+      <li><a href="api/python/opendp.typing.html#opendp.typing.PrivacyMeasure">PrivacyMeasure (class in opendp.typing)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="Q">Q</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.context.html#opendp.context.Query">Query (class in opendp.context)</a>
+</li>
+      <li><a href="api/python/opendp.context.html#opendp.context.Context.query">query() (opendp.context.Context method)</a>
+</li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Queryable.query_type">query_type (opendp.mod.Queryable property)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Queryable">Queryable (class in opendp.mod)</a>
+</li>
+      <li><a href="api/python/opendp.context.html#opendp.context.Context.queryable">queryable (opendp.context.Context attribute)</a>
+</li>
+      <li><a href="api/python/opendp.core.html#opendp.core.queryable_eval">queryable_eval() (in module opendp.core)</a>
+</li>
+      <li><a href="api/python/opendp.core.html#opendp.core.queryable_query_type">queryable_query_type() (in module opendp.core)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="R">R</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.OpenDPException.raw_frames">raw_frames() (opendp.mod.OpenDPException method)</a>
+</li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.OpenDPException.raw_traceback">raw_traceback (opendp.mod.OpenDPException attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.context.html#opendp.context.Query.release">release() (opendp.context.Query method)</a>
+</li>
+      <li><a href="api/python/opendp.context.html#opendp.context.Query.resolve">resolve() (opendp.context.Query method)</a>
+</li>
+      <li><a href="api/python/opendp.typing.html#opendp.typing.RuntimeType">RuntimeType (class in opendp.typing)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="S">S</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.typing.html#opendp.typing.SensitivityMetric">SensitivityMetric (class in opendp.typing)</a>
+</li>
+      <li><a href="api/python/opendp.typing.html#opendp.typing.set_default_float_type">set_default_float_type() (in module opendp.typing)</a>
+</li>
+      <li><a href="api/python/opendp.typing.html#opendp.typing.set_default_int_type">set_default_int_type() (in module opendp.typing)</a>
+</li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.SMDCurve">SMDCurve (class in opendp.mod)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.measures.html#opendp.measures.smoothed_max_divergence">smoothed_max_divergence() (in module opendp.measures)</a>
+</li>
+      <li><a href="api/python/opendp.context.html#opendp.context.space_of">space_of() (in module opendp.context)</a>
+</li>
+      <li><a href="api/python/opendp.typing.html#opendp.typing.RuntimeType.substitute">substitute() (opendp.typing.RuntimeType method)</a>
+</li>
+      <li><a href="api/python/opendp.metrics.html#opendp.metrics.symmetric_distance">symmetric_distance() (in module opendp.metrics)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="T">T</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.then_alp_queryable">then_alp_queryable() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_b_ary_tree">then_b_ary_tree() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.then_base_discrete_gaussian">then_base_discrete_gaussian() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.then_base_discrete_laplace">then_base_discrete_laplace() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.then_base_discrete_laplace_cks20">then_base_discrete_laplace_cks20() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.then_base_discrete_laplace_linear">then_base_discrete_laplace_linear() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.then_base_gaussian">then_base_gaussian() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.then_base_geometric">then_base_geometric() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.then_base_laplace">then_base_laplace() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.then_base_laplace_threshold">then_base_laplace_threshold() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_cast">then_cast() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_cast_default">then_cast_default() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_cast_inherent">then_cast_inherent() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_clamp">then_clamp() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_count">then_count() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_count_by">then_count_by() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_count_by_categories">then_count_by_categories() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_count_distinct">then_count_distinct() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_df_cast_default">then_df_cast_default() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_df_is_equal">then_df_is_equal() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_drop_null">then_drop_null() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_find">then_find() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_find_bin">then_find_bin() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.then_gaussian">then_gaussian() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_identity">then_identity() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_impute_constant">then_impute_constant() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_impute_uniform_float">then_impute_uniform_float() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_index">then_index() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_is_equal">then_is_equal() (in module opendp.transformations)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_is_null">then_is_null() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.then_laplace">then_laplace() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_mean">then_mean() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_metric_bounded">then_metric_bounded() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_metric_unbounded">then_metric_unbounded() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_ordered_random">then_ordered_random() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_quantile_score_candidates">then_quantile_score_candidates() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.then_report_noisy_max_gumbel">then_report_noisy_max_gumbel() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_resize">then_resize() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.combinators.html#opendp.combinators.then_sequential_composition">then_sequential_composition() (in module opendp.combinators)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_sum">then_sum() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_sum_of_squared_deviations">then_sum_of_squared_deviations() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_unordered">then_unordered() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.measurements.html#opendp.measurements.then_user_measurement">then_user_measurement() (in module opendp.measurements)</a>
+</li>
+      <li><a href="api/python/opendp.transformations.html#opendp.transformations.then_variance">then_variance() (in module opendp.transformations)</a>
+</li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Transformation">Transformation (class in opendp.mod)</a>
+</li>
+      <li><a href="api/python/opendp.core.html#opendp.core.transformation_check">transformation_check() (in module opendp.core)</a>
+</li>
+      <li><a href="api/python/opendp.core.html#opendp.core.transformation_function">transformation_function() (in module opendp.core)</a>
+</li>
+      <li><a href="api/python/opendp.core.html#opendp.core.transformation_input_carrier_type">transformation_input_carrier_type() (in module opendp.core)</a>
+</li>
+      <li><a href="api/python/opendp.core.html#opendp.core.transformation_input_distance_type">transformation_input_distance_type() (in module opendp.core)</a>
+</li>
+      <li><a href="api/python/opendp.core.html#opendp.core.transformation_input_domain">transformation_input_domain() (in module opendp.core)</a>
+</li>
+      <li><a href="api/python/opendp.core.html#opendp.core.transformation_input_metric">transformation_input_metric() (in module opendp.core)</a>
+</li>
+      <li><a href="api/python/opendp.core.html#opendp.core.transformation_invoke">transformation_invoke() (in module opendp.core)</a>
+</li>
+      <li><a href="api/python/opendp.core.html#opendp.core.transformation_map">transformation_map() (in module opendp.core)</a>
+</li>
+      <li><a href="api/python/opendp.core.html#opendp.core.transformation_output_distance_type">transformation_output_distance_type() (in module opendp.core)</a>
+</li>
+      <li><a href="api/python/opendp.core.html#opendp.core.transformation_output_domain">transformation_output_domain() (in module opendp.core)</a>
+</li>
+      <li><a href="api/python/opendp.core.html#opendp.core.transformation_output_metric">transformation_output_metric() (in module opendp.core)</a>
+</li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.Domain.type">type (opendp.mod.Domain property)</a>
+
+      <ul>
+        <li><a href="api/python/opendp.mod.html#opendp.mod.Measure.type">(opendp.mod.Measure property)</a>
+</li>
+        <li><a href="api/python/opendp.mod.html#opendp.mod.Metric.type">(opendp.mod.Metric property)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="U">U</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.context.html#opendp.context.unit_of">unit_of() (in module opendp.context)</a>
+</li>
+      <li><a href="api/python/opendp.typing.html#opendp.typing.UnknownType">UnknownType (class in opendp.typing)</a>
+</li>
+      <li><a href="api/python/opendp.mod.html#opendp.mod.UnknownTypeException">UnknownTypeException</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.metrics.html#opendp.metrics.user_distance">user_distance() (in module opendp.metrics)</a>
+</li>
+      <li><a href="api/python/opendp.measures.html#opendp.measures.user_divergence">user_divergence() (in module opendp.measures)</a>
+</li>
+      <li><a href="api/python/opendp.domains.html#opendp.domains.user_domain">user_domain() (in module opendp.domains)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="V">V</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.domains.html#opendp.domains.vector_domain">vector_domain() (in module opendp.domains)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="W">W</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.context.html#opendp.context.PartialChain.wrap">wrap() (opendp.context.PartialChain class method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="Z">Z</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/python/opendp.measures.html#opendp.measures.zero_concentrated_divergence">zero_concentrated_divergence() (in module opendp.measures)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.3rc1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

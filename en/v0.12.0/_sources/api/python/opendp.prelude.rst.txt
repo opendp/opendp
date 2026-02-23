@@ -1,0 +1,7 @@
+opendp.prelude module
+=====================
+
+.. automodule:: opendp.prelude
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,0 +1,2143 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>opendp.mod module &#8212; OpenDP</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=eafc0fe6" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=4f92a2c4" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+    <script src="../../_static/documentation_options.js?v=9dfcc03d"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/python/opendp.mod';</script>
+    <link rel="icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="opendp.prelude module" href="opendp.prelude.html" />
+    <link rel="prev" title="opendp.metrics module" href="opendp.metrics.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Feb 23, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+
+
+<script>
+document.write(`<aside class="bd-header-announcement" aria-label="Announcement"></aside>`);
+fetch("https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html")
+  .then(res => {return res.text();})
+  .then(data => {
+    if (data.length === 0) {
+      console.log("[PST]: Empty announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+      return;
+    }
+    div = document.querySelector(".bd-header-announcement");
+    div.classList.add(...["bd-header-announcement", "container-fluid", "init"]);
+    div.innerHTML = `<div class="bd-header-announcement__content">${data}</div>`;
+    // At least 3rem height
+    const autoHeight = Math.min(
+      div.offsetHeight,
+      3 * parseFloat(getComputedStyle(document.documentElement).fontSize));
+    // Set height and vertical padding to 0 to prepare the height transition
+    div.style.setProperty("height", 0);
+    div.style.setProperty("padding-top", 0);
+    div.style.setProperty("padding-bottom", 0);
+    div.classList.remove("init");
+    // Set height to the computed height with a small timeout to activate the transition
+    setTimeout(() => {
+      div.style.setProperty("height", `${autoHeight}px`);
+      // Wait for a bit more than 300ms (the transition duration) then remove the
+      // forcefully set styles and let CSS take over
+      setTimeout(() => {
+        div.style.removeProperty("padding-top");
+        div.style.removeProperty("padding-bottom");
+        div.style.removeProperty("height");
+        div.style.setProperty("min-height", "3rem");
+      }, 320);
+    }, 10);
+  })
+  .catch(error => {
+    console.log("[PST]: Failed to load announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+  });
+</script>
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <button class="sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/opendp-logo.png" class="logo__image only-light" alt="OpenDP - Home"/>
+    <script>document.write(`<img src="../../_static/opendp-logo.png" class="logo__image only-dark" alt="OpenDP - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../getting-started/index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="../index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../theory/index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+    <button class="sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../getting-started/index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="../index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../theory/index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../user-guide/index.html">API User Guide</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/limitations.html">Limitations</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/programming-framework/index.html">Programming Framework</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/programming-framework/core-structures.html">Core Structures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/programming-framework/supporting-elements.html">Supporting Elements</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/transformations/index.html">Transformations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/transformations/preprocess-resize.html">Preprocessing: Resize</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/transformations/aggregation-sum.html">Aggregation: Sum</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/transformations/aggregation-mean.html">Aggregation: Mean</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/transformations/aggregation-quantile.html">Aggregation: Quantile</a></li>
+
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/measurements/index.html">Measurements</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/measurements/additive-noise-mechanisms.html">Additive Noise Mechanisms</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/measurements/canonical-noise-mechanism.html">Canonical Noise Mechanism</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/measurements/thresholded-noise-mechanisms.html">Thresholded Noise Mechanisms</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/measurements/approximate-laplace-projection.html">Approximate Laplace Projection</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/measurements/noisy-max-mechanisms.html">Report Noisy Max Mechanisms</a></li>
+
+
+
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/measurements/randomized-response.html">Randomized Response</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/combinators/index.html">Combinators</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/combinators/chaining.html">Chaining</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/combinators/non-adaptive-composition.html">(Non-Adaptive) Composition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/combinators/adaptive-composition.html">Adaptive Composition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/combinators/fully-adaptive-composition.html">Fully Adaptive Composition and Odometers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/combinators/privacy-filters.html">Privacy Filters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/combinators/compositor-chaining-and-nesting.html">Compositor Chaining and Nesting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/combinators/measure-casting.html">Measure Casting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/combinators/amplification.html">Amplification</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/utilities/index.html">Utilities</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/utilities/typing.html">Typing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/utilities/parameter-search.html">Parameter Search</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/utilities/serialization.html">Serialization</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/context/index.html">Context</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/polars/index.html">Polars</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/polars/polars-vs-opendp.html">Polars vs. OpenDP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/polars/gaussian-noise.html">Gaussian Noise</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/polars/bounds.html">Identifier Truncation and Bounds</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/polars/data-types.html">Data Types</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../user-guide/polars/expressions/index.html">Expressions</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/aggregation.html">Aggregation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/boolean.html">Boolean</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/columns.html">Columns</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/manipulation.html">Manipulation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/operators.html">Operators</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/string.html">String</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/temporal.html">Temporal</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/plugins/index.html">Plugins</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/plugins/measurement.html">Measurement example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/plugins/transformation.html">Transformation example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/plugins/context-api-plugins.html">Context API Plugins</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/plugins/theil-sen-regression.html">Thiel-Sen Regression</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/plugins/selecting-grouping-columns.html">Privately Selecting Grouping Columns</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Python API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2 current active has-children"><a class="reference internal" href="opendp.html">opendp package</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l3 has-children"><a class="reference internal" href="opendp.extras.html">opendp.extras package</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="opendp.extras.examples.html">opendp.extras.examples package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="opendp.extras.mbi.html">opendp.extras.mbi package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="opendp.extras.numpy.html">opendp.extras.numpy package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="opendp.extras.polars.html">opendp.extras.polars package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="opendp.extras.sklearn.html">opendp.extras.sklearn package</a></li>
+</ul>
+</details></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.accuracy.html">opendp.accuracy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.combinators.html">opendp.combinators module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.context.html">opendp.context module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.core.html">opendp.core module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.domains.html">opendp.domains module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.measurements.html">opendp.measurements module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.measures.html">opendp.measures module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.metrics.html">opendp.metrics module</a></li>
+<li class="toctree-l3 current active"><a class="current reference internal" href="#">opendp.mod module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.prelude.html">opendp.prelude module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.transformations.html">opendp.transformations module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.typing.html">opendp.typing module</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference external" href="https://docs.opendp.org/en/stable/api/r">R API Reference</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://docs.rs/opendp">Rust API Reference</a></li>
+</ul>
+</div>
+</nav></div>
+        <div class="sidebar-primary-item">
+<h6>Branches</h6>
+<ul>
+    <li><a href="opendp.mod.html" style="font-weight: bold">beta</a></li>
+    <li><a href="../../../nightly/index.html" style="font-weight: normal">nightly</a></li>
+    <li><a href="../../../stable/index.html" style="font-weight: normal">stable</a></li>
+</ul>
+
+
+<h6 id="releases_header">Releases
+    <div id="releases_symbol" style="float:right"></div>
+</h6>
+<ul id="releases_content">
+    <li><a href="../../../v0.14.1/index.html" style="font-weight: normal">v0.14.1</a></li>
+    <li><a href="../../../v0.14.0/index.html" style="font-weight: normal">v0.14.0</a></li>
+    <li><a href="../../../v0.13.0/index.html" style="font-weight: normal">v0.13.0</a></li>
+    <li><a href="../../../v0.12.1/index.html" style="font-weight: normal">v0.12.1</a></li>
+    <li><a href="../../../v0.12.0/index.html" style="font-weight: normal">v0.12.0</a></li>
+    <li><a href="../../../v0.11.1/index.html" style="font-weight: normal">v0.11.1</a></li>
+    <li><a href="../../../v0.11.0/index.html" style="font-weight: normal">v0.11.0</a></li>
+    <li><a href="../../../v0.10.0/index.html" style="font-weight: normal">v0.10.0</a></li>
+    <li><a href="../../../v0.9.2/index.html" style="font-weight: normal">v0.9.2</a></li>
+    <li><a href="../../../v0.9.1/index.html" style="font-weight: normal">v0.9.1</a></li>
+    <li><a href="../../../v0.9.0/index.html" style="font-weight: normal">v0.9.0</a></li>
+    <li><a href="../../../v0.8.0/index.html" style="font-weight: normal">v0.8.0</a></li>
+    <li><a href="../../../v0.7.0/index.html" style="font-weight: normal">v0.7.0</a></li>
+    <li><a href="../../../v0.6.2/index.html" style="font-weight: normal">v0.6.2</a></li>
+    <li><a href="../../../v0.6.1/index.html" style="font-weight: normal">v0.6.1</a></li>
+    <li><a href="../../../v0.6.0/index.html" style="font-weight: normal">v0.6.0</a></li>
+    <li><a href="../../../v0.5.0/index.html" style="font-weight: normal">v0.5.0</a></li>
+    <li><a href="../../../v0.4.0/index.html" style="font-weight: normal">v0.4.0</a></li>
+    <li><a href="../../../v0.3.0/index.html" style="font-weight: normal">v0.3.0</a></li>
+    <li><a href="../../../v0.2.4/index.html" style="font-weight: normal">v0.2.4</a></li>
+    <li><a href="../../../v0.2.3/index.html" style="font-weight: normal">v0.2.3</a></li>
+    <li><a href="../../../v0.2.2/index.html" style="font-weight: normal">v0.2.2</a></li>
+    <li><a href="../../../v0.2.1/index.html" style="font-weight: normal">v0.2.1</a></li>
+    <li><a href="../../../v0.2.0/index.html" style="font-weight: normal">v0.2.0</a></li>
+    <li><a href="../../../v0.1.0/index.html" style="font-weight: normal">v0.1.0</a></li>
+</ul>
+<script>
+    let expanded = !!JSON.parse(localStorage.getItem('expanded'));
+
+    let releasesHeader = document.getElementById("releases_header");
+    let releasesSymbol = document.getElementById("releases_symbol");
+    let releasesContent = document.getElementById("releases_content");
+
+    function setReleasesState() {
+        localStorage.setItem("expanded", JSON.stringify(expanded))
+        releasesContent.style.display = expanded ? "block" : "none";
+        releasesSymbol.classList.add(expanded ? 'minus' : 'plus')
+        releasesSymbol.classList.remove(expanded ? 'plus' : 'minus')
+    }
+
+    setReleasesState()
+    releasesHeader.addEventListener("click", function() {
+        expanded = !expanded;
+        setReleasesState()
+    })
+</script>
+<style>
+    .plus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .plus:before,
+    .plus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .plus:before {
+        left:50%;
+        top:4px;
+        bottom:4px;
+        width:3px;
+        transform:translateX(-50%);
+    }
+
+    .plus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+
+
+
+    .minus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .minus:before,
+    .minus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .minus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+</style>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+
+
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">API</a></li>
+    
+    
+    <li class="breadcrumb-item"><i class="fa-solid fa-ellipsis"></i></li>
+    
+    
+    <li class="breadcrumb-item"><a href="opendp.html" class="nav-link">opendp package</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">opendp.mod module</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item"><div class="admonition warning" style="position: relative;">
+    <!--
+     Without the style, the region for the article title overlaps, and the link is unclickable.
+    -->
+    <details>
+        <summary>Questions or feedback?</summary>
+        <!--
+            All of these lists should be in sync:
+            - README.md
+            - docs/source/contributing/contact.rst
+            - docs/source/_templates/questions-feedback.html
+            - .github/ISSUE_TEMPLATE/config.yml
+        -->
+        <ul>
+            <li>Report a bug or request a feature on <a href="https://github.com/opendp/opendp/issues">Github</a>.</li>
+            <li>Send general queries to <a href="mailto:info@opendp.org">info@opendp.org</a>, or email <a href="mailto:security@opendp.org">security@opendp.org</a> if it is related to security.</li>
+            <li>Join the conversation on <a href="https://join.slack.com/t/opendp/shared_invite/zt-1t8rrbqhd-z8LiZiP06vVE422HJd6ciQ">Slack</a>, or the <a href="https://groups.google.com/a/g.harvard.edu/g/opendp-community">mailing list</a>.</li>
+        </ul>
+    </details>
+</div></div>
+      
+        <div class="header-article-item">
+<div class="admonition warning" style="position: relative;" id="old-version-warning">
+  <!--
+   To work with this locally, in conf.py uncomment the entry under "html_context".
+
+   Without the style, the region for the article title overlaps, and the link is unclickable.
+  -->
+  <p class="admonition-title">
+  
+  This documentation is for a development version of OpenDP.
+  
+  </p>
+  <p>The current release of OpenDP is <a href="/">v0.14.1</a>.</p>
+</div>
+<script>
+  window.addEventListener("load", (event) => {
+    document.getElementById('old-version-warning').style.top = `${window.visualViewport.pageTop}px`;
+  });
+</script>
+</div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="module-opendp.mod">
+<span id="opendp-mod-module"></span><h1>opendp.mod module<a class="headerlink" href="#module-opendp.mod" title="Link to this heading">#</a></h1>
+<p>The <code class="docutils literal notranslate"><span class="pre">mod</span></code> module provides the classes which implement the
+<a class="reference external" href="../../api/user-guide/programming-framework/index.html">OpenDP Programming Framework</a>,
+as well as utilities for enabling features and finding parameter values.</p>
+<p>The classes here correspond to other top-level modules: For example,
+instances of <a class="reference internal" href="#opendp.mod.Domain" title="opendp.mod.Domain"><code class="xref py py-class docutils literal notranslate"><span class="pre">opendp.mod.Domain</span></code></a> are either inputs or outputs for functions in <a class="reference internal" href="opendp.domains.html#module-opendp.domains" title="opendp.domains"><code class="xref py py-mod docutils literal notranslate"><span class="pre">opendp.domains</span></code></a>.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.mod.ApproximateDivergence">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">ApproximateDivergence</span></span><a class="reference internal" href="../../_modules/opendp/mod.html#ApproximateDivergence"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.ApproximateDivergence" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#opendp.mod.Measure" title="opendp.mod.Measure"><code class="xref py py-class docutils literal notranslate"><span class="pre">Measure</span></code></a></p>
+<p><code class="docutils literal notranslate"><span class="pre">ApproximateDivergence</span></code> is a privacy measure representing the divergence between two distributions 
+with respect to some inner privacy measure, except for some subset of possible outputs with probability mass no greater than delta.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.ApproximateDivergence.inner_measure">
+<span class="sig-name descname"><span class="pre">inner_measure</span></span><a class="headerlink" href="#opendp.mod.ApproximateDivergence.inner_measure" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.mod.AtomDomain">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">AtomDomain</span></span><a class="reference internal" href="../../_modules/opendp/mod.html#AtomDomain"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.AtomDomain" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#opendp.mod.Domain" title="opendp.mod.Domain"><code class="xref py py-class docutils literal notranslate"><span class="pre">Domain</span></code></a></p>
+<p>The domain of all values of a given atomic type.</p>
+<p>Create an instance of this domain with <a class="reference internal" href="opendp.domains.html#opendp.domains.atom_domain" title="opendp.domains.atom_domain"><code class="xref py py-func docutils literal notranslate"><span class="pre">atom_domain()</span></code></a>.</p>
+<p>If bounds are set, then the domain is restricted to the bounds.
+If nullable is set, then null value(s) are included in the domain.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.AtomDomain.bounds">
+<span class="sig-name descname"><span class="pre">bounds</span></span><a class="headerlink" href="#opendp.mod.AtomDomain.bounds" title="Link to this definition">#</a></dt>
+<dd><p>Bounds of the domain, if they exist</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.AtomDomain.nan">
+<span class="sig-name descname"><span class="pre">nan</span></span><a class="headerlink" href="#opendp.mod.AtomDomain.nan" title="Link to this definition">#</a></dt>
+<dd><p>Whether the domain includes NaN values</p>
+<p>Only relevant when the carrier type is a floating point type.
+All other types will always return <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.mod.ChangeOneIdDistance">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">ChangeOneIdDistance</span></span><a class="reference internal" href="../../_modules/opendp/mod.html#ChangeOneIdDistance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.ChangeOneIdDistance" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#opendp.mod.Metric" title="opendp.mod.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a></p>
+<p><code class="docutils literal notranslate"><span class="pre">ChangeOneIdDistance</span></code> is a metric for measuring the distance between the identifiers of two datasets.</p>
+<p>The metric counts the number of identifiers that must be changed to make the two datasets equal.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.ChangeOneIdDistance.identifier">
+<span class="sig-name descname"><span class="pre">identifier</span></span><a class="headerlink" href="#opendp.mod.ChangeOneIdDistance.identifier" title="Link to this definition">#</a></dt>
+<dd><p>The name of the column storing identifiers</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.mod.Domain">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">Domain</span></span><a class="reference internal" href="../../_modules/opendp/mod.html#Domain"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.Domain" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">LP_AnyDomain</span></code></p>
+<p>See the <a class="reference external" href="../../api/user-guide/programming-framework/supporting-elements.html#domain">Domain</a>
+section in the Programming Framework docs for more context.</p>
+<p>Functions for creating domains are in <a class="reference internal" href="opendp.domains.html#module-opendp.domains" title="opendp.domains"><code class="xref py py-mod docutils literal notranslate"><span class="pre">opendp.domains</span></code></a>.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Domain.carrier_type">
+<span class="sig-name descname"><span class="pre">carrier_type</span></span><a class="headerlink" href="#opendp.mod.Domain.carrier_type" title="Link to this definition">#</a></dt>
+<dd><p>Carrier type of domain</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.mod.Domain.cast">
+<span class="sig-name descname"><span class="pre">cast</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">type_</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#Domain.cast"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.Domain.cast" title="Link to this definition">#</a></dt>
+<dd><p>Retrieve the descriptor as the prescribed type, or error.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>type_</strong> (<em>Type</em><em>[</em><em>D</em><em>]</em>) – </p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>D</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.mod.Domain.member">
+<span class="sig-name descname"><span class="pre">member</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#Domain.member"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.Domain.member" title="Link to this definition">#</a></dt>
+<dd><p>Check if <code class="docutils literal notranslate"><span class="pre">val</span></code> is a member of the domain.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>val</strong> – a value to be checked for membership in <cite>self</cite></p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Domain.type">
+<span class="sig-name descname"><span class="pre">type</span></span><a class="headerlink" href="#opendp.mod.Domain.type" title="Link to this definition">#</a></dt>
+<dd><p>Type of domain</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.mod.ExtrinsicDomain">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">ExtrinsicDomain</span></span><a class="reference internal" href="../../_modules/opendp/mod.html#ExtrinsicDomain"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.ExtrinsicDomain" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#opendp.mod.Domain" title="opendp.mod.Domain"><code class="xref py py-class docutils literal notranslate"><span class="pre">Domain</span></code></a></p>
+<p>A user-defined domain.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.ExtrinsicDomain.descriptor">
+<span class="sig-name descname"><span class="pre">descriptor</span></span><a class="headerlink" href="#opendp.mod.ExtrinsicDomain.descriptor" title="Link to this definition">#</a></dt>
+<dd><p>Descriptor of domain. Used to retrieve the descriptor associated with domains defined in Python</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.mod.FrameDistance">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">FrameDistance</span></span><a class="reference internal" href="../../_modules/opendp/mod.html#FrameDistance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.FrameDistance" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#opendp.mod.Metric" title="opendp.mod.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a></p>
+<p><code class="docutils literal notranslate"><span class="pre">FrameDistance</span></code> is a higher-order metric that contains multiple distance bounds for different groupings of data.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.FrameDistance.inner_metric">
+<span class="sig-name descname"><span class="pre">inner_metric</span></span><a class="headerlink" href="#opendp.mod.FrameDistance.inner_metric" title="Link to this definition">#</a></dt>
+<dd><p>Bounds of the domain, if they exist</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.mod.Function">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">Function</span></span><a class="reference internal" href="../../_modules/opendp/mod.html#Function"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.Function" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">LP_AnyFunction</span></code></p>
+<p>See the <a class="reference external" href="../../api/user-guide/programming-framework/supporting-elements.html#function">Function</a>
+section in the Programming Framework docs for more context.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.mod.LazyFrameDomain">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">LazyFrameDomain</span></span><a class="reference internal" href="../../_modules/opendp/mod.html#LazyFrameDomain"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.LazyFrameDomain" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#opendp.mod.Domain" title="opendp.mod.Domain"><code class="xref py py-class docutils literal notranslate"><span class="pre">Domain</span></code></a></p>
+<p><code class="docutils literal notranslate"><span class="pre">LazyFrameDomain</span></code> describes the domain of all polars LazyFrames.</p>
+<p>Create an instance of this domain with <a class="reference internal" href="opendp.domains.html#opendp.domains.lazyframe_domain" title="opendp.domains.lazyframe_domain"><code class="xref py py-func docutils literal notranslate"><span class="pre">lazyframe_domain()</span></code></a>.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.LazyFrameDomain.columns">
+<span class="sig-name descname"><span class="pre">columns</span></span><a class="headerlink" href="#opendp.mod.LazyFrameDomain.columns" title="Link to this definition">#</a></dt>
+<dd><p>List of column names in the frame</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.mod.LazyFrameDomain.get_margin">
+<span class="sig-name descname"><span class="pre">get_margin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">by</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#LazyFrameDomain.get_margin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.LazyFrameDomain.get_margin" title="Link to this definition">#</a></dt>
+<dd><p>Get the margin descriptor of the frame when grouped by the given columns</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>by</strong> (<em>Sequence</em><em>[</em><em>Any</em><em>]</em>) – </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.mod.LazyFrameDomain.get_series_domain">
+<span class="sig-name descname"><span class="pre">get_series_domain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#LazyFrameDomain.get_series_domain"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.LazyFrameDomain.get_series_domain" title="Link to this definition">#</a></dt>
+<dd><p>Retrieve the series domain with the given name</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>name</strong> (<em>str</em>) – </p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#opendp.mod.SeriesDomain" title="opendp.mod.SeriesDomain"><em>SeriesDomain</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.mod.Measure">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">Measure</span></span><a class="reference internal" href="../../_modules/opendp/mod.html#Measure"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.Measure" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">LP_AnyMeasure</span></code></p>
+<p>See the <a class="reference external" href="../../api/user-guide/programming-framework/supporting-elements.html#measure">Measure</a>
+section in the Programming Framework docs for more context.</p>
+<p>Measures should be created with the functions in <a class="reference internal" href="opendp.measures.html#module-opendp.measures" title="opendp.measures"><code class="xref py py-mod docutils literal notranslate"><span class="pre">opendp.measures</span></code></a>
+or <a class="reference internal" href="opendp.context.html#module-opendp.context" title="opendp.context"><code class="xref py py-mod docutils literal notranslate"><span class="pre">opendp.context</span></code></a>, for a higher-level interface:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">opendp.prelude</span> <span class="k">as</span> <span class="nn">dp</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">measure</span><span class="p">,</span> <span class="n">distance</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">loss_of</span><span class="p">(</span><span class="n">epsilon</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">measure</span><span class="p">,</span> <span class="n">distance</span>
+<span class="go">(MaxDivergence, 1.0)</span>
+</pre></div>
+</div>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Measure.distance_type">
+<span class="sig-name descname"><span class="pre">distance_type</span></span><a class="headerlink" href="#opendp.mod.Measure.distance_type" title="Link to this definition">#</a></dt>
+<dd><p>Distance type of measure</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Measure.type">
+<span class="sig-name descname"><span class="pre">type</span></span><a class="headerlink" href="#opendp.mod.Measure.type" title="Link to this definition">#</a></dt>
+<dd><p>Type of measure</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.mod.Measurement">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">Measurement</span></span><a class="reference internal" href="../../_modules/opendp/mod.html#Measurement"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.Measurement" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">LP_AnyMeasurement</span></code></p>
+<p>A differentially private unit of computation.
+A measurement contains a function and a privacy relation.
+The function releases a differentially-private release.
+The privacy relation maps from an input metric to an output measure.</p>
+<p>See the <a class="reference external" href="../../api/user-guide/programming-framework/core-structures.html#measurement">Measurement</a>
+section in the Programming Framework docs for more context.</p>
+<p>Functions for creating measurements are in <a class="reference internal" href="opendp.measurements.html#module-opendp.measurements" title="opendp.measurements"><code class="xref py py-mod docutils literal notranslate"><span class="pre">opendp.measurements</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Example<span class="colon">:</span></dt>
+<dd class="field-odd"><p></p></dd>
+</dl>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">opendp.prelude</span> <span class="k">as</span> <span class="nn">dp</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span><span class="o">.</span><span class="n">enable_features</span><span class="p">(</span><span class="s2">&quot;contrib&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># create an instance of Measurement using a constructor from the meas module</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">laplace</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">make_laplace</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">int</span><span class="p">),</span> <span class="n">dp</span><span class="o">.</span><span class="n">absolute_distance</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">int</span><span class="p">),</span>
+<span class="gp">... </span>    <span class="n">scale</span><span class="o">=</span><span class="mf">2.</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">laplace</span>
+<span class="go">Measurement(</span>
+<span class="go">    input_domain   = AtomDomain(T=i32),</span>
+<span class="go">    input_metric   = AbsoluteDistance(i32),</span>
+<span class="go">    output_measure = MaxDivergence)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># invoke the measurement (invoke and __call__ are equivalent)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;explicit: &#39;</span><span class="p">,</span> <span class="n">laplace</span><span class="o">.</span><span class="n">invoke</span><span class="p">(</span><span class="mi">100</span><span class="p">))</span>  <span class="c1"># -&gt; 101   </span>
+<span class="go">explicit: ...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;concise: &#39;</span><span class="p">,</span> <span class="n">laplace</span><span class="p">(</span><span class="mi">100</span><span class="p">))</span>  <span class="c1"># -&gt; 99            </span>
+<span class="go">concise: ...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># check the measurement&#39;s relation at</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1">#     (1, 0.5): (AbsoluteDistance&lt;u32&gt;, MaxDivergence)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">laplace</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># chain with a transformation from the trans module</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">chained</span> <span class="o">=</span> <span class="p">(</span>
+<span class="gp">... </span>    <span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">vector_domain</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">int</span><span class="p">)),</span> <span class="n">dp</span><span class="o">.</span><span class="n">symmetric_distance</span><span class="p">())</span> <span class="o">&gt;&gt;</span>
+<span class="gp">... </span>    <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_count</span><span class="p">()</span> <span class="o">&gt;&gt;</span>
+<span class="gp">... </span>    <span class="n">laplace</span>
+<span class="gp">... </span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># the resulting measurement has the same features</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;dp count: &#39;</span><span class="p">,</span> <span class="n">chained</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]))</span>  <span class="c1"># -&gt; 4     </span>
+<span class="go">dp count: ...</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># check the chained measurement&#39;s relation at</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1">#     (1, 0.5): (SymmetricDistance, MaxDivergence)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">chained</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.mod.Measurement.check">
+<span class="sig-name descname"><span class="pre">check</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_out</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">debug</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#Measurement.check"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.Measurement.check" title="Link to this definition">#</a></dt>
+<dd><p>Check if the measurement is (<cite>d_in</cite>, <cite>d_out</cite>)-close.
+If true, implies that if the distance between inputs is at most <cite>d_in</cite>, then the privacy usage is at most <cite>d_out</cite>.
+See also <a class="reference internal" href="#opendp.mod.Transformation.check" title="opendp.mod.Transformation.check"><code class="xref py py-func docutils literal notranslate"><span class="pre">check()</span></code></a>, a similar check for transformations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>d_in</strong> – Distance in terms of the input metric.</p></li>
+<li><p><strong>d_out</strong> – Distance in terms of the output measure.</p></li>
+<li><p><strong>debug</strong> – Enable to raise Exceptions to help identify why the privacy relation failed.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>If True, a release is differentially private at <cite>d_in</cite>, <cite>d_out</cite>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Measurement.function">
+<span class="sig-name descname"><span class="pre">function</span></span><a class="headerlink" href="#opendp.mod.Measurement.function" title="Link to this definition">#</a></dt>
+<dd><p>Function of measurement</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Measurement.input_carrier_type">
+<span class="sig-name descname"><span class="pre">input_carrier_type</span></span><a class="headerlink" href="#opendp.mod.Measurement.input_carrier_type" title="Link to this definition">#</a></dt>
+<dd><p>Retrieve the carrier type of the input domain.
+Any member of the input domain is a member of the carrier type.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>carrier type</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Measurement.input_distance_type">
+<span class="sig-name descname"><span class="pre">input_distance_type</span></span><a class="headerlink" href="#opendp.mod.Measurement.input_distance_type" title="Link to this definition">#</a></dt>
+<dd><p>Retrieve the distance type of the input metric.
+This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>distance type</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Measurement.input_domain">
+<span class="sig-name descname"><span class="pre">input_domain</span></span><a class="headerlink" href="#opendp.mod.Measurement.input_domain" title="Link to this definition">#</a></dt>
+<dd><p>Input domain of measurement</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Measurement.input_metric">
+<span class="sig-name descname"><span class="pre">input_metric</span></span><a class="headerlink" href="#opendp.mod.Measurement.input_metric" title="Link to this definition">#</a></dt>
+<dd><p>Input metric of measurement</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Measurement.input_space">
+<span class="sig-name descname"><span class="pre">input_space</span></span><a class="headerlink" href="#opendp.mod.Measurement.input_space" title="Link to this definition">#</a></dt>
+<dd><p>Input space of measurement</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.mod.Measurement.invoke">
+<span class="sig-name descname"><span class="pre">invoke</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arg</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#Measurement.invoke"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.Measurement.invoke" title="Link to this definition">#</a></dt>
+<dd><p>Create a differentially-private release with <cite>arg</cite>.</p>
+<p>If <cite>self</cite> is (d_in, d_out)-close, then each invocation of this function is a d_out-DP release.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>arg</strong> – Input to the measurement.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>differentially-private release</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.mod.Measurement.map">
+<span class="sig-name descname"><span class="pre">map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d_in</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#Measurement.map"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.Measurement.map" title="Link to this definition">#</a></dt>
+<dd><p>Map an input distance <cite>d_in</cite> to an output distance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>d_in</strong> – Input distance</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Measurement.output_distance_type">
+<span class="sig-name descname"><span class="pre">output_distance_type</span></span><a class="headerlink" href="#opendp.mod.Measurement.output_distance_type" title="Link to this definition">#</a></dt>
+<dd><p>Retrieve the distance type of the output measure.
+This is the type that the budget is expressed in.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>distance type</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Measurement.output_measure">
+<span class="sig-name descname"><span class="pre">output_measure</span></span><a class="headerlink" href="#opendp.mod.Measurement.output_measure" title="Link to this definition">#</a></dt>
+<dd><p>Output measure of measurement</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.mod.Metric">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">Metric</span></span><a class="reference internal" href="../../_modules/opendp/mod.html#Metric"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.Metric" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">LP_AnyMetric</span></code></p>
+<p>See the <a class="reference external" href="../../api/user-guide/programming-framework/supporting-elements.html#metric">Metric</a>
+section in the Programming Framework docs for more context.</p>
+<p>Functions for creating metrics are in <a class="reference internal" href="opendp.metrics.html#module-opendp.metrics" title="opendp.metrics"><code class="xref py py-mod docutils literal notranslate"><span class="pre">opendp.metrics</span></code></a>.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.mod.Metric.cast">
+<span class="sig-name descname"><span class="pre">cast</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">type_</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#Metric.cast"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.Metric.cast" title="Link to this definition">#</a></dt>
+<dd><p>Retrieve the descriptor as the prescribed type, or error.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>type_</strong> (<em>Type</em><em>[</em><em>D</em><em>]</em>) – </p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>D</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Metric.distance_type">
+<span class="sig-name descname"><span class="pre">distance_type</span></span><a class="headerlink" href="#opendp.mod.Metric.distance_type" title="Link to this definition">#</a></dt>
+<dd><p>Distance type of metric</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Metric.type">
+<span class="sig-name descname"><span class="pre">type</span></span><a class="headerlink" href="#opendp.mod.Metric.type" title="Link to this definition">#</a></dt>
+<dd><p>Type of metric</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.mod.Odometer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">Odometer</span></span><a class="reference internal" href="../../_modules/opendp/mod.html#Odometer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.Odometer" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">LP_AnyOdometer</span></code></p>
+<p>A differentially private unit of computation with no privacy limit.
+An Odometer can be invoked with a dataset to return an OdometerQueryable.</p>
+<p>Differentially private queries (measurements) may be passed to the queryable,
+and <code class="docutils literal notranslate"><span class="pre">.privacy_loss(d_in)</span></code> can be called to check the current privacy usage.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Example<span class="colon">:</span></dt>
+<dd class="field-odd"><p></p></dd>
+</dl>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">opendp.prelude</span> <span class="k">as</span> <span class="nn">dp</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span><span class="o">.</span><span class="n">enable_features</span><span class="p">(</span><span class="s2">&quot;contrib&quot;</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># create a measurement that responds honestly with probability 0.6</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">meas_rr</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">make_randomized_response_bool</span><span class="p">(</span><span class="n">prob</span><span class="o">=</span><span class="mf">0.6</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># create an Odometer representing a fully adaptive compositor</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">odometer</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">make_fully_adaptive_composition</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">input_domain</span><span class="o">=</span><span class="n">meas_rr</span><span class="o">.</span><span class="n">input_domain</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">input_metric</span><span class="o">=</span><span class="n">meas_rr</span><span class="o">.</span><span class="n">input_metric</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">output_measure</span><span class="o">=</span><span class="n">meas_rr</span><span class="o">.</span><span class="n">output_measure</span><span class="p">,</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># invoke the odometer to get a queryable</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="kc">True</span> <span class="c1"># a trivial boolean dataset</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">qbl_comp</span> <span class="o">=</span> <span class="n">odometer</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># evaluate the queryable (eval and __call__ are equivalent)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Release:&quot;</span><span class="p">,</span> <span class="n">qbl_comp</span><span class="p">(</span><span class="n">meas_rr</span><span class="p">))</span>  
+<span class="go">Release: ...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># odometers can be repeatedly invoked without any limit on the privacy loss</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Release:&quot;</span><span class="p">,</span> <span class="n">qbl_comp</span><span class="p">(</span><span class="n">meas_rr</span><span class="p">))</span>  
+<span class="go">Release: ...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># The odometer&#39;s privacy consumption (in terms of ε) can be checked at any time.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Input dataset may differ by discrete distance 1.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">qbl_comp</span><span class="o">.</span><span class="n">privacy_loss</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="go">0.8109302162163288</span>
+</pre></div>
+</div>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Odometer.input_carrier_type">
+<span class="sig-name descname"><span class="pre">input_carrier_type</span></span><a class="headerlink" href="#opendp.mod.Odometer.input_carrier_type" title="Link to this definition">#</a></dt>
+<dd><p>Retrieve the carrier type of the input domain.
+Any member of the input domain is a member of the carrier type.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>carrier type</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Odometer.input_distance_type">
+<span class="sig-name descname"><span class="pre">input_distance_type</span></span><a class="headerlink" href="#opendp.mod.Odometer.input_distance_type" title="Link to this definition">#</a></dt>
+<dd><p>Retrieve the distance type of the input metric.
+This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>distance type</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Odometer.input_domain">
+<span class="sig-name descname"><span class="pre">input_domain</span></span><a class="headerlink" href="#opendp.mod.Odometer.input_domain" title="Link to this definition">#</a></dt>
+<dd><p>Input domain of odometer</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Odometer.input_metric">
+<span class="sig-name descname"><span class="pre">input_metric</span></span><a class="headerlink" href="#opendp.mod.Odometer.input_metric" title="Link to this definition">#</a></dt>
+<dd><p>Input metric of odometer</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Odometer.input_space">
+<span class="sig-name descname"><span class="pre">input_space</span></span><a class="headerlink" href="#opendp.mod.Odometer.input_space" title="Link to this definition">#</a></dt>
+<dd><p>Input domain and metric of odometer</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.mod.Odometer.invoke">
+<span class="sig-name descname"><span class="pre">invoke</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arg</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#Odometer.invoke"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.Odometer.invoke" title="Link to this definition">#</a></dt>
+<dd><p>Create a differentially-private release with <cite>arg</cite>.</p>
+<p>If <cite>self</cite> is (d_in, d_out)-close, then each invocation of this function is a d_out-DP release.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>arg</strong> – Input to the measurement.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>differentially-private release</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Odometer.output_distance_type">
+<span class="sig-name descname"><span class="pre">output_distance_type</span></span><a class="headerlink" href="#opendp.mod.Odometer.output_distance_type" title="Link to this definition">#</a></dt>
+<dd><p>Retrieve the distance type of the output measure.
+This is the type that the budget is expressed in.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>distance type</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Odometer.output_measure">
+<span class="sig-name descname"><span class="pre">output_measure</span></span><a class="headerlink" href="#opendp.mod.Odometer.output_measure" title="Link to this definition">#</a></dt>
+<dd><p>Output measure of odometer</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.mod.OdometerQueryable">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">OdometerQueryable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#OdometerQueryable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.OdometerQueryable" title="Link to this definition">#</a></dt>
+<dd><p>Odometer Queryables are used for instances of odometers like <a class="reference internal" href="../user-guide/combinators/fully-adaptive-composition.html#fully-adaptive-composition"><span class="std std-ref">fully adaptive composition</span></a>.</p>
+<p>Can be created via <a class="reference internal" href="opendp.combinators.html#opendp.combinators.make_fully_adaptive_composition" title="opendp.combinators.make_fully_adaptive_composition"><code class="xref py py-func docutils literal notranslate"><span class="pre">make_fully_adaptive_composition()</span></code></a>.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.mod.OdometerQueryable.invoke">
+<span class="sig-name descname"><span class="pre">invoke</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#OdometerQueryable.invoke"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.OdometerQueryable.invoke" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.mod.OdometerQueryable.privacy_loss">
+<span class="sig-name descname"><span class="pre">privacy_loss</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d_in</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#OdometerQueryable.privacy_loss"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.OdometerQueryable.privacy_loss" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="opendp.mod.OpenDPException">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">OpenDPException</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variant</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raw_traceback</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#OpenDPException"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.OpenDPException" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>General exception for errors originating from the underlying OpenDP library.
+The variant attribute corresponds to <a class="reference external" href="https://github.com/opendp/opendp/blob/53ec58d01762ca5ceee08590d7e7b725bbdafcf6/rust/opendp/src/error.rs#L46-L87">one of the following variants</a> and can be matched on.
+Error variants may change in library updates.</p>
+<p>See <a class="reference external" href="https://docs.rs/opendp/latest/opendp/error/enum.ErrorVariant.html">Rust ErrorVariant</a> for values variant may take on.</p>
+<p>Run <code class="docutils literal notranslate"><span class="pre">dp.enable_features('rust-stack-trace')</span></code> to see wrapped Rust stack traces.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>variant</strong> (<em>str</em>) – </p></li>
+<li><p><strong>message</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – </p></li>
+<li><p><strong>raw_traceback</strong> (<em>str</em><em> | </em><em>None</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.OpenDPException.raw_traceback">
+<span class="sig-name descname"><span class="pre">raw_traceback</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#opendp.mod.OpenDPException.raw_traceback" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.mod.OptionDomain">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">OptionDomain</span></span><a class="reference internal" href="../../_modules/opendp/mod.html#OptionDomain"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.OptionDomain" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#opendp.mod.Domain" title="opendp.mod.Domain"><code class="xref py py-class docutils literal notranslate"><span class="pre">Domain</span></code></a></p>
+<p>A domain whose members are either members of the <code class="docutils literal notranslate"><span class="pre">element_domain</span></code>, or <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+<p>Create an instance of this domain with <a class="reference internal" href="opendp.domains.html#opendp.domains.option_domain" title="opendp.domains.option_domain"><code class="xref py py-func docutils literal notranslate"><span class="pre">option_domain()</span></code></a>.</p>
+<p>The element domain is the domain of non-null values.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.OptionDomain.element_domain">
+<span class="sig-name descname"><span class="pre">element_domain</span></span><a class="headerlink" href="#opendp.mod.OptionDomain.element_domain" title="Link to this definition">#</a></dt>
+<dd><p>Domain of non-null values</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.mod.PrivacyProfile">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">PrivacyProfile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">curve</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#PrivacyProfile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.PrivacyProfile" title="Link to this definition">#</a></dt>
+<dd><p>Given a profile function provided by the user,
+gives the epsilon corresponding to a given delta, and vice versa.</p>
+<p><a class="reference internal" href="opendp.measures.html#opendp.measures.new_privacy_profile" title="opendp.measures.new_privacy_profile"><code class="xref py py-func docutils literal notranslate"><span class="pre">new_privacy_profile()</span></code></a>
+should be used to create new instances.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.mod.PrivacyProfile.delta">
+<span class="sig-name descname"><span class="pre">delta</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">epsilon</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#PrivacyProfile.delta"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.PrivacyProfile.delta" title="Link to this definition">#</a></dt>
+<dd><p>Returns the delta that corresponds to this epsilon.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>epsilon</strong> – Allowance for a multiplicative difference, or max divergence, in the distributions of releases on adjacent datasets</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.mod.PrivacyProfile.epsilon">
+<span class="sig-name descname"><span class="pre">epsilon</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">delta</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#PrivacyProfile.epsilon"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.PrivacyProfile.epsilon" title="Link to this definition">#</a></dt>
+<dd><p>Returns the epsilon that corresponds to this delta.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>delta</strong> – Allowance for an additive difference between the distributions of releases on adjacent datasets</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.mod.Queryable">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">Queryable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">query_type</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#Queryable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.Queryable" title="Link to this definition">#</a></dt>
+<dd><p>Queryables are used for interactive mechanisms like <a class="reference internal" href="../user-guide/combinators/adaptive-composition.html#adaptive-composition"><span class="std std-ref">adaptive composition</span></a>.</p>
+<p>Queryables can be created with <a class="reference internal" href="opendp.combinators.html#opendp.combinators.make_adaptive_composition" title="opendp.combinators.make_adaptive_composition"><code class="xref py py-func docutils literal notranslate"><span class="pre">make_adaptive_composition</span></code></a>
+or <a class="reference internal" href="opendp.core.html#opendp.core.new_queryable" title="opendp.core.new_queryable"><code class="xref py py-func docutils literal notranslate"><span class="pre">new_queryable()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.mod.SeriesDomain">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">SeriesDomain</span></span><a class="reference internal" href="../../_modules/opendp/mod.html#SeriesDomain"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.SeriesDomain" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#opendp.mod.Domain" title="opendp.mod.Domain"><code class="xref py py-class docutils literal notranslate"><span class="pre">Domain</span></code></a></p>
+<p><code class="docutils literal notranslate"><span class="pre">SeriesDomain</span></code> describes the domain of all polars Series.</p>
+<p>Create an instance of this domain with <a class="reference internal" href="opendp.domains.html#opendp.domains.series_domain" title="opendp.domains.series_domain"><code class="xref py py-func docutils literal notranslate"><span class="pre">series_domain()</span></code></a>.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.SeriesDomain.element_domain">
+<span class="sig-name descname"><span class="pre">element_domain</span></span><a class="headerlink" href="#opendp.mod.SeriesDomain.element_domain" title="Link to this definition">#</a></dt>
+<dd><p>Domain of non-null elements in the series</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.SeriesDomain.name">
+<span class="sig-name descname"><span class="pre">name</span></span><a class="headerlink" href="#opendp.mod.SeriesDomain.name" title="Link to this definition">#</a></dt>
+<dd><p>Name of series in the domain</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.SeriesDomain.nullable">
+<span class="sig-name descname"><span class="pre">nullable</span></span><a class="headerlink" href="#opendp.mod.SeriesDomain.nullable" title="Link to this definition">#</a></dt>
+<dd><p>Whether series in the domain may include null values</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.mod.SymmetricIdDistance">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">SymmetricIdDistance</span></span><a class="reference internal" href="../../_modules/opendp/mod.html#SymmetricIdDistance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.SymmetricIdDistance" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#opendp.mod.Metric" title="opendp.mod.Metric"><code class="xref py py-class docutils literal notranslate"><span class="pre">Metric</span></code></a></p>
+<p><code class="docutils literal notranslate"><span class="pre">SymmetricIdDistance</span></code> is a metric for measuring the distance between the identifiers of two datasets.</p>
+<p>The metric counts the number of identifiers that must be added or removed to make the two datasets equal.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.SymmetricIdDistance.identifier">
+<span class="sig-name descname"><span class="pre">identifier</span></span><a class="headerlink" href="#opendp.mod.SymmetricIdDistance.identifier" title="Link to this definition">#</a></dt>
+<dd><p>The name of the column storing identifiers</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.mod.Transformation">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">Transformation</span></span><a class="reference internal" href="../../_modules/opendp/mod.html#Transformation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.Transformation" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">LP_AnyTransformation</span></code></p>
+<p>A non-differentially private unit of computation.
+A transformation contains a function and a stability relation.
+The function maps from an input domain to an output domain.
+The stability relation maps from an input metric to an output metric.</p>
+<p>See the <a class="reference external" href="../../api/user-guide/programming-framework/core-structures.html#transformation">Transformation</a>
+section in the Programming Framework docs for more context.</p>
+<p>Functions for creating transformations are in <a class="reference internal" href="opendp.transformations.html#module-opendp.transformations" title="opendp.transformations"><code class="xref py py-mod docutils literal notranslate"><span class="pre">opendp.transformations</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Example<span class="colon">:</span></dt>
+<dd class="field-odd"><p></p></dd>
+</dl>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">opendp.prelude</span> <span class="k">as</span> <span class="nn">dp</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span><span class="o">.</span><span class="n">enable_features</span><span class="p">(</span><span class="s2">&quot;contrib&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># create an instance of Transformation using a constructor from the trans module</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">input_space</span> <span class="o">=</span> <span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">vector_domain</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">int</span><span class="p">)),</span> <span class="n">dp</span><span class="o">.</span><span class="n">symmetric_distance</span><span class="p">())</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">count</span> <span class="o">=</span> <span class="n">input_space</span> <span class="o">&gt;&gt;</span> <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_count</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">count</span>
+<span class="go">Transformation(</span>
+<span class="go">    input_domain   = VectorDomain(AtomDomain(T=i32)),</span>
+<span class="go">    output_domain  = AtomDomain(T=i32),</span>
+<span class="go">    input_metric   = SymmetricDistance(),</span>
+<span class="go">    output_metric  = AbsoluteDistance(i32))</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">count</span><span class="o">.</span><span class="n">input_space</span>
+<span class="go">(VectorDomain(AtomDomain(T=i32)), SymmetricDistance())</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># invoke the transformation (invoke and __call__ are equivalent)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">count</span><span class="o">.</span><span class="n">invoke</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+<span class="go">3</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">count</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+<span class="go">3</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># check the transformation&#39;s relation at</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1">#     (1, 1): (SymmetricDistance, AbsoluteDistance&lt;u32&gt;)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">count</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># chain with more transformations from the trans module</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">chained</span> <span class="o">=</span> <span class="p">(</span>
+<span class="gp">... </span>    <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">make_split_lines</span><span class="p">()</span> <span class="o">&gt;&gt;</span>
+<span class="gp">... </span>    <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_cast_default</span><span class="p">(</span><span class="n">TOA</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+<span class="gp">... </span>    <span class="n">count</span>
+<span class="gp">... </span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># the resulting transformation has the same features</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">chained</span><span class="p">(</span><span class="s2">&quot;1</span><span class="se">\n</span><span class="s2">2</span><span class="se">\n</span><span class="s2">3&quot;</span><span class="p">)</span>
+<span class="go">3</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">chained</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># both chained transformations were 1-stable</span>
+</pre></div>
+</div>
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.mod.Transformation.check">
+<span class="sig-name descname"><span class="pre">check</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_out</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">debug</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#Transformation.check"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.Transformation.check" title="Link to this definition">#</a></dt>
+<dd><p>Check if the transformation is (<cite>d_in</cite>, <cite>d_out</cite>)-close.
+If true, implies that if the distance between inputs is at most <cite>d_in</cite>, then the distance between outputs is at most <cite>d_out</cite>.
+See also <a class="reference internal" href="#opendp.mod.Measurement.check" title="opendp.mod.Measurement.check"><code class="xref py py-func docutils literal notranslate"><span class="pre">check()</span></code></a>, a similar check for measurements.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>d_in</strong> – Distance in terms of the input metric.</p></li>
+<li><p><strong>d_out</strong> – Distance in terms of the output metric.</p></li>
+<li><p><strong>debug</strong> – Enable to raise Exceptions to help identify why the stability relation failed.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if the relation passes. False if the relation failed.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Transformation.function">
+<span class="sig-name descname"><span class="pre">function</span></span><a class="headerlink" href="#opendp.mod.Transformation.function" title="Link to this definition">#</a></dt>
+<dd><p>Function of transformation</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Transformation.input_carrier_type">
+<span class="sig-name descname"><span class="pre">input_carrier_type</span></span><a class="headerlink" href="#opendp.mod.Transformation.input_carrier_type" title="Link to this definition">#</a></dt>
+<dd><p>Retrieve the carrier type of the input domain.
+Any member of the input domain is a member of the carrier type.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>carrier type</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Transformation.input_distance_type">
+<span class="sig-name descname"><span class="pre">input_distance_type</span></span><a class="headerlink" href="#opendp.mod.Transformation.input_distance_type" title="Link to this definition">#</a></dt>
+<dd><p>Retrieve the distance type of the input metric.
+This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>distance type</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Transformation.input_domain">
+<span class="sig-name descname"><span class="pre">input_domain</span></span><a class="headerlink" href="#opendp.mod.Transformation.input_domain" title="Link to this definition">#</a></dt>
+<dd><p>Input domain of transformation</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Transformation.input_metric">
+<span class="sig-name descname"><span class="pre">input_metric</span></span><a class="headerlink" href="#opendp.mod.Transformation.input_metric" title="Link to this definition">#</a></dt>
+<dd><p>Input metric of transformation</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Transformation.input_space">
+<span class="sig-name descname"><span class="pre">input_space</span></span><a class="headerlink" href="#opendp.mod.Transformation.input_space" title="Link to this definition">#</a></dt>
+<dd><p>Input space of transformation</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.mod.Transformation.invoke">
+<span class="sig-name descname"><span class="pre">invoke</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arg</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#Transformation.invoke"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.Transformation.invoke" title="Link to this definition">#</a></dt>
+<dd><p>Execute a non-differentially-private query with <cite>arg</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>arg</strong> – Input to the transformation.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>non-differentially-private answer</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="opendp.mod.Transformation.map">
+<span class="sig-name descname"><span class="pre">map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d_in</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#Transformation.map"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.Transformation.map" title="Link to this definition">#</a></dt>
+<dd><p>Map an input distance <cite>d_in</cite> to an output distance.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>d_in</strong> – Input distance. An upper bound on how far apart neighboring datasets can be with respect to the input metric</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Transformation.output_distance_type">
+<span class="sig-name descname"><span class="pre">output_distance_type</span></span><a class="headerlink" href="#opendp.mod.Transformation.output_distance_type" title="Link to this definition">#</a></dt>
+<dd><p>Retrieve the distance type of the output metric.
+This may be any integral type for dataset metrics, or any numeric type for sensitivity metrics.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>distance type</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Transformation.output_domain">
+<span class="sig-name descname"><span class="pre">output_domain</span></span><a class="headerlink" href="#opendp.mod.Transformation.output_domain" title="Link to this definition">#</a></dt>
+<dd><p>Output domain of transformation</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Transformation.output_metric">
+<span class="sig-name descname"><span class="pre">output_metric</span></span><a class="headerlink" href="#opendp.mod.Transformation.output_metric" title="Link to this definition">#</a></dt>
+<dd><p>Ouput metric of transformation</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.Transformation.output_space">
+<span class="sig-name descname"><span class="pre">output_space</span></span><a class="headerlink" href="#opendp.mod.Transformation.output_space" title="Link to this definition">#</a></dt>
+<dd><p>Output space of transformation</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py exception">
+<dt class="sig sig-object py" id="opendp.mod.UnknownTypeException">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">UnknownTypeException</span></span><a class="reference internal" href="../../_modules/opendp/mod.html#UnknownTypeException"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.UnknownTypeException" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="opendp.mod.VectorDomain">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">VectorDomain</span></span><a class="reference internal" href="../../_modules/opendp/mod.html#VectorDomain"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.VectorDomain" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#opendp.mod.Domain" title="opendp.mod.Domain"><code class="xref py py-class docutils literal notranslate"><span class="pre">Domain</span></code></a></p>
+<p><code class="docutils literal notranslate"><span class="pre">VectorDomain</span></code> describes the domain of all vectors whose elements are members of a given domain.</p>
+<p>Create an instance of this domain with <a class="reference internal" href="opendp.domains.html#opendp.domains.vector_domain" title="opendp.domains.vector_domain"><code class="xref py py-func docutils literal notranslate"><span class="pre">vector_domain()</span></code></a>.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.VectorDomain.element_domain">
+<span class="sig-name descname"><span class="pre">element_domain</span></span><a class="headerlink" href="#opendp.mod.VectorDomain.element_domain" title="Link to this definition">#</a></dt>
+<dd><p>Domain of elements in the vector</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="opendp.mod.VectorDomain.size">
+<span class="sig-name descname"><span class="pre">size</span></span><a class="headerlink" href="#opendp.mod.VectorDomain.size" title="Link to this definition">#</a></dt>
+<dd><p>Size of vectors in the domain, if it is fixed</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.mod.assert_features">
+<span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">assert_features</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">features</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#assert_features"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.assert_features" title="Link to this definition">#</a></dt>
+<dd><p>Check whether a given feature is enabled. See <a class="reference internal" href="../user-guide/index.html#feature-listing"><span class="std std-ref">Feature Listing</span></a> for details.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>features</strong> (<em>str</em>) – </p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.mod.binary_search">
+<span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">binary_search</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">predicate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bounds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Type</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_sign</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="k"><span class="pre">False</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">float</span></span></span><a class="reference internal" href="../../_modules/opendp/mod.html#binary_search"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.binary_search" title="Link to this definition">#</a></dt>
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">binary_search</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">predicate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bounds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Type</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_sign</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="k"><span class="pre">True</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></span></dt>
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">binary_search</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">predicate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Callable</span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">bool</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bounds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Type</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_sign</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="k"><span class="pre">True</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></span></dt>
+<dd><p>Find the closest passing value to the decision boundary of <cite>predicate</cite>.</p>
+<p>If bounds are not passed, conducts an exponential search.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>predicate</strong> – a monotonic unary function from a number to a boolean</p></li>
+<li><p><strong>bounds</strong> – a 2-tuple of the lower and upper bounds to the input of <cite>predicate</cite></p></li>
+<li><p><strong>T</strong> – type of argument to <cite>predicate</cite>, one of {float, int}</p></li>
+<li><p><strong>return_sign</strong> – if True, also return the direction away from the decision boundary</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the discovered parameter within the bounds</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if the type is not inferrable (pass T) or the type is invalid</p></li>
+<li><p><strong>ValueError</strong> – if the predicate function is constant, bounds cannot be inferred, or decision boundary is not within <cite>bounds</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Example<span class="colon">:</span></dt>
+<dd class="field-even"><p></p></dd>
+</dl>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">opendp.prelude</span> <span class="k">as</span> <span class="nn">dp</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span><span class="o">.</span><span class="n">binary_search</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">&gt;=</span> <span class="mf">5.</span><span class="p">)</span>
+<span class="go">5.0</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span><span class="o">.</span><span class="n">binary_search</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">&lt;=</span> <span class="mf">5.</span><span class="p">)</span>
+<span class="go">5.0</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span><span class="o">.</span><span class="n">binary_search</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">&gt;</span> <span class="mi">5</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+<span class="go">6</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span><span class="o">.</span><span class="n">binary_search</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">&lt;</span> <span class="mi">5</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+<span class="go">4</span>
+</pre></div>
+</div>
+<p>Find epsilon usage of the gaussian(scale=1.) mechanism applied on a dp mean.
+Assume neighboring datasets differ by up to three additions/removals, and fix delta to 1e-8.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># build a histogram that emits float counts</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">input_space</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">vector_domain</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">100.</span><span class="p">)),</span> <span class="mi">1000</span><span class="p">),</span> <span class="n">dp</span><span class="o">.</span><span class="n">symmetric_distance</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp_mean</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">make_fix_delta</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">make_zCDP_to_approxDP</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">input_space</span> <span class="o">&gt;&gt;</span> <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_mean</span><span class="p">()</span> <span class="o">&gt;&gt;</span> <span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">then_gaussian</span><span class="p">(</span><span class="mf">1.</span><span class="p">)),</span> 
+<span class="gp">... </span>    <span class="mf">1e-8</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span><span class="o">.</span><span class="n">binary_search</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="k">lambda</span> <span class="n">d_out</span><span class="p">:</span> <span class="n">dp_mean</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="p">(</span><span class="n">d_out</span><span class="p">,</span> <span class="mf">1e-8</span><span class="p">)),</span> 
+<span class="gp">... </span>    <span class="n">bounds</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">))</span>
+<span class="go">0.5235561269546629</span>
+</pre></div>
+</div>
+<p>Find the L2 distance sensitivity of a histogram when neighboring datasets differ by up to 3 additions/removals.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">histogram</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">make_count_by_categories</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">dp</span><span class="o">.</span><span class="n">vector_domain</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">str</span><span class="p">)),</span> <span class="n">dp</span><span class="o">.</span><span class="n">symmetric_distance</span><span class="p">(),</span>
+<span class="gp">... </span>    <span class="n">categories</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">],</span> <span class="n">MO</span><span class="o">=</span><span class="n">dp</span><span class="o">.</span><span class="n">L2Distance</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span><span class="o">.</span><span class="n">binary_search</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="k">lambda</span> <span class="n">d_out</span><span class="p">:</span> <span class="n">histogram</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">d_out</span><span class="p">),</span> 
+<span class="gp">... </span>    <span class="n">bounds</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">))</span>
+<span class="go">3</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.mod.binary_search_chain">
+<span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">binary_search_chain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">make_chain</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_out</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bounds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#binary_search_chain"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.binary_search_chain" title="Link to this definition">#</a></dt>
+<dd><p>Find the highest-utility (<cite>d_in</cite>, <cite>d_out</cite>)-close Transformation or Measurement.</p>
+<p>Searches for the numeric parameter to <cite>make_chain</cite> that results in a computation
+that most tightly satisfies <cite>d_out</cite> when datasets differ by at most <cite>d_in</cite>,
+then returns the Transformation or Measurement corresponding to said parameter.</p>
+<p>See <cite>binary_search_param</cite> to retrieve the discovered parameter instead of the complete computation chain.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>make_chain</strong> (<em>Callable</em><em>[</em><em>[</em><em>float</em><em>]</em><em>, </em><em>M</em><em>]</em>) – a function that takes a number and returns a Transformation or Measurement</p></li>
+<li><p><strong>d_in</strong> (<em>Any</em>) – how far apart input datasets can be</p></li>
+<li><p><strong>d_out</strong> (<em>Any</em>) – how far apart output datasets or distributions can be</p></li>
+<li><p><strong>bounds</strong> (<em>tuple</em><em>[</em><em>float</em><em>, </em><em>float</em><em>] </em><em>| </em><em>None</em>) – a 2-tuple of the lower and upper bounds on the input of <cite>make_chain</cite></p></li>
+<li><p><strong>T</strong> – type of argument to <cite>make_chain</cite>, one of {float, int}</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a chain parameterized at the nearest passing value to the decision point of the relation</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Union[<a class="reference internal" href="#opendp.mod.Transformation" title="opendp.mod.Transformation">Transformation</a>, <a class="reference internal" href="#opendp.mod.Measurement" title="opendp.mod.Measurement">Measurement</a>]</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>TypeError</strong> – if the type is not inferrable (pass T) or the type is invalid</p></li>
+<li><p><strong>ValueError</strong> – if the predicate function is constant, bounds cannot be inferred, or decision boundary is not within <cite>bounds</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Example<span class="colon">:</span></dt>
+<dd class="field-odd"><p></p></dd>
+</dl>
+<p>Find a laplace measurement with the smallest noise scale that is still (d_in, d_out)-close.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">opendp.prelude</span> <span class="k">as</span> <span class="nn">dp</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span><span class="o">.</span><span class="n">enable_features</span><span class="p">(</span><span class="s2">&quot;floating-point&quot;</span><span class="p">,</span> <span class="s2">&quot;contrib&quot;</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># The majority of the chain only needs to be defined once.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pre</span> <span class="o">=</span> <span class="p">(</span>
+<span class="gp">... </span>    <span class="n">dp</span><span class="o">.</span><span class="n">space_of</span><span class="p">(</span><span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">])</span> <span class="o">&gt;&gt;</span>
+<span class="gp">... </span>    <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_impute_constant</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+<span class="gp">... </span>    <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_clamp</span><span class="p">(</span><span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">))</span> <span class="o">&gt;&gt;</span>
+<span class="gp">... </span>    <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_resize</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">constant</span><span class="o">=</span><span class="mf">0.</span><span class="p">)</span> <span class="o">&gt;&gt;</span>
+<span class="gp">... </span>    <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_mean</span><span class="p">()</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain nearest the decision boundary.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># The lambda function returns the complete computation chain when given a single numeric parameter.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">chain</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">binary_search_chain</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">pre</span> <span class="o">&gt;&gt;</span> <span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">then_laplace</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="n">s</span><span class="p">),</span> 
+<span class="gp">... </span>    <span class="n">d_in</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">d_out</span><span class="o">=</span><span class="mf">1.</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># The resulting computation chain is always (`d_in`, `d_out`)-close, but we can still double-check:</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">chain</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mf">1.</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Build a (2 neighboring, 1. epsilon)-close sized bounded sum with discrete_laplace(100.) noise.
+It should have the widest possible admissible clamping bounds (-b, b).</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">make_sum</span><span class="p">(</span><span class="n">b</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="n">space</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">vector_domain</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">((</span><span class="o">-</span><span class="n">b</span><span class="p">,</span> <span class="n">b</span><span class="p">)),</span> <span class="mi">10_000</span><span class="p">),</span> <span class="n">dp</span><span class="o">.</span><span class="n">symmetric_distance</span><span class="p">()</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="n">space</span> <span class="o">&gt;&gt;</span> <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_sum</span><span class="p">()</span> <span class="o">&gt;&gt;</span> <span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">then_laplace</span><span class="p">(</span><span class="mf">100.</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># `meas` is a Measurement with the widest possible clamping bounds.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">meas</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">binary_search_chain</span><span class="p">(</span><span class="n">make_sum</span><span class="p">,</span> <span class="n">d_in</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">d_out</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10_000</span><span class="p">))</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># If you want the discovered clamping bound, use `binary_search_param` instead.</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.mod.binary_search_param">
+<span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">binary_search_param</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">make_chain</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_out</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bounds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#binary_search_param"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.binary_search_param" title="Link to this definition">#</a></dt>
+<dd><p>Solve for the ideal constructor argument to <cite>make_chain</cite>.</p>
+<p>Optimizes a parameterized chain <cite>make_chain</cite> within float or integer <cite>bounds</cite>,
+subject to the chained relation being (<cite>d_in</cite>, <cite>d_out</cite>)-close.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>make_chain</strong> (<em>Callable</em><em>[</em><em>[</em><em>float</em><em>]</em><em>, </em><a class="reference internal" href="#opendp.mod.Transformation" title="opendp.mod.Transformation"><em>Transformation</em></a><em> | </em><a class="reference internal" href="#opendp.mod.Measurement" title="opendp.mod.Measurement"><em>Measurement</em></a><em>]</em>) – a function that takes a number and returns a Transformation or Measurement</p></li>
+<li><p><strong>d_in</strong> (<em>Any</em>) – how far apart input datasets can be</p></li>
+<li><p><strong>d_out</strong> (<em>Any</em>) – how far apart output datasets or distributions can be</p></li>
+<li><p><strong>bounds</strong> (<em>tuple</em><em>[</em><em>float</em><em>, </em><em>float</em><em>] </em><em>| </em><em>None</em>) – a 2-tuple of the lower and upper bounds on the input of <cite>make_chain</cite></p></li>
+<li><p><strong>T</strong> – type of argument to <cite>make_chain</cite>, one of {float, int}</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>the nearest passing value to the decision point of the relation</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if the type is not inferrable (pass T) or the type is invalid</p></li>
+<li><p><strong>ValueError</strong> – if the predicate function is constant, bounds cannot be inferred, or decision boundary is not within <cite>bounds</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Example<span class="colon">:</span></dt>
+<dd class="field-even"><p></p></dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">opendp.prelude</span> <span class="k">as</span> <span class="nn">dp</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Find a value in `bounds` that produces a (`d_in`, `d_out`)-chain nearest the decision boundary.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># The first argument is any function that returns your complete computation chain</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1">#     when passed a single numeric parameter.</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">make_fixed_laplace</span><span class="p">(</span><span class="n">scale</span><span class="p">):</span>
+<span class="gp">... </span>    <span class="c1"># fixes the input domain and metric, but parameterizes the noise scale</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">make_laplace</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">nan</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span> <span class="n">dp</span><span class="o">.</span><span class="n">absolute_distance</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">),</span> <span class="n">scale</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">scale</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">binary_search_param</span><span class="p">(</span><span class="n">make_fixed_laplace</span><span class="p">,</span> <span class="n">d_in</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">d_out</span><span class="o">=</span><span class="mf">1.</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">scale</span> <span class="o">==</span> <span class="mf">0.1</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Constructing the same chain with the discovered parameter will always be (0.1, 1.)-close.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">make_fixed_laplace</span><span class="p">(</span><span class="n">scale</span><span class="p">)</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">1.</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>A policy research organization wants to know the smallest sample size necessary to release an “accurate” epsilon=1 DP mean income. 
+Determine the smallest dataset size such that, with 95% confidence, 
+the DP release differs from the clipped dataset’s mean by no more than 1000. 
+Assume that neighboring datasets have a symmetric distance at most 2. 
+Also assume a clipping bound of 500,000.</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># we first work out the necessary noise scale to satisfy the above constraints.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">necessary_scale</span> <span class="o">=</span> <span class="n">dp</span><span class="o">.</span><span class="n">accuracy_to_laplacian_scale</span><span class="p">(</span><span class="n">accuracy</span><span class="o">=</span><span class="mf">1000.</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">.05</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># we then write a function that make a computation chain with a given data size</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">make_mean</span><span class="p">(</span><span class="n">data_size</span><span class="p">):</span>
+<span class="gp">... </span>   <span class="k">return</span> <span class="p">(</span>
+<span class="gp">... </span>       <span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">vector_domain</span><span class="p">(</span><span class="n">dp</span><span class="o">.</span><span class="n">atom_domain</span><span class="p">(</span><span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">500_000.</span><span class="p">)),</span> <span class="n">data_size</span><span class="p">),</span> <span class="n">dp</span><span class="o">.</span><span class="n">symmetric_distance</span><span class="p">())</span> <span class="o">&gt;&gt;</span>
+<span class="gp">... </span>       <span class="n">dp</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">then_mean</span><span class="p">()</span> <span class="o">&gt;&gt;</span> 
+<span class="gp">... </span>       <span class="n">dp</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">then_laplace</span><span class="p">(</span><span class="n">necessary_scale</span><span class="p">)</span>
+<span class="gp">... </span>   <span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># solve for the smallest dataset size that admits a (2 neighboring, 1. epsilon)-close measurement</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dp</span><span class="o">.</span><span class="n">binary_search_param</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">make_mean</span><span class="p">,</span> 
+<span class="gp">... </span>    <span class="n">d_in</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">d_out</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1000000</span><span class="p">))</span>
+<span class="go">1498</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.mod.deserialize">
+<span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">deserialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dp_json</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#deserialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.deserialize" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.mod.disable_features">
+<span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">disable_features</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">features</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#disable_features"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.disable_features" title="Link to this definition">#</a></dt>
+<dd><p>Disallow the use of optional features. See <a class="reference internal" href="../user-guide/index.html#feature-listing"><span class="std std-ref">Feature Listing</span></a> for details.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>features</strong> (<em>str</em>) – </p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.mod.enable_features">
+<span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">enable_features</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">features</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#enable_features"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.enable_features" title="Link to this definition">#</a></dt>
+<dd><p>Allow the use of optional features. See <a class="reference internal" href="../user-guide/index.html#feature-listing"><span class="std std-ref">Feature Listing</span></a> for details.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>features</strong> (<em>str</em>) – </p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.mod.exponential_bounds_search">
+<span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">exponential_bounds_search</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">predicate</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#exponential_bounds_search"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.exponential_bounds_search" title="Link to this definition">#</a></dt>
+<dd><p>Determine bounds for a binary search via an exponential search,
+in large bands of [2^((k - 1)^2), 2^(k^2)] for k in [0, 8).
+Will attempt to recover once if <cite>predicate</cite> throws an exception, 
+by searching bands on the ok side of the exception boundary.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>predicate</strong> (<em>Callable</em><em>[</em><em>[</em><em>float</em><em>]</em><em>, </em><em>bool</em><em>]</em>) – a monotonic unary function from a number to a boolean</p></li>
+<li><p><strong>T</strong> (<em>Type</em><em>[</em><em>float</em><em>] </em><em>| </em><em>Type</em><em>[</em><em>int</em><em>] </em><em>| </em><em>None</em>) – type of argument to predicate, one of {float, int}</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>a tuple of float or int bounds that the decision boundary lies within</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if the type is not inferrable (pass T)</p></li>
+<li><p><strong>ValueError</strong> – if the predicate function is constant</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>tuple[float, float] | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.mod.serialize">
+<span class="sig-prename descclassname"><span class="pre">opendp.mod.</span></span><span class="sig-name descname"><span class="pre">serialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dp_obj</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/mod.html#serialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.mod.serialize" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="opendp.metrics.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">opendp.metrics module</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="opendp.prelude.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">opendp.prelude module</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.ApproximateDivergence"><code class="docutils literal notranslate"><span class="pre">ApproximateDivergence</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.ApproximateDivergence.inner_measure"><code class="docutils literal notranslate"><span class="pre">ApproximateDivergence.inner_measure</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.AtomDomain"><code class="docutils literal notranslate"><span class="pre">AtomDomain</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.AtomDomain.bounds"><code class="docutils literal notranslate"><span class="pre">AtomDomain.bounds</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.AtomDomain.nan"><code class="docutils literal notranslate"><span class="pre">AtomDomain.nan</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.ChangeOneIdDistance"><code class="docutils literal notranslate"><span class="pre">ChangeOneIdDistance</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.ChangeOneIdDistance.identifier"><code class="docutils literal notranslate"><span class="pre">ChangeOneIdDistance.identifier</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Domain"><code class="docutils literal notranslate"><span class="pre">Domain</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Domain.carrier_type"><code class="docutils literal notranslate"><span class="pre">Domain.carrier_type</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Domain.cast"><code class="docutils literal notranslate"><span class="pre">Domain.cast()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Domain.member"><code class="docutils literal notranslate"><span class="pre">Domain.member()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Domain.type"><code class="docutils literal notranslate"><span class="pre">Domain.type</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.ExtrinsicDomain"><code class="docutils literal notranslate"><span class="pre">ExtrinsicDomain</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.ExtrinsicDomain.descriptor"><code class="docutils literal notranslate"><span class="pre">ExtrinsicDomain.descriptor</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.FrameDistance"><code class="docutils literal notranslate"><span class="pre">FrameDistance</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.FrameDistance.inner_metric"><code class="docutils literal notranslate"><span class="pre">FrameDistance.inner_metric</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Function"><code class="docutils literal notranslate"><span class="pre">Function</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.LazyFrameDomain"><code class="docutils literal notranslate"><span class="pre">LazyFrameDomain</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.LazyFrameDomain.columns"><code class="docutils literal notranslate"><span class="pre">LazyFrameDomain.columns</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.LazyFrameDomain.get_margin"><code class="docutils literal notranslate"><span class="pre">LazyFrameDomain.get_margin()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.LazyFrameDomain.get_series_domain"><code class="docutils literal notranslate"><span class="pre">LazyFrameDomain.get_series_domain()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Measure"><code class="docutils literal notranslate"><span class="pre">Measure</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Measure.distance_type"><code class="docutils literal notranslate"><span class="pre">Measure.distance_type</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Measure.type"><code class="docutils literal notranslate"><span class="pre">Measure.type</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Measurement"><code class="docutils literal notranslate"><span class="pre">Measurement</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Measurement.check"><code class="docutils literal notranslate"><span class="pre">Measurement.check()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Measurement.function"><code class="docutils literal notranslate"><span class="pre">Measurement.function</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Measurement.input_carrier_type"><code class="docutils literal notranslate"><span class="pre">Measurement.input_carrier_type</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Measurement.input_distance_type"><code class="docutils literal notranslate"><span class="pre">Measurement.input_distance_type</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Measurement.input_domain"><code class="docutils literal notranslate"><span class="pre">Measurement.input_domain</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Measurement.input_metric"><code class="docutils literal notranslate"><span class="pre">Measurement.input_metric</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Measurement.input_space"><code class="docutils literal notranslate"><span class="pre">Measurement.input_space</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Measurement.invoke"><code class="docutils literal notranslate"><span class="pre">Measurement.invoke()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Measurement.map"><code class="docutils literal notranslate"><span class="pre">Measurement.map()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Measurement.output_distance_type"><code class="docutils literal notranslate"><span class="pre">Measurement.output_distance_type</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Measurement.output_measure"><code class="docutils literal notranslate"><span class="pre">Measurement.output_measure</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Metric"><code class="docutils literal notranslate"><span class="pre">Metric</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Metric.cast"><code class="docutils literal notranslate"><span class="pre">Metric.cast()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Metric.distance_type"><code class="docutils literal notranslate"><span class="pre">Metric.distance_type</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Metric.type"><code class="docutils literal notranslate"><span class="pre">Metric.type</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Odometer"><code class="docutils literal notranslate"><span class="pre">Odometer</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Odometer.input_carrier_type"><code class="docutils literal notranslate"><span class="pre">Odometer.input_carrier_type</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Odometer.input_distance_type"><code class="docutils literal notranslate"><span class="pre">Odometer.input_distance_type</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Odometer.input_domain"><code class="docutils literal notranslate"><span class="pre">Odometer.input_domain</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Odometer.input_metric"><code class="docutils literal notranslate"><span class="pre">Odometer.input_metric</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Odometer.input_space"><code class="docutils literal notranslate"><span class="pre">Odometer.input_space</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Odometer.invoke"><code class="docutils literal notranslate"><span class="pre">Odometer.invoke()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Odometer.output_distance_type"><code class="docutils literal notranslate"><span class="pre">Odometer.output_distance_type</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Odometer.output_measure"><code class="docutils literal notranslate"><span class="pre">Odometer.output_measure</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.OdometerQueryable"><code class="docutils literal notranslate"><span class="pre">OdometerQueryable</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.OdometerQueryable.invoke"><code class="docutils literal notranslate"><span class="pre">OdometerQueryable.invoke()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.OdometerQueryable.privacy_loss"><code class="docutils literal notranslate"><span class="pre">OdometerQueryable.privacy_loss()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.OpenDPException"><code class="docutils literal notranslate"><span class="pre">OpenDPException</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.OpenDPException.raw_traceback"><code class="docutils literal notranslate"><span class="pre">OpenDPException.raw_traceback</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.OptionDomain"><code class="docutils literal notranslate"><span class="pre">OptionDomain</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.OptionDomain.element_domain"><code class="docutils literal notranslate"><span class="pre">OptionDomain.element_domain</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.PrivacyProfile"><code class="docutils literal notranslate"><span class="pre">PrivacyProfile</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.PrivacyProfile.delta"><code class="docutils literal notranslate"><span class="pre">PrivacyProfile.delta()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.PrivacyProfile.epsilon"><code class="docutils literal notranslate"><span class="pre">PrivacyProfile.epsilon()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Queryable"><code class="docutils literal notranslate"><span class="pre">Queryable</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.SeriesDomain"><code class="docutils literal notranslate"><span class="pre">SeriesDomain</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.SeriesDomain.element_domain"><code class="docutils literal notranslate"><span class="pre">SeriesDomain.element_domain</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.SeriesDomain.name"><code class="docutils literal notranslate"><span class="pre">SeriesDomain.name</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.SeriesDomain.nullable"><code class="docutils literal notranslate"><span class="pre">SeriesDomain.nullable</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.SymmetricIdDistance"><code class="docutils literal notranslate"><span class="pre">SymmetricIdDistance</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.SymmetricIdDistance.identifier"><code class="docutils literal notranslate"><span class="pre">SymmetricIdDistance.identifier</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Transformation"><code class="docutils literal notranslate"><span class="pre">Transformation</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Transformation.check"><code class="docutils literal notranslate"><span class="pre">Transformation.check()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Transformation.function"><code class="docutils literal notranslate"><span class="pre">Transformation.function</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Transformation.input_carrier_type"><code class="docutils literal notranslate"><span class="pre">Transformation.input_carrier_type</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Transformation.input_distance_type"><code class="docutils literal notranslate"><span class="pre">Transformation.input_distance_type</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Transformation.input_domain"><code class="docutils literal notranslate"><span class="pre">Transformation.input_domain</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Transformation.input_metric"><code class="docutils literal notranslate"><span class="pre">Transformation.input_metric</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Transformation.input_space"><code class="docutils literal notranslate"><span class="pre">Transformation.input_space</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Transformation.invoke"><code class="docutils literal notranslate"><span class="pre">Transformation.invoke()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Transformation.map"><code class="docutils literal notranslate"><span class="pre">Transformation.map()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Transformation.output_distance_type"><code class="docutils literal notranslate"><span class="pre">Transformation.output_distance_type</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Transformation.output_domain"><code class="docutils literal notranslate"><span class="pre">Transformation.output_domain</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Transformation.output_metric"><code class="docutils literal notranslate"><span class="pre">Transformation.output_metric</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.Transformation.output_space"><code class="docutils literal notranslate"><span class="pre">Transformation.output_space</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.UnknownTypeException"><code class="docutils literal notranslate"><span class="pre">UnknownTypeException</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.VectorDomain"><code class="docutils literal notranslate"><span class="pre">VectorDomain</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.VectorDomain.element_domain"><code class="docutils literal notranslate"><span class="pre">VectorDomain.element_domain</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.VectorDomain.size"><code class="docutils literal notranslate"><span class="pre">VectorDomain.size</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.assert_features"><code class="docutils literal notranslate"><span class="pre">assert_features()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.binary_search"><code class="docutils literal notranslate"><span class="pre">binary_search()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.binary_search_chain"><code class="docutils literal notranslate"><span class="pre">binary_search_chain()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.binary_search_param"><code class="docutils literal notranslate"><span class="pre">binary_search_param()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.deserialize"><code class="docutils literal notranslate"><span class="pre">deserialize()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.disable_features"><code class="docutils literal notranslate"><span class="pre">disable_features()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.enable_features"><code class="docutils literal notranslate"><span class="pre">enable_features()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.exponential_bounds_search"><code class="docutils literal notranslate"><span class="pre">exponential_bounds_search()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.mod.serialize"><code class="docutils literal notranslate"><span class="pre">serialize()</span></code></a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../../_sources/api/python/opendp.mod.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.3rc1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

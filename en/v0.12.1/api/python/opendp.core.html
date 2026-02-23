@@ -1,0 +1,1411 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>opendp.core module &#8212; OpenDP</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=eafc0fe6" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=4f92a2c4" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+    <script src="../../_static/documentation_options.js?v=c5b435e8"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/python/opendp.core';</script>
+    <link rel="icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="opendp.domains module" href="opendp.domains.html" />
+    <link rel="prev" title="opendp.context module" href="opendp.context.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Feb 23, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+
+
+<script>
+document.write(`<aside class="bd-header-announcement" aria-label="Announcement"></aside>`);
+fetch("https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html")
+  .then(res => {return res.text();})
+  .then(data => {
+    if (data.length === 0) {
+      console.log("[PST]: Empty announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+      return;
+    }
+    div = document.querySelector(".bd-header-announcement");
+    div.classList.add(...["bd-header-announcement", "container-fluid", "init"]);
+    div.innerHTML = `<div class="bd-header-announcement__content">${data}</div>`;
+    // At least 3rem height
+    const autoHeight = Math.min(
+      div.offsetHeight,
+      3 * parseFloat(getComputedStyle(document.documentElement).fontSize));
+    // Set height and vertical padding to 0 to prepare the height transition
+    div.style.setProperty("height", 0);
+    div.style.setProperty("padding-top", 0);
+    div.style.setProperty("padding-bottom", 0);
+    div.classList.remove("init");
+    // Set height to the computed height with a small timeout to activate the transition
+    setTimeout(() => {
+      div.style.setProperty("height", `${autoHeight}px`);
+      // Wait for a bit more than 300ms (the transition duration) then remove the
+      // forcefully set styles and let CSS take over
+      setTimeout(() => {
+        div.style.removeProperty("padding-top");
+        div.style.removeProperty("padding-bottom");
+        div.style.removeProperty("height");
+        div.style.setProperty("min-height", "3rem");
+      }, 320);
+    }, 10);
+  })
+  .catch(error => {
+    console.log("[PST]: Failed to load announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+  });
+</script>
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <button class="sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/opendp-logo.png" class="logo__image only-light" alt="OpenDP - Home"/>
+    <script>document.write(`<img src="../../_static/opendp-logo.png" class="logo__image only-dark" alt="OpenDP - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../getting-started/index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="../index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../theory/index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+    <button class="sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../getting-started/index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="../index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../theory/index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../user-guide/index.html">API User Guide</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/limitations.html">Limitations</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/programming-framework/index.html">Programming Framework</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/programming-framework/core-structures.html">Core Structures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/programming-framework/supporting-elements.html">Supporting Elements</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/transformations/index.html">Transformations</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/transformations/aggregation-sum.html">Aggregation: Sum</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/transformations/aggregation-mean.html">Aggregation: Mean</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/transformations/aggregation-quantile.html">Aggregation: Quantile</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/measurements/index.html">Measurements</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/measurements/additive-noise-mechanisms.html">Additive Noise Mechanisms</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/measurements/randomized-response.html">Randomized Response</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/combinators/index.html">Combinators</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/combinators/compositors.html">Compositors</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/utilities/index.html">Utilities</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/utilities/typing.html">Typing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/utilities/parameter-search.html">Parameter Search</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/utilities/serialization.html">Serialization</a></li>
+</ul>
+</details></li>
+<li class="toctree-l2"><a class="reference internal" href="../user-guide/context/index.html">Context</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/polars/index.html">Polars</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/polars/polars-vs-opendp.html">Polars vs. OpenDP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/polars/gaussian-noise.html">Gaussian Noise</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/polars/data-types.html">Data Types</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../user-guide/polars/expressions/index.html">Expressions</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/aggregation.html">Aggregation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/boolean.html">Boolean</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/columns.html">Columns</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/manipulation.html">Manipulation</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/operators.html">Operators</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/string.html">String</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../user-guide/polars/expressions/temporal.html">Temporal</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../user-guide/plugins/index.html">Plugins</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/plugins/measurement.html">Measurement example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/plugins/transformation.html">Transformation example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../user-guide/plugins/selecting-grouping-columns.html">Privately Selecting Grouping Columns</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Python API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2 current active has-children"><a class="reference internal" href="opendp.html">opendp package</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l3 has-children"><a class="reference internal" href="opendp.extras.html">opendp.extras package</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l4"><a class="reference internal" href="opendp.extras.examples.html">opendp.extras.examples package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="opendp.extras.numpy.html">opendp.extras.numpy package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="opendp.extras.polars.html">opendp.extras.polars package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="opendp.extras.sklearn.html">opendp.extras.sklearn package</a></li>
+</ul>
+</details></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.accuracy.html">opendp.accuracy module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.combinators.html">opendp.combinators module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.context.html">opendp.context module</a></li>
+<li class="toctree-l3 current active"><a class="current reference internal" href="#">opendp.core module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.domains.html">opendp.domains module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.measurements.html">opendp.measurements module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.measures.html">opendp.measures module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.metrics.html">opendp.metrics module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.mod.html">opendp.mod module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.prelude.html">opendp.prelude module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.transformations.html">opendp.transformations module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="opendp.typing.html">opendp.typing module</a></li>
+</ul>
+</details></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference external" href="https://docs.opendp.org/en/stable/api/r">R API Reference</a></li>
+<li class="toctree-l1"><a class="reference external" href="https://docs.rs/opendp">Rust API Reference</a></li>
+</ul>
+</div>
+</nav></div>
+        <div class="sidebar-primary-item">
+<h6>Branches</h6>
+<ul>
+    <li><a href="../../../beta/index.html" style="font-weight: normal">beta</a></li>
+    <li><a href="../../../nightly/index.html" style="font-weight: normal">nightly</a></li>
+    <li><a href="../../../stable/index.html" style="font-weight: normal">stable</a></li>
+</ul>
+
+
+<h6 id="releases_header">Releases
+    <div id="releases_symbol" style="float:right"></div>
+</h6>
+<ul id="releases_content">
+    <li><a href="../../../v0.14.1/index.html" style="font-weight: normal">v0.14.1</a></li>
+    <li><a href="../../../v0.14.0/index.html" style="font-weight: normal">v0.14.0</a></li>
+    <li><a href="../../../v0.13.0/index.html" style="font-weight: normal">v0.13.0</a></li>
+    <li><a href="opendp.core.html" style="font-weight: bold">v0.12.1</a></li>
+    <li><a href="../../../v0.12.0/index.html" style="font-weight: normal">v0.12.0</a></li>
+    <li><a href="../../../v0.11.1/index.html" style="font-weight: normal">v0.11.1</a></li>
+    <li><a href="../../../v0.11.0/index.html" style="font-weight: normal">v0.11.0</a></li>
+    <li><a href="../../../v0.10.0/index.html" style="font-weight: normal">v0.10.0</a></li>
+    <li><a href="../../../v0.9.2/index.html" style="font-weight: normal">v0.9.2</a></li>
+    <li><a href="../../../v0.9.1/index.html" style="font-weight: normal">v0.9.1</a></li>
+    <li><a href="../../../v0.9.0/index.html" style="font-weight: normal">v0.9.0</a></li>
+    <li><a href="../../../v0.8.0/index.html" style="font-weight: normal">v0.8.0</a></li>
+    <li><a href="../../../v0.7.0/index.html" style="font-weight: normal">v0.7.0</a></li>
+    <li><a href="../../../v0.6.2/index.html" style="font-weight: normal">v0.6.2</a></li>
+    <li><a href="../../../v0.6.1/index.html" style="font-weight: normal">v0.6.1</a></li>
+    <li><a href="../../../v0.6.0/index.html" style="font-weight: normal">v0.6.0</a></li>
+    <li><a href="../../../v0.5.0/index.html" style="font-weight: normal">v0.5.0</a></li>
+    <li><a href="../../../v0.4.0/index.html" style="font-weight: normal">v0.4.0</a></li>
+    <li><a href="../../../v0.3.0/index.html" style="font-weight: normal">v0.3.0</a></li>
+    <li><a href="../../../v0.2.4/index.html" style="font-weight: normal">v0.2.4</a></li>
+    <li><a href="../../../v0.2.3/index.html" style="font-weight: normal">v0.2.3</a></li>
+    <li><a href="../../../v0.2.2/index.html" style="font-weight: normal">v0.2.2</a></li>
+    <li><a href="../../../v0.2.1/index.html" style="font-weight: normal">v0.2.1</a></li>
+    <li><a href="../../../v0.2.0/index.html" style="font-weight: normal">v0.2.0</a></li>
+    <li><a href="../../../v0.1.0/index.html" style="font-weight: normal">v0.1.0</a></li>
+</ul>
+<script>
+    let expanded = !!JSON.parse(localStorage.getItem('expanded'));
+
+    let releasesHeader = document.getElementById("releases_header");
+    let releasesSymbol = document.getElementById("releases_symbol");
+    let releasesContent = document.getElementById("releases_content");
+
+    function setReleasesState() {
+        localStorage.setItem("expanded", JSON.stringify(expanded))
+        releasesContent.style.display = expanded ? "block" : "none";
+        releasesSymbol.classList.add(expanded ? 'minus' : 'plus')
+        releasesSymbol.classList.remove(expanded ? 'plus' : 'minus')
+    }
+
+    setReleasesState()
+    releasesHeader.addEventListener("click", function() {
+        expanded = !expanded;
+        setReleasesState()
+    })
+</script>
+<style>
+    .plus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .plus:before,
+    .plus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .plus:before {
+        left:50%;
+        top:4px;
+        bottom:4px;
+        width:3px;
+        transform:translateX(-50%);
+    }
+
+    .plus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+
+
+
+    .minus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .minus:before,
+    .minus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .minus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+</style>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+
+
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">API</a></li>
+    
+    
+    <li class="breadcrumb-item"><i class="fa-solid fa-ellipsis"></i></li>
+    
+    
+    <li class="breadcrumb-item"><a href="opendp.html" class="nav-link">opendp package</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">opendp.core module</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item"><div class="admonition warning" style="position: relative;">
+    <!--
+     Without the style, the region for the article title overlaps, and the link is unclickable.
+    -->
+    <details>
+        <summary>Questions or feedback?</summary>
+        <!--
+            All of these lists should be in sync:
+            - README.md
+            - docs/source/contributing/contact.rst
+            - docs/source/_templates/questions-feedback.html
+            - .github/ISSUE_TEMPLATE/config.yml
+        -->
+        <ul>
+            <li>Report a bug or request a feature on <a href="https://github.com/opendp/opendp/issues">Github</a>.</li>
+            <li>Send general queries to <a href="mailto:info@opendp.org">info@opendp.org</a>, or email <a href="mailto:security@opendp.org">security@opendp.org</a> if it is related to security.</li>
+            <li>Join the conversation on <a href="https://join.slack.com/t/opendp/shared_invite/zt-1t8rrbqhd-z8LiZiP06vVE422HJd6ciQ">Slack</a>, or the <a href="https://groups.google.com/a/g.harvard.edu/g/opendp-community">mailing list</a>.</li>
+        </ul>
+    </details>
+</div></div>
+      
+        <div class="header-article-item">
+<div class="admonition warning" style="position: relative;" id="old-version-warning">
+  <!--
+   To work with this locally, in conf.py uncomment the entry under "html_context".
+
+   Without the style, the region for the article title overlaps, and the link is unclickable.
+  -->
+  <p class="admonition-title">
+  
+  This documentation is for an old version of OpenDP.
+  
+  </p>
+  <p>The current release of OpenDP is <a href="/">v0.14.1</a>.</p>
+</div>
+<script>
+  window.addEventListener("load", (event) => {
+    document.getElementById('old-version-warning').style.top = `${window.visualViewport.pageTop}px`;
+  });
+</script>
+</div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="module-opendp.core">
+<span id="opendp-core-module"></span><h1>opendp.core module<a class="headerlink" href="#module-opendp.core" title="Link to this heading">#</a></h1>
+<p>The <code class="docutils literal notranslate"><span class="pre">core</span></code> module provides functions for accessing the fields of transformations and measurements.
+For more context, see <a class="reference internal" href="../user-guide/programming-framework/core-structures.html#core-user-guide"><span class="std std-ref">core in the User Guide</span></a>.</p>
+<p>For convenience, all the functions of this module are also available from <a class="reference internal" href="opendp.prelude.html#module-opendp.prelude" title="opendp.prelude"><code class="xref py py-mod docutils literal notranslate"><span class="pre">opendp.prelude</span></code></a>.
+We suggest importing under the conventional name <code class="docutils literal notranslate"><span class="pre">dp</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">opendp.prelude</span> <span class="k">as</span> <span class="nn">dp</span>
+</pre></div>
+</div>
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.function_eval">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">function_eval</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">this</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">TI</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#function_eval"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.function_eval" title="Link to this definition">#</a></dt>
+<dd><p>Eval the <cite>function</cite> with <cite>arg</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>this</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Function" title="opendp.mod.Function"><em>Function</em></a>) – Function to invoke.</p></li>
+<li><p><strong>arg</strong> – Input data to supply to the measurement. A member of the measurement’s input domain.</p></li>
+<li><p><strong>TI</strong> (<em>str</em>) – Input Type.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.measurement_check">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">measurement_check</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">measurement</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distance_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distance_out</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#measurement_check"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.measurement_check" title="Link to this definition">#</a></dt>
+<dd><p>Check the privacy relation of the <cite>measurement</cite> at the given <cite>d_in</cite>, <cite>d_out</cite></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>measurement</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement" title="opendp.mod.Measurement"><em>Measurement</em></a>) – Measurement to check the privacy relation of.</p></li>
+<li><p><strong>distance_in</strong> – </p></li>
+<li><p><strong>distance_out</strong> – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True indicates that the relation passed at the given distance.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.measurement_function">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">measurement_function</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">this</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#measurement_function"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.measurement_function" title="Link to this definition">#</a></dt>
+<dd><p>Get the function from a measurement.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>this</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement" title="opendp.mod.Measurement"><em>Measurement</em></a>) – The measurement to retrieve the value from.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="opendp.mod.html#opendp.mod.Function" title="opendp.mod.Function">Function</a></p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.measurement_input_carrier_type">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">measurement_input_carrier_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">this</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#measurement_input_carrier_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.measurement_input_carrier_type" title="Link to this definition">#</a></dt>
+<dd><p>Get the input (carrier) data type of <cite>this</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>this</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement" title="opendp.mod.Measurement"><em>Measurement</em></a>) – The measurement to retrieve the type from.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.measurement_input_distance_type">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">measurement_input_distance_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">this</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#measurement_input_distance_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.measurement_input_distance_type" title="Link to this definition">#</a></dt>
+<dd><p>Get the input distance type of <cite>measurement</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>this</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement" title="opendp.mod.Measurement"><em>Measurement</em></a>) – The measurement to retrieve the type from.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.measurement_input_domain">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">measurement_input_domain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">this</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#measurement_input_domain"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.measurement_input_domain" title="Link to this definition">#</a></dt>
+<dd><p>Get the input domain from a <cite>measurement</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>this</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement" title="opendp.mod.Measurement"><em>Measurement</em></a>) – The measurement to retrieve the value from.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="opendp.mod.html#opendp.mod.Domain" title="opendp.mod.Domain">Domain</a></p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.measurement_input_metric">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">measurement_input_metric</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">this</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#measurement_input_metric"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.measurement_input_metric" title="Link to this definition">#</a></dt>
+<dd><p>Get the input domain from a <cite>measurement</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>this</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement" title="opendp.mod.Measurement"><em>Measurement</em></a>) – The measurement to retrieve the value from.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="opendp.mod.html#opendp.mod.Metric" title="opendp.mod.Metric">Metric</a></p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.measurement_invoke">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">measurement_invoke</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">this</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#measurement_invoke"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.measurement_invoke" title="Link to this definition">#</a></dt>
+<dd><p>Invoke the <cite>measurement</cite> with <cite>arg</cite>. Returns a differentially private release.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>this</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement" title="opendp.mod.Measurement"><em>Measurement</em></a>) – Measurement to invoke.</p></li>
+<li><p><strong>arg</strong> – Input data to supply to the measurement. A member of the measurement’s input domain.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.measurement_map">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">measurement_map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">measurement</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distance_in</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#measurement_map"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.measurement_map" title="Link to this definition">#</a></dt>
+<dd><p>Use the <cite>measurement</cite> to map a given <cite>d_in</cite> to <cite>d_out</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>measurement</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement" title="opendp.mod.Measurement"><em>Measurement</em></a>) – Measurement to check the map distances with.</p></li>
+<li><p><strong>distance_in</strong> – Distance in terms of the input metric.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.measurement_output_distance_type">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">measurement_output_distance_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">this</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#measurement_output_distance_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.measurement_output_distance_type" title="Link to this definition">#</a></dt>
+<dd><p>Get the output distance type of <cite>measurement</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>this</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement" title="opendp.mod.Measurement"><em>Measurement</em></a>) – The measurement to retrieve the type from.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.measurement_output_measure">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">measurement_output_measure</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">this</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#measurement_output_measure"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.measurement_output_measure" title="Link to this definition">#</a></dt>
+<dd><p>Get the output domain from a <cite>measurement</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>this</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Measurement" title="opendp.mod.Measurement"><em>Measurement</em></a>) – The measurement to retrieve the value from.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="opendp.mod.html#opendp.mod.Measure" title="opendp.mod.Measure">Measure</a></p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.new_function">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">new_function</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">function</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">TO</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#new_function"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.new_function" title="Link to this definition">#</a></dt>
+<dd><p>Construct a Function from a user-defined callback.
+Can be used to build a post-processor.</p>
+<p>Required features: <cite>contrib</cite>, <cite>honest-but-curious</cite></p>
+<p>[new_function in Rust documentation.](<a class="reference external" href="https://docs.rs/opendp/0.12.1/opendp/core/fn.new_function.html">https://docs.rs/opendp/0.12.1/opendp/core/fn.new_function.html</a>)</p>
+<p><strong>Why honest-but-curious?:</strong></p>
+<p>An OpenDP <cite>function</cite> must satisfy two criteria.
+These invariants about functions are necessary to show correctness of other algorithms.</p>
+<p>First, <cite>function</cite> must not use global state.
+For instance, a postprocessor that accesses the system clock time
+can be used to build a measurement that reveals elapsed execution time,
+which escalates a side-channel vulnerability into a direct vulnerability.</p>
+<p>Secondly, <cite>function</cite> must only raise data-independent exceptions.
+For instance, raising an exception with the value of a DP release will both
+reveal the DP output and cancel the computation, potentially avoiding privacy accounting.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>function</strong> – A function mapping data to a value of type <cite>TO</cite></p></li>
+<li><p><strong>TO</strong> (<a class="reference internal" href="../user-guide/utilities/typing.html#runtimetypedescriptor"><span class="std std-ref">Type Argument</span></a>) – Output Type</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="opendp.mod.html#opendp.mod.Function" title="opendp.mod.Function">Function</a></p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.new_queryable">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">new_queryable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">transition</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Q</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ExtrinsicObject'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">A</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'ExtrinsicObject'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#new_queryable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.new_queryable" title="Link to this definition">#</a></dt>
+<dd><p>Construct a queryable from a user-defined transition function.</p>
+<p>Required features: <cite>contrib</cite></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>transition</strong> – A transition function taking a reference to self, a query, and an internal/external indicator</p></li>
+<li><p><strong>Q</strong> (<a class="reference internal" href="../user-guide/utilities/typing.html#runtimetypedescriptor"><span class="std std-ref">Type Argument</span></a>) – Query Type</p></li>
+<li><p><strong>A</strong> (<a class="reference internal" href="../user-guide/utilities/typing.html#runtimetypedescriptor"><span class="std std-ref">Type Argument</span></a>) – Output Type</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.queryable_eval">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">queryable_eval</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">queryable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">query</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#queryable_eval"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.queryable_eval" title="Link to this definition">#</a></dt>
+<dd><p>Invoke the <cite>queryable</cite> with <cite>query</cite>. Returns a differentially private release.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>queryable</strong> – Queryable to eval.</p></li>
+<li><p><strong>query</strong> – Input data to supply to the measurement. A member of the measurement’s input domain.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.queryable_query_type">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">queryable_query_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">this</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#queryable_query_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.queryable_query_type" title="Link to this definition">#</a></dt>
+<dd><p>Get the query type of <cite>queryable</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>this</strong> – The queryable to retrieve the query type from.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.transformation_check">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">transformation_check</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">transformation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distance_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distance_out</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#transformation_check"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.transformation_check" title="Link to this definition">#</a></dt>
+<dd><p>Check the privacy relation of the <cite>measurement</cite> at the given <cite>d_in</cite>, <cite>d_out</cite></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>transformation</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Transformation" title="opendp.mod.Transformation"><em>Transformation</em></a>) – </p></li>
+<li><p><strong>distance_in</strong> – </p></li>
+<li><p><strong>distance_out</strong> – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True indicates that the relation passed at the given distance.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.transformation_function">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">transformation_function</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">this</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#transformation_function"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.transformation_function" title="Link to this definition">#</a></dt>
+<dd><p>Get the function from a transformation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>this</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Transformation" title="opendp.mod.Transformation"><em>Transformation</em></a>) – The transformation to retrieve the value from.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="opendp.mod.html#opendp.mod.Function" title="opendp.mod.Function">Function</a></p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.transformation_input_carrier_type">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">transformation_input_carrier_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">this</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#transformation_input_carrier_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.transformation_input_carrier_type" title="Link to this definition">#</a></dt>
+<dd><p>Get the input (carrier) data type of <cite>this</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>this</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Transformation" title="opendp.mod.Transformation"><em>Transformation</em></a>) – The transformation to retrieve the type from.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.transformation_input_distance_type">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">transformation_input_distance_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">this</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#transformation_input_distance_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.transformation_input_distance_type" title="Link to this definition">#</a></dt>
+<dd><p>Get the input distance type of <cite>transformation</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>this</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Transformation" title="opendp.mod.Transformation"><em>Transformation</em></a>) – The transformation to retrieve the type from.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.transformation_input_domain">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">transformation_input_domain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">this</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#transformation_input_domain"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.transformation_input_domain" title="Link to this definition">#</a></dt>
+<dd><p>Get the input domain from a <cite>transformation</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>this</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Transformation" title="opendp.mod.Transformation"><em>Transformation</em></a>) – The transformation to retrieve the value from.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="opendp.mod.html#opendp.mod.Domain" title="opendp.mod.Domain">Domain</a></p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.transformation_input_metric">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">transformation_input_metric</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">this</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#transformation_input_metric"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.transformation_input_metric" title="Link to this definition">#</a></dt>
+<dd><p>Get the input domain from a <cite>transformation</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>this</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Transformation" title="opendp.mod.Transformation"><em>Transformation</em></a>) – The transformation to retrieve the value from.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="opendp.mod.html#opendp.mod.Metric" title="opendp.mod.Metric">Metric</a></p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.transformation_invoke">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">transformation_invoke</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">this</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#transformation_invoke"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.transformation_invoke" title="Link to this definition">#</a></dt>
+<dd><p>Invoke the <cite>transformation</cite> with <cite>arg</cite>. Returns a differentially private release.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>this</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Transformation" title="opendp.mod.Transformation"><em>Transformation</em></a>) – Transformation to invoke.</p></li>
+<li><p><strong>arg</strong> – Input data to supply to the transformation. A member of the transformation’s input domain.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.transformation_map">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">transformation_map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">transformation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distance_in</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#transformation_map"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.transformation_map" title="Link to this definition">#</a></dt>
+<dd><p>Use the <cite>transformation</cite> to map a given <cite>d_in</cite> to <cite>d_out</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>transformation</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Transformation" title="opendp.mod.Transformation"><em>Transformation</em></a>) – Transformation to check the map distances with.</p></li>
+<li><p><strong>distance_in</strong> – Distance in terms of the input metric.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.transformation_output_distance_type">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">transformation_output_distance_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">this</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#transformation_output_distance_type"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.transformation_output_distance_type" title="Link to this definition">#</a></dt>
+<dd><p>Get the output distance type of <cite>transformation</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>this</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Transformation" title="opendp.mod.Transformation"><em>Transformation</em></a>) – The transformation to retrieve the type from.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.transformation_output_domain">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">transformation_output_domain</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">this</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#transformation_output_domain"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.transformation_output_domain" title="Link to this definition">#</a></dt>
+<dd><p>Get the output domain from a <cite>transformation</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>this</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Transformation" title="opendp.mod.Transformation"><em>Transformation</em></a>) – The transformation to retrieve the value from.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="opendp.mod.html#opendp.mod.Domain" title="opendp.mod.Domain">Domain</a></p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="opendp.core.transformation_output_metric">
+<span class="sig-prename descclassname"><span class="pre">opendp.core.</span></span><span class="sig-name descname"><span class="pre">transformation_output_metric</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">this</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/opendp/core.html#transformation_output_metric"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#opendp.core.transformation_output_metric" title="Link to this definition">#</a></dt>
+<dd><p>Get the output domain from a <cite>transformation</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>this</strong> (<a class="reference internal" href="opendp.mod.html#opendp.mod.Transformation" title="opendp.mod.Transformation"><em>Transformation</em></a>) – The transformation to retrieve the value from.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="opendp.mod.html#opendp.mod.Metric" title="opendp.mod.Metric">Metric</a></p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – if an argument’s type differs from the expected type</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.UnknownTypeException" title="opendp.mod.UnknownTypeException"><strong>UnknownTypeException</strong></a> – if a type argument fails to parse</p></li>
+<li><p><a class="reference internal" href="opendp.mod.html#opendp.mod.OpenDPException" title="opendp.mod.OpenDPException"><strong>OpenDPException</strong></a> – packaged error from the core OpenDP library</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="opendp.context.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">opendp.context module</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="opendp.domains.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">opendp.domains module</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.function_eval"><code class="docutils literal notranslate"><span class="pre">function_eval()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.measurement_check"><code class="docutils literal notranslate"><span class="pre">measurement_check()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.measurement_function"><code class="docutils literal notranslate"><span class="pre">measurement_function()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.measurement_input_carrier_type"><code class="docutils literal notranslate"><span class="pre">measurement_input_carrier_type()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.measurement_input_distance_type"><code class="docutils literal notranslate"><span class="pre">measurement_input_distance_type()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.measurement_input_domain"><code class="docutils literal notranslate"><span class="pre">measurement_input_domain()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.measurement_input_metric"><code class="docutils literal notranslate"><span class="pre">measurement_input_metric()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.measurement_invoke"><code class="docutils literal notranslate"><span class="pre">measurement_invoke()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.measurement_map"><code class="docutils literal notranslate"><span class="pre">measurement_map()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.measurement_output_distance_type"><code class="docutils literal notranslate"><span class="pre">measurement_output_distance_type()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.measurement_output_measure"><code class="docutils literal notranslate"><span class="pre">measurement_output_measure()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.new_function"><code class="docutils literal notranslate"><span class="pre">new_function()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.new_queryable"><code class="docutils literal notranslate"><span class="pre">new_queryable()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.queryable_eval"><code class="docutils literal notranslate"><span class="pre">queryable_eval()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.queryable_query_type"><code class="docutils literal notranslate"><span class="pre">queryable_query_type()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.transformation_check"><code class="docutils literal notranslate"><span class="pre">transformation_check()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.transformation_function"><code class="docutils literal notranslate"><span class="pre">transformation_function()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.transformation_input_carrier_type"><code class="docutils literal notranslate"><span class="pre">transformation_input_carrier_type()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.transformation_input_distance_type"><code class="docutils literal notranslate"><span class="pre">transformation_input_distance_type()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.transformation_input_domain"><code class="docutils literal notranslate"><span class="pre">transformation_input_domain()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.transformation_input_metric"><code class="docutils literal notranslate"><span class="pre">transformation_input_metric()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.transformation_invoke"><code class="docutils literal notranslate"><span class="pre">transformation_invoke()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.transformation_map"><code class="docutils literal notranslate"><span class="pre">transformation_map()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.transformation_output_distance_type"><code class="docutils literal notranslate"><span class="pre">transformation_output_distance_type()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.transformation_output_domain"><code class="docutils literal notranslate"><span class="pre">transformation_output_domain()</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#opendp.core.transformation_output_metric"><code class="docutils literal notranslate"><span class="pre">transformation_output_metric()</span></code></a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../../_sources/api/python/opendp.core.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.3rc1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

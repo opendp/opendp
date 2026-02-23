@@ -1,0 +1,1324 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Membership &#8212; OpenDP</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../_static/styles/theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../_static/styles/bootstrap.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../_static/styles/pydata-sphinx-theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+
+  
+  <link href="../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=eafc0fe6" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/nbsphinx-code-cells.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=4f92a2c4" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f" />
+<link rel="preload" as="script" href="../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f" />
+  <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+    <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'examples/attacks/membership';</script>
+    <link rel="icon" href="../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Reconstruction" href="reconstruction.html" />
+    <link rel="prev" title="Differencing" href="differencing.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Feb 23, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+
+
+<script>
+document.write(`<aside class="bd-header-announcement" aria-label="Announcement"></aside>`);
+fetch("https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html")
+  .then(res => {return res.text();})
+  .then(data => {
+    if (data.length === 0) {
+      console.log("[PST]: Empty announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+      return;
+    }
+    div = document.querySelector(".bd-header-announcement");
+    div.classList.add(...["bd-header-announcement", "container-fluid", "init"]);
+    div.innerHTML = `<div class="bd-header-announcement__content">${data}</div>`;
+    // At least 3rem height
+    const autoHeight = Math.min(
+      div.offsetHeight,
+      3 * parseFloat(getComputedStyle(document.documentElement).fontSize));
+    // Set height and vertical padding to 0 to prepare the height transition
+    div.style.setProperty("height", 0);
+    div.style.setProperty("padding-top", 0);
+    div.style.setProperty("padding-bottom", 0);
+    div.classList.remove("init");
+    // Set height to the computed height with a small timeout to activate the transition
+    setTimeout(() => {
+      div.style.setProperty("height", `${autoHeight}px`);
+      // Wait for a bit more than 300ms (the transition duration) then remove the
+      // forcefully set styles and let CSS take over
+      setTimeout(() => {
+        div.style.removeProperty("padding-top");
+        div.style.removeProperty("padding-bottom");
+        div.style.removeProperty("height");
+        div.style.setProperty("min-height", "3rem");
+      }, 320);
+    }, 10);
+  })
+  .catch(error => {
+    console.log("[PST]: Failed to load announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+  });
+</script>
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <button class="sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+
+<a class="navbar-brand logo" href="../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../_static/opendp-logo.png" class="logo__image only-light" alt="OpenDP - Home"/>
+    <script>document.write(`<img src="../../_static/opendp-logo.png" class="logo__image only-dark" alt="OpenDP - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../quickstart.html">
+                        Quickstart
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../user/index.html">
+                        User Guide
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="../index.html">
+                        Examples
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../api/index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../developer/index.html">
+                        Developer Guide
+                      </a>
+                    </li>
+                
+            <li class="nav-item dropdown pst-header-nav-item">
+                <button class="btn dropdown-toggle nav-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../../resources/index.html">
+                        Resources
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../../opendp-commons/index.html">
+                        OpenDP Commons
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../../contact.html">
+                        Contact
+                      </a>
+                    </li>
+                
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+    <button class="sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../quickstart.html">
+                        Quickstart
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../user/index.html">
+                        User Guide
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item current active">
+                      <a class="nav-link nav-internal" href="../index.html">
+                        Examples
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../api/index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../developer/index.html">
+                        Developer Guide
+                      </a>
+                    </li>
+                
+            <li class="nav-item dropdown pst-header-nav-item">
+                <button class="btn dropdown-toggle nav-item" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-controls="pst-nav-more-links-2">
+                    More
+                </button>
+                <ul id="pst-nav-more-links-2" class="dropdown-menu">
+                    
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../../resources/index.html">
+                        Resources
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../../opendp-commons/index.html">
+                        OpenDP Commons
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item  ">
+                      <a class="nav-link dropdown-item nav-internal" href="../../contact.html">
+                        Contact
+                      </a>
+                    </li>
+                
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../pums-data-analysis.html">Example Data Analysis</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Attacks</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="differencing.html">Differencing</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">Membership</a></li>
+<li class="toctree-l2"><a class="reference internal" href="reconstruction.html">Reconstruction</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference internal" href="../unknown-dataset-size.html">Working with Unknown Dataset Sizes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../histograms.html">Privatizing Histograms</a></li>
+</ul>
+</div>
+</nav></div>
+        <div class="sidebar-primary-item">
+<h6>Branches</h6>
+<ul>
+    <li><a href="../../../beta/index.html" style="font-weight: normal">beta</a></li>
+    <li><a href="../../../nightly/index.html" style="font-weight: normal">nightly</a></li>
+    <li><a href="../../../stable/index.html" style="font-weight: normal">stable</a></li>
+</ul>
+
+
+<h6 id="releases_header">Releases
+    <div id="releases_symbol" style="float:right"></div>
+</h6>
+<ul id="releases_content">
+    <li><a href="../../../v0.14.1/index.html" style="font-weight: normal">v0.14.1</a></li>
+    <li><a href="../../../v0.14.0/index.html" style="font-weight: normal">v0.14.0</a></li>
+    <li><a href="../../../v0.13.0/index.html" style="font-weight: normal">v0.13.0</a></li>
+    <li><a href="../../../v0.12.1/index.html" style="font-weight: normal">v0.12.1</a></li>
+    <li><a href="../../../v0.12.0/index.html" style="font-weight: normal">v0.12.0</a></li>
+    <li><a href="../../../v0.11.1/index.html" style="font-weight: normal">v0.11.1</a></li>
+    <li><a href="../../../v0.11.0/index.html" style="font-weight: normal">v0.11.0</a></li>
+    <li><a href="../../../v0.10.0/index.html" style="font-weight: normal">v0.10.0</a></li>
+    <li><a href="../../../v0.9.2/index.html" style="font-weight: normal">v0.9.2</a></li>
+    <li><a href="../../../v0.9.1/index.html" style="font-weight: normal">v0.9.1</a></li>
+    <li><a href="../../../v0.9.0/index.html" style="font-weight: normal">v0.9.0</a></li>
+    <li><a href="../../../v0.8.0/index.html" style="font-weight: normal">v0.8.0</a></li>
+    <li><a href="../../../v0.7.0/index.html" style="font-weight: normal">v0.7.0</a></li>
+    <li><a href="../../../v0.6.2/index.html" style="font-weight: normal">v0.6.2</a></li>
+    <li><a href="../../../v0.6.1/index.html" style="font-weight: normal">v0.6.1</a></li>
+    <li><a href="membership.html" style="font-weight: bold">v0.6.0</a></li>
+    <li><a href="../../../v0.5.0/index.html" style="font-weight: normal">v0.5.0</a></li>
+    <li><a href="../../../v0.4.0/index.html" style="font-weight: normal">v0.4.0</a></li>
+    <li><a href="../../../v0.3.0/index.html" style="font-weight: normal">v0.3.0</a></li>
+    <li><a href="../../../v0.2.4/index.html" style="font-weight: normal">v0.2.4</a></li>
+    <li><a href="../../../v0.2.3/index.html" style="font-weight: normal">v0.2.3</a></li>
+    <li><a href="../../../v0.2.2/index.html" style="font-weight: normal">v0.2.2</a></li>
+    <li><a href="../../../v0.2.1/index.html" style="font-weight: normal">v0.2.1</a></li>
+    <li><a href="../../../v0.2.0/index.html" style="font-weight: normal">v0.2.0</a></li>
+    <li><a href="../../../v0.1.0/index.html" style="font-weight: normal">v0.1.0</a></li>
+</ul>
+<script>
+    let expanded = !!JSON.parse(localStorage.getItem('expanded'));
+
+    let releasesHeader = document.getElementById("releases_header");
+    let releasesSymbol = document.getElementById("releases_symbol");
+    let releasesContent = document.getElementById("releases_content");
+
+    function setReleasesState() {
+        localStorage.setItem("expanded", JSON.stringify(expanded))
+        releasesContent.style.display = expanded ? "block" : "none";
+        releasesSymbol.classList.add(expanded ? 'minus' : 'plus')
+        releasesSymbol.classList.remove(expanded ? 'plus' : 'minus')
+    }
+
+    setReleasesState()
+    releasesHeader.addEventListener("click", function() {
+        expanded = !expanded;
+        setReleasesState()
+    })
+</script>
+<style>
+    .plus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .plus:before,
+    .plus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .plus:before {
+        left:50%;
+        top:4px;
+        bottom:4px;
+        width:3px;
+        transform:translateX(-50%);
+    }
+
+    .plus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+
+
+
+    .minus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .minus:before,
+    .minus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .minus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+</style>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../index.html" class="nav-link">Examples</a></li>
+    
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Attacks</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">Membership</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item"><div class="admonition warning" style="position: relative;">
+    <!--
+     Without the style, the region for the article title overlaps, and the link is unclickable.
+    -->
+    <details>
+        <summary>Questions or feedback?</summary>
+        <!--
+            All of these lists should be in sync:
+            - README.md
+            - docs/source/contributing/contact.rst
+            - docs/source/_templates/questions-feedback.html
+            - .github/ISSUE_TEMPLATE/config.yml
+        -->
+        <ul>
+            <li>Report a bug or request a feature on <a href="https://github.com/opendp/opendp/issues">Github</a>.</li>
+            <li>Send general queries to <a href="mailto:info@opendp.org">info@opendp.org</a>, or email <a href="mailto:security@opendp.org">security@opendp.org</a> if it is related to security.</li>
+            <li>Join the conversation on <a href="https://join.slack.com/t/opendp/shared_invite/zt-1t8rrbqhd-z8LiZiP06vVE422HJd6ciQ">Slack</a>, or the <a href="https://groups.google.com/a/g.harvard.edu/g/opendp-community">mailing list</a>.</li>
+        </ul>
+    </details>
+</div></div>
+      
+        <div class="header-article-item">
+<div class="admonition warning" style="position: relative;" id="old-version-warning">
+  <!--
+   To work with this locally, in conf.py uncomment the entry under "html_context".
+
+   Without the style, the region for the article title overlaps, and the link is unclickable.
+  -->
+  <p class="admonition-title">
+  
+  This documentation is for an old version of OpenDP.
+  
+  </p>
+  <p>The current release of OpenDP is <a href="/">v0.14.1</a>.</p>
+</div>
+<script>
+  window.addEventListener("load", (event) => {
+    document.getElementById('old-version-warning').style.top = `${window.visualViewport.pageTop}px`;
+  });
+</script>
+</div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="Membership">
+<h1>Membership<a class="headerlink" href="#Membership" title="Link to this heading">#</a></h1>
+<p>An adversary can leverage a membership inference attack that takes advantage of query answers on a sequestered dataset to infer if a particular individual exists in the sequestered dataset. There are situations in which knowing if an individual exists within a sequestered dataset poses risk to the individual.</p>
+<p>The membership attacks in this notebook come from <a class="reference external" href="https://privacytools.seas.harvard.edu/files/privacytools/files/robust.pdf">DSSUV’15, Robust Traceability from Trace Amounts.</a></p>
+<p>This notebook makes use of the Public Use Microdata Sample (PUMS), obtained from the Census Bureau’s American Community Survey (ACS). Attacks like the one demonstrated in this notebook motivate the use of statistical disclosure limitation techniques like differential privacy.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">123</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<section id="Membership-Attacks">
+<h2>Membership Attacks<a class="headerlink" href="#Membership-Attacks" title="Link to this heading">#</a></h2>
+<p>An attacker wants to determine if Alice, an individual from the population, is a member of a sequestered dataset. Consider the sequestered dataset to be a sample from a broader population.</p>
+<p>It is assumed that the attacker is given the answers to a mean query mechanism applied to the sequestered dataset. The attacker collects the public information for Alice, as well as the public information for other individuals from the population (the reference sample).</p>
+<p>The gist of the attack is that if Alice is more similar to the query answers than the reference sample is to the query answers, then Alice is likely a member of the sequestered dataset.</p>
+<p>The first attack comes from figure 1, where the reference sample is assumed to be of size 1.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="k">def</span> <span class="nf">membership_attack_fig_1</span><span class="p">(</span><span class="n">individual</span><span class="p">,</span> <span class="n">answers</span><span class="p">,</span> <span class="n">reference_samples</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="mf">.05</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Perform membership attack using dwork et al. test statistic.</span>
+<span class="sd">    See figure 1 in https://privacytools.seas.harvard.edu/files/privacytools/files/robust.pdf</span>
+
+<span class="sd">    :param individual: y, a boolean vector of shape (d,)</span>
+<span class="sd">    :param answers: q, a float vector with elements in [0, 1] of shape (d,)</span>
+<span class="sd">    :param reference_samples: z, a boolean vector of length (1, d)</span>
+<span class="sd">    :param delta: statistical significance</span>
+<span class="sd">    :return: True if alice is in data with (1-delta)100% confidence.&quot;&quot;&quot;</span>
+    <span class="n">individual</span> <span class="o">=</span> <span class="n">individual</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="n">answers</span> <span class="o">=</span> <span class="n">answers</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="n">reference_samples</span> <span class="o">=</span> <span class="n">reference_samples</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span>
+
+    <span class="n">alice_similarity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">individual</span><span class="p">,</span> <span class="n">answers</span><span class="p">)</span> <span class="c1"># cosine similarity</span>
+    <span class="n">reference_similarity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">reference_samples</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">answers</span><span class="p">)</span>
+    <span class="n">statistic</span> <span class="o">=</span> <span class="n">alice_similarity</span> <span class="o">-</span> <span class="n">reference_similarity</span>
+
+    <span class="n">d</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">individual</span><span class="p">)</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">8</span> <span class="o">*</span> <span class="n">d</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">delta</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">statistic</span> <span class="o">&gt;</span> <span class="n">tau</span>
+</pre></div>
+</div>
+</div>
+<p>The second attack comes from figure 2, a generalization of figure 1 where the reference sample is larger. While the implementation is not as intuitive, it has greater power than figure 1.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="k">def</span> <span class="nf">membership_attack_fig_2</span><span class="p">(</span><span class="n">individual</span><span class="p">,</span> <span class="n">answers</span><span class="p">,</span> <span class="n">reference_samples</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="mf">.05</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Perform membership attack using dwork et al. test statistic.</span>
+<span class="sd">    See figure 2 in https://privacytools.seas.harvard.edu/files/privacytools/files/robust.pdf</span>
+
+<span class="sd">    :param individual: y, a boolean vector of shape (d,)</span>
+<span class="sd">    :param answers: q, a float vector with elements in [0, 1] of shape (d,)</span>
+<span class="sd">    :param reference_samples: z, a boolean vector of length (*, d)</span>
+<span class="sd">    :param delta: statistical significance</span>
+<span class="sd">    :return: True if alice is in data with (1-delta)100% confidence.&quot;&quot;&quot;</span>
+    <span class="n">individual</span> <span class="o">=</span> <span class="n">individual</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="n">answers</span> <span class="o">=</span> <span class="n">answers</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span>
+    <span class="n">reference_samples</span> <span class="o">=</span> <span class="n">reference_samples</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span>
+
+    <span class="n">z</span><span class="p">,</span> <span class="n">w</span> <span class="o">=</span> <span class="n">reference_samples</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">reference_samples</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">m</span><span class="p">,</span> <span class="n">d</span> <span class="o">=</span> <span class="n">reference_samples</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">shape</span>
+
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">m</span><span class="p">)</span>
+    <span class="n">eta</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">alpha</span>
+
+    <span class="n">statistic</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">individual</span> <span class="o">-</span> <span class="n">z</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">answers</span> <span class="o">-</span> <span class="n">w</span><span class="p">,</span> <span class="o">-</span><span class="n">eta</span><span class="p">,</span> <span class="n">eta</span><span class="p">))</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">alpha</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">d</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">delta</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">statistic</span> <span class="o">&gt;</span> <span class="n">tau</span>
+</pre></div>
+</div>
+</div>
+<p>Both of these attacks have low power compared to a Monte Carlo simulation of the null distribution.</p>
+</section>
+<section id="Example">
+<h2>Example<a class="headerlink" href="#Example" title="Link to this heading">#</a></h2>
+<p>In the following examples, we will consider the population to be 100 individuals from the PUMS dataset. For simplicity, we are assuming all columns are public. Since the tests expect boolean data, we also provide a function to project from a real dataset to a boolean predicate space. We’ll be conducting our tests on the projected boolean space.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">population</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span>
+    <span class="s2">&quot;https://raw.githubusercontent.com/opendp/cs208/main/spring2022/data/FultonPUMS5sample100.csv&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">make_boolean_projection</span><span class="p">(</span><span class="n">d_in</span><span class="p">,</span> <span class="n">d_out</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns a (pseudo)random vector predicate function by hashing data.&quot;&quot;&quot;</span>
+    <span class="n">prime</span> <span class="o">=</span> <span class="mi">691</span>
+    <span class="n">desc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="n">prime</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">d_in</span><span class="p">,</span> <span class="n">d_out</span><span class="p">))</span>
+    <span class="c1"># this predicate maps data into a ndarray of booleans of size [n, d_out]</span>
+    <span class="c1">#   (where `@` is the dot product and `%` modulus)</span>
+    <span class="k">return</span> <span class="k">lambda</span> <span class="n">data</span><span class="p">:</span> <span class="p">((</span><span class="n">data</span><span class="o">.</span><span class="n">values</span> <span class="o">@</span> <span class="n">desc</span><span class="p">)</span> <span class="o">%</span> <span class="n">prime</span> <span class="o">%</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">bool</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">sample_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns `sample_size` rows randomly from `data`, and the rest&quot;&quot;&quot;</span>
+    <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">population</span><span class="p">))</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">population</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">indices</span><span class="p">[:</span><span class="n">sample_size</span><span class="p">]],</span> <span class="n">population</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">indices</span><span class="p">[</span><span class="n">sample_size</span><span class="p">:]]</span>
+
+
+<span class="k">def</span> <span class="nf">execute_exact_query</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Computes the mean of each attribute.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">data</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<br/></pre></div>
+</div>
+</div>
+<p>To set up this problem, we’ll first create a sequestered dataset, sampled from the population. In practice, this sequestered dataset may be from, for example, a medical trial, or polls conducted by a political party. In those cases, the selection mechanism isn’t a simple sample, and the strength of the attack may be increased.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">sequestered_data</span><span class="p">,</span> <span class="n">rest</span> <span class="o">=</span> <span class="n">draw</span><span class="p">(</span><span class="n">population</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>At this point the attacker takes over. The attacker builds a projection that maps data into a boolean space in which the tests can be conducted. He then collects the information he needs- public information for Alice, query answers on the sequestered data, and reference samples from the population. Keep in mind that the attacker does not need access to the sequestered data to retrieve the public information for Alice and the reference samples.</p>
+<p>If the membership attack evaluates to True, then the attacker can be 95% confident that Alice is a member of the sequestered dataset. If the membership attack evaluates to False, it is inconclusive if Alice is a member of the sequestered dataset.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="c1"># Projects the real-valued dataset into a boolean space with `d_out` columns</span>
+<span class="n">project</span> <span class="o">=</span> <span class="n">make_boolean_projection</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">population</span><span class="o">.</span><span class="n">columns</span><span class="p">),</span> <span class="n">d_out</span><span class="o">=</span><span class="mi">4000</span><span class="p">)</span>
+
+<span class="c1"># Attacker computes the means of each of the attributes of the data in the projected space</span>
+<span class="c1"># An attacker can still execute this attack on a query interface via predicates</span>
+<span class="n">answers</span> <span class="o">=</span> <span class="n">execute_exact_query</span><span class="p">(</span><span class="n">project</span><span class="p">(</span><span class="n">sequestered_data</span><span class="p">))</span>
+
+<span class="c1"># Attacker collects a reference sample from the population</span>
+<span class="n">reference_samples</span> <span class="o">=</span> <span class="n">project</span><span class="p">(</span><span class="n">population</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+
+<span class="c1"># Attacker collects public info for Alice</span>
+<span class="n">alice</span> <span class="o">=</span> <span class="n">project</span><span class="p">(</span><span class="n">sequestered_data</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">1</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="n">membership_attack_fig_1</span><span class="p">(</span>
+    <span class="n">individual</span><span class="o">=</span><span class="n">alice</span><span class="p">,</span>
+    <span class="n">answers</span><span class="o">=</span><span class="n">answers</span><span class="p">,</span>
+    <span class="n">reference_samples</span><span class="o">=</span><span class="n">reference_samples</span><span class="p">,</span>
+    <span class="n">delta</span><span class="o">=</span><span class="mf">.05</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[6]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+True
+</pre></div></div>
+</div>
+<p>The following example is similar, but we expect the test not to pass, because Anita is not a member of the sequestered dataset.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="c1"># Attacker collects public info for Anita</span>
+<span class="n">anita</span> <span class="o">=</span> <span class="n">project</span><span class="p">(</span><span class="n">rest</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">1</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="n">membership_attack_fig_1</span><span class="p">(</span>
+    <span class="n">individual</span><span class="o">=</span><span class="n">anita</span><span class="p">,</span>
+    <span class="n">answers</span><span class="o">=</span><span class="n">answers</span><span class="p">,</span>
+    <span class="n">reference_samples</span><span class="o">=</span><span class="n">reference_samples</span><span class="p">,</span>
+    <span class="n">delta</span><span class="o">=</span><span class="mf">.05</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[7]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+False
+</pre></div></div>
+</div>
+</section>
+<section id="Simulations">
+<h2>Simulations<a class="headerlink" href="#Simulations" title="Link to this heading">#</a></h2>
+<p>In the following simulations, we will conduct the membership attack thousands of times on different sequestered datasets, random projections, choices of alice, and reference samples, to see how the attack performs as we vary the predicate space dimensionality.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="k">def</span> <span class="nf">simulate_attacks</span><span class="p">(</span>
+    <span class="n">query</span><span class="p">,</span>
+    <span class="n">membership_attack</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span>
+    <span class="n">sample_size</span><span class="p">,</span> <span class="n">reference_size</span><span class="p">,</span>
+    <span class="n">num_predicates</span><span class="p">,</span> <span class="n">num_trials</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Simulates `membership_attack` many times for different boolean space dimensionalities.</span>
+
+<span class="sd">    :param query: a function that maps data to query answers</span>
+<span class="sd">    :param membership_attack: either membership_attack_fig_1 or membership_attack_fig_2</span>
+<span class="sd">    :param delta: statistical significance of the result</span>
+<span class="sd">    :param sample_size: number of records to sample for the sequestered dataset</span>
+<span class="sd">    :param reference_size: number of referents to sample from the population</span>
+<span class="sd">    :param num_predicates: A vector of boolean space dimensionalities to test</span>
+<span class="sd">    :param num_trials: number of membership attacks to conduct for each boolean space dimensionality</span>
+<span class="sd">    :return: Tuple[np.ndarray, np.ndarray]; A vector false positive rates, and a vector of true positive rates</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">fp_results</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">tp_results</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">num_predicates</span><span class="p">:</span>
+        <span class="n">fp</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">tp</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Predicate space dimensionality:&#39;</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span>
+
+        <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_trials</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="p">(</span><span class="n">num_trials</span> <span class="o">//</span> <span class="mi">10</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">i</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">num_trials</span><span class="si">:</span><span class="s2">.0%</span><span class="si">}</span><span class="s2"> &quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+            <span class="c1"># split the population into the sequestered data, and the rest</span>
+            <span class="n">sequestered_data</span><span class="p">,</span> <span class="n">rest</span> <span class="o">=</span> <span class="n">draw</span><span class="p">(</span><span class="n">population</span><span class="p">,</span> <span class="n">sample_size</span><span class="p">)</span>
+
+            <span class="c1"># build new projection each trial (which contains new random predicates)</span>
+            <span class="n">projection</span> <span class="o">=</span> <span class="n">make_boolean_projection</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">population</span><span class="o">.</span><span class="n">columns</span><span class="p">),</span> <span class="n">d</span><span class="p">)</span>
+
+            <span class="c1"># answers to queries on the dataset to be attacked</span>
+            <span class="n">answers</span> <span class="o">=</span> <span class="n">query</span><span class="p">(</span><span class="n">projection</span><span class="p">(</span><span class="n">sequestered_data</span><span class="p">))</span>
+
+            <span class="c1"># collect a reference sample from the population</span>
+            <span class="n">reference_samples</span> <span class="o">=</span> <span class="n">projection</span><span class="p">(</span><span class="n">rest</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">reference_size</span><span class="p">))</span>
+
+            <span class="c1"># collect an individual from the attacked dataset</span>
+            <span class="n">alice</span> <span class="o">=</span> <span class="n">projection</span><span class="p">(</span><span class="n">sequestered_data</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">1</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">tp</span> <span class="o">+=</span> <span class="n">membership_attack</span><span class="p">(</span>
+                <span class="n">individual</span><span class="o">=</span><span class="n">alice</span><span class="p">,</span> <span class="n">answers</span><span class="o">=</span><span class="n">answers</span><span class="p">,</span>
+                <span class="n">reference_samples</span><span class="o">=</span><span class="n">reference_samples</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="n">delta</span><span class="p">)</span>
+
+            <span class="c1"># collect an individual from the population</span>
+            <span class="n">anita</span> <span class="o">=</span> <span class="n">projection</span><span class="p">(</span><span class="n">rest</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="mi">1</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">fp</span> <span class="o">+=</span> <span class="n">membership_attack</span><span class="p">(</span>
+                <span class="n">individual</span><span class="o">=</span><span class="n">anita</span><span class="p">,</span> <span class="n">answers</span><span class="o">=</span><span class="n">answers</span><span class="p">,</span>
+                <span class="n">reference_samples</span><span class="o">=</span><span class="n">reference_samples</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="n">delta</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;100% ~ </span><span class="si">{</span><span class="nb">round</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_time</span><span class="p">)</span><span class="si">}</span><span class="s2"> seconds (tp:</span><span class="si">{</span><span class="n">tp</span><span class="si">}</span><span class="s2">,fp:</span><span class="si">{</span><span class="n">fp</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+        <span class="n">fp_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fp</span> <span class="o">/</span> <span class="n">num_trials</span><span class="p">)</span>
+        <span class="n">tp_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tp</span> <span class="o">/</span> <span class="n">num_trials</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">fp_results</span><span class="p">,</span> <span class="n">tp_results</span>
+
+
+<span class="k">def</span> <span class="nf">plot_fpr_tpr</span><span class="p">(</span><span class="n">num_predicates</span><span class="p">,</span> <span class="n">fp_results</span><span class="p">,</span> <span class="n">tp_results</span><span class="p">):</span>
+    <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">num_predicates</span><span class="p">,</span> <span class="n">fp_results</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Number of Predicates&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;False Positive Rate&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="n">bottom</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">top</span><span class="o">=</span><span class="mf">1.</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;False Positive Rate as Number of Predicates Increases&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">num_predicates</span><span class="p">,</span> <span class="n">tp_results</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Number of Predicates&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;True Positive Rate&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="n">bottom</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">top</span><span class="o">=</span><span class="mf">1.</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;True Positive Rate as Number of Predicates Increases&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<p>In this attack we use the membership attack from figure 1, and vary the predicate space to up to 1000 predicates.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">num_predicates</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">population</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span>
+<span class="n">fp_results</span><span class="p">,</span> <span class="n">tp_results</span> <span class="o">=</span> <span class="n">simulate_attacks</span><span class="p">(</span>
+    <span class="n">execute_exact_query</span><span class="p">,</span>
+    <span class="n">membership_attack_fig_1</span><span class="p">,</span>
+    <span class="n">sample_size</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+    <span class="n">reference_size</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">num_predicates</span><span class="o">=</span><span class="n">num_predicates</span><span class="p">,</span>
+    <span class="n">num_trials</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+    <span class="n">delta</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;FPR&quot;</span><span class="p">,</span> <span class="n">fp_results</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;TPR&quot;</span><span class="p">,</span> <span class="n">tp_results</span><span class="p">)</span>
+
+<span class="n">plot_fpr_tpr</span><span class="p">(</span><span class="n">num_predicates</span><span class="p">,</span> <span class="n">fp_results</span><span class="p">,</span> <span class="n">tp_results</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Predicate space dimensionality: 200
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 1 seconds (tp:1,fp:0)
+Predicate space dimensionality: 400
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 1 seconds (tp:84,fp:0)
+Predicate space dimensionality: 600
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 2 seconds (tp:496,fp:0)
+Predicate space dimensionality: 800
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 2 seconds (tp:897,fp:0)
+Predicate space dimensionality: 1000
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 2 seconds (tp:995,fp:0)
+FPR [0.0, 0.0, 0.0, 0.0, 0.0]
+TPR [0.001, 0.084, 0.496, 0.897, 0.995]
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../_images/examples_attacks_membership_22_1.png" src="../../_images/examples_attacks_membership_22_1.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../_images/examples_attacks_membership_22_2.png" src="../../_images/examples_attacks_membership_22_2.png" />
+</div>
+</div>
+<p>The test doesn’t identify members outside of the sequestered dataset (false positive rate of zero), and becomes more powerful as the number of predicates increases (true positive rate increasing).</p>
+<p>These results look very significant, but keep in mind that the size of the sequestered dataset <code class="docutils literal notranslate"><span class="pre">sample_size</span></code> is only 5. Such a small sample size makes the query answers more distinctive, thus making it much easier to distinguish Alice.</p>
+<p>In this second simulation, we increase the sample size to a relatively large 30% of the population. In order to maintain power on the membership attack, we use the hypothesis test from figure 2 instead, collect a larger reference sample, and increase the number of predicates.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="c1"># Run a more powerful attack with a much larger sample_size and more predicates</span>
+<span class="n">num_predicates</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">21</span><span class="p">)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">population</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span>
+<span class="n">fp_results</span><span class="p">,</span> <span class="n">tp_results</span> <span class="o">=</span> <span class="n">simulate_attacks</span><span class="p">(</span>
+    <span class="n">execute_exact_query</span><span class="p">,</span>
+    <span class="n">membership_attack_fig_2</span><span class="p">,</span>
+    <span class="n">sample_size</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+    <span class="n">reference_size</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+    <span class="n">num_predicates</span><span class="o">=</span><span class="n">num_predicates</span><span class="p">,</span>
+    <span class="n">num_trials</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+    <span class="n">delta</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;FPR&quot;</span><span class="p">,</span> <span class="n">fp_results</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;TPR&quot;</span><span class="p">,</span> <span class="n">tp_results</span><span class="p">)</span>
+<span class="n">plot_fpr_tpr</span><span class="p">(</span><span class="n">num_predicates</span><span class="p">,</span> <span class="n">fp_results</span><span class="p">,</span> <span class="n">tp_results</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Predicate space dimensionality: 200
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 0 seconds (tp:5,fp:0)
+Predicate space dimensionality: 400
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 0 seconds (tp:2,fp:0)
+Predicate space dimensionality: 600
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 0 seconds (tp:14,fp:0)
+Predicate space dimensionality: 800
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 0 seconds (tp:21,fp:0)
+Predicate space dimensionality: 1000
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 0 seconds (tp:29,fp:0)
+Predicate space dimensionality: 1200
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 1 seconds (tp:37,fp:0)
+Predicate space dimensionality: 1400
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 1 seconds (tp:51,fp:0)
+Predicate space dimensionality: 1600
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 1 seconds (tp:63,fp:0)
+Predicate space dimensionality: 1800
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 1 seconds (tp:67,fp:0)
+Predicate space dimensionality: 2000
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 1 seconds (tp:75,fp:0)
+Predicate space dimensionality: 2200
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 1 seconds (tp:79,fp:0)
+Predicate space dimensionality: 2400
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 1 seconds (tp:86,fp:0)
+Predicate space dimensionality: 2600
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 1 seconds (tp:90,fp:0)
+Predicate space dimensionality: 2800
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 1 seconds (tp:94,fp:0)
+Predicate space dimensionality: 3000
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 1 seconds (tp:98,fp:0)
+Predicate space dimensionality: 3200
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 1 seconds (tp:97,fp:0)
+Predicate space dimensionality: 3400
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 1 seconds (tp:100,fp:0)
+Predicate space dimensionality: 3600
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 1 seconds (tp:100,fp:0)
+Predicate space dimensionality: 3800
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 1 seconds (tp:100,fp:0)
+Predicate space dimensionality: 4000
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 2 seconds (tp:100,fp:0)
+FPR [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+TPR [0.05, 0.02, 0.14, 0.21, 0.29, 0.37, 0.51, 0.63, 0.67, 0.75, 0.79, 0.86, 0.9, 0.94, 0.98, 0.97, 1.0, 1.0, 1.0, 1.0]
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../_images/examples_attacks_membership_25_1.png" src="../../_images/examples_attacks_membership_25_1.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../_images/examples_attacks_membership_25_2.png" src="../../_images/examples_attacks_membership_25_2.png" />
+</div>
+</div>
+<p>The attack is more than effectively demonstrated at 4000 predicates, which gives an ~0% FPR and &gt;80% TPR. It is trivial to increase the number of predicates or size of the reference sample to further increase the power of the attack.</p>
+</section>
+<section id="Differential-Privacy">
+<h2>Differential Privacy<a class="headerlink" href="#Differential-Privacy" title="Link to this heading">#</a></h2>
+<p>We now adjust our query interface to return answers protected by differential privacy. <code class="docutils literal notranslate"><span class="pre">execute_dp_query</span></code> releases an estimate of the mean for each predicate. The implementation splits the budget evenly over all input columns. By linear composition, the total privacy expenditure of the joint release of all means works out to be <code class="docutils literal notranslate"><span class="pre">epsilon</span></code>. As the number of attributes increases, the number of queries increases, which commensurately increases the noise scale.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="kn">from</span> <span class="nn">opendp.measurements</span> <span class="kn">import</span> <span class="n">make_base_laplace</span>
+<span class="kn">from</span> <span class="nn">opendp.mod</span> <span class="kn">import</span> <span class="n">binary_search_param</span><span class="p">,</span> <span class="n">enable_features</span>
+<span class="kn">from</span> <span class="nn">opendp.transformations</span> <span class="kn">import</span> <span class="n">make_sized_bounded_mean</span>
+<span class="kn">from</span> <span class="nn">opendp.typing</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">lru_cache</span>
+
+<span class="n">enable_features</span><span class="p">(</span><span class="s2">&quot;floating-point&quot;</span><span class="p">,</span> <span class="s2">&quot;contrib&quot;</span><span class="p">)</span>
+
+<span class="n">epsilon</span> <span class="o">=</span> <span class="mf">1.</span>
+
+<span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">find_meas</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="n">num_queries</span><span class="p">):</span>
+    <span class="n">epsilon_per</span> <span class="o">=</span> <span class="n">epsilon</span> <span class="o">/</span> <span class="n">num_queries</span>
+    <span class="n">mean</span> <span class="o">=</span> <span class="n">make_sized_bounded_mean</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">,</span> <span class="n">bounds</span><span class="o">=</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">))</span>
+    <span class="n">scale</span> <span class="o">=</span> <span class="n">binary_search_param</span><span class="p">(</span>
+        <span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">mean</span> <span class="o">&gt;&gt;</span> <span class="n">make_base_laplace</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">k</span><span class="o">=-</span><span class="mi">40</span><span class="p">),</span>
+        <span class="n">d_in</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">d_out</span><span class="o">=</span><span class="n">epsilon_per</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">make_base_laplace</span><span class="p">(</span><span class="n">scale</span><span class="p">,</span> <span class="n">k</span><span class="o">=-</span><span class="mi">40</span><span class="p">,</span> <span class="n">D</span><span class="o">=</span><span class="n">VectorDomain</span><span class="p">[</span><span class="n">AllDomain</span><span class="p">[</span><span class="nb">float</span><span class="p">]])</span>
+
+
+<span class="k">def</span> <span class="nf">execute_dp_query</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Computes the dp means of `data`.</span>
+<span class="sd">    Assumes the number of rows is public information</span>
+<span class="sd">    The total privacy expenditure is `epsilon`.&quot;&quot;&quot;</span>
+    <span class="n">exact_aggregates</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">base_laplace</span> <span class="o">=</span> <span class="n">find_meas</span><span class="p">(</span><span class="o">*</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">base_laplace</span><span class="p">(</span><span class="n">exact_aggregates</span><span class="p">))</span>
+<br/></pre></div>
+</div>
+</div>
+<p>Run the simulation once more with this new query interface.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre data-tabindex="0"><span></span>[18]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre data-tabindex="0"><span></span><span class="n">num_predicates</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">11</span><span class="p">)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">population</span><span class="p">)</span> <span class="o">*</span> <span class="mi">4</span>
+<span class="n">fp_results</span><span class="p">,</span> <span class="n">tp_results</span> <span class="o">=</span> <span class="n">simulate_attacks</span><span class="p">(</span>
+    <span class="n">execute_dp_query</span><span class="p">,</span>
+    <span class="n">membership_attack_fig_1</span><span class="p">,</span>
+    <span class="n">sample_size</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+    <span class="n">reference_size</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+    <span class="n">num_predicates</span><span class="o">=</span><span class="n">num_predicates</span><span class="p">,</span>
+    <span class="n">num_trials</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+    <span class="n">delta</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;FPR&quot;</span><span class="p">,</span> <span class="n">fp_results</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;TPR&quot;</span><span class="p">,</span> <span class="n">tp_results</span><span class="p">)</span>
+
+<span class="n">plot_fpr_tpr</span><span class="p">(</span><span class="n">num_predicates</span><span class="p">,</span> <span class="n">fp_results</span><span class="p">,</span> <span class="n">tp_results</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Predicate space dimensionality: 400
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 2 seconds (tp:58,fp:49)
+Predicate space dimensionality: 800
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 3 seconds (tp:52,fp:51)
+Predicate space dimensionality: 1200
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 4 seconds (tp:52,fp:48)
+Predicate space dimensionality: 1600
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 5 seconds (tp:48,fp:46)
+Predicate space dimensionality: 2000
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 6 seconds (tp:44,fp:50)
+Predicate space dimensionality: 2400
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 8 seconds (tp:41,fp:53)
+Predicate space dimensionality: 2800
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 10 seconds (tp:58,fp:55)
+Predicate space dimensionality: 3200
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 12 seconds (tp:42,fp:57)
+Predicate space dimensionality: 3600
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 19 seconds (tp:40,fp:43)
+Predicate space dimensionality: 4000
+0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% ~ 31 seconds (tp:51,fp:41)
+FPR [0.49, 0.51, 0.48, 0.46, 0.5, 0.53, 0.55, 0.57, 0.43, 0.41]
+TPR [0.58, 0.52, 0.52, 0.48, 0.44, 0.41, 0.58, 0.42, 0.4, 0.51]
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../_images/examples_attacks_membership_29_1.png" src="../../_images/examples_attacks_membership_29_1.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../../_images/examples_attacks_membership_29_2.png" src="../../_images/examples_attacks_membership_29_2.png" />
+</div>
+</div>
+<p>The resulting graphs show that the membership attack is thwarted. The response from the test is practically a coin-flip; it fails to identify Alice as a member of the sequestered dataset about half the time, and falsely identifies Anita as a member of the dataset about half the time.</p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="differencing.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Differencing</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="reconstruction.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Reconstruction</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Membership-Attacks">Membership Attacks</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Example">Example</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Simulations">Simulations</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#Differential-Privacy">Differential Privacy</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../../_sources/examples/attacks/membership.ipynb.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f"></script>
+<script src="../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.3rc1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,2046 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>opendp.extras.polars &#8212; OpenDP</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../../_static/styles/bootstrap.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+
+  
+  <link href="../../../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=f91d6a3704ddd3a9dc0f" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/graphviz.css?v=eafc0fe6" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=4f92a2c4" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f" />
+  <script src="../../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+    <script src="../../../_static/documentation_options.js?v=3a3a8e7f"></script>
+    <script src="../../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/opendp/extras/polars';</script>
+    <link rel="icon" href="../../../_static/favicon.ico"/>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+    <meta name="docbuild:last-update" content="Feb 23, 2026"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+
+
+<script>
+document.write(`<aside class="bd-header-announcement" aria-label="Announcement"></aside>`);
+fetch("https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html")
+  .then(res => {return res.text();})
+  .then(data => {
+    if (data.length === 0) {
+      console.log("[PST]: Empty announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+      return;
+    }
+    div = document.querySelector(".bd-header-announcement");
+    div.classList.add(...["bd-header-announcement", "container-fluid", "init"]);
+    div.innerHTML = `<div class="bd-header-announcement__content">${data}</div>`;
+    // At least 3rem height
+    const autoHeight = Math.min(
+      div.offsetHeight,
+      3 * parseFloat(getComputedStyle(document.documentElement).fontSize));
+    // Set height and vertical padding to 0 to prepare the height transition
+    div.style.setProperty("height", 0);
+    div.style.setProperty("padding-top", 0);
+    div.style.setProperty("padding-bottom", 0);
+    div.classList.remove("init");
+    // Set height to the computed height with a small timeout to activate the transition
+    setTimeout(() => {
+      div.style.setProperty("height", `${autoHeight}px`);
+      // Wait for a bit more than 300ms (the transition duration) then remove the
+      // forcefully set styles and let CSS take over
+      setTimeout(() => {
+        div.style.removeProperty("padding-top");
+        div.style.removeProperty("padding-bottom");
+        div.style.removeProperty("height");
+        div.style.setProperty("min-height", "3rem");
+      }, 320);
+    }, 10);
+  })
+  .catch(error => {
+    console.log("[PST]: Failed to load announcement at: https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html");
+  });
+</script>
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <button class="sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/opendp-logo.png" class="logo__image only-light" alt="OpenDP - Home"/>
+    <script>document.write(`<img src="../../../_static/opendp-logo.png" class="logo__image only-dark" alt="OpenDP - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../getting-started/index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../api/index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../theory/index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../getting-started/index.html">
+                        Getting Started
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../api/index.html">
+                        API
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../theory/index.html">
+                        Theory
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item pst-header-nav-item ">
+                      <a class="nav-link nav-internal" href="../../../contributing/index.html">
+                        Contributing
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/opendp" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<h6>Branches</h6>
+<ul>
+    <li><a href="../../../../beta/index.html" style="font-weight: normal">beta</a></li>
+    <li><a href="../../../../nightly/index.html" style="font-weight: normal">nightly</a></li>
+    <li><a href="polars.html" style="font-weight: bold">stable</a></li>
+</ul>
+
+
+<h6 id="releases_header">Releases
+    <div id="releases_symbol" style="float:right"></div>
+</h6>
+<ul id="releases_content">
+    <li><a href="../../../../v0.14.1/index.html" style="font-weight: normal">v0.14.1</a></li>
+    <li><a href="../../../../v0.14.0/index.html" style="font-weight: normal">v0.14.0</a></li>
+    <li><a href="../../../../v0.13.0/index.html" style="font-weight: normal">v0.13.0</a></li>
+    <li><a href="../../../../v0.12.1/index.html" style="font-weight: normal">v0.12.1</a></li>
+    <li><a href="../../../../v0.12.0/index.html" style="font-weight: normal">v0.12.0</a></li>
+    <li><a href="../../../../v0.11.1/index.html" style="font-weight: normal">v0.11.1</a></li>
+    <li><a href="../../../../v0.11.0/index.html" style="font-weight: normal">v0.11.0</a></li>
+    <li><a href="../../../../v0.10.0/index.html" style="font-weight: normal">v0.10.0</a></li>
+    <li><a href="../../../../v0.9.2/index.html" style="font-weight: normal">v0.9.2</a></li>
+    <li><a href="../../../../v0.9.1/index.html" style="font-weight: normal">v0.9.1</a></li>
+    <li><a href="../../../../v0.9.0/index.html" style="font-weight: normal">v0.9.0</a></li>
+    <li><a href="../../../../v0.8.0/index.html" style="font-weight: normal">v0.8.0</a></li>
+    <li><a href="../../../../v0.7.0/index.html" style="font-weight: normal">v0.7.0</a></li>
+    <li><a href="../../../../v0.6.2/index.html" style="font-weight: normal">v0.6.2</a></li>
+    <li><a href="../../../../v0.6.1/index.html" style="font-weight: normal">v0.6.1</a></li>
+    <li><a href="../../../../v0.6.0/index.html" style="font-weight: normal">v0.6.0</a></li>
+    <li><a href="../../../../v0.5.0/index.html" style="font-weight: normal">v0.5.0</a></li>
+    <li><a href="../../../../v0.4.0/index.html" style="font-weight: normal">v0.4.0</a></li>
+    <li><a href="../../../../v0.3.0/index.html" style="font-weight: normal">v0.3.0</a></li>
+    <li><a href="../../../../v0.2.4/index.html" style="font-weight: normal">v0.2.4</a></li>
+    <li><a href="../../../../v0.2.3/index.html" style="font-weight: normal">v0.2.3</a></li>
+    <li><a href="../../../../v0.2.2/index.html" style="font-weight: normal">v0.2.2</a></li>
+    <li><a href="../../../../v0.2.1/index.html" style="font-weight: normal">v0.2.1</a></li>
+    <li><a href="../../../../v0.2.0/index.html" style="font-weight: normal">v0.2.0</a></li>
+    <li><a href="../../../../v0.1.0/index.html" style="font-weight: normal">v0.1.0</a></li>
+</ul>
+<script>
+    let expanded = !!JSON.parse(localStorage.getItem('expanded'));
+
+    let releasesHeader = document.getElementById("releases_header");
+    let releasesSymbol = document.getElementById("releases_symbol");
+    let releasesContent = document.getElementById("releases_content");
+
+    function setReleasesState() {
+        localStorage.setItem("expanded", JSON.stringify(expanded))
+        releasesContent.style.display = expanded ? "block" : "none";
+        releasesSymbol.classList.add(expanded ? 'minus' : 'plus')
+        releasesSymbol.classList.remove(expanded ? 'plus' : 'minus')
+    }
+
+    setReleasesState()
+    releasesHeader.addEventListener("click", function() {
+        expanded = !expanded;
+        setReleasesState()
+    })
+</script>
+<style>
+    .plus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .plus:before,
+    .plus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .plus:before {
+        left:50%;
+        top:4px;
+        bottom:4px;
+        width:3px;
+        transform:translateX(-50%);
+    }
+
+    .plus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+
+
+
+    .minus {
+        position: relative;
+        width:20px;
+        height:20px;
+        background:#676767;
+    }
+
+    .minus:before,
+    .minus:after {
+        content: "";
+        position:absolute;
+        background:#fff;
+    }
+
+    .minus:after {
+        top:50%;
+        left:4px;
+        right:4px;
+        height:3px;
+        transform:translateY(-50%);
+    }
+</style>
+</div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+
+
+<nav aria-label="Breadcrumb">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page">opendp.extras.polars</li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item"><div class="admonition warning" style="position: relative;">
+    <!--
+     Without the style, the region for the article title overlaps, and the link is unclickable.
+    -->
+    <details>
+        <summary>Questions or feedback?</summary>
+        <!--
+            All of these lists should be in sync:
+            - README.md
+            - docs/source/contributing/contact.rst
+            - docs/source/_templates/questions-feedback.html
+            - .github/ISSUE_TEMPLATE/config.yml
+        -->
+        <ul>
+            <li>Report a bug or request a feature on <a href="https://github.com/opendp/opendp/issues">Github</a>.</li>
+            <li>Send general queries to <a href="mailto:info@opendp.org">info@opendp.org</a>, or email <a href="mailto:security@opendp.org">security@opendp.org</a> if it is related to security.</li>
+            <li>Join the conversation on <a href="https://join.slack.com/t/opendp/shared_invite/zt-1t8rrbqhd-z8LiZiP06vVE422HJd6ciQ">Slack</a>, or the <a href="https://groups.google.com/a/g.harvard.edu/g/opendp-community">mailing list</a>.</li>
+        </ul>
+    </details>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for opendp.extras.polars</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This module requires extra installs: ``pip install &#39;opendp[polars]&#39;``</span>
+
+<span class="sd">The ``opendp.extras.polars`` module adds differential privacy to the</span>
+<span class="sd">`Polars DataFrame library &lt;https://docs.pola.rs&gt;`_.</span>
+
+<span class="sd">For convenience, all the members of this module are also available from :py:mod:`opendp.prelude`.</span>
+<span class="sd">We suggest importing under the conventional name ``dp``:</span>
+
+<span class="sd">.. code:: pycon</span>
+
+<span class="sd">    &gt;&gt;&gt; import opendp.prelude as dp</span>
+
+<span class="sd">The members of this module will then be accessible at ``dp.polars``.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">asdict</span><span class="p">,</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span><span class="p">,</span> <span class="n">replace</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">cast</span>
+<span class="kn">from</span> <span class="nn">opendp._lib</span> <span class="kn">import</span> <span class="n">lib_path</span><span class="p">,</span> <span class="n">import_optional_dependency</span>
+<span class="kn">from</span> <span class="nn">opendp.extras.mbi</span> <span class="kn">import</span> <span class="n">ContingencyTable</span><span class="p">,</span> <span class="n">make_contingency_table</span><span class="p">,</span> <span class="n">AIM</span><span class="p">,</span> <span class="n">Algorithm</span>
+<span class="kn">from</span> <span class="nn">opendp.mod</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ChangeOneIdDistance</span><span class="p">,</span>
+    <span class="n">Domain</span><span class="p">,</span>
+    <span class="n">Measurement</span><span class="p">,</span>
+    <span class="n">FrameDistance</span><span class="p">,</span>
+    <span class="n">Metric</span><span class="p">,</span>
+    <span class="n">OpenDPException</span><span class="p">,</span>
+    <span class="n">SymmetricIdDistance</span><span class="p">,</span>
+    <span class="n">binary_search</span><span class="p">,</span>
+    <span class="n">binary_search_chain</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">opendp.domains</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">series_domain</span><span class="p">,</span>
+    <span class="n">lazyframe_domain</span><span class="p">,</span>
+    <span class="n">option_domain</span><span class="p">,</span>
+    <span class="n">atom_domain</span><span class="p">,</span>
+    <span class="n">categorical_domain</span><span class="p">,</span>
+    <span class="n">datetime_domain</span><span class="p">,</span>
+    <span class="n">enum_domain</span><span class="p">,</span>
+    <span class="n">array_domain</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">opendp.measurements</span> <span class="kn">import</span> <span class="n">make_private_lazyframe</span>
+<span class="kn">from</span> <span class="nn">deprecated</span> <span class="kn">import</span> <span class="n">deprecated</span>
+<span class="kn">from</span> <span class="nn">opendp.transformations</span> <span class="kn">import</span> <span class="n">make_stable_lazyframe</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">TYPE_CHECKING</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+    <span class="kn">from</span> <span class="nn">opendp.context</span> <span class="kn">import</span> <span class="n">Query</span>
+    <span class="kn">from</span> <span class="nn">opendp.extras.polars.contingency_table</span> <span class="kn">import</span> <span class="n">ContingencyTableQuery</span>
+
+<span class="k">def</span> <span class="nf">_get_opendp_polars_lib_path</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;OPENDP_POLARS_LIB_PATH&quot;</span><span class="p">,</span> <span class="n">lib_path</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DPExpr">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.DPExpr">[docs]</a>
+<span class="k">class</span> <span class="nc">DPExpr</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    If both ``opendp`` and ``polars`` have been imported,</span>
+<span class="sd">    the methods of :py:class:`DPExpr` are registered under the ``dp`` namespace in</span>
+<span class="sd">    `Polars expressions &lt;https://docs.pola.rs/py-polars/html/reference/expressions/index.html&gt;`_.</span>
+<span class="sd">    An expression can be used as a plan in :py:func:`opendp.measurements.make_private_lazyframe`;</span>
+<span class="sd">    See the full example there for more information.</span>
+
+<span class="sd">    In addition to the DP-specific methods here, many Polars ``Expr`` methods are also supported,</span>
+<span class="sd">    and are documented in the :ref:`API User Guide &lt;expression-index&gt;`.</span>
+
+<span class="sd">    This class is typically not used directly by users:</span>
+<span class="sd">    Instead its methods are registered under the ``dp`` namespace of Polars expressions.</span>
+
+<span class="sd">    &gt;&gt;&gt; import polars as pl</span>
+<span class="sd">    &gt;&gt;&gt; pl.len().dp</span>
+<span class="sd">    &lt;opendp.extras.polars.DPExpr object at ...&gt;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">expr</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">expr</span> <span class="o">=</span> <span class="n">expr</span>
+
+<div class="viewcode-block" id="DPExpr.noise">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.DPExpr.noise">[docs]</a>
+    <span class="k">def</span> <span class="nf">noise</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add noise to the expression.</span>
+
+<span class="sd">        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.</span>
+<span class="sd">        The noise distribution is chosen according to the privacy definition:</span>
+
+<span class="sd">        * Pure-DP: Laplace noise, where ``scale == standard_deviation / sqrt(2)``</span>
+<span class="sd">        * zCDP: Gaussian noise, where ``scale == standard_devation``</span>
+
+<span class="sd">        :param scale: Scale parameter for the noise distribution.</span>
+
+<span class="sd">        :example:</span>
+
+<span class="sd">        &gt;&gt;&gt; import polars as pl</span>
+<span class="sd">        &gt;&gt;&gt; context = dp.Context.compositor(</span>
+<span class="sd">        ...     data=pl.LazyFrame({&quot;A&quot;: list(range(100))}),</span>
+<span class="sd">        ...     privacy_unit=dp.unit_of(contributions=1),</span>
+<span class="sd">        ...     privacy_loss=dp.loss_of(epsilon=1.),</span>
+<span class="sd">        ...     split_evenly_over=1,</span>
+<span class="sd">        ... )</span>
+<span class="sd">        &gt;&gt;&gt; query = context.query().select(dp.len())</span>
+<span class="sd">        &gt;&gt;&gt; query.release().collect()</span>
+<span class="sd">        shape: (1, 1)</span>
+<span class="sd">        ┌─────┐</span>
+<span class="sd">        │ len │</span>
+<span class="sd">        │ --- │</span>
+<span class="sd">        │ u32 │</span>
+<span class="sd">        ╞═════╡</span>
+<span class="sd">        │ ... │</span>
+<span class="sd">        └─────┘</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">polars.plugins</span> <span class="kn">import</span> <span class="n">register_plugin_function</span>  <span class="c1"># type: ignore[import-not-found]</span>
+
+        <span class="k">return</span> <span class="n">register_plugin_function</span><span class="p">(</span>
+            <span class="n">plugin_path</span><span class="o">=</span><span class="n">_get_opendp_polars_lib_path</span><span class="p">(),</span>
+            <span class="n">function_name</span><span class="o">=</span><span class="s2">&quot;noise&quot;</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">expr</span><span class="p">,</span> <span class="n">scale</span><span class="p">),</span>
+            <span class="n">is_elementwise</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DPExpr.laplace">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.DPExpr.laplace">[docs]</a>
+    <span class="nd">@deprecated</span><span class="p">(</span><span class="n">version</span><span class="o">=</span><span class="s2">&quot;0.14.1&quot;</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="s2">&quot;Use .noise instead. This will now apply gaussian noise if your privacy definition is zCDP.&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">laplace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add Laplace noise to the expression.</span>
+
+<span class="sd">        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.</span>
+
+<span class="sd">        :param scale: Noise scale parameter for the Laplace distribution. ``scale == standard_deviation / sqrt(2)``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">noise</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DPExpr.gaussian">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.DPExpr.gaussian">[docs]</a>
+    <span class="nd">@deprecated</span><span class="p">(</span><span class="n">version</span><span class="o">=</span><span class="s2">&quot;0.14.1&quot;</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="s2">&quot;Use .noise instead. This will now apply laplace noise if your privacy definition is pure-DP.&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">gaussian</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add Gaussian noise to the expression.</span>
+
+<span class="sd">        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.</span>
+
+<span class="sd">        :param scale: Noise scale parameter for the Gaussian distribution. ``scale == standard_deviation``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">noise</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DPExpr.len">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.DPExpr.len">[docs]</a>
+    <span class="k">def</span> <span class="nf">len</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute a differentially private estimate of the number of elements in `self`, including null values.</span>
+
+<span class="sd">        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.</span>
+
+<span class="sd">        :param scale: parameter for the noise distribution.</span>
+
+<span class="sd">        :example:</span>
+
+<span class="sd">        This function is a shortcut for the exact Polars ``len`` and then noise addition:</span>
+
+<span class="sd">        &gt;&gt;&gt; import polars as pl</span>
+<span class="sd">        &gt;&gt;&gt; context = dp.Context.compositor(</span>
+<span class="sd">        ...     data=pl.LazyFrame({&quot;visits&quot;: [1, 2, None]}),</span>
+<span class="sd">        ...     privacy_unit=dp.unit_of(contributions=1),</span>
+<span class="sd">        ...     privacy_loss=dp.loss_of(epsilon=1.),</span>
+<span class="sd">        ...     split_evenly_over=1,</span>
+<span class="sd">        ... )</span>
+<span class="sd">        &gt;&gt;&gt; query = context.query().select(pl.col(&quot;visits&quot;).dp.len())</span>
+<span class="sd">        &gt;&gt;&gt; query.release().collect()</span>
+<span class="sd">        shape: (1, 1)</span>
+<span class="sd">        ┌────────┐</span>
+<span class="sd">        │ visits │</span>
+<span class="sd">        │ ---    │</span>
+<span class="sd">        │ u32    │</span>
+<span class="sd">        ╞════════╡</span>
+<span class="sd">        │ ...    │</span>
+<span class="sd">        └────────┘</span>
+
+<span class="sd">        Output is noise added to three.</span>
+
+<span class="sd">        It can differ from frame length (``.select(dp.len())``) if the expression uses transformations that change the number of rows,</span>
+<span class="sd">        like filtering.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">polars.plugins</span> <span class="kn">import</span> <span class="n">register_plugin_function</span>  <span class="c1"># type: ignore[import-not-found]</span>
+
+        <span class="k">return</span> <span class="n">register_plugin_function</span><span class="p">(</span>
+            <span class="n">plugin_path</span><span class="o">=</span><span class="n">_get_opendp_polars_lib_path</span><span class="p">(),</span>
+            <span class="n">function_name</span><span class="o">=</span><span class="s2">&quot;dp_len&quot;</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">expr</span><span class="p">,</span> <span class="n">scale</span><span class="p">),</span>
+            <span class="n">returns_scalar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DPExpr.count">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.DPExpr.count">[docs]</a>
+    <span class="k">def</span> <span class="nf">count</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute a differentially private estimate of the number of elements in `self`, not including null values.</span>
+
+<span class="sd">        This function is a shortcut for the exact Polars ``count`` and then noise addition.</span>
+
+<span class="sd">        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.</span>
+
+<span class="sd">        :param scale: parameter for the noise distribution.</span>
+
+<span class="sd">        :example:</span>
+
+<span class="sd">        Count the number of records with known (non-null) visits:</span>
+
+<span class="sd">        &gt;&gt;&gt; import polars as pl</span>
+<span class="sd">        &gt;&gt;&gt; context = dp.Context.compositor(</span>
+<span class="sd">        ...     data=pl.LazyFrame({&quot;visits&quot;: [1, 2, None]}),</span>
+<span class="sd">        ...     privacy_unit=dp.unit_of(contributions=1),</span>
+<span class="sd">        ...     privacy_loss=dp.loss_of(epsilon=1.),</span>
+<span class="sd">        ...     split_evenly_over=1,</span>
+<span class="sd">        ... )</span>
+<span class="sd">        &gt;&gt;&gt; query = context.query().select(pl.col(&quot;visits&quot;).dp.count())</span>
+<span class="sd">        &gt;&gt;&gt; query.release().collect()</span>
+<span class="sd">        shape: (1, 1)</span>
+<span class="sd">        ┌────────┐</span>
+<span class="sd">        │ visits │</span>
+<span class="sd">        │ ---    │</span>
+<span class="sd">        │ u32    │</span>
+<span class="sd">        ╞════════╡</span>
+<span class="sd">        │ ...    │</span>
+<span class="sd">        └────────┘</span>
+
+<span class="sd">        Output is noise added to three.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">polars.plugins</span> <span class="kn">import</span> <span class="n">register_plugin_function</span>  <span class="c1"># type: ignore[import-not-found]</span>
+
+        <span class="k">return</span> <span class="n">register_plugin_function</span><span class="p">(</span>
+            <span class="n">plugin_path</span><span class="o">=</span><span class="n">_get_opendp_polars_lib_path</span><span class="p">(),</span>
+            <span class="n">function_name</span><span class="o">=</span><span class="s2">&quot;dp_count&quot;</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">expr</span><span class="p">,</span> <span class="n">scale</span><span class="p">),</span>
+            <span class="n">returns_scalar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DPExpr.null_count">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.DPExpr.null_count">[docs]</a>
+    <span class="k">def</span> <span class="nf">null_count</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute a differentially private estimate of the number of null elements in `self`.</span>
+
+<span class="sd">        This function is a shortcut for the exact Polars ``null_count`` and then noise addition.</span>
+
+<span class="sd">        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.</span>
+
+<span class="sd">        :param scale: parameter for the noise distribution.</span>
+
+<span class="sd">        :example:</span>
+
+<span class="sd">        Count the number of records with unknown (null) visits:</span>
+
+<span class="sd">        &gt;&gt;&gt; import polars as pl</span>
+<span class="sd">        &gt;&gt;&gt; context = dp.Context.compositor(</span>
+<span class="sd">        ...     data=pl.LazyFrame({&quot;visits&quot;: [1, 2, None]}),</span>
+<span class="sd">        ...     privacy_unit=dp.unit_of(contributions=1),</span>
+<span class="sd">        ...     privacy_loss=dp.loss_of(epsilon=1.),</span>
+<span class="sd">        ...     split_evenly_over=1,</span>
+<span class="sd">        ... )</span>
+<span class="sd">        &gt;&gt;&gt; query = context.query().select(pl.col(&quot;visits&quot;).dp.null_count())</span>
+<span class="sd">        &gt;&gt;&gt; query.release().collect()</span>
+<span class="sd">        shape: (1, 1)</span>
+<span class="sd">        ┌────────┐</span>
+<span class="sd">        │ visits │</span>
+<span class="sd">        │ ---    │</span>
+<span class="sd">        │ u32    │</span>
+<span class="sd">        ╞════════╡</span>
+<span class="sd">        │ ...    │</span>
+<span class="sd">        └────────┘</span>
+
+<span class="sd">        Output is noise added to one.</span>
+
+<span class="sd">        Note that if you want to count the number of null *and* non-null records,</span>
+<span class="sd">        consider combining the queries by constructing a boolean nullity column to group on,</span>
+<span class="sd">        grouping by this column, and then using ``dp.len()``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">polars.plugins</span> <span class="kn">import</span> <span class="n">register_plugin_function</span>  <span class="c1"># type: ignore[import-not-found]</span>
+
+        <span class="k">return</span> <span class="n">register_plugin_function</span><span class="p">(</span>
+            <span class="n">plugin_path</span><span class="o">=</span><span class="n">_get_opendp_polars_lib_path</span><span class="p">(),</span>
+            <span class="n">function_name</span><span class="o">=</span><span class="s2">&quot;dp_null_count&quot;</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">expr</span><span class="p">,</span> <span class="n">scale</span><span class="p">),</span>
+            <span class="n">returns_scalar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DPExpr.n_unique">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.DPExpr.n_unique">[docs]</a>
+    <span class="k">def</span> <span class="nf">n_unique</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute a differentially private estimate of the number of unique elements in `self`.</span>
+
+<span class="sd">        This function is a shortcut for the exact Polars ``n_unique`` and then noise addition.</span>
+
+<span class="sd">        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.</span>
+
+<span class="sd">        :param scale: parameter for the noise distribution.</span>
+
+<span class="sd">        :example:</span>
+
+<span class="sd">        Count the number of unique addresses:</span>
+
+<span class="sd">        &gt;&gt;&gt; import polars as pl</span>
+<span class="sd">        &gt;&gt;&gt; context = dp.Context.compositor(</span>
+<span class="sd">        ...     data=pl.LazyFrame({&quot;visits&quot;: [1, 2, None]}),</span>
+<span class="sd">        ...     privacy_unit=dp.unit_of(contributions=1),</span>
+<span class="sd">        ...     privacy_loss=dp.loss_of(epsilon=1.),</span>
+<span class="sd">        ...     split_evenly_over=1,</span>
+<span class="sd">        ... )</span>
+<span class="sd">        &gt;&gt;&gt; query = context.query().select(pl.col(&quot;visits&quot;).dp.n_unique())</span>
+<span class="sd">        &gt;&gt;&gt; query.release().collect()</span>
+<span class="sd">        shape: (1, 1)</span>
+<span class="sd">        ┌────────┐</span>
+<span class="sd">        │ visits │</span>
+<span class="sd">        │ ---    │</span>
+<span class="sd">        │ u32    │</span>
+<span class="sd">        ╞════════╡</span>
+<span class="sd">        │ ...    │</span>
+<span class="sd">        └────────┘</span>
+
+<span class="sd">        Output is noise added to three.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">polars.plugins</span> <span class="kn">import</span> <span class="n">register_plugin_function</span>  <span class="c1"># type: ignore[import-not-found]</span>
+
+        <span class="k">return</span> <span class="n">register_plugin_function</span><span class="p">(</span>
+            <span class="n">plugin_path</span><span class="o">=</span><span class="n">_get_opendp_polars_lib_path</span><span class="p">(),</span>
+            <span class="n">function_name</span><span class="o">=</span><span class="s2">&quot;dp_n_unique&quot;</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">expr</span><span class="p">,</span> <span class="n">scale</span><span class="p">),</span>
+            <span class="n">returns_scalar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DPExpr.sum">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.DPExpr.sum">[docs]</a>
+    <span class="k">def</span> <span class="nf">sum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bounds</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span> <span class="n">scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute the differentially private sum.</span>
+
+<span class="sd">        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.</span>
+
+<span class="sd">        :param bounds: clip the input data to these lower and upper bounds</span>
+<span class="sd">        :param scale: parameter for the noise distribution</span>
+
+<span class="sd">        :example:</span>
+
+<span class="sd">        This function is a shortcut which actually implies several operations:</span>
+
+<span class="sd">        * Clipping the values</span>
+<span class="sd">        * Summing them</span>
+<span class="sd">        * Applying noise to the sum</span>
+
+<span class="sd">        &gt;&gt;&gt; import polars as pl</span>
+<span class="sd">        &gt;&gt;&gt; context = dp.Context.compositor(</span>
+<span class="sd">        ...     data=pl.LazyFrame({&quot;visits&quot;: [1, 2, None]}),</span>
+<span class="sd">        ...     privacy_unit=dp.unit_of(contributions=1),</span>
+<span class="sd">        ...     privacy_loss=dp.loss_of(epsilon=1.),</span>
+<span class="sd">        ...     split_evenly_over=1,</span>
+<span class="sd">        ...     margins=[dp.polars.Margin(max_length=5)]</span>
+<span class="sd">        ... )</span>
+<span class="sd">        &gt;&gt;&gt; query = context.query().select(pl.col(&quot;visits&quot;).dp.sum((0, 1)))</span>
+<span class="sd">        &gt;&gt;&gt; query.release().collect()</span>
+<span class="sd">        shape: (1, 1)</span>
+<span class="sd">        ┌────────┐</span>
+<span class="sd">        │ visits │</span>
+<span class="sd">        │ ---    │</span>
+<span class="sd">        │ i64    │</span>
+<span class="sd">        ╞════════╡</span>
+<span class="sd">        │ ...    │</span>
+<span class="sd">        └────────┘</span>
+
+<span class="sd">        Output is noise added to two due to each value being clipped to (0, 1).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">polars.plugins</span> <span class="kn">import</span> <span class="n">register_plugin_function</span>  <span class="c1"># type: ignore[import-not-found]</span>
+        <span class="kn">from</span> <span class="nn">polars</span> <span class="kn">import</span> <span class="n">lit</span>  <span class="c1"># type: ignore[import-not-found]</span>
+
+        <span class="k">return</span> <span class="n">register_plugin_function</span><span class="p">(</span>
+            <span class="n">plugin_path</span><span class="o">=</span><span class="n">_get_opendp_polars_lib_path</span><span class="p">(),</span>
+            <span class="n">function_name</span><span class="o">=</span><span class="s2">&quot;dp_sum&quot;</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">expr</span><span class="p">,</span> <span class="n">lit</span><span class="p">(</span><span class="n">bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">lit</span><span class="p">(</span><span class="n">bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="n">scale</span><span class="p">),</span>
+            <span class="n">returns_scalar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">changes_length</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DPExpr.mean">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.DPExpr.mean">[docs]</a>
+    <span class="k">def</span> <span class="nf">mean</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">bounds</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
+        <span class="n">scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute the differentially private mean.</span>
+
+<span class="sd">        The amount of noise to be added to the sum is determined by the scale.</span>
+<span class="sd">        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.</span>
+
+<span class="sd">        :param bounds: clip the input data to these lower and upper bounds</span>
+<span class="sd">        :param scale: relative parameter for the scale of the noise distributions</span>
+
+<span class="sd">        :example:</span>
+
+<span class="sd">        &gt;&gt;&gt; import polars as pl</span>
+<span class="sd">        &gt;&gt;&gt; context = dp.Context.compositor(</span>
+<span class="sd">        ...     data=pl.LazyFrame({&quot;visits&quot;: [1, 2, None]}),</span>
+<span class="sd">        ...     privacy_unit=dp.unit_of(contributions=1),</span>
+<span class="sd">        ...     privacy_loss=dp.loss_of(epsilon=1.),</span>
+<span class="sd">        ...     split_evenly_over=1,</span>
+<span class="sd">        ...     margins=[dp.polars.Margin(max_length=5)]</span>
+<span class="sd">        ... )</span>
+<span class="sd">        &gt;&gt;&gt; query = context.query().select(pl.col(&quot;visits&quot;).dp.mean((0, 1)))</span>
+<span class="sd">        &gt;&gt;&gt; with pl.Config(float_precision=0): # just to prevent doctest from failing</span>
+<span class="sd">        ...     query.release().collect()</span>
+<span class="sd">        shape: (1, 1)</span>
+<span class="sd">        ┌────────┐</span>
+<span class="sd">        │ visits │</span>
+<span class="sd">        │ ---    │</span>
+<span class="sd">        │ f64    │</span>
+<span class="sd">        ╞════════╡</span>
+<span class="sd">        │ ...... │</span>
+<span class="sd">        └────────┘</span>
+
+<span class="sd">        Privately estimates the numerator and denominator separately, and then returns their ratio.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">polars.plugins</span> <span class="kn">import</span> <span class="n">register_plugin_function</span>  <span class="c1"># type: ignore[import-not-found]</span>
+        <span class="kn">from</span> <span class="nn">polars</span> <span class="kn">import</span> <span class="n">lit</span>  <span class="c1"># type: ignore[import-not-found]</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">scale</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>  <span class="c1"># pragma: no cover</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;OpenDP 0.14.1 adjusts the scale to only consist of a single float. &quot;</span>
+                             <span class="s2">&quot;Individually estimate sum and len to tune budget distribution.&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">register_plugin_function</span><span class="p">(</span>
+            <span class="n">plugin_path</span><span class="o">=</span><span class="n">_get_opendp_polars_lib_path</span><span class="p">(),</span>
+            <span class="n">function_name</span><span class="o">=</span><span class="s2">&quot;dp_mean&quot;</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">expr</span><span class="p">,</span> <span class="n">lit</span><span class="p">(</span><span class="n">bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">lit</span><span class="p">(</span><span class="n">bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="n">scale</span><span class="p">),</span>
+            <span class="n">returns_scalar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">changes_length</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="DPExpr.quantile">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.DPExpr.quantile">[docs]</a>
+    <span class="k">def</span> <span class="nf">quantile</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">candidates</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute a differentially private quantile.</span>
+
+<span class="sd">        The scale calibrates the level of entropy when selecting a candidate.</span>
+
+<span class="sd">        :param alpha: a value in [0, 1]. Choose 0.5 for median.</span>
+<span class="sd">        :param candidates: Potential quantiles to select from.</span>
+<span class="sd">        :param scale: How much noise to add to the scores of candidate.</span>
+
+<span class="sd">        :example:</span>
+
+<span class="sd">        &gt;&gt;&gt; import polars as pl</span>
+<span class="sd">        &gt;&gt;&gt; context = dp.Context.compositor(</span>
+<span class="sd">        ...     data=pl.LazyFrame({&quot;age&quot;: list(range(100))}),</span>
+<span class="sd">        ...     privacy_unit=dp.unit_of(contributions=1),</span>
+<span class="sd">        ...     privacy_loss=dp.loss_of(epsilon=1.),</span>
+<span class="sd">        ...     split_evenly_over=1,</span>
+<span class="sd">        ...     margins=[dp.polars.Margin(max_length=100)]</span>
+<span class="sd">        ... )</span>
+<span class="sd">        &gt;&gt;&gt; candidates = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]</span>
+<span class="sd">        &gt;&gt;&gt; query = context.query().select(pl.col(&quot;age&quot;).cast(int).dp.quantile(0.25, candidates))</span>
+<span class="sd">        &gt;&gt;&gt; query.release().collect()</span>
+<span class="sd">        shape: (1, 1)</span>
+<span class="sd">        ┌─────┐</span>
+<span class="sd">        │ age │</span>
+<span class="sd">        │ --- │</span>
+<span class="sd">        │ i64 │</span>
+<span class="sd">        ╞═════╡</span>
+<span class="sd">        │ ... │</span>
+<span class="sd">        └─────┘</span>
+
+<span class="sd">        Output will be one of the candidates,</span>
+<span class="sd">        with greater likelihood of being selected the closer the candidate is to the first quartile.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">polars.plugins</span> <span class="kn">import</span> <span class="n">register_plugin_function</span>  <span class="c1"># type: ignore[import-not-found]</span>
+        <span class="kn">from</span> <span class="nn">polars</span> <span class="kn">import</span> <span class="n">lit</span><span class="p">,</span> <span class="n">Series</span> <span class="c1"># type: ignore[import-not-found]</span>
+
+        <span class="k">return</span> <span class="n">register_plugin_function</span><span class="p">(</span>
+            <span class="n">plugin_path</span><span class="o">=</span><span class="n">_get_opendp_polars_lib_path</span><span class="p">(),</span>
+            <span class="n">function_name</span><span class="o">=</span><span class="s2">&quot;dp_quantile&quot;</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">expr</span><span class="p">,</span> <span class="n">lit</span><span class="p">(</span><span class="n">alpha</span><span class="p">),</span> <span class="n">lit</span><span class="p">(</span><span class="n">Series</span><span class="p">(</span><span class="n">candidates</span><span class="p">)),</span> <span class="n">scale</span><span class="p">),</span>
+            <span class="n">returns_scalar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">changes_length</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DPExpr.median">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.DPExpr.median">[docs]</a>
+    <span class="k">def</span> <span class="nf">median</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">candidates</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute a differentially private median.</span>
+
+<span class="sd">        The scale calibrates the level of entropy when selecting a candidate.</span>
+<span class="sd">        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.</span>
+
+<span class="sd">        :param candidates: Potential quantiles to select from.</span>
+<span class="sd">        :param scale: How much noise to add to the scores of candidate.</span>
+
+<span class="sd">        :example:</span>
+
+<span class="sd">        &gt;&gt;&gt; import polars as pl</span>
+<span class="sd">        &gt;&gt;&gt; context = dp.Context.compositor(</span>
+<span class="sd">        ...     data=pl.LazyFrame({&quot;age&quot;: list(range(100))}),</span>
+<span class="sd">        ...     privacy_unit=dp.unit_of(contributions=1),</span>
+<span class="sd">        ...     privacy_loss=dp.loss_of(epsilon=1.),</span>
+<span class="sd">        ...     split_evenly_over=1,</span>
+<span class="sd">        ...     margins=[dp.polars.Margin(max_length=100)]</span>
+<span class="sd">        ... )</span>
+<span class="sd">        &gt;&gt;&gt; candidates = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]</span>
+<span class="sd">        &gt;&gt;&gt; query = context.query().select(pl.col(&quot;age&quot;).cast(int).dp.quantile(0.5, candidates))</span>
+<span class="sd">        &gt;&gt;&gt; query.release().collect()</span>
+<span class="sd">        shape: (1, 1)</span>
+<span class="sd">        ┌─────┐</span>
+<span class="sd">        │ age │</span>
+<span class="sd">        │ --- │</span>
+<span class="sd">        │ i64 │</span>
+<span class="sd">        ╞═════╡</span>
+<span class="sd">        │ ... │</span>
+<span class="sd">        └─────┘</span>
+
+<span class="sd">        Output will be one of the candidates,</span>
+<span class="sd">        with greater likelihood of being selected the closer the candidate is to the median.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">polars.plugins</span> <span class="kn">import</span> <span class="n">register_plugin_function</span>  <span class="c1"># type: ignore[import-not-found]</span>
+        <span class="kn">from</span> <span class="nn">polars</span> <span class="kn">import</span> <span class="n">lit</span><span class="p">,</span> <span class="n">Series</span>  <span class="c1"># type: ignore[import-not-found]</span>
+
+        <span class="k">return</span> <span class="n">register_plugin_function</span><span class="p">(</span>
+            <span class="n">plugin_path</span><span class="o">=</span><span class="n">_get_opendp_polars_lib_path</span><span class="p">(),</span>
+            <span class="n">function_name</span><span class="o">=</span><span class="s2">&quot;dp_median&quot;</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">expr</span><span class="p">,</span> <span class="n">lit</span><span class="p">(</span><span class="n">Series</span><span class="p">(</span><span class="n">candidates</span><span class="p">)),</span> <span class="n">scale</span><span class="p">),</span>
+            <span class="n">returns_scalar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">changes_length</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span></div>
+</div>
+
+
+
+<span class="n">pl</span> <span class="o">=</span> <span class="n">import_optional_dependency</span><span class="p">(</span><span class="s2">&quot;polars&quot;</span><span class="p">,</span> <span class="n">raise_error</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">pl</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">pl</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">register_expr_namespace</span><span class="p">(</span><span class="s2">&quot;dp&quot;</span><span class="p">)(</span><span class="n">DPExpr</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="dp_len">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.dp_len">[docs]</a>
+<span class="k">def</span> <span class="nf">dp_len</span><span class="p">(</span><span class="n">scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute a differentially private estimate of the number of rows.</span>
+
+<span class="sd">    If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.</span>
+
+<span class="sd">    :param scale: parameter for the noise distribution.</span>
+
+<span class="sd">    :example:</span>
+
+<span class="sd">    This function is a shortcut for the exact Polars ``len`` and then noise addition:</span>
+
+<span class="sd">    &gt;&gt;&gt; import polars as pl</span>
+<span class="sd">    &gt;&gt;&gt; context = dp.Context.compositor(</span>
+<span class="sd">    ...     data=pl.LazyFrame({&quot;A&quot;: list(range(100))}),</span>
+<span class="sd">    ...     privacy_unit=dp.unit_of(contributions=1),</span>
+<span class="sd">    ...     privacy_loss=dp.loss_of(epsilon=1.),</span>
+<span class="sd">    ...     split_evenly_over=1,</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; query = context.query().select(dp.len())</span>
+<span class="sd">    &gt;&gt;&gt; query.release().collect()</span>
+<span class="sd">    shape: (1, 1)</span>
+<span class="sd">    ┌─────┐</span>
+<span class="sd">    │ len │</span>
+<span class="sd">    │ --- │</span>
+<span class="sd">    │ u32 │</span>
+<span class="sd">    ╞═════╡</span>
+<span class="sd">    │ ... │</span>
+<span class="sd">    └─────┘</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">polars.plugins</span> <span class="kn">import</span> <span class="n">register_plugin_function</span>  <span class="c1"># type: ignore[import-not-found]</span>
+
+    <span class="k">return</span> <span class="n">register_plugin_function</span><span class="p">(</span>
+        <span class="n">plugin_path</span><span class="o">=</span><span class="n">_get_opendp_polars_lib_path</span><span class="p">(),</span>
+        <span class="n">function_name</span><span class="o">=</span><span class="s2">&quot;dp_frame_len&quot;</span><span class="p">,</span>
+        <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">scale</span><span class="p">,),</span>
+        <span class="n">returns_scalar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="OnceFrame">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.OnceFrame">[docs]</a>
+<span class="k">class</span> <span class="nc">OnceFrame</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;OnceFrame is a Polars LazyFrame that may only be collected into a DataFrame once.</span>
+
+<span class="sd">    The APIs on this class mimic those that can be found in Polars.</span>
+
+<span class="sd">    Differentially private guarantees on a given LazyFrame require the LazyFrame to be evaluated at most once.</span>
+<span class="sd">    The purpose of this class is to protect against repeatedly evaluating the LazyFrame.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queryable</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">queryable</span> <span class="o">=</span> <span class="n">queryable</span>
+
+<div class="viewcode-block" id="OnceFrame.collect">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.OnceFrame.collect">[docs]</a>
+    <span class="k">def</span> <span class="nf">collect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Collects a DataFrame from a OnceFrame, exhausting the OnceFrame.&quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">opendp._data</span> <span class="kn">import</span> <span class="n">onceframe_collect</span>
+
+        <span class="k">return</span> <span class="n">onceframe_collect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">queryable</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="OnceFrame.lazy">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.OnceFrame.lazy">[docs]</a>
+    <span class="k">def</span> <span class="nf">lazy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Extracts a ``LazyFrame`` from a ``OnceFrame``,</span>
+<span class="sd">        circumventing protections against multiple evaluations.</span>
+
+<span class="sd">        Each collection consumes the entire allocated privacy budget.</span>
+<span class="sd">        To remain DP at the advertised privacy level, only collect the ``LazyFrame`` once.</span>
+
+<span class="sd">        Requires &quot;honest-but-curious&quot; because the privacy guarantees only apply if:</span>
+
+<span class="sd">        1. The LazyFrame (compute plan) is only ever executed once.</span>
+<span class="sd">        2. The analyst does not observe ordering of rows in the output.</span>
+
+<span class="sd">        To ensure that row ordering is not observed:</span>
+
+<span class="sd">        1. Do not extend the compute plan with order-sensitive computations.</span>
+<span class="sd">        2. Shuffle the output once collected `(in Polars sample all, with shuffle enabled) &lt;https://docs.pola.rs/api/python/stable/reference/dataframe/api/polars.DataFrame.sample.html&gt;`_.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">opendp._data</span> <span class="kn">import</span> <span class="n">onceframe_lazy</span>
+
+        <span class="k">return</span> <span class="n">onceframe_lazy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">queryable</span><span class="p">)</span></div>
+</div>
+
+
+
+<span class="k">def</span> <span class="nf">_lazyframe_domain_from_schema</span><span class="p">(</span><span class="n">schema</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Domain</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Builds the broadest possible LazyFrameDomain that matches a given LazyFrame schema.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">lazyframe_domain</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">_series_domain_from_field</span><span class="p">(</span><span class="n">field</span><span class="p">)</span> <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">schema</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_series_domain_from_field</span><span class="p">(</span><span class="n">field</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Domain</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Builds the broadest possible SeriesDomain that matches a given field.&quot;&quot;&quot;</span>
+    <span class="n">name</span><span class="p">,</span> <span class="n">dtype</span> <span class="o">=</span> <span class="n">field</span>
+    <span class="k">return</span> <span class="n">series_domain</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">option_domain</span><span class="p">(</span><span class="n">_domain_from_dtype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)))</span>
+
+
+<span class="k">def</span> <span class="nf">_domain_from_dtype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Domain</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Builds the broadest possible Domain that matches a given dtype.&quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">polars</span> <span class="k">as</span> <span class="nn">pl</span>
+
+    <span class="k">if</span> <span class="n">dtype</span> <span class="o">==</span> <span class="n">pl</span><span class="o">.</span><span class="n">Categorical</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">categorical_domain</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">dtype</span> <span class="o">==</span> <span class="n">pl</span><span class="o">.</span><span class="n">Enum</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">enum_domain</span><span class="p">(</span><span class="n">dtype</span><span class="o">.</span><span class="n">categories</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">dtype</span> <span class="o">==</span> <span class="n">pl</span><span class="o">.</span><span class="n">Datetime</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">datetime_domain</span><span class="p">(</span><span class="n">dtype</span><span class="o">.</span><span class="n">time_unit</span><span class="p">,</span> <span class="n">dtype</span><span class="o">.</span><span class="n">time_zone</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">dtype</span> <span class="o">==</span> <span class="n">pl</span><span class="o">.</span><span class="n">Array</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">array_domain</span><span class="p">(</span><span class="n">_domain_from_dtype</span><span class="p">(</span><span class="n">dtype</span><span class="o">.</span><span class="n">inner</span><span class="p">),</span> <span class="n">dtype</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+
+    <span class="n">T</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">pl</span><span class="o">.</span><span class="n">UInt32</span><span class="p">:</span> <span class="s2">&quot;u32&quot;</span><span class="p">,</span>
+        <span class="n">pl</span><span class="o">.</span><span class="n">UInt64</span><span class="p">:</span> <span class="s2">&quot;u64&quot;</span><span class="p">,</span>
+        <span class="n">pl</span><span class="o">.</span><span class="n">Int8</span><span class="p">:</span> <span class="s2">&quot;i8&quot;</span><span class="p">,</span>
+        <span class="n">pl</span><span class="o">.</span><span class="n">Int16</span><span class="p">:</span> <span class="s2">&quot;i16&quot;</span><span class="p">,</span>
+        <span class="n">pl</span><span class="o">.</span><span class="n">Int32</span><span class="p">:</span> <span class="s2">&quot;i32&quot;</span><span class="p">,</span>
+        <span class="n">pl</span><span class="o">.</span><span class="n">Int64</span><span class="p">:</span> <span class="s2">&quot;i64&quot;</span><span class="p">,</span>
+        <span class="n">pl</span><span class="o">.</span><span class="n">Float32</span><span class="p">:</span> <span class="s2">&quot;f32&quot;</span><span class="p">,</span>
+        <span class="n">pl</span><span class="o">.</span><span class="n">Float64</span><span class="p">:</span> <span class="s2">&quot;f64&quot;</span><span class="p">,</span>
+        <span class="n">pl</span><span class="o">.</span><span class="n">Boolean</span><span class="p">:</span> <span class="s2">&quot;bool&quot;</span><span class="p">,</span>
+        <span class="n">pl</span><span class="o">.</span><span class="n">String</span><span class="p">:</span> <span class="s2">&quot;String&quot;</span><span class="p">,</span>
+        <span class="n">pl</span><span class="o">.</span><span class="n">Time</span><span class="p">:</span> <span class="s2">&quot;NaiveTime&quot;</span><span class="p">,</span>
+        <span class="n">pl</span><span class="o">.</span><span class="n">Date</span><span class="p">:</span> <span class="s2">&quot;NaiveDate&quot;</span><span class="p">,</span>
+    <span class="p">}</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">T</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;unrecognized dtype: </span><span class="si">{</span><span class="n">dtype</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>  <span class="c1"># pragma: no cover</span>
+
+    <span class="k">return</span> <span class="n">atom_domain</span><span class="p">(</span><span class="n">T</span><span class="o">=</span><span class="n">T</span><span class="p">)</span>
+
+
+<span class="n">_LAZY_EXECUTION_METHODS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;collect&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;collect_async&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;describe&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;sink_parquet&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;sink_ipc&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;sink_csv&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;sink_ndjson&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;fetch&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<div class="viewcode-block" id="SortBy">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.SortBy">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">SortBy</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Configuration for ``keep`` in :py:meth:`LazyFrameQuery.truncate_per_group`.</span>
+
+<span class="sd">    Follows the arguments in Polars&#39; ``sort_by`` method.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">by</span><span class="p">:</span> <span class="n">Any</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Column(s) to sort by. Accepts expression input. Strings are parsed as column names.&quot;&quot;&quot;</span>
+
+    <span class="n">descending</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Sort in descending order. When sorting by multiple columns, can be specified per column by passing a sequence of booleans.&quot;&quot;&quot;</span>
+
+    <span class="n">nulls_last</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Place null values last; can specify a single boolean applying to all columns or a sequence of booleans for per-column control.&quot;&quot;&quot;</span>
+
+    <span class="n">multithreaded</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Sort using multiple threads.&quot;&quot;&quot;</span>
+
+    <span class="n">maintain_order</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Whether the order should be maintained if elements are equal.&quot;&quot;&quot;</span></div>
+
+
+
+<div class="viewcode-block" id="LazyFrameQuery">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.LazyFrameQuery">[docs]</a>
+<span class="k">class</span> <span class="nc">LazyFrameQuery</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A ``LazyFrameQuery`` may be returned by :py:func:`opendp.context.Context.query`.</span>
+<span class="sd">    It mimics a `Polars LazyFrame &lt;https://docs.pola.rs/api/python/stable/reference/lazyframe/index.html&gt;`_,</span>
+<span class="sd">    but makes a few additions and changes as documented below.&quot;&quot;&quot;</span>
+
+    <span class="c1"># Keep this docstring in sync with the docstring below for the dummy class.</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">polars_plan</span><span class="p">,</span> <span class="n">query</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">polars_plan</span> <span class="o">=</span> <span class="n">polars_plan</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_query</span> <span class="o">=</span> <span class="n">query</span>
+        <span class="c1"># do not initialize super() because inheritance is only used to mimic the API surface</span>
+
+    <span class="k">def</span> <span class="fm">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="c1"># Re-route all possible attribute access to self.polars_plan.</span>
+        <span class="c1"># __getattribute__ is necessary because __getattr__ cannot intercept calls to inherited methods</span>
+
+        <span class="c1"># We keep the query plan void of data anyways,</span>
+        <span class="c1"># so running the computation doesn&#39;t affect privacy.</span>
+        <span class="c1"># This doesn&#39;t have to cover all possible APIs that may execute the query,</span>
+        <span class="c1">#    but it does give a simple sanity check for the obvious cases.</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">_LAZY_EXECUTION_METHODS</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;You must call `.release()` before executing a query.&quot;</span><span class="p">)</span>
+
+        <span class="n">polars_plan</span> <span class="o">=</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;polars_plan&quot;</span><span class="p">)</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_query&quot;</span><span class="p">)</span>
+        <span class="n">attr</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">polars_plan</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="c1"># If not a valid attribute on self.polars_plan, then don&#39;t re-route</span>
+        <span class="k">if</span> <span class="n">attr</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+
+        <span class="c1"># any callable attributes (like .with_columns or .select) will now also wrap their outputs in a LazyFrameQuery</span>
+        <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="n">attr</span><span class="p">):</span>
+
+            <span class="k">def</span> <span class="nf">_wrap</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+                <span class="n">out</span> <span class="o">=</span> <span class="n">attr</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">pl</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="c1"># re-wrap any lazy outputs to keep the conveniences afforded by this class</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">pl</span><span class="o">.</span><span class="n">lazyframe</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">LazyFrame</span><span class="p">):</span>
+                        <span class="k">return</span> <span class="n">LazyFrameQuery</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">query</span><span class="p">)</span>
+
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">pl</span><span class="o">.</span><span class="n">lazyframe</span><span class="o">.</span><span class="n">group_by</span><span class="o">.</span><span class="n">LazyGroupBy</span><span class="p">):</span>
+                        <span class="k">return</span> <span class="n">LazyGroupByQuery</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">query</span><span class="p">)</span>
+
+                <span class="k">return</span> <span class="n">out</span>
+
+            <span class="k">return</span> <span class="n">_wrap</span>
+        <span class="k">return</span> <span class="n">attr</span>
+
+    <span class="c1"># These definitions are primarily for mypy:</span>
+    <span class="c1"># Without them, a &quot;# type: ignore[union-attr]&quot; is needed on every line where these methods are used.</span>
+    <span class="c1"># The docstrings are not seen by Sphinx, but aren&#39;t doing any harm either.</span>
+
+<div class="viewcode-block" id="LazyFrameQuery.sort">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.LazyFrameQuery.sort">[docs]</a>
+    <span class="k">def</span> <span class="nf">sort</span><span class="p">(</span>  <span class="c1"># type: ignore[empty-body]</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">by</span><span class="p">,</span>
+        <span class="o">*</span><span class="n">more_by</span><span class="p">,</span>
+        <span class="n">descending</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">nulls_last</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">maintain_order</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">multithreaded</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LazyFrameQuery</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Sort the ``LazyFrame`` by the given columns.&quot;&quot;&quot;</span>
+        <span class="o">...</span></div>
+
+
+<div class="viewcode-block" id="LazyFrameQuery.filter">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.LazyFrameQuery.filter">[docs]</a>
+    <span class="k">def</span> <span class="nf">filter</span><span class="p">(</span>  <span class="c1"># type: ignore[empty-body]</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="o">*</span><span class="n">predicates</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">constraints</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LazyFrameQuery</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Filter the rows in the ``LazyFrame`` based on a predicate expression.</span>
+
+<span class="sd">        OpenDP discards relevant margin descriptors in the domain when filtering.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="o">...</span></div>
+
+
+<div class="viewcode-block" id="LazyFrameQuery.select">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.LazyFrameQuery.select">[docs]</a>
+    <span class="k">def</span> <span class="nf">select</span><span class="p">(</span>  <span class="c1"># type: ignore[empty-body]</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">exprs</span><span class="p">,</span> <span class="o">**</span><span class="n">named_exprs</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LazyFrameQuery</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Select columns from this ``LazyFrame``.</span>
+
+<span class="sd">        OpenDP expects expressions in select statements that don&#39;t aggregate to be row-by-row.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="o">...</span></div>
+
+
+<div class="viewcode-block" id="LazyFrameQuery.select_seq">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.LazyFrameQuery.select_seq">[docs]</a>
+    <span class="k">def</span> <span class="nf">select_seq</span><span class="p">(</span>  <span class="c1"># type: ignore[empty-body]</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">exprs</span><span class="p">,</span> <span class="o">**</span><span class="n">named_exprs</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LazyFrameQuery</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Select columns from this ``LazyFrame``.</span>
+
+<span class="sd">        OpenDP allows expressions in select statements that aggregate to not be row-by-row.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="o">...</span></div>
+
+
+<div class="viewcode-block" id="LazyFrameQuery.group_by">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.LazyFrameQuery.group_by">[docs]</a>
+    <span class="k">def</span> <span class="nf">group_by</span><span class="p">(</span>  <span class="c1"># type: ignore[empty-body]</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="o">*</span><span class="n">by</span><span class="p">,</span>
+        <span class="n">maintain_order</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">named_by</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LazyGroupByQuery</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Start a group by operation.</span>
+
+<span class="sd">        OpenDP currently requires that grouping keys be simple column expressions.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="o">...</span></div>
+
+
+<div class="viewcode-block" id="LazyFrameQuery.with_columns">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.LazyFrameQuery.with_columns">[docs]</a>
+    <span class="k">def</span> <span class="nf">with_columns</span><span class="p">(</span>  <span class="c1"># type: ignore[empty-body]</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="o">*</span><span class="n">exprs</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">named_exprs</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LazyFrameQuery</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add columns to this ``LazyFrame``.</span>
+
+<span class="sd">        OpenDP requires that expressions in with_columns are row-by-row:</span>
+<span class="sd">        expressions may not change the number or order of records</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="o">...</span></div>
+
+
+<div class="viewcode-block" id="LazyFrameQuery.with_columns_seq">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.LazyFrameQuery.with_columns_seq">[docs]</a>
+    <span class="k">def</span> <span class="nf">with_columns_seq</span><span class="p">(</span>  <span class="c1"># type: ignore[empty-body]</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="o">*</span><span class="n">exprs</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">named_exprs</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LazyFrameQuery</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add columns to this ``LazyFrame``.</span>
+
+<span class="sd">        OpenDP requires that expressions in with_columns are row-by-row:</span>
+<span class="sd">        expressions may not change the number or order of records</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="o">...</span></div>
+
+
+<div class="viewcode-block" id="LazyFrameQuery.join">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.LazyFrameQuery.join">[docs]</a>
+    <span class="k">def</span> <span class="nf">join</span><span class="p">(</span>  <span class="c1"># type: ignore[empty-body]</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">other</span><span class="p">,</span>
+        <span class="n">on</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">how</span><span class="o">=</span><span class="s2">&quot;inner&quot;</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">left_on</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">right_on</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">suffix</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;_right&quot;</span><span class="p">,</span>
+        <span class="n">validate</span><span class="o">=</span><span class="s2">&quot;m:m&quot;</span><span class="p">,</span>
+        <span class="n">join_nulls</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">coalesce</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">allow_parallel</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">force_parallel</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LazyFrameQuery</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a join operation to the Logical Plan.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="o">...</span></div>
+
+
+<div class="viewcode-block" id="LazyFrameQuery.with_keys">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.LazyFrameQuery.with_keys">[docs]</a>
+    <span class="k">def</span> <span class="nf">with_keys</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">keys</span><span class="p">,</span>
+        <span class="n">on</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LazyFrameQuery</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Shorthand to join with an explicit key-set.</span>
+
+<span class="sd">        :param keys: lazyframe containing a key-set whose columns correspond to the grouping keys</span>
+<span class="sd">        :param on: optional, the names of columns to join on. Useful if the key dataframe contains extra columns</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Motivation for adding this new API:</span>
+        <span class="c1"># 1. Writing a left join is more difficult in the context API:</span>
+        <span class="c1">#   see the complexity of this implementation, where you have to go under the hood.</span>
+        <span class="c1">#   This gives an easier shorthand to write a left join.</span>
+        <span class="c1"># 2. Left joins are more likely to be supported by database backends.</span>
+        <span class="c1"># 3. Easier to use; with the Polars API the key set needs to be lazy, user must specify they want a right join and the join keys.</span>
+
+        <span class="k">if</span> <span class="n">pl</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="n">pl</span><span class="o">.</span><span class="n">dataframe</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+                <span class="n">keys</span> <span class="o">=</span> <span class="n">keys</span><span class="o">.</span><span class="n">lazy</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">on</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">on</span> <span class="o">=</span> <span class="n">keys</span><span class="o">.</span><span class="n">collect_schema</span><span class="p">()</span><span class="o">.</span><span class="n">names</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">LazyFrameQuery</span><span class="p">(</span>
+            <span class="n">keys</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">polars_plan</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;left&quot;</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="n">on</span><span class="p">,</span> <span class="n">nulls_equal</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_query</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="LazyFrameQuery.truncate_per_group">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.LazyFrameQuery.truncate_per_group">[docs]</a>
+    <span class="k">def</span> <span class="nf">truncate_per_group</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">k</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">by</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">keep</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;sample&quot;</span><span class="p">,</span> <span class="s2">&quot;first&quot;</span><span class="p">,</span> <span class="s2">&quot;last&quot;</span><span class="p">]</span> <span class="o">|</span> <span class="n">SortBy</span> <span class="o">=</span> <span class="s2">&quot;sample&quot;</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LazyFrameQuery</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Limit the number of contributed rows per group.</span>
+
+<span class="sd">        :param k: the number of rows to keep for each identifier and group</span>
+<span class="sd">        :param by: optional, additional columns to group by</span>
+<span class="sd">        :param keep: which rows to keep for each identifier in each group</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">input_metric</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_query</span><span class="o">.</span><span class="n">_chain</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">by</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;by must be a list of strings or expressions&quot;</span>
+            <span class="p">)</span>  <span class="c1"># pragma: no cover</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_metric</span><span class="p">,</span> <span class="n">FrameDistance</span><span class="p">):</span>
+            <span class="n">input_metric</span> <span class="o">=</span> <span class="n">input_metric</span><span class="o">.</span><span class="n">inner_metric</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_metric</span><span class="p">,</span> <span class="p">(</span><span class="n">SymmetricIdDistance</span><span class="p">,</span> <span class="n">ChangeOneIdDistance</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;truncation is only valid when identifier is defined&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">keep</span> <span class="o">==</span> <span class="s2">&quot;sample&quot;</span><span class="p">:</span>
+            <span class="n">indexes</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">int_range</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">len</span><span class="p">())</span><span class="o">.</span><span class="n">shuffle</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">keep</span> <span class="o">==</span> <span class="s2">&quot;first&quot;</span><span class="p">:</span>
+            <span class="n">indexes</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">int_range</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">len</span><span class="p">())</span>
+        <span class="k">elif</span> <span class="n">keep</span> <span class="o">==</span> <span class="s2">&quot;last&quot;</span><span class="p">:</span>
+            <span class="n">indexes</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">int_range</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">len</span><span class="p">())</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">keep</span><span class="p">,</span> <span class="n">SortBy</span><span class="p">):</span>
+            <span class="n">indexes</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">int_range</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">len</span><span class="p">())</span><span class="o">.</span><span class="n">sort_by</span><span class="p">(</span><span class="o">**</span><span class="n">asdict</span><span class="p">(</span><span class="n">keep</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;keep must be &#39;sample&#39;, &#39;first&#39;, &#39;last&#39; or SortBy&quot;</span>
+            <span class="p">)</span>  <span class="c1"># pragma: no cover</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">indexes</span><span class="o">.</span><span class="n">over</span><span class="p">(</span><span class="n">input_metric</span><span class="o">.</span><span class="n">identifier</span><span class="p">,</span> <span class="o">*</span><span class="n">by</span> <span class="ow">or</span> <span class="p">[])</span> <span class="o">&lt;</span> <span class="n">k</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="LazyFrameQuery.truncate_num_groups">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.LazyFrameQuery.truncate_num_groups">[docs]</a>
+    <span class="k">def</span> <span class="nf">truncate_num_groups</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">k</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">by</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span>
+        <span class="n">keep</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;sample&quot;</span><span class="p">,</span> <span class="s2">&quot;first&quot;</span><span class="p">,</span> <span class="s2">&quot;last&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;sample&quot;</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LazyFrameQuery</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Limit the number of groups an individual may influence.</span>
+
+<span class="sd">        :param k: the number of groups to keep for each identifier</span>
+<span class="sd">        :param by: when grouped by these grouping columns</span>
+<span class="sd">        :param keep: which groups to keep for each identifier</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">input_metric</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_query</span><span class="o">.</span><span class="n">_chain</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">by</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;by must be a list of strings or expressions&quot;</span>
+            <span class="p">)</span>  <span class="c1"># pragma: no cover</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_metric</span><span class="p">,</span> <span class="n">FrameDistance</span><span class="p">):</span>
+            <span class="n">input_metric</span> <span class="o">=</span> <span class="n">input_metric</span><span class="o">.</span><span class="n">inner_metric</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_metric</span><span class="p">,</span> <span class="p">(</span><span class="n">SymmetricIdDistance</span><span class="p">,</span> <span class="n">ChangeOneIdDistance</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;truncation is only valid when identifier is defined&quot;</span><span class="p">)</span>
+
+        <span class="n">struct</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">struct</span><span class="p">(</span><span class="o">*</span><span class="n">by</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">keep</span> <span class="o">==</span> <span class="s2">&quot;sample&quot;</span><span class="p">:</span>
+            <span class="n">ranks</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">struct</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">hash</span><span class="p">(),</span> <span class="n">struct</span><span class="p">)</span><span class="o">.</span><span class="n">rank</span><span class="p">(</span><span class="s2">&quot;dense&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">keep</span> <span class="o">==</span> <span class="s2">&quot;first&quot;</span><span class="p">:</span>
+            <span class="n">ranks</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">rank</span><span class="p">(</span><span class="s2">&quot;dense&quot;</span><span class="p">,</span> <span class="n">descending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">keep</span> <span class="o">==</span> <span class="s2">&quot;last&quot;</span><span class="p">:</span>
+            <span class="n">ranks</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">rank</span><span class="p">(</span><span class="s2">&quot;dense&quot;</span><span class="p">,</span> <span class="n">descending</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;keep must be &#39;sample&#39;, &#39;first&#39; or &#39;last&#39;&quot;</span>
+            <span class="p">)</span>  <span class="c1"># pragma: no cover</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">ranks</span><span class="o">.</span><span class="n">over</span><span class="p">(</span><span class="n">input_metric</span><span class="o">.</span><span class="n">identifier</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">k</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="LazyFrameQuery.resolve">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.LazyFrameQuery.resolve">[docs]</a>
+    <span class="k">def</span> <span class="nf">resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Measurement</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Resolve the query into a measurement.&quot;&quot;&quot;</span>
+
+        <span class="c1"># access attributes of self without getting intercepted by Self.__getattribute__</span>
+        <span class="n">polars_plan</span> <span class="o">=</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;polars_plan&quot;</span><span class="p">)</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_query&quot;</span><span class="p">)</span>
+        <span class="n">input_domain</span><span class="p">,</span> <span class="n">input_metric</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">_chain</span>
+        <span class="n">d_in</span><span class="p">,</span> <span class="n">d_out</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">_d_in</span><span class="p">,</span> <span class="n">query</span><span class="o">.</span><span class="n">_d_out</span>
+
+        <span class="k">def</span> <span class="nf">_make</span><span class="p">(</span><span class="n">scale</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">make_private_lazyframe</span><span class="p">(</span>
+                <span class="n">input_domain</span><span class="o">=</span><span class="n">input_domain</span><span class="p">,</span>
+                <span class="n">input_metric</span><span class="o">=</span><span class="n">input_metric</span><span class="p">,</span>
+                <span class="n">output_measure</span><span class="o">=</span><span class="n">query</span><span class="o">.</span><span class="n">_output_measure</span><span class="p">,</span>
+                <span class="n">lazyframe</span><span class="o">=</span><span class="n">polars_plan</span><span class="p">,</span>
+                <span class="n">global_scale</span><span class="o">=</span><span class="n">scale</span><span class="p">,</span>
+                <span class="n">threshold</span><span class="o">=</span><span class="n">threshold</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="c1"># when the query has sensitivity zero or is behind an invariant</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">m_zero</span> <span class="o">=</span> <span class="n">_make</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">m_zero</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">d_in</span><span class="p">,</span> <span class="n">d_out</span><span class="p">):</span>
+                <span class="c1"># if the zero scale measurement is already private, return it</span>
+                <span class="k">return</span> <span class="n">m_zero</span>
+        <span class="k">except</span> <span class="n">OpenDPException</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+        <span class="c1"># when the output measure is δ-approximate, then there are two free parameters to tune</span>
+        <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">query</span><span class="o">.</span><span class="n">_output_measure</span><span class="o">.</span><span class="n">type</span><span class="p">,</span> <span class="s2">&quot;origin&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;Approximate&quot;</span><span class="p">:</span>
+            <span class="c1"># search for a scale parameter. Solve for epsilon first,</span>
+            <span class="c1"># setting threshold to u32::MAX so as not to interfere with the search for a suitable scale parameter</span>
+            <span class="n">scale</span> <span class="o">=</span> <span class="n">binary_search</span><span class="p">(</span>
+                <span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">_make</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mi">2</span><span class="o">**</span><span class="mi">32</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">d_in</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">d_out</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>  <span class="c1"># type: ignore[index]</span>
+                <span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="c1"># attempt to return without setting a threshold</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">_make</span><span class="p">(</span><span class="n">scale</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">OpenDPException</span><span class="p">:</span>
+                <span class="k">pass</span>
+
+            <span class="c1"># now that scale has been solved, find a suitable threshold</span>
+            <span class="n">threshold</span> <span class="o">=</span> <span class="n">binary_search</span><span class="p">(</span>
+                <span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">_make</span><span class="p">(</span><span class="n">scale</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">d_in</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">d_out</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>  <span class="c1"># type: ignore[index]</span>
+                <span class="n">T</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="c1"># return a measurement with the discovered scale and threshold</span>
+            <span class="k">return</span> <span class="n">_make</span><span class="p">(</span><span class="n">scale</span><span class="p">,</span> <span class="n">threshold</span><span class="p">)</span>
+
+        <span class="c1"># when no delta parameter is involved,</span>
+        <span class="c1"># finding a suitable measurement just comes down to finding scale</span>
+        <span class="k">return</span> <span class="n">binary_search_chain</span><span class="p">(</span><span class="n">_make</span><span class="p">,</span> <span class="n">d_in</span><span class="p">,</span> <span class="n">d_out</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="LazyFrameQuery.release">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.LazyFrameQuery.release">[docs]</a>
+    <span class="k">def</span> <span class="nf">release</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OnceFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Release the query. The query must be part of a context.&quot;&quot;&quot;</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_query&quot;</span><span class="p">)</span>
+        <span class="n">resolve</span> <span class="o">=</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;resolve&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">query</span><span class="o">.</span><span class="n">_context</span><span class="p">(</span><span class="n">resolve</span><span class="p">())</span>  <span class="c1"># type: ignore[misc]</span></div>
+
+
+<div class="viewcode-block" id="LazyFrameQuery.summarize">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.LazyFrameQuery.summarize">[docs]</a>
+    <span class="k">def</span> <span class="nf">summarize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">alpha</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Summarize the statistics released by this query.</span>
+
+<span class="sd">        If ``alpha`` is passed, the resulting data frame includes an ``accuracy`` column.</span>
+
+<span class="sd">        If a threshold is configured for censoring small/sensitive groups,</span>
+<span class="sd">        a threshold column will be included,</span>
+<span class="sd">        containing the cutoff for the respective count query being thresholded.</span>
+
+<span class="sd">        :param alpha: optional. A value in [0, 1] denoting the statistical significance. For the corresponding confidence level, subtract from from 1: for 95% confidence, use 0.05 for alpha.</span>
+
+<span class="sd">        :example:</span>
+
+<span class="sd">        .. code:: pycon</span>
+
+<span class="sd">            &gt;&gt;&gt; import polars as pl</span>
+<span class="sd">            &gt;&gt;&gt; data = pl.LazyFrame([pl.Series(&quot;convicted&quot;, [0, 1, 1, 0, 1] * 50, dtype=pl.Int32)])</span>
+
+<span class="sd">            &gt;&gt;&gt; context = dp.Context.compositor(</span>
+<span class="sd">            ...     data=data,</span>
+<span class="sd">            ...     privacy_unit=dp.unit_of(contributions=1),</span>
+<span class="sd">            ...     privacy_loss=dp.loss_of(epsilon=1.0),</span>
+<span class="sd">            ...     split_evenly_over=1,</span>
+<span class="sd">            ...     margins=[dp.polars.Margin(by=(), max_length=1000)],</span>
+<span class="sd">            ... )</span>
+
+<span class="sd">            &gt;&gt;&gt; query = context.query().select(</span>
+<span class="sd">            ...     dp.len(),</span>
+<span class="sd">            ...     pl.col(&quot;convicted&quot;).dp.sum((0, 1))</span>
+<span class="sd">            ... )</span>
+
+<span class="sd">            &gt;&gt;&gt; query.summarize(alpha=.05)  # type: ignore[union-attr]</span>
+<span class="sd">            shape: (2, 5)</span>
+<span class="sd">            ┌───────────┬──────────────┬─────────────────┬───────┬──────────┐</span>
+<span class="sd">            │ column    ┆ aggregate    ┆ distribution    ┆ scale ┆ accuracy │</span>
+<span class="sd">            │ ---       ┆ ---          ┆ ---             ┆ ---   ┆ ---      │</span>
+<span class="sd">            │ str       ┆ str          ┆ str             ┆ f64   ┆ f64      │</span>
+<span class="sd">            ╞═══════════╪══════════════╪═════════════════╪═══════╪══════════╡</span>
+<span class="sd">            │ len       ┆ Frame Length ┆ Integer Laplace ┆ 2.0   ┆ 6.429605 │</span>
+<span class="sd">            │ convicted ┆ Sum          ┆ Integer Laplace ┆ 2.0   ┆ 6.429605 │</span>
+<span class="sd">            └───────────┴──────────────┴─────────────────┴───────┴──────────┘</span>
+
+<span class="sd">        The accuracy in any given row can be interpreted with:</span>
+
+<span class="sd">        .. code:: pycon</span>
+
+<span class="sd">            &gt;&gt;&gt; def interpret_accuracy(distribution, scale, accuracy, alpha):</span>
+<span class="sd">            ...     return (</span>
+<span class="sd">            ...         f&quot;When the {distribution} scale is {scale}, &quot;</span>
+<span class="sd">            ...         f&quot;the DP estimate differs from the true value by no more than {accuracy} &quot;</span>
+<span class="sd">            ...         f&quot;at a statistical significance level alpha of {alpha}, &quot;</span>
+<span class="sd">            ...         f&quot;or with (1 - {alpha})100% = {(1 - alpha) * 100}% confidence.&quot;</span>
+<span class="sd">            ...     )</span>
+
+<span class="sd">            &gt;&gt;&gt; interpret_accuracy(&quot;Integer Laplace&quot;, 2.0, 6.429605, alpha=.05) # doctest:+SKIP</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">opendp.accuracy</span> <span class="kn">import</span> <span class="n">summarize_polars_measurement</span>
+
+        <span class="k">return</span> <span class="n">summarize_polars_measurement</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">resolve</span><span class="p">(),</span> <span class="n">alpha</span><span class="p">)</span></div>
+
+
+        
+<div class="viewcode-block" id="LazyFrameQuery.contingency_table">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.LazyFrameQuery.contingency_table">[docs]</a>
+    <span class="k">def</span> <span class="nf">contingency_table</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">keys</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">cuts</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">]]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">table</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ContingencyTable</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">algorithm</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Algorithm</span><span class="p">]</span> <span class="o">=</span> <span class="n">AIM</span><span class="p">(),</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;ContingencyTableQuery&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Release an approximation to a contingency table across all columns.</span>
+
+<span class="sd">        :param keys: dictionary of column names and unique categories</span>
+<span class="sd">        :param cuts: dictionary of column names and bin edges for numerical columns</span>
+<span class="sd">        :param table: ContingencyTable from prior release</span>
+<span class="sd">        :param algorithm: configuration for internal estimation algorithm</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">.contingency_table</span> <span class="kn">import</span> <span class="n">ContingencyTableQuery</span>
+
+        <span class="n">query</span><span class="p">:</span> <span class="n">Query</span> <span class="o">=</span> <span class="nb">object</span><span class="o">.</span><span class="fm">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_query&quot;</span><span class="p">)</span>
+        <span class="n">input_domain</span><span class="p">,</span> <span class="n">input_metric</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Domain</span><span class="p">,</span> <span class="n">Metric</span><span class="p">],</span> <span class="n">query</span><span class="o">.</span><span class="n">_chain</span><span class="p">)</span>
+        <span class="n">d_in</span><span class="p">,</span> <span class="n">d_out</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">_d_in</span><span class="p">,</span> <span class="n">query</span><span class="o">.</span><span class="n">_d_out</span>
+
+        <span class="n">t_plan</span> <span class="o">=</span> <span class="n">make_stable_lazyframe</span><span class="p">(</span>
+            <span class="n">input_domain</span><span class="p">,</span>
+            <span class="n">input_metric</span><span class="p">,</span>
+            <span class="n">lazyframe</span><span class="o">=</span><span class="nb">object</span><span class="o">.</span><span class="fm">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;polars_plan&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="n">m_table</span><span class="p">,</span> <span class="n">oneway_scale</span><span class="p">,</span> <span class="n">oneway_threshold</span> <span class="o">=</span> <span class="n">make_contingency_table</span><span class="p">(</span>
+            <span class="n">input_domain</span><span class="o">=</span><span class="n">t_plan</span><span class="o">.</span><span class="n">output_domain</span><span class="p">,</span>
+            <span class="n">input_metric</span><span class="o">=</span><span class="n">t_plan</span><span class="o">.</span><span class="n">output_metric</span><span class="p">,</span>
+            <span class="n">output_measure</span><span class="o">=</span><span class="n">query</span><span class="o">.</span><span class="n">_output_measure</span><span class="p">,</span>
+            <span class="n">d_in</span><span class="o">=</span><span class="n">t_plan</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">d_in</span><span class="p">),</span>
+            <span class="n">d_out</span><span class="o">=</span><span class="n">d_out</span><span class="p">,</span>  <span class="c1"># type: ignore[arg-type]</span>
+            <span class="n">keys</span><span class="o">=</span><span class="n">keys</span><span class="p">,</span>
+            <span class="n">cuts</span><span class="o">=</span><span class="n">cuts</span><span class="p">,</span>
+            <span class="n">table</span><span class="o">=</span><span class="n">table</span><span class="p">,</span>
+            <span class="n">algorithm</span><span class="o">=</span><span class="n">algorithm</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">ContingencyTableQuery</span><span class="p">(</span>
+            <span class="n">chain</span><span class="o">=</span><span class="n">t_plan</span> <span class="o">&gt;&gt;</span> <span class="n">m_table</span><span class="p">,</span>
+            <span class="n">output_measure</span><span class="o">=</span><span class="n">query</span><span class="o">.</span><span class="n">_output_measure</span><span class="p">,</span>
+            <span class="n">context</span><span class="o">=</span><span class="n">query</span><span class="o">.</span><span class="n">_context</span><span class="p">,</span>
+            <span class="n">oneway_scale</span><span class="o">=</span><span class="n">oneway_scale</span><span class="p">,</span>
+            <span class="n">oneway_threshold</span><span class="o">=</span><span class="n">oneway_threshold</span>
+        <span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="LazyGroupByQuery">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.LazyGroupByQuery">[docs]</a>
+<span class="k">class</span> <span class="nc">LazyGroupByQuery</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A ``LazyGroupByQuery`` is returned by :py:func:`opendp.extras.polars.LazyFrameQuery.group_by`.</span>
+<span class="sd">    It mimics a `Polars LazyGroupBy &lt;https://docs.pola.rs/api/python/stable/reference/lazyframe/group_by.html&gt;`_,</span>
+<span class="sd">    but only supports APIs documented below.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lgb_plan</span><span class="p">,</span> <span class="n">query</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_lgb_plan</span> <span class="o">=</span> <span class="n">lgb_plan</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_query</span> <span class="o">=</span> <span class="n">query</span>
+
+<div class="viewcode-block" id="LazyGroupByQuery.agg">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.LazyGroupByQuery.agg">[docs]</a>
+    <span class="k">def</span> <span class="nf">agg</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="o">*</span><span class="n">aggs</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">named_aggs</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">LazyFrameQuery</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute aggregations for each group of a group by operation.</span>
+
+<span class="sd">        :param aggs: expressions to apply in the aggregation context</span>
+<span class="sd">        :param named_aggs: named/aliased expressions to apply in the aggregation context</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">polars_plan</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lgb_plan</span><span class="o">.</span><span class="n">agg</span><span class="p">(</span><span class="o">*</span><span class="n">aggs</span><span class="p">,</span> <span class="o">**</span><span class="n">named_aggs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">LazyFrameQuery</span><span class="p">(</span><span class="n">polars_plan</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_query</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="Margin">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.Margin">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">Margin</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The ``Margin`` class is used to describe what information is known publicly about a grouped dataset:</span>
+<span class="sd">    like the values you might expect to find in the margins of a table.</span>
+
+<span class="sd">    Be aware that aspects of your data marked as &quot;public information&quot; are not subject to privacy protections,</span>
+<span class="sd">    so it is important that public descriptors about the margin should be set conservatively, or not set at all.</span>
+
+<span class="sd">    Instances of this class are used by :py:func:`opendp.context.Context.compositor`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">by</span><span class="p">:</span> <span class="n">Sequence</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Polars expressions describing the grouping columns.&quot;&quot;&quot;</span>
+
+    <span class="n">max_length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;An upper bound on the number of records in any one group.</span>
+
+<span class="sd">    Some operations (for instance, for float sums) will error if `max_length` is not provided.</span>
+<span class="sd">    This is used to resolve issues raised in the paper</span>
+<span class="sd">    `Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It &lt;https://arxiv.org/pdf/2207.10635.pdf&gt;`_.</span>
+<span class="sd">    </span>
+<span class="sd">    If you don&#39;t know how many records are in the data, you can specify a very loose upper bound,</span>
+<span class="sd">    for example, the size of the total population you are sampling from.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">max_groups</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;An upper bound on the number of distinct groups.&quot;&quot;&quot;</span>
+
+    <span class="n">invariant</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;keys&quot;</span><span class="p">]</span> <span class="o">|</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;lengths&quot;</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Identifies properties of grouped data that are considered invariant.</span>
+<span class="sd">    </span>
+<span class="sd">    * ``&quot;keys&quot;`` designates that keys are not protected</span>
+<span class="sd">    * ``&quot;lengths&quot;`` designates that both keys and group lengths are not protected</span>
+
+<span class="sd">    By the analysis of invariants conducted in</span>
+<span class="sd">    `Formal Privacy Guarantees with Invariant Statistics &lt;https://arxiv.org/abs/2410.17468&gt;`_,</span>
+<span class="sd">    when invariants are set, the effective privacy guarantees of the library are weaker than advertised.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@property</span>
+    <span class="nd">@deprecated</span><span class="p">(</span><span class="n">version</span><span class="o">=</span><span class="s2">&quot;0.13.0&quot;</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="s2">&quot;Use max_length instead.&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">max_partition_length</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_length</span>  <span class="c1"># pragma: no cover</span>
+
+    <span class="nd">@max_partition_length</span><span class="o">.</span><span class="n">setter</span>
+    <span class="nd">@deprecated</span><span class="p">(</span><span class="n">reason</span><span class="o">=</span><span class="s2">&quot;Use max_length instead.&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">max_partition_length</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_length</span> <span class="o">=</span> <span class="n">value</span>  <span class="c1"># pragma: no cover</span>
+
+    <span class="nd">@property</span>
+    <span class="nd">@deprecated</span><span class="p">(</span>
+        <span class="n">version</span><span class="o">=</span><span class="s2">&quot;0.13.0&quot;</span><span class="p">,</span>
+        <span class="n">reason</span><span class="o">=</span><span class="s2">&quot;Use max_groups instead. This was renamed to be consistent with Polars terminology.&quot;</span>
+    <span class="p">)</span>
+    <span class="k">def</span> <span class="nf">max_num_partitions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_groups</span>  <span class="c1"># pragma: no cover</span>
+
+    <span class="nd">@max_num_partitions</span><span class="o">.</span><span class="n">setter</span>
+    <span class="nd">@deprecated</span><span class="p">(</span>
+        <span class="n">version</span><span class="o">=</span><span class="s2">&quot;0.13.0&quot;</span><span class="p">,</span>
+        <span class="n">reason</span><span class="o">=</span><span class="s2">&quot;Use max_groups instead. This was renamed to be consistent with Polars terminology.&quot;</span>
+    <span class="p">)</span>
+    <span class="k">def</span> <span class="nf">max_num_partitions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_groups</span> <span class="o">=</span> <span class="n">value</span>  <span class="c1"># pragma: no cover</span>
+
+    <span class="nd">@property</span>
+    <span class="nd">@deprecated</span><span class="p">(</span>
+        <span class="n">version</span><span class="o">=</span><span class="s2">&quot;0.13.0&quot;</span><span class="p">,</span>
+        <span class="n">reason</span><span class="o">=</span><span class="s1">&#39;Use invariant instead. This was renamed because invariants are not &quot;public information&quot;. Invariants are &quot;unprotected information&quot;.&#39;</span>
+    <span class="p">)</span>
+    <span class="k">def</span> <span class="nf">public_info</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">invariant</span>  <span class="c1"># pragma: no cover</span>
+
+    <span class="nd">@public_info</span><span class="o">.</span><span class="n">setter</span>
+    <span class="nd">@deprecated</span><span class="p">(</span>
+        <span class="n">version</span><span class="o">=</span><span class="s2">&quot;0.13.0&quot;</span><span class="p">,</span>
+        <span class="n">reason</span><span class="o">=</span><span class="s1">&#39;Use invariant instead. This was renamed because invariants are not &quot;public information&quot;. Invariants are &quot;unprotected information&quot;.&#39;</span>
+    <span class="p">)</span>
+    <span class="k">def</span> <span class="nf">public_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invariant</span> <span class="o">=</span> <span class="n">value</span>  <span class="c1"># pragma: no cover</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">max_partition_contributions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+            <span class="s2">&quot;max_partition_contributions has been moved. Use `dp.unit_of(contributions=[dp.polars.Bound(per_group=...)])` instead.&quot;</span>
+        <span class="p">)</span>  <span class="c1"># pragma: no cover</span>
+
+    <span class="nd">@max_partition_contributions</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">max_partition_contributions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+            <span class="s2">&quot;max_partition_contributions has been moved. Use `dp.unit_of(contributions=[dp.polars.Bound(per_group=...)])` instead.&quot;</span>
+        <span class="p">)</span>  <span class="c1"># pragma: no cover</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">max_influenced_partitions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+            <span class="s2">&quot;max_influenced_partitions has been moved. Use `dp.unit_of(contributions=[dp.polars.Bound(num_groups=...)])` instead.&quot;</span>
+        <span class="p">)</span>  <span class="c1"># pragma: no cover</span>
+
+    <span class="nd">@max_influenced_partitions</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">max_influenced_partitions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+            <span class="s2">&quot;max_influenced_partitions has been moved. Use `dp.unit_of(contributions=[dp.polars.Bound(num_groups=...)])` instead.&quot;</span>
+        <span class="p">)</span>  <span class="c1"># pragma: no cover</span>
+
+    <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Margin</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="c1"># special logic for by, which is considered a set (order and dupes don&#39;t matter)</span>
+        <span class="c1"># and may contain expressions that do not have a boolean equality operator</span>
+        <span class="k">def</span> <span class="nf">serialize</span><span class="p">(</span><span class="n">by</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">by</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="n">by</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="n">by</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">by</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">serialize</span><span class="p">()</span>
+
+        <span class="n">self_by</span> <span class="o">=</span> <span class="p">{</span><span class="n">serialize</span><span class="p">(</span><span class="n">col</span><span class="p">)</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">by</span><span class="p">}</span>
+        <span class="n">other_by</span> <span class="o">=</span> <span class="p">{</span><span class="n">serialize</span><span class="p">(</span><span class="n">col</span><span class="p">)</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">other</span><span class="o">.</span><span class="n">by</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">self_by</span> <span class="o">!=</span> <span class="n">other_by</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="k">return</span> <span class="n">asdict</span><span class="p">(</span><span class="n">replace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">by</span><span class="o">=</span><span class="p">[]))</span> <span class="o">==</span> <span class="n">asdict</span><span class="p">(</span><span class="n">replace</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">by</span><span class="o">=</span><span class="p">[]))</span></div>
+
+
+
+<div class="viewcode-block" id="Bound">
+<a class="viewcode-back" href="../../../api/python/opendp.extras.polars.html#opendp.extras.polars.Bound">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">Bound</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The ``Bound`` class is used to describe bounds on the number of</span>
+<span class="sd">    contributed rows per-group and the number of contributed groups.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">by</span><span class="p">:</span> <span class="n">Sequence</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Polars expressions describing the grouping columns.&quot;&quot;&quot;</span>
+
+    <span class="n">per_group</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The greatest number of records an individual may contribute to any one group.</span>
+<span class="sd">    </span>
+<span class="sd">    This can significantly reduce the sensitivity of grouped queries under zero-Concentrated DP.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">num_groups</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The greatest number of groups any one individual can contribute.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Bound</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="c1"># special logic for by, which is considered a set (order and dupes don&#39;t matter)</span>
+        <span class="c1"># and may contain expressions that do not have a boolean equality operator</span>
+        <span class="k">def</span> <span class="nf">serialize</span><span class="p">(</span><span class="n">by</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">by</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="n">by</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="n">by</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">by</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">serialize</span><span class="p">()</span>
+
+        <span class="n">self_by</span> <span class="o">=</span> <span class="p">{</span><span class="n">serialize</span><span class="p">(</span><span class="n">col</span><span class="p">)</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">by</span><span class="p">}</span>
+        <span class="n">other_by</span> <span class="o">=</span> <span class="p">{</span><span class="n">serialize</span><span class="p">(</span><span class="n">col</span><span class="p">)</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">other</span><span class="o">.</span><span class="n">by</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">self_by</span> <span class="o">!=</span> <span class="n">other_by</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="k">return</span> <span class="n">asdict</span><span class="p">(</span><span class="n">replace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">by</span><span class="o">=</span><span class="p">[]))</span> <span class="o">==</span> <span class="n">asdict</span><span class="p">(</span><span class="n">replace</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">by</span><span class="o">=</span><span class="p">[]))</span>  <span class="c1"># type: ignore[arg-type]</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../../../_static/scripts/bootstrap.js?digest=f91d6a3704ddd3a9dc0f"></script>
+<script src="../../../_static/scripts/pydata-sphinx-theme.js?digest=f91d6a3704ddd3a9dc0f"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2026.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.3rc1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
