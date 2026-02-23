@@ -1,5 +1,5 @@
 [workspace.package]
-version = "0.14.1-nightly.20260222.1"
+version = "0.14.1-beta.20260223.3"
 license-file = "../LICENSE"
 readme = "../README.md"
 homepage = "https://opendp.org/"
@@ -33,7 +33,7 @@ rust-version.workspace = true
 exclude = ["windows/*"]
 
 [dependencies]
-opendp_derive = { path = "opendp_derive", version = "0.14.1-nightly.20260222.1" }
+opendp_derive = { path = "opendp_derive", version = "0.14.1-beta.20260223.3" }
 rand = "0.7.3"
 num = "0.3.1"
 thiserror = "1.0.24"
@@ -41,7 +41,7 @@ statrs = "0.13.0"
 dashu = { version = "0.4.0", features = ["num-traits_v02"] }
 openssl = { version = "0.10.71", features = ["vendored"], optional = true }
 
-opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.14.1-nightly.20260222.1" }
+opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.14.1-beta.20260223.3" }
 readonly = "0.2"
 bitvec = "1.0"
 
@@ -173,7 +173,7 @@ serde-pickle = { version = "1.1", optional = true }
 lazy_static = { version = "1.4.0", optional = true }
 
 [build-dependencies]
-opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.14.1-nightly.20260222.1" }
+opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.14.1-beta.20260223.3" }
 syn = { workspace = true, optional = true }
 proc-macro2 = { workspace = true, optional = true }
 cbindgen = { version = "0.28.0", optional = true }
