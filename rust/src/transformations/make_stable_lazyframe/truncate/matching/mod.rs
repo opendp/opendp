@@ -93,7 +93,7 @@ pub(crate) fn match_truncations(
 ///
 /// # Proof Definition
 /// For a given query plan and user identifier expression,
-/// if the query plan bounds row contributions per-identifier via a group by,
+/// if the query plan bounds row contributions per-identifier via a group-by,
 /// returns a triple containing the input to the truncation,
 /// the truncation itself, and the per-id bound on user contribution.
 #[proven]

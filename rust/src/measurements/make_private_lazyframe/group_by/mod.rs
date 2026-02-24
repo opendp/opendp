@@ -63,7 +63,7 @@ where
         mut key_sanitizer,
     }) = match_group_by(plan)?
     else {
-        return fallible!(MakeMeasurement, "expected group by");
+        return fallible!(MakeMeasurement, "expected group-by");
     };
 
     // 1: establish stability of `group_by`
