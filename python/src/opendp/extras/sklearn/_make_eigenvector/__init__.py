@@ -1,4 +1,5 @@
 from typing import Sequence
+from dataclasses import asdict
 
 from opendp.extras.numpy import _sscp_domain
 from opendp.extras._utilities import to_then
@@ -120,7 +121,7 @@ def make_np_sscp_projection(
             f"projection P (axis-1 size: {P.shape[1]}) does not conform with data in input_domain (num_features: {input_domain.num_features})"
         )  # pragma: no cover
 
-    kwargs = input_desc._asdict() | {"num_features": P.shape[0]}
+    kwargs = asdict(input_desc) | {"num_features": P.shape[0]}
     return _make_transformation(
         input_domain,
         input_metric,
