@@ -107,6 +107,8 @@ def make_private_pca(
         raise ValueError("epsilon must be a float or instance of PCAEpsilons")  # pragma: no cover
 
     def _make_eigdecomp(norm, origin):
+        if not isinstance(unit_epsilon, PCAEpsilons):
+            raise ValueError("expected epsilon to be PCAEpsilons at this point")  # pragma: no cover
         return (
             (input_domain, input_metric)
             >> then_np_clamp(norm, p=2, origin=origin)

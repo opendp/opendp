@@ -51,7 +51,7 @@ def _check_nonnegative_int(v: int | None, name: str):
             raise ValueError(f"{name} must be non-negative")  # pragma: no cover
 
 
-def _fmt_attrs(attrs: dataclass) -> str:
+def _fmt_attrs(attrs) -> str:
     return ", ".join(f"{k}={v}" for k, v in asdict(attrs).items() if v is not None)
 
 
