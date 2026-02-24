@@ -777,7 +777,7 @@ class LazyFrameQuery:
         **named_by,
     ) -> LazyGroupByQuery:
         """
-        Start a group by operation.
+        Start a group-by operation.
 
         OpenDP currently requires that grouping keys be simple column expressions.
         """
@@ -1126,7 +1126,7 @@ class LazyGroupByQuery:
         **named_aggs,
     ) -> LazyFrameQuery:
         """
-        Compute aggregations for each group of a group by operation.
+        Compute aggregations for each group of a group-by operation.
 
         :param aggs: expressions to apply in the aggregation context
         :param named_aggs: named/aliased expressions to apply in the aggregation context

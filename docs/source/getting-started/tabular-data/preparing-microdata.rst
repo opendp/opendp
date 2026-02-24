@@ -190,7 +190,7 @@ these expressions must be row-by-row.
 
 
 This is the same query as shown above, but with the binning moved into
-the group by context.
+the group-by context.
 
 Group By / Agg (Stable)
 -----------------------
