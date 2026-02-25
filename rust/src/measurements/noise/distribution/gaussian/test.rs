@@ -60,7 +60,7 @@ fn test_make_gaussian_kolmogorov_smirnov() -> Fallible<()> {
     let input_domain = VectorDomain::new(AtomDomain::<f64>::new_non_nan());
     let input_metric = L2Distance::<f64>::default();
     let meas = make_gaussian(input_domain, input_metric, 1.0, None)?;
-    let samples = <[f64; 1000]>::try_from(meas.invoke(&vec![0.0; 1000])?).unwrap();
+    let samples = <[f64; 5000]>::try_from(meas.invoke(&vec![0.0; 5000])?).unwrap();
 
     pub fn normal_cdf(x: f64) -> f64 {
         (erf::erf(x / std::f64::consts::SQRT_2) + 1.0) / 2.0
