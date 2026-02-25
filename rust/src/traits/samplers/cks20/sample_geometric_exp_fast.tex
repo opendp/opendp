@@ -36,7 +36,8 @@ Assume the preconditions are met.
 \end{lemma} 
  
 \begin{proof} 
-    $\texttt{x} \geq 0$ and \texttt{x} is of type \docsrs{dashu}{rational/struct}{Rbig}, so there exists some non-negative integer $s$ and positive integer $t$ such that $x = s/t$. 
+    $\texttt{x} \geq 0$ and \texttt{x} is of type \docsrs{dashu}{rational/struct}{Rbig}, 
+    so there exists some non-negative integer $s$ and positive integer $t$ such that $x = s/t$. 
     This is why \texttt{Rational.into\_numer\_denom} is infallible. 
     Since $t$ is a positive integer, the preconditions on \rustdoc{traits/samplers/uniform/fn}{sample_uniform_ubig_below} are met,  
     \texttt{sample\_uniform\_int\_below} can only return an error due to lack of system entropy, and $u$ is a non-negative integer. 
