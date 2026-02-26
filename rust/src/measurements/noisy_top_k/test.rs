@@ -8,18 +8,21 @@ use super::*;
 #[test]
 fn test_rnm_gumbel_distribution_varied() -> Fallible<()> {
     let scores: [_; 10] = from_fn(|i| i);
-    let trials = 1000;
-    let mut observed = [0.0; 10];
+    let trials = 10_000;
+    let mut observed = [0; 10];
     (0..trials).try_for_each(|_| {
-        observed[noisy_top_k(&scores, 1.0, 1, false, true)?[0]] += 1.0;
+        observed[noisy_top_k(&scores, 1.0, 1, false, true)?[0]] += 1;
         Fallible::Ok(())
     })?;
 
     // compute softmax to get expected
     let numer: f64 = (0..10).map(|i| (i as f64).exp()).sum();
-    let expected = from_fn(|i| (i as f64).exp() / numer * (trials as f64));
+    let expected: Vec<f64> = (0..10)
+        .map(|i| (i as f64).exp() / numer * (trials as f64))
+        .collect();
 
-    check_chi_square(observed, expected)
+    // avoid running the test on the low-outcome values where it is invalid
+    check_chi_square(&observed[2..], &expected[2..])
 }
 
 #[test]
@@ -150,48 +153,47 @@ fn test_permute_and_flip() {
 #[test]
 fn test_permute_and_flip_distribution_zero() -> Fallible<()> {
     let scores = vec![rbig!(0).clone(); 10];
-    let mut observed = [0.0; 10];
     (0..1000).try_for_each(|_| {
-        observed[permute_and_flip(&scores, &rbig!(0), false)?] += 1.0;
+        if permute_and_flip(&scores, &rbig!(0), false)? != 9 {
+            panic!("P&F with zero scale should deterministically select last index");
+        }
         Fallible::Ok(())
-    })?;
-    let mut expected = [0.0; 10];
-    expected[0] = 1000.0;
-    check_chi_square(observed, expected)
+    })
 }
 
 #[test]
 fn test_permute_and_flip_distribution_uniform() -> Fallible<()> {
     let scores = vec![rbig!(0).clone(); 10];
-    let mut observed = [0.0; 10];
+    let mut observed = [0; 10];
     (0..1000).try_for_each(|_| {
-        observed[permute_and_flip(&scores, &rbig!(1), false)?] += 1.0;
+        observed[permute_and_flip(&scores, &rbig!(1), false)?] += 1;
         Fallible::Ok(())
     })?;
-    check_chi_square(observed, [100.0; 10])
+    check_chi_square(&observed, &[100.0; 10])
 }
 
 #[test]
 fn test_permute_and_flip_distribution_varied() -> Fallible<()> {
     let scores: [_; 10] = from_fn(RBig::from);
     let trials = 10000;
-    let mut observed = [0.0; 10];
+    let mut observed = [0; 10];
     (0..trials).try_for_each(|_| {
-        observed[permute_and_flip(&scores, &rbig!(1), false)?] += 1.0 / trials as f64;
+        observed[permute_and_flip(&scores, &rbig!(1), false)?] += 1;
         Fallible::Ok(())
     })?;
 
-    let expected = permute_and_flip_pmf(
+    let expected: Vec<f64> = permute_and_flip_pmf(
         &scores
             .into_iter()
             .map(|r| r.to_f64().value())
             .collect::<Vec<_>>(),
         1.0,
     )
-    .try_into()
-    .unwrap();
+    .into_iter()
+    .map(|p| p * trials as f64)
+    .collect();
 
-    check_chi_square(observed, expected)
+    check_chi_square(&observed, &expected)
 }
 
 /// Implements the PMF of the permute and flip algorithm,

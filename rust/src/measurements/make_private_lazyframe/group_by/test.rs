@@ -103,7 +103,7 @@ fn test_stable_keys_zcdp() -> Fallible<()> {
 
 #[test]
 fn test_explicit_keys() -> Fallible<()> {
-    static N_SAMPLES: u32 = 1000;
+    static N_SAMPLES: u32 = 5000;
     static N_CANDIDATES: usize = 10;
 
     let lf_domain = LazyFrameDomain::new(vec![
@@ -138,21 +138,25 @@ fn test_explicit_keys() -> Fallible<()> {
 
     let release = meas.invoke(&lf)?.collect()?;
     let gauss_samples: Vec<_> = release.column("sum")?.f64()?.iter().flatten().collect();
-    let gauss_samples = <[f64; 1000]>::try_from(gauss_samples).unwrap();
+    let gauss_samples = <[f64; 5000]>::try_from(gauss_samples).unwrap();
 
     pub fn normal_cdf(x: f64) -> f64 {
         (erf::erf(x / std::f64::consts::SQRT_2) + 1.0) / 2.0
     }
 
+    println!(
+        "gauss mean: {:?}",
+        gauss_samples.iter().sum::<f64>() / 5000.
+    );
     check_kolmogorov_smirnov(gauss_samples, normal_cdf)?;
 
     // check for uniformity of samples (all scores are matching)
     let unif_samples: Vec<_> = release.column("med")?.f64()?.iter().flatten().collect();
-    let mut counts = [0.0; N_CANDIDATES];
-    unif_samples.iter().for_each(|&s| counts[s as usize] += 1.0);
+    let mut counts = [0; N_CANDIDATES];
+    unif_samples.iter().for_each(|&s| counts[s as usize] += 1);
     check_chi_square(
-        counts,
-        [N_SAMPLES as f64 / (N_CANDIDATES as f64); N_CANDIDATES],
+        &counts,
+        &[N_SAMPLES as f64 / (N_CANDIDATES as f64); N_CANDIDATES],
     )?;
 
     Ok(())
