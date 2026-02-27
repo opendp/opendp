@@ -15,6 +15,19 @@ def test_polars_version():
     assert pl.__version__ == _EXPECTED_POLARS_VERSION
 
 
+def test_lazyframequery_wraps_after_late_polars_import(monkeypatch):
+    pl = pytest.importorskip("polars")
+    import opendp.extras.polars as dp_polars
+
+    lf_query = dp_polars.LazyFrameQuery(pl.LazyFrame({"A": [1, 2, 3]}), object())
+
+    monkeypatch.setattr(dp_polars, "pl", None)
+    monkeypatch.setattr(dp_polars, "_POLARS_REGISTERED", False)
+
+    result = lf_query.select(pl.col("A"))
+    assert isinstance(result, dp_polars.LazyFrameQuery)
+
+
 def seed(schema):
     pl = pytest.importorskip("polars")
     return pl.DataFrame(None, schema, orient="row").lazy()  # type: ignore[attr-defined]
