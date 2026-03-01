@@ -1,0 +1,149 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{NoiseThresholdPrivacyMap<L01InfDistance<AbsoluteDistance<RBig>>, Approximate<MaxDivergence>> for ZExpFamily<1>}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise_threshold/trait}{NoiseThresholdPrivacyMap} for \texttt{ZExpFamily<1>} in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+\texttt{NoiseThresholdPrivacyMap} is parameterized as follows:
+\begin{itemize}
+    \item \texttt{MI}, the input metric, is of type \rustdoc{metrics/type}{L01InfDistance}\texttt{<AbsoluteDistance<RBig>>}
+    \item \texttt{MO}, the output measure, is of type \rustdoc{measures/struct}{Approximate}\texttt{<MaxDivergence>}
+\end{itemize}
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/NoiseThresholdPrivacyMap_for_ZExpFamily1.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    Given a distribution \texttt{self},
+    returns \texttt{Err(e)} if \texttt{self} is not a valid distribution.
+    Otherwise the output is \texttt{Ok(privacy\_map)}
+    where \texttt{privacy\_map} observes the following:
+
+    Define \texttt{function(x)} as a function that updates each pair $(k_i, v_i + Z_i)$,
+    where $Z_i$ are iid samples from \texttt{self},
+    and discards pairs where $v_i + Z_i$ has smaller magnitude than \texttt{|threshold|}.
+    The ordering of returned pairs is independent from the input ordering.
+
+    For every pair of elements $x, x'$ in \texttt{VectorDomain<AtomDomain<IBig>{}>},
+    and for every pair (\texttt{d\_in}, \texttt{d\_out}),
+    where \texttt{d\_in} has the associated type for \texttt{input\_metric} and \texttt{d\_out} has the associated type for \texttt{output\_measure},
+    if $x, x'$ are \texttt{d\_in}-close under \texttt{input\_metric}, \texttt{privacy\_map(d\_in)} does not raise an exception,
+    and $\texttt{privacy\_map(d\_in)} \leq \texttt{d\_out}$,
+    then \texttt{function(x)}, \texttt{function(x')} are \texttt{d\_out}-close under \texttt{output\_measure}.
+\end{theorem}
+
+\begin{proof}
+    Line \ref{line:noise-privacy-map} rejects \texttt{self} if \texttt{self} does not represent a valid distribution,
+    satisfying the error conditions of the postcondition.
+
+    We now construct the privacy map.
+    Both the \texttt{l1} and \texttt{li} sensitivity can be floored, 
+    as neighboring integer datasets always differ in whole integer increments.
+    This doesn't affect the check on line \ref{line:li-check} to ensure \texttt{li} is non-negative.
+    
+    There are two ways to bound the l1 sensitivity given the three bounds:
+    \begin{enumerate}
+        \item The \texttt{l1} bound directly.
+        \item Define $x \sim x'$ as $||x - x'||_0 \leq \texttt{l0}$ and $||x - x'||_\infty \leq \texttt{li}$. Then
+        \begin{equation}
+            \max_{x \sim x'} ||x - x'||_1 = \max{x \sim x'} \sum^n_i |x_i - x'_i| \leq \texttt{l0} \cdot \texttt{li}
+        \end{equation}
+    \end{enumerate}
+    Line \ref{line:l1} updates \texttt{l1} to the tighter of these bounds.
+
+    \texttt{li} similarly has multiple bounds:
+    \begin{enumerate}
+        \item The \texttt{li} bound directly.
+        \item Define $x \sim x'$ as $||x - x'||_1 \leq \texttt{l1}$. Then
+        \begin{equation}
+            \max_{x \sim x'} ||x - x'||_\infty = \max{x \sim x'} \max_i |x_i - x'_i| \leq \max_i [0, \cdots, \texttt{l1}, \cdots, 0] = \texttt{l1}
+        \end{equation}
+    \end{enumerate}
+    Line \ref{line:li} updates \texttt{li} to the tighter of these bounds.
+
+    Now the \texttt{l1} sensitivity is zero if any of the three bounds are zero,
+    due to the tightening of the \texttt{l1} bound on line \ref{line:l1}.
+    Line \ref{line:zero-sens} then checks for zero sensitivity to return a privacy loss of zero epsilon, zero delta, 
+    because all neighboring datasets have identical pairs, and the ordering is randomized.
+
+    Otherwise sensitivity is nonzero, so if the scale is zero,
+    the privacy loss is unbounded, shown on line \ref{line:zero-scale}.
+
+    Now that the edge cases are handled, all sensitivities and scales are finite and strictly positive.
+
+    The mechanism that adds noise to the values in the hashmap, as described in the conditions of the postcondition of \rustdoc{measurements/noise_threshold/trait}{NoiseThresholdPrivacyMap}, 
+    matches the mechanism that adds noise to a vector, as described in the conditions of the postcondition of \rustdoc{measurements/noise/trait}{NoisePrivacyMap}.
+    Therefore releasing the values incurs the privacy loss computed by \texttt{noise\_privacy\_map} as defined on line \ref{line:epsilon},
+    The privacy map also ensures that \texttt{l1} is non-negative.
+
+    We now focus on computing the remaining privacy loss parameter delta.
+    To ensure that the distance to instability remains positive, 
+    the threshold must be at least as large as the sensitivity, as checked on line \ref{line:threshold-check}.
+
+    Adapting the proof from \cite{rogers2023unifyingprivacyanalysisframework} (Theorem 7).
+    Consider $S$ to be the set of labels that are common between $x$ and $x'$.
+    Define event $E$ to be any potential outcome of the mechanism for which all labels are in $S$
+    (where only stable partitions are released).
+    We then lower bound the probability of the mechanism returning an event $E$.
+    In the following, $c_j$ denotes the exact count for partition $j$,
+    and $Z_j$ is a random variable distributed according to \texttt{self}.
+
+    \begin{align*}
+        \Pr[E] &= \prod_{j \in x \backslash x'} \Pr[c_j + Z_j \le T] \\
+        &\ge \prod_{j \in x \backslash x'} \Pr[\Delta_\infty + Z_j \le T] \\
+        &\ge \Pr[\Delta_\infty + Z_j \le T]^{\Delta_0}
+    \end{align*}
+
+    The probability of returning a set of stable partitions ($\Pr[E]$) 
+    is the probability of not returning any of the unstable partitions.
+    We now solve for the choice of threshold $T$ such that $\Pr[E] \ge 1 - \delta$.
+
+    \begin{align*}
+        \Pr[\Delta_\infty + Z_j \le T]^{\Delta_0} &= \Pr[Z_j \le T - \Delta_\infty]^{\Delta_0} \\
+        &= (1 - \Pr[Z_j > T - \Delta_\infty])^{\Delta_0}
+    \end{align*}
+
+    Let \texttt{d\_instability} denote the distance to instability of $T - \Delta_\infty$.
+
+    Notice that when $C$ is a continuous laplace random variable and $D$ is a discrete laplace random variable,
+    \begin{align}
+        \Pr[C > t] &= \frac{e^{-t/s}}{2} > \frac{e^{-t/s}}{e^{1/s} + 1} = \Pr[D > t],
+    \end{align}
+    since $e^{1/s} > 1$.
+    Unfortunately, the discrete laplace tail bound is not feasible to compute for large parameter choices,
+    so we attempt to compute both tail bounds and take the minimum of the two.
+
+    By the postconditions of \rustdoc{accuracy/tail_bounds/fn}{conservative\_discrete\_laplacian\_tail\_to\_alpha} \\
+    and \rustdoc{accuracy/tail_bounds/fn}{conservative\_continuous\_laplacian\_tail\_to\_alpha},
+    the tail mass is bounded above by both \\\texttt{alpha\_disc} and \texttt{alpha\_cont}.
+    \texttt{delta\_single} is the smaller of the two, as both are conservative estimates.
+    Both bounds are computed because while the discrete bound is more accurate, it can only be computed for relatively small scales.
+    The continuous bound is a conservative estimate for larger scales that is always computable, 
+    and converges to the discrete bound at higher scales.
+
+    The probability that a random noise sample exceeds \texttt{d\_instability} is at most \texttt{delta\_single}.
+    Therefore $\delta = 1 - (1 - \texttt{delta\_single})^{\Delta_0}$.
+
+    The privacy map returns \texttt{(epsilon, delta.min(1))}, as $\delta$ is bounded by 1.
+    It is shown that \function(x), \function(x') are \dout-close under \texttt{output\_measure}.
+\end{proof}
+
+\bibliographystyle{alpha}
+\bibliography{ref}
+
+\end{document}

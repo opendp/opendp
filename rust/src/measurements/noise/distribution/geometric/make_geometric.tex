@@ -1,0 +1,54 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{fn make\_geometric}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise/distribution/geometric/fn}{make\_geometric} in \asOfCommit{mod.rs}{f5bb719}.
+
+The implementation of this function constructs a random variable denoting the noise distribution to add, 
+and then dispatches to the \rustdoc{measurements/noise/trait}{MakeNoise}\texttt{<DI, MI, MO>} trait
+which constructs the core mechanism and wraps it in pre-processing transformations and post-processors to match the desired parameterization.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+\begin{itemize}
+    \item generic \texttt{DI} implements trait \rustdoc{core/trait}{Domain}
+    \item generic \texttt{MI} implements trait \rustdoc{core/trait}{Metric}
+    \item generic \texttt{MO} implements trait \rustdoc{core/trait}{Measure}
+    \item type \texttt{DiscreteLaplace} implements trait \rustdoc{measurements/noise/trait}{MakeNoise}\texttt{<DI, MI, MO>}
+    \item type \texttt{ConstantTimeGeometric} implements trait \rustdoc{measurements/noise/trait}{MakeNoise}\texttt{<DI, MI, MO>}
+        These traits constrain the choice of input domain, input metric and output measure 
+        to those that can form valid measurements when adding noise from these distributions.
+    \item type \texttt{(DI, MI)} implements trait \rustdoc{core/trait}{MetricSpace}
+\end{itemize}
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_geometric.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \validMeasurement{(\texttt{input\_domain, input\_metric, scale, bounds, DI, MI, MO})}{\texttt{make\_geometric}}
+\end{theorem}
+
+\begin{proof}
+    If bounds are supplied, this constructor builds a specialized mechanism 
+    that adds noise to the input data from the \rustdoc{measurements/noise/distribution/geometric/struct}{ConstantTimeGeometric} random variable.
+    Otherwise noise is added from the \rustdoc{measurements/noise/distribution/laplace/struct}{DiscreteLaplace} random variable, 
+    which uses a logarithmic-time discrete laplace sampling algorithm.
+    
+    Since \rustdoc{measurements/noise/trait}{MakeNoise}\texttt{.make\_noise} has no preconditions,
+    the postcondition follows, which matches the postcondition for this function.
+\end{proof}
+
+\end{document}

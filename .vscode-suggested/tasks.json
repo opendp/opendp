@@ -1,0 +1,252 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "cargo",
+            "command": "check",
+            "problemMatcher": {
+                "base": "$rustc",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/rust"
+                ]
+            },
+            "options": {
+                "cwd": "./rust"
+            },
+            "args": [
+                "--all-features"
+            ],
+            "group": "build",
+            "label": "cargo check --all-features",
+            "detail": "    gives more detailed compiler errors than problems tab",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "type": "cargo",
+            "command": "build",
+            "problemMatcher": {
+                "base": "$rustc",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/rust"
+                ]
+            },
+            "options": {
+                "cwd": "./rust"
+            },
+            "args": [
+                "--all-features"
+            ],
+            "group": "build",
+            "label": "cargo build --all-features",
+            "detail": "    run before testing in Python",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "type": "cargo",
+            "command": "test",
+            "problemMatcher": {
+                "base": "$rustc",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/rust"
+                ]
+            },
+            "options": {
+                "cwd": "./rust"
+            },
+            "args": [
+                "----all-features"
+            ],
+            "group": "build",
+            "label": "cargo test --all-features",
+            "detail": "    run all Rust tests",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "type": "cargo",
+            "command": "clippy",
+            "problemMatcher": {
+                "base": "$rustc",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/rust"
+                ],
+                "source": "clippy"
+            },
+            "options": {
+                "cwd": "./rust"
+            },
+            "args": [
+                "--all-features"
+            ],
+            "group": "build",
+            "label": "cargo clippy --all-features",
+            "detail": "    more detailed linting and style suggestions",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "type": "cargo",
+            "command": "rustdoc",
+            "problemMatcher": {
+                "base": "$rustc",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/rust"
+                ]
+            },
+            "options": {
+                "cwd": "./rust"
+            },
+            "args": [
+                "--open",
+                "--all-features",
+                "--", "--html-in-header", "katex.html", "--document-private-items"
+            ],
+            "group": "build",
+            "label": "cargo rustdoc",
+            "detail": "    build rust documentation (and open)",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "type": "cargo",
+            "command": "rustdoc",
+            "problemMatcher": {
+                "base": "$rustc",
+                "fileLocation": ["relative", "${workspaceFolder}/rust"]
+            },
+            "options": {
+                "cwd": "./rust"
+            },
+            "args": [
+                "--all-features",
+                "--", "--html-in-header", "katex.html", "--document-private-items"
+            ],
+            "group": "build",
+            "label": "rust: cargo rustdoc",
+            "presentation": {
+                "clear": true
+            }
+        },
+
+        {
+            "label": "R/ stage",
+            "detail": "    stage an R package so that it can be built",
+            "type": "shell",
+            "command": "bash tools/r_stage.sh",
+            "group": "build",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "R/ clean",
+            "detail": "    return a staged R package to developer mode",
+            "type": "shell",
+            "command": "bash tools/r_stage.sh -c",
+            "group": "build",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "R/ pkgdown",
+            "detail": "    build a pkgdown site",
+            "type": "shell",
+            "command": "bash tools/r_stage.sh -d",
+            "group": "build",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "R/ test",
+            "type": "shell",
+            "group": "build",
+            "options": {
+                "cwd": "./R/opendp/"
+            },
+            "command": "Rscript -e 'devtools::load_all(recompile=TRUE); devtools::test(reporter = c(\"progress\", \"fail\"))'",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "R/ test file",
+            "type": "shell",
+            "group": "build",
+            "options": {
+                "cwd": "./R/opendp/"
+            },
+            "command": "Rscript -e 'devtools::load_all(recompile=TRUE); library(testthat); test_file(\"${file}\", reporter = c(\"location\"))'",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "R/ document",
+            "type": "shell",
+            "group": "build",
+            "options": {
+                "cwd": "./R/opendp/"
+            },
+            "command": "Rscript -e 'devtools::document()'",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "R/ check (devtools)",
+            "type": "shell",
+            "group": "build",
+            "options": {
+                "cwd": "./R/opendp/"
+            },
+            "command": "Rscript -e 'devtools::check()'",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "R/ check (R CMD)",
+            "type": "shell",
+            "group": "build",
+            "options": {
+                "cwd": "./R/opendp/"
+            },
+            "command": "R CMD build . && R CMD check --as-cran opendp_*.tar.gz",
+            "presentation": {
+                "clear": true
+            }
+        },
+        {
+            "label": "R/ install",
+            "type": "shell",
+            "group": "build",
+            "options": {
+                "cwd": "./R/opendp/"
+            },
+            "command": "Rscript -e 'devtools::install()'",
+            "presentation": {
+                "clear": true
+            }
+        }
+    ],
+    "options": {
+        "env": {
+            "OPENDP_LIB_DIR": "${workspaceFolder}/rust/target/debug",
+            "RUST_BACKTRACE": "1"
+        }
+    }
+}

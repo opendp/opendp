@@ -1,0 +1,93 @@
+url: https://docs.opendp.org
+title: 'R Documentation'
+
+# Suggested by https://github.com/r-lib/pkgdown/blob/main/R/build-llm.R
+llm-docs: false
+
+template:
+  bootstrap: 5
+  includes:
+    before_title: |
+      <a href="/">
+        <img src="https://docs.opendp.org/en/stable/_static/opendp-logo.png" alt="OpenDP logo" style="width: 183px; margin-right: 2em;">
+      </a>
+
+authors:
+  footer:
+    roles: [aut]
+  sidebar:
+    roles: [aut]
+
+navbar:
+  structure:
+    left:  [reference]
+    right: [search, github]
+
+reference:
+- title: internal
+  # pkgdown will error if any functions are unreferenced,
+  # but if listed under "internal" they won't be included in output.
+  # https://pkgdown.r-lib.org/reference/build_reference.html#missing-topics
+  contents:
+  - has_concept("data")
+
+- title: Accuracy
+  desc: The `accuracy` module provides functions for converting between accuracy and scale parameters.
+  contents:
+  - has_concept("accuracy")
+
+- title: Combinators
+  desc: The `combinators` module provides functions for combining transformations and measurements.
+  contents:
+  - has_concept("combinators")
+
+- title: Core
+  desc: The `core` module provides functions for accessing the fields of transformations and measurements.
+  contents:
+  - has_concept("core")
+
+- title: Domains
+  desc: The `domains` module provides functions for creating and using domains.
+  contents:
+  - has_concept("domains")
+
+- title: Measurements
+  desc: The `measurements` module provides functions that apply calibrated noise to data to ensure differential privacy.
+  contents:
+  - has_concept("measurements")
+
+- title: Measures
+  desc: The `measures` modules provides functions that measure the distance between probability distributions.
+  contents:
+  - has_concept("measures")
+
+- title: Metrics
+  desc: The `metrics` module provides functions that measure the distance between two elements of a domain.
+  contents:
+  - has_concept("metrics")
+
+- title: Mod
+  desc: |
+    The `mod` module provides the classes which implement the [OpenDP Programming Framework](https://docs.opendp.org/en/stable/api/user-guide/programming-framework/index.html),
+    as well as utilities for enabling features and finding parameter values.
+  contents:
+  - has_concept("mod")
+
+- title: Transformations
+  desc: The `transformations` module provides functions that deterministically transform datasets.
+  contents:
+  - has_concept("transformations")
+
+- title: Typing
+  desc: |
+    The `typing` module provides utilities that bridge between R and Rust types.
+    OpenDP relies on precise descriptions of data types to make its security guarantees:
+    These are more natural in Rust with its fine-grained type system, but they may feel out of place in R.
+    These utilities try to fill that gap.
+  contents:
+  - has_concept("typing")
+
+- title: Other
+  desc: This should be empty if correctly configured. Please file an issue if any functions are listed here.
+  contents:
+  - lacks_concepts(c("accuracy", "combinators", "core", "data", "domains", "measurements", "measures", "metrics", "mod", "transformations", "typing"))

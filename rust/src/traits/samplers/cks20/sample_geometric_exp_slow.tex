@@ -1,0 +1,91 @@
+\documentclass{article} 
+\input{../../../lib.sty} 
+ 
+\title{\texttt{fn sample\_geometric\_exp\_slow}} 
+\author{Michael Shoemate} 
+ 
+\begin{document} 
+\maketitle 
+ 
+Proves soundness of \texttt{fn sample\_geometric\_exp\_slow} in \asOfCommit{mod.rs}{1f9230c}. 
+This proof is adapted from \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2}{subsection 5.2} of \cite{CKS20}. 
+ 
+\section{Hoare Triple} 
+\subsection*{Precondition} 
+\subsubsection*{Compiler-verified} 
+Argument \texttt{x} is of type \texttt{RBig}, a bignum rational 
+ 
+\subsubsection*{User-verified} 
+$\texttt{x} > 0$ 
+ 
+\subsection*{Pseudocode}         
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_geometric_exp_slow.py} 
+ 
+\subsection*{Postcondition}
+
+\begin{theorem}
+    \label{postcondition}
+    For any setting of the input parameter \texttt{x} such that the given preconditions hold, \\ 
+    \texttt{sample\_geometric\_exp\_slow} either returns \texttt{Err(e)} due to a lack of system entropy, 
+    or \texttt{Ok(out)}, where \texttt{out} is distributed as $\mathrm{Geometric}(1 - \exp(-x))$.
+\end{theorem}
+
+\begin{definition}
+    \label{geometric-def}
+    If $K \sim \mathrm{Geometric}(p)$, then for $k \in \{0, 1, \ldots\}$
+    \begin{equation}
+        \Pr[K = k] = (1 - p)^k \cdot p.
+    \end{equation}
+\end{definition}
+
+\begin{definition}
+    If $B \sim \mathrm{Bernoulli}(p)$, then for $b \in \{\top, \bot\}$
+    \begin{equation}
+        \Pr[B = b] = 
+        \begin{cases} 
+            p & b = \top \\
+            1 - p & b = \bot
+        \end{cases}
+    \end{equation}
+\end{definition}
+ 
+\section{Proof} 
+Assume the preconditions are met. 
+ 
+\begin{lemma}\label{err-e} 
+    \texttt{sample\_geometric\_exp\_slow} only returns \texttt{Err(e)} when there is a lack of system entropy. 
+\end{lemma} 
+ 
+\begin{proof} 
+    The preconditions on \texttt{x} satisfy the preconditions on \rustdoc{traits/samplers/fn}{sample\_bernoulli\_exp}, 
+    so by its definition, it only returns an error if there is a lack of system entropy. 
+    The only source of errors is from this function, 
+    therefore \texttt{sample\_geometric\_exp\_slow} only returns \texttt{Err(e)} when there is a lack of system entropy. 
+\end{proof} 
+ 
+\begin{theorem} \label{ok-out} \cite{CKS20} 
+    If the outcome of \texttt{sample\_geometric\_exp\_slow} is \texttt{Ok(out)},  
+    then \texttt{out} is distributed as $\mathrm{Geometric}(1 - \exp(-x))$.
+\end{theorem} 
+ 
+\begin{proof} 
+    The distribution of the $i^{th}$ boolean returned on line \ref{line:B} is $B_i \sim \mathrm{Bernoulli}(\exp(-x))$, 
+    because the preconditions on \texttt{x} satisfy the preconditions for \texttt{sample\_bernoulli\_exp}. 
+     
+    \begin{align*} 
+        \Pr[\texttt{out} = k] &= \Pr[B_1 = B_2 = ... = B_k = \top \land B_{k + 1} = \bot] \\ 
+        &= \Pr[B_{k + 1} = \bot] \prod_{i=1}^{k} \Pr[B_i = \top] && \text{All $B_i$ are independent.} \\ 
+        &= (1 - \exp(-x)) \exp(-x)^{k}
+    \end{align*} 
+
+    By Definition~\ref{geometric-def}, setting $p = 1 - \exp(-x)$, then $\texttt{out} \sim \mathrm{Geometric}(1 - \exp(-x))$.
+\end{proof} 
+ 
+\begin{proof}[Proof of Theorem~\ref{postcondition}]
+    Holds by \ref{err-e} and \ref{ok-out}. 
+\end{proof} 
+ 
+ 
+\bibliographystyle{alpha} 
+\bibliography{mod} 
+\end{document}

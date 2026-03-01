@@ -1,0 +1,9 @@
+[package]
+name = "rust2"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+opendp = { path = "../../../../../rust/", features = ["contrib", "honest-but-curious"] }
+
+# Make sure the features are in sync with Cargo-for-docs.toml.

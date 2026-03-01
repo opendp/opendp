@@ -1,0 +1,58 @@
+\documentclass{article}
+\input{../../lib.sty}
+\allowdisplaybreaks
+
+\title{\texttt{fn make\_noisy\_top\_k}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle
+
+Proves soundness of \rustdoc{measurements/fn}{make\_noisy\_top\_k}
+in \asOfCommit{mod.rs}{f5bb719}.\\
+\texttt{make\_noisy\_top\_k} returns a Measurement that
+noisily selects the indices of the greatest scores from a vector of input scores.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item \texttt{MO} is a type with trait \rustdoc{measurements/make\_noisy\_top\_k/trait}{TopKMeasure}
+    \item \texttt{TIA} (atomic input type) is a type with trait \rustdoc{traits/trait}{Number}
+\end{itemize}
+
+\subsubsection*{Caller-verified}
+None
+
+\subsection*{Pseudocode}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_noisy_top_k.py}
+
+\subsection*{Postcondition}
+
+\begin{theorem}
+    \label{postcondition}
+    \validMeasurement{\texttt{input\_domain, input\_metric, output\_measure, k, scale, negate, MO, TIA}}{\texttt{make\_noisy\_top\_k}}
+\end{theorem}
+
+\begin{proof}[Proof of data-independent errors.]
+    By the postcondition of \rustdoc{measurements/noisy_top_k/fn}{noisy\_top\_k},
+    the only source of error is due to entropy exhaustion, which could be data-dependent,
+    due to differing number of expected random draws depending on the input dataset.
+    
+    Therefore, the mechanism only satisfies the requirement for data-independent errors when conditioned on entropy not being exhausted.
+\end{proof}
+
+\begin{proof}[Proof of privacy guarantee.]
+    When \din\ is zero, by line~\ref{din-non-zero}, the privacy loss is zero, satisfying the postcondition.
+    Otherwise when scale is zero, by line~\ref{scale-zero}, the privacy loss is infinite, also satisfying the postcondition.
+
+    By the checks on lines~\ref{check-non-nan} and \ref{check-non-negative-scale},
+    the preconditions for \rustdoc{measurements/noisy_top_k/fn}{noisy\_top\_k} are satisfied.
+    Additionally by the checks on lines~\ref{din-non-neg}, \ref{din-non-zero} and \ref{scale-zero},
+    the preconditions for \rustdoc{measurements/noisy_top_k/trait}{TopKMeasure}\texttt{privacy\_map} are satisfied.
+
+    By the postcondition of \rustdoc{measurements/noisy_top_k/trait}{TopKMeasure} and adaptive composition,
+    the \dout on line~\ref{fn-privacy-map-call} satisfies the postcondition.
+\end{proof}
+
+\end{document}

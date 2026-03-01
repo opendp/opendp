@@ -1,0 +1,88 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{MakeNoise<VectorDomain<AtomDomain<IBig>>, MI, MO> for RV}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise/trait}{MakeNoise} 
+for \texttt{RV} over vectors of big integers in \asOfCommit{mod.rs}{f5bb719}.
+
+This is the core implementation of all variations of the gaussian or laplace mechanism.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+\texttt{MakeNoise} is parameterized as follows:
+\begin{itemize}
+    \item \texttt{MI} implements trait \rustdoc{core/trait}{Metric}
+    \item \texttt{MO} implements trait \rustdoc{core/trait}{Measure}
+    \item \texttt{RV} implements trait \rustdoc{measurements/noise/trait}{Sample}
+\end{itemize}
+
+The following trait bounds are also required:
+\begin{itemize}
+    \item \texttt{(VectorDomain<AtomDomain<IBig>{}>, MI)} implements trait \texttt{MetricSpace}
+    \item \texttt{RV} implements \rustdoc{measurements/noise/trait}{NoisePrivacyMap}\texttt{<MI, MO>}
+\end{itemize}
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/MakeNoise_IBig_for_RV.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \validMeasurement{(\texttt{self, input\_space, MI, MO, RV})}{\texttt{make\_noise}}
+\end{theorem}
+
+\begin{proof}[Proof of data-independent errors]
+    The precondition of \rustdoc{measurements/noise/trait}{Sample}\texttt{.sample} requires that \texttt{self} is a valid distribution.
+    This is satisfied by the postcondition of \rustdoc{measurements/noise/trait}{NoisePrivacyMap}\texttt{<MI, MO>} on line \ref{line:privacy-map}.
+    The postcondition of \rustdoc{measurements/noise/trait}{Sample}\texttt{.sample} guarantees that the function only ever returns an error independently of the data.
+\end{proof}
+
+For the proof of the privacy guarantee, start by reviewing the postcondition of \rustdoc{measurements/noise/trait}{NoisePrivacyMap}\texttt{<MI, MO>}, 
+which has an associated function \texttt{noise\_privacy\_map} to be called on line~\ref{line:privacy-map}.
+\begin{lemma}[Postcondition of \rustdoc{measurements/noise/trait}{NoisePrivacyMap}]
+    \label{lemma:new-privacy-map}
+    Given a distribution \texttt{self},
+    returns \texttt{Err(e)} if \texttt{self} is not a valid distribution.
+    Otherwise the output is \texttt{Ok(privacy\_map)}
+    where \texttt{privacy\_map} observes the following:
+
+    Define \texttt{function(x) = x + Z} where \texttt{Z} is a vector of iid samples from \texttt{self}.
+
+    For every pair of elements $x, x'$ in \texttt{VectorDomain<AtomDomain<IBig>{}>},
+    and for every pair (\texttt{d\_in}, \texttt{d\_out}),
+    where \texttt{d\_in} has the associated type for \texttt{input\_metric} and \texttt{d\_out} has the associated type for \texttt{output\_measure},
+    if $x, x'$ are \texttt{d\_in}-close under \texttt{input\_metric}, \texttt{privacy\_map(d\_in)} does not raise an exception,
+    and $\texttt{privacy\_map(d\_in)} \leq \texttt{d\_out}$,
+    then \texttt{function(x)}, \texttt{function(x')} are \texttt{d\_out}-close under \texttt{output\_measure}.
+\end{lemma}
+
+\begin{proof}[Proof of privacy guarantee]
+    Assuming line~\ref{line:privacy-map} does not fail,
+    then the returned privacy map is subject to Theorem~\ref{lemma:new-privacy-map}.
+    The privacy guarantee applies when \texttt{function(x) = x + Z}, where \texttt{Z} is a vector of iid samples from \texttt{self}.
+    In this case \texttt{self} describes the noise distribution.
+
+    We argue that \texttt{function} is consistent with the function described in Lemma~\ref{lemma:new-privacy-map}.
+    Line~\ref{line:sample} calls \texttt{self.sample(x\_i)} on each element in the input vector.
+    The precondition that \texttt{self} represents a valid distribution is satisfied by the postcondition of Lemma~\ref{lemma:new-privacy-map};
+    the distribution is valid when the construction of the privacy map does not raise an exception.
+    Since the preconditions for \rustdoc{measurements/noise/trait}{Sample}\texttt{.sample} are satisfied,
+    the postcondition claims that either an error is returned independently of the input \texttt{shift},
+    or \texttt{shift + Z} where \texttt{Z} is a sample from the distribution defined by \texttt{self}.
+    This is consistent with the definition of \texttt{function(x)} in the privacy map.
+
+    Therefore, the privacy guarantee from Lemma~\ref{lemma:new-privacy-map} applies to the returned measurement.
+\end{proof}
+
+\end{document}

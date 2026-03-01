@@ -1,0 +1,52 @@
+\documentclass{article}
+\input{../../../../../lib.sty}
+
+\title{\texttt{fn x\_mul\_2k}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise/distribution/float/utilities/fn}{x\_mul\_2k} in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+None
+
+\subsubsection*{User-Verified}
+$k \neq \texttt{i32.MIN}$
+
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/x_mul_2k.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    Return $x \cdot 2^k$.
+\end{theorem}
+
+\begin{proof}
+    Since $x$ is a fraction, line \ref{line:into-parts} splits $x$ into its numerator and denominator.
+
+    Consider two cases:
+    \begin{itemize}
+        \item If $k < 0$, then multiplying the denominator by $2^-k$ is equivalent to multiplying by $2^k$.
+            Since $k$ is negative, then $-k$ is positive, meaning the cast to \texttt{usize} is valid.
+            Shifting $-k$ zeros to the left is equivalent to multipying the denominator by $2^k$.
+            Negation of $k$ is well-defined for all values of \texttt{i32}, 
+            except for \texttt{i32.MIN}, which is not allowed by the precondition.
+            Therefore, the result is $x \cdot 2^k$.
+
+        \item If $k \geq 0$, then we multiply the numerator by $2^k$.
+            Since $k$ is positive, the cast to \texttt{usize} is valid.
+            Shifting $k$ zeros to the left is equivalent to multipying the numerator by $2^k$.
+            Therefore, the result is $x \cdot 2^k$.
+    \end{itemize}
+
+    In both cases, the result is $x \cdot 2^k$.
+\end{proof}
+\end{document}

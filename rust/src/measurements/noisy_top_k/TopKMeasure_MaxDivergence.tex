@@ -1,0 +1,59 @@
+\documentclass{article}
+\input{../../lib.sty}
+\allowdisplaybreaks
+
+\title{\texttt{impl TopKMeasure for MaxDivergence}}
+\author{Tudor Cebere \and Michael Shoemate}
+\begin{document}
+\maketitle
+\contrib
+
+This document proves soundness of \rustdoc{measurements/noisy_top_k/trait}{TopKMeasure} for \texttt{MaxDivergence} in \asOfCommit{mod.rs}{e62b0aa2}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Associated Const \texttt{REPLACEMENT = false}
+    \item Method \texttt{privacy\_map} \\
+        \textit{Types consistent with pseudocode.}
+\end{itemize}
+
+\subsubsection*{Caller-verified}
+\begin{itemize}
+    \item Method \texttt{privacy\_map}
+        \begin{itemize}
+            \item \texttt{d\_in} is non-null and positive.
+            \item \texttt{scale} is non-null and positive.
+        \end{itemize}
+\end{itemize}
+
+\subsection*{Pseudocode}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/TopKMeasure_MaxDivergence.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    The implementation is consistent with the associated items in the \rustdoc{measurements/noisy\_top\_k/trait}{TopKMeasure} trait.
+    \begin{enumerate}
+        \item Method \texttt{privacy\_map}:
+        For any $x, x'$ where $d_\mathrm{in} \ge d_\mathrm{Range}(x, x')$,
+        return $d_\mathrm{out} \ge D_\mathrm{self}(f(x), f(x'))$,
+        where $f(x) = \mathrm{noisy\_top\_k}(x=x, k=1, \mathrm{scale}=\mathrm{scale}, \mathrm{replacement}=\mathrm{Self::REPLACEMENT})$.
+    \end{enumerate}
+\end{theorem}
+
+\begin{proof}
+    Since \texttt{Self::REPLACEMENT} is false, then by the postcondition of \texttt{noisy\_top\_k},
+    \texttt{noisy\_top\_k} returns a sample from $\mathcal{M}_{PF}$.
+    In the case that scores are not monotonic,
+    by \cite{mckenna2020permute} Theorem~1, $\mathcal{M}_{PF}$ satisfies $\epsilon$-DP,
+    because the range distance is equal to $2 \cdot \Delta$.
+    Otherwise in the case that scores are monotonic,
+    by \cite{mckenna2020permute} Remark~1, $\mathcal{M}_{PF}$ satisfies $\epsilon/2$-DP,
+    but the range distance is equal to $\Delta$, thus satisfying $\epsilon$-DP.
+\end{proof}
+\bibliographystyle{plain}
+\bibliography{references.bib}
+
+\end{document}

@@ -1,0 +1,64 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{impl InverseCDF for CanonicalRV}}
+\author{Aishwarya Ramasethu, Yu-Ju Ku, Jordan Awan, Michael Shoemate}
+\begin{document}
+
+\maketitle
+
+\contrib
+
+Proves soundness of the implementation of \rustdoc{traits/samplers/psrn/trait}{InverseCDF} 
+for \rustdoc{traits/samplers/psrn/canonical/struct}{CanonicalRV}.
+
+The implementation computes the inverse CDF of the canonical noise random variable.
+
+\section{Hoare Triple}
+
+\subsection*{Preconditions}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Argument \texttt{self} of type \rustdoc{traits/samplers/psrn/canonical/struct}{CanonicalRV}.
+    \item Argument \texttt{uniform} of type \texttt{RBig}.
+    \item Argument \texttt{refinements} of type \texttt{usize}.
+    \item Generic \texttt{R} implements \rustdoc{traits/samplers/psrn/trait}{ODPRound} which denotes the rounding mode, either up or down.
+\end{itemize}
+
+\subsubsection*{Human-verified}
+Argument \texttt{uniform} is in $[0, 1]$.
+
+\subsection*{Pseudocode}
+
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/InverseCDF_for_CanonicalRV.py}
+
+\subsection*{Postcondition}
+
+\begin{theorem}
+Given a random variable \texttt{self} (of type \rustdoc{traits/samplers/psrn/canonical/struct}{CanonicalRV}),
+the algorithm returns \texttt{Some(out)} where \texttt{out} is the inverse cumulative distribution function of \texttt{CanonicalRV} (which includes a rescale and shift) evaluated at \texttt{uniform}
+with error in direction \texttt{R}, or \texttt{None}.
+
+The error between \texttt{out} and the exactly-computed CDF decreases monotonically as \texttt{refinements} increases.
+\end{theorem}
+
+\begin{proof} 
+
+By the definition of \rustdoc{traits/samplers/psrn/canonical/struct}{CanonicalRV},
+\begin{itemize}
+    \item \texttt{self.tradeoff} is a symmetric nontrivial tradeoff function
+    \item \texttt{self.fixed\_point} is the fixed point of \texttt{self.tradeoff}, where \texttt{tradeoff(fixed\_point) = fixed\_point}.
+\end{itemize}
+
+Therefore the preconditions of \texttt{quantile\_cnd} are met,
+so \texttt{f\_inv} on line \ref{f_inv} is a sample from the canonical noise distribution with shift of zero and scale of one.
+
+The function then returns the outcome, scaled by \texttt{self.scale} and shifted by \texttt{self.shift}.
+
+Computing $F_f^{-1}$, rescaling and shifting are exact via fractional arithmetic, 
+so making use of refinements is not necessary, 
+as the error in computing the inverse CDF is already zero, satisfying the monotonicity property of the error.
+
+\end{proof}
+
+\end{document}

@@ -1,0 +1,22 @@
+{% if current_version and current_version.name not in [latest_version_name, 'stable'] %}
+<div class="admonition warning" style="position: relative;" id="old-version-warning">
+  <!--
+   To work with this locally, in conf.py uncomment the entry under "html_context".
+
+   Without the style, the region for the article title overlaps, and the link is unclickable.
+  -->
+  <p class="admonition-title">
+  {% if current_version.name in ['nightly', 'beta'] %}
+  This documentation is for a development version of OpenDP.
+  {% else %}
+  This documentation is for an old version of OpenDP.
+  {% endif %}
+  </p>
+  <p>The current release of OpenDP is <a href="/">{{ latest_version_name }}</a>.</p>
+</div>
+<script>
+  window.addEventListener("load", (event) => {
+    document.getElementById('old-version-warning').style.top = `${window.visualViewport.pageTop}px`;
+  });
+</script>
+{% endif %}

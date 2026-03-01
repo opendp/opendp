@@ -1,0 +1,18 @@
+# To add dev dependencies, make changes here and then
+# regenerate requirements-dev.txt by running
+#
+#   pip-compile requirements-dev.in
+#
+# and then commit this file and requirements-dev.txt.
+
+flake8
+pytest
+wheel
+coverage
+mypy
+pip-tools==7.3.0
+types-Deprecated
+blacken-docs
+
+# Just needed for examples in documentation:
+pandas

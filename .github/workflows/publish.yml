@@ -1,0 +1,189 @@
+# Publishes a release for a channel. Publishes to a Python package, a Rust crate, and a GitHub release.
+#
+# INPUTS
+# * channel:  The release channel
+# * date:     The release date
+# * dry_run:  Whether to do a dry-run (don't actually publish)
+name: Publish Channel
+on:
+  workflow_call:
+    inputs:
+      channel:
+        type: string
+        required: true
+      date:
+        type: string
+        required: true
+      dry_run:
+        type: boolean
+        required: false
+        default: false
+    secrets:
+      TEST_PYPI_API_TOKEN:
+        required: true
+      PYPI_API_TOKEN:
+        required: true
+      CRATES_IO_API_TOKEN:
+        required: true
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Target Channel
+        type: choice
+        options:
+          - dev
+          - nightly
+          - beta
+          - stable
+        required: true
+        default: nightly
+      date:
+        description: Release Date
+        type: string
+        required: true
+      dry_run:
+        description: Dry Run?
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  credential-check:
+    uses: ./.github/workflows/credential-check.yml
+    with:
+      ref: ${{ inputs.channel }}
+      assert_version: ${{ inputs.channel != 'dev' }}
+
+  publish-python:
+    needs: credential-check
+    runs-on: ubuntu-22.04
+    env:
+      # twine doesn't support dry-runs, so if that's what we're doing, simulate it by using TestPyPI instead of PyPI
+      PYPI_API_TOKEN: ${{ inputs.dry_run && secrets.TEST_PYPI_API_TOKEN || secrets.PYPI_API_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.channel }}
+
+      - name: Download Python bindings
+        uses: actions/download-artifact@v4
+        with:
+          name: python_bindings
+          path: python/src/opendp/
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.13
+
+      - name: Download Python wheel
+        uses: actions/download-artifact@v4
+        with:
+          pattern: python_wheel_*
+          path: python/dist
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: python_sdist
+          path: python/dist
+
+      - name: Publish Python package
+        env:
+          # twine doesn't support dry-runs, so if that's what we're doing, simulate it by using TestPyPI instead of PyPI
+          REPOSITORY: ${{ inputs.dry_run && 'testpypi' || 'pypi' }}
+        run: |
+          pip install -r tools/requirements-tools.txt
+          python tools/publish_tool.py python -r $REPOSITORY
+
+  publish-r:
+    if: 
+    needs: credential-check
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.channel }}
+
+      - name: Download R bindings
+        uses: actions/download-artifact@v4
+        with:
+          name: r_package
+          path: R/opendp/
+
+      - name: Push to R branch
+        run: |
+          git fetch
+          git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          git config --global user.name "$GITHUB_ACTOR"
+
+          # create brand new history each time
+          BRANCH=r-universe${{ (inputs.dry_run || inputs.channel != 'stable') && '-dev' || '' }}
+          git checkout --orphan $BRANCH
+
+          git add R/opendp/ --force
+          echo "Push R package to $BRANCH branch"
+          git commit --allow-empty-message --message "$(git log $(git rev-parse origin/main) --oneline --format=%B -n1 | head -n1)"
+          git remote set-url origin "https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY"
+          git push --force origin $BRANCH
+
+  publish-rust:
+    needs: publish-python
+    runs-on: ubuntu-22.04
+    env:
+      CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.channel }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.13
+
+      - name: Publish Rust crate
+        env:
+          DRY_RUN_FLAG: ${{ inputs.dry_run && '--dry_run' || '' }}
+        run: |
+          pip install -r tools/requirements-tools.txt
+          python tools/publish_tool.py rust $DRY_RUN_FLAG
+
+  publish-github:
+    needs: publish-rust
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.channel }}
+
+      - name: Download Python bindings
+        uses: actions/download-artifact@v4
+        with:
+          name: python_bindings
+          path: python/src/opendp/          
+
+      - name: Download R bindings
+        uses: actions/download-artifact@v4
+        with:
+          name: r_package
+          path: R/opendp/
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.13
+
+      - name: Publish GitHub Release
+        if: ${{ inputs.channel == 'stable' }}
+        env:
+          DRY_RUN_FLAG: ${{ inputs.dry_run && '--dry_run' || '' }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pip install -r tools/requirements-tools.txt
+          python tools/publish_tool.py github -d ${{ inputs.date }} $DRY_RUN_FLAG
+  

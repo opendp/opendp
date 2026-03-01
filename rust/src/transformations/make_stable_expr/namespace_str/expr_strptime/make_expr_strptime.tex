@@ -1,0 +1,87 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{fn make\_expr\_strptime}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of \rustdoc{transformations/make_stable_expr/namespace_str/expr_strptime/fn}{make\_expr\_strptime} in \asOfCommit{mod.rs}{f5bb719}.
+
+\texttt{make\_expr\_strptime} returns a Transformation that parses strings in a dataframe column into temporal types.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Argument \texttt{input\_domain} of type \texttt{WildExprDomain}
+    \item Argument \texttt{input\_metric} of type \texttt{M}
+    \item Generic \texttt{M} implements \texttt{OuterMetric}
+    \begin{itemize}
+        \item \texttt{OuterMetric} defines an associated type \texttt{InnerMetric} that must implement \texttt{UnboundedMetric}
+    \end{itemize}
+    \item \texttt{(ExprDomain, M)} implements \texttt{MetricSpace},
+    \item \texttt{Expr} implements \texttt{StableExpr<M, M>}
+\end{itemize}
+
+\subsubsection*{Human-verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/make_expr_strptime.py}
+
+\subsection*{Postcondition}
+\validTransformation{\texttt{(input\_domain, input\_metric, expr, M)}}{\texttt{make\_expr\_strptime}}
+
+\section{Proof}
+
+Starting from line \ref{match-strategy}, 
+\texttt{expr} is matched as if it were a strptime expression, or otherwise rejects the expression.
+
+All preconditions for \texttt{make\_stable} on line \ref{t-prior} are compiler-verified, 
+therefore by the postcondition \texttt{t\_prior} is a valid transformation.
+
+To prove that the output is a valid transformation, 
+we must first prove that the transformation on line \ref{strp-trans} is a valid transformation.
+
+\begin{proof}
+    \textbf{Data-Independent Errors}
+    Line \ref{string-check} ensures that the input data is always a string type and
+    line \ref{to-type-check} ensures that the output data is always a temporal type,
+    which are necessary preconditions for the strptime function in Polars.
+    However, even if these checks were ignored when they would fail, 
+    then all possible choices of input dataset would fail,
+    resulting in data-independent errors.
+
+    Line \ref{non-strict} disables raising an error when conversion fails.
+    Conversion cannot be ambiguous because line \ref{format} requires the format to be specified,
+    but even if parsing were to be ambiguous, line \ref{ambiguous} configures the parsing of ambiguous values to not raise.
+
+    Therefore, all errors that may be encountered while parsing result in null values,
+    so no error can be raised by the strptime transformation.
+\end{proof}
+
+\begin{proof}
+    \textbf{Appropriate Output Domain}
+    Line \ref{out-series} constructs a series domain whose elements are of type \texttt{to\_type} or null.
+    Each string in the input data may either parse into \texttt{to\_type} or fail and by \ref{non-strict} and \ref{ambiguous} evaluate to null.
+
+    Therefore the output domain is the same as the input domain, 
+    but where the active column domain's data type is nullable values of type \texttt{to\_type}.
+\end{proof}
+
+\begin{proof}
+    \textbf{Stability Guarantee}
+    strptime can be considered a 1-stable row-by-row transformation, 
+    as the date parsing is applied independently to each and every row.
+    See \rustdoc{transformations/manipulation/fn}{make\_row\_by\_row} for a proof of the stability of row-by-row functions.
+\end{proof}
+
+Since it has been shown that both \texttt{t\_prior} and the strptime transformation are valid transformations,
+then the preconditions for \texttt{make\_chain\_tt} are met (invoked via the right-shift operator shorthand).
+
+\end{document}

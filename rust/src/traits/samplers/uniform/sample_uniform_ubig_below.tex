@@ -1,0 +1,72 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn sample\_uniform\_ubig\_below}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+\contrib
+
+This document proves that the implementation of \rustdoc{traits/samplers/uniform/fn}{sample\_uniform\_ubig\_below} in \asOfCommit{mod.rs}{f5bb719} 
+satisfies its definition.
+This algorithm uses the same algorithm and argument as used for unsigned native integers, 
+but this time the bit depth is dynamically chosen to fill the last byte of a series of bytes long enough to hold \texttt{upper}.
+
+\subsection*{PR History}
+\begin{itemize}
+    \item \vettingPR{473}
+\end{itemize}
+
+\section{Hoare Triple}
+\subsection*{Preconditions}
+\begin{itemize}
+    \item \textbf{Arguments}
+    \begin{itemize}
+        \item \texttt{upper} of type \texttt{UBig}
+    \end{itemize}
+\end{itemize}
+
+\subsection*{Pseudocode}
+
+\lstinputlisting[language=Python,firstline=2]{./pseudocode/sample_uniform_ubig_below.py}
+
+\subsection*{Postcondition}
+For any setting of the input parameter \texttt{upper},
+\texttt{sample\_uniform\_ubig\_below} either
+\begin{itemize}
+    \item raises an exception if there is a lack of system entropy,
+    \item returns \texttt{out} where \texttt{out} is uniformly distributed between $[0, upper)$.
+\end{itemize}
+
+\section{Proof}
+\begin{proof}
+\texttt{byte\_len} is the fewest number of bytes necessary to represent \texttt{upper}, 
+which works out to $\mathrm{ceil}(\mathrm{ceil}(\log_2(\texttt{upper})) / 8)$.
+Let \texttt{max} denote the largest integer representable in this many bytes ($2^{\texttt{byte\_len}} - 1$).
+We can sample uniformly from $[0, \texttt{max})$ by filling this many bytes with bits uniformly at random.
+
+You could (naively) sample from $[0, \texttt{upper})$ by rejecting any \texttt{sample} greater than or equal to \texttt{upper}.
+To reduce the probability of rejecting (and improve computational performance), 
+partition the numbers into two sets:\
+
+\begin{itemize}
+    \item the leading $\texttt{upper} \cdot k = \texttt{threshold}$ numbers that wrap evenly modulo \texttt{upper}
+    \item the remaining trailing $(\texttt{max} \mod \texttt{upper})$ numbers
+\end{itemize}
+
+It is equivalent to only reject trailing numbers,
+and return the sample modulo \texttt{upper}.
+Since $\texttt{max} = \texttt{threshold} + (\texttt{max} \mod \texttt{upper})$,
+then $\texttt{threshold} = \texttt{max} - (\texttt{max} \mod \texttt{upper})$.
+
+\noindent Therefore, for any value of \texttt{upper}, the function satisfies the postcondition.
+\end{proof}
+
+\end{document}
+
+
+
+
+

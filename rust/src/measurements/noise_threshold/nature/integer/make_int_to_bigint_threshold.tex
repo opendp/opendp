@@ -1,0 +1,49 @@
+\documentclass{article}
+\input{../../../../lib.sty}
+
+\title{\texttt{fn make\_int\_to\_bigint\_threshold}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of the implementation of \rustdoc{measurements/noise_threshold/nature/integer/fn}{make\_int\_to\_bigint\_threshold} in \asOfCommit{mod.rs}{f5bb719}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-Verified}
+
+\begin{itemize}
+    \item Generic \texttt{TK} implements trait \rustdoc{traits/trait}{Hashable}
+    \item Generic \texttt{TV} implements trait \rustdoc{traits/trait}{Integer} and \rustdoc{traits/trait}{SaturatingCast}\texttt{<IBig>}
+    \item Const-generic \texttt{P} is of type \texttt{usize}
+    \item Generic \texttt{QI} implements trait \rustdoc{traits/trait}{Number}
+\end{itemize}
+
+\subsubsection*{User-Verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_int_to_bigint_threshold.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \validTransformation{(\texttt{input\_space, TK, TV, P, QI})}{\texttt{make\_int\_to\_bigint\_threshold}}
+\end{theorem}
+
+\begin{proof}
+    By the definition of the function on line \ref{line:function},
+    and since \texttt{IBig.from} is infallible, the function is infallible, 
+    meaning that the function cannot raise data-dependent errors.
+    The function also always returns a hashmap whose keys are un-changed, and values are IBigs,
+    meaning the output of the function is always a member of the output domain,
+    as defined on line \ref{line:output-domain}.
+    Finally, the function is 1-stable, because the real values of the numbers remain un-changed,
+    meaning the distance between adjacent inputs always remains the same, satisfying the stability property.
+\end{proof}
+
+
+\end{document}

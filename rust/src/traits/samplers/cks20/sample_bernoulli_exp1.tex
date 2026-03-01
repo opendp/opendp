@@ -1,0 +1,94 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn sample\_bernoulli\_exp1}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+\contrib
+Proves soundness of \texttt{fn sample\_bernoulli\_exp1} in \asOfCommit{mod.rs}{0be3ab3e6}.\\
+\texttt{fn sample\_bernoulli\_exp1} returns a sample from the $Bernoulli(exp(-x))$ distribution for some rational argument in $[0, 1]$.
+This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.5.1}{subsection 5.1} of \cite{CKS20}.
+
+\subsection*{Vetting History}
+\begin{itemize}
+    \item \vettingPR{519}
+\end{itemize}
+
+\section{Hoare Triple}
+\subsection*{Preconditions}
+\begin{itemize}
+    \item $\texttt{x}$ is of type $\texttt{Rational}$ and $x \in [0, 1]$
+    \item \rustdoc{traits/samplers/bernoulli/trait}{SampleBernoulli} is implemented for $\texttt{Rational}$ probabilities
+\end{itemize}
+
+
+\subsection*{Pseudocode}        
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_bernoulli_exp1.py}
+
+\subsection*{Postcondition}
+\label{postcondition}
+For any setting of the input parameter \texttt{x} such that the given preconditions hold, \\
+\texttt{sample\_bernoulli\_exp1} either returns \texttt{Err(e)} due to a lack of system entropy,
+or \texttt{Ok(out)}, where \texttt{out} is distributed as $Bernoulli(exp(-x))$.
+
+\section{Proof}
+Assume the preconditions are met.
+
+\begin{lemma}
+    \label{err-e}
+    \texttt{sample\_bernoulli\_exp1} only returns \texttt{Err(e)} when there is a lack of system entropy.
+\end{lemma}
+
+\begin{proof}
+    In all usages of \rustdoc{traits/samplers/bernoulli/trait}{SampleBernoulli}, the argument passed satisfies its definition preconditions, 
+    by the preconditions on \texttt{x} and function logic.
+    Thus, by its definition, \texttt{sample\_bernoulli\_rational} only returns an error when there is a lack of system entropy.
+    The only source of errors in \texttt{sample\_bernoulli\_exp1} is from the invocation of \texttt{sample\_bernoulli\_rational}.
+    Therefore \texttt{sample\_bernoulli\_exp1} only returns \texttt{Err(e)} when there is a lack of system entropy.
+\end{proof}
+
+\begin{lemma}
+    \label{P_K_gt_n}
+    Let $k^{*}$ denote the final value of \texttt{k} on line \ref{line:K}.
+    Then $P[K^{*} > n] = \frac{x^n}{n!}$ for any integer $n > 0$ \cite{CKS20}.
+\end{lemma}
+
+\begin{proof}
+    For $i \ge 0$, let $a_i$ denote the $i^{th}$ outcome of \texttt{sample\_bernoulli\_rational} on line \ref{line:B_i}.
+    By the definition of \texttt{sample\_bernoulli\_rational}, under the established conditions and preconditions,
+    each $A_i$ is distributed as $Bernoulli(x / i)$.
+
+    \begin{align*}
+        P[K^{*} > n] &= P[A_1 = A_2 = ... = A_n = \top] && \text{since } K^{*} > n, \forall i \leq n, a_i = \top \\
+        &= \prod_{k=1}^n P[A_k = \top] && \text{all $A_i$ are independent} \\
+        &= \prod_{k=1}^n \frac{x}{k} && \text{since $A_k \sim Bernoulli(x/k)$} \\
+        &= \frac{x^n}{n!}
+    \end{align*}
+\end{proof}
+
+\begin{lemma}
+    \label{ok-out}
+    $is\_odd(K^{*}) \sim Bernoulli(exp(-x))$ \cite{CKS20}.
+\end{lemma}
+
+\begin{proof}
+    \begin{align*}
+        P[K^{*} \text{ odd}] &= \sum_{k=0}^\infty P[K^{*} = 2k + 1] \\
+        &= \sum_{k=0}^\infty (P[K^{*} > 2k] - P[K^{*} > 2k + 1]) \\
+        &= \sum_{k=0}^\infty \left(\frac{x^{2k}}{(2k)!} - \frac{x^{2k + 1}}{(2k + 1)!}\right) && \text{by } \ref{P_K_gt_n} \\
+        &= exp(-x)
+    \end{align*}
+
+    Since $\mathtt{k}$ is distributed according to $K^{*}$, then \texttt{out} is distributed as $Bernoulli(exp(-x))$.
+\end{proof}
+
+\begin{proof}
+    \ref{postcondition} holds by \ref{err-e} and \ref{ok-out}.
+\end{proof}
+
+\bibliographystyle{alpha}
+\bibliography{mod}
+\end{document}

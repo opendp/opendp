@@ -1,0 +1,66 @@
+\documentclass{article}
+\input{../lib.sty}
+
+\title{\texttt{fn discrete\_gaussian\_scale\_to\_accuracy}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+This document contains materials associated with \rustdoc{accuracy/fn}{discrete\_gaussian\_scale\_to\_accuracy}.
+
+\begin{definition}
+    Let $z$ be the true value of the statistic and $X$ be the random variable the noisy release is drawn from.
+    Define $Y = |X - z|$, the distribution of DP errors. 
+    Then for any statistical significance level \texttt{alpha}, denoted $\alpha \in [0, 1]$, and \texttt{accuracy}, denoted $a \ge 0$,
+    \begin{equation}
+        \alpha = P[Y \ge a]
+    \end{equation}
+\end{definition}
+
+\begin{theorem}
+    For any $\texttt{scale} \ge 0$ denoted $s$, when $X \sim \mathcal{N}_\mathbb{Z}(z, s)$, 
+    \begin{equation}
+        a = argmin_i \left[(1 - \alpha) \cdot \sum_{y\in \mathbb{Z}} e^{-(y/s)^2/2} 
+        \le \sum_{x=0}^{i - 1} (1 + 1[x \ne 0]) e^{-(x/s)^2/2} \right]
+    \end{equation}
+
+    That is, the accuracy is the smallest $i$ such that the inequality holds.
+\end{theorem}
+
+\begin{proof}
+
+Consider that the distribution of $(X - z) \sim \mathcal{N}_\mathbb{Z}(0, s)$.
+Then the PMF of $Y$ is:
+\begin{equation}
+    \forall y \ge 0 \qquad g(y) = \frac{(1 + 1[y \ne 0]) e^{-(y/s)^2/2}}{\sum_{y \in \mathbb{Z}} e^{-(y/s)^2/2} }
+\end{equation}
+
+The purpose of the indicator function is to avoid double-counting zero.
+
+Now derive an expression for $\alpha$:
+\begin{align*}
+    \alpha &= P[Y \ge a] \\
+    &= 1 - P[Y < a] \\
+    &= 1 - \sum_{y=0}^{a - 1} g(y) && \text{where $g(y)$ is the distribution of Y} \\
+    &= 1 - \sum_{y=0}^{a - 1} \frac{(1 + 1[y \ne 0]) e^{-(y/s)^2/2}}{\sum_{z \in \mathbb{Z}} e^{-(z/s)^2/2} }
+\end{align*}
+
+Reorder terms:
+\begin{align*}
+    (1 - \alpha) \sum_{z \in \mathbb{Z}} e^{-(z/s)^2/2} = \sum_{y=0}^{a - 1} (1 + 1[y \ne 0]) e^{-(y/s)^2/2}
+\end{align*}
+
+The accuracy is the smallest $a$ for which the right term is greater than or equal to the left term.
+\end{proof}
+
+\section{Implementation}
+
+The discrete bound only differs significantly from the continuous bound when the scale is small.
+When the scale is small, the terms approach zero relatively quickly, due to the exponential term.
+Since the probability mass away from the origin is monotonically decreasing,
+the left-hand side of the equation can be approximated (down to float error) by summing the masses until underflow.
+
+We then simply run a linear search for the smallest $a$ such that the inequality holds.
+
+\end{document}

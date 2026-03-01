@@ -1,0 +1,14 @@
+# Creates a release on the nightly channel. Intended to right every day before midnight.
+name: Nightly
+on:
+  schedule:
+    # 03:45 UTC = 22:45 EST/23:45 EDT (i.e., always before midnight), so nightlies will have a sensible date
+    - cron: '45 3 * * *'
+
+jobs:
+  release:
+    uses: ./.github/workflows/release.yml
+    with:
+      channel: nightly
+      sync: true
+    secrets: inherit

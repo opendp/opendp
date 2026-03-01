@@ -1,0 +1,6309 @@
+This package contains the Rust source code of the dependencies in src/vendor.tar.xz
+The authorships and the licenses are listed below.
+
+===============================
+
+Name:    adler2
+Files:   vendor/adler2/*
+Authors: Jonas Schievink, oyvindln
+License: see license file
+
+------------------------------
+
+Name:    adler2
+Files:   vendor/adler2/*
+Authors: Jonas Schievink, oyvindln
+License: see license file
+
+------------------------------
+
+Name:    ahash
+Files:   vendor/ahash/*
+Authors: Tom Kaitchuck
+License: see license file
+
+------------------------------
+
+Name:    ahash
+Files:   vendor/ahash/*
+Authors: Tom Kaitchuck
+License: see license file
+
+------------------------------
+
+Name:    aho-corasick
+Files:   vendor/aho-corasick/*
+Authors: Andrew Gallant
+License: see license file
+
+------------------------------
+
+Name:    aho-corasick
+Files:   vendor/aho-corasick/*
+Authors: Andrew Gallant
+License: see license file
+
+------------------------------
+
+Name:    alga
+Files:   vendor/alga/*
+Authors: Brendan Zabarauskas, Darin Morrison, Sébastien Crozet, Wadelma
+License: see license file
+
+------------------------------
+
+Name:    alga
+Files:   vendor/alga/*
+Authors: Brendan Zabarauskas, Darin Morrison, Sébastien Crozet, Wadelma
+License: see license file
+
+------------------------------
+
+Name:    allocator-api2
+Files:   vendor/allocator-api2/*
+Authors: Zakarum
+License: see license file
+
+------------------------------
+
+Name:    allocator-api2
+Files:   vendor/allocator-api2/*
+Authors: Zakarum
+License: see license file
+
+------------------------------
+
+Name:    android_system_properties
+Files:   vendor/android_system_properties/*
+Authors: Nicolas Silva
+License: see license file
+
+------------------------------
+
+Name:    android_system_properties
+Files:   vendor/android_system_properties/*
+Authors: Nicolas Silva
+License: see license file
+
+------------------------------
+
+Name:    anstream
+Files:   vendor/anstream/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    anstream
+Files:   vendor/anstream/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    anstyle-parse
+Files:   vendor/anstyle-parse/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    anstyle-parse
+Files:   vendor/anstyle-parse/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    anstyle-query
+Files:   vendor/anstyle-query/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    anstyle-query
+Files:   vendor/anstyle-query/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    anstyle-wincon
+Files:   vendor/anstyle-wincon/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    anstyle-wincon
+Files:   vendor/anstyle-wincon/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    anstyle
+Files:   vendor/anstyle/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    anstyle
+Files:   vendor/anstyle/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    anyhow
+Files:   vendor/anyhow/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    anyhow
+Files:   vendor/anyhow/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    approx
+Files:   vendor/approx/*
+Authors: Brendan Zabarauskas
+License: see license file
+
+------------------------------
+
+Name:    approx
+Files:   vendor/approx/*
+Authors: Brendan Zabarauskas
+License: see license file
+
+------------------------------
+
+Name:    ar_archive_writer
+Files:   vendor/ar_archive_writer/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    ar_archive_writer
+Files:   vendor/ar_archive_writer/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    argminmax
+Files:   vendor/argminmax/*
+Authors: Jeroen Van Der Donckt
+License: see license file
+
+------------------------------
+
+Name:    argminmax
+Files:   vendor/argminmax/*
+Authors: Jeroen Van Der Donckt
+License: see license file
+
+------------------------------
+
+Name:    array-init-cursor
+Files:   vendor/array-init-cursor/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    array-init-cursor
+Files:   vendor/array-init-cursor/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    arrayref
+Files:   vendor/arrayref/*
+Authors: David Roundy
+License: see license file
+
+------------------------------
+
+Name:    arrayref
+Files:   vendor/arrayref/*
+Authors: David Roundy
+License: see license file
+
+------------------------------
+
+Name:    arrayvec
+Files:   vendor/arrayvec/*
+Authors: bluss
+License: see license file
+
+------------------------------
+
+Name:    arrayvec
+Files:   vendor/arrayvec/*
+Authors: bluss
+License: see license file
+
+------------------------------
+
+Name:    async-channel
+Files:   vendor/async-channel/*
+Authors: Stjepan Glavina
+License: see license file
+
+------------------------------
+
+Name:    async-channel
+Files:   vendor/async-channel/*
+Authors: Stjepan Glavina
+License: see license file
+
+------------------------------
+
+Name:    async-stream-impl
+Files:   vendor/async-stream-impl/*
+Authors: Carl Lerche
+License: see license file
+
+------------------------------
+
+Name:    async-stream-impl
+Files:   vendor/async-stream-impl/*
+Authors: Carl Lerche
+License: see license file
+
+------------------------------
+
+Name:    async-stream
+Files:   vendor/async-stream/*
+Authors: Carl Lerche
+License: see license file
+
+------------------------------
+
+Name:    async-stream
+Files:   vendor/async-stream/*
+Authors: Carl Lerche
+License: see license file
+
+------------------------------
+
+Name:    async-trait
+Files:   vendor/async-trait/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    async-trait
+Files:   vendor/async-trait/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    atoi_simd
+Files:   vendor/atoi_simd/*
+Authors: Dmitry Rodionov
+License: see license file
+
+------------------------------
+
+Name:    atoi_simd
+Files:   vendor/atoi_simd/*
+Authors: Dmitry Rodionov
+License: see license file
+
+------------------------------
+
+Name:    atomic-waker
+Files:   vendor/atomic-waker/*
+Authors: Stjepan Glavina, Contributors to futures-rs
+License: see license file
+
+------------------------------
+
+Name:    atomic-waker
+Files:   vendor/atomic-waker/*
+Authors: Stjepan Glavina, Contributors to futures-rs
+License: see license file
+
+------------------------------
+
+Name:    autocfg
+Files:   vendor/autocfg/*
+Authors: Josh Stone
+License: see license file
+
+------------------------------
+
+Name:    autocfg
+Files:   vendor/autocfg/*
+Authors: Josh Stone
+License: see license file
+
+------------------------------
+
+Name:    base64
+Files:   vendor/base64/*
+Authors: Marshall Pierce
+License: see license file
+
+------------------------------
+
+Name:    base64
+Files:   vendor/base64/*
+Authors: Marshall Pierce
+License: see license file
+
+------------------------------
+
+Name:    bincode_derive
+Files:   vendor/bincode_derive/*
+Authors: Zoey Riordan, Victor Koenders
+License: see license file
+
+------------------------------
+
+Name:    bincode_derive
+Files:   vendor/bincode_derive/*
+Authors: Zoey Riordan, Victor Koenders
+License: see license file
+
+------------------------------
+
+Name:    bincode
+Files:   vendor/bincode/*
+Authors: Ty Overby, Zoey Riordan, Victor Koenders
+License: see license file
+
+------------------------------
+
+Name:    bincode
+Files:   vendor/bincode/*
+Authors: Ty Overby, Zoey Riordan, Victor Koenders
+License: see license file
+
+------------------------------
+
+Name:    bitflags
+Files:   vendor/bitflags/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    bitflags
+Files:   vendor/bitflags/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    bitvec
+Files:   vendor/bitvec/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    bitvec
+Files:   vendor/bitvec/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    blake3
+Files:   vendor/blake3/*
+Authors: Jack O'Connor, Samuel Neves
+License: see license file
+
+------------------------------
+
+Name:    blake3
+Files:   vendor/blake3/*
+Authors: Jack O'Connor, Samuel Neves
+License: see license file
+
+------------------------------
+
+Name:    block-buffer
+Files:   vendor/block-buffer/*
+Authors: RustCrypto Developers
+License: see license file
+
+------------------------------
+
+Name:    block-buffer
+Files:   vendor/block-buffer/*
+Authors: RustCrypto Developers
+License: see license file
+
+------------------------------
+
+Name:    boxcar
+Files:   vendor/boxcar/*
+Authors: Ibraheem Ahmed
+License: see license file
+
+------------------------------
+
+Name:    boxcar
+Files:   vendor/boxcar/*
+Authors: Ibraheem Ahmed
+License: see license file
+
+------------------------------
+
+Name:    bumpalo
+Files:   vendor/bumpalo/*
+Authors: Nick Fitzgerald
+License: see license file
+
+------------------------------
+
+Name:    bumpalo
+Files:   vendor/bumpalo/*
+Authors: Nick Fitzgerald
+License: see license file
+
+------------------------------
+
+Name:    bytemuck_derive
+Files:   vendor/bytemuck_derive/*
+Authors: Lokathor
+License: see license file
+
+------------------------------
+
+Name:    bytemuck_derive
+Files:   vendor/bytemuck_derive/*
+Authors: Lokathor
+License: see license file
+
+------------------------------
+
+Name:    bytemuck
+Files:   vendor/bytemuck/*
+Authors: Lokathor
+License: see license file
+
+------------------------------
+
+Name:    bytemuck
+Files:   vendor/bytemuck/*
+Authors: Lokathor
+License: see license file
+
+------------------------------
+
+Name:    byteorder
+Files:   vendor/byteorder/*
+Authors: Andrew Gallant
+License: see license file
+
+------------------------------
+
+Name:    byteorder
+Files:   vendor/byteorder/*
+Authors: Andrew Gallant
+License: see license file
+
+------------------------------
+
+Name:    bytes
+Files:   vendor/bytes/*
+Authors: Carl Lerche, Sean McArthur
+License: see license file
+
+------------------------------
+
+Name:    bytes
+Files:   vendor/bytes/*
+Authors: Carl Lerche, Sean McArthur
+License: see license file
+
+------------------------------
+
+Name:    castaway
+Files:   vendor/castaway/*
+Authors: Stephen M. Coakley
+License: see license file
+
+------------------------------
+
+Name:    castaway
+Files:   vendor/castaway/*
+Authors: Stephen M. Coakley
+License: see license file
+
+------------------------------
+
+Name:    cbindgen
+Files:   vendor/cbindgen/*
+Authors: Emilio Cobos Álvarez, Jeff Muizelaar, Kartikaya Gupta, Ryan Hunt
+License: see license file
+
+------------------------------
+
+Name:    cbindgen
+Files:   vendor/cbindgen/*
+Authors: Emilio Cobos Álvarez, Jeff Muizelaar, Kartikaya Gupta, Ryan Hunt
+License: see license file
+
+------------------------------
+
+Name:    cc
+Files:   vendor/cc/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    cc
+Files:   vendor/cc/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    cfg_aliases
+Files:   vendor/cfg_aliases/*
+Authors: Zicklag
+License: see license file
+
+------------------------------
+
+Name:    cfg_aliases
+Files:   vendor/cfg_aliases/*
+Authors: Zicklag
+License: see license file
+
+------------------------------
+
+Name:    cfg-if
+Files:   vendor/cfg-if/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    cfg-if
+Files:   vendor/cfg-if/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    chrono-tz
+Files:   vendor/chrono-tz/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    chrono-tz
+Files:   vendor/chrono-tz/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    chrono
+Files:   vendor/chrono/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    chrono
+Files:   vendor/chrono/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    clap_builder
+Files:   vendor/clap_builder/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    clap_builder
+Files:   vendor/clap_builder/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    clap_lex
+Files:   vendor/clap_lex/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    clap_lex
+Files:   vendor/clap_lex/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    clap
+Files:   vendor/clap/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    clap
+Files:   vendor/clap/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    colorchoice
+Files:   vendor/colorchoice/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    colorchoice
+Files:   vendor/colorchoice/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    comfy-table
+Files:   vendor/comfy-table/*
+Authors: Arne Beer
+License: see license file
+
+------------------------------
+
+Name:    comfy-table
+Files:   vendor/comfy-table/*
+Authors: Arne Beer
+License: see license file
+
+------------------------------
+
+Name:    compact_str
+Files:   vendor/compact_str/*
+Authors: Parker Timmerman
+License: see license file
+
+------------------------------
+
+Name:    compact_str
+Files:   vendor/compact_str/*
+Authors: Parker Timmerman
+License: see license file
+
+------------------------------
+
+Name:    concurrent-queue
+Files:   vendor/concurrent-queue/*
+Authors: Stjepan Glavina, Taiki Endo, John Nunley
+License: see license file
+
+------------------------------
+
+Name:    concurrent-queue
+Files:   vendor/concurrent-queue/*
+Authors: Stjepan Glavina, Taiki Endo, John Nunley
+License: see license file
+
+------------------------------
+
+Name:    constant_time_eq
+Files:   vendor/constant_time_eq/*
+Authors: Cesar Eduardo Barros
+License: see license file
+
+------------------------------
+
+Name:    constant_time_eq
+Files:   vendor/constant_time_eq/*
+Authors: Cesar Eduardo Barros
+License: see license file
+
+------------------------------
+
+Name:    core-foundation-sys
+Files:   vendor/core-foundation-sys/*
+Authors: The Servo Project Developers
+License: see license file
+
+------------------------------
+
+Name:    core-foundation-sys
+Files:   vendor/core-foundation-sys/*
+Authors: The Servo Project Developers
+License: see license file
+
+------------------------------
+
+Name:    core-foundation
+Files:   vendor/core-foundation/*
+Authors: The Servo Project Developers
+License: see license file
+
+------------------------------
+
+Name:    core-foundation
+Files:   vendor/core-foundation/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    cpufeatures
+Files:   vendor/cpufeatures/*
+Authors: RustCrypto Developers
+License: see license file
+
+------------------------------
+
+Name:    cpufeatures
+Files:   vendor/cpufeatures/*
+Authors: RustCrypto Developers
+License: see license file
+
+------------------------------
+
+Name:    crc32fast
+Files:   vendor/crc32fast/*
+Authors: Sam Rijs, Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    crc32fast
+Files:   vendor/crc32fast/*
+Authors: Sam Rijs, Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    crossbeam-channel
+Files:   vendor/crossbeam-channel/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    crossbeam-channel
+Files:   vendor/crossbeam-channel/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    crossbeam-deque
+Files:   vendor/crossbeam-deque/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    crossbeam-deque
+Files:   vendor/crossbeam-deque/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    crossbeam-epoch
+Files:   vendor/crossbeam-epoch/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    crossbeam-epoch
+Files:   vendor/crossbeam-epoch/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    crossbeam-queue
+Files:   vendor/crossbeam-queue/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    crossbeam-queue
+Files:   vendor/crossbeam-queue/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    crossbeam-utils
+Files:   vendor/crossbeam-utils/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    crossbeam-utils
+Files:   vendor/crossbeam-utils/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    crossterm_winapi
+Files:   vendor/crossterm_winapi/*
+Authors: T. Post
+License: see license file
+
+------------------------------
+
+Name:    crossterm_winapi
+Files:   vendor/crossterm_winapi/*
+Authors: T. Post
+License: see license file
+
+------------------------------
+
+Name:    crossterm
+Files:   vendor/crossterm/*
+Authors: T. Post
+License: see license file
+
+------------------------------
+
+Name:    crossterm
+Files:   vendor/crossterm/*
+Authors: T. Post
+License: see license file
+
+------------------------------
+
+Name:    crypto-common
+Files:   vendor/crypto-common/*
+Authors: RustCrypto Developers
+License: see license file
+
+------------------------------
+
+Name:    crypto-common
+Files:   vendor/crypto-common/*
+Authors: RustCrypto Developers
+License: see license file
+
+------------------------------
+
+Name:    darling_core
+Files:   vendor/darling_core/*
+Authors: Ted Driggs
+License: see license file
+
+------------------------------
+
+Name:    darling_core
+Files:   vendor/darling_core/*
+Authors: Ted Driggs
+License: see license file
+
+------------------------------
+
+Name:    darling_macro
+Files:   vendor/darling_macro/*
+Authors: Ted Driggs
+License: see license file
+
+------------------------------
+
+Name:    darling_macro
+Files:   vendor/darling_macro/*
+Authors: Ted Driggs
+License: see license file
+
+------------------------------
+
+Name:    darling
+Files:   vendor/darling/*
+Authors: Ted Driggs
+License: see license file
+
+------------------------------
+
+Name:    darling
+Files:   vendor/darling/*
+Authors: Ted Driggs
+License: see license file
+
+------------------------------
+
+Name:    dashu-base
+Files:   vendor/dashu-base/*
+Authors: Jacob Zhong
+License: see license file
+
+------------------------------
+
+Name:    dashu-base
+Files:   vendor/dashu-base/*
+Authors: Jacob Zhong
+License: see license file
+
+------------------------------
+
+Name:    dashu-float
+Files:   vendor/dashu-float/*
+Authors: Jacob Zhong
+License: see license file
+
+------------------------------
+
+Name:    dashu-float
+Files:   vendor/dashu-float/*
+Authors: Jacob Zhong
+License: see license file
+
+------------------------------
+
+Name:    dashu-int
+Files:   vendor/dashu-int/*
+Authors: Jacob Zhong, Tomek Czajka
+License: see license file
+
+------------------------------
+
+Name:    dashu-int
+Files:   vendor/dashu-int/*
+Authors: Jacob Zhong, Tomek Czajka
+License: see license file
+
+------------------------------
+
+Name:    dashu-macros
+Files:   vendor/dashu-macros/*
+Authors: Jacob Zhong
+License: see license file
+
+------------------------------
+
+Name:    dashu-macros
+Files:   vendor/dashu-macros/*
+Authors: Jacob Zhong
+License: see license file
+
+------------------------------
+
+Name:    dashu-ratio
+Files:   vendor/dashu-ratio/*
+Authors: Jacob Zhong
+License: see license file
+
+------------------------------
+
+Name:    dashu-ratio
+Files:   vendor/dashu-ratio/*
+Authors: Jacob Zhong
+License: see license file
+
+------------------------------
+
+Name:    dashu
+Files:   vendor/dashu/*
+Authors: Jacob Zhong
+License: see license file
+
+------------------------------
+
+Name:    dashu
+Files:   vendor/dashu/*
+Authors: Jacob Zhong
+License: see license file
+
+------------------------------
+
+Name:    debug_unsafe
+Files:   vendor/debug_unsafe/*
+Authors: Dmitry Rodionov
+License: see license file
+
+------------------------------
+
+Name:    debug_unsafe
+Files:   vendor/debug_unsafe/*
+Authors: Dmitry Rodionov
+License: see license file
+
+------------------------------
+
+Name:    diff
+Files:   vendor/diff/*
+Authors: Utkarsh Kukreti
+License: see license file
+
+------------------------------
+
+Name:    diff
+Files:   vendor/diff/*
+Authors: Utkarsh Kukreti
+License: see license file
+
+------------------------------
+
+Name:    digest
+Files:   vendor/digest/*
+Authors: RustCrypto Developers
+License: see license file
+
+------------------------------
+
+Name:    digest
+Files:   vendor/digest/*
+Authors: RustCrypto Developers
+License: see license file
+
+------------------------------
+
+Name:    displaydoc
+Files:   vendor/displaydoc/*
+Authors: Jane Lusby
+License: see license file
+
+------------------------------
+
+Name:    displaydoc
+Files:   vendor/displaydoc/*
+Authors: Jane Lusby
+License: see license file
+
+------------------------------
+
+Name:    document-features
+Files:   vendor/document-features/*
+Authors: Slint Developers
+License: see license file
+
+------------------------------
+
+Name:    document-features
+Files:   vendor/document-features/*
+Authors: Slint Developers
+License: see license file
+
+------------------------------
+
+Name:    dyn-clone
+Files:   vendor/dyn-clone/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    dyn-clone
+Files:   vendor/dyn-clone/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    either
+Files:   vendor/either/*
+Authors: bluss
+License: see license file
+
+------------------------------
+
+Name:    either
+Files:   vendor/either/*
+Authors: bluss
+License: see license file
+
+------------------------------
+
+Name:    equivalent
+Files:   vendor/equivalent/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    equivalent
+Files:   vendor/equivalent/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    errno
+Files:   vendor/errno/*
+Authors: Chris Wong, Dan Gohman
+License: see license file
+
+------------------------------
+
+Name:    errno
+Files:   vendor/errno/*
+Authors: Chris Wong, Dan Gohman
+License: see license file
+
+------------------------------
+
+Name:    ethnum
+Files:   vendor/ethnum/*
+Authors: Nicholas Rodrigues Lordello
+License: see license file
+
+------------------------------
+
+Name:    ethnum
+Files:   vendor/ethnum/*
+Authors: Nicholas Rodrigues Lordello
+License: see license file
+
+------------------------------
+
+Name:    event-listener-strategy
+Files:   vendor/event-listener-strategy/*
+Authors: John Nunley
+License: see license file
+
+------------------------------
+
+Name:    event-listener-strategy
+Files:   vendor/event-listener-strategy/*
+Authors: John Nunley
+License: see license file
+
+------------------------------
+
+Name:    event-listener
+Files:   vendor/event-listener/*
+Authors: Stjepan Glavina, John Nunley
+License: see license file
+
+------------------------------
+
+Name:    event-listener
+Files:   vendor/event-listener/*
+Authors: Stjepan Glavina, John Nunley
+License: see license file
+
+------------------------------
+
+Name:    fallible-streaming-iterator
+Files:   vendor/fallible-streaming-iterator/*
+Authors: Steven Fackler
+License: see license file
+
+------------------------------
+
+Name:    fallible-streaming-iterator
+Files:   vendor/fallible-streaming-iterator/*
+Authors: Steven Fackler
+License: see license file
+
+------------------------------
+
+Name:    fast-float2
+Files:   vendor/fast-float2/*
+Authors: Ivan Smirnov, Alex Huszagh
+License: see license file
+
+------------------------------
+
+Name:    fast-float2
+Files:   vendor/fast-float2/*
+Authors: Ivan Smirnov, Alex Huszagh
+License: see license file
+
+------------------------------
+
+Name:    fastrand
+Files:   vendor/fastrand/*
+Authors: Stjepan Glavina
+License: see license file
+
+------------------------------
+
+Name:    fastrand
+Files:   vendor/fastrand/*
+Authors: Stjepan Glavina
+License: see license file
+
+------------------------------
+
+Name:    find-msvc-tools
+Files:   vendor/find-msvc-tools/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    find-msvc-tools
+Files:   vendor/find-msvc-tools/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    flate2
+Files:   vendor/flate2/*
+Authors: Alex Crichton, Josh Triplett
+License: see license file
+
+------------------------------
+
+Name:    flate2
+Files:   vendor/flate2/*
+Authors: Alex Crichton, Josh Triplett
+License: see license file
+
+------------------------------
+
+Name:    float-cmp
+Files:   vendor/float-cmp/*
+Authors: Mike Dilger
+License: see license file
+
+------------------------------
+
+Name:    float-cmp
+Files:   vendor/float-cmp/*
+Authors: Mike Dilger
+License: see license file
+
+------------------------------
+
+Name:    fnv
+Files:   vendor/fnv/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    fnv
+Files:   vendor/fnv/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    foldhash
+Files:   vendor/foldhash/*
+Authors: Orson Peters
+License: see license file
+
+------------------------------
+
+Name:    foldhash
+Files:   vendor/foldhash/*
+Authors: Orson Peters
+License: see license file
+
+------------------------------
+
+Name:    foreign-types-shared
+Files:   vendor/foreign-types-shared/*
+Authors: Steven Fackler
+License: see license file
+
+------------------------------
+
+Name:    foreign-types-shared
+Files:   vendor/foreign-types-shared/*
+Authors: Steven Fackler
+License: see license file
+
+------------------------------
+
+Name:    foreign-types
+Files:   vendor/foreign-types/*
+Authors: Steven Fackler
+License: see license file
+
+------------------------------
+
+Name:    foreign-types
+Files:   vendor/foreign-types/*
+Authors: Steven Fackler
+License: see license file
+
+------------------------------
+
+Name:    form_urlencoded
+Files:   vendor/form_urlencoded/*
+Authors: The rust-url developers
+License: see license file
+
+------------------------------
+
+Name:    form_urlencoded
+Files:   vendor/form_urlencoded/*
+Authors: The rust-url developers
+License: see license file
+
+------------------------------
+
+Name:    fs4
+Files:   vendor/fs4/*
+Authors: Dan Burkert, Al Liu
+License: see license file
+
+------------------------------
+
+Name:    fs4
+Files:   vendor/fs4/*
+Authors: Dan Burkert, Al Liu
+License: see license file
+
+------------------------------
+
+Name:    funty
+Files:   vendor/funty/*
+Authors: myrrlyn
+License: see license file
+
+------------------------------
+
+Name:    funty
+Files:   vendor/funty/*
+Authors: myrrlyn
+License: see license file
+
+------------------------------
+
+Name:    futures-channel
+Files:   vendor/futures-channel/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    futures-channel
+Files:   vendor/futures-channel/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    futures-core
+Files:   vendor/futures-core/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    futures-core
+Files:   vendor/futures-core/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    futures-executor
+Files:   vendor/futures-executor/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    futures-executor
+Files:   vendor/futures-executor/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    futures-io
+Files:   vendor/futures-io/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    futures-io
+Files:   vendor/futures-io/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    futures-macro
+Files:   vendor/futures-macro/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    futures-macro
+Files:   vendor/futures-macro/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    futures-sink
+Files:   vendor/futures-sink/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    futures-sink
+Files:   vendor/futures-sink/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    futures-task
+Files:   vendor/futures-task/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    futures-task
+Files:   vendor/futures-task/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    futures-util
+Files:   vendor/futures-util/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    futures-util
+Files:   vendor/futures-util/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    futures
+Files:   vendor/futures/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    futures
+Files:   vendor/futures/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    generic-array
+Files:   vendor/generic-array/*
+Authors: Bartłomiej Kamiński, Aaron Trent
+License: see license file
+
+------------------------------
+
+Name:    generic-array
+Files:   vendor/generic-array/*
+Authors: Bartłomiej Kamiński, Aaron Trent
+License: see license file
+
+------------------------------
+
+Name:    generic-array
+Files:   vendor/generic-array/*
+Authors: Bartłomiej Kamiński, Aaron Trent
+License: see license file
+
+------------------------------
+
+Name:    generic-array
+Files:   vendor/generic-array/*
+Authors: Bartłomiej Kamiński, Aaron Trent
+License: see license file
+
+------------------------------
+
+Name:    getrandom
+Files:   vendor/getrandom/*
+Authors: The Rand Project Developers
+License: see license file
+
+------------------------------
+
+Name:    getrandom
+Files:   vendor/getrandom/*
+Authors: The Rand Project Developers
+License: see license file
+
+------------------------------
+
+Name:    getrandom
+Files:   vendor/getrandom/*
+Authors: The Rand Project Developers
+License: see license file
+
+------------------------------
+
+Name:    getrandom
+Files:   vendor/getrandom/*
+Authors: The Rand Project Developers
+License: see license file
+
+------------------------------
+
+Name:    getrandom
+Files:   vendor/getrandom/*
+Authors: The Rand Project Developers
+License: see license file
+
+------------------------------
+
+Name:    getrandom
+Files:   vendor/getrandom/*
+Authors: The Rand Project Developers
+License: see license file
+
+------------------------------
+
+Name:    getrandom
+Files:   vendor/getrandom/*
+Authors: The Rand Project Developers
+License: see license file
+
+------------------------------
+
+Name:    getrandom
+Files:   vendor/getrandom/*
+Authors: The Rand Project Developers
+License: see license file
+
+------------------------------
+
+Name:    glob
+Files:   vendor/glob/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    glob
+Files:   vendor/glob/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    h2
+Files:   vendor/h2/*
+Authors: Carl Lerche, Sean McArthur
+License: see license file
+
+------------------------------
+
+Name:    h2
+Files:   vendor/h2/*
+Authors: Carl Lerche, Sean McArthur
+License: see license file
+
+------------------------------
+
+Name:    halfbrown
+Files:   vendor/halfbrown/*
+Authors: Heinz N. Gies
+License: see license file
+
+------------------------------
+
+Name:    halfbrown
+Files:   vendor/halfbrown/*
+Authors: Heinz N. Gies
+License: see license file
+
+------------------------------
+
+Name:    hashbrown
+Files:   vendor/hashbrown/*
+Authors: Amanieu d'Antras
+License: see license file
+
+------------------------------
+
+Name:    hashbrown
+Files:   vendor/hashbrown/*
+Authors: Amanieu d'Antras
+License: see license file
+
+------------------------------
+
+Name:    hashbrown
+Files:   vendor/hashbrown/*
+Authors: Amanieu d'Antras
+License: see license file
+
+------------------------------
+
+Name:    hashbrown
+Files:   vendor/hashbrown/*
+Authors: Amanieu d'Antras
+License: see license file
+
+------------------------------
+
+Name:    heck
+Files:   vendor/heck/*
+Authors: Without Boats
+License: see license file
+
+------------------------------
+
+Name:    heck
+Files:   vendor/heck/*
+Authors: Without Boats
+License: see license file
+
+------------------------------
+
+Name:    heck
+Files:   vendor/heck/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    heck
+Files:   vendor/heck/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    hex
+Files:   vendor/hex/*
+Authors: KokaKiwi
+License: see license file
+
+------------------------------
+
+Name:    hex
+Files:   vendor/hex/*
+Authors: KokaKiwi
+License: see license file
+
+------------------------------
+
+Name:    home
+Files:   vendor/home/*
+Authors: Brian Anderson
+License: see license file
+
+------------------------------
+
+Name:    home
+Files:   vendor/home/*
+Authors: Brian Anderson
+License: see license file
+
+------------------------------
+
+Name:    http-body-util
+Files:   vendor/http-body-util/*
+Authors: Carl Lerche, Lucio Franco, Sean McArthur
+License: see license file
+
+------------------------------
+
+Name:    http-body-util
+Files:   vendor/http-body-util/*
+Authors: Carl Lerche, Lucio Franco, Sean McArthur
+License: see license file
+
+------------------------------
+
+Name:    http-body
+Files:   vendor/http-body/*
+Authors: Carl Lerche, Lucio Franco, Sean McArthur
+License: see license file
+
+------------------------------
+
+Name:    http-body
+Files:   vendor/http-body/*
+Authors: Carl Lerche, Lucio Franco, Sean McArthur
+License: see license file
+
+------------------------------
+
+Name:    http
+Files:   vendor/http/*
+Authors: Alex Crichton, Carl Lerche, Sean McArthur
+License: see license file
+
+------------------------------
+
+Name:    http
+Files:   vendor/http/*
+Authors: Alex Crichton, Carl Lerche, Sean McArthur
+License: see license file
+
+------------------------------
+
+Name:    httparse
+Files:   vendor/httparse/*
+Authors: Sean McArthur
+License: see license file
+
+------------------------------
+
+Name:    httparse
+Files:   vendor/httparse/*
+Authors: Sean McArthur
+License: see license file
+
+------------------------------
+
+Name:    humantime
+Files:   vendor/humantime/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    humantime
+Files:   vendor/humantime/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    hyper-rustls
+Files:   vendor/hyper-rustls/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    hyper-rustls
+Files:   vendor/hyper-rustls/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    hyper-util
+Files:   vendor/hyper-util/*
+Authors: Sean McArthur
+License: see license file
+
+------------------------------
+
+Name:    hyper-util
+Files:   vendor/hyper-util/*
+Authors: Sean McArthur
+License: see license file
+
+------------------------------
+
+Name:    hyper
+Files:   vendor/hyper/*
+Authors: Sean McArthur
+License: see license file
+
+------------------------------
+
+Name:    hyper
+Files:   vendor/hyper/*
+Authors: Sean McArthur
+License: see license file
+
+------------------------------
+
+Name:    iana-time-zone-haiku
+Files:   vendor/iana-time-zone-haiku/*
+Authors: René Kijewski
+License: see license file
+
+------------------------------
+
+Name:    iana-time-zone-haiku
+Files:   vendor/iana-time-zone-haiku/*
+Authors: René Kijewski
+License: see license file
+
+------------------------------
+
+Name:    iana-time-zone
+Files:   vendor/iana-time-zone/*
+Authors: Andrew Straw, René Kijewski, Ryan Lopopolo
+License: see license file
+
+------------------------------
+
+Name:    iana-time-zone
+Files:   vendor/iana-time-zone/*
+Authors: Andrew Straw, René Kijewski, Ryan Lopopolo
+License: see license file
+
+------------------------------
+
+Name:    icu_collections
+Files:   vendor/icu_collections/*
+Authors: The ICU4X Project Developers
+License: see license file
+
+------------------------------
+
+Name:    icu_collections
+Files:   vendor/icu_collections/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    icu_locale_core
+Files:   vendor/icu_locale_core/*
+Authors: The ICU4X Project Developers
+License: see license file
+
+------------------------------
+
+Name:    icu_locale_core
+Files:   vendor/icu_locale_core/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    icu_normalizer_data
+Files:   vendor/icu_normalizer_data/*
+Authors: The ICU4X Project Developers
+License: see license file
+
+------------------------------
+
+Name:    icu_normalizer_data
+Files:   vendor/icu_normalizer_data/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    icu_normalizer
+Files:   vendor/icu_normalizer/*
+Authors: The ICU4X Project Developers
+License: see license file
+
+------------------------------
+
+Name:    icu_normalizer
+Files:   vendor/icu_normalizer/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    icu_properties_data
+Files:   vendor/icu_properties_data/*
+Authors: The ICU4X Project Developers
+License: see license file
+
+------------------------------
+
+Name:    icu_properties_data
+Files:   vendor/icu_properties_data/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    icu_properties
+Files:   vendor/icu_properties/*
+Authors: The ICU4X Project Developers
+License: see license file
+
+------------------------------
+
+Name:    icu_properties
+Files:   vendor/icu_properties/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    icu_provider
+Files:   vendor/icu_provider/*
+Authors: The ICU4X Project Developers
+License: see license file
+
+------------------------------
+
+Name:    icu_provider
+Files:   vendor/icu_provider/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    id-arena
+Files:   vendor/id-arena/*
+Authors: Nick Fitzgerald, Aleksey Kladov
+License: see license file
+
+------------------------------
+
+Name:    id-arena
+Files:   vendor/id-arena/*
+Authors: Nick Fitzgerald, Aleksey Kladov
+License: see license file
+
+------------------------------
+
+Name:    ident_case
+Files:   vendor/ident_case/*
+Authors: Ted Driggs
+License: see license file
+
+------------------------------
+
+Name:    ident_case
+Files:   vendor/ident_case/*
+Authors: Ted Driggs
+License: see license file
+
+------------------------------
+
+Name:    idna_adapter
+Files:   vendor/idna_adapter/*
+Authors: The rust-url developers
+License: see license file
+
+------------------------------
+
+Name:    idna_adapter
+Files:   vendor/idna_adapter/*
+Authors: The rust-url developers
+License: see license file
+
+------------------------------
+
+Name:    idna
+Files:   vendor/idna/*
+Authors: The rust-url developers
+License: see license file
+
+------------------------------
+
+Name:    idna
+Files:   vendor/idna/*
+Authors: The rust-url developers
+License: see license file
+
+------------------------------
+
+Name:    indexmap
+Files:   vendor/indexmap/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    indexmap
+Files:   vendor/indexmap/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    indoc
+Files:   vendor/indoc/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    indoc
+Files:   vendor/indoc/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    ipnet
+Files:   vendor/ipnet/*
+Authors: Kris Price
+License: see license file
+
+------------------------------
+
+Name:    ipnet
+Files:   vendor/ipnet/*
+Authors: Kris Price
+License: see license file
+
+------------------------------
+
+Name:    iri-string
+Files:   vendor/iri-string/*
+Authors: YOSHIOKA Takuma
+License: see license file
+
+------------------------------
+
+Name:    iri-string
+Files:   vendor/iri-string/*
+Authors: YOSHIOKA Takuma
+License: see license file
+
+------------------------------
+
+Name:    is_terminal_polyfill
+Files:   vendor/is_terminal_polyfill/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    is_terminal_polyfill
+Files:   vendor/is_terminal_polyfill/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    iter-read
+Files:   vendor/iter-read/*
+Authors: Georg Brandl
+License: see license file
+
+------------------------------
+
+Name:    iter-read
+Files:   vendor/iter-read/*
+Authors: Georg Brandl
+License: see license file
+
+------------------------------
+
+Name:    itertools
+Files:   vendor/itertools/*
+Authors: bluss
+License: see license file
+
+------------------------------
+
+Name:    itertools
+Files:   vendor/itertools/*
+Authors: bluss
+License: see license file
+
+------------------------------
+
+Name:    itoa
+Files:   vendor/itoa/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    itoa
+Files:   vendor/itoa/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    jobserver
+Files:   vendor/jobserver/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    jobserver
+Files:   vendor/jobserver/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    js-sys
+Files:   vendor/js-sys/*
+Authors: The wasm-bindgen Developers
+License: see license file
+
+------------------------------
+
+Name:    js-sys
+Files:   vendor/js-sys/*
+Authors: The wasm-bindgen Developers
+License: see license file
+
+------------------------------
+
+Name:    jsonpath_lib_polars_vendor
+Files:   vendor/jsonpath_lib_polars_vendor/*
+Authors: Changseok Han
+License: see license file
+
+------------------------------
+
+Name:    jsonpath_lib_polars_vendor
+Files:   vendor/jsonpath_lib_polars_vendor/*
+Authors: Changseok Han
+License: see license file
+
+------------------------------
+
+Name:    lazy_static
+Files:   vendor/lazy_static/*
+Authors: Marvin Löbel
+License: see license file
+
+------------------------------
+
+Name:    lazy_static
+Files:   vendor/lazy_static/*
+Authors: Marvin Löbel
+License: see license file
+
+------------------------------
+
+Name:    leb128fmt
+Files:   vendor/leb128fmt/*
+Authors: Bryant Luk
+License: see license file
+
+------------------------------
+
+Name:    leb128fmt
+Files:   vendor/leb128fmt/*
+Authors: Bryant Luk
+License: see license file
+
+------------------------------
+
+Name:    libc
+Files:   vendor/libc/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    libc
+Files:   vendor/libc/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    libloading
+Files:   vendor/libloading/*
+Authors: Simonas Kazlauskas
+License: see license file
+
+------------------------------
+
+Name:    libloading
+Files:   vendor/libloading/*
+Authors: Simonas Kazlauskas
+License: see license file
+
+------------------------------
+
+Name:    libm
+Files:   vendor/libm/*
+Authors: Alex Crichton, Amanieu d'Antras, Jorge Aparicio, Trevor Gross
+License: see license file
+
+------------------------------
+
+Name:    libm
+Files:   vendor/libm/*
+Authors: Alex Crichton, Amanieu d'Antras, Jorge Aparicio, Trevor Gross
+License: see license file
+
+------------------------------
+
+Name:    linux-raw-sys
+Files:   vendor/linux-raw-sys/*
+Authors: Dan Gohman
+License: see license file
+
+------------------------------
+
+Name:    linux-raw-sys
+Files:   vendor/linux-raw-sys/*
+Authors: Dan Gohman
+License: see license file
+
+------------------------------
+
+Name:    litemap
+Files:   vendor/litemap/*
+Authors: The ICU4X Project Developers
+License: see license file
+
+------------------------------
+
+Name:    litemap
+Files:   vendor/litemap/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    litrs
+Files:   vendor/litrs/*
+Authors: Lukas Kalbertodt
+License: see license file
+
+------------------------------
+
+Name:    litrs
+Files:   vendor/litrs/*
+Authors: Lukas Kalbertodt
+License: see license file
+
+------------------------------
+
+Name:    lock_api
+Files:   vendor/lock_api/*
+Authors: Amanieu d'Antras
+License: see license file
+
+------------------------------
+
+Name:    lock_api
+Files:   vendor/lock_api/*
+Authors: Amanieu d'Antras
+License: see license file
+
+------------------------------
+
+Name:    log
+Files:   vendor/log/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    log
+Files:   vendor/log/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    lru-slab
+Files:   vendor/lru-slab/*
+Authors: Benjamin Saunders
+License: see license file
+
+------------------------------
+
+Name:    lru-slab
+Files:   vendor/lru-slab/*
+Authors: Benjamin Saunders
+License: see license file
+
+------------------------------
+
+Name:    lz4-sys
+Files:   vendor/lz4-sys/*
+Authors: Jens Heyens, Artem V. Navrotskiy, Patrick Marks
+License: see license file
+
+------------------------------
+
+Name:    lz4-sys
+Files:   vendor/lz4-sys/*
+Authors: Jens Heyens, Artem V. Navrotskiy, Patrick Marks
+License: see license file
+
+------------------------------
+
+Name:    lz4
+Files:   vendor/lz4/*
+Authors: Jens Heyens, Artem V. Navrotskiy, Patrick Marks
+License: see license file
+
+------------------------------
+
+Name:    lz4
+Files:   vendor/lz4/*
+Authors: Jens Heyens, Artem V. Navrotskiy, Patrick Marks
+License: see license file
+
+------------------------------
+
+Name:    matrixmultiply
+Files:   vendor/matrixmultiply/*
+Authors: bluss, R. Janis Goldschmidt
+License: see license file
+
+------------------------------
+
+Name:    matrixmultiply
+Files:   vendor/matrixmultiply/*
+Authors: bluss, R. Janis Goldschmidt
+License: see license file
+
+------------------------------
+
+Name:    matrixmultiply
+Files:   vendor/matrixmultiply/*
+Authors: bluss, R. Janis Goldschmidt
+License: see license file
+
+------------------------------
+
+Name:    matrixmultiply
+Files:   vendor/matrixmultiply/*
+Authors: bluss, R. Janis Goldschmidt
+License: see license file
+
+------------------------------
+
+Name:    memchr
+Files:   vendor/memchr/*
+Authors: Andrew Gallant, bluss
+License: see license file
+
+------------------------------
+
+Name:    memchr
+Files:   vendor/memchr/*
+Authors: Andrew Gallant, bluss
+License: see license file
+
+------------------------------
+
+Name:    memmap2
+Files:   vendor/memmap2/*
+Authors: Dan Burkert, Yevhenii Reizner, The Contributors
+License: see license file
+
+------------------------------
+
+Name:    memmap2
+Files:   vendor/memmap2/*
+Authors: Dan Burkert, Yevhenii Reizner, The Contributors
+License: see license file
+
+------------------------------
+
+Name:    memoffset
+Files:   vendor/memoffset/*
+Authors: Gilad Naaman
+License: see license file
+
+------------------------------
+
+Name:    memoffset
+Files:   vendor/memoffset/*
+Authors: Gilad Naaman
+License: see license file
+
+------------------------------
+
+Name:    miniz_oxide
+Files:   vendor/miniz_oxide/*
+Authors: Frommi, oyvindln, Rich Geldreich richgel99@gmail.com
+License: see license file
+
+------------------------------
+
+Name:    miniz_oxide
+Files:   vendor/miniz_oxide/*
+Authors: Frommi, oyvindln, Rich Geldreich richgel99@gmail.com
+License: see license file
+
+------------------------------
+
+Name:    mio
+Files:   vendor/mio/*
+Authors: Carl Lerche, Thomas de Zeeuw, Tokio Contributors
+License: see license file
+
+------------------------------
+
+Name:    mio
+Files:   vendor/mio/*
+Authors: Carl Lerche, Thomas de Zeeuw, Tokio Contributors
+License: see license file
+
+------------------------------
+
+Name:    nalgebra
+Files:   vendor/nalgebra/*
+Authors: Sébastien Crozet
+License: see license file
+
+------------------------------
+
+Name:    nalgebra
+Files:   vendor/nalgebra/*
+Authors: Sébastien Crozet
+License: see license file
+
+------------------------------
+
+Name:    ndarray
+Files:   vendor/ndarray/*
+Authors: Ulrik Sverdrup \"bluss\", Jim Turner
+License: see license file
+
+------------------------------
+
+Name:    ndarray
+Files:   vendor/ndarray/*
+Authors: Ulrik Sverdrup \"bluss\", Jim Turner
+License: see license file
+
+------------------------------
+
+Name:    now
+Files:   vendor/now/*
+Authors: Kilerd
+License: see license file
+
+------------------------------
+
+Name:    now
+Files:   vendor/now/*
+Authors: Kilerd
+License: see license file
+
+------------------------------
+
+Name:    num-bigint
+Files:   vendor/num-bigint/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    num-bigint
+Files:   vendor/num-bigint/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    num-bigint
+Files:   vendor/num-bigint/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    num-bigint
+Files:   vendor/num-bigint/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    num-complex
+Files:   vendor/num-complex/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    num-complex
+Files:   vendor/num-complex/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    num-complex
+Files:   vendor/num-complex/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    num-complex
+Files:   vendor/num-complex/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    num-complex
+Files:   vendor/num-complex/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    num-complex
+Files:   vendor/num-complex/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    num-integer
+Files:   vendor/num-integer/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    num-integer
+Files:   vendor/num-integer/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    num-iter
+Files:   vendor/num-iter/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    num-iter
+Files:   vendor/num-iter/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    num-modular
+Files:   vendor/num-modular/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    num-modular
+Files:   vendor/num-modular/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    num-order
+Files:   vendor/num-order/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    num-order
+Files:   vendor/num-order/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    num-rational
+Files:   vendor/num-rational/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    num-rational
+Files:   vendor/num-rational/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    num-rational
+Files:   vendor/num-rational/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    num-rational
+Files:   vendor/num-rational/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    num-traits
+Files:   vendor/num-traits/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    num-traits
+Files:   vendor/num-traits/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    num
+Files:   vendor/num/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    num
+Files:   vendor/num/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    object_store
+Files:   vendor/object_store/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    object_store
+Files:   vendor/object_store/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    object
+Files:   vendor/object/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    object
+Files:   vendor/object/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    once_cell_polyfill
+Files:   vendor/once_cell_polyfill/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    once_cell_polyfill
+Files:   vendor/once_cell_polyfill/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    once_cell
+Files:   vendor/once_cell/*
+Authors: Aleksey Kladov
+License: see license file
+
+------------------------------
+
+Name:    once_cell
+Files:   vendor/once_cell/*
+Authors: Aleksey Kladov
+License: see license file
+
+------------------------------
+
+Name:    openssl-macros
+Files:   vendor/openssl-macros/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    openssl-macros
+Files:   vendor/openssl-macros/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    openssl-probe
+Files:   vendor/openssl-probe/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    openssl-probe
+Files:   vendor/openssl-probe/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    openssl-src
+Files:   vendor/openssl-src/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    openssl-src
+Files:   vendor/openssl-src/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    openssl-sys
+Files:   vendor/openssl-sys/*
+Authors: Alex Crichton, Steven Fackler
+License: see license file
+
+------------------------------
+
+Name:    openssl-sys
+Files:   vendor/openssl-sys/*
+Authors: Alex Crichton, Steven Fackler
+License: see license file
+
+------------------------------
+
+Name:    openssl
+Files:   vendor/openssl/*
+Authors: Steven Fackler
+License: see license file
+
+------------------------------
+
+Name:    openssl
+Files:   vendor/openssl/*
+Authors: Steven Fackler
+License: see license file
+
+------------------------------
+
+Name:    parking_lot_core
+Files:   vendor/parking_lot_core/*
+Authors: Amanieu d'Antras
+License: see license file
+
+------------------------------
+
+Name:    parking_lot_core
+Files:   vendor/parking_lot_core/*
+Authors: Amanieu d'Antras
+License: see license file
+
+------------------------------
+
+Name:    parking_lot
+Files:   vendor/parking_lot/*
+Authors: Amanieu d'Antras
+License: see license file
+
+------------------------------
+
+Name:    parking_lot
+Files:   vendor/parking_lot/*
+Authors: Amanieu d'Antras
+License: see license file
+
+------------------------------
+
+Name:    parking
+Files:   vendor/parking/*
+Authors: Stjepan Glavina, The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    parking
+Files:   vendor/parking/*
+Authors: Stjepan Glavina, The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    paste
+Files:   vendor/paste/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    paste
+Files:   vendor/paste/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    percent-encoding
+Files:   vendor/percent-encoding/*
+Authors: The rust-url developers
+License: see license file
+
+------------------------------
+
+Name:    percent-encoding
+Files:   vendor/percent-encoding/*
+Authors: The rust-url developers
+License: see license file
+
+------------------------------
+
+Name:    phf_shared
+Files:   vendor/phf_shared/*
+Authors: Steven Fackler
+License: see license file
+
+------------------------------
+
+Name:    phf_shared
+Files:   vendor/phf_shared/*
+Authors: Steven Fackler
+License: see license file
+
+------------------------------
+
+Name:    phf
+Files:   vendor/phf/*
+Authors: Steven Fackler
+License: see license file
+
+------------------------------
+
+Name:    phf
+Files:   vendor/phf/*
+Authors: Steven Fackler
+License: see license file
+
+------------------------------
+
+Name:    pin-project-lite
+Files:   vendor/pin-project-lite/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    pin-project-lite
+Files:   vendor/pin-project-lite/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    pin-utils
+Files:   vendor/pin-utils/*
+Authors: Josef Brandl
+License: see license file
+
+------------------------------
+
+Name:    pin-utils
+Files:   vendor/pin-utils/*
+Authors: Josef Brandl
+License: see license file
+
+------------------------------
+
+Name:    pkg-config
+Files:   vendor/pkg-config/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    pkg-config
+Files:   vendor/pkg-config/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    planus
+Files:   vendor/planus/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    planus
+Files:   vendor/planus/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    polars-arrow-format
+Files:   vendor/polars-arrow-format/*
+Authors: Jorge C. Leitao
+License: see license file
+
+------------------------------
+
+Name:    polars-arrow-format
+Files:   vendor/polars-arrow-format/*
+Authors: Jorge C. Leitao
+License: see license file
+
+------------------------------
+
+Name:    polars-arrow
+Files:   vendor/polars-arrow/*
+Authors: Jorge C. Leitao, Apache Arrow, Ritchie Vink
+License: see license file
+
+------------------------------
+
+Name:    polars-arrow
+Files:   vendor/polars-arrow/*
+Authors: Jorge C. Leitao, Apache Arrow, Ritchie Vink
+License: see license file
+
+------------------------------
+
+Name:    polars-compute
+Files:   vendor/polars-compute/*
+Authors: Ritchie Vink
+License: see license file
+
+------------------------------
+
+Name:    polars-compute
+Files:   vendor/polars-compute/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    polars-core
+Files:   vendor/polars-core/*
+Authors: Ritchie Vink
+License: see license file
+
+------------------------------
+
+Name:    polars-core
+Files:   vendor/polars-core/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    polars-dtype
+Files:   vendor/polars-dtype/*
+Authors: Ritchie Vink
+License: see license file
+
+------------------------------
+
+Name:    polars-dtype
+Files:   vendor/polars-dtype/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    polars-error
+Files:   vendor/polars-error/*
+Authors: Ritchie Vink
+License: see license file
+
+------------------------------
+
+Name:    polars-error
+Files:   vendor/polars-error/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    polars-expr
+Files:   vendor/polars-expr/*
+Authors: Ritchie Vink
+License: see license file
+
+------------------------------
+
+Name:    polars-expr
+Files:   vendor/polars-expr/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    polars-ffi
+Files:   vendor/polars-ffi/*
+Authors: Ritchie Vink
+License: see license file
+
+------------------------------
+
+Name:    polars-ffi
+Files:   vendor/polars-ffi/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    polars-io
+Files:   vendor/polars-io/*
+Authors: Ritchie Vink
+License: see license file
+
+------------------------------
+
+Name:    polars-io
+Files:   vendor/polars-io/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    polars-json
+Files:   vendor/polars-json/*
+Authors: Ritchie Vink
+License: see license file
+
+------------------------------
+
+Name:    polars-json
+Files:   vendor/polars-json/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    polars-lazy
+Files:   vendor/polars-lazy/*
+Authors: Ritchie Vink
+License: see license file
+
+------------------------------
+
+Name:    polars-lazy
+Files:   vendor/polars-lazy/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    polars-mem-engine
+Files:   vendor/polars-mem-engine/*
+Authors: Ritchie Vink
+License: see license file
+
+------------------------------
+
+Name:    polars-mem-engine
+Files:   vendor/polars-mem-engine/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    polars-ops
+Files:   vendor/polars-ops/*
+Authors: Ritchie Vink
+License: see license file
+
+------------------------------
+
+Name:    polars-ops
+Files:   vendor/polars-ops/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    polars-parquet-format
+Files:   vendor/polars-parquet-format/*
+Authors: Apache Thrift contributors, Jorge Leitao, Gijs Burghoorn, Ritchie Vink
+License: see license file
+
+------------------------------
+
+Name:    polars-parquet-format
+Files:   vendor/polars-parquet-format/*
+Authors: Apache Thrift contributors, Jorge Leitao, Gijs Burghoorn, Ritchie Vink
+License: see license file
+
+------------------------------
+
+Name:    polars-parquet
+Files:   vendor/polars-parquet/*
+Authors: Jorge C. Leitao, Apache Arrow, Ritchie Vink
+License: see license file
+
+------------------------------
+
+Name:    polars-parquet
+Files:   vendor/polars-parquet/*
+Authors: Jorge C. Leitao, Apache Arrow, Ritchie Vink
+License: see license file
+
+------------------------------
+
+Name:    polars-plan
+Files:   vendor/polars-plan/*
+Authors: Ritchie Vink
+License: see license file
+
+------------------------------
+
+Name:    polars-plan
+Files:   vendor/polars-plan/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    polars-row
+Files:   vendor/polars-row/*
+Authors: Ritchie Vink
+License: see license file
+
+------------------------------
+
+Name:    polars-row
+Files:   vendor/polars-row/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    polars-schema
+Files:   vendor/polars-schema/*
+Authors: Ritchie Vink
+License: see license file
+
+------------------------------
+
+Name:    polars-schema
+Files:   vendor/polars-schema/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    polars-sql
+Files:   vendor/polars-sql/*
+Authors: Ritchie Vink
+License: see license file
+
+------------------------------
+
+Name:    polars-sql
+Files:   vendor/polars-sql/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    polars-stream
+Files:   vendor/polars-stream/*
+Authors: Ritchie Vink
+License: see license file
+
+------------------------------
+
+Name:    polars-stream
+Files:   vendor/polars-stream/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    polars-time
+Files:   vendor/polars-time/*
+Authors: Ritchie Vink
+License: see license file
+
+------------------------------
+
+Name:    polars-time
+Files:   vendor/polars-time/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    polars-utils
+Files:   vendor/polars-utils/*
+Authors: Ritchie Vink
+License: see license file
+
+------------------------------
+
+Name:    polars-utils
+Files:   vendor/polars-utils/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    polars
+Files:   vendor/polars/*
+Authors: Ritchie Vink
+License: see license file
+
+------------------------------
+
+Name:    polars
+Files:   vendor/polars/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    portable-atomic-util
+Files:   vendor/portable-atomic-util/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    portable-atomic-util
+Files:   vendor/portable-atomic-util/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    portable-atomic
+Files:   vendor/portable-atomic/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    portable-atomic
+Files:   vendor/portable-atomic/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    potential_utf
+Files:   vendor/potential_utf/*
+Authors: The ICU4X Project Developers
+License: see license file
+
+------------------------------
+
+Name:    potential_utf
+Files:   vendor/potential_utf/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    ppv-lite86
+Files:   vendor/ppv-lite86/*
+Authors: The CryptoCorrosion Contributors
+License: see license file
+
+------------------------------
+
+Name:    ppv-lite86
+Files:   vendor/ppv-lite86/*
+Authors: The CryptoCorrosion Contributors
+License: see license file
+
+------------------------------
+
+Name:    pretty_assertions
+Files:   vendor/pretty_assertions/*
+Authors: Colin Kiegel, Florent Fayolle, Tom Milligan
+License: see license file
+
+------------------------------
+
+Name:    pretty_assertions
+Files:   vendor/pretty_assertions/*
+Authors: Colin Kiegel, Florent Fayolle, Tom Milligan
+License: see license file
+
+------------------------------
+
+Name:    prettyplease
+Files:   vendor/prettyplease/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    prettyplease
+Files:   vendor/prettyplease/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    proc-macro2
+Files:   vendor/proc-macro2/*
+Authors: David Tolnay, Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    proc-macro2
+Files:   vendor/proc-macro2/*
+Authors: David Tolnay, Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    psm
+Files:   vendor/psm/*
+Authors: Simonas Kazlauskas
+License: see license file
+
+------------------------------
+
+Name:    psm
+Files:   vendor/psm/*
+Authors: Simonas Kazlauskas
+License: see license file
+
+------------------------------
+
+Name:    pyo3-build-config
+Files:   vendor/pyo3-build-config/*
+Authors: PyO3 Project and Contributors
+License: see license file
+
+------------------------------
+
+Name:    pyo3-build-config
+Files:   vendor/pyo3-build-config/*
+Authors: PyO3 Project and Contributors
+License: see license file
+
+------------------------------
+
+Name:    pyo3-ffi
+Files:   vendor/pyo3-ffi/*
+Authors: PyO3 Project and Contributors
+License: see license file
+
+------------------------------
+
+Name:    pyo3-ffi
+Files:   vendor/pyo3-ffi/*
+Authors: PyO3 Project and Contributors
+License: see license file
+
+------------------------------
+
+Name:    pyo3-macros-backend
+Files:   vendor/pyo3-macros-backend/*
+Authors: PyO3 Project and Contributors
+License: see license file
+
+------------------------------
+
+Name:    pyo3-macros-backend
+Files:   vendor/pyo3-macros-backend/*
+Authors: PyO3 Project and Contributors
+License: see license file
+
+------------------------------
+
+Name:    pyo3-macros
+Files:   vendor/pyo3-macros/*
+Authors: PyO3 Project and Contributors
+License: see license file
+
+------------------------------
+
+Name:    pyo3-macros
+Files:   vendor/pyo3-macros/*
+Authors: PyO3 Project and Contributors
+License: see license file
+
+------------------------------
+
+Name:    pyo3-polars-derive
+Files:   vendor/pyo3-polars-derive/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    pyo3-polars-derive
+Files:   vendor/pyo3-polars-derive/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    pyo3-polars
+Files:   vendor/pyo3-polars/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    pyo3-polars
+Files:   vendor/pyo3-polars/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    pyo3
+Files:   vendor/pyo3/*
+Authors: PyO3 Project and Contributors
+License: see license file
+
+------------------------------
+
+Name:    pyo3
+Files:   vendor/pyo3/*
+Authors: PyO3 Project and Contributors
+License: see license file
+
+------------------------------
+
+Name:    quick-xml
+Files:   vendor/quick-xml/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    quick-xml
+Files:   vendor/quick-xml/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    quinn-proto
+Files:   vendor/quinn-proto/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    quinn-proto
+Files:   vendor/quinn-proto/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    quinn-udp
+Files:   vendor/quinn-udp/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    quinn-udp
+Files:   vendor/quinn-udp/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    quinn
+Files:   vendor/quinn/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    quinn
+Files:   vendor/quinn/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    quote
+Files:   vendor/quote/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    quote
+Files:   vendor/quote/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    r-efi
+Files:   vendor/r-efi/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    r-efi
+Files:   vendor/r-efi/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    radium
+Files:   vendor/radium/*
+Authors: Nika Layzell, myrrlyn
+License: see license file
+
+------------------------------
+
+Name:    radium
+Files:   vendor/radium/*
+Authors: Nika Layzell, myrrlyn
+License: see license file
+
+------------------------------
+
+Name:    rand_chacha
+Files:   vendor/rand_chacha/*
+Authors: The Rand Project Developers, The Rust Project Developers, The CryptoCorrosion Contributors
+License: see license file
+
+------------------------------
+
+Name:    rand_chacha
+Files:   vendor/rand_chacha/*
+Authors: The Rand Project Developers, The Rust Project Developers, The CryptoCorrosion Contributors
+License: see license file
+
+------------------------------
+
+Name:    rand_chacha
+Files:   vendor/rand_chacha/*
+Authors: The Rand Project Developers, The Rust Project Developers, The CryptoCorrosion Contributors
+License: see license file
+
+------------------------------
+
+Name:    rand_chacha
+Files:   vendor/rand_chacha/*
+Authors: The Rand Project Developers, The Rust Project Developers, The CryptoCorrosion Contributors
+License: see license file
+
+------------------------------
+
+Name:    rand_core
+Files:   vendor/rand_core/*
+Authors: The Rand Project Developers, The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    rand_core
+Files:   vendor/rand_core/*
+Authors: The Rand Project Developers, The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    rand_core
+Files:   vendor/rand_core/*
+Authors: The Rand Project Developers, The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    rand_core
+Files:   vendor/rand_core/*
+Authors: The Rand Project Developers, The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    rand_distr
+Files:   vendor/rand_distr/*
+Authors: The Rand Project Developers
+License: see license file
+
+------------------------------
+
+Name:    rand_distr
+Files:   vendor/rand_distr/*
+Authors: The Rand Project Developers
+License: see license file
+
+------------------------------
+
+Name:    rand_distr
+Files:   vendor/rand_distr/*
+Authors: The Rand Project Developers
+License: see license file
+
+------------------------------
+
+Name:    rand_distr
+Files:   vendor/rand_distr/*
+Authors: The Rand Project Developers
+License: see license file
+
+------------------------------
+
+Name:    rand_hc
+Files:   vendor/rand_hc/*
+Authors: The Rand Project Developers
+License: see license file
+
+------------------------------
+
+Name:    rand_hc
+Files:   vendor/rand_hc/*
+Authors: The Rand Project Developers
+License: see license file
+
+------------------------------
+
+Name:    rand
+Files:   vendor/rand/*
+Authors: The Rand Project Developers, The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    rand
+Files:   vendor/rand/*
+Authors: The Rand Project Developers, The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    rand
+Files:   vendor/rand/*
+Authors: The Rand Project Developers, The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    rand
+Files:   vendor/rand/*
+Authors: The Rand Project Developers, The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    raw-cpuid
+Files:   vendor/raw-cpuid/*
+Authors: Gerd Zellweger
+License: see license file
+
+------------------------------
+
+Name:    raw-cpuid
+Files:   vendor/raw-cpuid/*
+Authors: Gerd Zellweger
+License: see license file
+
+------------------------------
+
+Name:    rawpointer
+Files:   vendor/rawpointer/*
+Authors: bluss
+License: see license file
+
+------------------------------
+
+Name:    rawpointer
+Files:   vendor/rawpointer/*
+Authors: bluss
+License: see license file
+
+------------------------------
+
+Name:    rayon-core
+Files:   vendor/rayon-core/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    rayon-core
+Files:   vendor/rayon-core/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    rayon
+Files:   vendor/rayon/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    rayon
+Files:   vendor/rayon/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    readonly
+Files:   vendor/readonly/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    readonly
+Files:   vendor/readonly/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    recursive-proc-macro-impl
+Files:   vendor/recursive-proc-macro-impl/*
+Authors: Orson Peters
+License: see license file
+
+------------------------------
+
+Name:    recursive-proc-macro-impl
+Files:   vendor/recursive-proc-macro-impl/*
+Authors: Orson Peters
+License: see license file
+
+------------------------------
+
+Name:    recursive
+Files:   vendor/recursive/*
+Authors: Orson Peters
+License: see license file
+
+------------------------------
+
+Name:    recursive
+Files:   vendor/recursive/*
+Authors: Orson Peters
+License: see license file
+
+------------------------------
+
+Name:    redox_syscall
+Files:   vendor/redox_syscall/*
+Authors: Jeremy Soller
+License: see license file
+
+------------------------------
+
+Name:    redox_syscall
+Files:   vendor/redox_syscall/*
+Authors: Jeremy Soller
+License: see license file
+
+------------------------------
+
+Name:    ref-cast-impl
+Files:   vendor/ref-cast-impl/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    ref-cast-impl
+Files:   vendor/ref-cast-impl/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    ref-cast
+Files:   vendor/ref-cast/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    ref-cast
+Files:   vendor/ref-cast/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    regex-automata
+Files:   vendor/regex-automata/*
+Authors: The Rust Project Developers, Andrew Gallant
+License: see license file
+
+------------------------------
+
+Name:    regex-automata
+Files:   vendor/regex-automata/*
+Authors: The Rust Project Developers, Andrew Gallant
+License: see license file
+
+------------------------------
+
+Name:    regex-syntax
+Files:   vendor/regex-syntax/*
+Authors: The Rust Project Developers, Andrew Gallant
+License: see license file
+
+------------------------------
+
+Name:    regex-syntax
+Files:   vendor/regex-syntax/*
+Authors: The Rust Project Developers, Andrew Gallant
+License: see license file
+
+------------------------------
+
+Name:    regex
+Files:   vendor/regex/*
+Authors: The Rust Project Developers, Andrew Gallant
+License: see license file
+
+------------------------------
+
+Name:    regex
+Files:   vendor/regex/*
+Authors: The Rust Project Developers, Andrew Gallant
+License: see license file
+
+------------------------------
+
+Name:    reqwest
+Files:   vendor/reqwest/*
+Authors: Sean McArthur
+License: see license file
+
+------------------------------
+
+Name:    reqwest
+Files:   vendor/reqwest/*
+Authors: Sean McArthur
+License: see license file
+
+------------------------------
+
+Name:    ring
+Files:   vendor/ring/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    ring
+Files:   vendor/ring/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    rmp-serde
+Files:   vendor/rmp-serde/*
+Authors: Evgeny Safronov
+License: see license file
+
+------------------------------
+
+Name:    rmp-serde
+Files:   vendor/rmp-serde/*
+Authors: Evgeny Safronov
+License: see license file
+
+------------------------------
+
+Name:    rmp
+Files:   vendor/rmp/*
+Authors: Evgeny Safronov, Kornel
+License: see license file
+
+------------------------------
+
+Name:    rmp
+Files:   vendor/rmp/*
+Authors: Evgeny Safronov, Kornel
+License: see license file
+
+------------------------------
+
+Name:    rustc-hash
+Files:   vendor/rustc-hash/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    rustc-hash
+Files:   vendor/rustc-hash/*
+Authors: The Rust Project Developers
+License: see license file
+
+------------------------------
+
+Name:    rustix
+Files:   vendor/rustix/*
+Authors: Dan Gohman, Jakub Konka
+License: see license file
+
+------------------------------
+
+Name:    rustix
+Files:   vendor/rustix/*
+Authors: Dan Gohman, Jakub Konka
+License: see license file
+
+------------------------------
+
+Name:    rustls-native-certs
+Files:   vendor/rustls-native-certs/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    rustls-native-certs
+Files:   vendor/rustls-native-certs/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    rustls-pki-types
+Files:   vendor/rustls-pki-types/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    rustls-pki-types
+Files:   vendor/rustls-pki-types/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    rustls-webpki
+Files:   vendor/rustls-webpki/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    rustls-webpki
+Files:   vendor/rustls-webpki/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    rustls
+Files:   vendor/rustls/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    rustls
+Files:   vendor/rustls/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    rustversion
+Files:   vendor/rustversion/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    rustversion
+Files:   vendor/rustversion/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    ryu
+Files:   vendor/ryu/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    ryu
+Files:   vendor/ryu/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    same-file
+Files:   vendor/same-file/*
+Authors: Andrew Gallant
+License: see license file
+
+------------------------------
+
+Name:    same-file
+Files:   vendor/same-file/*
+Authors: Andrew Gallant
+License: see license file
+
+------------------------------
+
+Name:    schannel
+Files:   vendor/schannel/*
+Authors: Steven Fackler, Steffen Butzer
+License: see license file
+
+------------------------------
+
+Name:    schannel
+Files:   vendor/schannel/*
+Authors: Steven Fackler, Steffen Butzer
+License: see license file
+
+------------------------------
+
+Name:    scopeguard
+Files:   vendor/scopeguard/*
+Authors: bluss
+License: see license file
+
+------------------------------
+
+Name:    scopeguard
+Files:   vendor/scopeguard/*
+Authors: bluss
+License: see license file
+
+------------------------------
+
+Name:    security-framework-sys
+Files:   vendor/security-framework-sys/*
+Authors: Steven Fackler, Kornel
+License: see license file
+
+------------------------------
+
+Name:    security-framework-sys
+Files:   vendor/security-framework-sys/*
+Authors: Steven Fackler, Kornel
+License: see license file
+
+------------------------------
+
+Name:    security-framework
+Files:   vendor/security-framework/*
+Authors: Steven Fackler, Kornel
+License: see license file
+
+------------------------------
+
+Name:    security-framework
+Files:   vendor/security-framework/*
+Authors: Steven Fackler, Kornel
+License: see license file
+
+------------------------------
+
+Name:    semver
+Files:   vendor/semver/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    semver
+Files:   vendor/semver/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    serde_core
+Files:   vendor/serde_core/*
+Authors: Erick Tryzelaar, David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    serde_core
+Files:   vendor/serde_core/*
+Authors: Erick Tryzelaar, David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    serde_derive
+Files:   vendor/serde_derive/*
+Authors: Erick Tryzelaar, David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    serde_derive
+Files:   vendor/serde_derive/*
+Authors: Erick Tryzelaar, David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    serde_json
+Files:   vendor/serde_json/*
+Authors: Erick Tryzelaar, David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    serde_json
+Files:   vendor/serde_json/*
+Authors: Erick Tryzelaar, David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    serde_spanned
+Files:   vendor/serde_spanned/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    serde_spanned
+Files:   vendor/serde_spanned/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    serde_stacker
+Files:   vendor/serde_stacker/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    serde_stacker
+Files:   vendor/serde_stacker/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    serde_urlencoded
+Files:   vendor/serde_urlencoded/*
+Authors: Anthony Ramine
+License: see license file
+
+------------------------------
+
+Name:    serde_urlencoded
+Files:   vendor/serde_urlencoded/*
+Authors: Anthony Ramine
+License: see license file
+
+------------------------------
+
+Name:    serde-pickle
+Files:   vendor/serde-pickle/*
+Authors: Georg Brandl
+License: see license file
+
+------------------------------
+
+Name:    serde-pickle
+Files:   vendor/serde-pickle/*
+Authors: Georg Brandl
+License: see license file
+
+------------------------------
+
+Name:    serde
+Files:   vendor/serde/*
+Authors: Erick Tryzelaar, David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    serde
+Files:   vendor/serde/*
+Authors: Erick Tryzelaar, David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    sha2
+Files:   vendor/sha2/*
+Authors: RustCrypto Developers
+License: see license file
+
+------------------------------
+
+Name:    sha2
+Files:   vendor/sha2/*
+Authors: RustCrypto Developers
+License: see license file
+
+------------------------------
+
+Name:    shlex
+Files:   vendor/shlex/*
+Authors: comex, Fenhl, Adrian Taylor, Alex Touchet, Daniel Parks, Garrett Berg
+License: see license file
+
+------------------------------
+
+Name:    shlex
+Files:   vendor/shlex/*
+Authors: comex, Fenhl, Adrian Taylor, Alex Touchet, Daniel Parks, Garrett Berg
+License: see license file
+
+------------------------------
+
+Name:    signal-hook-registry
+Files:   vendor/signal-hook-registry/*
+Authors: Michal 'vorner' Vaner, Masaki Hara
+License: see license file
+
+------------------------------
+
+Name:    signal-hook-registry
+Files:   vendor/signal-hook-registry/*
+Authors: Michal 'vorner' Vaner, Masaki Hara
+License: see license file
+
+------------------------------
+
+Name:    signal-hook
+Files:   vendor/signal-hook/*
+Authors: Michal 'vorner' Vaner, Thomas Himmelstoss
+License: see license file
+
+------------------------------
+
+Name:    signal-hook
+Files:   vendor/signal-hook/*
+Authors: Michal 'vorner' Vaner, Thomas Himmelstoss
+License: see license file
+
+------------------------------
+
+Name:    simd-adler32
+Files:   vendor/simd-adler32/*
+Authors: Marvin Countryman
+License: see license file
+
+------------------------------
+
+Name:    simd-adler32
+Files:   vendor/simd-adler32/*
+Authors: Marvin Countryman
+License: see license file
+
+------------------------------
+
+Name:    simd-json
+Files:   vendor/simd-json/*
+Authors: Heinz N. Gies, Sunny Gleason
+License: see license file
+
+------------------------------
+
+Name:    simd-json
+Files:   vendor/simd-json/*
+Authors: Heinz N. Gies, Sunny Gleason
+License: see license file
+
+------------------------------
+
+Name:    simdutf8
+Files:   vendor/simdutf8/*
+Authors: Hans Kratz
+License: see license file
+
+------------------------------
+
+Name:    simdutf8
+Files:   vendor/simdutf8/*
+Authors: Hans Kratz
+License: see license file
+
+------------------------------
+
+Name:    siphasher
+Files:   vendor/siphasher/*
+Authors: Frank Denis
+License: see license file
+
+------------------------------
+
+Name:    siphasher
+Files:   vendor/siphasher/*
+Authors: Frank Denis
+License: see license file
+
+------------------------------
+
+Name:    skiplist
+Files:   vendor/skiplist/*
+Authors: JP-Ellis
+License: see license file
+
+------------------------------
+
+Name:    skiplist
+Files:   vendor/skiplist/*
+Authors: JP-Ellis
+License: see license file
+
+------------------------------
+
+Name:    slab
+Files:   vendor/slab/*
+Authors: Carl Lerche
+License: see license file
+
+------------------------------
+
+Name:    slab
+Files:   vendor/slab/*
+Authors: Carl Lerche
+License: see license file
+
+------------------------------
+
+Name:    slotmap
+Files:   vendor/slotmap/*
+Authors: Orson Peters
+License: see license file
+
+------------------------------
+
+Name:    slotmap
+Files:   vendor/slotmap/*
+Authors: Orson Peters
+License: see license file
+
+------------------------------
+
+Name:    smallvec
+Files:   vendor/smallvec/*
+Authors: The Servo Project Developers
+License: see license file
+
+------------------------------
+
+Name:    smallvec
+Files:   vendor/smallvec/*
+Authors: The Servo Project Developers
+License: see license file
+
+------------------------------
+
+Name:    socket2
+Files:   vendor/socket2/*
+Authors: Alex Crichton, Thomas de Zeeuw
+License: see license file
+
+------------------------------
+
+Name:    socket2
+Files:   vendor/socket2/*
+Authors: Alex Crichton, Thomas de Zeeuw
+License: see license file
+
+------------------------------
+
+Name:    sqlparser
+Files:   vendor/sqlparser/*
+Authors: Apache DataFusion
+License: see license file
+
+------------------------------
+
+Name:    sqlparser
+Files:   vendor/sqlparser/*
+Authors: Apache DataFusion
+License: see license file
+
+------------------------------
+
+Name:    stable_deref_trait
+Files:   vendor/stable_deref_trait/*
+Authors: Robert Grosse
+License: see license file
+
+------------------------------
+
+Name:    stable_deref_trait
+Files:   vendor/stable_deref_trait/*
+Authors: Robert Grosse
+License: see license file
+
+------------------------------
+
+Name:    stacker
+Files:   vendor/stacker/*
+Authors: Alex Crichton, Simonas Kazlauskas
+License: see license file
+
+------------------------------
+
+Name:    stacker
+Files:   vendor/stacker/*
+Authors: Alex Crichton, Simonas Kazlauskas
+License: see license file
+
+------------------------------
+
+Name:    static_assertions
+Files:   vendor/static_assertions/*
+Authors: Nikolai Vazquez
+License: see license file
+
+------------------------------
+
+Name:    static_assertions
+Files:   vendor/static_assertions/*
+Authors: Nikolai Vazquez
+License: see license file
+
+------------------------------
+
+Name:    statrs
+Files:   vendor/statrs/*
+Authors: Michael Ma
+License: see license file
+
+------------------------------
+
+Name:    statrs
+Files:   vendor/statrs/*
+Authors: Michael Ma
+License: see license file
+
+------------------------------
+
+Name:    streaming-decompression
+Files:   vendor/streaming-decompression/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    streaming-decompression
+Files:   vendor/streaming-decompression/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    streaming-iterator
+Files:   vendor/streaming-iterator/*
+Authors: Steven Fackler
+License: see license file
+
+------------------------------
+
+Name:    streaming-iterator
+Files:   vendor/streaming-iterator/*
+Authors: Steven Fackler
+License: see license file
+
+------------------------------
+
+Name:    strength_reduce
+Files:   vendor/strength_reduce/*
+Authors: Elliott Mahler
+License: see license file
+
+------------------------------
+
+Name:    strength_reduce
+Files:   vendor/strength_reduce/*
+Authors: Elliott Mahler
+License: see license file
+
+------------------------------
+
+Name:    strsim
+Files:   vendor/strsim/*
+Authors: Danny Guo, maxbachmann
+License: see license file
+
+------------------------------
+
+Name:    strsim
+Files:   vendor/strsim/*
+Authors: Danny Guo, maxbachmann
+License: see license file
+
+------------------------------
+
+Name:    strum_macros
+Files:   vendor/strum_macros/*
+Authors: Peter Glotfelty
+License: see license file
+
+------------------------------
+
+Name:    strum_macros
+Files:   vendor/strum_macros/*
+Authors: Peter Glotfelty
+License: see license file
+
+------------------------------
+
+Name:    subtle
+Files:   vendor/subtle/*
+Authors: Isis Lovecruft, Henry de Valence
+License: see license file
+
+------------------------------
+
+Name:    subtle
+Files:   vendor/subtle/*
+Authors: Isis Lovecruft, Henry de Valence
+License: see license file
+
+------------------------------
+
+Name:    syn
+Files:   vendor/syn/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    syn
+Files:   vendor/syn/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    sync_wrapper
+Files:   vendor/sync_wrapper/*
+Authors: Actyx AG
+License: see license file
+
+------------------------------
+
+Name:    sync_wrapper
+Files:   vendor/sync_wrapper/*
+Authors: Actyx AG
+License: see license file
+
+------------------------------
+
+Name:    synstructure
+Files:   vendor/synstructure/*
+Authors: Nika Layzell
+License: see license file
+
+------------------------------
+
+Name:    synstructure
+Files:   vendor/synstructure/*
+Authors: Nika Layzell
+License: see license file
+
+------------------------------
+
+Name:    tap
+Files:   vendor/tap/*
+Authors: Elliott Linder, myrrlyn
+License: see license file
+
+------------------------------
+
+Name:    tap
+Files:   vendor/tap/*
+Authors: Elliott Linder, myrrlyn
+License: see license file
+
+------------------------------
+
+Name:    target-lexicon
+Files:   vendor/target-lexicon/*
+Authors: Dan Gohman
+License: see license file
+
+------------------------------
+
+Name:    target-lexicon
+Files:   vendor/target-lexicon/*
+Authors: Dan Gohman
+License: see license file
+
+------------------------------
+
+Name:    tempfile
+Files:   vendor/tempfile/*
+Authors: Steven Allen, The Rust Project Developers, Ashley Mannix, Jason White
+License: see license file
+
+------------------------------
+
+Name:    tempfile
+Files:   vendor/tempfile/*
+Authors: Steven Allen, The Rust Project Developers, Ashley Mannix, Jason White
+License: see license file
+
+------------------------------
+
+Name:    thiserror
+Files:   vendor/thiserror/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    thiserror
+Files:   vendor/thiserror/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    thiserror-impl
+Files:   vendor/thiserror-impl/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    thiserror-impl
+Files:   vendor/thiserror-impl/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    thiserror-impl
+Files:   vendor/thiserror-impl/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    thiserror-impl
+Files:   vendor/thiserror-impl/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    thiserror
+Files:   vendor/thiserror/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    thiserror
+Files:   vendor/thiserror/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    tinystr
+Files:   vendor/tinystr/*
+Authors: The ICU4X Project Developers
+License: see license file
+
+------------------------------
+
+Name:    tinystr
+Files:   vendor/tinystr/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    tinyvec_macros
+Files:   vendor/tinyvec_macros/*
+Authors: Soveu
+License: see license file
+
+------------------------------
+
+Name:    tinyvec_macros
+Files:   vendor/tinyvec_macros/*
+Authors: Soveu
+License: see license file
+
+------------------------------
+
+Name:    tinyvec
+Files:   vendor/tinyvec/*
+Authors: Lokathor
+License: see license file
+
+------------------------------
+
+Name:    tinyvec
+Files:   vendor/tinyvec/*
+Authors: Lokathor
+License: see license file
+
+------------------------------
+
+Name:    tokio-macros
+Files:   vendor/tokio-macros/*
+Authors: Tokio Contributors
+License: see license file
+
+------------------------------
+
+Name:    tokio-macros
+Files:   vendor/tokio-macros/*
+Authors: Tokio Contributors
+License: see license file
+
+------------------------------
+
+Name:    tokio-rustls
+Files:   vendor/tokio-rustls/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    tokio-rustls
+Files:   vendor/tokio-rustls/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    tokio-util
+Files:   vendor/tokio-util/*
+Authors: Tokio Contributors
+License: see license file
+
+------------------------------
+
+Name:    tokio-util
+Files:   vendor/tokio-util/*
+Authors: Tokio Contributors
+License: see license file
+
+------------------------------
+
+Name:    tokio
+Files:   vendor/tokio/*
+Authors: Tokio Contributors
+License: see license file
+
+------------------------------
+
+Name:    tokio
+Files:   vendor/tokio/*
+Authors: Tokio Contributors
+License: see license file
+
+------------------------------
+
+Name:    toml_datetime
+Files:   vendor/toml_datetime/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    toml_datetime
+Files:   vendor/toml_datetime/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    toml_edit
+Files:   vendor/toml_edit/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    toml_edit
+Files:   vendor/toml_edit/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    toml_write
+Files:   vendor/toml_write/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    toml_write
+Files:   vendor/toml_write/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    toml
+Files:   vendor/toml/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    toml
+Files:   vendor/toml/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    tower-http
+Files:   vendor/tower-http/*
+Authors: Tower Maintainers
+License: see license file
+
+------------------------------
+
+Name:    tower-http
+Files:   vendor/tower-http/*
+Authors: Tower Maintainers
+License: see license file
+
+------------------------------
+
+Name:    tower-layer
+Files:   vendor/tower-layer/*
+Authors: Tower Maintainers
+License: see license file
+
+------------------------------
+
+Name:    tower-layer
+Files:   vendor/tower-layer/*
+Authors: Tower Maintainers
+License: see license file
+
+------------------------------
+
+Name:    tower-service
+Files:   vendor/tower-service/*
+Authors: Tower Maintainers
+License: see license file
+
+------------------------------
+
+Name:    tower-service
+Files:   vendor/tower-service/*
+Authors: Tower Maintainers
+License: see license file
+
+------------------------------
+
+Name:    tower
+Files:   vendor/tower/*
+Authors: Tower Maintainers
+License: see license file
+
+------------------------------
+
+Name:    tower
+Files:   vendor/tower/*
+Authors: Tower Maintainers
+License: see license file
+
+------------------------------
+
+Name:    tracing-attributes
+Files:   vendor/tracing-attributes/*
+Authors: Tokio Contributors, Eliza Weisman, David Barsky
+License: see license file
+
+------------------------------
+
+Name:    tracing-attributes
+Files:   vendor/tracing-attributes/*
+Authors: Tokio Contributors, Eliza Weisman, David Barsky
+License: see license file
+
+------------------------------
+
+Name:    tracing-core
+Files:   vendor/tracing-core/*
+Authors: Tokio Contributors
+License: see license file
+
+------------------------------
+
+Name:    tracing-core
+Files:   vendor/tracing-core/*
+Authors: Tokio Contributors
+License: see license file
+
+------------------------------
+
+Name:    tracing
+Files:   vendor/tracing/*
+Authors: Eliza Weisman, Tokio Contributors
+License: see license file
+
+------------------------------
+
+Name:    tracing
+Files:   vendor/tracing/*
+Authors: Eliza Weisman, Tokio Contributors
+License: see license file
+
+------------------------------
+
+Name:    try-lock
+Files:   vendor/try-lock/*
+Authors: Sean McArthur
+License: see license file
+
+------------------------------
+
+Name:    try-lock
+Files:   vendor/try-lock/*
+Authors: Sean McArthur
+License: see license file
+
+------------------------------
+
+Name:    typenum
+Files:   vendor/typenum/*
+Authors: Paho Lurie-Gregg, Andre Bogus
+License: see license file
+
+------------------------------
+
+Name:    typenum
+Files:   vendor/typenum/*
+Authors: Paho Lurie-Gregg, Andre Bogus
+License: see license file
+
+------------------------------
+
+Name:    unicode-ident
+Files:   vendor/unicode-ident/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    unicode-ident
+Files:   vendor/unicode-ident/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    unicode-normalization
+Files:   vendor/unicode-normalization/*
+Authors: kwantam, Manish Goregaokar
+License: see license file
+
+------------------------------
+
+Name:    unicode-normalization
+Files:   vendor/unicode-normalization/*
+Authors: kwantam, Manish Goregaokar
+License: see license file
+
+------------------------------
+
+Name:    unicode-reverse
+Files:   vendor/unicode-reverse/*
+Authors: Matt Brubeck
+License: see license file
+
+------------------------------
+
+Name:    unicode-reverse
+Files:   vendor/unicode-reverse/*
+Authors: Matt Brubeck
+License: see license file
+
+------------------------------
+
+Name:    unicode-segmentation
+Files:   vendor/unicode-segmentation/*
+Authors: kwantam, Manish Goregaokar
+License: see license file
+
+------------------------------
+
+Name:    unicode-segmentation
+Files:   vendor/unicode-segmentation/*
+Authors: kwantam, Manish Goregaokar
+License: see license file
+
+------------------------------
+
+Name:    unicode-width
+Files:   vendor/unicode-width/*
+Authors: kwantam, Manish Goregaokar
+License: see license file
+
+------------------------------
+
+Name:    unicode-width
+Files:   vendor/unicode-width/*
+Authors: kwantam, Manish Goregaokar
+License: see license file
+
+------------------------------
+
+Name:    unicode-xid
+Files:   vendor/unicode-xid/*
+Authors: erick.tryzelaar, kwantam, Manish Goregaokar
+License: see license file
+
+------------------------------
+
+Name:    unicode-xid
+Files:   vendor/unicode-xid/*
+Authors: erick.tryzelaar, kwantam, Manish Goregaokar
+License: see license file
+
+------------------------------
+
+Name:    unindent
+Files:   vendor/unindent/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    unindent
+Files:   vendor/unindent/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    untrusted
+Files:   vendor/untrusted/*
+Authors: Brian Smith
+License: see license file
+
+------------------------------
+
+Name:    untrusted
+Files:   vendor/untrusted/*
+Authors: Brian Smith
+License: see license file
+
+------------------------------
+
+Name:    unty
+Files:   vendor/unty/*
+Authors: Victor Koenders
+License: see license file
+
+------------------------------
+
+Name:    unty
+Files:   vendor/unty/*
+Authors: Victor Koenders
+License: see license file
+
+------------------------------
+
+Name:    url
+Files:   vendor/url/*
+Authors: The rust-url developers
+License: see license file
+
+------------------------------
+
+Name:    url
+Files:   vendor/url/*
+Authors: The rust-url developers
+License: see license file
+
+------------------------------
+
+Name:    utf8_iter
+Files:   vendor/utf8_iter/*
+Authors: Henri Sivonen
+License: see license file
+
+------------------------------
+
+Name:    utf8_iter
+Files:   vendor/utf8_iter/*
+Authors: Henri Sivonen
+License: see license file
+
+------------------------------
+
+Name:    utf8parse
+Files:   vendor/utf8parse/*
+Authors: Joe Wilm, Christian Duerr
+License: see license file
+
+------------------------------
+
+Name:    utf8parse
+Files:   vendor/utf8parse/*
+Authors: Joe Wilm, Christian Duerr
+License: see license file
+
+------------------------------
+
+Name:    uuid
+Files:   vendor/uuid/*
+Authors: Ashley Mannix<ashleymannix@live.com.au>, Dylan DPC<dylan.dpc@gmail.com>, Hunar Roop Kahlon<hunar.roop@gmail.com>
+License: see license file
+
+------------------------------
+
+Name:    uuid
+Files:   vendor/uuid/*
+Authors: Ashley Mannix<ashleymannix@live.com.au>, Dylan DPC<dylan.dpc@gmail.com>, Hunar Roop Kahlon<hunar.roop@gmail.com>
+License: see license file
+
+------------------------------
+
+Name:    value-trait
+Files:   vendor/value-trait/*
+Authors: Heinz N. Gies
+License: see license file
+
+------------------------------
+
+Name:    value-trait
+Files:   vendor/value-trait/*
+Authors: Heinz N. Gies
+License: see license file
+
+------------------------------
+
+Name:    vcpkg
+Files:   vendor/vcpkg/*
+Authors: Jim McGrath
+License: see license file
+
+------------------------------
+
+Name:    vcpkg
+Files:   vendor/vcpkg/*
+Authors: Jim McGrath
+License: see license file
+
+------------------------------
+
+Name:    version_check
+Files:   vendor/version_check/*
+Authors: Sergio Benitez
+License: see license file
+
+------------------------------
+
+Name:    version_check
+Files:   vendor/version_check/*
+Authors: Sergio Benitez
+License: see license file
+
+------------------------------
+
+Name:    virtue
+Files:   vendor/virtue/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    virtue
+Files:   vendor/virtue/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    walkdir
+Files:   vendor/walkdir/*
+Authors: Andrew Gallant
+License: see license file
+
+------------------------------
+
+Name:    walkdir
+Files:   vendor/walkdir/*
+Authors: Andrew Gallant
+License: see license file
+
+------------------------------
+
+Name:    want
+Files:   vendor/want/*
+Authors: Sean McArthur
+License: see license file
+
+------------------------------
+
+Name:    want
+Files:   vendor/want/*
+Authors: Sean McArthur
+License: see license file
+
+------------------------------
+
+Name:    wasi
+Files:   vendor/wasi/*
+Authors: The Cranelift Project Developers
+License: see license file
+
+------------------------------
+
+Name:    wasi
+Files:   vendor/wasi/*
+Authors: The Cranelift Project Developers
+License: see license file
+
+------------------------------
+
+Name:    wasi
+Files:   vendor/wasi/*
+Authors: The Cranelift Project Developers
+License: see license file
+
+------------------------------
+
+Name:    wasi
+Files:   vendor/wasi/*
+Authors: The Cranelift Project Developers
+License: see license file
+
+------------------------------
+
+Name:    wasip2
+Files:   vendor/wasip2/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    wasip2
+Files:   vendor/wasip2/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    wasip3
+Files:   vendor/wasip3/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    wasip3
+Files:   vendor/wasip3/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    wasm-bindgen-futures
+Files:   vendor/wasm-bindgen-futures/*
+Authors: The wasm-bindgen Developers
+License: see license file
+
+------------------------------
+
+Name:    wasm-bindgen-futures
+Files:   vendor/wasm-bindgen-futures/*
+Authors: The wasm-bindgen Developers
+License: see license file
+
+------------------------------
+
+Name:    wasm-bindgen-macro-support
+Files:   vendor/wasm-bindgen-macro-support/*
+Authors: The wasm-bindgen Developers
+License: see license file
+
+------------------------------
+
+Name:    wasm-bindgen-macro-support
+Files:   vendor/wasm-bindgen-macro-support/*
+Authors: The wasm-bindgen Developers
+License: see license file
+
+------------------------------
+
+Name:    wasm-bindgen-macro
+Files:   vendor/wasm-bindgen-macro/*
+Authors: The wasm-bindgen Developers
+License: see license file
+
+------------------------------
+
+Name:    wasm-bindgen-macro
+Files:   vendor/wasm-bindgen-macro/*
+Authors: The wasm-bindgen Developers
+License: see license file
+
+------------------------------
+
+Name:    wasm-bindgen-shared
+Files:   vendor/wasm-bindgen-shared/*
+Authors: The wasm-bindgen Developers
+License: see license file
+
+------------------------------
+
+Name:    wasm-bindgen-shared
+Files:   vendor/wasm-bindgen-shared/*
+Authors: The wasm-bindgen Developers
+License: see license file
+
+------------------------------
+
+Name:    wasm-bindgen
+Files:   vendor/wasm-bindgen/*
+Authors: The wasm-bindgen Developers
+License: see license file
+
+------------------------------
+
+Name:    wasm-bindgen
+Files:   vendor/wasm-bindgen/*
+Authors: The wasm-bindgen Developers
+License: see license file
+
+------------------------------
+
+Name:    wasm-encoder
+Files:   vendor/wasm-encoder/*
+Authors: Nick Fitzgerald
+License: see license file
+
+------------------------------
+
+Name:    wasm-encoder
+Files:   vendor/wasm-encoder/*
+Authors: Nick Fitzgerald
+License: see license file
+
+------------------------------
+
+Name:    wasm-metadata
+Files:   vendor/wasm-metadata/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    wasm-metadata
+Files:   vendor/wasm-metadata/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    wasm-streams
+Files:   vendor/wasm-streams/*
+Authors: Mattias Buelens
+License: see license file
+
+------------------------------
+
+Name:    wasm-streams
+Files:   vendor/wasm-streams/*
+Authors: Mattias Buelens
+License: see license file
+
+------------------------------
+
+Name:    wasmparser
+Files:   vendor/wasmparser/*
+Authors: Yury Delendik
+License: see license file
+
+------------------------------
+
+Name:    wasmparser
+Files:   vendor/wasmparser/*
+Authors: Yury Delendik
+License: see license file
+
+------------------------------
+
+Name:    web-sys
+Files:   vendor/web-sys/*
+Authors: The wasm-bindgen Developers
+License: see license file
+
+------------------------------
+
+Name:    web-sys
+Files:   vendor/web-sys/*
+Authors: The wasm-bindgen Developers
+License: see license file
+
+------------------------------
+
+Name:    web-time
+Files:   vendor/web-time/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    web-time
+Files:   vendor/web-time/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    winapi-i686-pc-windows-gnu
+Files:   vendor/winapi-i686-pc-windows-gnu/*
+Authors: Peter Atashian
+License: see license file
+
+------------------------------
+
+Name:    winapi-i686-pc-windows-gnu
+Files:   vendor/winapi-i686-pc-windows-gnu/*
+Authors: Peter Atashian
+License: see license file
+
+------------------------------
+
+Name:    winapi-util
+Files:   vendor/winapi-util/*
+Authors: Andrew Gallant
+License: see license file
+
+------------------------------
+
+Name:    winapi-util
+Files:   vendor/winapi-util/*
+Authors: Andrew Gallant
+License: see license file
+
+------------------------------
+
+Name:    winapi-x86_64-pc-windows-gnu
+Files:   vendor/winapi-x86_64-pc-windows-gnu/*
+Authors: Peter Atashian
+License: see license file
+
+------------------------------
+
+Name:    winapi-x86_64-pc-windows-gnu
+Files:   vendor/winapi-x86_64-pc-windows-gnu/*
+Authors: Peter Atashian
+License: see license file
+
+------------------------------
+
+Name:    winapi
+Files:   vendor/winapi/*
+Authors: Peter Atashian
+License: see license file
+
+------------------------------
+
+Name:    winapi
+Files:   vendor/winapi/*
+Authors: Peter Atashian
+License: see license file
+
+------------------------------
+
+Name:    windows_aarch64_gnullvm
+Files:   vendor/windows_aarch64_gnullvm/*
+Authors: Microsoft
+License: see license file
+
+------------------------------
+
+Name:    windows_aarch64_gnullvm
+Files:   vendor/windows_aarch64_gnullvm/*
+Authors: Microsoft
+License: see license file
+
+------------------------------
+
+Name:    windows_aarch64_gnullvm
+Files:   vendor/windows_aarch64_gnullvm/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows_aarch64_gnullvm
+Files:   vendor/windows_aarch64_gnullvm/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows_aarch64_msvc
+Files:   vendor/windows_aarch64_msvc/*
+Authors: Microsoft
+License: see license file
+
+------------------------------
+
+Name:    windows_aarch64_msvc
+Files:   vendor/windows_aarch64_msvc/*
+Authors: Microsoft
+License: see license file
+
+------------------------------
+
+Name:    windows_aarch64_msvc
+Files:   vendor/windows_aarch64_msvc/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows_aarch64_msvc
+Files:   vendor/windows_aarch64_msvc/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows_i686_gnu
+Files:   vendor/windows_i686_gnu/*
+Authors: Microsoft
+License: see license file
+
+------------------------------
+
+Name:    windows_i686_gnu
+Files:   vendor/windows_i686_gnu/*
+Authors: Microsoft
+License: see license file
+
+------------------------------
+
+Name:    windows_i686_gnu
+Files:   vendor/windows_i686_gnu/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows_i686_gnu
+Files:   vendor/windows_i686_gnu/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows_i686_gnullvm
+Files:   vendor/windows_i686_gnullvm/*
+Authors: Microsoft
+License: see license file
+
+------------------------------
+
+Name:    windows_i686_gnullvm
+Files:   vendor/windows_i686_gnullvm/*
+Authors: Microsoft
+License: see license file
+
+------------------------------
+
+Name:    windows_i686_gnullvm
+Files:   vendor/windows_i686_gnullvm/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows_i686_gnullvm
+Files:   vendor/windows_i686_gnullvm/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows_i686_msvc
+Files:   vendor/windows_i686_msvc/*
+Authors: Microsoft
+License: see license file
+
+------------------------------
+
+Name:    windows_i686_msvc
+Files:   vendor/windows_i686_msvc/*
+Authors: Microsoft
+License: see license file
+
+------------------------------
+
+Name:    windows_i686_msvc
+Files:   vendor/windows_i686_msvc/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows_i686_msvc
+Files:   vendor/windows_i686_msvc/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows_x86_64_gnu
+Files:   vendor/windows_x86_64_gnu/*
+Authors: Microsoft
+License: see license file
+
+------------------------------
+
+Name:    windows_x86_64_gnu
+Files:   vendor/windows_x86_64_gnu/*
+Authors: Microsoft
+License: see license file
+
+------------------------------
+
+Name:    windows_x86_64_gnu
+Files:   vendor/windows_x86_64_gnu/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows_x86_64_gnu
+Files:   vendor/windows_x86_64_gnu/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows_x86_64_gnullvm
+Files:   vendor/windows_x86_64_gnullvm/*
+Authors: Microsoft
+License: see license file
+
+------------------------------
+
+Name:    windows_x86_64_gnullvm
+Files:   vendor/windows_x86_64_gnullvm/*
+Authors: Microsoft
+License: see license file
+
+------------------------------
+
+Name:    windows_x86_64_gnullvm
+Files:   vendor/windows_x86_64_gnullvm/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows_x86_64_gnullvm
+Files:   vendor/windows_x86_64_gnullvm/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows_x86_64_msvc
+Files:   vendor/windows_x86_64_msvc/*
+Authors: Microsoft
+License: see license file
+
+------------------------------
+
+Name:    windows_x86_64_msvc
+Files:   vendor/windows_x86_64_msvc/*
+Authors: Microsoft
+License: see license file
+
+------------------------------
+
+Name:    windows_x86_64_msvc
+Files:   vendor/windows_x86_64_msvc/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows_x86_64_msvc
+Files:   vendor/windows_x86_64_msvc/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows-core
+Files:   vendor/windows-core/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows-core
+Files:   vendor/windows-core/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows-implement
+Files:   vendor/windows-implement/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows-implement
+Files:   vendor/windows-implement/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows-interface
+Files:   vendor/windows-interface/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows-interface
+Files:   vendor/windows-interface/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows-link
+Files:   vendor/windows-link/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows-link
+Files:   vendor/windows-link/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows-result
+Files:   vendor/windows-result/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows-result
+Files:   vendor/windows-result/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows-strings
+Files:   vendor/windows-strings/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows-strings
+Files:   vendor/windows-strings/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows-sys
+Files:   vendor/windows-sys/*
+Authors: Microsoft
+License: see license file
+
+------------------------------
+
+Name:    windows-sys
+Files:   vendor/windows-sys/*
+Authors: Microsoft
+License: see license file
+
+------------------------------
+
+Name:    windows-sys
+Files:   vendor/windows-sys/*
+Authors: Microsoft
+License: see license file
+
+------------------------------
+
+Name:    windows-sys
+Files:   vendor/windows-sys/*
+Authors: Microsoft
+License: see license file
+
+------------------------------
+
+Name:    windows-sys
+Files:   vendor/windows-sys/*
+Authors: Microsoft
+License: see license file
+
+------------------------------
+
+Name:    windows-sys
+Files:   vendor/windows-sys/*
+Authors: Microsoft
+License: see license file
+
+------------------------------
+
+Name:    windows-sys
+Files:   vendor/windows-sys/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows-sys
+Files:   vendor/windows-sys/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows-targets
+Files:   vendor/windows-targets/*
+Authors: Microsoft
+License: see license file
+
+------------------------------
+
+Name:    windows-targets
+Files:   vendor/windows-targets/*
+Authors: Microsoft
+License: see license file
+
+------------------------------
+
+Name:    windows-targets
+Files:   vendor/windows-targets/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    windows-targets
+Files:   vendor/windows-targets/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    winnow
+Files:   vendor/winnow/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    winnow
+Files:   vendor/winnow/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    wit-bindgen
+Files:   vendor/wit-bindgen/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    wit-bindgen
+Files:   vendor/wit-bindgen/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    wit-bindgen-core
+Files:   vendor/wit-bindgen-core/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    wit-bindgen-core
+Files:   vendor/wit-bindgen-core/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    wit-bindgen-rust-macro
+Files:   vendor/wit-bindgen-rust-macro/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    wit-bindgen-rust-macro
+Files:   vendor/wit-bindgen-rust-macro/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    wit-bindgen-rust
+Files:   vendor/wit-bindgen-rust/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    wit-bindgen-rust
+Files:   vendor/wit-bindgen-rust/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    wit-bindgen
+Files:   vendor/wit-bindgen/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    wit-bindgen
+Files:   vendor/wit-bindgen/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    wit-component
+Files:   vendor/wit-component/*
+Authors: Peter Huene
+License: see license file
+
+------------------------------
+
+Name:    wit-component
+Files:   vendor/wit-component/*
+Authors: Peter Huene
+License: see license file
+
+------------------------------
+
+Name:    wit-parser
+Files:   vendor/wit-parser/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    wit-parser
+Files:   vendor/wit-parser/*
+Authors: Alex Crichton
+License: see license file
+
+------------------------------
+
+Name:    writeable
+Files:   vendor/writeable/*
+Authors: The ICU4X Project Developers
+License: see license file
+
+------------------------------
+
+Name:    writeable
+Files:   vendor/writeable/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    wyz
+Files:   vendor/wyz/*
+Authors: myrrlyn
+License: see license file
+
+------------------------------
+
+Name:    wyz
+Files:   vendor/wyz/*
+Authors: myrrlyn
+License: see license file
+
+------------------------------
+
+Name:    xxhash-rust
+Files:   vendor/xxhash-rust/*
+Authors: Douman
+License: see license file
+
+------------------------------
+
+Name:    xxhash-rust
+Files:   vendor/xxhash-rust/*
+Authors: Douman
+License: see license file
+
+------------------------------
+
+Name:    yansi
+Files:   vendor/yansi/*
+Authors: Sergio Benitez
+License: see license file
+
+------------------------------
+
+Name:    yansi
+Files:   vendor/yansi/*
+Authors: Sergio Benitez
+License: see license file
+
+------------------------------
+
+Name:    yoke-derive
+Files:   vendor/yoke-derive/*
+Authors: Manish Goregaokar
+License: see license file
+
+------------------------------
+
+Name:    yoke-derive
+Files:   vendor/yoke-derive/*
+Authors: Manish Goregaokar
+License: see license file
+
+------------------------------
+
+Name:    yoke
+Files:   vendor/yoke/*
+Authors: Manish Goregaokar
+License: see license file
+
+------------------------------
+
+Name:    yoke
+Files:   vendor/yoke/*
+Authors: Manish Goregaokar
+License: see license file
+
+------------------------------
+
+Name:    zerocopy-derive
+Files:   vendor/zerocopy-derive/*
+Authors: Joshua Liebow-Feeser, Jack Wrenn
+License: see license file
+
+------------------------------
+
+Name:    zerocopy-derive
+Files:   vendor/zerocopy-derive/*
+Authors: Joshua Liebow-Feeser, Jack Wrenn
+License: see license file
+
+------------------------------
+
+Name:    zerocopy
+Files:   vendor/zerocopy/*
+Authors: Joshua Liebow-Feeser, Jack Wrenn
+License: see license file
+
+------------------------------
+
+Name:    zerocopy
+Files:   vendor/zerocopy/*
+Authors: Joshua Liebow-Feeser, Jack Wrenn
+License: see license file
+
+------------------------------
+
+Name:    std-deps
+Files:   vendor/std-deps/*
+Authors: 
+License: see license file
+
+------------------------------
+
+Name:    zerofrom-derive
+Files:   vendor/zerofrom-derive/*
+Authors: Manish Goregaokar
+License: see license file
+
+------------------------------
+
+Name:    zerofrom-derive
+Files:   vendor/zerofrom-derive/*
+Authors: Manish Goregaokar
+License: see license file
+
+------------------------------
+
+Name:    zerofrom
+Files:   vendor/zerofrom/*
+Authors: Manish Goregaokar
+License: see license file
+
+------------------------------
+
+Name:    zerofrom
+Files:   vendor/zerofrom/*
+Authors: Manish Goregaokar
+License: see license file
+
+------------------------------
+
+Name:    zeroize
+Files:   vendor/zeroize/*
+Authors: The RustCrypto Project Developers
+License: see license file
+
+------------------------------
+
+Name:    zeroize
+Files:   vendor/zeroize/*
+Authors: The RustCrypto Project Developers
+License: see license file
+
+------------------------------
+
+Name:    zerotrie
+Files:   vendor/zerotrie/*
+Authors: The ICU4X Project Developers
+License: see license file
+
+------------------------------
+
+Name:    zerotrie
+Files:   vendor/zerotrie/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    zerovec-derive
+Files:   vendor/zerovec-derive/*
+Authors: Manish Goregaokar
+License: see license file
+
+------------------------------
+
+Name:    zerovec-derive
+Files:   vendor/zerovec-derive/*
+Authors: Manish Goregaokar
+License: see license file
+
+------------------------------
+
+Name:    zerovec
+Files:   vendor/zerovec/*
+Authors: The ICU4X Project Developers
+License: see license file
+
+------------------------------
+
+Name:    zerovec
+Files:   vendor/zerovec/*
+Authors: TRUE
+License: see license file
+
+------------------------------
+
+Name:    zmij
+Files:   vendor/zmij/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    zmij
+Files:   vendor/zmij/*
+Authors: David Tolnay
+License: see license file
+
+------------------------------
+
+Name:    zstd-safe
+Files:   vendor/zstd-safe/*
+Authors: Alexandre Bury
+License: see license file
+
+------------------------------
+
+Name:    zstd-safe
+Files:   vendor/zstd-safe/*
+Authors: Alexandre Bury
+License: see license file
+
+------------------------------
+
+Name:    zstd-sys
+Files:   vendor/zstd-sys/*
+Authors: Alexandre Bury
+License: see license file
+
+------------------------------
+
+Name:    zstd-sys
+Files:   vendor/zstd-sys/*
+Authors: Alexandre Bury
+License: see license file
+
+------------------------------
+
+Name:    zstd
+Files:   vendor/zstd/*
+Authors: Alexandre Bury
+License: see license file
+
+------------------------------
+
+Name:    zstd
+Files:   vendor/zstd/*
+Authors: Alexandre Bury
+License: see license file

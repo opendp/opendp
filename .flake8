@@ -1,0 +1,75 @@
+# We could configure flake8 in python/setup.cfg,
+# but there is also python code outside the python directory,
+# so this config belongs at the top level.
+
+[flake8]
+exclude =
+    # old
+    venv
+    .venv
+    # suggested virtualenv for python/
+    .venv-dev
+    # suggested virtualenv for docs/
+    .venv-docs
+    # suggested virtualenv for tools/
+    .venv-tools
+    out
+    vendor
+
+
+extend-ignore =
+    # TODO: Good to be more conservative, but "import *" is ubiquitous right now.
+    # If we wanted to fix this, could get list of all names from a file,
+    # import them all explicitly, and then remove the unused ones,
+    # F403: 'from ... import *' used; unable to detect undefined names
+    F403,
+    # F405: '...' may be undefined, or defined from star imports: ...
+    F405,
+
+    # For us, lambdas are often more clear. No fixes needed!
+    # E731: do not assign a lambda expression, use a def
+    E731,
+
+    # Wouldn't complain about these during code review, so don't automate it. No fixes needed!
+    # W291: trailing whitespace
+    W291,
+    # W292: no newline at end of file
+    W292,
+    # W293: blank line contains whitespace
+    W293,
+    # W391: blank line at end of file
+    W391
+    # E302: expected 2 blank lines, found ...
+    E302,
+    # E303: too many blank lines (...)
+    E303,
+    # E251: unexpected spaces around keyword / parameter equals
+    E251,
+    # E261: at least two spaces before inline comment
+    E261,
+    # E305: expected 2 blank lines after class or function definition, found ...
+    E305,
+    # E306: expected 1 blank line before a nested definition, found ...
+    E306,
+    # E501: line too long (... > 79 characters)
+    E501,
+
+per-file-ignores =
+    # Use globs here so it works whether it's run from root or from python/.
+
+    # Pseudocode necessarily has a lot of undefined names. No fixes needed!
+    # F821: undefined name '...'
+    # TODO: Move cdp_epsilon.py to a pseudocode directory? 
+    */cdp_epsilon.py:F821
+    */pseudocode/*:F821
+
+    # Generated code. No fixes needed!
+    # F841: local variable '...' is assigned to but never used
+    */transformations.py:F841
+
+    # Names are gathered here for convenience imports downstream. No fixes needed!
+    # F401: '...' imported but unused
+    */opendp/__init__.py:F401
+    */prelude.py:F401
+    */sklearn/__init__.py:F401
+    */extras/__init__.py:F401
