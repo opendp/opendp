@@ -10,7 +10,7 @@ use crate::traits::{InfCast, InfDiv, InfLn, InfMul, InfSub, samplers::sample_ber
 #[cfg(feature = "ffi")]
 mod ffi;
 
-#[bootstrap(features("contrib"), arguments(constant_time(default = false)))]
+#[bootstrap(features("contrib"), arguments(mitigate_timing(default = false)))]
 /// Make a Measurement that implements randomized response on a bit vector.
 ///
 /// This primitive can be useful for implementing RAPPOR.
@@ -22,12 +22,12 @@ mod ffi;
 /// * `input_domain` - BitVectorDomain with max_weight
 /// * `input_metric` - DiscreteDistance
 /// * `f` - Per-bit flipping probability. Must be in $(0, 1]$.
-/// * `constant_time` - Whether to run the Bernoulli samplers in constant time, this is likely to be extremely slow.
+/// * `mitigate_timing` - Whether to run the Bernoulli samplers in constant time, this is likely to be extremely slow.
 pub fn make_randomized_response_bitvec(
     input_domain: BitVectorDomain,
     input_metric: DiscreteDistance,
     f: f64,
-    constant_time: bool,
+    mitigate_timing: bool,
 ) -> Fallible<Measurement<BitVectorDomain, DiscreteDistance, MaxDivergence, BitVector>> {
     let m = match input_domain.max_weight {
         Some(m) => m,
@@ -59,7 +59,7 @@ pub fn make_randomized_response_bitvec(
             let n = arg.len();
             let noise_vector = (1..n)
                 .into_iter()
-                .map(|_| sample_bernoulli_float(f_2, constant_time))
+                .map(|_| sample_bernoulli_float(f_2, mitigate_timing))
                 .collect::<Fallible<BitVector>>()?;
             // I wanted to avoid cloning here but the closure makes it necessary
             // Shouldn't use much memory anyway given bit-vecs
