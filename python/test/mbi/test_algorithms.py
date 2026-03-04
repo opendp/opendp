@@ -10,6 +10,8 @@ import opendp.prelude as dp
 import pytest
 import re
 
+from ..helpers import ids
+
 
 @pytest.mark.parametrize(
     "algorithm",
@@ -25,6 +27,7 @@ import re
         ),
         dp.mbi.Fixed(queries=[Count(("A",))]),
     ),
+    ids=ids,
 )
 def test_algorithm_err_elements(algorithm):
     pytest.importorskip("mbi")
@@ -94,6 +97,7 @@ def test_algorithm_err_elements(algorithm):
         (dict(measure_split=2), "measure_split (2) must be in (0, 1]"),
         (dict(max_size=-1), "max_size (-1) must be positive"),
     ],
+    ids=ids,
 )
 def test_aim_init(kwargs, message):
     with pytest.raises(ValueError, match=re.escape(message)):
@@ -126,6 +130,7 @@ def test_aim_exhaustion():
         (dict(queries=[]), "queries must have at least one element"),
         (dict(queries=[2]), "queries must be of type Count"),
     ],
+    ids=ids,
 )
 def test_fixed_init(kwargs, message):
     with pytest.raises(ValueError, match=re.escape(message)):
@@ -138,6 +143,7 @@ def test_fixed_init(kwargs, message):
         (dict(measure_split=2), "measure_split (2) must be in (0, 1]"),
         (dict(num_selections=0), "num_selections (0) must be positive"),
     ],
+    ids=ids,
 )
 def test_mst_init(kwargs, message):
     with pytest.raises(ValueError, match=re.escape(message)):
@@ -152,6 +158,7 @@ def test_mst_init(kwargs, message):
         (dict(algorithms=[MST()], weights=[]), "algorithms and weights must contain"),
         (dict(algorithms=[MST()], weights=[0]), "weights ([0]) must be positive"),
     ],
+    ids=ids,
 )
 def test_sequential_init(kwargs, message):
     with pytest.raises(ValueError, match=re.escape(message)):

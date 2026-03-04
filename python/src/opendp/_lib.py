@@ -24,7 +24,7 @@ def _load_library():
     lib_dir = Path(os.environ.get(lib_envvar, default_lib_dir))
     if not lib_dir.exists():
         # fall back to default location of binaries in a developer install
-        build_dir = 'debug' if os.environ.get('OPENDP_TEST_RELEASE', "false") == "false" else 'release'
+        build_dir = 'release' if os.environ.get('OPENDP_TEST_RELEASE') else 'debug'
         lib_dir = Path(__file__).parent / ".." / ".." / ".." / 'rust' / 'target' / build_dir  # pragma: no cover
 
     if lib_dir.exists():

@@ -1,6 +1,8 @@
 import pytest
 import opendp.prelude as dp
 
+from .helpers import ids
+
 
 def test_gaussian_curve():
     input_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
@@ -214,12 +216,16 @@ def test_gaussian():
     (input_space >> dp.m.then_gaussian(1.))([1., 2., 3.])
 
 
-@pytest.mark.parametrize("measure,d_out", [
-    # d_in * 2 / scale = 2
-    (dp.max_divergence(), 2), 
-    # (d_in * 2 / scale)^2 / 8
-    (dp.zero_concentrated_divergence(), 1 / 2)
-])
+@pytest.mark.parametrize(
+    "measure,d_out",
+    [
+        # d_in * 2 / scale = 2
+        (dp.max_divergence(), 2), 
+        # (d_in * 2 / scale)^2 / 8
+        (dp.zero_concentrated_divergence(), 1 / 2)
+    ],
+    ids=ids,
+)
 def test_noisy_max(measure, d_out):
     input_domain = dp.vector_domain(dp.atom_domain(T=dp.usize))
     input_metric = dp.linf_distance(T=dp.usize)
@@ -230,12 +236,16 @@ def test_noisy_max(measure, d_out):
     assert meas.map(1) == d_out
 
 
-@pytest.mark.parametrize("measure,d_out", [
-    # (d_in * 2) / scale * 2 = 4
-    (dp.max_divergence(), 4), 
-    # ((d_in * 2) / scale)^2 / 8 * 2 = 1
-    (dp.zero_concentrated_divergence(), 1)
-])
+@pytest.mark.parametrize(
+    "measure,d_out",
+    [
+        # (d_in * 2) / scale * 2 = 4
+        (dp.max_divergence(), 4), 
+        # ((d_in * 2) / scale)^2 / 8 * 2 = 1
+        (dp.zero_concentrated_divergence(), 1)
+    ],
+    ids=ids,
+)
 def test_noisy_top_k(measure, d_out):
     input_domain = dp.vector_domain(dp.atom_domain(T=dp.usize))
     input_metric = dp.linf_distance(T=dp.usize)

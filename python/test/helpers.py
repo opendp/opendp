@@ -6,6 +6,10 @@ import pytest
 from opendp._lib import install_names
 
 
+def ids(struct):
+    return re.sub(r'\s+', ' ', str(struct)).replace('( ', '(')
+
+
 @contextmanager
 def optional_dependency(name):
     '''
