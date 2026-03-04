@@ -12,7 +12,7 @@ use polars_plan::prelude::GroupbyOptions;
 
 use polars::prelude::{
     BooleanFunction, DataType, DslPlan, Expr, FunctionExpr, Operator, RankMethod, WindowMapping,
-    WindowType, int_range, len, lit,
+    int_range, len, lit,
 };
 
 #[cfg(test)]
@@ -187,11 +187,10 @@ fn match_truncation_predicate(predicate: &Expr, identifier: &Expr) -> Fallible<O
                 // don't throw an error as non-truncation filters may still be valid
                 _ => return Ok(None),
             };
-
-            let Expr::Window {
+            let Expr::Over {
                 function,
                 partition_by,
-                options: WindowType::Over(WindowMapping::GroupsToRows),
+                mapping: WindowMapping::GroupsToRows,
                 ..
             } = over.as_ref()
             else {

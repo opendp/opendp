@@ -103,7 +103,7 @@ def test_contingency_table_int_cuts():
     import numpy as np  # type: ignore[import-not-found]
     import polars as pl  # type: ignore[import-not-found]
 
-    exact = [100, 200, 400, 300, 200]
+    exact = np.array([100, 200, 400, 300, 200])
 
     lm = LinearMeasurement(exact, clique=("A",), stddev=0.01)
     model = mirror_descent(Domain(("A",), (5,)), [lm])
@@ -131,8 +131,8 @@ def test_contingency_table_project():
     import polars as pl  # type: ignore[import-not-found]
     from polars.testing import assert_frame_equal  # type: ignore[import-not-found]
 
-    A_exact = [3, 5]
-    B_exact = [1, 3, 4]
+    A_exact = np.array([3, 5])
+    B_exact = np.array([1, 3, 4])
     A_keys = pl.Series("A", ["a1", "a2"])
     B_keys = pl.Series("B", ["b1", "b2", "b3"])
 
