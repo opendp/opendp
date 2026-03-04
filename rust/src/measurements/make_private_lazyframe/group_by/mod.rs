@@ -19,8 +19,8 @@ use dashu::integer::{IBig, UBig};
 use dashu::rational::RBig;
 use make_private_expr::PrivateExpr;
 use matching::find_len_expr;
-use polars::prelude::{DslPlan, JoinType, LazyFrame, len};
-use polars_plan::dsl::{Expr, col, lit};
+use polars::prelude::{DslPlan, JoinType, LazyFrame, col, len, lit};
+use polars_plan::dsl::Expr;
 
 #[cfg(test)]
 mod test;
@@ -175,6 +175,7 @@ where
         let output = DslPlan::GroupBy {
             input: Arc::new(arg.clone()),
             keys: group_by.clone(),
+            predicates: vec![],
             aggs: f_comp.eval(&arg)?.into_iter().map(|p| p.expr).collect(),
             apply: None,
             maintain_order: false,

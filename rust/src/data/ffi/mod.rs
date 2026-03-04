@@ -37,7 +37,6 @@ use crate::measures::PrivacyProfile;
 use crate::metrics::IntDistance;
 use crate::traits::ProductOrd;
 use crate::traits::samplers::{Shuffle, fill_bytes};
-use crate::{err, fallible, try_, try_as_ref};
 use opendp_derive::bootstrap;
 
 #[bootstrap(
@@ -238,7 +237,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         let slices = unsafe { slice::from_raw_parts(raw.ptr as *const *const FfiSlice, raw.len) };
         let series = slices.iter().map(|&s| raw_to_concrete_series(try_as_ref!(s)).map(|s| s.into_column()))
         .collect::<Fallible<Vec<Column>>>()?;
-        
+
         Ok(AnyObject::new(DataFrame::new(series)?))
     }
 
@@ -252,7 +251,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         // the slice is lf.__getstate__ from the python side and then deserialized here
         polars_utils::pl_serialize::SerializeOptions::default()
             // `false` disables forward compatibility
-            .deserialize_from_reader::<_, _, false>(slice)
+            .deserialize_from_reader::<T, &[u8], false>(slice)
             .map_err(
             |e| err!(FFI, "Error when deserializing '{}'. This may be because you're using features from Polars that are not currently supported. {}", name, e)
         )

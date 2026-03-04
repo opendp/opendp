@@ -59,18 +59,6 @@ This will compile a debug build of the OpenDP shared library, placing it in the 
 
 Substitute ``cargo build`` with ``cargo test`` to test, or ``cargo check`` to check syntax.
 
-.. note::
-
-  If linking fails when runnning ``cargo test``, you may need to build without the ``extension-module`` feature (`context here <https://pyo3.rs/v0.25.1/faq.html#i-cant-run-cargo-test-or-i-cant-build-in-a-cargo-workspace-im-having-linker-issues-like-symbol-not-found-or-undefined-reference-to-_pyexc_systemerror>`_):
-
-  .. code-block:: bash
-
-    cargo test --no-default-features --features=partials,use-openssl,untrusted,polars,ffi,derive
-  
-  Since ``extension-module`` is a default feature, 
-  the other remaining features are enabled in the above command.
-
-
 Note that Python and R require builds with different features.
 Details are in the :ref:`python-setup` and :ref:`r-setup` sections below.
 Setting a feature changes how the crate compiles.
@@ -102,6 +90,8 @@ Setting a feature changes how the crate compiles.
         - Enables untrusted features ``contrib``, ``honest-but-curious`` and ``floating-point``.
       * - ``ffi``
         - Enable to include C foreign function interfaces.
+      * - ``polars-ffi``
+        - Enable both ``polars`` and ``ffi``.
       * - ``derive``
         - Enable to support code generation and links to proofs in documentation.
       * - ``extension-module``

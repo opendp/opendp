@@ -11,9 +11,9 @@
 #[cfg(feature = "ffi")]
 pub(crate) mod ffi;
 
-#[cfg(feature = "polars")]
+#[cfg(all(feature = "polars", feature = "contrib"))]
 mod polars;
-#[cfg(feature = "polars")]
+#[cfg(all(feature = "polars", feature = "contrib"))]
 pub use polars::*;
 
 // Once we have things using `Any` that are outside of `contrib`, this should specify `feature="ffi"`.

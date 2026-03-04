@@ -16,16 +16,17 @@ use crate::{
         expr_noisy_max::NoisyMaxShim,
     },
 };
+use polars::prelude::AnonymousColumnsUdf;
 use polars::{
     frame::DataFrame,
     lazy::frame::LazyFrame,
-    prelude::{AnyValue, DslPlan, GetOutput, LazySerde, NULL, len, repeat},
+    prelude::{AnyValue, DslPlan, LazySerde, NULL, len, lit, repeat},
     series::Series,
 };
 #[cfg(feature = "ffi")]
 use polars_plan::dsl::FunctionExpr;
 use polars_plan::{
-    dsl::{ColumnsUdf, Expr, SpecialEq, lit},
+    dsl::{Expr, SpecialEq},
     plans::{LiteralValue, Null},
     prelude::FunctionOptions,
 };
@@ -37,20 +38,17 @@ mod test;
 
 // this trait is used to make the Deserialize trait bound conditional on the feature flag
 #[cfg(not(feature = "ffi"))]
-pub(crate) trait OpenDPPlugin: 'static + Clone + ColumnsUdf {
+pub(crate) trait OpenDPPlugin: 'static + Clone + AnonymousColumnsUdf {
     const NAME: &'static str;
-    const SHIM: bool = false;
     fn function_options() -> FunctionOptions;
-    fn get_output(&self) -> Option<GetOutput>;
 }
 #[cfg(feature = "ffi")]
 pub(crate) trait OpenDPPlugin:
-    'static + Clone + ColumnsUdf + for<'de> Deserialize<'de> + Serialize
+    'static + Clone + AnonymousColumnsUdf + for<'de> Deserialize<'de> + Serialize
 {
     const NAME: &'static str;
     const SHIM: bool = false;
     fn function_options() -> FunctionOptions;
-    fn get_output(&self) -> Option<GetOutput>;
 }
 
 #[cfg(feature = "ffi")]
@@ -78,7 +76,7 @@ where
                 return Ok(None);
             }
 
-            if !kwargs.is_empty() {
+            if kwargs.len() > 3 {
                 return fallible!(
                     FailedFunction,
                     "OpenDP does not allow pickled keyword arguments as they may enable remote code execution."
@@ -210,6 +208,7 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
                     } else {
                         serde_pickle::to_vec(&kwargs_new, Default::default())
                             .expect("pickling does not fail")
+                            .as_slice()
                             .into()
                     },
                 },
@@ -219,7 +218,6 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
         Expr::AnonymousFunction { .. } => Expr::AnonymousFunction {
             input: input_exprs,
             fmt_str: Box::new(KW::NAME.into()),
-            output_type: kwargs_new.get_output().unwrap(),
             function: LazySerde::Deserialized(SpecialEq::new(Arc::new(kwargs_new))),
             options: KW::function_options(),
         },
@@ -233,16 +231,6 @@ pub(crate) fn apply_anonymous_function<KW: OpenDPPlugin>(input: Vec<Expr>, kwarg
         fmt_str: Box::new(KW::NAME.into()),
         // pass through the constructor to activate the expression
         function: LazySerde::Deserialized(SpecialEq::new(Arc::new(kwargs.clone()))),
-        // have no option but to panic in this case, since the polars api does not accept results
-        output_type: kwargs
-            .get_output()
-            .ok_or_else(|| {
-                err!(
-                    FailedFunction,
-                    "Anonymous function must have an output type"
-                )
-            })
-            .unwrap(),
         options: KW::function_options(),
     }
 }

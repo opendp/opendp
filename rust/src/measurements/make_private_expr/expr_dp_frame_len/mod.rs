@@ -1,13 +1,11 @@
-#[cfg(feature = "ffi")]
-use polars::prelude::CompatLevel;
+use std::sync::Arc;
+
 #[cfg(feature = "ffi")]
 use polars::series::Series;
 use polars::{
     error::{PolarsResult, polars_bail},
-    prelude::{Column, ColumnsUdf, Expr, GetOutput, len},
+    prelude::{AnonymousColumnsUdf, Column, ColumnsUdf, DataType, Expr, Field, len},
 };
-#[cfg(feature = "ffi")]
-use polars_arrow as arrow;
 use polars_plan::prelude::FunctionOptions;
 use serde::{Deserialize, Serialize};
 
@@ -31,18 +29,34 @@ impl ColumnsUdf for DPFrameLenShim {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
-    fn call_udf(&self, _: &mut [Column]) -> PolarsResult<Option<Column>> {
+    fn call_udf(&self, _: &mut [Column]) -> PolarsResult<Column> {
         polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")
+    }
+}
+
+impl AnonymousColumnsUdf for DPFrameLenShim {
+    fn as_column_udf(self: std::sync::Arc<Self>) -> std::sync::Arc<dyn ColumnsUdf> {
+        self
+    }
+
+    fn deep_clone(self: std::sync::Arc<Self>) -> std::sync::Arc<dyn AnonymousColumnsUdf> {
+        Arc::new(Arc::unwrap_or_clone(self))
+    }
+
+    fn get_field(
+        &self,
+        _: &polars::prelude::Schema,
+        _: &[polars::prelude::Field],
+    ) -> PolarsResult<polars::prelude::Field> {
+        Ok(Field::new("len".into(), DataType::UInt32))
     }
 }
 impl OpenDPPlugin for DPFrameLenShim {
     const NAME: &'static str = "dp_frame_len";
+    #[cfg(feature = "ffi")]
     const SHIM: bool = true;
     fn function_options() -> FunctionOptions {
         FunctionOptions::aggregation()
-    }
-    fn get_output(&self) -> Option<GetOutput> {
-        Some(GetOutput::same_type())
     }
 }
 
