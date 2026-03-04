@@ -30,8 +30,6 @@ RoxygenNote: 7.3.2
 SystemRequirements: Cargo (Rust's package manager), rustc
 Config/testthat/edition: 3
 Config/opendp/MSRV: 1.64.0
-Config/Needs/website:
-    pkgdown
 Collate: 
     'mod.R'
     'typing.R'
