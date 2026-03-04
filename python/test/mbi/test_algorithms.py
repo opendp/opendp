@@ -101,6 +101,7 @@ def test_aim_init(kwargs, message):
 
 
 def test_aim_exhaustion():
+    # tests how algorithm behaves when all workload queries are ineligible for selection
     pytest.importorskip("mbi")
     import mbi  # type: ignore[import-not-found]
     import polars as pl  # type: ignore[import-not-found]

@@ -333,7 +333,7 @@ def test_contingency_table_minimum_variance_weighted_total():
 
 
 def test_unique():
-    pytest.importorskip("pl")
+    pytest.importorskip("polars")
     import polars as pl  # type: ignore[import-not-found]
 
     with pytest.raises(ValueError, match='cuts must be unique: "col" has duplicates'):
@@ -341,7 +341,7 @@ def test_unique():
 
 
 def test_increasing():
-    pytest.importorskip("pl")
+    pytest.importorskip("polars")
     import polars as pl  # type: ignore[import-not-found]
 
     message = 'cuts must be strictly increasing: "col" is not strictly increasing'
@@ -350,7 +350,7 @@ def test_increasing():
 
 
 def test_with_null():
-    pytest.importorskip("pl")
+    pytest.importorskip("polars")
     import polars as pl  # type: ignore[import-not-found]
 
     assert _with_null(pl.Series(["a", "b"])) == pl.Series(["a", "b", None])
@@ -358,7 +358,7 @@ def test_with_null():
 
 
 def test_get_null_index():
-    pytest.importorskip("pl")
+    pytest.importorskip("polars")
     import polars as pl  # type: ignore[import-not-found]
 
     assert _get_null_index(pl.Series(["a", "b", None])) == 2
