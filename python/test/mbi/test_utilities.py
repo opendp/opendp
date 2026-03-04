@@ -172,8 +172,8 @@ def test_weight_marginals():
     ):
         weight_marginals({}, False)
 
-    lm1 = LinearMeasurement([1], clique=("A",), stddev=1.0)
-    lm2 = LinearMeasurement([2], clique=("A",), stddev=1.0)
+    lm1 = LinearMeasurement(np.array([1]), clique=("A",), stddev=1.0)
+    lm2 = LinearMeasurement(np.array([2]), clique=("A",), stddev=1.0)
     marginals = weight_marginals({("A",): lm1}, lm2)
     weighted: LinearMeasurement = marginals[("A",)]
     assert weighted.stddev == sqrt(1 / 2)
