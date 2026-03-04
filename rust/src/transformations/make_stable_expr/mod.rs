@@ -247,7 +247,7 @@ where
         use Expr::*;
         match self {
             #[cfg(feature = "contrib")]
-            Agg(AggExpr::Count(_, _) | AggExpr::NUnique(_))
+            Agg(AggExpr::Count { .. } | AggExpr::NUnique(_))
             | Function {
                 function: FunctionExpr::NullCount,
                 ..

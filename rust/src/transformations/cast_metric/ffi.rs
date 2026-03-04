@@ -1,5 +1,4 @@
 use crate::core::{FfiResult, Metric, MetricSpace};
-use crate::err;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast, IntoAnyStabilityMapExt};
 use crate::metrics::{
     ChangeOneDistance, HammingDistance, InsertDeleteDistance, IntDistance, SymmetricDistance,

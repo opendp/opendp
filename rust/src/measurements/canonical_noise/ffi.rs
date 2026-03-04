@@ -2,7 +2,6 @@ use std::ffi::c_double;
 
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt};
 use crate::domains::AtomDomain;
-use crate::err;
 use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, AnyObject, Downcast};
 use crate::metrics::AbsoluteDistance;
 

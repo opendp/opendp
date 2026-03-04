@@ -1,5 +1,4 @@
-use polars::df;
-use polars_plan::dsl::len;
+use polars::{df, prelude::len};
 
 use crate::{
     core::Transformation,
