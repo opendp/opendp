@@ -16,7 +16,7 @@ use super::StableDslPlan;
 #[cfg(test)]
 mod test;
 
-/// Transformation for stable group by and aggregate.
+/// Transformation for stable group-by and aggregate.
 ///
 /// # Arguments
 /// * `input_domain` - The domain of the input LazyFrame.
@@ -36,7 +36,7 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
         options,
     } = plan
     else {
-        return fallible!(MakeTransformation, "Expected group by in logical plan");
+        return fallible!(MakeTransformation, "Expected group-by in logical plan");
     };
 
     if apply.is_some() {
