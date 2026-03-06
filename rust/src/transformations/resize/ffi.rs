@@ -3,7 +3,6 @@ use std::os::raw::{c_char, c_uint};
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
-use crate::err;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyObject, AnyTransformation};
 use crate::ffi::any::{AnyMetric, Downcast};

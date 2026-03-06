@@ -3,7 +3,8 @@ use crate::domains::{AtomDomain, Context, ExprDomain, Margin, SeriesDomain, Wild
 use crate::error::*;
 use crate::metrics::{L01InfDistance, LpDistance};
 use crate::transformations::traits::UnboundedMetric;
-use polars_plan::dsl::{Expr, len};
+use polars::prelude::len;
+use polars_plan::dsl::Expr;
 use polars_plan::plans::typed_lit;
 
 use super::expr_count::counting_query_stability_map;

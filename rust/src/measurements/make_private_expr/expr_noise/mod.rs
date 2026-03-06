@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::core::{MetricSpace, PrivacyMap};
 use crate::domains::{
     AtomDomain, ExprDomain, ExprPlan, NumericDataType, OuterMetric, VectorDomain, WildExprDomain,
@@ -15,7 +17,7 @@ use crate::{
     measures::MaxDivergence,
 };
 use dashu::rational::RBig;
-use polars::prelude::{Column, IntoColumn, PolarsNumericType};
+use polars::prelude::{AnonymousColumnsUdf, Column, IntoColumn, PolarsNumericType};
 
 use polars_arrow::array::PrimitiveArray;
 
@@ -25,11 +27,7 @@ use polars::error::PolarsResult;
 use polars::error::polars_bail;
 use polars::lazy::dsl::Expr;
 use polars::series::{IntoSeries, Series};
-#[cfg(feature = "ffi")]
-use polars::{datatypes::CompatLevel, error::polars_err};
-#[cfg(feature = "ffi")]
-use polars_arrow as arrow;
-use polars_plan::dsl::{ColumnsUdf, GetOutput};
+use polars_plan::dsl::ColumnsUdf;
 use polars_plan::prelude::FunctionOptions;
 
 use serde::{Deserialize, Serialize};
@@ -47,22 +45,35 @@ impl ColumnsUdf for NoiseShim {
         self
     }
 
-    fn call_udf(&self, _: &mut [Column]) -> PolarsResult<Option<Column>> {
+    fn call_udf(&self, _: &mut [Column]) -> PolarsResult<Column> {
         polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")
+    }
+}
+
+impl AnonymousColumnsUdf for NoiseShim {
+    fn as_column_udf(self: Arc<Self>) -> Arc<dyn ColumnsUdf> {
+        self
+    }
+
+    fn deep_clone(self: Arc<Self>) -> Arc<dyn AnonymousColumnsUdf> {
+        Arc::new(Arc::unwrap_or_clone(self))
+    }
+
+    fn get_field(
+        &self,
+        _: &polars::prelude::Schema,
+        fields: &[polars::prelude::Field],
+    ) -> PolarsResult<polars::prelude::Field> {
+        noise_plugin_type_udf(fields)
     }
 }
 
 impl OpenDPPlugin for NoiseShim {
     const NAME: &'static str = "noise";
+    #[cfg(feature = "ffi")]
     const SHIM: bool = true;
     fn function_options() -> FunctionOptions {
         FunctionOptions::elementwise()
-    }
-
-    fn get_output(&self) -> Option<GetOutput> {
-        Some(GetOutput::map_fields(|fields| {
-            noise_plugin_type_udf(fields)
-        }))
     }
 }
 
@@ -86,8 +97,26 @@ impl ColumnsUdf for NoisePlugin {
         self
     }
 
-    fn call_udf(&self, s: &mut [Column]) -> PolarsResult<Option<Column>> {
-        noise_udf(s, self.clone()).map(Some)
+    fn call_udf(&self, s: &mut [Column]) -> PolarsResult<Column> {
+        noise_udf(s, self.clone())
+    }
+}
+
+impl AnonymousColumnsUdf for NoisePlugin {
+    fn as_column_udf(self: Arc<Self>) -> Arc<dyn ColumnsUdf> {
+        self
+    }
+
+    fn deep_clone(self: Arc<Self>) -> Arc<dyn AnonymousColumnsUdf> {
+        Arc::new(Arc::unwrap_or_clone(self))
+    }
+
+    fn get_field(
+        &self,
+        _: &polars::prelude::Schema,
+        fields: &[polars::prelude::Field],
+    ) -> PolarsResult<polars::prelude::Field> {
+        noise_plugin_type_udf(fields)
     }
 }
 
@@ -95,12 +124,6 @@ impl OpenDPPlugin for NoisePlugin {
     const NAME: &'static str = "noise_plugin";
     fn function_options() -> FunctionOptions {
         FunctionOptions::elementwise()
-    }
-
-    fn get_output(&self) -> Option<GetOutput> {
-        Some(GetOutput::map_fields(|fields| {
-            noise_plugin_type_udf(fields)
-        }))
     }
 }
 
@@ -366,7 +389,7 @@ where
         .downcast_iter()
         .map(|chunk| {
             function
-                .eval(&chunk.values().to_vec())
+                .eval(&chunk.values().as_slice().to_vec())
                 .map(PrimitiveArray::from_vec)
         });
 

@@ -8,7 +8,6 @@ use opendp_derive::bootstrap;
 use crate::error::{Error, ErrorVariant, ExplainUnwrap, Fallible};
 use crate::ffi::any::{AnyFunction, AnyObject, CallbackFn, wrap_func};
 use crate::ffi::util;
-use crate::{try_, try_as_ref};
 
 mod measurement;
 pub use measurement::*;

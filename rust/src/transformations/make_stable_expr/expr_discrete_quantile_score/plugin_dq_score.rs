@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use polars::{
     datatypes::{
         ArrayChunked, ArrowDataType,
@@ -6,24 +8,19 @@ use polars::{
         UInt32Type, UInt64Type,
     },
     error::{PolarsResult, polars_bail, polars_err},
-    prelude::{Column, CompatLevel, IntoColumn, PolarsPhysicalType},
+    prelude::{AnonymousColumnsUdf, Column, IntoColumn, PolarsPhysicalType},
     series::Series,
 };
-#[cfg(feature = "ffi")]
-use polars_arrow as arrow;
 
 use polars_arrow::{
     array::{FixedSizeListArray, UInt64Array},
     datatypes::Field as ArrowField,
 };
-use polars_plan::{
-    dsl::{ColumnsUdf, GetOutput},
-    prelude::FunctionOptions,
-};
+use polars_plan::{dsl::ColumnsUdf, prelude::FunctionOptions};
 
 #[cfg(feature = "ffi")]
 use pyo3_polars::derive::polars_expr;
-
+#[cfg(feature = "ffi")]
 use serde::{Deserialize, Serialize};
 
 use crate::{polars::OpenDPPlugin, traits::RoundCast, transformations::score_candidates};
@@ -39,21 +36,39 @@ impl ColumnsUdf for DiscreteQuantileScoreShim {
         self
     }
 
-    fn call_udf(&self, _: &mut [Column]) -> PolarsResult<Option<Column>> {
+    fn call_udf(&self, _: &mut [Column]) -> PolarsResult<Column> {
         polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")
+    }
+}
+
+impl AnonymousColumnsUdf for DiscreteQuantileScoreShim {
+    fn as_column_udf(self: Arc<Self>) -> Arc<dyn ColumnsUdf> {
+        self
+    }
+
+    fn deep_clone(self: Arc<Self>) -> Arc<dyn AnonymousColumnsUdf> {
+        Arc::new(Arc::unwrap_or_clone(self))
+    }
+
+    fn get_field(
+        &self,
+        _: &polars::prelude::Schema,
+        fields: &[polars::prelude::Field],
+    ) -> PolarsResult<polars::prelude::Field> {
+        let field = fields
+            .first()
+            .cloned()
+            .ok_or_else(|| polars_err!(InvalidOperation: "{} expects one column", Self::NAME))?;
+        Ok(Field::new(field.name, DataType::Array(Box::new(UInt64), 1)))
     }
 }
 
 impl OpenDPPlugin for DiscreteQuantileScoreShim {
     const NAME: &'static str = "discrete_quantile_score";
+    #[cfg(feature = "ffi")]
     const SHIM: bool = true;
     fn function_options() -> FunctionOptions {
         FunctionOptions::aggregation()
-    }
-
-    fn get_output(&self) -> Option<GetOutput> {
-        // dtype is unknown
-        Some(GetOutput::from_type(DataType::Array(Box::new(UInt64), 1)))
     }
 }
 
@@ -69,17 +84,28 @@ pub(crate) struct DiscreteQuantileScorePlugin {
     pub size_limit: u64,
 }
 
+impl AnonymousColumnsUdf for DiscreteQuantileScorePlugin {
+    fn as_column_udf(self: Arc<Self>) -> Arc<dyn ColumnsUdf> {
+        self
+    }
+
+    fn deep_clone(self: Arc<Self>) -> Arc<dyn AnonymousColumnsUdf> {
+        Arc::new(Arc::unwrap_or_clone(self))
+    }
+
+    fn get_field(
+        &self,
+        _: &polars::prelude::Schema,
+        fields: &[polars::prelude::Field],
+    ) -> PolarsResult<polars::prelude::Field> {
+        discrete_quantile_score_plugin_type_udf(fields, self.clone())
+    }
+}
+
 impl OpenDPPlugin for DiscreteQuantileScorePlugin {
     const NAME: &'static str = "discrete_quantile_score_plugin";
     fn function_options() -> FunctionOptions {
         FunctionOptions::aggregation()
-    }
-
-    fn get_output(&self) -> Option<GetOutput> {
-        let kwargs = self.clone();
-        Some(GetOutput::map_fields(move |fields| {
-            discrete_quantile_score_plugin_type_udf(fields, kwargs.clone())
-        }))
     }
 }
 
@@ -90,8 +116,8 @@ impl ColumnsUdf for DiscreteQuantileScorePlugin {
         self
     }
 
-    fn call_udf(&self, s: &mut [Column]) -> PolarsResult<Option<Column>> {
-        discrete_quantile_score_udf(s, self.clone()).map(Some)
+    fn call_udf(&self, s: &mut [Column]) -> PolarsResult<Column> {
+        discrete_quantile_score_udf(s, self.clone())
     }
 }
 
