@@ -1,11 +1,4 @@
-use dashu::{
-    float::{
-        FBig,
-        round::mode::{Down, Up},
-    },
-    rational::RBig,
-    rbig,
-};
+use dashu::rational::RBig;
 use num::Zero;
 use opendp_derive::bootstrap;
 
@@ -13,7 +6,7 @@ use crate::{
     core::{Function, Measurement, PrivacyMap},
     domains::AtomDomain,
     error::Fallible,
-    measures::{Approximate, MaxDivergence},
+    measures::{Approximate, MaxDivergence, f_dp::approximate_to_tradeoff},
     metrics::AbsoluteDistance,
     traits::samplers::{CanonicalRV, PartialSample},
 };
@@ -83,53 +76,4 @@ pub fn make_canonical_noise(
             Ok(d_out.clone())
         }),
     )
-}
-
-/// # Proof Definition
-/// Given epsilon and delta, return the corresponding f-DP tradeoff curve
-/// with conservative arithmetic,
-/// as well as the fixed point `c` where `c = f(c)`.
-/// Returns an error if epsilon or delta are invalid.
-pub(crate) fn approximate_to_tradeoff(
-    (epsilon, delta): (f64, f64),
-) -> Fallible<(impl Fn(RBig) -> RBig + 'static + Clone + Send + Sync, RBig)> {
-    if epsilon.is_sign_negative() || epsilon.is_zero() {
-        return fallible!(
-            MakeMeasurement,
-            "epsilon ({epsilon}) must not be positive (greater than zero)"
-        );
-    }
-    if !(0.0..=1.0).contains(&delta) {
-        return fallible!(MakeMeasurement, "delta ({delta}) must be within [0, 1]");
-    }
-
-    let epsilon = FBig::<Down>::try_from(epsilon)?;
-    let delta = RBig::try_from(delta)?;
-
-    // exp(ε)
-    let exp_eps = epsilon.clone().with_rounding::<Down>().exp();
-    let exp_eps = RBig::try_from(exp_eps)?;
-
-    // exp(-ε)
-    let exp_neg_eps = (-epsilon).with_rounding::<Up>().exp();
-    let exp_neg_eps = RBig::try_from(exp_neg_eps)?;
-
-    //              = (1 - δ) / (1 + exp(ε))
-    let fixed_point = (rbig!(1) - &delta) / (rbig!(1) + &exp_eps);
-
-    // greater than 1/2 means the tradeoff curve is greater than 1 - x, which is invalid
-    // exactly 1 / 2 means perfect privacy, and results in an infinite loop when sampling "infinite" noise
-    if fixed_point >= rbig!(1 / 2) {
-        return fallible!(
-            MakeMeasurement,
-            "fixed-point of the f-DP tradeoff curve must be less than 1/2. This indicates that your privacy parameters are too small."
-        );
-    }
-
-    let tradeoff = move |alpha: RBig| {
-        let t1 = rbig!(1) - &delta - &exp_eps * &alpha;
-        let t2 = &exp_neg_eps * (rbig!(1) - &delta - alpha);
-        t1.max(t2).max(rbig!(0))
-    };
-    Ok((tradeoff, fixed_point))
 }
