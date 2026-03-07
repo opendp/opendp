@@ -1,0 +1,9 @@
+matplotlib
+randomgen>=2.0.0
+pandas
+seaborn
+scipy
+scikit-learn
+polars==1.32.0
+pyarrow
+hvplot
