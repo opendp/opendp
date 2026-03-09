@@ -298,6 +298,7 @@ def make_noise_marginal(
 ) -> Measurement:
     """Make a measurement that releases a DP marginal"""
     from opendp.extras.numpy import NPArrayDDomain
+    # use jax arrays because lms will be used in optimization
     import jax.numpy as np  # type: ignore[import-not-found]
     from mbi import LinearMeasurement  # type: ignore[import-untyped,import-not-found]
 
