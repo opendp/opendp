@@ -9,7 +9,7 @@ use crate::{
 
 use num::Zero;
 use polars::lazy::dsl::Expr;
-use polars_plan::dsl::len;
+use polars::prelude::len;
 use polars_plan::plans::typed_lit;
 
 #[cfg(test)]

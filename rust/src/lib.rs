@@ -190,5 +190,5 @@ pub mod metrics;
 pub mod traits;
 pub mod transformations;
 
-#[cfg(feature = "polars")]
+#[cfg(all(feature = "polars", feature = "contrib"))]
 pub mod polars;

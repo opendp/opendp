@@ -5,7 +5,6 @@ use dashu::integer::IBig;
 
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt};
 use crate::domains::{AtomDomain, VectorDomain};
-use crate::err;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast};
 use crate::ffi::util::Type;

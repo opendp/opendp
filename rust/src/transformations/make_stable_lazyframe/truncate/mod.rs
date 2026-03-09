@@ -88,6 +88,7 @@ pub fn make_stable_truncate(
                     input: Arc::new(plan),
                     keys: keys.clone(),
                     aggs: aggs.clone(),
+                    predicates: vec![],
                     apply: None,
                     maintain_order: false,
                     options: Arc::new(GroupbyOptions::default()),

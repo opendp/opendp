@@ -30,6 +30,7 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
     let DslPlan::GroupBy {
         input,
         keys,
+        predicates,
         aggs,
         apply,
         maintain_order,
@@ -41,6 +42,15 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
 
     if apply.is_some() {
         return fallible!(MakeTransformation, "apply is not currently supported");
+    }
+
+    if !predicates.is_empty() {
+        // This is equivalent to running a filter after, as far as I can tell.
+        // Possibly useful to support.
+        return fallible!(
+            MakeTransformation,
+            "having/predicates are not currently supported"
+        );
     }
 
     if maintain_order {
@@ -111,6 +121,7 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
         Function::new(move |plan: &DslPlan| DslPlan::GroupBy {
             input: Arc::new(plan.clone()),
             keys: keys.clone(),
+            predicates: vec![],
             aggs: aggs.clone(),
             apply: None,
             maintain_order: false,
@@ -153,6 +164,25 @@ pub(crate) enum Resize {
 /// because they can be broadcasted.
 pub(crate) fn check_infallible(expr: &Expr, resize: Resize) -> Fallible<()> {
     Ok(match expr {
+        Expr::Rolling { .. } => {
+            return fallible!(MakeTransformation, "rolling is not a stable transformation");
+        }
+        Expr::Element => return fallible!(MakeTransformation, "eval is not supported"),
+        Expr::Over { .. } => {
+            return fallible!(MakeTransformation, "rolling is not a stable transformation");
+        }
+        // will be useful for Rust Polars 0.53+
+        // Expr::StructEval { .. } => {
+        //     return fallible!(MakeTransformation, "eval is not supported");
+        // }
+        Expr::Eval { .. } => return fallible!(MakeTransformation, "eval is not supported"),
+        // will be useful for Rust Polars 0.53+
+        // Expr::Display { .. } => {
+        //     return fallible!(
+        //         MakeTransformation,
+        //         "embedded IR in the DSL is not supported"
+        //     );
+        // }
         Expr::Alias(e, _) => check_infallible(e.as_ref(), resize)?,
         Expr::Column(_) => (),
         Expr::Selector(_) => (),
@@ -188,13 +218,19 @@ pub(crate) fn check_infallible(expr: &Expr, resize: Resize) -> Fallible<()> {
             AggExpr::First(e) => check_infallible(e, Resize::Allow)?,
             AggExpr::Last(e) => check_infallible(e, Resize::Allow)?,
             AggExpr::Implode(e) => check_infallible(e, Resize::Allow)?,
-            AggExpr::Count(e, _) => check_infallible(e, Resize::Allow)?,
+            AggExpr::Count { input: e, .. } => check_infallible(e, Resize::Allow)?,
             AggExpr::Quantile { expr: e, .. } => check_infallible(e, Resize::Allow)?,
             AggExpr::Max { input: e, .. } => check_infallible(e, Resize::Allow)?,
             AggExpr::Min { input: e, .. } => check_infallible(e, Resize::Allow)?,
             AggExpr::Std(e, _) => check_infallible(e, Resize::Allow)?,
             AggExpr::Var(e, _) => check_infallible(e, Resize::Allow)?,
             AggExpr::AggGroups(e) => check_infallible(e, Resize::Allow)?,
+            AggExpr::FirstNonNull(e) | AggExpr::LastNonNull(e) => {
+                check_infallible(e, Resize::Allow)?
+            }
+            AggExpr::Item { .. } => {
+                return fallible!(MakeTransformation, "item is not currently supported");
+            }
         },
         Expr::Ternary {
             predicate,
@@ -225,12 +261,6 @@ pub(crate) fn check_infallible(expr: &Expr, resize: Resize) -> Fallible<()> {
             check_infallible(input.as_ref(), resize)?;
             check_infallible(by.as_ref(), resize)?;
         }
-        Expr::Window { .. } => {
-            return fallible!(
-                MakeTransformation,
-                "Window functions are not currently supported."
-            );
-        }
         Expr::Slice { .. } => {
             return fallible!(
                 MakeTransformation,
@@ -255,9 +285,6 @@ pub(crate) fn check_infallible(expr: &Expr, resize: Resize) -> Fallible<()> {
                 MakeTransformation,
                 "Data type function is not currently supported."
             );
-        }
-        Expr::Eval { .. } => {
-            return fallible!(MakeTransformation, "Eval is not currently supported.");
         }
     })
 }
@@ -352,9 +379,6 @@ fn check_infallible_function(
         FunctionExpr::Reverse => check_inputs!(),
         FunctionExpr::ValueCounts { .. } => check_inputs!(resize = "value_counts"),
         FunctionExpr::Coalesce => check_inputs!(aligned_rows),
-        FunctionExpr::ShrinkType => {
-            return fallible!(MakeTransformation, "shrink_type has data-dependent dtype.");
-        }
         FunctionExpr::Unique(_) => check_inputs!(resize = "unique"),
         FunctionExpr::Round { .. } => check_inputs!(),
         FunctionExpr::RoundSF { .. } => check_inputs!(),
@@ -374,6 +398,7 @@ fn check_infallible_function(
             );
         }
         FunctionExpr::SetSortedFlag(_) => check_inputs!(),
+        #[cfg(feature = "ffi")]
         FunctionExpr::FfiPlugin { .. } => {
             return fallible!(
                 MakeTransformation,

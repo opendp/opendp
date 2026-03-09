@@ -382,7 +382,6 @@ macro_rules! wrap_downcast_err {
         })
     }};
 }
-pub(crate) use wrap_downcast_err;
 
 impl Downcast for AnyDomain {
     fn downcast<T: 'static>(self) -> Fallible<T> {

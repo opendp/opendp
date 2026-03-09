@@ -16,7 +16,7 @@ We suggest importing under the conventional name ``dp``:
 from __future__ import annotations
 import typing
 from collections.abc import Hashable
-from typing import Optional, Union, Any, Type, Sequence, _GenericAlias # type: ignore[attr-defined]
+from typing import Optional, TypeAlias, Union, Any, Type, Sequence, _GenericAlias # type: ignore[attr-defined]
 from types import GenericAlias
 import re
 
@@ -65,7 +65,7 @@ _PRIMITIVE_TYPES = _NUMERIC_TYPES | {"bool", "String"}
 
 
 # all ways of providing type information
-RuntimeTypeDescriptor = Union[
+RuntimeTypeDescriptor: TypeAlias = Union[
     "RuntimeType",  # as the normalized type -- ChangeOneDistance; RuntimeType.parse("i32")
     str,  # plaintext string in terms of Rust types -- "Vec<i32>"
     Type[Union[Sequence[Any], tuple[Any, Any], float, str, bool]],  # using the Python type class itself -- int, float
