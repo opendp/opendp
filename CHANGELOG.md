@@ -4,6 +4,8 @@ This file documents the version history of OpenDP. The links on each version num
 showing the source changes from the previous version.
 
 
+## [0.14.2](https://github.com/opendp/opendp/compare/v0.14.1...v0.14.2) - 2026-03-10
+
 ### Features
 
 - Faster and simpler exponential mechanism [#2549](https://github.com/opendp/opendp/pull/2549)
