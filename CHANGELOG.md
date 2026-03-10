@@ -4,6 +4,56 @@ This file documents the version history of OpenDP. The links on each version num
 showing the source changes from the previous version.
 
 
+### Features
+
+- Faster and simpler exponential mechanism [#2549](https://github.com/opendp/opendp/pull/2549)
+
+### Fixes
+
+- Additive noise sampler bias, statistical testing [#2639](https://github.com/opendp/opendp/pull/2639)
+- Swap in numpy cumsum for deprecated sklearn function [#2589](https://github.com/opendp/opendp/pull/2589)
+- Ffi for stable truncation transformations [#2557](https://github.com/opendp/opendp/pull/2557)
+
+### Proof Reviews
+
+- Make_count [#2122](https://github.com/opendp/opendp/pull/2122)
+- Sample_bernoulli_exp [#2113](https://github.com/opendp/opendp/pull/2113)
+- Sample_discrete_gaussian [#2115](https://github.com/opendp/opendp/pull/2115)
+- Sample_geometric_exp_slow [#2118](https://github.com/opendp/opendp/pull/2118)
+
+### Docs
+
+- Group by -> group-by [#2636](https://github.com/opendp/opendp/pull/2636)
+- Remove intern announcement from banner [#2624](https://github.com/opendp/opendp/pull/2624)
+- Check formating of code samples in docs in smoke-tests, not just weekly [#2578](https://github.com/opendp/opendp/pull/2578)
+- Mention "hierarchical queries" [#2584](https://github.com/opendp/opendp/pull/2584)
+- Fix ordering of docs sections by adding indent [#2586](https://github.com/opendp/opendp/pull/2586)
+- Add bounds estimation section [#2583](https://github.com/opendp/opendp/pull/2583)
+- Add a redirect from old cla to current [#2591](https://github.com/opendp/opendp/pull/2591)
+- Include job and internship announcement [#2593](https://github.com/opendp/opendp/pull/2593)
+- Better formatting of api reference docs [#2546](https://github.com/opendp/opendp/pull/2546)
+- Https for registry [#2582](https://github.com/opendp/opendp/pull/2582)
+- Use tilde in rst [#2544](https://github.com/opendp/opendp/pull/2544)
+- Clean up measurements index page [#2543](https://github.com/opendp/opendp/pull/2543)
+- Update issue templates [#2538](https://github.com/opendp/opendp/pull/2538)
+- Search and replace framework PDF URL [#2570](https://github.com/opendp/opendp/pull/2570)
+- Update slack link; remove office hours [#2606](https://github.com/opendp/opendp/pull/2606)
+
+### Maintenance
+
+- To fix rdocs build, use action provided by pandoc to upgrade pandoc version [#2628](https://github.com/opendp/opendp/pull/2628) (Reverts: Disable llm-docs rdocs generation [#2608](https://github.com/opendp/opendp/pull/2608) and Downgrade pkgdown to work around "definition_lists is not supported for gfm" error [#2616](https://github.com/opendp/opendp/pull/2616))
+- Swap macos 15 for 13 [#2597](https://github.com/opendp/opendp/pull/2597)
+- Stub codeowners [#2566](https://github.com/opendp/opendp/pull/2566)
+- Convert from namedtuples to dataclasses [#2623](https://github.com/opendp/opendp/pull/2623)
+- Minor docs and test quality-of-life improvements [#2622](https://github.com/opendp/opendp/pull/2622)
+- R Linting: turn off return_linter [#2576](https://github.com/opendp/opendp/pull/2576)
+
+### Testing
+
+- Ignore deprecation warning from transitive dependency [#2620](https://github.com/opendp/opendp/pull/2620)
+
+
+
 ## [0.14.1](https://github.com/opendp/opendp/compare/v0.14.0...v0.14.1) - 2025-09-16
 
 ### Fix
