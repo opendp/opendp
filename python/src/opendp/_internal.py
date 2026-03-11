@@ -290,7 +290,7 @@ def _new_pure_function(
 
     Required features: `contrib`
 
-    [_new_pure_function in Rust documentation.](https://docs.rs/opendp/0.14.2-nightly.20260310.1/opendp/internal/fn._new_pure_function.html)
+    [_new_pure_function in Rust documentation.](https://docs.rs/opendp/0.14.2-beta.20260310.1/opendp/internal/fn._new_pure_function.html)
 
     .. end-markdown
 
