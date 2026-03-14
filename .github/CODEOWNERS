@@ -1,0 +1,36 @@
+# TODO: Find volunteers to take on particular subdirectories.
+# It might be more sustainable if there's a wider pool of reviewers,
+# but a given reviewer only is responsible for a small area.
+
+# Global defaults:
+# If no more precise mapping is available, assign all active developers.
+# (PRs still require only one approval.)
+
+*   @Shoeboxam @mccalluc
+
+
+# Docs:
+# Chuck should take a first look at changes, to ensure they align with the high-level organization.
+
+/docs/      @mccalluc
+
+
+# Proofs:
+# PRs for mechanisms should come with proofs, and eventually they should be reviewed by the Proof Review Board, but that level of review is not a requirement for the initial commit.
+
+*.tex       @Shoeboxam
+
+
+# Python:
+
+/python/    @Shoeboxam @mccalluc
+
+
+# R:
+
+/R/         @Shoeboxam
+
+
+# Rust:
+
+/rust/      @Shoeboxam

@@ -1,0 +1,10 @@
+linters: all_linters(
+    # This file must be at the top of the directory being linted; It is ignored in subdirectories.
+    # If "linters_with_defaults" is used then only these problems are reported:
+    line_length_linter = NULL, # Lines should not be more than 80 characters.
+    # With "all_linters", these problems are also reported:
+    todo_comment_linter = NULL, # TODO comments should be removed.
+    undesirable_function_linter = NULL, # Function "library" is undesirable. As an alternative, use roxygen2's @importFrom statement in packages and `::` in scripts, instead of modifying the global search path.
+    one_call_pipe_linter = NULL # Avoid pipe |> for expressions with only a single call.
+    ) # Closing paren must be indented, and no closing comma above!
+encoding: "UTF-8"
