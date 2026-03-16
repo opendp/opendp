@@ -51,7 +51,7 @@ bitvec = "1.0"
 #
 # The features track the features enabled in the Rust build for the Polars Python crate.
 # Having matching features is necessary for cross-binary DSL compatibility.
-polars = { version = "=0.52.0", features = ["full", "meta", "cutqcut", "is_unique", "row_hash"], optional = true }
+polars = { version = "=0.52.0", features = ["full", "meta", "cutqcut", "row_hash"], optional = true }
 polars-python = { version = "=0.52.0", optional = true }
 
 # these crates are implicit in the tree behind polars, 

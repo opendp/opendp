@@ -91,7 +91,7 @@ Setting a feature changes how the crate compiles.
       * - ``ffi``
         - Enable to include C foreign function interfaces.
       * - ``polars-ffi``
-        - Enable both ``polars`` and ``ffi``.
+        - Build Polars with linking against Python. Enables both ``polars`` and ``ffi``.
       * - ``derive``
         - Enable to support code generation and links to proofs in documentation.
       * - ``extension-module``

@@ -130,7 +130,10 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
         // Support could be added by composing over the measurements and then composing with the aggs.
         // Not a priority to add because we'd typically rather keep groups in the DP release,
         // especially if we've spent budget on it.
-        return fallible!(MakeMeasurement, "having is not supported in logical plan");
+        return fallible!(
+            MakeMeasurement,
+            "Having is not currently supported in logical plan. Please open an issue if this would be useful to you."
+        );
     }
 
     if maintain_order {
