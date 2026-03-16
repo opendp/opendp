@@ -140,7 +140,7 @@ on github, or with the `gh` command line tool. Parameters:
     1. Increment patch version in `main`.
 
         ```shell
-        python channel_tool.py bump_version --position patch
+        python channel_tool.py bump_version --position patch # or minor or major
         ```
 
     1. Increment changelog.
