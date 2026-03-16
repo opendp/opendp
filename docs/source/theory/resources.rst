@@ -10,7 +10,7 @@ Foundations
 
 Applying Differential Privacy
 -----------------------------
-* `The Privacy Deployments Registry <https://registry.oblivious.com/>`_ provides examples of the privacy budgets chosen by real-world deployments.
+* `The Privacy Deployments Registry <https://registry.opendp.org/deployments-registry/>`_ provides examples of the privacy budgets chosen by real-world deployments.
 * `DP Wizard <https://pypi.org/project/dp_wizard/>`_ produces Jupyter notebooks that demonstrate the OpenDP API on your own data.
 
 
