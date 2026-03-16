@@ -43,10 +43,10 @@ on:
         required: true
         default: dev
       sync:
-        description: Sync the Channel from Upstream?
+        description: Sync the target channel to the branch selected above?
         type: boolean
         required: false
-        default: false
+        default: true
       counter:
         description: Version Counter
         type: number
