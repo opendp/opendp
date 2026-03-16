@@ -4,7 +4,7 @@ set -e
 BEFORE_CARGO_BUILD=''
 AFTER_CARGO_BUILD=''
 
-RUST_FEATURES=untrusted,ffi
+RUST_FEATURES=untrusted,ffi,honest-but-curious,private-selection-v2
 
 # Even when `cargo` is on `PATH`, `rustc` might not. We need to source
 # ~/.cargo/env to ensure PATH is configured correctly in some cases

@@ -179,17 +179,31 @@ def check_list_space(docstring):
     ...     * not ok!
     ... """)
     'Add a blank line above list that begins with: * not ok!'
+
+    >>> check_list_space("""
+    ...     Supported parameter combinations:
+    ...
+    ...     * First bullet:
+    ...       wrapped text
+    ...     * Second bullet:
+    ...       more wrapped text
+    ... """)
     '''
     prev_is_text = False
+    in_list = False
     for line in docstring.split('\n'):
         line = line.strip()
-        if prev_is_text and (line.startswith('1.') or line.startswith('* ')):
+        is_list_item = line.startswith('1.') or line.startswith('* ')
+        if prev_is_text and is_list_item and not in_list:
             return f'Add a blank line above list that begins with: {line}'
         prev_is_text = line and not (
             line.startswith('>>>')
             or line.startswith('...')
-            or line.startswith('* ')
+            or is_list_item
         )
+        in_list = bool(line) and (in_list or is_list_item)
+        if not line:
+            in_list = False
 
 
 class Checker():

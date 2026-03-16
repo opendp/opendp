@@ -12,6 +12,12 @@ pub use cks20::*;
 mod geometric;
 pub use geometric::*;
 
+pub mod logarithmic;
+
+pub mod negative_binomial;
+
+pub mod poisson;
+
 mod psrn;
 pub use psrn::*;
 

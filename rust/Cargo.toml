@@ -185,6 +185,7 @@ default = ["partials", "use-openssl", "extension-module"]
 floating-point = []
 contrib = []
 honest-but-curious = []
+private-selection-v2 = []
 untrusted = ["floating-point", "contrib", "honest-but-curious"]
 
 polars = [

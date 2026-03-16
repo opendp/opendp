@@ -1,0 +1,49 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{fn ResolvedRepetitions::sample}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+\maketitle
+
+Proves soundness of \texttt{fn ResolvedRepetitions::sample} in \texttt{mod.rs}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\texttt{resolved} satisfies the proof definition of \texttt{ResolvedRepetitions}.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/resolved_repetitions_sample.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+\label{postcondition}
+For any valid \texttt{resolved}, \texttt{resolved.sample()} either returns \texttt{Err(e)}
+due to propagated cast or sampler errors, or returns an exact draw from the repetition law
+specified by \texttt{resolved}.
+\end{theorem}
+
+\section{Proof}
+The function has three cases.
+
+\begin{itemize}
+    \item If \texttt{resolved = Poisson \{ mean \}}, line \ref{line:poisson} invokes
+    \rustdoc{traits/samplers/poisson/fn}{sample\_poisson}. By its postcondition, the return value
+    is distributed as \texttt{Poisson(mean)}.
+    \item If \texttt{resolved = NegativeBinomial \{ eta: 0, x \}}, then after the exact cast on
+    line \ref{line:x-rational}, line \ref{line:logarithmic} invokes
+    \rustdoc{traits/samplers/logarithmic/fn}{sample\_logarithmic\_exp}. By its postcondition, the
+    return value is distributed as the logarithmic member of Definition 1.
+    \item If \texttt{resolved = NegativeBinomial \{ eta, x \}} with \texttt{eta > 0}, then after
+    the exact casts on lines \ref{line:x-rational} and \ref{line:eta-rational}, line
+    \ref{line:negative-binomial} invokes
+    \rustdoc{traits/samplers/negative_binomial/fn}{sample\_truncated\_negative\_binomial\_rational}.
+    By its postcondition, the return value is distributed as the Definition 1
+    truncated-negative-binomial law.
+\end{itemize}
+
+These are the only branches of the function, which establishes the postcondition.
+
+\end{document}
