@@ -140,13 +140,13 @@ on github, or with the `gh` command line tool. Parameters:
     1. Increment patch version in `main`.
 
         ```shell
-        python tools/channel_tool.py bump_version --position patch
+        python channel_tool.py bump_version --position patch
         ```
 
     1. Increment changelog.
 
         ```shell
-        python tools/channel_tool.py changelog --prepend
+        python channel_tool.py changelog --prepend
         ```
 
     1. Update `robots.txt`: Add the new version to the `Disallow` list.
