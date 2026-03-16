@@ -1,0 +1,108 @@
+\documentclass{article}
+\input{../../../lib.sty}
+\title{\texttt{fn sample\_negative\_binomial\_rational}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle
+
+This document proves that the implementation of \texttt{sample\_negative\_binomial\_rational}
+in \texttt{mod.rs} satisfies its proof definition.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+$\texttt{eta} \in \mathbb{Q}_{>0}$ and $\texttt{x} \in \mathbb{Q}_{>0}$.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_negative_binomial_rational.py}
+
+\subsection*{Postcondition}
+\label{postcondition}
+For any setting of the input parameters \texttt{eta} and \texttt{x} such that the given preconditions hold,
+\texttt{sample\_negative\_binomial\_rational} either returns \texttt{Err(e)} due to a lack of system entropy,
+or \texttt{Ok(out)}, where \texttt{out} is distributed as a negative binomial random variable on $\mathbb{N}_0$
+with shape \texttt{eta} and success probability $1 - e^{-x}$, parameterized as the number of failures before
+the \texttt{eta}-th success.
+
+\section{Proof}
+Assume the preconditions are met, and write $m := \lceil \texttt{eta} \rceil$.
+Define the target pmf
+\begin{equation*}
+p_\eta(k) := (1 - e^{-x})^{\eta} e^{-xk} \prod_{i=0}^{k-1}\frac{\eta + i}{i + 1}
+\qquad\text{for } k \in \mathbb{N}_0.
+\end{equation*}
+This is the ordinary negative binomial pmf on $\mathbb{N}_0$ with shape $\eta$
+and success probability $1 - e^{-x}$.
+
+\begin{lemma}
+\label{lem:err-e}
+\texttt{sample\_negative\_binomial\_rational} only returns \texttt{Err(e)} when there is a lack of system entropy.
+\end{lemma}
+\begin{proof}
+If line \ref{line:integer_fast_path} is executed, the only fallible call is to
+\rustdoc{traits/samplers/negative_binomial/fn}{sample\_negative\_binomial\_integer},
+which by its proof definition only returns \texttt{Err(e)} due to a lack of system entropy.
+
+Otherwise, in each loop iteration line \ref{line:proposal_draw} invokes
+\rustdoc{traits/samplers/negative_binomial/fn}{sample\_negative\_binomial\_integer},
+and line \ref{line:proposal_accept} invokes
+\rustdoc{traits/samplers/negative_binomial/fn}{sample\_integer\_envelope\_accept}.
+By their proof definitions, any returned error must be due to a lack of system entropy.
+There are no other fallible operations.
+\end{proof}
+
+\begin{lemma}
+\label{lem:proposal-law}
+In the non-integer branch, each loop iteration draws a proposal
+$Y \sim NegativeBinomial(m, 1 - e^{-x})$ on $\mathbb{N}_0$ and accepts it with probability
+$\prod_{i=0}^{Y-1}\frac{\eta + i}{m + i}$.
+\end{lemma}
+\begin{proof}
+By the proof of \texttt{sample\_negative\_binomial\_integer}, line \ref{line:proposal_draw}
+returns a proposal with pmf
+\begin{equation*}
+\Pr[Y = k] = \binom{k + m - 1}{k}(1 - e^{-x})^m e^{-xk}.
+\end{equation*}
+By the proof of \texttt{sample\_integer\_envelope\_accept}, conditional on $Y = k$,
+line \ref{line:proposal_accept} accepts with probability
+\begin{equation*}
+\prod_{i=0}^{k-1}\frac{\eta + i}{m + i}.
+\end{equation*}
+\end{proof}
+
+\begin{lemma}
+\label{lem:ok-out}
+If the outcome of \texttt{sample\_negative\_binomial\_rational} is \texttt{Ok(out)}, then \texttt{out}
+is distributed according to $p_\eta$.
+\end{lemma}
+\begin{proof}
+If \texttt{eta} is an integer, then $m = \eta$ and the fast path on line \ref{line:integer_fast_path}
+is taken. By the proof of \texttt{sample\_negative\_binomial\_integer}, the returned value already
+has pmf $p_\eta$.
+
+Assume now that \texttt{eta} is not an integer. By Lemma~\ref{lem:proposal-law}, in each loop iteration
+and for every $k \in \mathbb{N}_0$,
+\begin{align*}
+\Pr[Y = k \text{ and accepted}]
+&= \binom{k + m - 1}{k}(1 - e^{-x})^m e^{-xk}
+   \prod_{i=0}^{k-1}\frac{\eta + i}{m + i} \\
+&= (1 - e^{-x})^m e^{-xk}
+   \prod_{i=0}^{k-1}\frac{\eta + i}{i + 1} \\
+&= (1 - e^{-x})^{m - \eta} p_\eta(k).
+\end{align*}
+Summing over $k$ shows that the total acceptance probability in each loop iteration is
+$(1 - e^{-x})^{m - \eta}$, which is strictly positive because $x > 0$.
+Therefore the loop terminates almost surely.
+Conditioning on acceptance yields
+\begin{equation*}
+\Pr[\texttt{out} = k]
+= \frac{(1 - e^{-x})^{m - \eta} p_\eta(k)}{(1 - e^{-x})^{m - \eta}}
+= p_\eta(k).
+\end{equation*}
+Thus the returned value has the claimed negative binomial distribution.
+\end{proof}
+
+\begin{proof}
+\ref{postcondition} holds by Lemma~\ref{lem:err-e} and Lemma~\ref{lem:ok-out}.
+\end{proof}
+
+\end{document}

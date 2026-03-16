@@ -1,0 +1,51 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{impl PrivateCandidateMeasure for RenyiDivergence}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+\maketitle
+
+Proves soundness of the \texttt{RenyiDivergence} implementation of
+\texttt{PrivateCandidateMeasure} in \texttt{mod.rs}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\texttt{base\_map} is the privacy map of a valid \texttt{RenyiDivergence} measurement.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/renyi_divergence_private_candidate_measure.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+\label{postcondition}
+The \texttt{validate} method accepts exactly the supported Rényi-DP combinations implemented in
+\texttt{mod.rs}, and \texttt{new\_privacy\_map} returns the privacy map stated in the proof
+definition of \texttt{make\_select\_private\_candidate}.
+\end{theorem}
+
+\section{Proof}
+Validation is immediate: line \ref{line:geometric-guard} rejects thresholded constructions unless
+the repetition family is geometric, and no other combinations are rejected.
+
+For privacy accounting, line \ref{line:base-curve} evaluates the base privacy map to obtain the
+base Rényi curve.
+There are three accepted branches.
+\begin{itemize}
+    \item In the thresholded geometric case, line \ref{line:conditional-branch} returns
+    \rustdoc{combinators/select\_private\_candidate/bounds/fn}{new\_conditional\_rdp\_curve}.
+    By its postcondition, this upper-bounds the Appendix C / Corollary 16
+    conditional-sampling curve.
+    \item In the non-thresholded negative-binomial case, line \ref{line:nb-branch} returns
+    \rustdoc{combinators/select\_private\_candidate/bounds/fn}{new\_negative\_binomial\_rdp\_curve}.
+    By its postcondition, this upper-bounds the Theorem 2 curve.
+    \item In the non-thresholded Poisson case, line \ref{line:poisson-branch} returns
+    \rustdoc{combinators/select\_private\_candidate/bounds/fn}{new\_poisson\_rdp\_curve}. By its
+    postcondition, this upper-bounds the implemented Theorem 6-based curve.
+\end{itemize}
+
+Therefore the returned privacy map is sound in every accepted branch.
+
+\end{document}

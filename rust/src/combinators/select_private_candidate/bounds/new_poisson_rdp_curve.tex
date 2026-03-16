@@ -1,0 +1,152 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn new\_poisson\_rdp\_curve}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+Proves soundness of \texttt{fn new\_poisson\_rdp\_curve} in \texttt{mod.rs}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\texttt{base\_curve} upper-bounds the base Rényi divergence at every order $> 1$, and
+\texttt{mean} $\ge 0$.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/new_poisson_rdp_curve.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+\label{postcondition}
+For every $\alpha > 1$, the returned function either returns \texttt{Err(e)} due to a propagated
+helper error, or returns an upper bound on the implemented Poisson expression
+\[
+\epsilon(\alpha)
+\;+\;
+\texttt{mean}\cdot \delta(\alpha)
+\;+\;
+\frac{\log(\texttt{mean})}{\alpha - 1},
+\]
+where $\epsilon(\cdot)$ is the base Rényi divergence curve and
+\[
+\delta(\alpha) = \alpha^{-1}\!\left(1 - \alpha^{-1}\right)^{\alpha - 1}.
+\]
+\end{theorem}
+
+\section{Proof}
+Fix $\alpha > 1$.
+
+\begin{lemma}
+\label{special-cases}
+If \texttt{mean = 0}, the returned value is $0$, which equals the displayed expression.
+If $\alpha \le 1$, the returned value is $+\infty$, which is a valid upper bound.
+\end{lemma}
+
+\begin{proof}
+When \texttt{mean = 0}, both additive terms involving \texttt{mean} vanish.
+For $\alpha \le 1$, $+\infty$ upper-bounds any real value.
+\end{proof}
+
+\begin{lemma}
+\label{admissibility}
+If the admissibility check on line \ref{line:admissibility} passes, then the exact base Rényi
+divergence satisfies the Theorem 6 admissibility condition.
+\end{lemma}
+
+\begin{proof}
+Let $\epsilon(\alpha)$ denote the exact base Rényi divergence curve.
+By precondition, \texttt{eps\_alpha} $\ge \epsilon(\alpha)$.
+By the proof of \texttt{log\_alpha\_over\_alpha\_minus\_one\_lo},
+\[
+\texttt{max\_eps\_lo} \le \log\!\left(\frac{\alpha}{\alpha - 1}\right).
+\]
+Therefore \texttt{eps\_alpha} $\le$ \texttt{max\_eps\_lo} implies
+\[
+\epsilon(\alpha) \le \log\!\left(\frac{\alpha}{\alpha - 1}\right),
+\]
+which is exactly the admissibility condition.
+\end{proof}
+
+\begin{lemma}
+\label{admissibility-fails}
+If the admissibility check on line \ref{line:admissibility} fails, the function returns
+$+\infty$, which is a valid upper bound on the displayed expression.
+\end{lemma}
+
+\begin{proof}
+This is exactly the branch taken by the pseudocode, and $+\infty$ upper-bounds any real value.
+\end{proof}
+
+\begin{lemma}
+\label{delta}
+If \texttt{mean > 0}, $\alpha > 1$, and the admissibility check passes, then the value
+\texttt{delta\_hi} computed by the function satisfies
+\[
+\texttt{delta\_hi} \ge \delta(\alpha).
+\]
+\end{lemma}
+
+\begin{proof}
+We have \texttt{inv\_alpha\_hi} $\ge 1/\alpha$ and \texttt{inv\_alpha\_lo} $\le 1/\alpha$.
+Hence
+\[
+\texttt{one\_minus\_inv\_alpha\_hi} \ge 1 - \frac{1}{\alpha},
+\]
+so after subtracting $1$,
+\[
+\texttt{one\_minus\_inv\_alpha\_minus\_one\_hi} \ge -\frac{1}{\alpha}.
+\]
+Both values lie in $(-1,0)$, so upward-rounded \texttt{ln\_1p} gives
+\[
+\texttt{ln\_one\_minus\_inv\_alpha\_hi}
+\ge
+\ln\!\left(1 - \frac{1}{\alpha}\right).
+\]
+Also \texttt{alpha\_minus\_one\_lo} $\le \alpha - 1$ with \texttt{alpha\_minus\_one\_lo} $> 0$.
+Since the logarithm above is negative, multiplying first by the smaller positive factor and then
+by the larger negative factor is conservative:
+\[
+\texttt{exponent\_hi}
+\ge
+(\alpha - 1)\ln\!\left(1 - \frac{1}{\alpha}\right).
+\]
+Upward-rounded exponentiation yields
+\[
+\texttt{power\_hi}
+\ge
+\left(1 - \frac{1}{\alpha}\right)^{\alpha - 1}.
+\]
+Multiplying by \texttt{inv\_alpha\_hi} $\ge 1/\alpha$ gives the claim.
+\end{proof}
+
+\begin{lemma}
+\label{main}
+If \texttt{mean > 0}, $\alpha > 1$, the admissibility check passes, and the function returns
+\texttt{Ok(out)}, then \texttt{out} upper-bounds the displayed Poisson expression.
+\end{lemma}
+
+\begin{proof}
+By precondition, \texttt{eps\_alpha} $\ge \epsilon(\alpha)$.
+By Lemma~\ref{delta},
+\[
+\texttt{term1\_hi} \ge \texttt{mean}\cdot \delta(\alpha).
+\]
+By the proof of \texttt{log\_mean\_hi},
+\[
+\texttt{log\_mean\_hi\_} \ge \log(\texttt{mean}).
+\]
+Since \texttt{alpha\_minus\_one\_lo} $\le \alpha - 1$ with a positive denominator,
+\[
+\texttt{term2\_hi} \ge \frac{\log(\texttt{mean})}{\alpha - 1}.
+\]
+Finally, \texttt{out} is formed by upward-rounded addition of these three upper bounds.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{postcondition}]
+By Lemma~\ref{special-cases}, Lemma~\ref{admissibility-fails}, Lemma~\ref{admissibility}, and
+Lemma~\ref{main}.
+\end{proof}
+
+\end{document}

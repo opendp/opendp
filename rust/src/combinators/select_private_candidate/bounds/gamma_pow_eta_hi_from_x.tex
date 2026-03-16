@@ -1,0 +1,81 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn gamma\_pow\_eta\_hi\_from\_x}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+Proves soundness of \texttt{fn gamma\_pow\_eta\_hi\_from\_x} in \texttt{mod.rs}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\texttt{eta} $\ge 0$ and \texttt{x} is finite.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/gamma_pow_eta_hi_from_x.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+\label{postcondition}
+For any inputs satisfying the precondition,
+\texttt{gamma\_pow\_eta\_hi\_from\_x} either returns \texttt{Err(e)},
+or returns \texttt{Ok(out)} where
+\[
+\texttt{out} \ge (1 - e^{-\texttt{x}})^{\texttt{eta}}.
+\]
+\end{theorem}
+
+\section{Proof}
+Assume the precondition and write $\gamma = 1 - e^{-x}$.
+
+\begin{lemma}
+\label{err-e}
+\texttt{gamma\_pow\_eta\_hi\_from\_x} only returns \texttt{Err(e)} if one of the fallible calls
+on lines \ref{line:gamma_hi}, \ref{line:interval}, \ref{line:minus_one_hi},
+\ref{line:ln_gamma_hi}, \ref{line:mul_hi}, or \ref{line:exp_hi} returns \texttt{Err(e)}.
+\end{lemma}
+
+\begin{proof}
+These are exactly the fallible operations in the pseudocode.
+\end{proof}
+
+\begin{lemma}
+\label{ok-out}
+If \texttt{gamma\_pow\_eta\_hi\_from\_x} returns \texttt{Ok(out)}, then
+\[
+\texttt{out} \ge (1 - e^{-\texttt{x}})^{\texttt{eta}}.
+\]
+\end{lemma}
+
+\begin{proof}
+If line \ref{line:interval} succeeds, then \texttt{gamma\_hi} lies in $(0,1)$.
+By the proof of \texttt{gamma\_hi\_from\_x},
+\[
+\texttt{gamma\_hi} \ge \gamma.
+\]
+Subtracting $1$ preserves order, so
+\[
+\texttt{gamma\_minus\_one\_hi} \ge \gamma - 1.
+\]
+Both values lie in $(-1,0)$, therefore
+\[
+\texttt{ln\_gamma\_hi} \ge \ln(\gamma).
+\]
+Since \texttt{eta} $\ge 0$, upward-rounded multiplication gives
+\[
+\texttt{exponent\_hi} \ge \texttt{eta} \cdot \ln(\gamma).
+\]
+Finally, upward-rounded exponentiation yields
+\[
+\texttt{out} \ge e^{\texttt{eta} \ln(\gamma)} = \gamma^{\texttt{eta}}
+= (1 - e^{-x})^{\texttt{eta}}.
+\]
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{postcondition}]
+Holds by Lemma~\ref{err-e} and Lemma~\ref{ok-out}.
+\end{proof}
+
+\end{document}

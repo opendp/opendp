@@ -1,0 +1,61 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{fn Repetitions::resolve}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+\maketitle
+
+Proves soundness of \texttt{fn Repetitions::resolve} in \texttt{mod.rs}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\texttt{mean} is finite.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/repetitions_resolve.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+\label{postcondition}
+For any repetition specification \texttt{repetitions} and finite \texttt{mean},
+\texttt{repetitions.resolve(mean)} either returns \texttt{Err(e)}, or returns a
+\texttt{ResolvedRepetitions} value satisfying the proof definition in \texttt{mod.rs}.
+\end{theorem}
+
+\section{Proof}
+Assume the precondition.
+
+\begin{lemma}
+\label{poisson}
+If \texttt{repetitions = Poisson} and the function returns \texttt{Ok(out)}, then
+\texttt{out = Poisson \{ mean \}} with nonnegative mean.
+\end{lemma}
+
+\begin{proof}
+The only branch-specific check is line \ref{line:poisson-mean-guard}. If it succeeds, the function
+returns exactly \texttt{Poisson \{ mean \}}.
+\end{proof}
+
+\begin{lemma}
+\label{nb}
+If \texttt{repetitions = NegativeBinomial \{ eta \}} and the function returns \texttt{Ok(out)},
+then \texttt{eta} is finite and nonnegative, \texttt{mean > 1}, and
+\texttt{out = NegativeBinomial \{ eta, x \}} where \texttt{x} is the next floating-point value
+above a solution returned by \texttt{solve\_nb\_x\_from\_mean(mean, eta)}.
+\end{lemma}
+
+\begin{proof}
+Lines \ref{line:nb-mean-guard}, \ref{line:eta-finite-guard}, and \ref{line:eta-sign-guard}
+enforce the parameter restrictions. The only remaining fallible helper is
+\texttt{solve\_nb\_x\_from\_mean} on line \ref{line:solve}; if it succeeds, the function rounds
+its result upward on line \ref{line:next-up} and returns exactly the stated resolved value.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{postcondition}]
+By Lemma~\ref{poisson} and Lemma~\ref{nb}.
+\end{proof}
+
+\end{document}

@@ -1,0 +1,90 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn new\_conditional\_rdp\_curve}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+Proves soundness of \texttt{fn new\_conditional\_rdp\_curve} in \texttt{mod.rs}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\texttt{base\_curve} upper-bounds the base Rényi divergence at every order $> 1$, and \texttt{x}
+is such that \texttt{log\_inv\_gamma\_hi\_from\_x(x)} succeeds whenever it is called.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/new_conditional_rdp_curve.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+\label{postcondition}
+For every $\alpha > 1$, the returned function either returns \texttt{Err(e)} due to a propagated
+helper error, or returns an upper bound on the Corollary 16 expression
+\[
+\epsilon(\alpha)
+\;+\;
+\frac{\alpha - 2}{\alpha - 1}\epsilon(\alpha - 1)
+\;+\;
+\frac{2 \log(1/\gamma)}{\alpha - 1},
+\]
+where $\epsilon(\cdot)$ is the base Rényi divergence curve and $\gamma = 1 - e^{-x}$.
+\end{theorem}
+
+\section{Proof}
+Fix $\alpha > 1$.
+
+\begin{lemma}
+\label{guard}
+If $\alpha \le 2$, the returned value is $+\infty$, which is a valid upper bound.
+\end{lemma}
+
+\begin{proof}
+The expression is finite or infinite, and $+\infty$ upper-bounds either case.
+\end{proof}
+
+\begin{lemma}
+\label{main}
+If $\alpha > 2$ and the function returns \texttt{Ok(out)}, then \texttt{out} upper-bounds the
+displayed Corollary 16 expression.
+\end{lemma}
+
+\begin{proof}
+Let $\epsilon(\cdot)$ denote the exact base Rényi divergence curve.
+By precondition,
+\[
+\texttt{eps\_alpha} \ge \epsilon(\alpha).
+\]
+Also \texttt{alpha\_minus\_one\_hi} $\ge \alpha - 1 > 1$.
+Rényi divergence is nondecreasing in its order, so
+\[
+\epsilon(\alpha - 1) \le \epsilon(\texttt{alpha\_minus\_one\_hi})
+\le \texttt{eps\_alpha\_minus\_one\_hi}.
+\]
+Because $\alpha > 2$, both $\alpha - 2$ and $\alpha - 1$ are positive. The arithmetic helpers
+therefore give
+\[
+\texttt{coeff\_hi} \ge \frac{\alpha - 2}{\alpha - 1}.
+\]
+Since \texttt{eps\_alpha\_minus\_one\_hi} is nonnegative, upward-rounded multiplication yields
+\[
+\texttt{term1\_hi} \ge \frac{\alpha - 2}{\alpha - 1}\epsilon(\alpha - 1).
+\]
+By the proof of \texttt{log\_inv\_gamma\_hi\_from\_x},
+\[
+\texttt{log\_inv\_gamma\_hi} \ge \log(1/\gamma).
+\]
+Again \texttt{alpha\_minus\_one\_lo} $\le \alpha - 1$ with a positive denominator, so
+\[
+\texttt{term2\_hi} \ge \frac{2 \log(1/\gamma)}{\alpha - 1}.
+\]
+Finally, \texttt{out} is formed by upward-rounded addition of these three upper bounds, so it
+upper-bounds the full displayed expression.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{postcondition}]
+By Lemma~\ref{guard} for $\alpha \le 2$, and Lemma~\ref{main} otherwise.
+\end{proof}
+
+\end{document}

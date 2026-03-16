@@ -15,9 +15,9 @@ mod sequential_composition;
 #[cfg(feature = "contrib")]
 pub use sequential_composition::*;
 
-#[cfg(feature = "contrib")]
+#[cfg(all(feature = "contrib", feature = "private-selection-v2"))]
 mod select_private_candidate;
-#[cfg(feature = "contrib")]
+#[cfg(all(feature = "contrib", feature = "private-selection-v2"))]
 pub use select_private_candidate::*;
 
 #[cfg(feature = "contrib")]
