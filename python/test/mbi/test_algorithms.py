@@ -93,7 +93,7 @@ def test_algorithm_err_elements(algorithm):
     "kwargs,message",
     [
         (dict(queries=-1), "queries (-1) must be positive"),
-        (dict(queries=[]), "queries must not be non-empty"),
+        (dict(queries=[]), "queries must not be empty"),
         (dict(measure_split=2), "measure_split (2) must be in (0, 1]"),
         (dict(max_size=-1), "max_size (-1) must be positive"),
     ],
@@ -105,6 +105,7 @@ def test_aim_init(kwargs, message):
 
 
 def test_aim_exhaustion():
+    # tests how algorithm behaves when all workload queries are ineligible for selection
     pytest.importorskip("mbi")
     import mbi  # type: ignore[import-not-found]
     import polars as pl  # type: ignore[import-not-found]

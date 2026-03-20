@@ -64,12 +64,12 @@ def mirror_descent(
     potentials=None,  # CliqueVector | None
 ):  # MarkovRandomField
     """Fit a MarkovRandomField over the domain and loss function using mirror descent.
+    
+    If you want to use a custom estimator, consider this a contract/example.
+    Your function can then close over configuration for any MBI estimator."""
+    from mbi.estimation import mirror_descent as _mirror_descent  # type: ignore
 
-    Replicate the API of this function to `use other optimizers from Private-PGM <https://private-pgm.readthedocs.io/en/latest/_autosummary_output/mbi.estimation.html#module-mbi.estimation>`_.
-    """
-    from mbi.estimation import mirror_descent  # type: ignore[import-untyped,import-not-found]
-
-    return mirror_descent(domain, loss_fn, potentials=potentials)
+    return _mirror_descent(domain, loss_fn, potentials=potentials)
 
 OnewayType = Literal["all", "unkeyed"]
 ONEWAY_ALL, ONEWAY_UNKEYED = get_args(OnewayType)
@@ -298,7 +298,8 @@ def make_noise_marginal(
 ) -> Measurement:
     """Make a measurement that releases a DP marginal"""
     from opendp.extras.numpy import NPArrayDDomain
-    import numpy as np  # type: ignore[import-not-found]
+    # use jax arrays because lms will be used in optimization
+    import jax.numpy as np  # type: ignore[import-not-found]
     from mbi import LinearMeasurement  # type: ignore[import-untyped,import-not-found]
 
     clique_domain = input_domain.cast(TypedDictDomain)[clique]
@@ -322,7 +323,7 @@ def make_noise_marginal(
     )
 
     def function(x):
-        return LinearMeasurement(x, clique, stddev=get_std(output_measure, scale))
+        return LinearMeasurement(np.array(x), clique, stddev=get_std(output_measure, scale))
 
     return (
         t_marginal >> then_noise(output_measure, scale) >> _new_pure_function(function)
