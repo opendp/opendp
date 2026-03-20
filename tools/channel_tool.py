@@ -3,6 +3,7 @@ import configupdater
 import datetime
 import re
 import zoneinfo
+from os import chdir
 from pathlib import Path
 
 import tomlkit
@@ -256,4 +257,5 @@ def main():
 
 
 if __name__ == "__main__":
+    chdir(Path(__file__).parent.parent)
     main()
