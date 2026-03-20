@@ -96,3 +96,32 @@ def test_bound():
     pytest.importorskip("polars")
     zero_way = dp._get_bound([Bound(by=["A"], per_group=2)], ["A", "B"])
     assert zero_way == Bound(by=["A", "B"], per_group=2)
+
+
+def test_modular_metric_constructors():
+    m_abs = dp.absolute_distance(T=int, modular=True)
+    m_l1 = dp.l1_distance(T=int, modular=True)
+    m_l2 = dp.l2_distance(T=float, modular=True)
+
+    assert "modulo" in str(m_abs)
+    assert "modular" in str(m_l1)
+    assert "modular" in str(m_l2)
+
+
+def test_modular_noise_metrics():
+    meas_abs = dp.m.make_laplace(
+        dp.atom_domain(T=int),
+        dp.absolute_distance(T=int, modular=True),
+        scale=1.0,
+    )
+    assert isinstance(meas_abs(0), int)
+    assert meas_abs.map(1) == 1.0
+
+    meas_vec = dp.m.make_gaussian(
+        dp.vector_domain(dp.atom_domain(T=int)),
+        dp.l2_distance(T=float, modular=True),
+        scale=2.0,
+    )
+    out = meas_vec([0, 1])
+    assert len(out) == 2
+    assert meas_vec.map(1.0) == 0.125

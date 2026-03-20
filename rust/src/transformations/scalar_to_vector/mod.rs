@@ -4,7 +4,7 @@ use crate::{
     core::{Function, StabilityMap, Transformation},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    metrics::{AbsoluteDistance, LpDistance},
+    metrics::{AbsoluteDistance, LpDistance, ModularMetric},
     traits::CheckAtom,
 };
 
@@ -23,11 +23,12 @@ where
     T: CheckAtom,
     Q: 'static + Clone,
 {
+    let modular = input_metric.modular();
     Transformation::new(
         input_domain.clone(),
         input_metric,
         VectorDomain::new(input_domain).with_size(1),
-        LpDistance::default(),
+        LpDistance::new(modular),
         Function::new(move |arg: &T| vec![arg.clone()]),
         StabilityMap::new(Clone::clone),
     )

@@ -108,7 +108,7 @@ def test_fully_adaptive_composition():
 
     assert str(o_comp) == """Odometer(
     input_domain   = VectorDomain(AtomDomain(T=i32)),
-    input_metric   = SymmetricDistance(),
+    input_metric   = SymmetricDistance,
     output_measure = MaxDivergence)"""
 
     qbl_comp: dp.OdometerQueryable = o_comp([1] * 200)

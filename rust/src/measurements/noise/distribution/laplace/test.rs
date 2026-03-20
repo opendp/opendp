@@ -32,6 +32,28 @@ fn test_make_laplace_native_types() -> Fallible<()> {
 }
 
 #[test]
+fn test_make_laplace_modular_native_types() -> Fallible<()> {
+    let scalar = make_laplace(
+        AtomDomain::<i32>::default(),
+        AbsoluteDistance::<f64>::new(true),
+        1.,
+        None,
+    )?;
+    scalar.invoke(&0)?;
+    assert_eq!(scalar.map(&1.)?, 1.0);
+
+    let vector = make_laplace(
+        VectorDomain::new(AtomDomain::<i32>::default()),
+        L1Distance::<f64>::new(true),
+        1.,
+        None,
+    )?;
+    vector.invoke(&vec![0, 1])?;
+    assert_eq!(vector.map(&1.)?, 1.0);
+    Ok(())
+}
+
+#[test]
 fn test_make_laplace_bigint() -> Fallible<()> {
     // scalar ibig
     let meas = make_laplace(
@@ -141,6 +163,7 @@ fn test_make_noise_zexpfamily1_large_scale() -> Fallible<()> {
     let space = (AtomDomain::<IBig>::default(), AbsoluteDistance::default());
     let distribution = ZExpFamily::<1> {
         scale: rbig!(23948285282902934157),
+        divisor: None,
     };
 
     let meas = distribution.make_noise(space)?;
@@ -154,7 +177,10 @@ fn test_make_noise_zexpfamily1_large_scale() -> Fallible<()> {
 fn test_make_noise_zexpfamily1_zero_scale() -> Fallible<()> {
     let domain = VectorDomain::<AtomDomain<IBig>>::default();
     let metric = L1Distance::default();
-    let distribution = ZExpFamily { scale: rbig!(0) };
+    let distribution = ZExpFamily {
+        scale: rbig!(0),
+        divisor: None,
+    };
 
     let meas = distribution.make_noise((domain, metric))?;
     assert_eq!(meas.invoke(&vec![ibig!(0)])?, vec![ibig!(0)]);
