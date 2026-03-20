@@ -30,33 +30,7 @@ on:
     outputs:
       date:
         value: ${{ jobs.prepare.outputs.date }}
-  workflow_dispatch:
-    inputs:
-      channel:
-        description: Target Channel
-        type: choice
-        options:
-          - dev
-          - nightly
-          - beta
-          - stable
-        required: true
-        default: nightly
-      sync:
-        description: Sync the Channel from Upstream?
-        type: boolean
-        required: false
-        default: false
-      counter:
-        description: Version Counter
-        type: number
-        required: false
-        default: 1
-      dry_run:
-        description: Dry Run?
-        type: boolean
-        required: false
-        default: false
+
 env:
   # Standardize dates to Eastern time
   TIME_ZONE: "America/New_York"

@@ -24,23 +24,6 @@ on:
         type: boolean
         required: false
         default: false
-  workflow_dispatch:
-    inputs:
-      channel:
-        description: Target Channel
-        type: choice
-        options:
-          - dev
-          - nightly
-          - beta
-          - stable
-        required: true
-        default: dev
-      fake:
-        description: Fake Build?
-        type: boolean
-        required: false
-        default: false
 env:
   FEATURES: untrusted,ffi,polars,extension-module
 

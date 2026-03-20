@@ -25,27 +25,6 @@ on:
         required: true
       CRATES_IO_API_TOKEN:
         required: true
-  workflow_dispatch:
-    inputs:
-      channel:
-        description: Target Channel
-        type: choice
-        options:
-          - dev
-          - nightly
-          - beta
-          - stable
-        required: true
-        default: nightly
-      date:
-        description: Release Date
-        type: string
-        required: true
-      dry_run:
-        description: Dry Run?
-        type: boolean
-        required: false
-        default: false
 
 jobs:
   credential-check:
