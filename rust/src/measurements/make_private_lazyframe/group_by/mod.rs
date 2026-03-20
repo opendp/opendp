@@ -8,8 +8,8 @@ use crate::combinators::{CompositionMeasure, make_composition};
 use crate::core::{Function, Measurement, PrivacyMap};
 use crate::domains::{CategoricalDomain, Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
+use crate::measurements::PrivateExpr;
 use crate::measurements::expr_noise::NoiseDistribution;
-use crate::measurements::make_private_expr;
 use crate::measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence};
 use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance};
 use crate::traits::{InfAdd, InfMul, InfPowI, InfSub, option_min};
@@ -17,10 +17,9 @@ use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::{StableDslPlan, StableExpr};
 use dashu::integer::{IBig, UBig};
 use dashu::rational::RBig;
-use make_private_expr::PrivateExpr;
 use matching::find_len_expr;
-use polars::prelude::{DslPlan, JoinType, LazyFrame, len};
-use polars_plan::dsl::{Expr, col, lit};
+use polars::prelude::{DslPlan, JoinType, LazyFrame, col, len, lit};
+use polars_plan::dsl::Expr;
 
 #[cfg(test)]
 mod test;
@@ -105,7 +104,7 @@ where
     };
 
     let m_expr_aggs = aggs.into_iter().map(|expr| {
-        make_private_expr(
+        expr.make_private(
             WildExprDomain {
                 columns: middle_domain.series_domains.clone(),
                 context: Context::Aggregation {
@@ -114,7 +113,6 @@ where
             },
             L0PInfDistance(middle_metric.0.clone()),
             output_measure.clone(),
-            expr,
             global_scale,
         )
     });
@@ -175,6 +173,7 @@ where
         let output = DslPlan::GroupBy {
             input: Arc::new(arg.clone()),
             keys: group_by.clone(),
+            predicates: vec![],
             aggs: f_comp.eval(&arg)?.into_iter().map(|p| p.expr).collect(),
             apply: None,
             maintain_order: false,

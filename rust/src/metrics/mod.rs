@@ -14,9 +14,9 @@
 #[cfg(feature = "ffi")]
 pub(crate) mod ffi;
 
-#[cfg(feature = "polars")]
+#[cfg(all(feature = "polars", feature = "contrib"))]
 pub mod polars;
-#[cfg(feature = "polars")]
+#[cfg(all(feature = "polars", feature = "contrib"))]
 pub use polars::*;
 
 use std::hash::Hash;

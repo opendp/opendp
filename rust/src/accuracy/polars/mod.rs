@@ -2,9 +2,8 @@ use opendp_derive::bootstrap;
 use polars::{
     datatypes::{AnyValue, DataType, Field},
     frame::{DataFrame, row::Row},
-    prelude::{DslPlan, FunctionExpr, IntoLazy, LazyFrame, Schema},
+    prelude::{AggExpr, DslPlan, Expr, FunctionExpr, IntoLazy, LazyFrame, Schema},
 };
-use polars_plan::dsl::{AggExpr, Expr};
 
 #[cfg(test)]
 mod test;
@@ -273,8 +272,11 @@ fn expr_aggregate(expr: &Expr) -> Fallible<String> {
     Ok(match expr {
         Expr::Agg(AggExpr::Sum(_)) => "Sum",
         Expr::Len => "Frame Length",
-        Expr::Agg(AggExpr::Count(_, include_null)) => {
-            if *include_null {
+        Expr::Agg(AggExpr::Count {
+            input: _,
+            include_nulls,
+        }) => {
+            if *include_nulls {
                 "Length"
             } else {
                 "Count"

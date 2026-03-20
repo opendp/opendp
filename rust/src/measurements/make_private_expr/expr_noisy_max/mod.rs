@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::core::PrivacyMap;
 use crate::domains::{ArrayDomain, AtomDomain, ExprPlan, VectorDomain, WildExprDomain};
 use crate::measurements::{TopKMeasure, make_noisy_max, noisy_top_k};
@@ -17,17 +19,15 @@ use polars::datatypes::{
     PolarsDataType, UInt32Type, UInt64Type,
 };
 use polars::error::polars_bail;
-#[cfg(feature = "ffi")]
-use polars::error::polars_err;
 use polars::error::{PolarsError, PolarsResult};
 use polars::lazy::dsl::Expr;
-use polars::prelude::{Column, CompatLevel, IntoColumn};
-use polars::series::{IntoSeries, Series};
+use polars::prelude::{AnonymousColumnsUdf, Column, IntoColumn};
+use polars::series::IntoSeries;
 #[cfg(feature = "ffi")]
-use polars_arrow as arrow;
+use polars::series::Series;
 use polars_arrow::array::PrimitiveArray;
 use polars_arrow::types::NativeType;
-use polars_plan::dsl::{ColumnsUdf, GetOutput};
+use polars_plan::dsl::ColumnsUdf;
 use polars_plan::prelude::FunctionOptions;
 use serde::{Deserialize, Serialize};
 
@@ -216,29 +216,36 @@ impl ColumnsUdf for NoisyMaxShim {
         self
     }
 
-    fn call_udf(&self, _: &mut [Column]) -> PolarsResult<Option<Column>> {
+    fn call_udf(&self, _: &mut [Column]) -> PolarsResult<Column> {
         polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")
+    }
+}
+
+impl AnonymousColumnsUdf for NoisyMaxShim {
+    fn as_column_udf(self: Arc<Self>) -> Arc<dyn ColumnsUdf> {
+        self
+    }
+
+    fn deep_clone(self: Arc<Self>) -> Arc<dyn AnonymousColumnsUdf> {
+        Arc::new(Arc::unwrap_or_clone(self))
+    }
+
+    fn get_field(
+        &self,
+        _: &polars::prelude::Schema,
+        fields: &[polars::prelude::Field],
+    ) -> PolarsResult<polars::prelude::Field> {
+        noisy_max_plugin_type_udf(fields)
     }
 }
 
 impl OpenDPPlugin for NoisyMaxShim {
     const NAME: &'static str = "noisy_max";
+    #[cfg(feature = "ffi")]
     const SHIM: bool = true;
     fn function_options() -> FunctionOptions {
         FunctionOptions::elementwise()
     }
-
-    fn get_output(&self) -> Option<GetOutput> {
-        Some(GetOutput::map_fields(|fields| {
-            noisy_max_plugin_type_udf(fields)
-        }))
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Debug)]
-pub enum TopKDistribution {
-    Exponential,
-    Gumbel,
 }
 
 /// Arguments for the Noisy Max expression
@@ -252,16 +259,28 @@ pub(crate) struct NoisyMaxPlugin {
     pub negate: bool,
 }
 
+impl AnonymousColumnsUdf for NoisyMaxPlugin {
+    fn as_column_udf(self: Arc<Self>) -> Arc<dyn ColumnsUdf> {
+        self
+    }
+
+    fn deep_clone(self: Arc<Self>) -> Arc<dyn AnonymousColumnsUdf> {
+        Arc::new(Arc::unwrap_or_clone(self))
+    }
+
+    fn get_field(
+        &self,
+        _: &polars::prelude::Schema,
+        fields: &[polars::prelude::Field],
+    ) -> PolarsResult<polars::prelude::Field> {
+        noisy_max_plugin_type_udf(fields)
+    }
+}
+
 impl OpenDPPlugin for NoisyMaxPlugin {
     const NAME: &'static str = "noisy_max_plugin";
     fn function_options() -> FunctionOptions {
         FunctionOptions::elementwise()
-    }
-
-    fn get_output(&self) -> Option<GetOutput> {
-        Some(GetOutput::map_fields(|fields| {
-            noisy_max_plugin_type_udf(fields)
-        }))
     }
 }
 
@@ -272,8 +291,8 @@ impl ColumnsUdf for NoisyMaxPlugin {
         self
     }
 
-    fn call_udf(&self, s: &mut [Column]) -> PolarsResult<Option<Column>> {
-        noisy_max_udf(s, self.clone()).map(Some)
+    fn call_udf(&self, s: &mut [Column]) -> PolarsResult<Column> {
+        noisy_max_udf(s, self.clone())
     }
 }
 

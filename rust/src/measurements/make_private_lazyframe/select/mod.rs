@@ -5,11 +5,10 @@ use crate::combinators::{CompositionMeasure, make_composition};
 use crate::core::{Function, Measurement, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
-use crate::measurements::make_private_expr;
+use crate::measurements::PrivateExpr;
 use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance};
 use crate::transformations::StableDslPlan;
 use crate::transformations::traits::UnboundedMetric;
-use make_private_expr::PrivateExpr;
 use polars::prelude::{DslPlan, Expr};
 
 #[cfg(test)]
@@ -90,11 +89,10 @@ where
     let m_exprs = expr
         .into_iter()
         .map(|expr| {
-            make_private_expr(
+            expr.clone().make_private(
                 expr_domain.clone(),
                 L0PInfDistance(middle_metric.0.clone()),
                 output_measure.clone(),
-                expr.clone(),
                 global_scale,
             )
         })

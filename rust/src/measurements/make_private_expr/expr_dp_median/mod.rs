@@ -1,13 +1,11 @@
-#[cfg(feature = "ffi")]
-use polars::prelude::CompatLevel;
+use std::sync::Arc;
+
 #[cfg(feature = "ffi")]
 use polars::series::Series;
 use polars::{
-    error::{PolarsResult, polars_bail},
-    prelude::{Column, ColumnsUdf, Expr, GetOutput, lit},
+    error::{PolarsResult, polars_bail, polars_err},
+    prelude::{AnonymousColumnsUdf, Column, ColumnsUdf, Expr, lit},
 };
-#[cfg(feature = "ffi")]
-use polars_arrow as arrow;
 use polars_plan::prelude::FunctionOptions;
 use serde::{Deserialize, Serialize};
 
@@ -29,20 +27,37 @@ impl ColumnsUdf for DPMedianShim {
         self
     }
 
-    fn call_udf(&self, _: &mut [Column]) -> PolarsResult<Option<Column>> {
+    fn call_udf(&self, _: &mut [Column]) -> PolarsResult<Column> {
         polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")
+    }
+}
+
+impl AnonymousColumnsUdf for DPMedianShim {
+    fn as_column_udf(self: Arc<Self>) -> Arc<dyn ColumnsUdf> {
+        self
+    }
+
+    fn deep_clone(self: Arc<Self>) -> Arc<dyn AnonymousColumnsUdf> {
+        Arc::new(Arc::unwrap_or_clone(self))
+    }
+
+    fn get_field(
+        &self,
+        _: &polars::prelude::Schema,
+        fields: &[polars::prelude::Field],
+    ) -> PolarsResult<polars::prelude::Field> {
+        <&[polars::prelude::Field; 1]>::try_from(fields)
+            .map_err(|_| polars_err!(InvalidOperation: "{} expects one column", Self::NAME))
+            .map(|[x]| x.clone())
     }
 }
 
 impl OpenDPPlugin for DPMedianShim {
     const NAME: &'static str = "dp_median";
+    #[cfg(feature = "ffi")]
     const SHIM: bool = true;
     fn function_options() -> FunctionOptions {
         FunctionOptions::aggregation()
-    }
-
-    fn get_output(&self) -> Option<GetOutput> {
-        Some(GetOutput::same_type())
     }
 }
 
