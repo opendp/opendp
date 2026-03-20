@@ -1,0 +1,78 @@
+\documentclass{article}
+\input{../../../lib.sty}
+\title{\texttt{fn sample\_integer\_envelope\_accept}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle
+
+This document proves that the implementation of \texttt{sample\_integer\_envelope\_accept}
+in \texttt{mod.rs} satisfies its proof definition.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+$\texttt{k} \in \mathbb{N}_0$, $\texttt{eta\_numer} \in \mathbb{N}_{>0}$,
+$\texttt{eta\_denom} \in \mathbb{N}_{>0}$, $\texttt{base\_denom} \in \mathbb{N}_{>0}$,
+and $m := \texttt{base\_denom} / \texttt{eta\_denom} \in \mathbb{N}_{>0}$.
+Define $\eta := \texttt{eta\_numer} / \texttt{eta\_denom}$.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_integer_envelope_accept.py}
+
+\subsection*{Postcondition}
+\label{postcondition}
+For any setting of the input parameters \texttt{k}, \texttt{eta\_numer}, \texttt{eta\_denom}, and \texttt{base\_denom}
+such that the given preconditions hold,
+\texttt{sample\_integer\_envelope\_accept} either returns \texttt{Err(e)} due to a lack of system entropy,
+or \texttt{Ok(out)}, where \texttt{out} is distributed as a Bernoulli random variable with success probability
+$\prod_{i=0}^{\texttt{k}-1} \frac{\eta + i}{m + i}$.
+
+\section{Proof}
+Assume the preconditions are met.
+
+\begin{lemma}
+\label{lem:err-e}
+\texttt{sample\_integer\_envelope\_accept} only returns \texttt{Err(e)} when there is a lack of system entropy.
+\end{lemma}
+\begin{proof}
+In each loop iteration, line \ref{line:accept_coin} invokes
+\rustdoc{traits/samplers/bernoulli/fn}{sample\_bernoulli\_rational}
+with probability
+\begin{equation*}
+\frac{\texttt{numer}}{\texttt{denom}}
+= \frac{\texttt{eta\_numer} + i \cdot \texttt{eta\_denom}}{(m + i)\texttt{eta\_denom}}
+= \frac{\eta + i}{m + i},
+\end{equation*}
+where $i$ is the current loop index.
+Since $m = \lceil \eta \rceil$ in its intended use, each such probability lies in $[0,1]$.
+By the proof definition of
+\rustdoc{traits/samplers/bernoulli/fn}{sample\_bernoulli\_rational},
+each call either returns a Bernoulli sample or \texttt{Err(e)} due to a lack of system entropy.
+There are no other fallible operations.
+\end{proof}
+
+\begin{lemma}
+\label{lem:accept-prob}
+If the outcome of \texttt{sample\_integer\_envelope\_accept} is \texttt{Ok(out)}, then \texttt{out}
+is distributed as a Bernoulli random variable with success probability
+$\prod_{i=0}^{\texttt{k}-1} \frac{\eta + i}{m + i}$.
+\end{lemma}
+\begin{proof}
+If $\texttt{k} = 0$, the loop body is never entered and the function returns \texttt{true} deterministically.
+This agrees with the empty product convention.
+
+Assume now that $\texttt{k} > 0$.
+In iteration $i \in \{0,\ldots,\texttt{k}-1\}$, the function draws an independent Bernoulli random variable
+with success probability $\frac{\eta + i}{m + i}$.
+The function returns \texttt{true} if and only if all of these Bernoulli draws succeed.
+Therefore
+\begin{equation*}
+\Pr[\texttt{out} = \texttt{true}] = \prod_{i=0}^{\texttt{k}-1} \frac{\eta + i}{m + i}.
+\end{equation*}
+Hence \texttt{out} is Bernoulli with the claimed success probability.
+\end{proof}
+
+\begin{proof}
+\ref{postcondition} holds by Lemma~\ref{lem:err-e} and Lemma~\ref{lem:accept-prob}.
+\end{proof}
+
+\end{document}

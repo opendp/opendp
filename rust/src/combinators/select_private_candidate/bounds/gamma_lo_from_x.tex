@@ -1,0 +1,80 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn gamma\_lo\_from\_x}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+Proves soundness of \texttt{fn gamma\_lo\_from\_x} in \texttt{mod.rs}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\texttt{x} is finite.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/gamma_lo_from_x.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+\label{postcondition}
+For any setting of the input parameter \texttt{x} such that the given precondition holds,
+\texttt{gamma\_lo\_from\_x} either returns \texttt{Err(e)},
+or returns \texttt{Ok(out)} where
+\[
+\texttt{out} \le 1 - e^{-\texttt{x}}.
+\]
+\end{theorem}
+
+\section{Proof}
+
+Assume the precondition is met.
+
+\begin{lemma}
+\label{err-e}
+\texttt{gamma\_lo\_from\_x} only returns \texttt{Err(e)} if the call to
+\texttt{inf\_exp\_m1} on line \ref{line:expm1_hi} returns \texttt{Err(e)}.
+\end{lemma}
+
+\begin{proof}
+The only fallible operation in \texttt{gamma\_lo\_from\_x} is the invocation of
+\texttt{(-x).inf\_exp\_m1()} on line \ref{line:expm1_hi}.
+Negation of a finite floating-point value is infallible, and negating the result on the return line
+is infallible as well.
+Therefore every error returned by \texttt{gamma\_lo\_from\_x} must come from
+\texttt{inf\_exp\_m1}.
+\end{proof}
+
+\begin{lemma}
+\label{ok-out}
+If the outcome of \texttt{gamma\_lo\_from\_x} is \texttt{Ok(out)}, then
+\[
+\texttt{out} \le 1 - e^{-\texttt{x}}.
+\]
+\end{lemma}
+
+\begin{proof}
+Suppose \texttt{gamma\_lo\_from\_x} returns \texttt{Ok(out)}.
+Write \texttt{expm1\_hi} for the value returned by \texttt{(-x).inf\_exp\_m1()} on line \ref{line:expm1_hi}.
+By the proof definition of \texttt{inf\_exp\_m1},
+\[
+\texttt{expm1\_hi} \ge e^{-\texttt{x}} - 1.
+\]
+Multiplying both sides by $-1$ reverses the inequality, giving
+\[
+-\texttt{expm1\_hi} \le 1 - e^{-\texttt{x}}.
+\]
+By the return statement of the function, \texttt{out} $= -\texttt{expm1\_hi}$.
+Therefore
+\[
+\texttt{out} \le 1 - e^{-\texttt{x}},
+\]
+as claimed.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{postcondition}]
+Holds by Lemma~\ref{err-e} and Lemma~\ref{ok-out}.
+\end{proof}
+
+\end{document}

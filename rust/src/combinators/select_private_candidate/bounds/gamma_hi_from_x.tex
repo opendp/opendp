@@ -1,0 +1,69 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn gamma\_hi\_from\_x}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+Proves soundness of \texttt{fn gamma\_hi\_from\_x} in \texttt{mod.rs}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\texttt{x} is finite.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/gamma_hi_from_x.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+\label{postcondition}
+For any setting of the input parameter \texttt{x} such that the given precondition holds,
+\texttt{gamma\_hi\_from\_x} either returns \texttt{Err(e)},
+or returns \texttt{Ok(out)} where
+\[
+\texttt{out} \ge 1 - e^{-\texttt{x}}.
+\]
+\end{theorem}
+
+\section{Proof}
+Assume the precondition is met.
+
+\begin{lemma}
+\label{err-e}
+\texttt{gamma\_hi\_from\_x} only returns \texttt{Err(e)} if the call to
+\texttt{neg\_inf\_exp\_m1} on line \ref{line:expm1_lo} returns \texttt{Err(e)}.
+\end{lemma}
+
+\begin{proof}
+The only fallible operation in \texttt{gamma\_hi\_from\_x} is the invocation of
+\texttt{(-x).neg\_inf\_exp\_m1()} on line \ref{line:expm1_lo}.
+All other operations are infallible.
+\end{proof}
+
+\begin{lemma}
+\label{ok-out}
+If the outcome of \texttt{gamma\_hi\_from\_x} is \texttt{Ok(out)}, then
+\[
+\texttt{out} \ge 1 - e^{-\texttt{x}}.
+\]
+\end{lemma}
+
+\begin{proof}
+By the proof definition of \texttt{neg\_inf\_exp\_m1},
+\[
+\texttt{expm1\_lo} \le e^{-\texttt{x}} - 1.
+\]
+Multiplying by $-1$ reverses the inequality:
+\[
+-\texttt{expm1\_lo} \ge 1 - e^{-\texttt{x}}.
+\]
+Since the function returns \texttt{out} $= -\texttt{expm1\_lo}$, the claim follows.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{postcondition}]
+Holds by Lemma~\ref{err-e} and Lemma~\ref{ok-out}.
+\end{proof}
+
+\end{document}

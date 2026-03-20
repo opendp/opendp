@@ -21,6 +21,9 @@ NORET void error_unknown_type(const char *lhs, const char *rhs)
 
 #define CharPtr(x) (const char *)CHAR(STRING_ELT(x, 0))
 
+// forward declaration
+SEXP anyobjectptr_to_sexp(AnyObject *obj);
+
 // extracts origin from a runtime type
 // f("Vec<i32>") -> "Vec"
 SEXP get_origin(SEXP rust_type)
@@ -296,15 +299,17 @@ SEXP voidptr_to_sexp(void *input, SEXP rust_type, size_t len)
         }
         UNPROTECT(1);
     }
+    else if (str_equal(c_origin, "AnyObject"))
+    {
+        result = PROTECT(anyobjectptr_to_sexp((AnyObject *)input));
+        UNPROTECT(1);
+    }
     else
         error_unknown_type("voidptr_to_sexp unknown type:", c_origin);
 
     UNPROTECT(1);
     return result;
 }
-
-// forward declaration
-SEXP anyobjectptr_to_sexp(AnyObject *obj);
 
 FfiSlice scalar_to_slice(SEXP value, SEXP type_name)
 {
@@ -525,6 +530,14 @@ SEXP slice_to_sexp(FfiSlice *raw, SEXP type_name)
     const char *c_origin = sexp_to_charptr(get_origin(type_name));
 
     SEXP result;
+
+    if (str_equal(c_origin, "Option"))
+    {
+        if (raw->ptr == NULL || raw->len == 0)
+            return R_NilValue;
+
+        return slice_to_sexp(raw, VECTOR_ELT(get_args(type_name), 0));
+    }
 
     if (str_equal(c_origin, "Vec"))
         result = slice_to_vector(raw, type_name);

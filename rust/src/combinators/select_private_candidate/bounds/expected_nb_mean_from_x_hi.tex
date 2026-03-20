@@ -1,0 +1,109 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn expected\_nb\_mean\_from\_x\_hi}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+Proves soundness of \texttt{fn expected\_nb\_mean\_from\_x\_hi} in \texttt{mod.rs}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\texttt{eta} $\ge 0$ and \texttt{x} $> 0$.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/expected_nb_mean_from_x_hi.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+\label{postcondition}
+For any inputs satisfying the precondition,
+\texttt{expected\_nb\_mean\_from\_x\_hi} either returns \texttt{Err(e)},
+or returns \texttt{Ok(out)} where \texttt{out} is an upper enclosure of the Definition 1
+expected repetition count.
+\end{theorem}
+
+\section{Proof}
+Assume the precondition, let $q = e^{-x}$ and $\gamma = 1 - e^{-x}$.
+Since $x > 0$, we have $q \in (0,1)$ and $\gamma \in (0,1)$.
+
+\begin{lemma}
+\label{err-e}
+\texttt{expected\_nb\_mean\_from\_x\_hi} only returns \texttt{Err(e)} if one of the fallible calls
+on lines \ref{line:q_hi}, \ref{line:gamma_lo}, \ref{line:interval}, \ref{line:gamma_eta_hi},
+or the unlabeled fallible arithmetic calls in the taken branch returns \texttt{Err(e)}.
+\end{lemma}
+
+\begin{proof}
+Every branch return is either an explicit \texttt{float("inf")} or the result of propagating one
+of the listed fallible helper calls.
+\end{proof}
+
+\begin{lemma}
+\label{log-branch}
+If \texttt{eta = 0} and \texttt{expected\_nb\_mean\_from\_x\_hi} returns \texttt{Ok(out)}, then
+\[
+\texttt{out} \ge \frac{e^{-x}}{\gamma \log(1/\gamma)}.
+\]
+\end{lemma}
+
+\begin{proof}
+By the proof definitions of \texttt{inf\_exp} and \texttt{gamma\_lo\_from\_x},
+\[
+\texttt{q\_hi} \ge q, \qquad \texttt{gamma\_lo} \le \gamma.
+\]
+If line \ref{line:interval} succeeds, then \texttt{gamma\_lo} lies in $(0,1)$.
+By the proof of \texttt{log\_inv\_gamma\_lo\_from\_x},
+\[
+\texttt{log\_inv\_gamma\_lo} \le \log(1/\gamma).
+\]
+Therefore the rounded multiplication on line \ref{line:logarithmic_branch} computes a lower bound
+on the true denominator, so
+\[
+\texttt{denom\_lo} \le \gamma \log(1/\gamma).
+\]
+If \texttt{denom\_lo $\le 0$}, the function returns $+\infty$, which is an upper bound.
+Otherwise \texttt{denom\_lo} is a positive lower bound on the true denominator, so upward-rounded
+division yields
+\[
+\texttt{out} \ge \frac{q}{\gamma \log(1/\gamma)} = \frac{e^{-x}}{\gamma \log(1/\gamma)}.
+\]
+\end{proof}
+
+\begin{lemma}
+\label{nb-branch}
+If \texttt{eta > 0} and \texttt{expected\_nb\_mean\_from\_x\_hi} returns \texttt{Ok(out)}, then
+\[
+\texttt{out} \ge \frac{\texttt{eta} \cdot e^{-x}}{\gamma(1 - \gamma^{\texttt{eta}})}.
+\]
+\end{lemma}
+
+\begin{proof}
+As above, \texttt{q\_hi} $\ge q$ and \texttt{gamma\_lo} $\le \gamma$, with \texttt{gamma\_lo} in
+$(0,1)$ after line \ref{line:interval}.
+By the proof of \texttt{gamma\_pow\_eta\_hi\_from\_x},
+\[
+\texttt{gamma\_eta\_hi} \ge \gamma^{\texttt{eta}}.
+\]
+Therefore
+\[
+\texttt{one\_minus\_gamma\_eta\_lo} \le 1 - \gamma^{\texttt{eta}}.
+\]
+If \texttt{one\_minus\_gamma\_eta\_lo $\le 0$} or \texttt{denom\_lo $\le 0$}, the function returns
+$+\infty$, which is an upper bound.
+Otherwise both lower bounds are positive, so
+\[
+\texttt{denom\_lo} \le \gamma(1 - \gamma^{\texttt{eta}})
+\quad\text{and}\quad
+\texttt{num\_hi} \ge \texttt{eta} \cdot e^{-x}.
+\]
+Upward-rounded division then gives the claimed upper bound.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{postcondition}]
+Holds by Lemma~\ref{err-e}, Lemma~\ref{log-branch}, and Lemma~\ref{nb-branch}.
+\end{proof}
+
+\end{document}
