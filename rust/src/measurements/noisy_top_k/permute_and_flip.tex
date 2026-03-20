@@ -1,0 +1,49 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{fn permute\_and\_flip}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle\contrib
+This document proves soundness of \rustdoc{measurements/noisy_top_k}{permute\_and\_flip} \cite{mckenna2020permute} in \asOfCommit{mod.rs}{e62b0aa2}. 
+\texttt{permute\_and\_flip} noisily selects the index of the greatest score from a vector of input scores.
+
+\section{Hoare Triple}
+\subsection*{Preconditions}
+\textit{Types consistent with pseudocode.}
+
+\subsection*{Pseudocode}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/permute_and_flip.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    \label{postcondition}
+    \begin{itemize}
+        \item If replacement is set, returns a sample from $\mathcal{M}_{EM}$ (as defined in MS2023 Definition 4),
+            otherwise returns a sample from $\mathcal{M}_{PF}$ (as defined in MS2023 Lemma 1),
+            where $\texttt{scale} = \frac{2 \cdot \Delta}{\epsilon}$.
+        \item Errors are data-independent, except for exhaustion of entropy.
+    \end{itemize}
+\end{theorem}
+
+\begin{proof}
+    By swapping elements on line~\ref{shuffle},
+    an online Fisher-Yates shuffle is applied up to and including index \texttt{left}.
+
+    Substituting $\texttt{scale} = \frac{2\Delta}{\epsilon}$,
+    the argument to \rustdoc{traits/samplers/cks20/fn}{sample\_bernoulli\_exp} is then $\frac{\epsilon}{2\Delta}(q_* - q_r)$,
+    which is non-negative, satisfying the precondition of \rustdoc{traits/samplers/cks20/fn}{sample\_bernoulli\_exp}.
+    Therefore by the postcondition of \rustdoc{traits/samplers/cks20/fn}{sample\_bernoulli\_exp}, 
+    the response is a sample from $\mathrm{Bern}(\exp(-x))$, where $x = \frac{\epsilon}{2\Delta}(q_* - q_r)$.
+    Therefore the response is a sample from $\mathrm{Bern}(\exp(\frac{\epsilon}{2\Delta}(q_r - q_*)))$,
+    which is equivalent to Algorithm~1 in \cite{mckenna2020permute}.
+
+    The only source of error is due to entropy exhaustion.
+\end{proof}
+
+\bibliographystyle{plain}
+\bibliography{references.bib}
+
+\end{document}
