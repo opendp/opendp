@@ -19,9 +19,11 @@ OpenDP is implemented in Rust, with bindings for easy use from Python and R.
 The architecture of the OpenDP Library is based on a conceptual framework for expressing privacy-aware computations.
 This framework is described in the paper [A Programming Framework for OpenDP](https://opendp.org/files/2025/11/opendp_programming_framework_11may2020_1_01.pdf).
 
-The OpenDP Library is part of the larger [OpenDP Project](https://opendp.org), a community effort to build trustworthy,
-open source software tools for analysis of private data.
-(For simplicity in these docs, when we refer to “OpenDP,” we mean just the library, not the entire project.)
+> [!NOTE]
+> This software is part of the [**OpenDP Commons**](https://sites.harvard.edu/opendp/tools/#opendp-commons). As such, the OpenDP Executive Committee commits to:
+> - Releasing this software under an [OSI approved licence](https://opensource.org/licenses), in this case the [MIT License](https://github.com/opendp/opendp/blob/main/LICENSE).
+> - Ensuring there are at least two maintainers, in this case Michael Shoemate (`Shoeboxam`) and Chuck McCallum (`mccalluc`), who will respond within a week to new issues and PRs.
+> - On an annual basis, recruiting one or more volunteers (not active contributors) to conduct an audit, and publishing the results of the audit.
 
 ## Status
 
