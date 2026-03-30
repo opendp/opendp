@@ -35,13 +35,14 @@ This Contributor License Agreement (the “CLA”) is entered into by and betwee
 This is a reference copy of the OpenDP Contributor License Agreement.
 In order to complete the agreement, please follow these steps:
 
-1. Sign into your GitHub account (necessary for authentication).
-2. Visit https://github.com/opendp/clabot-config/actions/workflows/sign-individual.yml.
-3. Click the “Run workflow” drop-down on the right side of the page.
-4. In the form that appears, enter your name and check the “I AGREE” checkbox.
-5. Click the green “Run workflow” button.
-6. Your signature will be recorded electronically.
-7. If you have a pending PR, please allow up to 1 business day for your status to be updated.
+1. Provide your GitHub username to OpenDP staff so they can add you to the `opendp-library-contributors` team.
+2. Sign into your GitHub account (necessary for authentication).
+3. Visit https://github.com/opendp/clabot-config/actions/workflows/sign-individual.yml.
+4. Click the “Run workflow” drop-down on the right side of the page.
+5. In the form that appears, enter your name and check the “I AGREE” checkbox.
+6. Click the green “Run workflow” button.
+7. Your signature will be recorded electronically.
+8. If you have a pending PR, please allow up to 1 business day for your status to be updated.
 
 ---
 
