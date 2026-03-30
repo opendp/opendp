@@ -3,7 +3,7 @@ Statistical Modeling
 
 Beyond the basic statistics offered by the Polars interface,
 OpenDP offers differentially private versions of linear regression and PCA,
-with APIs modelled after scikit-learn.
+clustering, and PCA, with APIs modelled after scikit-learn.
 
 Another more flexible option is to use OpenDP to create synthetic data.
 Statistics calculated from synthetic data with a given privacy budget
@@ -16,5 +16,6 @@ this may be a good option.
   :maxdepth: 1
 
   linear-regression
+  clustering
   pca
   synthetic-data
