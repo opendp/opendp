@@ -14,3 +14,4 @@ Submodule organization will follow the conventions of `scikit-learn <https://sci
 
 import opendp.extras.sklearn.decomposition as decomposition
 import opendp.extras.sklearn.linear_model as linear_model
+import opendp.extras.sklearn.cluster as cluster
