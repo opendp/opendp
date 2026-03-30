@@ -94,10 +94,8 @@ Setting a feature changes how the crate compiles.
         - Build Polars with linking against Python. Enables both ``polars`` and ``ffi``.
       * - ``derive``
         - Enable to support code generation and links to proofs in documentation.
-      * - ``extension-module``
-        - Enable creation of a python extension module for use by Python Polars. Must be disabled for Rust tests. Enable for Python builds to skip linking to ``libpython``.
       * - ``bindings``
-        - Enable to generate Python and R source code. Also enables the ``ffi``, ``derive`` and ``extension-module`` features. 
+        - Enable to generate Python and R source code. Also enables the ``ffi`` and ``derive`` features. 
       * - ``partials``
         - Enabled by default. When enabled, ``then_*`` functions are generated from ``make_*`` functions. Also enables the ``derive`` feature.
       * - ``use-openssl``

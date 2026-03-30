@@ -25,7 +25,7 @@ on:
         required: false
         default: false
 env:
-  FEATURES: untrusted,ffi,polars,extension-module
+  FEATURES: untrusted,polars-ffi
 
 jobs:
   credential-check:

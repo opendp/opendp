@@ -16,7 +16,7 @@ if not os.path.isdir("src/opendp/lib") and os.path.isdir("src/opendp/rust"):
                 target="opendp/lib/opendp",
                 path="src/opendp/rust/Cargo.toml",
                 args=["--color", "always"],
-                features=["untrusted", "ffi", "polars", "extension-module"],
+                features=["untrusted", "polars-ffi"],
                 binding=Binding.NoBinding,
             )
         ]
