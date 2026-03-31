@@ -265,6 +265,13 @@ mod laplace {
             for &t in &[1usize, 2usize, 3usize, 5usize, 8usize] {
                 let phat = hist.tail_abs_ge(t) as f64 / n;
                 let p = th.tail_abs_ge(t);
+
+                // Wald normal approximation is poor for ultra-rare events.
+                // Require a minimally reasonable expected count.
+                if (N_LAPLACE as f64) * p < 10.0 {
+                    continue;
+                }
+
                 assert_close_binomial_mean(phat, p, N_LAPLACE, "laplace tail");
             }
 
@@ -507,6 +514,13 @@ mod gaussian {
             for &t in &[1usize, 2usize, 3usize, 4usize, 6usize] {
                 let phat = hist.tail_abs_ge(t) as f64 / n;
                 let p = th.tail_abs_ge(t);
+
+                // Wald normal approximation is poor for ultra-rare events.
+                // Require a minimally reasonable expected count.
+                if (N_GAUSS as f64) * p < 10.0 {
+                    continue;
+                }
+
                 assert_close_binomial_mean(phat, p, N_GAUSS, "gauss tail");
             }
 
