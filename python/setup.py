@@ -18,6 +18,7 @@ if not os.path.isdir("src/opendp/lib") and os.path.isdir("src/opendp/rust"):
                 args=["--color", "always"],
                 features=["untrusted", "polars-ffi"],
                 binding=Binding.NoBinding,
+                env={**os.environ, "PYO3_BUILD_EXTENSION_MODULE": "1"}
             )
         ]
     )
