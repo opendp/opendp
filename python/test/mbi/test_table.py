@@ -100,7 +100,7 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
         i, j = idx[clique[0]], idx[clique[-1]]
         
         assert abs(cov[i, j] - cov_syn[i, j]) < 0.2, (
-            f"{clique} cov drifted: {cov[i, j]:.3f=}, {cov_syn[i, j]:.3f=}"
+            f"{clique} cov drifted: {cov[i, j]=:.3f}, {cov_syn[i, j]=:.3f}"
         )
 
     # in an MRF, a missing 2-way marginal does not imply independence

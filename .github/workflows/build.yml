@@ -212,7 +212,7 @@ jobs:
 
       - name: Create Rust build for linux
         if: ${{ !inputs.fake }}
-        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -g $TARGET -f \"$FEATURES\""
+        run: docker run --rm -e PYO3_BUILD_EXTENSION_MODULE=1 -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -g $TARGET -f \"$FEATURES\""
 
       - name: Create Rust build for linux (FAKE)
         if: ${{ inputs.fake }}
