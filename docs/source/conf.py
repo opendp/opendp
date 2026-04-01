@@ -5,6 +5,8 @@ import os
 from datetime import datetime
 import semver
 import pypandoc
+import re
+import subprocess
 from sphinx.ext import autodoc
 
 # docs should be built without needing import the library binary for the specified version
@@ -188,8 +190,27 @@ html_context = {
 }
 
 # SPHINX-MULTIVERSION STUFF
+def _select_recent_release_tags(lines=4):
+    tags = subprocess.check_output(["git", "tag", "--list", "v*"], text=True).splitlines()
+    latest_by_line = {}
+    for tag in tags:
+        match = re.fullmatch(r"v(\d+)\.(\d+)\.(\d+)", tag)
+        if match is None:
+            continue
+        major, minor, patch = map(int, match.groups())
+        line_key = (major, minor)
+        current = latest_by_line.get(line_key)
+        if current is None or patch > current[0]:
+            latest_by_line[line_key] = (patch, tag)
+    selected_lines = sorted(latest_by_line, reverse=True)[:lines]
+    selected_tags = sorted(latest_by_line[line_key][1] for line_key in selected_lines)
+    if not selected_tags:
+        return r"^$"
+    return r"^(%s)$" % "|".join(re.escape(tag) for tag in selected_tags)
+
+
 # Whitelist pattern for tags (set to None to ignore all tags)
-smv_tag_whitelist = r'^v.*$'
+smv_tag_whitelist = _select_recent_release_tags()
 # # keep all released versions, as well as prereleases for the stable version. Doesn't work, because version != stable
 # import re
 # smv_tag_whitelist = rf'(^v\d+\.\d+\.\d+$)|(^v{re.escape(version.split("-")[0])}.+$)'

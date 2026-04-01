@@ -77,6 +77,7 @@ jobs:
 
           echo "Create docs."
           make versions
+          find build/html/en -type d -name .doctrees -prune -exec rm -rf {} +
           cp -r build /tmp
           cd ..
           git fetch
@@ -85,9 +86,10 @@ jobs:
 
           # create brand new history each time
           git checkout --orphan gh-pages
+          git rm -rf --cached . || true
           
           # sudo to have sufficient permission to delete files created by the docker user while compiling .tex
-          sudo rm -rf *
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec sudo rm -rf {} +
           echo docs.opendp.org > CNAME
           echo "for underscore directories" > .nojekyll
           cp -r /tmp/build/html/* .
