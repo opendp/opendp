@@ -32,9 +32,14 @@ None
 \end{theorem}
 
 \begin{proof}
-    Since \texttt{TO.saturating\_cast} is infallible, the function is infallible,
-    meaning that the function cannot raise data-dependent errors.
-    Therefore the function is a valid postprocessor.
+    Since \texttt{TO.saturating\_cast} is infallible, and addition by the constant
+    \texttt{TO::MIN\_FINITE} is infallible on \texttt{IBig}, the function is infallible.
+    Therefore the function cannot raise data-dependent errors.
+
+    In the non-modular branch, the function is coordinatewise saturating cast.
+    In the modular branch, it first translates each coordinate by the constant
+    \texttt{TO::MIN\_FINITE} and then applies the same infallible saturating cast.
+    Both branches are deterministic postprocessings, so the function is a valid postprocessor.
 \end{proof}
 
 

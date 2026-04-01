@@ -136,63 +136,81 @@ pub extern "C" fn opendp_metrics__hamming_distance() -> FfiResult<*mut AnyMetric
 
 #[bootstrap(
     rust_path = "metrics/struct.AbsoluteDistance",
+    arguments(modular(default = false)),
     returns(c_type = "FfiResult<AnyMetric *>")
 )]
 /// Construct an instance of the `AbsoluteDistance` metric.
 ///
 /// # Arguments
+/// * `modular` - set to true to measure distance modulo the native integer representation
 /// * `T` - The type of the distance.
-fn absolute_distance<T>() -> AbsoluteDistance<T> {
-    AbsoluteDistance::default()
+fn absolute_distance<T>(modular: bool) -> AbsoluteDistance<T> {
+    AbsoluteDistance::new(modular)
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_metrics__absolute_distance(T: *const c_char) -> FfiResult<*mut AnyMetric> {
-    fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMetric> {
-        Ok(AnyMetric::new(absolute_distance::<T>())).into()
+pub extern "C" fn opendp_metrics__absolute_distance(
+    modular: c_bool,
+    T: *const c_char,
+) -> FfiResult<*mut AnyMetric> {
+    let modular = util::to_bool(modular);
+    fn monomorphize<T: 'static>(modular: bool) -> FfiResult<*mut AnyMetric> {
+        Ok(AnyMetric::new(absolute_distance::<T>(modular))).into()
     }
     let T = try_!(Type::try_from(T));
-    dispatch!(monomorphize, [(T, @numbers)], ())
+    dispatch!(monomorphize, [(T, @numbers)], (modular))
 }
 
 #[bootstrap(
     rust_path = "metrics/type.L1Distance",
+    arguments(modular(default = false)),
     returns(c_type = "FfiResult<AnyMetric *>")
 )]
 /// Construct an instance of the `L1Distance` metric.
 ///
 /// # Arguments
+/// * `modular` - set to true to measure distance modulo the native integer representation
 /// * `T` - The type of the distance.
-fn l1_distance<T>() -> L1Distance<T> {
-    L1Distance::default()
+fn l1_distance<T>(modular: bool) -> L1Distance<T> {
+    L1Distance::new(modular)
 }
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_metrics__l1_distance(T: *const c_char) -> FfiResult<*mut AnyMetric> {
-    fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMetric> {
-        Ok(AnyMetric::new(l1_distance::<T>())).into()
+pub extern "C" fn opendp_metrics__l1_distance(
+    modular: c_bool,
+    T: *const c_char,
+) -> FfiResult<*mut AnyMetric> {
+    let modular = util::to_bool(modular);
+    fn monomorphize<T: 'static>(modular: bool) -> FfiResult<*mut AnyMetric> {
+        Ok(AnyMetric::new(l1_distance::<T>(modular))).into()
     }
     let T = try_!(Type::try_from(T));
-    dispatch!(monomorphize, [(T, @numbers)], ())
+    dispatch!(monomorphize, [(T, @numbers)], (modular))
 }
 
 #[bootstrap(
     rust_path = "metrics/type.L2Distance",
+    arguments(modular(default = false)),
     returns(c_type = "FfiResult<AnyMetric *>")
 )]
 /// Construct an instance of the `L2Distance` metric.
 ///
 /// # Arguments
+/// * `modular` - set to true to measure distance modulo the native integer representation
 /// * `T` - The type of the distance.
-fn l2_distance<T>() -> L2Distance<T> {
-    L2Distance::default()
+fn l2_distance<T>(modular: bool) -> L2Distance<T> {
+    L2Distance::new(modular)
 }
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_metrics__l2_distance(T: *const c_char) -> FfiResult<*mut AnyMetric> {
-    fn monomorphize<T: 'static>() -> FfiResult<*mut AnyMetric> {
-        Ok(AnyMetric::new(l2_distance::<T>())).into()
+pub extern "C" fn opendp_metrics__l2_distance(
+    modular: c_bool,
+    T: *const c_char,
+) -> FfiResult<*mut AnyMetric> {
+    let modular = util::to_bool(modular);
+    fn monomorphize<T: 'static>(modular: bool) -> FfiResult<*mut AnyMetric> {
+        Ok(AnyMetric::new(l2_distance::<T>(modular))).into()
     }
     let T = try_!(Type::try_from(T));
-    dispatch!(monomorphize, [(T, @numbers)], ())
+    dispatch!(monomorphize, [(T, @numbers)], (modular))
 }
 
 #[bootstrap(name = "discrete_distance", returns(c_type = "FfiResult<AnyMetric *>"))]
