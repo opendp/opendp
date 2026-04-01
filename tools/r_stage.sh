@@ -57,8 +57,20 @@ function source_tar() {
   log "Tar lib sources into:  R/opendp/src/source.tar.xz"
 
   [ -d "rust/target" ] && mv rust/target target || true
+  local TMPDIR
+  TMPDIR=$(mktemp -d)
+  trap 'rm -rf "$TMPDIR"' RETURN
+
+  # Stage a copy of rust sources for the R package. The R build uses features
+  # `untrusted,ffi`, so strip the Polars git patches that would otherwise force
+  # Cargo to resolve a git source in `--offline` mode.
+  cp -R rust "$TMPDIR/rust"
+  sh R/opendp/tools/prepare_rust_manifest.sh "$TMPDIR/rust/Cargo.toml" "untrusted,ffi"
+
   # tar everything because R CMD build ignores arbitrary file patterns like .*old (like threshold...)
-  tar --create --xz --no-xattrs --file=R/opendp/src/source.tar.xz rust
+  tar --create --xz --no-xattrs --file=R/opendp/src/source.tar.xz -C "$TMPDIR" rust
+  rm -rf "$TMPDIR"
+  trap - RETURN
   [ -d "target" ] && mv target rust/target || true
 }
 
