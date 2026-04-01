@@ -5,7 +5,6 @@
 #include <Rdefines.h>
 #include <Rinternals.h>
 #include <R_ext/Complex.h>
-#include <R_ext/Callbacks.h>
 
 // Import C headers for rust API
 #include "Ropendp.h"

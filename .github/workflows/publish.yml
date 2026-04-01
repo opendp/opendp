@@ -94,6 +94,11 @@ jobs:
 
       - name: Push to R branch
         run: |
+          SOURCE_MESSAGE="$(git log -1 --format=%s HEAD)"
+          if [ -z "$SOURCE_MESSAGE" ]; then
+            SOURCE_MESSAGE="Update R package for ${{ inputs.channel }}"
+          fi
+
           git fetch
           git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
           git config --global user.name "$GITHUB_ACTOR"
@@ -104,7 +109,7 @@ jobs:
 
           git add R/opendp/ --force
           echo "Push R package to $BRANCH branch"
-          git commit --allow-empty-message --message "$(git log $(git rev-parse origin/main) --oneline --format=%B -n1 | head -n1)"
+          git commit --message "$SOURCE_MESSAGE"
           git remote set-url origin "https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY"
           git push --force origin $BRANCH
 

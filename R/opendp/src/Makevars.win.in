@@ -24,10 +24,11 @@ rust_build:
 		cp binary/libopendp.a .; \
 	elif [ -f "source.tar.xz" ]; then \
 		# https://github.com/extendr/rextendr/issues/279 \
-	    mkdir -p rust/target/release/libgcc_mock && touch rust/target/release/libgcc_mock/libgcc_eh.a \
+	    mkdir -p rust/target/release/libgcc_mock && touch rust/target/release/libgcc_mock/libgcc_eh.a; \
 		echo "* extract opendp and vendor files"; \
 		$(TAR) --extract --xz -f source.tar.xz -C .; \
 		$(TAR) --extract --xz -f vendor.tar.xz -C rust; \
+		sh ../tools/prepare_rust_manifest.sh rust/Cargo.toml "@RUST_FEATURES@"; \
 		mkdir -p .cargo; \
 		cp cargo_vendor_config.toml .cargo/config.toml; \
 		echo "* building OpenDP Library (libopendp.a)"; \
