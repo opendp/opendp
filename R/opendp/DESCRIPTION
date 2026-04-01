@@ -7,7 +7,7 @@ Authors@R: c(
             email = "siacus@iq.harvard.edu"),
     person("The OpenDP Project",
             role = "aut",
-            email = "info@opendp.org",
+            email = "contact@opendp.org",
             comment = "https://github.com/opendp/opendp/graphs/contributors"),
     person("The authors of the dependency Rust crates",
             role = "ctb",
