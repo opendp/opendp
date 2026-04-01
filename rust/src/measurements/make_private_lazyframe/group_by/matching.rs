@@ -101,10 +101,23 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
         _ => None,
     };
 
+    #[cfg(patch_polars)]
     let DslPlan::GroupBy {
         input,
         keys,
         predicates,
+        aggs,
+        apply,
+        maintain_order,
+        options,
+    } = plan
+    else {
+        return Ok(None);
+    };
+    #[cfg(not(patch_polars))]
+    let DslPlan::GroupBy {
+        input,
+        keys,
         aggs,
         apply,
         maintain_order,
@@ -126,6 +139,7 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
         return fallible!(MakeMeasurement, "Apply is not supported in logical plan");
     }
 
+    #[cfg(patch_polars)]
     if !predicates.is_empty() {
         // Support could be added by composing over the measurements and then composing with the aggs.
         // Not a priority to add because we'd typically rather keep groups in the DP release,
