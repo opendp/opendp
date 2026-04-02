@@ -12,3 +12,8 @@ test_that("rt_parse-tuple", {
   expect_equal(rtype$args[[1]], f64)
   expect_equal(rtype$args[[2]], i32)
 })
+
+test_that("rt_infer is strict by default on unknown objects", {
+  expect_error(rt_infer(environment()), "unable to infer type")
+  expect_equal(rt_infer(environment(), allow_extrinsic = TRUE), ExtrinsicObject)
+})

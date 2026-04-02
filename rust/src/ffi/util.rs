@@ -64,12 +64,12 @@ static TOTAL_CMP: OnceLock<
 > = OnceLock::new();
 
 #[unsafe(no_mangle)]
-extern "C" fn _set_ref_count(callback: extern "C" fn(*const c_void, bool) -> bool) {
+pub extern "C" fn _set_ref_count(callback: extern "C" fn(*const c_void, bool) -> bool) {
     REF_COUNT.set(callback).ok();
 }
 
 #[unsafe(no_mangle)]
-extern "C" fn _set_total_cmp(
+pub extern "C" fn _set_total_cmp(
     callback: extern "C" fn(*const c_void, *const c_void) -> *mut FfiResult<*mut AnyObject>,
 ) {
     TOTAL_CMP.set(callback).ok();

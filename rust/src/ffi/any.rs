@@ -511,17 +511,18 @@ impl Debug for AnyMetric {
 #[repr(C)]
 #[derive(Clone)]
 pub struct CallbackFn {
-    pub(crate) callback: extern "C" fn(*const AnyObject) -> *mut FfiResult<*mut AnyObject>,
-    pub(crate) lifeline: ExtrinsicObject,
+    pub(crate) callback:
+        extern "C" fn(*const AnyObject, *const std::ffi::c_void) -> *mut FfiResult<*mut AnyObject>,
+    pub(crate) userdata: ExtrinsicObject,
 }
 
 // wrap a CallbackFn in a closure, so that it can be used in transformations and measurements
 pub fn wrap_func(func: CallbackFn) -> impl Fn(&AnyObject) -> Fallible<AnyObject> {
     move |arg: &AnyObject| -> Fallible<AnyObject> {
-        // extends the lifetime of func.callback to the lifetime of this closure
-        let _ = &func.lifeline;
+        // extends the lifetime of func.userdata to the lifetime of this closure
+        let _ = &func.userdata;
 
-        into_owned((func.callback)(arg as *const AnyObject))?.into()
+        into_owned((func.callback)(arg as *const AnyObject, func.userdata.0))?.into()
     }
 }
 

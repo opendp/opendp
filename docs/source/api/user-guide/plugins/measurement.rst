@@ -11,59 +11,55 @@ Use :func:`~opendp.measurements.make_user_measurement` to construct a measuremen
 
     .. tab-set::
 
-      .. tab-item:: Python
+        .. tab-item:: Python
 
-        .. code:: pycon
+            .. literalinclude:: code/measurement.py
+                :language: python
+                :start-after: import opendp.prelude as dp
+                :end-before: # make-base-constant
 
-            >>> import opendp.prelude as dp
-            >>> dp.enable_features("honest-but-curious", "contrib")
+        .. tab-item:: R
+
+            .. literalinclude:: code/measurement.R
+                :language: r
+                :start-after: library(opendp)
+                :end-before: # make-base-constant
 
 This example mocks the typical API of the OpenDP library to make the *most private* DP mechanism ever!
 
 .. tab-set::
 
-  .. tab-item:: Python
+    .. tab-item:: Python
 
-    .. code:: pycon
+        .. literalinclude:: code/measurement.py
+            :language: python
+            :start-after: # make-base-constant
+            :end-before: # /make-base-constant
 
-        >>> def make_base_constant(constant):
-        ...     """Constructs a Measurement that only returns a constant value."""
-        ...     def function(_arg: int):
-        ...         return constant
-        ...     def privacy_map(d_in: int) -> float:
-        ...         return 0.0
-        ...     return dp.m.make_user_measurement(
-        ...         input_domain=dp.atom_domain(T=int),
-        ...         input_metric=dp.absolute_distance(T=int),
-        ...         output_measure=dp.max_divergence(),
-        ...         function=function,
-        ...         privacy_map=privacy_map,
-        ...         TO=type(
-        ...             constant
-        ...         ),  # the expected type of the output
-        ...     )
-        ...
+    .. tab-item:: R
+
+        .. literalinclude:: code/measurement.R
+            :language: r
+            :start-after: # make-base-constant
+            :end-before: # /make-base-constant
     
 The resulting Measurement may be used interchangeably with those constructed via the library:
 
 .. tab-set::
 
-  .. tab-item:: Python
+    .. tab-item:: Python
 
-    .. code:: pycon
+        .. literalinclude:: code/measurement.py
+            :language: python
+            :start-after: # use-measurement
+            :end-before: # /use-measurement
 
-        >>> meas = (
-        ...     (
-        ...         dp.vector_domain(dp.atom_domain((0, 10))),
-        ...         dp.symmetric_distance(),
-        ...     )
-        ...     >> dp.t.then_sum()
-        ...     >> make_base_constant("denied")
-        ... )
-        >>> meas([2, 3, 4])
-        'denied'
-        >>> meas.map(1)
-        0.0
+    .. tab-item:: R
+
+        .. literalinclude:: code/measurement.R
+            :language: r
+            :start-after: # use-measurement
+            :end-before: # /use-measurement
 
 While this mechanism clearly has no utility, 
 the code snip may form a basis for you to create own measurements, 

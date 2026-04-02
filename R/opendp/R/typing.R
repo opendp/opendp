@@ -3,6 +3,7 @@ ATOM_EQUIVALENCE_CLASSES <- list(
   i32 = c("u32", "u64", "i32", "i64", "usize"),
   f64 = c("f32", "f64"),
   bool = c("bool"),
+  ExtrinsicObject = c("ExtrinsicObject"),
   AnyMeasurement = c("AnyMeasurementPtr", "AnyMeasurement"),
   AnyTransformation = c("AnyTransformationPtr")
 )
@@ -31,6 +32,9 @@ R_TO_RUST <- list(
   measure = "AnyMeasure",
   measurement = "AnyMeasurement",
   transformation = "AnyTransformation",
+  privacy_profile = "PrivacyProfile",
+  queryable = "AnyQueryable",
+  odometer_queryable = "AnyOdometerQueryable",
   `function` = "AnyFunction"
 )
 
@@ -38,7 +42,15 @@ as_rt_vec <- function(atom_type) {
   new_runtime_type("Vec", list(atom_type))
 }
 
-rt_infer <- function(public_example) {
+#' Infer a runtime type from a public example
+#'
+#' Mirrors Python's public `RuntimeType.infer(...)` entrypoint.
+#' @concept typing
+#' @param public_example A value whose runtime type should be inferred.
+#' @param allow_extrinsic Return `ExtrinsicObject` for unknown host objects when `TRUE`.
+#' @return A normalized `runtime_type`.
+#' @export
+rt_infer <- function(public_example, allow_extrinsic = FALSE) {
   prospect <- R_TO_RUST[[class(public_example)]]
   if (!is.null(prospect)) {
     runtime_type <- new_runtime_type(prospect)
@@ -59,15 +71,25 @@ rt_infer <- function(public_example) {
     return(new_runtime_type("HashMap", list(.K, .V)))
   }
   if (is.list(public_example)) {
-    return(new_runtime_type("Tuple", lapply(public_example, rt_infer)))
+    return(new_runtime_type("Tuple", lapply(public_example, function(arg) rt_infer(arg, allow_extrinsic = allow_extrinsic))))
   }
   if (is.null(public_example)) {
     return(new_runtime_type("Option", list(new_runtime_type(is_unknown = TRUE))))
   }
-
-  stop("unrecognized type: ", class(public_example), call. = FALSE)
+  if (allow_extrinsic) {
+    return(new_runtime_type("ExtrinsicObject"))
+  }
+  stop(paste0("unable to infer type from object of class ", class(public_example)[1]), call. = FALSE)
 }
 
+#' Parse a runtime type descriptor into a runtime_type object
+#'
+#' Mirrors Python's public `RuntimeType.parse(...)` entrypoint.
+#' @concept typing
+#' @param type_name A type descriptor to normalize.
+#' @param generics Generic type names to preserve during parsing.
+#' @return A normalized `runtime_type`.
+#' @export
 # nolint start: cyclocomp_linter
 rt_parse <- function(type_name, generics = list()) {
   if (inherits(type_name, "runtime_type")) {
@@ -114,6 +136,28 @@ rt_parse <- function(type_name, generics = list()) {
   })
 }
 # nolint end
+
+rt_canon <- function(type_name, generics = list()) {
+  if (inherits(type_name, "runtime_type")) {
+    args <- type_name$args
+    if (!is.null(args)) {
+      args <- lapply(args, function(arg) rt_canon(arg, generics = generics))
+    }
+    return(new_runtime_type(
+      origin = type_name$origin,
+      args = args,
+      is_generic = type_name$is_generic,
+      is_unknown = type_name$is_unknown
+    ))
+  }
+  if (is.character(type_name) && length(type_name) == 1) {
+    return(rt_parse(type_name, generics = generics))
+  }
+  if (is.null(type_name)) {
+    return(type_name)
+  }
+  stop("type_name must be a runtime_type or character string", call. = FALSE)
+}
 
 parse_args_ <- function(args, generics = list()) {
   type_args <- strsplit(args, ",\\s*(?![^()<>]*\\))", perl = TRUE)
@@ -179,6 +223,10 @@ rt_assert_is_similar <- function(expected, inferred) {
         inferred <- inferred$args[[1]]
       }
     }
+  }
+
+  if (expected$origin == "ExtrinsicObject") {
+    return()
   }
 
   if (is.null(inferred$args) && expected$origin == "Vec") {
@@ -276,12 +324,22 @@ get_first <- function(x) {
   }
 }
 
-parse_or_infer <- function(type_name, public_example, generics = list()) {
+#' Parse a runtime type or infer it from an example
+#'
+#' Mirrors Python's public `RuntimeType.parse_or_infer(...)` entrypoint.
+#' @concept typing
+#' @param type_name A type descriptor to normalize, or `NULL`.
+#' @param public_example A value to infer from when `type_name` is `NULL`.
+#' @param generics Generic type names to preserve during parsing.
+#' @param allow_extrinsic Return `ExtrinsicObject` for unknown host objects when `TRUE`.
+#' @return A normalized `runtime_type`.
+#' @export
+parse_or_infer <- function(type_name, public_example, generics = list(), allow_extrinsic = FALSE) {
   if (!is.null(type_name)) {
     return(rt_parse(type_name, generics))
   }
   if (!is.null(public_example)) {
-    return(rt_infer(public_example))
+    return(rt_infer(public_example, allow_extrinsic = allow_extrinsic))
   }
 
   stop("either type_name or public_example must be passed", call. = FALSE)
@@ -389,6 +447,12 @@ bool <- new_runtime_type("bool")
 #' @concept typing
 #' @export
 BitVector <- new_runtime_type("BitVector")
+
+#' type signature for an arbitrary R object preserved across FFI
+#'
+#' @concept typing
+#' @export
+ExtrinsicObject <- new_runtime_type("ExtrinsicObject")
 
 AnyMeasurementPtr <- new_runtime_type("AnyMeasurementPtr")
 AnyMeasurement <- AnyMeasurementPtr

@@ -36,22 +36,6 @@ const BLOCKLIST: &'static [&'static str] = &[
     "fill_bytes",
     "erfc",
     "debias_randomized_response_bitvec",
-    // plugins
-    "make_user_transformation",
-    "make_user_measurement",
-    "new_function",
-    "new_queryable",
-    "new_privacy_profile",
-    "user_domain",
-    "user_distance",
-    "_make_transformation",
-    "_make_measurement",
-    "_new_pure_function",
-    "_extrinsic_domain",
-    "_extrinsic_domain_descriptor",
-    "_extrinsic_metric_descriptor",
-    "_extrinsic_distance",
-    "_extrinsic_divergence",
     // polars
     "new_arrow_array",
     "series_domain",
@@ -97,7 +81,6 @@ pub fn generate_bindings(modules: &HashMap<String, Vec<Function>>) -> HashMap<Pa
 
     let r_bindings = modules
         .into_iter()
-        .filter(|(name, _)| name.as_str() != "internal")
         .map(|(module_name, module)| {
             (
                 PathBuf::from(format!("R/{}.R", module_name)),
@@ -108,7 +91,6 @@ pub fn generate_bindings(modules: &HashMap<String, Vec<Function>>) -> HashMap<Pa
 
     let mut c_bindings = modules
         .into_iter()
-        .filter(|(name, _)| name.as_str() != "internal")
         .map(|(module_name, module)| {
             (
                 PathBuf::from(format!("src/{}.c", module_name)),

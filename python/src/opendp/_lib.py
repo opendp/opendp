@@ -287,12 +287,12 @@ class ExtrinsicObjectPtr(ctypes.POINTER(ExtrinsicObject)): # type: ignore[misc]
 # The output type cannot be an `ctypes.POINTER(FfiResult)` due to:
 #   https://bugs.python.org/issue5710#msg85731
 #                                 (output         , input       )
-CallbackFnValue = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr)
+CallbackFnValue = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr, ctypes.py_object)
 
 class CallbackFn(ctypes.Structure):
     _fields_ = [
         ("callback", CallbackFnValue),
-        ("lifeline", ExtrinsicObject)
+        ("userdata", ExtrinsicObject)
     ]
 
 class CallbackFnPtr(ctypes.POINTER(CallbackFn)): # type: ignore[misc]

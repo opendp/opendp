@@ -38,6 +38,7 @@ Collate:
     'core.R'
     'data.R'
     'domains.R'
+    'internal.R'
     'measurements.R'
     'measures.R'
     'metrics.R'
