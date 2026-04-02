@@ -19,6 +19,10 @@ PKG_LIBS = $(STATLIB) -lws2_32 -ladvapi32 -luserenv -lbcrypt -lntdll -lcrypt32
 
 all: rust_build
 
+# When building from staged source, configure substitutes @RUST_FEATURES@
+# before prepare_rust_manifest.sh and cargo build run.
+# Work around https://github.com/extendr/rextendr/issues/279 by placing
+# Cargo's target output on a short path and creating the mock libgcc path.
 rust_build:
 
 	@if [ -f "binary.tar.xz" ]; then \
@@ -26,12 +30,10 @@ rust_build:
 		$(TAR) --extract --xz -f binary.tar.xz -C .; \
 		cp binary/libopendp.a .; \
 	elif [ -f "source.tar.xz" ]; then \
-		# https://github.com/extendr/rextendr/issues/279 \
-	    mkdir -p $(TARGET_DIR)/release/libgcc_mock && touch $(TARGET_DIR)/release/libgcc_mock/libgcc_eh.a; \
+		mkdir -p $(TARGET_DIR)/release/libgcc_mock && touch $(TARGET_DIR)/release/libgcc_mock/libgcc_eh.a; \
 		echo "* extract opendp and vendor files"; \
 		$(TAR) --extract --xz -f source.tar.xz -C .; \
 		$(TAR) --extract --xz -f vendor.tar.xz -C rust; \
-		# @RUST_FEATURES@ is substituted by configure. \
 		sh ../tools/prepare_rust_manifest.sh rust/Cargo.toml "@RUST_FEATURES@"; \
 		mkdir -p .cargo; \
 		cp cargo_vendor_config.toml .cargo/config.toml; \

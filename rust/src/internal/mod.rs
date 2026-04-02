@@ -16,11 +16,9 @@ use crate::{
         },
         util::{self, ExtrinsicObject},
     },
-    measures::ffi::ExtrinsicDivergence,
+    measures::ffi::opendp_measures__user_divergence,
     metrics::ffi::opendp_metrics__user_distance,
 };
-
-use self::util::to_str;
 
 #[bootstrap(
     name = "_make_measurement",
@@ -159,7 +157,10 @@ pub extern "C" fn opendp_internal___extrinsic_domain(
 
 #[bootstrap(
     name = "_extrinsic_divergence",
-    arguments(descriptor(rust_type = "String"))
+    arguments(
+        identifier(c_type = "char *", rust_type = b"null"),
+        descriptor(default = b"null", rust_type = "ExtrinsicObject")
+    )
 )]
 /// Construct a new ExtrinsicDivergence, a privacy measure defined from a bindings language.
 /// This is meant for internal use, as it does not require "honest-but-curious",
@@ -168,13 +169,14 @@ pub extern "C" fn opendp_internal___extrinsic_domain(
 /// See `user_divergence` for correct usage and proof definition for this function.
 ///
 /// # Arguments
-/// * `descriptor` - A string description of the privacy measure.
+/// * `identifier` - A string description of the privacy measure.
+/// * `descriptor` - Additional constraints on the privacy measure.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_internal___extrinsic_divergence(
-    descriptor: *mut c_char,
+    identifier: *mut c_char,
+    descriptor: *mut ExtrinsicObject,
 ) -> FfiResult<*mut AnyMeasure> {
-    let descriptor = try_!(to_str(descriptor)).to_string();
-    Ok(AnyMeasure::new(ExtrinsicDivergence { descriptor })).into()
+    opendp_measures__user_divergence(identifier, descriptor)
 }
 
 #[bootstrap(

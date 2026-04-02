@@ -268,13 +268,14 @@ new_domain <- function(ptr, log) {
     }
 
     if (!missing(member)) {
-      return(member(ptr, member))
+      return(`_member`(ptr, member))
     }
 
     switch(attr,
       debug = domain_debug(ptr),
       type = domain_type(ptr),
       carrier_type = domain_carrier_type(ptr),
+      descriptor = `_extrinsic_domain_descriptor`(ptr),
       json = jsonlite::toJSON(to_ast(log), pretty = TRUE),
       ptr = ptr,
       log = log,
@@ -308,6 +309,7 @@ new_metric <- function(ptr, log) {
       debug = metric_debug(ptr),
       type = metric_type(ptr),
       distance_type = metric_distance_type(ptr),
+      descriptor = `_extrinsic_metric_descriptor`(ptr),
       json = jsonlite::toJSON(to_ast(log), pretty = TRUE),
       ptr = ptr,
       log = log,
@@ -341,6 +343,7 @@ new_measure <- function(ptr, log) {
       debug = measure_debug(ptr),
       type = measure_type(ptr),
       distance_type = measure_distance_type(ptr),
+      descriptor = `_extrinsic_measure_descriptor`(ptr),
       json = jsonlite::toJSON(to_ast(log), pretty = TRUE),
       ptr = ptr,
       log = log,
@@ -368,7 +371,7 @@ print.measure <- function(x, ...) {
 #' @concept mod
 #' @param ptr a pointer to a function
 #' @param log call history
-new_function <- function(ptr, log) {
+new_function_internal <- function(ptr, log) {
   opendp_function <- function(attr, arg) {
     if (missing(attr) + missing(arg) != 1) {
       stop("expected exactly one of attr or arg", call. = FALSE)
@@ -393,7 +396,7 @@ new_function <- function(ptr, log) {
 #'
 #' @concept mod
 #' @param ptr a pointer to a privacy profile
-new_privacy_profile <- function(ptr) {
+new_privacy_profile_internal <- function(ptr) {
   privacy_profile <- function(attr, epsilon, delta) {
     if (missing(attr) + missing(epsilon) + missing(delta) != 2) {
       stop("expected exactly one of attr, epsilon or delta", call. = FALSE)
@@ -420,7 +423,7 @@ new_privacy_profile <- function(ptr) {
 #'
 #' @concept mod
 #' @param ptr a pointer to a queryable
-new_queryable <- function(ptr) {
+new_queryable_internal <- function(ptr) {
   queryable <- function(attr, query) {
     if (missing(attr) + missing(query) != 1) {
       stop("expected exactly one of attr or query", call. = FALSE)
@@ -444,7 +447,7 @@ new_queryable <- function(ptr) {
 #'
 #' @concept mod
 #' @param ptr a pointer to an odometer queryable
-new_odometer_queryable <- function(ptr) {
+new_odometer_queryable_internal <- function(ptr) {
   odometer_queryable <- function(attr, query, d_in) {
     if (missing(attr) + missing(query) + missing(d_in) != 2) {
       stop("expected exactly one of attr, query or d_in", call. = FALSE)

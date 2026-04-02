@@ -7,6 +7,7 @@ from opendp.mod import (
     ChangeOneIdDistance,
     Domain,
     ExtrinsicDistance,
+    ExtrinsicDivergence,
     ExtrinsicDomain,
     LazyFrameDomain,
     Measure,
@@ -269,6 +270,8 @@ def c_to_py(value: Any) -> Any:
         if isinstance(rt_type, RuntimeType):
             if rt_type.origin == "Approximate":
                 value.__class__ = ApproximateDivergence
+        elif rt_type == ExtrinsicDivergence.__name__:
+            value.__class__ = ExtrinsicDivergence
         # if you fall through these cases, then it is just treated as a generic Measure
 
     if isinstance(value, ctypes.c_void_p):
@@ -928,98 +931,104 @@ def _wrap_in_slice(ptr, len_: int) -> FfiSlicePtr:
     return FfiSlicePtr(FfiSlice(ctypes.cast(ptr, ctypes.c_void_p), len_))
 
 
-def _wrap_py_func(func, TO):
+def _invoke_py_callback(c_arg, userdata):
     from opendp._convert import c_to_py, py_to_c
+    func, TO = userdata
 
-    def wrapper_func(c_arg):
-        try:
-            # 1. convert AnyObject to Python type
-            py_arg = c_to_py(c_arg)
-            # don't free c_arg, because it is owned by Rust
-            c_arg.__class__ = ctypes.POINTER(AnyObject)
+    try:
+        # 1. convert AnyObject to Python type
+        py_arg = c_to_py(c_arg)
+        # don't free c_arg, because it is owned by Rust
+        c_arg.__class__ = ctypes.POINTER(AnyObject)
 
-            # 2. invoke the user-supplied function
-            py_out = func(py_arg)
+        # 2. invoke the user-supplied function
+        py_out = func(py_arg)
 
-            # 3. convert back to an AnyObject
-            c_out = py_to_c(py_out, c_type=AnyObjectPtr, type_name=TO)
-            # don't free c_out, because we are giving ownership to Rust
-            c_out.__class__ = ctypes.POINTER(AnyObject)
+        # 3. convert back to an AnyObject
+        c_out = py_to_c(py_out, c_type=AnyObjectPtr, type_name=TO)
+        # don't free c_out, because we are giving ownership to Rust
+        c_out.__class__ = ctypes.POINTER(AnyObject)
 
-            # 4. pack up into an FfiResult
-            lib.ffiresult_ok.argtypes = [ctypes.c_void_p]
-            lib.ffiresult_ok.restype = ctypes.c_void_p
-            return lib.ffiresult_ok(ctypes.addressof(c_out.contents))
+        # 4. pack up into an FfiResult
+        lib.ffiresult_ok.argtypes = [ctypes.c_void_p]
+        lib.ffiresult_ok.restype = ctypes.c_void_p
+        return lib.ffiresult_ok(ctypes.addressof(c_out.contents))
 
-        except Exception:
-            import traceback
-            lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
-            lib.ffiresult_err.restype = ctypes.c_void_p
-            return lib.ffiresult_err(
-                ctypes.c_char_p("Continued stack trace from Exception in user-defined function".encode()),
-                ctypes.c_char_p(traceback.format_exc().encode()),
-            )
+    except Exception:
+        import traceback
+        lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+        lib.ffiresult_err.restype = ctypes.c_void_p
+        return lib.ffiresult_err(
+            ctypes.c_char_p("Continued stack trace from Exception in user-defined function".encode()),
+            ctypes.c_char_p(traceback.format_exc().encode()),
+        )
 
-    c_wrapper_func = CallbackFnValue(wrapper_func)
-    lifeline = ExtrinsicObject(ctypes.py_object(c_wrapper_func))
 
-    return ctypes.pointer(CallbackFn(c_wrapper_func, lifeline))
+_CALLBACK_DISPATCH = CallbackFnValue(_invoke_py_callback)
+
+
+def _wrap_py_func(func, TO):
+    userdata = ExtrinsicObject(ctypes.py_object((func, TO)))
+    return ctypes.pointer(CallbackFn(_CALLBACK_DISPATCH, userdata))
 
 
 # The output type cannot be an `ctypes.POINTER(FfiResult)` due to:
 #   https://bugs.python.org/issue5710#msg85731
-#                                   (answer         , query       , is_internal  )
-TransitionFnValue = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr, ctypes.c_bool)
+#                                   (answer         , query       , is_internal  , userdata        )
+TransitionFnValue = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr, ctypes.c_bool, ctypes.py_object)
 
 class TransitionFn(ctypes.Structure):
     _fields_ = [
         ("callback", TransitionFnValue),
-        ("lifeline", ExtrinsicObject)
+        ("userdata", ExtrinsicObject)
     ]
 
 class TransitionFnPtr(ctypes.POINTER(TransitionFn)): # type: ignore[misc]
     _type_ = TransitionFn
 
 
-def _wrap_py_transition(py_transition, A):
+def _invoke_py_transition(c_query, c_is_internal: ctypes.c_bool, userdata):
     from opendp._convert import c_to_py, py_to_c
+    py_transition, A = userdata
 
+    try:
+        # 1. convert to Python type
+        py_query = c_to_py(c_query)
+        py_is_internal = c_is_internal
+        # don't free c_arg, because it is owned by Rust
+        c_query.__class__ = ctypes.POINTER(AnyObject)
+
+        # 2. invoke the user-supplied function
+        py_out = py_transition(py_query, py_is_internal)
+
+        # 3. convert back to an AnyObject
+        c_out = py_to_c(py_out, c_type=AnyObjectPtr, type_name=A)
+        # don't free c_out, because we are giving ownership to Rust
+        c_out.__class__ = ctypes.POINTER(AnyObject)
+
+        # 4. pack up into an FfiResult
+        lib.ffiresult_ok.argtypes = [ctypes.c_void_p]
+        lib.ffiresult_ok.restype = ctypes.c_void_p
+        return lib.ffiresult_ok(ctypes.addressof(c_out.contents))
+
+    except Exception:
+        import traceback
+        lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+        lib.ffiresult_err.restype = ctypes.c_void_p
+        return lib.ffiresult_err(
+            ctypes.c_char_p("Continued stack trace from Exception in user-defined function".encode()),
+            ctypes.c_char_p(traceback.format_exc().encode()),
+        )
+
+
+_TRANSITION_DISPATCH = TransitionFnValue(_invoke_py_transition)
+
+
+def _wrap_py_transition(py_transition, A):
     # the indicator that a query is internal is oftentimes not needed
     if len(signature(py_transition).parameters) == 1:
         py_transition_old = py_transition
         py_transition = lambda q, _=None: py_transition_old(q)
 
-    def wrapper_func(c_query, c_is_internal: ctypes.c_bool):
-        try:
-            # 1. convert to Python type
-            py_query = c_to_py(c_query)
-            py_is_internal = c_is_internal
-            # don't free c_arg, because it is owned by Rust
-            c_query.__class__ = ctypes.POINTER(AnyObject)
-
-            # 2. invoke the user-supplied function
-            py_out = py_transition(py_query, py_is_internal)
-
-            # 3. convert back to an AnyObject
-            c_out = py_to_c(py_out, c_type=AnyObjectPtr, type_name=A)
-            # don't free c_out, because we are giving ownership to Rust
-            c_out.__class__ = ctypes.POINTER(AnyObject)
-
-            # 4. pack up into an FfiResult
-            lib.ffiresult_ok.argtypes = [ctypes.c_void_p]
-            lib.ffiresult_ok.restype = ctypes.c_void_p
-            return lib.ffiresult_ok(ctypes.addressof(c_out.contents))
-
-        except Exception:
-            import traceback
-            lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
-            lib.ffiresult_err.restype = ctypes.c_void_p
-            return lib.ffiresult_err(
-                ctypes.c_char_p("Continued stack trace from Exception in user-defined function".encode()),
-                ctypes.c_char_p(traceback.format_exc().encode()),
-            )
-
-    c_wrapper_func = TransitionFnValue(wrapper_func)
-    lifeline = ExtrinsicObject(ctypes.py_object(c_wrapper_func))
-
-    return ctypes.pointer(TransitionFn(c_wrapper_func, lifeline))
+    userdata = ExtrinsicObject(ctypes.py_object((py_transition, A)))
+    return ctypes.pointer(TransitionFn(_TRANSITION_DISPATCH, userdata))
