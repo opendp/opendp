@@ -363,7 +363,7 @@ def test_custom_distance(new_distance, new_divergence):
     meas = dp.m.make_user_measurement(
         dp.atom_domain(T=float),
         dp.absolute_distance(T=float),
-        new_divergence("tCDP"),
+        new_divergence("tCDP", {"kind": "tCDP"}),
         lambda _: 0.0,
         # clearly not actually tCDP
         lambda d_in: lambda omega: d_in * omega * 2,
@@ -371,6 +371,11 @@ def test_custom_distance(new_distance, new_divergence):
 
     assert meas(2.0) == 0.0
     assert meas.map(2.0)(3.0) == 12.0
+    assert isinstance(meas.output_measure, dp.ExtrinsicDivergence)
+    assert meas.output_measure.descriptor == {"kind": "tCDP"}
+    assert meas.output_measure.cast(dict) == {"kind": "tCDP"}
+    with pytest.raises(ValueError, match=r"measure descriptor must be a list"):
+        meas.output_measure.cast(list)
 
 
 def test_pure_function():
