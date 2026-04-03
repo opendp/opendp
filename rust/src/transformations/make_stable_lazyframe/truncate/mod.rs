@@ -1,11 +1,11 @@
 use std::collections::HashSet;
 
-use crate::core::{Function, StabilityMap, Transformation};
+use crate::core::{Domain, Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{Context, DslPlanDomain, FrameDomain, SeriesDomain, WildExprDomain};
 use crate::error::*;
 use crate::metrics::{
-    Bound, Bounds, FrameDistance, L0PInfDistance, L01InfDistance, SymmetricDistance,
-    SymmetricIdDistance,
+    unique_id_expr, Bound, Bounds, FrameDistance, L0PInfDistance, L01InfDistance,
+    PolarsMetric, SymmetricDistance, SymmetricIdDistance,
 };
 use crate::traits::{InfMul, option_min};
 use crate::transformations::make_stable_expr;
@@ -29,29 +29,26 @@ pub(crate) use matching::match_truncations;
 /// * `input_domain` - The domain of the input LazyFrame.
 /// * `input_metric` - The metric of the input LazyFrame.
 /// * `plan` - The LazyFrame to transform.
-pub fn make_stable_truncate(
-    input_domain: DslPlanDomain,
-    input_metric: FrameDistance<SymmetricIdDistance>,
+pub(crate) fn make_chain_truncate<DI, MI>(
+    t_prior: Transformation<DI, MI, DslPlanDomain, FrameDistance<SymmetricIdDistance>>,
     plan: DslPlan,
-) -> Fallible<
-    Transformation<
-        DslPlanDomain,
-        FrameDistance<SymmetricIdDistance>,
-        DslPlanDomain,
-        FrameDistance<SymmetricDistance>,
-    >,
-> {
-    // the identifier is protected from changes, so we can use the identifier from the input metric
-    // instead of the identifier from the middle_metric to match truncations
-    let (input, truncations, truncation_bounds) =
-        match_truncations(plan, &input_metric.0.identifier)?;
+) -> Fallible<Transformation<DI, MI, DslPlanDomain, FrameDistance<SymmetricDistance>>>
+where
+    DI: Domain + 'static,
+    MI: Metric + 'static,
+    (DI, MI): MetricSpace,
+    (DslPlanDomain, FrameDistance<SymmetricIdDistance>): MetricSpace,
+    (DslPlanDomain, FrameDistance<SymmetricDistance>): MetricSpace,
+{
+    let identifier = unique_id_expr(&t_prior.output_metric.0.active_id_sites())?
+        .ok_or_else(|| err!(MakeTransformation, "truncation requires at least one identifier"))?;
+
+    let (_, truncations, truncation_bounds) = match_truncations(plan, &identifier)?;
 
     if truncations.is_empty() {
-        // should be unreachable in practice, but makes this function self-contained
         return fallible!(MakeTransformation, "failed to match truncation");
-    };
+    }
 
-    let t_prior = input.make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric): (_, FrameDistance<SymmetricIdDistance>) =
         t_prior.output_space();
 
@@ -112,6 +109,25 @@ pub fn make_stable_truncate(
         }),
     )?;
     t_prior >> t_truncate
+}
+
+pub fn make_stable_truncate(
+    input_domain: DslPlanDomain,
+    input_metric: FrameDistance<SymmetricIdDistance>,
+    plan: DslPlan,
+) -> Fallible<
+    Transformation<
+        DslPlanDomain,
+        FrameDistance<SymmetricIdDistance>,
+        DslPlanDomain,
+        FrameDistance<SymmetricDistance>,
+    >,
+> {
+    let identifier = unique_id_expr(&input_metric.0.active_id_sites())?
+        .ok_or_else(|| err!(MakeTransformation, "truncation requires at least one identifier"))?;
+    let (input, _, _) = match_truncations(plan.clone(), &identifier)?;
+    let t_prior = input.make_stable(input_domain, input_metric)?;
+    make_chain_truncate(t_prior, plan)
 }
 
 /// # Proof Definition

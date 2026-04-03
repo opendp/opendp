@@ -11,6 +11,8 @@ use std::slice;
 #[cfg(feature = "polars")]
 use crate::metrics::polars::{Bound, Bounds};
 #[cfg(feature = "polars")]
+use crate::{domains::LazyFrameDomain, metrics::IdSite};
+#[cfg(feature = "polars")]
 use ::polars::prelude::*;
 #[cfg(feature = "polars")]
 use polars_arrow::ffi::ArrowArray;
@@ -29,7 +31,7 @@ use crate::core::{FfiError, FfiResult, FfiSlice, Function};
 use crate::domains::BitVector;
 use crate::error::Fallible;
 use crate::ffi::any::{
-    AnyFunction, AnyMeasurement, AnyObject, AnyOdometer, AnyQueryable, Downcast,
+    AnyDomain, AnyFunction, AnyMeasurement, AnyObject, AnyOdometer, AnyQueryable, Downcast,
 };
 use crate::ffi::util::{self, AnyDomainPtr, ExtrinsicObject, as_ref, into_c_char_p};
 use crate::ffi::util::{AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents, c_bool};
@@ -133,6 +135,10 @@ pub extern "C" fn opendp_data__slice_as_object(
                 .map(Clone::clone))
             .collect::<Fallible<Vec<T>>>()?;
         Ok(AnyObject::new(vec))
+    }
+    fn raw_to_vec_domain(raw: &FfiSlice) -> Fallible<AnyObject> {
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const AnyDomainPtr, raw.len) };
+        Ok(AnyObject::new(slice.to_vec()))
     }
     fn raw_to_tuple2<T0: 'static + Clone, T1: 'static + Clone>(
         raw: &FfiSlice,
@@ -333,6 +339,8 @@ pub extern "C" fn opendp_data__slice_as_object(
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("Expr") => raw_to_expr(raw),
         #[cfg(feature = "polars")]
+        TypeContents::PLAIN("IdSite") => raw_to_plain::<IdSite>(raw),
+        #[cfg(feature = "polars")]
         TypeContents::PLAIN("DataFrame") => raw_to_dataframe(raw),
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("Series") => raw_to_series(raw),
@@ -361,8 +369,18 @@ pub extern "C" fn opendp_data__slice_as_object(
                 #[cfg(feature = "polars")]
                 "Expr" => raw_to_vec_obj::<Expr>(raw),
                 #[cfg(feature = "polars")]
+                "LazyFrame" => raw_to_vec_obj::<LazyFrame>(raw),
+                #[cfg(feature = "polars")]
+                "IdSite" => raw_to_vec_obj::<IdSite>(raw),
+                #[cfg(feature = "polars")]
+                "LazyFrameDomain" => raw_to_vec_domain(raw),
+                #[cfg(feature = "polars")]
                 "Bound" => raw_to_vec_obj::<Bound>(raw),
                 "BitVector" => raw_to_vec_obj::<BitVector>(raw),
+                #[cfg(feature = "polars")]
+                _ if element == Type::of::<Vec<Expr>>() => raw_to_vec_obj::<Vec<Expr>>(raw),
+                #[cfg(feature = "polars")]
+                _ if element == Type::of::<Vec<IdSite>>() => raw_to_vec_obj::<Vec<IdSite>>(raw),
                 _ => dispatch!(raw_to_vec, [(element, @primitives)], (raw)),
             }
         }
@@ -401,6 +419,26 @@ pub extern "C" fn opendp_data__slice_as_object(
                 let V = try_!(Type::of_id(&args[1]));
                 if matches!(V.contents, TypeContents::PLAIN("ExtrinsicObject")) {
                     dispatch!(raw_to_hashmap, [(K, @hashable), (V, [ExtrinsicObject])], (raw))
+                } else if K == Type::of::<String>() && matches!(V.contents, TypeContents::PLAIN("LazyFrame")) {
+                    raw_to_hashmap::<String, LazyFrame>(raw)
+                } else if K == Type::of::<String>() && matches!(V.contents, TypeContents::PLAIN("LazyFrameDomain")) {
+                    raw_to_hashmap::<String, AnyDomainPtr>(raw)
+                } else if K == Type::of::<String>() && matches!(V.contents, TypeContents::PLAIN("Expr")) {
+                    raw_to_hashmap::<String, Expr>(raw)
+                } else if K == Type::of::<String>() && V == Type::of::<Vec<Expr>>() {
+                    raw_to_hashmap::<String, Vec<Expr>>(raw)
+                } else if K == Type::of::<String>() && V == Type::of::<Vec<IdSite>>() {
+                    raw_to_hashmap::<String, Vec<IdSite>>(raw)
+                } else if matches!(V.contents, TypeContents::PLAIN("LazyFrame")) {
+                    dispatch!(raw_to_hashmap, [(K, @hashable), (V, [LazyFrame])], (raw))
+                } else if matches!(V.contents, TypeContents::PLAIN("LazyFrameDomain")) {
+                    dispatch!(raw_to_hashmap, [(K, @hashable), (V, [LazyFrameDomain])], (raw))
+                } else if matches!(V.contents, TypeContents::PLAIN("Expr")) {
+                    dispatch!(raw_to_hashmap, [(K, @hashable), (V, [Expr])], (raw))
+                } else if V == Type::of::<Vec<Expr>>() {
+                    dispatch!(raw_to_hashmap, [(K, @hashable), (V, [Vec<Expr>])], (raw))
+                } else if V == Type::of::<Vec<IdSite>>() {
+                    dispatch!(raw_to_hashmap, [(K, @hashable), (V, [Vec<IdSite>])], (raw))
                 } else {
                     dispatch!(raw_to_hashmap, [(K, @hashable), (V, @primitives)], (raw))
                 }
@@ -492,8 +530,21 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
     fn vec_expr_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
         let vec_expr: &Vec<Expr> = obj.downcast_ref()?;
         let vec = (vec_expr.iter().cloned())
-            .map(AnyObject::new)
-            .collect::<Vec<AnyObject>>();
+            .map(AnyObject::new_raw)
+            .collect::<Vec<*mut AnyObject>>();
+
+        let res = Ok(FfiSlice::new(vec.as_ptr() as *mut c_void, vec.len()));
+        util::into_raw(vec);
+        res
+    }
+    #[cfg(feature = "polars")]
+    fn vec_object_to_raw<T: 'static + Clone>(obj: &AnyObject) -> Fallible<FfiSlice> {
+        let values: &Vec<T> = obj.downcast_ref()?;
+        let vec = values
+            .iter()
+            .cloned()
+            .map(AnyObject::new_raw)
+            .collect::<Vec<*mut AnyObject>>();
 
         let res = Ok(FfiSlice::new(vec.as_ptr() as *mut c_void, vec.len()));
         util::into_raw(vec);
@@ -506,6 +557,17 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
     fn vec_to_raw<T: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
         let vec: &Vec<T> = obj.downcast_ref()?;
         Ok(FfiSlice::new(vec.as_ptr() as *mut c_void, vec.len()))
+    }
+    fn vec_domain_to_raw<T: 'static + crate::core::Domain + Clone>(obj: &AnyObject) -> Fallible<FfiSlice> {
+        let vec: &Vec<T> = obj.downcast_ref()?;
+        let domains = vec
+            .iter()
+            .cloned()
+            .map(|domain| util::into_raw(AnyDomain::new(domain)) as AnyDomainPtr)
+            .collect::<Vec<_>>();
+        let slice = FfiSlice::new(domains.as_ptr() as *mut c_void, domains.len());
+        util::into_raw(domains);
+        Ok(slice)
     }
     fn tuple2_to_raw<T0: 'static, T1: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
         let tuple: &(T0, T1) = obj.downcast_ref()?;
@@ -751,7 +813,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             .downcast_ref::<Bounds>()?
             .0
             .iter()
-            .map(|b| AnyObject::new(b.clone()))
+            .map(|b| AnyObject::new_raw(b.clone()))
             .collect::<Vec<_>>();
         let (ptr, len) = (bounds.as_ptr() as *mut c_void, bounds.len());
         util::into_raw(bounds);
@@ -779,6 +841,8 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("Expr") => expr_to_raw(obj),
         #[cfg(feature = "polars")]
+        TypeContents::PLAIN("IdSite") => plain_to_raw::<IdSite>(obj),
+        #[cfg(feature = "polars")]
         TypeContents::PLAIN("ExprPlan") => exprplan_to_raw(obj),
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("DataFrame") => dataframe_to_raw(obj),
@@ -801,8 +865,18 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             #[cfg(feature = "polars")]
             if element.descriptor == "Expr" {
                 return vec_expr_to_raw(obj).into();
+            } else if element.descriptor == "LazyFrame" {
+                return vec_object_to_raw::<LazyFrame>(obj).into();
+            } else if element.descriptor == "IdSite" {
+                return vec_object_to_raw::<IdSite>(obj).into();
+            } else if element.descriptor == "LazyFrameDomain" {
+                return vec_domain_to_raw::<LazyFrameDomain>(obj).into();
             } else if element.descriptor == "Bound" {
-                return vec_to_raw::<Bound>(obj).into();
+                return vec_object_to_raw::<Bound>(obj).into();
+            } else if element == Type::of::<Vec<Expr>>() {
+                return vec_object_to_raw::<Vec<Expr>>(obj).into();
+            } else if element == Type::of::<Vec<IdSite>>() {
+                return vec_object_to_raw::<Vec<IdSite>>(obj).into();
             }
 
             if element.descriptor == "String" {
@@ -843,6 +917,26 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
                 let [K, V] = try_!(parse_type_args(args, "HashMap"));
                 if matches!(V.contents, TypeContents::PLAIN("ExtrinsicObject")) {
                     dispatch!(hashmap_to_raw, [(K, @hashable), (V, [ExtrinsicObject])], (obj))
+                } else if K == Type::of::<String>() && matches!(V.contents, TypeContents::PLAIN("LazyFrame")) {
+                    hashmap_to_raw::<String, LazyFrame>(obj)
+                } else if K == Type::of::<String>() && matches!(V.contents, TypeContents::PLAIN("LazyFrameDomain")) {
+                    hashmap_to_raw::<String, LazyFrameDomain>(obj)
+                } else if K == Type::of::<String>() && matches!(V.contents, TypeContents::PLAIN("Expr")) {
+                    hashmap_to_raw::<String, Expr>(obj)
+                } else if K == Type::of::<String>() && V == Type::of::<Vec<Expr>>() {
+                    hashmap_to_raw::<String, Vec<Expr>>(obj)
+                } else if K == Type::of::<String>() && V == Type::of::<Vec<IdSite>>() {
+                    hashmap_to_raw::<String, Vec<IdSite>>(obj)
+                } else if matches!(V.contents, TypeContents::PLAIN("LazyFrame")) {
+                    dispatch!(hashmap_to_raw, [(K, @hashable), (V, [LazyFrame])], (obj))
+                } else if matches!(V.contents, TypeContents::PLAIN("LazyFrameDomain")) {
+                    dispatch!(hashmap_to_raw, [(K, @hashable), (V, [LazyFrameDomain])], (obj))
+                } else if matches!(V.contents, TypeContents::PLAIN("Expr")) {
+                    dispatch!(hashmap_to_raw, [(K, @hashable), (V, [Expr])], (obj))
+                } else if V == Type::of::<Vec<Expr>>() {
+                    dispatch!(hashmap_to_raw, [(K, @hashable), (V, [Vec<Expr>])], (obj))
+                } else if V == Type::of::<Vec<IdSite>>() {
+                    dispatch!(hashmap_to_raw, [(K, @hashable), (V, [Vec<IdSite>])], (obj))
                 } else {
                     dispatch!(hashmap_to_raw, [(K, @hashable), (V, @primitives)], (obj))
                 }
@@ -1200,6 +1294,26 @@ impl Clone for AnyObject {
                     let V = Type::of_id(&args[1]).unwrap();
                     if matches!(V.contents, TypeContents::PLAIN("ExtrinsicObject")) {
                         dispatch!(clone_hashmap, [(K, @hashable), (V, [ExtrinsicObject])], (self))
+                    } else if K == Type::of::<String>() && matches!(V.contents, TypeContents::PLAIN("LazyFrame")) {
+                        clone_hashmap::<String, LazyFrame>(self)
+                    } else if K == Type::of::<String>() && matches!(V.contents, TypeContents::PLAIN("LazyFrameDomain")) {
+                        clone_hashmap::<String, AnyDomainPtr>(self)
+                    } else if K == Type::of::<String>() && matches!(V.contents, TypeContents::PLAIN("Expr")) {
+                        clone_hashmap::<String, Expr>(self)
+                    } else if K == Type::of::<String>() && V == Type::of::<Vec<Expr>>() {
+                        clone_hashmap::<String, Vec<Expr>>(self)
+                    } else if K == Type::of::<String>() && V == Type::of::<Vec<IdSite>>() {
+                        clone_hashmap::<String, Vec<IdSite>>(self)
+                    } else if matches!(V.contents, TypeContents::PLAIN("LazyFrame")) {
+                        dispatch!(clone_hashmap, [(K, @hashable), (V, [LazyFrame])], (self))
+                    } else if matches!(V.contents, TypeContents::PLAIN("LazyFrameDomain")) {
+                        dispatch!(clone_hashmap, [(K, @hashable), (V, [LazyFrameDomain])], (self))
+                    } else if matches!(V.contents, TypeContents::PLAIN("Expr")) {
+                        dispatch!(clone_hashmap, [(K, @hashable), (V, [Expr])], (self))
+                    } else if V == Type::of::<Vec<Expr>>() {
+                        dispatch!(clone_hashmap, [(K, @hashable), (V, [Vec<Expr>])], (self))
+                    } else if V == Type::of::<Vec<IdSite>>() {
+                        dispatch!(clone_hashmap, [(K, @hashable), (V, [Vec<IdSite>])], (self))
                     } else {
                         dispatch!(clone_hashmap, [(K, @hashable), (V, @primitives)], (self))
                     }
@@ -1209,8 +1323,20 @@ impl Clone for AnyObject {
             }
             TypeContents::VEC(type_id) => {
                 #[cfg(feature = "polars")]
-                if let Ok(clone) = dispatch!(clone_plain, [(self.type_, [Bound])], (self)) {
-                    return clone;
+                {
+                    if let Ok(clone) = dispatch!(clone_plain, [(self.type_, [Bound])], (self)) {
+                        return clone;
+                    }
+                    if let Ok(clone) = dispatch!(
+                        clone_vec,
+                        [(
+                            Type::of_id(type_id).unwrap(),
+                            [Expr, IdSite, LazyFrame, LazyFrameDomain, Vec<Expr>, Vec<IdSite>]
+                        )],
+                        (self)
+                    ) {
+                        return clone;
+                    }
                 }
 
                 dispatch!(
@@ -1445,6 +1571,146 @@ mod tests {
         assert_eq!(res, (999, -999));
         Ok(())
     }
+
+    #[cfg(feature = "polars")]
+    #[test]
+    fn test_roundtrip_hashmap_string_expr() -> Fallible<()> {
+        use std::collections::HashMap;
+
+        let obj = AnyObject::new_raw(HashMap::from([("events".to_string(), col("user_id"))]));
+        let raw = Fallible::from(opendp_data__object_as_slice(obj))?;
+        let res = opendp_data__slice_as_object(util::into_raw(raw), "HashMap<String, Expr>".to_char_p());
+        let res: HashMap<String, Expr> = Fallible::from(res)?.downcast()?;
+        assert_eq!(res.len(), 1);
+        assert!(res.contains_key("events"));
+        Ok(())
+    }
+
+    #[cfg(feature = "polars")]
+    #[test]
+    fn test_roundtrip_id_site() -> Fallible<()> {
+        let id_site = IdSite {
+            label: "user".to_string(),
+            exprs: vec![col("user_id")],
+        };
+
+        let obj = AnyObject::new_raw(id_site.clone());
+        let raw = Fallible::from(opendp_data__object_as_slice(obj))?;
+        let res = opendp_data__slice_as_object(util::into_raw(raw), "IdSite".to_char_p());
+        let res: IdSite = Fallible::from(res)?.downcast()?;
+        assert_eq!(res.label, id_site.label);
+        assert_eq!(res.exprs.len(), 1);
+        Ok(())
+    }
+
+    #[cfg(feature = "polars")]
+    #[test]
+    fn test_roundtrip_vec_id_site() -> Fallible<()> {
+        let id_site = IdSite {
+            label: "user".to_string(),
+            exprs: vec![col("user_id")],
+        };
+
+        let obj = AnyObject::new_raw(vec![id_site]);
+        let raw = Fallible::from(opendp_data__object_as_slice(obj))?;
+        let res = opendp_data__slice_as_object(util::into_raw(raw), "Vec<IdSite>".to_char_p());
+        let res: Vec<IdSite> = Fallible::from(res)?.downcast()?;
+        assert_eq!(res.len(), 1);
+        assert_eq!(res[0].label, "user");
+        Ok(())
+    }
+
+    #[cfg(feature = "polars")]
+    #[test]
+    fn test_slice_as_object_vec_id_site_raw() -> Fallible<()> {
+        let elems = vec![AnyObject::new_raw(IdSite {
+            label: "user".to_string(),
+            exprs: vec![col("user_id")],
+        })];
+        let raw = util::into_raw(FfiSlice::new(elems.as_ptr() as *mut c_void, elems.len()));
+        let res = opendp_data__slice_as_object(raw, "Vec<IdSite>".to_char_p());
+        let res: Vec<IdSite> = Fallible::from(res)?.downcast()?;
+        assert_eq!(res.len(), 1);
+        assert_eq!(res[0].label, "user");
+        Ok(())
+    }
+
+    #[cfg(feature = "polars")]
+    #[test]
+    fn test_roundtrip_hashmap_string_vec_id_site() -> Fallible<()> {
+        let id_sites = HashMap::from([(
+            "events".to_string(),
+            vec![IdSite {
+                label: "user".to_string(),
+                exprs: vec![col("user_id")],
+            }],
+        )]);
+
+        let obj = AnyObject::new_raw(id_sites);
+        let raw = Fallible::from(opendp_data__object_as_slice(obj))?;
+        let res = opendp_data__slice_as_object(
+            util::into_raw(raw),
+            "HashMap<String, Vec<IdSite>>".to_char_p(),
+        );
+        let res: HashMap<String, Vec<IdSite>> = Fallible::from(res)?.downcast()?;
+        assert_eq!(res.len(), 1);
+        assert_eq!(res["events"][0].label, "user");
+        Ok(())
+    }
+
+    #[cfg(feature = "polars")]
+    #[test]
+    fn test_roundtrip_vec_vec_id_site() -> Fallible<()> {
+        let obj = AnyObject::new_raw(vec![vec![IdSite {
+            label: "user".to_string(),
+            exprs: vec![col("user_id")],
+        }]]);
+        let raw = Fallible::from(opendp_data__object_as_slice(obj))?;
+        let res = opendp_data__slice_as_object(util::into_raw(raw), "Vec<Vec<IdSite>>".to_char_p());
+        let res: Vec<Vec<IdSite>> = Fallible::from(res)?.downcast()?;
+        assert_eq!(res.len(), 1);
+        assert_eq!(res[0][0].label, "user");
+        Ok(())
+    }
+
+    #[cfg(feature = "polars")]
+    #[test]
+    fn test_nested_object_as_slice_hashmap_string_vec_id_site() -> Fallible<()> {
+        let obj = AnyObject::new_raw(HashMap::from([(
+            "events".to_string(),
+            vec![IdSite {
+                label: "user".to_string(),
+                exprs: vec![col("user_id")],
+            }],
+        )]));
+
+        let raw_map = Fallible::from(opendp_data__object_as_slice(obj))?;
+        let map_slice = unsafe { slice::from_raw_parts(raw_map.ptr as *const *const AnyObject, raw_map.len) };
+        let vals_obj = map_slice[1] as *const AnyObject;
+
+        let raw_vals = Fallible::from(opendp_data__object_as_slice(vals_obj))?;
+        let vals: Vec<Vec<IdSite>> = Fallible::from(opendp_data__slice_as_object(
+            util::into_raw(raw_vals),
+            "Vec<Vec<IdSite>>".to_char_p(),
+        ))?
+        .downcast()?;
+        assert_eq!(vals[0][0].label, "user");
+
+        let raw_inner = Fallible::from(opendp_data__object_as_slice(map_slice[1]))?;
+        let inner_slice = unsafe {
+            slice::from_raw_parts(raw_inner.ptr as *const *const AnyObject, raw_inner.len)
+        };
+        let first_inner = inner_slice[0] as *const AnyObject;
+        let raw_first_inner = Fallible::from(opendp_data__object_as_slice(first_inner))?;
+        let first_inner_vec: Vec<IdSite> = Fallible::from(opendp_data__slice_as_object(
+            util::into_raw(raw_first_inner),
+            "Vec<IdSite>".to_char_p(),
+        ))?
+        .downcast()?;
+        assert_eq!(first_inner_vec[0].label, "user");
+        Ok(())
+    }
+
 
     #[test]
     fn test_data_as_raw_number() -> Fallible<()> {

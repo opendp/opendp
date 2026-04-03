@@ -1,6 +1,6 @@
 use crate::{
     domains::{AtomDomain, LazyFrameDomain, Margin, OptionDomain, SeriesDomain},
-    metrics::{FrameDistance, SymmetricDistance},
+    metrics::{FrameDistance, IdSite, SymmetricDistance, SymmetricIdDistance},
     transformations::make_stable_lazyframe,
 };
 
@@ -59,5 +59,33 @@ fn test_fill_nan() -> Fallible<()> {
     let expect = df!("f64" => [1f64, 2f64])?;
 
     assert_eq!(actual, expect);
+    Ok(())
+}
+
+#[test]
+fn test_with_column_rejects_multisite_identifier_modification() -> Fallible<()> {
+    let lf = df!("user_id" => [1i32, 2], "value" => [3i32, 4])?.lazy();
+
+    let lf_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("user_id", AtomDomain::<i32>::default()),
+        SeriesDomain::new("value", AtomDomain::<i32>::default()),
+    ])?;
+
+    let metric = SymmetricIdDistance {
+        protected_label: "user".to_string(),
+        id_sites: vec![IdSite {
+            label: "user".to_string(),
+            exprs: vec![col("user_id")],
+        }],
+    };
+
+    let err = make_stable_lazyframe::<_, FrameDistance<SymmetricIdDistance>>(
+        lf_domain,
+        FrameDistance(metric),
+        lf.with_column((col("user_id") + lit(1)).alias("user_id")),
+    )
+    .unwrap_err();
+
+    assert!(format!("{err:?}").contains("identifiers"));
     Ok(())
 }

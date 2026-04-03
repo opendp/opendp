@@ -8,7 +8,7 @@ instances of :py:class:`opendp.mod.Domain` are either inputs or outputs for func
 '''
 from __future__ import annotations
 import ctypes
-from dataclasses import asdict
+from dataclasses import asdict, dataclass, field
 from typing import Any, Literal, Sequence, Type, TypeVar, Union, Callable, Optional, overload, TYPE_CHECKING, cast
 import importlib
 import json
@@ -34,11 +34,14 @@ __all__ = [
     'VectorDomain',
     'SeriesDomain',
     'LazyFrameDomain',
+    'DatabaseDomain',
     'ExtrinsicDomain',
     'Metric',
     'SymmetricIdDistance',
     'ChangeOneIdDistance',
+    'DatabaseIdDistance',
     'FrameDistance',
+    'IdSite',
     'Measure',
     'ApproximateDivergence',
     'PrivacyProfile',
@@ -912,6 +915,25 @@ class LazyFrameDomain(Domain):
         return _lazyframe_domain_get_margin(self, by)
 
 
+class DatabaseDomain(Domain):
+    '''``DatabaseDomain`` describes the domain of a database keyed by table name.'''
+
+    _type_ = AnyDomain
+
+    def get_table_domain(self, name: str) -> LazyFrameDomain:
+        '''Retrieve the lazyframe domain for the given table name.'''
+        from opendp.domains import _database_domain_get_table_domain
+
+        return _database_domain_get_table_domain(self, name)
+
+    @property
+    def table_domains(self) -> dict[str, LazyFrameDomain]:
+        '''Mapping from table name to lazyframe domain.'''
+        from opendp.domains import _database_domain_get_table_domains
+
+        return _database_domain_get_table_domains(self)
+
+
 class ExtrinsicDomain(Domain):
     '''A user-defined domain.'''
 
@@ -1014,6 +1036,43 @@ class FrameDistance(Metric):
         '''Bounds of the domain, if they exist'''
         from opendp.metrics import _frame_distance_get_inner_metric
         return _frame_distance_get_inner_metric(self)
+
+def _coerce_id_site_exprs(exprs):
+    pl = import_optional_dependency("polars")
+
+    if isinstance(exprs, str):
+        return [pl.col(exprs)]
+    if isinstance(exprs, pl.Expr):
+        return [exprs]
+    if isinstance(exprs, Sequence) and not isinstance(exprs, (str, bytes)):
+        return [pl.col(expr) if isinstance(expr, str) else expr for expr in exprs]
+    raise TypeError("exprs must be a column name, expression, or sequence of them")
+
+
+@dataclass
+class IdSite:
+    '''``IdSite`` describes where one semantic identifier space appears in a table.'''
+
+    exprs: Sequence = field(default_factory=list)
+    '''Expressions locating the identifier columns for this site.'''
+
+    label: Optional[str] = None
+    '''Optional semantic label for the identifier space represented by this site.'''
+
+    def __post_init__(self):
+        self.exprs = _coerce_id_site_exprs(self.exprs)
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, IdSite) or self.label != other.label:
+            return False
+
+        return [
+            expr.meta.serialize()
+            for expr in self.exprs
+        ] == [
+            expr.meta.serialize()
+            for expr in other.exprs
+        ]
     
 class SymmetricIdDistance(Metric):
     '''``SymmetricIdDistance`` is a metric for measuring the distance between the identifiers of two datasets.
@@ -1043,6 +1102,33 @@ class ChangeOneIdDistance(Metric):
         '''The name of the column storing identifiers'''
         from opendp.metrics import _change_one_id_distance_get_identifier
         return _change_one_id_distance_get_identifier(self)
+
+
+class DatabaseIdDistance(Metric):
+    '''``DatabaseIdDistance`` measures distance in one protected identifier space across multiple tables.'''
+
+    _type_ = AnyMetric
+
+    @property
+    def protected_label(self) -> str:
+        '''The semantic identifier space used for privacy accounting.'''
+        from opendp.metrics import _database_id_distance_get_protected_label
+
+        return _database_id_distance_get_protected_label(self)
+
+    @property
+    def identifiers(self):
+        '''Mapping from table name to the protected identifier column name.'''
+        from opendp.metrics import _database_id_distance_get_columns
+
+        return _database_id_distance_get_columns(self)
+
+    @property
+    def id_sites(self):
+        '''Mapping from table name to identifier sites.'''
+        from opendp.metrics import _database_id_distance_get_id_sites
+
+        return _database_id_distance_get_id_sites(self)
     
 class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
     '''

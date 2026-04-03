@@ -153,5 +153,6 @@ for more information on any of these topics.
   essential-statistics
   grouping
   identifier-truncation
+  multi-table-joins
   preparing-microdata
   contingency-tables

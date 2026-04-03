@@ -16,7 +16,7 @@ use crate::{
     },
 };
 
-use super::{Frame, FrameDomain, LazyFrameDomain};
+use super::{DatabaseDomain, Frame, FrameDomain, LazyFrameDomain};
 use polars::prelude::*;
 
 #[bootstrap(
@@ -36,6 +36,44 @@ pub extern "C" fn opendp_domains__lazyframe_domain(
         unpack_series_domains(series_domains)
     )))))
     .into()
+}
+
+#[bootstrap(
+    name = "database_domain",
+    arguments(table_domains(rust_type = "HashMap<String, LazyFrameDomain>")),
+    returns(c_type = "FfiResult<AnyDomain *>", hint = "DatabaseDomain")
+)]
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_domains__database_domain(
+    table_domains: *const AnyObject,
+) -> FfiResult<*mut AnyDomain> {
+    let table_domains = try_!(unpack_table_domains(table_domains));
+    FfiResult::Ok(util::into_raw(AnyDomain::new(DatabaseDomain::new(
+        table_domains,
+    ))))
+}
+
+#[bootstrap(name = "_database_domain_get_table_domain")]
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_domains___database_domain_get_table_domain(
+    database_domain: *const AnyDomain,
+    table_name: *const c_char,
+) -> FfiResult<*mut AnyDomain> {
+    let database_domain =
+        try_!(try_as_ref!(database_domain).downcast_ref::<DatabaseDomain>());
+    let table_name = try_!(util::to_str(table_name));
+    let domain = try_!(database_domain.get(table_name)).clone();
+    FfiResult::Ok(util::into_raw(AnyDomain::new(domain)))
+}
+
+#[bootstrap(name = "_database_domain_get_table_domains")]
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_domains___database_domain_get_table_domains(
+    database_domain: *const AnyDomain,
+) -> FfiResult<*mut AnyObject> {
+    let database_domain =
+        try_!(try_as_ref!(database_domain).downcast_ref::<DatabaseDomain>());
+    FfiResult::Ok(AnyObject::new_raw(database_domain.0.clone()))
 }
 
 #[bootstrap(
@@ -130,6 +168,24 @@ pub(crate) fn unpack_series_domains(
                 .cloned()
         })
         .collect::<Option<Vec<SeriesDomain>>>()
+        .ok_or_else(|| err!(FailedCast, "domain downcast failed"))
+}
+
+pub(crate) fn unpack_table_domains(
+    table_domains: *const AnyObject,
+) -> Fallible<std::collections::HashMap<String, LazyFrameDomain>> {
+    let table_domains = try_as_ref!(table_domains)
+        .downcast_ref::<std::collections::HashMap<String, AnyDomainPtr>>()?;
+
+    table_domains
+        .iter()
+        .map(|(name, domain)| {
+            util::as_ref(*domain)
+                .and_then(|ad: &AnyDomain| ad.downcast_ref::<LazyFrameDomain>().ok())
+                .cloned()
+                .map(|domain| (name.clone(), domain))
+        })
+        .collect::<Option<std::collections::HashMap<String, LazyFrameDomain>>>()
         .ok_or_else(|| err!(FailedCast, "domain downcast failed"))
 }
 

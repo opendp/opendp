@@ -1,5 +1,8 @@
 use super::*;
+use crate::core::MetricSpace;
 use crate::domains::AtomDomain;
+use crate::metrics::DatabaseIdDistance;
+use std::collections::HashMap;
 
 #[test]
 fn test_frame_new() -> Fallible<()> {
@@ -164,5 +167,149 @@ fn test_find_min_covering_nonoptimal() -> Fallible<()> {
         .reduce(|l, r| &l | &r)
         .unwrap();
     assert_eq!(intersection, must_cover);
+    Ok(())
+}
+
+#[test]
+fn test_database_metric_space_validation() -> Fallible<()> {
+    let frame_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("user_id", AtomDomain::<i32>::default()),
+        SeriesDomain::new("value", AtomDomain::<i32>::default()),
+    ])?;
+
+    let database_domain =
+        DatabaseDomain::new(HashMap::from([("events".to_string(), frame_domain.clone())]));
+
+    let valid_metric = DatabaseIdDistance {
+        protected_label: "user".to_string(),
+        id_sites: HashMap::from([(
+            "events".to_string(),
+            vec![crate::metrics::IdSite {
+                label: "user".to_string(),
+                exprs: vec![col("user_id")],
+            }],
+        )]),
+    };
+    assert!((database_domain.clone(), valid_metric).check_space().is_ok());
+
+    let invalid_metric = DatabaseIdDistance {
+        protected_label: "user".to_string(),
+        id_sites: HashMap::from([(
+            "events".to_string(),
+            vec![crate::metrics::IdSite {
+                label: "user".to_string(),
+                exprs: vec![col("missing")],
+            }],
+        )]),
+    };
+    assert!((database_domain.clone(), invalid_metric).check_space().is_err());
+
+    let missing_table_metric = DatabaseIdDistance {
+        protected_label: "user".to_string(),
+        id_sites: HashMap::from([(
+            "missing".to_string(),
+            vec![crate::metrics::IdSite {
+                label: "user".to_string(),
+                exprs: vec![col("user_id")],
+            }],
+        )]),
+    };
+    assert!((database_domain, missing_table_metric).check_space().is_err());
+
+    Ok(())
+}
+
+#[test]
+fn test_database_domain_member_uses_table_markers() -> Fallible<()> {
+    let users_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("user_id", AtomDomain::<i32>::default()),
+        SeriesDomain::new("age", AtomDomain::<i32>::default()),
+    ])?;
+    let events_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("user_id", AtomDomain::<i32>::default()),
+        SeriesDomain::new("value", AtomDomain::<i32>::default()),
+    ])?;
+
+    let database_domain = DatabaseDomain::new(HashMap::from([
+        ("users".to_string(), users_domain),
+        ("events".to_string(), events_domain),
+    ]));
+
+    let users = df!(
+        "__OPENDP_TABLE_NAME__[users]" => ["user1", "user2"],
+        "user_id" => [1i32, 2],
+        "age" => [30i32, 31]
+    )?
+    .lazy();
+    let events = df!(
+        "__OPENDP_TABLE_NAME__[events]" => ["event1", "event2"],
+        "user_id" => [1i32, 2],
+        "value" => [10i32, 11]
+    )?
+    .lazy();
+
+    let db = HashMap::from([("users".to_string(), users), ("events".to_string(), events)]);
+
+    assert!(database_domain.member(&db)?);
+    Ok(())
+}
+
+#[test]
+fn test_database_metric_space_accepts_duplicate_exprs_and_duplicate_labels() -> Fallible<()> {
+    let events_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("user_id", AtomDomain::<i32>::default()),
+        SeriesDomain::new("src_user_id", AtomDomain::<i32>::default()),
+        SeriesDomain::new("dst_user_id", AtomDomain::<i32>::default()),
+    ])?;
+    let database_domain =
+        DatabaseDomain::new(HashMap::from([("events".to_string(), events_domain)]));
+
+    let metric = DatabaseIdDistance {
+        protected_label: "user".to_string(),
+        id_sites: HashMap::from([(
+            "events".to_string(),
+            vec![
+                crate::metrics::IdSite {
+                    label: "user".to_string(),
+                    exprs: vec![col("user_id"), col("user_id")],
+                },
+                crate::metrics::IdSite {
+                    label: "user".to_string(),
+                    exprs: vec![col("src_user_id"), col("dst_user_id")],
+                },
+            ],
+        )]),
+    };
+
+    assert!((database_domain, metric).check_space().is_ok());
+    Ok(())
+}
+
+#[test]
+fn test_database_metric_space_requires_protected_label_presence() -> Fallible<()> {
+    let events_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("user_id", AtomDomain::<i32>::default()),
+        SeriesDomain::new("value", AtomDomain::<i32>::default()),
+    ])?;
+    let database_domain =
+        DatabaseDomain::new(HashMap::from([("events".to_string(), events_domain)]));
+
+    let metric = DatabaseIdDistance {
+        protected_label: "user".to_string(),
+        id_sites: HashMap::from([(
+            "events".to_string(),
+            vec![crate::metrics::IdSite {
+                label: "household".to_string(),
+                exprs: vec![col("user_id")],
+            }],
+        )]),
+    };
+
+    let err = (database_domain, metric).check_space().unwrap_err();
+    assert!(
+        err.message
+            .unwrap_or_default()
+            .contains("protected identifier label")
+    );
     Ok(())
 }

@@ -1,4 +1,7 @@
-use std::{cmp::Ordering, collections::HashSet};
+use std::{
+    cmp::Ordering,
+    collections::{HashMap, HashSet},
+};
 
 use polars::prelude::Expr;
 
@@ -14,6 +17,70 @@ use super::{ChangeOneDistance, IntDistance, MicrodataMetric, SymmetricDistance};
 
 #[cfg(feature = "ffi")]
 mod ffi;
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct IdSite {
+    pub label: String,
+    pub exprs: Vec<Expr>,
+}
+
+impl IdSite {
+    pub fn root_names(&self) -> HashSet<polars::prelude::PlSmallStr> {
+        self.exprs
+            .iter()
+            .flat_map(|expr| expr.clone().meta().root_names())
+            .collect()
+    }
+}
+
+pub fn id_sites_root_names(id_sites: &[IdSite]) -> HashSet<polars::prelude::PlSmallStr> {
+    id_sites
+        .iter()
+        .flat_map(IdSite::root_names)
+        .collect::<HashSet<_>>()
+}
+
+pub fn unique_id_expr(id_sites: &[IdSite]) -> Fallible<Option<Expr>> {
+    let sites = id_sites
+        .iter()
+        .filter(|site| !site.exprs.is_empty())
+        .fold(Vec::<IdSite>::new(), |mut acc, site| {
+            if !acc.contains(site) {
+                acc.push(site.clone());
+            }
+            acc
+        });
+
+    match sites.as_slice() {
+        [] => Ok(None),
+        [site] => Ok(site.exprs.first().cloned()),
+        _ => fallible!(
+            MakeTransformation,
+            "this operation currently supports at most one identifier site, but found {}",
+            sites.len()
+        ),
+    }
+}
+
+pub fn filter_id_sites(id_sites: &[IdSite], label: &str) -> Vec<IdSite> {
+    id_sites
+        .iter()
+        .filter(|site| site.label == label)
+        .cloned()
+        .collect()
+}
+
+pub trait PolarsMetric: MicrodataMetric {
+    fn id_sites(&self) -> Vec<IdSite>;
+    fn protected_label(&self) -> Option<&str> {
+        None
+    }
+    fn active_id_sites(&self) -> Vec<IdSite> {
+        self.protected_label()
+            .map(|label| filter_id_sites(&self.id_sites(), label))
+            .unwrap_or_default()
+    }
+}
 
 /// Distance betweeen datasets in terms of the number of added or removed identifiers.
 ///
@@ -31,7 +98,8 @@ mod ffi;
 /// the corresponding data must be equivalent for the datasets to be close.
 #[derive(Clone, PartialEq, Debug)]
 pub struct SymmetricIdDistance {
-    pub identifier: Expr,
+    pub protected_label: String,
+    pub id_sites: Vec<IdSite>,
 }
 
 impl Metric for SymmetricIdDistance {
@@ -55,10 +123,21 @@ impl Metric for SymmetricIdDistance {
 /// the corresponding data must be equivalent for the datasets to be close.
 #[derive(Clone, PartialEq, Debug)]
 pub struct ChangeOneIdDistance {
-    pub identifier: Expr,
+    pub protected_label: String,
+    pub id_sites: Vec<IdSite>,
 }
 
 impl Metric for ChangeOneIdDistance {
+    type Distance = IntDistance;
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct DatabaseIdDistance {
+    pub protected_label: String,
+    pub id_sites: HashMap<String, Vec<IdSite>>,
+}
+
+impl Metric for DatabaseIdDistance {
     type Distance = IntDistance;
 }
 
@@ -96,7 +175,7 @@ impl MicrodataMetric for SymmetricIdDistance {
     const SIZED: bool = false;
     const ORDERED: bool = false;
     fn identifier(&self) -> Option<Expr> {
-        Some(self.identifier.clone())
+        unique_id_expr(&self.active_id_sites()).ok().flatten()
     }
     type EventMetric = SymmetricDistance;
 }
@@ -104,9 +183,46 @@ impl MicrodataMetric for ChangeOneIdDistance {
     const SIZED: bool = true;
     const ORDERED: bool = false;
     fn identifier(&self) -> Option<Expr> {
-        Some(self.identifier.clone())
+        unique_id_expr(&self.active_id_sites()).ok().flatten()
     }
     type EventMetric = ChangeOneDistance;
+}
+
+impl PolarsMetric for SymmetricDistance {
+    fn id_sites(&self) -> Vec<IdSite> {
+        vec![]
+    }
+}
+impl PolarsMetric for ChangeOneDistance {
+    fn id_sites(&self) -> Vec<IdSite> {
+        vec![]
+    }
+}
+impl PolarsMetric for super::InsertDeleteDistance {
+    fn id_sites(&self) -> Vec<IdSite> {
+        vec![]
+    }
+}
+impl PolarsMetric for super::HammingDistance {
+    fn id_sites(&self) -> Vec<IdSite> {
+        vec![]
+    }
+}
+impl PolarsMetric for SymmetricIdDistance {
+    fn id_sites(&self) -> Vec<IdSite> {
+        self.id_sites.clone()
+    }
+    fn protected_label(&self) -> Option<&str> {
+        Some(&self.protected_label)
+    }
+}
+impl PolarsMetric for ChangeOneIdDistance {
+    fn id_sites(&self) -> Vec<IdSite> {
+        self.id_sites.clone()
+    }
+    fn protected_label(&self) -> Option<&str> {
+        Some(&self.protected_label)
+    }
 }
 
 impl<M: UnboundedMetric> Metric for FrameDistance<M> {

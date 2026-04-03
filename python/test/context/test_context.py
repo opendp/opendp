@@ -39,6 +39,110 @@ def test_unit_of_identifier():
 
     assert dp.unit_of(identifier="A", changes=3) == (dp.change_one_id_distance("A"), 3)
 
+
+def test_unit_of_database_identifier():
+    metric, d_in = dp.unit_of(
+        identifier={"events": dp.IdSite("user_id", label="user"), "users": dp.IdSite("id", label="user")},
+        protected_label="user",
+        contributions=2,
+    )
+
+    assert isinstance(metric, dp.DatabaseIdDistance)
+    assert metric.protected_label == "user"
+    assert set(metric.identifiers) == {"events", "users"}
+    assert d_in == 2
+
+
+def test_unit_of_database_identifier_generalized():
+    pl = pytest.importorskip("polars")
+
+    metric, d_in = dp.unit_of(
+        identifier={
+            "events": dp.IdSite(pl.col("user_id"), label="user"),
+            "users": dp.IdSite(pl.col("id"), label="user"),
+            "households": dp.IdSite(pl.col("household_id"), label="user"),
+        },
+        contributions=2,
+    )
+
+    assert isinstance(metric, dp.DatabaseIdDistance)
+    assert metric.protected_label == "user"
+    assert d_in == 2
+    assert set(metric.id_sites) == {"events", "users", "households"}
+    assert [site.label for site in metric.id_sites["households"]] == ["user"]
+
+
+def test_unit_of_database_identifier_rejects_implicit_shapes():
+    with pytest.raises(TypeError, match="IdSite"):
+        dp.unit_of(
+            identifier={
+                "events": "user_id",
+                "users": ["id"],
+            },
+            protected_label="user",
+            contributions=2,
+        )
+
+
+def test_unit_of_database_identifier_id_site_objects():
+    pl = pytest.importorskip("polars")
+
+    metric, d_in = dp.unit_of(
+        identifier={
+            "events": [
+                dp.IdSite(pl.col("src_user_id"), label="user"),
+                dp.IdSite(pl.col("dst_user_id"), label="user"),
+                dp.IdSite("household_id", label="household"),
+            ],
+            "users": dp.IdSite("user_id", label="user"),
+        },
+        protected_label="user",
+        contributions=2,
+    )
+
+    assert isinstance(metric, dp.DatabaseIdDistance)
+    assert metric.protected_label == "user"
+    assert d_in == 2
+    assert [site.label for site in metric.id_sites["events"]] == ["user", "user", "household"]
+    assert len(metric.id_sites["events"][0].exprs) == 1
+    assert len(metric.id_sites["events"][1].exprs) == 1
+    assert len(metric.id_sites["users"][0].exprs) == 1
+
+
+def test_id_site_constructor_coerces_exprs():
+    pl = pytest.importorskip("polars")
+
+    assert dp.IdSite("user_id", label="user").label == "user"
+    assert dp.IdSite(pl.col("user_id"), label="user").label == "user"
+    assert len(dp.IdSite(["user_id", pl.col("user_id")], label="user").exprs) == 2
+
+
+def test_id_site_allows_duplicate_exprs_for_identical_columns():
+    site = dp.IdSite(["user_id", "user_id"], label="user")
+
+    assert site.label == "user"
+    assert len(site.exprs) == 2
+
+
+def test_id_site_defaults_label_until_metric_construction():
+    site = dp.IdSite("user_id")
+
+    assert site.label is None
+    assert len(site.exprs) == 1
+
+
+def test_unit_of_database_identifier_requires_protected_label_for_multiple_spaces():
+    with pytest.raises(ValueError, match="protected_label is required"):
+        dp.unit_of(
+            identifier={
+                "events": [
+                    dp.IdSite("user_id", label="user"),
+                    dp.IdSite("household_id", label="household"),
+                ]
+            },
+            contributions=2,
+        )
+
 def test_privacy_loss_of():
     assert dp.loss_of(epsilon=3) == (dp.max_divergence(), 3.0)
     assert dp.loss_of(rho=2.0) == (dp.zero_concentrated_divergence(), 2.0)
