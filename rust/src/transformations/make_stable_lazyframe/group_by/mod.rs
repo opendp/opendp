@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 
-use crate::core::{Function, StabilityMap, Transformation};
+use crate::core::{Domain, Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{Context, DslPlanDomain, FrameDomain, SeriesDomain, WildExprDomain};
 use crate::error::*;
-use crate::metrics::{Bound, Bounds, FrameDistance, L0PInfDistance, L01InfDistance};
+use crate::metrics::{Bound, Bounds, FrameDistance, L0PInfDistance, L01InfDistance, PolarsMetric};
 use crate::traits::{InfMul, option_min};
 use crate::transformations::StableExpr;
 use crate::transformations::traits::UnboundedMetric;
@@ -11,9 +11,8 @@ use polars::chunked_array::cast::CastOptions;
 use polars::prelude::*;
 #[cfg(not(patch_polars))]
 use polars_plan::dsl::WindowType;
+use polars_plan::callback::PlanCallback;
 use polars_plan::prelude::GroupbyOptions;
-
-use super::StableDslPlan;
 
 #[cfg(test)]
 mod test;
@@ -24,51 +23,25 @@ mod test;
 /// * `input_domain` - The domain of the input LazyFrame.
 /// * `input_metric` - The metric of the input LazyFrame.
 /// * `plan` - The LazyFrame to transform.
-pub fn make_stable_group_by<M: UnboundedMetric>(
-    input_domain: DslPlanDomain,
-    input_metric: FrameDistance<M>,
-    plan: DslPlan,
-) -> Fallible<Transformation<DslPlanDomain, FrameDistance<M>, DslPlanDomain, FrameDistance<M>>> {
-    #[cfg(patch_polars)]
-    let DslPlan::GroupBy {
-        input,
-        keys,
-        predicates,
-        aggs,
-        apply,
-        maintain_order,
-        options,
-    } = plan
-    else {
-        return fallible!(MakeTransformation, "Expected group-by in logical plan");
-    };
-    #[cfg(not(patch_polars))]
-    let DslPlan::GroupBy {
-        input,
-        keys,
-        aggs,
-        apply,
-        maintain_order,
-        options,
-    } = plan
-    else {
-        return fallible!(MakeTransformation, "Expected group-by in logical plan");
-    };
-
+pub(crate) fn make_chain_group_by<DI, MI, M>(
+    t_prior: Transformation<DI, MI, DslPlanDomain, FrameDistance<M>>,
+    keys: Vec<Expr>,
+    aggs: Vec<Expr>,
+    apply: Option<(PlanCallback<DataFrame, DataFrame>, Arc<Schema>)>,
+    maintain_order: bool,
+    options: Arc<GroupbyOptions>,
+) -> Fallible<Transformation<DI, MI, DslPlanDomain, FrameDistance<M>>>
+where
+    DI: Domain + 'static,
+    MI: Metric + 'static,
+    M: UnboundedMetric + PolarsMetric,
+    (DI, MI): MetricSpace,
+    (DslPlanDomain, FrameDistance<M>): MetricSpace,
+{
     if apply.is_some() {
         return fallible!(
             MakeTransformation,
             "Apply is not currently supported in the logical plan. Please open an issue if this would be useful to you."
-        );
-    }
-
-    #[cfg(patch_polars)]
-    if !predicates.is_empty() {
-        // This is equivalent to running a filter after, as far as I can tell.
-        // Possibly useful to support.
-        return fallible!(
-            MakeTransformation,
-            "Having is not currently supported in logical plan. Please open an issue if this would be useful to you."
         );
     }
 
@@ -86,37 +59,22 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
         );
     }
 
-    let t_prior = input
-        .as_ref()
-        .clone()
-        .make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric): (_, FrameDistance<M>) = t_prior.output_space();
 
-    // create a transformation for each expression
     let expr_domain = WildExprDomain {
         columns: middle_domain.series_domains.clone(),
         context: Context::RowByRow,
     };
 
-    // each expression must be stable row by row
     keys.iter().try_for_each(|key| {
         key.clone()
             .make_stable(expr_domain.clone(), L0PInfDistance(middle_metric.0.clone()))
             .map(|_: Transformation<_, _, _, L01InfDistance<M>>| ())
     })?;
 
-    // check that aggregations are infallible. Aggregations are allowed to resize data
     aggs.iter()
         .try_for_each(|e| check_infallible(e, Resize::Allow))?;
 
-    if middle_metric.0.identifier().is_some() {
-        return fallible!(
-            MakeTransformation,
-            "stable groupby (sample and aggregate) is not supported on datasets with unbounded row contributions. If you want to execute a groupby truncation, include the identifier in the groupby keys."
-        );
-    }
-
-    // use Polars to compute the output dtype
     let series_domains = middle_domain
         .simulate_schema(|lf| lf.group_by(&keys).agg(&aggs))?
         .iter_fields()
@@ -166,7 +124,8 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
             let contributed_rows = d_in.get_bound(&HashSet::new()).per_group;
             let contributed_groups = d_in.get_bound(&h_keys).num_groups;
 
-            let Some(influenced_groups) = option_min(contributed_rows, contributed_groups) else {
+            let Some(influenced_groups) = option_min(contributed_rows, contributed_groups)
+            else {
                 return fallible!(
                     FailedMap,
                     "an upper bound on the number of contributed rows or groups is required"

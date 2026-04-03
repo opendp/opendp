@@ -5,6 +5,8 @@ from opendp._lib import *
 from opendp.mod import (
     ApproximateDivergence,
     ChangeOneIdDistance,
+    DatabaseDomain,
+    DatabaseIdDistance,
     Domain,
     ExtrinsicDistance,
     ExtrinsicDivergence,
@@ -147,7 +149,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
 
     if c_type == AnyObjectPtr:
         if isinstance(value, ctypes.POINTER(AnyObject)):
-            return value
+            return ctypes.cast(value, ctypes.POINTER(AnyObject))
         
         from opendp._data import slice_as_object
         return slice_as_object(value, type_name) # type: ignore[arg-type]
@@ -241,6 +243,8 @@ def c_to_py(value: Any) -> Any:
                 value.__class__ = SeriesDomain
             elif rt_type == LazyFrameDomain.__name__:
                 value.__class__ = LazyFrameDomain
+            elif rt_type == DatabaseDomain.__name__:
+                value.__class__ = DatabaseDomain
             elif rt_type == ExtrinsicDomain.__name__:
                 value.__class__ = ExtrinsicDomain
         # if you fall through these cases, then it is just treated as a generic Domain
@@ -258,6 +262,8 @@ def c_to_py(value: Any) -> Any:
                 value.__class__ = SymmetricIdDistance
             elif rt_type == ChangeOneIdDistance.__name__:
                 value.__class__ = ChangeOneIdDistance
+            elif rt_type == DatabaseIdDistance.__name__:
+                value.__class__ = DatabaseIdDistance
             elif rt_type == ExtrinsicDistance.__name__:
                 value.__class__ = ExtrinsicDistance
         # if you fall through these cases, then it is just treated as a generic Metric
@@ -327,6 +333,17 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
         
         if type_name == "Bounds":
             return _slice_to_vector(raw, RuntimeType("Vec", ["Bound"]))
+        
+        if type_name == "Binding":
+            return _slice_to_binding(raw)
+        if type_name == "UniqueKey":
+            return _slice_to_unique_key(raw)
+        if type_name == "ForeignKey":
+            return _slice_to_foreign_key(raw)
+        if type_name == "FunctionalDependency":
+            return _slice_to_functional_dependency(raw)
+        if type_name == "Ownership":
+            return _slice_to_ownership(raw)
 
         if type_name == "AnyObject":
             return _slice_to_anyobject(raw)
@@ -398,6 +415,17 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
         
         if type_name == "Bounds":
             return _vector_to_slice(value, RuntimeType("Vec", ["Bound"]))
+        
+        if type_name == "Binding":
+            return _binding_to_slice(value)
+        if type_name == "UniqueKey":
+            return _unique_key_to_slice(value)
+        if type_name == "ForeignKey":
+            return _foreign_key_to_slice(value)
+        if type_name == "FunctionalDependency":
+            return _functional_dependency_to_slice(value)
+        if type_name == "Ownership":
+            return _ownership_to_slice(value)
 
     if isinstance(type_name, RuntimeType):
         if type_name.origin == "Vec":
@@ -491,9 +519,16 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
         except TypeError:
             raise TypeError(f"Expected type is {type_name} but input data is not a list.")
 
-    if isinstance(inner_type_name, RuntimeType) or inner_type_name in {"Expr", "Bound", "BitVector"}:
-        c_repr = [py_to_c(v, c_type=AnyObjectPtr, type_name=inner_type_name) for v in val]
-        array = (AnyObjectPtr * len(val))(*c_repr) # type: ignore[operator]
+    inner_type_name = type_name.args[0]
+
+    if isinstance(inner_type_name, RuntimeType) or inner_type_name in {"Expr", "LazyFrame", "Bound", "BitVector", "Binding", "UniqueKey", "ForeignKey", "FunctionalDependency", "Ownership"}:
+        c_repr = [
+            py_to_c(v, c_type=AnyObjectPtr, type_name=inner_type_name)
+            for v in val
+        ]
+        array = (ctypes.c_void_p * len(val))(
+            *(ctypes.cast(obj, ctypes.c_void_p) for obj in c_repr)
+        )
         ffislice = _wrap_in_slice(array, len(val))
         ffislice.depends_on(*c_repr)
         return ffislice
@@ -505,11 +540,16 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
         ffi_slice.depends_on(c_repr)
         return ffi_slice
 
-    if inner_type_name == "SeriesDomain":
+    if isinstance(inner_type_name, str) and inner_type_name.endswith("Domain"):
         # define the ctype of an array of domains
         domain_array_type = (Domain * len(val)) # type: ignore[operator]
         # create an instance of a ctype array of domains
         array = domain_array_type(*val) # type: ignore[operator]
+        return _wrap_in_slice(array, len(val))
+
+    if isinstance(inner_type_name, str) and inner_type_name.endswith("Distance"):
+        metric_array_type = (Metric * len(val)) # type: ignore[operator]
+        array = metric_array_type(*val) # type: ignore[operator]
         return _wrap_in_slice(array, len(val))
     
     # remaining inner types should be atomic
@@ -534,15 +574,17 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> Sequence[Any]:
 
     inner_type_name = type_name.args[0]
 
-    if inner_type_name in {'AnyObject', 'Expr', 'Bound'}:
-        from opendp._data import ffislice_of_anyobjectptrs
-        raw = ffislice_of_anyobjectptrs(raw)
-        array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(AnyObjectPtr))[0:raw.contents.len]
-        res = list(map(c_to_py, array))
-        # when the top-level AnyObject is freed, it recursively frees all anyobjects inside of it
-        # adjust the type of constituent AnyObjects so that __delete__ is not called when they are dropped
+    if isinstance(inner_type_name, RuntimeType) or inner_type_name in {'AnyObject', 'Expr', 'LazyFrame', 'Bound', 'Binding', 'UniqueKey', 'ForeignKey', 'FunctionalDependency', 'Ownership'}:
+        ptrs = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))[0:raw.contents.len]
+        array = [ctypes.cast(ptr, AnyObjectPtr) for ptr in ptrs]
+        res = []
+        # when the top-level AnyObject is freed, it recursively frees all anyobjects inside of it.
+        # downgrade only temporary pointer wrappers; keep any pointers that are returned directly.
         for elem in array:
-            elem.__class__ = ctypes.POINTER(AnyObject)
+            py_elem = c_to_py(elem)
+            if py_elem is not elem:
+                elem.__class__ = ctypes.POINTER(AnyObject)
+            res.append(py_elem)
         return res
 
     if inner_type_name == 'ExtrinsicObject':
@@ -553,9 +595,15 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> Sequence[Any]:
         array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_char_p))[0:raw.contents.len]
         return list(map(lambda v: v.decode(), array))
 
-    if not isinstance(inner_type_name, str):
-        raise ValueError(f"inner type must be atomic, found {inner_type_name}")  # pragma: no cover
-    
+    if isinstance(inner_type_name, str) and inner_type_name.endswith("Domain"):
+        array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(Domain))[0:raw.contents.len]
+        return list(map(c_to_py, array))
+
+    if isinstance(inner_type_name, str) and inner_type_name.endswith("Distance"):
+        array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(Metric))[0:raw.contents.len]
+        return list(map(c_to_py, array))
+
+    assert isinstance(inner_type_name, str), f"inner type must be string, found {inner_type_name} of type {type(inner_type_name)}"
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))[0:raw.contents.len]
 
 
@@ -671,14 +719,31 @@ def _hashmap_to_slice(val: MutableMapping, type_name: RuntimeType) -> FfiSlicePt
     if not isinstance(val, MutableMapping):
         raise TypeError(f"Expected type is {type_name} but input data is not a dict.")  # pragma: no cover
 
+    def _coerce_hashmap_member(type_desc, member):
+        if type_desc == "ExtrinsicObject":
+            return member
+        if isinstance(type_desc, RuntimeType):
+            return member
+        if type_desc in ATOM_MAP:
+            return _check_and_cast_scalar(type_desc, member)
+        return member
+
     val = {
-        _check_and_cast_scalar(key_type, k):
-            _check_and_cast_scalar(val_type, v) if val_type != "ExtrinsicObject" else v
+        _coerce_hashmap_member(key_type, k):
+            _coerce_hashmap_member(val_type, v)
         for k, v in val.items()
     }
     
-    keys: AnyObjectPtr = py_to_c(list(val.keys()), type_name=f"Vec<{key_type}>", c_type=AnyObjectPtr)
-    vals: AnyObjectPtr = py_to_c(list(val.values()), type_name=f"Vec<{val_type}>", c_type=AnyObjectPtr)
+    keys: AnyObjectPtr = py_to_c(
+        list(val.keys()),
+        type_name=RuntimeType("Vec", [key_type]),
+        c_type=AnyObjectPtr,
+    )
+    vals: AnyObjectPtr = py_to_c(
+        list(val.values()),
+        type_name=RuntimeType("Vec", [val_type]),
+        c_type=AnyObjectPtr,
+    )
     ffislice = _wrap_in_slice(ctypes.pointer((AnyObjectPtr * 2)(keys, vals)), 2) # type: ignore[operator]
 
     # The __del__ destructor on `keys` and `vals` is called and memory freed when their refcounts go to zero.
@@ -850,6 +915,109 @@ def _bound_to_slice(val) -> FfiSlicePtr:
     return _wrap_in_slice(ctypes.pointer(array), 3)
 
 
+def _binding_to_slice(val) -> AnyObjectPtr:
+    from opendp.extras.polars import Binding
+    assert isinstance(val, Binding)
+
+    exprs = ctypes.cast(py_to_c(val.exprs, c_type=AnyObjectPtr, type_name="Vec<Expr>"), ctypes.c_void_p)
+    space = ctypes.cast(py_to_c(val.space, c_type=AnyObjectPtr, type_name="String"), ctypes.c_void_p)
+
+    array = (ctypes.c_void_p * 2)(exprs, space)
+    return _wrap_in_slice(ctypes.pointer(array), 2)
+
+
+def _slice_to_binding(raw: FfiSlicePtr):
+    from opendp.extras.polars import Binding
+
+    void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
+    ptr_data: list[ctypes.c_void_p] = void_array_ptr[0: raw.contents.len]
+
+    return Binding(
+        exprs=c_to_py(ctypes.cast(ptr_data[0], AnyObjectPtr)),
+        space=c_to_py(ctypes.cast(ptr_data[1], AnyObjectPtr)),
+    )
+
+def _unique_key_to_slice(val) -> AnyObjectPtr:
+    from opendp.extras.polars import UniqueKey
+    assert isinstance(val, UniqueKey)
+
+    table = ctypes.cast(py_to_c(val.table, c_type=AnyObjectPtr, type_name="String"), ctypes.c_void_p)
+    key = ctypes.cast(py_to_c(val.key, c_type=AnyObjectPtr, type_name="Expr"), ctypes.c_void_p)
+    array = (ctypes.c_void_p * 2)(table, key)
+    return _wrap_in_slice(ctypes.pointer(array), 2)
+
+def _slice_to_unique_key(raw: FfiSlicePtr):
+    from opendp.extras.polars import UniqueKey
+
+    void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
+    ptr_data: list[ctypes.c_void_p] = void_array_ptr[0: raw.contents.len]
+    return UniqueKey(
+        table=c_to_py(ctypes.cast(ptr_data[0], AnyObjectPtr)),
+        key=c_to_py(ctypes.cast(ptr_data[1], AnyObjectPtr)),
+    )
+
+def _foreign_key_to_slice(val) -> AnyObjectPtr:
+    from opendp.extras.polars import ForeignKey
+    assert isinstance(val, ForeignKey)
+
+    from_table = ctypes.cast(py_to_c(val.from_table, c_type=AnyObjectPtr, type_name="String"), ctypes.c_void_p)
+    from_key = ctypes.cast(py_to_c(val.from_key, c_type=AnyObjectPtr, type_name="Expr"), ctypes.c_void_p)
+    to_table = ctypes.cast(py_to_c(val.to_table, c_type=AnyObjectPtr, type_name="String"), ctypes.c_void_p)
+    to_key = ctypes.cast(py_to_c(val.to_key, c_type=AnyObjectPtr, type_name="Expr"), ctypes.c_void_p)
+    array = (ctypes.c_void_p * 4)(from_table, from_key, to_table, to_key)
+    return _wrap_in_slice(ctypes.pointer(array), 4)
+
+def _slice_to_foreign_key(raw: FfiSlicePtr):
+    from opendp.extras.polars import ForeignKey
+
+    void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
+    ptr_data: list[ctypes.c_void_p] = void_array_ptr[0: raw.contents.len]
+    return ForeignKey(
+        from_table=c_to_py(ctypes.cast(ptr_data[0], AnyObjectPtr)),
+        from_key=c_to_py(ctypes.cast(ptr_data[1], AnyObjectPtr)),
+        to_table=c_to_py(ctypes.cast(ptr_data[2], AnyObjectPtr)),
+        to_key=c_to_py(ctypes.cast(ptr_data[3], AnyObjectPtr)),
+    )
+
+def _functional_dependency_to_slice(val) -> AnyObjectPtr:
+    from opendp.extras.polars import FunctionalDependency
+    assert isinstance(val, FunctionalDependency)
+
+    table = ctypes.cast(py_to_c(val.table, c_type=AnyObjectPtr, type_name="String"), ctypes.c_void_p)
+    from_key = ctypes.cast(py_to_c(val.from_key, c_type=AnyObjectPtr, type_name="Expr"), ctypes.c_void_p)
+    to_key = ctypes.cast(py_to_c(val.to_key, c_type=AnyObjectPtr, type_name="Expr"), ctypes.c_void_p)
+    array = (ctypes.c_void_p * 3)(table, from_key, to_key)
+    return _wrap_in_slice(ctypes.pointer(array), 3)
+
+def _slice_to_functional_dependency(raw: FfiSlicePtr):
+    from opendp.extras.polars import FunctionalDependency
+
+    void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
+    ptr_data: list[ctypes.c_void_p] = void_array_ptr[0: raw.contents.len]
+    return FunctionalDependency(
+        table=c_to_py(ctypes.cast(ptr_data[0], AnyObjectPtr)),
+        from_key=c_to_py(ctypes.cast(ptr_data[1], AnyObjectPtr)),
+        to_key=c_to_py(ctypes.cast(ptr_data[2], AnyObjectPtr)),
+    )
+
+def _ownership_to_slice(val) -> AnyObjectPtr:
+    from opendp.extras.polars import Ownership
+    assert isinstance(val, Ownership)
+
+    table = ctypes.cast(py_to_c(val.table, c_type=AnyObjectPtr, type_name="String"), ctypes.c_void_p)
+    claims = ctypes.cast(py_to_c(val.claims, c_type=AnyObjectPtr, type_name="Vec<Vec<Expr>>"), ctypes.c_void_p)
+    array = (ctypes.c_void_p * 2)(table, claims)
+    return _wrap_in_slice(ctypes.pointer(array), 2)
+
+def _slice_to_ownership(raw: FfiSlicePtr):
+    from opendp.extras.polars import Ownership
+
+    void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
+    ptr_data: list[ctypes.c_void_p] = void_array_ptr[0: raw.contents.len]
+    return Ownership(
+        table=c_to_py(ctypes.cast(ptr_data[0], AnyObjectPtr)),
+        claims=c_to_py(ctypes.cast(ptr_data[1], AnyObjectPtr)),
+    )
 
 def _dataframe_to_slice(val) -> FfiSlicePtr:
     pl = import_optional_dependency('polars')

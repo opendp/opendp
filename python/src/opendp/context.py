@@ -12,7 +12,8 @@ We suggest importing under the conventional name ``dp``:
 """
 
 import logging
-from typing import Any, Callable, Optional, Sequence, Type, Union, MutableMapping
+import warnings
+from typing import Any, Callable, Optional, Sequence, Type, Union, MutableMapping, Mapping, cast
 import importlib
 from inspect import signature
 from functools import partial
@@ -37,6 +38,7 @@ from opendp.metrics import (
     absolute_distance,
     change_one_distance,
     change_one_id_distance,
+    database_id_distance,
     discrete_distance,
     hamming_distance,
     insert_delete_distance,
@@ -48,6 +50,8 @@ from opendp.metrics import (
 )
 from opendp.mod import (
     ApproximateDivergence,
+    DatabaseIdDistance,
+    DatabaseDomain,
     Domain,
     Measurement,
     Metric,
@@ -62,7 +66,23 @@ from opendp.mod import (
 )
 from opendp.typing import RuntimeType
 from opendp._lib import indent, import_optional_dependency
-from opendp.extras.polars import Bound, LazyFrameQuery, Margin
+from opendp.extras.polars import (
+    Binding,
+    DatabaseQuery,
+    Bound,
+    ForeignKey,
+    FunctionalDependency,
+    LazyFrameQuery,
+    Margin,
+    Ownership,
+    UniqueKey,
+    _database_table_names_from_connection,
+    _database_tables_from_connection,
+    _database_schema_metadata_from_connection,
+    _database_domain_from_tables,
+    database_id_distance_from_schema,
+    table,
+)
 from dataclasses import replace
 
 __all__ = [
@@ -76,6 +96,7 @@ __all__ = [
     "Chain",
     "PartialChain",
     "register",
+    "table",
 ]
 
 
@@ -226,6 +247,10 @@ def domain_of(T, infer: bool = False) -> Domain:
             from opendp.extras.polars import _lazyframe_domain_from_schema
 
             return _lazyframe_domain_from_schema(T.collect_schema())
+        if pl is not None and isinstance(T, MutableMapping) and all(
+            isinstance(k, str) and isinstance(v, pl.LazyFrame) for k, v in T.items()
+        ):
+            return _database_domain_from_tables(T)
 
     # normalize to a type descriptor
     if infer:
@@ -343,6 +368,12 @@ def unit_of(
     l2: Optional[float] = None,
     local: Optional[bool] = None,
     identifier: Optional[str] = None,
+    bindings: Optional[Mapping[str, Any] | Sequence[Any]] = None,
+    protect: Optional[str] = None,
+    unique_keys: Optional[Sequence[UniqueKey]] = None,
+    foreign_keys: Optional[Sequence[ForeignKey]] = None,
+    functional_dependencies: Optional[Sequence[FunctionalDependency]] = None,
+    ownerships: Optional[Sequence[Ownership]] = None,
     ordered: bool = False,
     U=None,
 ) -> tuple[Metric, Union[float, Sequence[Bound]]]:
@@ -361,18 +392,38 @@ def unit_of(
     :param l1: Greatest l1 distance a privacy unit can influence a vector aggregate data set
     :param l2: Greatest l2 distance a privacy unit can influence a vector aggregate data set
     :param local: Set to true if the dataset consists of one individual (for local-DP)
-    :param identifier: Can be a column name or Polars expression.
+    :param identifier: Column name or Polars expression for single-table identifier distance.
+    :param bindings: For database contexts, a mapping from table name to non-empty ``list[bind(...)]``.
+        Within ``bind(exprs, to=...)``, ``exprs`` may be a string, expression, or list of strings/expressions.
+        Distinct appearances of the same semantic identifier space should be separate ``bind`` values.
+    :param protect: Optional name of the protected identifier space when ``bindings`` is set.
+        Required when the database bindings mapping contains multiple semantic spaces.
+    :param unique_keys: Public unique-key metadata used to compile additional database bindings.
+    :param foreign_keys: Public foreign-key metadata used to compile additional database bindings.
+    :param functional_dependencies: Public functional dependencies used to compile additional database bindings.
+    :param ownerships: Explicit ownership declarations compiled into base owner claims.
     :param ordered: Set to ``True`` to use ``InsertDeleteDistance`` instead of ``SymmetricDistance``, or ``HammingDistance`` instead of ``ChangeOneDistance``.
     :param U: The type of the dataset distance."""
 
     def _is_distance(p, v):
-        return p not in ["ordered", "U", "_is_distance", "identifier"] and v is not None
+        return p not in [
+            "ordered",
+            "U",
+            "_is_distance",
+            "identifier",
+            "bindings",
+            "protect",
+            "unique_keys",
+            "foreign_keys",
+            "functional_dependencies",
+            "ownerships",
+        ] and v is not None
 
     if sum(1 for p, v in locals().items() if _is_distance(p, v)) != 1:
         raise ValueError("Must specify exactly one distance.")
 
     if local:
-        if identifier is not None or ordered or U is not None:
+        if identifier is not None or bindings is not None or protect is not None or ordered or U is not None or unique_keys or foreign_keys or functional_dependencies or ownerships:
             raise ValueError('"local" must be the only parameter')
         return discrete_distance(), int(local)
 
@@ -381,26 +432,81 @@ def unit_of(
             raise ValueError(
                 '"ordered" is only valid with "changes" or "contributions"'
             )
-        if identifier is not None:
-            raise ValueError('"ordered" must be False when "identifier" is set')
+        if identifier is not None or bindings is not None or unique_keys or foreign_keys or functional_dependencies or ownerships:
+            raise ValueError('"ordered" must be False when "identifier" or "bindings" is set')
+
+    if protect is not None and bindings is None:
+        raise ValueError('"protect" is only valid when "bindings" is set')
+    if (unique_keys or foreign_keys or functional_dependencies or ownerships) and not isinstance(bindings, Mapping):
+        raise ValueError('schema metadata is only valid with database bindings')
+    
+    # reduce identifier to bindings case
+    if identifier is not None:
+        from opendp.extras.polars import bind
+        bindings = [bind(identifier, to="identifier")]
+        protect = "identifier"
+        identifier = None
+
+    if bindings is not None:
+        # normalize protect
+        if protect is None:
+            if not bindings:
+                raise ValueError("bindings must be non-empty")
+            if isinstance(bindings, Sequence):
+                spaces = set(b.space for b in bindings)
+            elif isinstance(bindings, Mapping):
+                spaces = set(b.space for t in bindings.values() for b in t)
+            if len(spaces) != 1:
+                raise ValueError("protect must be specified when multiple identifier spaces exist")
+            protect = next(iter(spaces))
+
+        # sequence-based bindings correspond to frames
+        if isinstance(bindings, Sequence):
+            if changes is not None:
+                metric = change_one_id_distance(bindings, protect)
+                return metric, contributions
+            
+            elif contributions is not None:
+                metric = symmetric_id_distance(bindings, protect)
+
+                if isinstance(contributions, Sequence):
+                    metric = frame_distance(metric)
+                
+                return metric, contributions
+            
+            raise ValueError("Must specify exactly one distance.")
+        
+        # dict-based bindings correspond to databases
+        elif isinstance(bindings, Mapping):
+            for sites in bindings.values():
+                if not isinstance(sites, Sequence) or isinstance(sites, (str, bytes)) or not sites or not all(isinstance(site, Binding) for site in sites):
+                    raise TypeError("database bindings must be a mapping from table name to non-empty list[bind(...)]")
+            if changes is not None:
+                raise ValueError('database bindings currently only support "contributions" in dp.unit_of')
+            if contributions is None:
+                raise ValueError("Must specify exactly one distance.")
+            if isinstance(contributions, Sequence):
+                raise ValueError("database bindings do not support frame-distance contribution bounds")
+            
+            if unique_keys or foreign_keys or functional_dependencies or ownerships:
+                metric = database_id_distance_from_schema(
+                    protect,
+                    bindings,
+                    unique_keys=unique_keys or (),
+                    foreign_keys=foreign_keys or (),
+                    functional_dependencies=functional_dependencies or (),
+                    ownerships=ownerships or (),
+                )
+            else:
+                metric = database_id_distance(protect, bindings)
+            return metric, contributions
 
     if contributions is not None:
-        if identifier is None:
-            metric = insert_delete_distance() if ordered else symmetric_distance()
-        else:
-            metric = symmetric_id_distance(identifier)
-
-        if isinstance(contributions, Sequence):
-            metric = frame_distance(metric)
-
+        metric = insert_delete_distance() if ordered else symmetric_distance()
         return metric, contributions
 
     if changes is not None:
-        if identifier is None:
-            metric = hamming_distance() if ordered else change_one_distance()
-        else:
-            metric = change_one_id_distance(identifier)
-
+        metric = hamming_distance() if ordered else change_one_distance()
         return metric, changes
 
     if absolute is not None:
@@ -474,12 +580,19 @@ class Context(object):
         pl = import_optional_dependency("polars")
 
         new_plan = pl.LazyFrame.deserialize(io.BytesIO(serialized_plan))
-        new_query = self.query()
-        if not isinstance(new_query, LazyFrameQuery):
-            raise ValueError("'data' of context must be a LazyFrame")
-
-        new_query.polars_plan = new_plan
-        return new_query
+        chain = self.query_space or self.accountant.input_space
+        if not (
+            isinstance(chain[0], DatabaseDomain) or chain[0].type == "LazyFrameDomain"
+        ):
+            raise ValueError("'data' of context must be a LazyFrame or dict[str, LazyFrame]")
+        query = Query(
+            chain=chain,
+            output_measure=self.accountant.output_measure,
+            d_in=self.d_in,
+            d_out=self._resolve_query_d_out({}),
+            context=self,
+        )
+        return LazyFrameQuery(new_plan, query)
 
     @staticmethod
     def compositor(
@@ -508,10 +621,44 @@ class Context(object):
         :param split_by_weights: A list of weights for each intermediate privacy loss.
         :param domain: The domain of the data.
         :param margins: Descriptors for grouped data."""
+        pl = import_optional_dependency("polars", raise_error=False)
+        if pl is not None and not isinstance(data, pl.LazyFrame) and not isinstance(data, MutableMapping):
+            connection = data
+            privacy_metric = privacy_unit[0]
+            if isinstance(domain, DatabaseDomain) or isinstance(privacy_metric, DatabaseIdDistance):
+                inferred_table_names = _database_table_names_from_connection(connection)
+                table_names = (
+                    domain.table_domains.keys()
+                    if isinstance(domain, DatabaseDomain)
+                    else inferred_table_names or privacy_metric.bindings.keys()
+                )
+                data = _database_tables_from_connection(data, table_names)
+                if domain is None:
+                    domain = _database_domain_from_tables(data)
+                elif not isinstance(domain, DatabaseDomain):
+                    raise ValueError("database connections require a DatabaseDomain")
+                if isinstance(privacy_metric, DatabaseIdDistance):
+                    unique_keys, foreign_keys, functional_dependencies, _ = (
+                        _database_schema_metadata_from_connection(connection, data.keys())
+                    )
+                    if unique_keys or foreign_keys or functional_dependencies:
+                        privacy_metric = database_id_distance_from_schema(
+                            privacy_metric.protect,
+                            privacy_metric.bindings,
+                            unique_keys=unique_keys,
+                            foreign_keys=foreign_keys,
+                            functional_dependencies=functional_dependencies,
+                        )
+                        privacy_unit = privacy_metric, privacy_unit[1]
+
         if domain is None:
             domain = domain_of(data, infer=True)
 
         if margins:
+            if isinstance(domain, DatabaseDomain):
+                raise ValueError(
+                    "database margins must be declared on each table domain; pass a database domain instead of top-level margins"
+                )
             # allows dictionaries of {[by]: [margin]}
             if isinstance(margins, MutableMapping):
                 from warnings import warn
@@ -533,7 +680,7 @@ class Context(object):
             queryable = accountant(data)
         except TypeError as e:
             inferred_domain = domain_of(data, infer=True)
-            if vector_domain(domain) == inferred_domain:
+            if not isinstance(domain, DatabaseDomain) and vector_domain(domain) == inferred_domain:
                 # With Python 3.11, add_note is available, but pytest.raises doesn't see notes.
                 e.args = (
                     e.args[0] + "; To fix, wrap domain kwarg with dp.vector_domain()",
@@ -558,14 +705,60 @@ class Context(object):
         )
         return answer
 
-    def query(self, **kwargs) -> Union["Query", LazyFrameQuery]:
+    def query(self, plan=None, **kwargs) -> Union["Query", LazyFrameQuery, DatabaseQuery]:
         """Starts a new Query to be executed in this context.
 
         If the context has been constructed with a sequence of privacy losses,
-        the next loss will be used. Otherwise, the loss will be computed from the kwargs.
+        the next loss will be used automatically.
 
-        :param kwargs: The privacy loss to use for the query. Passed directly into :py:func:`loss_of`.
+        Passing privacy kwargs here is deprecated.
+        Prefer to pass them to :py:meth:`Query.release`,
+        :py:meth:`Query.resolve`,
+        or Polars :py:meth:`~opendp.extras.polars.LazyFrameQuery.summarize`.
+
+        :param plan: Optional initial plan for single-table contexts.
+        :param kwargs: Deprecated privacy loss arguments. Passed directly into :py:func:`loss_of`.
         """
+        if kwargs:
+            warnings.warn(
+                'Passing privacy kwargs to ".query(...)" is deprecated. '
+                'Pass them to ".release(...)", ".resolve(...)" or ".summarize(...)" instead.',
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+        d_query = self._resolve_query_d_out(kwargs)
+
+        chain = self.query_space or self.accountant.input_space
+        query = Query(
+            chain=chain,
+            output_measure=self.accountant.output_measure,
+            d_in=self.d_in,
+            d_out=d_query,
+            context=self,
+        )
+
+        if isinstance(chain[0], DatabaseDomain):
+            if plan is not None:
+                raise ValueError(
+                    'database contexts start from `context.query().table("name")`, not `context.query(plan)`'
+                )
+            return DatabaseQuery(query, chain[0])
+
+        if chain[0].type == "LazyFrameDomain":
+            if plan is not None:
+                if isinstance(plan, LazyFrameQuery):
+                    return LazyFrameQuery(plan.polars_plan, query)
+                return LazyFrameQuery(plan, query)
+            from opendp.domains import _lazyframe_from_domain
+
+            # creates an empty lazyframe to hold the query plan
+            polars_plan = _lazyframe_from_domain(self.accountant.input_domain)
+            return LazyFrameQuery(polars_plan, query)
+
+        return query
+
+    def _resolve_query_d_out(self, kwargs):
         d_query = None
         if self.d_mids is not None:
             if kwargs:
@@ -589,25 +782,7 @@ class Context(object):
                 ):
                     msg += " Consider setting `delta=0.0` in your query."
                 raise ValueError(msg)
-
-        chain = self.query_space or self.accountant.input_space
-        query = Query(
-            chain=chain,
-            output_measure=self.accountant.output_measure,
-            d_in=self.d_in,
-            d_out=d_query,
-            context=self,
-        )
-
-        # return a LazyFrameQuery when dealing with Polars data, to better mimic the Polars API
-        if chain[0].type == "LazyFrameDomain":
-            from opendp.domains import _lazyframe_from_domain
-
-            # creates an empty lazyframe to hold the query plan
-            polars_plan = _lazyframe_from_domain(self.accountant.input_domain)
-            return LazyFrameQuery(polars_plan, query)
-
-        return query
+        return d_query
 
     def current_privacy_loss(self):
         """When the query losses are static, returns the list of consumed privacy losses,
@@ -792,6 +967,24 @@ class Query(object):
             _wrap_release=wrap_release or self._wrap_release,
         )
 
+    def _resolve_d_out(self, kwargs):
+        if kwargs:
+            if self._context is not None:
+                return self._context._resolve_query_d_out(kwargs)
+
+            observed_measure, d_out = loss_of(**kwargs)
+            expected_measure = self._output_measure
+            if observed_measure != expected_measure:
+                msg = f"Expected output measure {expected_measure} but got {observed_measure}."
+                if (
+                    isinstance(expected_measure, ApproximateDivergence)
+                    and "delta" not in kwargs
+                ):
+                    msg += " Consider setting `delta=0.0` in your query."
+                raise ValueError(msg)
+            return d_out
+        return self._d_out
+
     def __dir__(self):
         """Returns the list of available constructors. Used by Python's error suggestion mechanism.
         Without this, none of the transformations or measument methods are listed.
@@ -803,6 +996,7 @@ class Query(object):
         allow_transformations: bool = False,
         bounds: Optional[tuple[float, float]] = None,
         T: Optional[Union[Type[float], Type[int]]] = None,
+        **kwargs,
     ) -> Union[Transformation, Measurement, Odometer]:
         """Resolve the query into a transformation, measurement or odometer.
 
@@ -811,23 +1005,25 @@ class Query(object):
         :param T: The type of the parameter to search for. Either ``float`` or ``int``.
         """
         # resolve a partial chain into a measurement, by fixing the input and output distances
+        d_out = self._resolve_d_out(kwargs)
         if isinstance(self._chain, PartialChain):
             assert self._d_in is not None
-            assert self._d_out is not None
+            assert d_out is not None
             chain = self._chain.fix(
-                self._d_in, self._d_out, self._output_measure, bounds=bounds, T=T
+                self._d_in, d_out, self._output_measure, bounds=bounds, T=T
             )
         else:
             chain = self._chain
         if not allow_transformations and isinstance(chain, Transformation):
             raise ValueError("Query is not yet a measurement or odometer.")
-        return _cast_measure(chain, self._output_measure, self._d_out)
+        return _cast_measure(chain, self._output_measure, d_out)
 
     def release(
         self,
         data=None,
         bounds: Optional[tuple[float, float]] = None,
         T: Optional[Union[Type[float], Type[int]]] = None,
+        **kwargs,
     ):
         """Release the query. The query must be part of a context.
 
@@ -838,7 +1034,7 @@ class Query(object):
         if self._context is not None and data is not None:
             raise ValueError("Cannot specify data when the query is part of a context.")
 
-        measurement = self.resolve(bounds=bounds, T=T)
+        measurement = self.resolve(bounds=bounds, T=T, **kwargs)
 
         if self._context is not None:
             answer = self._context(measurement)

@@ -1,8 +1,17 @@
+use std::collections::HashMap;
+
 use crate::{
-    domains::{AtomDomain, LazyFrameDomain, Margin, OptionDomain, SeriesDomain},
-    metrics::SymmetricDistance,
-    transformations::make_stable_lazyframe,
+    core::Transformation,
+    domains::{
+        AtomDomain, DatabaseDomain, DslPlanDomain, LazyFrameDomain, Margin, OptionDomain,
+        SeriesDomain,
+    },
+    metrics::{
+        Binding, Bounds, DatabaseIdDistance, FrameDistance, SymmetricDistance, SymmetricIdDistance,
+    },
+    transformations::{StableDslPlan, make_stable_lazyframe},
 };
+use polars::prelude::{DataType, int_range, len, lit};
 
 use super::*;
 
@@ -57,5 +66,186 @@ fn test_filter_fail_with_non_bool_predicate() -> Fallible<()> {
 
     assert_eq!(variant, ErrorVariant::MakeTransformation);
 
+    Ok(())
+}
+
+#[test]
+fn test_database_truncation_matches_single_table_stability_map() -> Fallible<()> {
+    let frame_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("alpha", AtomDomain::<i32>::default()),
+        SeriesDomain::new("id", AtomDomain::<i32>::default()),
+    ])?;
+
+    let frame_metric = FrameDistance(SymmetricIdDistance {
+        protect: "user".to_string(),
+        bindings: vec![Binding {
+            space: "user".to_string(),
+            exprs: vec![col("id")],
+        }],
+        owner_claims: vec![vec![col("id")]],
+    });
+
+    let database_domain = DatabaseDomain::new(HashMap::from([(
+        "events".to_string(),
+        frame_domain.clone(),
+    )]));
+    let database_metric = DatabaseIdDistance {
+        protect: "user".to_string(),
+        bindings: HashMap::from([(
+            "events".to_string(),
+            vec![Binding {
+                space: "user".to_string(),
+                exprs: vec![col("id")],
+            }],
+        )]),
+        base_owner_claims: HashMap::from([("events".to_string(), vec![vec![col("id")]])]),
+    };
+
+    let truncation = int_range(lit(0), len(), 1, DataType::Int64)
+        .over([col("id")])
+        .lt(lit(2u32));
+
+    let frame_plan = df!("alpha" => [1i32, 2], "id" => [1i32, 1])?
+        .lazy()
+        .filter(truncation.clone())
+        .logical_plan;
+
+    let database_plan = df!(
+        "__OPENDP_TABLE_NAME__[events]" => ["events", "events"],
+        "alpha" => [1i32, 2],
+        "id" => [1i32, 1]
+    )?
+    .lazy()
+    .filter(truncation)
+    .logical_plan;
+
+    let t_frame: Transformation<
+        DslPlanDomain,
+        FrameDistance<SymmetricIdDistance>,
+        DslPlanDomain,
+        FrameDistance<SymmetricDistance>,
+    > = frame_plan.make_stable(frame_domain.cast_carrier(), frame_metric)?;
+    let t_database: Transformation<
+        DatabaseDomain,
+        DatabaseIdDistance,
+        DslPlanDomain,
+        FrameDistance<SymmetricDistance>,
+    > = database_plan.make_stable(database_domain, database_metric)?;
+
+    assert_eq!(t_frame.output_domain, t_database.output_domain);
+    assert_eq!(
+        t_frame.stability_map.eval(&Bounds::from(1))?,
+        t_database.stability_map.eval(&1)?
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_database_truncation_chooses_matching_singleton_owner_claim() -> Fallible<()> {
+    let events_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("user_id", AtomDomain::<i32>::default()),
+        SeriesDomain::new("user_id_dup", AtomDomain::<i32>::default()),
+        SeriesDomain::new("value", AtomDomain::<i32>::default()),
+    ])?;
+
+    let database_domain =
+        DatabaseDomain::new(HashMap::from([("events".to_string(), events_domain)]));
+    let database_metric = DatabaseIdDistance {
+        protect: "user".to_string(),
+        bindings: HashMap::from([(
+            "events".to_string(),
+            vec![
+                Binding {
+                    space: "user".to_string(),
+                    exprs: vec![col("user_id")],
+                },
+                Binding {
+                    space: "user".to_string(),
+                    exprs: vec![col("user_id_dup")],
+                },
+            ],
+        )]),
+        base_owner_claims: HashMap::from([(
+            "events".to_string(),
+            vec![vec![col("user_id")], vec![col("user_id_dup")]],
+        )]),
+    };
+
+    let truncation = int_range(lit(0), len(), 1, DataType::Int64)
+        .over([col("user_id")])
+        .lt(lit(1u32));
+    let plan = df!(
+        "__OPENDP_TABLE_NAME__[events]" => ["events", "events", "events"],
+        "user_id" => [1i32, 1, 2],
+        "user_id_dup" => [1i32, 1, 2],
+        "value" => [10i32, 11, 12]
+    )?
+    .lazy()
+    .filter(truncation)
+    .logical_plan;
+
+    let t_truncate = <DslPlan as StableDslPlan<
+        DatabaseDomain,
+        DatabaseIdDistance,
+        FrameDistance<SymmetricDistance>,
+    >>::make_stable(plan, database_domain, database_metric)?;
+    assert_eq!(t_truncate.output_metric.0, SymmetricDistance);
+    Ok(())
+}
+
+#[test]
+fn test_database_truncation_rejects_multi_factor_owner_claim() -> Fallible<()> {
+    let events_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("src_user_id", AtomDomain::<i32>::default()),
+        SeriesDomain::new("dst_user_id", AtomDomain::<i32>::default()),
+        SeriesDomain::new("value", AtomDomain::<i32>::default()),
+    ])?;
+
+    let database_domain =
+        DatabaseDomain::new(HashMap::from([("events".to_string(), events_domain)]));
+    let database_metric = DatabaseIdDistance {
+        protect: "user".to_string(),
+        bindings: HashMap::from([(
+            "events".to_string(),
+            vec![
+                Binding {
+                    space: "user".to_string(),
+                    exprs: vec![col("src_user_id")],
+                },
+                Binding {
+                    space: "user".to_string(),
+                    exprs: vec![col("dst_user_id")],
+                },
+            ],
+        )]),
+        base_owner_claims: HashMap::from([(
+            "events".to_string(),
+            vec![vec![col("src_user_id"), col("dst_user_id")]],
+        )]),
+    };
+
+    let truncation = int_range(lit(0), len(), 1, DataType::Int64)
+        .over([col("src_user_id")])
+        .lt(lit(1u32));
+    let plan = df!(
+        "__OPENDP_TABLE_NAME__[events]" => ["events", "events", "events"],
+        "src_user_id" => [1i32, 1, 2],
+        "dst_user_id" => [2i32, 3, 3],
+        "value" => [10i32, 11, 12]
+    )?
+    .lazy()
+    .filter(truncation)
+    .logical_plan;
+
+    let err = <DslPlan as StableDslPlan<
+        DatabaseDomain,
+        DatabaseIdDistance,
+        FrameDistance<SymmetricDistance>,
+    >>::make_stable(plan, database_domain, database_metric)
+    .unwrap_err();
+    let message = err.message.unwrap_or_default();
+
+    assert!(message.contains("compatible single-factor owner claim"), "{message}");
     Ok(())
 }
