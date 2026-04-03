@@ -9,7 +9,11 @@ use std::ptr::null;
 use std::slice;
 
 #[cfg(feature = "polars")]
-use crate::metrics::polars::{Bound, Bounds};
+use crate::metrics::polars::{
+    Bound, Bounds, ForeignKey, FunctionalDependency, Ownership, UniqueKey,
+};
+#[cfg(feature = "polars")]
+use crate::{domains::LazyFrameDomain, metrics::Binding};
 #[cfg(feature = "polars")]
 use ::polars::prelude::*;
 #[cfg(feature = "polars")]
@@ -29,7 +33,7 @@ use crate::core::{FfiError, FfiResult, FfiSlice, Function};
 use crate::domains::BitVector;
 use crate::error::Fallible;
 use crate::ffi::any::{
-    AnyFunction, AnyMeasurement, AnyObject, AnyOdometer, AnyQueryable, Downcast,
+    AnyDomain, AnyFunction, AnyMeasurement, AnyObject, AnyOdometer, AnyQueryable, Downcast,
 };
 use crate::ffi::util::{self, AnyDomainPtr, ExtrinsicObject, as_ref, into_c_char_p};
 use crate::ffi::util::{AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents, c_bool};
@@ -133,6 +137,10 @@ pub extern "C" fn opendp_data__slice_as_object(
                 .map(Clone::clone))
             .collect::<Fallible<Vec<T>>>()?;
         Ok(AnyObject::new(vec))
+    }
+    fn raw_to_vec_domain(raw: &FfiSlice) -> Fallible<AnyObject> {
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const AnyDomainPtr, raw.len) };
+        Ok(AnyObject::new(slice.to_vec()))
     }
     fn raw_to_tuple2<T0: 'static + Clone, T1: 'static + Clone>(
         raw: &FfiSlice,
@@ -321,6 +329,64 @@ pub extern "C" fn opendp_data__slice_as_object(
             .collect::<Fallible<Vec<Bound>>>()?;
         Ok(AnyObject::new(Bounds(vec)))
     }
+    #[cfg(feature = "polars")]
+    fn raw_to_binding(raw: &FfiSlice) -> Fallible<AnyObject> {
+        if raw.len != 2 {
+            return fallible!(FFI, "Binding FfiSlice must have length 2, found a length of {}", raw.len);
+        }
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, raw.len) };
+        Ok(AnyObject::new(Binding {
+            exprs: try_!(try_as_ref!(slice[0] as *const AnyObject).downcast_ref::<Vec<Expr>>()).clone(),
+            space: try_!(try_as_ref!(slice[1] as *const AnyObject).downcast_ref::<String>()).clone(),
+        })).into()
+    }
+    #[cfg(feature = "polars")]
+    fn raw_to_unique_key(raw: &FfiSlice) -> Fallible<AnyObject> {
+        if raw.len != 2 {
+            return fallible!(FFI, "UniqueKey FfiSlice must have length 2, found a length of {}", raw.len);
+        }
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, raw.len) };
+        Ok(AnyObject::new(UniqueKey {
+            table: try_!(try_as_ref!(slice[0] as *const AnyObject).downcast_ref::<String>()).clone(),
+            key: try_!(try_as_ref!(slice[1] as *const AnyObject).downcast_ref::<Expr>()).clone(),
+        })).into()
+    }
+    #[cfg(feature = "polars")]
+    fn raw_to_foreign_key(raw: &FfiSlice) -> Fallible<AnyObject> {
+        if raw.len != 4 {
+            return fallible!(FFI, "ForeignKey FfiSlice must have length 4, found a length of {}", raw.len);
+        }
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, raw.len) };
+        Ok(AnyObject::new(ForeignKey {
+            from_table: try_!(try_as_ref!(slice[0] as *const AnyObject).downcast_ref::<String>()).clone(),
+            from: try_!(try_as_ref!(slice[1] as *const AnyObject).downcast_ref::<Expr>()).clone(),
+            to_table: try_!(try_as_ref!(slice[2] as *const AnyObject).downcast_ref::<String>()).clone(),
+            to: try_!(try_as_ref!(slice[3] as *const AnyObject).downcast_ref::<Expr>()).clone(),
+        })).into()
+    }
+    #[cfg(feature = "polars")]
+    fn raw_to_functional_dependency(raw: &FfiSlice) -> Fallible<AnyObject> {
+        if raw.len != 3 {
+            return fallible!(FFI, "FunctionalDependency FfiSlice must have length 3, found a length of {}", raw.len);
+        }
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, raw.len) };
+        Ok(AnyObject::new(FunctionalDependency {
+            table: try_!(try_as_ref!(slice[0] as *const AnyObject).downcast_ref::<String>()).clone(),
+            from: try_!(try_as_ref!(slice[1] as *const AnyObject).downcast_ref::<Expr>()).clone(),
+            to: try_!(try_as_ref!(slice[2] as *const AnyObject).downcast_ref::<Expr>()).clone(),
+        })).into()
+    }
+    #[cfg(feature = "polars")]
+    fn raw_to_ownership(raw: &FfiSlice) -> Fallible<AnyObject> {
+        if raw.len != 2 {
+            return fallible!(FFI, "Ownership FfiSlice must have length 2, found a length of {}", raw.len);
+        }
+        let slice = unsafe { slice::from_raw_parts(raw.ptr as *const *const c_void, raw.len) };
+        Ok(AnyObject::new(Ownership {
+            table: try_!(try_as_ref!(slice[0] as *const AnyObject).downcast_ref::<String>()).clone(),
+            claims: try_!(try_as_ref!(slice[1] as *const AnyObject).downcast_ref::<Vec<Vec<Expr>>>()).clone(),
+        })).into()
+    }
     match T_.contents {
         TypeContents::PLAIN("AnyMeasurementPtr") => raw_to_plain::<AnyMeasurement>(raw),
         TypeContents::PLAIN("BitVector") => raw_to_bitvector(raw),
@@ -342,6 +408,16 @@ pub extern "C" fn opendp_data__slice_as_object(
         TypeContents::PLAIN("Bound") => raw_to_group_bound(raw),
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("Bounds") => raw_to_group_bounds(raw),
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("Binding") => raw_to_binding(raw),
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("UniqueKey") => raw_to_unique_key(raw),
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("ForeignKey") => raw_to_foreign_key(raw),
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("FunctionalDependency") => raw_to_functional_dependency(raw),
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("Ownership") => raw_to_ownership(raw),
 
         TypeContents::SLICE(element_id) => {
             let element = try_!(Type::of_id(&element_id));
@@ -361,7 +437,25 @@ pub extern "C" fn opendp_data__slice_as_object(
                 #[cfg(feature = "polars")]
                 "Expr" => raw_to_vec_obj::<Expr>(raw),
                 #[cfg(feature = "polars")]
+                "LazyFrame" => raw_to_vec_obj::<LazyFrame>(raw),
+                #[cfg(feature = "polars")]
+                "LazyFrameDomain" => raw_to_vec_domain(raw),
+                #[cfg(feature = "polars")]
                 "Bound" => raw_to_vec_obj::<Bound>(raw),
+                #[cfg(feature = "polars")]
+                "Binding" => raw_to_vec_obj::<Binding>(raw),
+                #[cfg(feature = "polars")]
+                "UniqueKey" => raw_to_vec_obj::<UniqueKey>(raw),
+                #[cfg(feature = "polars")]
+                "ForeignKey" => raw_to_vec_obj::<ForeignKey>(raw),
+                #[cfg(feature = "polars")]
+                "FunctionalDependency" => raw_to_vec_obj::<FunctionalDependency>(raw),
+                #[cfg(feature = "polars")]
+                "Ownership" => raw_to_vec_obj::<Ownership>(raw),
+                #[cfg(feature = "polars")]
+                "Vec<Binding>" => raw_to_vec_obj::<Vec<Binding>>(raw),
+                #[cfg(feature = "polars")]
+                "Vec<Expr>" => raw_to_vec_obj::<Vec<Expr>>(raw),
                 "BitVector" => raw_to_vec_obj::<BitVector>(raw),
                 _ => dispatch!(raw_to_vec, [(element, @primitives)], (raw)),
             }
@@ -401,6 +495,22 @@ pub extern "C" fn opendp_data__slice_as_object(
                 let V = try_!(Type::of_id(&args[1]));
                 if matches!(V.contents, TypeContents::PLAIN("ExtrinsicObject")) {
                     dispatch!(raw_to_hashmap, [(K, @hashable), (V, [ExtrinsicObject])], (raw))
+                } else if K == Type::of::<String>() && matches!(V.contents, TypeContents::PLAIN("LazyFrame")) {
+                    raw_to_hashmap::<String, LazyFrame>(raw)
+                } else if K == Type::of::<String>() && matches!(V.contents, TypeContents::PLAIN("LazyFrameDomain")) {
+                    raw_to_hashmap::<String, AnyDomainPtr>(raw)
+                } else if K == Type::of::<String>() && matches!(V.contents, TypeContents::PLAIN("Expr")) {
+                    raw_to_hashmap::<String, Expr>(raw)
+                } else if K == Type::of::<String>() && V == Type::of::<Vec<Expr>>() {
+                    raw_to_hashmap::<String, Vec<Expr>>(raw)
+                } else if K == Type::of::<String>() && V == Type::of::<Vec<Binding>>() {
+                    raw_to_hashmap::<String, Vec<Binding>>(raw)
+                } else if matches!(V.contents, TypeContents::PLAIN("LazyFrame")) {
+                    dispatch!(raw_to_hashmap, [(K, [String]), (V, [LazyFrame])], (raw))
+                } else if matches!(V.contents, TypeContents::PLAIN("LazyFrameDomain")) {
+                    dispatch!(raw_to_hashmap, [(K, [String]), (V, [LazyFrameDomain])], (raw))
+                } else if V == Type::of::<Vec<Binding>>() {
+                    dispatch!(raw_to_hashmap, [(K, [String]), (V, [Vec<Binding>])], (raw))
                 } else {
                     dispatch!(raw_to_hashmap, [(K, @hashable), (V, @primitives)], (raw))
                 }
@@ -492,8 +602,21 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
     fn vec_expr_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
         let vec_expr: &Vec<Expr> = obj.downcast_ref()?;
         let vec = (vec_expr.iter().cloned())
-            .map(AnyObject::new)
-            .collect::<Vec<AnyObject>>();
+            .map(AnyObject::new_raw)
+            .collect::<Vec<*mut AnyObject>>();
+
+        let res = Ok(FfiSlice::new(vec.as_ptr() as *mut c_void, vec.len()));
+        util::into_raw(vec);
+        res
+    }
+    #[cfg(feature = "polars")]
+    fn vec_object_to_raw<T: 'static + Clone>(obj: &AnyObject) -> Fallible<FfiSlice> {
+        let values: &Vec<T> = obj.downcast_ref()?;
+        let vec = values
+            .iter()
+            .cloned()
+            .map(AnyObject::new_raw)
+            .collect::<Vec<*mut AnyObject>>();
 
         let res = Ok(FfiSlice::new(vec.as_ptr() as *mut c_void, vec.len()));
         util::into_raw(vec);
@@ -506,6 +629,19 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
     fn vec_to_raw<T: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
         let vec: &Vec<T> = obj.downcast_ref()?;
         Ok(FfiSlice::new(vec.as_ptr() as *mut c_void, vec.len()))
+    }
+    fn vec_domain_to_raw<T: 'static + crate::core::Domain + Clone>(
+        obj: &AnyObject,
+    ) -> Fallible<FfiSlice> {
+        let vec: &Vec<T> = obj.downcast_ref()?;
+        let domains = vec
+            .iter()
+            .cloned()
+            .map(|domain| util::into_raw(AnyDomain::new(domain)) as AnyDomainPtr)
+            .collect::<Vec<_>>();
+        let slice = FfiSlice::new(domains.as_ptr() as *mut c_void, domains.len());
+        util::into_raw(domains);
+        Ok(slice)
     }
     fn tuple2_to_raw<T0: 'static, T1: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
         let tuple: &(T0, T1) = obj.downcast_ref()?;
@@ -779,11 +915,86 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             .downcast_ref::<Bounds>()?
             .0
             .iter()
-            .map(|b| AnyObject::new(b.clone()))
+            .map(|b| AnyObject::new_raw(b.clone()))
             .collect::<Vec<_>>();
         let (ptr, len) = (bounds.as_ptr() as *mut c_void, bounds.len());
         util::into_raw(bounds);
         Ok(FfiSlice::new(ptr, len))
+    }
+
+    #[cfg(feature = "polars")]
+    fn binding_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
+        let binding = obj.downcast_ref::<Binding>()?;
+
+        let buffer = vec![
+            AnyObject::new_raw(binding.exprs.clone()) as *const c_void,
+            AnyObject::new_raw(binding.space.clone()) as *const c_void,
+        ];
+        let slice = FfiSlice {
+            ptr: buffer.as_ptr() as *mut c_void,
+            len: buffer.len(),
+        };
+        util::into_raw(buffer);
+        Ok(slice)
+    }
+    #[cfg(feature = "polars")]
+    fn unique_key_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
+        let unique = obj.downcast_ref::<UniqueKey>()?;
+        let buffer = vec![
+            AnyObject::new_raw(unique.table.clone()) as *const c_void,
+            AnyObject::new_raw(unique.key.clone()) as *const c_void,
+        ];
+        let slice = FfiSlice {
+            ptr: buffer.as_ptr() as *mut c_void,
+            len: buffer.len(),
+        };
+        util::into_raw(buffer);
+        Ok(slice)
+    }
+    #[cfg(feature = "polars")]
+    fn foreign_key_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
+        let foreign_key = obj.downcast_ref::<ForeignKey>()?;
+        let buffer = vec![
+            AnyObject::new_raw(foreign_key.from_table.clone()) as *const c_void,
+            AnyObject::new_raw(foreign_key.from.clone()) as *const c_void,
+            AnyObject::new_raw(foreign_key.to_table.clone()) as *const c_void,
+            AnyObject::new_raw(foreign_key.to.clone()) as *const c_void,
+        ];
+        let slice = FfiSlice {
+            ptr: buffer.as_ptr() as *mut c_void,
+            len: buffer.len(),
+        };
+        util::into_raw(buffer);
+        Ok(slice)
+    }
+    #[cfg(feature = "polars")]
+    fn functional_dependency_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
+        let dependency = obj.downcast_ref::<FunctionalDependency>()?;
+        let buffer = vec![
+            AnyObject::new_raw(dependency.table.clone()) as *const c_void,
+            AnyObject::new_raw(dependency.from.clone()) as *const c_void,
+            AnyObject::new_raw(dependency.to.clone()) as *const c_void,
+        ];
+        let slice = FfiSlice {
+            ptr: buffer.as_ptr() as *mut c_void,
+            len: buffer.len(),
+        };
+        util::into_raw(buffer);
+        Ok(slice)
+    }
+    #[cfg(feature = "polars")]
+    fn ownership_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
+        let ownership = obj.downcast_ref::<Ownership>()?;
+        let buffer = vec![
+            AnyObject::new_raw(ownership.table.clone()) as *const c_void,
+            AnyObject::new_raw(ownership.claims.clone()) as *const c_void,
+        ];
+        let slice = FfiSlice {
+            ptr: buffer.as_ptr() as *mut c_void,
+            len: buffer.len(),
+        };
+        util::into_raw(buffer);
+        Ok(slice)
     }
 
     fn tuple_curve_f64_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
@@ -818,6 +1029,16 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
         TypeContents::PLAIN("Bound") => group_bound_to_raw(obj),
         #[cfg(feature = "polars")]
         TypeContents::PLAIN("Bounds") => group_bounds_to_raw(obj),
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("Binding") => binding_to_raw(obj),
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("UniqueKey") => unique_key_to_raw(obj),
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("ForeignKey") => foreign_key_to_raw(obj),
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("FunctionalDependency") => functional_dependency_to_raw(obj),
+        #[cfg(feature = "polars")]
+        TypeContents::PLAIN("Ownership") => ownership_to_raw(obj),
 
         TypeContents::SLICE(element_id) => {
             let element = try_!(Type::of_id(element_id));
@@ -829,8 +1050,26 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             #[cfg(feature = "polars")]
             if element.descriptor == "Expr" {
                 return vec_expr_to_raw(obj).into();
+            } else if element.descriptor == "LazyFrame" {
+                return vec_object_to_raw::<LazyFrame>(obj).into();
+            } else if element.descriptor == "Binding" {
+                return vec_object_to_raw::<Binding>(obj).into();
+            } else if element.descriptor == "UniqueKey" {
+                return vec_object_to_raw::<UniqueKey>(obj).into();
+            } else if element.descriptor == "ForeignKey" {
+                return vec_object_to_raw::<ForeignKey>(obj).into();
+            } else if element.descriptor == "FunctionalDependency" {
+                return vec_object_to_raw::<FunctionalDependency>(obj).into();
+            } else if element.descriptor == "Ownership" {
+                return vec_object_to_raw::<Ownership>(obj).into();
+            } else if element.descriptor == "Vec<Binding>" {
+                return vec_object_to_raw::<Vec<Binding>>(obj).into();
+            } else if element.descriptor == "Vec<Expr>" {
+                return vec_object_to_raw::<Vec<Expr>>(obj).into();
+            } else if element.descriptor == "LazyFrameDomain" {
+                return vec_domain_to_raw::<LazyFrameDomain>(obj).into();
             } else if element.descriptor == "Bound" {
-                return vec_to_raw::<Bound>(obj).into();
+                return vec_object_to_raw::<Bound>(obj).into();
             }
 
             if element.descriptor == "String" {
@@ -871,6 +1110,26 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
                 let [K, V] = try_!(parse_type_args(args, "HashMap"));
                 if matches!(V.contents, TypeContents::PLAIN("ExtrinsicObject")) {
                     dispatch!(hashmap_to_raw, [(K, @hashable), (V, [ExtrinsicObject])], (obj))
+                } else if K == Type::of::<String>() && matches!(V.contents, TypeContents::PLAIN("LazyFrame")) {
+                    hashmap_to_raw::<String, LazyFrame>(obj)
+                } else if K == Type::of::<String>() && matches!(V.contents, TypeContents::PLAIN("LazyFrameDomain")) {
+                    hashmap_to_raw::<String, LazyFrameDomain>(obj)
+                } else if K == Type::of::<String>() && matches!(V.contents, TypeContents::PLAIN("Expr")) {
+                    hashmap_to_raw::<String, Expr>(obj)
+                } else if K == Type::of::<String>() && V == Type::of::<Vec<Expr>>() {
+                    hashmap_to_raw::<String, Vec<Expr>>(obj)
+                } else if K == Type::of::<String>() && V == Type::of::<Vec<Binding>>() {
+                    hashmap_to_raw::<String, Vec<Binding>>(obj)
+                } else if matches!(V.contents, TypeContents::PLAIN("LazyFrame")) {
+                    dispatch!(hashmap_to_raw, [(K, @hashable), (V, [LazyFrame])], (obj))
+                } else if matches!(V.contents, TypeContents::PLAIN("LazyFrameDomain")) {
+                    dispatch!(hashmap_to_raw, [(K, @hashable), (V, [LazyFrameDomain])], (obj))
+                } else if matches!(V.contents, TypeContents::PLAIN("Expr")) {
+                    dispatch!(hashmap_to_raw, [(K, @hashable), (V, [Expr])], (obj))
+                } else if V == Type::of::<Vec<Expr>>() {
+                    dispatch!(hashmap_to_raw, [(K, @hashable), (V, [Vec<Expr>])], (obj))
+                } else if V == Type::of::<Vec<Binding>>() {
+                    dispatch!(hashmap_to_raw, [(K, @hashable), (V, [Vec<Binding>])], (obj))
                 } else {
                     dispatch!(hashmap_to_raw, [(K, @hashable), (V, @primitives)], (obj))
                 }
@@ -1228,6 +1487,30 @@ impl Clone for AnyObject {
                     let V = Type::of_id(&args[1]).unwrap();
                     if matches!(V.contents, TypeContents::PLAIN("ExtrinsicObject")) {
                         dispatch!(clone_hashmap, [(K, @hashable), (V, [ExtrinsicObject])], (self))
+                    } else if K == Type::of::<String>()
+                        && matches!(V.contents, TypeContents::PLAIN("LazyFrame"))
+                    {
+                        clone_hashmap::<String, LazyFrame>(self)
+                    } else if K == Type::of::<String>()
+                        && matches!(V.contents, TypeContents::PLAIN("LazyFrameDomain"))
+                    {
+                        clone_hashmap::<String, AnyDomainPtr>(self)
+                    } else if K == Type::of::<String>()
+                        && matches!(V.contents, TypeContents::PLAIN("Expr"))
+                    {
+                        clone_hashmap::<String, Expr>(self)
+                    } else if K == Type::of::<String>() && V == Type::of::<Vec<Expr>>() {
+                        clone_hashmap::<String, Vec<Expr>>(self)
+                    } else if K == Type::of::<String>() && V == Type::of::<Vec<Binding>>() {
+                        clone_hashmap::<String, Vec<Binding>>(self)
+                    } else if matches!(V.contents, TypeContents::PLAIN("LazyFrame")) {
+                        dispatch!(clone_hashmap, [(K, @hashable), (V, [LazyFrame])], (self))
+                    } else if matches!(V.contents, TypeContents::PLAIN("LazyFrameDomain")) {
+                        dispatch!(clone_hashmap, [(K, @hashable), (V, [LazyFrameDomain])], (self))
+                    } else if matches!(V.contents, TypeContents::PLAIN("Expr")) {
+                        dispatch!(clone_hashmap, [(K, @hashable), (V, [Expr])], (self))
+                    } else if V == Type::of::<Vec<Binding>>() {
+                        dispatch!(clone_hashmap, [(K, @hashable), (V, [Vec<Binding>])], (self))
                     } else {
                         dispatch!(clone_hashmap, [(K, @hashable), (V, @primitives)], (self))
                     }
@@ -1238,6 +1521,17 @@ impl Clone for AnyObject {
             TypeContents::VEC(type_id) => {
                 #[cfg(feature = "polars")]
                 if let Ok(clone) = dispatch!(clone_plain, [(self.type_, [Bound])], (self)) {
+                    return clone;
+                }
+                #[cfg(feature = "polars")]
+                if let Ok(clone) = dispatch!(
+                    clone_vec,
+                    [(
+                        Type::of_id(type_id).unwrap(),
+                        [Expr, Binding, UniqueKey, ForeignKey, FunctionalDependency, Ownership, LazyFrame, LazyFrameDomain]
+                    )],
+                    (self)
+                ) {
                     return clone;
                 }
 
@@ -1471,6 +1765,123 @@ mod tests {
         let res = opendp_data__slice_as_object(raw, "(i32, i32)".to_char_p());
         let res: (i32, i32) = Fallible::from(res)?.downcast()?;
         assert_eq!(res, (999, -999));
+        Ok(())
+    }
+
+    #[cfg(feature = "polars")]
+    #[test]
+    fn test_roundtrip_hashmap_string_expr() -> Fallible<()> {
+        use std::collections::HashMap;
+
+        let obj = AnyObject::new_raw(HashMap::from([("events".to_string(), col("user_id"))]));
+        let raw = Fallible::from(opendp_data__object_as_slice(obj))?;
+        let res =
+            opendp_data__slice_as_object(util::into_raw(raw), "HashMap<String, Expr>".to_char_p());
+        let res: HashMap<String, Expr> = Fallible::from(res)?.downcast()?;
+        assert_eq!(res.len(), 1);
+        assert!(res.contains_key("events"));
+        Ok(())
+    }
+
+    #[cfg(feature = "polars")]
+    #[test]
+    fn test_roundtrip_bind() -> Fallible<()> {
+        let bind = Binding {
+            space: "user".to_string(),
+            exprs: vec![col("user_id")],
+        };
+
+        let obj = AnyObject::new_raw(bind.clone());
+        let raw = Fallible::from(opendp_data__object_as_slice(obj))?;
+        let res = opendp_data__slice_as_object(util::into_raw(raw), "Binding".to_char_p());
+        let res: Binding = Fallible::from(res)?.downcast()?;
+        assert_eq!(res.space, bind.space);
+        assert_eq!(res.exprs.len(), 1);
+        Ok(())
+    }
+
+    #[cfg(feature = "polars")]
+    #[test]
+    fn test_roundtrip_vec_bind() -> Fallible<()> {
+        let bind = Binding {
+            space: "user".to_string(),
+            exprs: vec![col("user_id")],
+        };
+
+        let obj = AnyObject::new_raw(vec![bind]);
+        let raw = Fallible::from(opendp_data__object_as_slice(obj))?;
+        let res = opendp_data__slice_as_object(util::into_raw(raw), "Vec<Binding>".to_char_p());
+        let res: Vec<Binding> = Fallible::from(res)?.downcast()?;
+        assert_eq!(res.len(), 1);
+        assert_eq!(res[0].space, "user");
+        Ok(())
+    }
+
+    #[cfg(feature = "polars")]
+    #[test]
+    fn test_slice_as_object_vec_bind_raw() -> Fallible<()> {
+        let elems = vec![AnyObject::new_raw(Binding {
+            space: "user".to_string(),
+            exprs: vec![col("user_id")],
+        })];
+        let raw = util::into_raw(FfiSlice::new(elems.as_ptr() as *mut c_void, elems.len()));
+        let res = opendp_data__slice_as_object(raw, "Vec<Binding>".to_char_p());
+        let res: Vec<Binding> = Fallible::from(res)?.downcast()?;
+        assert_eq!(res.len(), 1);
+        assert_eq!(res[0].space, "user");
+        Ok(())
+    }
+
+    #[cfg(feature = "polars")]
+    #[test]
+    fn test_roundtrip_hashmap_string_vec_bind() -> Fallible<()> {
+        let bindings = HashMap::from([(
+            "events".to_string(),
+            vec![Binding {
+                space: "user".to_string(),
+                exprs: vec![col("user_id")],
+            }],
+        )]);
+
+        let obj = AnyObject::new_raw(bindings);
+        let raw = Fallible::from(opendp_data__object_as_slice(obj))?;
+        let res = opendp_data__slice_as_object(
+            util::into_raw(raw),
+            "HashMap<String, Vec<Binding>>".to_char_p(),
+        );
+        let res: HashMap<String, Vec<Binding>> = Fallible::from(res)?.downcast()?;
+        assert_eq!(res.len(), 1);
+        assert_eq!(res["events"][0].space, "user");
+        Ok(())
+    }
+
+    #[cfg(feature = "polars")]
+    #[test]
+    fn test_slice_as_object_hashmap_string_vec_bind_raw() -> Fallible<()> {
+        let t = Type::try_from("HashMap<String, Vec<Binding>>")?;
+        let TypeContents::GENERIC { name, args } = t.contents else {
+            panic!("expected generic hashmap type");
+        };
+        assert_eq!(name, "HashMap");
+        assert_eq!(Type::of_id(&args[0])?.descriptor, "String");
+        assert_eq!(Type::of_id(&args[1])?.descriptor, "Vec<Binding>");
+
+        let keys = AnyObject::new_raw(vec!["events".to_string()]);
+        let vals = AnyObject::new_raw(vec![vec![Binding {
+            space: "user".to_string(),
+            exprs: vec![col("user_id")],
+        }]]);
+        let raw = FfiSlice::new(
+            [keys as *const AnyObject, vals as *const AnyObject].as_ptr() as *mut c_void,
+            2,
+        );
+        let res = opendp_data__slice_as_object(
+            util::into_raw(raw),
+            "HashMap<String, Vec<Binding>>".to_char_p(),
+        );
+        let res: HashMap<String, Vec<Binding>> = Fallible::from(res)?.downcast()?;
+        assert_eq!(res.len(), 1);
+        assert_eq!(res["events"][0].space, "user");
         Ok(())
     }
 

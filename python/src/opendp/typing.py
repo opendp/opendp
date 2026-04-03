@@ -269,6 +269,8 @@ class RuntimeType(object):
         ...
         opendp.mod.UnknownTypeException: Cannot infer atomic type when empty
         """
+        from opendp.extras.polars import Binding
+        
         if type(public_example) in _ELEMENTARY_TYPES:
             return _ELEMENTARY_TYPES[type(public_example)]
         
@@ -288,6 +290,9 @@ class RuntimeType(object):
             
             if isinstance(public_example, pl.Expr):
                 return Expr
+        
+        if isinstance(public_example, Binding):
+            return "Binding"
 
         if isinstance(public_example, tuple):
             return RuntimeType('Tuple', [cls.infer(e, py_object) for e in public_example])

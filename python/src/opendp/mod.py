@@ -20,6 +20,7 @@ from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric,
 # https://mypy.readthedocs.io/en/stable/runtime_troubles.html#import-cycles
 if TYPE_CHECKING:
     from opendp.typing import RuntimeType # pragma: no cover
+    from opendp.extras.polars import Binding
 
 
 __all__ = [
@@ -35,10 +36,12 @@ __all__ = [
     'VectorDomain',
     'SeriesDomain',
     'LazyFrameDomain',
+    'DatabaseDomain',
     'ExtrinsicDomain',
     'Metric',
     'SymmetricIdDistance',
     'ChangeOneIdDistance',
+    'DatabaseIdDistance',
     'FrameDistance',
     'Measure',
     'ExtrinsicDivergence',
@@ -914,6 +917,25 @@ class LazyFrameDomain(Domain):
         return _lazyframe_domain_get_margin(self, by)
 
 
+class DatabaseDomain(Domain):
+    '''``DatabaseDomain`` describes the domain of a database keyed by table name.'''
+
+    _type_ = AnyDomain
+
+    def table(self, name: str) -> LazyFrameDomain:
+        '''Retrieve the lazyframe domain for the given table name.'''
+        from opendp.domains import _database_domain_get_table_domain
+
+        return _database_domain_get_table_domain(self, name)
+
+    @property
+    def table_domains(self) -> dict[str, LazyFrameDomain]:
+        '''Mapping from table name to lazyframe domain.'''
+        from opendp.domains import _database_domain_get_table_domains
+
+        return _database_domain_get_table_domains(self)
+
+
 class ExtrinsicDomain(Domain):
     '''A user-defined domain.'''
 
@@ -1016,6 +1038,7 @@ class FrameDistance(Metric):
         '''Bounds of the domain, if they exist'''
         from opendp.metrics import _frame_distance_get_inner_metric
         return _frame_distance_get_inner_metric(self)
+
     
 class SymmetricIdDistance(Metric):
     '''``SymmetricIdDistance`` is a metric for measuring the distance between the identifiers of two datasets.
@@ -1026,10 +1049,16 @@ class SymmetricIdDistance(Metric):
     _type_ = AnyMetric
     
     @property
-    def identifier(self):
-        '''The name of the column storing identifiers'''
-        from opendp.metrics import _symmetric_id_distance_get_identifier
-        return _symmetric_id_distance_get_identifier(self)
+    def bindings(self) -> list[Binding]:
+        '''The bindings associated with the metric.'''
+        from opendp.metrics import _symmetric_id_distance_get_bindings
+        return _symmetric_id_distance_get_bindings(self)
+    
+    @property
+    def protect(self) -> str:
+        '''The protected identifier space.'''
+        from opendp.metrics import _symmetric_id_distance_get_protect
+        return _symmetric_id_distance_get_protect(self)
     
 
 class ChangeOneIdDistance(Metric):
@@ -1041,11 +1070,36 @@ class ChangeOneIdDistance(Metric):
     _type_ = AnyMetric
     
     @property
-    def identifier(self):
-        '''The name of the column storing identifiers'''
-        from opendp.metrics import _change_one_id_distance_get_identifier
-        return _change_one_id_distance_get_identifier(self)
+    def bindings(self) -> list[Binding]:
+        '''The bindings associated with the metric.'''
+        from opendp.metrics import _change_one_id_distance_get_bindings
+        return _change_one_id_distance_get_bindings(self)
     
+    @property
+    def protect(self) -> str:
+        '''The protected identifier space.'''
+        from opendp.metrics import _change_one_id_distance_get_protect
+        return _change_one_id_distance_get_protect(self)
+
+
+class DatabaseIdDistance(Metric):
+    '''``DatabaseIdDistance`` measures distance in one protected identifier space across multiple tables.'''
+
+    _type_ = AnyMetric
+
+    @property
+    def bindings(self) -> list[Binding]:
+        '''The bindings associated with the metric.'''
+        from opendp.metrics import _database_id_distance_get_bindings
+        return _database_id_distance_get_bindings(self)
+    
+    @property
+    def protect(self) -> str:
+        '''The semantic identifier space used for privacy accounting.'''
+        from opendp.metrics import _database_id_distance_get_protect
+        return _database_id_distance_get_protect(self)
+
+
 class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
     '''
     See the `Measure <../../api/user-guide/programming-framework/supporting-elements.html#measure>`_
