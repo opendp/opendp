@@ -2,11 +2,11 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use crate::combinators::{CompositionMeasure, make_composition};
-use crate::core::{Function, Measurement, MetricSpace, StabilityMap, Transformation};
+use crate::core::{Domain, Function, Measurement, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
 use crate::measurements::PrivateExpr;
-use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance};
+use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance, PolarsMetric};
 use crate::transformations::StableDslPlan;
 use crate::transformations::traits::UnboundedMetric;
 use polars::prelude::{DslPlan, Expr};
@@ -31,23 +31,52 @@ pub fn make_private_select<MI, MO>(
 ) -> Fallible<Measurement<DslPlanDomain, FrameDistance<MI>, MO, DslPlan>>
 where
     MI: 'static + UnboundedMetric,
-    MI::EventMetric: UnboundedMetric,
+    MI: PolarsMetric,
+    MI::EventMetric: UnboundedMetric + PolarsMetric,
     MO: 'static + CompositionMeasure,
     Expr: PrivateExpr<L01InfDistance<MI::EventMetric>, MO>,
     DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
     (DslPlanDomain, FrameDistance<MI>): MetricSpace,
     (DslPlanDomain, FrameDistance<MI::EventMetric>): MetricSpace,
 {
-    let is_truncated = input_metric.0.identifier().is_some();
-
-    let DslPlan::Select { expr, input, .. } = plan.clone() else {
+    let DslPlan::Select { input, .. } = &plan else {
         return fallible!(MakeMeasurement, "Expected selection in logical plan");
     };
 
-    let t_prior = input
+    let t_prior: Transformation<
+        DslPlanDomain,
+        FrameDistance<MI>,
+        DslPlanDomain,
+        FrameDistance<MI::EventMetric>,
+    > = input
         .as_ref()
         .clone()
         .make_stable(input_domain, input_metric)?;
+    make_private_select_with_prior::<_, _, MI, MO>(t_prior, output_measure, plan, global_scale)
+}
+
+pub(crate) fn make_private_select_with_prior<DI, MII, MI, MO>(
+    t_prior: Transformation<DI, MII, DslPlanDomain, FrameDistance<MI::EventMetric>>,
+    output_measure: MO,
+    plan: DslPlan,
+    global_scale: Option<f64>,
+) -> Fallible<Measurement<DI, MII, MO, DslPlan>>
+where
+    DI: Domain + 'static,
+    MII: 'static + Metric,
+    MI: 'static + UnboundedMetric + PolarsMetric,
+    MI::EventMetric: UnboundedMetric + PolarsMetric,
+    MO: 'static + CompositionMeasure,
+    Expr: PrivateExpr<L01InfDistance<MI::EventMetric>, MO>,
+    (DI, MII): MetricSpace,
+    (DslPlanDomain, FrameDistance<MI::EventMetric>): MetricSpace,
+{
+    let is_truncated = !t_prior.output_metric.0.active_id_sites().is_empty();
+
+    let DslPlan::Select { expr, .. } = plan.clone() else {
+        return fallible!(MakeMeasurement, "Expected selection in logical plan");
+    };
+
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let margin = middle_domain.get_margin(&HashSet::new());

@@ -12,7 +12,7 @@ We suggest importing under the conventional name ``dp``:
 """
 
 import logging
-from typing import Any, Callable, Optional, Sequence, Type, Union, MutableMapping
+from typing import Any, Callable, Optional, Sequence, Type, Union, MutableMapping, Mapping, cast
 import importlib
 from inspect import signature
 from functools import partial
@@ -48,6 +48,7 @@ from opendp.metrics import (
 )
 from opendp.mod import (
     ApproximateDivergence,
+    DatabaseDomain,
     Domain,
     Measurement,
     Metric,
@@ -62,7 +63,15 @@ from opendp.mod import (
 )
 from opendp.typing import RuntimeType
 from opendp._lib import indent, import_optional_dependency
-from opendp.extras.polars import Bound, LazyFrameQuery, Margin
+from opendp.extras.polars import (
+    Bound,
+    DatabaseQuery,
+    LazyFrameQuery,
+    Margin,
+    _database_metric_from_identifier,
+    _database_domain_from_tables,
+    _table_scan_from_domain,
+)
 from dataclasses import replace
 
 __all__ = [
@@ -226,6 +235,10 @@ def domain_of(T, infer: bool = False) -> Domain:
             from opendp.extras.polars import _lazyframe_domain_from_schema
 
             return _lazyframe_domain_from_schema(T.collect_schema())
+        if pl is not None and isinstance(T, MutableMapping) and all(
+            isinstance(k, str) and isinstance(v, pl.LazyFrame) for k, v in T.items()
+        ):
+            return _database_domain_from_tables(T)
 
     # normalize to a type descriptor
     if infer:
@@ -342,7 +355,8 @@ def unit_of(
     l1: Optional[float] = None,
     l2: Optional[float] = None,
     local: Optional[bool] = None,
-    identifier: Optional[str] = None,
+    identifier: Optional[Union[str, Mapping[str, Any]]] = None,
+    protected_label: Optional[str] = None,
     ordered: bool = False,
     U=None,
 ) -> tuple[Metric, Union[float, Sequence[Bound]]]:
@@ -361,18 +375,23 @@ def unit_of(
     :param l1: Greatest l1 distance a privacy unit can influence a vector aggregate data set
     :param l2: Greatest l2 distance a privacy unit can influence a vector aggregate data set
     :param local: Set to true if the dataset consists of one individual (for local-DP)
-    :param identifier: Can be a column name or Polars expression.
+    :param identifier: Can be a column name or Polars expression, or for databases a mapping from table name to ``IdSite`` or ``list[IdSite]``.
+        Within ``IdSite(exprs, label=...)``, ``exprs`` may be a string, expression, or list of strings/expressions.
+        Multiple expressions in one ``IdSite`` are for identical columns, such as duplicated join keys;
+        distinct appearances of the same semantic identifier space should be separate ``IdSite`` values.
+    :param protected_label: Optional label naming the protected identifier space when ``identifier`` is a database mapping.
+        Required when the database identifier mapping contains multiple semantic identifier spaces.
     :param ordered: Set to ``True`` to use ``InsertDeleteDistance`` instead of ``SymmetricDistance``, or ``HammingDistance`` instead of ``ChangeOneDistance``.
     :param U: The type of the dataset distance."""
 
     def _is_distance(p, v):
-        return p not in ["ordered", "U", "_is_distance", "identifier"] and v is not None
+        return p not in ["ordered", "U", "_is_distance", "identifier", "protected_label"] and v is not None
 
     if sum(1 for p, v in locals().items() if _is_distance(p, v)) != 1:
         raise ValueError("Must specify exactly one distance.")
 
     if local:
-        if identifier is not None or ordered or U is not None:
+        if identifier is not None or protected_label is not None or ordered or U is not None:
             raise ValueError('"local" must be the only parameter')
         return discrete_distance(), int(local)
 
@@ -383,6 +402,20 @@ def unit_of(
             )
         if identifier is not None:
             raise ValueError('"ordered" must be False when "identifier" is set')
+
+    if protected_label is not None and identifier is None:
+        raise ValueError('"protected_label" is only valid when "identifier" is set')
+
+    if isinstance(identifier, Mapping):
+        if changes is not None:
+            raise ValueError('database identifiers currently only support "contributions" in dp.unit_of')
+        if contributions is None:
+            raise ValueError("Must specify exactly one distance.")
+        if isinstance(contributions, Sequence):
+            raise ValueError("database identifiers do not support frame-distance contribution bounds")
+
+        metric = _database_metric_from_identifier(identifier, protected_label)
+        return metric, contributions
 
     if contributions is not None:
         if identifier is None:
@@ -475,8 +508,10 @@ class Context(object):
 
         new_plan = pl.LazyFrame.deserialize(io.BytesIO(serialized_plan))
         new_query = self.query()
-        if not isinstance(new_query, LazyFrameQuery):
-            raise ValueError("'data' of context must be a LazyFrame")
+        if isinstance(new_query, DatabaseQuery):
+            new_query = LazyFrameQuery(new_plan, new_query._query)
+        elif not isinstance(new_query, LazyFrameQuery):
+            raise ValueError("'data' of context must be a LazyFrame or dict[str, LazyFrame]")
 
         new_query.polars_plan = new_plan
         return new_query
@@ -512,6 +547,10 @@ class Context(object):
             domain = domain_of(data, infer=True)
 
         if margins:
+            if isinstance(domain, DatabaseDomain):
+                raise ValueError(
+                    "database margins must be declared on each table domain; pass a database domain instead of top-level margins"
+                )
             # allows dictionaries of {[by]: [margin]}
             if isinstance(margins, MutableMapping):
                 from warnings import warn
@@ -533,7 +572,7 @@ class Context(object):
             queryable = accountant(data)
         except TypeError as e:
             inferred_domain = domain_of(data, infer=True)
-            if vector_domain(domain) == inferred_domain:
+            if not isinstance(domain, DatabaseDomain) and vector_domain(domain) == inferred_domain:
                 # With Python 3.11, add_note is available, but pytest.raises doesn't see notes.
                 e.args = (
                     e.args[0] + "; To fix, wrap domain kwarg with dp.vector_domain()",
@@ -558,7 +597,7 @@ class Context(object):
         )
         return answer
 
-    def query(self, **kwargs) -> Union["Query", LazyFrameQuery]:
+    def query(self, **kwargs) -> Union["Query", LazyFrameQuery, DatabaseQuery]:
         """Starts a new Query to be executed in this context.
 
         If the context has been constructed with a sequence of privacy losses,
@@ -600,6 +639,17 @@ class Context(object):
         )
 
         # return a LazyFrameQuery when dealing with Polars data, to better mimic the Polars API
+        if isinstance(chain[0], DatabaseDomain):
+            table_queries = {
+                table_name: LazyFrameQuery(
+                    _table_scan_from_domain(table_name, table_domain),
+                    query,
+                    table_name=table_name,
+                )
+                for table_name, table_domain in chain[0].table_domains.items()
+            }
+            return DatabaseQuery(table_queries, query)
+
         if chain[0].type == "LazyFrameDomain":
             from opendp.domains import _lazyframe_from_domain
 

@@ -17,21 +17,28 @@ The members of this module will then be accessible at ``dp.polars``.
 from __future__ import annotations
 from dataclasses import asdict, dataclass, field, replace
 import os
+from functools import reduce
 from typing import Any, Literal, Mapping, Optional, Sequence, Union, cast
-from opendp._lib import lib_path, import_optional_dependency
+from opendp._lib import AnyObjectPtr, FfiResult, lib, lib_path, import_optional_dependency, unwrap
+from opendp._convert import c_to_py, py_to_c
 from opendp.extras.mbi import ContingencyTable, make_contingency_table, AIM, Algorithm
 from opendp.mod import (
     ChangeOneIdDistance,
+    DatabaseDomain,
+    DatabaseIdDistance,
     Domain,
+    IdSite,
     Measurement,
     FrameDistance,
     Metric,
     OpenDPException,
     SymmetricIdDistance,
+    Transformation,
     binary_search,
     binary_search_chain,
 )
 from opendp.domains import (
+    database_domain,
     series_domain,
     lazyframe_domain,
     option_domain,
@@ -41,9 +48,10 @@ from opendp.domains import (
     enum_domain,
     array_domain,
 )
-from opendp.measurements import make_private_lazyframe
+from opendp.measurements import make_private_database_lazyframe, make_private_lazyframe
 from deprecated import deprecated
 from opendp.transformations import make_stable_lazyframe
+from opendp.metrics import _id_site_get_exprs, _id_site_get_label, database_id_distance
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -596,6 +604,209 @@ def _lazyframe_domain_from_schema(schema) -> Domain:
     )
 
 
+OPENDP_TABLE_NAME_PREFIX = "__OPENDP_TABLE_NAME__"
+
+
+def _table_marker_name(table_name: str) -> str:
+    return f"{OPENDP_TABLE_NAME_PREFIX}[{table_name}]"
+
+
+def _table_name_from_schema(schema) -> str | None:
+    marker_names = [
+        name for name in schema.names() if name.startswith(OPENDP_TABLE_NAME_PREFIX)
+    ]
+    if len(marker_names) != 1:
+        return None
+
+    marker_name = marker_names[0]
+    prefix = f"{OPENDP_TABLE_NAME_PREFIX}["
+    if not marker_name.startswith(prefix) or not marker_name.endswith("]"):
+        return None
+    return marker_name[len(prefix):-1]
+
+
+def _append_table_marker(lf, table_name: str):
+    marker_name = _table_marker_name(table_name)
+    marker_expr = pl.lit(table_name, dtype=pl.String).alias(marker_name)
+
+    if marker_name in lf.collect_schema().names():
+        return lf
+    return lf.with_columns(marker_expr)
+
+
+def _table_scan_from_domain(table_name: str, table_domain):
+    """Create an empty single-table scan whose leaf schema already carries the table marker."""
+    from opendp.domains import _lazyframe_from_domain
+
+    base = _lazyframe_from_domain(table_domain)
+    schema = base.collect_schema()
+    marker_name = _table_marker_name(table_name)
+    data = {
+        name: pl.Series(name, [], dtype=dtype)
+        for name, dtype in schema.items()
+    }
+    data[marker_name] = pl.Series(marker_name, [], dtype=pl.String)
+    return pl.DataFrame(data).lazy()
+
+
+def _database_carrier_from_tables(data: Mapping[str, Any]):
+    if not data:
+        raise ValueError("database data must contain at least one table")
+
+    marked_tables = [
+        _append_table_marker(lf, table_name)
+        for table_name, lf in data.items()
+    ]
+    return reduce(lambda left, right: left.join(right, how="cross"), marked_tables)
+
+
+def _database_domain_from_tables(data: Mapping[str, Any]) -> DatabaseDomain:
+    return database_domain(
+        {
+            table_name: _lazyframe_domain_from_schema(lf.collect_schema())
+            for table_name, lf in data.items()
+        }
+    )
+
+
+def _coerce_identifier_exprs(identifier) -> list[Any]:
+    if isinstance(identifier, str):
+        return [pl.col(identifier)]
+    if pl is not None and isinstance(identifier, pl.Expr):
+        return [identifier]
+    if isinstance(identifier, Sequence):
+        exprs = []
+        for expr in identifier:
+            if isinstance(expr, str):
+                exprs.append(pl.col(expr))
+            else:
+                exprs.append(expr)
+        return exprs
+    raise TypeError("identifier values must be a column name, expression, or sequence of them")
+
+
+def _is_id_site(value) -> bool:
+    if isinstance(value, IdSite):
+        return True
+    try:
+        _id_site_get_label(value)
+        _id_site_get_exprs(value)
+        return True
+    except Exception:
+        return False
+
+
+def _coerce_id_site(site: Any, default_label: str) -> IdSite:
+    if not _is_id_site(site):
+        raise TypeError(
+            "database identifier values must be IdSite or list[IdSite]"
+        )
+
+    return IdSite(
+        site.exprs,
+        label=site.label or default_label,
+    )
+
+
+def _coerce_database_id_sites(identifier: Mapping[str, Any], protected_label: str):
+    table_to_id_sites = {}
+    for table_name, table_identifier in identifier.items():
+        if _is_id_site(table_identifier):
+            table_to_id_sites[table_name] = [
+                _coerce_id_site(table_identifier, protected_label)
+            ]
+            continue
+
+        if isinstance(table_identifier, Sequence) and not isinstance(table_identifier, (str, bytes)):
+            if not table_identifier or not all(_is_id_site(site) for site in table_identifier):
+                raise TypeError(
+                    "database identifier values must be IdSite or non-empty list[IdSite]"
+                )
+            table_to_id_sites[table_name] = [
+                _coerce_id_site(site, protected_label) for site in table_identifier
+            ]
+            continue
+
+        raise TypeError(
+            "database identifier values must be IdSite or list[IdSite]"
+        )
+
+    return table_to_id_sites
+
+
+def _infer_database_protected_label(identifier: Mapping[str, Any], protected_label: Optional[str]):
+    default_label = protected_label or "identifier"
+    table_to_id_sites = _coerce_database_id_sites(identifier, default_label)
+    labels = {
+        site.label
+        for id_sites in table_to_id_sites.values()
+        for site in id_sites
+    }
+
+    if protected_label is None:
+        if len(labels) > 1:
+            raise ValueError(
+                "protected_label is required when identifier contains multiple id spaces"
+            )
+        protected_label = next(iter(labels), default_label)
+    elif labels and protected_label not in labels:
+        raise ValueError(
+            f'protected_label="{protected_label}" does not match any declared IdSite label'
+        )
+
+    return protected_label, table_to_id_sites
+
+def _database_metric_from_identifier(identifier: Mapping[str, Any], protected_label: Optional[str]):
+    protected_label, table_to_id_sites = _infer_database_protected_label(
+        identifier, protected_label
+    )
+    return database_id_distance(
+        protected_label,
+        table_to_id_sites,
+    )
+
+
+def _database_identifier_expr(metric: DatabaseIdDistance):
+    exprs = [
+        expr
+        for id_sites in metric.id_sites.values()
+        for id_site in id_sites
+        if id_site.label == metric.protected_label
+        for expr in id_site.exprs
+    ]
+    if len(exprs) != 1:
+        raise ValueError(
+            "database truncation currently requires exactly one protected identifier expression"
+        )
+    return exprs[0]
+
+
+def _database_identifier_expr_from_query(input_domain, input_metric, polars_plan):
+    c_input_domain = py_to_c(input_domain, c_type=Domain, type_name="AnyDomain")
+    c_input_metric = py_to_c(input_metric, c_type=Metric, type_name="AnyMetric")
+    c_lazyframe = py_to_c(polars_plan, c_type=AnyObjectPtr, type_name="LazyFrame")
+
+    lib_function = lib.opendp_transformations__make_stable_database_lazyframe
+    lib_function.argtypes = [Domain, Metric, AnyObjectPtr]
+    lib_function.restype = FfiResult
+
+    t_plan = c_to_py(
+        unwrap(
+            lib_function(c_input_domain, c_input_metric, c_lazyframe),
+            Transformation,
+        )
+    )
+    output_metric = t_plan.output_metric
+    if isinstance(output_metric, FrameDistance):
+        output_metric = output_metric.inner_metric
+    if not isinstance(output_metric, (SymmetricIdDistance, ChangeOneIdDistance)):
+        raise ValueError("truncation is only valid when identifier is defined")
+    identifier = output_metric.identifier
+    if identifier is None:
+        raise ValueError("truncation requires at least one identifier")
+    return identifier
+
+
 def _series_domain_from_field(field) -> Domain:
     """Builds the broadest possible SeriesDomain that matches a given field."""
     name, dtype = field
@@ -671,6 +882,32 @@ class SortBy:
     """Whether the order should be maintained if elements are equal."""
 
 
+class DatabaseQuery:
+    """A database-root query for dict-backed Polars contexts."""
+
+    def __init__(self, table_queries: Mapping[str, "LazyFrameQuery"], query) -> None:
+        self._table_queries = dict(table_queries)
+        self._query = query
+
+    @property
+    def tables(self) -> list[str]:
+        return list(self._table_queries)
+
+    def __getitem__(self, table_name: str) -> "LazyFrameQuery":
+        try:
+            return self._table_queries[table_name]
+        except KeyError as err:
+            raise KeyError(
+                f"unknown table {table_name!r}; expected one of {', '.join(self.tables)}"
+            ) from err
+
+    def table(self, table_name: str) -> "LazyFrameQuery":
+        return self[table_name]
+
+    def __repr__(self) -> str:
+        return f"DatabaseQuery(tables={self.tables})"
+
+
 class LazyFrameQuery:
     """
     A ``LazyFrameQuery`` may be returned by :py:func:`~opendp.context.Context.query`.
@@ -679,9 +916,10 @@ class LazyFrameQuery:
 
     # Keep this docstring in sync with the docstring below for the dummy class.
 
-    def __init__(self, polars_plan, query):
+    def __init__(self, polars_plan, query, table_name: str | None = None):
         self.polars_plan = polars_plan
         self._query = query
+        self._table_name = table_name
         # do not initialize super() because inheritance is only used to mimic the API surface
 
     def __getattribute__(self, name):
@@ -707,12 +945,20 @@ class LazyFrameQuery:
         if callable(attr):
 
             def _wrap(*args, **kwargs):
+                args = tuple(
+                    arg.polars_plan if isinstance(arg, LazyFrameQuery) else arg
+                    for arg in args
+                )
+                kwargs = {
+                    key: value.polars_plan if isinstance(value, LazyFrameQuery) else value
+                    for key, value in kwargs.items()
+                }
                 out = attr(*args, **kwargs)
 
                 if pl is not None:
                     # re-wrap any lazy outputs to keep the conveniences afforded by this class
                     if isinstance(out, pl.lazyframe.frame.LazyFrame):
-                        return LazyFrameQuery(out, query)
+                        return LazyFrameQuery(out, query, _table_name_from_schema(out.collect_schema()))
 
                     if isinstance(out, pl.lazyframe.group_by.LazyGroupBy):
                         return LazyGroupByQuery(out, query)
@@ -854,9 +1100,11 @@ class LazyFrameQuery:
         if on is None:
             on = keys.collect_schema().names()
 
+        polars_plan = keys.join(self.polars_plan, how="left", on=on, nulls_equal=True)
         return LazyFrameQuery(
-            keys.join(self.polars_plan, how="left", on=on, nulls_equal=True),
+            polars_plan,
             self._query,
+            _table_name_from_schema(polars_plan.collect_schema()),
         )
 
     def truncate_per_group(
@@ -872,7 +1120,7 @@ class LazyFrameQuery:
         :param by: optional, additional columns to group by
         :param keep: which rows to keep for each identifier in each group
         """
-        input_metric = self._query._chain[1]
+        input_domain, input_metric = self._query._chain
 
         if isinstance(by, str):
             raise ValueError(
@@ -881,23 +1129,32 @@ class LazyFrameQuery:
 
         if isinstance(input_metric, FrameDistance):
             input_metric = input_metric.inner_metric
-        if not isinstance(input_metric, (SymmetricIdDistance, ChangeOneIdDistance)):
+        if isinstance(input_metric, DatabaseIdDistance):
+            identifier = _database_identifier_expr_from_query(
+                input_domain,
+                input_metric,
+                self.polars_plan,
+            )
+        elif isinstance(input_metric, (SymmetricIdDistance, ChangeOneIdDistance)):
+            identifier = input_metric.identifier
+        else:
             raise ValueError("truncation is only valid when identifier is defined")
 
+        indexes = pl.int_range(pl.lit(0), pl.len(), 1, dtype=pl.Int64)
         if keep == "sample":
-            indexes = pl.int_range(pl.len()).shuffle()
+            indexes = indexes.shuffle()
         elif keep == "first":
-            indexes = pl.int_range(pl.len())
+            pass
         elif keep == "last":
-            indexes = pl.int_range(pl.len()).reverse()
+            indexes = indexes.reverse()
         elif isinstance(keep, SortBy):
-            indexes = pl.int_range(pl.len()).sort_by(**asdict(keep))
+            indexes = indexes.sort_by(**asdict(keep))
         else:
             raise ValueError(
                 "keep must be 'sample', 'first', 'last' or SortBy"
             )  # pragma: no cover
 
-        return self.filter(indexes.over(input_metric.identifier, *by or []) < k)
+        return self.filter(indexes.over(identifier, *by or []) < k)
 
     def truncate_num_groups(
         self,
@@ -912,7 +1169,7 @@ class LazyFrameQuery:
         :param by: when grouped by these grouping columns
         :param keep: which groups to keep for each identifier
         """
-        input_metric = self._query._chain[1]
+        input_domain, input_metric = self._query._chain
 
         if isinstance(by, str):
             raise ValueError(
@@ -921,7 +1178,15 @@ class LazyFrameQuery:
 
         if isinstance(input_metric, FrameDistance):
             input_metric = input_metric.inner_metric
-        if not isinstance(input_metric, (SymmetricIdDistance, ChangeOneIdDistance)):
+        if isinstance(input_metric, DatabaseIdDistance):
+            identifier = _database_identifier_expr_from_query(
+                input_domain,
+                input_metric,
+                self.polars_plan,
+            )
+        elif isinstance(input_metric, (SymmetricIdDistance, ChangeOneIdDistance)):
+            identifier = input_metric.identifier
+        else:
             raise ValueError("truncation is only valid when identifier is defined")
 
         struct = pl.struct(*by)
@@ -936,7 +1201,7 @@ class LazyFrameQuery:
                 "keep must be 'sample', 'first' or 'last'"
             )  # pragma: no cover
 
-        return self.filter(ranks.over(input_metric.identifier) < k)
+        return self.filter(ranks.over(identifier) < k)
 
     def resolve(self) -> Measurement:
         """Resolve the query into a measurement."""
@@ -947,8 +1212,14 @@ class LazyFrameQuery:
         input_domain, input_metric = query._chain
         d_in, d_out = query._d_in, query._d_out
 
+        make_private = (
+            make_private_database_lazyframe
+            if isinstance(input_domain, DatabaseDomain)
+            else make_private_lazyframe
+        )
+
         def _make(scale, threshold=None):
-            return make_private_lazyframe(
+            return make_private(
                 input_domain=input_domain,
                 input_metric=input_metric,
                 output_measure=query._output_measure,
@@ -1082,6 +1353,9 @@ class LazyFrameQuery:
         input_domain, input_metric = cast(tuple[Domain, Metric], query._chain)
         d_in, d_out = query._d_in, query._d_out
 
+        if isinstance(input_domain, DatabaseDomain):
+            raise ValueError("contingency tables are only supported on single-table polars contexts")
+
         t_plan = make_stable_lazyframe(
             input_domain,
             input_metric,
@@ -1132,7 +1406,7 @@ class LazyGroupByQuery:
         :param named_aggs: named/aliased expressions to apply in the aggregation context
         """
         polars_plan = self._lgb_plan.agg(*aggs, **named_aggs)
-        return LazyFrameQuery(polars_plan, self._query)
+        return LazyFrameQuery(polars_plan, self._query, _table_name_from_schema(polars_plan.collect_schema()))
 
 
 @dataclass

@@ -4,11 +4,12 @@ use std::collections::HashSet;
 
 use crate::{
     core::{Function, Metric, MetricSpace, StabilityMap, Transformation},
-    domains::{DslPlanDomain, Invariant, LazyFrameDomain, Margin},
+    domains::{Database, DatabaseDomain, DslPlanDomain, Invariant, LazyFrameDomain, Margin},
     error::Fallible,
     metrics::{
-        Bounds, ChangeOneDistance, ChangeOneIdDistance, FrameDistance, HammingDistance,
-        SymmetricDistance, SymmetricIdDistance,
+        filter_id_sites, unique_id_expr, Bounds, ChangeOneDistance, ChangeOneIdDistance,
+        DatabaseIdDistance, FrameDistance, HammingDistance, PolarsMetric, SymmetricDistance,
+        SymmetricIdDistance,
     },
     polars::get_disabled_features_message,
 };
@@ -28,28 +29,22 @@ mod group_by;
 mod h_stack;
 
 #[cfg(feature = "contrib")]
+mod join;
+
+#[cfg(feature = "contrib")]
 pub(crate) mod select;
 
 #[cfg(feature = "contrib")]
-mod source;
+pub(crate) mod source;
 
 #[cfg(feature = "contrib")]
-mod truncate;
+pub(crate) mod truncate;
 
 #[bootstrap(
     features("contrib"),
     arguments(output_metric(c_type = "AnyMetric *", rust_type = b"null")),
     generics(MI(suppress), MO(default = "MI"))
 )]
-/// Create a stable transformation from a [`LazyFrame`].
-///
-/// # Arguments
-/// * `input_domain` - The domain of the input data.
-/// * `input_metric` - How to measure distances between neighboring input data sets.
-/// * `lazyframe` - The [`LazyFrame`] to be analyzed.
-///
-/// # Generics
-/// * `MO` - The type of the output metric.
 pub fn make_stable_lazyframe<MI: 'static + Metric, MO: 'static + Metric>(
     input_domain: LazyFrameDomain,
     input_metric: MI,
@@ -80,12 +75,82 @@ where
     )
 }
 
+pub fn make_stable_database_lazyframe(
+    input_domain: DatabaseDomain,
+    input_metric: DatabaseIdDistance,
+    lazyframe: LazyFrame,
+) -> Fallible<
+    Transformation<
+        DatabaseDomain,
+        DatabaseIdDistance,
+        LazyFrameDomain,
+        FrameDistance<SymmetricIdDistance>,
+    >,
+>
+where
+    DslPlan: StableDatabaseDslPlan<DatabaseIdDistance, FrameDistance<SymmetricIdDistance>>,
+    (DatabaseDomain, DatabaseIdDistance): MetricSpace,
+{
+    let t_input: Transformation<
+        DatabaseDomain,
+        DatabaseIdDistance,
+        DslPlanDomain,
+        FrameDistance<SymmetricIdDistance>,
+    > = lazyframe
+        .logical_plan
+        .make_stable_database(input_domain, input_metric)?;
+    let f_input = t_input.function_clone();
+    let m_input = t_input.stability_map_clone();
+
+    Transformation::new(
+        t_input.input_domain.clone(),
+        t_input.input_metric.clone(),
+        t_input.output_domain.cast_carrier(),
+        t_input.output_metric.clone(),
+        Function::new_fallible(move |arg: &Database| Ok(LazyFrame::from(f_input.eval(arg)?))),
+        m_input,
+    )
+}
+
 pub trait StableDslPlan<MI: Metric, MO: Metric> {
     fn make_stable(
         self,
         input_domain: DslPlanDomain,
         input_metric: MI,
     ) -> Fallible<Transformation<DslPlanDomain, MI, DslPlanDomain, MO>>;
+}
+
+pub trait StableDatabaseDslPlan<MI: Metric, MO: Metric> {
+    fn make_stable_database(
+        self,
+        input_domain: DatabaseDomain,
+        input_metric: MI,
+    ) -> Fallible<Transformation<DatabaseDomain, MI, DslPlanDomain, MO>>;
+}
+
+pub(crate) fn table_metric(
+    input_metric: &DatabaseIdDistance,
+    table_name: &str,
+) -> SymmetricIdDistance {
+    SymmetricIdDistance {
+        protected_label: input_metric.protected_label.clone(),
+        id_sites: input_metric
+            .id_sites
+            .get(table_name)
+            .cloned()
+            .unwrap_or_default(),
+    }
+}
+
+pub(crate) fn database_metric(input_metric: &DatabaseIdDistance) -> SymmetricIdDistance {
+    SymmetricIdDistance {
+        protected_label: input_metric.protected_label.clone(),
+        id_sites: input_metric
+            .id_sites
+            .values()
+            .flat_map(|sites| filter_id_sites(sites, &input_metric.protected_label))
+            .collect(),
+    }
 }
 
 impl StableDslPlan<FrameDistance<SymmetricIdDistance>, FrameDistance<SymmetricDistance>>
@@ -103,36 +168,25 @@ impl StableDslPlan<FrameDistance<SymmetricIdDistance>, FrameDistance<SymmetricDi
             FrameDistance<SymmetricDistance>,
         >,
     > {
-        // matching errors only when the plan unambiguously contains a mis-specified truncation
-        let truncations = truncate::match_truncations(self.clone(), &input_metric.0.identifier)?.1;
+        if let DslPlan::IR { dsl, .. } = self {
+            return dsl.as_ref().clone().make_stable(input_domain, input_metric);
+        }
+
+        let identifier = unique_id_expr(&input_metric.0.active_id_sites())?
+            .ok_or_else(|| err!(MakeTransformation, "truncation requires at least one identifier"))?;
+        let truncations = truncate::match_truncations(self.clone(), &identifier)?.1;
         if !truncations.is_empty() {
             return truncate::make_stable_truncate(input_domain, input_metric, self);
         }
 
-        match &self {
-            DslPlan::IR { dsl, .. } => (**dsl).clone().make_stable(input_domain, input_metric),
-            DslPlan::Filter { .. } => filter::make_stable_filter(input_domain, input_metric, self),
-            DslPlan::HStack { .. } => h_stack::make_h_stack(input_domain, input_metric, self),
-            DslPlan::Select { .. } => select::make_select(input_domain, input_metric, self),
-            dsl => match dsl.describe() {
-                Ok(describe) => fallible!(
-                    MakeTransformation,
-                    "A step in your query is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
-                    describe,
-                    get_disabled_features_message()
-                ),
-                Err(e) => fallible!(
-                    MakeTransformation,
-                    "A step in your query is not recognized at this time, and the step cannot be identified due to the following error: {}. {:?}",
-                    e,
-                    get_disabled_features_message()
-                ),
-            },
-        }
+        fallible!(
+            MakeTransformation,
+            "queries with identifier metrics require an explicit truncation before converting to event-level stability"
+        )
     }
 }
 
-impl<M: UnboundedMetric> StableDslPlan<FrameDistance<M>, FrameDistance<M>> for DslPlan {
+impl<M: UnboundedMetric + PolarsMetric> StableDslPlan<FrameDistance<M>, FrameDistance<M>> for DslPlan {
     fn make_stable(
         self,
         input_domain: DslPlanDomain,
@@ -165,6 +219,40 @@ impl<M: UnboundedMetric> StableDslPlan<FrameDistance<M>, FrameDistance<M>> for D
                 ),
             },
         }
+    }
+}
+
+impl StableDatabaseDslPlan<DatabaseIdDistance, FrameDistance<SymmetricDistance>> for DslPlan {
+    fn make_stable_database(
+        self,
+        input_domain: DatabaseDomain,
+        input_metric: DatabaseIdDistance,
+    ) -> Fallible<
+        Transformation<
+            DatabaseDomain,
+            DatabaseIdDistance,
+            DslPlanDomain,
+            FrameDistance<SymmetricDistance>,
+        >,
+    > {
+        let plan = match self {
+            DslPlan::IR { dsl, .. } => return dsl.as_ref().clone().make_stable_database(input_domain, input_metric),
+            plan => plan,
+        };
+
+        let identifier = unique_id_expr(&database_metric(&input_metric).active_id_sites())?
+            .ok_or_else(|| err!(MakeTransformation, "truncation requires at least one identifier"))?;
+        let (input, truncations, _) = truncate::match_truncations(plan.clone(), &identifier)?;
+
+        if truncations.is_empty() {
+            return fallible!(
+                MakeTransformation,
+                "queries with identifier metrics require an explicit truncation before converting to event-level stability"
+            );
+        }
+
+        let t_prior = input.make_stable_database(input_domain, input_metric)?;
+        truncate::make_chain_truncate(t_prior, plan)
     }
 }
 

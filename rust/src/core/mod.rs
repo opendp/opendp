@@ -429,6 +429,14 @@ impl<DI: Domain, MI: Metric, DO: Domain, MO: Metric> Transformation<DI, MI, DO, 
         self.function.eval(arg)
     }
 
+    pub(crate) fn function_clone(&self) -> Function<DI::Carrier, DO::Carrier> {
+        self.function.clone()
+    }
+
+    pub(crate) fn stability_map_clone(&self) -> StabilityMap<MI, MO> {
+        self.stability_map.clone()
+    }
+
     pub fn map(&self, d_in: &MI::Distance) -> Fallible<MO::Distance> {
         self.stability_map.eval(d_in)
     }
