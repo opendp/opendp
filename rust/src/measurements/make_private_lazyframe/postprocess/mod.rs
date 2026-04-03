@@ -6,7 +6,7 @@ use crate::combinators::CompositionMeasure;
 use crate::core::{Metric, MetricSpace};
 use crate::domains::{DslPlanDomain, LazyFrameDomain};
 use crate::{
-    core::{Function, Measurement},
+    core::{Domain, Function, Measurement},
     error::Fallible,
 };
 
@@ -28,6 +28,31 @@ where
     (DslPlanDomain, MI): MetricSpace,
     (LazyFrameDomain, MI): MetricSpace,
 {
+    match_postprocess_with(
+        |plan| {
+            plan.make_private(
+                input_domain.clone(),
+                input_metric.clone(),
+                output_measure.clone(),
+                global_scale,
+                threshold,
+            )
+        },
+        plan,
+    )
+}
+
+pub fn match_postprocess_with<DI, MI, MO, F>(
+    recurse: F,
+    plan: DslPlan,
+) -> Fallible<Option<Measurement<DI, MI, MO, DslPlan>>>
+where
+    DI: Domain + 'static,
+    MI: 'static + Metric,
+    MO: 'static + CompositionMeasure,
+    (DI, MI): MetricSpace,
+    F: FnOnce(DslPlan) -> Fallible<Measurement<DI, MI, MO, DslPlan>>,
+{
     match &plan {
         // allow column selection, renaming in postprocessing
         // this postprocessor is always used by query plans translated from SQL queries
@@ -42,13 +67,7 @@ where
             {
                 return Ok(None);
             }
-            let m_in = input.as_ref().clone().make_private(
-                input_domain,
-                input_metric,
-                output_measure,
-                global_scale,
-                threshold,
-            )?;
+            let m_in = recurse(input.as_ref().clone())?;
             let post = match plan {
                 DslPlan::Select { expr, options, .. } => {
                     Function::new_fallible(move |arg: &DslPlan| {

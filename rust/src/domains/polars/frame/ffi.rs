@@ -1,14 +1,18 @@
-use std::{any::TypeId, collections::HashSet, ffi::c_char};
+use std::{
+    any::TypeId,
+    collections::{HashMap, HashSet},
+    ffi::c_char,
+};
 
 use opendp_derive::bootstrap;
 
 use crate::{
     core::{FfiResult, Metric, MetricSpace},
-    domains::{Margin, SeriesDomain},
+    domains::{Margin, OPENDP_TABLE_NAME_PREFIX, SeriesDomain},
     error::Fallible,
     ffi::{
         any::{AnyDomain, AnyMetric, AnyObject, Downcast},
-        util::{self, AnyDomainPtr, Type},
+        util::{self, AnyDomainPtr, Type, as_ref},
     },
     metrics::{
         ChangeOneDistance, ChangeOneIdDistance, FrameDistance, HammingDistance,
@@ -16,7 +20,7 @@ use crate::{
     },
 };
 
-use super::{Frame, FrameDomain, LazyFrameDomain};
+use super::{DatabaseDomain, Frame, FrameDomain, LazyFrameDomain};
 use polars::prelude::*;
 
 #[bootstrap(
@@ -36,6 +40,42 @@ pub extern "C" fn opendp_domains__lazyframe_domain(
         unpack_series_domains(series_domains)
     )))))
     .into()
+}
+
+#[bootstrap(
+    name = "database_domain",
+    arguments(table_domains(rust_type = "HashMap<String, LazyFrameDomain>")),
+    returns(c_type = "FfiResult<AnyDomain *>", hint = "DatabaseDomain")
+)]
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_domains__database_domain(
+    table_domains: *const AnyObject,
+) -> FfiResult<*mut AnyDomain> {
+    let table_domains = try_!(unpack_table_domains(table_domains));
+    FfiResult::Ok(util::into_raw(AnyDomain::new(DatabaseDomain::new(
+        table_domains,
+    ))))
+}
+
+#[bootstrap(name = "_database_domain_get_table_domain")]
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_domains___database_domain_get_table_domain(
+    database_domain: *const AnyDomain,
+    table_name: *const c_char,
+) -> FfiResult<*mut AnyDomain> {
+    let database_domain = try_!(try_as_ref!(database_domain).downcast_ref::<DatabaseDomain>());
+    let table_name = try_!(util::to_str(table_name));
+    let domain = try_!(database_domain.table(table_name)).clone();
+    FfiResult::Ok(util::into_raw(AnyDomain::new(domain)))
+}
+
+#[bootstrap(name = "_database_domain_get_table_domains")]
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_domains___database_domain_get_table_domains(
+    database_domain: *const AnyDomain,
+) -> FfiResult<*mut AnyObject> {
+    let database_domain = try_!(try_as_ref!(database_domain).downcast_ref::<DatabaseDomain>());
+    FfiResult::Ok(AnyObject::new_raw(database_domain.0.clone()))
 }
 
 #[bootstrap(
@@ -98,23 +138,39 @@ pub extern "C" fn opendp_domains___lazyframe_domain_get_margin(
     Ok(AnyObject::new(margin)).into()
 }
 
-#[bootstrap()]
+#[bootstrap(
+    arguments(name(default = b"null"))
+)]
 /// Construct an empty LazyFrame with the same schema as in the LazyFrameDomain.
 ///
 /// This is useful for creating a dummy lazyframe used to write a query plan.
 ///
 /// # Arguments
 /// * `domain` - A LazyFrameDomain.
-fn _lazyframe_from_domain(domain: LazyFrameDomain) -> Fallible<LazyFrame> {
-    Ok(DataFrame::from_rows_and_schema(&[], &domain.schema())?.lazy())
+/// * `name` - Optional additional table name marker.
+fn _lazyframe_from_domain(domain: LazyFrameDomain, name: Option<String>) -> Fallible<LazyFrame> {
+    let mut schema = domain.schema();
+    name.map(|name| {
+        let marker = format!("{}{}", OPENDP_TABLE_NAME_PREFIX, name);
+        schema.with_column(marker.into(), DataType::Null)
+    });
+    Ok(DataFrame::from_rows_and_schema(&[], &schema)?.lazy())
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_domains___lazyframe_from_domain(
-    domain: *mut AnyDomain,
+    domain: *const AnyDomain,
+    name: *const AnyObject,
 ) -> FfiResult<*mut AnyObject> {
     let domain = try_!(try_as_ref!(domain).downcast_ref::<LazyFrameDomain>()).clone();
-    _lazyframe_from_domain(domain).map(AnyObject::new).into()
+    let name = if let Some(name) = as_ref(name) {
+        Some(try_!(name.downcast_ref::<String>()).clone())
+    } else {
+        None
+    };
+    _lazyframe_from_domain(domain, name)
+        .map(AnyObject::new)
+        .into()
 }
 
 pub(crate) fn unpack_series_domains(
@@ -130,6 +186,24 @@ pub(crate) fn unpack_series_domains(
                 .cloned()
         })
         .collect::<Option<Vec<SeriesDomain>>>()
+        .ok_or_else(|| err!(FailedCast, "domain downcast failed"))
+}
+
+pub(crate) fn unpack_table_domains(
+    table_domains: *const AnyObject,
+) -> Fallible<HashMap<String, LazyFrameDomain>> {
+    let table_domains =
+        try_as_ref!(table_domains).downcast_ref::<HashMap<String, AnyDomainPtr>>()?;
+
+    table_domains
+        .iter()
+        .map(|(name, domain)| {
+            util::as_ref(*domain)
+                .and_then(|ad: &AnyDomain| ad.downcast_ref::<LazyFrameDomain>().ok())
+                .cloned()
+                .map(|domain| (name.clone(), domain))
+        })
+        .collect::<Option<HashMap<String, LazyFrameDomain>>>()
         .ok_or_else(|| err!(FailedCast, "domain downcast failed"))
 }
 

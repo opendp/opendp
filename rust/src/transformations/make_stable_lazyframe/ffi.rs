@@ -1,18 +1,19 @@
 use std::ffi::c_char;
 
+use opendp_derive::bootstrap;
 use polars::{lazy::frame::LazyFrame, prelude::DslPlan};
 
 use crate::{
     core::{FfiResult, IntoAnyTransformationFfiResultExt, Metric, MetricSpace},
-    domains::{DslPlanDomain, LazyFrameDomain},
+    domains::{DatabaseDomain, DslPlanDomain, LazyFrameDomain},
     error::Fallible,
     ffi::{
         any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast},
         util::{Type, TypeContents, to_str},
     },
     metrics::{
-        ChangeOneDistance, ChangeOneIdDistance, FrameDistance, HammingDistance,
-        InsertDeleteDistance, SymmetricDistance, SymmetricIdDistance,
+        ChangeOneDistance, ChangeOneIdDistance, DatabaseIdDistance, FrameDistance, HammingDistance,
+        InsertDeleteDistance, PolarsMetric, SymmetricDistance, SymmetricIdDistance,
     },
     transformations::{
         StableDslPlan,
@@ -20,7 +21,7 @@ use crate::{
     },
 };
 
-use super::make_stable_lazyframe;
+use super::{make_stable_database_lazyframe, make_stable_lazyframe};
 
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_transformations__make_stable_lazyframe(
@@ -52,7 +53,7 @@ pub extern "C" fn opendp_transformations__make_stable_lazyframe(
                 lazyframe: LazyFrame,
             ) -> Fallible<AnyTransformation>
             where
-                DslPlan: StableDslPlan<MI, MI>,
+                DslPlan: StableDslPlan<DslPlanDomain, MI, MI>,
                 (LazyFrameDomain, MI): MetricSpace,
                 (DslPlanDomain, MI): MetricSpace,
             {
@@ -84,7 +85,8 @@ pub extern "C" fn opendp_transformations__make_stable_lazyframe(
                 lazyframe: LazyFrame,
             ) -> Fallible<AnyTransformation>
             where
-                DslPlan: StableDslPlan<MI, FrameDistance<MI>> + StableDslPlan<FrameDistance<MI>, FrameDistance<MI>>,
+                MI: PolarsMetric,
+                DslPlan: StableDslPlan<DslPlanDomain, MI, FrameDistance<MI>>,
             {
                 let input_metric = input_metric.downcast_ref::<MI>()?.clone();
                 make_stable_lazyframe(input_domain, input_metric, lazyframe).into_any()
@@ -112,7 +114,8 @@ pub extern "C" fn opendp_transformations__make_stable_lazyframe(
             lazyframe: LazyFrame,
         ) -> Fallible<AnyTransformation>
         where
-            DslPlan: StableDslPlan<MI, FrameDistance<MI::UnboundedMetric>>,
+            MI::UnboundedMetric: PolarsMetric,
+            DslPlan: StableDslPlan<DslPlanDomain, MI, FrameDistance<MI::UnboundedMetric>>,
         {
             let input_metric = input_metric.downcast_ref::<MI>()?.clone();
             make_stable_lazyframe(input_domain, input_metric, lazyframe).into_any()
@@ -127,4 +130,35 @@ pub extern "C" fn opendp_transformations__make_stable_lazyframe(
             )
         )
     }.into()
+}
+
+#[bootstrap(
+    features("contrib"),
+    returns(c_type = "FfiResult<AnyTransformation *>")
+)]
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_transformations__make_stable_database_lazyframe(
+    input_domain: *const AnyDomain,
+    input_metric: *const AnyMetric,
+    lazyframe: *const AnyObject,
+) -> FfiResult<*mut AnyTransformation> {
+    let input_domain = try_!(try_as_ref!(input_domain).downcast_ref::<DatabaseDomain>()).clone();
+    let input_metric = try_as_ref!(input_metric);
+    let input_metric = try_!(input_metric.downcast_ref::<DatabaseIdDistance>()).clone();
+    let lazyframe = try_!(try_as_ref!(lazyframe).downcast_ref::<LazyFrame>()).clone();
+
+    fn monomorphize(
+        input_domain: DatabaseDomain,
+        input_metric: DatabaseIdDistance,
+        lazyframe: LazyFrame,
+    ) -> Fallible<AnyTransformation>
+    where
+        DslPlan:
+            StableDslPlan<DatabaseDomain, DatabaseIdDistance, FrameDistance<SymmetricIdDistance>>,
+        (DatabaseDomain, DatabaseIdDistance): MetricSpace,
+    {
+        make_stable_database_lazyframe(input_domain, input_metric, lazyframe).into_any()
+    }
+
+    monomorphize(input_domain, input_metric, lazyframe).into()
 }

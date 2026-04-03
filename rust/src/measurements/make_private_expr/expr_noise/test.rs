@@ -3,7 +3,7 @@ use polars::prelude::*;
 
 use crate::{
     domains::{AtomDomain, LazyFrameDomain, Margin, SeriesDomain},
-    measurements::{PrivateExpr, make_private_expr, make_private_lazyframe},
+    measurements::{PrivateExpr, make_private_lazyframe},
     metrics::{FrameDistance, InsertDeleteDistance, L0PInfDistance, SymmetricDistance},
     polars::PrivacyNamespace,
     transformations::test_helper::get_test_data,
@@ -14,13 +14,15 @@ fn test_make_expr_puredp() -> Fallible<()> {
     let (lf_domain, lf) = get_test_data()?;
     let scale: f64 = 0.0;
 
-    let m_quant = make_private_expr(
-        lf_domain.select(),
-        L0PInfDistance(InsertDeleteDistance),
-        MaxDivergence,
-        col("const_1f64").dp().sum((lit(0.), lit(1.)), Some(scale)),
-        None,
-    )?;
+    let m_quant = col("const_1f64")
+        .dp()
+        .sum((lit(0.), lit(1.)), Some(scale))
+        .make_private(
+            lf_domain.select(),
+            L0PInfDistance(InsertDeleteDistance),
+            MaxDivergence,
+            None,
+        )?;
 
     let dp_expr = m_quant.invoke(&lf.logical_plan)?.expr;
     let df_actual = lf.select([dp_expr]).collect()?;
@@ -35,13 +37,15 @@ fn test_make_expr_zcdp() -> Fallible<()> {
     let (lf_domain, lf) = get_test_data()?;
     let scale: f64 = 0.0;
 
-    let m_quant = make_private_expr(
-        lf_domain.select(),
-        L0PInfDistance(InsertDeleteDistance),
-        ZeroConcentratedDivergence::default(),
-        col("const_1f64").dp().sum((lit(0.), lit(1.)), Some(scale)),
-        None,
-    )?;
+    let m_quant = col("const_1f64")
+        .dp()
+        .sum((lit(0.), lit(1.)), Some(scale))
+        .make_private(
+            lf_domain.select(),
+            L0PInfDistance(InsertDeleteDistance),
+            ZeroConcentratedDivergence::default(),
+            None,
+        )?;
 
     let dp_expr = m_quant.invoke(&lf.logical_plan)?.expr;
     let df_actual = lf.select([dp_expr]).collect()?;
@@ -56,13 +60,15 @@ fn test_make_expr_gaussian() -> Fallible<()> {
     let (lf_domain, lf) = get_test_data()?;
     let scale: f64 = 0.0;
 
-    let m_quant = make_private_expr(
-        lf_domain.select(),
-        L0PInfDistance(InsertDeleteDistance),
-        ZeroConcentratedDivergence::default(),
-        col("const_1f64").dp().sum((lit(0.), lit(1.)), Some(scale)),
-        None,
-    )?;
+    let m_quant = col("const_1f64")
+        .dp()
+        .sum((lit(0.), lit(1.)), Some(scale))
+        .make_private(
+            lf_domain.select(),
+            L0PInfDistance(InsertDeleteDistance),
+            ZeroConcentratedDivergence::default(),
+            None,
+        )?;
 
     let dp_expr = m_quant.invoke(&lf.logical_plan)?.expr;
     let df_actual = lf.select([dp_expr]).collect()?;

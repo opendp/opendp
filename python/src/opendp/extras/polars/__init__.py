@@ -15,13 +15,17 @@ The members of this module will then be accessible at ``dp.polars``.
 """
 
 from __future__ import annotations
+import ctypes
 from dataclasses import asdict, dataclass, field, replace
 import os
-from typing import Any, Literal, Mapping, Optional, Sequence, Union, cast
-from opendp._lib import lib_path, import_optional_dependency
-from opendp.extras.mbi import ContingencyTable, make_contingency_table, AIM, Algorithm
+from typing import Any, Literal, Mapping, Optional, Sequence, Type, Union, cast
+from opendp._lib import AnyMetric, AnyObjectPtr, FfiResult, lib, lib_path, import_optional_dependency, unwrap
+from opendp._convert import py_to_c
+from opendp.extras.mbi import ContingencyTable, AIM, Algorithm
 from opendp.mod import (
     ChangeOneIdDistance,
+    DatabaseIdDistance,
+    DatabaseDomain,
     Domain,
     Measurement,
     FrameDistance,
@@ -32,6 +36,8 @@ from opendp.mod import (
     binary_search_chain,
 )
 from opendp.domains import (
+    _lazyframe_from_domain,
+    database_domain,
     series_domain,
     lazyframe_domain,
     option_domain,
@@ -41,7 +47,7 @@ from opendp.domains import (
     enum_domain,
     array_domain,
 )
-from opendp.measurements import make_private_lazyframe
+from opendp.measurements import make_private_database_lazyframe, make_private_lazyframe
 from deprecated import deprecated
 from opendp.transformations import make_stable_lazyframe
 from typing import TYPE_CHECKING
@@ -596,6 +602,247 @@ def _lazyframe_domain_from_schema(schema) -> Domain:
     )
 
 
+OPENDP_TABLE_NAME_PREFIX = "__OPENDP_TABLE_NAME__"
+
+
+def _table_marker_name(table_name: str) -> str:
+    return f"{OPENDP_TABLE_NAME_PREFIX}{table_name}"
+
+
+def _is_table_marker_name(name: str) -> bool:
+    return name.startswith(OPENDP_TABLE_NAME_PREFIX)
+
+
+def _schema_without_table_markers(schema):
+    return pl.Schema(
+        {
+            name: dtype
+            for name, dtype in schema.items()
+            if not _is_table_marker_name(name)
+        }
+    )
+
+
+def _tables_in_plan(plan) -> set[str] | None:
+    if plan is None:
+        return None
+    return {
+        name.removeprefix(OPENDP_TABLE_NAME_PREFIX)
+        for name in plan.collect_schema().names()
+        if _is_table_marker_name(name)
+    }
+
+
+def _database_domain_from_tables(data: Mapping[str, Any]) -> DatabaseDomain:
+    return database_domain(
+        {
+            table_name: _lazyframe_domain_from_schema(lf.collect_schema())
+            for table_name, lf in data.items()
+        }
+    )
+
+
+def _table_select_query(table_name: str, *, limit: int | None = None) -> str:
+    query = f"SELECT * FROM {table_name}"
+    if limit is not None:
+        query += f" LIMIT {limit}"
+    return query
+
+
+def _sqlite_ident(name: str) -> str:
+    return '"' + name.replace('"', '""') + '"'
+
+
+def _sqlalchemy_inspector(connection: Any):
+    sqlalchemy = import_optional_dependency("sqlalchemy", raise_error=False)
+    if sqlalchemy is None:
+        return None
+    try:
+        return sqlalchemy.inspect(connection)
+    except Exception:
+        return None
+
+
+def _schema_metadata_from_inspector(
+    inspector, table_names: Sequence[str]
+) -> tuple[list["UniqueKey"], list["ForeignKey"]]:
+    unique_keys: list[UniqueKey] = []
+    foreign_keys: list[ForeignKey] = []
+
+    for table_name in table_names:
+        pk = inspector.get_pk_constraint(table_name)
+        pk_cols = pk.get("constrained_columns") or []
+        if pk_cols:
+            candidate = UniqueKey(table_name, pk_cols)
+            if candidate not in unique_keys:
+                unique_keys.append(candidate)
+
+        for unique in inspector.get_unique_constraints(table_name):
+            unique_cols = unique.get("column_names") or []
+            if unique_cols:
+                candidate = UniqueKey(table_name, unique_cols)
+                if candidate not in unique_keys:
+                    unique_keys.append(candidate)
+
+        for foreign_key in inspector.get_foreign_keys(table_name):
+            from_cols = foreign_key.get("constrained_columns") or []
+            to_table = foreign_key.get("referred_table")
+            to_cols = foreign_key.get("referred_columns") or []
+            if from_cols and to_table and len(from_cols) == len(to_cols):
+                candidate = ForeignKey(table_name, from_cols, to_table, to_cols)
+                if candidate not in foreign_keys:
+                    foreign_keys.append(candidate)
+
+    return unique_keys, foreign_keys
+
+
+def _sqlite_schema_metadata_from_connection(connection: Any, table_names: Sequence[str]) -> tuple[list["UniqueKey"], list["ForeignKey"]]:
+    unique_keys: list[UniqueKey] = []
+    foreign_keys: list[ForeignKey] = []
+
+    for table_name in table_names:
+        table_info = connection.execute(f"PRAGMA table_info({_sqlite_ident(table_name)})").fetchall()
+        pk_cols = [
+            row[1]
+            for row in sorted(table_info, key=lambda row: row[5])
+            if row[5]
+        ]
+        if pk_cols:
+            candidate = UniqueKey(table_name, pk_cols)
+            if candidate not in unique_keys:
+                unique_keys.append(candidate)
+
+        for row in connection.execute(f"PRAGMA index_list({_sqlite_ident(table_name)})").fetchall():
+            index_name = row[1]
+            is_unique = bool(row[2])
+            is_partial = bool(row[4]) if len(row) > 4 else False
+            origin = row[3] if len(row) > 3 else None
+            if not is_unique or is_partial or origin == "pk":
+                continue
+
+            index_cols = [
+                index_row[2]
+                for index_row in connection.execute(f"PRAGMA index_info({_sqlite_ident(index_name)})").fetchall()
+                if index_row[2] is not None
+            ]
+            if index_cols:
+                candidate = UniqueKey(table_name, index_cols)
+                if candidate not in unique_keys:
+                    unique_keys.append(candidate)
+
+        foreign_key_rows = connection.execute(
+            f"PRAGMA foreign_key_list({_sqlite_ident(table_name)})"
+        ).fetchall()
+        foreign_keys_by_id: dict[tuple[int, str], list[tuple[int, str, str | None]]] = {}
+        for row in foreign_key_rows:
+            foreign_keys_by_id.setdefault((row[0], row[2]), []).append((row[1], row[3], row[4]))
+
+        for (_, to_table), fk_rows in foreign_keys_by_id.items():
+            ordered_rows = sorted(fk_rows, key=lambda row: row[0])
+            from_cols = [row[1] for row in ordered_rows if row[1] is not None]
+            to_cols = [row[2] for row in ordered_rows if row[2] is not None]
+            if from_cols and len(from_cols) == len(to_cols):
+                candidate = ForeignKey(table_name, from_cols, to_table, to_cols)
+                if candidate not in foreign_keys:
+                    foreign_keys.append(candidate)
+
+    return unique_keys, foreign_keys
+
+
+def _database_schema_metadata_from_connection(
+    connection: Any, table_names: Sequence[str]
+) -> tuple[list["UniqueKey"], list["ForeignKey"], list["FunctionalDependency"], list["Ownership"]]:
+    inspector = _sqlalchemy_inspector(connection)
+    if inspector is not None:
+        unique_keys, foreign_keys = _schema_metadata_from_inspector(inspector, table_names)
+        return unique_keys, foreign_keys, [], []
+
+    try:
+        import sqlite3
+    except ImportError:  # pragma: no cover
+        sqlite3 = None
+
+    if sqlite3 is not None and isinstance(connection, sqlite3.Connection):
+        unique_keys, foreign_keys = _sqlite_schema_metadata_from_connection(connection, table_names)
+        return unique_keys, foreign_keys, [], []
+
+    return [], [], [], []
+
+
+def _database_table_names_from_connection(connection: Any) -> list[str] | None:
+    inspector = _sqlalchemy_inspector(connection)
+    if inspector is not None:
+        return inspector.get_table_names()
+
+    try:
+        import sqlite3
+    except ImportError:  # pragma: no cover
+        sqlite3 = None
+
+    if sqlite3 is not None and isinstance(connection, sqlite3.Connection):
+        rows = connection.execute(
+            """
+            SELECT name
+            FROM sqlite_master
+            WHERE type = 'table'
+              AND name NOT LIKE 'sqlite_%'
+            ORDER BY name
+            """
+        ).fetchall()
+        return [row[0] for row in rows]
+
+    return None
+
+
+def _database_tables_from_connection(connection: Any, table_names: Sequence[str]) -> dict[str, Any]:
+    return {
+        table_name: pl.read_database(_table_select_query(table_name), connection).lazy()
+        for table_name in table_names
+    }
+
+
+def _infer_identifier(metric, plan=None):
+    """Extract an unambiguous identifier expression to truncate on, or error"""
+    plan_columns = None
+    plan_tables = _tables_in_plan(plan)
+    if plan is not None:
+        plan_columns = set(_schema_without_table_markers(plan.collect_schema()).names())
+
+    if isinstance(metric, FrameDistance):
+        metric = metric.inner_metric
+    if isinstance(metric, (SymmetricIdDistance, ChangeOneIdDistance)):
+        bindings = [b for b in metric.bindings if b.space == metric.protect]
+        if len(bindings) != 1:
+            raise ValueError("expected exactly one binding. Truncation across multiple bindings is not currently supported")
+        return bindings[0].exprs[0]
+    if isinstance(metric, DatabaseIdDistance):
+        all_bindings = [
+            b
+            for sites in metric.bindings.values()
+            for b in sites
+            if b.space == metric.protect
+        ]
+        bindings = [
+            b
+            for table_name, sites in metric.bindings.items()
+            if plan_tables is None or table_name in plan_tables
+            for b in sites
+            if b.space == metric.protect
+            if plan_columns is None
+            or {
+                root
+                for expr in b.exprs
+                for root in expr.meta.root_names()
+            } <= plan_columns
+        ]
+        if len(bindings) != 1 and len(all_bindings) == 1:
+            bindings = all_bindings
+        if len(bindings) != 1:
+            raise ValueError("expected exactly one binding. Truncation across multiple bindings is not currently supported")
+        return bindings[0].exprs[0]
+    else:
+        raise ValueError("identifier must be explicitly specified")
+
 def _series_domain_from_field(field) -> Domain:
     """Builds the broadest possible SeriesDomain that matches a given field."""
     name, dtype = field
@@ -671,22 +918,47 @@ class SortBy:
     """Whether the order should be maintained if elements are equal."""
 
 
+def table(table_name: str):
+    marker_name = _table_marker_name(table_name)
+    polars_plan = pl.LazyFrame(
+        {marker_name: pl.Series(marker_name, [], dtype=pl.Null)}
+    )
+    return LazyFrameQuery(polars_plan, None)
+
+
+class DatabaseQuery:
+    """Root object for database-backed Polars queries."""
+
+    def __init__(self, query, domain: DatabaseDomain):
+        self._query = query
+        self._domain = domain
+
+    def table(self, table_name: str) -> "LazyFrameQuery":
+        return LazyFrameQuery(
+            _lazyframe_from_domain(self._domain.table(table_name), table_name),
+            self._query,
+        )
+
+
 class LazyFrameQuery:
     """
     A ``LazyFrameQuery`` may be returned by :py:func:`~opendp.context.Context.query`.
     It mimics a `Polars LazyFrame <https://docs.pola.rs/api/python/stable/reference/lazyframe/index.html>`_,
     but makes a few additions and changes as documented below."""
 
-    # Keep this docstring in sync with the docstring below for the dummy class.
-
     def __init__(self, polars_plan, query):
         self.polars_plan = polars_plan
         self._query = query
-        # do not initialize super() because inheritance is only used to mimic the API surface
+
+    def __repr__(self):
+        return repr(self.polars_plan)
 
     def __getattribute__(self, name):
         # Re-route all possible attribute access to self.polars_plan.
         # __getattribute__ is necessary because __getattr__ cannot intercept calls to inherited methods
+
+        if name == "collect_schema":
+            return object.__getattribute__(self, name)
 
         # We keep the query plan void of data anyways,
         # so running the computation doesn't affect privacy.
@@ -707,6 +979,14 @@ class LazyFrameQuery:
         if callable(attr):
 
             def _wrap(*args, **kwargs):
+                args = tuple(
+                    arg.polars_plan if isinstance(arg, LazyFrameQuery) else arg
+                    for arg in args
+                )
+                kwargs = {
+                    key: value.polars_plan if isinstance(value, LazyFrameQuery) else value
+                    for key, value in kwargs.items()
+                }
                 out = attr(*args, **kwargs)
 
                 if pl is not None:
@@ -721,6 +1001,9 @@ class LazyFrameQuery:
 
             return _wrap
         return attr
+
+    def collect_schema(self):
+        return _schema_without_table_markers(self.polars_plan.collect_schema())
 
     # These definitions are primarily for mypy:
     # Without them, a "# type: ignore[union-attr]" is needed on every line where these methods are used.
@@ -854,8 +1137,9 @@ class LazyFrameQuery:
         if on is None:
             on = keys.collect_schema().names()
 
+        polars_plan = keys.join(self.polars_plan, how="left", on=on, nulls_equal=True)
         return LazyFrameQuery(
-            keys.join(self.polars_plan, how="left", on=on, nulls_equal=True),
+            polars_plan,
             self._query,
         )
 
@@ -864,6 +1148,7 @@ class LazyFrameQuery:
         k: int,
         by: list[Any] | None = None,
         keep: Literal["sample", "first", "last"] | SortBy = "sample",
+        identifier: str | None = None
     ) -> LazyFrameQuery:
         """
         Limit the number of contributed rows per group.
@@ -872,38 +1157,38 @@ class LazyFrameQuery:
         :param by: optional, additional columns to group by
         :param keep: which rows to keep for each identifier in each group
         """
-        input_metric = self._query._chain[1]
+        input_domain, input_metric = self._query._chain
 
         if isinstance(by, str):
             raise ValueError(
                 "by must be a list of strings or expressions"
             )  # pragma: no cover
 
-        if isinstance(input_metric, FrameDistance):
-            input_metric = input_metric.inner_metric
-        if not isinstance(input_metric, (SymmetricIdDistance, ChangeOneIdDistance)):
-            raise ValueError("truncation is only valid when identifier is defined")
+        if identifier is None:
+            identifier = _infer_identifier(input_metric, self.polars_plan)
 
+        indexes = pl.int_range(pl.lit(0), pl.len(), 1, dtype=pl.Int64)
         if keep == "sample":
-            indexes = pl.int_range(pl.len()).shuffle()
+            indexes = indexes.shuffle()
         elif keep == "first":
-            indexes = pl.int_range(pl.len())
+            pass
         elif keep == "last":
-            indexes = pl.int_range(pl.len()).reverse()
+            indexes = indexes.reverse()
         elif isinstance(keep, SortBy):
-            indexes = pl.int_range(pl.len()).sort_by(**asdict(keep))
+            indexes = indexes.sort_by(**asdict(keep))
         else:
             raise ValueError(
                 "keep must be 'sample', 'first', 'last' or SortBy"
             )  # pragma: no cover
 
-        return self.filter(indexes.over(input_metric.identifier, *by or []) < k)
+        return self.filter(indexes.over(identifier, *by or []) < k)
 
     def truncate_num_groups(
         self,
         k: int,
         by: list[Any],
         keep: Literal["sample", "first", "last"] = "sample",
+        identifier = None,
     ) -> LazyFrameQuery:
         """
         Limit the number of groups an individual may influence.
@@ -912,18 +1197,16 @@ class LazyFrameQuery:
         :param by: when grouped by these grouping columns
         :param keep: which groups to keep for each identifier
         """
-        input_metric = self._query._chain[1]
+        input_domain, input_metric = self._query._chain
 
         if isinstance(by, str):
             raise ValueError(
                 "by must be a list of strings or expressions"
             )  # pragma: no cover
 
-        if isinstance(input_metric, FrameDistance):
-            input_metric = input_metric.inner_metric
-        if not isinstance(input_metric, (SymmetricIdDistance, ChangeOneIdDistance)):
-            raise ValueError("truncation is only valid when identifier is defined")
-
+        if identifier is None:
+            identifier = _infer_identifier(input_metric, self.polars_plan)
+        
         struct = pl.struct(*by)
         if keep == "sample":
             ranks = pl.struct(struct.hash(), struct).rank("dense")
@@ -936,19 +1219,30 @@ class LazyFrameQuery:
                 "keep must be 'sample', 'first' or 'last'"
             )  # pragma: no cover
 
-        return self.filter(ranks.over(input_metric.identifier) < k)
+        return self.filter(ranks.over(identifier) < k)
 
-    def resolve(self) -> Measurement:
+    def resolve(
+        self,
+        bounds: Optional[tuple[float, float]] = None,
+        T: Optional[Union[Type[float], Type[int]]] = None,
+        **kwargs,
+    ) -> Measurement:
         """Resolve the query into a measurement."""
 
         # access attributes of self without getting intercepted by Self.__getattribute__
         polars_plan = object.__getattribute__(self, "polars_plan")
         query = object.__getattribute__(self, "_query")
         input_domain, input_metric = query._chain
-        d_in, d_out = query._d_in, query._d_out
+        d_in, d_out = query._d_in, query._resolve_d_out(kwargs)
+
+        make_private = (
+            make_private_database_lazyframe
+            if isinstance(input_domain, DatabaseDomain)
+            else make_private_lazyframe
+        )
 
         def _make(scale, threshold=None):
-            return make_private_lazyframe(
+            return make_private(
                 input_domain=input_domain,
                 input_metric=input_metric,
                 output_measure=query._output_measure,
@@ -994,13 +1288,15 @@ class LazyFrameQuery:
         # finding a suitable measurement just comes down to finding scale
         return binary_search_chain(_make, d_in, d_out, T=float)
 
-    def release(self) -> OnceFrame:
+    def release(self, **kwargs) -> OnceFrame:
         """Release the query. The query must be part of a context."""
         query = object.__getattribute__(self, "_query")
         resolve = object.__getattribute__(self, "resolve")
-        return query._context(resolve())  # type: ignore[misc]
+        bounds = kwargs.pop("bounds", None)
+        T = kwargs.pop("T", None)
+        return query._context(resolve(bounds=bounds, T=T, **kwargs))  # type: ignore[misc]
 
-    def summarize(self, alpha: float | None = None):
+    def summarize(self, alpha: float | None = None, **kwargs):
         """Summarize the statistics released by this query.
 
         If ``alpha`` is passed, the resulting data frame includes an ``accuracy`` column.
@@ -1058,7 +1354,7 @@ class LazyFrameQuery:
         """
         from opendp.accuracy import summarize_polars_measurement
 
-        return summarize_polars_measurement(self.resolve(), alpha)
+        return summarize_polars_measurement(self.resolve(**kwargs), alpha)
 
         
     def contingency_table(
@@ -1080,7 +1376,8 @@ class LazyFrameQuery:
 
         query: Query = object.__getattribute__(self, "_query")
         input_domain, input_metric = cast(tuple[Domain, Metric], query._chain)
-        d_in, d_out = query._d_in, query._d_out
+        if isinstance(input_domain, DatabaseDomain):
+            raise ValueError("contingency tables are only supported on single-table polars contexts")
 
         t_plan = make_stable_lazyframe(
             input_domain,
@@ -1089,24 +1386,17 @@ class LazyFrameQuery:
             MO="FrameDistance<SymmetricDistance>",
         )
 
-        m_table, oneway_scale, oneway_threshold = make_contingency_table(
-            input_domain=t_plan.output_domain,
-            input_metric=t_plan.output_metric,
+        return ContingencyTableQuery(
+            chain=t_plan,
             output_measure=query._output_measure,
-            d_in=t_plan.map(d_in),
-            d_out=d_out,  # type: ignore[arg-type]
+            context=query._context,
+            d_in=query._d_in,
+            oneway_scale=None,
+            oneway_threshold=None,
             keys=keys,
             cuts=cuts,
             table=table,
             algorithm=algorithm,
-        )
-
-        return ContingencyTableQuery(
-            chain=t_plan >> m_table,
-            output_measure=query._output_measure,
-            context=query._context,
-            oneway_scale=oneway_scale,
-            oneway_threshold=oneway_threshold
         )
 
 
@@ -1132,6 +1422,7 @@ class LazyGroupByQuery:
         :param named_aggs: named/aliased expressions to apply in the aggregation context
         """
         polars_plan = self._lgb_plan.agg(*aggs, **named_aggs)
+
         return LazyFrameQuery(polars_plan, self._query)
 
 
@@ -1296,3 +1587,116 @@ class Bound(object):
             return False
 
         return asdict(replace(self, by=[])) == asdict(replace(other, by=[]))  # type: ignore[arg-type]
+
+@dataclass
+class Binding:
+    exprs: Sequence
+    """Polars expressions describing the identifier columns."""
+    
+    space: str
+    """The name of the identifier space."""
+
+
+def bind(exprs: Any, /, to: str) -> Binding:
+    import polars as pl
+    
+    if isinstance(exprs, (str, pl.Expr)):
+        exprs = [exprs]
+    
+    if not isinstance(exprs, Sequence):
+        raise ValueError("exprs must be a str | Expr | list[str|Expr]")
+
+    return Binding(exprs=exprs, space=to)
+
+
+def _coerce_expr(expr: Any):
+    pl = import_optional_dependency("polars")
+    if isinstance(expr, str):
+        return pl.col(expr)
+    if isinstance(expr, pl.Expr):
+        return expr
+    raise ValueError("expected a string or Polars expression")
+
+
+def _coerce_key_expr(exprs: Any):
+    pl = import_optional_dependency("polars")
+    if isinstance(exprs, Sequence) and not isinstance(exprs, (str, pl.Expr)):
+        exprs = [_coerce_expr(expr) for expr in exprs]
+        if len(exprs) == 1:
+            return exprs[0]
+        return pl.as_struct(exprs)
+    return _coerce_expr(exprs)
+
+
+def _coerce_claims(claims: Sequence[Any]) -> list[list[Any]]:
+    return [[_coerce_key_expr(factor)] for factor in claims] if claims and not isinstance(claims[0], Sequence) else [
+        [_coerce_key_expr(factor) for factor in claim] for claim in claims
+    ]
+
+
+@dataclass
+class UniqueKey:
+    table: str
+    key: Any
+
+    def __post_init__(self):
+        self.key = _coerce_key_expr(self.key)
+
+
+@dataclass
+class ForeignKey:
+    from_table: str
+    from_key: Any
+    to_table: str
+    to_key: Any
+
+    def __post_init__(self):
+        self.from_key = _coerce_key_expr(self.from_key)
+        self.to_key = _coerce_key_expr(self.to_key)
+
+
+@dataclass
+class FunctionalDependency:
+    table: str
+    from_key: Any
+    to_key: Any
+
+    def __post_init__(self):
+        self.from_key = _coerce_key_expr(self.from_key)
+        self.to_key = _coerce_key_expr(self.to_key)
+
+
+@dataclass
+class Ownership:
+    table: str
+    claims: Sequence[Sequence[Any]]
+
+    def __post_init__(self):
+        self.claims = [
+            [_coerce_key_expr(factor) for factor in claim]
+            for claim in self.claims
+        ]
+
+
+def database_id_distance_from_schema(
+    protect: str,
+    bindings: Mapping[str, Sequence[Binding]],
+    *,
+    unique_keys: Sequence[UniqueKey] = (),
+    foreign_keys: Sequence[ForeignKey] = (),
+    functional_dependencies: Sequence[FunctionalDependency] = (),
+    ownerships: Sequence[Ownership] = (),
+) -> DatabaseIdDistance:
+    lib.opendp_metrics__database_id_distance_from_schema.argtypes = [AnyObjectPtr] * 6
+    lib.opendp_metrics__database_id_distance_from_schema.restype = FfiResult
+    result = lib.opendp_metrics__database_id_distance_from_schema(
+        py_to_c(protect, c_type=AnyObjectPtr, type_name="String"),
+        py_to_c(dict(bindings), c_type=AnyObjectPtr, type_name="HashMap<String, Vec<Binding>>"),
+        py_to_c(list(unique_keys), c_type=AnyObjectPtr, type_name="Vec<UniqueKey>"),
+        py_to_c(list(foreign_keys), c_type=AnyObjectPtr, type_name="Vec<ForeignKey>"),
+        py_to_c(list(functional_dependencies), c_type=AnyObjectPtr, type_name="Vec<FunctionalDependency>"),
+        py_to_c(list(ownerships), c_type=AnyObjectPtr, type_name="Vec<Ownership>"),
+    )
+    metric = unwrap(result, ctypes.POINTER(AnyMetric))
+    metric.__class__ = DatabaseIdDistance
+    return metric
