@@ -1,51 +1,32 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
+use crate::core::{Domain, Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
-use crate::metrics::FrameDistance;
+use crate::metrics::{FrameDistance, PolarsMetric, id_sites_root_names};
 use crate::transformations::StableExpr;
 use crate::transformations::traits::UnboundedMetric;
 use polars::prelude::*;
-
-use super::StableDslPlan;
+use polars_plan::prelude::ProjectionOptions;
 
 #[cfg(test)]
 mod test;
 
-/// Transformation for horizontal stacking of columns in a LazyFrame.
-///
-/// # Arguments
-/// * `input_domain` - The domain of the input LazyFrame.
-/// * `input_metric` - The metric of the input LazyFrame.
-/// * `plan` - The LazyFrame to transform.
-pub fn make_h_stack<MI: 'static + Metric, MO: UnboundedMetric>(
-    input_domain: DslPlanDomain,
-    input_metric: MI,
-    plan: DslPlan,
-) -> Fallible<Transformation<DslPlanDomain, MI, DslPlanDomain, FrameDistance<MO>>>
+pub(crate) fn make_chain_h_stack<DI, MI, MO>(
+    t_prior: Transformation<DI, MI, DslPlanDomain, FrameDistance<MO>>,
+    exprs: Vec<Expr>,
+    options: ProjectionOptions,
+) -> Fallible<Transformation<DI, MI, DslPlanDomain, FrameDistance<MO>>>
 where
-    DslPlan: StableDslPlan<MI, FrameDistance<MO>>,
+    DI: Domain + 'static,
+    MI: Metric + 'static,
+    MO: UnboundedMetric + PolarsMetric,
     Expr: StableExpr<FrameDistance<MO>, FrameDistance<MO>>,
-    (DslPlanDomain, MI): MetricSpace,
+    (DI, MI): MetricSpace,
     (DslPlanDomain, FrameDistance<MO>): MetricSpace,
 {
-    let DslPlan::HStack {
-        input,
-        exprs,
-        options,
-    } = plan
-    else {
-        return fallible!(MakeTransformation, "Expected with_columns logical plan");
-    };
-
-    let t_prior = input
-        .as_ref()
-        .clone()
-        .make_stable(input_domain.clone(), input_metric.clone())?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
-    // create a transformation for each expression
     let expr_domain = WildExprDomain {
         columns: middle_domain.series_domains.clone(),
         context: Context::RowByRow,
@@ -55,11 +36,11 @@ where
         .map(|expr| expr.make_stable(expr_domain.clone(), middle_metric.clone()))
         .collect::<Fallible<Vec<_>>>()?;
 
-    if let Some(identifier) = middle_metric.0.identifier() {
+    let root_names = id_sites_root_names(&middle_metric.0.id_sites());
+    if !root_names.is_empty() {
         let names = (t_exprs.iter())
             .map(|t| t.output_domain.column.name.clone())
             .collect::<HashSet<_>>();
-        let root_names = HashSet::from_iter(identifier.meta().root_names());
         if !names.is_disjoint(&root_names) {
             return fallible!(
                 MakeTransformation,
@@ -68,11 +49,8 @@ where
         }
     }
 
-    // expand and update the set of series domains on the output domain
     let mut series_domains = Vec::new();
-    // keys are the column name, values are the index of the column
     let mut lookup = HashMap::new();
-
     let new_series = t_exprs.iter().map(|t| &t.output_domain.column);
 
     (middle_domain.series_domains.iter())
@@ -89,7 +67,6 @@ where
                 });
         });
 
-    // only keep margins for series that have not changed
     let new_series_names = new_series
         .map(|series_domain| col(series_domain.name.clone()))
         .collect();
@@ -98,26 +75,24 @@ where
         .cloned()
         .collect();
 
-    // instead of using the public APIs that check invariants, directly populate the struct entries
     let output_domain = DslPlanDomain::new_with_margins(series_domains, margins)?;
 
-    let t_with_columns = Transformation::new(
-        middle_domain,
-        middle_metric.clone(),
-        output_domain,
-        middle_metric,
-        Function::new_fallible(move |plan: &DslPlan| {
-            let expr_arg = plan.clone();
-            Ok(DslPlan::HStack {
-                input: Arc::new(plan.clone()),
-                exprs: (t_exprs.iter())
-                    .map(|t| t.invoke(&expr_arg).map(|p| p.expr))
-                    .collect::<Fallible<Vec<_>>>()?,
-                options,
-            })
-        }),
-        StabilityMap::new(Clone::clone),
-    )?;
-
-    t_prior >> t_with_columns
+    t_prior
+        >> Transformation::new(
+            middle_domain,
+            middle_metric.clone(),
+            output_domain,
+            middle_metric,
+            Function::new_fallible(move |plan: &DslPlan| {
+                let expr_arg = plan.clone();
+                Ok(DslPlan::HStack {
+                    input: Arc::new(plan.clone()),
+                    exprs: (t_exprs.iter())
+                        .map(|t| t.invoke(&expr_arg).map(|p| p.expr))
+                        .collect::<Fallible<Vec<_>>>()?,
+                    options: options.clone(),
+                })
+            }),
+            StabilityMap::new(Clone::clone),
+        )?
 }

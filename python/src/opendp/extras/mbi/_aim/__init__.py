@@ -73,7 +73,7 @@ class AIM(Algorithm):
         ... )
 
         >>> table_aim = (
-        ...     context.query(rho=0.1, delta=1e-7)
+        ...     context.query()
         ...     # transformations/truncation may be applied here
         ...     .select("SEX", "AGE", "HWUSUAL", "ILOSTAT")
         ...     .contingency_table(
@@ -81,7 +81,7 @@ class AIM(Algorithm):
         ...         cuts={"AGE": [20, 40, 60], "HWUSUAL": [1, 20, 40]},
         ...         algorithm=dp.mbi.AIM()
         ...     )
-        ...     .release()
+        ...     .release(rho=0.1, delta=1e-7)
         ... )
 
         >>> table_aim.synthesize() # doctest: +SKIP
