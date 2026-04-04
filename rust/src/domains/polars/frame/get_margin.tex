@@ -1,0 +1,68 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn get\_margin}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\contrib
+Proves soundness of \rustdoc{domains/polars/frame/fn}{get\_margin} in \asOfCommit{mod.rs}{f5bb719}.
+
+\texttt{get\_margin} returns a \texttt{Margin} for a given set of grouping columns (\texttt{by})
+whose descriptors are no more restrictive than what is known in \texttt{FrameDomain}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+Types matching pseudocode.
+
+\subsubsection*{Human-verified}
+None
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/get_margin.py}
+
+\subsection*{Postcondition}
+Returns a \texttt{Margin} that describes properties of members of \texttt{domain} when grouped by \texttt{by}.
+
+\section{Proofs}
+
+\begin{proof} 
+    On line \ref{let-margin}, \texttt{margin} is either a valid margin descriptor 
+    for \texttt{by}, by the definition of \texttt{domain},
+    or it is the default margin, which is a valid margin descriptor for all potential datasets. 
+
+    We now update descriptors based on other information available in \texttt{domain}.
+
+    On line \ref{let-subset-margins}, 
+    \texttt{subset\_margins} is the subset of margins spanned by \texttt{by}.
+    Then \ref{let-max-length} assigns the smallest known descriptors over any margin spanning a subset of the grouping columns.
+
+    If \texttt{max\_length} is known about a coarser data grouping (when grouped by fewer columns),
+    then these descriptors still apply to a finer data grouping, as group length can only decrease when more finely splitting data.
+    Therefore \texttt{max\_length} remains valid after mutation.
+
+    Line \ref{all-max-groups} retrieves all known \texttt{max\_groups} descriptors.
+    There are no manual preconditions to \rustdoc{domains/polars/frame/fn}{find\_min\_covering}, 
+    therefore we claim the postcondition, that the output is a covering for \texttt{by}.
+
+    The number of groups can be no greater than the cardinality of the cartesian product of the keys of each grouping column.
+    Therefore the code finds a set of \texttt{max\_groups} descriptors that covers the grouping columns,
+    and then updates \texttt{margin} to the product of the covering.
+
+    On an aside, for utility, while the covering found may not be the smallest, 
+    the greedy algorithm will always choose a singleton cover if it is available,
+    therefore this update to the descriptor cannot increase the descriptor.
+
+    Finally, on line \ref{all-invariants}, \texttt{all\_invariants} contains invariants for any margin finer than \texttt{by}.
+    If group keys and/or lengths are known for a finer grouping, then they are also valid for a coarser grouping.
+    Therefore \texttt{invariants} is updated to the strongest invariant for any grouping as fine or finer than \texttt{by}.
+
+    Since the initial margin (\ref{let-margin}) was valid, and all updates have also been shown to be valid,
+    \texttt{get\_margin} returns a \texttt{Margin} that describes properties of members of \texttt{domain} when grouped by \texttt{by}.
+\end{proof}
+\end{document}
