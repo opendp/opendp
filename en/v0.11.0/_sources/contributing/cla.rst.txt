@@ -12,7 +12,7 @@ select one of the options below.
 This will take you to a page with instructions for completing the agreement.
 
 Please read the agreement carefully, as it specifies your rights and responsibilities.
-If you have any questions about this agreement, please contact us at info@opendp.org.
+If you have any questions about this agreement, please contact us at contact@opendp.org.
 
 |
 
