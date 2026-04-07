@@ -4,7 +4,7 @@ license-file = "../LICENSE"
 readme = "../README.md"
 homepage = "https://opendp.org/"
 repository = "https://github.com/opendp/opendp"
-authors = ["The OpenDP Project <info@opendp.org>"]
+authors = ["The OpenDP Project <contact@opendp.org>"]
 edition = "2024"
 rust-version = "1.88.0" # MSRV via `cargo install cargo-msrv && cargo msrv --min 1.49.0 -- cargo check --all-features`
 
