@@ -1,6 +1,6 @@
 use crate::{
     domains::{AtomDomain, LazyFrameDomain, OptionDomain, SeriesDomain},
-    metrics::SymmetricDistance,
+    metrics::{Binding, FrameDistance, SymmetricDistance, SymmetricIdDistance},
     transformations::make_stable_lazyframe,
 };
 
@@ -28,5 +28,45 @@ fn test_select_microdata() -> Fallible<()> {
     assert_eq!(observed, expected);
     assert!(t_select.output_domain.margins.is_empty());
 
+    Ok(())
+}
+
+#[test]
+fn test_select_rejects_multisite_identifier_modification() -> Fallible<()> {
+    let lf = df!(
+        "user_id" => [1i32, 2],
+        "edge_src" => [10i32, 11],
+        "value" => [5i32, 6]
+    )?
+    .lazy();
+
+    let lf_domain = LazyFrameDomain::new(vec![
+        SeriesDomain::new("user_id", AtomDomain::<i32>::default()),
+        SeriesDomain::new("edge_src", AtomDomain::<i32>::default()),
+        SeriesDomain::new("value", AtomDomain::<i32>::default()),
+    ])?;
+
+    let metric = SymmetricIdDistance {
+        protect: "user".to_string(),
+        bindings: vec![
+            Binding {
+                space: "user".to_string(),
+                exprs: vec![col("user_id")],
+            },
+            Binding {
+                space: "node".to_string(),
+                exprs: vec![col("edge_src")],
+            },
+        ],
+    };
+
+    let err = make_stable_lazyframe::<_, FrameDistance<SymmetricIdDistance>>(
+        lf_domain,
+        FrameDistance(metric),
+        lf.select([col("value"), col("user_id").alias("user_id")]),
+    )
+    .unwrap_err();
+
+    assert!(format!("{err:?}").contains("identifiers"));
     Ok(())
 }

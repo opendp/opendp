@@ -76,7 +76,8 @@ impl BoundedMetric for ChangeOneIdDistance {
     type UnboundedMetric = SymmetricIdDistance;
     fn to_unbounded(&self) -> Self::UnboundedMetric {
         SymmetricIdDistance {
-            identifier: self.identifier.clone(),
+            protect: self.protect.clone(),
+            bindings: self.bindings.clone(),
         }
     }
 }
@@ -110,7 +111,8 @@ impl UnboundedMetric for SymmetricIdDistance {
     type BoundedMetric = ChangeOneIdDistance;
     fn to_bounded(&self) -> Self::BoundedMetric {
         ChangeOneIdDistance {
-            identifier: self.identifier.clone(),
+            protect: self.protect.clone(),
+            bindings: self.bindings.clone(),
         }
     }
 }

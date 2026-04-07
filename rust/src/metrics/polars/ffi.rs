@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use opendp_derive::bootstrap;
 use polars::prelude::Expr;
 
@@ -9,8 +11,8 @@ use crate::{
         util,
     },
     metrics::{
-        Bounds, ChangeOneIdDistance, FrameDistance, InsertDeleteDistance, SymmetricDistance,
-        SymmetricIdDistance,
+        Binding, Bounds, ChangeOneIdDistance, DatabaseIdDistance, FrameDistance,
+        InsertDeleteDistance, SymmetricDistance, SymmetricIdDistance,
     },
     transformations::traits::UnboundedMetric,
 };
@@ -23,22 +25,34 @@ use crate::{
 /// Construct an instance of the `SymmetricIdDistance` metric.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__symmetric_id_distance(
-    identifier: *const AnyObject,
+    bindings: *const AnyObject,
+    protect: *const AnyObject,
 ) -> FfiResult<*mut AnyMetric> {
     let metric = SymmetricIdDistance {
-        identifier: try_!(try_as_ref!(identifier).downcast_ref::<Expr>()).clone(),
+        protect: try_!(try_as_ref!(protect).downcast_ref::<String>()).clone(),
+        bindings: try_!(try_as_ref!(bindings).downcast_ref::<Vec<Binding>>()).clone(),
     };
     FfiResult::Ok(util::into_raw(AnyMetric::new(metric)))
 }
 
-#[bootstrap(name = "_symmetric_id_distance_get_identifier")]
-/// Retrieve the identifier of a `SymmetricIdDistance` metric.
+#[bootstrap(name = "_symmetric_id_distance_get_bindings")]
+/// Retrieve the bindings of a `SymmetricIdDistance` metric.
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_metrics___symmetric_id_distance_get_identifier(
+pub extern "C" fn opendp_metrics___symmetric_id_distance_get_bindings(
     metric: *const AnyMetric,
 ) -> FfiResult<*mut AnyObject> {
     let metric = try_!(try_as_ref!(metric).downcast_ref::<SymmetricIdDistance>());
-    FfiResult::Ok(AnyObject::new_raw(metric.identifier.clone()))
+    FfiResult::Ok(AnyObject::new_raw(metric.bindings.clone()))
+}
+
+#[bootstrap(name = "_symmetric_id_distance_get_protect")]
+/// Retrieve the protected space of a `SymmetricIdDistance` metric.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_metrics___symmetric_id_distance_get_protect(
+    metric: *const AnyMetric,
+) -> FfiResult<*mut AnyObject> {
+    let metric = try_!(try_as_ref!(metric).downcast_ref::<SymmetricIdDistance>());
+    FfiResult::Ok(AnyObject::new_raw(metric.protect.clone()))
 }
 
 #[bootstrap(
@@ -49,22 +63,90 @@ pub extern "C" fn opendp_metrics___symmetric_id_distance_get_identifier(
 /// Construct an instance of the `ChangeOneIdDistance` metric.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_metrics__change_one_id_distance(
-    identifier: *const AnyObject,
+    bindings: *const AnyObject,
+    protect: *const AnyObject,
 ) -> FfiResult<*mut AnyMetric> {
     let metric = ChangeOneIdDistance {
-        identifier: try_!(try_as_ref!(identifier).downcast_ref::<Expr>()).clone(),
+        protect: try_!(try_as_ref!(protect).downcast_ref::<String>()).clone(),
+        bindings: try_!(try_as_ref!(bindings).downcast_ref::<Vec<Binding>>()).clone(),
     };
     FfiResult::Ok(util::into_raw(AnyMetric::new(metric)))
 }
 
-#[bootstrap(name = "_change_one_id_distance_get_identifier")]
-/// Retrieve the identifier of a `ChangeOneIdDistance` metric.
+#[bootstrap(name = "_change_one_id_distance_get_protect")]
+/// Retrieve the protected space of a `ChangeOneIdDistance` metric.
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_metrics___change_one_id_distance_get_identifier(
+pub extern "C" fn opendp_metrics___change_one_id_distance_get_protect(
     metric: *const AnyMetric,
 ) -> FfiResult<*mut AnyObject> {
     let metric = try_!(try_as_ref!(metric).downcast_ref::<ChangeOneIdDistance>());
-    FfiResult::Ok(AnyObject::new_raw(metric.identifier.clone()))
+    FfiResult::Ok(AnyObject::new_raw(metric.protect.clone()))
+}
+
+#[bootstrap(name = "_change_one_id_distance_get_bindings")]
+/// Retrieve the bindings of a `ChangeOneIdDistance` metric.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_metrics___change_one_id_distance_get_bindings(
+    metric: *const AnyMetric,
+) -> FfiResult<*mut AnyObject> {
+    let metric = try_!(try_as_ref!(metric).downcast_ref::<ChangeOneIdDistance>());
+    FfiResult::Ok(AnyObject::new_raw(metric.bindings.clone()))
+}
+
+#[bootstrap(
+    name = "database_id_distance",
+    arguments(
+        protect(rust_type = "String"),
+        bindings(rust_type = "HashMap<String, Vec<Binding>>")
+    ),
+    returns(c_type = "FfiResult<AnyMetric *>", hint = "DatabaseIdDistance")
+)]
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_metrics__database_id_distance(
+    protect: *const AnyObject,
+    bindings: *const AnyObject,
+) -> FfiResult<*mut AnyMetric> {
+    FfiResult::Ok(util::into_raw(AnyMetric::new(DatabaseIdDistance {
+        protect: try_!(try_as_ref!(protect).downcast_ref::<String>()).clone(),
+        bindings: try_!(try_as_ref!(bindings).downcast_ref::<HashMap<String, Vec<Binding>>>())
+            .clone(),
+    })))
+}
+
+#[bootstrap(name = "_database_id_distance_get_bindings")]
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_metrics___database_id_distance_get_bindings(
+    metric: *const AnyMetric,
+) -> FfiResult<*mut AnyObject> {
+    let metric = try_!(try_as_ref!(metric).downcast_ref::<DatabaseIdDistance>());
+    FfiResult::Ok(AnyObject::new_raw(metric.bindings.clone()))
+}
+
+#[bootstrap(name = "_database_id_distance_get_protect")]
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_metrics___database_id_distance_get_protect(
+    metric: *const AnyMetric,
+) -> FfiResult<*mut AnyObject> {
+    let metric = try_!(try_as_ref!(metric).downcast_ref::<DatabaseIdDistance>());
+    FfiResult::Ok(AnyObject::new_raw(metric.protect.clone()))
+}
+
+#[bootstrap(name = "_bind_get_to")]
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_metrics___bind_get_to(
+    bind: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    let bind = try_!(try_as_ref!(bind).downcast_ref::<Binding>());
+    FfiResult::Ok(AnyObject::new_raw(bind.space.clone()))
+}
+
+#[bootstrap(name = "_bind_get_exprs")]
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_metrics___bind_get_exprs(
+    bind: *const AnyObject,
+) -> FfiResult<*mut AnyObject> {
+    let bind = try_!(try_as_ref!(bind).downcast_ref::<Binding>());
+    FfiResult::Ok(AnyObject::new_raw(bind.exprs.clone()))
 }
 
 #[bootstrap(name = "frame_distance", returns(c_type = "FfiResult<AnyMetric *>"))]

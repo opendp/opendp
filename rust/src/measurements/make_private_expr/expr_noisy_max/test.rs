@@ -4,7 +4,7 @@ use polars_arrow::array::{FixedSizeListArray, UInt32Array};
 
 use crate::{
     error::ErrorVariant,
-    measurements::make_private_expr,
+    measurements::PrivateExpr,
     measures::MaxDivergence,
     metrics::{L0PInfDistance, SymmetricDistance},
     polars::{PrivacyNamespace, apply_anonymous_function},
@@ -58,21 +58,21 @@ fn test_noisy_max_expr() -> Fallible<()> {
         [0., 10., 20., 30., 40., 50., 60., 70., 80., 90., 100.],
     );
 
-    let m_quant = make_private_expr(
+    let m_quant = {
+        let this = col("cycle_(..101f64)");
+        let alpha = 0.5;
+        let candidates = candidates;
+        apply_anonymous_function(
+            vec![this, lit(alpha), lit(candidates)],
+            DiscreteQuantileScoreShim,
+        )
+    }
+    .dp()
+    .noisy_max(true, Some(scale))
+    .make_private(
         lf_domain.select(),
         L0PInfDistance(SymmetricDistance),
         MaxDivergence,
-        {
-            let this = col("cycle_(..101f64)");
-            let alpha = 0.5;
-            let candidates = candidates;
-            apply_anonymous_function(
-                vec![this, lit(alpha), lit(candidates)],
-                DiscreteQuantileScoreShim,
-            )
-        }
-        .dp()
-        .noisy_max(true, Some(scale)),
         None,
     )?;
 
@@ -93,16 +93,18 @@ fn test_fail_noisy_max_expr_nan_scale() -> Fallible<()> {
         [0., 10., 20., 30., 40., 50., 60., 70., 80., 90., 100.],
     );
 
-    let err_variant = make_private_expr(
-        lf_domain.select(),
-        L0PInfDistance(SymmetricDistance),
-        MaxDivergence,
-        col("cycle_(..101f64)").dp().median(candidates, Some(scale)),
-        None,
-    )
-    .map(|_| ())
-    .unwrap_err()
-    .variant;
+    let err_variant = col("cycle_(..101f64)")
+        .dp()
+        .median(candidates, Some(scale))
+        .make_private(
+            lf_domain.select(),
+            L0PInfDistance(SymmetricDistance),
+            MaxDivergence,
+            None,
+        )
+        .map(|_| ())
+        .unwrap_err()
+        .variant;
 
     assert_eq!(err_variant, ErrorVariant::MakeMeasurement);
 

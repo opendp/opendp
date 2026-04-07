@@ -7,7 +7,10 @@ import os
 import io
 from datetime import date, time, datetime
 
-from .helpers import ids
+try:
+    from .helpers import ids
+except ImportError:  # direct execution
+    from helpers import ids
 
 
 def test_polars_version():
@@ -56,6 +59,52 @@ def example_lf(margin=None, **kwargs):
     return lf_domain, lf
 
 
+def example_database():
+    pl = pytest.importorskip("polars")
+    users = pl.LazyFrame(
+        {
+            "user_id": [1, 2, 3],
+            "age": [30, 40, 50],
+        },
+        schema={"user_id": pl.Int32, "age": pl.Int32},
+    )
+    events = pl.LazyFrame(
+        {
+            "user_id": [1, 1, 2],
+            "value": [10, 11, 12],
+        },
+        schema={"user_id": pl.Int32, "value": pl.Int32},
+    )
+    return {"users": users, "events": events}
+
+
+def example_hierarchy_database():
+    pl = pytest.importorskip("polars")
+    households = pl.LazyFrame(
+        {
+            "household_id": [10, 20],
+            "region": ["east", "west"],
+        },
+        schema={"household_id": pl.Int32, "region": pl.String},
+    )
+    users = pl.LazyFrame(
+        {
+            "user_id": [1, 2, 3],
+            "household_id": [10, 10, 20],
+            "age": [30, 40, 50],
+        },
+        schema={"user_id": pl.Int32, "household_id": pl.Int32, "age": pl.Int32},
+    )
+    events = pl.LazyFrame(
+        {
+            "user_id": [1, 1, 2, 3],
+            "value": [10, 11, 12, 13],
+        },
+        schema={"user_id": pl.Int32, "value": pl.Int32},
+    )
+    return {"households": households, "users": users, "events": events}
+
+
 def test_expr_domain():
     series_domains, _ = example_series()
 
@@ -75,6 +124,538 @@ def test_domains():
         max_length=50,
         max_groups=3,
     )
+
+
+def test_database_domain_infer():
+    pl = pytest.importorskip("polars")
+    domain = dp.domain_of(example_database(), infer=True)
+
+    assert isinstance(domain, dp.DatabaseDomain)
+    assert set(domain.table_domains) == {"users", "events"}
+    assert domain.table("users").columns == ["user_id", "age"]
+    margin = domain.table("users").get_margin([pl.col("user_id")])
+    assert margin.max_length is None
+    assert margin.max_groups is None
+    assert margin.invariant is None
+
+
+def test_database_context_query():
+    pl = pytest.importorskip("polars")
+
+    context = dp.Context.compositor(
+        data=example_database(),
+        privacy_unit=dp.unit_of(
+            contributions=1,
+            bindings={"events": [dp.bind("user_id", to="user")]},
+        ),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+    )
+
+    db = context.query()
+
+    query = (
+        db.table("events")
+        .join(db.table("users"), left_on="user_id", right_on="user_id", how="left")
+        .truncate_per_group(1)
+        .select(dp.len(scale=1.0))
+    )
+
+    release = query.release().collect()
+    assert release.height == 1
+    assert release.schema == {"len": pl.UInt32}
+
+
+def test_database_context_table_collect_schema_hides_markers():
+    pl = pytest.importorskip("polars")
+
+    context = dp.Context.compositor(
+        data=example_database(),
+        privacy_unit=dp.unit_of(
+            contributions=1,
+            bindings={"events": [dp.bind("user_id", to="user")]},
+        ),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+    )
+
+    schema = context.query().table("events").collect_schema()
+    assert schema == {"user_id": pl.Int32, "value": pl.Int32}
+
+
+def test_database_context_query_expr_identifier():
+    pl = pytest.importorskip("polars")
+
+    context = dp.Context.compositor(
+        data=example_database(),
+        privacy_unit=dp.unit_of(
+            contributions=1,
+            bindings={"events": [dp.bind("user_id", to="user")]},
+            protect="user",
+        ),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+    )
+
+    db = context.query()
+    release = (
+        db.table("events")
+        .truncate_per_group(1)
+        .select(dp.len(scale=1.0))
+        .release()
+        .collect()
+    )
+
+    assert release.height == 1
+    assert release.schema == {"len": pl.UInt32}
+
+
+def test_database_context_query_zero_noise_is_rejected():
+    pl = pytest.importorskip("polars")
+
+    context = dp.Context.compositor(
+        data=example_database(),
+        privacy_unit=dp.unit_of(
+            contributions=1,
+            bindings={"events": [dp.bind("user_id", to="user")]},
+            protect="user",
+        ),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+    )
+
+    db = context.query()
+    query = db.table("events").truncate_per_group(1).select(dp.len(scale=0.0))
+    with pytest.raises(dp.OpenDPException, match="Overflow"):
+        query.release()
+
+
+def test_database_context_query_id_site_identifier():
+    pl = pytest.importorskip("polars")
+
+    context = dp.Context.compositor(
+        data=example_database(),
+        privacy_unit=dp.unit_of(
+            contributions=1,
+            bindings={"events": [dp.bind("user_id", to="user")]},
+            protect="user",
+        ),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+    )
+
+    db = context.query()
+    release = db.table("events").truncate_per_group(1).select(dp.len(scale=1.0)).release().collect()
+
+    assert release.height == 1
+    assert release.schema == {"len": pl.UInt32}
+
+
+def test_database_context_query_join_then_truncate_expr_identifier():
+    pl = pytest.importorskip("polars")
+
+    context = dp.Context.compositor(
+        data=example_database(),
+        privacy_unit=dp.unit_of(
+            contributions=1,
+            bindings={"events": [dp.bind(pl.col("user_id"), to="user")]},
+            protect="user",
+        ),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+    )
+
+    db = context.query()
+    release = (
+        db.table("events")
+        .join(db.table("users"), left_on="user_id", right_on="user_id", how="left")
+        .truncate_per_group(1)
+        .select(dp.len(scale=1.0))
+        .release()
+        .collect()
+    )
+
+    assert release.height == 1
+    assert release.schema == {"len": pl.UInt32}
+
+
+def test_database_context_query_summarize_end_to_end():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    context = dp.Context.compositor(
+        data=example_database(),
+        privacy_unit=dp.unit_of(
+            contributions=1,
+            bindings={"events": [dp.bind("user_id", to="user")]},
+            protect="user",
+        ),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=1,
+    )
+
+    db = context.query()
+    query = db.table("events").truncate_per_group(2).select(dp.len())
+    actual = query.summarize()
+    expected = pl.DataFrame(
+        {
+            "column": ["len"],
+            "aggregate": ["Frame Length"],
+            "distribution": ["Integer Laplace"],
+            "scale": [2.0],
+        }
+    )
+    pl_testing.assert_frame_equal(actual, expected)
+
+
+def test_polars_query_summarize_accepts_privacy_kwargs():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    context = dp.Context.compositor(
+        data=example_database(),
+        privacy_unit=dp.unit_of(
+            contributions=1,
+            bindings={"events": [dp.bind("user_id", to="user")]},
+            protect="user",
+        ),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+    )
+
+    db = context.query()
+    query = db.table("events").truncate_per_group(2).select(dp.len())
+    actual = query.summarize(epsilon=1.0, delta=0.0)
+    expected = pl.DataFrame(
+        {
+            "column": ["len"],
+            "aggregate": ["Frame Length"],
+            "distribution": ["Integer Laplace"],
+            "scale": [2.0],
+        }
+    )
+    pl_testing.assert_frame_equal(actual, expected)
+
+
+def test_polars_query_resolve_accepts_privacy_kwargs():
+    context = dp.Context.compositor(
+        data=example_database(),
+        privacy_unit=dp.unit_of(
+            contributions=1,
+            bindings={"events": [dp.bind("user_id", to="user")]},
+            protect="user",
+        ),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+    )
+
+    db = context.query()
+    measurement = db.table("events").truncate_per_group(1).select(dp.len()).resolve(epsilon=1.0)
+    assert isinstance(measurement, dp.Measurement)
+
+
+def test_database_context_query_join_summarize_end_to_end():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    context = dp.Context.compositor(
+        data=example_database(),
+        privacy_unit=dp.unit_of(
+            contributions=1,
+            bindings={"events": [dp.bind("user_id", to="user")]},
+            protect="user",
+        ),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=1,
+    )
+
+    db = context.query()
+    query = (
+        db.table("events")
+        .join(db.table("users"), left_on="user_id", right_on="user_id", how="left")
+        .truncate_per_group(1)
+        .select(dp.len())
+    )
+    actual = query.summarize()
+    expected = pl.DataFrame(
+        {
+            "column": ["len"],
+            "aggregate": ["Frame Length"],
+            "distribution": ["Integer Laplace"],
+            "scale": [1.0],
+        }
+    )
+    pl_testing.assert_frame_equal(actual, expected)
+
+
+def test_database_context_deserialize_polars_plan_end_to_end():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    context = dp.Context.compositor(
+        data=example_database(),
+        privacy_unit=dp.unit_of(
+            contributions=1,
+            bindings={"events": [dp.bind("user_id", to="user")]},
+            protect="user",
+        ),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=1,
+    )
+
+    db = context.query()
+    query = (
+        db.table("events")
+        .join(db.table("users"), left_on="user_id", right_on="user_id", how="left")
+        .truncate_per_group(1)
+        .select(dp.len())
+    )
+    restored = context.deserialize_polars_plan(query.serialize())
+
+    summary = restored.summarize()
+    expected_summary = pl.DataFrame(
+        {
+            "column": ["len"],
+            "aggregate": ["Frame Length"],
+            "distribution": ["Integer Laplace"],
+            "scale": [1.0],
+        }
+    )
+    pl_testing.assert_frame_equal(summary, expected_summary)
+
+    release = restored.release().collect()
+    assert release.height == 1
+    assert release.schema == {"len": pl.UInt32}
+
+
+def test_database_context_multi_join_end_to_end():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    context = dp.Context.compositor(
+        data=example_hierarchy_database(),
+        privacy_unit=dp.unit_of(
+            contributions=1,
+            bindings={
+                "events": [dp.bind("user_id", to="user")],
+                "users": [
+                    dp.bind("user_id", to="user"),
+                    dp.bind("household_id", to="household"),
+                ],
+                "households": [dp.bind("household_id", to="household")],
+            },
+            protect="user",
+        ),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=1,
+    )
+
+    db = context.query()
+    query = (
+        db.table("events")
+        .join(
+            db.table("users"),
+            left_on="user_id",
+            right_on="user_id",
+            how="left",
+        )
+        .join(
+            db.table("households"),
+            left_on="household_id",
+            right_on="household_id",
+            how="left",
+        )
+        .truncate_per_group(1, identifier="user_id")
+        .select(dp.len())
+    )
+
+    summary = query.summarize()
+    expected_summary = pl.DataFrame(
+        {
+            "column": ["len"],
+            "aggregate": ["Frame Length"],
+            "distribution": ["Integer Laplace"],
+            "scale": [1.0],
+        }
+    )
+    pl_testing.assert_frame_equal(summary, expected_summary)
+
+    release = query.release().collect()
+    assert release.height == 1
+    assert release.schema == {"len": pl.UInt32}
+
+
+def test_database_context_private_private_join_on_protected_identifier_is_allowed():
+    pl = pytest.importorskip("polars")
+
+    context = dp.Context.compositor(
+        data=example_hierarchy_database(),
+        privacy_unit=dp.unit_of(
+            contributions=1,
+            bindings={
+                "users": [
+                    dp.bind("user_id", to="user"),
+                    dp.bind("household_id", to="household"),
+                ],
+                "households": [dp.bind("household_id", to="household")],
+            },
+            protect="household",
+        ),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+    )
+
+    db = context.query()
+    release = (
+        db.table("users")
+        .join(
+            db.table("households"),
+            left_on="household_id",
+            right_on="household_id",
+            how="left",
+        )
+        .truncate_per_group(1, identifier="household_id")
+        .select(dp.len(scale=1.0))
+        .release()
+        .collect()
+    )
+
+    assert release.height == 1
+    assert release.schema == {"len": pl.UInt32}
+
+
+def test_database_context_private_private_join_rejects_wrong_key():
+    context = dp.Context.compositor(
+        data=example_database(),
+        privacy_unit=dp.unit_of(
+            contributions=1,
+            bindings={
+                "events": [dp.bind("user_id", to="user")],
+                "users": [dp.bind("user_id", to="user")],
+            },
+            protect="user",
+        ),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+    )
+
+    db = context.query()
+    rejected_query = db.table("events").join(
+        db.table("users"), left_on="value", right_on="age", how="left"
+    )
+
+    with pytest.raises(ValueError, match="expected exactly one binding"):
+        rejected_query.truncate_per_group(1)
+
+
+def test_database_context_private_private_hierarchy_join_rejects_nonprotected_key():
+    pl = pytest.importorskip("polars")
+
+    data = {
+        "events": pl.LazyFrame(
+            {
+                "user_id": [1, 1, 2, 3],
+                "household_id": [10, 10, 10, 20],
+                "value": [10, 11, 12, 13],
+            },
+            schema={
+                "user_id": pl.Int32,
+                "household_id": pl.Int32,
+                "value": pl.Int32,
+            },
+        ),
+        "users": example_hierarchy_database()["users"],
+    }
+    context = dp.Context.compositor(
+        data=data,
+        privacy_unit=dp.unit_of(
+            contributions=1,
+            bindings={
+                "events": [
+                    dp.bind("user_id", to="user"),
+                    dp.bind("household_id", to="household"),
+                ],
+                "users": [
+                    dp.bind("user_id", to="user"),
+                    dp.bind("household_id", to="household"),
+                ],
+            },
+            protect="household",
+        ),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+    )
+
+    db = context.query()
+    rejected_query = db.table("events").join(
+        db.table("users"),
+        left_on="user_id",
+        right_on="user_id",
+        how="left",
+    )
+
+    with pytest.raises(ValueError, match="expected exactly one binding"):
+        rejected_query.truncate_per_group(1)
+
+
+def test_database_context_query_join_after_truncation_is_rejected():
+    pl = pytest.importorskip("polars")
+
+    context = dp.Context.compositor(
+        data=example_database(),
+        privacy_unit=dp.unit_of(
+            contributions=1,
+            bindings={"events": [dp.bind("user_id", to="user")]},
+            protect="user",
+        ),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+    )
+
+    db = context.query()
+    query = (
+        db.table("events")
+        .truncate_per_group(1)
+        .join(db.table("users"), left_on="user_id", right_on="user_id", how="left")
+        .select(dp.len(scale=1.0))
+    )
+    with pytest.raises(
+        dp.OpenDPException,
+        match="joins are only supported before truncation|explicit truncation before converting to event-level stability|not recognized",
+    ):
+        query.release()
+
+
+def test_database_context_query_multiple_protected_sites_rejects_truncation():
+    pl = pytest.importorskip("polars")
+
+    data = {
+        "events": pl.LazyFrame(
+            {
+                "src_user_id": [1, 1, 2],
+                "dst_user_id": [1, 1, 2],
+                "value": [10, 11, 12],
+            },
+            schema={
+                "src_user_id": pl.Int32,
+                "dst_user_id": pl.Int32,
+                "value": pl.Int32,
+            },
+        )
+    }
+    context = dp.Context.compositor(
+        data=data,
+        privacy_unit=dp.unit_of(
+            contributions=1,
+            bindings={"events": [dp.bind("src_user_id", to="user"), dp.bind("dst_user_id", to="user")]},
+            protect="user",
+        ),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+    )
+
+    with pytest.raises(
+        ValueError, match="expected exactly one binding"
+    ):
+        context.query().table("events").truncate_per_group(1)
 
 
 # data loaders
@@ -101,7 +682,8 @@ def test_lazyframe_ffi():
 
 
 @pytest.mark.parametrize(
-    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()],
+    "measure",
+    [dp.max_divergence(), dp.zero_concentrated_divergence()],
     ids=ids,
 )
 def test_private_lazyframe_explicit_sum(measure):
@@ -231,9 +813,7 @@ def test_private_lazyframe_median():
     pl = pytest.importorskip("polars")
     pl_testing = pytest.importorskip("polars.testing")
 
-    lf_domain, lf = example_lf(
-        margin=["A"], invariant="keys", max_length=50
-    )
+    lf_domain, lf = example_lf(margin=["A"], invariant="keys", max_length=50)
     candidates = list(range(1, 6))
     expr = pl.col("B").dp.median(candidates, 1.0)
     plan = seed(lf.collect_schema()).group_by("A").agg(expr)
@@ -324,6 +904,7 @@ def test_mechanisms(measure):
 
     expect = pl.DataFrame([pl.Series("len", [50], dtype=pl.UInt32)])
     pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
+
 
 def test_polars_context():
     pl = pytest.importorskip("polars")
@@ -433,11 +1014,7 @@ def test_polars_accuracy_threshold():
         schema_overrides={"threshold": pl.UInt32},
     )
 
-    query = (
-        context.query()
-        .group_by("B")
-        .agg(dp.len(), pl.col("A").dp.sum((0, 3)))
-    )
+    query = context.query().group_by("B").agg(dp.len(), pl.col("A").dp.sum((0, 3)))
 
     actual = query.summarize()
     pl_testing.assert_frame_equal(expected, actual)
@@ -707,9 +1284,11 @@ def test_execute_shim():
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0),
     )
-    plan = context.query(epsilon=1.0).select(dp.len()).polars_plan
+    plan = context.query().select(dp.len()).polars_plan
 
-    with pytest.raises(pl.exceptions.ComputeError, match="OpenDP expressions must be passed through"):
+    with pytest.raises(
+        pl.exceptions.ComputeError, match="OpenDP expressions must be passed through"
+    ):
         plan.collect()  # type: ignore[union-attr]
 
 
@@ -865,7 +1444,8 @@ def test_float_sum_with_unlimited_reorderable_partitions():
         ]
     )
     lf_domain = dp.with_margin(
-        lf_domain, dp.polars.Margin(by=[pl.col("region")], invariant="lengths", max_length=6)
+        lf_domain,
+        dp.polars.Margin(by=[pl.col("region")], invariant="lengths", max_length=6),
     )
 
     from opendp.domains import _lazyframe_from_domain
@@ -1171,29 +1751,38 @@ def test_enum_domain():
     assert observed == expected
 
 
-@pytest.mark.xfail(reason="broken until https://github.com/pola-rs/polars/issues/20162 is fixed")
+@pytest.mark.xfail(
+    reason="broken until https://github.com/pola-rs/polars/issues/20162 is fixed"
+)
 def test_array_domain_query():
     pl = pytest.importorskip("polars")
 
     # this triggers construction of a lazyframe domain from the schema
     context = dp.Context.compositor(
-        data=pl.LazyFrame(pl.Series("alpha", [["A", "B", "C"]] * 100, dtype=pl.Array(pl.String, 3))),
+        data=pl.LazyFrame(
+            pl.Series("alpha", [["A", "B", "C"]] * 100, dtype=pl.Array(pl.String, 3))
+        ),
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=1,
     )
-    
+
     # this is broken until https://github.com/pola-rs/polars/issues/20162 is fixed
-    context.query().with_columns(pl.col.alpha.explode()).select(dp.len()).release().collect()
+    context.query().with_columns(pl.col.alpha.explode()).select(
+        dp.len()
+    ).release().collect()
+
 
 def test_arithmetic():
     pl = pytest.importorskip("polars")
 
     context = dp.Context.compositor(
-        data=pl.LazyFrame({
-            "data": [1, 2, 3] * 100,
-            "weights": [0.2, 0.5, 0.7] * 100,
-        }),
+        data=pl.LazyFrame(
+            {
+                "data": [1, 2, 3] * 100,
+                "weights": [0.2, 0.5, 0.7] * 100,
+            }
+        ),
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0),
         split_evenly_over=1,
@@ -1211,6 +1800,7 @@ def test_arithmetic():
 
     # expectation is 330.0
     assert 260 < observed < 400
+
 
 @pytest.mark.parametrize(
     "privacy_unit",

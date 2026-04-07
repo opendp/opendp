@@ -5,13 +5,13 @@ use crate::accuracy::{
     conservative_discrete_gaussian_tail_to_alpha, conservative_discrete_laplacian_tail_to_alpha,
 };
 use crate::combinators::{CompositionMeasure, make_composition};
-use crate::core::{Function, Measurement, PrivacyMap};
+use crate::core::{Domain, Function, Measurement, Metric, PrivacyMap, Transformation};
 use crate::domains::{CategoricalDomain, Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
 use crate::measurements::PrivateExpr;
 use crate::measurements::expr_noise::NoiseDistribution;
 use crate::measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence};
-use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance};
+use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance, PolarsMetric};
 use crate::traits::{InfAdd, InfMul, InfPowI, InfSub, option_min};
 use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::{StableDslPlan, StableExpr};
@@ -47,26 +47,63 @@ pub fn make_private_group_by<MI, MO>(
 ) -> Fallible<Measurement<DslPlanDomain, FrameDistance<MI>, MO, DslPlan>>
 where
     MI: 'static + UnboundedMetric,
-    MI::EventMetric: UnboundedMetric,
+    MI: PolarsMetric,
+    MI::EventMetric: UnboundedMetric + PolarsMetric,
     MO: 'static + ApproximateMeasure,
     Expr: PrivateExpr<L01InfDistance<MI::EventMetric>, MO>
         + StableExpr<L01InfDistance<MI::EventMetric>, L01InfDistance<MI::EventMetric>>,
-    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
+    DslPlan: StableDslPlan<DslPlanDomain, FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
 {
-    let is_truncated = input_metric.0.identifier().is_some();
+    let Some(MatchGroupBy { input, .. }) = match_group_by(plan.clone())? else {
+        return fallible!(MakeMeasurement, "expected group-by");
+    };
+    let t_prior: Transformation<
+        DslPlanDomain,
+        FrameDistance<MI>,
+        DslPlanDomain,
+        FrameDistance<MI::EventMetric>,
+    > = input.clone().make_stable(input_domain, input_metric)?;
+    make_private_group_by_with_prior::<_, _, MI, MO>(
+        t_prior,
+        output_measure,
+        plan,
+        global_scale,
+        threshold,
+    )
+}
+
+pub(crate) fn make_private_group_by_with_prior<DI, MII, MI, MO>(
+    t_prior: Transformation<DI, MII, DslPlanDomain, FrameDistance<MI::EventMetric>>,
+    output_measure: MO,
+    plan: DslPlan,
+    global_scale: Option<f64>,
+    threshold: Option<u32>,
+) -> Fallible<Measurement<DI, MII, MO, DslPlan>>
+where
+    DI: Domain + 'static,
+    MII: 'static + Metric,
+    MI: 'static + UnboundedMetric + PolarsMetric,
+    MI::EventMetric: UnboundedMetric + PolarsMetric,
+    MO: 'static + ApproximateMeasure,
+    Expr: PrivateExpr<L01InfDistance<MI::EventMetric>, MO>
+        + StableExpr<L01InfDistance<MI::EventMetric>, L01InfDistance<MI::EventMetric>>,
+    (DI, MII): crate::core::MetricSpace,
+    (DslPlanDomain, FrameDistance<MI::EventMetric>): crate::core::MetricSpace,
+{
+    let is_truncated = !t_prior.output_metric.0.active_id_sites().is_empty();
 
     let Some(MatchGroupBy {
         input,
         group_by,
         aggs,
         mut key_sanitizer,
+        ..
     }) = match_group_by(plan)?
     else {
         return fallible!(MakeMeasurement, "expected group-by");
     };
 
     // 1: establish stability of `group_by`
-    let t_prior = input.clone().make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     for expr in &group_by {

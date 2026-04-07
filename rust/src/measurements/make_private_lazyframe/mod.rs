@@ -10,15 +10,16 @@ use std::fmt::Debug;
 use crate::{
     combinators::{CompositionMeasure, make_approximate},
     core::{Function, Measure, Measurement, Metric, MetricSpace, StabilityMap, Transformation},
-    domains::{DslPlanDomain, Invariant, LazyFrameDomain, Margin},
+    domains::{Database, DatabaseDomain, DslPlanDomain, Invariant, LazyFrameDomain, Margin},
     error::Fallible,
     measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
     metrics::{
-        ChangeOneDistance, ChangeOneIdDistance, FrameDistance, HammingDistance, L01InfDistance,
+        ChangeOneDistance, ChangeOneIdDistance, DatabaseIdDistance, FrameDistance, HammingDistance,
+        L01InfDistance, MicrodataMetric, PolarsMetric, SymmetricDistance, SymmetricIdDistance,
     },
     polars::{OnceFrame, get_disabled_features_message},
     transformations::{
-        StableDslPlan,
+        StableDslPlan, StableExpr,
         traits::{BoundedMetric, UnboundedMetric},
     },
 };
@@ -47,12 +48,12 @@ fn make_private_aggregation<MI, MO>(
     threshold: Option<u32>,
 ) -> Fallible<Measurement<DslPlanDomain, FrameDistance<MI>, MO, DslPlan>>
 where
-    MI: 'static + UnboundedMetric,
-    MI::EventMetric: UnboundedMetric,
+    MI: 'static + UnboundedMetric + PolarsMetric,
+    MI::EventMetric: UnboundedMetric + PolarsMetric,
     MO: 'static + ApproximateMeasure,
     MO::Distance: Debug,
     Expr: PrivateExpr<L01InfDistance<MI::EventMetric>, MO>,
-    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
+    DslPlan: StableDslPlan<DslPlanDomain, FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
 {
     #[cfg(feature = "contrib")]
     if group_by::match_group_by(plan.clone())?.is_some() {
@@ -66,6 +67,14 @@ where
         );
     }
     match plan {
+        DslPlan::IR { dsl, .. } => make_private_aggregation::<MI, _>(
+            input_domain,
+            input_metric,
+            output_measure,
+            dsl.as_ref().clone(),
+            global_scale,
+            threshold,
+        ),
         #[cfg(feature = "contrib")]
         plan if matches!(plan, DslPlan::Select { .. }) => select::make_private_select::<MI, MO>(
             input_domain,
@@ -84,6 +93,120 @@ where
     }
 }
 
+fn make_private_database_dslplan<MO>(
+    input_domain: DatabaseDomain,
+    input_metric: DatabaseIdDistance,
+    output_measure: MO,
+    plan: DslPlan,
+    global_scale: Option<f64>,
+    threshold: Option<u32>,
+) -> Fallible<Measurement<DatabaseDomain, DatabaseIdDistance, MO, DslPlan>>
+where
+    MO: 'static + CompositionMeasure + group_by::ApproximateMeasure,
+    Expr: PrivateExpr<L01InfDistance<<SymmetricIdDistance as MicrodataMetric>::EventMetric>, MO>
+        + StableExpr<
+            L01InfDistance<<SymmetricIdDistance as MicrodataMetric>::EventMetric>,
+            L01InfDistance<<SymmetricIdDistance as MicrodataMetric>::EventMetric>,
+        >,
+    DslPlan: StableDslPlan<DatabaseDomain, DatabaseIdDistance, FrameDistance<SymmetricDistance>>,
+    (DatabaseDomain, DatabaseIdDistance): MetricSpace,
+{
+    match plan {
+        DslPlan::IR { dsl, .. } => {
+            return make_private_database_dslplan(
+                input_domain,
+                input_metric,
+                output_measure,
+                dsl.as_ref().clone(),
+                global_scale,
+                threshold,
+            );
+        }
+        DslPlan::Sort { .. } => return fallible!(MakeMeasurement, "{}", SORT_ERR_MSG),
+        plan => {
+            #[cfg(feature = "contrib")]
+            if let Some(meas) = postprocess::match_postprocess_with(
+                |input| {
+                    make_private_database_dslplan(
+                        input_domain.clone(),
+                        input_metric.clone(),
+                        output_measure.clone(),
+                        input,
+                        global_scale,
+                        threshold,
+                    )
+                },
+                plan.clone(),
+            )? {
+                return Ok(meas);
+            }
+
+            return make_private_database_aggregation(
+                input_domain,
+                input_metric,
+                output_measure,
+                plan,
+                global_scale,
+                threshold,
+            );
+        }
+    }
+}
+
+fn make_private_database_aggregation<MO>(
+    input_domain: DatabaseDomain,
+    input_metric: DatabaseIdDistance,
+    output_measure: MO,
+    plan: DslPlan,
+    global_scale: Option<f64>,
+    threshold: Option<u32>,
+) -> Fallible<Measurement<DatabaseDomain, DatabaseIdDistance, MO, DslPlan>>
+where
+    MO: 'static + CompositionMeasure + group_by::ApproximateMeasure,
+    Expr: PrivateExpr<L01InfDistance<<SymmetricIdDistance as MicrodataMetric>::EventMetric>, MO>
+        + StableExpr<
+            L01InfDistance<<SymmetricIdDistance as MicrodataMetric>::EventMetric>,
+            L01InfDistance<<SymmetricIdDistance as MicrodataMetric>::EventMetric>,
+        >,
+    DslPlan: StableDslPlan<DatabaseDomain, DatabaseIdDistance, FrameDistance<SymmetricDistance>>,
+    (DatabaseDomain, DatabaseIdDistance): MetricSpace,
+{
+    let matched_group_by = match_group_by(plan.clone())?;
+    let is_group_by = matched_group_by.is_some();
+    let input = if let Some(matched) = matched_group_by {
+        matched.input
+    } else {
+        match &plan {
+            DslPlan::Select { input, .. } => input.as_ref().clone(),
+            _ => {
+                return fallible!(
+                    MakeMeasurement,
+                    "A step in your query is not recognized at this time: {:?}. {:?}If you would like to see this supported, please file an issue.",
+                    plan.describe()?,
+                    get_disabled_features_message()
+                );
+            }
+        }
+    };
+    let t_prior = input.make_stable(input_domain, input_metric)?;
+
+    if is_group_by {
+        return group_by::make_private_group_by_with_prior::<
+            DatabaseDomain,
+            DatabaseIdDistance,
+            SymmetricIdDistance,
+            MO,
+        >(t_prior, output_measure, plan, global_scale, threshold);
+    }
+
+    select::make_private_select_with_prior::<
+        DatabaseDomain,
+        DatabaseIdDistance,
+        SymmetricIdDistance,
+        MO,
+    >(t_prior, output_measure, plan, global_scale)
+}
+
 #[bootstrap(
     features("contrib"),
     arguments(
@@ -93,18 +216,6 @@ where
     ),
     generics(MI(suppress), MO(suppress))
 )]
-/// Create a differentially private measurement from a [`LazyFrame`].
-///
-/// Any data inside the [`LazyFrame`] is ignored,
-/// but it is still recommended to start with an empty [`DataFrame`] and build up the computation using the [`LazyFrame`] API.
-///
-/// # Arguments
-/// * `input_domain` - The domain of the input data.
-/// * `input_metric` - How to measure distances between neighboring input data sets.
-/// * `output_measure` - How to measure privacy loss.
-/// * `lazyframe` - A description of the computations to be run, in the form of a [`LazyFrame`].
-/// * `global_scale` - Optional. A tune-able parameter that affects the privacy-utility tradeoff.
-/// * `threshold` - Optional. Minimum number of rows in each released group.
 pub fn make_private_lazyframe<MI: Metric, MO: 'static + Measure>(
     input_domain: LazyFrameDomain,
     input_metric: MI,
@@ -140,6 +251,52 @@ where
     )
 }
 
+#[bootstrap(
+    features("contrib"),
+    arguments(
+        output_measure(c_type = "AnyMeasure *", rust_type = b"null"),
+        global_scale(rust_type = "Option<f64>", c_type = "AnyObject *", default = b"null"),
+        threshold(rust_type = "Option<u32>", c_type = "AnyObject *", default = b"null")
+    ),
+    generics(MO(suppress))
+)]
+pub fn make_private_database_lazyframe<MO: 'static + Measure>(
+    input_domain: DatabaseDomain,
+    input_metric: DatabaseIdDistance,
+    output_measure: MO,
+    lazyframe: LazyFrame,
+    global_scale: Option<f64>,
+    threshold: Option<u32>,
+) -> Fallible<Measurement<DatabaseDomain, DatabaseIdDistance, MO, OnceFrame>>
+where
+    MO: CompositionMeasure + group_by::ApproximateMeasure,
+    Expr: PrivateExpr<L01InfDistance<<SymmetricIdDistance as MicrodataMetric>::EventMetric>, MO>
+        + StableExpr<
+            L01InfDistance<<SymmetricIdDistance as MicrodataMetric>::EventMetric>,
+            L01InfDistance<<SymmetricIdDistance as MicrodataMetric>::EventMetric>,
+        >,
+    DslPlan: StableDslPlan<DatabaseDomain, DatabaseIdDistance, FrameDistance<SymmetricDistance>>,
+    (DatabaseDomain, DatabaseIdDistance): MetricSpace,
+{
+    let m_lp = make_private_database_dslplan(
+        input_domain,
+        input_metric,
+        output_measure,
+        lazyframe.logical_plan,
+        global_scale,
+        threshold,
+    )?;
+    let f_lp = m_lp.function.clone();
+
+    Measurement::new(
+        m_lp.input_domain.clone(),
+        m_lp.input_metric.clone(),
+        m_lp.output_measure.clone(),
+        Function::new_fallible(move |arg: &Database| Ok(LazyFrame::from(f_lp.eval(arg)?).into())),
+        m_lp.privacy_map.clone(),
+    )
+}
+
 pub trait PrivateDslPlan<MI: Metric, MO: Measure> {
     fn make_private(
         self,
@@ -155,9 +312,9 @@ const SORT_ERR_MSG: &'static str = "Found sort in query plan. To conceal row ord
 
 impl<MI> PrivateDslPlan<FrameDistance<MI>, MaxDivergence> for DslPlan
 where
-    MI: UnboundedMetric,
-    MI::EventMetric: UnboundedMetric,
-    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
+    MI: UnboundedMetric + PolarsMetric,
+    MI::EventMetric: UnboundedMetric + PolarsMetric,
+    DslPlan: StableDslPlan<DslPlanDomain, FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
     (DslPlanDomain, FrameDistance<MI>): MetricSpace,
 {
     fn make_private(
@@ -196,9 +353,9 @@ where
 
 impl<MI> PrivateDslPlan<FrameDistance<MI>, ZeroConcentratedDivergence> for DslPlan
 where
-    MI: UnboundedMetric,
-    MI::EventMetric: UnboundedMetric,
-    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
+    MI: UnboundedMetric + PolarsMetric,
+    MI::EventMetric: UnboundedMetric + PolarsMetric,
+    DslPlan: StableDslPlan<DslPlanDomain, FrameDistance<MI>, FrameDistance<MI::EventMetric>>,
 {
     fn make_private(
         self,
@@ -237,13 +394,13 @@ where
 
 impl<MI, MO> PrivateDslPlan<FrameDistance<MI>, Approximate<MO>> for DslPlan
 where
-    MI: UnboundedMetric,
-    MI::EventMetric: UnboundedMetric,
+    MI: UnboundedMetric + PolarsMetric,
+    MI::EventMetric: UnboundedMetric + PolarsMetric,
     MO: 'static + CompositionMeasure,
     Approximate<MO>: 'static + ApproximateMeasure,
     <Approximate<MO> as Measure>::Distance: Debug,
     Expr: PrivateExpr<L01InfDistance<MI::EventMetric>, Approximate<MO>>,
-    DslPlan: StableDslPlan<FrameDistance<MI>, FrameDistance<MI::EventMetric>>
+    DslPlan: StableDslPlan<DslPlanDomain, FrameDistance<MI>, FrameDistance<MI::EventMetric>>
         + PrivateDslPlan<FrameDistance<MI::EventMetric>, MO>
         + PrivateDslPlan<FrameDistance<MI>, MO>,
 {
