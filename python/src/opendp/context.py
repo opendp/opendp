@@ -143,10 +143,10 @@ def space_of(T, M=None, infer: bool = False) -> tuple[Domain, Metric]:
     >>> import opendp.prelude as dp
     ...
     >>> dp.space_of(list[int])
-    (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())
+    (VectorDomain(AtomDomain(T=i32)), SymmetricDistance)
     >>> # the verbose form allows greater control:
     >>> (dp.vector_domain(dp.atom_domain(T=dp.i32)), dp.symmetric_distance())
-    (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())
+    (VectorDomain(AtomDomain(T=i32)), SymmetricDistance)
 
     :param T: carrier type (the type of members in the domain)
     :param M: metric type
@@ -351,7 +351,7 @@ def unit_of(
 
     >>> import opendp.prelude as dp
     >>> dp.unit_of(contributions=3)
-    (SymmetricDistance(), 3)
+    (SymmetricDistance, 3)
     >>> dp.unit_of(l1=2.0)
     (L1Distance(f64), 2.0)
 

@@ -1,8 +1,15 @@
 use dashu::rbig;
 
-use crate::metrics::L2Distance;
+use crate::metrics::{AbsoluteDistance, L1Distance, L2Distance, ModularMetric};
 
 use super::*;
+
+#[test]
+fn test_public_modular_metric_apis() {
+    assert!(AbsoluteDistance::<i32>::new(true).modular());
+    assert!(L1Distance::<i32>::new(true).modular());
+    assert!(L2Distance::<f64>::new(true).modular());
+}
 
 #[test]
 fn test_make_int_to_bigint() -> Fallible<()> {
@@ -23,6 +30,26 @@ fn test_make_int_to_bigint() -> Fallible<()> {
 }
 
 #[test]
+fn test_make_int_to_bigint_modular() -> Fallible<()> {
+    let space = (
+        VectorDomain::new(AtomDomain::<i8>::default()),
+        L2Distance::<f64>::new(true),
+    );
+
+    let t_cast = make_int_to_bigint::<i8, 2, f64>(space)?;
+    assert_eq!(
+        t_cast.invoke(&vec![i8::MIN, -1, 0, i8::MAX])?,
+        vec![
+            IBig::from(0),
+            IBig::from(127),
+            IBig::from(128),
+            IBig::from(255)
+        ]
+    );
+    Ok(())
+}
+
+#[test]
 fn test_make_noise_intexpfamily() -> Fallible<()> {
     let space = (
         AtomDomain::<i32>::default(),
@@ -30,14 +57,20 @@ fn test_make_noise_intexpfamily() -> Fallible<()> {
     );
 
     assert!(
-        IntExpFamily::<1> { scale: 1.0 }
-            .make_noise(space.clone())
-            .is_ok()
+        IntExpFamily::<1> {
+            scale: 1.0,
+            divisor: None
+        }
+        .make_noise(space.clone())
+        .is_ok()
     );
     assert!(
-        IntExpFamily::<1> { scale: f64::NAN }
-            .make_noise(space.clone())
-            .is_err()
+        IntExpFamily::<1> {
+            scale: f64::NAN,
+            divisor: None
+        }
+        .make_noise(space.clone())
+        .is_err()
     );
 
     Ok(())
@@ -49,7 +82,7 @@ fn test_then_saturating_cast() -> Fallible<()> {
     let q = IBig::try_from(i8::MAX).unwrap();
     assert_eq!(i8::saturating_cast(q + IBig::ONE), i8::MAX);
 
-    let f_i32 = then_saturating_cast::<i32>();
+    let f_i32 = then_saturating_cast::<i32>(false);
     assert_eq!(
         f_i32.eval(&vec![IBig::from(i32::MAX) + IBig::ONE])?,
         vec![i32::MAX]
@@ -57,6 +90,17 @@ fn test_then_saturating_cast() -> Fallible<()> {
     assert_eq!(
         f_i32.eval(&vec![IBig::from(i32::MIN) - IBig::ONE])?,
         vec![i32::MIN]
+    );
+
+    let f_i8_mod = then_saturating_cast::<i8>(true);
+    assert_eq!(
+        f_i8_mod.eval(&vec![
+            IBig::from(0),
+            IBig::from(127),
+            IBig::from(128),
+            IBig::from(255)
+        ])?,
+        vec![i8::MIN, -1, 0, i8::MAX]
     );
     Ok(())
 }
