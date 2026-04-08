@@ -10,5 +10,5 @@ Contact
 .. - .github/ISSUE_TEMPLATE/config.yml
 
 * Report a bug or request a feature on `Github <https://github.com/opendp/opendp/issues>`_.
-* Send general queries to `info@opendp.org <mailto:info@opendp.org>`_, or email `security@opendp.org <mailto:security@opendp.org>`_ if it is related to security.
+* Send general queries to `contact@opendp.org <mailto:contact@opendp.org>`_, or email `security@opendp.org <mailto:security@opendp.org>`_ if it is related to security.
 * Join the conversation on `Slack <https://join.slack.com/t/opendp/shared_invite/zt-1t8rrbqhd-z8LiZiP06vVE422HJd6ciQ>`_, or the `mailing list <https://groups.google.com/a/g.harvard.edu/g/opendp-community>`_.

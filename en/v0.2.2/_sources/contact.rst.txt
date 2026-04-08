@@ -23,4 +23,4 @@ To report bugs, please use the `issue tracker`_.
 
 To report security issues, please email security@opendp.org.
 
-For general inquiries, please email info@opendp.org.
+For general inquiries, please email contact@opendp.org.
