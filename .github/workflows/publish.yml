@@ -101,6 +101,8 @@ jobs:
           # create brand new history each time
           BRANCH=r-universe${{ (inputs.dry_run || inputs.channel != 'stable') && '-dev' || '' }}
           git checkout --orphan $BRANCH
+          git rm -rf --cached . || true
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
 
           git add R/opendp/ --force
           echo "Push R package to $BRANCH branch"
