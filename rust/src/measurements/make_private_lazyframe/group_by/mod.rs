@@ -170,10 +170,20 @@ where
     }
 
     let function = Function::new_fallible(move |arg: &DslPlan| {
+        #[cfg(patch_polars)]
         let output = DslPlan::GroupBy {
             input: Arc::new(arg.clone()),
             keys: group_by.clone(),
             predicates: vec![],
+            aggs: f_comp.eval(&arg)?.into_iter().map(|p| p.expr).collect(),
+            apply: None,
+            maintain_order: false,
+            options: Default::default(),
+        };
+        #[cfg(not(patch_polars))]
+        let output = DslPlan::GroupBy {
+            input: Arc::new(arg.clone()),
+            keys: group_by.clone(),
             aggs: f_comp.eval(&arg)?.into_iter().map(|p| p.expr).collect(),
             apply: None,
             maintain_order: false,

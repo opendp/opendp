@@ -8,6 +8,8 @@ use crate::{
     transformations::make_stable_lazyframe::group_by::{Resize, check_infallible},
 };
 use opendp_derive::proven;
+#[cfg(not(patch_polars))]
+use polars_plan::dsl::WindowType;
 use polars_plan::prelude::GroupbyOptions;
 
 use polars::prelude::{
@@ -101,6 +103,19 @@ fn match_group_by_truncation(
     plan: &DslPlan,
     identifier: &Expr,
 ) -> Option<(DslPlan, Truncation, Bound)> {
+    #[cfg(patch_polars)]
+    let DslPlan::GroupBy {
+        input,
+        keys,
+        aggs,
+        apply,
+        options,
+        ..
+    } = plan.clone()
+    else {
+        return None;
+    };
+    #[cfg(not(patch_polars))]
     let DslPlan::GroupBy {
         input,
         keys,
@@ -187,10 +202,21 @@ fn match_truncation_predicate(predicate: &Expr, identifier: &Expr) -> Fallible<O
                 // don't throw an error as non-truncation filters may still be valid
                 _ => return Ok(None),
             };
+            #[cfg(patch_polars)]
             let Expr::Over {
                 function,
                 partition_by,
                 mapping: WindowMapping::GroupsToRows,
+                ..
+            } = over.as_ref()
+            else {
+                return Ok(None);
+            };
+            #[cfg(not(patch_polars))]
+            let Expr::Window {
+                function,
+                partition_by,
+                options: WindowType::Over(WindowMapping::GroupsToRows),
                 ..
             } = over.as_ref()
             else {

@@ -9,6 +9,8 @@ use crate::transformations::StableExpr;
 use crate::transformations::traits::UnboundedMetric;
 use polars::chunked_array::cast::CastOptions;
 use polars::prelude::*;
+#[cfg(not(patch_polars))]
+use polars_plan::dsl::WindowType;
 use polars_plan::prelude::GroupbyOptions;
 
 use super::StableDslPlan;
@@ -27,10 +29,23 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
     input_metric: FrameDistance<M>,
     plan: DslPlan,
 ) -> Fallible<Transformation<DslPlanDomain, FrameDistance<M>, DslPlanDomain, FrameDistance<M>>> {
+    #[cfg(patch_polars)]
     let DslPlan::GroupBy {
         input,
         keys,
         predicates,
+        aggs,
+        apply,
+        maintain_order,
+        options,
+    } = plan
+    else {
+        return fallible!(MakeTransformation, "Expected group-by in logical plan");
+    };
+    #[cfg(not(patch_polars))]
+    let DslPlan::GroupBy {
+        input,
+        keys,
         aggs,
         apply,
         maintain_order,
@@ -47,6 +62,7 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
         );
     }
 
+    #[cfg(patch_polars)]
     if !predicates.is_empty() {
         // This is equivalent to running a filter after, as far as I can tell.
         // Possibly useful to support.
@@ -124,14 +140,27 @@ pub fn make_stable_group_by<M: UnboundedMetric>(
         middle_metric.clone(),
         output_domain,
         middle_metric.clone(),
-        Function::new(move |plan: &DslPlan| DslPlan::GroupBy {
-            input: Arc::new(plan.clone()),
-            keys: keys.clone(),
-            predicates: vec![],
-            aggs: aggs.clone(),
-            apply: None,
-            maintain_order: false,
-            options: options.clone(),
+        Function::new(move |plan: &DslPlan| {
+            #[cfg(patch_polars)]
+            let output = DslPlan::GroupBy {
+                input: Arc::new(plan.clone()),
+                keys: keys.clone(),
+                predicates: vec![],
+                aggs: aggs.clone(),
+                apply: None,
+                maintain_order: false,
+                options: options.clone(),
+            };
+            #[cfg(not(patch_polars))]
+            let output = DslPlan::GroupBy {
+                input: Arc::new(plan.clone()),
+                keys: keys.clone(),
+                aggs: aggs.clone(),
+                apply: None,
+                maintain_order: false,
+                options: options.clone(),
+            };
+            output
         }),
         StabilityMap::new_fallible(move |d_in: &Bounds| {
             let contributed_rows = d_in.get_bound(&HashSet::new()).per_group;
@@ -172,6 +201,7 @@ const INVITE: &'static str = "Please open an issue if this would be useful to yo
 /// because they can be broadcasted.
 pub(crate) fn check_infallible(expr: &Expr, resize: Resize) -> Fallible<()> {
     Ok(match expr {
+        #[cfg(patch_polars)]
         Expr::Rolling {
             function,
             index_column,
@@ -181,6 +211,7 @@ pub(crate) fn check_infallible(expr: &Expr, resize: Resize) -> Fallible<()> {
             check_infallible(&*index_column, resize)?;
         }
         Expr::Element => (),
+        #[cfg(patch_polars)]
         Expr::Over {
             function,
             partition_by,
@@ -191,6 +222,27 @@ pub(crate) fn check_infallible(expr: &Expr, resize: Resize) -> Fallible<()> {
             partition_by
                 .iter()
                 .try_for_each(|by| check_infallible(&*by, Resize::Ban))?;
+            if let Some((order, _)) = order_by {
+                check_infallible(order, Resize::Ban)?;
+            }
+        }
+        #[cfg(not(patch_polars))]
+        Expr::Window {
+            function,
+            partition_by,
+            order_by,
+            options,
+        } => {
+            if *options != WindowType::Over(WindowMapping::GroupsToRows) {
+                return fallible!(
+                    MakeTransformation,
+                    "Only groups-to-rows window expressions are currently supported. {INVITE}"
+                );
+            }
+            check_infallible(&*function, resize)?;
+            partition_by
+                .iter()
+                .try_for_each(|by| check_infallible(by, Resize::Ban))?;
             if let Some((order, _)) = order_by {
                 check_infallible(order, Resize::Ban)?;
             }
@@ -243,6 +295,7 @@ pub(crate) fn check_infallible(expr: &Expr, resize: Resize) -> Fallible<()> {
             AggExpr::Std(e, _) => check_infallible(e, Resize::Allow)?,
             AggExpr::Var(e, _) => check_infallible(e, Resize::Allow)?,
             AggExpr::AggGroups(e) => check_infallible(e, Resize::Allow)?,
+            #[cfg(patch_polars)]
             AggExpr::FirstNonNull(e) | AggExpr::LastNonNull(e) => {
                 check_infallible(e, Resize::Allow)?
             }
@@ -454,7 +507,10 @@ fn check_infallible_function(
             | ArrayFunction::ArgMax => check_inputs!(),
 
             // Still unary, but changes row count (Array width is schema-known, but it is a resize)
+            #[cfg(patch_polars)]
             ArrayFunction::Explode(_) => check_inputs!(resize = "array.explode"),
+            #[cfg(not(patch_polars))]
+            ArrayFunction::Explode { .. } => check_inputs!(resize = "array.explode"),
 
             // Multi-input: allow scalar broadcast, but ban mismatched lengths if Resize::Ban
             ArrayFunction::Get(_)
@@ -480,10 +536,11 @@ fn check_infallible_function(
             | BinaryFunction::EndsWith
             | BinaryFunction::HexEncode
             | BinaryFunction::Size
-            | BinaryFunction::Slice
-            | BinaryFunction::Head
-            | BinaryFunction::Tail
             | BinaryFunction::Reinterpret(_, _) => check_inputs!(aligned_rows),
+            #[cfg(patch_polars)]
+            BinaryFunction::Slice | BinaryFunction::Head | BinaryFunction::Tail => {
+                check_inputs!(aligned_rows)
+            }
 
             // Decode may raise if strict=true (invalid encoding depends on data)
             BinaryFunction::HexDecode(strict) => {
