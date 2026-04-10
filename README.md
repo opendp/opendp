@@ -26,21 +26,6 @@ This framework is described in the paper [A Programming Framework for OpenDP](ht
 > - Only making changes on `main` through PRs, and getting approval on these PRs before merging.
 > - On an annual basis, recruiting one or more volunteers (not active contributors) who will conduct a health-check, focussed not on the details of the algorithms but on the health of this repo as open source software. Their report will be linked here. The next (and first) health-check is scheduled for September 2026.
 
-<!--
-
-If approved, a list of Commons repos will be maintained at https://opendp.org/tools/#opendp-commons, with this description (corresponding to the commitments above):
-
-"""
-For each repo in the OpenDP Commons, the OpenDP Executive Committee commits to:
-- Releasing the software under an [OSI approved licence](https://opensource.org/licenses).
-- Ensuring there are at least two maintainers who will reply within a month (at the latest) to new issues and PRs.
-- Only making changes on `main` through PRs, and getting approval on these PRs before merging.
-- On an annual basis, recruiting one or more volunteers (not active contributors) who will conduct a health-check, focussed not on the details of the algorithms but on the health of this repo as open source software, and linking to their report from the repo.
-
-Projects can be added or removed from the OpenDP Commons with the approval of the OpenDP Executive Committee.
-"""
-
--->
 
 ## Status
 
