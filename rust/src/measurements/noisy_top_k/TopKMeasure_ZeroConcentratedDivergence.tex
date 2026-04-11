@@ -1,0 +1,52 @@
+\documentclass{article}
+\input{../../lib.sty}
+\allowdisplaybreaks
+
+\title{\texttt{impl TopKMeasure for ZeroConcentratedDivergence}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Associated Const \texttt{REPLACEMENT = true}
+    \item Method \texttt{privacy\_map}
+        \textit{Types consistent with pseudocode.}
+\end{itemize}
+
+\subsubsection*{Caller-verified}
+\begin{itemize}
+    \item Method \texttt{privacy\_map}
+        \begin{itemize}
+            \item \texttt{d\_in} is non-null and positive.
+            \item \texttt{scale} is non-null and positive.
+        \end{itemize}
+\end{itemize}
+
+\subsection*{Pseudocode}
+\label{sec:python-pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/TopKMeasure_ZeroConcentratedDivergence.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+    The implementation is consistent with all associated items in the \rustdoc{measurements/noisy\_top\_k/trait}{TopKMeasure} trait.
+    \begin{enumerate}
+        \item Method \texttt{privacy\_map}:
+        For any $x, x'$ where $d_\mathrm{in} \ge d_\mathrm{Range}(x, x')$,
+        return $d_\mathrm{out} \ge D_\mathrm{self}(f(x), f(x'))$,
+        where $f(x) = \mathrm{noisy\_top\_k}(x=x, k=1, \mathrm{scale}=\mathrm{scale}, \mathrm{replacement}=\mathrm{Self::REPLACEMENT})$.
+    \end{enumerate}
+\end{theorem}
+
+\begin{proof}[Proof of postcondition: \texttt{privacy\_map}]
+
+    \cite{Dong2019OptimalDP} Proposition~2 shows that the exponential mechanism satisfies Bounded Range.
+    \cite{cesar2020bounding} Lemma 3.2 shows that Bounded Range satisfies .
+\end{proof}
+
+\bibliographystyle{plain}
+\bibliography{references.bib}
+
+\end{document}
