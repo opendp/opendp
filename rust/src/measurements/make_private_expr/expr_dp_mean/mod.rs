@@ -64,14 +64,14 @@ impl OpenDPPlugin for DPMeanShim {
     }
 }
 
-/// Make a dp sum expression measurement.
+/// Make a dp mean expression measurement.
 ///
 /// # Arguments
 /// * `input_domain` - ExprDomain
 /// * `input_metric` - The metric space under which neighboring LazyFrames are compared
 /// * `expr` - The expression to which the noise will be added
 /// * `global_scale` - (Re)scale the noise parameter for the noise distribution
-pub fn make_expr_dp_mean<MI: 'static + UnboundedMetric, MO: NoiseExprMeasure>(
+pub(crate) fn make_expr_dp_mean<MI: 'static + UnboundedMetric, MO: NoiseExprMeasure>(
     input_domain: WildExprDomain,
     input_metric: L01InfDistance<MI>,
     output_measure: MO,

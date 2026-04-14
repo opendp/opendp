@@ -26,6 +26,16 @@ mod test;
 )]
 /// Makes a Transformation that scores how similar each candidate is to the given `alpha`-quantile on the input dataset.
 ///
+/// # Citations
+/// * [Smith11 Privacy-Preserving Statistical Estimation with Optimal Convergence Rates](https://doi.org/10.1145/1993636.1993743)
+///
+/// # Runtime
+/// For a dataset of size `n` and `c` candidates, runtime is `O(n log c + c)`.
+///
+/// # Utility
+/// If the input domain size is known, the score sensitivity is reduced by a factor of 2
+/// relative to the unknown-size case, which can improve downstream utility.
+///
 /// # Arguments
 /// * `input_domain` - Uses a smaller sensitivity when the size of vectors in the input domain is known.
 /// * `input_metric` - Either SymmetricDistance or InsertDeleteDistance.

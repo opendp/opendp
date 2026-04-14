@@ -146,7 +146,7 @@ pub enum Support {
 /// * `input_metric` - The metric space under which neighboring LazyFrames are compared
 /// * `expr` - The expression to which the noise will be added
 /// * `global_scale` - (Re)scale the noise parameter for the noise distribution
-pub fn make_expr_noise<MI: 'static + UnboundedMetric, MO: NoiseExprMeasure>(
+pub(crate) fn make_expr_noise<MI: 'static + UnboundedMetric, MO: NoiseExprMeasure>(
     input_domain: WildExprDomain,
     input_metric: L01InfDistance<MI>,
     expr: Expr,

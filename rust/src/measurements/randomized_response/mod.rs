@@ -28,6 +28,16 @@ use crate::traits::{ExactIntCast, Hashable, InfDiv, InfLn, InfMul, InfSub};
 #[bootstrap(features("contrib"), arguments(constant_time(default = false)))]
 /// Make a Measurement that implements randomized response on a boolean value.
 ///
+/// # Citations
+/// * [Warner65 Randomized Response: A Survey Technique for Eliminating Evasive Answer Bias](https://doi.org/10.1080/01621459.1965.10480775)
+///
+/// # Runtime
+/// Per release, runtime is `O(1)`.
+///
+/// # Utility
+/// The released bit matches the input with probability `prob`,
+/// so the expected 0-1 loss is `O(1 - prob)`.
+///
 /// # Arguments
 /// * `prob` - Probability of returning the correct answer. Must be in `[0.5, 1]`
 /// * `constant_time` - Set to true to enable constant time. Slower.
@@ -66,6 +76,19 @@ pub fn make_randomized_response_bool(
     generics(T(example = "$get_first(categories)"))
 )]
 /// Make a Measurement that implements randomized response on a categorical value.
+///
+/// # Citations
+/// * [Warner65 Randomized Response: A Survey Technique for Eliminating Evasive Answer Bias](https://doi.org/10.1080/01621459.1965.10480775)
+///
+/// # Runtime
+/// Per release, runtime is `O(t)`, where `t` is the number of categories,
+/// because the implementation linearly searches for the input in `categories`.
+///
+/// # Utility
+/// If the input is a member of `categories`,
+/// the mechanism returns the truthful category with probability `prob`,
+/// so the expected 0-1 loss is `O(1 - prob)`.
+/// Otherwise, the output is sampled uniformly from `categories`.
 ///
 /// # Arguments
 /// * `categories` - Set of valid outcomes

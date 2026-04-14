@@ -98,6 +98,17 @@ where
 /// Any data inside the [`LazyFrame`] is ignored,
 /// but it is still recommended to start with an empty [`DataFrame`] and build up the computation using the [`LazyFrame`] API.
 ///
+/// # Citations
+/// Depending on the query plan, this constructor may rely on:
+///
+/// * [Rogers23 A Unifying Privacy Analysis Framework for Unknown Domain Algorithms in Differential Privacy](https://arxiv.org/abs/2309.09170)
+/// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
+/// * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/abs/2004.00010)
+/// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+/// * [CSVW22 Widespread Underestimation of Sensitivity in Differentially Private Libraries and How to Fix It](https://arxiv.org/abs/2207.10635)
+/// * [Smith11 Privacy-Preserving Statistical Estimation with Optimal Convergence Rates](https://doi.org/10.1145/1993636.1993743)
+/// * [MS20 Permute-and-Flip: A New Mechanism for Differentially Private Selection](https://arxiv.org/abs/2010.12603)
+///
 /// # Arguments
 /// * `input_domain` - The domain of the input data.
 /// * `input_metric` - How to measure distances between neighboring input data sets.

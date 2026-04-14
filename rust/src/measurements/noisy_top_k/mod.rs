@@ -29,6 +29,19 @@ mod test;
 )]
 /// Make a Measurement that takes a vector of scores and privately selects the index of the highest score.
 ///
+/// # Citations
+/// * [MS20 Permute-and-Flip: A New Mechanism for Differentially Private Selection](https://arxiv.org/abs/2010.12603)
+///
+/// # Runtime
+/// Per release, worst-case runtime is `O(k n)`, where `n` is the number of scores.
+/// For `k = 1`, this reduces to `O(n)`.
+///
+/// # Utility
+/// When `scale = 0`, the mechanism returns the exact top-`k` indices.
+/// For positive `scale`, utility improves as score gaps grow relative to `scale`;
+/// for a fixed gap parameter `g`, the failure probability decays exponentially in `g / scale`
+/// up to constants from the selection mechanism analysis.
+///
 /// # Arguments
 /// * `input_domain` - Domain of the input vector. Must be a non-nullable VectorDomain.
 /// * `input_metric` - Metric on the input domain. Must be LInfDistance

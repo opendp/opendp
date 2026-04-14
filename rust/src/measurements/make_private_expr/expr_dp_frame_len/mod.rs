@@ -60,7 +60,8 @@ impl OpenDPPlugin for DPFrameLenShim {
     }
 }
 
-pub fn make_expr_dp_frame_len<MI: 'static + UnboundedMetric, MO: NoiseExprMeasure>(
+/// Make a dp frame-length expression measurement.
+pub(crate) fn make_expr_dp_frame_len<MI: 'static + UnboundedMetric, MO: NoiseExprMeasure>(
     input_domain: WildExprDomain,
     input_metric: L01InfDistance<MI>,
     output_measure: MO,
