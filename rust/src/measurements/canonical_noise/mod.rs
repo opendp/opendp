@@ -7,7 +7,7 @@ use dashu::{
     rbig,
 };
 use num::Zero;
-use opendp_derive::bootstrap;
+use opendp_derive::{bootstrap, proven};
 
 use crate::{
     core::{Function, Measurement, PrivacyMap},
@@ -85,6 +85,7 @@ pub fn make_canonical_noise(
     )
 }
 
+#[proven]
 /// # Proof Definition
 /// Given epsilon and delta, return the corresponding f-DP tradeoff curve
 /// with conservative arithmetic,

@@ -21,6 +21,9 @@ use crate::{
 #[cfg(test)]
 mod test;
 
+#[proven(
+    proof_path = "measurements/noise_threshold/nature/integer/MakeNoiseThreshold_MapDomain_for_IntExpFamily.tex"
+)]
 impl<TK, TV, const P: usize, QI: Number, MO: 'static + Measure>
     MakeNoiseThreshold<
         MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
