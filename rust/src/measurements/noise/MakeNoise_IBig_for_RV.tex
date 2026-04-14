@@ -17,7 +17,7 @@ This is the core implementation of all variations of the gaussian or laplace mec
 
 \section{Hoare Triple}
 \subsection*{Precondition}
-\subsubsection*{Compiler-Verified}
+\subsubsection*{Compiler-verified}
 \texttt{MakeNoise} is parameterized as follows:
 \begin{itemize}
     \item \texttt{MI} implements trait \rustdoc{core/trait}{Metric}
@@ -31,7 +31,7 @@ The following trait bounds are also required:
     \item \texttt{RV} implements \rustdoc{measurements/noise/trait}{NoisePrivacyMap}\texttt{<MI, MO>}
 \end{itemize}
 
-\subsubsection*{User-Verified}
+\subsubsection*{Caller-verified}
 None
 
 \subsection*{Pseudocode}

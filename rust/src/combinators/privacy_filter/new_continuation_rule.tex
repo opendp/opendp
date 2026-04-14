@@ -16,13 +16,13 @@ Proves soundness of \texttt{fn new\_continuation\_rule}.
 \subsection*{Precondition}
 \subsubsection*{Compiler-verified}
 \textit{Types consistent with pseudocode.}
-\subsubsection*{User-verified}
+\subsubsection*{Caller-verified}
 None
 
 \subsection*{Pseudocode}
 \lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/new_continuation_rule.py}
 
-\subsubsection*{Postcondition}
+\subsection*{Postcondition}
 \begin{theorem}
     Returns a function that wraps a queryable.
     The wrapped queryable refuses to release any query

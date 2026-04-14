@@ -16,7 +16,7 @@ The implementation computes the inverse CDF of the canonical noise random variab
 
 \section{Hoare Triple}
 
-\subsection*{Preconditions}
+\subsection*{Precondition}
 \subsubsection*{Compiler-verified}
 \begin{itemize}
     \item Argument \texttt{self} of type \rustdoc{traits/samplers/psrn/canonical/struct}{CanonicalRV}.
@@ -25,7 +25,7 @@ The implementation computes the inverse CDF of the canonical noise random variab
     \item Generic \texttt{R} implements \rustdoc{traits/samplers/psrn/trait}{ODPRound} which denotes the rounding mode, either up or down.
 \end{itemize}
 
-\subsubsection*{Human-verified}
+\subsubsection*{Caller-verified}
 Argument \texttt{uniform} is in $[0, 1]$.
 
 \subsection*{Pseudocode}

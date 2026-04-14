@@ -5,16 +5,17 @@
 \author{Michael Shoemate}
 
 \begin{document}
-\maketitle\contrib
+\maketitle
+\contrib
 This document proves soundness of \rustdoc{measurements/noisy_top_k/fn}{noisy\_top\_k} in \asOfCommit{mod.rs}{e62b0aa2}. 
 \texttt{noisy\_top\_k} noisily selects the index of the best score from a vector of input scores $k$ times.
 
 \section{Hoare Triple}
-\subsection*{Preconditions}
-\subsubsection*{Compiler-Verified}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
 \textit{Types consistent with pseudocode.}
 
-\subsubsection*{Caller-Verified}
+\subsubsection*{Caller-verified}
 \begin{itemize}
     \item Each item of \texttt{x} is finite.
 \end{itemize}

@@ -34,10 +34,9 @@ None
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_count.py} 
  
 \subsection*{Postcondition} 
+\begin{theorem}
 \validTransformation{\texttt{(input\_domain, input\_metric, TIA, TO)}}{\texttt{make\_count}} 
- 
-\section{Proofs} 
- 
+\end{theorem}
 \begin{proof} \textbf{(Part 1 -- appropriate output domain).} 
     The \texttt{output\_domain} is \texttt{AtomDomain(TO)}, so it is sufficient to show that \texttt{function} always returns non-null values of type \texttt{TO}. 
     By the definition of the \texttt{ExactIntCast} trait, \texttt{TO.exact\_int\_cast} always returns a non-null value of type \texttt{TO} or raises an exception. 

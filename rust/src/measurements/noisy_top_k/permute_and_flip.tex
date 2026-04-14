@@ -10,8 +10,12 @@ This document proves soundness of \rustdoc{measurements/noisy_top_k}{permute\_an
 \texttt{permute\_and\_flip} noisily selects the index of the greatest score from a vector of input scores.
 
 \section{Hoare Triple}
-\subsection*{Preconditions}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
 \textit{Types consistent with pseudocode.}
+
+\subsubsection*{Caller-verified}
+None
 
 \subsection*{Pseudocode}
 \label{sec:python-pseudocode}

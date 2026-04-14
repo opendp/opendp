@@ -15,7 +15,7 @@ This proof is adapted from \href{https://arxiv.org/pdf/2004.00010.pdf#subsection
 \subsubsection*{Compiler-verified} 
 Argument \texttt{x} is of type \texttt{RBig}, a bignum rational 
  
-\subsubsection*{User-verified} 
+\subsubsection*{Caller-verified}
 $\texttt{x} > 0$ 
  
 \subsection*{Pseudocode}         
@@ -48,8 +48,6 @@ $\texttt{x} > 0$
         \end{cases}
     \end{equation}
 \end{definition}
- 
-\section{Proof} 
 Assume the preconditions are met. 
  
 \begin{lemma}\label{err-e} 

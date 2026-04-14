@@ -27,25 +27,26 @@ like so: $\texttt{prob} = \sum_{i = 0}^{\infty} \frac{a_i}{2^{i + 1}}$.
 The algorithm samples $I \sim Geom(0.5)$ using an internal function \rustdoc{traits/samplers/geometric/fn}{sample\_geometric\_buffer}, then returns $a_I$. 
 
 \subsection{Hoare Triple}
-\subsubsection*{Preconditions}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
 \begin{itemize}
-    \item \textbf{User-specified types:}
-    \begin{itemize}
-        \item Variable \texttt{prob} must be of type \texttt{T}
-        \item Variable \texttt{constant\_time} must be of type \texttt{bool}
-        \item Type \texttt{T} has trait \rustdoc{traits/trait}{Float}. 
-            \texttt{Float} implies there exists an associated type \texttt{T::Bits} (defined in \rustdoc{traits/trait}{FloatBits}) that captures the underlying bit representation of \texttt{T}.
-        \item Type \texttt{T::Bits} has traits \texttt{PartialOrd} and \texttt{ExactIntCast<usize>}
-        \item Type \texttt{usize} has trait \texttt{ExactIntCast<T::Bits>}
-    \end{itemize}
+    \item Variable \texttt{prob} must be of type \texttt{T}.
+    \item Variable \texttt{constant\_time} must be of type \texttt{bool}.
+    \item Type \texttt{T} has trait \rustdoc{traits/trait}{Float}.
+        \texttt{Float} implies there exists an associated type \texttt{T::Bits} (defined in \rustdoc{traits/trait}{FloatBits}) that captures the underlying bit representation of \texttt{T}.
+    \item Type \texttt{T::Bits} has traits \texttt{PartialOrd} and \texttt{ExactIntCast<usize>}.
+    \item Type \texttt{usize} has trait \texttt{ExactIntCast<T::Bits>}.
 \end{itemize}
 
-\subsubsection*{Pseudocode}
+\subsubsection*{Caller-verified}
+None
+
+\subsection*{Pseudocode}
 
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_bernoulli_rational.py}
 
-\subsubsection*{Postcondition}
-\begin{definition}
+\subsection*{Postcondition}
+\begin{theorem}
     \label{sample-bernoulli}
 
     For any setting of the input parameters
@@ -57,7 +58,7 @@ The algorithm samples $I \sim Geom(0.5)$ using an internal function \rustdoc{tra
         \item returns \texttt{out} where \texttt{out} is $\top$ with probability \texttt{prob}, otherwise $\bot$.
     \end{itemize}
      If \texttt{trials} is set, the implementation's runtime is constant.    
-\end{definition}
+\end{theorem}
 
 \begin{proof} 
 An integer sample is taken uniformly at random from $[0, denom)$, where \texttt{denom} is the denominator of \texttt{prob}.

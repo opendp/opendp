@@ -13,17 +13,14 @@ Proves soundness of \rustdoc{transformations/make_stable_lazyframe/truncate/matc
 in \asOfCommit{mod.rs}{f5bb719}.
 
 \section{Hoare Triple}
-\subsubsection*{Compiler Verified}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
 Types matching pseudocode.
 
-\subsection*{Precondition}
-\subsubsection*{Compiler Verified}
-Types matching pseudocode.
-
-\subsection*{Precondition}
+\subsubsection*{Caller-verified}
 None 
 
-\subsection*{Function}
+\subsection*{Pseudocode}
 \label{sec:python-pseudocode}
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/match_truncation_predicate.py}
 

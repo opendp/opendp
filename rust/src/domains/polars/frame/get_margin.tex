@@ -20,17 +20,16 @@ whose descriptors are no more restrictive than what is known in \texttt{FrameDom
 \subsubsection*{Compiler-verified}
 Types matching pseudocode.
 
-\subsubsection*{Human-verified}
+\subsubsection*{Caller-verified}
 None
 
 \subsection*{Pseudocode}
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/get_margin.py}
 
 \subsection*{Postcondition}
+\begin{theorem}
 Returns a \texttt{Margin} that describes properties of members of \texttt{domain} when grouped by \texttt{by}.
-
-\section{Proofs}
-
+\end{theorem}
 \begin{proof} 
     On line \ref{let-margin}, \texttt{margin} is either a valid margin descriptor 
     for \texttt{by}, by the definition of \texttt{domain},
