@@ -22,7 +22,7 @@ def make_private_eigenvector(
     np = import_optional_dependency('numpy')
     import opendp.prelude as dp
 
-    dp.assert_features("contrib", "floating-point")
+    dp.assert_features("contrib", "idealized-numerics")
     
     np_csprng = get_np_csprng()
     input_desc = input_domain.descriptor
@@ -113,7 +113,7 @@ def make_np_sscp_projection(
     """
     import opendp.prelude as dp
 
-    dp.assert_features("contrib", "floating-point")
+    dp.assert_features("contrib", "idealized-numerics")
     input_desc = input_domain.descriptor
 
     if input_desc.num_features != P.shape[1]:
@@ -145,7 +145,7 @@ def make_private_eigenvectors(
     import opendp.prelude as dp
     linalg = import_optional_dependency('scipy.linalg')
 
-    dp.assert_features("contrib", "floating-point")
+    dp.assert_features("contrib", "idealized-numerics")
 
     input_desc = input_domain.descriptor
     if input_desc.p != 2:

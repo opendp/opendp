@@ -30,7 +30,7 @@ def make_private_np_mean(
     import opendp.prelude as dp
     np = import_optional_dependency('numpy')
 
-    dp.assert_features("contrib", "floating-point")
+    dp.assert_features("contrib", "idealized-numerics")
 
     if norm is not None:
         t_clamp = make_np_clamp(input_domain, input_metric, norm, p, origin)

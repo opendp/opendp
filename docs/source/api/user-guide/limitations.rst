@@ -13,10 +13,11 @@ Privacy Concerns
 As a work in progress, OpenDP has some known privacy concerns.
 These vulnerabilities may have an impact on some applications, depending on how they operate.
 
-* **Floating point issues:** Some OpenDP Transformations and Measurements assume an idealized model of real-number arithmetic
+* **Idealized numerics issues:** Some OpenDP Transformations and Measurements assume an idealized model of real-number arithmetic
   (as is common in the differential privacy research literature).
-  Their implementations using floating-point numbers have `known issues <https://www.microsoft.com/en-us/research/wp-content/uploads/2012/10/lsbs.pdf>`_,
-  where the differential privacy property is not satisfied due to discrepancies between real-number arithmetic and floating-point arithmetic.
+  Implementations using finite data types like floating-point numbers have `known issues <https://salil.seas.harvard.edu/publications/widespread-underestimation-sensitivity-differentially-private-libraries-and-how>`_,
+  where the differential privacy property is not satisfied due to discrepancies between real-number arithmetic and finite arithmetic.
+  These APIs are surfaced behind the ``idealized-numerics`` feature flag.
   Through the ongoing process of vetting privacy proofs (see below), we clearly distinguish such mechanisms from ones
   whose concrete implementations faithfully satisfy differential privacy.
 * **Side-channel attacks:** OpenDP has not yet been hardened against side-channel attacks.
@@ -39,14 +40,6 @@ privacy-relevant properties.
 As components complete the vetting process, they will drop the ``contrib`` feature flag, and will be accessible without explicitly opting into
 unvetted components.
 
-Missing Functionality
----------------------
-
-There are some elements of the OpenDP Programming Framework, the conceptual basis for OpenDP, that are not yet implemented.
-Foremost among these is the concept of interactive measurements.
-(There is an initial prototype, implemented in Rust only, but it's not fully fleshed out).
-These elements are on our roadmap, but applications will have to wait to use them.
-
 API Stability
 -------------
 
@@ -60,5 +53,5 @@ Until then, please don't depend on interfaces remaining the same across releases
 Software Quality
 ----------------
 
-Like any software project, OpenDP likely has bugs. Because it's still an early project, it likely has many bugs!
+Like any software project, OpenDP likely has bugs.
 We strive to make high quality software, but if you encounter issues, `please let us know <https://github.com/opendp/opendp/issues>`_.

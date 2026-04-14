@@ -29,7 +29,7 @@ def make_private_np_eigendecomposition(
     """
     import opendp.prelude as dp
 
-    dp.assert_features("contrib", "floating-point")
+    dp.assert_features("contrib", "idealized-numerics")
     input_desc = input_domain.descriptor
 
     if input_desc.size is None:
