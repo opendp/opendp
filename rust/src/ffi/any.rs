@@ -40,6 +40,13 @@ impl AnyObject {
         }
     }
 
+    pub fn new_type<T: 'static>(value: T, type_: Type) -> Self {
+        AnyObject {
+            type_,
+            value: Box::new(value),
+        }
+    }
+
     pub fn new_raw<T: 'static>(value: T) -> *mut Self {
         crate::ffi::util::into_raw(Self::new(value))
     }

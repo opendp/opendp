@@ -182,6 +182,7 @@ def make_private_eigenvectors(
                 (input_domain, input_metric)
                 >> then_np_sscp_projection(P)  # 2.c happens inside this transformation
                 >> then_private_eigenvector(epsilon_i)
+                >> dp.as_array(T=input_desc.T)
             )
             u = qbl(m_eigvec)
 
