@@ -168,8 +168,15 @@ The measurement for each expression expects data set distances in terms of a tri
     but can also be bounded by the product of the $L^0$ and $L^\infty$ bounds on line \ref{line:l1-from-l0-li}.
 \end{itemize}
 
-By the postcondition of \texttt{f\_privacy\_map}, the privacy loss of releasing the output of \texttt{aggs}, 
-when grouped data sets may differ by this distance triple,
+Once all three bounds are concrete, the logic tightens them using identities that always hold for grouped distances:
+\[
+    \Delta_0 \le \Delta_1, \qquad \Delta_\infty \le \Delta_1, \qquad \Delta_1 \le \Delta_0 \cdot \Delta_\infty.
+\]
+Therefore the assignments on lines \ref{line:l0-tighten}, \ref{line:li-tighten}, and \ref{line:l1-tighten}
+preserve validity while potentially reducing looseness introduced by independently supplied upper bounds.
+
+By the postcondition of \texttt{f\_privacy\_map}, the privacy loss of releasing the output of \texttt{aggs},
+when grouped data sets may differ by this tightened distance triple,
 is \texttt{d\_out}.
 
 We also need to consider the privacy loss from releasing \texttt{keys}.
