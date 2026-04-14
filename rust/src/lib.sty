@@ -135,9 +135,24 @@
 \newtheorem{observation}{Observation}
 \newtheorem{note}{Note}
 
-\newcommand{\vicki}[1]{{ {\color{olive}{(vicki)~#1}}}}
-\newcommand{\hanwen}[1]{{ {\color{purple}{(hanwen)~#1}}}}
-\newcommand{\zach}[1]{{ {\color{red}{(zach)~#1}}}}
+\newcommand{\proofAuthor}[2]{%
+  #1%
+  \if\relax\detokenize{#2}\relax\else~(\href{https://github.com/#2}{\texttt{@#2}})\fi%
+}
+\newcommand{\AbigailGentleAuthor}{\proofAuthor{Abigail Gentle}{abigail-gentle}}
+\newcommand{\AishwaryaRamasethuAuthor}{\proofAuthor{Aishwarya Ramasethu}{aramasethu}}
+\newcommand{\ChristianCovingtonAuthor}{\proofAuthor{Christian Covington}{ctcovington}}
+\newcommand{\ConnorWagamanAuthor}{\proofAuthor{Connor Wagaman}{cwagaman}}
+\newcommand{\GraceTianAuthor}{\proofAuthor{Grace Tian}{gracetian6}}
+\newcommand{\HanwenZhangAuthor}{\proofAuthor{Hanwen Zhang}{}}
+\newcommand{\IraGlobusHarrusAuthor}{\proofAuthor{Ira Globus-Harrus}{globusharris}}
+\newcommand{\JordanAwanAuthor}{\proofAuthor{Jordan Awan}{}}
+\newcommand{\MichaelShoemateAuthor}{\proofAuthor{Michael Shoemate}{Shoeboxam}}
+\newcommand{\SilviaCasacubertaAuthor}{\proofAuthor{S\'ilvia Casacuberta}{silviacasac}}
+\newcommand{\TudorCebereAuthor}{\proofAuthor{Tudor Cebere}{tudorcebere}}
+\newcommand{\VickiXuAuthor}{\proofAuthor{Vicki Xu}{matchaginseng}}
+\newcommand{\YuJuKuAuthor}{\proofAuthor{Yu-Ju Ku}{yuju1998}}
+\newcommand{\ZacharyRatliffAuthor}{\proofAuthor{Zachary Ratliff}{zachratliff}}
 
 \newcommand{\MultiSet}{\mathrm{MultiSet}}
 \newcommand{\len}{\mathrm{len}}
