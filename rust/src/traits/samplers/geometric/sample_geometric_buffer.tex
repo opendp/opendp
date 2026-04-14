@@ -10,13 +10,18 @@
 This document proves soundness of \rustdoc{traits/samplers/geometric/fn}{sample\_geometric\_buffer} in \asOfCommit{mod.rs}{f5bb719}.
 
 \section{Hoare Triple}
-\subsection*{Preconditions}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+None
+
+\subsubsection*{Caller-verified}
 None
 
 \subsection*{Pseudocode}
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_geometric_buffer.py}
 
 \subsection*{Postcondition}
+\begin{theorem}
 For any setting of the input arguments, \texttt{sample\_geometric\_buffer} either
 raises an exception if there is insufficient system entropy, 
 or returns \texttt{sample} where \texttt{sample} is drawn from a discrete distribution.
@@ -24,6 +29,7 @@ or returns \texttt{sample} where \texttt{sample} is drawn from a discrete distri
 \texttt{sample} is either 
 \texttt{geo} where \texttt{geo} is a sample from the $Geometric(p=0.5)$ distribution, and is less than $buffer\_len * 8$, or
 \texttt{None} with probability $2^{-buffer\_len * 8}$.
+\end{theorem}
 
 \begin{proof}
     \texttt{sample\_geometric\_buffer} uses \rustdoc{traits/samplers/fn}{fill\_bytes} as a subroutine to generate a buffer of $\texttt{buffer\_len}$ bytes.

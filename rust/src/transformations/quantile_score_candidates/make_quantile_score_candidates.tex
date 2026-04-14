@@ -153,20 +153,26 @@ while still leaving enough room for datasets on the order of $10^{15}$ elements.
 
 \section{Hoare Triple}
 \subsection*{Precondition}
+\subsubsection*{Compiler-verified}
 \begin{itemize}
     \item \texttt{MI} is a type with trait \rustdoc{transformations/trait}{UnboundedMetric}.
     \item \texttt{TIA} (input atom type) is a type with trait \rustdoc{traits/trait}{Number}.
 \end{itemize}
 
-\subsection*{Function}
+\subsubsection*{Caller-verified}
+None
+
+\subsection*{Pseudocode}
 \label{sec:python-pseudocode}
 \lstinputlisting[language=Python,firstline=2]{./pseudocode/make_quantile_score_candidates.py}
 
 
 \subsection*{Postcondition}
+\begin{theorem}
 \validTransformation
     {(\texttt{input\_domain, input\_metric, candidates, alpha, MI, TIA})}
     {\texttt{make\_quantile\_\\score\_candidates}}
+\end{theorem}
 
 
 \begin{proof}[Proof of Appropriate Output Domain]

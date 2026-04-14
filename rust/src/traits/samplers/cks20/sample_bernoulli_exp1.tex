@@ -12,29 +12,29 @@ Proves soundness of \texttt{fn sample\_bernoulli\_exp1} in \asOfCommit{mod.rs}{0
 \texttt{fn sample\_bernoulli\_exp1} returns a sample from the $Bernoulli(exp(-x))$ distribution for some rational argument in $[0, 1]$.
 This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.5.1}{subsection 5.1} of \cite{CKS20}.
 
-\subsection*{Vetting History}
-\begin{itemize}
-    \item \vettingPR{519}
-\end{itemize}
-
 \section{Hoare Triple}
-\subsection*{Preconditions}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
 \begin{itemize}
-    \item $\texttt{x}$ is of type $\texttt{Rational}$ and $x \in [0, 1]$
-    \item \rustdoc{traits/samplers/bernoulli/trait}{SampleBernoulli} is implemented for $\texttt{Rational}$ probabilities
+    \item $\texttt{x}$ is of type $\texttt{Rational}$.
+    \item \rustdoc{traits/samplers/bernoulli/trait}{SampleBernoulli} is implemented for $\texttt{Rational}$ probabilities.
 \end{itemize}
 
+\subsubsection*{Caller-verified}
+\begin{itemize}
+    \item $x \in [0, 1]$.
+\end{itemize}
 
 \subsection*{Pseudocode}        
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_bernoulli_exp1.py}
 
 \subsection*{Postcondition}
+\begin{theorem}
 \label{postcondition}
 For any setting of the input parameter \texttt{x} such that the given preconditions hold, \\
 \texttt{sample\_bernoulli\_exp1} either returns \texttt{Err(e)} due to a lack of system entropy,
 or \texttt{Ok(out)}, where \texttt{out} is distributed as $Bernoulli(exp(-x))$.
-
-\section{Proof}
+\end{theorem}
 Assume the preconditions are met.
 
 \begin{lemma}

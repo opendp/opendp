@@ -27,21 +27,23 @@ The measurement function makes mitigations against timing channels if \texttt{co
 
 \section{Hoare Triple}
 
-\subsection*{Preconditions}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
 \begin{itemize}
     \item Variable \texttt{prob} must be of type \texttt{f64}
     \item Variable \texttt{constant\_time} must be of type \texttt{bool}
 \end{itemize}
 
+\subsubsection*{Caller-verified}
+None
+
 \subsection*{Pseudocode}
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_randomized_response_bool.py}
 
 \subsection*{Postcondition}
-
+\begin{theorem}
 \validMeasurement{\texttt{(prob, constant\_time)}}{\\ \texttt{make\_randomized\_response\_bool}}
-
-\section{Proof}
-
+\end{theorem}
 \begin{proof} 
 \textbf{(Privacy guarantee.)} 
 

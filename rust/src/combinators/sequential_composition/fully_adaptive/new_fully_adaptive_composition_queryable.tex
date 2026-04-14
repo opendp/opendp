@@ -24,14 +24,14 @@ Types matching those in the pseudocode.
     \item \texttt{(DI, MI)} implements \rustdoc{core/trait}{MetricSpace}.
 \end{itemize}
 
-\subsubsection*{User-verified}
+\subsubsection*{Caller-verified}
 \texttt{data} is a member of \texttt{input\_domain}.
 
 
 \subsection*{Pseudocode}
 \lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/new_fully_adaptive_composition_queryable.py}
 
-\subsubsection*{Postconditions}
+\subsection*{Postcondition}
 \begin{theorem}
     \validOdometerQueryable{\texttt{(input\_domain, input\_metric, output\_measure, data, DI, MI, MO, TO)}}{\texttt{new\_fully\_adaptive\_composition\_queryable}}
 \end{theorem}

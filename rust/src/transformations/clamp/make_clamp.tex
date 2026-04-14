@@ -12,28 +12,24 @@
 \contrib
 Proves soundness of \texttt{fn make\_clamp} in \asOfCommit{mod.rs}{0db9c6036}.
 
-\subsection*{Vetting History}
-\begin{itemize}
-    \item \vettingPR{512}
-\end{itemize}
-
 \section{Hoare Triple}
 \subsection*{Precondition}
-To ensure the correctness of the output, we require the following preconditions:
-
+\subsubsection*{Compiler-verified}
 \begin{itemize}
     \item Type \texttt{TA} must have trait \texttt{ProductOrd}.
     \item Type \texttt{M} must have trait \texttt{DatasetMetric}.
 \end{itemize}
 
+\subsubsection*{Caller-verified}
+None
+
 \subsection*{Pseudocode}
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_clamp.py}
 
-\subsubsection*{Postconditions}
+\subsection*{Postcondition}
+\begin{theorem}
 \validTransformation{\texttt{(input\_domain, input\_metric, bounds)}}{\texttt{make\_clamp}}
-
-\section{Proof}
-
+\end{theorem}
 \begin{lemma}
     The invocation of \rustdoc{transformations/manipulation/fn}{make\_row\_by\_row\_fallible} (line \ref{line:row-by-row}) satisfies its preconditions.
 \end{lemma}

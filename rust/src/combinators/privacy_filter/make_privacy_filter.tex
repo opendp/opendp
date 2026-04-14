@@ -27,14 +27,16 @@ Proves soundness of \texttt{fn make\_privacy\_filter}.
     \item \texttt{(DI, MI)} implements \rustdoc{core/trait}{MetricSpace}.
 \end{itemize}
 
-\subsubsection*{User-verified}
+\subsubsection*{Caller-verified}
 None
 
 \subsection*{Pseudocode}
 \lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/make_privacy_filter.py}
 
-\subsubsection*{Postcondition}
+\subsection*{Postcondition}
+\begin{theorem}
 \validOdometer{\texttt{(odometer, d\_out, DI, MI, MO, Q, A)}}{\texttt{make\_privacy\_filter}}
+\end{theorem}
 
 \begin{proof}[Proof of data-independent errors]
     \rustdoc{core/struct}{Function}\texttt{.eval} on line \ref{eval} has data-independent exceptions,

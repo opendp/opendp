@@ -11,25 +11,28 @@
 Proves soundness of \texttt{fn sample\_geometric\_exp\_fast} in \asOfCommit{mod.rs}{0be3ab3e6}.
 This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2}{subsection 5.2} of \cite{CKS20}.
 
-\subsection*{Vetting history}
-\begin{itemize}
-    \item \vettingPR{519}
-\end{itemize}
-
 \section{Hoare Triple}
 \subsection*{Precondition}
-$\texttt{x} \in \mathbb{Q} \land \texttt{x} > 0$
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item \texttt{x} is of type \texttt{Rational}.
+\end{itemize}
+
+\subsubsection*{Caller-verified}
+\begin{itemize}
+    \item $\texttt{x} > 0$.
+\end{itemize}
 
 \subsection*{Pseudocode}        
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_geometric_exp_fast.py}
 
 \subsection*{Postcondition}
+\begin{theorem}
 \label{postcondition}
 For any setting of the input parameter \texttt{x} such that the given preconditions hold, \\
 \texttt{sample\_geometric\_exp\_fast} either returns \texttt{Err(e)} due to a lack of system entropy,
 or \texttt{Ok(out)}, where \texttt{out} is distributed as $Geometric(1 - exp(-x))$.
-
-\section{Proof}
+\end{theorem}
 Assume the preconditions are met.
 
 \begin{lemma}\label{err-e}

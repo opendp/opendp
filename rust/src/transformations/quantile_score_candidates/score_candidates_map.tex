@@ -15,9 +15,15 @@ in \asOfCommit{mod.rs}{f5bb719}.
 
 \section{Hoare Triple}
 \subsection*{Precondition}
-$\texttt{alpha\_den} > \texttt{alpha\_num}$.
+\subsubsection*{Compiler-verified}
+None
 
-\subsection*{Function}
+\subsubsection*{Caller-verified}
+\begin{itemize}
+    \item $\texttt{alpha\_den} > \texttt{alpha\_num}$.
+\end{itemize}
+
+\subsection*{Pseudocode}
 \label{sec:python-pseudocode}
 \lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/score_candidates_map.py}
 

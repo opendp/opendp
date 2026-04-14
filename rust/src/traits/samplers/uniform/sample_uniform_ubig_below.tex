@@ -20,27 +20,28 @@ but this time the bit depth is dynamically chosen to fill the last byte of a ser
 \end{itemize}
 
 \section{Hoare Triple}
-\subsection*{Preconditions}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
 \begin{itemize}
-    \item \textbf{Arguments}
-    \begin{itemize}
-        \item \texttt{upper} of type \texttt{UBig}
-    \end{itemize}
+    \item \texttt{upper} is of type \texttt{UBig}.
 \end{itemize}
+
+\subsubsection*{Caller-verified}
+None
 
 \subsection*{Pseudocode}
 
 \lstinputlisting[language=Python,firstline=2]{./pseudocode/sample_uniform_ubig_below.py}
 
 \subsection*{Postcondition}
+\begin{theorem}
 For any setting of the input parameter \texttt{upper},
 \texttt{sample\_uniform\_ubig\_below} either
 \begin{itemize}
     \item raises an exception if there is a lack of system entropy,
     \item returns \texttt{out} where \texttt{out} is uniformly distributed between $[0, upper)$.
 \end{itemize}
-
-\section{Proof}
+\end{theorem}
 \begin{proof}
 \texttt{byte\_len} is the fewest number of bytes necessary to represent \texttt{upper}, 
 which works out to $\mathrm{ceil}(\mathrm{ceil}(\log_2(\texttt{upper})) / 8)$.
@@ -65,7 +66,6 @@ then $\texttt{threshold} = \texttt{max} - (\texttt{max} \mod \texttt{upper})$.
 \end{proof}
 
 \end{document}
-
 
 
 

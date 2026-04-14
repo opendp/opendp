@@ -21,7 +21,7 @@ The clamping is done by saturating the cast of the sampled value to the native i
 
 \section{Hoare Triple}
 \subsection*{Precondition}
-\subsubsection*{Compiler-Verified}
+\subsubsection*{Compiler-verified}
 
 \begin{itemize}
     \item Generic \texttt{T} implements trait \rustdoc{traits/trait}{Integer} and \rustdoc{traits/trait}{SaturatingCast}\texttt{<IBig>}
@@ -37,7 +37,7 @@ The clamping is done by saturating the cast of the sampled value to the native i
         This bound requires that it must be possible to construct a privacy map for this combination of noise distribution, distance type and privacy measure.
 \end{itemize}
 
-\subsubsection*{User-Verified}
+\subsubsection*{Caller-verified}
 None
 
 \subsection*{Pseudocode}
