@@ -41,7 +41,12 @@ def test_data_object_list():
     val_in = [1, 2, 3]
     obj = py_to_c(val_in, c_type=AnyObjectPtr)
     val_out = c_to_py(obj)
-    assert val_out == val_in
+    np = import_optional_dependency('numpy', raise_error=False)
+    if np is not None:
+        assert isinstance(val_out, np.ndarray)
+        assert np.array_equal(val_out, np.array(val_in, dtype=np.int32))
+    else:
+        assert val_out == val_in
 
 
 def test_data_object_tuple():
@@ -115,14 +120,20 @@ def test_hashmap():
 
 def test_numpy_data():
     np = pytest.importorskip('numpy')
-    def roundtrip(value, type_name, dtype=None):
+    def roundtrip_vector(value, type_name, dtype):
+        result = c_to_py(py_to_c(np.array(value, dtype=dtype), AnyObjectPtr, type_name=type_name))
+        assert isinstance(result, np.ndarray)
+        assert np.array_equal(result, np.array(value, dtype=dtype))
+
+    def roundtrip_scalar(value, type_name, dtype=None):
         assert value == c_to_py(py_to_c(np.array(value, dtype=dtype), AnyObjectPtr, type_name=type_name))
-    roundtrip([1, 2], "Vec<i32>", dtype=np.int32)
-    roundtrip(1, "i32", dtype=np.int32)
-    roundtrip([1., 2.], "Vec<f64>")
-    roundtrip(1., "f64")
-    roundtrip(["A", "B"], "Vec<String>")
-    roundtrip("A", "String")
+
+    roundtrip_vector([1, 2], "Vec<i32>", np.int32)
+    roundtrip_scalar(1, "i32", dtype=np.int32)
+    roundtrip_vector([1., 2.], "Vec<f64>", np.float64)
+    roundtrip_scalar(1., "f64")
+    assert c_to_py(py_to_c(np.array(["A", "B"]), AnyObjectPtr, type_name="Vec<String>")) == ["A", "B"]
+    roundtrip_scalar("A", "String")
 
 
 def test_numpy_trans():
@@ -132,6 +143,20 @@ def test_numpy_trans():
         dp.vector_domain(dp.atom_domain(bounds=(0, 10))), 
         dp.symmetric_distance(),
     )(np.array([1, 2, 3], dtype=np.int32)) == 6
+
+
+def test_numpy_vector_output_from_rust_transformation():
+    np = pytest.importorskip('numpy')
+    import opendp.prelude as dp
+
+    result = dp.t.make_clamp(
+        dp.vector_domain(dp.atom_domain(T=int)),
+        dp.symmetric_distance(),
+        bounds=(0, 10),
+    )(np.array([-1, 2, 11], dtype=np.int32))
+
+    assert isinstance(result, np.ndarray)
+    assert np.array_equal(result, np.array([0, 2, 10], dtype=np.int32))
 
 
 def test_overflow():
@@ -211,4 +236,3 @@ def test_bitvec():
         val_out = np.frombuffer(c_to_py(obj), dtype=np.uint8)
         bits = np.unpackbits(val_out)
         assert (bits.tolist() + [0]).index(0) == i
-

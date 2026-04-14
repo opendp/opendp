@@ -43,6 +43,31 @@ def test_make_custom_transformation_error():
         make_duplicate(2, raises=True)([1, 2, 3])
 
 
+def test_numpy_user_transformation_roundtrip():
+    np = pytest.importorskip("numpy")
+
+    seen = {}
+
+    def function(arg):
+        seen["input_is_ndarray"] = isinstance(arg, np.ndarray)
+        return arg + 1
+
+    trans = dp.t.make_user_transformation(
+        dp.vector_domain(dp.atom_domain(T=int)),
+        dp.symmetric_distance(),
+        dp.vector_domain(dp.atom_domain(T=int)),
+        dp.symmetric_distance(),
+        function,
+        lambda d_in: d_in,
+    )
+
+    result = trans(np.array([1, 2, 3], dtype=np.int32))
+
+    assert seen["input_is_ndarray"]
+    assert isinstance(result, np.ndarray)
+    assert np.array_equal(result, np.array([2, 3, 4], dtype=np.int32))
+
+
 def make_constant_mechanism(constant):
     """An example user-defined measurement from Python"""
     def function(_arg):
@@ -79,6 +104,8 @@ def test_make_user_postprocessor():
 
 
 def test_user_constructors():
+    np = pytest.importorskip("numpy")
+
     trans = dp.t.make_user_transformation(
         dp.atom_domain((2, 10)),
         dp.symmetric_distance(),
@@ -87,7 +114,7 @@ def test_user_constructors():
         lambda x: [x] * 10,
         lambda d_in: d_in * 10
     )
-    assert trans(2) == [2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+    assert np.array_equal(trans(2), np.repeat(2, 10))
     assert trans.map(1) == 10
 
     meas = dp.m.make_user_measurement(
@@ -99,7 +126,7 @@ def test_user_constructors():
         TO=dp.Vec[int],
     )
 
-    assert meas(2) == [2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+    assert np.array_equal(meas(2), np.repeat(2, 10))
     assert meas.map(1) == 10
 
     assert (meas >> (lambda x: x[0]))(2) == 2

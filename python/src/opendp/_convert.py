@@ -1,4 +1,4 @@
-from typing import Sequence, Union, cast, MutableMapping
+from typing import Any, Sequence, Union, cast, MutableMapping
 from inspect import signature
 
 from opendp._lib import *
@@ -43,6 +43,40 @@ ATOM_MAP = {
     'AnyMeasurementPtr': Measurement,
     'AnyTransformationPtr': Transformation,
 }
+
+_NP: Any = import_optional_dependency('numpy', raise_error=False)
+_NUMPY_COMPATIBLE_ATOM_TYPES = frozenset(ATOM_MAP) - {'AnyMeasurementPtr', 'AnyTransformationPtr'}
+
+
+def _numpy_dtype_for_rust_type(type_name: str) -> Any | None:
+    if _NP is None or type_name not in _NUMPY_COMPATIBLE_ATOM_TYPES:
+        return None
+    return _NP.dtype(ATOM_MAP[type_name])
+
+
+def _vector_to_slice_from_numpy(val, inner_type_name: str) -> FfiSlicePtr | None:
+    np_dtype = _numpy_dtype_for_rust_type(inner_type_name)
+    if _NP is None or np_dtype is None or not isinstance(val, _NP.ndarray):
+        return None
+
+    if val.ndim != 1 or val.dtype != _NP.dtype(np_dtype):
+        return None
+
+    contiguous = _NP.ascontiguousarray(val)
+    array = _NP.ctypeslib.as_ctypes(contiguous)
+    ffi_slice = _wrap_in_slice(array, len(contiguous))
+    ffi_slice.depends_on(contiguous, array)
+    return ffi_slice
+
+
+def _slice_to_numpy_vector(raw: FfiSlicePtr, inner_type_name: str):
+    np_dtype = _numpy_dtype_for_rust_type(inner_type_name)
+    if _NP is None or np_dtype is None:
+        return None
+
+    array_ptr: Any = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))
+    return _NP.ctypeslib.as_array(array_ptr, shape=(raw.contents.len,)).copy()
+
 
 def c_int_limits(type_name):
     c_int_type = ATOM_MAP[type_name]
@@ -175,6 +209,7 @@ def c_to_py(value: Any) -> Any:
         from opendp._data import object_type, object_as_slice, slice_free
 
         obj_type = object_type(value)
+        obj_rt_type = RuntimeType.parse(obj_type)
 
         if obj_type == PrivacyProfile.__name__:
             return PrivacyProfile(value)
@@ -196,7 +231,7 @@ def c_to_py(value: Any) -> Any:
 
         ffi_slice = object_as_slice(value)
         try:
-            return _slice_to_py(ffi_slice, RuntimeType.parse(obj_type))
+            return _slice_to_py(ffi_slice, obj_rt_type)
         finally:
             slice_free(ffi_slice)
 
@@ -457,7 +492,11 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
         raise ValueError("type_name must be a Vec<_>")  # pragma: no cover
 
     inner_type_name = type_name.args[0]
-    # TODO: can we use underlying numpy buffers directly?
+    if isinstance(inner_type_name, str):
+        ffi_slice = _vector_to_slice_from_numpy(val, inner_type_name)
+        if ffi_slice is not None:
+            return ffi_slice
+
     if not isinstance(val, list):
         try:
             val = list(val)
@@ -529,6 +568,9 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> Sequence[Any]:
         return list(map(lambda v: v.decode(), array))
 
     assert isinstance(inner_type_name, str), f"inner type must be string, found {inner_type_name} of type {type(inner_type_name)}"
+    np_array = _slice_to_numpy_vector(raw, inner_type_name)
+    if np_array is not None:
+        return np_array
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))[0:raw.contents.len]
 
 
