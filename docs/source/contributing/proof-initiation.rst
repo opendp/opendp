@@ -97,7 +97,7 @@ Here’s a template for ``absolute_distance.tex``:
    \input{../lib.sty} % "rust/src/lib.sty" contains boilerplate and macros
 
    \title{\texttt{fn absolute\_distance}}
-   \author{Your Name(s) Here}\date{}
+   \author{\YourNameAuthor}\date{}
 
    \begin{document}
    \maketitle\contrib
@@ -121,6 +121,12 @@ This template uses several macros defined in ``rust/src/lib.sty``:
 
 -  ``\contrib`` adds a header to the document indicating the proof is in
    ``"contrib"``.
+
+-  ``\YourNameAuthor`` and similar macros expand to an author's
+   name and GitHub handle together. Use these in ``\author{...}`` so
+   author formatting stays consistent across proofs. If your name is not
+   listed in ``rust/src/lib.sty``, add a new macro there via
+   ``\proofAuthor{name}{github-handle}``.
 
 -  ``\rustdoc{path/to/fn}{ident}`` creates a link to the rust
    documentation for the function we are proving. When you build the

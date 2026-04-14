@@ -31,8 +31,6 @@
 \newcommand{\contrib}{{\begin{warn_box}This proof resides in \textbf{``contrib''} because it has not completed the vetting process.\end{warn_box}}} 
 \newcommand{\honestButCurious}{{\begin{warn_box}This proof relies on caller-verified preconditions, so the corresponding API belongs behind the \textbf{``honest-but-curious''} feature flag.\end{warn_box}}}
 \newcommand{\idealizedNumerics}{{\begin{warn_box}This proof relies on an idealized model of numeric computation that ignores finite-machine limitations such as non-closure and overflow, so the corresponding API belongs behind the \textbf{``idealized-numerics''} feature flag.\end{warn_box}}}
-% Deprecated alias. Prefer \idealizedNumerics.
-\newcommand{\floatingPoint}{\idealizedNumerics}
 
 % asOfCommit macro to version a code dependency. Arguments:
 %    #1: relative path to file you are dependent on
@@ -135,9 +133,24 @@
 \newtheorem{observation}{Observation}
 \newtheorem{note}{Note}
 
-\newcommand{\vicki}[1]{{ {\color{olive}{(vicki)~#1}}}}
-\newcommand{\hanwen}[1]{{ {\color{purple}{(hanwen)~#1}}}}
-\newcommand{\zach}[1]{{ {\color{red}{(zach)~#1}}}}
+\newcommand{\proofAuthor}[2]{%
+  #1%
+  \if\relax\detokenize{#2}\relax\else\ {\small(\href{https://github.com/#2}{\texttt{@#2}})}\fi%
+}
+\newcommand{\AbigailGentleAuthor}{\proofAuthor{Abigail Gentle}{abigail-gentle}}
+\newcommand{\AishwaryaRamasethuAuthor}{\proofAuthor{Aishwarya Ramasethu}{aramasethu}}
+\newcommand{\ChristianCovingtonAuthor}{\proofAuthor{Christian Covington}{ctcovington}}
+\newcommand{\ConnorWagamanAuthor}{\proofAuthor{Connor Wagaman}{cwagaman}}
+\newcommand{\GraceTianAuthor}{\proofAuthor{Grace Tian}{gracetian6}}
+\newcommand{\HanwenZhangAuthor}{\proofAuthor{Hanwen Zhang}{}}
+\newcommand{\IraGlobusHarrusAuthor}{\proofAuthor{Ira Globus-Harrus}{globusharris}}
+\newcommand{\JordanAwanAuthor}{\proofAuthor{Jordan Awan}{}}
+\newcommand{\MichaelShoemateAuthor}{\proofAuthor{Michael Shoemate}{Shoeboxam}}
+\newcommand{\SilviaCasacubertaAuthor}{\proofAuthor{S\'ilvia Casacuberta}{silviacasac}}
+\newcommand{\TudorCebereAuthor}{\proofAuthor{Tudor Cebere}{tudorcebere}}
+\newcommand{\VickiXuAuthor}{\proofAuthor{Vicki Xu}{matchaginseng}}
+\newcommand{\YuJuKuAuthor}{\proofAuthor{Yu-Ju Ku}{yuju1998}}
+\newcommand{\ZacharyRatliffAuthor}{\proofAuthor{Zachary Ratliff}{zachratliff}}
 
 \newcommand{\MultiSet}{\mathrm{MultiSet}}
 \newcommand{\len}{\mathrm{len}}
