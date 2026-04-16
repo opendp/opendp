@@ -8,6 +8,10 @@ fn main() {
     println!("cargo:rerun-if-changed=Cargo.toml");
     println!("cargo:rerun-if-changed=Cargo.lock");
 
+    // We need to be able to build against two different Polars versions:
+    // 1. Polars on Crates.io, tied to a Rust crate release
+    // 2. Polars on PyPI, tied to a specific commit hash via a patch
+    // Local builds are always variant 1, which is convenient because it allows Python interchange.
     autocfg::emit_possibility("patch_polars");
 
     let polars = std::env::var_os("CARGO_FEATURE_POLARS").is_some();
