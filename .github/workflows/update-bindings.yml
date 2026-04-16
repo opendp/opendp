@@ -46,7 +46,7 @@ jobs:
           path: R/opendp/
 
       - name: Drop R release tarballs from tracked history
-        run: rm -f R/opendp/src/vendor.tar.xz R/opendp/src/source.tar.xz R/opendp/src/binary.tar.xz
+        run: rm -f R/opendp/src/*.tar.xz
       
       - name: Push changes
         run: |
