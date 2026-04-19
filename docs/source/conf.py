@@ -5,6 +5,8 @@ import os
 from datetime import datetime
 import semver
 import pypandoc
+import re
+import subprocess
 from sphinx.ext import autodoc
 
 # docs should be built without needing import the library binary for the specified version
@@ -188,8 +190,45 @@ html_context = {
 }
 
 # SPHINX-MULTIVERSION STUFF
+def _list_release_tags():
+    return subprocess.check_output(["git", "tag", "--list", "v*"], text=True).splitlines()
+
+
+# With a quarterly release cadence (not counting patches),
+# this will generate API docs just for the past year.
+def _select_recent_release_tags(tags):
+    """
+    Return a regex matching the latest patch release from the most recent release lines.
+
+    >>> _select_recent_release_tags(
+    ...     ["v0.11.0", "v0.11.1", "v0.12.0", "v0.12.0-rc.1", "not-a-tag"],
+    ...     number_to_keep=2,
+    ... )
+    '^(v0\\\\.11\\\\.1|v0\\\\.12\\\\.0)$'
+    """
+    # assuming quarterly release cadence
+    number_to_keep = 8
+    
+    latest_patch_for_major_minor = {}
+    for tag in tags:
+        match = re.fullmatch(r"v(\d+)\.(\d+)\.(\d+)", tag)
+        if match is None:
+            continue
+        major, minor, patch = map(int, match.groups())
+        major_minor = (major, minor)
+        current = latest_patch_for_major_minor.get(major_minor)
+        if current is None or patch > current[0]:
+            latest_patch_for_major_minor[major_minor] = (patch, tag)
+
+    selected_major_minors = sorted(latest_patch_for_major_minor, reverse=True)[:number_to_keep]
+    selected_tags = sorted(
+        latest_patch_for_major_minor[major_minor][1] for major_minor in selected_major_minors
+    )
+    return r"^(%s)$" % "|".join(re.escape(tag) for tag in selected_tags)
+
+
 # Whitelist pattern for tags (set to None to ignore all tags)
-smv_tag_whitelist = r'^v.*$'
+smv_tag_whitelist = _select_recent_release_tags(_list_release_tags())
 # # keep all released versions, as well as prereleases for the stable version. Doesn't work, because version != stable
 # import re
 # smv_tag_whitelist = rf'(^v\d+\.\d+\.\d+$)|(^v{re.escape(version.split("-")[0])}.+$)'
