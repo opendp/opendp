@@ -12,6 +12,7 @@ from dataclasses import asdict
 from typing import Any, Literal, Sequence, Type, TypeVar, Union, Callable, Optional, overload, TYPE_CHECKING, cast
 import importlib
 import json
+import warnings
 
 from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, AnyOdometer, import_optional_dependency, get_opendp_version
 
@@ -1241,26 +1242,43 @@ class OpenDPException(Exception):
 
 
 GLOBAL_FEATURES: set[str] = set()
+def _normalize_features(features: Sequence[str], *, stacklevel: int) -> tuple[str, ...]:
+    normalized = []
+
+    for feature in features:
+        if feature != "floating-point":
+            normalized.append(feature)
+            continue
+
+        normalized.append("idealized-numerics")
+        warnings.warn(
+            '"floating-point" is deprecated. Use "idealized-numerics" instead.',
+            DeprecationWarning,
+            stacklevel=stacklevel,
+        )
+
+    return tuple(normalized)
 
 
 def enable_features(*features: str) -> None:
     '''
     Allow the use of optional features. See :ref:`feature-listing` for details.
     '''
-    GLOBAL_FEATURES.update(set(features))
+    GLOBAL_FEATURES.update(set(_normalize_features(features, stacklevel=3)))
 
 
 def disable_features(*features: str) -> None:
     '''
     Disallow the use of optional features. See :ref:`feature-listing` for details.
     '''
-    GLOBAL_FEATURES.difference_update(set(features))
+    GLOBAL_FEATURES.difference_update(set(_normalize_features(features, stacklevel=3)))
 
 
 def assert_features(*features: str) -> None:
     '''
     Check whether a given feature is enabled. See :ref:`feature-listing` for details.
     '''
+    features = _normalize_features(features, stacklevel=3)
     missing_features = [f for f in features if f not in GLOBAL_FEATURES]
     if missing_features:
         features_string = ', '.join(f'"{f}"' for f in features)

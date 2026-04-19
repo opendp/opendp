@@ -147,7 +147,7 @@ proof:
    an idealized numeric model that ignores finite-machine limitations
    such as non-closure and overflow. Use this when the proof holds in
    idealized numerics but the implementation is not privately sound on
-   finite computers. ``\floatingPoint`` is a deprecated alias.
+   finite computers.
 
 -  ``\YourNameAuthor`` and similar macros expand to an author's
    name and GitHub handle together. Use these in ``\author{...}`` so
