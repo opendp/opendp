@@ -60,8 +60,8 @@ polars-expr = { version = "=0.52.0", features = ["json"], optional = true }
 polars-plan = { version = "=0.52.0", optional = true }
 polars-utils = { version = "=0.52.0", optional = true }
 polars-arrow = { version = "=0.52.0", optional = true }
-pyo3-polars = { version = "*", features = ["derive", "dtype-array", "dtype-categorical", "dtype-struct", "lazy"], optional = true }
-pyo3 = { version = "*", features = ["abi3-py310"], optional = true }
+pyo3-polars = { version = "=0.25.0", features = ["derive", "dtype-array", "dtype-categorical", "dtype-struct", "lazy"], optional = true }
+pyo3 = { version = "=0.26.0", features = ["abi3-py310"], optional = true }
 
 # matches the version specified in Polars: 
 #   https://github.com/pola-rs/polars/blob/main/Cargo.toml
@@ -72,11 +72,12 @@ serde-pickle = { version = "1.1", optional = true }
 lazy_static = { version = "1.4.0", optional = true }
 
 [build-dependencies]
+autocfg = "1.4"
 opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.14.2-dev" }
 syn = { workspace = true, optional = true }
 proc-macro2 = { workspace = true, optional = true }
 cbindgen = { version = "0.28.0", optional = true }
-pyo3-build-config = { version = "*", features = ["resolve-config"], optional = true }
+pyo3-build-config = { version = "=0.26.0", features = ["resolve-config"], optional = true }
 
 [patch.crates-io]
 # When building locally, orient the package to python compatibility via patches.
