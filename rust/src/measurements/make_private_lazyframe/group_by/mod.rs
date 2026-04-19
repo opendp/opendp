@@ -1,6 +1,8 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use opendp_derive::proven;
+
 use crate::accuracy::{
     conservative_discrete_gaussian_tail_to_alpha, conservative_discrete_laplacian_tail_to_alpha,
 };
@@ -28,6 +30,7 @@ mod matching;
 pub(crate) use matching::{KeySanitizer, MatchGroupBy, is_threshold_predicate, match_group_by};
 use polars_plan::prelude::ProjectionOptions;
 
+#[proven]
 /// Create a private version of an aggregate operation on a LazyFrame.
 ///
 /// # Arguments

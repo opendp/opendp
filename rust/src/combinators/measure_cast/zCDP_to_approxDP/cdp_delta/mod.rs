@@ -45,6 +45,7 @@
 use std::ops::Neg;
 
 use num::Zero;
+use opendp_derive::proven;
 
 use crate::{
     error::Fallible,
@@ -54,6 +55,7 @@ use crate::{
 #[cfg(test)]
 pub(crate) mod test;
 
+#[proven]
 /// # Proof Definition
 ///
 /// For any possible setting of $\rho$ and $\epsilon$, $\texttt{cdp\_delta}$ either returns an error,
