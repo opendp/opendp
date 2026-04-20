@@ -2,7 +2,7 @@
 \input{../../../lib.sty} 
  
 \title{\texttt{fn sample\_uniform\_ubig\_below}} 
-\author{Michael Shoemate} 
+\author{\MichaelShoemateAuthor} 
  
 \begin{document} 
 \maketitle 
@@ -13,31 +13,32 @@ This algorithm uses the same algorithm and argument as used for unsigned native 
 but this time the bit depth is dynamically chosen to fill the last byte of a series of bytes long enough to hold \texttt{upper}. 
  
 \section{Hoare Triple} 
-\subsection*{Preconditions} 
- 
+\subsection*{Precondition} 
 \subsubsection*{Compiler-verified} 
-Argument \texttt{upper} is of type \texttt{UBig}, a bignum 
- 
+\texttt{upper} of type \texttt{UBig} 
+
 \subsubsection*{Caller-verified} 
-$\texttt{upper} \neq 0$ 
+$\texttt{upper} > 0$
  
 \subsection*{Pseudocode} 
  
 \lstinputlisting[language=Python,firstline=2]{./pseudocode/sample_uniform_ubig_below.py} 
  
 \subsection*{Postcondition} 
+\begin{theorem}
+For any setting of the input parameter \texttt{upper} that satisfies the precondition, 
 \texttt{sample\_uniform\_ubig\_below} either 
 \begin{itemize} 
     \item raises an exception if there is a lack of system entropy, 
     \item returns \texttt{out} where \texttt{out} is uniformly distributed between $[0, upper)$. 
 \end{itemize} 
+\end{theorem}
  
-\section{Proof} 
 \begin{proof} 
 \texttt{byte\_len} is the fewest number of bytes necessary to represent \texttt{upper},  
 which works out to $\mathrm{ceil}(\mathrm{ceil}(\log_2(\texttt{upper})) / 8)$. 
-Let \texttt{max} denote the largest integer representable in this many bytes ($2^{(\texttt{byte\_len} \cdot 8)} - 1$). 
-Let \texttt{sample} be a uniform sample between $[0, \texttt{max}]$ by flipping $\texttt{byte\_len} \cdot 8$ even coins. 
+Let \texttt{range} denote the size of the sample space in this many bytes ($2^{(\texttt{byte\_len} \cdot 8)}$). 
+Let \texttt{sample} be a uniform sample between $[0, \texttt{range})$ by flipping $\texttt{byte\_len} \cdot 8$ even coins. 
  
 You could then (naively) update the range of \texttt{sample} to $[0, \texttt{upper})$ by rejecting any \texttt{sample} greater than or equal to \texttt{upper}. 
 To reduce the probability of rejection (and improve computational performance),  
@@ -45,19 +46,19 @@ partition the numbers into two sets:\
  
 \begin{itemize} 
     \item the leading $\texttt{upper} \cdot k = \texttt{threshold}$ numbers that wrap evenly modulo \texttt{upper} 
-    \item the remaining trailing $(\texttt{max} \mod \texttt{upper})$ numbers 
+    \item the remaining trailing $(\texttt{range} \mod \texttt{upper})$ numbers 
 \end{itemize} 
  
 It is equivalent to only reject trailing numbers, 
 and return the sample modulo \texttt{upper}. 
-Since $\texttt{max} = \texttt{threshold} + (\texttt{max} \mod \texttt{upper})$, 
-then $\texttt{threshold} = \texttt{max} - (\texttt{max} \mod \texttt{upper})$. 
+Since $\texttt{range} = \texttt{threshold} + (\texttt{range} \mod \texttt{upper})$, 
+then $\texttt{threshold} = \texttt{range} - (\texttt{range} \mod \texttt{upper})$. 
  
-\noindent Therefore, for any value of \texttt{upper}, the function satisfies the postcondition. 
+\noindent Therefore, for any positive value of \texttt{upper}, the function satisfies the postcondition. 
 \end{proof} 
 
 For an intuitive understanding of the sampling approach, consider when \texttt{upper} is two.
-The naive approach would sample one byte, and then reject if the integer is not zero or one, 
+The naive approach would sample one byte, and then reject if the integer is not zero or one,
 with probability $\frac{2^8 - 2}{2^8} \approx .99$.
 Alternatively, two valid outcomes wrap $2^7$ times into $2^8$, with no trailing numbers.
 Never reject \texttt{sample} because there are no trailing numbers, and return $\texttt{sample} \mod 2$.

@@ -1,8 +1,8 @@
 # type: ignore 
 def sample_uniform_ubig_below(upper: UBig) -> UBig: 
     byte_len = upper.bit_len().div_ceil(8) 
-    max = Ubig.from_be_bytes([u8.MAX] * byte_len) 
-    threshold = max - max % upper 
+    range = 1 << (8 * byte_len) 
+    threshold = range - range % upper 
 
     buffer = [0] * byte_len 
     while True: 
