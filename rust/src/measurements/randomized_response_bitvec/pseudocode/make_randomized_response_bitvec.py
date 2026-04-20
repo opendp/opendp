@@ -21,8 +21,7 @@ def make_randomized_response_bitvec(
             raise ValueError("d_in must be 0 or 1.")
         return epsilon
     def function(arg: BitVector) -> BitVector: # |\label{line:fn}|
-        k = len(arg)
-        noise_vector = [bool.sample_bernoulli(f/2, constant_time) for _ in range(k)]
+        noise_vector = [bool.sample_bernoulli(f/2, constant_time) for _ in range(len(arg))]
         return xor(arg, noise_vector)
     
     return Measurement(input_domain, function, input_metric, output_measure, privacy_map)
