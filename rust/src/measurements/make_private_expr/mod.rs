@@ -69,6 +69,9 @@ pub(crate) mod expr_noisy_max;
 )]
 /// Create a differentially private measurement from an [`Expr`].
 ///
+/// # Citations
+/// * [Rogers23 A Unifying Privacy Analysis Framework for Unknown Domain Algorithms in Differential Privacy](https://arxiv.org/abs/2309.09170)
+///
 /// # Arguments
 /// * `input_domain` - The domain of the input data.
 /// * `input_metric` - How to measure distances between neighboring input data sets.

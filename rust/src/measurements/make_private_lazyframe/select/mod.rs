@@ -22,7 +22,7 @@ mod test;
 /// * `output_measure` - The measure of the output LazyFrame.
 /// * `plan` - The LazyFrame to transform.
 /// * `global_scale` - The parameter for the measurement.
-pub fn make_private_select<MI, MO>(
+pub(crate) fn make_private_select<MI, MO>(
     input_domain: DslPlanDomain,
     input_metric: FrameDistance<MI>,
     output_measure: MO,

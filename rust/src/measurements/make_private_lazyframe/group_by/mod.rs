@@ -40,7 +40,7 @@ use polars_plan::prelude::ProjectionOptions;
 /// * `plan` - The LazyFrame to transform.
 /// * `global_scale` - The parameter for the measurement.
 /// * `threshold` - Only keep groups with length greater than threshold
-pub fn make_private_group_by<MI, MO>(
+pub(crate) fn make_private_group_by<MI, MO>(
     input_domain: DslPlanDomain,
     input_metric: FrameDistance<MI>,
     output_measure: MO,
