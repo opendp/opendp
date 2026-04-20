@@ -2,63 +2,56 @@
 \input{../../../lib.sty} 
  
 \title{\texttt{fn sample\_uniform\_uint\_below}} 
-\author{Michael Shoemate} 
+\author{\MichaelShoemateAuthor} 
  
 \begin{document} 
 \maketitle 
  
-This document proves that the implementation of \rustdoc{traits/samplers/uniform/fn}{sample\_uniform\_uint\_below} in \asOfCommit{mod.rs}{f5bb719}  
+This document proves that the implementation of \rustdoc{traits/samplers/uniform/fn}{sample\_uniform\_uint\_below} in \asOfCommit{mod.rs}{f5bb719} 
 satisfies its definition. 
  
-\texttt{sample\_uniform\_uint\_below} uses rejection sampling.  
-In each round all bits of the integer are filled randomly, drawing an unsigned integer uniformly at random. 
-The algorithm returns the sample, modulo the upper bound, so long as the sample is not one of the final "div" largest integers. 
+\texttt{sample\_uniform\_uint\_below} uses rejection sampling. 
+In each round all bits of the integer are filled randomly, drawing an unsigned integer uniformly at random from a space of size $2^N$. 
+The algorithm returns the sample, modulo the upper bound, so long as the sample is not one of the first $2^N \mod \texttt{upper}$ integers. 
  
-\subsection{Hoare Triple} 
-\subsubsection*{Preconditions} 
+\section{Hoare Triple} 
+\subsection*{Precondition} 
  
-\textbf{Compiler-verified} 
+\subsubsection*{Compiler-verified} 
 \begin{itemize} 
     \item Generic \texttt{T} has traits \texttt{Integer + Unsigned + FromBytes<N>}. 
     \item Const-generic \texttt{N} of type usize. By the definition of \texttt{FromBytes}, the compiler ensures this is the number of bytes in T. 
     \item Argument \texttt{upper} must be of type \texttt{T} 
 \end{itemize} 
  
-\textbf{User-verified} 
-$\texttt{upper} \geq 0$ 
+\subsubsection*{Caller-verified} 
+$\texttt{upper} > 0$ 
  
-\subsubsection*{Pseudocode} 
+\subsection*{Pseudocode} 
  
 \lstinputlisting[language=Python,firstline=2]{./pseudocode/sample_uniform_uint_below.py} 
  
-\subsubsection*{Postcondition} 
-For any setting of the input parameter \texttt{upper}, 
+\subsection*{Postcondition} 
+For any setting of the input parameter \texttt{upper} that satisfies the precondition, 
 \texttt{sample\_uniform\_uint\_below} either 
 \begin{itemize} 
     \item raises an exception if there is a lack of system entropy, 
     \item returns \texttt{out} where \texttt{out} is uniformly distributed between $[0, upper)$. 
 \end{itemize} 
  
-\subsection{Proof} 
-\begin{proof}  
+\begin{proof} 
 \label{unsigned-integer-proof} 
 By the postcondition of \rustdoc{traits/samplers/uniform/fn}{sample\_from\_uniform\_bytes}, 
-then \texttt{sample} is a sample between zero and \texttt{T.MAX} inclusive, the greatest representable number of type \texttt{T}. 
+\texttt{sample} is drawn uniformly from the $2^N$ representable values of type \texttt{T}, namely $\{0, \ldots, \texttt{T.MAX}\}$. 
  
-You could sample one of \texttt{upper} values uniformly at random by rejecting \texttt{sample} if it is larger than \texttt{upper}. 
-That is, only return \texttt{sample} if \texttt{sample} is less than \texttt{upper}. 
+Let $r = 2^N \mod \texttt{upper}$. Since \texttt{upper} is positive by the preconditions, $r$ is well-defined and $\texttt{reject\_below} = r$. 
+The algorithm rejects exactly the first $r$ values and accepts the remaining $2^N - r$ values. 
+This is equivalent to the more familiar presentation that accepts the first $2^N - r$ values and rejects the final $r$ values, because both acceptance regions have the same size and therefore contain the same number of representatives from each congruence class modulo \texttt{upper}. 
+The implementation uses front rejection because $2^N = \texttt{T.MAX} + 1$ may not itself be representable in type \texttt{T}$;$ however, $r$ is representable, so testing whether \texttt{sample >= reject\_below} avoids overflow. 
+Because $2^N - r$ is a multiple of \texttt{upper}, the accepted values partition into congruence classes modulo \texttt{upper} of equal size. 
+Therefore \texttt{sample \% upper} is uniformly distributed on $[0, \texttt{upper})$ after conditioning on acceptance. 
  
-It is equivalent to extend the acceptance region,  
-by returning \texttt{sample \% 2} if \texttt{sample} is less than \texttt{sample * 2},  
-so long as \texttt{sample * 2 <= T.MAX}. 
-This reduces the rejection rate, which increases algorithm performance. 
- 
-There are \texttt{T.MAX \% upper} remaining elements if you were to  
-extend the acceptance region to the greatest multiple of \texttt{upper} that is less than \texttt{T.MAX}. 
-Therefore conditioning \texttt{sample} on being less than \texttt{T.MAX - T.MAX \% upper}  
-results in \texttt{sample \% upper} being an unbiased, uniformly distributed sample. 
- 
-\noindent Therefore, for any value of \texttt{upper}, the function satisfies the postcondition. 
+\noindent Therefore, for any positive value of \texttt{upper}, the function satisfies the postcondition. 
 \end{proof} 
  
 \end{document} 
