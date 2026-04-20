@@ -9,4 +9,4 @@ def conservative_continuous_gaussian_tail_to_alpha(scale: f64, tail: f64) -> f64
     # erfc error is at most 1 f32 ulp (see erfc_err_analysis.py)
     t = f32.inf_cast(erfc(t)).next_up_()
 
-    f64(t).inf_div(2.0)
+    return f64(t).inf_div(2.0)

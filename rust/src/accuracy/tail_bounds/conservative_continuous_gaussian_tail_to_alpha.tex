@@ -31,16 +31,16 @@ Proof for \rustdoc{accuracy/tail\_bounds/fn}{conservative\_continuous\_gaussian\
 \subsection*{Postcondition} 
  
 \begin{theorem}
-    Returns \texttt{Ok(out)}, where \texttt{out} is no smaller than $\Pr[X > t]$ 
-    for $X \sim \mathcal{N}(0, scale)$, assuming $t > 0$, 
+    Returns \texttt{Ok(out)}, where \texttt{out} is at least $\Pr[X > \texttt{tail}]$ 
+    for $X \sim \mathcal{N}(0, \texttt{scale})$, assuming $\texttt{tail} > 0$, 
     or \texttt{Err(e)} if any numerical computation overflows. 
 \end{theorem} 
  
 \begin{definition} 
     \label{gaussian} 
-    Define $X \sim \mathcal{N}(0, s)$, a random variable following the continuous gaussian distribution: 
+    Define $X \sim \mathcal{N}(0, \texttt{scale})$, where $\texttt{scale} > 0$. Then $X$ follows the continuous gaussian distribution: 
     \begin{equation} 
-        f(x) = \frac{1}{\sigma \sqrt{2 \pi}} e^{-\frac{1}{2}\left( \frac{x}{\sigma}\right)^2} 
+        f(x) = \frac{1}{\texttt{scale} \sqrt{2 \pi}} e^{-\frac{1}{2}\left( \frac{x}{\texttt{scale}}\right)^2} 
     \end{equation} 
 \end{definition} 
  
@@ -75,23 +75,32 @@ Proof for \rustdoc{accuracy/tail\_bounds/fn}{conservative\_continuous\_gaussian\
 \end{proof} 
  
 \begin{theorem} 
-    Assume $X \sim \mathcal{N}(0, s)$, and $t > 0$. 
+    Assume $X \sim \mathcal{N}(0, \texttt{scale})$ and $\texttt{tail} > 0$. Then 
     \begin{equation} 
-        \alpha = P[X \ge t] = \frac{1}{2} \mathrm{erfc}\left(\frac{t}{\sigma \sqrt{2}}\right) 
+        \alpha = P[X > \texttt{tail}] = \frac{1}{2} \mathrm{erfc}\left(\frac{\texttt{tail}}{\texttt{scale} \sqrt{2}}\right) 
     \end{equation} 
 \end{theorem} 
  
 \begin{proof} 
+    The strict postcondition $P[X > \texttt{tail}]$ is intentional, because dependent proofs use this exact event.
+    The argument in this theorem is about the ideal continuous gaussian random variable $X$.
+    For this reference distribution, continuity implies $P[X > \texttt{tail}] = P[X \ge \texttt{tail}]$.
+    This equality is used only within the theorem, and not for any discretized or postprocessed implementation,
+    where $P[X > \texttt{tail}]$ and $P[X \ge \texttt{tail}]$ may differ due to point masses.
+
     \begin{align*} 
-        \alpha &= P[X \ge t] \\ 
-        &= \frac{1}{\sigma \sqrt{2 \pi}} \int_{t}^{\infty} e^{-\frac{1}{2}\left( \frac{t}{\sigma}\right)^2} dt && \text{by } \ref{gaussian} \\ 
-        &= \frac{1}{2} \left(1 + \mathrm{erf}\frac{t}{\sigma \sqrt{2}}\right) && \text{by } \ref{erf} \\ 
-        &= \frac{1}{2} \mathrm{erfc}\left(\frac{t}{\sigma \sqrt{2}}\right) && \text{by } \ref{erfc} 
+        \alpha &= P[X > \texttt{tail}] \\ 
+        &= P[X \ge \texttt{tail}] && \text{because } X \text{ is continuous} \\ 
+        &= \int_{\texttt{tail}}^{\infty} \frac{1}{\texttt{scale} \sqrt{2 \pi}} e^{-\frac{1}{2}\left( \frac{x}{\texttt{scale}}\right)^2} dx && \text{by } \ref{gaussian} \\ 
+        &= \frac{1}{\sqrt{\pi}} \int_{\texttt{tail} / (\texttt{scale} \sqrt{2})}^{\infty} e^{-u^2} du && \text{with } u = \frac{x}{\texttt{scale} \sqrt{2}} \\ 
+        &= \frac{1}{2} \left(1 - \mathrm{erf}\frac{\texttt{tail}}{\texttt{scale} \sqrt{2}}\right) && \text{by } \ref{erf} \\ 
+        &= \frac{1}{2} \mathrm{erfc}\left(\frac{\texttt{tail}}{\texttt{scale} \sqrt{2}}\right) && \text{by } \ref{erfc} 
     \end{align*} 
  
-    The implementation of this bound uses conservative rounding down within erfc, as erfc is monotonically decreasing. 
-    The outcome of erfc is increased by one 32-bit float ulp, which guarantees a conservatively larger value, by \ref{erfc-err}. 
-    Therefore the entire computation results in a conservatively larger bound on the mass of the tail of the continuous gaussian distribution. 
+    The implementation computes $\frac{\texttt{tail}}{\texttt{scale} \sqrt{2}}$ with conservative downward rounding, so the input to \texttt{erfc} is no greater than the exact value. 
+    Since \texttt{erfc} is monotonically decreasing, this yields a value no smaller than the exact tail probability expression above. 
+    The outcome of \texttt{erfc} is then increased by one 32-bit float ulp, which compensates for implementation error by \ref{erfc-err}. 
+    Therefore the returned result is at least $\Pr[X > \texttt{tail}]$. 
 \end{proof} 
  
-\end{document}
+\end{document} 
