@@ -1,13 +1,15 @@
-\documentclass{article} % necessary for Overleaf to recognize the file
-\input{../lib.sty} % "rust/src/lib.sty" contains boilerplate and macros
+\documentclass{article}
+\input{../../../lib.sty}
 
 \title{\texttt{fn sample\_standard\_bernoulli}}
 \author{Pranav S Ramanujam}\date{18/01/2026}
 
 \begin{document}
-\maketitle\contrib
+\maketitle
+
+\contrib
 Proves soundness of \rustdoc{traits/samplers/bernoulli/fn}{sample\_standard\_bernoulli}
-in \asOfCommit{rust/src/traits/samplers/bernoulli/mod.rs}{655696c}.
+in \asOfCommit{mod.rs}{655696c}.
 
 \section{Hoare Triple}
 
@@ -18,11 +20,14 @@ There are no preconditions for \texttt{sample\_standard\_bernoulli}.
 \subsection*{Pseudocode}
 \begin{lstlisting}[language = Python, escapechar=|]
 def sample_standard_bernoulli():
-    buffer = sample_uniform_byte()
-    return (buffer & 1) == 1   |\label{line:out}|
+    buffer = [0]
+    fill_bytes(buffer)
+    return (buffer[0] & 1) == 1   |\label{line:out}|
 \end{lstlisting}
 
 \subsection*{Postcondition}
+
+\begin{theorem}
 For any setting of the input parameters for which the preconditions hold,
 \texttt{sample\_standard\_bernoulli} either:
 \begin{itemize}
@@ -30,29 +35,30 @@ For any setting of the input parameters for which the preconditions hold,
     \item returns \texttt{Ok(sample)} where \texttt{sample} is a draw from
     $\texttt{Bernoulli}(0.5)$.
 \end{itemize}
+\end{theorem}
 
-\section{Proof}
+\begin{proof}
 
 We first consider the behavior of the function
 \rustdoc{traits/samplers/uniform/fn}{fill\_bytes}, which is invoked inside
-\texttt{fn sample_standard_bernoulli}. 
-The precondition of \rustdoc{traits/samplers/uniform/fn}{fill_bytes}
+\texttt{fn sample\_standard\_bernoulli}. 
+The precondition of \rustdoc{traits/samplers/uniform/fn}{fill\_bytes}
 is trivially satisfied. Hence, we may assume its postcondition, which states:
 
 \begin{enumerate}
     \item If sufficient system entropy is available, 
-    \texttt{fill_bytes} succeeds and fills the single-byte buffer
+    \texttt{fill\_bytes} succeeds and fills the single-byte buffer
     \texttt{buffer} with a uniformly random value in the set
     $\{0,1,\dots,255\}$.
 
     \item If insufficient system entropy is available,
-    \texttt{fill_bytes} fails and returns \texttt{Err(e)}.
+    \texttt{fill\_bytes} fails and returns \texttt{Err(e)}.
 \end{enumerate}
 
 We now analyze the behavior of
-\texttt{fn sample_standard_bernoulli} under these two cases.
+\texttt{fn sample\_standard\_bernoulli} under these two cases.
 
-\paragraph{Case 1: \texttt{fill_bytes} succeeds.}
+\paragraph{Case 1: \texttt{fill\_bytes} succeeds.}
 
 In this case, \texttt{buffer[0]} is uniformly distributed over
 $\{0,1,\dots,255\}$. The function evaluates the expression
@@ -74,8 +80,8 @@ and odd integers have least significant bit equal to $1$. Since
 \Pr[\texttt{buffer[0] \& 1 == 1}] = \frac{128}{256} = \frac{1}{2}.
 \]
 
-Hence, conditioned on success of \texttt{fill_bytes},
-\texttt{sample_standard_bernoulli} returns:
+Hence, conditioned on success of \texttt{fill\_bytes},
+\texttt{sample\_standard\_bernoulli} returns:
 \[
 \Pr[\texttt{Ok(true)}] = \frac{1}{2},
 \qquad
@@ -85,10 +91,10 @@ Hence, conditioned on success of \texttt{fill_bytes},
 Thus, the output distribution is exactly
 $\texttt{Bernoulli}(0.5)$.
 
-\paragraph{Case 2: \texttt{fill_bytes} fails.}
+\paragraph{Case 2: \texttt{fill\_bytes} fails.}
 
-If \texttt{fill_bytes} returns \texttt{Err(e)}, then
-\texttt{sample_standard_bernoulli} immediately propagates the error via the
+If \texttt{fill\_bytes} returns \texttt{Err(e)}, then
+\texttt{sample\_standard\_bernoulli} immediately propagates the error via the
 \texttt{?} operator and returns \texttt{Err(e)}.
 
 Therefore, in all cases,
@@ -96,4 +102,5 @@ Therefore, in all cases,
 insufficient system entropy, or returns a sample drawn from
 $\texttt{Bernoulli}(0.5)$, as required by the postcondition. Thus, the postcondition is satisfied.
 
+\end{proof}
 \end{document}
