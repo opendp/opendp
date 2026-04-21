@@ -600,6 +600,62 @@ def test_polars_threshold_rho():
     assert len(release) == 2
 
 
+def test_polars_grouped_quantile_max_groups_contribution_bound():
+    # Regression test for https://github.com/opendp/opendp/issues/2640
+    # A loose explicit max_groups should not dominate a tighter total contribution bound.
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    counts = {"first year": 485, "sophomore": 361, "junior": 85, "senior": 67}
+    rows = []
+    for group, n in counts.items():
+        for i in range(n):
+            rows.append(
+                {
+                    "class_year_str": group,
+                    "grade": [50, 60, 70, 80, 90, 100][i % 6],
+                }
+            )
+
+    lf = pl.DataFrame(rows).lazy()
+
+    context = dp.Context.compositor(
+        data=lf,
+        privacy_unit=dp.unit_of(contributions=10),
+        privacy_loss=dp.loss_of(epsilon=50.0, delta=1e-7),
+        split_by_weights=[1],
+        margins=[
+            dp.polars.Margin(
+                by=["class_year_str"],
+                max_length=10_000,
+                max_groups=100,
+            )
+        ],
+    )
+
+    query = context.query().group_by(["class_year_str"]).agg(
+        dp.len(),
+        pl.col("grade").dp.quantile(0.5, [50, 60, 70, 80, 90, 100]),
+    )
+
+    expected = pl.DataFrame(
+        {
+            "column": ["len", "grade"],
+            "aggregate": ["Frame Length", "0.5-Quantile"],
+            "distribution": ["Integer Laplace", "ExponentialMin"],
+            "scale": [4.2, 4.2],
+            "threshold": [84, None],
+        },
+        schema_overrides={"threshold": pl.UInt32},
+    )
+
+    pl_testing.assert_frame_equal(query.summarize(), expected)
+
+    release = query.release().collect()
+    assert release.columns == ["class_year_str", "len", "grade"]
+    assert set(["first year", "sophomore"]).issubset(release["class_year_str"])
+
+
 @pytest.mark.skipif(
     os.getenv("FORCE_TEST_REPLACE_BINARY_PATH") != "1",
     reason="setting OPENDP_POLARS_LIB_PATH interferes with the execution of other tests",

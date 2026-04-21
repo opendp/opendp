@@ -274,6 +274,13 @@ where
             }
         };
 
+        // Tighten the concrete bounds using relationships that always hold:
+        // changed groups <= changed rows, max per-group changes <= changed rows,
+        // and changed rows <= changed groups * max per-group changes.
+        let l0 = l0.min(l1);
+        let li = li.min(l1);
+        let l1 = l1.min(l0.inf_mul(&li)?);
+
         let mut d_out = privacy_map.eval(&(l0, l1, li))?;
 
         if margin.invariant.is_some() || is_join {
