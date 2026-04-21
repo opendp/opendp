@@ -95,9 +95,6 @@ jobs:
       - name: Push to R branch
         run: |
           SOURCE_MESSAGE="$(git log -1 --format=%s HEAD)"
-          if [ -z "$SOURCE_MESSAGE" ]; then
-            SOURCE_MESSAGE="Update R package for ${{ inputs.channel }}"
-          fi
           TMPDIR="$(mktemp -d)"
           cp -R R/opendp "$TMPDIR/opendp"
 

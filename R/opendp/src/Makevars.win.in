@@ -31,6 +31,7 @@ rust_build:
 		echo "* extract opendp and vendor files"; \
 		$(TAR) --extract --xz -f source.tar.xz -C .; \
 		$(TAR) --extract --xz -f vendor.tar.xz -C rust; \
+		# @RUST_FEATURES@ is substituted by configure. \
 		sh ../tools/prepare_rust_manifest.sh rust/Cargo.toml "@RUST_FEATURES@"; \
 		mkdir -p .cargo; \
 		cp cargo_vendor_config.toml .cargo/config.toml; \
