@@ -20,14 +20,14 @@ meas_sum <- input_space |>
 meas_count
 # Measurement(
 #   input_domain=VectorDomain(AtomDomain(T=i32)),
-#   input_metric=SymmetricDistance(),
+#   input_metric=SymmetricDistance,
 #   output_measure=MaxDivergence
 # )
 
 meas_sum
 # Measurement(
 #   input_domain=VectorDomain(AtomDomain(T=i32)),
-#   input_metric=SymmetricDistance(),
+#   input_metric=SymmetricDistance,
 #   output_measure=MaxDivergence
 # )
 # /print-up-front

@@ -134,7 +134,7 @@ test_that("test_fully_adaptive_composition", {
   expect_equal(toString(o_sc), paste0(
     "Odometer(\n",
     "  input_domain=VectorDomain(AtomDomain(T=i32)),\n",
-    "  input_metric=SymmetricDistance(),\n",
+    "  input_metric=SymmetricDistance,\n",
     "  output_measure=MaxDivergence\n",
     ")"
   ))

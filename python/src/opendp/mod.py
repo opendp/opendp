@@ -420,11 +420,11 @@ class Transformation(ctypes.POINTER(AnyTransformation)): # type: ignore[misc]
     Transformation(
         input_domain   = VectorDomain(AtomDomain(T=i32)),
         output_domain  = AtomDomain(T=i32),
-        input_metric   = SymmetricDistance(),
+        input_metric   = SymmetricDistance,
         output_metric  = AbsoluteDistance(i32))
 
     >>> count.input_space
-    (VectorDomain(AtomDomain(T=i32)), SymmetricDistance())
+    (VectorDomain(AtomDomain(T=i32)), SymmetricDistance)
     
     >>> # invoke the transformation (invoke and __call__ are equivalent)
     >>> count.invoke([1, 2, 3])
