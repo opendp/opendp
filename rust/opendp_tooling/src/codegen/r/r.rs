@@ -56,7 +56,46 @@ pub(crate) fn generate_r_function(
 
     let then_func = if func.name.starts_with("make_") {
         let offset = if func.supports_partial { 2 } else { 0 };
-        let pre_args_nl = if args.len() > 0 { "\n" } else { "" };
+        let constructor_args = if func.supports_partial {
+            vec![
+                "input_domain = output_domain(base_lhs)".to_string(),
+                "input_metric = output_metric(base_lhs)".to_string(),
+            ]
+        } else {
+            vec![]
+        }
+        .join(",\n");
+
+        let then_call_args = if constructor_args.is_empty() {
+            "list()".to_string()
+        } else {
+            format!(
+                "list(\n{}\n      )",
+                tab_r(tab_r(constructor_args))
+            )
+        };
+
+        let user_args = func.args[offset..]
+            .iter()
+            .map(|arg| {
+                let name = if arg.is_type {
+                    format!(".{}", arg.name())
+                } else {
+                    sanitize_r(arg.name(), arg.is_type)
+                };
+                format!("{name} = {name}")
+            })
+            .collect::<Vec<_>>()
+            .join(",\n");
+
+        let then_args_list = if user_args.is_empty() {
+            "list()".to_string()
+        } else {
+            format!(
+                "list(\n{}\n    )",
+                tab_r(tab_r(user_args))
+            )
+        };
         format!(
             r#"
 
@@ -65,9 +104,16 @@ pub(crate) fn generate_r_function(
 {then_args}
 ) {{
 {then_log}
-  make_chain_dyn(
-    {name}({pre_args_nl}{args}),
-    lhs,
+  opendp_then(
+    lhs = lhs,
+    constructor = function(base_lhs, args) do.call(
+      {name},
+      c(
+{call_args},
+        args
+      )
+    ),
+    args = {then_args_list},
     log_)
 }}"#,
             then_docs = generate_then_doc_block(module_name, func, hierarchy),
@@ -80,27 +126,8 @@ pub(crate) fn generate_r_function(
             ),
             then_log = tab_r(generate_logger(module_name, func, true)),
             name = func.name,
-            args = tab_r(tab_r(tab_r(
-                if func.supports_partial {
-                    vec![
-                        "output_domain(lhs)".to_string(),
-                        "output_metric(lhs)".to_string(),
-                    ]
-                } else {
-                    vec![]
-                }
-                .into_iter()
-                .chain(func.args[offset..].iter().map(|arg| {
-                    let name = if arg.is_type {
-                        format!(".{}", arg.name())
-                    } else {
-                        sanitize_r(arg.name(), arg.is_type)
-                    };
-                    format!("{name} = {name}")
-                }))
-                .collect::<Vec<_>>()
-                .join(",\n")
-            )))
+            call_args = tab_r(tab_r(then_call_args)),
+            then_args_list = then_args_list
         )
     } else {
         String::default()
