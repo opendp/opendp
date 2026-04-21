@@ -374,7 +374,7 @@ if _decomposition is not None:
 
         def measurement(self) -> Measurement:
             """Return a measurement that releases a fitted model."""
-            return self._prepare_fitter() >> (lambda _: self)
+            return self._prepare_fitter() >> _new_pure_function(lambda _: self)
 
         # overrides an sklearn method
         def _validate_params(*args, **kwargs):
