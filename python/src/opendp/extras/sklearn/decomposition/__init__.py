@@ -72,7 +72,7 @@ def make_private_pca(
     import opendp.prelude as dp
     np = import_optional_dependency('numpy')
 
-    dp.assert_features("contrib", "floating-point")
+    dp.assert_features("contrib", "idealized-numerics")
 
     @dataclass(kw_only=True, frozen=True)
     class PCAResult:
@@ -407,7 +407,7 @@ def _make_center(input_domain, input_metric):
     import opendp.prelude as dp
     np = import_optional_dependency('numpy')
 
-    dp.assert_features("contrib", "floating-point")
+    dp.assert_features("contrib", "idealized-numerics")
 
     input_desc = input_domain.descriptor
 

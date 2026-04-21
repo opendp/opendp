@@ -20,7 +20,7 @@ us if you are interested in proof-writing. Thank you!
 
             >>> import opendp.prelude as dp
             >>> dp.enable_features(
-            ...     "contrib", "floating-point", "honest-but-curious"
+            ...     "contrib", "idealized-numerics", "honest-but-curious"
             ... )
 
             >>> import numpy as np

@@ -568,8 +568,8 @@ pub(crate) fn get_disabled_features_message() -> String {
 
     #[cfg(not(feature = "contrib"))]
     disabled_features.push("contrib");
-    #[cfg(not(feature = "floating-point"))]
-    disabled_features.push("floating-point");
+    #[cfg(not(feature = "idealized-numerics"))]
+    disabled_features.push("idealized-numerics");
     #[cfg(not(feature = "honest-but-curious"))]
     disabled_features.push("honest-but-curious");
 

@@ -1,5 +1,22 @@
+normalize_features <- function(features) {
+  normalized <- vapply(
+    features,
+    function(feature) {
+      if (identical(feature, "floating-point")) {
+        warning("\"floating-point\" is deprecated. Use \"idealized-numerics\" instead.", call. = FALSE)
+        return("idealized-numerics")
+      }
+      feature
+    },
+    FUN.VALUE = character(1),
+    USE.NAMES = FALSE
+  )
+
+  as.list(normalized)
+}
+
 assert_features <- function(...) {
-  for (feature in list(...)) {
+  for (feature in normalize_features(list(...))) {
     if (!feature %in% getOption("opendp_features")) {
       stop("Attempted to use function that requires ", feature, " but ", feature, " is not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features(\"", feature, "\")", call. = FALSE)
     }
@@ -14,7 +31,7 @@ assert_features <- function(...) {
 #' @param ... features to enable
 #' @export
 enable_features <- function(...) {
-  options(opendp_features = union(getOption("opendp_features"), list(...)))
+  options(opendp_features = union(getOption("opendp_features"), normalize_features(list(...))))
 }
 
 #' Disable features in the opendp package.
@@ -24,7 +41,7 @@ enable_features <- function(...) {
 #' @export
 disable_features <- function(...) {
   features <- getOption("opendp_features")
-  options(opendp_features = features[!features %in% list(...)])
+  options(opendp_features = features[!features %in% normalize_features(list(...))])
 }
 
 is_space <- function(x) {
