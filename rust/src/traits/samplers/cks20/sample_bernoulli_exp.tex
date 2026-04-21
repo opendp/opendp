@@ -2,7 +2,7 @@
 \input{../../../lib.sty} 
  
 \title{\texttt{fn sample\_bernoulli\_exp}} 
-\author{Michael Shoemate} 
+\author{\MichaelShoemateAuthor}
  
 \begin{document} 
 \maketitle 
@@ -14,24 +14,26 @@ This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsec
  
 \section{Hoare Triple} 
 \subsection*{Precondition} 
-\textbf{Compiler-verified} 
+\subsubsection*{Compiler-verified}
 \begin{itemize} 
     \item Argument \texttt{x} is of type \texttt{RBig}, a bignum rational 
 \end{itemize} 
  
-\textbf{User-verified} 
-$\texttt{x} > 0$ 
+\subsubsection*{Caller-verified}
+\begin{itemize}
+    \item $\texttt{x} > 0$.
+\end{itemize}
  
 \subsection*{Pseudocode}         
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_bernoulli_exp.py} 
  
 \subsection*{Postcondition} 
+\begin{theorem}
 \label{postcondition} 
 For any setting of the input parameters \texttt{x} such that the given preconditions hold, \\ 
 \texttt{sample\_bernoulli\_exp} either returns \texttt{Err(e)} due to a lack of system entropy, 
 or \texttt{Ok(out)}, where \texttt{out} is distributed as $Bernoulli(exp(-x))$. 
- 
-\section{Proof} 
+\end{theorem}
 Assume the preconditions are met. 
  
 \begin{lemma} 

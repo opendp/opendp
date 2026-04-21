@@ -2,7 +2,7 @@
 \input{../../../../../lib.sty}
 
 \title{\texttt{fn get\_min\_k}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 \date{}
 
 \begin{document}
@@ -14,7 +14,7 @@ Proves soundness of the implementation of \rustdoc{measurements/noise/distributi
 
 \section{Hoare Triple}
 \subsection*{Precondition}
-\subsubsection*{Compiler-Verified}
+\subsubsection*{Compiler-verified}
 
 \begin{itemize}
     \item Generic \texttt{T} implements trait \rustdoc{traits/trait}{Float}
@@ -22,7 +22,7 @@ Proves soundness of the implementation of \rustdoc{measurements/noise/distributi
         where \texttt{T.Bits} is the type of the native bit representation of \texttt{T}.
 \end{itemize}
 
-\subsubsection*{User-Verified}
+\subsubsection*{Caller-verified}
 None
 
 \subsection*{Pseudocode}

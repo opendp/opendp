@@ -2,7 +2,7 @@
 \input{../../../lib.sty}
 
 \title{\texttt{fn make\_private\_group\_by}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 \date{}
 
 \begin{document}
@@ -20,19 +20,17 @@ Proves soundness of \texttt{fn make\_private\_group\_by} in \asOfCommit{mod.rs}{
     \item Generic \texttt{MO} must implement trait \texttt{ApproximateMeasure}.
 \end{itemize}
 
-\subsubsection*{User-verified}
+\subsubsection*{Caller-verified}
 None
 
 \subsection*{Pseudocode}
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_private_group_by.py}
 
-\subsubsection*{Postconditions}
+\subsection*{Postcondition}
 \begin{theorem}
     \label{postcondition}
     \validMeasurement{\texttt{(input\_domain, input\_metric, \\output\_measure, plan, global\_scale, threshold, MI, MO)}}{\texttt{make\_private\_group\_by}}
 \end{theorem}
-\section{Proof}
-
 We now prove the postcondition (Theorem~\ref{postcondition}).
 \begin{proof}
 

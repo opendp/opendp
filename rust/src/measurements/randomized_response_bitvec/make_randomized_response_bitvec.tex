@@ -4,7 +4,7 @@
 \newcommand\numberthis{\addtocounter{equation}{1}\tag{\theequation}}
 
 \title{\texttt{fn make\_randomized\_response\_bitvec}}
-\author{Abigail Gentle}
+\author{\AbigailGentleAuthor}
 
 \allowdisplaybreaks
 
@@ -24,7 +24,8 @@ This is a randomizer in the local model of differential privacy, which is a simp
 Frequency estimation is the problem of generating a histogram of the empirical frequencies of categorical elements. Any categorical domain of size $k$ can be mapped to the set $[k]=\{0,1,\ldots,k-1\}$, and we can represent any element $j\in[k]$ as the $j$'th standard basis vector so that $m=1$. In cases where the domain is extremely large or even unbounded (such as a set of strings) we can hash the domain elements using a bloom filter with $m$ hash functions. In order to decode a set of outputs generated in this fashion we must perform a regression against the bloom filter representations of a set of candidate elements, neither bloom filters nor the regression tools required for this are implemented here, but details can be found in the original RAPPOR paper. We will require that $2m+1<k$, but $m$ should be much less than $k$ in order to preserve utility. As we will prove in~\ref{thm:privacy-parameter} privacy degrades linearly with $m$. 
 
 \section{Hoare Triple}
-\subsection{Preconditions}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
 \begin{itemize}
 	\item Variable \texttt{input\_domain} must be of type \rustdoc{domains/struct}{BitVectorDomain}, with \texttt{max\_weight}.
 	\item Variable \texttt{input\_metric} must be of type \rustdoc{metrics/struct}{DiscreteDistance}.
@@ -32,16 +33,17 @@ Frequency estimation is the problem of generating a histogram of the empirical f
     \item Variable \texttt{constant\_time} must be of type \texttt{bool}.
 \end{itemize}
 
-\subsection{Pseudocode}
+\subsubsection*{Caller-verified}
+None
+
+\subsection*{Pseudocode}
 
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_randomized_response_bitvec.py}
 
-\subsection{Postcondition}
+\subsection*{Postcondition}
+\begin{theorem}
 \validMeasurement{\texttt{(f, m, constant\_time)}}{\\ \texttt{make\_randomized\_response\_bitvec}}
-
-
-\section{Proof}
-
+\end{theorem}
 \subsection{Privacy}
 
 \begin{tcolorbox}
