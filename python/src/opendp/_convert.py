@@ -48,7 +48,7 @@ _NUMPY_COMPATIBLE_ATOM_TYPES = frozenset(ATOM_MAP) - {'AnyMeasurementPtr', 'AnyT
 def _numpy_dtype_for_rust_type(type_name: str) -> Any:
     np = import_optional_dependency('numpy')
     if type_name not in _NUMPY_COMPATIBLE_ATOM_TYPES:
-        raise ValueError("unrecognized numpy dtype")
+        raise ValueError(f"unrecognized numpy dtype: {type_name}")
     return np.dtype(ATOM_MAP[type_name])
 
 
@@ -183,7 +183,6 @@ def c_to_py(value: Any) -> Any:
         from opendp._data import object_type, object_as_slice, slice_free
 
         obj_type = object_type(value)
-        obj_rt_type = RuntimeType.parse(obj_type)
 
         if obj_type == PrivacyProfile.__name__:
             return PrivacyProfile(value)
@@ -205,7 +204,7 @@ def c_to_py(value: Any) -> Any:
 
         ffi_slice = object_as_slice(value)
         try:
-            return _slice_to_py(ffi_slice, obj_rt_type)
+            return _slice_to_py(ffi_slice, RuntimeType.parse(obj_type))
         finally:
             slice_free(ffi_slice)
 
@@ -560,7 +559,7 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> Sequence[Any]:
 def _numpy_to_slice(val, type_name: RuntimeType) -> FfiSlicePtr:
     np = import_optional_dependency("numpy")
     if type_name.origin != 'NDArray' or len(type_name.args) != 1:
-        raise ValueError("type_name must be NDArray<_>")  # pragma: no cover
+        raise ValueError(f"type_name must be NDArray<T> with one type argument, found {type_name}")  # pragma: no cover
 
     inner_type_name = type_name.args[0]
     if not isinstance(inner_type_name, str):
@@ -570,8 +569,10 @@ def _numpy_to_slice(val, type_name: RuntimeType) -> FfiSlicePtr:
     if not isinstance(val, np.ndarray):
         raise TypeError(f"Expected type is {type_name}.")
 
-    if val.ndim != 1 or val.dtype != np.dtype(np_dtype):
+    if val.ndim != 1:
         raise TypeError("Only 1d arrays are currently supported. Flatten first.")
+    if val.dtype != np.dtype(np_dtype):
+        raise TypeError(f"Expected dtype {np.dtype(np_dtype)}, got {val.dtype}.")
 
     contiguous = np.ascontiguousarray(val)
     array = np.ctypeslib.as_ctypes(contiguous)
@@ -583,13 +584,13 @@ def _numpy_to_slice(val, type_name: RuntimeType) -> FfiSlicePtr:
 def _slice_to_numpy(raw: FfiSlicePtr, type_name: RuntimeType):
     np = import_optional_dependency("numpy")
     if type_name.origin != 'NDArray' or len(type_name.args) != 1:
-        raise ValueError("type_name must be NDArray<_>")  # pragma: no cover
+        raise ValueError(f"type_name must be NDArray<T> with one type argument, found {type_name}")  # pragma: no cover
 
     inner_type_name = type_name.args[0]
     if not isinstance(inner_type_name, str):
         raise ValueError(f"inner type must be atomic, found {inner_type_name}")  # pragma: no cover
     
-    _numpy_dtype_for_rust_type(inner_type_name)
+    _numpy_dtype_for_rust_type(inner_type_name)  # validate numpy compatibility before casting
 
     array_ptr: Any = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))
     return np.ctypeslib.as_array(array_ptr, shape=(raw.contents.len,)).copy()

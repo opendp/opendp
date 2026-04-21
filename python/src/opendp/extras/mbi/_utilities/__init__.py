@@ -328,7 +328,7 @@ def make_noise_marginal(
     return (
         t_marginal
         >> then_noise(output_measure, scale)
-        >> as_array(T="i32")
+        >> as_array()
         >> _new_pure_function(function)
     )
 

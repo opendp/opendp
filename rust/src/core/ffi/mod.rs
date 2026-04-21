@@ -254,37 +254,45 @@ pub extern "C" fn opendp_core__new_function(
 
 #[bootstrap(name = "as_array")]
 #[allow(dead_code)]
-fn as_array<T: 'static>() -> Fallible<AnyFunction> {
-    let _ = TypeId::of::<T>();
+fn as_array() -> Fallible<AnyFunction> {
     panic!("this signature only exists for code generation")
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_core__as_array(T: *const c_char) -> FfiResult<*mut AnyFunction> {
-    fn monomorphize<T: 'static + Clone + Send + Sync>() -> Fallible<AnyFunction> {
+pub extern "C" fn opendp_core__as_array() -> FfiResult<*mut AnyFunction> {
+    fn monomorphize<T: 'static + Clone + Send + Sync>(arg: &AnyObject) -> Fallible<AnyObject> {
         let type_ = Type::new(
             TypeId::of::<Vec<T>>(),
             std::format!("NDArray<{}>", Type::of::<T>().descriptor),
             TypeContents::VEC(TypeId::of::<T>()),
         );
-        Ok(Function::new_fallible(move |arg: &AnyObject| {
-            Ok(AnyObject::new_type(
-                arg.downcast_ref::<Vec<T>>()?.clone(),
-                type_.clone(),
-            ))
-        }))
+        Ok(AnyObject::new_type(
+            arg.downcast_ref::<Vec<T>>()?.clone(),
+            type_,
+        ))
     }
 
-    let T = try_!(Type::try_from(T));
-    dispatch!(
-        monomorphize,
-        [(
-            T,
-            [u8, u16, u32, u64, i8, i16, i32, i64, usize, f32, f64, bool]
-        )],
-        ()
-    )
-    .into()
+    let function = Function::new_fallible(move |arg: &AnyObject| {
+        let TypeContents::VEC(atom_id) = &arg.type_.contents else {
+            return fallible!(
+                FailedCast,
+                "Expected data of type Vec<T>. Got {}",
+                arg.type_.to_string()
+            );
+        };
+
+        let atom = try_!(Type::of_id(atom_id));
+        dispatch!(
+            monomorphize,
+            [(
+                atom,
+                [u8, u16, u32, u64, i8, i16, i32, i64, usize, f32, f64, bool]
+            )],
+            (arg)
+        )
+    });
+
+    FfiResult::Ok(util::into_raw(function))
 }
 
 #[bootstrap(

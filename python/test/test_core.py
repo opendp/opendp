@@ -380,7 +380,7 @@ def test_pure_function():
 
 def test_np_array_postprocessor():
     np = pytest.importorskip("numpy")
-    fun = dp.as_array(T="i32")
+    fun = dp.as_array()
 
     result = fun(np.array([1, 2, 3], dtype=np.int32))
 

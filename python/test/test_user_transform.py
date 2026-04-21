@@ -46,10 +46,11 @@ def test_make_custom_transformation_error():
 def test_numpy_user_transformation_roundtrip():
     np = pytest.importorskip("numpy")
 
-    seen = {}
+    input_is_ndarray = False
 
     def function(arg):
-        seen["input_is_ndarray"] = isinstance(arg, np.ndarray)
+        nonlocal input_is_ndarray
+        input_is_ndarray |= isinstance(arg, np.ndarray)
         return [v + 1 for v in arg]
 
     trans = dp.t.make_user_transformation(
@@ -61,10 +62,9 @@ def test_numpy_user_transformation_roundtrip():
         lambda d_in: d_in,
     )
 
-    assert trans(np.array([1, 2, 3], dtype=np.int32)) == [2, 3, 4]
-    result = dp.as_array(T="i32")(trans(np.array([1, 2, 3], dtype=np.int32)))
+    result = dp.as_array()(trans(np.array([1, 2, 3], dtype=np.int32)))
 
-    assert not seen["input_is_ndarray"]
+    assert not input_is_ndarray
     assert isinstance(result, np.ndarray)
     assert np.array_equal(result, np.array([2, 3, 4], dtype=np.int32))
 
@@ -116,7 +116,7 @@ def test_user_constructors():
         lambda d_in: d_in * 10
     )
     assert trans(2) == [2] * 10
-    assert np.array_equal(dp.as_array(T="i32")(trans(2)), np.repeat(2, 10))
+    assert np.array_equal(dp.as_array()(trans(2)), np.repeat(2, 10))
     assert trans.map(1) == 10
 
     meas = dp.m.make_user_measurement(
@@ -129,7 +129,7 @@ def test_user_constructors():
     )
 
     assert meas(2) == [2] * 10
-    assert np.array_equal((meas >> dp.as_array(T="i32"))(2), np.repeat(2, 10))
+    assert np.array_equal((meas >> dp.as_array())(2), np.repeat(2, 10))
     assert meas.map(1) == 10
 
     assert (meas >> (lambda x: x[0]))(2) == 2

@@ -57,7 +57,7 @@ def make_private_np_eigendecomposition(
         lambda s: t_eigvals >> dp.m.then_laplace(s),
         d_in=2,  # the unit d_in: one change = 1 addition + 1 removal
         d_out=eigvals_epsilon,
-    ) >> dp.as_array(T="f64")
+    ) >> dp.as_array()
     m_eigvecs = t_sscp.output_space >> then_private_eigenvectors(
         eigvecs_epsilons,
     )
