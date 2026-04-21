@@ -37,6 +37,7 @@ Collate:
     'internal.R'
     'accuracy.R'
     'combinators.R'
+    'context.R'
     'core.R'
     'data.R'
     'domains.R'
