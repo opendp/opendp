@@ -85,6 +85,12 @@ make_chain_dyn <- function(rhs, lhs, log) {
   if (inherits(rhs, "measurement")) {
     return(new_measurement(make_chain_mt(rhs, lhs)("ptr"), log))
   }
+  if (inherits(rhs, "odometer")) {
+    if (inherits(lhs, "transformation")) {
+      return(new_chained_odometer(rhs, lhs, log))
+    }
+    stop("cannot chain lhs and rhs: ", class(lhs), ", ", class(rhs), call. = FALSE)
+  }
   if (inherits(rhs, "opendp_function")) {
     return(new_measurement(make_chain_pm(rhs, lhs)("ptr"), log))
   }
@@ -236,6 +242,28 @@ new_odometer <- function(ptr, log) {
   }
   class(odometer) <- "odometer"
   odometer
+}
+
+new_chained_odometer <- function(odometer, transformation, log) {
+  chained_odometer <- function(attr, arg) {
+    if (missing(attr) + missing(arg) != 1) {
+      stop("expected exactly one of attr or arg", call. = FALSE)
+    }
+
+    if (!missing(arg)) {
+      return(odometer(arg = transformation(arg = arg)))
+    }
+
+    switch(attr,
+      input_domain = transformation("input_domain"),
+      input_metric = transformation("input_metric"),
+      output_measure = odometer("output_measure"),
+      log = log,
+      stop("unrecognized attribute", call. = FALSE)
+    )
+  }
+  class(chained_odometer) <- "odometer"
+  chained_odometer
 }
 
 #' @concept mod
@@ -576,6 +604,9 @@ to_ast <- function(item) {
 
 
 unbox2 <- function(x) {
+  if (inherits(x, "opendp_auto")) {
+    return("auto")
+  }
   if (requireNamespace("jsonlite", quietly = TRUE)) {
     jsonlite::unbox(x)
   } else {
