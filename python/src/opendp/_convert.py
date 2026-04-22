@@ -968,6 +968,9 @@ _CALLBACK_DISPATCH = CallbackFnValue(_invoke_py_callback)
 
 
 def _wrap_py_func(func, TO):
+    # `userdata` is the opaque host-owned payload carried alongside the shared
+    # callback trampoline. Here it stores the Python callable and the declared
+    # output type so the dispatcher can recover the closure environment later.
     userdata = ExtrinsicObject(ctypes.py_object((func, TO)))
     return ctypes.pointer(CallbackFn(_CALLBACK_DISPATCH, userdata))
 

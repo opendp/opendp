@@ -13,10 +13,9 @@ Use :func:`~opendp.measurements.make_user_measurement` to construct a measuremen
 
         .. tab-item:: Python
 
-            .. literalinclude:: code/measurement.py
-                :language: python
-                :start-after: import opendp.prelude as dp
-                :end-before: # make-base-constant
+            .. literalinclude:: code/measurement.rst
+                :start-after: # enable-features
+                :end-before: # /enable-features
 
         .. tab-item:: R
 
@@ -31,8 +30,7 @@ This example mocks the typical API of the OpenDP library to make the *most priva
 
     .. tab-item:: Python
 
-        .. literalinclude:: code/measurement.py
-            :language: python
+        .. literalinclude:: code/measurement.rst
             :start-after: # make-base-constant
             :end-before: # /make-base-constant
 
@@ -49,8 +47,7 @@ The resulting Measurement may be used interchangeably with those constructed via
 
     .. tab-item:: Python
 
-        .. literalinclude:: code/measurement.py
-            :language: python
+        .. literalinclude:: code/measurement.rst
             :start-after: # use-measurement
             :end-before: # /use-measurement
 

@@ -3,6 +3,11 @@ Thiel-Sen Regression
 
 This example demonstrates how transformation and measurement plugins can be combined to build a differentially private Theil-Sen-style regression estimator.
 
+.. note::
+
+    If you actually want to use Theil-Sen in Python, don't copy-and-paste this code.
+    It is already implemented by the OpenDP library: see the :mod:`opendp.extras.sklearn.linear_model` API reference.
+
 The high-level flow is:
 
 1. Build a user-defined transformation that pairs records and predicts response values at two cut points.
@@ -15,10 +20,9 @@ Enable plugin-related features:
 
     .. tab-item:: Python
 
-        .. literalinclude:: code/theil-sen-regression.py
-            :language: python
-            :start-after: import opendp.prelude as dp
-            :end-before: # pairwise-predict
+        .. literalinclude:: code/theil-sen-regression.rst
+            :start-after: # enable-features
+            :end-before: # /enable-features
 
     .. tab-item:: R
 
@@ -36,8 +40,7 @@ Construct a transformation that pairs rows and predicts response values at two x
 
     .. tab-item:: Python
 
-        .. literalinclude:: code/theil-sen-regression.py
-            :language: python
+        .. literalinclude:: code/theil-sen-regression.rst
             :start-after: # pairwise-predict
             :end-before: # /pairwise-predict
 
@@ -56,8 +59,7 @@ The figure below shows the intuition behind the pairwise prediction step: each s
 
 .. dropdown:: Python code to generate this figure
 
-    .. literalinclude:: code/theil-sen-regression.py
-        :language: python
+    .. literalinclude:: code/theil-sen-regression.rst
         :start-after: # pairwise-visualization
         :end-before: # /pairwise-visualization
 
@@ -70,8 +72,7 @@ Construct a measurement that privately estimates the median prediction at each c
 
     .. tab-item:: Python
 
-        .. literalinclude:: code/theil-sen-regression.py
-            :language: python
+        .. literalinclude:: code/theil-sen-regression.rst
             :start-after: # private-medians
             :end-before: # /private-medians
 
@@ -91,8 +92,7 @@ Combine the transformation, private medians, and postprocessing into a single me
 
     .. tab-item:: Python
 
-        .. literalinclude:: code/theil-sen-regression.py
-            :language: python
+        .. literalinclude:: code/theil-sen-regression.rst
             :start-after: # mechanism
             :end-before: # /mechanism
 
@@ -112,8 +112,7 @@ Apply the measurement to synthetic data to obtain private regression coefficient
 
     .. tab-item:: Python
 
-        .. literalinclude:: code/theil-sen-regression.py
-            :language: python
+        .. literalinclude:: code/theil-sen-regression.rst
             :start-after: # release
             :end-before: # /release
 
@@ -132,7 +131,6 @@ The original notebook also visualized the resulting private fit:
 
 .. dropdown:: Python code to generate this figure
 
-    .. literalinclude:: code/theil-sen-regression.py
-        :language: python
+    .. literalinclude:: code/theil-sen-regression.rst
         :start-after: # private-fit-visualization
         :end-before: # /private-fit-visualization

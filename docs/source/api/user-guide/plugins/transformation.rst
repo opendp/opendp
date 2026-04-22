@@ -12,10 +12,9 @@ Use :func:`~opendp.transformations.make_user_transformation` to construct your o
 
         .. tab-item:: Python
 
-            .. literalinclude:: code/transformation.py
-                :language: python
-                :start-after: import opendp.prelude as dp
-                :end-before: # make-repeat
+            .. literalinclude:: code/transformation.rst
+                :start-after: # enable-features
+                :end-before: # /enable-features
 
         .. tab-item:: R
 
@@ -30,8 +29,7 @@ In this example, we mock the typical API of the OpenDP library to make a transfo
 
     .. tab-item:: Python
 
-        .. literalinclude:: code/transformation.py
-            :language: python
+        .. literalinclude:: code/transformation.rst
             :start-after: # make-repeat
             :end-before: # /make-repeat
 
@@ -48,8 +46,7 @@ The resulting Transformation may be used interchangeably with those constructed 
 
     .. tab-item:: Python
 
-        .. literalinclude:: code/transformation.py
-            :language: python
+        .. literalinclude:: code/transformation.rst
             :start-after: # use-transformation
             :end-before: # /use-transformation
 
