@@ -290,13 +290,16 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           # overrides packages so that dependencies for package in cwd are not installed
-          packages: RcppTOML,stringr
-      
+          packages: RcppTOML,stringr,roxygen2
+
       - name: Download R bindings
         uses: actions/download-artifact@v4
         with:
           name: r_bindings
           path: R/opendp/
+
+      - name: Generate R documentation
+        run: Rscript -e 'roxygen2::roxygenise("R/opendp", roclets = c("rd", "namespace"), load_code = roxygen2::load_source)'
 
       - name: Source tar
         run: bash tools/r_stage.sh -s

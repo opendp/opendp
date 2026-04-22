@@ -1,4 +1,5 @@
 linters: all_linters(
+    cyclocomp_linter = NULL,
     # Intentional configurations, and not just to get passing tests:
     return_linter = NULL, # We prefer explicit returns for clarity.
     # If "linters_with_defaults" is used then only these problems are reported:

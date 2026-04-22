@@ -232,12 +232,6 @@ First, build a debug binary that works with R. (Note that the resulting binary w
 
 If you have not already, `install R <https://cran.r-project.org/>`_.
 
-Then, set an environment variable to the absolute path of the OpenDP Library binary directory:
-
-.. code-block:: bash
-
-    export OPENDP_LIB_DIR=$(realpath target/debug)
-
 The default R install for MacOS also includes GUI elements like Tcl/Tk,
 so for the smoothest development experience we suggest these additional installs:
 
@@ -251,11 +245,24 @@ Then, install devtools in R:
 
     install.packages(c("devtools", "RcppTOML", "lintr"))
 
-After each edit to the R or Rust source, run the following command in R to (re)load the R package:
+For day-to-day R development, work from the package directory:
+
+.. code-block:: bash
+
+    cd R/opendp; R
+
+After editing R code, reload the package in your interactive R session with:
 
 .. code-block:: R
 
-    devtools::load_all("R/opendp/", recompile=TRUE)
+    pkgload::load_all()
+
+If you changed Rust or C code, or want to force recompilation of native code as
+part of the reload, use:
+
+.. code-block:: R
+
+    devtools::load_all(recompile = TRUE)
 
 .. This function...
 .. - runs "src/Makevars"
@@ -263,6 +270,9 @@ After each edit to the R or Rust source, run the following command in R to (re)l
 .. - compiles the c files in "src/", which statically links with "libopendp.a"
 .. - outputs "src/opendp.so", which is used by all R functions
 .. - reloads all R functions
+
+In a normal local checkout, both commands pick up the Rust library path
+automatically via ``R/opendp/.Rprofile``.
 
 To do a full package installation from local sources:
 
@@ -345,8 +355,7 @@ Environment Variables
    * - Name
      - Description
    * - ``OPENDP_LIB_DIR``
-     - Overrides the directory in which the OpenDP language binding looks for the OpenDP Library binary.  
-       See example in :ref:`r-setup`. 
+     - Overrides the directory in which the OpenDP language binding looks for the OpenDP Library binary.
    * - ``OPENDP_POLARS_LIB_PATH``
      - Each OpenDP Polars plugin contains a path to the OpenDP Library binary.
        When OpenDP is used as a query server, library paths in queries submitted by clients are stale (local to the client).
