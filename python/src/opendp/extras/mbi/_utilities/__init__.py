@@ -21,6 +21,7 @@ from opendp.metrics import (
     l2_distance,
     symmetric_distance,
 )
+from opendp.core import as_array
 from opendp.mod import (
     ApproximateDivergence,
     AtomDomain,
@@ -34,7 +35,6 @@ from opendp.mod import (
     Metric,
     Transformation,
 )
-
 if TYPE_CHECKING:  # pragma: no cover
     from opendp.extras.polars import Bound
 
@@ -297,10 +297,10 @@ def make_noise_marginal(
     scale: float,
 ) -> Measurement:
     """Make a measurement that releases a DP marginal"""
-    from opendp.extras.numpy import NPArrayDDomain
     # use jax arrays because lms will be used in optimization
     import jax.numpy as np  # type: ignore[import-not-found]
     from mbi import LinearMeasurement  # type: ignore[import-untyped,import-not-found]
+    from opendp.extras.numpy import NPArrayDDomain
 
     clique_domain = input_domain.cast(TypedDictDomain)[clique]
     inner_metric = input_metric.cast(TypedDictDistance).inner_metric
@@ -323,10 +323,13 @@ def make_noise_marginal(
     )
 
     def function(x):
-        return LinearMeasurement(np.array(x), clique, stddev=get_std(output_measure, scale))
+        return LinearMeasurement(x, clique, stddev=get_std(output_measure, scale))
 
     return (
-        t_marginal >> then_noise(output_measure, scale) >> _new_pure_function(function)
+        t_marginal
+        >> then_noise(output_measure, scale)
+        >> as_array()
+        >> _new_pure_function(function)
     )
 
 

@@ -23,7 +23,7 @@ from opendp.extras.numpy._make_np_mean import make_private_np_mean
 from opendp.extras.sklearn._make_eigendecomposition import then_private_np_eigendecomposition
 from opendp.mod import Domain, Measurement, Metric
 from opendp._lib import import_optional_dependency
-from opendp._internal import _make_measurement, _make_transformation
+from opendp._internal import _make_measurement, _make_transformation, _new_pure_function
 
 if TYPE_CHECKING: # pragma: no cover
     import numpy # type: ignore[import-not-found]
@@ -114,11 +114,13 @@ def make_private_pca(
             >> then_np_clamp(norm, p=2, origin=origin)
             >> then_center()
             >> then_private_np_eigendecomposition(unit_epsilon.eigvals, unit_epsilon.eigvecs)
-            >> (lambda out: PCAResult(
-                mean=origin,
-                S=np.sqrt(np.maximum(out[0], 0))[::-1],
-                Vt=out[1].T
-            ))
+            >> _new_pure_function(
+                lambda out: PCAResult(
+                    mean=origin,
+                    S=np.sqrt(np.maximum(out[0], 0))[::-1],
+                    Vt=out[1].T,
+                )
+            )
         )
 
     if input_desc.norm is not None:
@@ -372,7 +374,7 @@ if _decomposition is not None:
 
         def measurement(self) -> Measurement:
             """Return a measurement that releases a fitted model."""
-            return self._prepare_fitter() >> (lambda _: self)
+            return self._prepare_fitter() >> _new_pure_function(lambda _: self)
 
         # overrides an sklearn method
         def _validate_params(*args, **kwargs):

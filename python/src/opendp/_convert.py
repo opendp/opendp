@@ -1,4 +1,4 @@
-from typing import Sequence, Union, cast, MutableMapping
+from typing import Any, Sequence, Union, cast, MutableMapping
 from inspect import signature
 
 from opendp._lib import *
@@ -43,6 +43,14 @@ ATOM_MAP = {
     'AnyMeasurementPtr': Measurement,
     'AnyTransformationPtr': Transformation,
 }
+
+_NUMPY_COMPATIBLE_ATOM_TYPES = frozenset(ATOM_MAP) - {'AnyMeasurementPtr', 'AnyTransformationPtr'}
+def _numpy_dtype_for_rust_type(type_name: str) -> Any:
+    np = import_optional_dependency('numpy')
+    if type_name not in _NUMPY_COMPATIBLE_ATOM_TYPES:
+        raise ValueError(f"unrecognized numpy dtype: {type_name}")
+    return np.dtype(ATOM_MAP[type_name])
+
 
 def c_int_limits(type_name):
     c_int_type = ATOM_MAP[type_name]
@@ -323,6 +331,9 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
     if isinstance(type_name, RuntimeType):
         if type_name.origin == "Vec":
             return _slice_to_vector(raw, type_name)
+        
+        if type_name.origin == "NDArray":
+            return _slice_to_numpy(raw, type_name)
 
         if type_name.origin == "Function":
             return _slice_to_function(raw)
@@ -388,6 +399,9 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
     if isinstance(type_name, RuntimeType):
         if type_name.origin == "Vec":
             return _vector_to_slice(value, type_name)
+        
+        if type_name.origin == "NDArray":
+            return _numpy_to_slice(value, type_name)
 
         if type_name.origin == "HashMap":
             return _hashmap_to_slice(value, type_name)
@@ -454,17 +468,25 @@ def _slice_to_bitvector(raw: FfiSlicePtr) -> bytes:
 
 def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
     if type_name.origin != 'Vec' or len(type_name.args) != 1:
-        raise ValueError("type_name must be a Vec<_>")  # pragma: no cover
+        raise ValueError("type_name must be Vec<_>")  # pragma: no cover
 
     inner_type_name = type_name.args[0]
-    # TODO: can we use underlying numpy buffers directly?
+
+    np = import_optional_dependency("numpy", raise_error=False)
+    if (
+        np is not None
+        and isinstance(val, np.ndarray)
+        and isinstance(inner_type_name, str)
+        and inner_type_name in _NUMPY_COMPATIBLE_ATOM_TYPES
+    ):
+        type_name = RuntimeType("NDArray", [inner_type_name])
+        return _numpy_to_slice(val, type_name)
+
     if not isinstance(val, list):
         try:
             val = list(val)
         except TypeError:
             raise TypeError(f"Expected type is {type_name} but input data is not a list.")
-
-    inner_type_name = type_name.args[0]
 
     if isinstance(inner_type_name, RuntimeType) or inner_type_name in {"Expr", "Bound", "BitVector"}:
         c_repr = [py_to_c(v, c_type=AnyObjectPtr, type_name=inner_type_name) for v in val]
@@ -505,7 +527,7 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
 
 def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> Sequence[Any]:
     if type_name.origin != 'Vec' or len(type_name.args) != 1:
-        raise ValueError("type_name must be a Vec<_>")  # pragma: no cover
+        raise ValueError("type_name must be Vec<_>")  # pragma: no cover
 
     inner_type_name = type_name.args[0]
 
@@ -528,8 +550,50 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> Sequence[Any]:
         array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_char_p))[0:raw.contents.len]
         return list(map(lambda v: v.decode(), array))
 
-    assert isinstance(inner_type_name, str), f"inner type must be string, found {inner_type_name} of type {type(inner_type_name)}"
+    if not isinstance(inner_type_name, str):
+        raise ValueError(f"inner type must be atomic, found {inner_type_name}")  # pragma: no cover
+    
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))[0:raw.contents.len]
+
+
+def _numpy_to_slice(val, type_name: RuntimeType) -> FfiSlicePtr:
+    np = import_optional_dependency("numpy")
+    if type_name.origin != 'NDArray' or len(type_name.args) != 1:
+        raise ValueError(f"type_name must be NDArray<T> with one type argument, found {type_name}")  # pragma: no cover
+
+    inner_type_name = type_name.args[0]
+    if not isinstance(inner_type_name, str):
+        raise ValueError(f"inner type must be atomic, found {inner_type_name}")  # pragma: no cover
+
+    np_dtype = _numpy_dtype_for_rust_type(inner_type_name)
+    if not isinstance(val, np.ndarray):
+        raise TypeError(f"Expected type is {type_name}.")
+
+    if val.ndim != 1:
+        raise TypeError("Only 1d arrays are currently supported. Flatten first.")
+    if val.dtype != np.dtype(np_dtype):
+        raise TypeError(f"Expected dtype {np.dtype(np_dtype)}, got {val.dtype}.")
+
+    contiguous = np.ascontiguousarray(val)
+    array = np.ctypeslib.as_ctypes(contiguous)
+    ffi_slice = _wrap_in_slice(array, len(contiguous))
+    ffi_slice.depends_on(contiguous, array)
+    return ffi_slice
+
+
+def _slice_to_numpy(raw: FfiSlicePtr, type_name: RuntimeType):
+    np = import_optional_dependency("numpy")
+    if type_name.origin != 'NDArray' or len(type_name.args) != 1:
+        raise ValueError(f"type_name must be NDArray<T> with one type argument, found {type_name}")  # pragma: no cover
+
+    inner_type_name = type_name.args[0]
+    if not isinstance(inner_type_name, str):
+        raise ValueError(f"inner type must be atomic, found {inner_type_name}")  # pragma: no cover
+    
+    _numpy_dtype_for_rust_type(inner_type_name)  # validate numpy compatibility before casting
+
+    array_ptr: Any = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))
+    return np.ctypeslib.as_array(array_ptr, shape=(raw.contents.len,)).copy()
 
 
 def _tuple_to_slice(val: tuple[Any, ...], type_name: Union[RuntimeType, str]) -> FfiSlicePtr:

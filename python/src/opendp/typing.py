@@ -411,6 +411,7 @@ class Carrier(RuntimeType):
 
 
 Vec: Carrier = Carrier('Vec')
+NDArray: Carrier = Carrier('NDArray')
 HashMap: Carrier = Carrier('HashMap')
 i8: str = 'i8'
 i16: str = 'i16'

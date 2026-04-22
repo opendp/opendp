@@ -378,6 +378,16 @@ def test_pure_function():
     assert fun(1) == 2
 
 
+def test_np_array_postprocessor():
+    np = pytest.importorskip("numpy")
+    fun = dp.as_array()
+
+    result = fun(np.array([1, 2, 3], dtype=np.int32))
+
+    assert isinstance(result, np.ndarray)
+    assert np.array_equal(result, np.array([1, 2, 3], dtype=np.int32))
+
+
 def test_pointer_classes_dont_iter():
     import opendp.prelude as dp
 

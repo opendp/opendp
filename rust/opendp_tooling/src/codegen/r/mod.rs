@@ -47,6 +47,7 @@ const BLOCKLIST: &'static [&'static str] = &[
     "_make_transformation",
     "_make_measurement",
     "_new_pure_function",
+    "as_array",
     "_extrinsic_domain",
     "_extrinsic_domain_descriptor",
     "_extrinsic_metric_descriptor",
