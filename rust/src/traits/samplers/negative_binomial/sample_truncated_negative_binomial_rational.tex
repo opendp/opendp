@@ -1,0 +1,97 @@
+\documentclass{article}
+\input{../../../lib.sty}
+\title{\texttt{fn sample\_truncated\_negative\_binomial\_rational}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle
+
+This document proves that the implementation of \texttt{sample\_truncated\_negative\_binomial\_rational}
+in \texttt{mod.rs} satisfies its proof definition.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+$\texttt{eta} \in \mathbb{Q}_{>0}$ and $\texttt{x} \in \mathbb{Q}_{>0}$.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_truncated_negative_binomial_rational.py}
+
+\subsection*{Postcondition}
+\label{postcondition}
+For any setting of the input parameters \texttt{eta} and \texttt{x} such that the given preconditions hold,
+\texttt{sample\_truncated\_negative\_binomial\_rational} either returns \texttt{Err(e)} due to a lack of system entropy,
+or \texttt{Ok(out)}, where \texttt{out} is distributed as a negative binomial random variable
+with shape \texttt{eta} and success probability $1 - e^{-x}$, parameterized as the number of failures before
+the \texttt{eta}-th success, conditioned on \texttt{out > 0}.
+
+\section{Proof}
+Assume the preconditions are met.
+Let $K$ denote a random variable distributed as the output of
+\texttt{sample\_negative\_binomial\_rational(eta, x)}.
+By its proof definition, for every $k \in \mathbb{N}_0$,
+\begin{equation*}
+\Pr[K = k] = (1 - e^{-x})^{\eta} e^{-xk} \prod_{i=0}^{k-1}\frac{\eta + i}{i + 1}.
+\end{equation*}
+
+\begin{lemma}
+\label{lem:err-e}
+\texttt{sample\_truncated\_negative\_binomial\_rational} only returns \texttt{Err(e)} when there is a lack of system entropy.
+\end{lemma}
+\begin{proof}
+The only fallible call is to
+\rustdoc{traits/samplers/negative_binomial/fn}{sample\_negative\_binomial\_rational}
+on line \ref{line:ordinary_draw}.
+By its proof definition, any returned error must be due to a lack of system entropy.
+\end{proof}
+
+\begin{lemma}
+\label{lem:ok-out}
+If the outcome of \texttt{sample\_truncated\_negative\_binomial\_rational} is \texttt{Ok(out)}, then \texttt{out}
+is distributed as the law of $K$ conditioned on $K > 0$.
+\end{lemma}
+\begin{proof}
+In each loop iteration, line \ref{line:ordinary_draw} draws an independent sample distributed as $K$.
+The function returns the first such draw satisfying the predicate on line \ref{line:positive_branch}.
+Since
+\begin{equation*}
+\Pr[K > 0] = 1 - \Pr[K = 0] = 1 - (1 - e^{-x})^{\eta} > 0,
+\end{equation*}
+the loop terminates almost surely.
+For any $k \in \mathbb{N}_{>0}$,
+\begin{equation*}
+\Pr[\texttt{out} = k]
+= \sum_{t=1}^{\infty} \Pr[K = 0]^{t-1} \Pr[K = k]
+= \frac{\Pr[K = k]}{1 - \Pr[K = 0]}.
+\end{equation*}
+Therefore the output distribution is exactly the conditional distribution of $K$ given $K > 0$.
+\end{proof}
+
+\begin{lemma}
+\label{lem:d-eta-gamma}
+If $\gamma := 1 - e^{-x}$, then the output distribution equals
+\begin{equation*}
+\Pr[\texttt{out} = k]
+= \frac{(1 - \gamma)^k}{\gamma^{-\eta} - 1}
+\prod_{i=0}^{k-1}\frac{\eta + i}{i + 1}
+\qquad\text{for } k \in \mathbb{N}_{>0}.
+\end{equation*}
+\end{lemma}
+\begin{proof}
+For any $k \in \mathbb{N}_{>0}$,
+\begin{align*}
+\Pr[\texttt{out} = k]
+&= \frac{(1 - e^{-x})^{\eta} e^{-xk} \prod_{i=0}^{k-1}\frac{\eta + i}{i + 1}}
+         {1 - (1 - e^{-x})^{\eta}} \\
+&= \frac{\gamma^{\eta}(1 - \gamma)^k \prod_{i=0}^{k-1}\frac{\eta + i}{i + 1}}
+         {1 - \gamma^{\eta}} \\
+&= \frac{(1 - \gamma)^k}{\gamma^{-\eta} - 1}
+   \prod_{i=0}^{k-1}\frac{\eta + i}{i + 1}.
+\end{align*}
+This is exactly the claimed pmf.
+\end{proof}
+
+\begin{proof}
+\ref{postcondition} holds by Lemma~\ref{lem:err-e} and Lemma~\ref{lem:ok-out}.
+Lemma~\ref{lem:d-eta-gamma} identifies the conditional law with the truncated negative binomial family.
+\end{proof}
+
+\end{document}

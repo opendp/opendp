@@ -85,3 +85,4 @@ There are just a couple other applications of combinators we should mention for 
 
     measure-casting
     amplification
+    private-selection

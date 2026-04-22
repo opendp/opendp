@@ -1,0 +1,134 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn sample\_poisson}}
+\author{OpenDP}
+
+\begin{document}
+\maketitle
+
+\contrib Proves soundness of \texttt{fn sample\_poisson} in \texttt{mod.rs}.
+This proof reduces the general Poisson sampler to repeated calls to
+\texttt{sample\_poisson\_0\_1} on equal sub-means in $[0,1)$, then sums the results.
+
+\section{Hoare Triple}
+
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Argument \texttt{lambda} is of type \texttt{RBig}, a bignum rational
+\end{itemize}
+
+\subsubsection*{User-verified}
+$\texttt{lambda} \ge 0$
+
+\subsection*{Implementation}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_poisson.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+\label{postcondition}
+For any setting of the input parameter \texttt{lambda} such that the given preconditions hold, \\
+\texttt{sample\_poisson} either returns \texttt{Err(e)} due to a lack of system entropy,
+or \texttt{Ok(out)}, where \texttt{out} is distributed as $Poisson(\texttt{lambda})$.
+\end{theorem}
+
+\section{Proof}
+
+\begin{lemma}
+\label{err-e}
+\texttt{sample\_poisson} only returns \texttt{Err(e)} when there is a lack of system entropy.
+\end{lemma}
+
+\begin{proof}
+If \texttt{lambda} $= 0$, the function returns \texttt{Ok(0)} immediately.
+
+Otherwise, the only fallible call is line \ref{line:subcall}, which invokes
+\rustdoc{traits/samplers/poisson/fn}{sample\_poisson\_0\_1}.
+By line \ref{line:pieces}, \texttt{pieces} $= \lfloor \texttt{lambda} \rfloor + 1$, so
+\texttt{pieces} is a positive integer. Therefore line \ref{line:piece} defines
+\[
+\texttt{piece} = \frac{\texttt{lambda}}{\texttt{pieces}},
+\]
+which satisfies $0 \le \texttt{piece} < 1$ because $\texttt{pieces} > \texttt{lambda}$ whenever
+$\texttt{lambda} > 0$. Hence the preconditions of \texttt{sample\_poisson\_0\_1} hold.
+
+By the definition of \texttt{sample\_poisson\_0\_1}, any error it returns is due to a lack of
+system entropy. Therefore \texttt{sample\_poisson} only returns \texttt{Err(e)} when there is
+a lack of system entropy.
+\end{proof}
+
+We now condition on not returning an error.
+
+\begin{lemma}
+\label{piece-law}
+Each invocation of \texttt{sample\_poisson\_0\_1(piece)} on line \ref{line:subcall}
+returns an independent random variable distributed as $Poisson(\texttt{piece})$.
+\end{lemma}
+
+\begin{proof}
+By the proof of Lemma~\ref{err-e}, the preconditions of
+\texttt{sample\_poisson\_0\_1} hold for \texttt{piece}. Therefore each call returns a
+$Poisson(\texttt{piece})$ random variable by its postcondition. Independence follows from the
+fact that the calls are made sequentially with fresh randomness.
+\end{proof}
+
+\begin{lemma}
+\label{sum-poisson}
+If $X_1,\ldots,X_m$ are independent and each $X_i \sim Poisson(\mu)$, then
+\[
+X_1 + \cdots + X_m \sim Poisson(m\mu).
+\]
+\end{lemma}
+
+\begin{proof}
+The probability generating function of a $Poisson(\mu)$ random variable is
+\[
+G_X(z) = \mathbb{E}[z^X] = \sum_{k=0}^\infty e^{-\mu}\frac{\mu^k}{k!}z^k = e^{\mu(z-1)}.
+\]
+Therefore, if $X_1,\ldots,X_m$ are independent and each distributed as $Poisson(\mu)$,
+the probability generating function of their sum is
+\[
+\mathbb{E}[z^{X_1+\cdots+X_m}]
+=
+\prod_{i=1}^m \mathbb{E}[z^{X_i}]
+=
+\left(e^{\mu(z-1)}\right)^m
+=
+e^{m\mu(z-1)},
+\]
+which is the probability generating function of $Poisson(m\mu)$.
+\end{proof}
+
+\begin{lemma}
+\label{ok-out}
+If the outcome of \texttt{sample\_poisson} is \texttt{Ok(out)}, then \texttt{out} is distributed as $Poisson(\texttt{lambda})$.
+\end{lemma}
+
+\begin{proof}
+If \texttt{lambda} $= 0$, the function returns $0$, which is $Poisson(0)$.
+
+Assume now that \texttt{lambda} $> 0$. Let
+\[
+m := \lfloor \texttt{lambda} \rfloor + 1
+\quad\text{and}\quad
+\mu := \frac{\texttt{lambda}}{m}.
+\]
+By Lemma~\ref{piece-law}, each iteration of the loop on line \ref{line:subcall} adds an
+independent $Poisson(\mu)$ random variable to \texttt{total}. Since the loop runs exactly $m$
+times, \texttt{out} is the sum of $m$ independent $Poisson(\mu)$ random variables.
+
+By Lemma~\ref{sum-poisson},
+\[
+\texttt{out} \sim Poisson(m\mu) = Poisson(\texttt{lambda}).
+\]
+Thus \texttt{out} has the claimed distribution.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{postcondition}]
+Holds by Lemma~\ref{err-e} and Lemma~\ref{ok-out}.
+\end{proof}
+
+\bibliographystyle{alpha}
+\bibliography{mod}
+\end{document}

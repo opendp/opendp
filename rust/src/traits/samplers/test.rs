@@ -134,7 +134,7 @@ pub fn check_chi_square(observed: &[u64], expected: &[f64]) -> Fallible<()> {
         return fallible!(FailedFunction, "no bins");
     }
 
-    // Preconditions: expected counts must be finite and >= 5.
+    // Preconditions: expected counts must be finite and > 0.
     for (i, &e) in expected.iter().enumerate() {
         if !e.is_finite() || e <= 0.0 {
             return fallible!(
@@ -142,13 +142,47 @@ pub fn check_chi_square(observed: &[u64], expected: &[f64]) -> Fallible<()> {
                 "expected[{i}] must be finite and > 0, got {e}"
             );
         }
-        if e < 5.0 {
+    }
+
+    // Coalesce sparse tail bins so the chi-square approximation remains valid.
+    // This is standard practice for discrete distributions with light tails.
+    let mut grouped_observed_rev = Vec::new();
+    let mut grouped_expected_rev = Vec::new();
+    let mut acc_o = 0u64;
+    let mut acc_e = 0.0f64;
+
+    for (&o, &e) in observed.iter().zip(expected.iter()).rev() {
+        acc_o += o;
+        acc_e += e;
+
+        if acc_e >= 5.0 {
+            grouped_observed_rev.push(acc_o);
+            grouped_expected_rev.push(acc_e);
+            acc_o = 0;
+            acc_e = 0.0;
+        }
+    }
+
+    if acc_e > 0.0 {
+        if let (Some(last_o), Some(last_e)) = (
+            grouped_observed_rev.last_mut(),
+            grouped_expected_rev.last_mut(),
+        ) {
+            *last_o += acc_o;
+            *last_e += acc_e;
+        } else {
             return fallible!(
                 FailedFunction,
-                "expected[{i}] too small for chi-square approximation: expected={e} (<5)."
+                "total expected count too small for chi-square approximation: expected={acc_e} (<5)."
             );
         }
     }
+
+    grouped_observed_rev.reverse();
+    grouped_expected_rev.reverse();
+
+    let observed = grouped_observed_rev;
+    let expected = grouped_expected_rev;
 
     // df = k - 1 - params_estimated
     let k = observed.len();

@@ -1,0 +1,55 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\title{\texttt{impl PrivateCandidateMeasure for MaxDivergence}}
+\author{Michael Shoemate}
+\date{}
+
+\begin{document}
+\maketitle
+
+Proves soundness of the \texttt{MaxDivergence} implementation of
+\texttt{PrivateCandidateMeasure} in \texttt{mod.rs}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\texttt{base\_map} is the privacy map of a valid \texttt{MaxDivergence} measurement.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/max_divergence_private_candidate_measure.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+\label{postcondition}
+The \texttt{validate} method accepts exactly the supported pure-DP combinations implemented in
+\texttt{mod.rs}, and \texttt{new\_privacy\_map} returns the privacy map stated in the proof
+definition of \texttt{make\_select\_private\_candidate}.
+\end{theorem}
+
+\section{Proof}
+The validation logic is immediate:
+\begin{itemize}
+    \item line \ref{line:geometric-guard} rejects thresholded constructions unless the repetition
+    family is geometric;
+    \item line \ref{line:poisson-guard} rejects all Poisson constructions;
+    \item no other combinations are rejected.
+\end{itemize}
+
+For privacy accounting, there are two accepted cases.
+\begin{itemize}
+    \item In the thresholded case, line \ref{line:threshold-factor} sets the factor to $2$.
+    By Theorem 3.1 of \cite{liu2018privateselectionprivatecandidates}, the thresholded geometric
+    construction is $2\epsilon$-DP when the base mechanism is $\epsilon$-DP.
+    \item In the non-thresholded case, line \ref{line:nb-factor} computes an upward-rounded factor
+    satisfying \texttt{factor} $\ge 2 + \eta$.
+    By Corollary 3 of \cite{papernot2021hyperparametertuningrenyidifferentialprivacy}, the
+    negative-binomial best-of-$k$ construction is $(2 + \eta)\epsilon$-DP.
+\end{itemize}
+
+Line \ref{line:mul} applies this factor to \texttt{base\_map(d\_in)}, so the returned privacy map
+is a conservative upper bound on the implemented pure-DP privacy loss.
+
+\bibliographystyle{plain}
+\bibliography{references.bib}
+
+\end{document}

@@ -103,6 +103,7 @@ idealized-numerics = []
 floating-point = ["idealized-numerics"]
 contrib = []
 honest-but-curious = []
+private-selection-v2 = []
 untrusted = ["idealized-numerics", "contrib", "honest-but-curious"]
 
 polars = [

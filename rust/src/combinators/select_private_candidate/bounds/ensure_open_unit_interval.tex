@@ -1,0 +1,56 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn ensure\_open\_unit\_interval}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+Proves soundness of \texttt{fn ensure\_open\_unit\_interval} in \texttt{mod.rs}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+None.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/ensure_open_unit_interval.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+\label{postcondition}
+For any input \texttt{x}, \texttt{ensure\_open\_unit\_interval(x)} either returns \texttt{Err(e)},
+or returns \texttt{Ok(())} and \texttt{x} lies in the open unit interval $(0,1)$.
+\end{theorem}
+
+\section{Proof}
+Assume an arbitrary input \texttt{x}.
+
+\begin{lemma}
+\label{err-e}
+\texttt{ensure\_open\_unit\_interval} returns \texttt{Err(e)} exactly when the guard on
+line \ref{line:guard} is true.
+\end{lemma}
+
+\begin{proof}
+The guard is the only branch in the function. If it is true, the function executes the explicit
+\texttt{raise}. If it is false, the function reaches the final \texttt{return ()}.
+\end{proof}
+
+\begin{lemma}
+\label{ok-out}
+If \texttt{ensure\_open\_unit\_interval(x)} returns \texttt{Ok(())}, then \texttt{x} lies in
+$(0,1)$.
+\end{lemma}
+
+\begin{proof}
+If the function returns \texttt{Ok(())}, then by Lemma~\ref{err-e} the guard on
+line \ref{line:guard} is false. Therefore \texttt{x} is neither $\le 0$ nor $\ge 1$, so
+\texttt{x} lies in $(0,1)$.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{postcondition}]
+Holds by Lemma~\ref{err-e} and Lemma~\ref{ok-out}.
+\end{proof}
+
+\end{document}

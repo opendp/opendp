@@ -1,0 +1,76 @@
+\documentclass{article}
+\input{../../../lib.sty}
+
+\title{\texttt{fn log\_inv\_gamma\_hi\_from\_x}}
+\author{Michael Shoemate}
+
+\begin{document}
+\maketitle
+
+Proves soundness of \texttt{fn log\_inv\_gamma\_hi\_from\_x} in \texttt{mod.rs}.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+\texttt{x} is finite.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/log_inv_gamma_hi_from_x.py}
+
+\subsection*{Postcondition}
+\begin{theorem}
+\label{postcondition}
+For any finite \texttt{x}, \texttt{log\_inv\_gamma\_hi\_from\_x} either returns \texttt{Err(e)},
+or returns \texttt{Ok(out)} where
+\[
+\texttt{out} \ge \log\!\left(\frac{1}{1 - e^{-\texttt{x}}}\right).
+\]
+\end{theorem}
+
+\section{Proof}
+Assume the precondition and write $\gamma = 1 - e^{-x}$.
+
+\begin{lemma}
+\label{err-e}
+\texttt{log\_inv\_gamma\_hi\_from\_x} only returns \texttt{Err(e)} if one of the fallible calls
+on lines \ref{line:gamma_lo}, \ref{line:interval}, \ref{line:minus_one_lo}, or
+\ref{line:ln_gamma_lo} returns \texttt{Err(e)}.
+\end{lemma}
+
+\begin{proof}
+These are exactly the fallible operations in the pseudocode; the final negation is infallible.
+\end{proof}
+
+\begin{lemma}
+\label{ok-out}
+If \texttt{log\_inv\_gamma\_hi\_from\_x} returns \texttt{Ok(out)}, then
+\[
+\texttt{out} \ge \log\!\left(\frac{1}{1 - e^{-\texttt{x}}}\right).
+\]
+\end{lemma}
+
+\begin{proof}
+If line \ref{line:interval} succeeds, then \texttt{gamma\_lo} lies in $(0,1)$.
+By the proof of \texttt{gamma\_lo\_from\_x},
+\[
+\texttt{gamma\_lo} \le \gamma.
+\]
+Subtracting $1$ preserves order, so
+\[
+\texttt{gamma\_minus\_one\_lo} \le \gamma - 1.
+\]
+Both values lie in $(-1,0)$, so \texttt{neg\_inf\_ln\_1p} is applied on a valid domain and yields
+\[
+\texttt{ln\_gamma\_lo} \le \ln(\gamma).
+\]
+Negating reverses the inequality:
+\[
+\texttt{out} = -\texttt{ln\_gamma\_lo} \ge -\ln(\gamma)
+= \log\!\left(\frac{1}{1 - e^{-x}}\right).
+\]
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{postcondition}]
+Holds by Lemma~\ref{err-e} and Lemma~\ref{ok-out}.
+\end{proof}
+
+\end{document}

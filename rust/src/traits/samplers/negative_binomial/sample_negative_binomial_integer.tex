@@ -1,0 +1,78 @@
+\documentclass{article}
+\input{../../../lib.sty}
+\title{\texttt{fn sample\_negative\_binomial\_integer}}
+\author{Michael Shoemate}
+\begin{document}
+\maketitle
+
+This document proves that the implementation of \texttt{sample\_negative\_binomial\_integer}
+in \texttt{mod.rs} satisfies its proof definition.
+
+\section{Hoare Triple}
+\subsection*{Precondition}
+$\texttt{shape} \in \mathbb{N}_{>0}$ and $\texttt{x} \in \mathbb{Q}_{>0}$.
+
+\subsection*{Pseudocode}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_negative_binomial_integer.py}
+
+\subsection*{Postcondition}
+\label{postcondition}
+For any setting of the input parameters \texttt{shape} and \texttt{x} such that the given preconditions hold,
+\texttt{sample\_negative\_binomial\_integer} either returns \texttt{Err(e)} due to a lack of system entropy,
+or \texttt{Ok(out)}, where \texttt{out} is distributed as a negative binomial random variable on $\mathbb{N}_0$
+with shape \texttt{shape} and success probability $1 - e^{-x}$, parameterized as the number of failures before
+the \texttt{shape}-th success.
+
+\section{Proof}
+Assume the preconditions are met.
+
+\begin{lemma}
+\label{lem:err-e}
+\texttt{sample\_negative\_binomial\_integer} only returns \texttt{Err(e)} when there is a lack of system entropy.
+\end{lemma}
+\begin{proof}
+Under the stated preconditions, the preconditions of
+\rustdoc{traits/samplers/cks20/fn}{sample\_geometric\_exp\_fast}
+on line \ref{line:geom_draw} are met in every iteration of the loop.
+By its proof definition, each invocation of
+\rustdoc{traits/samplers/cks20/fn}{sample\_geometric\_exp\_fast}
+either returns a geometrically distributed sample or \texttt{Err(e)} due to a lack of system entropy.
+The function has no other fallible operations. Therefore any returned error must be due to a lack of system entropy.
+\end{proof}
+
+\begin{lemma}
+\label{lem:geom-sum}
+If the outcome of \texttt{sample\_negative\_binomial\_integer} is \texttt{Ok(out)}, then \texttt{out}
+is distributed as a negative binomial random variable on $\mathbb{N}_0$ with shape \texttt{shape}
+and success probability $1 - e^{-x}$, parameterized as the number of failures before the
+\texttt{shape}-th success.
+\end{lemma}
+\begin{proof}
+Let $m$ denote the value of \texttt{shape}.
+For each of the $m$ iterations of the loop, line \ref{line:geom_draw} draws an independent sample
+$G_i \sim Geometric(1 - e^{-x})$ on $\mathbb{N}_0$.
+The algorithm returns
+$K = \sum_{i=1}^m G_i$.
+
+For any $k \in \mathbb{N}_0$, the event $\{K = k\}$ is equivalent to choosing a vector
+$(g_1, \ldots, g_m) \in \mathbb{N}_0^m$ such that $\sum_{i=1}^m g_i = k$.
+There are $\binom{k + m - 1}{k}$ such vectors.
+Each vector has probability
+\begin{equation*}
+\prod_{i=1}^m (1 - e^{-x}) e^{-x g_i}
+= (1 - e^{-x})^m e^{-xk}.
+\end{equation*}
+Therefore
+\begin{equation*}
+\Pr[K = k]
+= \binom{k + m - 1}{k} (1 - e^{-x})^m e^{-xk}.
+\end{equation*}
+This is exactly the negative binomial distribution with shape $m$ and success probability $1 - e^{-x}$,
+parameterized as the number of failures before the $m$-th success.
+\end{proof}
+
+\begin{proof}
+\ref{postcondition} holds by Lemma~\ref{lem:err-e} and Lemma~\ref{lem:geom-sum}.
+\end{proof}
+
+\end{document}
