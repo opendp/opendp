@@ -240,3 +240,7 @@ R/opendp-docs
 *.blg
 *.run.xml
 *.toc
+
+
+rust/**/proofs/
+.lake
