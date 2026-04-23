@@ -41,6 +41,7 @@ __all__ = [
     'ChangeOneIdDistance',
     'FrameDistance',
     'Measure',
+    'ExtrinsicDivergence',
     'ApproximateDivergence',
     'PrivacyProfile',
     '_PartialConstructor',
@@ -1105,6 +1106,29 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
     
     def __iter__(self):
         raise ValueError("Measure does not support iteration")
+
+    def cast(self, type_: Type[D]) -> D:
+        """Retrieve the descriptor as the prescribed type, or error."""
+        if not (
+            isinstance(self, ExtrinsicDivergence)
+            and isinstance(descriptor := self.descriptor, type_)
+        ):
+            raise ValueError(f"measure descriptor must be a {type_.__name__}, found {self}")
+        return descriptor
+
+
+class ExtrinsicDivergence(Measure):
+    '''A user-defined privacy measure.'''
+
+    _type_ = AnyMeasure
+
+    @property
+    def descriptor(self) -> Any:
+        '''
+        Descriptor of measure. Used to retrieve the descriptor associated with measures defined in Python
+        '''
+        from opendp.measures import _extrinsic_measure_descriptor
+        return _extrinsic_measure_descriptor(self)
 
 
 

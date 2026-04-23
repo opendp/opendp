@@ -11,6 +11,7 @@ tests = {
     # (for f-string). Negative lookahead would be more precise.
     '"print" in test/ should be explained': "! egrep 'print\\(([^\"'\"'\"'f]' -r test",
     '"print" in src/ should be log instead': "! egrep '^\\s+print\\(' -r src",
+    # run this to fix: find docs/source/ -name '*.rst' | xargs blacken-docs -l 60
     'check formatting of code in docs': "find ../docs/source/ -name '*.rst' | xargs blacken-docs -l 60 --check",
 }
 

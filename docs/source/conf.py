@@ -178,10 +178,11 @@ html_css_files = [
 ]
 
 # See https://pydata-sphinx-theme.readthedocs.io/en/v0.6.3/user_guide/configuring.html#configure-the-sidebar
-# Note: Overridden in the Makefile for local builds. Be sure to update both places.
-html_sidebars = {
-   '**': ['sidebar-nav-bs.html', 'versioning.html'],
-}
+universal_sidebars = ['sidebar-nav-bs.html']
+if os.getenv("OPENDP_SPHINX_LOCAL") != "1":
+    universal_sidebars.append('versioning.html')
+html_sidebars = {'**': universal_sidebars}
+
 html_context = {
     # Expected sphinx-multiversion to set "latest_version", but it was None, so set it manually.
     'latest_version_name': f'v{version}',
