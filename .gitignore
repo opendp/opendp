@@ -240,3 +240,11 @@ R/opendp-docs
 *.blg
 *.run.xml
 *.toc
+
+# Aeneas build artifacts and generated outputs
+.lake/
+*.llbc
+rust/aeneas-out/
+rust/opendp_verified/Generated/
+SampCert/
+aeneas/
