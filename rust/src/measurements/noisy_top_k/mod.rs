@@ -1,18 +1,20 @@
 use crate::{
     core::{Function, Measure, Measurement, PrivacyMap},
     domains::{AtomDomain, VectorDomain},
-    error::Fallible,
+    error::{Error, ErrorVariant, Fallible},
     measures::{MaxDivergence, ZeroConcentratedDivergence},
     metrics::LInfDistance,
     traits::{
         CastInternalRational, FiniteBounds, InfCast, InfDiv, InfMul, InfPowI, Number, ProductOrd,
-        samplers::{sample_bernoulli_exp, sample_uniform_uint_below},
     },
 };
 use dashu::{base::Sign, float::FBig, ibig, rational::RBig};
 use num::Zero;
 use opendp_derive::{bootstrap, proven};
-use std::{collections::BTreeSet, ops::Range};
+use opendp_verified::{
+    error::{Error as VerifiedError, ErrorVariant as VerifiedErrorVariant},
+    measurements::noisy_top_k as verified_noisy_top_k,
+};
 
 #[cfg(feature = "ffi")]
 mod ffi;
@@ -194,7 +196,8 @@ pub(crate) fn noisy_top_k<TIA: Clone + CastInternalRational + ProductOrd + Finit
         })
         .collect::<Fallible<_>>()?;
 
-    peel_permute_and_flip(y, scale, k, replacement)
+    verified_noisy_top_k::peel_permute_and_flip(y, scale, k, replacement)
+        .map_err(from_verified_error)
 }
 
 #[proven]
@@ -204,27 +207,13 @@ pub(crate) fn noisy_top_k<TIA: Clone + CastInternalRational + ProductOrd + Finit
 /// $k$ times by peeling,
 /// where $\texttt{scale} = \frac{2 \cdot \Delta}{\epsilon}$.
 fn peel_permute_and_flip(
-    mut x: Vec<RBig>,
+    x: Vec<RBig>,
     scale: RBig,
     k: usize,
     replacement: bool,
 ) -> Fallible<Vec<usize>> {
-    let mut natural_order = Vec::new();
-    let mut sorted_order = BTreeSet::new();
-
-    for _ in 0..k.min(x.len()) {
-        let mut index = permute_and_flip(&x, &scale, replacement)?;
-        x.remove(index);
-
-        // map index on modified x back to original x (postprocessing)
-        for &del in &sorted_order {
-            if del <= index { index += 1 } else { break }
-        }
-
-        sorted_order.insert(index);
-        natural_order.push(index);
-    }
-    Ok(natural_order)
+    verified_noisy_top_k::peel_permute_and_flip(x, scale, k, replacement)
+        .map_err(from_verified_error)
 }
 
 #[proven]
@@ -233,44 +222,19 @@ fn peel_permute_and_flip(
 /// otherwise returns a sample from $\mathcal{M}_{PF}$ (as defined in MS2023 Lemma 1),
 /// where $\texttt{scale} = \frac{2 \cdot \Delta}{\epsilon}$.
 fn permute_and_flip(x: &[RBig], scale: &RBig, replacement: bool) -> Fallible<usize> {
-    let x_is_empty = || err!(FailedFunction, "x is empty");
+    verified_noisy_top_k::permute_and_flip(x, scale, replacement).map_err(from_verified_error)
+}
 
-    if scale.is_zero() {
-        return (0..x.len()).max_by_key(|&i| &x[i]).ok_or_else(x_is_empty);
-    }
-
-    let x_max = x.iter().max().ok_or_else(x_is_empty)?;
-
-    let mut candidates: Vec<usize> = (0..x.len()).collect();
-
-    let sequence = match replacement {
-        false => Sequence::Range(0..x.len()),
-        true => Sequence::Zero,
+fn from_verified_error(error: VerifiedError) -> Error {
+    let variant = match error.variant {
+        VerifiedErrorVariant::FailedFunction => ErrorVariant::FailedFunction,
+        VerifiedErrorVariant::FailedCast => ErrorVariant::FailedCast,
+        VerifiedErrorVariant::EntropyExhausted => ErrorVariant::EntropyExhausted,
+        _ => ErrorVariant::FailedFunction,
     };
-
-    for left in sequence {
-        let right = left + sample_uniform_uint_below(x.len() - left)?;
-        candidates.swap(left, right); // if w/o replacement, fisher-yates shuffle up to left
-
-        let candidate = candidates[left];
-        if sample_bernoulli_exp((x_max - &x[candidate]) / scale)? {
-            return Ok(candidate);
-        }
-    }
-    unreachable!("at least one x[candidate] is equal to x_max")
-}
-
-enum Sequence {
-    Range(Range<usize>),
-    Zero,
-}
-impl Iterator for Sequence {
-    type Item = usize;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self {
-            Sequence::Range(range) => range.next(),
-            Sequence::Zero => Some(0),
-        }
+    Error {
+        variant,
+        message: error.message,
+        backtrace: error.backtrace,
     }
 }
