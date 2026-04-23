@@ -12,12 +12,16 @@ Use :func:`~opendp.measurements.make_user_measurement` to construct a measuremen
     .. tab-set::
 
         .. tab-item:: Python
+            :sync: python
 
             .. literalinclude:: code/measurement.rst
+                :language: python
+                :dedent:
                 :start-after: # enable-features
                 :end-before: # /enable-features
 
         .. tab-item:: R
+            :sync: r
 
             .. literalinclude:: code/measurement.R
                 :language: r
@@ -29,12 +33,16 @@ This example mocks the typical API of the OpenDP library to make the *most priva
 .. tab-set::
 
     .. tab-item:: Python
+        :sync: python
 
         .. literalinclude:: code/measurement.rst
+            :language: python
+            :dedent:
             :start-after: # make-base-constant
             :end-before: # /make-base-constant
 
     .. tab-item:: R
+        :sync: r
 
         .. literalinclude:: code/measurement.R
             :language: r
@@ -46,12 +54,16 @@ The resulting Measurement may be used interchangeably with those constructed via
 .. tab-set::
 
     .. tab-item:: Python
+        :sync: python
 
         .. literalinclude:: code/measurement.rst
+            :language: python
+            :dedent:
             :start-after: # use-measurement
             :end-before: # /use-measurement
 
     .. tab-item:: R
+        :sync: r
 
         .. literalinclude:: code/measurement.R
             :language: r

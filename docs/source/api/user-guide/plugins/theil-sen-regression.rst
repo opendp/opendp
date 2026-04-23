@@ -19,12 +19,16 @@ Enable plugin-related features:
 .. tab-set::
 
     .. tab-item:: Python
+        :sync: python
 
         .. literalinclude:: code/theil-sen-regression.rst
+            :language: python
+            :dedent:
             :start-after: # enable-features
             :end-before: # /enable-features
 
     .. tab-item:: R
+        :sync: r
 
         .. literalinclude:: code/theil-sen-regression.R
             :language: r
@@ -39,12 +43,16 @@ Construct a transformation that pairs rows and predicts response values at two x
 .. tab-set::
 
     .. tab-item:: Python
+        :sync: python
 
         .. literalinclude:: code/theil-sen-regression.rst
+            :language: python
+            :dedent:
             :start-after: # pairwise-predict
             :end-before: # /pairwise-predict
 
     .. tab-item:: R
+        :sync: r
 
         .. literalinclude:: code/theil-sen-regression.R
             :language: r
@@ -60,6 +68,8 @@ The figure below shows the intuition behind the pairwise prediction step: each s
 .. dropdown:: Python code to generate this figure
 
     .. literalinclude:: code/theil-sen-regression.rst
+        :language: python
+        :dedent:
         :start-after: # pairwise-visualization
         :end-before: # /pairwise-visualization
 
@@ -71,12 +81,16 @@ Construct a measurement that privately estimates the median prediction at each c
 .. tab-set::
 
     .. tab-item:: Python
+        :sync: python
 
         .. literalinclude:: code/theil-sen-regression.rst
+            :language: python
+            :dedent:
             :start-after: # private-medians
             :end-before: # /private-medians
 
     .. tab-item:: R
+        :sync: r
 
         .. literalinclude:: code/theil-sen-regression.R
             :language: r
@@ -91,12 +105,16 @@ Combine the transformation, private medians, and postprocessing into a single me
 .. tab-set::
 
     .. tab-item:: Python
+        :sync: python
 
         .. literalinclude:: code/theil-sen-regression.rst
+            :language: python
+            :dedent:
             :start-after: # mechanism
             :end-before: # /mechanism
 
     .. tab-item:: R
+        :sync: r
 
         .. literalinclude:: code/theil-sen-regression.R
             :language: r
@@ -113,6 +131,8 @@ Apply the measurement to synthetic data to obtain private regression coefficient
     .. tab-item:: Python
 
         .. literalinclude:: code/theil-sen-regression.rst
+            :language: python
+            :dedent:
             :start-after: # release
             :end-before: # /release
 
@@ -132,5 +152,7 @@ The original notebook also visualized the resulting private fit:
 .. dropdown:: Python code to generate this figure
 
     .. literalinclude:: code/theil-sen-regression.rst
+        :language: python
+        :dedent:
         :start-after: # private-fit-visualization
         :end-before: # /private-fit-visualization

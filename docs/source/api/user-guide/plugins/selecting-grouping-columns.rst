@@ -25,12 +25,16 @@ We'll first write plugins for our transformation and measurement:
 .. tab-set::
 
     .. tab-item:: Python
+        :sync: python
 
         .. literalinclude:: code/selecting-grouping-columns.rst
+            :language: python
+            :dedent:
             :start-after: # plugins
             :end-before: # /plugins
 
     .. tab-item:: R
+        :sync: r
 
         .. literalinclude:: code/selecting-grouping-columns.R
             :language: r
@@ -42,12 +46,16 @@ Next, use these functions to create a DP mechanism:
 .. tab-set::
 
     .. tab-item:: Python
+        :sync: python
 
         .. literalinclude:: code/selecting-grouping-columns.rst
+            :language: python
+            :dedent:
             :start-after: # dp-mechanism
             :end-before: # /dp-mechanism
 
     .. tab-item:: R
+        :sync: r
 
         .. literalinclude:: code/selecting-grouping-columns.R
             :language: r
@@ -59,12 +67,16 @@ Finally, load your data and make a DP release:
 .. tab-set::
 
     .. tab-item:: Python
+        :sync: python
 
         .. literalinclude:: code/selecting-grouping-columns.rst
+            :language: python
+            :dedent:
             :start-after: # dp-release
             :end-before: # /dp-release
 
     .. tab-item:: R
+        :sync: r
 
         .. literalinclude:: code/selecting-grouping-columns.R
             :language: r

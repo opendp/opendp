@@ -11,12 +11,16 @@ Use :func:`~opendp.transformations.make_user_transformation` to construct your o
     .. tab-set::
 
         .. tab-item:: Python
+            :sync: python
 
             .. literalinclude:: code/transformation.rst
+                :language: python
+                :dedent:
                 :start-after: # enable-features
                 :end-before: # /enable-features
 
         .. tab-item:: R
+            :sync: r
 
             .. literalinclude:: code/transformation.R
                 :language: r
@@ -28,12 +32,16 @@ In this example, we mock the typical API of the OpenDP library to make a transfo
 .. tab-set::
 
     .. tab-item:: Python
+        :sync: python
 
         .. literalinclude:: code/transformation.rst
+            :language: python
+            :dedent:
             :start-after: # make-repeat
             :end-before: # /make-repeat
 
     .. tab-item:: R
+        :sync: r
 
         .. literalinclude:: code/transformation.R
             :language: r
@@ -45,12 +53,16 @@ The resulting Transformation may be used interchangeably with those constructed 
 .. tab-set::
 
     .. tab-item:: Python
+        :sync: python
 
         .. literalinclude:: code/transformation.rst
+            :language: python
+            :dedent:
             :start-after: # use-transformation
             :end-before: # /use-transformation
 
     .. tab-item:: R
+        :sync: r
 
         .. literalinclude:: code/transformation.R
             :language: r

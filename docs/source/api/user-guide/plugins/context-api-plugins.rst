@@ -12,10 +12,14 @@ then they can be omitted when you call the function from the Context API.
 The Context API will fill them in from the compositor's input space or from the output space of the previous transformation.
 
 .. literalinclude:: code/context-api-plugins.rst
+    :language: python
+    :dedent:
     :start-after: # enable-features
     :end-before: # /enable-features
 
 .. literalinclude:: code/context-api-plugins.rst
+    :language: python
+    :dedent:
     :start-after: # register-anything-constant
     :end-before: # /register-anything-constant
 
@@ -27,6 +31,8 @@ While we recommend writing constructors in this convention,
 you can still register functions that don't follow this convention.
 
 .. literalinclude:: code/context-api-plugins.rst
+    :language: python
+    :dedent:
     :start-after: # register-int-constant
     :end-before: # /register-int-constant
 
