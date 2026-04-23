@@ -1,0 +1,26 @@
+[package]
+name = "opendp_verified"
+version.workspace = true
+license-file.workspace = true
+readme.workspace = true
+homepage.workspace = true
+repository.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[features]
+default = ["use-openssl"]
+use-openssl = ["dep:openssl", "dep:openssl-src"]
+
+[dependencies]
+dashu = { version = "0.4.0", features = ["num-traits_v02"] }
+openssl = { version = "0.10.71", features = ["vendored"], optional = true }
+# Keep vendored OpenSSL on a pre-3.5 line for Windows Rtools/MinGW builds.
+# `openssl-src` versions `300.Y.Z` package upstream OpenSSL `3.Y.Z`.
+# Newer vendored releases pull in QUIC code that fails to compile there.
+openssl-src = { version = "=300.3.1", optional = true }
+rand = "0.7.3"
+
+[lib]
+path = "src/lib.rs"

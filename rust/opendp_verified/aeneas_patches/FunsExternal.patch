@@ -1,0 +1,71 @@
+--- FunsExternal_Template.lean
++++ FunsExternal.lean
+@@ -18,6 +18,10 @@
+ @[rust_fun "core::hint::must_use"]
+ axiom core.hint.must_use {T : Type} : T → Result T
+ 
++@[simp]
++axiom core.hint.must_use_spec {T : Type} (x : T) :
++  core.hint.must_use x ⦃ y => y = x ⦄
++
+ /-- [core::num::{usize}::div_ceil]:
+     Source: '/rustc/library/core/src/num/uint_macros.rs', lines 3597:8-3597:54
+     Name pattern: [core::num::{usize}::div_ceil] -/
+@@ -76,27 +80,39 @@
+     Name pattern: [core::result::{core::ops::try_trait::Try<core::result::Result<@T, @E>, @T, core::result::Result<core::convert::Infallible, @E>>}::branch] -/
+ @[rust_fun
+   "core::result::{core::ops::try_trait::Try<core::result::Result<@T, @E>, @T, core::result::Result<core::convert::Infallible, @E>>}::branch"]
+-axiom core.result.Result.Insts.CoreOpsTry_traitTryTResultInfallibleE.branch
++def core.result.Result.Insts.CoreOpsTry_traitTryTResultInfallibleE.branch
+   {T : Type} {E : Type} :
+   core.result.Result T E → Result (core.ops.control_flow.ControlFlow
+     (core.result.Result core.convert.Infallible E) T)
++  | core.result.Result.Ok x =>
++      ok (core.ops.control_flow.ControlFlow.Continue x)
++  | core.result.Result.Err e =>
++      ok (core.ops.control_flow.ControlFlow.Break (core.result.Result.Err e))
+ 
+ /-- [core::result::{core::ops::try_trait::FromResidual<core::result::Result<core::convert::Infallible, E>> for core::result::Result<T, F>}::from_residual]:
+     Source: '/rustc/library/core/src/result.rs', lines 2187:4-2187:70
+     Name pattern: [core::result::{core::ops::try_trait::FromResidual<core::result::Result<@T, @F>, core::result::Result<core::convert::Infallible, @E>>}::from_residual] -/
+ @[rust_fun
+   "core::result::{core::ops::try_trait::FromResidual<core::result::Result<@T, @F>, core::result::Result<core::convert::Infallible, @E>>}::from_residual"]
+-axiom
++def
+   core.result.Result.Insts.CoreOpsTry_traitFromResidualResultInfallibleE.from_residual
+   (T : Type) {E : Type} {F : Type} (convertFromInst : core.convert.From F E) :
+   core.result.Result core.convert.Infallible E → Result (core.result.Result T
+     F)
++  | core.result.Result.Err e => do
++      let e' ← convertFromInst.from_ e
++      ok (core.result.Result.Err e')
++  | core.result.Result.Ok h => nomatch h
+ 
+ /-- [std::backtrace::{std::backtrace::Backtrace}::capture]:
+     Source: '/rustc/library/std/src/backtrace.rs', lines 292:4-292:33
+     Name pattern: [std::backtrace::{std::backtrace::Backtrace}::capture] -/
+ @[rust_fun "std::backtrace::{std::backtrace::Backtrace}::capture"]
+ axiom std.backtrace.Backtrace.capture : Result std.backtrace.Backtrace
++
++@[simp]
++axiom std.backtrace.Backtrace.capture_spec :
++  std.backtrace.Backtrace.capture ⦃ _ => True ⦄
+ 
+ /-- [std::backtrace::{core::fmt::Display for std::backtrace::Backtrace}::fmt]:
+     Source: '/rustc/library/std/src/backtrace.rs', lines 383:4-383:62
+@@ -114,6 +130,10 @@
+ @[rust_fun "alloc::fmt::format"]
+ axiom alloc.fmt.format : core.fmt.Arguments → Result String
+ 
++@[simp]
++axiom alloc.fmt.format_spec (args : core.fmt.Arguments) :
++  alloc.fmt.format args ⦃ _ => True ⦄
++
+ /-- [alloc::string::{core::cmp::PartialEq<alloc::string::String> for alloc::string::String}::eq]:
+     Source: '/rustc/library/alloc/src/string.rs', lines 350:9-350:18
+     Name pattern: [alloc::string::{core::cmp::PartialEq<alloc::string::String, alloc::string::String>}::eq] -/
+@@ -425,4 +445,3 @@
+   :
+   Slice Std.U8 → Result ((core.result.Result Unit openssl.error.ErrorStack)
+     × (Slice Std.U8))
+-

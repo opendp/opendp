@@ -9,8 +9,8 @@ edition = "2024"
 rust-version = "1.88.0" # MSRV via `cargo install cargo-msrv && cargo msrv --min 1.49.0 -- cargo check --all-features`
 
 [workspace]
-members = [".", "opendp_derive", "opendp_tooling"]
-default-members = [".", "opendp_derive", "opendp_tooling"]
+members = [".", "opendp_derive", "opendp_tooling", "opendp_verified"]
+default-members = [".", "opendp_derive", "opendp_tooling", "opendp_verified"]
 
 [workspace.dependencies]
 syn = { version = "2.0", features = ["full", "parsing"] }
@@ -34,12 +34,14 @@ exclude = ["windows/*"]
 
 [dependencies]
 opendp_derive = { path = "opendp_derive", version = "0.14.2-dev" }
+opendp_verified = { path = "opendp_verified", version = "0.14.2-dev", default-features = false }
 rand = "0.7.3"
 num = "0.3.1"
 thiserror = "1.0.24"
 statrs = "0.13.0"
 dashu = { version = "0.4.0", features = ["num-traits_v02"] }
 openssl = { version = "0.10.71", features = ["vendored"], optional = true }
+openssl-src = { version = "=300.3.1", optional = true }
 
 opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.14.2-dev" }
 readonly = "0.2"
@@ -78,10 +80,6 @@ syn = { workspace = true, optional = true }
 proc-macro2 = { workspace = true, optional = true }
 cbindgen = { version = "0.28.0", optional = true }
 pyo3-build-config = { version = "=0.26.0", features = ["resolve-config"], optional = true }
-# Keep vendored OpenSSL on a pre-3.5 line for Windows Rtools/MinGW builds.
-# `openssl-src` versions `300.Y.Z` package upstream OpenSSL `3.Y.Z`.
-# Newer vendored releases pull in QUIC code that fails to compile there.
-openssl-src = { version = "=300.3.1", optional = true }
 
 [patch.crates-io]
 # When building locally, orient the package to python compatibility via patches.
@@ -127,7 +125,7 @@ polars-ffi = [
     "polars-plan/ffi_plugin", 
     "polars-plan/python"
 ]
-use-openssl = ["openssl", "dep:openssl-src"]
+use-openssl = ["dep:openssl", "dep:openssl-src", "opendp_verified/use-openssl"]
 
 # include extern "C" functions in cdylib
 ffi = ["lazy_static", "cbindgen"]

@@ -32,7 +32,7 @@ use crate::error::Fallible;
 pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
     use openssl::rand::rand_bytes;
     if let Err(e) = rand_bytes(buffer) {
-        fallible!(FailedFunction, "OpenSSL error: {:?}", e)
+        fallible!(EntropyExhausted, "OpenSSL error: {:?}", e)
     } else {
         Ok(())
     }
@@ -45,7 +45,7 @@ pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
 pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
     use rand::Rng;
     if let Err(e) = rand::thread_rng().try_fill(buffer) {
-        fallible!(FailedFunction, "Rand error: {:?}", e)
+        fallible!(EntropyExhausted, "Rand error: {:?}", e)
     } else {
         Ok(())
     }

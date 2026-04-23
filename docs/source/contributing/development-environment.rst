@@ -337,6 +337,68 @@ For more on proof writing patterns:
 
     proof-initiation
 
+
+Lean Verification
+-----------------
+
+Optional instructions for extending OpenDP's formal verification.
+
+Install
+^^^^^^^
+
+1. Install Lean with ``elan``.
+2. Open the repository root and let ``elan`` select the toolchain from ``lean-toolchain``.
+3. Clone Aeneas into ``./aeneas`` and build.
+4. Optional: Clone SampCert into ``./SampCert`` if you want a local editable checkout.
+   Use the ``private-selection`` branch from:
+
+   * ``https://github.com/Shoeboxam/SampCert/tree/private-selection``
+
+5. Run:
+
+.. code-block:: bash
+
+    lake update
+    tools/refresh_opendp_verified_aeneas.sh
+    lake build OpenDPVerified
+
+Workflow
+^^^^^^^^
+
+Keep the files in the following layout:
+
+* generated Aeneas Lean in ``rust/opendp_verified/Generated/``
+* handwritten Lean proofs next to the Rust they prove in ``rust/opendp_verified/src/**/*.lean``
+* the tracked ``FunsExternal`` patch set in ``rust/opendp_verified/aeneas_patches/``
+* semantic sidecar modules for externals in ``rust/opendp_verified/src/externals/``
+* the root Lean module for the verified crate in ``rust/opendp_verified/OpenDPVerified.lean``
+
+To regenerate the LLBC file, run Aeneas, and rebuild the external companion files from
+their templates plus the tracked patch set, run:
+
+.. code-block:: bash
+
+    tools/refresh_opendp_verified_aeneas.sh
+
+Before regeneration, the script snapshots local edits to ``FunsExternal.lean`` and
+``TypesExternal.lean`` back into the tracked patch set in ``rust/opendp_verified/aeneas_patches/``.
+If you change one of those generated companion files intentionally, rerun the refresh script before
+you commit so the patch set is updated.
+
+If the generated templates shift enough that a tracked patch no longer applies, the script stops and
+``patch`` reports the failed hunk. Update the companion file, rerun the refresh script to refresh
+the patch set, and then rerun the script again.
+
+After regeneration:
+
+1. Put semantic predicates and proof-facing contracts for externals in sidecar modules under ``rust/opendp_verified/src/externals``.
+2. Leave handwritten proof files in ``rust/opendp_verified/src``.
+3. Rebuild the Lean target.
+
+.. code-block:: bash
+
+    lake build OpenDPVerified
+
 Release Process
 -----------------
 
