@@ -1,6 +1,8 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use opendp_derive::proven;
+
 use crate::accuracy::{
     conservative_discrete_gaussian_tail_to_alpha, conservative_discrete_laplacian_tail_to_alpha,
 };
@@ -8,8 +10,8 @@ use crate::combinators::{CompositionMeasure, make_composition};
 use crate::core::{Function, Measurement, PrivacyMap};
 use crate::domains::{CategoricalDomain, Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
+use crate::measurements::PrivateExpr;
 use crate::measurements::expr_noise::NoiseDistribution;
-use crate::measurements::make_private_expr;
 use crate::measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence};
 use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance};
 use crate::traits::{InfAdd, InfMul, InfPowI, InfSub, option_min};
@@ -17,10 +19,9 @@ use crate::transformations::traits::UnboundedMetric;
 use crate::transformations::{StableDslPlan, StableExpr};
 use dashu::integer::{IBig, UBig};
 use dashu::rational::RBig;
-use make_private_expr::PrivateExpr;
 use matching::find_len_expr;
-use polars::prelude::{DslPlan, JoinType, LazyFrame, len};
-use polars_plan::dsl::{Expr, col, lit};
+use polars::prelude::{DslPlan, JoinType, LazyFrame, col, len, lit};
+use polars_plan::dsl::Expr;
 
 #[cfg(test)]
 mod test;
@@ -29,6 +30,7 @@ mod matching;
 pub(crate) use matching::{KeySanitizer, MatchGroupBy, is_threshold_predicate, match_group_by};
 use polars_plan::prelude::ProjectionOptions;
 
+#[proven]
 /// Create a private version of an aggregate operation on a LazyFrame.
 ///
 /// # Arguments
@@ -38,7 +40,7 @@ use polars_plan::prelude::ProjectionOptions;
 /// * `plan` - The LazyFrame to transform.
 /// * `global_scale` - The parameter for the measurement.
 /// * `threshold` - Only keep groups with length greater than threshold
-pub fn make_private_group_by<MI, MO>(
+pub(crate) fn make_private_group_by<MI, MO>(
     input_domain: DslPlanDomain,
     input_metric: FrameDistance<MI>,
     output_measure: MO,
@@ -63,7 +65,7 @@ where
         mut key_sanitizer,
     }) = match_group_by(plan)?
     else {
-        return fallible!(MakeMeasurement, "expected group by");
+        return fallible!(MakeMeasurement, "expected group-by");
     };
 
     // 1: establish stability of `group_by`
@@ -105,7 +107,7 @@ where
     };
 
     let m_expr_aggs = aggs.into_iter().map(|expr| {
-        make_private_expr(
+        expr.make_private(
             WildExprDomain {
                 columns: middle_domain.series_domains.clone(),
                 context: Context::Aggregation {
@@ -114,7 +116,6 @@ where
             },
             L0PInfDistance(middle_metric.0.clone()),
             output_measure.clone(),
-            expr,
             global_scale,
         )
     });
@@ -172,6 +173,17 @@ where
     }
 
     let function = Function::new_fallible(move |arg: &DslPlan| {
+        #[cfg(patch_polars)]
+        let output = DslPlan::GroupBy {
+            input: Arc::new(arg.clone()),
+            keys: group_by.clone(),
+            predicates: vec![],
+            aggs: f_comp.eval(&arg)?.into_iter().map(|p| p.expr).collect(),
+            apply: None,
+            maintain_order: false,
+            options: Default::default(),
+        };
+        #[cfg(not(patch_polars))]
         let output = DslPlan::GroupBy {
             input: Arc::new(arg.clone()),
             keys: group_by.clone(),
@@ -261,6 +273,13 @@ where
                 );
             }
         };
+
+        // Tighten the concrete bounds using relationships that always hold:
+        // changed groups <= changed rows, max per-group changes <= changed rows,
+        // and changed rows <= changed groups * max per-group changes.
+        let l0 = l0.min(l1);
+        let li = li.min(l1);
+        let l1 = l1.min(l0.inf_mul(&li)?);
 
         let mut d_out = privacy_map.eval(&(l0, l1, li))?;
 

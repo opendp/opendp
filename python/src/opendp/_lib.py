@@ -24,7 +24,7 @@ def _load_library():
     lib_dir = Path(os.environ.get(lib_envvar, default_lib_dir))
     if not lib_dir.exists():
         # fall back to default location of binaries in a developer install
-        build_dir = 'debug' if os.environ.get('OPENDP_TEST_RELEASE', "false") == "false" else 'release'
+        build_dir = 'release' if os.environ.get('OPENDP_TEST_RELEASE') else 'debug'
         lib_dir = Path(__file__).parent / ".." / ".." / ".." / 'rust' / 'target' / build_dir  # pragma: no cover
 
     if lib_dir.exists():
@@ -286,13 +286,13 @@ class ExtrinsicObjectPtr(ctypes.POINTER(ExtrinsicObject)): # type: ignore[misc]
 
 # The output type cannot be an `ctypes.POINTER(FfiResult)` due to:
 #   https://bugs.python.org/issue5710#msg85731
-#                                 (output         , input       )
-CallbackFnValue = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr)
+#                                 (output         , input       , userdata        )
+CallbackFnValue = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr, ctypes.py_object)
 
 class CallbackFn(ctypes.Structure):
     _fields_ = [
         ("callback", CallbackFnValue),
-        ("lifeline", ExtrinsicObject)
+        ("userdata", ExtrinsicObject)
     ]
 
 class CallbackFnPtr(ctypes.POINTER(CallbackFn)): # type: ignore[misc]

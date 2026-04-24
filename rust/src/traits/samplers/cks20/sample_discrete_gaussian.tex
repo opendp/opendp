@@ -2,7 +2,7 @@
 \input{../../../lib.sty} 
  
 \title{\texttt{fn sample\_discrete\_gaussian}} 
-\author{Michael Shoemate} 
+\author{\MichaelShoemateAuthor}
  
 \begin{document} 
 \maketitle 
@@ -17,10 +17,10 @@ This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsec
     \item Argument \texttt{scale} is of type \texttt{RBig}, a bignum rational 
 \end{itemize} 
  
-\subsubsection*{User-verified} 
+\subsubsection*{Caller-verified}
 $\texttt{scale} \geq 0$ 
  
-\subsection*{Implementation} 
+\subsection*{Pseudocode}
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_discrete_gaussian.py} 
  
 \subsection*{Postcondition} 
@@ -30,9 +30,6 @@ $\texttt{scale} \geq 0$
     \texttt{sample\_discrete\_gaussian} either returns \texttt{Err(e)} due to a lack of system entropy, 
     or \texttt{Ok(out)}, where \texttt{out} is distributed as $\mathcal{N}_\mathbb{Z}(0, \texttt{scale}^2)$. 
 \end{theorem}
- 
-\section{Proof} 
- 
 \begin{definition} 
     (Discrete Gaussian). \cite{CKS20} Let $\mu, \sigma \in \mathbb{R}$ with $\sigma > 0$.  
     The discrete gaussian distribution with location $\mu$ and scale $\sigma$ is denoted $\mathcal{N}_\mathbb{Z}(\mu, \sigma^2)$.  
@@ -105,10 +102,10 @@ We now show that conditioning $Y$ on the success of $C$ gives the desired output
 \end{proof} 
  
 \begin{proof}[Proof of Theorem~\ref{postcondition}]
-    Holds by \ref{err-e} and \ref{ok-out}. 
-\end{proof} 
- 
-\bibliographystyle{alpha} 
-\bibliography{mod} 
- 
+    Holds by \ref{err-e} and \ref{ok-out}.
+\end{proof}
+
+\bibliographystyle{alpha}
+\bibliography{mod}
+
 \end{document}

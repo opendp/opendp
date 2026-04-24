@@ -34,6 +34,26 @@ mod test;
 /// Larger granularities are more computationally efficient, but have a looser privacy map.
 /// If k is not set, k defaults to the smallest granularity.
 ///
+/// # Citations
+/// * [Rogers23 A Unifying Privacy Analysis Framework for Unknown Domain Algorithms in Differential Privacy](https://arxiv.org/abs/2309.09170)
+/// * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/abs/2004.00010)
+///
+/// # Proof Navigation
+/// * [`make_laplace_threshold`] and [`make_gaussian_threshold`] are the distribution-specific entry points.
+/// * [`MakeNoiseThreshold`] covers distribution-specific measurement construction.
+/// * [`NoiseThresholdPrivacyMap`] covers threshold-specific privacy accounting.
+///
+/// # Runtime
+/// For an input map with `m` entries, each release performs `O(m)` wrapper work
+/// plus one draw from the underlying thresholded noise sampler per entry.
+///
+/// # Utility
+/// Utility is governed by the tail of the chosen noise distribution.
+/// If an item is separated from the threshold by a margin `g`,
+/// false-positive and false-negative probabilities decay according to that tail:
+/// exponentially in `g / scale` for Laplace-like tails and
+/// subgaussianly in `(g / scale)^2` for Gaussian-like tails.
+///
 /// # Arguments
 /// * `input_domain` - Domain of the input.
 /// * `input_metric` - Metric for the input domain.

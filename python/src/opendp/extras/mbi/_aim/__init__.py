@@ -130,7 +130,7 @@ class AIM(Algorithm):
             raise ValueError(f"queries ({self.queries}) must be positive")
 
         if isinstance(self.queries, list) and not self.queries:
-            raise ValueError("queries must not be non-empty")
+            raise ValueError("queries must not be empty")
 
         if not (0 < self.measure_split <= 1):
             raise ValueError(f"measure_split ({self.measure_split}) must be in (0, 1]")
@@ -252,7 +252,7 @@ def _make_aim_marginal(
 
     # factors to convert stddev -> scale and scale -> half-distribution expectation
     if output_measure == max_divergence():
-        to_scale, to_mu = sqrt(2), 1.0
+        to_scale, to_mu = 1 / sqrt(2), 1.0
     elif output_measure == zero_concentrated_divergence():
         to_scale, to_mu = 1.0, sqrt(2 / pi)
 

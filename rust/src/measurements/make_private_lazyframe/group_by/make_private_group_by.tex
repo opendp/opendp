@@ -2,7 +2,7 @@
 \input{../../../lib.sty}
 
 \title{\texttt{fn make\_private\_group\_by}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 \date{}
 
 \begin{document}
@@ -20,25 +20,23 @@ Proves soundness of \texttt{fn make\_private\_group\_by} in \asOfCommit{mod.rs}{
     \item Generic \texttt{MO} must implement trait \texttt{ApproximateMeasure}.
 \end{itemize}
 
-\subsubsection*{User-verified}
+\subsubsection*{Caller-verified}
 None
 
 \subsection*{Pseudocode}
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_private_group_by.py}
 
-\subsubsection*{Postconditions}
+\subsection*{Postcondition}
 \begin{theorem}
     \label{postcondition}
     \validMeasurement{\texttt{(input\_domain, input\_metric, \\output\_measure, plan, global\_scale, threshold, MI, MO)}}{\texttt{make\_private\_group\_by}}
 \end{theorem}
-\section{Proof}
-
 We now prove the postcondition (Theorem~\ref{postcondition}).
 \begin{proof}
 
 The function logic breaks down into parts:
 \begin{enumerate}
-    \item establish stability of group by (line \ref{line:input_stability})
+    \item establish stability of group-by (line \ref{line:input_stability})
     \item prepare for release of \texttt{aggs} (line \ref{line:prep-release-aggs})
     \item prepare for release of \texttt{keys} (line \ref{line:prep-release-keys})
     \begin{enumerate}
@@ -168,8 +166,15 @@ The measurement for each expression expects data set distances in terms of a tri
     but can also be bounded by the product of the $L^0$ and $L^\infty$ bounds on line \ref{line:l1-from-l0-li}.
 \end{itemize}
 
-By the postcondition of \texttt{f\_privacy\_map}, the privacy loss of releasing the output of \texttt{aggs}, 
-when grouped data sets may differ by this distance triple,
+Once all three bounds are concrete, the logic tightens them using identities that always hold for grouped distances:
+\[
+    \Delta_0 \le \Delta_1, \qquad \Delta_\infty \le \Delta_1, \qquad \Delta_1 \le \Delta_0 \cdot \Delta_\infty.
+\]
+Therefore the assignments on lines \ref{line:l0-tighten}, \ref{line:li-tighten}, and \ref{line:l1-tighten}
+preserve validity while potentially reducing looseness introduced by independently supplied upper bounds.
+
+By the postcondition of \texttt{f\_privacy\_map}, the privacy loss of releasing the output of \texttt{aggs},
+when grouped data sets may differ by this tightened distance triple,
 is \texttt{d\_out}.
 
 We also need to consider the privacy loss from releasing \texttt{keys}.

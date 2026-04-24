@@ -9,4 +9,4 @@ Everything we've touched on here is explained in more detail in the API User Gui
 * Or if you're interested in extending OpenDP with your own algorithms, see :ref:`plugins`.
 
 Finally, if you have ideas for how we could improve this documentation,
-please let us know at `info@opendp.org <mailto:info@opendp.org>`_.
+please let us know at `contact@opendp.org <mailto:contact@opendp.org>`_.

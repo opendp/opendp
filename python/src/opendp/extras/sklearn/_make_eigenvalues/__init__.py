@@ -15,7 +15,7 @@ def make_eigenvalues(input_domain: Domain, input_metric: Metric) -> Transformati
     np = import_optional_dependency('numpy')
     import opendp.prelude as dp
 
-    dp.assert_features("contrib", "floating-point")
+    dp.assert_features("contrib", "idealized-numerics")
 
     if not str(input_domain).startswith("NPSSCPDomain"):
         raise ValueError("input_domain must be NPSSCPDomain")  # pragma: no cover

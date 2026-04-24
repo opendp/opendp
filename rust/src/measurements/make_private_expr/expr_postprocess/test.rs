@@ -1,5 +1,7 @@
-use polars::df;
-use polars_plan::dsl::{col, len, lit};
+use polars::{
+    df,
+    prelude::{col, len, lit},
+};
 
 use crate::{
     measures::MaxDivergence,

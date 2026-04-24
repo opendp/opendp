@@ -18,6 +18,8 @@ Each document should at least have these components:
 1. Hoare Triple
 
    1. Precondition
+      1. Compiler-verified
+      2. Caller-verified
    2. Pseudocode
    3. Postcondition
 
@@ -97,30 +99,61 @@ Here’s a template for ``absolute_distance.tex``:
    \input{../lib.sty} % "rust/src/lib.sty" contains boilerplate and macros
 
    \title{\texttt{fn absolute\_distance}}
-   \author{Your Name(s) Here}\date{}
+   \author{\YourNameAuthor}\date{}
 
    \begin{document}
-   \maketitle\contrib
+   \maketitle
+   % Enable any applicable proof feature flags:
+   % \contrib
+   % \honestButCurious
+   % \idealizedNumerics
    Proves soundness of \rustdoc{transformations/fn}{absolute\_distance} in \asOfCommit{mod.rs}{f5bb719}.
 
-   \subsection*{Vetting history}
-   \begin{itemize}
-       \item \vettingPR{519}
-   \end{itemize}
-
    \section{Hoare Triple}
-   \subsection*{Preconditions}
+   \subsection*{Precondition}
+   \subsubsection*{Compiler-verified}
+   % List trait bounds and type constraints checked by the compiler.
+   \subsubsection*{Caller-verified}
+   % List any semantic assumptions the caller must satisfy, or write ``None''.
    \subsection*{Pseudocode}
+   \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/this.py}
    \subsection*{Postcondition}
+   \begin{theorem}
+   \label{postcondition}
+   % State the postcondition here.
+   \end{theorem}
 
-   \section{Proof}
+   % Begin lemmas and proofs!
+   \begin{proof}
+   \end{proof}
 
    \end{document}
 
 This template uses several macros defined in ``rust/src/lib.sty``:
 
+Proof documents may include feature-flag warning macros near the top of
+the file. These correspond to Rust feature flags documented in
+:ref:`rust-feature-listing`. Enable whichever warnings apply to the
+proof:
+
 -  ``\contrib`` adds a header to the document indicating the proof is in
-   ``"contrib"``.
+   ``"contrib"`` because it has not completed the vetting process.
+
+-  ``\honestButCurious`` adds a header indicating the proof relies on
+   caller-verified preconditions. Use this whenever the
+   ``Caller-verified`` subsection contains any substantive assumptions.
+
+-  ``\idealizedNumerics`` adds a header indicating the proof relies on
+   an idealized numeric model that ignores finite-machine limitations
+   such as non-closure and overflow. Use this when the proof holds in
+   idealized numerics but the implementation is not privately sound on
+   finite computers.
+
+-  ``\YourNameAuthor`` and similar macros expand to an author's
+   name and GitHub handle together. Use these in ``\author{...}`` so
+   author formatting stays consistent across proofs. If your name is not
+   listed in ``rust/src/lib.sty``, add a new macro there via
+   ``\proofAuthor{name}{github-handle}``.
 
 -  ``\rustdoc{path/to/fn}{ident}`` creates a link to the rust
    documentation for the function we are proving. When you build the
@@ -177,8 +210,8 @@ and link generated ``.pdf`` files from your PR.
 
 We now continue by filling out the proof sections.
 
-Preconditions
-~~~~~~~~~~~~~
+Precondition
+~~~~~~~~~~~~
 
 The function we are proving has three input parameters, consisting of
 one generic (``T``) and two arguments (``a`` and ``b``), where the
@@ -206,10 +239,14 @@ become part of the precondition for the function.
 
 .. code:: latex
 
-   \subsection*{Preconditions}
+   \subsection*{Precondition}
+   \subsubsection*{Compiler-verified}
    \begin{itemize}
        \item \texttt{T} is a type with traits \rustdoc{traits/trait}{InfSub} and \rustdoc{traits/trait}{AlertingAbs}.
    \end{itemize}
+
+   \subsubsection*{Caller-verified}
+   None
 
 In other contexts, it may make sense to specify preconditions on the
 arguments as well.
@@ -223,7 +260,7 @@ communicate the algorithm in a way that is more accessible than Rust.
 
 .. code:: latex
 
-   \section{Pseudocode}
+   \subsection*{Pseudocode}
    \begin{lstlisting}[language = Python, escapechar=|]
    def absolute_distance(a, b):
        a.inf_sub(b).alerting_abs() |\label{line:out}|

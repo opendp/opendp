@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::core::{Measure, Metric, MetricSpace};
 use crate::domains::{ExprPlan, WildExprDomain};
 use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
@@ -6,16 +8,14 @@ use crate::{
     error::Fallible,
 };
 
-use polars::datatypes::{DataType, Field};
-use polars::error::PolarsResult;
+#[cfg(feature = "ffi")]
+use polars::datatypes::DataType;
+use polars::datatypes::Field;
 use polars::error::polars_bail;
-#[cfg(feature = "ffi")]
-use polars::error::polars_err;
-use polars::prelude::{Column, CompatLevel, IntoColumn};
+use polars::error::{PolarsResult, polars_err};
+use polars::prelude::{AnonymousColumnsUdf, Column, IntoColumn};
 use polars::series::Series;
-#[cfg(feature = "ffi")]
-use polars_arrow as arrow;
-use polars_plan::dsl::{ColumnsUdf, Expr, GetOutput};
+use polars_plan::dsl::{ColumnsUdf, Expr};
 use polars_plan::prelude::{FunctionFlags, FunctionOptions};
 #[cfg(feature = "ffi")]
 use pyo3_polars::derive::polars_expr;
@@ -106,8 +106,28 @@ impl ColumnsUdf for IndexCandidatesShim {
         self
     }
 
-    fn call_udf(&self, _: &mut [Column]) -> PolarsResult<Option<Column>> {
+    fn call_udf(&self, _: &mut [Column]) -> PolarsResult<Column> {
         polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")
+    }
+}
+
+impl AnonymousColumnsUdf for IndexCandidatesShim {
+    fn as_column_udf(self: Arc<Self>) -> Arc<dyn ColumnsUdf> {
+        self
+    }
+
+    fn deep_clone(self: Arc<Self>) -> Arc<dyn AnonymousColumnsUdf> {
+        Arc::new(Arc::unwrap_or_clone(self))
+    }
+
+    fn get_field(
+        &self,
+        _: &polars::prelude::Schema,
+        fields: &[polars::prelude::Field],
+    ) -> PolarsResult<polars::prelude::Field> {
+        let [index, cands] = <&[_; 2]>::try_from(fields)
+            .map_err(|_| polars_err!(InvalidOperation: "expected two input arguments"))?;
+        Ok(Field::new(index.name.clone(), cands.dtype.clone()))
     }
 }
 
@@ -118,6 +138,7 @@ pub(crate) struct IndexCandidatesPlugin {
 
 impl OpenDPPlugin for IndexCandidatesShim {
     const NAME: &'static str = "index_candidates";
+    #[cfg(feature = "ffi")]
     const SHIM: bool = true;
     fn function_options() -> FunctionOptions {
         let mut flags = FunctionFlags::default();
@@ -127,10 +148,26 @@ impl OpenDPPlugin for IndexCandidatesShim {
             ..Default::default()
         }
     }
+}
 
-    fn get_output(&self) -> Option<GetOutput> {
-        // dtype is unknown
-        Some(GetOutput::from_type(DataType::Null))
+impl AnonymousColumnsUdf for IndexCandidatesPlugin {
+    fn as_column_udf(self: Arc<Self>) -> Arc<dyn ColumnsUdf> {
+        self
+    }
+
+    fn deep_clone(self: Arc<Self>) -> Arc<dyn AnonymousColumnsUdf> {
+        Arc::new(Arc::unwrap_or_clone(self))
+    }
+
+    fn get_field(
+        &self,
+        _: &polars::prelude::Schema,
+        fields: &[polars::prelude::Field],
+    ) -> PolarsResult<polars::prelude::Field> {
+        let dtype = self.candidates.0.dtype().clone();
+        let [index] = <&[_; 1]>::try_from(fields)
+            .map_err(|_| polars_err!(InvalidOperation: "expected one input argument"))?;
+        Ok(Field::new(index.name.clone(), dtype))
     }
 }
 
@@ -138,13 +175,6 @@ impl OpenDPPlugin for IndexCandidatesPlugin {
     const NAME: &'static str = "index_candidates_plugin";
     fn function_options() -> FunctionOptions {
         FunctionOptions::elementwise()
-    }
-
-    fn get_output(&self) -> Option<GetOutput> {
-        let dtype = self.candidates.0.dtype().clone();
-        Some(GetOutput::map_field(move |f| {
-            Ok(Field::new(f.name().clone(), dtype.clone()))
-        }))
     }
 }
 
@@ -155,8 +185,8 @@ impl ColumnsUdf for IndexCandidatesPlugin {
         self
     }
 
-    fn call_udf(&self, s: &mut [Column]) -> PolarsResult<Option<Column>> {
-        index_candidates_udf(s, self.clone()).map(Some)
+    fn call_udf(&self, s: &mut [Column]) -> PolarsResult<Column> {
+        index_candidates_udf(s, self.clone())
     }
 }
 

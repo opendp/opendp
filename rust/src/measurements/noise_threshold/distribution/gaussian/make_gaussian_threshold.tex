@@ -2,7 +2,7 @@
 \input{../../../../lib.sty}
 
 \title{\texttt{fn make\_gaussian\_threshold}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 \date{}
 
 \begin{document}
@@ -30,7 +30,7 @@ which constructs the core mechanism and wraps it in pre-processing transformatio
 
 \section{Hoare Triple}
 \subsection*{Precondition}
-\subsubsection*{Compiler-Verified}
+\subsubsection*{Compiler-verified}
 \begin{itemize}
     \item generic \texttt{DI} implements trait \rustdoc{measurements/noise/trait}{NoiseDomain}
     \item generic \texttt{MI} implements trait \rustdoc{core/trait}{Metric}
@@ -39,7 +39,7 @@ which constructs the core mechanism and wraps it in pre-processing transformatio
     \item type \texttt{(DI, MI)} implements trait \rustdoc{core/trait}{MetricSpace}
 \end{itemize}
 
-\subsubsection*{User-Verified}
+\subsubsection*{Caller-verified}
 None
 
 \subsection*{Pseudocode}

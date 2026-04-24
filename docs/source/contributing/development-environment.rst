@@ -46,7 +46,8 @@ Make sure you are on the latest Rust version:
 
     rustup update
 
-Now run ``cargo build`` in the ``rust`` subdirectory of the repo:
+Now run ``cargo build`` in the ``rust`` subdirectory of the repo.
+(There will be warnings: They can safely be ignored. `Cleaning them up is tech debt. <https://github.com/opendp/opendp/issues/2476>`)
 
 .. code-block:: bash
 
@@ -57,18 +58,6 @@ This will compile a debug build of the OpenDP shared library, placing it in the 
 (The specific name of the library file will vary depending on your platform.)
 
 Substitute ``cargo build`` with ``cargo test`` to test, or ``cargo check`` to check syntax.
-
-.. note::
-
-  If linking fails when runnning ``cargo test``, you may need to build without the ``extension-module`` feature (`context here <https://pyo3.rs/v0.25.1/faq.html#i-cant-run-cargo-test-or-i-cant-build-in-a-cargo-workspace-im-having-linker-issues-like-symbol-not-found-or-undefined-reference-to-_pyexc_systemerror>`_):
-
-  .. code-block:: bash
-
-    cargo test --no-default-features --features=partials,use-openssl,untrusted,polars,ffi,derive
-  
-  Since ``extension-module`` is a default feature, 
-  the other remaining features are enabled in the above command.
-
 
 Note that Python and R require builds with different features.
 Details are in the :ref:`python-setup` and :ref:`r-setup` sections below.
@@ -95,18 +84,22 @@ Setting a feature changes how the crate compiles.
           That is, if a user/adversary is 'honest' in specifying the constructor arguments,
           then even if they later become 'curious' and try to learn something from the measurement outputs,
           they will not be able to violate the differential privacy promises of the measurement.
+      * - ``idealized-numerics``
+        - Enable to assume an idealized numeric model
+          that ignores finite-precision limitations such as non-closure and overflow,
+          resulting in an underestimation of the actual privacy loss.
       * - ``floating-point``
-        - Enable to include transformations and measurements with floating-point vulnerabilities.
+        - Deprecated alias for ``idealized-numerics``.
       * - ``untrusted``
-        - Enables untrusted features ``contrib``, ``honest-but-curious`` and ``floating-point``.
+        - Enables untrusted features ``contrib``, ``honest-but-curious`` and ``idealized-numerics``.
       * - ``ffi``
         - Enable to include C foreign function interfaces.
+      * - ``polars-ffi``
+        - Build Polars with linking against Python. Enables both ``polars`` and ``ffi``.
       * - ``derive``
         - Enable to support code generation and links to proofs in documentation.
-      * - ``extension-module``
-        - Enable creation of a python extension module for use by Python Polars. Must be disabled for Rust tests. Enable for Python builds to skip linking to ``libpython``.
       * - ``bindings``
-        - Enable to generate Python and R source code. Also enables the ``ffi``, ``derive`` and ``extension-module`` features. 
+        - Enable to generate Python and R source code. Also enables the ``ffi`` and ``derive`` features. 
       * - ``partials``
         - Enabled by default. When enabled, ``then_*`` functions are generated from ``make_*`` functions. Also enables the ``derive`` feature.
       * - ``use-openssl``
@@ -239,12 +232,6 @@ First, build a debug binary that works with R. (Note that the resulting binary w
 
 If you have not already, `install R <https://cran.r-project.org/>`_.
 
-Then, set an environment variable to the absolute path of the OpenDP Library binary directory:
-
-.. code-block:: bash
-
-    export OPENDP_LIB_DIR=$(realpath target/debug)
-
 The default R install for MacOS also includes GUI elements like Tcl/Tk,
 so for the smoothest development experience we suggest these additional installs:
 
@@ -258,11 +245,24 @@ Then, install devtools in R:
 
     install.packages(c("devtools", "RcppTOML", "lintr"))
 
-After each edit to the R or Rust source, run the following command in R to (re)load the R package:
+For day-to-day R development, work from the package directory:
+
+.. code-block:: bash
+
+    cd R/opendp; R
+
+After editing R code, reload the package in your interactive R session with:
 
 .. code-block:: R
 
-    devtools::load_all("R/opendp/", recompile=TRUE)
+    pkgload::load_all()
+
+If you changed Rust or C code, or want to force recompilation of native code as
+part of the reload, use:
+
+.. code-block:: R
+
+    devtools::load_all(recompile = TRUE)
 
 .. This function...
 .. - runs "src/Makevars"
@@ -270,6 +270,9 @@ After each edit to the R or Rust source, run the following command in R to (re)l
 .. - compiles the c files in "src/", which statically links with "libopendp.a"
 .. - outputs "src/opendp.so", which is used by all R functions
 .. - reloads all R functions
+
+In a normal local checkout, both commands pick up the Rust library path
+automatically via ``R/opendp/.Rprofile``.
 
 To do a full package installation from local sources:
 
@@ -352,8 +355,7 @@ Environment Variables
    * - Name
      - Description
    * - ``OPENDP_LIB_DIR``
-     - Overrides the directory in which the OpenDP language binding looks for the OpenDP Library binary.  
-       See example in :ref:`r-setup`. 
+     - Overrides the directory in which the OpenDP language binding looks for the OpenDP Library binary.
    * - ``OPENDP_POLARS_LIB_PATH``
      - Each OpenDP Polars plugin contains a path to the OpenDP Library binary.
        When OpenDP is used as a query server, library paths in queries submitted by clients are stale (local to the client).

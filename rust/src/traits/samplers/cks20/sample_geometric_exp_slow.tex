@@ -2,7 +2,7 @@
 \input{../../../lib.sty} 
  
 \title{\texttt{fn sample\_geometric\_exp\_slow}} 
-\author{Michael Shoemate} 
+\author{\MichaelShoemateAuthor}
  
 \begin{document} 
 \maketitle 
@@ -15,7 +15,7 @@ This proof is adapted from \href{https://arxiv.org/pdf/2004.00010.pdf#subsection
 \subsubsection*{Compiler-verified} 
 Argument \texttt{x} is of type \texttt{RBig}, a bignum rational 
  
-\subsubsection*{User-verified} 
+\subsubsection*{Caller-verified}
 $\texttt{x} > 0$ 
  
 \subsection*{Pseudocode}         
@@ -48,8 +48,6 @@ $\texttt{x} > 0$
         \end{cases}
     \end{equation}
 \end{definition}
- 
-\section{Proof} 
 Assume the preconditions are met. 
  
 \begin{lemma}\label{err-e} 
@@ -82,10 +80,10 @@ Assume the preconditions are met.
 \end{proof} 
  
 \begin{proof}[Proof of Theorem~\ref{postcondition}]
-    Holds by \ref{err-e} and \ref{ok-out}. 
-\end{proof} 
- 
- 
-\bibliographystyle{alpha} 
-\bibliography{mod} 
+    Holds by \ref{err-e} and \ref{ok-out}.
+\end{proof}
+
+
+\bibliographystyle{alpha}
+\bibliography{mod}
 \end{document}

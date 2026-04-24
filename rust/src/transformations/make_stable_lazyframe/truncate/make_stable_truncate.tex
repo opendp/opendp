@@ -2,7 +2,7 @@
 \input{../../../lib.sty}
 
 \title{\texttt{fn make\_stable\_truncate}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 \begin{document}
 \maketitle  
 
@@ -14,15 +14,20 @@ in \asOfCommit{mod.rs}{f5bb719}.
 
 \section{Hoare Triple}
 \subsection*{Precondition}
-\subsubsection*{Caller Verified}
+\subsubsection*{Compiler-verified}
 None
 
-\subsection*{Function}
+\subsubsection*{Caller-verified}
+None
+
+\subsection*{Pseudocode}
 \label{sec:python-pseudocode}
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_stable_truncate.py}
 
 \subsection*{Postcondition}
+\begin{theorem}
 \validTransformation{\texttt{(input\_domain, input\_metric, plan)}}{\\\texttt{make\_stable\_truncate}}
+\end{theorem}
 
 \begin{proof}[Appropriate Output Domain]
     By line \ref{line:stable-keys},

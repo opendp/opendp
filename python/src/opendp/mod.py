@@ -12,6 +12,7 @@ from dataclasses import asdict
 from typing import Any, Literal, Sequence, Type, TypeVar, Union, Callable, Optional, overload, TYPE_CHECKING, cast
 import importlib
 import json
+import warnings
 
 from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, AnyOdometer, import_optional_dependency, get_opendp_version
 
@@ -40,6 +41,7 @@ __all__ = [
     'ChangeOneIdDistance',
     'FrameDistance',
     'Measure',
+    'ExtrinsicDivergence',
     'ApproximateDivergence',
     'PrivacyProfile',
     '_PartialConstructor',
@@ -1105,6 +1107,29 @@ class Measure(ctypes.POINTER(AnyMeasure)): # type: ignore[misc]
     def __iter__(self):
         raise ValueError("Measure does not support iteration")
 
+    def cast(self, type_: Type[D]) -> D:
+        """Retrieve the descriptor as the prescribed type, or error."""
+        if not (
+            isinstance(self, ExtrinsicDivergence)
+            and isinstance(descriptor := self.descriptor, type_)
+        ):
+            raise ValueError(f"measure descriptor must be a {type_.__name__}, found {self}")
+        return descriptor
+
+
+class ExtrinsicDivergence(Measure):
+    '''A user-defined privacy measure.'''
+
+    _type_ = AnyMeasure
+
+    @property
+    def descriptor(self) -> Any:
+        '''
+        Descriptor of measure. Used to retrieve the descriptor associated with measures defined in Python
+        '''
+        from opendp.measures import _extrinsic_measure_descriptor
+        return _extrinsic_measure_descriptor(self)
+
 
 
 class ApproximateDivergence(Measure):
@@ -1241,26 +1266,43 @@ class OpenDPException(Exception):
 
 
 GLOBAL_FEATURES: set[str] = set()
+def _normalize_features(features: Sequence[str], *, stacklevel: int) -> tuple[str, ...]:
+    normalized = []
+
+    for feature in features:
+        if feature != "floating-point":
+            normalized.append(feature)
+            continue
+
+        normalized.append("idealized-numerics")
+        warnings.warn(
+            '"floating-point" is deprecated. Use "idealized-numerics" instead.',
+            DeprecationWarning,
+            stacklevel=stacklevel,
+        )
+
+    return tuple(normalized)
 
 
 def enable_features(*features: str) -> None:
     '''
     Allow the use of optional features. See :ref:`feature-listing` for details.
     '''
-    GLOBAL_FEATURES.update(set(features))
+    GLOBAL_FEATURES.update(set(_normalize_features(features, stacklevel=3)))
 
 
 def disable_features(*features: str) -> None:
     '''
     Disallow the use of optional features. See :ref:`feature-listing` for details.
     '''
-    GLOBAL_FEATURES.difference_update(set(features))
+    GLOBAL_FEATURES.difference_update(set(_normalize_features(features, stacklevel=3)))
 
 
 def assert_features(*features: str) -> None:
     '''
     Check whether a given feature is enabled. See :ref:`feature-listing` for details.
     '''
+    features = _normalize_features(features, stacklevel=3)
     missing_features = [f for f in features if f not in GLOBAL_FEATURES]
     if missing_features:
         features_string = ', '.join(f'"{f}"' for f in features)
@@ -1298,7 +1340,7 @@ def binary_search_chain(
     Find a laplace measurement with the smallest noise scale that is still (d_in, d_out)-close.
 
     >>> import opendp.prelude as dp
-    >>> dp.enable_features("floating-point", "contrib")
+    >>> dp.enable_features("idealized-numerics", "contrib")
     ...
     >>> # The majority of the chain only needs to be defined once.
     >>> pre = (
@@ -1769,7 +1811,7 @@ def deserialize(dp_json):
     return json.loads(dp_json, object_hook=_deserialization_hook)
 
 
-_EXPECTED_POLARS_VERSION = '1.32.0' # Keep in sync with setup.cfg.
+_EXPECTED_POLARS_VERSION = '1.36.1' # Keep in sync with setup.cfg.
 
 
 __version__ = get_opendp_version()

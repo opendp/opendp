@@ -2,7 +2,7 @@
 \input{../../lib.sty}
 
 \title{\texttt{fn then\_index\_or\_default}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 \date{}
 
 \begin{document}
@@ -15,12 +15,12 @@ Proves soundness of the implementation of \rustdoc{transformations/fn}{then\_ind
 This postprocessor indexes into a vector or returns the default value of the type if the index does not exist.
 \section{Hoare Triple}
 \subsection*{Precondition}
-\subsubsection*{Compiler-Verified}
+\subsubsection*{Compiler-verified}
 \begin{itemize}
     \item Generic \texttt{T} implements trait \texttt{Default}
 \end{itemize}
 
-\subsubsection*{User-Verified}
+\subsubsection*{Caller-verified}
 None
 
 \subsection*{Pseudocode}

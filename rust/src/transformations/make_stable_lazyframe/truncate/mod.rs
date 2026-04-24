@@ -84,14 +84,28 @@ pub fn make_stable_truncate(
                     input: Arc::new(plan.clone()),
                     predicate: predicate.clone(),
                 },
-                Truncation::GroupBy { keys, aggs } => DslPlan::GroupBy {
-                    input: Arc::new(plan),
-                    keys: keys.clone(),
-                    aggs: aggs.clone(),
-                    apply: None,
-                    maintain_order: false,
-                    options: Arc::new(GroupbyOptions::default()),
-                },
+                Truncation::GroupBy { keys, aggs } => {
+                    #[cfg(patch_polars)]
+                    let output = DslPlan::GroupBy {
+                        input: Arc::new(plan),
+                        keys: keys.clone(),
+                        aggs: aggs.clone(),
+                        predicates: vec![],
+                        apply: None,
+                        maintain_order: false,
+                        options: Arc::new(GroupbyOptions::default()),
+                    };
+                    #[cfg(not(patch_polars))]
+                    let output = DslPlan::GroupBy {
+                        input: Arc::new(plan),
+                        keys: keys.clone(),
+                        aggs: aggs.clone(),
+                        apply: None,
+                        maintain_order: false,
+                        options: Arc::new(GroupbyOptions::default()),
+                    };
+                    output
+                }
             })
         }),
         StabilityMap::new_fallible(move |id_bounds: &Bounds| {

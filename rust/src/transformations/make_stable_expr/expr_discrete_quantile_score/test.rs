@@ -21,7 +21,7 @@ pub fn get_quantile_test_data() -> Fallible<(LazyFrameDomain, LazyFrame)> {
 
     let lf = df!(
         "cycle_(..101f64)" => (0..1010).map(|i| (i % 101) as f64).collect::<Vec<_>>(),
-        "cycle_(..10i32)" => (0..1010).map(|i| (i % 10)).collect::<Vec<_>>()
+        "cycle_(..10i32)" => (0..1010).map(|i| i % 10).collect::<Vec<_>>()
     )?
     .lazy();
 

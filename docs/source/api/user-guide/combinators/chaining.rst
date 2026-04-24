@@ -25,7 +25,7 @@ In the following example we chain :py:func:`~opendp.measurements.make_laplace` w
     .. code:: pycon
 
         >>> import opendp.prelude as dp
-        >>> dp.enable_features("contrib", "floating-point")
+        >>> dp.enable_features("contrib", "idealized-numerics")
         >>> # call a constructor to produce a transformation
         >>> sum_trans = dp.t.make_sum(
         ...     dp.vector_domain(dp.atom_domain(bounds=(0, 1))),

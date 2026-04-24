@@ -18,32 +18,6 @@ on:
         type: boolean
         required: false
         default: false
-  workflow_dispatch:
-    inputs:
-      channel:
-        description: Target Channel
-        type: choice
-        options:
-          - dev
-          - nightly
-          - beta
-          - stable
-        required: true
-        default: nightly
-      python_repository:
-        description: Python Repository
-        type: choice
-        options:
-          - PyPI
-          - TestPyPI
-          - local
-        required: true
-        default: PyPI
-      fake:
-        description: Fake Test?
-        type: boolean
-        required: false
-        default: false
 
 jobs:
   sanity-test:

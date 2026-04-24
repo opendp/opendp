@@ -11,14 +11,6 @@ on:
         type: boolean
         required: false
         default: false
-  workflow_dispatch:
-    inputs:
-      # Doesn't take a channel input, because we generate docs for all channels and releases.
-      dry_run:
-        description: Dry Run?
-        type: boolean
-        required: false
-        default: false
 
 jobs:
   credential-check:
@@ -34,6 +26,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: stable
+
+      - name: Setup Pandoc
+        uses: pandoc/actions/setup@v1
+        with:
+          version: 2.19.2
 
       - name: Set up R
         uses: r-lib/actions/setup-r@v2
@@ -57,9 +54,6 @@ jobs:
       - credential-check
       - r-docs
     runs-on: ubuntu-22.04
-    env:
-      # don't attempt to load binaries when sourcing the library
-      OPENDP_HEADLESS: true
 
     steps:
       - name: Checkout repository
@@ -83,6 +77,8 @@ jobs:
 
           echo "Create docs."
           make versions
+          # Sphinx caches parsed sources in .doctrees, but the published site does not need them.
+          rm -rf build/html/en/*/.doctrees
           cp -r build /tmp
           cd ..
           git fetch
@@ -91,9 +87,11 @@ jobs:
 
           # create brand new history each time
           git checkout --orphan gh-pages
-          
+          git rm -rf --cached . || true
+
+          # Keep .git so this orphaned checkout can still be committed and pushed.
           # sudo to have sufficient permission to delete files created by the docker user while compiling .tex
-          sudo rm -rf *
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec sudo rm -rf {} +
           echo docs.opendp.org > CNAME
           echo "for underscore directories" > .nojekyll
           cp -r /tmp/build/html/* .

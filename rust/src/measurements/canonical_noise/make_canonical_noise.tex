@@ -5,7 +5,7 @@
 \addbibresource{ref.bib} 
 
 \title{\texttt{fn make\_canonical\_noise}}
-\author{Aishwarya Ramasethu, Yu-Ju Ku, Jordan Awan, Michael Shoemate}
+\author{\AishwaryaRamasethuAuthor, \YuJuKuAuthor, \JordanAwanAuthor, \MichaelShoemateAuthor}
 \begin{document}
 
 \maketitle
@@ -20,7 +20,7 @@ a fixed privacy guarantee \texttt{d\_out} at a fixed sensitivity \texttt{d\_in}.
 
 \section{Hoare Triple}
 
-\subsection*{Preconditions}
+\subsection*{Precondition}
 \subsubsection*{Compiler-verified}
 \begin{itemize}
     \item Argument \texttt{input\_domain} of type \texttt{AtomDomain<f64>}.
@@ -29,7 +29,7 @@ a fixed privacy guarantee \texttt{d\_out} at a fixed sensitivity \texttt{d\_in}.
     \item Argument \texttt{d\_out} of type \texttt{(f64, f64)} corresponding to epsilon and delta.
 \end{itemize}
 
-\subsubsection*{Human-verified}
+\subsubsection*{Caller-verified}
 None
 
 \subsection*{Pseudocode}

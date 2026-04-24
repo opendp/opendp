@@ -3,7 +3,7 @@
 
 
 \title{\texttt{fn cdp\_delta}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 
 \begin{document}
 \maketitle
@@ -160,23 +160,24 @@ Let $M: \mathcal{X}^n \rightarrow \mathcal{Y}$ be a randomized algorithm satisfy
 This follows from \ref{renyidp-approxdp-epsilon} by taking the infimum over all divergence parameters $\alpha$.
 \end{proof}
 
-\section{Pseudocode}
-\subsubsection*{Precondition}
-None.
+\section{Hoare Triple}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+None
 
-\subsubsection*{Implementation}
+\subsubsection*{Caller-verified}
+None
+
+\subsection*{Pseudocode}
 \lstinputlisting[language=Python,firstline=2]{./pseudocode/cdp_delta.py}
 
 
-\subsubsection*{Postcondition}
+\subsection*{Postcondition}
 
 \begin{theorem}
     For any possible setting of $\rho$ and $\epsilon$, $\texttt{cdp\_delta}$ either returns an error, 
     or a $\delta$ such that any $\rho$-differentially private measurement is also $(\epsilon, \delta)$-differentially private.
 \end{theorem}
-
-\section{Proof}
-
 \begin{proof}
 The code always finds an $\alpha_{*} \approx \texttt{a\_max} \geq 1.01$.
 Since $\texttt{a\_max} \in (1, \infty)$, then by \ref{renyidp-approxdp-epsilon}, any $\rho$-differentially private measurement is also $(\epsilon(\texttt{a\_max}), \delta)$-differentially private.
