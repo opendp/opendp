@@ -10,8 +10,8 @@ If you haven't already, please review :ref:`tabular-data` in "Getting Started" b
   :titlesonly:
 
   polars-vs-opendp
+  sql
   gaussian-noise
   bounds
   data-types
   expressions/index
-

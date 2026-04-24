@@ -47,7 +47,7 @@ from opendp.domains import (
     enum_domain,
     array_domain,
 )
-from opendp.measurements import make_private_database_lazyframe, make_private_lazyframe
+from opendp.measurements import make_private_database_lazyframe, make_private_lazyframe, sql_to_plan
 from deprecated import deprecated
 from opendp.transformations import make_stable_lazyframe
 from typing import TYPE_CHECKING
@@ -1111,6 +1111,71 @@ class LazyFrameQuery:
         Add a join operation to the Logical Plan.
         """
         ...
+
+    def sql(
+        self,
+        query: str,
+        *,
+        table_name: str = "data",
+        tables: Mapping[str, Any] | None = None,
+    ) -> LazyFrameQuery:
+        """
+        Replace the current Polars plan with one built from SQL.
+
+        The current query plan is registered as ``table_name`` and may be referenced
+        from the SQL string. Additional public tables may be supplied via ``tables``.
+
+        :param query: SQL query to translate into a Polars plan.
+        :param table_name: Name of the current sensitive table inside the SQL query.
+        :param tables: Optional additional tables to register by name.
+
+        :example:
+
+        >>> import polars as pl
+        >>> context = dp.Context.compositor(
+        ...     data=pl.LazyFrame({
+        ...         "a": [1.0] * 50,
+        ...         "b": [1, 2, 3, 4, 5] * 10,
+        ...     }),
+        ...     privacy_unit=dp.unit_of(contributions=1),
+        ...     privacy_loss=dp.loss_of(epsilon=1.0),
+        ...     split_evenly_over=1,
+        ...     margins=[dp.polars.Margin(by=["b"], max_length=50, max_groups=10, invariant="keys")],
+        ... )
+        >>> query = context.query().sql(
+        ...     "SELECT b, dp_sum(a, 1.0, 2.0) AS total FROM data GROUP BY b"
+        ... )
+        >>> query.release().collect().sort("b")
+        shape: (5, 2)
+        ┌─────┬───────┐
+        │ b   ┆ total │
+        │ --- ┆ ---   │
+        │ i64 ┆ f64   │
+        ╞═════╪═══════╡
+        │ 1   ┆ ...   │
+        │ 2   ┆ ...   │
+        │ 3   ┆ ...   │
+        │ 4   ┆ ...   │
+        │ 5   ┆ ...   │
+        └─────┴───────┘
+        """
+        if table_name == "":
+            raise ValueError("table_name must not be empty")
+
+        registered_tables = dict(tables or {})
+        if table_name in registered_tables:
+            raise ValueError(f"tables must not contain the reserved name {table_name!r}")
+
+        if pl is not None:
+            for name, table in list(registered_tables.items()):
+                if isinstance(table, pl.dataframe.frame.DataFrame):
+                    table = table.lazy()
+                if not isinstance(table, pl.lazyframe.frame.LazyFrame):
+                    raise TypeError(f"table {name!r} must be a Polars LazyFrame or DataFrame")
+                registered_tables[name] = table
+
+        registered_tables[table_name] = self.polars_plan
+        return LazyFrameQuery(sql_to_plan(query, registered_tables), self._query)
 
     def with_keys(
         self,
