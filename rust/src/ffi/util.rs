@@ -26,7 +26,10 @@ use crate::metrics::{
 };
 
 #[cfg(feature = "polars")]
-use crate::metrics::{Bound, Bounds, ChangeOneIdDistance, FrameDistance, SymmetricIdDistance};
+use crate::metrics::{
+    Binding, Bound, Bounds, ChangeOneIdDistance, DatabaseIdDistance, ForeignKey,
+    FrameDistance, FunctionalDependency, Ownership, SymmetricIdDistance, UniqueKey,
+};
 
 #[cfg(feature = "polars")]
 use crate::polars::{OnceFrame, OnceFrameAnswer, OnceFrameQuery};
@@ -50,8 +53,8 @@ pub struct Pairwise<T>(PhantomData<T>);
 // If polars is not enabled, then these structs don't exist.
 #[cfg(feature = "polars")]
 use crate::domains::{
-    ArrayDomain, CategoricalDomain, DatetimeDomain, EnumDomain, ExprDomain, ExprPlan,
-    LazyFrameDomain, Margin, SeriesDomain,
+    ArrayDomain, CategoricalDomain, DatabaseDomain, DatetimeDomain, EnumDomain, ExprDomain,
+    ExprPlan, LazyFrameDomain, Margin, SeriesDomain,
 };
 #[cfg(feature = "polars")]
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
@@ -329,7 +332,10 @@ lazy_static! {
         #[cfg(feature = "polars")]
         let polars_types = vec![
             type_vec![DataFrame, LazyFrame, DslPlan, Series, Expr, ExprPlan, OnceFrame, OnceFrameQuery, OnceFrameAnswer],
-            type_vec![ExprDomain, LazyFrameDomain, SeriesDomain],
+            type_vec![Vec, <LazyFrame, LazyFrameDomain, Binding, UniqueKey, ForeignKey, FunctionalDependency, Ownership>],
+            vec![t!(Vec<Vec<Binding>>)],
+            vec![t!(Vec<Vec<Expr>>)],
+            type_vec![ExprDomain, LazyFrameDomain, SeriesDomain, DatabaseDomain],
 
             type_vec![NaiveDate, NaiveTime, NaiveDateTime],
             type_vec![AtomDomain, <NaiveDate, NaiveTime>],
@@ -337,10 +343,13 @@ lazy_static! {
 
             type_vec![CategoricalDomain, DatetimeDomain, EnumDomain, ArrayDomain],
             type_vec![OptionDomain, <CategoricalDomain, DatetimeDomain, EnumDomain, ArrayDomain>],
-            type_vec![Margin],
+            type_vec![Margin, Binding, UniqueKey, ForeignKey, FunctionalDependency, Ownership],
+            vec![t!(HashMap<String, Vec<Binding>>)],
+            vec![t!(HashMap<String, Vec<Vec<Expr>>>)],
+            type_vec![HashMap, <String>, <LazyFrame, LazyFrameDomain>],
 
             // metrics
-            type_vec![SymmetricIdDistance, ChangeOneIdDistance],
+            type_vec![SymmetricIdDistance, ChangeOneIdDistance, DatabaseIdDistance],
             type_vec![FrameDistance, <SymmetricDistance, InsertDeleteDistance, SymmetricIdDistance>],
 
             // metric distances
@@ -562,6 +571,30 @@ mod tests {
         assert_eq!(TryInto::<Type>::try_into("[i32]")?, Type::new(TypeId::of::<[i32]>(), "[i32]", TypeContents::SLICE(i32_t)));
         assert_eq!(TryInto::<Type>::try_into("L1Distance<i32>")?, Type::new(TypeId::of::<L1Distance<i32>>(), "L1Distance<i32>", TypeContents::GENERIC { name: "L1Distance", args: vec![i32_t] }));
         assert_eq!(TryInto::<Type>::try_into("Vec<i32>")?, Type::new(TypeId::of::<Vec<i32>>(), "Vec<i32>", TypeContents::VEC(i32_t)));
+        Ok(())
+    }
+
+    #[cfg(feature = "polars")]
+    #[test]
+    fn test_type_try_from_vec_binding() -> Fallible<()> {
+        let vec_bind = TryInto::<Type>::try_into("Vec<Binding>")?;
+        assert_eq!(vec_bind.to_string(), "Vec<Binding>");
+        let TypeContents::VEC(element_id) = vec_bind.contents else {
+            panic!("expected vec");
+        };
+        assert_eq!(Type::of_id(&element_id)?.descriptor, "Binding");
+        Ok(())
+    }
+
+    #[cfg(feature = "polars")]
+    #[test]
+    fn test_type_try_from_vec_vec_binding() -> Fallible<()> {
+        let vec_vec_bind = TryInto::<Type>::try_into("Vec<Vec<Binding>>")?;
+        assert_eq!(vec_vec_bind.to_string(), "Vec<Vec<Binding>>");
+        let TypeContents::VEC(element_id) = vec_vec_bind.contents else {
+            panic!("expected outer vec");
+        };
+        assert_eq!(Type::of_id(&element_id)?.descriptor, "Vec<Binding>");
         Ok(())
     }
 }
