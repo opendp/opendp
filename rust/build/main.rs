@@ -70,7 +70,12 @@ fn resolved_polars_plan_uses_git_patch() -> bool {
         return false;
     };
 
+    let local_polars_plan = std::fs::canonicalize(format!("{manifest_dir}/../../polars/crates/polars-plan"))
+        .ok()
+        .map(|path| format!("\"id\":\"path+file://{}#0.52.0\"", path.to_string_lossy()))
+        .unwrap_or_default();
+
     stdout.contains(
         "\"id\":\"git+https://github.com/pola-rs/polars?tag=py-1.36.1#polars-plan@0.52.0\"",
-    )
+    ) || (!local_polars_plan.is_empty() && stdout.contains(&local_polars_plan))
 }

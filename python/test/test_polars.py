@@ -226,6 +226,187 @@ def sqlalchemy_engine_with_constraints_from_hierarchy_database():
                 event,
             )
     return engine
+def example_sql_lf():
+    pl = pytest.importorskip("polars")
+
+    lf_domain = dp.lazyframe_domain(
+        [
+            dp.series_domain("grp", dp.atom_domain(T=dp.i32)),
+            dp.series_domain("value", dp.atom_domain(T=dp.f64)),
+            dp.series_domain("maybe", dp.option_domain(dp.atom_domain(T=dp.i32))),
+            dp.series_domain("age", dp.atom_domain(T=dp.i32)),
+        ]
+    )
+    lf_domain = dp.with_margin(lf_domain, Margin(max_length=6))
+    lf_domain = dp.with_margin(
+        lf_domain, Margin(by=["grp"], invariant="keys", max_length=2, max_groups=3)
+    )
+
+    lf = pl.LazyFrame(
+        {
+            "grp": [1, 1, 2, 2, 3, 3],
+            "value": [1.0] * 6,
+            "maybe": [1, None, 1, None, 2, None],
+            "age": [10, 10, 30, 30, 50, 50],
+        },
+        schema={
+            "grp": pl.Int32,
+            "value": pl.Float64,
+            "maybe": pl.Int32,
+            "age": pl.Int32,
+        },
+    )
+    return lf_domain, lf
+
+
+def release_sql_to_plan(query):
+    pl = pytest.importorskip("polars")
+
+    lf_domain, lf = example_sql_lf()
+    plan = dp.m.sql_to_plan(query, {"data": seed(lf.collect_schema())})
+    measurement = dp.m.make_private_lazyframe(
+        lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan, 0.0
+    )
+    return measurement(lf).collect()
+
+
+def release_query_sql(query):
+    _, lf = example_sql_lf()
+    context = dp.Context.compositor(
+        data=lf,
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+        margins=[
+            Margin(max_length=6),
+            Margin(by=["grp"], invariant="keys", max_length=2, max_groups=3),
+        ],
+    )
+    return context.query().sql(query).release().collect()
+
+
+SQL_EXECUTORS = {
+    "sql_to_plan": release_sql_to_plan,
+    "query_sql": release_query_sql,
+}
+
+
+SQL_TEST_CASES = [
+    (
+        "frame_len",
+        "SELECT dp_frame_len(0.0) AS value FROM data",
+        {"value": [6]},
+        None,
+    ),
+    (
+        "noise_count",
+        "SELECT noise(count(*), 0.0) AS value FROM data",
+        {"value": [6]},
+        None,
+    ),
+    (
+        "dp_len",
+        "SELECT dp_len(value, 0.0) AS value FROM data",
+        {"value": [6]},
+        None,
+    ),
+    (
+        "dp_count",
+        "SELECT dp_count(maybe, 0.0) AS value FROM data",
+        {"value": [3]},
+        None,
+    ),
+    (
+        "dp_null_count",
+        "SELECT dp_null_count(maybe, 0.0) AS value FROM data",
+        {"value": [3]},
+        None,
+    ),
+    (
+        "dp_n_unique",
+        "SELECT dp_n_unique(maybe, 0.0) AS value FROM data",
+        {"value": [3]},
+        None,
+    ),
+    (
+        "dp_sum",
+        "SELECT dp_sum(value, 0.0, 1.0, 0.0) AS value FROM data",
+        {"value": [6.0]},
+        None,
+    ),
+    (
+        "dp_mean",
+        "SELECT dp_mean(value, 0.0, 1.0, 0.0) AS value FROM data",
+        {"value": [1.0]},
+        None,
+    ),
+    (
+        "dp_quantile",
+        "SELECT dp_quantile(age, 0.5, ARRAY[10, 30, 50], 0.0) AS value FROM data",
+        {"value": [30]},
+        None,
+    ),
+    (
+        "dp_median",
+        "SELECT dp_median(age, ARRAY[10, 30, 50], 0.0) AS value FROM data",
+        {"value": [30]},
+        None,
+    ),
+    (
+        "grouped_noise_count",
+        "SELECT grp, noise(count(*), 0.0) AS value FROM data GROUP BY grp",
+        {"grp": [1, 2, 3], "value": [2, 2, 2]},
+        "grp",
+    ),
+    (
+        "grouped_dp_len",
+        "SELECT grp, dp_len(value, 0.0) AS value FROM data GROUP BY grp",
+        {"grp": [1, 2, 3], "value": [2, 2, 2]},
+        "grp",
+    ),
+    (
+        "grouped_dp_count",
+        "SELECT grp, dp_count(maybe, 0.0) AS value FROM data GROUP BY grp",
+        {"grp": [1, 2, 3], "value": [1, 1, 1]},
+        "grp",
+    ),
+    (
+        "grouped_dp_null_count",
+        "SELECT grp, dp_null_count(maybe, 0.0) AS value FROM data GROUP BY grp",
+        {"grp": [1, 2, 3], "value": [1, 1, 1]},
+        "grp",
+    ),
+    (
+        "grouped_dp_n_unique",
+        "SELECT grp, dp_n_unique(maybe, 0.0) AS value FROM data GROUP BY grp",
+        {"grp": [1, 2, 3], "value": [2, 2, 2]},
+        "grp",
+    ),
+    (
+        "grouped_dp_sum",
+        "SELECT grp, dp_sum(value, 0.0, 1.0, 0.0) AS value FROM data GROUP BY grp",
+        {"grp": [1, 2, 3], "value": [2.0, 2.0, 2.0]},
+        "grp",
+    ),
+    (
+        "grouped_dp_mean",
+        "SELECT grp, dp_mean(value, 0.0, 1.0, 0.0) AS value FROM data GROUP BY grp",
+        {"grp": [1, 2, 3], "value": [1.0, 1.0, 1.0]},
+        "grp",
+    ),
+    (
+        "grouped_dp_quantile",
+        "SELECT grp, dp_quantile(age, 0.5, ARRAY[10, 30, 50], 0.0) AS value FROM data GROUP BY grp",
+        {"grp": [1, 2, 3], "value": [10, 30, 50]},
+        "grp",
+    ),
+    (
+        "grouped_dp_median",
+        "SELECT grp, dp_median(age, ARRAY[10, 30, 50], 0.0) AS value FROM data GROUP BY grp",
+        {"grp": [1, 2, 3], "value": [10, 30, 50]},
+        "grp",
+    ),
+]
 
 
 def test_expr_domain():
@@ -2092,6 +2273,78 @@ def test_explicit_grouping_keys_context():
     assert observed.collect_schema() == expected.collect_schema()
     observed = observed.with_columns(D=expected["D"])
     pl_testing.assert_frame_equal(observed, expected)
+
+
+def test_sql_to_plan_group_by():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    lf_domain, lf = example_lf(
+        margin=["B"],
+        invariant="keys",
+        max_length=50,
+        max_groups=10,
+    )
+
+    plan = dp.m.sql_to_plan(
+        "SELECT B, dp_sum(A, 1.0, 2.0) AS total FROM data GROUP BY B",
+        {"data": seed(lf.collect_schema())},
+    )
+    m_lf = dp.m.make_private_lazyframe(
+        lf_domain, dp.symmetric_distance(), dp.max_divergence(), plan, 0.0
+    )
+
+    observed = m_lf(lf).collect().sort("B")
+    expected = pl.DataFrame(
+        [
+            pl.Series("B", [1, 2, 3, 4, 5], dtype=pl.Int32),
+            pl.Series("total", [10.0] * 5, dtype=pl.Float64),
+        ]
+    )
+    pl_testing.assert_frame_equal(observed, expected)
+
+
+def test_query_sql_group_by():
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    _, lf = example_lf()
+    context = dp.Context.compositor(
+        data=lf,
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+        split_evenly_over=1,
+        margins=[Margin(by=["B"], max_length=50, max_groups=10, invariant="keys")],
+    )
+
+    observed = (
+        context.query()
+        .sql("SELECT B, dp_sum(A, 1.0, 2.0) AS total FROM data GROUP BY B")
+        .release()
+        .collect()
+        .sort("B")
+    )
+    expected = pl.DataFrame(
+        [
+            pl.Series("B", [1, 2, 3, 4, 5], dtype=pl.Int32),
+            pl.Series("total", [10.0] * 5, dtype=pl.Float64),
+        ]
+    )
+    pl_testing.assert_frame_equal(observed, expected)
+
+
+@pytest.mark.parametrize("executor", SQL_EXECUTORS, ids=list(SQL_EXECUTORS))
+@pytest.mark.parametrize(
+    "name,query,expected,sort_by",
+    SQL_TEST_CASES,
+    ids=[case[0] for case in SQL_TEST_CASES],
+)
+def test_sql_supported_operations(executor, name, query, expected, sort_by):
+    del name
+    actual = SQL_EXECUTORS[executor](query)
+    if sort_by is not None:
+        actual = actual.sort(sort_by)
+    assert actual.to_dict(as_series=False) == expected
 
 
 @pytest.mark.parametrize("dtype", ["Time", "Datetime", "Date"])

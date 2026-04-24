@@ -51,7 +51,7 @@ bitvec = "1.0"
 #
 # The features track the features enabled in the Rust build for the Polars Python crate.
 # Having matching features is necessary for cross-binary DSL compatibility.
-polars = { version = "=0.52.0", features = ["full", "meta", "cutqcut", "row_hash"], optional = true }
+polars = { version = "=0.52.0", features = ["full", "meta", "cutqcut", "row_hash", "sql"], optional = true }
 polars-python = { version = "=0.52.0", optional = true }
 
 # these crates are implicit in the tree behind polars, 
@@ -90,14 +90,15 @@ openssl-src = { version = "=300.3.1", optional = true }
 #     then you can use autocfg in the build script to create a cfg for rectifying API differences.
 
 # https://github.com/pola-rs/polars/blob/py-1.36.1/Cargo.toml
-polars = { git = "https://github.com/pola-rs/polars", tag = "py-1.36.1" }
-polars-python = { git = "https://github.com/pola-rs/polars", tag = "py-1.36.1" }
-polars-expr = { git = "https://github.com/pola-rs/polars", tag = "py-1.36.1" }
-polars-plan = { git = "https://github.com/pola-rs/polars", tag = "py-1.36.1" }
-polars-utils = { git = "https://github.com/pola-rs/polars", tag = "py-1.36.1" }
-polars-arrow = { git = "https://github.com/pola-rs/polars", tag = "py-1.36.1" }
-polars-mem-engine = { git = "https://github.com/pola-rs/polars", tag = "py-1.36.1" }
-pyo3-polars = { git = "https://github.com/pola-rs/polars", tag = "py-1.36.1" }
+polars = { path = "../../polars/crates/polars" }
+polars-python = { path = "../../polars/crates/polars-python" }
+polars-expr = { path = "../../polars/crates/polars-expr" }
+polars-plan = { path = "../../polars/crates/polars-plan" }
+polars-utils = { path = "../../polars/crates/polars-utils" }
+polars-arrow = { path = "../../polars/crates/polars-arrow" }
+polars-mem-engine = { path = "../../polars/crates/polars-mem-engine" }
+pyo3-polars = { path = "../../polars/pyo3-polars/pyo3-polars" }
+polars-sql = { path = "../../polars/crates/polars-sql" }
 
 [features]
 default = ["partials", "use-openssl"]

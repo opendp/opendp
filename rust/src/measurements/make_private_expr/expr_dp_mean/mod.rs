@@ -49,9 +49,10 @@ impl AnonymousColumnsUdf for DPMeanShim {
         _: &polars::prelude::Schema,
         fields: &[polars::prelude::Field],
     ) -> PolarsResult<polars::prelude::Field> {
-        <&[polars::prelude::Field; 1]>::try_from(fields)
-            .map_err(|_| polars_err!(InvalidOperation: "{} expects one column", Self::NAME))
-            .map(|[x]| x.clone())
+        fields
+            .first()
+            .cloned()
+            .ok_or_else(|| polars_err!(InvalidOperation: "{} expects at least one column", Self::NAME))
     }
 }
 

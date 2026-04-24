@@ -37,3 +37,6 @@ it can raise an exception and prevent you from running more queries than your bu
       ...     "DP sum should be near 500:", dp_sum_query.release()
       ... )  # doctest: +ELLIPSIS
       DP sum should be near 500: ...
+
+    When the context data is a Polars ``LazyFrame``, you can also write queries in SQL via
+    :code:`context.query().sql(...)`. See :ref:`polars-sql-user-guide`.
