@@ -1,133 +1,161 @@
-\documentclass{article}
-\input{../../../lib.sty}
-
-\title{\texttt{fn sample\_geometric\_exp\_fast}}
-\author{\MichaelShoemateAuthor}
-
-\begin{document}
-\maketitle
-\contrib
-Proves soundness of \texttt{fn sample\_geometric\_exp\_fast} in \asOfCommit{mod.rs}{0be3ab3e6}.
-This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2}{subsection 5.2} of \cite{CKS20}.
-
-\section{Hoare Triple}
-\subsection*{Precondition}
-\subsubsection*{Compiler-verified}
+\documentclass{article} 
+\input{../../../lib.sty} 
+ 
+\title{\texttt{fn sample\_geometric\_exp\_fast}} 
+\author{\MichaelShoemateAuthor} 
+ 
+\begin{document} 
+\maketitle 
+ 
+Proves soundness of \texttt{fn sample\_geometric\_exp\_fast} in \asOfCommit{mod.rs}{0be3ab3e6}. 
+This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2}{subsection 5.2} of \cite{CKS20}. 
+ 
+\section{Hoare Triple} 
+ 
+\subsection*{Precondition} 
+\subsubsection*{Compiler-verified} 
 \begin{itemize}
-    \item \texttt{x} is of type \texttt{Rational}.
+    \item Argument \texttt{x} is of type \texttt{RBig}, a bignum rational.
 \end{itemize}
-
-\subsubsection*{Caller-verified}
+ 
+\subsubsection*{Caller-verified} 
 \begin{itemize}
-    \item $\texttt{x} > 0$.
+    \item $\texttt{x} \geq 0$
 \end{itemize}
-
-\subsection*{Pseudocode}        
-\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_geometric_exp_fast.py}
-
-\subsection*{Postcondition}
+ 
+\subsection*{Pseudocode} 
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_geometric_exp_fast.py} 
+ 
+\subsection*{Postcondition} 
 \begin{theorem}
-\label{postcondition}
-For any setting of the input parameter \texttt{x} such that the given preconditions hold, \\
-\texttt{sample\_geometric\_exp\_fast} either returns \texttt{Err(e)} due to a lack of system entropy,
-or \texttt{Ok(out)}, where \texttt{out} is distributed as $Geometric(1 - exp(-x))$.
-\end{theorem}
-Assume the preconditions are met.
-
-\begin{lemma}\label{err-e}
-    \texttt{sample\_geometric\_exp\_fast} only returns \texttt{Err(e)} when there is a lack of system entropy.
-\end{lemma}
-
-\begin{proof}
-    \texttt{x} is of type \docsrs{rug}{struct}{Rational}, there exists some non-negative integer $s$ and positive integer $t$ such that $x = s/t$.
-    This is why \texttt{Rational.into\_numer\_denom} is infallible.
-    Since $t$ is a positive integer, the preconditions on \rustdoc{traits/samplers/uniform/trait}{SampleUniformIntBelow} are met, 
-    \texttt{sample\_uniform\_int\_below} can only return an error due to lack of system entropy, and $u$ is a non-negative integer.
-    Similarly, the preconditions on \rustdoc{traits/samplers/cks20/fn}{sample\_bernoulli\_exp} and \rustdoc{traits/samplers/cks20/fn}{sample\_geometric\_exp\_slow} are met,
-    and their definitions guarantee an error is only returned due to lack of system entropy.
-    The only source of errors is from the invocation of these functions,
-    therefore \texttt{sample\_geometric\_exp\_fast} only returns \texttt{Err(e)} when there is a lack of system entropy.
-\end{proof}
-
-We now establish some lemmas that will be useful in proving the distribution of \texttt{out}.
-
-\begin{itemize}
-    \item Let $u$ be a realization of a random variable $U \sim Uniform(0, t)$, supported on $[0, t)$.
-    \item Let $d$ be a realization of a random variable $D \sim Bernoulli(exp(-u/t))$
-    \item Let $v$ be a realization of a random variable $V \sim Geometric(1 - exp(-1))$
-\end{itemize}
-
-\begin{lemma}\label{geom_1_t}\cite{CKS20}
-    Conditioned on $d = \top$, if $z = u + t \cdot v$, 
-    then $z$ is a realization of a random variable $Z \sim Geometric(1 - exp(-1/t))$. 
-    Equivalently, $P[Z=z | D=\top] = (1 - e^{-1/t}) e^{-z/t}$.
-\end{lemma}
-
-\begin{proof}
-    For any z, define $u_z := z \ mod \ t$ and $v_z := \lfloor z/t \rfloor$, so that $z = u_z + t \ v_z$. 
-
-    \begin{align*}
-        P[Z=z | D=\top] &= P[U = u_z, V = v_z | D = \top] && \text{since } z = u_z + t \cdot v_z \\
-        &= P[U = u_z | D = \top] P[V = v_z] && \text{as $U$ and $V$ are independent}\\
-        &= \frac{P[U = u_z]}{P[D=\top]} P[D=\top | U = u_z] \cdot (1 - e^{-1}) e^{-v_z} && \text{by Bayes' theorem}\\
-        &= \frac{1/t}{1/t \sum_{k=0}^{t-1}e^{-k/t}} e^{-u_z/t} \cdot (1 - e^{-1}) e^{-v_z} && \text{since } P[D = \top] = \frac{1}{t} \sum_{k=0}^{t-1}e^{-k/t} \\
-        &= \frac{(1 - e^{-1})}{\sum_{k=0}^{t-1}e^{-k/t}}  e^{-(u_z/t + v_z)} \\
-        &= (1 - e^{-1/t}) e^{-(u_z/t + v_z)} \\
-        &= (1 - e^{-1/t}) e^{-z/t} && \text{since } z = u_z + t \cdot v_z
-    \end{align*}
-\end{proof}
-
-
-
-\begin{lemma}\label{divide_geometric}\cite{CKS20}
-    Fix $p \in (0, 1]$. Let G be a $Geometric(1 - p)$ random variable, and $n \geq 1$ be an integer. 
-    Then $\lfloor G / n \rfloor$ is a $Geometric(1 - q)$ random variable with $q = p^n$.
-\end{lemma}
-
-\begin{proof}
-    \begin{align*}
-        P[\lfloor G/n \rfloor = k] &= P[nk < G < (k + 1)n] &&\text{any $G$ in the interval maps to $k$} \\
-        &= \sum_{l=kn}^{(k+1)n - 1} (1 - p)p^l \\
-        &= (1 - p^n)p^{nk} \\
-        &= (1 - q)q^k
-    \end{align*}
-\end{proof}
-
-\begin{theorem} \label{geom_s_t} \cite{CKS20}
-    Given any $s,t \in \mathbb{Z}_+$ and $Z \sim Geometric(1-exp(-1/t))$, 
-    define $Y = \lfloor Z / s \rfloor$.
-    Then $Y \sim Geometric(1 - exp(-s/t))$.
+\label{postcondition} 
+For any setting of the input parameter \texttt{x} such that the given preconditions hold, \\ 
+\texttt{sample\_geometric\_exp\_fast} either returns \texttt{Err(e)} due to a lack of system entropy, 
+or \texttt{Ok(out)}, where \texttt{out} is distributed as $\textrm{Geometric}(1 - \exp(-x))$. 
 \end{theorem}
 
-\begin{proof}
-    \begin{align*}
-        P[Y = y | D = \top] &= P[\lfloor Z/s \rfloor = y | D = \top] \\
-        &= (1 - p^s) p^{sk} && \text{by } \ref{divide_geometric} \\
-        &= (1 - (e^{-1/t})^s) (e^{-1/t})^{sk} \\
-        &= (1 - e^{-s/t}) (e^{-s/t})^k
-    \end{align*}
-\end{proof}
-
-
-\begin{lemma}\label{ok-out}
+Assume the preconditions are met. 
+ 
+\begin{lemma}\label{x-parts} 
+    There exist a non-negative integer $s$ and positive integer $t$ such that $x = s/t$. 
+    If $x > 0$, then $s \geq 1$. 
+\end{lemma} 
+ 
+\begin{proof} 
+    Since \texttt{x} is of type \docsrs{dashu}{rational/struct}{Rbig} and $\texttt{x} \geq 0$, 
+    it can be written as $x = s/t$ for some non-negative integer $s$ and positive integer $t$. 
+    This is why \texttt{RBig.into\_parts} is infallible. 
+    If $x > 0$, then its numerator is positive, so $s \geq 1$. 
+\end{proof} 
+ 
+\begin{lemma}\label{err-e} 
+    \texttt{sample\_geometric\_exp\_fast} only returns \texttt{Err(e)} when there is a lack of system entropy. 
+\end{lemma} 
+ 
+\begin{proof} 
+    If $x = 0$, the function returns \texttt{Ok(0)} immediately, so it cannot return \texttt{Err(e)}. 
+    Assume $x > 0$. By Lemma \ref{x-parts}, there exist integers $s \geq 1$ and $t > 0$ with $x = s/t$. 
+    Since $t$ is a positive integer, the preconditions on \rustdoc{traits/samplers/uniform/fn}{sample\_uniform\_ubig\_below} are met. 
+    Any returned value \texttt{u} therefore lies in $\{0, 1, \dots, t - 1\}$, so $u/t \geq 0$, 
+    and the preconditions on \rustdoc{traits/samplers/cks20/fn}{sample\_bernoulli\_exp} are also met. 
+    The input on line \ref{line:V} is the non-negative rational $1$, so the preconditions on 
+    \rustdoc{traits/samplers/cks20/fn}{sample\_geometric\_exp\_slow} are met as well. 
+    By their definitions, each of these fallible calls can only return an error due to a lack of system entropy. 
+    These are the only fallible calls in \texttt{sample\_geometric\_exp\_fast}, 
+    so the function only returns \texttt{Err(e)} when there is a lack of system entropy. 
+\end{proof} 
+ 
+We now establish some lemmas that will be useful in proving the distribution of \texttt{out}. 
+ 
+\begin{lemma}\label{loop-dist} 
+    Suppose $x > 0$. Conditioned on the loop on lines \ref{line:U}--\ref{line:D} terminating without returning \texttt{Err(e)}, 
+    the value \texttt{u} at loop exit is a realization of a random variable $U_{\mathrm{acc}}$ supported on $\{0, 1, \dots, t - 1\}$, where 
+    \[
+        P[U_{\mathrm{acc}} = u] = \frac{1 - e^{-1/t}}{1 - e^{-1}} e^{-u/t}. 
+    \]
+\end{lemma} 
+ 
+\begin{proof} 
+    By Lemma \ref{x-parts}, $t > 0$, so in each loop iteration the call on line \ref{line:U} samples 
+    a random variable $U \sim \textrm{Uniform}(0, t)$ supported on $\{0, 1, \dots, t - 1\}$. 
+    Conditioned on a realization $u$ of $U$, the call on line \ref{line:D} samples 
+    $D \sim \textrm{Bernoulli}(\exp(-u/t))$ by the specification of 
+    \rustdoc{traits/samplers/cks20/fn}{sample\_bernoulli\_exp}. 
+ 
+    Each iteration uses fresh randomness, and the loop stops at the first iteration for which $D = \top$. 
+    Therefore the value returned by the loop has the same distribution as $U$ conditioned on $D = \top$. 
+    For any $u \in \{0, 1, \dots, t - 1\}$, 
+    \begin{align*} 
+        P[U_{\mathrm{acc}} = u] 
+        &= P[U = u \mid D = \top] \\ 
+        &= \frac{P[U = u] P[D = \top \mid U = u]}{P[D = \top]} && \text{by Bayes' theorem} \\ 
+        &= \frac{(1/t)e^{-u/t}}{\frac{1}{t} \sum_{k=0}^{t-1} e^{-k/t}} \\ 
+        &= \frac{(1/t)e^{-u/t}}{\frac{1}{t}\frac{1 - e^{-1}}{1 - e^{-1/t}}} \\ 
+        &= \frac{1 - e^{-1/t}}{1 - e^{-1}} e^{-u/t}. 
+    \end{align*} 
+\end{proof} 
+ 
+\begin{lemma}\label{z-dist} 
+    Suppose $x > 0$ and \texttt{sample\_geometric\_exp\_fast} returns \texttt{Ok(out)}. 
+    Then the value \texttt{z} is a realization of a random variable $Z \sim \textrm{Geometric}(1 - \exp(-1/t))$. 
+\end{lemma} 
+ 
+\begin{proof} 
+    By Lemma \ref{loop-dist}, the value \texttt{u} exiting the loop is distributed as $U_{\mathrm{acc}}$. 
+    The call on line \ref{line:V} returns a value \texttt{v} distributed as 
+    $V \sim \textrm{Geometric}(1 - \exp(-1))$ by the specification of 
+    \rustdoc{traits/samplers/cks20/fn}{sample\_geometric\_exp\_slow}. 
+    Since line \ref{line:V} is executed after the loop and uses fresh randomness, $U_{\mathrm{acc}}$ and $V$ are independent. 
+ 
+    For any $z$, define $u_z := z \mod t$ and $v_z := \lfloor z/t \rfloor$, so that $z = u_z + t \cdot v_z$. 
+    Then 
+    \begin{align*} 
+        P[Z = z] 
+        &= P[U_{\mathrm{acc}} = u_z, V = v_z] && \text{since } z = u_z + t \cdot v_z \\ 
+        &= P[U_{\mathrm{acc}} = u_z] P[V = v_z] && \text{by independence} \\ 
+        &= \frac{1 - e^{-1/t}}{1 - e^{-1}} e^{-u_z/t} \cdot (1 - e^{-1}) e^{-v_z} && \text{by Lemma \ref{loop-dist}} \\ 
+        &= (1 - e^{-1/t}) e^{-(u_z/t + v_z)} \\ 
+        &= (1 - e^{-1/t}) e^{-z/t}. 
+    \end{align*} 
+    Therefore $Z \sim \textrm{Geometric}(1 - \exp(-1/t))$. 
+\end{proof} 
+ 
+\begin{lemma}\label{divide_geometric}\cite{CKS20} 
+    Fix $p \in (0, 1]$. Let $G$ be a $\textrm{Geometric}(1 - p)$ random variable, and $n \geq 1$ be an integer. 
+    Then $\lfloor G / n \rfloor$ is a $\textrm{Geometric}(1 - q)$ random variable with $q = p^n$. 
+\end{lemma} 
+ 
+\begin{proof} 
+    \begin{align*} 
+        P[\lfloor G/n \rfloor = k] &= P[nk \le G < (k + 1)n] &&\text{any $G$ in the interval maps to $k$} \\ 
+        &= \sum_{l=kn}^{(k+1)n - 1} (1 - p)p^l \\ 
+        &= (1 - p^n)p^{nk} \\ 
+        &= (1 - q)q^k 
+    \end{align*} 
+\end{proof} 
+ 
+\begin{lemma}\label{ok-out} 
     If the outcome of \texttt{sample\_geometric\_exp\_fast} is \texttt{Ok(out)}, 
-    then \texttt{out} is distributed as $Geometric(1 - exp(-x))$.
-\end{lemma}
-
-\begin{proof}
-    As shown in \ref{err-e}, the preconditions for \rustdoc{traits/samplers/uniform/trait}{SampleUniformIntBelow} on line \ref{line:U},
-    \rustdoc{traits/samplers/cks20/fn}{sample\_bernoulli\_exp} on line \ref{line:D},
-    and \rustdoc{traits/samplers/cks20/fn}{sample\_bernoulli\_exp\_slow} on line \ref{line:V} are met.
-    Therefore, \texttt{u}, \texttt{d} and \texttt{v} follow the distributions necessary to apply \ref{geom_1_t}.
-    By \ref{geom_1_t}, $\mathtt{z}$ is a realization of $Z \sim Geometric(1 - exp(-1/t)$. 
-    Since \texttt{z} is a realization of $Z \sim Geometric(1 - exp(-1/t))$, 
-    then by \ref{geom_s_t}, \texttt{out} is distributed as $Geometric(1 - exp(-x))$.    
-\end{proof}
-
-\begin{proof}
-    \ref{postcondition} holds by \ref{err-e} and \ref{ok-out}.
-\end{proof}
-
-\bibliographystyle{alpha}
-\bibliography{mod}
+    then \texttt{out} is distributed as $\textrm{Geometric}(1 - \exp(-x))$. 
+\end{lemma} 
+ 
+\begin{proof} 
+    If $x = 0$, the function returns \texttt{Ok(0)} immediately. Since 
+    $\textrm{Geometric}(1 - \exp(-0)) = \textrm{Geometric}(0)$ is the point mass at $0$, 
+    the claim holds. 
+ 
+    Assume $x > 0$. By Lemma \ref{x-parts}, there exist integers $s \geq 1$ and $t > 0$ with $x = s/t$. 
+    By Lemma \ref{z-dist}, \texttt{z} is a realization of $Z \sim \textrm{Geometric}(1 - \exp(-1/t))$. 
+    Applying Lemma \ref{divide_geometric} with $p = \exp(-1/t)$ and $n = s$, 
+    we conclude that $\lfloor Z / s \rfloor$ is distributed as $\textrm{Geometric}(1 - \exp(-s/t))$. 
+    Finally, $\texttt{out} = \lfloor Z / s \rfloor$ and $s/t = x$, so 
+    \texttt{out} is distributed as $\textrm{Geometric}(1 - \exp(-x))$. 
+\end{proof} 
+ 
+\begin{proof} 
+    Theorem~\ref{postcondition} holds by \ref{err-e} and \ref{ok-out}. 
+\end{proof} 
+ 
+\bibliographystyle{alpha} 
+\bibliography{mod} 
 \end{document}
