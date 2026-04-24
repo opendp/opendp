@@ -6,7 +6,7 @@ the local-DP, or per-user, model. The randomized response algorithm is
 typically meant to be run on the edge, at the user's device, before data
 is submitted to a central server. Local DP is a stronger privacy model
 than the central model, because the central data aggregator is only ever
-privileged to privatized data.
+privileged to differentially private releases, not the raw data.
 
 OpenDP currently only provides mechanisms that may be run on the edge
 device: You must handle network communication and aggregation.
@@ -88,7 +88,7 @@ following six elements:
             >>> print("epsilon:", rr_bool_meas.map(d_in=1))
             epsilon: 1.0986...
 
-The privatized responses from many individuals may be aggregated to form
+The differentially private responses from many individuals may be aggregated to form
 a population-level inference. In the case of the boolean randomized
 response, you may want to estimate the proportion of individuals who
 actually responded with ``True``.

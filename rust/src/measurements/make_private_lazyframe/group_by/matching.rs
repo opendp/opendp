@@ -48,7 +48,7 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
             if !predicates.is_empty() {
                 return fallible!(
                     MakeMeasurement,
-                    "predicates are not supported in key-privatization joins"
+                    "predicates are not supported in DP key joins"
                 );
             }
             let how = options.as_ref().args.how.clone();
@@ -64,7 +64,7 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
                 _ => {
                     return fallible!(
                         MakeMeasurement,
-                        "only left or right joins can be used to privatize key-sets"
+                        "only left or right joins can be used to release key-sets"
                     );
                 }
             };

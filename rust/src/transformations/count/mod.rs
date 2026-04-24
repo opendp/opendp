@@ -20,8 +20,8 @@ use crate::traits::{Hashable, InfCast, Integer, Number, Primitive};
 /// * [GRS12 Universally Utility-Maximizing Privacy Mechanisms](https://theory.stanford.edu/~tim/papers/priv.pdf)
 ///
 /// # Arguments
-/// * `input_domain` - Domain of the data type to be privatized.
-/// * `input_metric` - Metric of the data type to be privatized.
+/// * `input_domain` - Domain of the data type to be released.
+/// * `input_metric` - Metric of the data type to be released.
 ///
 /// # Generics
 /// * `TIA` - Atomic Input Type. Input data is expected to be of the form `Vec<TIA>`.
