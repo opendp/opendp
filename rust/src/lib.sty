@@ -174,11 +174,12 @@
   hold, #2 raises an error (at compile time or run time) or returns a valid transformation. A valid transformation has the following properties:
   \begin{enumerate}
       \item \textup{(Data-independent runtime errors).}
-      For every pair of members $x$ and $x'$ in \texttt{input\_domain},
-      $\texttt{invoke}(x)$ and $\texttt{invoke}(x')$ either both return the same error or neither return an error. 
+      For every pair of elements $x, x'$ in \texttt{input\_domain},
+      $\function(x)$ returns an error if and only if $\function(x')$.
 
       \item \textup{(Appropriate output domain).} 
-      For every member $x$ in \texttt{input\_domain}, $\function(x)$ is in \texttt{output\_domain} or raises a data-independent runtime error.
+      For every member $x$ in \texttt{input\_domain}, 
+      $\function(x)$ is in \texttt{output\_domain} or raises a data-independent runtime exception.
       
       \item \textup{(Stability guarantee).} 
       For every pair of members $x$ and $x'$ in \texttt{input\_domain} and for every pair $(\din, \dout)$, 

@@ -7,7 +7,7 @@ use crate::core::{MetricSpace, Transformation};
 use crate::domains::{AtomDomain, Bounds, VectorDomain};
 use crate::error::Fallible;
 use crate::metrics::EventLevelMetric;
-use crate::traits::{CheckAtom, ProductOrd};
+use crate::traits::Number;
 use crate::transformations::make_row_by_row_fallible;
 
 #[bootstrap(
@@ -31,7 +31,7 @@ use crate::transformations::make_row_by_row_fallible;
 ///
 /// # Generics
 /// * `TA` - Atomic Type
-pub fn make_clamp<TA: 'static + Clone + ProductOrd + PartialOrd + CheckAtom, M: EventLevelMetric>(
+pub fn make_clamp<TA: Number, M: EventLevelMetric>(
     input_domain: VectorDomain<AtomDomain<TA>>,
     input_metric: M,
     bounds: (TA, TA),
