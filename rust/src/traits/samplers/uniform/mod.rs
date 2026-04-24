@@ -63,7 +63,7 @@ pub fn sample_uniform_uint_below<T: Integer + Unsigned + FromBytes<N>, const N: 
 /// Sample an integer uniformly from `[0, upper)`
 ///
 /// # Proof Definition
-/// For any non-negative setting of `upper`,
+/// For any positive setting of `upper`,
 /// return either `Err(e)` if there is insufficient system entropy,
 /// or `Some(sample)`, where `sample` is uniformly distributed over `[0, upper)`.
 pub fn sample_uniform_ubig_below(upper: UBig) -> Fallible<UBig> {
@@ -71,9 +71,10 @@ pub fn sample_uniform_ubig_below(upper: UBig) -> Fallible<UBig> {
     let byte_len = upper.bit_len().div_ceil(8);
 
     // sample % upper is unbiased for any sample < threshold, because
-    // max - max % upper evenly folds into [0, upper), max // upper times
-    let max = UBig::from_be_bytes(&vec![u8::MAX; byte_len]);
-    let threshold = &max - &max % &upper;
+    // threshold = 2^(8 * byte_len) - (2^(8 * byte_len) % upper)
+    // evenly folds into [0, upper), threshold / upper times
+    let range = UBig::ONE << (byte_len * 8);
+    let threshold = &range - &range % &upper;
 
     let mut buffer = vec![0; byte_len];
 
