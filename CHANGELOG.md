@@ -4,7 +4,176 @@ This file documents the version history of OpenDP. The links on each version num
 showing the source changes from the previous version.
 
 
-## [0.13.0-dev](https://github.com/opendp/opendp/compare/v0.12.1...HEAD) - TBD
+## [0.14.2](https://github.com/opendp/opendp/compare/v0.14.1...v0.14.2) - 2026-03-10
+
+### Features
+
+- Faster and simpler exponential mechanism [#2549](https://github.com/opendp/opendp/pull/2549)
+
+### Fixes
+
+- Additive noise sampler bias, statistical testing [#2639](https://github.com/opendp/opendp/pull/2639)
+- Swap in numpy cumsum for deprecated sklearn function [#2589](https://github.com/opendp/opendp/pull/2589)
+- Ffi for stable truncation transformations [#2557](https://github.com/opendp/opendp/pull/2557)
+
+### Proof Reviews
+
+- Make_count [#2122](https://github.com/opendp/opendp/pull/2122)
+- Sample_bernoulli_exp [#2113](https://github.com/opendp/opendp/pull/2113)
+- Sample_discrete_gaussian [#2115](https://github.com/opendp/opendp/pull/2115)
+- Sample_geometric_exp_slow [#2118](https://github.com/opendp/opendp/pull/2118)
+
+### Docs
+
+- Group by -> group-by [#2636](https://github.com/opendp/opendp/pull/2636)
+- Remove intern announcement from banner [#2624](https://github.com/opendp/opendp/pull/2624)
+- Check formating of code samples in docs in smoke-tests, not just weekly [#2578](https://github.com/opendp/opendp/pull/2578)
+- Mention "hierarchical queries" [#2584](https://github.com/opendp/opendp/pull/2584)
+- Fix ordering of docs sections by adding indent [#2586](https://github.com/opendp/opendp/pull/2586)
+- Add bounds estimation section [#2583](https://github.com/opendp/opendp/pull/2583)
+- Add a redirect from old cla to current [#2591](https://github.com/opendp/opendp/pull/2591)
+- Include job and internship announcement [#2593](https://github.com/opendp/opendp/pull/2593)
+- Better formatting of api reference docs [#2546](https://github.com/opendp/opendp/pull/2546)
+- Https for registry [#2582](https://github.com/opendp/opendp/pull/2582)
+- Use tilde in rst [#2544](https://github.com/opendp/opendp/pull/2544)
+- Clean up measurements index page [#2543](https://github.com/opendp/opendp/pull/2543)
+- Update issue templates [#2538](https://github.com/opendp/opendp/pull/2538)
+- Search and replace framework PDF URL [#2570](https://github.com/opendp/opendp/pull/2570)
+- Update slack link; remove office hours [#2606](https://github.com/opendp/opendp/pull/2606)
+
+### Maintenance
+
+- To fix rdocs build, use action provided by pandoc to upgrade pandoc version [#2628](https://github.com/opendp/opendp/pull/2628) (Reverts: Disable llm-docs rdocs generation [#2608](https://github.com/opendp/opendp/pull/2608) and Downgrade pkgdown to work around "definition_lists is not supported for gfm" error [#2616](https://github.com/opendp/opendp/pull/2616))
+- Swap macos 15 for 13 [#2597](https://github.com/opendp/opendp/pull/2597)
+- Stub codeowners [#2566](https://github.com/opendp/opendp/pull/2566)
+- Convert from namedtuples to dataclasses [#2623](https://github.com/opendp/opendp/pull/2623)
+- Minor docs and test quality-of-life improvements [#2622](https://github.com/opendp/opendp/pull/2622)
+- R Linting: turn off return_linter [#2576](https://github.com/opendp/opendp/pull/2576)
+
+### Testing
+
+- Ignore deprecation warning from transitive dependency [#2620](https://github.com/opendp/opendp/pull/2620)
+
+
+
+## [0.14.1](https://github.com/opendp/opendp/compare/v0.14.0...v0.14.1) - 2025-09-16
+
+### Fix
+
+- Python/r -> rust api docs links [#2534](https://github.com/opendp/opendp/pull/2534)
+- Binomialcnd link [#2518](https://github.com/opendp/opendp/pull/2518)
+- Github ci syntax: only run the tests we need [#2506](https://github.com/opendp/opendp/pull/2506)
+
+### Docs
+
+- Make_alp_queryable [#2531](https://github.com/opendp/opendp/pull/2531)
+- Noisy max mechanisms [#2525](https://github.com/opendp/opendp/pull/2525)
+- Randomized response bitvec [#2533](https://github.com/opendp/opendp/pull/2533)
+- Line wrapping in sythetic data code samples [#2500](https://github.com/opendp/opendp/pull/2500)
+
+### Feature
+
+- Add plugins for dp aggregators [#2473](https://github.com/opendp/opendp/pull/2473)
+
+### Chore
+
+- Last steps on v0.14.0 release [#2513](https://github.com/opendp/opendp/pull/2513)
+
+## [0.14.0](https://github.com/opendp/opendp/compare/v0.13.0...v0.14.0) - 2025-09-08
+
+
+### Feature
+
+- New:
+    - Synthesizer preprocessing and mst [#2406](https://github.com/opendp/opendp/pull/2406)
+    - Add aim synthesizer for ordinal data [#2290](https://github.com/opendp/opendp/pull/2290)
+    - Add make_noise constructors [#2459](https://github.com/opendp/opendp/pull/2459)
+    - Extrinsic metric descriptor; lifeline simplification [#2458](https://github.com/opendp/opendp/pull/2458)
+    - Make_noisy_top_k [#2220](https://github.com/opendp/opendp/pull/2220)
+    - Add `dp.sklearn.linear_model.linearregression` [#2403](https://github.com/opendp/opendp/pull/2403)
+    - Context api odometer/filter integration [#2384](https://github.com/opendp/opendp/pull/2384)
+    - Odometer ffi [#678](https://github.com/opendp/opendp/pull/678)
+    - Add `make_privacy_filter` [#2048](https://github.com/opendp/opendp/pull/2048)
+    - Add `make_fully_adaptive_composition` [#676](https://github.com/opendp/opendp/pull/676)
+    - Add `make_canonical_noise` [#1126](https://github.com/opendp/opendp/pull/1126)
+    - Polars contribution bounding and sample/aggregate [#2318](https://github.com/opendp/opendp/pull/2318)
+- Improvements:
+    - Improve usability of randomized response mechanisms [#2383](https://github.com/opendp/opendp/pull/2383)
+    - Add more info for the user in `max_partition_length` error message  [#2316](https://github.com/opendp/opendp/pull/2316)
+    - Rename compositor apis [#2377](https://github.com/opendp/opendp/pull/2377)
+    - If envvar is set, show more info in error [#2452](https://github.com/opendp/opendp/pull/2452)
+    - Rewrite discrete noise mechanisms [#2134](https://github.com/opendp/opendp/pull/2134)
+
+### Fix
+
+- Always default to include inf in float domains [#2466](https://github.com/opendp/opendp/pull/2466)
+- Interactive postprocessing under sequentiality constraint [#2450](https://github.com/opendp/opendp/pull/2450)
+- Constanttimegeometric release build [#2380](https://github.com/opendp/opendp/pull/2380)
+- Fix the release build [#2475](https://github.com/opendp/opendp/pull/2475)
+- Comparison in `_make_eigenvector` [#2422](https://github.com/opendp/opendp/pull/2422)
+- In rust, `compile_fail` -> `no_run` in two locations [#2394](https://github.com/opendp/opendp/pull/2394)
+
+### Docs
+
+- New content:
+    - Update developer instructions to include mbi [#2489](https://github.com/opendp/opendp/pull/2489)
+    - Contingency tables and synthetic data [#2460](https://github.com/opendp/opendp/pull/2460)
+    - Bounds page in api user guide [#2436](https://github.com/opendp/opendp/pull/2436)
+    - Add a next-steps page [#2462](https://github.com/opendp/opendp/pull/2462)
+    - Simplify "assessing utility" [#2463](https://github.com/opendp/opendp/pull/2463)
+    - Combinators and compositors docs reorganization [#2464](https://github.com/opendp/opendp/pull/2464)
+    - Explain constructor lingo [#2405](https://github.com/opendp/opendp/pull/2405)
+    - Update thiel-sen notebook [#2360](https://github.com/opendp/opendp/pull/2360)
+    - Update differencing attack notebook [#2355](https://github.com/opendp/opendp/pull/2355)
+    - Document exponential quantiles in the user guide [#2358](https://github.com/opendp/opendp/pull/2358)
+    - Stats ToC in getting-started [#2494](https://github.com/opendp/opendp/pull/2494)
+    - Fill in docstrings for namedtuple params [#2492](https://github.com/opendp/opendp/pull/2492)
+    - Quantiles theory section [#1734](https://github.com/opendp/opendp/pull/1734)
+- Links to outside resources:
+    - Add dp-wizard link [#2413](https://github.com/opendp/opendp/pull/2413)
+    - Link to deployments registry [#2415](https://github.com/opendp/opendp/pull/2415)
+- Housekeeping:
+    - Add link to pca source [#2389](https://github.com/opendp/opendp/pull/2389)
+    - Fill in v0.13 deprecations [#2493](https://github.com/opendp/opendp/pull/2493)
+    - Add missing docstring boilerplate in extras [#2487](https://github.com/opendp/opendp/pull/2487)
+    - Fix linear regression link [#2488](https://github.com/opendp/opendp/pull/2488)
+    - Format code samples [#2448](https://github.com/opendp/opendp/pull/2448)
+    - Convert tabular data notebooks to rst [#2434](https://github.com/opendp/opendp/pull/2434)
+    - Convert truncation docs to rst [#2433](https://github.com/opendp/opendp/pull/2433)
+    - Js redirection for regression [#2404](https://github.com/opendp/opendp/pull/2404)
+    - Remove orphan `noise` notebook [#2414](https://github.com/opendp/opendp/pull/2414)
+    - Check that all notebook cells are executed in order [#2388](https://github.com/opendp/opendp/pull/2388)
+    - Reformat MBI code blocks [#2479](https://github.com/opendp/opendp/pull/2479)
+    - Make Markdown explicit in docs [#2399](https://github.com/opendp/opendp/pull/2399)
+    - Fix link check [#2402](https://github.com/opendp/opendp/pull/2402)
+    - Fix missing backticks [#2490](https://github.com/opendp/opendp/pull/2490)
+    - Prefer empty lines in doctests [#2491](https://github.com/opendp/opendp/pull/2491)
+    - Remove old, unneeded type comment [#2502](https://github.com/opendp/opendp/pull/2502)
+
+### Prove
+
+- Prove `make_expr_datetime_component` and `match_datetime_component` [#2159](https://github.com/opendp/opendp/pull/2159)
+- Prove `make_expr_strptime` [#2156](https://github.com/opendp/opendp/pull/2156)
+- Prove `make_private_group_by` [#2166](https://github.com/opendp/opendp/pull/2166)
+- Prove `counting_query_stability_map` and `make_expr_count` [#2155](https://github.com/opendp/opendp/pull/2155)
+- Prove `get_margin` and `find_min_covering` [#2153](https://github.com/opendp/opendp/pull/2153)
+- Consolidate and prove discrete quantile scorer [#2357](https://github.com/opendp/opendp/pull/2357)
+
+### Chore
+
+- Version bumps:
+    - Bump top supported python from 3.12 to 3.13 [#2412](https://github.com/opendp/opendp/pull/2412)
+    - Upgrade last ci actions to python 3.13 [#2427](https://github.com/opendp/opendp/pull/2427)
+    - Upgrade minimum python version to 3.10 [#2441](https://github.com/opendp/opendp/pull/2441)
+    - Update polars to 0.50.0 [#2419](https://github.com/opendp/opendp/pull/2419)
+- Other:
+    - Reorder constructor args [#2449](https://github.com/opendp/opendp/pull/2449)
+    - (re)move more examples documentation [#2353](https://github.com/opendp/opendp/pull/2353)
+    - Flake8 should ignore tools venv [#2387](https://github.com/opendp/opendp/pull/2387)
+    - Rename "member" to "_member" [#2392](https://github.com/opendp/opendp/pull/2392)
+
+
+## [0.13.0](https://github.com/opendp/opendp/compare/v0.12.1...v0.13.0) - 2025-04-22
 
 
 ### Feat

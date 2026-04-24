@@ -31,11 +31,11 @@ use crate::transformations::make_row_by_row_fallible;
 ///
 /// # Generics
 /// * `TA` - Atomic Type
-pub fn make_clamp<TA: 'static + Clone + ProductOrd + CheckAtom, M: EventLevelMetric>(
+pub fn make_clamp<TA: 'static + Clone + ProductOrd + PartialOrd + CheckAtom, M: EventLevelMetric>(
     input_domain: VectorDomain<AtomDomain<TA>>,
     input_metric: M,
     bounds: (TA, TA),
-) -> Fallible<Transformation<VectorDomain<AtomDomain<TA>>, VectorDomain<AtomDomain<TA>>, M, M>>
+) -> Fallible<Transformation<VectorDomain<AtomDomain<TA>>, M, VectorDomain<AtomDomain<TA>>, M>>
 where
     (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
 {

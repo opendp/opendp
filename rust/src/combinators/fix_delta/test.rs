@@ -6,9 +6,9 @@ use super::*;
 fn test_fix_delta_adp() -> Fallible<()> {
     let meas = Measurement::new(
         AtomDomain::<bool>::default(),
-        Function::new(|&v| v),
         DiscreteDistance,
         SmoothedMaxDivergence,
+        Function::new(|&v| v),
         PrivacyMap::new(|_d_in| PrivacyProfile::new(|eps| (-eps).inf_exp())),
     )?;
     let m_fixed = make_fix_delta(&meas, 1e-7)?;
@@ -25,9 +25,9 @@ fn test_fix_delta_adp() -> Fallible<()> {
 fn test_fix_delta_approx_adp() -> Fallible<()> {
     let meas = Measurement::new(
         AtomDomain::<bool>::default(),
-        Function::new(|&v| v),
         DiscreteDistance,
         Approximate(SmoothedMaxDivergence),
+        Function::new(|&v| v),
         PrivacyMap::new(|_d_in| (PrivacyProfile::new(|eps| (-eps).inf_exp()), 1e-7)),
     )?;
     let m_fixed = make_fix_delta(&meas, 2e-7)?;

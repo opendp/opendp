@@ -39,7 +39,7 @@ fn test_is_null() -> Fallible<()> {
     let (lf_domain, lf) = get_f64_i64_data()?;
     let expr_domain = lf_domain.row_by_row();
     assert_eq!(
-        lf.with_column(all().is_null()).collect()?,
+        lf.with_column(all().as_expr().is_null()).collect()?,
         df!(
             "f64" => [false, false, false, false],
             "i64" => [false, false, false, false],
@@ -61,7 +61,7 @@ fn test_is_not_null() -> Fallible<()> {
     let (lf_domain, lf) = get_f64_i64_data()?;
     let expr_domain = lf_domain.row_by_row();
     assert_eq!(
-        lf.with_column(all().is_not_null()).collect()?,
+        lf.with_column(all().as_expr().is_not_null()).collect()?,
         df!(
             "f64" => [true, true, true, true],
             "i64" => [true, true, true, true],
@@ -83,12 +83,12 @@ fn test_is_finite() -> Fallible<()> {
     let (lf_domain, lf) = get_f64_i64_data()?;
     let expr_domain = lf_domain.row_by_row();
     assert_eq!(
-        lf.with_column(all().is_finite()).collect()?,
+        lf.with_column(all().as_expr().is_finite()).collect()?,
         df!(
             "f64" => [true, false, false, false],
             "i64" => [true, true, true, true],
             "f64_null" => [Some(true), Some(false), None, Some(false)],
-            "i64_null" => [true, true, true, true],
+            "i64_null" => [Some(true), None, None, Some(true)],
         )?
     );
 
@@ -105,12 +105,12 @@ fn test_is_infinite() -> Fallible<()> {
     let (lf_domain, lf) = get_f64_i64_data()?;
     let expr_domain = lf_domain.row_by_row();
     assert_eq!(
-        lf.with_column(all().is_infinite()).collect()?,
+        lf.with_column(all().as_expr().is_infinite()).collect()?,
         df!(
             "f64" => [false, false, false, true],
             "i64" => [false, false, false, false],
             "f64_null" => [Some(false), Some(false), None, Some(true)],
-            "i64_null" => [false, false, false, false],
+            "i64_null" => [Some(false), None, None, Some(false)],
         )?
     );
 
@@ -127,12 +127,12 @@ fn test_is_nan() -> Fallible<()> {
     let (lf_domain, lf) = get_f64_i64_data()?;
     let expr_domain = lf_domain.row_by_row();
     assert_eq!(
-        lf.with_column(all().is_nan()).collect()?,
+        lf.with_column(all().as_expr().is_nan()).collect()?,
         df!(
             "f64" => [false, true, true, false],
             "i64" => [false, false, false, false],
             "f64_null" => [Some(false), Some(true), None, Some(false)],
-            "i64_null" => [false, false, false, false],
+            "i64_null" => [Some(false), None, None, Some(false)],
         )?
     );
 
@@ -149,13 +149,13 @@ fn test_is_not_nan() -> Fallible<()> {
     let (lf_domain, lf) = get_f64_i64_data()?;
     let expr_domain = lf_domain.row_by_row();
     assert_eq!(
-        lf.with_column(all().is_not_nan()).collect()?,
+        lf.with_column(all().as_expr().is_not_nan()).collect()?,
         df!(
             "f64" => [true, false, false, true],
             "i64" => [true, true, true, true],
             // nulls propagate through nan check on floats
             "f64_null" => [Some(true), Some(false), None, Some(true)],
-            "i64_null" => [true, true, true, true],
+            "i64_null" => [Some(true), None, None, Some(true)],
         )?
     );
 
@@ -191,7 +191,7 @@ fn test_not() -> Fallible<()> {
     let expr_domain = lf_domain.row_by_row();
 
     assert_eq!(
-        lf.clone().with_column(all().not()).collect()?,
+        lf.clone().with_column(all().as_expr().not()).collect()?,
         df!(
             "bool" => [false, true, true],
             "bool_null" => [Some(false), Some(true), None]
@@ -225,7 +225,7 @@ fn test_not_i64() -> Fallible<()> {
     let expr_domain = lf_domain.row_by_row();
 
     assert_eq!(
-        lf.clone().with_column(all().not()).collect()?,
+        lf.clone().with_column(all().as_expr().not()).collect()?,
         df!(
             "i64" => [-1, -2, -3, -4],
             "i64_null" => [Some(-1), None, None, Some(-4)],

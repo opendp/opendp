@@ -1,5 +1,22 @@
+normalize_features <- function(features) {
+  normalized <- vapply(
+    features,
+    function(feature) {
+      if (identical(feature, "floating-point")) {
+        warning("\"floating-point\" is deprecated. Use \"idealized-numerics\" instead.", call. = FALSE)
+        return("idealized-numerics")
+      }
+      feature
+    },
+    FUN.VALUE = character(1),
+    USE.NAMES = FALSE
+  )
+
+  as.list(normalized)
+}
+
 assert_features <- function(...) {
-  for (feature in list(...)) {
+  for (feature in normalize_features(list(...))) {
     if (!feature %in% getOption("opendp_features")) {
       stop("Attempted to use function that requires ", feature, " but ", feature, " is not enabled. See https://github.com/opendp/opendp/discussions/304, then call enable_features(\"", feature, "\")", call. = FALSE)
     }
@@ -14,7 +31,7 @@ assert_features <- function(...) {
 #' @param ... features to enable
 #' @export
 enable_features <- function(...) {
-  options(opendp_features = union(getOption("opendp_features"), list(...)))
+  options(opendp_features = union(getOption("opendp_features"), normalize_features(list(...))))
 }
 
 #' Disable features in the opendp package.
@@ -24,7 +41,7 @@ enable_features <- function(...) {
 #' @export
 disable_features <- function(...) {
   features <- getOption("opendp_features")
-  options(opendp_features = features[!features %in% list(...)])
+  options(opendp_features = features[!features %in% normalize_features(list(...))])
 }
 
 is_space <- function(x) {
@@ -172,6 +189,7 @@ new_measurement <- function(ptr, log) {
   measurement
 }
 
+
 #' @concept mod
 #' @export
 toString.measurement <- function(x, ...) {
@@ -190,6 +208,54 @@ print.measurement <- function(x, ...) {
   cat(toString(x, ...))
 }
 
+#' new odometer
+#'
+#' @concept mod
+#' @param ptr pointer to the odometer struct
+#' @param log call history
+new_odometer <- function(ptr, log) {
+  odometer <- function(attr, arg) {
+    if (missing(attr) + missing(arg) != 1) {
+      stop("expected exactly one of attr or arg", call. = FALSE)
+    }
+    if (!missing(arg)) {
+      return(odometer_invoke(ptr, arg))
+    }
+    if (is.numeric(attr)) {
+      stop("numeric attr not allowed; Did you mean 'arg='?", call. = FALSE)
+    }
+    switch(attr,
+      input_domain = odometer_input_domain(ptr),
+      input_metric = odometer_input_metric(ptr),
+      output_measure = odometer_output_measure(ptr),
+      json = jsonlite::toJSON(to_ast(log), pretty = TRUE),
+      ptr = ptr,
+      log = log,
+      stop("unrecognized attribute", call. = FALSE)
+    )
+  }
+  class(odometer) <- "odometer"
+  odometer
+}
+
+#' @concept mod
+#' @export
+toString.odometer <- function(x, ...) {
+  paste0(
+    "Odometer(\n",
+    "  input_domain=", toString(x("input_domain")), ",\n",
+    "  input_metric=", toString(x("input_metric")), ",\n",
+    "  output_measure=", toString(x("output_measure")), "\n",
+    ")"
+  )
+}
+
+#' @concept mod
+#' @export
+print.odometer <- function(x, ...) {
+  cat(toString(x, ...))
+}
+
 #' new domain
 #'
 #' @concept mod
@@ -202,13 +268,14 @@ new_domain <- function(ptr, log) {
     }
 
     if (!missing(member)) {
-      return(member(ptr, member))
+      return(`_member`(ptr, member))
     }
 
     switch(attr,
       debug = domain_debug(ptr),
       type = domain_type(ptr),
       carrier_type = domain_carrier_type(ptr),
+      descriptor = `_extrinsic_domain_descriptor`(ptr),
       json = jsonlite::toJSON(to_ast(log), pretty = TRUE),
       ptr = ptr,
       log = log,
@@ -242,6 +309,7 @@ new_metric <- function(ptr, log) {
       debug = metric_debug(ptr),
       type = metric_type(ptr),
       distance_type = metric_distance_type(ptr),
+      descriptor = `_extrinsic_metric_descriptor`(ptr),
       json = jsonlite::toJSON(to_ast(log), pretty = TRUE),
       ptr = ptr,
       log = log,
@@ -275,6 +343,7 @@ new_measure <- function(ptr, log) {
       debug = measure_debug(ptr),
       type = measure_type(ptr),
       distance_type = measure_distance_type(ptr),
+      descriptor = `_extrinsic_measure_descriptor`(ptr),
       json = jsonlite::toJSON(to_ast(log), pretty = TRUE),
       ptr = ptr,
       log = log,
@@ -302,7 +371,7 @@ print.measure <- function(x, ...) {
 #' @concept mod
 #' @param ptr a pointer to a function
 #' @param log call history
-new_function <- function(ptr, log) {
+new_function_internal <- function(ptr, log) {
   opendp_function <- function(attr, arg) {
     if (missing(attr) + missing(arg) != 1) {
       stop("expected exactly one of attr or arg", call. = FALSE)
@@ -327,7 +396,7 @@ new_function <- function(ptr, log) {
 #'
 #' @concept mod
 #' @param ptr a pointer to a privacy profile
-new_privacy_profile <- function(ptr) {
+new_privacy_profile_internal <- function(ptr) {
   privacy_profile <- function(attr, epsilon, delta) {
     if (missing(attr) + missing(epsilon) + missing(delta) != 2) {
       stop("expected exactly one of attr, epsilon or delta", call. = FALSE)
@@ -354,7 +423,7 @@ new_privacy_profile <- function(ptr) {
 #'
 #' @concept mod
 #' @param ptr a pointer to a queryable
-new_queryable <- function(ptr) {
+new_queryable_internal <- function(ptr) {
   queryable <- function(attr, query) {
     if (missing(attr) + missing(query) != 1) {
       stop("expected exactly one of attr or query", call. = FALSE)
@@ -372,6 +441,34 @@ new_queryable <- function(ptr) {
   class(queryable) <- "queryable"
   queryable
 }
+
+
+#' new odometer queryable
+#'
+#' @concept mod
+#' @param ptr a pointer to an odometer queryable
+new_odometer_queryable_internal <- function(ptr) {
+  odometer_queryable <- function(attr, query, d_in) {
+    if (missing(attr) + missing(query) + missing(d_in) != 2) {
+      stop("expected exactly one of attr, query or d_in", call. = FALSE)
+    }
+
+    if (!missing(query)) {
+      return(odometer_queryable_invoke(ptr, query))
+    }
+    if (!missing(d_in)) {
+      return(odometer_queryable_privacy_loss(ptr, d_in))
+    }
+
+    switch(attr,
+      ptr = ptr,
+      stop("unrecognized attribute", call. = FALSE)
+    )
+  }
+  class(odometer_queryable) <- "odometer_queryable"
+  odometer_queryable
+}
+
 
 #' extract heterogeneously typed keys and values from a hashtab
 #'

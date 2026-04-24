@@ -20,10 +20,11 @@ ATOM_EQUIVALENCE_CLASSES: MutableMapping[str, Sequence[str]] = {
 
 def _load_library():
     default_lib_dir = Path(__file__).absolute().parent / "lib"
-    lib_dir = Path(os.environ.get("OPENDP_LIB_DIR", default_lib_dir))
+    lib_envvar = "OPENDP_LIB_DIR"
+    lib_dir = Path(os.environ.get(lib_envvar, default_lib_dir))
     if not lib_dir.exists():
         # fall back to default location of binaries in a developer install
-        build_dir = 'debug' if os.environ.get('OPENDP_TEST_RELEASE', "false") == "false" else 'release'
+        build_dir = 'release' if os.environ.get('OPENDP_TEST_RELEASE') else 'debug'
         lib_dir = Path(__file__).parent / ".." / ".." / ".." / 'rust' / 'target' / build_dir  # pragma: no cover
 
     if lib_dir.exists():
@@ -36,8 +37,10 @@ def _load_library():
             and any(p.name.endswith(suffix) for suffix in suffixes)
         ]
         
-        if len(lib_dir_file_names) != 1:
-            raise Exception(f"Expected exactly one binary to be present in {lib_dir}. Got: {lib_dir_file_names}")  # pragma: no cover
+        if len(lib_dir_file_names) != 1:  # pragma: no cover
+            value = os.environ.get(lib_envvar)
+            envvar_info = f" ({lib_envvar}='{value}')" if value is not None else ""
+            raise Exception(f"Expected exactly one binary to be present in '{lib_dir}'{envvar_info}. Got: {lib_dir_file_names}")
         
         lib_path = lib_dir / lib_dir_file_names[0]
         try:
@@ -54,6 +57,54 @@ def _load_library():
 
 lib, lib_path = _load_library()
 
+def _total_cmp(left, right):
+    try:
+        # compare equality first in case order not supported
+        if left == right:
+            cmp = 0
+        elif left < right:
+            cmp = -1
+        elif left > right:
+            cmp = 1
+        else:
+            raise ValueError("left and right are not comparable")
+        
+        lib.ffiresult_ok.argtypes = [ctypes.c_void_p]
+        lib.ffiresult_ok.restype = ctypes.c_void_p
+        
+        from opendp._convert import py_to_c
+        c_out = py_to_c(cmp, c_type=AnyObjectPtr, type_name="i8")
+        # don't free c_out, because we are giving ownership to Rust
+        c_out.__class__ = ctypes.POINTER(AnyObject)
+        return lib.ffiresult_ok(ctypes.addressof(c_out.contents))
+    
+    except Exception:
+        import traceback
+        lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+        lib.ffiresult_err.restype = ctypes.c_void_p
+        return lib.ffiresult_err(
+            ctypes.c_char_p("Continued stack trace from Exception in user-defined function".encode()),
+            ctypes.c_char_p(traceback.format_exc().encode()),
+        )
+
+_TOTAL_CMP = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.py_object, ctypes.py_object)(_total_cmp)
+
+def _ref_count(ptr, increment):
+    try:
+        if increment:
+            ctypes.pythonapi.Py_IncRef(ctypes.py_object(ptr))
+        else:
+            ctypes.pythonapi.Py_DecRef(ctypes.py_object(ptr))
+    except Exception: # pragma: no cover
+        return False
+    return True
+
+_REF_COUNT = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.py_object, ctypes.c_bool)(_ref_count)
+
+
+if lib:
+    lib._set_total_cmp(_TOTAL_CMP)
+    lib._set_ref_count(_REF_COUNT)
 
 # Key: Optional module name
 # Value: The opendp extra that provides this module,
@@ -79,7 +130,7 @@ def import_optional_dependency(name, raise_error=True):
         return None
 
 
-_np_csprng = None
+_np_csprng: Any = None
 _buffer_pos = 0 # TODO: Make this into a class rather than using ad-hoc globals.
 def get_np_csprng():
     global _np_csprng
@@ -132,6 +183,10 @@ class AnyObject(ctypes.Structure):
 
 
 class AnyMeasurement(ctypes.Structure):
+    pass  # Opaque struct
+
+
+class AnyOdometer(ctypes.Structure):
     pass  # Opaque struct
 
 
@@ -213,7 +268,6 @@ class FfiResult(ctypes.Structure):
 class ExtrinsicObject(ctypes.Structure):
     _fields_ = [
         ("ptr", ctypes.py_object),
-        ("count", ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.py_object, ctypes.c_bool))
     ]
 
 
@@ -232,13 +286,13 @@ class ExtrinsicObjectPtr(ctypes.POINTER(ExtrinsicObject)): # type: ignore[misc]
 
 # The output type cannot be an `ctypes.POINTER(FfiResult)` due to:
 #   https://bugs.python.org/issue5710#msg85731
-#                                 (output         , input       )
-CallbackFnValue = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr)
+#                                 (output         , input       , userdata        )
+CallbackFnValue = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr, ctypes.py_object)
 
 class CallbackFn(ctypes.Structure):
     _fields_ = [
         ("callback", CallbackFnValue),
-        ("lifeline", ExtrinsicObject)
+        ("userdata", ExtrinsicObject)
     ]
 
 class CallbackFnPtr(ctypes.POINTER(CallbackFn)): # type: ignore[misc]

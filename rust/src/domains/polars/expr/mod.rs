@@ -20,7 +20,7 @@ mod ffi;
 /// Expressions used in the Polars API fall into four categories:
 ///
 /// 1. Not useful on their own for DP (shift)
-/// 2. Leaf nodes, like only col or lit (impute, group by or join keys, explode)
+/// 2. Leaf nodes, like only col or lit (impute, group-by or join keys, explode)
 /// 3. Row-by-row (sorting by, filter, with column, top/bottom k)
 /// 4. Grouping (select, aggregate)
 ///
@@ -157,7 +157,7 @@ impl From<DslPlan> for ExprPlan {
     fn from(value: DslPlan) -> Self {
         ExprPlan {
             plan: value,
-            expr: all(),
+            expr: Expr::Selector(all()),
             fill: None,
         }
     }
@@ -285,7 +285,7 @@ impl<Q: ProductOrd, const P: usize> MetricSpace for (ExprDomain, LpDistance<P, Q
                 "LpDistance between vectors with nulls is undefined"
             );
         }
-        if !column.dtype().is_numeric() {
+        if !column.dtype().is_primitive_numeric() {
             return fallible!(
                 MetricSpace,
                 "LpDistance is only well defined for numeric data"
@@ -305,7 +305,7 @@ impl<Q: ProductOrd> MetricSpace for (ExprDomain, LInfDistance<Q>) {
             );
         }
         if let DataType::Array(inner_dtype, _) = column.dtype() {
-            if !inner_dtype.is_numeric() {
+            if !inner_dtype.is_primitive_numeric() {
                 return fallible!(
                     MetricSpace,
                     "LInfDistance is only well defined for numeric array data"

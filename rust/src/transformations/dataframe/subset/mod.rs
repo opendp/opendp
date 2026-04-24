@@ -12,7 +12,7 @@ use super::{DataFrame, DataFrameDomain};
 #[cfg(feature = "ffi")]
 mod ffi;
 
-#[deprecated(note = "Use Polars instead", since = "0.12.0")]
+#[deprecated(note = "Use Polars instead.", since = "0.12.0")]
 #[bootstrap(features("contrib"))]
 /// Make a Transformation that subsets a dataframe by a boolean column.
 ///
@@ -26,11 +26,13 @@ pub fn make_subset_by<TK: Hashable>(
     indicator_column: TK,
     keep_columns: Vec<TK>,
 ) -> Fallible<
-    Transformation<DataFrameDomain<TK>, DataFrameDomain<TK>, SymmetricDistance, SymmetricDistance>,
+    Transformation<DataFrameDomain<TK>, SymmetricDistance, DataFrameDomain<TK>, SymmetricDistance>,
 > {
     Transformation::new(
         DataFrameDomain::new(),
+        SymmetricDistance,
         DataFrameDomain::new(),
+        SymmetricDistance,
         Function::new_fallible(move |data: &DataFrame<TK>| {
             // the partition to move each row into
             let indicator = (data.get(&indicator_column))
@@ -64,8 +66,6 @@ pub fn make_subset_by<TK: Hashable>(
 
             Ok(subsetted)
         }),
-        SymmetricDistance,
-        SymmetricDistance,
         StabilityMap::new_from_constant(1),
     )
 }

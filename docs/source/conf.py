@@ -5,6 +5,8 @@ import os
 from datetime import datetime
 import semver
 import pypandoc
+import re
+import subprocess
 from sphinx.ext import autodoc
 
 # docs should be built without needing import the library binary for the specified version
@@ -101,13 +103,22 @@ nitpick_ignore = [
     ('py:class', 'opendp.mod.LP_AnyFunction'),
     ('py:class', 'opendp.mod.LP_AnyMeasure'),
     ('py:class', 'opendp.mod.LP_AnyMeasurement'),
+    ('py:class', 'opendp.mod.LP_AnyOdometer'),
     ('py:class', 'opendp.mod.LP_AnyMetric'),
     ('py:class', 'opendp.mod.LP_AnyTransformation'),
 
+    # External dependencies may not exist when building docs
+    ('py:class', 'numpy.ndarray'),
+    ('py:class', 'sklearn.decomposition._pca.PCA'),
+
+    # Standard library reference fails to resolve
+    ('py:class', 'abc.ABC'),
+
     # I think the problem is that Sphinx is making parameter list documentation,
-    # and it doesn't understand that `M` and `T` are type parameters, not actual types.
+    # and it doesn't understand that `M`, `T`, and `D` are type parameters, not actual types.
     ('py:class', 'opendp.mod.M'),
     ('py:class', 'opendp.mod.T'),  # 17 occurrences
+    ('py:class', 'opendp.mod.D'),
 
     # In a given version of Python, only one will apply,
     # but we need them both for compatibility.
@@ -157,7 +168,8 @@ html_last_updated_fmt = '%b %d, %Y'
 # Full list of options at https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/layout.html#references
 html_theme_options = {
     "github_url": "https://github.com/opendp",
-    "article_header_end": ["questions-feedback", "old-version-warning"]
+    "article_header_end": ["questions-feedback", "old-version-warning"],
+    "announcement": "https://raw.githubusercontent.com/opendp/opendp/refs/heads/main/docs/source/announcement.html",
 }
 
 html_theme = 'pydata_sphinx_theme'
@@ -166,10 +178,11 @@ html_css_files = [
 ]
 
 # See https://pydata-sphinx-theme.readthedocs.io/en/v0.6.3/user_guide/configuring.html#configure-the-sidebar
-# Note: Overridden in the Makefile for local builds. Be sure to update both places.
-html_sidebars = {
-   '**': ['sidebar-nav-bs.html', 'versioning.html'],
-}
+universal_sidebars = ['sidebar-nav-bs.html']
+if os.getenv("OPENDP_SPHINX_LOCAL") != "1":
+    universal_sidebars.append('versioning.html')
+html_sidebars = {'**': universal_sidebars}
+
 html_context = {
     # Expected sphinx-multiversion to set "latest_version", but it was None, so set it manually.
     'latest_version_name': f'v{version}',
@@ -178,8 +191,45 @@ html_context = {
 }
 
 # SPHINX-MULTIVERSION STUFF
+def _list_release_tags():
+    return subprocess.check_output(["git", "tag", "--list", "v*"], text=True).splitlines()
+
+
+# With a quarterly release cadence (not counting patches),
+# this will generate API docs just for the past year.
+def _select_recent_release_tags(tags):
+    """
+    Return a regex matching the latest patch release from the most recent release lines.
+
+    >>> _select_recent_release_tags(
+    ...     ["v0.11.0", "v0.11.1", "v0.12.0", "v0.12.0-rc.1", "not-a-tag"],
+    ...     number_to_keep=2,
+    ... )
+    '^(v0\\\\.11\\\\.1|v0\\\\.12\\\\.0)$'
+    """
+    # assuming quarterly release cadence
+    number_to_keep = 8
+    
+    latest_patch_for_major_minor = {}
+    for tag in tags:
+        match = re.fullmatch(r"v(\d+)\.(\d+)\.(\d+)", tag)
+        if match is None:
+            continue
+        major, minor, patch = map(int, match.groups())
+        major_minor = (major, minor)
+        current = latest_patch_for_major_minor.get(major_minor)
+        if current is None or patch > current[0]:
+            latest_patch_for_major_minor[major_minor] = (patch, tag)
+
+    selected_major_minors = sorted(latest_patch_for_major_minor, reverse=True)[:number_to_keep]
+    selected_tags = sorted(
+        latest_patch_for_major_minor[major_minor][1] for major_minor in selected_major_minors
+    )
+    return r"^(%s)$" % "|".join(re.escape(tag) for tag in selected_tags)
+
+
 # Whitelist pattern for tags (set to None to ignore all tags)
-smv_tag_whitelist = r'^v.*$'
+smv_tag_whitelist = _select_recent_release_tags(_list_release_tags())
 # # keep all released versions, as well as prereleases for the stable version. Doesn't work, because version != stable
 # import re
 # smv_tag_whitelist = rf'(^v\d+\.\d+\.\d+$)|(^v{re.escape(version.split("-")[0])}.+$)'

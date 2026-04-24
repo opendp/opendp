@@ -22,7 +22,7 @@ pub fn make_expr_cast<M: OuterMetric>(
     input_domain: WildExprDomain,
     input_metric: M,
     expr: Expr,
-) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
+) -> Fallible<Transformation<WildExprDomain, M, ExprDomain, M>>
 where
     M::InnerMetric: MicrodataMetric,
     M::Distance: Clone,
@@ -55,23 +55,33 @@ where
     let mut output_domain = middle_domain.clone();
     let data_column = &mut output_domain.column;
 
+    let to_type_dtype = to_type
+        .as_literal()
+        .ok_or_else(|| {
+            err!(
+                MakeTransformation,
+                "cast expression only supports literal dtype"
+            )
+        })?
+        .clone();
+
     // it is possible to tighten this:
     // in cases where casting will never fail, the nullable and/or nan bits can be left false
     // in the meantime, users will need to impute
-    data_column.set_dtype(to_type.clone())?;
+    data_column.set_dtype(to_type_dtype.clone())?;
 
     t_prior
         >> Transformation::new(
             middle_domain.clone(),
+            middle_metric.clone(),
             output_domain,
+            middle_metric,
             Function::then_expr(move |expr| Expr::Cast {
                 expr: Arc::new(expr),
                 dtype: to_type.clone(),
                 // Specify behavior for when casting fails (this is forced to be non-strict).
                 options,
             }),
-            middle_metric.clone(),
-            middle_metric,
             StabilityMap::new(Clone::clone),
         )?
 }

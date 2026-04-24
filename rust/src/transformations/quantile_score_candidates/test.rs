@@ -1,8 +1,7 @@
 use num::Float;
 
 use crate::{
-    measurements::{Optimize, make_report_noisy_max_gumbel},
-    metrics::SymmetricDistance,
+    measurements::make_noisy_max, measures::ZeroConcentratedDivergence, metrics::SymmetricDistance,
     traits::samplers::sample_uniform_uint_below,
 };
 
@@ -23,17 +22,18 @@ fn test_quantile_score_candidates_median() -> Fallible<()> {
         vec![59, 33, 19, 1, 45, 100]
     );
 
-    let m_rnm = make_report_noisy_max_gumbel(
+    let m_rnm = make_noisy_max(
         t_qscore.output_domain.clone(),
         t_qscore.output_metric.clone(),
+        ZeroConcentratedDivergence,
         1.0,
-        Optimize::Min,
+        true,
     )?;
 
     let m_quantile = (t_qscore >> m_rnm)?;
     let idx = m_quantile.invoke(&(0..100).collect())?;
     assert_eq!(candidates[idx], 50);
-    assert_eq!(m_quantile.map(&1)?, 2.0);
+    assert_eq!(m_quantile.map(&1)?, 0.5);
     Ok(())
 }
 
@@ -199,10 +199,7 @@ fn test_score_candidates_map() -> Fallible<()> {
 
 #[cfg(feature = "derive")]
 mod integration_tests {
-    use crate::{
-        measurements::{Optimize, make_report_noisy_max_gumbel},
-        metrics::SymmetricDistance,
-    };
+    use crate::{measurements::make_noisy_max, metrics::SymmetricDistance};
 
     use super::*;
 
@@ -237,11 +234,12 @@ mod integration_tests {
         let input_domain = VectorDomain::new(AtomDomain::default());
         let input_metric = SymmetricDistance;
         let trans = make_quantile_score_candidates(input_domain, input_metric, candidates, 0.75)?;
-        let exp_mech = make_report_noisy_max_gumbel(
+        let exp_mech = make_noisy_max(
             trans.output_domain.clone(),
             trans.output_metric.clone(),
+            ZeroConcentratedDivergence,
             trans.map(&1)? as f64 * 2.,
-            Optimize::Min,
+            true,
         )?;
 
         let quantile_meas = (trans >> exp_mech)?;
@@ -258,11 +256,12 @@ mod integration_tests {
         let input_metric = SymmetricDistance;
         let trans_sized =
             make_quantile_score_candidates(input_domain, input_metric, candidates, 0.75)?;
-        let exp_mech = make_report_noisy_max_gumbel(
+        let exp_mech = make_noisy_max(
             trans_sized.output_domain.clone(),
             trans_sized.output_metric.clone(),
+            ZeroConcentratedDivergence,
             trans_sized.map(&2)? as f64 * 2.,
-            Optimize::Min,
+            true,
         )?;
 
         let quantile_sized_meas = (trans_sized >> exp_mech)?;

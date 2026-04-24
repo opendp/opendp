@@ -40,10 +40,12 @@ pub fn generate_lib_c(modules: &HashMap<String, Vec<Function>>) -> String {
 
 // Import C headers for rust API
 #include "Ropendp.h"
+#include "convert.h"
 
 SEXP AnyObject_tag;
 SEXP AnyTransformation_tag;
 SEXP AnyMeasurement_tag;
+SEXP AnyOdometer_tag;
 SEXP AnyDomain_tag;
 SEXP AnyMetric_tag;
 SEXP AnyMeasure_tag;
@@ -57,10 +59,12 @@ static R_CMethodDef R_CDef[] = {{
 void R_init_opendp(DllInfo *dll)
 {{
     R_registerRoutines(dll, R_CDef, NULL, NULL, NULL);
+    init_udf_support();
     // here we create the tags for the external pointers
     AnyObject_tag = install("AnyObject_TAG");
     AnyTransformation_tag = install("AnyTransformation_TAG");
     AnyMeasurement_tag = install("AnyMeasurement_TAG");
+    AnyOdometer_tag = install("AnyOdometer_TAG");
     AnyDomain_tag = install("AnyDomain_TAG");
     AnyMetric_tag = install("AnyMetric_TAG");
     AnyMeasure_tag = install("AnyMeasure_TAG");
@@ -112,6 +116,7 @@ pub fn generate_Ropendp_h(modules: &HashMap<String, Vec<Function>>) -> String {
 extern SEXP AnyObject_tag;
 extern SEXP AnyTransformation_tag;
 extern SEXP AnyMeasurement_tag;
+extern SEXP AnyOdometer_tag;
 extern SEXP AnyDomain_tag;
 extern SEXP AnyMetric_tag;
 extern SEXP AnyMeasure_tag;
@@ -208,7 +213,10 @@ fn generate_data_converter(func: &Function) -> String {
         .join("\n");
 
     // generates code that calls the appropriate function to read the memory behind the SEXP
-    let data_converter: String = (func.args.iter())
+    let mut conversion_args = flatten_args_for_c(func);
+    conversion_args.sort_by_key(|arg| !arg.is_type);
+
+    let data_converter: String = (conversion_args.iter())
         .map(|arg| {
             // types are normalized/always packaged in readable runtime types
             if arg.is_type {
@@ -245,12 +253,37 @@ PROTECT(log);
 fn generate_c_call(module_name: &str, func: &Function) -> String {
     // all converted arguments were prefixed with `c_`
     let args = (func.args.iter())
-        .map(|arg| format!("c_{}", arg.name()))
+        .map(|arg| {
+            let name = arg.name();
+            match arg.c_type().as_str() {
+                "CallbackFn" | "TransitionFn" => format!("&c_{name}"),
+                _ => format!("c_{name}"),
+            }
+        })
         .collect::<Vec<_>>()
         .join(", ");
 
+    let cleanup = func
+        .args
+        .iter()
+        .filter_map(|arg| {
+            let name = arg.name();
+            match arg.c_type().as_str() {
+                "CallbackFn" => Some(format!("callbackfn_release(&c_{name});")),
+                "TransitionFn" => Some(format!("transitionfn_release(&c_{name});")),
+                _ => None,
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
     // mirrors the PROTECT calls in `generate_data_converter`. One addition for `log`
     let unprotect = format!("UNPROTECT({});", flatten_args_for_c(func).len() + 1);
+    let cleanup = if cleanup.is_empty() {
+        String::new()
+    } else {
+        format!("{cleanup}\n\n")
+    };
 
     let mut ret = func.ret.clone();
     // always save the output to a variable called `_result`
@@ -262,11 +295,12 @@ fn generate_c_call(module_name: &str, func: &Function) -> String {
         r#"// Call library function.
 {ret_type} {ret_name} = opendp_{module_name}__{func_name}({args});
 
-{unprotect}
+{cleanup}{unprotect}
 {convert_response}"#,
         ret_type = mangle(ret.c_type().as_str()),
         ret_name = ret.name(),
         func_name = func.name,
+        cleanup = cleanup,
     )
 }
 
@@ -276,6 +310,14 @@ fn generate_c_call(module_name: &str, func: &Function) -> String {
 fn r_to_c(arg: &Argument) -> String {
     let c_type = arg.c_type();
     let name = arg.name();
+    if matches!(c_type.as_str(), "CallbackFn" | "TransitionFn") {
+        return match c_type.as_str() {
+            "CallbackFn" => format!("sexp_to_callbackfn({name}, c_T_{name})"),
+            "TransitionFn" => format!("sexp_to_transitionfn({name}, c_T_{name})"),
+            _ => unreachable!(),
+        };
+    }
+
     let rust_type = (arg.rust_type.clone())
         .map(|rt| match rt {
             TypeRecipe::Name(v) => v,
@@ -289,14 +331,22 @@ fn r_to_c(arg: &Argument) -> String {
     // other conversions are handled by hand-written functions from `convert.c` and `convert_elements.c`
     match &c_type {
         ty if ty == "void *" => format!("sexp_to_voidptr({name}, {rust_type})"),
+        ty if ty == "ExtrinsicObject *" => format!("sexp_to_extrinsicobjectptr({name})"),
         ty if ty == "AnyObject *" => format!("sexp_to_anyobjectptr({name}, {rust_type})"),
         ty if ty == "AnyTransformation *" => format!("sexp_to_anytransformationptr({name})"),
         ty if ty == "AnyMeasurement *" => format!("sexp_to_anymeasurementptr({name})"),
+        ty if ty == "AnyOdometer *" => format!("sexp_to_anyodometerptr({name})"),
         ty if ty == "AnyDomain *" => format!("sexp_to_anydomainptr({name})"),
         ty if ty == "AnyMetric *" => format!("sexp_to_anymetricptr({name})"),
         ty if ty == "AnyMeasure *" => format!("sexp_to_anymeasureptr({name})"),
         ty if ty == "AnyFunction *" => format!("sexp_to_anyfunctionptr({name})"),
-        ty if ty == "char *" => format!("(char *)CHAR(STRING_ELT({name}, 0))"),
+        ty if ty == "char *" => {
+            if rust_type == "R_NilValue" {
+                format!("Rf_isNull({name}) ? NULL : (char *)CHAR(STRING_ELT({name}, 0))")
+            } else {
+                format!("(char *)CHAR(STRING_ELT({name}, 0))")
+            }
+        }
         ty if ty == "int32_t" => format!("(int32_t)Rf_asInteger({name})"),
         ty if ty == "double" => format!("Rf_asReal({name})"),
         ty if ty == "size_t" => format!("(size_t)Rf_asInteger({name})"),
@@ -350,17 +400,19 @@ fn c_to_r(arg: Argument) -> String {
     let converter = match arg.c_type().replace("const ", "") {
         ty if ty == "void *" => {
             // when the c type is a void pointer, lean on the rust type information
-            let rust_type = arg.rust_type.clone().unwrap().to_r(None);
+            let rust_type = arg.rust_type.clone().unwrap().to_r(None, None);
             format!("voidptr_to_sexp({name}, {rust_type})")
         }
         // call out to hand-written code from `convert.c` and `convert_elements.c`
         ty if ty == "AnyObject *" => format!("anyobjectptr_to_sexp({name})"),
         ty if ty == "AnyTransformation *" => format!("anytransformationptr_to_sexp({name}, log)"),
         ty if ty == "AnyMeasurement *" => format!("anymeasurementptr_to_sexp({name}, log)"),
+        ty if ty == "AnyOdometer *" => format!("anyodometerptr_to_sexp({name}, log)"),
         ty if ty == "AnyDomain *" => format!("anydomainptr_to_sexp({name}, log)"),
         ty if ty == "AnyMetric *" => format!("anymetricptr_to_sexp({name}, log)"),
         ty if ty == "AnyMeasure *" => format!("anymeasureptr_to_sexp({name}, log)"),
         ty if ty == "AnyFunction *" => format!("anyfunctionptr_to_sexp({name}, log)"),
+        ty if ty == "ExtrinsicObject *" => format!("extrinsic_object_to_sexp({name})"),
         // https://github.com/hadley/r-internals/blob/master/vectors.md
         ty if ty == "char *" => format!("ScalarString(mkChar({name}))"),
         ty if ty == "double" => format!("ScalarReal(*(double *){name})"),

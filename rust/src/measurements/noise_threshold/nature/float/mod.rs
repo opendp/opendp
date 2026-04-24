@@ -48,9 +48,9 @@ where
     ) -> Fallible<
         Measurement<
             MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
-            HashMap<TK, TV>,
             L0PInfDistance<P, AbsoluteDistance<QI>>,
             MO,
+            HashMap<TK, TV>,
         >,
     > {
         let FloatExpFamily { scale, k } = self;
@@ -90,8 +90,8 @@ fn make_float_to_bigint_threshold<TK, TV, const P: usize, QI: Number>(
 ) -> Fallible<
     Transformation<
         MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
-        MapDomain<AtomDomain<TK>, AtomDomain<IBig>>,
         L0PInfDistance<P, AbsoluteDistance<QI>>,
+        MapDomain<AtomDomain<TK>, AtomDomain<IBig>>,
         L0PInfDistance<P, AbsoluteDistance<RBig>>,
     >,
 >
@@ -119,20 +119,21 @@ where
     }
     Transformation::new(
         input_domain.clone(),
+        input_metric.clone(),
         MapDomain {
             key_domain: input_domain.key_domain,
             value_domain: AtomDomain::<IBig>::default(),
         },
+        L0PInfDistance::default(),
         Function::new(move |arg: &HashMap<TK, TV>| {
             (arg.into_iter())
                 .map(|(key, val)| {
-                    let val = RBig::try_from(val.clone()).unwrap_or(RBig::ZERO);
+                    let val = RBig::try_from(val.clamp(TV::MIN_FINITE, TV::MAX_FINITE))
+                        .unwrap_or(RBig::ZERO);
                     (key.clone(), find_nearest_multiple_of_2k(val, k))
                 })
                 .collect()
         }),
-        input_metric.clone(),
-        L0PInfDistance::default(),
         StabilityMap::new_fallible(move |(l0, lp, li): &(u32, QI, QI)| {
             // Lp sensitivity
             let r_lp = RBig::try_from(lp.clone())

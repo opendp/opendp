@@ -23,7 +23,7 @@ pub fn make_select<MI: 'static + Metric, MO: UnboundedMetric>(
     input_domain: DslPlanDomain,
     input_metric: MI,
     plan: DslPlan,
-) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, MI, FrameDistance<MO>>>
+) -> Fallible<Transformation<DslPlanDomain, MI, DslPlanDomain, FrameDistance<MO>>>
 where
     DslPlan: StableDslPlan<MI, FrameDistance<MO>>,
     (DslPlanDomain, MI): MetricSpace,
@@ -75,7 +75,9 @@ where
 
     let t_select = Transformation::new(
         middle_domain,
+        middle_metric.clone(),
         output_domain,
+        middle_metric,
         Function::new_fallible(move |plan: &DslPlan| {
             let expr_arg = plan.clone();
             Ok(DslPlan::Select {
@@ -86,8 +88,6 @@ where
                 options,
             })
         }),
-        middle_metric.clone(),
-        middle_metric,
         StabilityMap::new(Clone::clone),
     )?;
 

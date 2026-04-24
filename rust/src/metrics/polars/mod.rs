@@ -204,12 +204,6 @@ impl Bound {
     }
 }
 
-impl PartialOrd for Bounds {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.total_cmp(other).ok()
-    }
-}
-
 impl ProductOrd for Bounds {
     fn total_cmp(&self, other: &Self) -> Fallible<Ordering> {
         if self != other {

@@ -24,7 +24,7 @@ pub fn make_expr_private_lit<MI: 'static + Metric, MO: 'static + Measure, const 
     input_domain: WildExprDomain,
     input_metric: L0PInfDistance<P, MI>,
     expr: Expr,
-) -> Fallible<Measurement<WildExprDomain, ExprPlan, L0PInfDistance<P, MI>, MO>>
+) -> Fallible<Measurement<WildExprDomain, L0PInfDistance<P, MI>, MO, ExprPlan>>
 where
     MO::Distance: Zero,
     (WildExprDomain, L0PInfDistance<P, MI>): MetricSpace,
@@ -35,9 +35,9 @@ where
 
     Measurement::new(
         input_domain,
-        Function::from_expr(expr),
         input_metric,
         MO::default(),
+        Function::from_expr(expr),
         PrivacyMap::new(|_| MO::Distance::zero()),
     )
 }

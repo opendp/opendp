@@ -1,6 +1,5 @@
 use polars::prelude::*;
 use polars_plan::dsl::Expr;
-use polars_plan::prelude::{ApplyOptions, FunctionOptions};
 
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{ExprDomain, OuterMetric, WildExprDomain};
@@ -22,7 +21,7 @@ pub fn make_expr_datetime_component<M: OuterMetric>(
     input_domain: WildExprDomain,
     input_metric: M,
     expr: Expr,
-) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
+) -> Fallible<Transformation<WildExprDomain, M, ExprDomain, M>>
 where
     M::InnerMetric: MicrodataMetric,
     M::Distance: Clone,
@@ -77,17 +76,13 @@ where
     t_prior
         >> Transformation::new(
             middle_domain.clone(),
+            middle_metric.clone(),
             output_domain,
+            middle_metric,
             Function::then_expr(move |expr| Expr::Function {
                 input: vec![expr],
                 function: FunctionExpr::TemporalExpr(temporal_function.clone()),
-                options: FunctionOptions {
-                    collect_groups: ApplyOptions::ElementWise,
-                    ..Default::default()
-                },
             }),
-            middle_metric.clone(),
-            middle_metric,
             StabilityMap::new(Clone::clone),
         )?
 }
@@ -99,8 +94,8 @@ where
 pub(super) fn match_datetime_component(temporal_function: &TemporalFunction) -> Option<DataType> {
     use TemporalFunction::*;
     Some(match temporal_function {
-        Millennium => DataType::Int8,
-        Century => DataType::Int8,
+        Millennium => DataType::Int32,
+        Century => DataType::Int32,
         Year => DataType::Int32,
         IsoYear => DataType::Int32,
         Quarter => DataType::Int8,

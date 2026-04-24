@@ -48,7 +48,7 @@ pub fn make_resize<TA, MI, MO>(
     input_metric: MI,
     size: usize,
     constant: TA,
-) -> Fallible<Transformation<VectorDomain<AtomDomain<TA>>, VectorDomain<AtomDomain<TA>>, MI, MO>>
+) -> Fallible<Transformation<VectorDomain<AtomDomain<TA>>, MI, VectorDomain<AtomDomain<TA>>, MO>>
 where
     TA: 'static + Clone + CheckAtom,
     MI: IsMetricOrdered<Distance = IntDistance>,
@@ -65,7 +65,9 @@ where
 
     Transformation::new(
         input_domain.clone(),
+        input_metric,
         input_domain.with_size(size),
+        MO::default(),
         Function::new_fallible(move |arg: &Vec<TA>| {
             Ok(match arg.len().cmp(&size) {
                 Ordering::Less | Ordering::Equal => {
@@ -90,8 +92,6 @@ where
                 }
             })
         }),
-        input_metric,
-        MO::default(),
         // Consider when a dataset has zero records and is resized to length 1.
         // The resulting dataset will be `vec![constant]`
         // Now consider a neighboring dataset that differs by one addition of `value`.

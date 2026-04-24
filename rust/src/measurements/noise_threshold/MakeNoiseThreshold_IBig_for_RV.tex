@@ -2,7 +2,7 @@
 \input{../../lib.sty}
 
 \title{\texttt{MakeNoiseThreshold<MapDomain<AtomDomain<TK>, AtomDomain<IBig>{}>, MI, MO> for RV}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 \date{}
 
 \begin{document}
@@ -17,7 +17,7 @@ This is the core implementation of all variations of the thresholded gaussian or
 
 \section{Hoare Triple}
 \subsection*{Precondition}
-\subsubsection*{Compiler-Verified}
+\subsubsection*{Compiler-verified}
 \texttt{MakeNoise} is parameterized as follows:
 \begin{itemize}
     \item \texttt{DI} is \texttt{MapDomain<AtomDomain<TK>, AtomDomain<IBig>{}>}
@@ -33,7 +33,7 @@ The following trait bounds are required:
     \item Type \texttt{ZExpFamily<P>} implements trait \rustdoc{measurements/noise_threshold/trait}{NoiseThresholdPrivacyMap}\texttt{<L0PInfDistance<P, AbsoluteDistance<UBig>{}>, MO>}
 \end{itemize}
 
-\subsubsection*{User-Verified}
+\subsubsection*{Caller-verified}
 None
 
 \subsection*{Pseudocode}

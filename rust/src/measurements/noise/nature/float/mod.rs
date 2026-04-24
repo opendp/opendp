@@ -36,7 +36,7 @@ where
     fn make_noise(
         self,
         input_space: (VectorDomain<AtomDomain<T>>, LpDistance<P, QI>),
-    ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, Vec<T>, LpDistance<P, QI>, MO>> {
+    ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, LpDistance<P, QI>, MO, Vec<T>>> {
         let FloatExpFamily { scale, k } = self;
         let distribution = ZExpFamily {
             scale: integerize_scale(scale, k)?,
@@ -55,8 +55,8 @@ fn make_float_to_bigint<T: Float, const P: usize, QI: Number>(
 ) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<T>>,
-        VectorDomain<AtomDomain<IBig>>,
         LpDistance<P, QI>,
+        VectorDomain<AtomDomain<IBig>>,
         LpDistance<P, RBig>,
     >,
 >
@@ -76,21 +76,22 @@ where
 
     Transformation::new(
         input_domain,
+        input_metric.clone(),
         VectorDomain {
             element_domain: AtomDomain::<IBig>::default(),
             size,
         },
+        LpDistance::default(),
         Function::new(move |arg: &Vec<T>| {
             arg.iter()
                 .cloned()
                 .map(|x_i| {
-                    let x_i = RBig::try_from(x_i).unwrap_or(RBig::ZERO);
+                    let x_i = RBig::try_from(x_i.clamp(T::MIN_FINITE, T::MAX_FINITE))
+                        .unwrap_or(RBig::ZERO);
                     find_nearest_multiple_of_2k(x_i, k)
                 })
                 .collect()
         }),
-        input_metric.clone(),
-        LpDistance::default(),
         StabilityMap::new_fallible(move |d_in: &QI| {
             let d_in = RBig::try_from(d_in.clone())
                 .map_err(|_| err!(FailedMap, "d_in ({:?}) must be finite", d_in))?;
@@ -113,7 +114,7 @@ where
     fn make_noise(
         self,
         input_space: (AtomDomain<T>, AbsoluteDistance<QI>),
-    ) -> Fallible<Measurement<AtomDomain<T>, T, AbsoluteDistance<QI>, MO>> {
+    ) -> Fallible<Measurement<AtomDomain<T>, AbsoluteDistance<QI>, MO, T>> {
         let t_vec = make_vec(input_space)?;
         let m_noise = self.make_noise(t_vec.output_space())?;
 

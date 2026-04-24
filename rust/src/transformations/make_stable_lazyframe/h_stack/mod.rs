@@ -23,7 +23,7 @@ pub fn make_h_stack<MI: 'static + Metric, MO: UnboundedMetric>(
     input_domain: DslPlanDomain,
     input_metric: MI,
     plan: DslPlan,
-) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, MI, FrameDistance<MO>>>
+) -> Fallible<Transformation<DslPlanDomain, MI, DslPlanDomain, FrameDistance<MO>>>
 where
     DslPlan: StableDslPlan<MI, FrameDistance<MO>>,
     Expr: StableExpr<FrameDistance<MO>, FrameDistance<MO>>,
@@ -59,10 +59,11 @@ where
         let names = (t_exprs.iter())
             .map(|t| t.output_domain.column.name.clone())
             .collect::<HashSet<_>>();
-        if !names.is_disjoint(&HashSet::from_iter(identifier.meta().root_names())) {
+        let root_names = HashSet::from_iter(identifier.meta().root_names());
+        if !names.is_disjoint(&root_names) {
             return fallible!(
                 MakeTransformation,
-                "identifiers ({names:?}) may not be modified"
+                "identifiers ({root_names:?}) may not be modified"
             );
         }
     }
@@ -102,7 +103,9 @@ where
 
     let t_with_columns = Transformation::new(
         middle_domain,
+        middle_metric.clone(),
         output_domain,
+        middle_metric,
         Function::new_fallible(move |plan: &DslPlan| {
             let expr_arg = plan.clone();
             Ok(DslPlan::HStack {
@@ -113,8 +116,6 @@ where
                 options,
             })
         }),
-        middle_metric.clone(),
-        middle_metric,
         StabilityMap::new(Clone::clone),
     )?;
 

@@ -22,6 +22,7 @@ use crate::{
 use super::{SeriesDomain, SeriesElementDomain};
 
 #[bootstrap(
+    rust_path = "domains/struct.SeriesDomain",
     arguments(element_domain(c_type = "AnyDomain *", rust_type = b"null")),
     generics(DI(suppress)),
     returns(c_type = "FfiResult<AnyDomain *>", hint = "SeriesDomain")
@@ -150,6 +151,7 @@ pub extern "C" fn opendp_domains___series_domain_get_element_domain(
 ) -> FfiResult<*mut AnyDomain> {
     let series_domain = try_!(try_as_ref!(series_domain).downcast_ref::<SeriesDomain>());
     match series_domain.dtype() {
+        DataType::Array(_, _) => _series_domain_get_element_domain::<ArrayDomain>(series_domain),
         DataType::Categorical(_, _) => {
             _series_domain_get_element_domain::<CategoricalDomain>(series_domain)
         }

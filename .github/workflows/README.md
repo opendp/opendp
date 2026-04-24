@@ -137,23 +137,28 @@ on github, or with the `gh` command line tool. Parameters:
         git checkout -b version-changelog
         ``` 
 
+    1. Increment patch version in `main`.
+
+        ```shell
+        python channel_tool.py bump_version --position patch # or minor or major
+        ```
+
+    1. Increment changelog.
+
+        ```shell
+        python channel_tool.py changelog --prepend
+        ```
+
     1. Update `robots.txt`: Add the new version to the `Disallow` list.
 
     1. Update changelog
 
         ```shell
-        python channel_tool.py changelog
-
-        git fetch --tags
         python changelog.py
         ```
         Additional manual edits will be useful to arrange individual commits thematically.
 
-    1. Update `VERSION` file on the `main` branch to match the version you want to release.
-
-        - If it's a patch release, no change to the version number should be needed: The patch should have been incremented after the previous release.
-        - If it's a minor release, run `python channel_tool.py bump_version --position minor`
-        - Similarly, if it's a major release, run `python channel_tool.py bump_version --position major`
+    1. Add a header for the current version to the CHANGELOG.md.
 
     1. Commit your updates
 
@@ -185,18 +190,6 @@ on github, or with the `gh` command line tool. Parameters:
     If CI fails, debug on main and restart.
     If beta release failed, don't forget to increment the beta version counter next time.
     If stable release failed, consider incrementing patch version and starting over.
-
-1. Increment patch version in `main`.
-
-    ```shell
-    python tools/channel_tool.py bump_version --position patch
-    ```
-
-1. Increment changelog.
-
-    ```shell
-    python tools/channel_tool.py changelog --prepend
-    ```
 
 
 ## Making a dev release

@@ -20,7 +20,7 @@ fn test_expr_cut() -> Fallible<()> {
     // check data output
     let actual = t_cut
         .invoke(&lf)?
-        .with_column(all().cast(DataType::String))
+        .with_column(all().as_expr().cast(DataType::String))
         .collect()?;
     let expected = df!["data" => ["(-inf, -1]", "(-inf, -1]", "(-1, 1]", "(-1, 1]", "(1, inf]"]]?;
     assert_eq!(expected, actual);

@@ -33,7 +33,7 @@ mod test;
 /// This ensures that the float value is accessible to the algorithm.
 /// The candidate, left as arbitrary Python data, is held behind the ExtrinsicObject.
 ///
-/// Algorithm 1 in `Private selection from private candidates <https://arxiv.org/pdf/1811.07971.pdf#page=7>`_ (Liu and Talwar, STOC 2019).
+/// Algorithm 1 in [Private selection from private candidates](https://arxiv.org/pdf/1811.07971.pdf#page=7) (Liu and Talwar, STOC 2019).
 ///
 /// # Arguments
 /// * `measurement` - A measurement that releases a 2-tuple of (score, candidate)
@@ -47,10 +47,10 @@ pub fn make_select_private_candidate<
     MI: 'static + Metric,
     TO: 'static + Debug,
 >(
-    measurement: Measurement<DI, (f64, TO), MI, MaxDivergence>,
+    measurement: Measurement<DI, MI, MaxDivergence, (f64, TO)>,
     stop_probability: f64,
     threshold: f64,
-) -> Fallible<Measurement<DI, Option<(f64, TO)>, MI, MaxDivergence>>
+) -> Fallible<Measurement<DI, MI, MaxDivergence, Option<(f64, TO)>>>
 where
     (DI, MI): MetricSpace,
 {
@@ -76,6 +76,8 @@ where
 
     Measurement::new(
         measurement.input_domain.clone(),
+        measurement.input_metric.clone(),
+        measurement.output_measure.clone(),
         Function::new_fallible(move |arg| {
             let mut remaining_iterations = (scale.clone())
                 .map(|s| sample_geometric_exp_fast(s).map(|v| v + UBig::ONE))
@@ -96,8 +98,6 @@ where
                 }
             }
         }),
-        measurement.input_metric.clone(),
-        measurement.output_measure.clone(),
         PrivacyMap::new_fallible(move |d_in| privacy_map.eval(d_in)?.inf_mul(&2.0)),
     )
 }

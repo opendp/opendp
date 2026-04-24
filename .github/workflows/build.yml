@@ -24,25 +24,8 @@ on:
         type: boolean
         required: false
         default: false
-  workflow_dispatch:
-    inputs:
-      channel:
-        description: Target Channel
-        type: choice
-        options:
-          - dev
-          - nightly
-          - beta
-          - stable
-        required: true
-        default: dev
-      fake:
-        description: Fake Build?
-        type: boolean
-        required: false
-        default: false
 env:
-  FEATURES: untrusted,ffi,polars
+  FEATURES: untrusted,polars-ffi
 
 jobs:
   credential-check:
@@ -59,12 +42,12 @@ jobs:
       - name: Free disk space
         uses: jlumbroso/free-disk-space@v1.3.1
         with:
-          tool-cache: false     # no: will remove rust
+          tool-cache: true      # 5.3GiB
           android: true         # 8.7GiB
           dotnet: true          # 1.6GiB
           docker-images: true   # 3.2GiB
-          haskell: false        # no: little/no benefit
-          large-packages: false # no: slow
+          haskell: true         # 6.2GiB
+          large-packages: true  # 4.7GiB
           swap-storage: false   # no: having swap is useful
 
       - name: Checkout repository
@@ -72,18 +55,9 @@ jobs:
         with:
           ref: ${{ inputs.channel }}
 
-      - name: Cache Rust dependencies
-        if: ${{ !inputs.fake }}
-        uses: actions/cache@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          path: |
-            ~/.cargo/bin
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
-          restore-keys: ${{ runner.os }}-cargo-
+          rustflags: ""
 
       - name: Create bindings
         if: ${{ !inputs.fake }}
@@ -120,20 +94,22 @@ jobs:
       # it is helpful to try to build all platforms to completion to catch any platform-specific issues
       fail-fast: false
       matrix:
-        # macos-13 is an intel runner, macos-14 is apple silicon
+        # macos-14 is apple silicon;
+        # macos-15-intel is intel, and will be available until August 2027.
+        # https://github.com/actions/runner-images/issues/13046
         # https://cibuildwheel.pypa.io/en/stable/faq/#how
-        os: [ubuntu-latest, windows-latest, macos-13, macos-14]
+        os: [ubuntu-latest, windows-latest, macos-14, macos-15-intel]
 
     steps:
       - name: Free disk space
         uses: jlumbroso/free-disk-space@v1.3.1
         with:
-          tool-cache: false     # no: will remove rust
+          tool-cache: true      # 5.3GiB
           android: true         # 8.7GiB
           dotnet: true          # 1.6GiB
           docker-images: true   # 3.2GiB
-          haskell: false        # no: little/no benefit
-          large-packages: false # no: slow
+          haskell: true         # 6.2GiB
+          large-packages: true  # 4.7GiB
           swap-storage: false   # no: having swap is useful
   
       - name: Checkout repository
@@ -152,20 +128,21 @@ jobs:
     
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          # necessary to use cibuildwheel 3.x
+          python-version: '3.11'
           cache: pip
 
       - name: Install cibuildwheel
         run: |
           python -m pip install --upgrade pip
-          python -m pip install cibuildwheel==2.19.2
+          python -m pip install cibuildwheel==3.1.4
     
       - name: Build wheels
         working-directory: python
         run: python -m cibuildwheel --output-dir dist
         env:
-          # don't build separate wheels for pypy
-          CIBW_SKIP: "pp*"
+          # don't build separate wheels for free-threaded cpython
+          CIBW_SKIP: "cp31?t-*"
           CIBW_ENVIRONMENT: 'PATH="$HOME/.cargo/bin:$PATH"'
           CIBW_ENVIRONMENT_WINDOWS: 'PATH="$UserProfile\.cargo\bin;$PATH"'
           # first find the xcode version for the mac images:
@@ -205,18 +182,18 @@ jobs:
     needs: bindings
     runs-on: ubuntu-22.04
     env:
-      DOCKER_IMAGE: messense/manylinux_2_24-cross:aarch64
+      DOCKER_IMAGE: messense/manylinux_2_28-cross:aarch64
       TARGET: aarch64-unknown-linux-gnu
     steps:
       - name: Free disk space
         uses: jlumbroso/free-disk-space@v1.3.1
         with:
-          tool-cache: false     # no: will remove rust
+          tool-cache: true      # 5.3GiB
           android: true         # 8.7GiB
           dotnet: true          # 1.6GiB
           docker-images: true   # 3.2GiB
-          haskell: false        # no: little/no benefit
-          large-packages: false # no: slow
+          haskell: true         # 6.2GiB
+          large-packages: true  # 4.7GiB
           swap-storage: false   # no: having swap is useful
 
       - name: Checkout repository
@@ -228,25 +205,14 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version: '3.10'
           cache: pip
 
-      - name: Cache Rust dependencies
-        if: ${{ !inputs.fake }}
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
-          restore-keys: ${{ runner.os }}-cargo-
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Create Rust build for linux
         if: ${{ !inputs.fake }}
-        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -g $TARGET -f \"$FEATURES\""
+        run: docker run --rm -e PYO3_BUILD_EXTENSION_MODULE=1 -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -g $TARGET -f \"$FEATURES\""
 
       - name: Create Rust build for linux (FAKE)
         if: ${{ inputs.fake }}
@@ -274,7 +240,7 @@ jobs:
         # continuing to use bdist_wheel for now until python's packaging story matures
         run: > 
           python -m pip install wheel &&
-          python setup.py bdist_wheel --plat-name=manylinux_2_24_aarch64 --py-limited-api=cp39
+          python setup.py bdist_wheel --plat-name=manylinux_2_28_aarch64 --py-limited-api=cp310
 
       - name: Upload Python wheel
         uses: actions/upload-artifact@v4
@@ -324,13 +290,16 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           # overrides packages so that dependencies for package in cwd are not installed
-          packages: RcppTOML,stringr
-      
+          packages: RcppTOML,stringr,roxygen2
+
       - name: Download R bindings
         uses: actions/download-artifact@v4
         with:
           name: r_bindings
           path: R/opendp/
+
+      - name: Generate R documentation
+        run: Rscript -e 'roxygen2::roxygenise("R/opendp", roclets = c("rd", "namespace"), load_code = roxygen2::load_source)'
 
       - name: Source tar
         run: bash tools/r_stage.sh -s

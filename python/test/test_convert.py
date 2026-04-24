@@ -3,6 +3,7 @@ from opendp._convert import (
     _scalar_to_slice, _slice_to_scalar,
     _vector_to_slice, _slice_to_vector,
     _hashmap_to_slice, _slice_to_hashmap,
+    _numpy_dtype_for_rust_type, _numpy_to_slice, _py_to_slice, _slice_to_numpy,
 )
 from opendp._convert import _check_and_cast_scalar
 from opendp.typing import *
@@ -113,16 +114,73 @@ def test_hashmap():
     assert c_to_py(any) == data
 
 
-def test_numpy_data():
+@pytest.mark.parametrize(
+    "value,type_name,dtype",
+    [
+        ([1, 2], "Vec<i32>", "int32"),
+        (1, "i32", "int32"),
+        ([1.0, 2.0], "Vec<f64>", "float64"),
+        (1.0, "f64", None),
+        ("A", "String", None),
+    ],
+)
+def test_numpy_data(value, type_name, dtype):
     np = pytest.importorskip('numpy')
-    def roundtrip(value, type_name, dtype=None):
-        assert value == c_to_py(py_to_c(np.array(value, dtype=dtype), AnyObjectPtr, type_name=type_name))
-    roundtrip([1, 2], "Vec<i32>", dtype=np.int32)
-    roundtrip(1, "i32", dtype=np.int32)
-    roundtrip([1., 2.], "Vec<f64>")
-    roundtrip(1., "f64")
-    roundtrip(["A", "B"], "Vec<String>")
-    roundtrip("A", "String")
+    array = np.array(value, dtype=dtype) if dtype is not None else np.array(value)
+    assert c_to_py(py_to_c(array, AnyObjectPtr, type_name=type_name)) == value
+
+
+def test_as_array():
+    np = pytest.importorskip('numpy')
+    import opendp.prelude as dp
+
+    result = dp.as_array()(np.array([1, 2], dtype=np.int32))
+    assert isinstance(result, np.ndarray)
+    assert np.array_equal(result, np.array([1, 2], dtype=np.int32))
+
+
+def test_numpy_string_vector_roundtrip():
+    np = pytest.importorskip('numpy')
+    # `Vec<String>` still goes through the standard vector path, not the atomic ndarray fast path.
+    assert c_to_py(py_to_c(np.array(["A", "B"]), AnyObjectPtr, type_name="Vec<String>")) == ["A", "B"]
+
+
+def test_numpy_ndarray_roundtrip():
+    np = pytest.importorskip('numpy')
+    type_name = RuntimeType("NDArray", ["i32"])
+
+    raw = _py_to_slice(np.array([1, 2, 3], dtype=np.int32), type_name)
+    result = _slice_to_numpy(raw, type_name)
+
+    assert isinstance(result, np.ndarray)
+    assert np.array_equal(result, np.array([1, 2, 3], dtype=np.int32))
+
+
+def test_numpy_vec_input_uses_ndarray_loader():
+    np = pytest.importorskip('numpy')
+    type_name = RuntimeType("Vec", ["i32"])
+
+    raw = _vector_to_slice(np.array([1, 2, 3], dtype=np.int32), type_name)
+    result = _slice_to_vector(raw, type_name)
+
+    assert list(result) == [1, 2, 3]
+
+
+def test_numpy_ndarray_validation():
+    np = pytest.importorskip('numpy')
+    type_name = RuntimeType("NDArray", ["i32"])
+
+    with pytest.raises(ValueError, match="unrecognized numpy dtype"):
+        _numpy_dtype_for_rust_type("String")
+
+    with pytest.raises(TypeError, match="Expected type is NDArray<i32>"):
+        _numpy_to_slice([1, 2, 3], type_name)
+
+    with pytest.raises(TypeError, match="Only 1d arrays are currently supported"):
+        _numpy_to_slice(np.array([[1, 2], [3, 4]], dtype=np.int32), type_name)
+
+    with pytest.raises(TypeError, match="Expected dtype int32, got int64"):
+        _numpy_to_slice(np.array([1, 2, 3], dtype=np.int64), type_name)
 
 
 def test_numpy_trans():
@@ -132,6 +190,22 @@ def test_numpy_trans():
         dp.vector_domain(dp.atom_domain(bounds=(0, 10))), 
         dp.symmetric_distance(),
     )(np.array([1, 2, 3], dtype=np.int32)) == 6
+
+
+def test_numpy_vector_output_from_rust_transformation():
+    np = pytest.importorskip('numpy')
+    import opendp.prelude as dp
+
+    trans = dp.t.make_clamp(
+        dp.vector_domain(dp.atom_domain(T=int)),
+        dp.symmetric_distance(),
+        bounds=(0, 10),
+    )
+
+    result = dp.as_array()(trans(np.array([-1, 2, 11], dtype=np.int32)))
+
+    assert isinstance(result, np.ndarray)
+    assert np.array_equal(result, np.array([0, 2, 10], dtype=np.int32))
 
 
 def test_overflow():
@@ -211,4 +285,3 @@ def test_bitvec():
         val_out = np.frombuffer(c_to_py(obj), dtype=np.uint8)
         bits = np.unpackbits(val_out)
         assert (bits.tolist() + [0]).index(0) == i
-

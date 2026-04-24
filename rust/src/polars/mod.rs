@@ -6,24 +6,28 @@ use crate::{
     error::Fallible,
     interactive::{Answer, Query, Queryable},
     measurements::{
-        Optimize,
-        expr_index_candidates::IndexCandidatesShim,
-        expr_noise::{Distribution, NoiseShim},
-        expr_report_noisy_max::ReportNoisyMaxShim,
+        expr_dp_counting_query::{DPCountShim, DPLenShim, DPNUniqueShim, DPNullCountShim},
+        expr_dp_frame_len::DPFrameLenShim,
+        expr_dp_mean::DPMeanShim,
+        expr_dp_median::DPMedianShim,
+        expr_dp_quantile::DPQuantileShim,
+        expr_dp_sum::DPSumShim,
+        expr_noise::NoiseShim,
+        expr_noisy_max::NoisyMaxShim,
     },
-    transformations::expr_discrete_quantile_score::DiscreteQuantileScoreShim,
 };
+use polars::prelude::AnonymousColumnsUdf;
 use polars::{
     frame::DataFrame,
     lazy::frame::LazyFrame,
-    prelude::{DslPlan, GetOutput, LazySerde, NamedFrom, len, repeat},
+    prelude::{AnyValue, DslPlan, LazySerde, NULL, len, lit, repeat},
     series::Series,
 };
 #[cfg(feature = "ffi")]
 use polars_plan::dsl::FunctionExpr;
 use polars_plan::{
-    dsl::{ColumnsUdf, Expr, SpecialEq, lit},
-    plans::{Literal, LiteralValue, Null},
+    dsl::{Expr, SpecialEq},
+    plans::{LiteralValue, Null},
     prelude::FunctionOptions,
 };
 #[cfg(feature = "ffi")]
@@ -34,18 +38,17 @@ mod test;
 
 // this trait is used to make the Deserialize trait bound conditional on the feature flag
 #[cfg(not(feature = "ffi"))]
-pub(crate) trait OpenDPPlugin: 'static + Clone + ColumnsUdf {
+pub(crate) trait OpenDPPlugin: 'static + Clone + AnonymousColumnsUdf {
     const NAME: &'static str;
     fn function_options() -> FunctionOptions;
-    fn get_output(&self) -> Option<GetOutput>;
 }
 #[cfg(feature = "ffi")]
 pub(crate) trait OpenDPPlugin:
-    'static + Clone + ColumnsUdf + for<'de> Deserialize<'de> + Serialize
+    'static + Clone + AnonymousColumnsUdf + for<'de> Deserialize<'de> + Serialize
 {
     const NAME: &'static str;
+    const SHIM: bool = false;
     fn function_options() -> FunctionOptions;
-    fn get_output(&self) -> Option<GetOutput>;
 }
 
 #[cfg(feature = "ffi")]
@@ -64,6 +67,7 @@ where
                     lib,
                     symbol,
                     kwargs, // Don't un-pickle! subjects the library to arbitrary code execution.
+                    ..
                 },
             ..
         } => {
@@ -72,7 +76,7 @@ where
                 return Ok(None);
             }
 
-            if !kwargs.is_empty() {
+            if kwargs.len() > 3 {
                 return fallible!(
                     FailedFunction,
                     "OpenDP does not allow pickled keyword arguments as they may enable remote code execution."
@@ -112,6 +116,7 @@ where
                     lib,
                     symbol,
                     kwargs,
+                    ..
                 },
             ..
         } => {
@@ -136,6 +141,36 @@ where
     }))
 }
 
+/// Match a shim plugin with a variadic number of arguments.
+///
+/// # Arguments
+/// * `expr` - The expression to match over
+///
+/// # Returns
+/// The input to the expression
+pub(crate) fn match_shim<P: OpenDPPlugin, const V: usize>(
+    expr: &Expr,
+) -> Fallible<Option<[Expr; V]>> {
+    let Some(input) = match_plugin::<P>(expr)? else {
+        return Ok(None);
+    };
+
+    if input.len() > V {
+        return fallible!(
+            MakeMeasurement,
+            "{} expects no more than {V} arguments",
+            P::NAME
+        );
+    }
+
+    let input = [input.clone(), vec![lit(NULL); V - input.len()]].concat();
+    // NOTE: once generic parameters may be used in const expressions (compiler limitation)
+    //       then const V can be made an associated const on OpenDPPlugin
+    let args = <[_; V]>::try_from(input).expect("input always has expected length");
+
+    Ok(Some(args))
+}
+
 /// Augment the input expression to apply the plugin expression.
 ///
 /// # Arguments
@@ -152,35 +187,37 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
         #[cfg(feature = "ffi")]
         Expr::Function {
             input: _, // ignore the input, as it is replaced with input_expr
-            mut function,
-            options,
+            function,
         } => {
-            // overwrite the kwargs to update the noise scale parameter in the FFI plugin
-            if let FunctionExpr::FfiPlugin {
-                lib,
-                symbol,
-                kwargs,
-            } = &mut function
-            {
-                if let Ok(path) = std::env::var("OPENDP_POLARS_LIB_PATH") {
-                    *lib = path.into();
-                }
-                *symbol = KW::NAME.into();
-                *kwargs = serde_pickle::to_vec(&kwargs_new, Default::default())
-                    .expect("pickling does not fail")
-                    .into();
-            }
+            let lib = if let Ok(path) = std::env::var("OPENDP_POLARS_LIB_PATH") {
+                path.into()
+            } else if let FunctionExpr::FfiPlugin { lib, .. } = function {
+                lib
+            } else {
+                unreachable!("plugin expressions are always an FfiPlugin")
+            };
 
             Expr::Function {
                 input: input_exprs,
-                function,
-                options,
+                function: FunctionExpr::FfiPlugin {
+                    flags: KW::function_options(),
+                    lib,
+                    symbol: KW::NAME.into(),
+                    kwargs: if KW::SHIM {
+                        Default::default()
+                    } else {
+                        serde_pickle::to_vec(&kwargs_new, Default::default())
+                            .expect("pickling does not fail")
+                            .as_slice()
+                            .into()
+                    },
+                },
             }
         }
         // handle the case where the expression is an AnonymousFunction from Rust
         Expr::AnonymousFunction { .. } => Expr::AnonymousFunction {
             input: input_exprs,
-            output_type: kwargs_new.get_output().unwrap(),
+            fmt_str: Box::new(KW::NAME.into()),
             function: LazySerde::Deserialized(SpecialEq::new(Arc::new(kwargs_new))),
             options: KW::function_options(),
         },
@@ -191,18 +228,9 @@ pub(crate) fn apply_plugin<KW: OpenDPPlugin>(
 pub(crate) fn apply_anonymous_function<KW: OpenDPPlugin>(input: Vec<Expr>, kwargs: KW) -> Expr {
     Expr::AnonymousFunction {
         input,
+        fmt_str: Box::new(KW::NAME.into()),
         // pass through the constructor to activate the expression
         function: LazySerde::Deserialized(SpecialEq::new(Arc::new(kwargs.clone()))),
-        // have no option but to panic in this case, since the polars api does not accept results
-        output_type: kwargs
-            .get_output()
-            .ok_or_else(|| {
-                err!(
-                    FailedFunction,
-                    "Anonymous function must have an output type"
-                )
-            })
-            .unwrap(),
         options: KW::function_options(),
     }
 }
@@ -218,10 +246,10 @@ pub(crate) fn literal_value_of<T: ExtractValue>(expr: &Expr) -> Fallible<Option<
 pub(crate) trait ExtractValue: Sized {
     fn extract(literal: LiteralValue) -> Fallible<Option<Self>>;
 }
-macro_rules! impl_extract_value {
+macro_rules! impl_extract_value_number {
     ($($ty:ty)+) => {$(impl ExtractValue for $ty {
         fn extract(literal: LiteralValue) -> Fallible<Option<Self>> {
-            if let LiteralValue::Null = literal {
+            if literal.is_null() {
                 return Ok(None);
             }
             Ok(Some(literal
@@ -232,12 +260,30 @@ macro_rules! impl_extract_value {
     })+}
 }
 
-impl_extract_value!(u32 u64 i32 i64 f32 f64);
+impl_extract_value_number!(u8 u16 u32 u64 i8 i16 i32 i64 f32 f64);
+
+impl ExtractValue for bool {
+    fn extract(literal: LiteralValue) -> Fallible<Option<Self>> {
+        let any_value = literal.to_any_value().ok_or_else(|| err!(FailedFunction))?;
+
+        if matches!(any_value, AnyValue::Null) {
+            return Ok(None);
+        }
+
+        let AnyValue::Boolean(value) = any_value else {
+            return fallible!(FailedFunction, "expected boolean, found {:?}", any_value);
+        };
+
+        Ok(Some(value))
+    }
+}
 
 impl ExtractValue for Series {
     fn extract(literal: LiteralValue) -> Fallible<Option<Self>> {
+        if literal.is_null() {
+            return Ok(None);
+        }
         Ok(match literal {
-            LiteralValue::Null => None,
             LiteralValue::Series(series) => Some((*series).clone()),
             _ => return fallible!(FailedFunction, "expected series, found: {:?}", literal),
         })
@@ -246,11 +292,13 @@ impl ExtractValue for Series {
 
 impl ExtractValue for String {
     fn extract(literal: LiteralValue) -> Fallible<Option<Self>> {
-        Ok(match literal {
-            LiteralValue::Null => None,
-            LiteralValue::String(string) => Some(string.into_string()),
-            _ => return fallible!(FailedFunction, "expected String, found: {:?}", literal),
-        })
+        if literal.is_null() {
+            return Ok(None);
+        }
+        literal
+            .extract_str()
+            .map(|s| Some(s.to_string()))
+            .ok_or_else(|| err!(FailedFunction, "expected String, found: {:?}", literal))
     }
 }
 
@@ -286,7 +334,7 @@ impl<TI: 'static> Function<TI, ExprPlan> {
     pub(crate) fn fill_with(self, value: Expr) -> Self {
         // Without this repeat, the expression would be scalar-valued,
         // and broadcast later to the required length.
-        // This would cause randomized plugins, like noise and report_noisy_max,
+        // This would cause randomized plugins, like noise and noisy_max,
         // to only be applied to one row,
         // and the one noisy row would then be broadcast to the entire column.
         let fill = repeat(value.clone(), len());
@@ -315,42 +363,16 @@ impl DPExpr {
     ///
     /// `scale` must not be negative or inf.
     /// Scale and distribution may be left None, to be filled later by [`make_private_lazyframe`].
-    /// If distribution is None, then the noise distribution will be chosen for you:
+    /// The noise distribution is chosen according to the privacy definition:
     ///    
     /// * Pure-DP: Laplace noise, where `scale` == standard_deviation / sqrt(2)
     /// * zCDP: Gaussian noise, where `scale` == standard_devation
     ///
     /// # Arguments
     /// * `scale` - Scale parameter for the noise distribution
-    /// * `distribution` - Either Laplace, Gaussian or None.
-    pub fn noise(self, distribution: Option<Distribution>, scale: Option<f64>) -> Expr {
-        let distribution = distribution
-            .map(|d| lit(format!("{:?}", d)))
-            .unwrap_or_else(|| lit(Null {}));
+    pub fn noise(self, scale: Option<f64>) -> Expr {
         let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
-        apply_anonymous_function(vec![self.0, distribution, scale], NoiseShim)
-    }
-
-    /// Add Laplace noise to the expression.
-    ///
-    /// `scale` must not be negative or inf.
-    /// Scale may be left None, to be filled later by [`make_private_expr`] or [`make_private_lazyframe`].
-    ///
-    /// # Arguments
-    /// * `scale` - Noise scale parameter for the Laplace distribution. `scale` == standard_deviation / sqrt(2).
-    pub fn laplace(self, scale: Option<f64>) -> Expr {
-        self.noise(Some(Distribution::Laplace), scale)
-    }
-
-    /// Add Gaussian noise to the expression.
-    ///
-    /// `scale` must not be negative or inf.
-    /// Scale may be left None, to be filled later by [`make_private_expr`] or [`make_private_lazyframe`].
-    ///
-    /// # Arguments
-    /// * `scale` - Noise scale parameter for the Gaussian distribution. `scale` == standard_deviation.
-    pub fn gaussian(self, scale: Option<f64>) -> Expr {
-        self.noise(Some(Distribution::Gaussian), scale)
+        apply_anonymous_function(vec![self.0, scale], NoiseShim)
     }
 
     /// Compute the differentially private len (including nulls).
@@ -358,7 +380,8 @@ impl DPExpr {
     /// # Arguments
     /// * `scale` - parameter for the noise distribution
     pub fn len(self, scale: Option<f64>) -> Expr {
-        self.0.len().dp().noise(None, scale)
+        let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
+        apply_anonymous_function(vec![self.0, scale], DPLenShim)
     }
 
     /// Compute the differentially private count (excluding nulls).
@@ -366,7 +389,8 @@ impl DPExpr {
     /// # Arguments
     /// * `scale` - parameter for the noise distribution
     pub fn count(self, scale: Option<f64>) -> Expr {
-        self.0.count().dp().noise(None, scale)
+        let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
+        apply_anonymous_function(vec![self.0, scale], DPCountShim)
     }
 
     /// Compute the differentially private null count (exclusively nulls).
@@ -374,7 +398,8 @@ impl DPExpr {
     /// # Arguments
     /// * `scale` - parameter for the noise distribution
     pub fn null_count(self, scale: Option<f64>) -> Expr {
-        self.0.null_count().dp().noise(None, scale)
+        let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
+        apply_anonymous_function(vec![self.0, scale], DPNullCountShim)
     }
 
     /// Compute the differentially private count of unique elements (including null).
@@ -382,7 +407,8 @@ impl DPExpr {
     /// # Arguments
     /// * `scale` - parameter for the noise distribution
     pub fn n_unique(self, scale: Option<f64>) -> Expr {
-        self.0.n_unique().dp().noise(None, scale)
+        let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
+        apply_anonymous_function(vec![self.0, scale], DPNUniqueShim)
     }
 
     /// Compute the differentially private sum.
@@ -390,60 +416,32 @@ impl DPExpr {
     /// # Arguments
     /// * `bounds` - The bounds of the input data
     /// * `scale` - parameter for the noise distribution
-    pub fn sum<L: Literal>(self, bounds: (L, L), scale: Option<f64>) -> Expr {
-        self.0
-            .clip(lit(bounds.0), lit(bounds.1))
-            .sum()
-            .dp()
-            .noise(None, scale)
+    pub fn sum(self, bounds: (Expr, Expr), scale: Option<f64>) -> Expr {
+        let scale = scale.map(lit).unwrap_or_default();
+        apply_anonymous_function(vec![self.0, bounds.0, bounds.1, scale], DPSumShim)
     }
 
     /// Compute the differentially private mean.
     ///
     /// # Arguments
     /// * `bounds` - The bounds of the input data
-    /// * `scales` - parameters for the noise distributions of the numerator and denominator
-    pub fn mean<L: Literal>(self, bounds: (L, L), scales: Option<(f64, f64)>) -> Expr {
-        let (numer, denom) = scales.unzip();
-        self.0.clone().dp().sum(bounds, numer) / self.0.dp().len(denom)
+    /// * `scales` - relative parameter for the scale of the noise distributions
+    pub fn mean(self, bounds: (Expr, Expr), scale: Option<f64>) -> Expr {
+        let scale = scale.map(lit).unwrap_or_default();
+        apply_anonymous_function(vec![self.0, bounds.0, bounds.1, scale], DPMeanShim)
     }
 
-    /// Score the utility of each candidate for representing the true quantile.
-    ///
-    /// Candidates closer to the true quantile are assigned scores closer to zero.
-    /// Lower scores are better.
-    ///
-    /// # Arguments
-    /// * `alpha` - a value in $[0, 1]$. Choose 0.5 for median
-    /// * `candidates` - Set of possible quantiles to evaluate the utility of.
-    pub(crate) fn quantile_score(self, alpha: f64, candidates: Series) -> Expr {
-        apply_anonymous_function(
-            vec![self.0, lit(alpha), lit(candidates)],
-            DiscreteQuantileScoreShim,
-        )
-    }
-
-    /// Report the argmax or argmin after adding Gumbel noise.
+    /// Report the argmax or argmin after adding noise.
     ///
     /// The scale calibrates the level of entropy when selecting an index.
     ///
     /// # Arguments
-    /// * `optimize` - Distinguish between argmax and argmin.
-    /// * `scale` - Noise scale parameter for the Gumbel distribution.
-    pub(crate) fn report_noisy_max_gumbel(self, optimize: Optimize, scale: Option<f64>) -> Expr {
-        let optimize = lit(format!("{optimize}"));
+    /// * `negate` - Flip signs to report noisy min.
+    /// * `scale` - Noise scale parameter for the noise distribution.
+    pub fn noisy_max(self, negate: bool, scale: Option<f64>) -> Expr {
+        let negate = lit(negate);
         let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
-        apply_anonymous_function(vec![self.0, optimize, scale], ReportNoisyMaxShim)
-    }
-
-    /// Index into a candidate set.
-    ///
-    /// Typically used after `rnm_gumbel` to map selected indices to candidates.
-    ///
-    /// # Arguments
-    /// * `candidates` - The values that each selected index corresponds to.
-    pub(crate) fn index_candidates(self, candidates: Series) -> Expr {
-        apply_anonymous_function(vec![self.0, lit(candidates)], IndexCandidatesShim)
+        apply_anonymous_function(vec![self.0, negate, scale], NoisyMaxShim)
     }
 
     /// Compute a differentially private quantile.
@@ -453,15 +451,13 @@ impl DPExpr {
     /// # Arguments
     /// * `alpha` - a value in $[0, 1]$. Choose 0.5 for median
     /// * `candidates` - Potential quantiles to select from.
-    /// * `scale` - Noise scale parameter for the Gumbel distribution.
+    /// * `scale` - scale parameter for the noise distribution.
     pub fn quantile(self, alpha: f64, candidates: Series, scale: Option<f64>) -> Expr {
-        self.0
-            .dp()
-            .quantile_score(alpha, candidates.clone())
-            .dp()
-            .report_noisy_max_gumbel(Optimize::Min, scale)
-            .dp()
-            .index_candidates(Series::new("".into(), candidates))
+        let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
+        apply_anonymous_function(
+            vec![self.0, lit(alpha), lit(candidates), scale],
+            DPQuantileShim,
+        )
     }
 
     /// Compute a differentially private median.
@@ -470,10 +466,20 @@ impl DPExpr {
     ///
     /// # Arguments
     /// * `candidates` - Potential quantiles to select from.
-    /// * `scale` - Noise scale parameter for the Gumbel distribution.
+    /// * `scale` - scale parameter for the noise distribution.
     pub fn median(self, candidates: Series, scale: Option<f64>) -> Expr {
-        self.0.dp().quantile(0.5, candidates, scale)
+        let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
+        apply_anonymous_function(vec![self.0, lit(candidates), scale], DPMedianShim)
     }
+}
+
+/// Compute the differentially private len (including nulls).
+///
+/// # Arguments
+/// * `scale` - parameter for the noise distribution
+pub fn dp_len(scale: Option<f64>) -> Expr {
+    let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
+    apply_anonymous_function(vec![scale], DPFrameLenShim)
 }
 
 pub enum OnceFrameQuery {
@@ -562,8 +568,8 @@ pub(crate) fn get_disabled_features_message() -> String {
 
     #[cfg(not(feature = "contrib"))]
     disabled_features.push("contrib");
-    #[cfg(not(feature = "floating-point"))]
-    disabled_features.push("floating-point");
+    #[cfg(not(feature = "idealized-numerics"))]
+    disabled_features.push("idealized-numerics");
     #[cfg(not(feature = "honest-but-curious"))]
     disabled_features.push("honest-but-curious");
 

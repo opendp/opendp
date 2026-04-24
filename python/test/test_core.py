@@ -3,6 +3,8 @@ import pytest
 import opendp.prelude as dp
 from opendp._internal import _extrinsic_domain, _extrinsic_distance, _extrinsic_divergence, _new_pure_function
 
+from .helpers import ids
+
 def test_version():
     assert dp.__version__.startswith('0.')
 
@@ -220,6 +222,40 @@ def test_new_domain():
     assert not not_null_domain.member(float("nan"))
 
 
+@pytest.mark.parametrize(
+    "struct",
+    [
+        dp.m.make_user_measurement(
+            dp.atom_domain(T=int),
+            dp.absolute_distance(T=int),
+            dp.max_divergence(),
+            lambda x: x,
+            lambda _: 0.0,
+        ), 
+        dp.t.make_user_transformation(
+            dp.atom_domain(T=int),
+            dp.absolute_distance(T=int),
+            dp.atom_domain(T=int),
+            dp.absolute_distance(T=int),
+            lambda x: x,
+            lambda _: 0.0,
+        ),
+        dp.c.make_fully_adaptive_composition(
+            dp.atom_domain(T=int),
+            dp.absolute_distance(T=int),
+            dp.max_divergence(),
+        ),
+        dp.user_distance(""),
+        dp.user_divergence(""),
+        dp.user_domain("", lambda _: True),
+        dp.new_function(lambda x: x, TO="i32"),
+    ],
+    ids=ids,
+)
+def test_struct_iter(struct):
+    with pytest.raises(ValueError):
+        [*struct]
+
 @pytest.mark.parametrize("new_domain", [dp.user_domain, _extrinsic_domain])
 def test_custom_domain(new_domain):
     from datetime import datetime
@@ -248,6 +284,11 @@ def test_custom_domain(new_domain):
 
     # can retrieve the descriptor for use in further analysis
     assert domain.descriptor == {1, 2, 3, 4}
+    # or retrieve the descriptor with type-checking
+    assert domain.cast(set) == {1, 2, 3, 4}
+
+    with pytest.raises(ValueError, match="domain descriptor must be a int"):
+        assert domain.cast(int)
 
     # nest inside a vector domain
     vec_domain = dp.vector_domain(domain)
@@ -322,7 +363,7 @@ def test_custom_distance(new_distance, new_divergence):
     meas = dp.m.make_user_measurement(
         dp.atom_domain(T=float),
         dp.absolute_distance(T=float),
-        new_divergence("tCDP"),
+        new_divergence("tCDP", {"kind": "tCDP"}),
         lambda _: 0.0,
         # clearly not actually tCDP
         lambda d_in: lambda omega: d_in * omega * 2,
@@ -330,11 +371,26 @@ def test_custom_distance(new_distance, new_divergence):
 
     assert meas(2.0) == 0.0
     assert meas.map(2.0)(3.0) == 12.0
+    assert isinstance(meas.output_measure, dp.ExtrinsicDivergence)
+    assert meas.output_measure.descriptor == {"kind": "tCDP"}
+    assert meas.output_measure.cast(dict) == {"kind": "tCDP"}
+    with pytest.raises(ValueError, match=r"measure descriptor must be a list"):
+        meas.output_measure.cast(list)
 
 
 def test_pure_function():
     fun = _new_pure_function(lambda x: x + 1, TO="i32")
     assert fun(1) == 2
+
+
+def test_np_array_postprocessor():
+    np = pytest.importorskip("numpy")
+    fun = dp.as_array()
+
+    result = fun(np.array([1, 2, 3], dtype=np.int32))
+
+    assert isinstance(result, np.ndarray)
+    assert np.array_equal(result, np.array([1, 2, 3], dtype=np.int32))
 
 
 def test_pointer_classes_dont_iter():

@@ -153,7 +153,7 @@ fn test_make_noise_threshold_zexpfamily2_zero_scale() -> Fallible<()> {
     let metric = L0PInfDistance(AbsoluteDistance::<RBig>::default());
     let distribution = ZExpFamily { scale: rbig!(0) };
 
-    let meas: Measurement<_, _, _, Approximate<ZeroConcentratedDivergence>> =
+    let meas: Measurement<_, _, Approximate<ZeroConcentratedDivergence>, _> =
         distribution.make_noise_threshold((domain, metric), ibig!(100))?;
 
     let data = HashMap::from([(false, ibig!(0)), (true, ibig!(100))]);

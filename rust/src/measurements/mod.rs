@@ -3,11 +3,6 @@
 //! The different [`crate::core::Measurement`] implementations in this module are accessed by calling the appropriate constructor function.
 //! Constructors are named in the form `make_xxx()`, where `xxx` indicates what the resulting `Measurement` does.
 
-#[cfg(feature = "contrib")]
-mod gumbel_max;
-#[cfg(feature = "contrib")]
-pub use gumbel_max::*;
-
 #[cfg(all(feature = "contrib", feature = "polars"))]
 mod make_private_expr;
 #[cfg(all(feature = "contrib", feature = "polars"))]
@@ -39,6 +34,16 @@ mod noise_threshold;
 pub use noise_threshold::*;
 
 #[cfg(feature = "contrib")]
+mod noisy_max;
+#[cfg(feature = "contrib")]
+pub use noisy_max::*;
+
+#[cfg(feature = "contrib")]
+mod noisy_top_k;
+#[cfg(feature = "contrib")]
+pub use noisy_top_k::*;
+
+#[cfg(feature = "contrib")]
 mod randomized_response;
 #[cfg(feature = "contrib")]
 pub use randomized_response::*;
@@ -53,7 +58,7 @@ mod canonical_noise;
 #[cfg(feature = "contrib")]
 pub use canonical_noise::*;
 
-#[cfg(all(feature = "floating-point", feature = "contrib"))]
+#[cfg(all(feature = "idealized-numerics", feature = "contrib"))]
 mod alp;
-#[cfg(all(feature = "floating-point", feature = "contrib"))]
+#[cfg(all(feature = "idealized-numerics", feature = "contrib"))]
 pub use alp::*;

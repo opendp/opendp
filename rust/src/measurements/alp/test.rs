@@ -51,7 +51,7 @@ fn test_alp_construction() -> Fallible<()> {
     let beta = 10;
     let alp = make_alp_state_with_hashers::<u32, u32>(
         MapDomain::default(),
-        L0PInfDistance::default(),
+        L01InfDistance::default(),
         1.0,
         1.,
         beta,
@@ -81,7 +81,7 @@ fn test_alp_construction_out_of_range() -> Fallible<()> {
     let h = index_identify_functions(20);
     let alp = make_alp_state_with_hashers::<u32, u32>(
         MapDomain::default(),
-        L0PInfDistance::default(),
+        L01InfDistance::default(),
         1.0,
         1.,
         s,
@@ -163,7 +163,7 @@ fn test_construct_and_post_process() -> Fallible<()> {
 
     let alp_meas = make_alp_state::<i32, i32>(
         MapDomain::default(),
-        L0PInfDistance::default(),
+        L01InfDistance::default(),
         2.,
         24,
         Some(24),
@@ -192,7 +192,7 @@ fn test_post_process_measurement() -> Fallible<()> {
 
     let alp_meas = make_alp_queryable::<i32, i32>(
         MapDomain::new(AtomDomain::default(), AtomDomain::default()),
-        L0PInfDistance::default(),
+        L01InfDistance::default(),
         2.,
         24,
         Some(24),

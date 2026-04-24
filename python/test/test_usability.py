@@ -2,6 +2,8 @@ import re
 import pytest
 import opendp.prelude as dp
 
+from .helpers import ids
+
 
 @pytest.mark.xfail(raises=dp.UnknownTypeException)
 def test_iterable_data():
@@ -130,7 +132,10 @@ def test_margins_dict_instead_of_list():
 
 
 @pytest.mark.parametrize(
-    "domain", [dp.lazyframe_domain([]), dp.series_domain("A", dp.atom_domain(T=bool))])
+    "domain",
+    [dp.lazyframe_domain([]), dp.series_domain("A", dp.atom_domain(T=bool))],
+    ids=ids,
+)
 def test_polars_data_loader_error_is_human_readable(domain):
     pytest.importorskip("polars")
     overall_pipeline = dp.c.make_adaptive_composition(
@@ -161,7 +166,7 @@ def test_unrecognized_column():
         split_evenly_over=1,
         margins=[]
     )
-    config = pl.col("X").fill_null(0).dp.mean((0, 10))
+    config = pl.col("X").dp.mean((0, 10))
 
     plain_query = context.query().select(config)
     with pytest.raises(dp.OpenDPException, match=r"unrecognized column 'X' in output domain; expected one of: A, B"):
@@ -178,7 +183,7 @@ def test_without_max_partition_length():
         margins=[],
     )
 
-    config = pl.col("A").fill_null(0).dp.mean((0, 10))
+    config = pl.col("A").dp.mean((0, 10))
 
     plain_query = context_wo_margin.query().select(config)
     with pytest.raises(dp.OpenDPException, match=r"must specify 'max_length' in a margin with by=\[\]"):
@@ -203,7 +208,7 @@ def test_with_max_length():
         )],
     )
 
-    config = pl.col("A").fill_null(0).dp.mean((0, 10))
+    config = pl.col("A").dp.mean((0, 10))
 
     plain_query = context_w_margin.query().select(config)
     plain_query.release()
@@ -235,7 +240,7 @@ def test_with_max_length_and_invariant_keys():
         ],
     )
 
-    config = pl.col("A").fill_null(0).dp.mean((0, 10))
+    config = pl.col("A").dp.mean((0, 10))
 
     plain_query = context_w_invariant_keys.query().select(config)
     plain_query.release()

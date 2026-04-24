@@ -8,11 +8,13 @@ use crate::{
     transformations::make_stable_lazyframe::group_by::{Resize, check_infallible},
 };
 use opendp_derive::proven;
-use polars_plan::prelude::{ApplyOptions, FunctionOptions, GroupbyOptions};
+#[cfg(not(patch_polars))]
+use polars_plan::dsl::WindowType;
+use polars_plan::prelude::GroupbyOptions;
 
 use polars::prelude::{
     BooleanFunction, DataType, DslPlan, Expr, FunctionExpr, Operator, RankMethod, WindowMapping,
-    WindowType, int_range, len, lit,
+    int_range, len, lit,
 };
 
 #[cfg(test)]
@@ -93,7 +95,7 @@ pub(crate) fn match_truncations(
 ///
 /// # Proof Definition
 /// For a given query plan and user identifier expression,
-/// if the query plan bounds row contributions per-identifier via a group by,
+/// if the query plan bounds row contributions per-identifier via a group-by,
 /// returns a triple containing the input to the truncation,
 /// the truncation itself, and the per-id bound on user contribution.
 #[proven]
@@ -101,6 +103,19 @@ fn match_group_by_truncation(
     plan: &DslPlan,
     identifier: &Expr,
 ) -> Option<(DslPlan, Truncation, Bound)> {
+    #[cfg(patch_polars)]
+    let DslPlan::GroupBy {
+        input,
+        keys,
+        aggs,
+        apply,
+        options,
+        ..
+    } = plan.clone()
+    else {
+        return None;
+    };
+    #[cfg(not(patch_polars))]
     let DslPlan::GroupBy {
         input,
         keys,
@@ -187,7 +202,17 @@ fn match_truncation_predicate(predicate: &Expr, identifier: &Expr) -> Fallible<O
                 // don't throw an error as non-truncation filters may still be valid
                 _ => return Ok(None),
             };
-
+            #[cfg(patch_polars)]
+            let Expr::Over {
+                function,
+                partition_by,
+                mapping: WindowMapping::GroupsToRows,
+                ..
+            } = over.as_ref()
+            else {
+                return Ok(None);
+            };
+            #[cfg(not(patch_polars))]
             let Expr::Window {
                 function,
                 partition_by,
@@ -343,13 +368,7 @@ fn match_per_group_predicate(
     // reorderings of an enumeration are still enumerations
     match enumeration {
         Expr::Function {
-            input,
-            function,
-            options:
-                FunctionOptions {
-                    collect_groups: ApplyOptions::GroupWise,
-                    ..
-                },
+            input, function, ..
         } => {
             // FunctionExprs that may reorder data
             let is_reorder = match function {

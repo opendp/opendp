@@ -1,6 +1,3 @@
-# 2/6/2020 - Initial version contains the GitHub .gitignore files for both Python and Rust
-
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -151,6 +148,7 @@ R/opendp/R/measurements.R
 R/opendp/R/measures.R
 R/opendp/R/metrics.R
 R/opendp/R/transformations.R
+R/opendp/R/internal.R
 R/opendp/src/Ropendp.h
 R/opendp/src/accuracy.c
 R/opendp/src/combinators.c
@@ -162,6 +160,7 @@ R/opendp/src/measurements.c
 R/opendp/src/measures.c
 R/opendp/src/metrics.c
 R/opendp/src/transformations.c
+R/opendp/src/internal.c
 python/src/opendp/_data.py
 python/src/opendp/_internal.py
 python/src/opendp/accuracy.py
@@ -240,3 +239,11 @@ R/opendp-docs
 *.blg
 *.run.xml
 *.toc
+
+# Aeneas build artifacts and generated outputs
+.lake/
+*.llbc
+rust/aeneas-out/
+rust/opendp_verified/Generated/
+SampCert/
+aeneas/

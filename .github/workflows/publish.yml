@@ -25,27 +25,6 @@ on:
         required: true
       CRATES_IO_API_TOKEN:
         required: true
-  workflow_dispatch:
-    inputs:
-      channel:
-        description: Target Channel
-        type: choice
-        options:
-          - dev
-          - nightly
-          - beta
-          - stable
-        required: true
-        default: nightly
-      date:
-        description: Release Date
-        type: string
-        required: true
-      dry_run:
-        description: Dry Run?
-        type: boolean
-        required: false
-        default: false
 
 jobs:
   credential-check:
@@ -75,7 +54,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.12
+          python-version: 3.13
 
       - name: Download Python wheel
         uses: actions/download-artifact@v4
@@ -115,6 +94,10 @@ jobs:
 
       - name: Push to R branch
         run: |
+          SOURCE_MESSAGE="$(git log -1 --format=%s HEAD)"
+          TMPDIR="$(mktemp -d)"
+          cp -R R/opendp "$TMPDIR/opendp"
+
           git fetch
           git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
           git config --global user.name "$GITHUB_ACTOR"
@@ -122,10 +105,16 @@ jobs:
           # create brand new history each time
           BRANCH=r-universe${{ (inputs.dry_run || inputs.channel != 'stable') && '-dev' || '' }}
           git checkout --orphan $BRANCH
+          git rm -rf --cached . || true
+
+          # Keep .git so this orphaned checkout can still be committed and pushed.
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          mkdir -p R
+          cp -R "$TMPDIR/opendp" R/opendp
 
           git add R/opendp/ --force
           echo "Push R package to $BRANCH branch"
-          git commit --allow-empty-message --message "$(git log $(git rev-parse origin/main) --oneline --format=%B -n1 | head -n1)"
+          git commit --message "$SOURCE_MESSAGE"
           git remote set-url origin "https://$GITHUB_ACTOR:${{ secrets.GITHUB_TOKEN }}@github.com/$GITHUB_REPOSITORY"
           git push --force origin $BRANCH
 
@@ -143,7 +132,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.12
+          python-version: 3.13
 
       - name: Publish Rust crate
         env:
@@ -176,7 +165,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.12
+          python-version: 3.13
 
       - name: Publish GitHub Release
         if: ${{ inputs.channel == 'stable' }}

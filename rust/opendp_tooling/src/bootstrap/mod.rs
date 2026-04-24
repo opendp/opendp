@@ -38,22 +38,22 @@ impl Function {
         // Parse the signature
         let signature = BootstrapSignature::from_syn(item_fn.sig.clone())?;
 
+        let name = arguments.name.clone().unwrap_or(signature.name.clone());
+
         // Parse the docstring
-        let path = if arguments.name.is_none() {
-            module.map(|module| {
-                let name = arguments.name.as_ref().unwrap_or(&signature.name).as_str();
-                (module, name)
-            })
+        let rust_path = if let Some(path) = &arguments.rust_path {
+            Some(path.clone())
+        } else if arguments.name.is_none() {
+            module.map(|module| format!("{module}/fn.{name}"))
         } else {
             None
         };
 
-        let name = arguments.name.clone().unwrap_or(signature.name.clone());
         let docstring = BootstrapDocstring::from_attrs(
             &name,
             item_fn.attrs,
             &item_fn.sig.output,
-            path,
+            rust_path,
             arguments.features.0.clone(),
         )?;
 

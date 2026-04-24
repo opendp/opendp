@@ -28,8 +28,8 @@ fn make_int_to_bigint<T: Integer, const P: usize, QI: Number>(
 ) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<T>>,
-        VectorDomain<AtomDomain<IBig>>,
         LpDistance<P, QI>,
+        VectorDomain<AtomDomain<IBig>>,
         LpDistance<P, RBig>,
     >,
 >
@@ -39,13 +39,13 @@ where
 {
     Transformation::new(
         input_domain.clone(),
+        input_metric,
         VectorDomain {
             element_domain: AtomDomain::<IBig>::default(),
             size: input_domain.size.clone(),
         },
-        Function::new(move |x: &Vec<T>| x.iter().cloned().map(IBig::from).collect()),
-        input_metric,
         LpDistance::default(),
+        Function::new(move |x: &Vec<T>| x.iter().cloned().map(IBig::from).collect()),
         StabilityMap::new_fallible(move |&d_in: &QI| {
             RBig::try_from(d_in).map_err(|_| err!(FailedMap, "d_in ({d_in:?}) must be finite"))
         }),
@@ -69,7 +69,7 @@ where
     fn make_noise(
         self,
         input_space: (AtomDomain<T>, AbsoluteDistance<QI>),
-    ) -> Fallible<Measurement<AtomDomain<T>, T, AbsoluteDistance<QI>, MO>> {
+    ) -> Fallible<Measurement<AtomDomain<T>, AbsoluteDistance<QI>, MO, T>> {
         let t_vec = make_vec(input_space)?;
         let m_noise = self.make_noise(t_vec.output_space())?;
 
@@ -93,7 +93,7 @@ where
     fn make_noise(
         self,
         input_space: (VectorDomain<AtomDomain<T>>, LpDistance<P, QI>),
-    ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, Vec<T>, LpDistance<P, QI>, MO>> {
+    ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, LpDistance<P, QI>, MO, Vec<T>>> {
         let distribution = ZExpFamily {
             scale: integerize_scale(self.scale, 0)?,
         };

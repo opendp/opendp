@@ -7,20 +7,18 @@ use opendp_derive::bootstrap;
 
 use crate::{
     core::{FfiResult, Function, Measurement, PrivacyMap, StabilityMap, Transformation},
-    domains::ffi::{ExtrinsicDomain, ExtrinsicElement},
+    domains::ffi::opendp_domains__user_domain,
     error::Fallible,
     ffi::{
         any::{
             AnyDomain, AnyFunction, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject,
-            AnyTransformation, CallbackFn, Downcast, wrap_func,
+            AnyTransformation, CallbackFn, wrap_func,
         },
         util::{self, ExtrinsicObject},
     },
-    measures::ffi::ExtrinsicDivergence,
-    metrics::ffi::ExtrinsicDistance,
+    measures::ffi::opendp_measures__user_divergence,
+    metrics::ffi::opendp_metrics__user_distance,
 };
-
-use self::util::to_str;
 
 #[bootstrap(
     name = "_make_measurement",
@@ -55,7 +53,7 @@ fn _make_measurement<TO>(
     output_measure: AnyMeasure,
     function: CallbackFn,
     privacy_map: CallbackFn,
-) -> Fallible<Measurement<AnyDomain, AnyObject, AnyMetric, AnyMeasure>> {
+) -> Fallible<Measurement<AnyDomain, AnyMetric, AnyMeasure, AnyObject>> {
     let _ = (
         input_domain,
         input_metric,
@@ -78,9 +76,9 @@ pub extern "C" fn opendp_internal___make_measurement(
     let _TO = TO;
     Measurement::new(
         try_as_ref!(input_domain).clone(),
-        Function::new_fallible(wrap_func(try_as_ref!(function).clone())),
         try_as_ref!(input_metric).clone(),
         try_as_ref!(output_measure).clone(),
+        Function::new_fallible(wrap_func(try_as_ref!(function).clone())),
         PrivacyMap::new_fallible(wrap_func(try_as_ref!(privacy_map).clone())),
     )
     .into()
@@ -121,10 +119,10 @@ pub extern "C" fn opendp_internal___make_transformation(
 ) -> FfiResult<*mut AnyTransformation> {
     Transformation::new(
         try_as_ref!(input_domain).clone(),
-        try_as_ref!(output_domain).clone(),
-        Function::new_fallible(wrap_func(try_as_ref!(function).clone())),
         try_as_ref!(input_metric).clone(),
+        try_as_ref!(output_domain).clone(),
         try_as_ref!(output_metric).clone(),
+        Function::new_fallible(wrap_func(try_as_ref!(function).clone())),
         StabilityMap::new_fallible(wrap_func(try_as_ref!(stability_map).clone())),
     )
     .into()
@@ -154,20 +152,15 @@ pub extern "C" fn opendp_internal___extrinsic_domain(
     member: *const CallbackFn,
     descriptor: *mut ExtrinsicObject,
 ) -> FfiResult<*mut AnyDomain> {
-    let identifier = try_!(to_str(identifier)).to_string();
-    let descriptor = try_as_ref!(descriptor).clone();
-    let member = wrap_func(try_as_ref!(member).clone());
-    let element = ExtrinsicElement::new(identifier, descriptor);
-    let member = Function::new_fallible(move |arg: &ExtrinsicObject| -> Fallible<bool> {
-        member(&AnyObject::new(arg.clone()))?.downcast::<bool>()
-    });
-
-    Ok(AnyDomain::new(ExtrinsicDomain { element, member })).into()
+    opendp_domains__user_domain(identifier, member, descriptor)
 }
 
 #[bootstrap(
     name = "_extrinsic_divergence",
-    arguments(descriptor(rust_type = "String"))
+    arguments(
+        identifier(c_type = "char *", rust_type = b"null"),
+        descriptor(default = b"null", rust_type = "ExtrinsicObject")
+    )
 )]
 /// Construct a new ExtrinsicDivergence, a privacy measure defined from a bindings language.
 /// This is meant for internal use, as it does not require "honest-but-curious",
@@ -176,18 +169,22 @@ pub extern "C" fn opendp_internal___extrinsic_domain(
 /// See `user_divergence` for correct usage and proof definition for this function.
 ///
 /// # Arguments
-/// * `descriptor` - A string description of the privacy measure.
+/// * `identifier` - A string description of the privacy measure.
+/// * `descriptor` - Additional constraints on the privacy measure.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_internal___extrinsic_divergence(
-    descriptor: *mut c_char,
+    identifier: *mut c_char,
+    descriptor: *mut ExtrinsicObject,
 ) -> FfiResult<*mut AnyMeasure> {
-    let descriptor = try_!(to_str(descriptor)).to_string();
-    Ok(AnyMeasure::new(ExtrinsicDivergence { descriptor })).into()
+    opendp_measures__user_divergence(identifier, descriptor)
 }
 
 #[bootstrap(
     name = "_extrinsic_distance",
-    arguments(descriptor(rust_type = "String"))
+    arguments(
+        identifier(c_type = "char *", rust_type = b"null"),
+        descriptor(default = b"null", rust_type = "ExtrinsicObject")
+    )
 )]
 /// Construct a new ExtrinsicDistance.
 /// This is meant for internal use, as it does not require "honest-but-curious",
@@ -196,18 +193,20 @@ pub extern "C" fn opendp_internal___extrinsic_divergence(
 /// See `user_distance` for correct usage of this function.
 ///
 /// # Arguments
-/// * `descriptor` - A string description of the metric.
+/// * `identifier` - A string description of the metric.
+/// * `descriptor` - Additional constraints on the domain.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_internal___extrinsic_distance(
-    descriptor: *mut c_char,
+    identifier: *mut c_char,
+    descriptor: *mut ExtrinsicObject,
 ) -> FfiResult<*mut AnyMetric> {
-    let descriptor = try_!(to_str(descriptor)).to_string();
-    Ok(AnyMetric::new(ExtrinsicDistance { descriptor })).into()
+    opendp_metrics__user_distance(identifier, descriptor)
 }
 
 #[bootstrap(
     features("contrib"),
-    arguments(function(rust_type = "$pass_through(TO)"))
+    arguments(function(rust_type = "$pass_through(TO)")),
+    generics(TO(default = "ExtrinsicObject"))
 )]
 /// Construct a Function from a user-defined callback.
 /// This is meant for internal use, as it does not require "honest-but-curious",

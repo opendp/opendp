@@ -24,26 +24,21 @@ jobs:
       - name: Free disk space
         uses: jlumbroso/free-disk-space@v1.3.1
         with:
-          tool-cache: false     # no: will remove rust
+          tool-cache: true      # 5.3GiB
           android: true         # 8.7GiB
           dotnet: true          # 1.6GiB
           docker-images: true   # 3.2GiB
-          haskell: true         # ?
-          large-packages: false # no: slow
+          haskell: true         # 6.2GiB
+          large-packages: true  # 4.7GiB
           swap-storage: false   # no: having swap is useful
 
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Cache Rust dependencies
-        uses: actions/cache@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
-          restore-keys: ${{ runner.os }}-cargo-
+          rustflags: ""
+          components: rustfmt
 
       - name: Check Rust version
         run: cargo --version
@@ -59,7 +54,7 @@ jobs:
         run: cargo check --verbose --no-default-features --features untrusted,bindings
 
       - name: Build (dynamic w/ polars)
-        run: cargo build --verbose --features untrusted,ffi,polars
+        run: cargo build --verbose --features untrusted,polars-ffi
       
       - name: Upload (dynamic w/ polars)
         uses: actions/upload-artifact@v4
@@ -101,26 +96,20 @@ jobs:
       - name: Free disk space
         uses: jlumbroso/free-disk-space@v1.3.1
         with:
-          tool-cache: false     # no: will remove rust
+          tool-cache: true      # 5.3GiB
           android: true         # 8.7GiB
           dotnet: true          # 1.6GiB
           docker-images: true   # 3.2GiB
-          haskell: true         # 5.4GiB
-          large-packages: false # no: slow
+          haskell: true         # 6.2GiB
+          large-packages: true  # 4.7GiB
           swap-storage: false   # no: having swap is useful
 
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Cache Rust dependencies
-        uses: actions/cache@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.toml') }}
-          restore-keys: ${{ runner.os }}-cargo-
+          rustflags: ""
 
       - name: Test (default)
         run: cargo test --verbose
@@ -140,12 +129,14 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - '3.9'
+          - '3.10'
           - '3.13'
         extra-install:
-          - '.'
-          - '.[scikit-learn]'
-          - '.[polars]'
+          - 'PLACEHOLDER' # Will raise a warning during pip install, but otherwise works
+          - 'numpy'
+          - 'scikit-learn'
+          - 'polars'
+          - 'mbi'
 
     steps:
       - name: Checkout repository
@@ -186,28 +177,37 @@ jobs:
           path: python/src/opendp/
 
       - name: Install package
-        run: python -m pip install -e ${{ matrix.extra-install }}
+        run: python -m pip install -e .[${{ matrix.extra-install }}]
 
       - name: Test
         # There's not a "skipif" for doctests, so use "-k" to exclude based on name patterns.
         # (Even in unittests we should use "importskip" rather than "skipif".)
-        run: coverage run -m pytest -v ${{ ! contains(matrix.extra-install, 'polars') && '-k "not lazyframe and not polars and not pca and not rst"' || ''}}
+        run: |
+          case "${{ matrix.extra-install }}" in
+            PLACEHOLDER)          pytest -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
+            numpy)                pytest -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
+            scikit-learn)         pytest -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
+            polars)               pytest -v -k "not contingency and not synthetic";;
+            mbi)  coverage run -m pytest -v;;
+
+            *)    print "unexpected extra-install"; exit 1;;
+          esac
 
       - name: Test replace-binary-path
-        if: ${{ contains(matrix.extra-install, 'polars') }}
+        if: matrix.extra-install == 'polars'
         # Messes with envvars, so can't be run in parallel!
         run: FORCE_TEST_REPLACE_BINARY_PATH=1 pytest -k 'test_replace_binary_path'
 
       - name: Test coverage
         # We only expect test coverage with all extra dependencies.
-        # "polars" implies "scikit-learn": see setup.cfg.
-        if: ${{ contains(matrix.extra-install, 'polars') && contains(matrix.python-version, '3.13') }}
+        # "mbi" implies "polars" and "scikit-learn": see setup.cfg.
+        if: matrix.extra-install == 'mbi' && matrix.python-version == '3.13'
         run: |
           coverage report
           touch /tmp/coverage.txt
 
       - name: Upload coverage
-        if: ${{ contains(matrix.extra-install, 'polars') && contains(matrix.python-version, '3.13') }}
+        if: matrix.extra-install == 'mbi' && matrix.python-version == '3.13'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
@@ -277,7 +277,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version: '3.10'
 
       - name: Get pip cache dir
         id: pip-cache

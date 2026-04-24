@@ -10,13 +10,8 @@ use opendp_derive::bootstrap;
 use crate::core::{Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{AtomDomain, MapDomain, VectorDomain};
 use crate::error::*;
-use crate::metrics::{
-    AbsoluteDistance, L0PInfDistance, L1Distance, L01InfDistance, LpDistance, SymmetricDistance,
-};
-use crate::traits::{CollectionSize, Hashable, InfCast, Integer, Number, Primitive};
-
-#[cfg(test)]
-mod test;
+use crate::metrics::{AbsoluteDistance, L1Distance, L01InfDistance, LpDistance, SymmetricDistance};
+use crate::traits::{Hashable, InfCast, Integer, Number, Primitive};
 
 #[bootstrap(features("contrib"), generics(TIA(suppress), TO(default = "int")))]
 /// Make a Transformation that computes a count of the number of records in data.
@@ -37,8 +32,8 @@ pub fn make_count<TIA, TO>(
 ) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<TIA>>,
-        AtomDomain<TO>,
         SymmetricDistance,
+        AtomDomain<TO>,
         AbsoluteDistance<TO>,
     >,
 >
@@ -48,17 +43,15 @@ where
 {
     Transformation::new(
         input_domain,
+        input_metric,
         AtomDomain::new_non_nan(),
+        AbsoluteDistance::default(),
         // think of this as: min(arg.len(), TO::max_value())
         Function::new(move |arg: &Vec<TIA>| {
-            // get size via the CollectionSize trait
-            let size = arg.size();
-
+            let size = arg.len();
             // cast to TO, and if cast fails (due to overflow) fill with largest value
             TO::exact_int_cast(size).unwrap_or(TO::MAX_CONSECUTIVE)
         }),
-        input_metric,
-        AbsoluteDistance::default(),
         StabilityMap::new_from_constant(TO::one()),
     )
 }
@@ -82,8 +75,8 @@ pub fn make_count_distinct<TIA, TO>(
 ) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<TIA>>,
-        AtomDomain<TO>,
         SymmetricDistance,
+        AtomDomain<TO>,
         AbsoluteDistance<TO>,
     >,
 >
@@ -93,13 +86,13 @@ where
 {
     Transformation::new(
         input_domain,
+        input_metric,
         AtomDomain::new_non_nan(),
+        AbsoluteDistance::default(),
         Function::new(move |arg: &Vec<TIA>| {
             let len = arg.iter().collect::<HashSet<_>>().len();
             TO::exact_int_cast(len).unwrap_or(TO::MAX_CONSECUTIVE)
         }),
-        input_metric,
-        AbsoluteDistance::default(),
         StabilityMap::new_from_constant(TO::one()),
     )
 }
@@ -148,8 +141,8 @@ pub fn make_count_by_categories<MO, TIA, TOA>(
 ) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<TIA>>,
-        VectorDomain<AtomDomain<TOA>>,
         SymmetricDistance,
+        VectorDomain<AtomDomain<TOA>>,
         MO,
     >,
 >
@@ -167,7 +160,9 @@ where
     }
     Transformation::new(
         input_domain,
+        input_metric,
         VectorDomain::new(AtomDomain::new_non_nan()),
+        MO::default(),
         Function::new(move |data: &Vec<TIA>| {
             let mut counts = categories
                 .iter()
@@ -197,8 +192,6 @@ where
                 })
                 .collect()
         }),
-        input_metric,
-        MO::default(),
         StabilityMap::new_from_constant(MO::get_stability_constant()),
     )
 }
@@ -226,14 +219,16 @@ pub fn make_count_by<TK: Hashable, TV: Integer>(
 ) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<TK>>,
-        MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
         SymmetricDistance,
+        MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
         L01InfDistance<AbsoluteDistance<TV>>,
     >,
 > {
     Transformation::new(
         input_domain.clone(),
+        input_metric,
         MapDomain::new(input_domain.element_domain, AtomDomain::new_non_nan()),
+        L01InfDistance::default(),
         Function::new(move |data: &Vec<TK>| {
             let mut counts = HashMap::new();
             data.iter().for_each(|v| {
@@ -242,8 +237,6 @@ pub fn make_count_by<TK: Hashable, TV: Integer>(
             });
             counts
         }),
-        input_metric,
-        L0PInfDistance::default(),
         StabilityMap::new_fallible(move |d_in| {
             Ok((*d_in, TV::inf_cast(*d_in)?, TV::inf_cast(*d_in)?))
         }),

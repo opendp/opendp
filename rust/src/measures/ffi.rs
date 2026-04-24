@@ -1,19 +1,21 @@
-use std::{ffi::c_char, fmt::Debug, marker::PhantomData};
+use std::{cmp::Ordering, ffi::c_char};
 
 use crate::ffi::{
     any::{AnyObject, CallbackFn, Downcast, wrap_func},
-    util::c_bool,
+    util::{ExtrinsicObject, c_bool},
 };
 use opendp_derive::bootstrap;
 
 use crate::{
     core::{FfiResult, Measure},
+    domains::ffi::ExtrinsicElement,
     error::Fallible,
     ffi::{
         any::AnyMeasure,
-        util::{self, ExtrinsicObject, Type, into_c_char_p, to_str},
+        util::{self, into_c_char_p},
     },
     measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
+    traits::ProductOrd,
 };
 
 use super::{PrivacyProfile, RenyiDivergence, SmoothedMaxDivergence};
@@ -170,9 +172,10 @@ pub extern "C" fn opendp_measures__fixed_smoothed_max_divergence() -> FfiResult<
 }
 
 #[bootstrap(
+    rust_path = "measures/struct.Approximate",
     generics(M(suppress)),
     arguments(measure(c_type = "AnyMeasure *", rust_type = b"null")),
-    returns(c_type = "FfiResult<AnyMeasure *>")
+    returns(c_type = "FfiResult<AnyMeasure *>", hint = "ApproximateDivergence")
 )]
 /// Privacy measure used to define $\delta$-approximate PM-differential privacy.
 ///
@@ -235,6 +238,40 @@ pub extern "C" fn opendp_measures__approximate(
     .into()
 }
 
+#[bootstrap(name = "_approximate_divergence_get_inner_measure")]
+/// Retrieve the inner privacy measure of an approximate privacy measure.
+///
+/// # Arguments
+/// * `privacy_measure` - The privacy measure to inspect
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measures___approximate_divergence_get_inner_measure(
+    privacy_measure: *const AnyMeasure,
+) -> FfiResult<*mut AnyMeasure> {
+    let privacy_measure = try_as_ref!(privacy_measure);
+    let M = privacy_measure.type_.clone();
+    let T = try_!(M.get_atom());
+
+    fn monomorphize<M: 'static + Measure>(privacy_measure: &AnyMeasure) -> Fallible<AnyMeasure> {
+        let privacy_measure = privacy_measure.downcast_ref::<Approximate<M>>()?.clone();
+        Ok(AnyMeasure::new(privacy_measure.0.clone()))
+    }
+
+    dispatch!(
+        monomorphize,
+        [(
+            T,
+            [
+                MaxDivergence,
+                SmoothedMaxDivergence,
+                ZeroConcentratedDivergence,
+                ExtrinsicDivergence
+            ]
+        )],
+        (privacy_measure)
+    )
+    .into()
+}
+
 #[bootstrap(name = "zero_concentrated_divergence")]
 /// Privacy measure used to define $\rho$-zero concentrated differential privacy.
 ///
@@ -282,20 +319,36 @@ pub extern "C" fn opendp_measures__renyi_divergence() -> FfiResult<*mut AnyMeasu
     Ok(AnyMeasure::new(RenyiDivergence)).into()
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct ExtrinsicDivergence {
-    pub descriptor: String,
+    pub element: ExtrinsicElement,
+}
+
+// TODO: drop requirement for Default on privacy measures
+impl Default for ExtrinsicDivergence {
+    fn default() -> Self {
+        Self {
+            element: ExtrinsicElement::new(
+                "UserDivergence".to_string(),
+                ExtrinsicObject(std::ptr::null()),
+            ),
+        }
+    }
 }
 
 impl std::fmt::Debug for ExtrinsicDivergence {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "UserDivergence({:?})", self.descriptor)
+        write!(f, "{:?}", self.element)
     }
 }
 
 impl PartialEq for ExtrinsicDivergence {
     fn eq(&self, other: &Self) -> bool {
-        self.descriptor == other.descriptor
+        self.element
+            .value
+            .total_cmp(&other.element.value)
+            .map(|ordering| ordering == Ordering::Equal)
+            .unwrap_or(false)
     }
 }
 
@@ -306,11 +359,14 @@ impl Measure for ExtrinsicDivergence {
 #[bootstrap(
     name = "user_divergence",
     features("honest-but-curious"),
-    arguments(descriptor(rust_type = "String"))
+    arguments(
+        identifier(c_type = "char *", rust_type = b"null"),
+        descriptor(default = b"null", rust_type = "ExtrinsicObject")
+    )
 )]
 /// Privacy measure with meaning defined by an OpenDP Library user (you).
 ///
-/// Any two instances of UserDivergence are equal if their string descriptors are equal.
+/// Any two instances of UserDivergence are equal if their descriptors compare equal.
 ///
 /// # Proof definition
 ///
@@ -323,7 +379,8 @@ impl Measure for ExtrinsicDivergence {
 /// $D_U(Y, Y') \ge D_U(f(Y), f(Y'))$.
 ///
 /// # Arguments
-/// * `descriptor` - A string description of the privacy measure.
+/// * `identifier` - A string description of the privacy measure.
+/// * `descriptor` - Additional constraints on the privacy measure.
 ///
 /// # Why honest-but-curious?
 /// The essential requirement of a privacy measure is that it is closed under postprocessing.
@@ -332,63 +389,30 @@ impl Measure for ExtrinsicDivergence {
 /// Beyond this, you should also consider whether your privacy measure can be used to provide meaningful privacy guarantees to your privacy units.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_measures__user_divergence(
-    descriptor: *mut c_char,
+    identifier: *mut c_char,
+    descriptor: *mut ExtrinsicObject,
 ) -> FfiResult<*mut AnyMeasure> {
-    let descriptor = try_!(to_str(descriptor)).to_string();
-    Ok(AnyMeasure::new(ExtrinsicDivergence { descriptor })).into()
+    let value = try_as_ref!(descriptor).clone();
+    let identifier = try_!(crate::ffi::util::to_str(identifier)).to_string();
+    let element = ExtrinsicElement::new(identifier, value);
+    Ok(AnyMeasure::new(ExtrinsicDivergence { element })).into()
 }
 
-pub struct TypedMeasure<Q> {
-    pub measure: AnyMeasure,
-    marker: PhantomData<fn() -> Q>,
-}
-
-impl<Q: 'static> TypedMeasure<Q> {
-    pub fn new(measure: AnyMeasure) -> Fallible<TypedMeasure<Q>> {
-        if measure.distance_type != Type::of::<Q>() {
-            return fallible!(
-                FFI,
-                "unexpected distance type in measure. Expected {}, got {}",
-                Type::of::<Q>().to_string(),
-                measure.distance_type.to_string()
-            );
-        }
-
-        Ok(TypedMeasure {
-            measure,
-            marker: PhantomData,
-        })
-    }
-}
-
-impl<Q> PartialEq for TypedMeasure<Q> {
-    fn eq(&self, other: &Self) -> bool {
-        self.measure == other.measure
-    }
-}
-
-impl<Q> Clone for TypedMeasure<Q> {
-    fn clone(&self) -> Self {
-        Self {
-            measure: self.measure.clone(),
-            marker: self.marker.clone(),
-        }
-    }
-}
-
-impl<Q> Debug for TypedMeasure<Q> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.measure)
-    }
-}
-impl<Q> Default for TypedMeasure<Q> {
-    fn default() -> Self {
-        panic!()
-    }
-}
-
-impl<Q> Measure for TypedMeasure<Q> {
-    type Distance = Q;
+#[bootstrap(
+    name = "_extrinsic_measure_descriptor",
+    arguments(measure(rust_type = b"null")),
+    returns(c_type = "FfiResult<ExtrinsicObject *>")
+)]
+/// Retrieve the descriptor value stored in an extrinsic measure.
+///
+/// # Arguments
+/// * `measure` - The ExtrinsicDivergence to extract the descriptor from
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measures___extrinsic_measure_descriptor(
+    measure: *mut AnyMeasure,
+) -> FfiResult<*mut ExtrinsicObject> {
+    let measure = try_!(try_as_ref!(measure).downcast_ref::<ExtrinsicDivergence>()).clone();
+    FfiResult::Ok(util::into_raw(measure.element.value.clone()))
 }
 
 #[bootstrap(
@@ -408,7 +432,7 @@ impl<Q> Measure for TypedMeasure<Q> {
 ///
 /// * monotonically decreasing
 /// * rejects epsilon values that are less than zero or nan
-/// * returns delta values only within [0, 1]
+/// * returns delta values only within $[0, 1]$
 #[allow(dead_code)]
 fn new_privacy_profile(curve: *const CallbackFn) -> Fallible<AnyObject> {
     let _ = curve;

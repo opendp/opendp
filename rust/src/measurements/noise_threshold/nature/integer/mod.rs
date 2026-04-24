@@ -21,6 +21,9 @@ use crate::{
 #[cfg(test)]
 mod test;
 
+#[proven(
+    proof_path = "measurements/noise_threshold/nature/integer/MakeNoiseThreshold_MapDomain_for_IntExpFamily.tex"
+)]
 impl<TK, TV, const P: usize, QI: Number, MO: 'static + Measure>
     MakeNoiseThreshold<
         MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
@@ -46,9 +49,9 @@ where
     ) -> Fallible<
         Measurement<
             MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
-            HashMap<TK, TV>,
             L0PInfDistance<P, AbsoluteDistance<QI>>,
             MO,
+            HashMap<TK, TV>,
         >,
     > {
         let distribution = ZExpFamily {
@@ -77,8 +80,8 @@ fn make_int_to_bigint_threshold<TK, TV, const P: usize, QI: Number>(
 ) -> Fallible<
     Transformation<
         MapDomain<AtomDomain<TK>, AtomDomain<TV>>,
-        MapDomain<AtomDomain<TK>, AtomDomain<IBig>>,
         L0PInfDistance<P, AbsoluteDistance<QI>>,
+        MapDomain<AtomDomain<TK>, AtomDomain<IBig>>,
         L0PInfDistance<P, AbsoluteDistance<RBig>>,
     >,
 >
@@ -91,17 +94,17 @@ where
     let (input_domain, input_metric) = input_space;
     Transformation::new(
         input_domain.clone(),
+        input_metric,
         MapDomain {
             key_domain: input_domain.key_domain.clone(),
             value_domain: AtomDomain::<IBig>::default(),
         },
+        L0PInfDistance::default(),
         Function::new(move |arg: &HashMap<TK, TV>| {
             arg.iter()
                 .map(|(k, v)| (k.clone(), IBig::from(v.clone())))
                 .collect()
         }),
-        input_metric,
-        L0PInfDistance::default(),
         StabilityMap::new_fallible(move |(l0, lp, li): &(u32, QI, QI)| {
             let lp = RBig::try_from(lp.clone())
                 .map_err(|_| err!(FailedMap, "l{P} ({lp:?}) must be finite"))?;

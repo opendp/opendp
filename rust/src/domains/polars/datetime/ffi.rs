@@ -1,7 +1,7 @@
 use std::ffi::c_char;
 
 use opendp_derive::bootstrap;
-use polars::prelude::TimeUnit;
+use polars::prelude::{TimeUnit, TimeZone};
 
 use crate::{
     core::FfiResult,
@@ -12,6 +12,7 @@ use crate::{
 use super::DatetimeDomain;
 
 #[bootstrap(
+    rust_path = "domains/struct.DatetimeDomain",
     arguments(time_unit(default = "us"), time_zone(default = b"null")),
     generics(DI(suppress)),
     returns(c_type = "FfiResult<AnyDomain *>")
@@ -37,7 +38,7 @@ fn datetime_domain(time_unit: &str, time_zone: Option<&str>) -> Fallible<Datetim
     };
     Ok(DatetimeDomain {
         time_unit,
-        time_zone: time_zone.map(|s| s.into()),
+        time_zone: TimeZone::opt_try_new(time_zone)?,
     })
 }
 

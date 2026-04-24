@@ -42,7 +42,7 @@ mod full;
 /// You can indicate a list of features that must be enabled by the user for the function to exist.
 /// ```no_run
 /// #[bootstrap(
-///     features("contrib", "floating-point")
+///     features("contrib", "idealized-numerics")
 /// )]
 /// ```
 /// It is recommended to specify features through the `bootstrap` function, not via `cfg` attributes,
@@ -64,6 +64,16 @@ mod full;
 /// def my_func_renamed():
 ///     pass
 /// ```
+///
+/// # Rust Link
+/// Set to the expected path of Rust documentation, if it can't be correctly inferred.
+///
+/// ```compile_fail
+/// #[bootstrap(rust_path = "domains/struct.AtomDomain")]
+/// fn my_func() {}
+/// ```
+///
+/// This gives a manual way to fix dead links to rust documentation in bindings language documentation.
 ///
 /// # Arguments, Generics and Return
 /// You can pass additional metadata that is specific to each argument or generic.

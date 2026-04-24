@@ -28,7 +28,7 @@ pub fn make_randomized_response_bitvec(
     input_metric: DiscreteDistance,
     f: f64,
     constant_time: bool,
-) -> Fallible<Measurement<BitVectorDomain, BitVector, DiscreteDistance, MaxDivergence>> {
+) -> Fallible<Measurement<BitVectorDomain, DiscreteDistance, MaxDivergence, BitVector>> {
     let m = match input_domain.max_weight {
         Some(m) => m,
         None => {
@@ -53,9 +53,10 @@ pub fn make_randomized_response_bitvec(
     let f_2 = f.inf_div(&2.0)?;
     Measurement::new(
         input_domain,
+        input_metric,
+        MaxDivergence,
         Function::new_fallible(move |arg: &BitVector| {
-            let n = arg.len();
-            let noise_vector = (1..n)
+            let noise_vector = (0..arg.len())
                 .into_iter()
                 .map(|_| sample_bernoulli_float(f_2, constant_time))
                 .collect::<Fallible<BitVector>>()?;
@@ -63,8 +64,6 @@ pub fn make_randomized_response_bitvec(
             // Shouldn't use much memory anyway given bit-vecs
             Ok(arg.clone() ^ noise_vector) // xor on bit vectors
         }),
-        input_metric,
-        MaxDivergence,
         PrivacyMap::new_fallible(move |&d_in: &u32| {
             if d_in == 0 {
                 return Ok(0.0);
@@ -138,11 +137,38 @@ mod test {
     }
 
     #[test]
+    fn test_make_randomized_response_bitvec_randomizes_last_bit() -> Fallible<()> {
+        let m_rr = make_randomized_response_bitvec(
+            BitVectorDomain::new().with_max_weight(1),
+            DiscreteDistance,
+            1.0,
+            false,
+        )?;
+        let input = bitvec![u8, Lsb0; 0, 0, 0, 1];
+
+        let mut seen_true = false;
+        let mut seen_false = false;
+
+        for _ in 0..64 {
+            let release = m_rr.invoke(&input)?;
+            let last_bit = release[release.len() - 1];
+            seen_true |= last_bit;
+            seen_false |= !last_bit;
+            if seen_true && seen_false {
+                break;
+            }
+        }
+
+        assert!(
+            seen_true && seen_false,
+            "expected last bit to be randomized"
+        );
+        Ok(())
+    }
+
+    #[test]
     fn test_debias_rr_bitvec() -> Fallible<()> {
         let f = 0.1;
-        let mut answer = vec![0.0; 10];
-        answer[0] = 1.0;
-
         let answers = vec![bitvec![u8, Lsb0; 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]; 10];
 
         let high = 10.555555555555555;

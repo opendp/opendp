@@ -20,6 +20,7 @@ Features can be enabled via the following syntax:
       .. code-block:: python
 
          import opendp.prelude as dp
+
          dp.enable_features("contrib")
 
    .. tab-item:: R
@@ -56,8 +57,12 @@ Features that are available from Python and R:
        That is, if a user/adversary is 'honest' in specifying the constructor arguments,
        then even if they later become 'curious' and try to learn something from the measurement outputs,
        they will not be able to violate the differential privacy promises of the measurement.
+   * - ``idealized-numerics``
+     - Enable to assume an idealized numeric model
+       that ignores finite-precision limitations such as non-closure and overflow,
+       resulting in an underestimation of the actual privacy loss.
    * - ``floating-point``
-     - Enable to include transformations and measurements with floating-point vulnerabilities.
+     - Deprecated alias for ``idealized-numerics``.
    * - ``rust-stack-trace``
      - Enable to allow stack traces to include stack frames from Rust.
 

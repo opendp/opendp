@@ -13,32 +13,25 @@ pub fn make_stable_source<M: Metric>(
     input_domain: DslPlanDomain,
     input_metric: M,
     plan: DslPlan,
-) -> Fallible<Transformation<DslPlanDomain, DslPlanDomain, M, M>>
+) -> Fallible<Transformation<DslPlanDomain, M, DslPlanDomain, M>>
 where
     (DslPlanDomain, M): MetricSpace,
     M::Distance: 'static + Clone,
 {
     let DslPlan::DataFrameScan {
         df: _, // DO NOT TOUCH THE DATA. Touching the data will degrade any downstream stability or privacy guarantees.
-        schema,
+        ..
     } = plan
     else {
         return fallible!(MakeTransformation, "Expected dataframe scan");
     };
 
-    if &input_domain.schema() != schema.as_ref() {
-        return fallible!(
-            MakeTransformation,
-            "Schema mismatch. LazyFrame schema must match the schema from the input domain."
-        );
-    }
-
     Transformation::new(
         input_domain.clone(),
-        input_domain,
-        Function::new(Clone::clone),
         input_metric.clone(),
+        input_domain,
         input_metric,
+        Function::new(Clone::clone),
         StabilityMap::new(Clone::clone),
     )
 }

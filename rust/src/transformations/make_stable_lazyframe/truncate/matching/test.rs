@@ -67,7 +67,7 @@ fn test_match_truncations_groupby_not_last() -> Fallible<()> {
         .agg([col("B").sum()])
         .filter(truncate_num_groups.clone());
 
-    // should get a nice error when group by truncation is not last
+    // should get a nice error when group-by truncation is not last
     let res = match_truncations(plan.logical_plan.clone(), &col("ID"));
     let msg = "Groupby truncation must be the last truncation in the plan.";
     assert!((res.map(|_| ()).unwrap_err().message.unwrap()).starts_with(msg));

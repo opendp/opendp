@@ -2,7 +2,7 @@
 The ``prelude`` module provides shortcuts that reduce the number of ``import`` statements needed to get started.
 In most of our notebooks we begin with:
 
-.. code:: python
+.. code:: pycon
 
     >>> import opendp.prelude as dp
     >>> dp.enable_features("contrib")
@@ -25,7 +25,7 @@ In addition, three modules are distinctive and have shortcut submodules:
 :py:mod:`combinators <opendp.combinators>` as ``c``.
 For example:
 
-.. code:: python
+.. code:: pycon
 
     >>> type(dp.t.then_sum)
     <class 'function'>
@@ -35,7 +35,7 @@ For example:
     <class 'function'>
 '''
 from opendp.mod import *
-from opendp.extras import sklearn, numpy, polars, examples
+from opendp.extras import sklearn, numpy, polars, examples, mbi
 from opendp.extras.polars import dp_len as len
 import opendp.transformations as t
 import opendp.measurements as m
@@ -45,7 +45,7 @@ from opendp.metrics import *
 from opendp.measures import *
 from opendp.typing import *
 from opendp.accuracy import *
-from opendp.core import new_function, new_queryable
+from opendp.core import as_array, new_function, new_queryable
 from opendp.context import *
 
 __all__ = ["t", "m", "c"]

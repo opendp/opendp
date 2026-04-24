@@ -3,7 +3,7 @@
 #[cfg(feature = "ffi")]
 mod ffi;
 
-#[cfg(feature = "polars")]
+#[cfg(all(feature = "polars", feature = "contrib"))]
 pub mod polars;
 
 mod tail_bounds;

@@ -28,13 +28,23 @@ use crate::traits::{ExactIntCast, Hashable, InfDiv, InfLn, InfMul, InfSub};
 #[bootstrap(features("contrib"), arguments(constant_time(default = false)))]
 /// Make a Measurement that implements randomized response on a boolean value.
 ///
+/// # Citations
+/// * [Warner65 Randomized Response: A Survey Technique for Eliminating Evasive Answer Bias](https://doi.org/10.1080/01621459.1965.10480775)
+///
+/// # Runtime
+/// Per release, runtime is `O(1)`.
+///
+/// # Utility
+/// The released bit matches the input with probability `prob`,
+/// so the expected 0-1 loss is `O(1 - prob)`.
+///
 /// # Arguments
 /// * `prob` - Probability of returning the correct answer. Must be in `[0.5, 1]`
 /// * `constant_time` - Set to true to enable constant time. Slower.
 pub fn make_randomized_response_bool(
     prob: f64,
     constant_time: bool,
-) -> Fallible<Measurement<AtomDomain<bool>, bool, DiscreteDistance, MaxDivergence>> {
+) -> Fallible<Measurement<AtomDomain<bool>, DiscreteDistance, MaxDivergence, bool>> {
     // number of categories t is 2, and probability is bounded below by 1/t
     if !(0.5f64..=1.0).contains(&prob) {
         return fallible!(MakeMeasurement, "probability must be within [0.5, 1]");
@@ -51,11 +61,11 @@ pub fn make_randomized_response_bool(
 
     Measurement::new(
         AtomDomain::default(),
+        DiscreteDistance,
+        MaxDivergence,
         Function::new_fallible(move |arg: &bool| {
             Ok(arg ^ !sample_bernoulli_float(prob, constant_time)?)
         }),
-        DiscreteDistance,
-        MaxDivergence,
         PrivacyMap::new(move |d_in| if *d_in == 0 { 0.0 } else { privacy_constant }),
     )
 }
@@ -67,6 +77,19 @@ pub fn make_randomized_response_bool(
 )]
 /// Make a Measurement that implements randomized response on a categorical value.
 ///
+/// # Citations
+/// * [Warner65 Randomized Response: A Survey Technique for Eliminating Evasive Answer Bias](https://doi.org/10.1080/01621459.1965.10480775)
+///
+/// # Runtime
+/// Per release, runtime is `O(t)`, where `t` is the number of categories,
+/// because the implementation linearly searches for the input in `categories`.
+///
+/// # Utility
+/// If the input is a member of `categories`,
+/// the mechanism returns the truthful category with probability `prob`,
+/// so the expected 0-1 loss is `O(1 - prob)`.
+/// Otherwise, the output is sampled uniformly from `categories`.
+///
 /// # Arguments
 /// * `categories` - Set of valid outcomes
 /// * `prob` - Probability of returning the correct answer. Must be in `[1/num_categories, 1]`
@@ -76,7 +99,7 @@ pub fn make_randomized_response_bool(
 pub fn make_randomized_response<T: Hashable>(
     categories: HashSet<T>,
     prob: f64,
-) -> Fallible<Measurement<AtomDomain<T>, T, DiscreteDistance, MaxDivergence>> {
+) -> Fallible<Measurement<AtomDomain<T>, DiscreteDistance, MaxDivergence, T>> {
     use crate::traits::samplers::sample_uniform_uint_below;
 
     let categories = categories.into_iter().collect::<Vec<_>>();
@@ -108,6 +131,8 @@ pub fn make_randomized_response<T: Hashable>(
 
     Measurement::new(
         AtomDomain::default(),
+        DiscreteDistance,
+        MaxDivergence,
         Function::new_fallible(move |truth: &T| {
             // find index of truth in category set, or None
             let index = categories.iter().position(|cat| cat == truth);
@@ -129,8 +154,6 @@ pub fn make_randomized_response<T: Hashable>(
             let is_member = index.is_some();
             Ok(if be_honest && is_member { truth } else { lie }.clone())
         }),
-        DiscreteDistance,
-        MaxDivergence,
         PrivacyMap::new(move |d_in| if *d_in == 0 { 0.0 } else { privacy_constant }),
     )
 }

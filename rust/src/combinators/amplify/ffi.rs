@@ -2,14 +2,11 @@ use std::os::raw::c_uint;
 
 use opendp_derive::bootstrap;
 
-use crate::combinators::{AmplifiableMeasure, IsSizedDomain};
+use crate::combinators::AmplifiableMeasure;
 use crate::core::FfiResult;
-use crate::domains::{AtomDomain, VectorDomain};
 use crate::error::Fallible;
-use crate::ffi::any::{AnyDomain, AnyMeasure, AnyMeasurement, AnyObject, Downcast};
-use crate::ffi::util::Type;
+use crate::ffi::any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast};
 use crate::measures::{Approximate, MaxDivergence};
-use crate::traits::{CheckAtom, ProductOrd};
 
 impl AmplifiableMeasure for AnyMeasure {
     fn amplify(
@@ -35,43 +32,6 @@ impl AmplifiableMeasure for AnyMeasure {
             [(self.type_, [MaxDivergence, Approximate<MaxDivergence>])],
             (self, budget, population_size, sample_size)
         )
-    }
-}
-
-impl IsSizedDomain for AnyDomain {
-    fn get_size(&self) -> Fallible<usize> {
-        fn monomorphize1<TIA>(domain: &AnyDomain, DIA: Type) -> Fallible<usize>
-        where
-            TIA: 'static + Clone + ProductOrd + CheckAtom,
-        {
-            fn monomorphize2<DIA: IsSizedDomain>(domain: &AnyDomain) -> Fallible<usize>
-            where
-                DIA: 'static,
-                DIA::Carrier: 'static + Clone,
-            {
-                domain
-                    .downcast_ref::<DIA>()
-                    .map_err(|_| {
-                        err!(
-                            FFI,
-                            "failed to downcast AnyDomain to {}",
-                            Type::of::<DIA>().to_string()
-                        )
-                    })?
-                    .get_size()
-            }
-
-            dispatch!(
-                monomorphize2,
-                [(DIA, [VectorDomain<AtomDomain<TIA>>])],
-                (domain)
-            )
-        }
-
-        let DI = Type::of_id(&self.domain.value.type_id())?;
-        let TIA = DI.get_atom()?;
-
-        dispatch!(monomorphize1, [(TIA, @numbers)], (self, DI))
     }
 }
 

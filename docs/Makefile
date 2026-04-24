@@ -4,7 +4,11 @@
 # You can set these variables from the command line.
 CARGO         = cargo
 SPHINXAPIDOC  = sphinx-apidoc
-SPHINXOPTS    = -W --keep-going
+
+# TODO: restore "-W": Treat warnings as errors.
+# https://github.com/opendp/opendp/issues/2509
+# https://github.com/opendp/opendp/issues/2508
+SPHINXOPTS    = --keep-going
 SPHINXBUILD   = sphinx-build
 SPHINXMULTI   = sphinx-multiversion
 PAPER         =
@@ -30,7 +34,7 @@ html:
 	@set -e
 	# If sphinx-apidoc options change, also update conf.py!
 	$(SPHINXAPIDOC) -f -F -e -d 3 -H "OpenDP" -A "The OpenDP Project" -V $(VERSION) -o source/api/python ../python/src/opendp --templatedir source/_templates
-	$(SPHINXBUILD) $(SPHINXOPTS) -D version=$(VERSION) -D 'html_sidebars.**'=sidebar-nav-bs.html source $(BUILDDIR)/html
+	OPENDP_SPHINX_LOCAL=1 $(SPHINXBUILD) $(SPHINXOPTS) -D version=$(VERSION) source $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 

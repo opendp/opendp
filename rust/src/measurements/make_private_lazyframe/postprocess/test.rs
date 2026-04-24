@@ -1,5 +1,8 @@
-use polars::{df, lazy::frame::IntoLazy, prelude::LazyFrame};
-use polars_plan::dsl::col;
+use polars::{
+    df,
+    lazy::frame::IntoLazy,
+    prelude::{LazyFrame, col, lit},
+};
 
 use crate::{
     domains::{AtomDomain, Margin, SeriesDomain},
@@ -24,7 +27,7 @@ fn lazyframe_select_postprocess_query() -> Fallible<(LazyFrameDomain, LazyFrame)
     let lf = df!("A" => [0, 1, 1], "B" => [true, false, true])?
         .lazy()
         .group_by([col("B")])
-        .agg([col("A").dp().sum((0, 1), Some(1.))]);
+        .agg([col("A").dp().sum((lit(0), lit(1)), Some(1.))]);
 
     Ok((lf_domain, lf))
 }

@@ -1,20 +1,21 @@
 '''
 This module requires extra installs: ``pip install 'opendp[scikit-learn]'``
 
-For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
+For convenience, all the members of this module are also available from :py:mod:`opendp.prelude`.
 We suggest importing under the conventional name ``dp``:
 
-.. code:: python
+.. code:: pycon
 
     >>> import opendp.prelude as dp
 
-The methods of this module will then be accessible at ``dp.sklearn.decomposition``.    
+The members of this module will then be accessible at ``dp.sklearn.decomposition``.    
 
 See also our :ref:`tutorial on diffentially private PCA <dp-pca>`.
 '''
 
 from __future__ import annotations
-from typing import NamedTuple, Optional, TYPE_CHECKING, Sequence
+from typing import Optional, TYPE_CHECKING, Sequence
+from dataclasses import dataclass, asdict, astuple
 from opendp.extras.numpy import then_np_clamp
 from opendp.context import register
 from opendp.extras._utilities import to_then
@@ -22,19 +23,33 @@ from opendp.extras.numpy._make_np_mean import make_private_np_mean
 from opendp.extras.sklearn._make_eigendecomposition import then_private_np_eigendecomposition
 from opendp.mod import Domain, Measurement, Metric
 from opendp._lib import import_optional_dependency
-from opendp._internal import _make_measurement, _make_transformation
+from opendp._internal import _make_measurement, _make_transformation, _new_pure_function
 
 if TYPE_CHECKING: # pragma: no cover
     import numpy # type: ignore[import-not-found]
 
 
-class PCAEpsilons(NamedTuple):
+@dataclass(kw_only=True, frozen=True)
+class PCAEpsilons:
     '''
     Tuple used to describe the ε-expenditure per changed record in the input data
     '''
     eigvals: float
+    '''ε-expenditure to estimate the eigenvalues'''
     eigvecs: Sequence[float]
+    '''ε-expenditure to estimate the eigenvectors'''
     mean: Optional[float]
+    """ε-expenditure to estimate the mean.
+
+A portion of the budget is used to estimate the mean because the OpenDP PCA algorithm 
+releases an eigendecomposition of the sum of squares and cross-products matrix (SSCP), 
+not of the covariance matrix. 
+If the data is centered beforehand (either by a prior from the user or by privately estimating the mean and then centering), 
+then PCA will correspond to the covariance matrix, as expected, 
+because the SSCP matrix of centered data is equivalent to a scaled covariance matrix.
+
+If the data is not centered (or the mean is poorly estimated), then the first eigenvector will be dominated by the true mean.
+"""
 
 
 def make_private_pca(
@@ -57,9 +72,10 @@ def make_private_pca(
     import opendp.prelude as dp
     np = import_optional_dependency('numpy')
 
-    dp.assert_features("contrib", "floating-point")
+    dp.assert_features("contrib", "idealized-numerics")
 
-    class PCAResult(NamedTuple):
+    @dataclass(kw_only=True, frozen=True)
+    class PCAResult:
         mean: numpy.ndarray
         S: numpy.ndarray
         Vt: numpy.ndarray
@@ -90,24 +106,26 @@ def make_private_pca(
     if not isinstance(unit_epsilon, PCAEpsilons):
         raise ValueError("epsilon must be a float or instance of PCAEpsilons")  # pragma: no cover
 
-    eigvals_epsilon, eigvecs_epsilons, mean_epsilon = unit_epsilon
-
-    def _eig_to_SVt(decomp):
-        eigvals, eigvecs = decomp
-        return np.sqrt(np.maximum(eigvals, 0))[::-1], eigvecs.T
-
     def _make_eigdecomp(norm, origin):
+        if not isinstance(unit_epsilon, PCAEpsilons):
+            raise ValueError("expected epsilon to be PCAEpsilons at this point")  # pragma: no cover
         return (
             (input_domain, input_metric)
             >> then_np_clamp(norm, p=2, origin=origin)
             >> then_center()
-            >> then_private_np_eigendecomposition(eigvals_epsilon, eigvecs_epsilons)
-            >> (lambda out: PCAResult(origin, *_eig_to_SVt(out)))
+            >> then_private_np_eigendecomposition(unit_epsilon.eigvals, unit_epsilon.eigvecs)
+            >> _new_pure_function(
+                lambda out: PCAResult(
+                    mean=origin,
+                    S=np.sqrt(np.maximum(out[0], 0))[::-1],
+                    Vt=out[1].T,
+                )
+            )
         )
 
     if input_desc.norm is not None:
-        if mean_epsilon is not None:
-            raise ValueError("mean_epsilon should be zero because origin is known")  # pragma: no cover
+        if unit_epsilon.mean is not None:
+            raise ValueError("unit_epsilon.mean should be zero because origin is known")  # pragma: no cover
         norm = input_desc.norm if norm is None else norm
         norm = min(input_desc.norm, norm)
         return _make_eigdecomp(norm, input_desc.origin)
@@ -123,11 +141,10 @@ def make_private_pca(
         input_metric,
         dp.max_divergence(),
         d_in=unit_d_in,
-        d_mids=[mean_epsilon, _make_eigdecomp(norm, 0).map(unit_d_in)],
+        d_mids=[unit_epsilon.mean, _make_eigdecomp(norm, 0).map(unit_d_in)],
     )
 
     def _function(data):
-        nonlocal input_domain
         qbl = compositor(data)
 
         # find origin
@@ -136,7 +153,7 @@ def make_private_pca(
                 input_domain, input_metric, s, norm=norm, p=1
             ),
             d_in=unit_d_in,
-            d_out=mean_epsilon,
+            d_out=unit_epsilon.mean,
             T=float,
         )
         origin = qbl(m_mean)
@@ -306,10 +323,10 @@ if _decomposition is not None:
         def _postprocess(self, values):
             """A function that applies a release of the mean and eigendecomposition to self"""
             np = import_optional_dependency('numpy')
-            from sklearn.utils.extmath import stable_cumsum, svd_flip # type: ignore[import]
+            from sklearn.utils.extmath import svd_flip # type: ignore[import]
             from sklearn.decomposition._pca import _infer_dimension # type: ignore[import]
 
-            self.mean_, S, Vt = values
+            self.mean_, S, Vt = astuple(values)
             U = Vt.T
             n_samples, n_features = self.n_samples, self.n_features_in_
             n_components = self.n_components
@@ -336,7 +353,7 @@ if _decomposition is not None:
                 # their variance is always greater than n_components float
                 # passed. More discussion in issue: https://github.com/scikit-learn/scikit-learn/pull/15669
                 explained_variance_ratio_np = explained_variance_ratio_
-                ratio_cumsum = stable_cumsum(explained_variance_ratio_np)
+                ratio_cumsum = np.cumsum(explained_variance_ratio_np)
                 n_components = np.searchsorted(ratio_cumsum, n_components, side="right") + 1
 
             # Compute noise covariance using Probabilistic PCA model
@@ -357,7 +374,7 @@ if _decomposition is not None:
 
         def measurement(self) -> Measurement:
             """Return a measurement that releases a fitted model."""
-            return self._prepare_fitter() >> (lambda _: self)
+            return self._prepare_fitter() >> _new_pure_function(lambda _: self)
 
         # overrides an sklearn method
         def _validate_params(*args, **kwargs):
@@ -392,11 +409,11 @@ def _make_center(input_domain, input_metric):
     import opendp.prelude as dp
     np = import_optional_dependency('numpy')
 
-    dp.assert_features("contrib", "floating-point")
+    dp.assert_features("contrib", "idealized-numerics")
 
     input_desc = input_domain.descriptor
 
-    kwargs = input_desc._asdict() | {"origin": np.zeros(input_desc.num_columns)}
+    kwargs = asdict(input_desc) | {"origin": np.zeros(input_desc.num_columns)}
     return _make_transformation(
         input_domain,
         input_metric,

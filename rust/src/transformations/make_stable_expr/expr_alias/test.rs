@@ -1,8 +1,8 @@
 use polars::{
     df,
     lazy::frame::{IntoLazy, LazyFrame},
+    prelude::col,
 };
-use polars_plan::dsl::col;
 
 use crate::{
     domains::{AtomDomain, LazyFrameDomain, SeriesDomain},
@@ -31,8 +31,8 @@ macro_rules! test_query {
         let t_lf = make_stable_lazyframe(lf_domain, FrameDistance(SymmetricDistance), query)?;
 
         assert_eq!(
-            t_lf.output_domain.schema(),
-            t_lf.invoke(&lf)?.collect()?.schema()
+            &t_lf.output_domain.schema(),
+            &**t_lf.invoke(&lf)?.collect()?.schema()
         );
         Ok(())
     }};

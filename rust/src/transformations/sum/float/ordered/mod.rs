@@ -52,8 +52,8 @@ pub fn make_bounded_float_ordered_sum<S>(
 ) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<S::Item>>,
-        AtomDomain<S::Item>,
         InsertDeleteDistance,
+        AtomDomain<S::Item>,
         AbsoluteDistance<S::Item>,
     >,
 >
@@ -69,12 +69,12 @@ where
 
     Transformation::new(
         VectorDomain::new(AtomDomain::new_closed(bounds)?),
+        InsertDeleteDistance,
         AtomDomain::new_non_nan(),
+        AbsoluteDistance::default(),
         Function::new(move |arg: &Vec<S::Item>| {
             S::saturating_sum(&arg[..size_limit.min(arg.len())])
         }),
-        InsertDeleteDistance,
-        AbsoluteDistance::default(),
         StabilityMap::new_fallible(move |d_in: &IntDistance| {
             // d_out =  |BS*(v) - BS*(v')| where BS* is the finite sum and BS the ideal sum
             //       <= |BS*(v) - BS(v)| + |BS(v) - BS(v')| + |BS(v') - BS*(v')|
@@ -126,8 +126,8 @@ pub fn make_sized_bounded_float_ordered_sum<S>(
 ) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<S::Item>>,
-        AtomDomain<S::Item>,
         InsertDeleteDistance,
+        AtomDomain<S::Item>,
         AbsoluteDistance<S::Item>,
     >,
 >
@@ -141,10 +141,10 @@ where
 
     Transformation::new(
         VectorDomain::new(AtomDomain::new_closed(bounds)?).with_size(size),
-        AtomDomain::new_non_nan(),
-        Function::new(move |arg: &Vec<S::Item>| S::saturating_sum(arg)),
         InsertDeleteDistance,
+        AtomDomain::new_non_nan(),
         AbsoluteDistance::default(),
+        Function::new(move |arg: &Vec<S::Item>| S::saturating_sum(arg)),
         StabilityMap::new_fallible(move |d_in: &IntDistance| {
             // d_out =  |BS*(v) - BS*(v')| where BS* is the finite sum and BS the ideal sum
             //       <= |BS*(v) - BS(v)| + |BS(v) - BS(v')| + |BS(v') - BS*(v')|

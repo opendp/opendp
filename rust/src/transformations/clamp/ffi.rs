@@ -1,6 +1,5 @@
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, MetricSpace};
 use crate::domains::{AtomDomain, VectorDomain};
-use crate::err;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyObject, AnyTransformation, Downcast};
 use crate::metrics::EventLevelMetric;
@@ -25,7 +24,7 @@ pub extern "C" fn opendp_transformations__make_clamp(
         bounds: &AnyObject,
     ) -> Fallible<AnyTransformation>
     where
-        TA: 'static + Clone + ProductOrd + CheckAtom,
+        TA: 'static + Clone + ProductOrd + PartialOrd + CheckAtom,
         M: 'static + EventLevelMetric,
         (VectorDomain<AtomDomain<TA>>, M): MetricSpace,
     {

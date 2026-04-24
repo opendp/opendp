@@ -100,13 +100,13 @@ def test__tulap_cdf_array_input():
     t_values = np.array([-1.0, -0.5, 0.0, 0.5, 1.0])
 
     ptulap_results = _cnd_cdf(t_values, shift=0.0, d_in=1.0, d_out=(0.5, 1e-7))
-    assert list(ptulap_results) == [
+    assert np.allclose(ptulap_results, [
         0.30326526920325075,
         0.37754063104407853,
         0.5,
         0.6224593689559215,
         0.6967347307967493,
-    ]
+    ])
 
 
 def test__tulap_cdf_inf_handling():

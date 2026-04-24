@@ -2,7 +2,7 @@
 \input{../../../lib.sty}
 
 \title{\texttt{fn sample\_uniform\_uint\_below}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 
 \begin{document}
 \maketitle
@@ -22,33 +22,30 @@ The algorithm returns the sample, modulo the upper bound, so long as the sample 
 \end{itemize}
 
 \subsection{Hoare Triple}
-\subsubsection*{Preconditions}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
 \begin{itemize}
-    \item \textbf{Arguments}
-    \begin{itemize}
-        \item \texttt{upper} must be of type \texttt{T} and non-negative
-    \end{itemize}
-
-    \item \textbf{Type Arguments}
-    \begin{itemize}
-        \item \texttt{T} has traits \texttt{Integer + Unsigned + FromBytes<N>}, which narrows valid types to u16, u32, u64, u128, usize
-        \item \texttt{N}. By the definition of \texttt{FromBytes}, the compiler ensures this is the number of bytes in T.
-    \end{itemize}
+    \item \texttt{upper} must be of type \texttt{T}.
+    \item \texttt{T} has traits \texttt{Integer + Unsigned + FromBytes<N>}, which narrows valid types to u16, u32, u64, u128, usize.
+    \item By the definition of \texttt{FromBytes}, \texttt{N} is the number of bytes in \texttt{T}.
 \end{itemize}
 
-\subsubsection*{Pseudocode}
+\subsubsection*{Caller-verified}
+None
+
+\subsection*{Pseudocode}
 
 \lstinputlisting[language=Python,firstline=2]{./pseudocode/sample_uniform_uint_below.py}
 
-\subsubsection*{Postcondition}
+\subsection*{Postcondition}
+\begin{theorem}
 For any setting of the input parameter \texttt{upper},
 \texttt{sample\_uniform\_uint\_below} either
 \begin{itemize}
     \item raises an exception if there is a lack of system entropy,
     \item returns \texttt{out} where \texttt{out} is uniformly distributed between $[0, upper)$.
 \end{itemize}
-
-\subsection{Proof}
+\end{theorem}
 \begin{proof} 
 \label{unsigned-integer-proof}
 By the postcondition of \rustdoc{traits/samplers/uniform/fn}{sample\_from\_uniform\_bytes},

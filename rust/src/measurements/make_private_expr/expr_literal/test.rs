@@ -1,5 +1,4 @@
-use polars::df;
-use polars_plan::dsl::lit;
+use polars::{df, prelude::lit};
 
 use crate::{
     measurements::{PrivateExpr, make_private_lazyframe},

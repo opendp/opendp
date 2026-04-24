@@ -1,4 +1,4 @@
-from opendp.extras.polars import Margin, Bound
+from opendp.extras.polars import Margin
 import pytest
 import opendp.prelude as dp
 import warnings
@@ -6,6 +6,8 @@ import re
 import os
 import io
 from datetime import date, time, datetime
+
+from .helpers import ids
 
 
 def test_polars_version():
@@ -76,7 +78,11 @@ def test_domains():
 
 
 # data loaders
-@pytest.mark.parametrize("domain,series", zip(*example_series()))
+@pytest.mark.parametrize(
+    "domain,series",
+    zip(*example_series()),
+    ids=ids,
+)
 def test_series_ffi(domain, series):
     """ensure that series can be passed to/from Rust"""
     pl_testing = pytest.importorskip("polars.testing")
@@ -95,7 +101,8 @@ def test_lazyframe_ffi():
 
 
 @pytest.mark.parametrize(
-    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()]
+    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()],
+    ids=ids,
 )
 def test_private_lazyframe_explicit_sum(measure):
     pl = pytest.importorskip("polars")
@@ -125,7 +132,9 @@ def test_private_lazyframe_explicit_sum(measure):
 
 
 @pytest.mark.parametrize(
-    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()]
+    "measure",
+    [dp.max_divergence(), dp.zero_concentrated_divergence()],
+    ids=ids,
 )
 def test_private_lazyframe_sum(measure):
     pl = pytest.importorskip("polars")
@@ -137,7 +146,7 @@ def test_private_lazyframe_sum(measure):
         max_length=50,
         max_groups=10,
     )
-    expr = pl.col("A").fill_nan(0.0).fill_null(0.0).dp.sum((1.0, 2.0), scale=0.0)
+    expr = pl.col("A").dp.sum((1.0, 2.0), scale=0.0)
     plan = seed(lf.collect_schema()).group_by("B").agg(expr)
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), measure, plan, 0.0
@@ -153,7 +162,9 @@ def test_private_lazyframe_sum(measure):
 
 
 @pytest.mark.parametrize(
-    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()]
+    "measure",
+    [dp.max_divergence(), dp.zero_concentrated_divergence()],
+    ids=ids,
 )
 def test_private_lazyframe_mean(measure):
     pl = pytest.importorskip("polars")
@@ -166,7 +177,7 @@ def test_private_lazyframe_mean(measure):
         max_groups=10,
     )
 
-    expr = pl.col("A").fill_nan(0.0).fill_null(0.0).dp.mean((1.0, 2.0), scale=(0.0, 0.0))
+    expr = pl.col("A").dp.mean((1.0, 2.0), scale=0.0)
     plan = seed(lf.collect_schema()).group_by("B").agg(expr)
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), measure, plan, 1.0
@@ -241,7 +252,9 @@ def test_private_lazyframe_median():
 
 
 @pytest.mark.parametrize(
-    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()]
+    "measure",
+    [dp.max_divergence(), dp.zero_concentrated_divergence()],
+    ids=ids,
 )
 def test_filter(measure):
     """ensure that expr domain's carrier type can be passed to/from Rust"""
@@ -287,7 +300,9 @@ def test_onceframe_lazy():
 
 
 @pytest.mark.parametrize(
-    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()]
+    "measure",
+    [dp.max_divergence(), dp.zero_concentrated_divergence()],
+    ids=ids,
 )
 def test_mechanisms(measure):
     pl_testing = pytest.importorskip("polars.testing")
@@ -296,10 +311,11 @@ def test_mechanisms(measure):
 
     lf_domain, lf = example_lf()
 
-    if measure == dp.max_divergence():
-        expr = pl.len().dp.laplace(0.0)
-    else:
-        expr = pl.len().dp.gaussian(0.0)
+    with pytest.warns(DeprecationWarning):
+        if measure == dp.max_divergence():
+            expr = pl.len().dp.laplace(0.0)
+        else:
+            expr = pl.len().dp.gaussian(0.0)
 
     plan = seed(lf.collect_schema()).select(expr)
     m_lf = dp.m.make_private_lazyframe(
@@ -308,24 +324,6 @@ def test_mechanisms(measure):
 
     expect = pl.DataFrame([pl.Series("len", [50], dtype=pl.UInt32)])
     pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
-
-
-def test_wrong_mechanism():
-    pl = pytest.importorskip("polars")
-
-    lf_domain, lf = example_lf()
-
-    plan = seed(lf.collect_schema()).select(pl.len().dp.gaussian(0.0))
-    with pytest.raises(dp.OpenDPException) as err:
-        dp.m.make_private_lazyframe(
-            lf_domain,
-            dp.symmetric_distance(),
-            dp.max_divergence(),
-            plan,
-            0.0,
-        )
-    assert "expected Laplace distribution, found Gaussian" in (err.value.message or "")
-
 
 def test_polars_context():
     pl = pytest.importorskip("polars")
@@ -350,7 +348,7 @@ def test_polars_context():
         context.query()
         .with_columns(pl.col("B").is_null().alias("B_nulls"))
         .filter(pl.col("B_nulls"))
-        .select(pl.col("A").fill_null(2.0).dp.sum((0, 3)))
+        .select(pl.col("A").dp.sum((0, 3)))
         .release()
         .collect()
     )
@@ -358,7 +356,7 @@ def test_polars_context():
     (
         context.query()
         .group_by("B")
-        .agg(dp.len(), pl.col("A").fill_null(2).dp.sum((0, 3)))
+        .agg(dp.len(), pl.col("A").dp.sum((0, 3)))
         .release()
         .collect()
     )
@@ -393,7 +391,7 @@ def test_polars_describe():
         }
     )
 
-    summer = pl.col("A").fill_null(2).dp.sum((0, 3))
+    summer = pl.col("A").dp.sum((0, 3))
 
     query = context.query().group_by("B").agg(dp.len(), summer, summer.alias("B"))
 
@@ -438,7 +436,7 @@ def test_polars_accuracy_threshold():
     query = (
         context.query()
         .group_by("B")
-        .agg(dp.len(), pl.col("A").fill_null(2).dp.sum((0, 3)))
+        .agg(dp.len(), pl.col("A").dp.sum((0, 3)))
     )
 
     actual = query.summarize()
@@ -455,7 +453,7 @@ def test_polars_non_wrapping():
         split_evenly_over=1,
     )
     # only calls that return a LazyFrame or LazyGroupBy are wrapped
-    assert context.query().explain() == 'DF ["A"]; PROJECT */1 COLUMNS; SELECTION: None'
+    assert context.query().explain() == 'DF ["A"]; PROJECT */1 COLUMNS'
     assert context.query().collect_schema() == {"A": pl.String}
 
     # for coverage: attribute access works properly
@@ -602,6 +600,62 @@ def test_polars_threshold_rho():
     assert len(release) == 2
 
 
+def test_polars_grouped_quantile_max_groups_contribution_bound():
+    # Regression test for https://github.com/opendp/opendp/issues/2640
+    # A loose explicit max_groups should not dominate a tighter total contribution bound.
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    counts = {"first year": 485, "sophomore": 361, "junior": 85, "senior": 67}
+    rows = []
+    for group, n in counts.items():
+        for i in range(n):
+            rows.append(
+                {
+                    "class_year_str": group,
+                    "grade": [50, 60, 70, 80, 90, 100][i % 6],
+                }
+            )
+
+    lf = pl.DataFrame(rows).lazy()
+
+    context = dp.Context.compositor(
+        data=lf,
+        privacy_unit=dp.unit_of(contributions=10),
+        privacy_loss=dp.loss_of(epsilon=50.0, delta=1e-7),
+        split_by_weights=[1],
+        margins=[
+            dp.polars.Margin(
+                by=["class_year_str"],
+                max_length=10_000,
+                max_groups=100,
+            )
+        ],
+    )
+
+    query = context.query().group_by(["class_year_str"]).agg(
+        dp.len(),
+        pl.col("grade").dp.quantile(0.5, [50, 60, 70, 80, 90, 100]),
+    )
+
+    expected = pl.DataFrame(
+        {
+            "column": ["len", "grade"],
+            "aggregate": ["Frame Length", "0.5-Quantile"],
+            "distribution": ["Integer Laplace", "ExponentialMin"],
+            "scale": [4.2, 4.2],
+            "threshold": [84, None],
+        },
+        schema_overrides={"threshold": pl.UInt32},
+    )
+
+    pl_testing.assert_frame_equal(query.summarize(), expected)
+
+    release = query.release().collect()
+    assert release.columns == ["class_year_str", "len", "grade"]
+    assert set(["first year", "sophomore"]).issubset(release["class_year_str"])
+
+
 @pytest.mark.skipif(
     os.getenv("FORCE_TEST_REPLACE_BINARY_PATH") != "1",
     reason="setting OPENDP_POLARS_LIB_PATH interferes with the execution of other tests",
@@ -613,7 +667,7 @@ def test_replace_binary_path():
     expr = dp.len(scale=1.0)
 
     # check that the library overwrites paths
-    os.environ["OPENDP_POLARS_LIB_PATH"] = "testing!"
+    os.environ["OPENDP_POLARS_LIB_PATH"] = "opendp_testing!"
 
     m_expr = dp.m.make_private_expr(
         dp.wild_expr_domain(example_series()[0], dp.polars.Margin(by=[])),
@@ -621,11 +675,11 @@ def test_replace_binary_path():
         dp.max_divergence(),
         expr,
     )
-    assert "testing!" in str(m_expr(pl.LazyFrame(dict())).expr)
+    assert "opendp_testing!" in str(m_expr(pl.LazyFrame(dict())).expr)
 
     # check that local paths in new expressions get overwritten
     os.environ["OPENDP_POLARS_LIB_PATH"] = __file__
-    assert str(dp.len(scale=1.0)) == f"len().{__file__}:noise([null, dyn float: 1.0])"
+    assert str(dp.len(scale=1.0)) == f"dyn float: 1.{__file__}:dp_frame_len()"
 
     # cleanup
     del os.environ["OPENDP_POLARS_LIB_PATH"]
@@ -699,6 +753,20 @@ def test_pickle_bomb():
             dp.max_divergence(),
             bomb_lf,
         )
+
+
+def test_execute_shim():
+    pl = pytest.importorskip("polars")
+
+    context = dp.Context.compositor(
+        data=pl.LazyFrame({"A": [1]}),
+        privacy_unit=dp.unit_of(contributions=1),
+        privacy_loss=dp.loss_of(epsilon=1.0),
+    )
+    plan = context.query(epsilon=1.0).select(dp.len()).polars_plan
+
+    with pytest.raises(pl.exceptions.ComputeError, match="OpenDP expressions must be passed through"):
+        plan.collect()  # type: ignore[union-attr]
 
 
 def test_cut():
@@ -1041,7 +1109,7 @@ def test_replace():
 
     # this triggers construction of a lazyframe domain from the schema
     context = dp.Context.compositor(
-        data=pl.LazyFrame(pl.Series("alpha", ["A", "B", "C"] * 100)),
+        data=pl.LazyFrame(pl.Series("alpha", ["A", "B", "C"] * 1000)),
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=4,
@@ -1192,7 +1260,7 @@ def test_arithmetic():
 
     observed = (
         context.query()
-        .select((pl.col.data * pl.col.weights).fill_null(0).fill_nan(0).dp.sum((0, 5)))
+        .select((pl.col.data * pl.col.weights).dp.sum((0, 5)))
         .release()
         .collect()["data"][0]
     )
@@ -1200,95 +1268,11 @@ def test_arithmetic():
     # expectation is 330.0
     assert 260 < observed < 400
 
-@pytest.mark.parametrize("keep", ["first", "last", "sample"])
-def test_truncate_per_group(keep):
-    pl = pytest.importorskip("polars")
-
-    context = dp.Context.compositor(
-        data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100}),
-        privacy_unit=dp.unit_of(contributions=1, identifier="id"),
-        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
-        split_evenly_over=1,
-    )
-
-    query = context.query().truncate_per_group(2, keep=keep).select(dp.len())
-    assert query.summarize()["scale"][0] == 2.0000000000000004  # type: ignore[index]
-
-    context = dp.Context.compositor(
-        data=pl.LazyFrame({"alpha": ["A", "B", "C", "D"] * 100, "id": list(range(100)) * 4}),
-        privacy_unit=dp.unit_of(
-            contributions=[
-                Bound(
-                    by=["alpha"],
-                    num_groups=1,
-                    per_group=1,
-                )
-            ],
-            identifier="id",
-        ),
-        privacy_loss=dp.loss_of(rho=0.5, delta=1e-7),
-        split_evenly_over=1,
-    )
-
-    query = context.query().truncate_per_group(2, by=["alpha"], keep=keep).group_by("alpha").agg(dp.len())
-    assert query.summarize()["scale"][0] == 2.0000000000000004  # type: ignore[index]
-
-
-def test_truncate_per_group_sort_by():
-    pl = pytest.importorskip("polars")
-
-    context = dp.Context.compositor(
-        data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100, "sort": [3, 2, 1] * 100}),
-        privacy_unit=dp.unit_of(contributions=1, identifier="id"),
-        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
-        split_evenly_over=1,
-    )
-
-    query = context.query().truncate_per_group(2, keep=dp.polars.SortBy(pl.col("sort"))).select(dp.len())
-    assert query.summarize()["scale"][0] == 2.0000000000000004  # type: ignore[index]
-
-
-def test_truncate_error_messages():
-    pl = pytest.importorskip("polars")
-
-    context = dp.Context.compositor(
-        data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100, "sort": [3, 2, 1] * 100}),
-        privacy_unit=dp.unit_of(contributions=1, identifier="id"),
-        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
-        split_evenly_over=1,
-    )
-
-    query = context.query().truncate_num_groups(1, by=["alpha"]).select(dp.len())
-    with pytest.raises(dp.OpenDPException, match="`per_group` contributions is unknown. This is likely due to a missing truncation"):
-        query.summarize()
-    
-    query = context.query().truncate_num_groups(1, by=["alpha"]).group_by("sort").agg(dp.len())
-    with pytest.raises(dp.OpenDPException, match=re.escape('To bound `num_groups` in the Context API, try using `.truncate_num_groups(num_groups, by=[col("sort")])`. To bound `per_group` in the Context API, try using `.truncate_per_group(per_group, by=[col("sort")])`.')):
-        query.summarize()
-
-
-@pytest.mark.parametrize("keep", ["first", "last"])
-def test_truncate_num_groups(keep):
-    pl = pytest.importorskip("polars")
-
-    context = dp.Context.compositor(
-        data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100}),
-        privacy_unit=dp.unit_of(contributions=1, identifier="id"),
-        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
-        split_evenly_over=1,
-    )
-
-    query = (
-        context.query()
-        .truncate_per_group(2)
-        .truncate_num_groups(1, keep=keep, by=["alpha"])
-        .group_by("alpha")
-        .agg(dp.len())
-    )
-    assert query.summarize()["scale"][0] == 2.0000000000000004  # type: ignore[index]
-
-
-@pytest.mark.parametrize("privacy_unit", [dp.unit_of(changes=1), dp.unit_of(changes=1, ordered=True)])
+@pytest.mark.parametrize(
+    "privacy_unit",
+    [dp.unit_of(changes=1), dp.unit_of(changes=1, ordered=True)],
+    ids=ids,
+)
 def test_private_lazyframe_bounded_dp(privacy_unit):
     pl = pytest.importorskip("polars")
 
@@ -1300,65 +1284,8 @@ def test_private_lazyframe_bounded_dp(privacy_unit):
         margins=[dp.polars.Margin(by=(), max_length=300)],
     )
 
-    query = context.query().select(pl.col.id.fill_null(0).dp.sum((0, 3)))
+    query = context.query().select(pl.col.id.dp.sum((0, 3)))
     assert query.summarize()["scale"][0] == 3.000000000000001  # type: ignore[index]
-
-def test_lazyframe_bounded_dp_truncation():
-    pl = pytest.importorskip("polars")
-
-    context = dp.Context.compositor(
-        data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100}),
-        privacy_unit=dp.unit_of(changes=1, identifier="id"),
-        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
-        split_evenly_over=1,
-    )
-
-    # the unused with_columns is for test coverage of .truncate, 
-    # which retrieves input domain from prior query
-    query = context.query().with_columns(x=pl.lit(10)).truncate_per_group(3).select(dp.len())
-    assert query.summarize()["scale"][0] == 6.000000000000001  # type: ignore[index]
-
-
-def test_unnecessary_lazyframe_truncation():
-    pl = pytest.importorskip("polars")
-
-    context = dp.Context.compositor(
-        data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": [1, 2, 3] * 100}),
-        privacy_unit=dp.unit_of(contributions=1),
-        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
-        split_evenly_over=1,
-        margins=[dp.polars.Margin(by=(), max_length=300)],
-    )
-
-    with pytest.raises(ValueError, match="truncation is only valid when"):
-        context.query().truncate_per_group(3)
-    with pytest.raises(ValueError, match="truncation is only valid when"):
-        context.query().truncate_num_groups(3, by=["alpha"])
-
-
-def test_frame_distance():
-    pl = pytest.importorskip("polars")
-
-    context = dp.Context.compositor(
-        data=pl.LazyFrame({"alpha": ["A", "B", "C"] * 100, "id": range(300)}),
-        privacy_unit=dp.unit_of(contributions=[
-            dp.polars.Bound(per_group=2)
-        ], identifier="id"),
-        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-8),
-        split_evenly_over=1,
-    )
-
-    query = (
-        context.query()
-        # user can contribute one record per id per group (2 records per group)
-        .truncate_per_group(1, by=["alpha"])
-        # user can contribute one group per id (2 groups total)
-        .truncate_num_groups(1, by=["alpha"])
-        .group_by("alpha")
-        .agg(dp.len())
-    )
-    # ...therefore sensitivity of count is 2 * 2
-    assert query.summarize()["scale"][0] == 4.000000000000001  # type: ignore[index]
 
 
 def test_zero_budget():

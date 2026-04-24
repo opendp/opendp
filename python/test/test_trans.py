@@ -326,7 +326,7 @@ def test_lipschitz_mul_float():
 def test_df_deprecation_warning():
     with pytest.warns(DeprecationWarning, match=re.escape(
         'Call to deprecated function (or staticmethod) make_split_dataframe. '
-        '(Use Polars instead) -- Deprecated since version 0.12.0.')
+        '(Use Polars instead.) -- Deprecated since version 0.12.0.')
     ):
         dp.t.make_split_dataframe(separator=",", col_names=["A", "B"])
 

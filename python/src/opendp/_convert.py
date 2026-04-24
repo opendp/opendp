@@ -1,12 +1,16 @@
-from typing import Sequence, Union, cast, MutableMapping
+from typing import Any, Sequence, Union, cast, MutableMapping
 from inspect import signature
 
 from opendp._lib import *
 from opendp.mod import (
+    ApproximateDivergence,
     ChangeOneIdDistance,
     Domain,
+    ExtrinsicDistance,
+    ExtrinsicDivergence,
     ExtrinsicDomain,
     LazyFrameDomain,
+    Measure,
     Metric,
     FrameDistance,
     SeriesDomain,
@@ -16,6 +20,7 @@ from opendp.mod import (
     Measurement,
     PrivacyProfile,
     Queryable,
+    OdometerQueryable,
     Function,
     AtomDomain,
     OptionDomain,
@@ -39,6 +44,14 @@ ATOM_MAP = {
     'AnyMeasurementPtr': Measurement,
     'AnyTransformationPtr': Transformation,
 }
+
+_NUMPY_COMPATIBLE_ATOM_TYPES = frozenset(ATOM_MAP) - {'AnyMeasurementPtr', 'AnyTransformationPtr'}
+def _numpy_dtype_for_rust_type(type_name: str) -> Any:
+    np = import_optional_dependency('numpy')
+    if type_name not in _NUMPY_COMPATIBLE_ATOM_TYPES:
+        raise ValueError(f"unrecognized numpy dtype: {type_name}")
+    return np.dtype(ATOM_MAP[type_name])
+
 
 def c_int_limits(type_name):
     c_int_type = ATOM_MAP[type_name]
@@ -106,7 +119,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
         # since the memory is allocated by python, 
         #    don't actually return an ExtrinsicObjectPtr, 
         #    which would call rust to free the Python-allocated ExtrinsicObject
-        return ctypes.pointer(ExtrinsicObject(ctypes.py_object(value), c_counter))
+        return ctypes.pointer(ExtrinsicObject(ctypes.py_object(value)))
 
     # check that the type name is consistent with the value
     if type_name is not None:
@@ -133,6 +146,9 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
         raise UnknownTypeException(rust_type)  # pragma: no cover
 
     if c_type == AnyObjectPtr:
+        if isinstance(value, ctypes.POINTER(AnyObject)):
+            return value
+        
         from opendp._data import slice_as_object
         return slice_as_object(value, type_name) # type: ignore[arg-type]
 
@@ -164,15 +180,18 @@ def c_to_py(value: Any) -> Any:
     :param value: data in ctypes format
     :return: copy of data in Python representation
     """
-    if isinstance(value, AnyObjectPtr):
+    if isinstance(value, ctypes.POINTER(AnyObject)):
         from opendp._data import object_type, object_as_slice, slice_free
 
         obj_type = object_type(value)
 
-        if "PrivacyProfile" == obj_type:
+        if obj_type == PrivacyProfile.__name__:
             return PrivacyProfile(value)
         
-        if "Queryable" in obj_type:
+        if obj_type == "AnyOdometerQueryable":
+            return OdometerQueryable(value)
+
+        if obj_type == "AnyQueryable":
             from opendp.core import queryable_query_type
 
             query_type = RuntimeType.parse(queryable_query_type(value))
@@ -211,20 +230,20 @@ def c_to_py(value: Any) -> Any:
         rt_type = RuntimeType.parse(domain_type(value))
 
         if isinstance(rt_type, RuntimeType):
-            if rt_type.origin == "OptionDomain":
+            if rt_type.origin == OptionDomain.__name__:
                 value.__class__ = OptionDomain
-            elif rt_type.origin == "AtomDomain":
+            elif rt_type.origin == AtomDomain.__name__:
                 value.__class__ = AtomDomain
-            elif rt_type.origin == "VectorDomain":
+            elif rt_type.origin == VectorDomain.__name__:
                 value.__class__ = VectorDomain
         else:
-            if rt_type == "SeriesDomain":
+            if rt_type == SeriesDomain.__name__:
                 value.__class__ = SeriesDomain
-            elif rt_type == "LazyFrameDomain":
+            elif rt_type == LazyFrameDomain.__name__:
                 value.__class__ = LazyFrameDomain
-            elif rt_type == "ExtrinsicDomain":
+            elif rt_type == ExtrinsicDomain.__name__:
                 value.__class__ = ExtrinsicDomain
-        # otherwise falls through to the default case, where isinstance(value, Domain) 
+        # if you fall through these cases, then it is just treated as a generic Domain
 
     if isinstance(value, Metric):
         from opendp.metrics import metric_type
@@ -232,14 +251,28 @@ def c_to_py(value: Any) -> Any:
         rt_type = RuntimeType.parse(metric_type(value))
 
         if isinstance(rt_type, RuntimeType):
-            if rt_type.origin == "FrameDistance":
+            if rt_type.origin == FrameDistance.__name__:
                 value.__class__ = FrameDistance
         else:
-            if rt_type == "SymmetricIdDistance":
+            if rt_type == SymmetricIdDistance.__name__:
                 value.__class__ = SymmetricIdDistance
-            elif rt_type == "ChangeOneIdDistance":
+            elif rt_type == ChangeOneIdDistance.__name__:
                 value.__class__ = ChangeOneIdDistance
+            elif rt_type == ExtrinsicDistance.__name__:
+                value.__class__ = ExtrinsicDistance
         # if you fall through these cases, then it is just treated as a generic Metric
+
+    if isinstance(value, Measure):
+        from opendp.measures import measure_type
+
+        rt_type = RuntimeType.parse(measure_type(value))
+
+        if isinstance(rt_type, RuntimeType):
+            if rt_type.origin == "Approximate":
+                value.__class__ = ApproximateDivergence
+        elif rt_type == ExtrinsicDivergence.__name__:
+            value.__class__ = ExtrinsicDivergence
+        # if you fall through these cases, then it is just treated as a generic Measure
 
     if isinstance(value, ctypes.c_void_p):
         # returned void pointers are interpreted as None
@@ -301,6 +334,9 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
     if isinstance(type_name, RuntimeType):
         if type_name.origin == "Vec":
             return _slice_to_vector(raw, type_name)
+        
+        if type_name.origin == "NDArray":
+            return _slice_to_numpy(raw, type_name)
 
         if type_name.origin == "Function":
             return _slice_to_function(raw)
@@ -366,6 +402,9 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
     if isinstance(type_name, RuntimeType):
         if type_name.origin == "Vec":
             return _vector_to_slice(value, type_name)
+        
+        if type_name.origin == "NDArray":
+            return _numpy_to_slice(value, type_name)
 
         if type_name.origin == "HashMap":
             return _hashmap_to_slice(value, type_name)
@@ -391,21 +430,8 @@ def _scalar_to_slice(val, type_name: str) -> FfiSlicePtr:
 def _slice_to_scalar(raw: FfiSlicePtr, type_name: str):
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[type_name])).contents.value # type: ignore[attr-defined]
 
-
-def _refcounter(ptr, increment):
-    try:
-        if increment:
-            ctypes.pythonapi.Py_IncRef(ctypes.py_object(ptr))
-        else:
-            ctypes.pythonapi.Py_DecRef(ctypes.py_object(ptr))
-    except Exception: # pragma: no cover
-        return False
-    return True
-
-c_counter = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.py_object, ctypes.c_bool)(_refcounter)
-
 def _extrinsic_to_slice(val) -> FfiSlicePtr:
-    return _wrap_in_slice(ctypes.pointer(ExtrinsicObject(ctypes.py_object(val), c_counter)), 1)
+    return _wrap_in_slice(ctypes.pointer(ExtrinsicObject(ctypes.py_object(val))), 1)
 
 def _slice_to_extrinsic(raw: FfiSlicePtr):
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ExtrinsicObject)).contents.ptr
@@ -445,19 +471,27 @@ def _slice_to_bitvector(raw: FfiSlicePtr) -> bytes:
 
 def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
     if type_name.origin != 'Vec' or len(type_name.args) != 1:
-        raise ValueError("type_name must be a Vec<_>")  # pragma: no cover
+        raise ValueError("type_name must be Vec<_>")  # pragma: no cover
 
     inner_type_name = type_name.args[0]
-    # TODO: can we use underlying numpy buffers directly?
+
+    np = import_optional_dependency("numpy", raise_error=False)
+    if (
+        np is not None
+        and isinstance(val, np.ndarray)
+        and isinstance(inner_type_name, str)
+        and inner_type_name in _NUMPY_COMPATIBLE_ATOM_TYPES
+    ):
+        type_name = RuntimeType("NDArray", [inner_type_name])
+        return _numpy_to_slice(val, type_name)
+
     if not isinstance(val, list):
         try:
             val = list(val)
         except TypeError:
             raise TypeError(f"Expected type is {type_name} but input data is not a list.")
 
-    inner_type_name = type_name.args[0]
-
-    if isinstance(inner_type_name, RuntimeType) or inner_type_name in {"Expr", "Bound"}:
+    if isinstance(inner_type_name, RuntimeType) or inner_type_name in {"Expr", "Bound", "BitVector"}:
         c_repr = [py_to_c(v, c_type=AnyObjectPtr, type_name=inner_type_name) for v in val]
         array = (AnyObjectPtr * len(val))(*c_repr) # type: ignore[operator]
         ffislice = _wrap_in_slice(array, len(val))
@@ -465,7 +499,7 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
         return ffislice
 
     if inner_type_name == "ExtrinsicObject":
-        c_repr = [ExtrinsicObject(ctypes.py_object(v), c_counter) for v in val]
+        c_repr = [ExtrinsicObject(ctypes.py_object(v)) for v in val]
         array = (ExtrinsicObject * len(val))(*c_repr)
         ffi_slice = _wrap_in_slice(array, len(val))
         ffi_slice.depends_on(c_repr)
@@ -496,7 +530,7 @@ def _vector_to_slice(val: Sequence[Any], type_name: RuntimeType) -> FfiSlicePtr:
 
 def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> Sequence[Any]:
     if type_name.origin != 'Vec' or len(type_name.args) != 1:
-        raise ValueError("type_name must be a Vec<_>")  # pragma: no cover
+        raise ValueError("type_name must be Vec<_>")  # pragma: no cover
 
     inner_type_name = type_name.args[0]
 
@@ -519,8 +553,50 @@ def _slice_to_vector(raw: FfiSlicePtr, type_name: RuntimeType) -> Sequence[Any]:
         array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_char_p))[0:raw.contents.len]
         return list(map(lambda v: v.decode(), array))
 
-    assert isinstance(inner_type_name, str), f"inner type must be string, found {inner_type_name} of type {type(inner_type_name)}"
+    if not isinstance(inner_type_name, str):
+        raise ValueError(f"inner type must be atomic, found {inner_type_name}")  # pragma: no cover
+    
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))[0:raw.contents.len]
+
+
+def _numpy_to_slice(val, type_name: RuntimeType) -> FfiSlicePtr:
+    np = import_optional_dependency("numpy")
+    if type_name.origin != 'NDArray' or len(type_name.args) != 1:
+        raise ValueError(f"type_name must be NDArray<T> with one type argument, found {type_name}")  # pragma: no cover
+
+    inner_type_name = type_name.args[0]
+    if not isinstance(inner_type_name, str):
+        raise ValueError(f"inner type must be atomic, found {inner_type_name}")  # pragma: no cover
+
+    np_dtype = _numpy_dtype_for_rust_type(inner_type_name)
+    if not isinstance(val, np.ndarray):
+        raise TypeError(f"Expected type is {type_name}.")
+
+    if val.ndim != 1:
+        raise TypeError("Only 1d arrays are currently supported. Flatten first.")
+    if val.dtype != np.dtype(np_dtype):
+        raise TypeError(f"Expected dtype {np.dtype(np_dtype)}, got {val.dtype}.")
+
+    contiguous = np.ascontiguousarray(val)
+    array = np.ctypeslib.as_ctypes(contiguous)
+    ffi_slice = _wrap_in_slice(array, len(contiguous))
+    ffi_slice.depends_on(contiguous, array)
+    return ffi_slice
+
+
+def _slice_to_numpy(raw: FfiSlicePtr, type_name: RuntimeType):
+    np = import_optional_dependency("numpy")
+    if type_name.origin != 'NDArray' or len(type_name.args) != 1:
+        raise ValueError(f"type_name must be NDArray<T> with one type argument, found {type_name}")  # pragma: no cover
+
+    inner_type_name = type_name.args[0]
+    if not isinstance(inner_type_name, str):
+        raise ValueError(f"inner type must be atomic, found {inner_type_name}")  # pragma: no cover
+    
+    _numpy_dtype_for_rust_type(inner_type_name)  # validate numpy compatibility before casting
+
+    array_ptr: Any = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))
+    return np.ctypeslib.as_array(array_ptr, shape=(raw.contents.len,)).copy()
 
 
 def _tuple_to_slice(val: tuple[Any, ...], type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
@@ -534,7 +610,7 @@ def _tuple_to_slice(val: tuple[Any, ...], type_name: Union[RuntimeType, str]) ->
 
     if inner_type_names == ['f64', 'ExtrinsicObject']:
         score_ptr = ctypes.pointer(ctypes.c_double(val[0]))
-        ext_obj = ctypes.pointer(ExtrinsicObject(ctypes.py_object(val[1]), c_counter))
+        ext_obj = ctypes.pointer(ExtrinsicObject(ctypes.py_object(val[1])))
 
         cand_ptr = py_to_c(ext_obj, c_type=AnyObjectPtr, type_name="ExtrinsicObject")
         array = (ctypes.c_void_p * 2)(
@@ -855,98 +931,107 @@ def _wrap_in_slice(ptr, len_: int) -> FfiSlicePtr:
     return FfiSlicePtr(FfiSlice(ctypes.cast(ptr, ctypes.c_void_p), len_))
 
 
-def _wrap_py_func(func, TO):
+def _invoke_py_callback(c_arg, userdata):
     from opendp._convert import c_to_py, py_to_c
+    func, TO = userdata
 
-    def wrapper_func(c_arg):
-        try:
-            # 1. convert AnyObject to Python type
-            py_arg = c_to_py(c_arg)
-            # don't free c_arg, because it is owned by Rust
-            c_arg.__class__ = ctypes.POINTER(AnyObject)
+    try:
+        # 1. convert AnyObject to Python type
+        py_arg = c_to_py(c_arg)
+        # don't free c_arg, because it is owned by Rust
+        c_arg.__class__ = ctypes.POINTER(AnyObject)
 
-            # 2. invoke the user-supplied function
-            py_out = func(py_arg)
+        # 2. invoke the user-supplied function
+        py_out = func(py_arg)
 
-            # 3. convert back to an AnyObject
-            c_out = py_to_c(py_out, c_type=AnyObjectPtr, type_name=TO)
-            # don't free c_out, because we are giving ownership to Rust
-            c_out.__class__ = ctypes.POINTER(AnyObject)
+        # 3. convert back to an AnyObject
+        c_out = py_to_c(py_out, c_type=AnyObjectPtr, type_name=TO)
+        # don't free c_out, because we are giving ownership to Rust
+        c_out.__class__ = ctypes.POINTER(AnyObject)
 
-            # 4. pack up into an FfiResult
-            lib.ffiresult_ok.argtypes = [ctypes.c_void_p]
-            lib.ffiresult_ok.restype = ctypes.c_void_p
-            return lib.ffiresult_ok(ctypes.addressof(c_out.contents))
+        # 4. pack up into an FfiResult
+        lib.ffiresult_ok.argtypes = [ctypes.c_void_p]
+        lib.ffiresult_ok.restype = ctypes.c_void_p
+        return lib.ffiresult_ok(ctypes.addressof(c_out.contents))
 
-        except Exception:
-            import traceback
-            lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
-            lib.ffiresult_err.restype = ctypes.c_void_p
-            return lib.ffiresult_err(
-                ctypes.c_char_p("Continued stack trace from Exception in user-defined function".encode()),
-                ctypes.c_char_p(traceback.format_exc().encode()),
-            )
+    except Exception:
+        import traceback
+        lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+        lib.ffiresult_err.restype = ctypes.c_void_p
+        return lib.ffiresult_err(
+            ctypes.c_char_p("Continued stack trace from Exception in user-defined function".encode()),
+            ctypes.c_char_p(traceback.format_exc().encode()),
+        )
 
-    c_wrapper_func = CallbackFnValue(wrapper_func)
-    lifeline = ExtrinsicObject(ctypes.py_object(c_wrapper_func), c_counter)
 
-    return ctypes.pointer(CallbackFn(c_wrapper_func, lifeline))
+_CALLBACK_DISPATCH = CallbackFnValue(_invoke_py_callback)
+
+
+def _wrap_py_func(func, TO):
+    # `userdata` is the opaque host-owned payload carried alongside the shared
+    # callback trampoline. Here it stores the Python callable and the declared
+    # output type so the dispatcher can recover the closure environment later.
+    userdata = ExtrinsicObject(ctypes.py_object((func, TO)))
+    return ctypes.pointer(CallbackFn(_CALLBACK_DISPATCH, userdata))
 
 
 # The output type cannot be an `ctypes.POINTER(FfiResult)` due to:
 #   https://bugs.python.org/issue5710#msg85731
-#                                   (answer         , query       , is_internal  )
-TransitionFnValue = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr, ctypes.c_bool)
+#                                   (answer         , query       , is_internal  , userdata        )
+TransitionFnValue = ctypes.CFUNCTYPE(ctypes.c_void_p, AnyObjectPtr, ctypes.c_bool, ctypes.py_object)
 
 class TransitionFn(ctypes.Structure):
     _fields_ = [
         ("callback", TransitionFnValue),
-        ("lifeline", ExtrinsicObject)
+        ("userdata", ExtrinsicObject)
     ]
 
 class TransitionFnPtr(ctypes.POINTER(TransitionFn)): # type: ignore[misc]
     _type_ = TransitionFn
 
 
-def _wrap_py_transition(py_transition, A):
+def _invoke_py_transition(c_query, c_is_internal: ctypes.c_bool, userdata):
     from opendp._convert import c_to_py, py_to_c
+    py_transition, A = userdata
 
+    try:
+        # 1. convert to Python type
+        py_query = c_to_py(c_query)
+        py_is_internal = c_is_internal
+        # don't free c_arg, because it is owned by Rust
+        c_query.__class__ = ctypes.POINTER(AnyObject)
+
+        # 2. invoke the user-supplied function
+        py_out = py_transition(py_query, py_is_internal)
+
+        # 3. convert back to an AnyObject
+        c_out = py_to_c(py_out, c_type=AnyObjectPtr, type_name=A)
+        # don't free c_out, because we are giving ownership to Rust
+        c_out.__class__ = ctypes.POINTER(AnyObject)
+
+        # 4. pack up into an FfiResult
+        lib.ffiresult_ok.argtypes = [ctypes.c_void_p]
+        lib.ffiresult_ok.restype = ctypes.c_void_p
+        return lib.ffiresult_ok(ctypes.addressof(c_out.contents))
+
+    except Exception:
+        import traceback
+        lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+        lib.ffiresult_err.restype = ctypes.c_void_p
+        return lib.ffiresult_err(
+            ctypes.c_char_p("Continued stack trace from Exception in user-defined function".encode()),
+            ctypes.c_char_p(traceback.format_exc().encode()),
+        )
+
+
+_TRANSITION_DISPATCH = TransitionFnValue(_invoke_py_transition)
+
+
+def _wrap_py_transition(py_transition, A):
     # the indicator that a query is internal is oftentimes not needed
     if len(signature(py_transition).parameters) == 1:
         py_transition_old = py_transition
         py_transition = lambda q, _=None: py_transition_old(q)
 
-    def wrapper_func(c_query, c_is_internal: ctypes.c_bool):
-        try:
-            # 1. convert to Python type
-            py_query = c_to_py(c_query)
-            py_is_internal = c_is_internal
-            # don't free c_arg, because it is owned by Rust
-            c_query.__class__ = ctypes.POINTER(AnyObject)
-
-            # 2. invoke the user-supplied function
-            py_out = py_transition(py_query, py_is_internal)
-
-            # 3. convert back to an AnyObject
-            c_out = py_to_c(py_out, c_type=AnyObjectPtr, type_name=A)
-            # don't free c_out, because we are giving ownership to Rust
-            c_out.__class__ = ctypes.POINTER(AnyObject)
-
-            # 4. pack up into an FfiResult
-            lib.ffiresult_ok.argtypes = [ctypes.c_void_p]
-            lib.ffiresult_ok.restype = ctypes.c_void_p
-            return lib.ffiresult_ok(ctypes.addressof(c_out.contents))
-
-        except Exception:
-            import traceback
-            lib.ffiresult_err.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
-            lib.ffiresult_err.restype = ctypes.c_void_p
-            return lib.ffiresult_err(
-                ctypes.c_char_p("Continued stack trace from Exception in user-defined function".encode()),
-                ctypes.c_char_p(traceback.format_exc().encode()),
-            )
-
-    c_wrapper_func = TransitionFnValue(wrapper_func)
-    lifeline = ExtrinsicObject(ctypes.py_object(c_wrapper_func), c_counter)
-
-    return ctypes.pointer(TransitionFn(c_wrapper_func, lifeline))
+    userdata = ExtrinsicObject(ctypes.py_object((py_transition, A)))
+    return ctypes.pointer(TransitionFn(_TRANSITION_DISPATCH, userdata))

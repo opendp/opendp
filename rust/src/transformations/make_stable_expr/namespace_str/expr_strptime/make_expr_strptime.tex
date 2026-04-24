@@ -2,7 +2,7 @@
 \input{../../../../lib.sty}
 
 \title{\texttt{fn make\_expr\_strptime}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 \date{}
 
 \begin{document}
@@ -28,17 +28,16 @@ Proves soundness of \rustdoc{transformations/make_stable_expr/namespace_str/expr
     \item \texttt{Expr} implements \texttt{StableExpr<M, M>}
 \end{itemize}
 
-\subsubsection*{Human-verified}
+\subsubsection*{Caller-verified}
 None
 
 \subsection*{Pseudocode}
 \lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/make_expr_strptime.py}
 
 \subsection*{Postcondition}
+\begin{theorem}
 \validTransformation{\texttt{(input\_domain, input\_metric, expr, M)}}{\texttt{make\_expr\_strptime}}
-
-\section{Proof}
-
+\end{theorem}
 Starting from line \ref{match-strategy}, 
 \texttt{expr} is matched as if it were a strptime expression, or otherwise rejects the expression.
 

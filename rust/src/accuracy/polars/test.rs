@@ -2,10 +2,9 @@ use core::f64;
 
 use polars::{
     df,
-    prelude::{IntoLazy, NamedFrom},
+    prelude::{Column, IntoLazy, NamedFrom, col, len, lit},
     series::Series,
 };
-use polars_plan::dsl::{col, len};
 
 use crate::{
     accuracy::discrete_laplacian_scale_to_accuracy,
@@ -34,8 +33,8 @@ fn test_summarize_polars_measurement_basic() -> Fallible<()> {
         FrameDistance(SymmetricDistance),
         MaxDivergence,
         lf.select([
-            len().dp().noise(None, None),
-            col("A").dp().sum((0, 1), None),
+            len().dp().noise(None),
+            col("A").dp().sum((lit(0), lit(1)), None),
         ]),
         Some(1.0),
         None,
@@ -49,13 +48,12 @@ fn test_summarize_polars_measurement_basic() -> Fallible<()> {
         "distribution" => &["Integer Laplace", "Integer Laplace"],
         "scale" => &[1.0, 1.0]
     ]?;
-    println!("{:?}", expected);
     assert_eq!(expected, description);
 
     let description = summarize_polars_measurement(meas.clone(), Some(0.05))?;
 
     let accuracy = discrete_laplacian_scale_to_accuracy(1.0, 0.05)?;
-    expected.with_column(Series::new("accuracy".into(), &[accuracy, accuracy]))?;
+    expected.with_column(Column::new("accuracy".into(), &[accuracy, accuracy]))?;
     println!("{:?}", expected);
     assert_eq!(expected, description);
 
@@ -80,7 +78,7 @@ fn test_summarize_polars_measurement_mean() -> Fallible<()> {
         lf_domain,
         FrameDistance(SymmetricDistance),
         MaxDivergence,
-        lf.select([col("A").dp().mean((3, 5), Some((1.0, 0.0)))]),
+        lf.select([col("A").dp().mean((lit(3), lit(5)), Some(1.0))]),
         None,
         None,
     )?;
@@ -93,13 +91,12 @@ fn test_summarize_polars_measurement_mean() -> Fallible<()> {
         "distribution" => &[Some("Integer Laplace"), Some("Integer Laplace")],
         "scale" => &[Some(1.0), Some(0.0)]
     ]?;
-    println!("{:?}", expected);
     assert_eq!(expected, description);
 
     let description = summarize_polars_measurement(meas.clone(), Some(0.05))?;
 
     let accuracy = discrete_laplacian_scale_to_accuracy(1.0, 0.05)?;
-    expected.with_column(Series::new(
+    expected.with_column(Column::new(
         "accuracy".into(),
         &[Some(accuracy), Some(f64::NAN)],
     ))?;
@@ -152,10 +149,9 @@ fn test_summarize_polars_measurement_quantile() -> Fallible<()> {
     let expected = df![
         "column" => &["25", "50", "75"],
         "aggregate" => &["0.25-Quantile", "0.5-Quantile", "0.75-Quantile"],
-        "distribution" => &[Some("GumbelMin"); 3],
+        "distribution" => &[Some("ExponentialMin"); 3],
         "scale" => &[Some(1.0); 3]
     ]?;
-    println!("{:?}", expected);
     assert_eq!(expected, description);
 
     Ok(())

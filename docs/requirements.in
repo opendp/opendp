@@ -12,9 +12,11 @@ git+https://github.com/samtygier-stfc/sphinx-multiversion.git@prebuild_command
 pydata-sphinx-theme==0.15.3rc1 # TODO: Remove version pin when RC is released.
 nbsphinx
 ipython  # for notebook syntax highlighting in docs
+matplotlib
 pandoc
 pypandoc
 semver
 linkchecker
 pip-tools
 deprecated # Transitive dependency of opendp, but we don't actually install opendp to build docs.
+blacken-docs

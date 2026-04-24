@@ -20,9 +20,9 @@ mod test;
 /// * `DI` - Input Domain
 /// * `DO` - Output Domain
 /// * `MI` - Input Metric
-pub fn make_fixed_approxDP_to_approxDP<DI, TO, MI>(
-    measurement: Measurement<DI, TO, MI, Approximate<MaxDivergence>>,
-) -> Fallible<Measurement<DI, TO, MI, SmoothedMaxDivergence>>
+pub fn make_fixed_approxDP_to_approxDP<DI, MI, TO>(
+    measurement: Measurement<DI, MI, Approximate<MaxDivergence>, TO>,
+) -> Fallible<Measurement<DI, MI, SmoothedMaxDivergence, TO>>
 where
     DI: Domain,
     MI: 'static + Metric,

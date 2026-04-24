@@ -1,3 +1,16 @@
+"""
+This module requires extra installs: ``pip install 'opendp[numpy]'``
+
+For convenience, all the members of this module are also available from :py:mod:`opendp.prelude`.
+We suggest importing under the conventional name ``dp``:
+
+.. code:: pycon
+
+    >>> import opendp.prelude as dp
+
+The members of this module will then be accessible at ``dp.numpy.canonical``.
+"""
+
 from __future__ import annotations
 
 import math
@@ -10,7 +23,7 @@ class BinomialCND:
     """
     Utilities to conduct statistical inference on the output of the canonical noise mechanism on binomially-distributed data.
 
-    Use :func:`opendp.measurements.make_canonical_noise` to instantiate the canonical noise mechanism.
+    Use :func:`~opendp.measurements.make_canonical_noise` to instantiate the canonical noise mechanism.
 
     The mechanism outputs a sample from X + N,
     where X ~ Binomial(n=size, p=theta), N ~ CND(0, d_in, d_out).

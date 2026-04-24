@@ -3,7 +3,7 @@
 [![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/license/MIT)
 
-[![Python](https://img.shields.io/badge/Python-3.9%20%E2%80%93%203.13-blue)](https://docs.opendp.org/en/stable/api/python/index.html)
+[![Python](https://img.shields.io/badge/Python-3.10%20%E2%80%93%203.13-blue)](https://docs.opendp.org/en/stable/api/python/index.html)
 [![R](https://img.shields.io/badge/R-grey)](https://docs.opendp.org/en/stable/api/r/)
 [![Rust](https://img.shields.io/badge/Rust-grey)](https://docs.rs/crate/opendp/latest)
 
@@ -17,7 +17,7 @@ It can be used to build applications of privacy-preserving computations, using a
 OpenDP is implemented in Rust, with bindings for easy use from Python and R.
 
 The architecture of the OpenDP Library is based on a conceptual framework for expressing privacy-aware computations.
-This framework is described in the paper [A Programming Framework for OpenDP](https://projects.iq.harvard.edu/files/opendp/files/opendp_programming_framework_11may2020_1_01.pdf).
+This framework is described in the paper [A Programming Framework for OpenDP](https://opendp.org/files/2025/11/opendp_programming_framework_11may2020_1_01.pdf).
 
 The OpenDP Library is part of the larger [OpenDP Project](https://opendp.org), a community effort to build trustworthy,
 open source software tools for analysis of private data.
@@ -71,9 +71,8 @@ If you're having problems using OpenDP, or want to submit feedback, please reach
 -->
 
 * Report a bug or request a feature on [Github](https://github.com/opendp/opendp/issues).
-* Send general queries to [info@opendp.org](mailto:info@opendp.org), or email [security@opendp.org](mailto:security@opendp.org) if it is related to security.
-* Join the conversation on [Slack](https://join.slack.com/t/opendp/shared_invite/zt-zw7o1k2s-dHg8NQE8WTfAGFnN_cwomA), or the [mailing list](https://groups.google.com/a/g.harvard.edu/g/opendp-community).
-* Office hours are M/T/Th at 11am Eastern on [Zoom](https://harvard.zoom.us/j/98058847683).
+* Send general queries to [contact@opendp.org](mailto:contact@opendp.org), or email [security@opendp.org](mailto:security@opendp.org) if it is related to security.
+* Join the conversation on [Slack](https://join.slack.com/t/opendp/shared_invite/zt-1t8rrbqhd-z8LiZiP06vVE422HJd6ciQ), or the [mailing list](https://groups.google.com/a/g.harvard.edu/g/opendp-community).
 
 ## Contributing
 

@@ -7,8 +7,6 @@ use crate::polars::PrivacyNamespace;
 use crate::traits::samplers::test::{check_chi_square, check_kolmogorov_smirnov};
 use polars::prelude::*;
 
-use statrs::function::erf;
-
 use crate::metrics::SymmetricDistance;
 
 use super::*;
@@ -60,7 +58,7 @@ fn test_stable_keys_puredp() -> Fallible<()> {
         Approximate(MaxDivergence),
         lf.clone()
             .group_by(&[col("A")])
-            .agg(&[len().dp().noise(None, None)]),
+            .agg(&[len().dp().noise(None)]),
         Some(1.),
         Some(40),
     )?;
@@ -87,7 +85,7 @@ fn test_stable_keys_zcdp() -> Fallible<()> {
         Approximate(ZeroConcentratedDivergence),
         lf.clone()
             .group_by(&[col("A")])
-            .agg(&[len().dp().noise(None, None)]),
+            .agg(&[len().dp().noise(None)]),
         Some(1.),
         Some(40),
     )?;
@@ -103,7 +101,7 @@ fn test_stable_keys_zcdp() -> Fallible<()> {
 
 #[test]
 fn test_explicit_keys() -> Fallible<()> {
-    static N_SAMPLES: u32 = 1000;
+    static N_SAMPLES: u32 = 5000;
     static N_CANDIDATES: usize = 10;
 
     let lf_domain = LazyFrameDomain::new(vec![
@@ -115,12 +113,7 @@ fn test_explicit_keys() -> Fallible<()> {
     let lf = df!("A" => &[0u32], "B" => &[0.0f64])?.lazy();
     let keys = df!("A" => &(0u32..N_SAMPLES).collect::<Vec<_>>())?.lazy();
 
-    let sum_expr = col("B")
-        .fill_nan(0.0)
-        .fill_null(0.0)
-        .dp()
-        .sum((0.0, 1.0), None)
-        .alias("sum");
+    let sum_expr = col("B").dp().sum((lit(0.0), lit(1.0)), None).alias("sum");
     let candidates = (0..N_CANDIDATES).map(|v| v as f64).collect::<Vec<_>>();
     let median_expr = col("B")
         .fill_nan(0.0)
@@ -142,22 +135,26 @@ fn test_explicit_keys() -> Fallible<()> {
     )?;
 
     let release = meas.invoke(&lf)?.collect()?;
-    let gauss_samples: Vec<_> = release.column("sum")?.f64()?.iter().flatten().collect();
-    let gauss_samples = <[f64; 1000]>::try_from(gauss_samples).unwrap();
+    let lap_samples: Vec<_> = release.column("sum")?.f64()?.iter().flatten().collect();
+    let lap_samples = <[f64; 5000]>::try_from(lap_samples).unwrap();
 
-    pub fn normal_cdf(x: f64) -> f64 {
-        (erf::erf(x / std::f64::consts::SQRT_2) + 1.0) / 2.0
+    pub fn laplace_cdf(x: f64) -> f64 {
+        if x < 0.0 {
+            0.5 * x.exp()
+        } else {
+            1.0 - 0.5 * (-x).exp()
+        }
     }
 
-    check_kolmogorov_smirnov(gauss_samples, normal_cdf)?;
+    check_kolmogorov_smirnov(lap_samples, laplace_cdf)?;
 
     // check for uniformity of samples (all scores are matching)
     let unif_samples: Vec<_> = release.column("med")?.f64()?.iter().flatten().collect();
-    let mut counts = [0.0; N_CANDIDATES];
-    unif_samples.iter().for_each(|&s| counts[s as usize] += 1.0);
+    let mut counts = [0; N_CANDIDATES];
+    unif_samples.iter().for_each(|&s| counts[s as usize] += 1);
     check_chi_square(
-        counts,
-        [N_SAMPLES as f64 / (N_CANDIDATES as f64); N_CANDIDATES],
+        &counts,
+        &[N_SAMPLES as f64 / (N_CANDIDATES as f64); N_CANDIDATES],
     )?;
 
     Ok(())

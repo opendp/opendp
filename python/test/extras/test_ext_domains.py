@@ -1,6 +1,7 @@
-from opendp.extras.numpy import _sscp_domain
+from opendp.extras.numpy import _sscp_domain, arrayd_domain
 import opendp.prelude as dp
 import pytest
+import re
 
 
 def test_array2_domain():
@@ -62,6 +63,25 @@ def test_array2_domain_member():
     assert domain.member(np.array([[1.0, 0.0], [1.0, 0.0]]))
 
 
+def test_array2_domain_cardinalities():
+    np = pytest.importorskip("numpy")
+    with pytest.raises(ValueError, match="cardinalities ndim"):
+        dp.numpy.array2_domain(cardinalities=np.array(2), T=int)
+    with pytest.raises(ValueError, match="cardinalities dtype"):
+        dp.numpy.array2_domain(cardinalities=[], T=int)
+    with pytest.raises(ValueError, match="must be positive"):
+        dp.numpy.array2_domain(cardinalities=[-1], T=int)
+    with pytest.raises(ValueError, match="cardinalities length"):
+        dp.numpy.array2_domain(cardinalities=[1, 2], num_columns=1, T=int)
+    with pytest.raises(ValueError, match="cardinalities must be a list, ndarray or None"):
+        dp.numpy.array2_domain(cardinalities=True, num_columns=1, T=int) # type: ignore[arg-type]
+
+    domain = dp.numpy.array2_domain(cardinalities=[1, 2, 3], T=int)
+
+    with pytest.warns(match=re.escape("unique values in data ([2 1 1]) must not exceed cardinalities ([1 2 3])")):
+        domain.member(np.array([[1, 1, 1], [2, 1, 1]], dtype=np.int32))
+    assert domain.member(np.array([[1, 1, 1], [1, 1, 1]], dtype=np.int32))
+
 def test_sscp_domain():
     np = pytest.importorskip("numpy")
     
@@ -86,3 +106,25 @@ def test_sscp_domain():
         domain.member(np.array([[1.0, 2.0], [2.0, 1.0]]))
 
     assert domain.member(np.array([[2.0, 1.0], [1.0, 2.0]]))
+
+
+def test_arrayd_domain():
+    np = pytest.importorskip("numpy")
+
+    with pytest.raises(ValueError, match="must be a tuple"):
+        arrayd_domain(shape=None, T=bool) # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="must be a tuple of positive integers"):
+        arrayd_domain(shape=(-1, 2), T=bool)
+    with pytest.raises(ValueError, match="must be a primitive type"):
+        arrayd_domain(shape=(2, 1), T=dp.Measurement)
+
+    domain = arrayd_domain(shape=(2, 1), T=float)
+
+    with pytest.warns(match="must be a numpy ndarray"):
+        domain.member(False)
+    with pytest.warns(match="must have data of type"):
+        domain.member(np.array([[1, 2, 3]]))
+    with pytest.warns(match="must have shape"):
+        domain.member(np.array([[1.0, 2.0, 3.0]]))
+
+    assert domain.member(np.array([[2.0], [1.0]]))

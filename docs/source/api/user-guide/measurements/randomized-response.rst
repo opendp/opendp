@@ -1,9 +1,9 @@
 Randomized Response
 ===================
 
-Randomized response is used to release categorical survey responses in
+Randomized response is used to release categorical data in
 the local-DP, or per-user, model. The randomized response algorithm is
-typically meant to be run on the edge, at the user’s device, before data
+typically meant to be run on the edge, at the user's device, before data
 is submitted to a central server. Local DP is a stronger privacy model
 than the central model, because the central data aggregator is only ever
 privileged to differentially private releases, not the raw data.
@@ -13,7 +13,7 @@ device: You must handle network communication and aggregation.
 
 --------------
 
-Any constructors that have not completed the proof-writing and vetting
+Any functions that have not completed the proof-writing and vetting
 process may still be accessed if you opt-in to “contrib”. Please contact
 us if you are interested in proof-writing. Thank you!
 
@@ -22,16 +22,16 @@ us if you are interested in proof-writing. Thank you!
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> import opendp.prelude as dp
             >>> dp.enable_features("contrib")
-            
 
-Privatization
--------------
 
-We’ll start by creating a differentially private release of a boolean response. Boolean randomized
+Boolean Randomized Response
+---------------------------
+
+We’ll start by releasing a boolean response. Boolean randomized
 response is fully characterized by a *measurement* containing the
 following six elements:
 
@@ -73,12 +73,13 @@ following six elements:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> # construct the measurement
             >>> rr_bool_meas = dp.m.make_randomized_response_bool(prob=0.75)
-            
-            >>> # invoke the measurement on some survey response to execute the randomized response algorithm
+
+            >>> # invoke the measurement on some survey response to execute
+            >>> # the randomized response algorithm
             >>> alice_survey_response = True
             >>> print("noisy release:", rr_bool_meas(alice_survey_response))
             noisy release: ...
@@ -86,32 +87,6 @@ following six elements:
             >>> # determine epsilon by invoking the map
             >>> print("epsilon:", rr_bool_meas.map(d_in=1))
             epsilon: 1.0986...
-
-A simple generalization of the previous algorithm is to randomize over a
-custom category set:
-
-.. tab-set::
-
-    .. tab-item:: Python
-        :sync: python
-
-        .. code:: python
-
-            >>> # construct the measurement
-            >>> categories = ["A", "B", "C", "D"]
-            >>> rr_meas = dp.m.make_randomized_response(categories, prob=0.75)
-            
-            >>> # invoke the measurement on some survey response, to execute the randomized response algorithm
-            >>> alice_survey_response = "C"
-            >>> print("noisy release:", rr_meas(alice_survey_response))
-            noisy release: ...
-
-            >>> # determine epsilon by invoking the map
-            >>> print("epsilon:", rr_meas.map(d_in=1))
-            epsilon: 2.197...
-
-Aggregation: Mean
------------------
 
 The differentially private responses from many individuals may be aggregated to form
 a population-level inference. In the case of the boolean randomized
@@ -123,22 +98,25 @@ actually responded with ``True``.
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> import numpy as np
             >>> num_responses = 1000
-            
-            >>> true_probability = .23
-            
+
+            >>> true_probability = 0.23
+
             >>> private_bool_responses = []
-            
+
             >>> for _ in range(num_responses):
-            ...     response = bool(np.random.binomial(n=1, p=true_probability))
+            ...     response = bool(
+            ...         np.random.binomial(n=1, p=true_probability)
+            ...     )
             ...     randomized_response = rr_bool_meas(response)
             ...     private_bool_responses.append(randomized_response)
-            
+            ...
+
             >>> naive_proportion = np.mean(private_bool_responses)
-            >>> print('naive proportion:', naive_proportion)
+            >>> print("naive proportion:", naive_proportion)
             naive proportion: ...
 
 We know the true probability is .23, so our estimate is off!
@@ -176,21 +154,52 @@ The resulting expression is distilled into the following function:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> def debias_randomized_response_bool(mean_release, p):
             ...     """Adjust for the bias of the mean of a boolean RR dataset."""
             ...     assert 0 <= mean_release <= 1
             ...     assert 0 <= p <= 1
-            ...     
             ...     return (mean_release + p - 1) / (2 * p - 1)
-            
-            >>> estimated_bool_proportion = debias_randomized_response_bool(naive_proportion, .75)
-            >>> print('estimated:', estimated_bool_proportion)
+            ...
+
+            >>> estimated_bool_proportion = debias_randomized_response_bool(
+            ...     naive_proportion, 0.75
+            ... )
+            >>> print("estimated:", estimated_bool_proportion)
             estimated: ...
 
 As expected, the bias correction admits a useful estimate of the
 population proportion (``.23``).
+
+Categorical Randomized Response
+-------------------------------
+
+One way to generalize the previous algorithm is to randomize over a
+custom category set:
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. code:: pycon
+
+            >>> # construct the measurement
+            >>> categories = ["A", "B", "C", "D"]
+            >>> rr_meas = dp.m.make_randomized_response(
+            ...     categories, prob=0.75
+            ... )
+
+            >>> # invoke the measurement on some survey response, to execute
+            >>> # the randomized response algorithm
+            >>> alice_survey_response = "C"
+            >>> print("noisy release:", rr_meas(alice_survey_response))
+            noisy release: ...
+
+            >>> # determine epsilon by invoking the map
+            >>> print("epsilon:", rr_meas.map(d_in=1))
+            epsilon: 2.197...
 
 The categorical randomized response will suffer the same bias:
 
@@ -199,24 +208,29 @@ The categorical randomized response will suffer the same bias:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> import numpy as np
             >>> num_responses = 1000
-            
+
             >>> true_probability = [0.1, 0.4, 0.3, 0.2]
-            
+
             >>> private_cat_responses = []
-            
+
             >>> for _ in range(num_responses):
-            ...     response = np.random.choice(categories, p=true_probability)
+            ...     response = np.random.choice(
+            ...         categories, p=true_probability
+            ...     )
             ...     randomized_response = rr_meas(response)
             ...     private_cat_responses.append(randomized_response)
-            
+            ...
+
             >>> from collections import Counter
-            
+
             >>> counter = Counter(private_cat_responses)
-            >>> naive_cat_proportions = [counter[cat] / num_responses for cat in categories]
+            >>> naive_cat_proportions = [
+            ...     counter[cat] / num_responses for cat in categories
+            ... ]
             >>> naive_cat_proportions
             [..., ..., ..., ...]
 
@@ -258,17 +272,20 @@ This formula is represented in the following function:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
             >>> def debias_randomized_response(mean_releases, p):
             ...     """Adjust for the bias of the mean of a categorical RR dataset."""
             ...     mean_releases = np.array(mean_releases)
-            ...     assert all(mean_releases >= 0) and abs(sum(mean_releases) - 1) < 1e-6
+            ...     assert (
+            ...         all(mean_releases >= 0)
+            ...         and abs(sum(mean_releases) - 1) < 1e-6
+            ...     )
             ...     assert 0 <= p <= 1
-            ...     
             ...     k = len(mean_releases)
             ...     return (mean_releases * (k - 1) + p - 1) / (p * k - 1)
-            
+            ...
+
 
 We similarly estimate population parameters in the categorical setting:
 
@@ -277,17 +294,17 @@ We similarly estimate population parameters in the categorical setting:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
-            >>> estimated_cat_proportions = debias_randomized_response(naive_cat_proportions, .75)
-            
+            >>> estimated_cat_proportions = debias_randomized_response(
+            ...     naive_cat_proportions, 0.75
+            ... )
+
             >>> print("true probability:", true_probability)
             true probability: [0.1, 0.4, 0.3, 0.2]
             >>> print("estimated probability:", estimated_cat_proportions)
             estimated probability: [... ... ... ...]
 
-Aggregation: Count
-------------------
 
 Just like the mean was biased, so is a simple count of responses for
 each category:
@@ -297,11 +314,16 @@ each category:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
-            >>> print("biased boolean count:", np.sum(private_bool_responses))
+            >>> print(
+            ...     "biased boolean count:", np.sum(private_bool_responses)
+            ... )
             biased boolean count: ...
-            >>> print("biased categorical count:", dict(sorted(Counter(private_cat_responses).items())))
+            >>> print(
+            ...     "biased categorical count:",
+            ...     dict(sorted(Counter(private_cat_responses).items())),
+            ... )
             biased categorical count: {'A': ..., 'B': ..., 'C': ..., 'D': ...}
 
 Since the dataset size is known, simply post-process the mean estimates:
@@ -311,13 +333,80 @@ Since the dataset size is known, simply post-process the mean estimates:
     .. tab-item:: Python
         :sync: python
 
-        .. code:: python
+        .. code:: pycon
 
-            >>> estimated_bool_count = int(estimated_bool_proportion * num_responses)
-            >>> estimated_cat_count = dict(zip(categories, (estimated_cat_proportions * num_responses).astype(int)))
-            
+            >>> estimated_bool_count = int(
+            ...     estimated_bool_proportion * num_responses
+            ... )
+            >>> estimated_cat_count = dict(
+            ...     zip(
+            ...         categories,
+            ...         (estimated_cat_proportions * num_responses).astype(
+            ...             int
+            ...         ),
+            ...     )
+            ... )
+
             >>> print("unbiased boolean count:", estimated_bool_count)
             unbiased boolean count: ...
             >>> print("unbiased categorical count:", estimated_cat_count)
             unbiased categorical count: {'A': ..., 'B': ..., 'C': ..., 'D': ...}
-            
+
+Bit Vector Randomized Response
+------------------------------
+
+Another way to generalize boolean randomized response 
+is by considering bit vectors with limited weight.
+In this setting, neighboring datasets may be completely different bitvectors, 
+but all bitvectors may only have a limited number of true bits (the weight).
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. code:: pycon
+
+            >>> import pytest
+            >>> np = pytest.importorskip("numpy")
+
+            >>> # construct the measurement
+            >>> m_rr = dp.m.make_randomized_response_bitvec(
+            ...     dp.bitvector_domain(max_weight=3),
+            ...     dp.discrete_distance(),
+            ...     f=0.8,
+            ... )
+
+            >>> # the de-biaser will expect little endian data
+            >>> data = np.packbits(
+            ...     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0], # fmt: skip
+            ...     bitorder="little",
+            ... ) # fmt: skip
+
+            >>> # invoke the measurement: np -> bytes -> mechanism -> bytes -> np
+            >>> release = np.frombuffer(m_rr(data), dtype=np.uint8)
+
+            >>> # use unpackbits to visualize the bitvectors
+            >>> print("data:   ", np.unpackbits(data, bitorder="little"))
+            data:    [0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 1 1 0 0]
+            >>> print("release:", np.unpackbits(release, bitorder="little"))   # fmt: skip # doctest: +SKIP
+            release: [1 0 0 0 0 1 1 1 1 0 0 1 1 1 1 0 0 1 1 0 1 1 0 0]
+
+            >>> # epsilon is 2 * m * ln((2 - f) / f) where m = 3 and f = .8
+            >>> print("epsilon:", m_rr.map(1))
+            epsilon: 2.4327906486489863
+
+We now convert a vector of randomized response bitvec releases 
+to an unbiased frequency estimate via ``debias_randomized_response_bitvec``:
+
+.. tab-set::
+
+    .. tab-item:: Python
+        :sync: python
+
+        .. code:: pycon
+
+            >>> frequencies = dp.m.debias_randomized_response_bitvec(
+            ...     [m_rr(data) for _ in range(10_000)],
+            ...     f=0.8,
+            ... )

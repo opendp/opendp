@@ -7,23 +7,25 @@ The ``opendp.extras.polars`` module adds differential privacy to the
 For convenience, all the members of this module are also available from :py:mod:`opendp.prelude`.
 We suggest importing under the conventional name ``dp``:
 
-.. code:: python
+.. code:: pycon
 
     >>> import opendp.prelude as dp
 
-The methods of this module will then be accessible at ``dp.polars``.
+The members of this module will then be accessible at ``dp.polars``.
 """
 
 from __future__ import annotations
 from dataclasses import asdict, dataclass, field, replace
 import os
-from typing import Any, Literal, Sequence
+from typing import Any, Literal, Mapping, Optional, Sequence, Union, cast
 from opendp._lib import lib_path, import_optional_dependency
+from opendp.extras.mbi import ContingencyTable, make_contingency_table, AIM, Algorithm
 from opendp.mod import (
     ChangeOneIdDistance,
     Domain,
     Measurement,
     FrameDistance,
+    Metric,
     OpenDPException,
     SymmetricIdDistance,
     binary_search,
@@ -41,14 +43,22 @@ from opendp.domains import (
 )
 from opendp.measurements import make_private_lazyframe
 from deprecated import deprecated
+from opendp.transformations import make_stable_lazyframe
+from typing import TYPE_CHECKING
 
+if TYPE_CHECKING:  # pragma: no cover
+    from opendp.context import Query
+    from opendp.extras.polars.contingency_table import ContingencyTableQuery
+
+def _get_opendp_polars_lib_path():
+    return os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path)
 
 class DPExpr(object):
     """
     If both ``opendp`` and ``polars`` have been imported,
     the methods of :py:class:`DPExpr` are registered under the ``dp`` namespace in
     `Polars expressions <https://docs.pola.rs/py-polars/html/reference/expressions/index.html>`_.
-    An expression can be used as a plan in :py:func:`opendp.measurements.make_private_lazyframe`;
+    An expression can be used as a plan in :py:func:`~opendp.measurements.make_private_lazyframe`;
     See the full example there for more information.
 
     In addition to the DP-specific methods here, many Polars ``Expr`` methods are also supported,
@@ -68,18 +78,16 @@ class DPExpr(object):
     def noise(
         self,
         scale: float | None = None,
-        distribution: Literal["Laplace"] | Literal["Gaussian"] | None = None,
     ):
         """Add noise to the expression.
 
-        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
-        If distribution is None, then the noise distribution will be chosen for you:
+        If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
+        The noise distribution is chosen according to the privacy definition:
 
         * Pure-DP: Laplace noise, where ``scale == standard_deviation / sqrt(2)``
         * zCDP: Gaussian noise, where ``scale == standard_devation``
 
         :param scale: Scale parameter for the noise distribution.
-        :param distribution: Either Laplace, Gaussian or None.
 
         :example:
 
@@ -102,77 +110,38 @@ class DPExpr(object):
         └─────┘
         """
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
-        from polars import lit  # type: ignore[import-not-found]
 
         return register_plugin_function(
-            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
+            plugin_path=_get_opendp_polars_lib_path(),
             function_name="noise",
-            args=(self.expr, lit(distribution), scale),
+            args=(self.expr, scale),
             is_elementwise=True,
         )
 
+    @deprecated(version="0.14.1", reason="Use .noise instead. This will now apply gaussian noise if your privacy definition is zCDP.")
     def laplace(self, scale: float | None = None):
         """Add Laplace noise to the expression.
 
-        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+        If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
         :param scale: Noise scale parameter for the Laplace distribution. ``scale == standard_deviation / sqrt(2)``
-
-        :example:
-
-        >>> import polars as pl
-        >>> context = dp.Context.compositor(
-        ...     data=pl.LazyFrame({"A": list(range(100))}),
-        ...     privacy_unit=dp.unit_of(contributions=1),
-        ...     privacy_loss=dp.loss_of(epsilon=1.),
-        ...     split_evenly_over=1,
-        ... )
-        >>> query = context.query().select(pl.len().dp.laplace())
-        >>> query.release().collect()
-        shape: (1, 1)
-        ┌─────┐
-        │ len │
-        │ --- │
-        │ u32 │
-        ╞═════╡
-        │ ... │
-        └─────┘
         """
-        return self.noise(scale=scale, distribution="Laplace")
+        return self.noise(scale=scale)
 
+    @deprecated(version="0.14.1", reason="Use .noise instead. This will now apply laplace noise if your privacy definition is pure-DP.")
     def gaussian(self, scale: float | None = None):
         """Add Gaussian noise to the expression.
 
-        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+        If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
         :param scale: Noise scale parameter for the Gaussian distribution. ``scale == standard_deviation``
-
-        :example:
-
-        >>> import polars as pl
-        >>> context = dp.Context.compositor(
-        ...     data=pl.LazyFrame({"A": list(range(100))}),
-        ...     privacy_unit=dp.unit_of(contributions=1),
-        ...     privacy_loss=dp.loss_of(rho=0.5),
-        ...     split_evenly_over=1,
-        ... )
-        >>> query = context.query().select(pl.len().dp.gaussian())
-        >>> query.release().collect()
-        shape: (1, 1)
-        ┌─────┐
-        │ len │
-        │ --- │
-        │ u32 │
-        ╞═════╡
-        │ ... │
-        └─────┘
         """
-        return self.noise(scale=scale, distribution="Gaussian")
+        return self.noise(scale=scale)
 
     def len(self, scale: float | None = None):
         """Compute a differentially private estimate of the number of elements in `self`, including null values.
 
-        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+        If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
         :param scale: parameter for the noise distribution.
 
@@ -203,14 +172,21 @@ class DPExpr(object):
         It can differ from frame length (``.select(dp.len())``) if the expression uses transformations that change the number of rows,
         like filtering.
         """
-        return self.expr.len().dp.noise(scale)
+        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+
+        return register_plugin_function(
+            plugin_path=_get_opendp_polars_lib_path(),
+            function_name="dp_len",
+            args=(self.expr, scale),
+            returns_scalar=True,
+        )
 
     def count(self, scale: float | None = None):
         """Compute a differentially private estimate of the number of elements in `self`, not including null values.
 
         This function is a shortcut for the exact Polars ``count`` and then noise addition.
 
-        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+        If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
         :param scale: parameter for the noise distribution.
 
@@ -238,14 +214,21 @@ class DPExpr(object):
 
         Output is noise added to three.
         """
-        return self.expr.count().dp.noise(scale)
+        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+
+        return register_plugin_function(
+            plugin_path=_get_opendp_polars_lib_path(),
+            function_name="dp_count",
+            args=(self.expr, scale),
+            returns_scalar=True,
+        )
 
     def null_count(self, scale: float | None = None):
         """Compute a differentially private estimate of the number of null elements in `self`.
 
         This function is a shortcut for the exact Polars ``null_count`` and then noise addition.
 
-        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+        If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
         :param scale: parameter for the noise distribution.
 
@@ -277,14 +260,21 @@ class DPExpr(object):
         consider combining the queries by constructing a boolean nullity column to group on,
         grouping by this column, and then using ``dp.len()``.
         """
-        return self.expr.null_count().dp.noise(scale)
+        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+
+        return register_plugin_function(
+            plugin_path=_get_opendp_polars_lib_path(),
+            function_name="dp_null_count",
+            args=(self.expr, scale),
+            returns_scalar=True,
+        )
 
     def n_unique(self, scale: float | None = None):
         """Compute a differentially private estimate of the number of unique elements in `self`.
 
         This function is a shortcut for the exact Polars ``n_unique`` and then noise addition.
 
-        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+        If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
         :param scale: parameter for the noise distribution.
 
@@ -312,12 +302,19 @@ class DPExpr(object):
 
         Output is noise added to three.
         """
-        return self.expr.n_unique().dp.noise(scale)
+        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+
+        return register_plugin_function(
+            plugin_path=_get_opendp_polars_lib_path(),
+            function_name="dp_n_unique",
+            args=(self.expr, scale),
+            returns_scalar=True,
+        )
 
     def sum(self, bounds: tuple[float, float], scale: float | None = None):
         """Compute the differentially private sum.
 
-        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+        If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
         :param bounds: clip the input data to these lower and upper bounds
         :param scale: parameter for the noise distribution
@@ -338,7 +335,7 @@ class DPExpr(object):
         ...     split_evenly_over=1,
         ...     margins=[dp.polars.Margin(max_length=5)]
         ... )
-        >>> query = context.query().select(pl.col("visits").fill_null(0).dp.sum((0, 1)))
+        >>> query = context.query().select(pl.col("visits").dp.sum((0, 1)))
         >>> query.release().collect()
         shape: (1, 1)
         ┌────────┐
@@ -351,20 +348,29 @@ class DPExpr(object):
 
         Output is noise added to two due to each value being clipped to (0, 1).
         """
-        return self.expr.clip(*bounds).sum().dp.noise(scale)
+        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+        from polars import lit  # type: ignore[import-not-found]
+
+        return register_plugin_function(
+            plugin_path=_get_opendp_polars_lib_path(),
+            function_name="dp_sum",
+            args=(self.expr, lit(bounds[0]), lit(bounds[1]), scale),
+            returns_scalar=True,
+            changes_length=True,
+        )
 
     def mean(
         self,
         bounds: tuple[float, float],
-        scale: tuple[float | None, float | None] = (None, None),
+        scale: float | None = None,
     ):
         """Compute the differentially private mean.
 
         The amount of noise to be added to the sum is determined by the scale.
-        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+        If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
         :param bounds: clip the input data to these lower and upper bounds
-        :param scale: parameters for the noise distributions of the numerator and denominator
+        :param scale: relative parameter for the scale of the noise distributions
 
         :example:
 
@@ -376,7 +382,7 @@ class DPExpr(object):
         ...     split_evenly_over=1,
         ...     margins=[dp.polars.Margin(max_length=5)]
         ... )
-        >>> query = context.query().select(pl.col("visits").fill_null(0).dp.mean((0, 1)))
+        >>> query = context.query().select(pl.col("visits").dp.mean((0, 1)))
         >>> with pl.Config(float_precision=0): # just to prevent doctest from failing
         ...     query.release().collect()
         shape: (1, 1)
@@ -390,65 +396,21 @@ class DPExpr(object):
 
         Privately estimates the numerator and denominator separately, and then returns their ratio.
         """
-        numer, denom = scale
-        return self.sum(bounds, numer) / self.len(denom)
-
-    def _discrete_quantile_score(self, alpha: float, candidates: list[float]):
-        """Score the utility of each candidate for representing the true quantile.
-
-        Candidates closer to the true quantile are assigned scores closer to zero.
-        Lower scores are better.
-
-        :param alpha: a value in [0, 1]. Choose 0.5 for median
-        :param candidates: Set of possible quantiles to evaluate the utility of.
-        """
-        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
-        from polars import Series  # type: ignore[import-not-found]
-
-        return register_plugin_function(
-            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
-            function_name="discrete_quantile_score",
-            args=[self.expr, alpha, Series(candidates)],
-            returns_scalar=True,
-        )
-
-    def _report_noisy_max(
-        self, optimize: Literal["min", "max"], scale: float | None = None
-    ):
-        """Report the argmax or argmin after adding Gumbel noise.
-
-        The scale calibrates the level of entropy when selecting an index.
-        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
-
-        :param optimize: Distinguish between argmax and argmin.
-        :param scale: Noise scale parameter for the Gumbel distribution.
-        """
         from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
         from polars import lit  # type: ignore[import-not-found]
 
-        return register_plugin_function(
-            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
-            function_name="report_noisy_max",
-            args=[self.expr, lit(optimize), scale],
-            is_elementwise=True,
-        )
-
-    def _index_candidates(self, candidates: list[float]):
-        """Index into a candidate set.
-
-        Typically used after :py:func:`_report_noisy_max` to map selected indices to candidates.
-
-        :param candidates: The values that each selected index corresponds to.
-        """
-        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
-        from polars import Series  # type: ignore[import-not-found]
+        if isinstance(scale, tuple):  # pragma: no cover
+            raise ValueError("OpenDP 0.14.1 adjusts the scale to only consist of a single float. "
+                             "Individually estimate sum and len to tune budget distribution.")
 
         return register_plugin_function(
-            plugin_path=os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path),
-            function_name="index_candidates",
-            args=[self.expr, Series(candidates)],
-            is_elementwise=True,
+            plugin_path=_get_opendp_polars_lib_path(),
+            function_name="dp_mean",
+            args=(self.expr, lit(bounds[0]), lit(bounds[1]), scale),
+            returns_scalar=True,
+            changes_length=True,
         )
+
 
     def quantile(
         self, alpha: float, candidates: list[float], scale: float | None = None
@@ -472,7 +434,7 @@ class DPExpr(object):
         ...     margins=[dp.polars.Margin(max_length=100)]
         ... )
         >>> candidates = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
-        >>> query = context.query().select(pl.col("age").cast(int).fill_null(0).dp.quantile(0.25, candidates))
+        >>> query = context.query().select(pl.col("age").cast(int).dp.quantile(0.25, candidates))
         >>> query.release().collect()
         shape: (1, 1)
         ┌─────┐
@@ -486,15 +448,22 @@ class DPExpr(object):
         Output will be one of the candidates,
         with greater likelihood of being selected the closer the candidate is to the first quartile.
         """
-        dq_score = self.expr.dp._discrete_quantile_score(alpha, candidates)
-        noisy_idx = dq_score.dp._report_noisy_max("min", scale)
-        return noisy_idx.dp._index_candidates(candidates)
+        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+        from polars import lit, Series # type: ignore[import-not-found]
+
+        return register_plugin_function(
+            plugin_path=_get_opendp_polars_lib_path(),
+            function_name="dp_quantile",
+            args=(self.expr, lit(alpha), lit(Series(candidates)), scale),
+            returns_scalar=True,
+            changes_length=True,
+        )
 
     def median(self, candidates: list[float], scale: float | None = None):
         """Compute a differentially private median.
 
         The scale calibrates the level of entropy when selecting a candidate.
-        If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+        If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
         :param candidates: Potential quantiles to select from.
         :param scale: How much noise to add to the scores of candidate.
@@ -510,7 +479,7 @@ class DPExpr(object):
         ...     margins=[dp.polars.Margin(max_length=100)]
         ... )
         >>> candidates = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
-        >>> query = context.query().select(pl.col("age").cast(int).fill_null(0).dp.quantile(0.5, candidates))
+        >>> query = context.query().select(pl.col("age").cast(int).dp.quantile(0.5, candidates))
         >>> query.release().collect()
         shape: (1, 1)
         ┌─────┐
@@ -524,7 +493,16 @@ class DPExpr(object):
         Output will be one of the candidates,
         with greater likelihood of being selected the closer the candidate is to the median.
         """
-        return self.expr.dp.quantile(0.5, candidates, scale)
+        from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
+        from polars import lit, Series  # type: ignore[import-not-found]
+
+        return register_plugin_function(
+            plugin_path=_get_opendp_polars_lib_path(),
+            function_name="dp_median",
+            args=(self.expr, lit(Series(candidates)), scale),
+            returns_scalar=True,
+            changes_length=True,
+        )
 
 
 pl = import_optional_dependency("polars", raise_error=False)
@@ -535,7 +513,7 @@ if pl is not None:
 def dp_len(scale: float | None = None):
     """Compute a differentially private estimate of the number of rows.
 
-    If scale is None it is filled by ``global_scale`` in :py:func:`opendp.measurements.make_private_lazyframe`.
+    If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
     :param scale: parameter for the noise distribution.
 
@@ -561,9 +539,14 @@ def dp_len(scale: float | None = None):
     │ ... │
     └─────┘
     """
-    from polars.functions import len  # type: ignore[import-not-found]
+    from polars.plugins import register_plugin_function  # type: ignore[import-not-found]
 
-    return DPExpr(len()).noise(scale=scale)
+    return register_plugin_function(
+        plugin_path=_get_opendp_polars_lib_path(),
+        function_name="dp_frame_len",
+        args=(scale,),
+        returns_scalar=True,
+    )
 
 
 class OnceFrame(object):
@@ -664,10 +647,11 @@ _LAZY_EXECUTION_METHODS = {
     "fetch",
 }
 
+
 @dataclass
 class SortBy:
     """Configuration for ``keep`` in :py:meth:`LazyFrameQuery.truncate_per_group`.
-     
+
     Follows the arguments in Polars' ``sort_by`` method.
     """
 
@@ -689,7 +673,7 @@ class SortBy:
 
 class LazyFrameQuery:
     """
-    A ``LazyFrameQuery`` may be returned by :py:func:`opendp.context.Context.query`.
+    A ``LazyFrameQuery`` may be returned by :py:func:`~opendp.context.Context.query`.
     It mimics a `Polars LazyFrame <https://docs.pola.rs/api/python/stable/reference/lazyframe/index.html>`_,
     but makes a few additions and changes as documented below."""
 
@@ -793,7 +777,7 @@ class LazyFrameQuery:
         **named_by,
     ) -> LazyGroupByQuery:
         """
-        Start a group by operation.
+        Start a group-by operation.
 
         OpenDP currently requires that grouping keys be simple column expressions.
         """
@@ -871,7 +855,7 @@ class LazyFrameQuery:
             on = keys.collect_schema().names()
 
         return LazyFrameQuery(
-            keys.join(self.polars_plan, how="left", on=on),
+            keys.join(self.polars_plan, how="left", on=on, nulls_equal=True),
             self._query,
         )
 
@@ -891,7 +875,9 @@ class LazyFrameQuery:
         input_metric = self._query._chain[1]
 
         if isinstance(by, str):
-            raise ValueError("by must be a list of strings or expressions")  # pragma: no cover
+            raise ValueError(
+                "by must be a list of strings or expressions"
+            )  # pragma: no cover
 
         if isinstance(input_metric, FrameDistance):
             input_metric = input_metric.inner_metric
@@ -929,7 +915,9 @@ class LazyFrameQuery:
         input_metric = self._query._chain[1]
 
         if isinstance(by, str):
-            raise ValueError("by must be a list of strings or expressions")  # pragma: no cover
+            raise ValueError(
+                "by must be a list of strings or expressions"
+            )  # pragma: no cover
 
         if isinstance(input_metric, FrameDistance):
             input_metric = input_metric.inner_metric
@@ -944,7 +932,9 @@ class LazyFrameQuery:
         elif keep == "last":
             ranks = struct.rank("dense", descending=True)
         else:
-            raise ValueError("keep must be 'sample', 'first' or 'last'")  # pragma: no cover
+            raise ValueError(
+                "keep must be 'sample', 'first' or 'last'"
+            )  # pragma: no cover
 
         return self.filter(ranks.over(input_metric.identifier) < k)
 
@@ -1023,53 +1013,106 @@ class LazyFrameQuery:
 
         :example:
 
-        >>> import polars as pl
-        >>> data = pl.LazyFrame([pl.Series("convicted", [0, 1, 1, 0, 1] * 50, dtype=pl.Int32)])
-        >>>
-        >>> context = dp.Context.compositor(
-        ...     data=data,
-        ...     privacy_unit=dp.unit_of(contributions=1),
-        ...     privacy_loss=dp.loss_of(epsilon=1.0),
-        ...     split_evenly_over=1,
-        ...     margins=[dp.polars.Margin(by=(), max_length=1000)],
-        ... )
-        >>>
-        >>> query = context.query().select(
-        ...     dp.len(),
-        ...     pl.col("convicted").fill_null(0).dp.sum((0, 1))
-        ... )
-        >>>
-        >>> query.summarize(alpha=.05)  # type: ignore[union-attr]
-        shape: (2, 5)
-        ┌───────────┬──────────────┬─────────────────┬───────┬──────────┐
-        │ column    ┆ aggregate    ┆ distribution    ┆ scale ┆ accuracy │
-        │ ---       ┆ ---          ┆ ---             ┆ ---   ┆ ---      │
-        │ str       ┆ str          ┆ str             ┆ f64   ┆ f64      │
-        ╞═══════════╪══════════════╪═════════════════╪═══════╪══════════╡
-        │ len       ┆ Frame Length ┆ Integer Laplace ┆ 2.0   ┆ 6.429605 │
-        │ convicted ┆ Sum          ┆ Integer Laplace ┆ 2.0   ┆ 6.429605 │
-        └───────────┴──────────────┴─────────────────┴───────┴──────────┘
+        .. code:: pycon
+
+            >>> import polars as pl
+            >>> data = pl.LazyFrame([pl.Series("convicted", [0, 1, 1, 0, 1] * 50, dtype=pl.Int32)])
+
+            >>> context = dp.Context.compositor(
+            ...     data=data,
+            ...     privacy_unit=dp.unit_of(contributions=1),
+            ...     privacy_loss=dp.loss_of(epsilon=1.0),
+            ...     split_evenly_over=1,
+            ...     margins=[dp.polars.Margin(by=(), max_length=1000)],
+            ... )
+
+            >>> query = context.query().select(
+            ...     dp.len(),
+            ...     pl.col("convicted").dp.sum((0, 1))
+            ... )
+
+            >>> query.summarize(alpha=.05)  # type: ignore[union-attr]
+            shape: (2, 5)
+            ┌───────────┬──────────────┬─────────────────┬───────┬──────────┐
+            │ column    ┆ aggregate    ┆ distribution    ┆ scale ┆ accuracy │
+            │ ---       ┆ ---          ┆ ---             ┆ ---   ┆ ---      │
+            │ str       ┆ str          ┆ str             ┆ f64   ┆ f64      │
+            ╞═══════════╪══════════════╪═════════════════╪═══════╪══════════╡
+            │ len       ┆ Frame Length ┆ Integer Laplace ┆ 2.0   ┆ 6.429605 │
+            │ convicted ┆ Sum          ┆ Integer Laplace ┆ 2.0   ┆ 6.429605 │
+            └───────────┴──────────────┴─────────────────┴───────┴──────────┘
 
         The accuracy in any given row can be interpreted with:
 
-        >>> def interpret_accuracy(distribution, scale, accuracy, alpha):
-        ...     return (
-        ...         f"When the {distribution} scale is {scale}, "
-        ...         f"the DP estimate differs from the true value by no more than {accuracy} "
-        ...         f"at a statistical significance level alpha of {alpha}, "
-        ...         f"or with (1 - {alpha})100% = {(1 - alpha) * 100}% confidence."
-        ...     )
-        ...
-        >>> interpret_accuracy("Integer Laplace", 2.0, 6.429605, alpha=.05) # doctest:+SKIP
+        .. code:: pycon
+
+            >>> def interpret_accuracy(distribution, scale, accuracy, alpha):
+            ...     return (
+            ...         f"When the {distribution} scale is {scale}, "
+            ...         f"the DP estimate differs from the true value by no more than {accuracy} "
+            ...         f"at a statistical significance level alpha of {alpha}, "
+            ...         f"or with (1 - {alpha})100% = {(1 - alpha) * 100}% confidence."
+            ...     )
+
+            >>> interpret_accuracy("Integer Laplace", 2.0, 6.429605, alpha=.05) # doctest:+SKIP
         """
         from opendp.accuracy import summarize_polars_measurement
 
         return summarize_polars_measurement(self.resolve(), alpha)
 
+        
+    def contingency_table(
+        self,
+        *,
+        keys: Optional[Mapping[str, Sequence]] = None,
+        cuts: Optional[Mapping[str, Sequence[float]]] = None,
+        table: Optional[ContingencyTable] = None,
+        algorithm: Union[Algorithm] = AIM(),
+    ) -> "ContingencyTableQuery":
+        """Release an approximation to a contingency table across all columns.
+
+        :param keys: dictionary of column names and unique categories
+        :param cuts: dictionary of column names and bin edges for numerical columns
+        :param table: ContingencyTable from prior release
+        :param algorithm: configuration for internal estimation algorithm
+        """
+        from .contingency_table import ContingencyTableQuery
+
+        query: Query = object.__getattribute__(self, "_query")
+        input_domain, input_metric = cast(tuple[Domain, Metric], query._chain)
+        d_in, d_out = query._d_in, query._d_out
+
+        t_plan = make_stable_lazyframe(
+            input_domain,
+            input_metric,
+            lazyframe=object.__getattribute__(self, "polars_plan"),
+            MO="FrameDistance<SymmetricDistance>",
+        )
+
+        m_table, oneway_scale, oneway_threshold = make_contingency_table(
+            input_domain=t_plan.output_domain,
+            input_metric=t_plan.output_metric,
+            output_measure=query._output_measure,
+            d_in=t_plan.map(d_in),
+            d_out=d_out,  # type: ignore[arg-type]
+            keys=keys,
+            cuts=cuts,
+            table=table,
+            algorithm=algorithm,
+        )
+
+        return ContingencyTableQuery(
+            chain=t_plan >> m_table,
+            output_measure=query._output_measure,
+            context=query._context,
+            oneway_scale=oneway_scale,
+            oneway_threshold=oneway_threshold
+        )
+
 
 class LazyGroupByQuery:
     """
-    A ``LazyGroupByQuery`` is returned by :py:func:`opendp.extras.polars.LazyFrameQuery.group_by`.
+    A ``LazyGroupByQuery`` is returned by :py:func:`~opendp.extras.polars.LazyFrameQuery.group_by`.
     It mimics a `Polars LazyGroupBy <https://docs.pola.rs/api/python/stable/reference/lazyframe/group_by.html>`_,
     but only supports APIs documented below."""
 
@@ -1083,7 +1126,7 @@ class LazyGroupByQuery:
         **named_aggs,
     ) -> LazyFrameQuery:
         """
-        Compute aggregations for each group of a group by operation.
+        Compute aggregations for each group of a group-by operation.
 
         :param aggs: expressions to apply in the aggregation context
         :param named_aggs: named/aliased expressions to apply in the aggregation context
@@ -1101,7 +1144,7 @@ class Margin:
     Be aware that aspects of your data marked as "public information" are not subject to privacy protections,
     so it is important that public descriptors about the margin should be set conservatively, or not set at all.
 
-    Instances of this class are used by :py:func:`opendp.context.Context.compositor`.
+    Instances of this class are used by :py:func:`~opendp.context.Context.compositor`.
     """
 
     by: Sequence = field(default_factory=list)
@@ -1133,7 +1176,7 @@ class Margin:
     """
 
     @property
-    @deprecated(reason="Use max_length instead.")
+    @deprecated(version="0.13.0", reason="Use max_length instead.")
     def max_partition_length(self):
         return self.max_length  # pragma: no cover
 
@@ -1144,6 +1187,7 @@ class Margin:
 
     @property
     @deprecated(
+        version="0.13.0",
         reason="Use max_groups instead. This was renamed to be consistent with Polars terminology."
     )
     def max_num_partitions(self):
@@ -1151,6 +1195,7 @@ class Margin:
 
     @max_num_partitions.setter
     @deprecated(
+        version="0.13.0",
         reason="Use max_groups instead. This was renamed to be consistent with Polars terminology."
     )
     def max_num_partitions(self, value):
@@ -1158,6 +1203,7 @@ class Margin:
 
     @property
     @deprecated(
+        version="0.13.0",
         reason='Use invariant instead. This was renamed because invariants are not "public information". Invariants are "unprotected information".'
     )
     def public_info(self):
@@ -1165,6 +1211,7 @@ class Margin:
 
     @public_info.setter
     @deprecated(
+        version="0.13.0",
         reason='Use invariant instead. This was renamed because invariants are not "public information". Invariants are "unprotected information".'
     )
     def public_info(self, value):
@@ -1216,7 +1263,7 @@ class Margin:
 @dataclass
 class Bound(object):
     """
-    The ``Bound`` class is used to describe bounds on the number of 
+    The ``Bound`` class is used to describe bounds on the number of
     contributed rows per-group and the number of contributed groups.
     """
 

@@ -1,3 +1,4 @@
+use polars::prelude::AnyValue;
 use polars_plan::dsl::Expr;
 use polars_plan::plans::LiteralValue;
 use polars_plan::utils::expr_output_name;
@@ -20,7 +21,7 @@ pub fn make_expr_lit<M: OuterMetric>(
     input_domain: WildExprDomain,
     input_metric: M,
     expr: Expr,
-) -> Fallible<Transformation<WildExprDomain, ExprDomain, M, M>>
+) -> Fallible<Transformation<WildExprDomain, M, ExprDomain, M>>
 where
     M::InnerMetric: MicrodataMetric,
     M::Distance: Clone,
@@ -37,17 +38,26 @@ where
         ($ty:ty, $null:expr) => {{ SeriesDomain::new(name, AtomDomain::<$ty>::new(None, $null)) }};
     }
 
-    let series_domain = match literal_value.clone().materialize() {
-        LiteralValue::Boolean(_) => series_domain!(bool, None),
-        LiteralValue::String(_) => series_domain!(String, None),
-        LiteralValue::UInt32(_) => series_domain!(u32, None),
-        LiteralValue::UInt64(_) => series_domain!(u64, None),
-        LiteralValue::Int8(_) => series_domain!(i8, None),
-        LiteralValue::Int16(_) => series_domain!(i16, None),
-        LiteralValue::Int32(_) => series_domain!(i32, None),
-        LiteralValue::Int64(_) => series_domain!(i64, None),
-        LiteralValue::Float32(v) => series_domain!(f32, v.is_nan().then(NaN::new)),
-        LiteralValue::Float64(v) => series_domain!(f64, v.is_nan().then(NaN::new)),
+    let LiteralValue::Scalar(literal_value) = literal_value.clone().materialize() else {
+        return fallible!(
+            MakeTransformation,
+            "unsupported literal value: {:?}",
+            literal_value
+        );
+    };
+
+    let series_domain = match literal_value.value() {
+        AnyValue::Boolean(_) => series_domain!(bool, None),
+        AnyValue::String(_) => series_domain!(String, None),
+        AnyValue::StringOwned(_) => series_domain!(String, None),
+        AnyValue::UInt32(_) => series_domain!(u32, None),
+        AnyValue::UInt64(_) => series_domain!(u64, None),
+        AnyValue::Int8(_) => series_domain!(i8, None),
+        AnyValue::Int16(_) => series_domain!(i16, None),
+        AnyValue::Int32(_) => series_domain!(i32, None),
+        AnyValue::Int64(_) => series_domain!(i64, None),
+        AnyValue::Float32(v) => series_domain!(f32, v.is_nan().then(NaN::new)),
+        AnyValue::Float64(v) => series_domain!(f64, v.is_nan().then(NaN::new)),
         value => return fallible!(MakeTransformation, "unsupported literal value: {:?}", value),
     };
 
@@ -58,10 +68,10 @@ where
 
     Transformation::new(
         input_domain,
-        output_domain,
-        Function::from_expr(expr),
         input_metric.clone(),
+        output_domain,
         input_metric,
+        Function::from_expr(expr),
         StabilityMap::new(Clone::clone),
     )
 }

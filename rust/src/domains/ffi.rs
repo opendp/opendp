@@ -31,7 +31,10 @@ pub extern "C" fn opendp_domains___domain_free(this: *mut AnyDomain) -> FfiResul
 
 #[bootstrap(
     name = "_member",
-    arguments(this(hint = "Domain"), val(rust_type = "$domain_carrier_type(this)")),
+    arguments(
+        this(hint = "Domain", rust_type = b"null"),
+        val(rust_type = "$domain_carrier_type(this)")
+    ),
     returns(c_type = "FfiResult<bool *>", hint = "bool")
 )]
 /// Check membership in a `domain`.
@@ -118,6 +121,7 @@ pub extern "C" fn opendp_domains__domain_carrier_type(
 }
 
 #[bootstrap(
+    rust_path = "domains/struct.AtomDomain",
     arguments(
         bounds(
             rust_type = "Option<(T, T)>",
@@ -261,7 +265,9 @@ pub extern "C" fn opendp_domains___atom_domain_get_bounds_closed(
 ) -> FfiResult<*mut AnyObject> {
     fn monomorphize<T: 'static + CheckAtom>(domain: &AnyDomain) -> Fallible<AnyObject> {
         let domain = domain.downcast_ref::<AtomDomain<T>>()?;
-        _atom_domain_get_bounds_closed(domain).map(|v| AnyObject::new(v.map(AnyObject::new)))
+        Ok(AnyObject::new(
+            _atom_domain_get_bounds_closed(domain)?.map(AnyObject::new),
+        ))
     }
     let domain = try_as_ref!(domain);
     let T = try_!(domain.type_.get_atom());
@@ -305,6 +311,7 @@ pub extern "C" fn opendp_domains___atom_domain_nan(
 }
 
 #[bootstrap(
+    rust_path = "domains/struct.OptionDomain",
     arguments(element_domain(c_type = "AnyDomain *")),
     generics(D(example = "element_domain")),
     returns(c_type = "FfiResult<AnyDomain *>", hint = "OptionDomain")
@@ -624,6 +631,7 @@ pub extern "C" fn opendp_domains__map_domain(
 
 /// A struct containing the essential metadata shared by extrinsic elements:
 /// UserDomain, UserMetric, UserMeasure.
+#[derive(Clone)]
 pub struct ExtrinsicElement {
     /// The name of the element, used for display and partial equality
     pub identifier: String,
@@ -631,19 +639,8 @@ pub struct ExtrinsicElement {
     pub value: ExtrinsicObject,
 }
 
-impl Clone for ExtrinsicElement {
-    fn clone(&self) -> Self {
-        (self.value.count)(self.value.ptr, true);
-        Self {
-            identifier: self.identifier.clone(),
-            value: self.value.clone(),
-        }
-    }
-}
-
 impl ExtrinsicElement {
     pub fn new(identifier: String, value: ExtrinsicObject) -> Self {
-        (value.count)(value.ptr, true);
         ExtrinsicElement { value, identifier }
     }
 }
@@ -656,11 +653,6 @@ impl Debug for ExtrinsicElement {
 impl PartialEq for ExtrinsicElement {
     fn eq(&self, other: &Self) -> bool {
         self.identifier == other.identifier
-    }
-}
-impl Drop for ExtrinsicElement {
-    fn drop(&mut self) {
-        (self.value.count)(self.value.ptr, false);
     }
 }
 
@@ -749,6 +741,7 @@ pub extern "C" fn opendp_domains__user_domain(
 
 #[bootstrap(
     name = "_extrinsic_domain_descriptor",
+    arguments(domain(rust_type = b"null")),
     returns(c_type = "FfiResult<ExtrinsicObject *>")
 )]
 /// Retrieve the descriptor value stored in an extrinsic domain.

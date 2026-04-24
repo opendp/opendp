@@ -19,13 +19,13 @@ mod test;
 ///
 /// # Generics
 /// * `DI` - Input Domain
-/// * `TO` - Output Type
 /// * `MI` - Input Metric.
 /// * `MO` - Output Measure of the input argument. Must be `SmoothedMaxDivergence`
-pub fn make_fix_delta<DI, TO, MI, MO>(
-    m: &Measurement<DI, TO, MI, MO>,
+/// * `TO` - Output Type
+pub fn make_fix_delta<DI, MI, MO, TO>(
+    m: &Measurement<DI, MI, MO, TO>,
     delta: f64,
-) -> Fallible<Measurement<DI, TO, MI, MO::FixedMeasure>>
+) -> Fallible<Measurement<DI, MI, MO::FixedMeasure, TO>>
 where
     DI: Domain,
     MI: 'static + Metric,

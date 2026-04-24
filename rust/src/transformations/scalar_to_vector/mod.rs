@@ -14,8 +14,8 @@ pub fn make_vec<T, const P: usize, Q>(
 ) -> Fallible<
     Transformation<
         AtomDomain<T>,
-        VectorDomain<AtomDomain<T>>,
         AbsoluteDistance<Q>,
+        VectorDomain<AtomDomain<T>>,
         LpDistance<P, Q>,
     >,
 >
@@ -25,10 +25,10 @@ where
 {
     Transformation::new(
         input_domain.clone(),
-        VectorDomain::new(input_domain).with_size(1),
-        Function::new(move |arg: &T| vec![arg.clone()]),
         input_metric,
+        VectorDomain::new(input_domain).with_size(1),
         LpDistance::default(),
+        Function::new(move |arg: &T| vec![arg.clone()]),
         StabilityMap::new(Clone::clone),
     )
 }

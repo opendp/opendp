@@ -19,7 +19,7 @@ use crate::{
 };
 
 #[cfg(feature = "ffi")]
-mod ffi;
+pub(crate) mod ffi;
 
 #[cfg(test)]
 mod test;
@@ -40,6 +40,24 @@ mod test;
 /// Larger granularities are more computationally efficient, but have a looser privacy map.
 /// If k is not set, k defaults to the smallest granularity.
 ///
+/// # Citations
+/// * [Rogers23 A Unifying Privacy Analysis Framework for Unknown Domain Algorithms in Differential Privacy](https://arxiv.org/abs/2309.09170)
+/// * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/abs/2004.00010)
+///
+/// # Proof Navigation
+/// * This constructor delegates to [`MakeNoiseThreshold`] for [`DiscreteGaussian`].
+/// * Threshold-specific privacy accounting is implemented by [`NoiseThresholdPrivacyMap`].
+/// * See also [`make_noise_threshold`] for the distribution-agnostic entry point.
+///
+/// # Runtime
+/// For an input map with `m` entries, each release performs `O(m)` wrapper work
+/// plus one discrete-Gaussian draw per entry.
+///
+/// # Utility
+/// If an item's value is separated from the threshold by margin `g`,
+/// the probability of thresholding it incorrectly decays subgaussianly as
+/// `O(exp(-(g / scale)^2))` up to constants from the discrete Gaussian tail bound.
+///
 /// # Arguments
 /// * `input_domain` - Domain of the input.
 /// * `input_metric` - Metric for the input domain.
@@ -57,7 +75,7 @@ pub fn make_gaussian_threshold<DI: NoiseDomain, MI: Metric, MO: 'static + Measur
     scale: f64,
     threshold: DI::Atom,
     k: Option<i32>,
-) -> Fallible<Measurement<DI, DI::Carrier, MI, MO>>
+) -> Fallible<Measurement<DI, MI, MO, DI::Carrier>>
 where
     DiscreteGaussian: MakeNoiseThreshold<DI, MI, MO, Threshold = DI::Atom>,
     (DI, MI): MetricSpace,
@@ -80,7 +98,7 @@ where
         self,
         input_space: (DI, MI),
         threshold: DI::Atom,
-    ) -> Fallible<Measurement<DI, DI::Carrier, MI, MO>> {
+    ) -> Fallible<Measurement<DI, MI, MO, DI::Carrier>> {
         DI::Atom::new_distribution(self.scale, self.k)?.make_noise_threshold(input_space, threshold)
     }
 }

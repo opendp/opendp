@@ -5,14 +5,14 @@
 #include <Rdefines.h>
 #include <Rinternals.h>
 #include <R_ext/Complex.h>
-#include <R_ext/Callbacks.h>
 
 // Import C headers for rust API
 #include "Ropendp.h"
 #include "opendp.h"
+#include "convert.h"
 #include "convert_elements.h"
 
-const char *ATOM_TYPES[] = {"u32", "u64", "i32", "i64", "f32", "f64", "usize", "bool", "String"};
+const char *ATOM_TYPES[] = {"u8", "u16", "u32", "u64", "i8", "i16", "i32", "i64", "f32", "f64", "usize", "bool", "String", NULL};
 
 NORET void error_unknown_type(const char *lhs, const char *rhs)
 {
@@ -55,10 +55,26 @@ unsigned char str_equal(const char *str1, const char *str2)
 
 unsigned char is_in(const char *str, const char **arr)
 {
-    for (int i = 0; i <= sizeof(arr); i++)
+    for (int i = 0; arr[i] != NULL; i++)
         if (str_equal(str, arr[i]))
             return 1;
     return 0;
+}
+
+static ExtrinsicObject sexp_to_extrinsicobject(SEXP value)
+{
+    RetainedSexp *retained = new_retained_sexp(value);
+    ExtrinsicObject output = {(const void *)retained};
+    return output;
+}
+
+ExtrinsicObject *sexp_to_extrinsicobjectptr(SEXP value)
+{
+    ExtrinsicObject *output_obj = (ExtrinsicObject *)malloc(sizeof(ExtrinsicObject));
+    if (!output_obj)
+        error("failed to allocate extrinsic object");
+    output_obj[0] = sexp_to_extrinsicobject(value);
+    return output_obj;
 }
 
 SEXP extract_error(FfiError *err)
@@ -130,6 +146,22 @@ void *sexp_to_voidptr(SEXP input, SEXP rust_type)
     else if (str_equal(c_rust_type, "i32"))
         output = INTEGER(input);
 
+    else if (str_equal(c_rust_type, "i16"))
+    {
+        short *output_i16 = (short *)R_alloc(LENGTH(input), sizeof(short));
+        for (int i = 0; i < LENGTH(input); i++)
+            output_i16[i] = (short)INTEGER(input)[i];
+        output = output_i16;
+    }
+
+    else if (str_equal(c_rust_type, "i8"))
+    {
+        signed char *output_i8 = (signed char *)R_alloc(LENGTH(input), sizeof(signed char));
+        for (int i = 0; i < LENGTH(input); i++)
+            output_i8[i] = (signed char)INTEGER(input)[i];
+        output = output_i8;
+    }
+
     else if (str_equal(c_rust_type, "u32"))
     {
         unsigned int *output_u32 = (unsigned int *)R_alloc(LENGTH(input), sizeof(unsigned int));
@@ -159,6 +191,28 @@ void *sexp_to_voidptr(SEXP input, SEXP rust_type)
         }
         output = output_u64;
     }
+    else if (str_equal(c_rust_type, "u16"))
+    {
+        unsigned short *output_u16 = (unsigned short *)R_alloc(LENGTH(input), sizeof(unsigned short));
+        for (int i = 0; i < LENGTH(input); i++)
+        {
+            if (INTEGER(input)[i] < 0)
+                error("u16 cannot be negative");
+            output_u16[i] = (unsigned short)INTEGER(input)[i];
+        }
+        output = output_u16;
+    }
+    else if (str_equal(c_rust_type, "u8"))
+    {
+        unsigned char *output_u8 = (unsigned char *)R_alloc(LENGTH(input), sizeof(unsigned char));
+        for (int i = 0; i < LENGTH(input); i++)
+        {
+            if (INTEGER(input)[i] < 0)
+                error("u8 cannot be negative");
+            output_u8[i] = (unsigned char)INTEGER(input)[i];
+        }
+        output = output_u8;
+    }
     else if (str_equal(c_rust_type, "usize"))
     {
         size_t *output_size_t = (size_t *)R_alloc(LENGTH(input), sizeof(size_t));
@@ -177,6 +231,10 @@ void *sexp_to_voidptr(SEXP input, SEXP rust_type)
         for (int i = 0; i < LENGTH(input); i++)
             output_bool[i] = (bool)LOGICAL(input)[i];
         output = output_bool;
+    }
+    else if (str_equal(c_rust_type, "ExtrinsicObject"))
+    {
+        output = sexp_to_extrinsicobjectptr(input);
     }
 
     else
@@ -231,6 +289,20 @@ SEXP voidptr_to_sexp(void *input, SEXP rust_type, size_t len)
         }
         UNPROTECT(1);
     }
+    else if (str_equal(c_origin, "i16"))
+    {
+        result = PROTECT(allocVector(INTSXP, len));
+        for (int i = 0; i < len; i++)
+            INTEGER(result)[i] = (int)((short *)input)[i];
+        UNPROTECT(1);
+    }
+    else if (str_equal(c_origin, "i8"))
+    {
+        result = PROTECT(allocVector(INTSXP, len));
+        for (int i = 0; i < len; i++)
+            INTEGER(result)[i] = (int)((signed char *)input)[i];
+        UNPROTECT(1);
+    }
     else if (str_equal(c_origin, "u32"))
     {
         result = PROTECT(allocVector(INTSXP, len));
@@ -257,6 +329,20 @@ SEXP voidptr_to_sexp(void *input, SEXP rust_type, size_t len)
             INTEGER(result)
             [i] = (int)input_i64;
         }
+        UNPROTECT(1);
+    }
+    else if (str_equal(c_origin, "u16"))
+    {
+        result = PROTECT(allocVector(INTSXP, len));
+        for (int i = 0; i < len; i++)
+            INTEGER(result)[i] = (int)((unsigned short *)input)[i];
+        UNPROTECT(1);
+    }
+    else if (str_equal(c_origin, "u8"))
+    {
+        result = PROTECT(allocVector(INTSXP, len));
+        for (int i = 0; i < len; i++)
+            INTEGER(result)[i] = (int)((unsigned char *)input)[i];
         UNPROTECT(1);
     }
     else if (str_equal(c_origin, "u64"))
@@ -296,6 +382,18 @@ SEXP voidptr_to_sexp(void *input, SEXP rust_type, size_t len)
         }
         UNPROTECT(1);
     }
+    else if (str_equal(c_origin, "ExtrinsicObject"))
+    {
+        if (len == 1)
+            result = extrinsic_object_to_sexp((ExtrinsicObject *)input);
+        else
+        {
+            result = PROTECT(allocVector(VECSXP, len));
+            for (int i = 0; i < len; i++)
+                SET_VECTOR_ELT(result, i, extrinsic_object_to_sexp(((ExtrinsicObject *)input) + i));
+            UNPROTECT(1);
+        }
+    }
     else
         error_unknown_type("voidptr_to_sexp unknown type:", c_origin);
 
@@ -315,6 +413,15 @@ FfiSlice scalar_to_slice(SEXP value, SEXP type_name)
     if (is_in(c_origin, ATOM_TYPES))
         result.ptr = sexp_to_voidptr(value, type_name);
 
+    else if (str_equal(c_origin, "ExtrinsicObject"))
+    {
+        if (TYPEOF(value) != VECSXP)
+            error("expected a list when constructing Vec<ExtrinsicObject>");
+        ExtrinsicObject *objects = (ExtrinsicObject *)malloc(LENGTH(value) * sizeof(ExtrinsicObject));
+        for (int i = 0; i < LENGTH(value); i++)
+            objects[i] = sexp_to_extrinsicobject(VECTOR_ELT(value, i));
+        result.ptr = objects;
+    }
     else if (str_equal(c_origin, "AnyMeasurementPtr"))
     {
         // TODO: does this ever get freed?
@@ -337,6 +444,9 @@ SEXP slice_to_scalar(FfiSlice *raw, SEXP type_name)
 
     SEXP result;
     if (is_in(c_origin, ATOM_TYPES))
+        result = voidptr_to_sexp((void *)raw->ptr, type_name, raw->len);
+
+    else if (str_equal(c_origin, "ExtrinsicObject"))
         result = voidptr_to_sexp((void *)raw->ptr, type_name, raw->len);
 
     else if (str_equal(c_origin, "AnyObject"))
@@ -448,12 +558,13 @@ FfiSlice hashmap_to_slice(SEXP value, SEXP type_name)
     if (errorOccurred)
         error("Error getting hash items");
 
-    SEXP key_rt_call = PROTECT(lang2(install("as_rt_vec"), VECTOR_ELT(args, 0)));
+    SEXP as_rt_vec = PROTECT(get_private_func("as_rt_vec"));
+    SEXP key_rt_call = PROTECT(lang2(as_rt_vec, VECTOR_ELT(args, 0)));
     SEXP key_rt = PROTECT(R_tryEval(key_rt_call, R_GlobalEnv, &errorOccurred));
     if (errorOccurred)
         error("Error getting key type");
 
-    SEXP val_rt_call = PROTECT(lang2(install("as_rt_vec"), VECTOR_ELT(args, 1)));
+    SEXP val_rt_call = PROTECT(lang2(as_rt_vec, VECTOR_ELT(args, 1)));
     SEXP val_rt = PROTECT(R_tryEval(val_rt_call, R_GlobalEnv, &errorOccurred));
     if (errorOccurred)
         error("Error getting val type");
@@ -463,7 +574,7 @@ FfiSlice hashmap_to_slice(SEXP value, SEXP type_name)
     ((void **)ptr)[1] = sexp_to_anyobjectptr(VECTOR_ELT(hashitems, 1), val_rt);
 
     FfiSlice result = {ptr, 2};
-    UNPROTECT(8);
+    UNPROTECT(9);
     return result;
 }
 
@@ -471,8 +582,8 @@ SEXP slice_to_hashmap(FfiSlice *raw, SEXP type_name)
 {
     PROTECT(type_name);
     void **backing = (void **)raw->ptr;
-    SEXP keys = anyobjectptr_to_sexp(backing[0]);
-    SEXP vals = anyobjectptr_to_sexp(backing[1]);
+    SEXP keys = PROTECT(anyobjectptr_to_sexp(backing[0]));
+    SEXP vals = PROTECT(anyobjectptr_to_sexp(backing[1]));
 
     int errorOccurred;
     SEXP hashtab_call = PROTECT(lang3(install("new_hashtab"), keys, vals));
@@ -480,7 +591,7 @@ SEXP slice_to_hashmap(FfiSlice *raw, SEXP type_name)
     if (errorOccurred)
         error("Error creating hashmap");
 
-    UNPROTECT(3);
+    UNPROTECT(5);
     return hashtab;
 }
 
@@ -495,6 +606,13 @@ FfiSlice sexp_to_slice(SEXP value, SEXP type_name)
     if (str_equal(c_origin, "AnyMeasurement"))
     {
         FfiSlice t = {.ptr = sexp_to_anymeasurementptr(value), .len = 1};
+        result = t;
+    }
+    else if (str_equal(c_origin, "ExtrinsicObject"))
+    {
+        ExtrinsicObject *object = (ExtrinsicObject *)malloc(sizeof(ExtrinsicObject));
+        object[0] = sexp_to_extrinsicobject(value);
+        FfiSlice t = {.ptr = object, .len = 1};
         result = t;
     }
 
@@ -541,6 +659,9 @@ SEXP slice_to_sexp(FfiSlice *raw, SEXP type_name)
     else if (is_in(c_origin, ATOM_TYPES))
         result = slice_to_scalar(raw, type_name);
 
+    else if (str_equal(c_origin, "ExtrinsicObject"))
+        result = slice_to_scalar(raw, type_name);
+
     else
         error_unknown_type("slice_to_sexp unknown type:", c_origin);
 
@@ -558,6 +679,22 @@ char *rt_to_string(SEXP type_name)
 
     UNPROTECT(3);
     return (char *)sexp_to_charptr(string_type_name);
+}
+
+SEXP parse_runtime_type(const char *type_name)
+{
+    int errorOccurred;
+    SEXP r_type_name = PROTECT(allocVector(STRSXP, 1));
+    SET_STRING_ELT(r_type_name, 0, mkChar(type_name));
+
+    SEXP rt_parse = PROTECT(get_private_func("rt_parse"));
+    SEXP rt_parse_call = PROTECT(lang2(rt_parse, r_type_name));
+    SEXP parsed = PROTECT(R_tryEval(rt_parse_call, R_GlobalEnv, &errorOccurred));
+    if (errorOccurred)
+        error("failed to parse type");
+
+    UNPROTECT(4);
+    return parsed;
 }
 
 AnyObject *sexp_to_anyobjectptr(SEXP data, SEXP type_name)
@@ -608,29 +745,27 @@ SEXP anyobjectptr_to_sexp(AnyObject *obj)
         extract_error(type_name_result.err);
     char *c_type_name = type_name_result.ok;
 
-    SEXP r_type_name;
-    PROTECT(r_type_name = allocVector(STRSXP, 1));
-    SET_STRING_ELT(r_type_name, 0, mkChar(c_type_name));
-
-    int errorOccurred;
-    SEXP rt_parse = PROTECT(get_private_func("rt_parse"));
-    SEXP rt_parse_call = PROTECT(lang2(rt_parse, r_type_name));
-    SEXP type_name = PROTECT(R_tryEval(rt_parse_call, R_GlobalEnv, &errorOccurred));
-    if (errorOccurred)
-        error("failed to parse type");
+    SEXP type_name = PROTECT(parse_runtime_type(c_type_name));
 
     const char *c_origin = sexp_to_charptr(get_origin(type_name));
     if (str_equal(c_origin, "PrivacyProfile"))
     {
         SEXP profile = privacyprofileptr_to_sexp(obj, R_NilValue);
-        UNPROTECT(4);
+        UNPROTECT(1);
         return profile;
+    }
+
+    if (str_equal(c_origin, "AnyOdometerQueryable"))
+    {
+        SEXP queryable = anyodometerqueryableptr_to_sexp(obj, R_NilValue);
+        UNPROTECT(1);
+        return queryable;
     }
 
     if (str_equal(c_origin, "AnyQueryable"))
     {
         SEXP queryable = anyqueryableptr_to_sexp(obj, R_NilValue);
-        UNPROTECT(4);
+        UNPROTECT(1);
         return queryable;
     }
 
@@ -640,7 +775,7 @@ SEXP anyobjectptr_to_sexp(AnyObject *obj)
     FfiSlice *slice = slice_result.ok;
 
     SEXP value = slice_to_sexp(slice, type_name);
-    UNPROTECT(4);
+    UNPROTECT(1);
     return value;
 }
 

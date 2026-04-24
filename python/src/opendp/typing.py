@@ -6,17 +6,17 @@ but they may feel out of place in Python. These utilities try to fill that gap.
 
 For more context, see :ref:`typing in the User Guide <typing-user-guide>`.
 
-For convenience, all the functions of this module are also available from :py:mod:`opendp.prelude`.
+For convenience, all the members of this module are also available from :py:mod:`opendp.prelude`.
 We suggest importing under the conventional name ``dp``:
 
-.. code:: python
+.. code:: pycon
 
     >>> import opendp.prelude as dp
 '''
 from __future__ import annotations
 import typing
 from collections.abc import Hashable
-from typing import Optional, Union, Any, Type, Sequence, _GenericAlias # type: ignore[attr-defined]
+from typing import Optional, TypeAlias, Union, Any, Type, Sequence, _GenericAlias # type: ignore[attr-defined]
 from types import GenericAlias
 import re
 
@@ -65,7 +65,7 @@ _PRIMITIVE_TYPES = _NUMERIC_TYPES | {"bool", "String"}
 
 
 # all ways of providing type information
-RuntimeTypeDescriptor = Union[
+RuntimeTypeDescriptor: TypeAlias = Union[
     "RuntimeType",  # as the normalized type -- ChangeOneDistance; RuntimeType.parse("i32")
     str,  # plaintext string in terms of Rust types -- "Vec<i32>"
     Type[Union[Sequence[Any], tuple[Any, Any], float, str, bool]],  # using the Python type class itself -- int, float
@@ -264,7 +264,6 @@ class RuntimeType(object):
         Vec<String>
         >>> dp.RuntimeType.infer((12., True, "A"))
         (f64, bool, String)
-        >>>
         >>> dp.RuntimeType.infer([])
         Traceback (most recent call last):
         ...
@@ -412,6 +411,7 @@ class Carrier(RuntimeType):
 
 
 Vec: Carrier = Carrier('Vec')
+NDArray: Carrier = Carrier('NDArray')
 HashMap: Carrier = Carrier('HashMap')
 i8: str = 'i8'
 i16: str = 'i16'
@@ -495,21 +495,21 @@ def get_carrier_type(domain: Domain) -> Union[RuntimeType, str]:
     '''
     return domain.carrier_type
 
-def get_type(domain: Domain):
+def get_type(element: Union[Domain, Metric, Measure]):
     '''
-    Returns the type for a domain.
+    Returns the type for a supporting element.
 
-    :param domain: A domain
+    :param element: A supporting element
     '''
-    return domain.type
+    return element.type
 
-def get_value_type(value: Union[Metric, Measure]):
+def get_value_type(type_descriptor: RuntimeTypeDescriptor):
     '''
-    Returns the value type for a metric or measure.
+    Returns the value type for a dict type descriptor.
 
-    :param value: Metric or measure
+    :param type_descriptor: runtime type
     '''
-    return RuntimeType.parse(value).args[1] # type: ignore[union-attr]
+    return RuntimeType.parse(type_descriptor).args[1] # type: ignore[union-attr]
 
 def get_distance_type(value: Union[Metric, Measure]) -> Union[RuntimeType, str]:
     '''

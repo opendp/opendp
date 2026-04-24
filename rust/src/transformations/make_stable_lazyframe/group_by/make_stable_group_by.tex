@@ -2,7 +2,7 @@
 \input{../../../lib.sty}
 
 \title{\texttt{fn make\_stable\_group\_by}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 \begin{document}
 \maketitle  
 
@@ -14,20 +14,22 @@ in \asOfCommit{mod.rs}{f5bb719}.
 
 \section{Hoare Triple}
 \subsection*{Precondition}
-\subsubsection*{Compiler Verified}
+\subsubsection*{Compiler-verified}
 \begin{itemize}
     \item Generic \texttt{M} implements \rustdoc{transformations/cast_metric/trait}{UnboundedMetric}.
 \end{itemize}
 
-\subsubsection*{Caller Verified}
+\subsubsection*{Caller-verified}
 None
 
-\subsection*{Function}
+\subsection*{Pseudocode}
 \label{sec:python-pseudocode}
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_stable_group_by.py}
 
 \subsection*{Postcondition}
+\begin{theorem}
 \validTransformation{\texttt{(input\_domain, input\_metric, plan)}}{\\\texttt{make\_stable\_group\_by}}
+\end{theorem}
 
 \begin{proof}[Appropriate Output Domain]
     By line \ref{line:stable-keys} the grouping keys are stable row-by-row transformations of the data.

@@ -38,7 +38,7 @@ authors:
     given-names: Claire
 cff-version: 1.2.0
 contact:
-  - email: info@opendp.org
+  - email: contact@opendp.org
     name: The OpenDP Team
     website: https://opendp.org
 identifiers:
@@ -65,7 +65,7 @@ references:
     status: preprint
     title: A Programming Framework for OpenDP
     type: conference-paper
-    url: https://projects.iq.harvard.edu/files/opendp/files/opendp_programming_framework_11may2020_1_01.pdf
+    url: https://opendp.org/files/2025/11/opendp_programming_framework_11may2020_1_01.pdf
     year: 2020
 repository-artifact: https://pypi.org/project/opendp
 repository-code: https://github.com/opendp/opendp

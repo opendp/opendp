@@ -30,23 +30,23 @@ impl<TI> Function<TI, Box<dyn Any>> {
     }
 }
 
-impl<DI, TO, MI, MO> Measurement<DI, TO, MI, MO>
+impl<DI, MI, MO, TO> Measurement<DI, MI, MO, TO>
 where
     DI: 'static + Domain,
     DI::Carrier: 'static,
-    TO: 'static,
     MI: 'static + Metric,
     MO: 'static + Measure,
+    TO: 'static,
     (DI, MI): MetricSpace,
 {
     /// Converts this Measurement into one with polymorphic output. This is useful for composition
     /// of heterogeneous Measurements.
-    pub fn into_poly(self) -> Measurement<DI, Box<dyn Any>, MI, MO> {
+    pub fn into_poly(self) -> Measurement<DI, MI, MO, Box<dyn Any>> {
         Measurement::new(
             self.input_domain.clone(),
-            self.function.clone().into_poly(),
             self.input_metric.clone(),
             self.output_measure.clone(),
+            self.function.clone().into_poly(),
             self.privacy_map.clone(),
         )
         .expect("compatibility check already passed")

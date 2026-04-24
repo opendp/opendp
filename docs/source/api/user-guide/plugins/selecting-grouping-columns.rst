@@ -27,10 +27,19 @@ We'll first write plugins for our transformation and measurement:
     .. tab-item:: Python
         :sync: python
 
-        .. literalinclude:: code/selecting-grouping-columns.txt
+        .. literalinclude:: code/selecting-grouping-columns.rst
             :language: python
-            :start-after: plugins
-            :end-before: /plugins
+            :dedent:
+            :start-after: # plugins
+            :end-before: # /plugins
+
+    .. tab-item:: R
+        :sync: r
+
+        .. literalinclude:: code/selecting-grouping-columns.R
+            :language: r
+            :start-after: # plugins
+            :end-before: # /plugins
 
 Next, use these functions to create a DP mechanism:
 
@@ -39,10 +48,19 @@ Next, use these functions to create a DP mechanism:
     .. tab-item:: Python
         :sync: python
 
-        .. literalinclude:: code/selecting-grouping-columns.txt
+        .. literalinclude:: code/selecting-grouping-columns.rst
             :language: python
-            :start-after: dp-mechanism
-            :end-before: /dp-mechanism
+            :dedent:
+            :start-after: # dp-mechanism
+            :end-before: # /dp-mechanism
+
+    .. tab-item:: R
+        :sync: r
+
+        .. literalinclude:: code/selecting-grouping-columns.R
+            :language: r
+            :start-after: # dp-mechanism
+            :end-before: # /dp-mechanism
 
 Finally, load your data and make a DP release:
 
@@ -51,9 +69,18 @@ Finally, load your data and make a DP release:
     .. tab-item:: Python
         :sync: python
 
-        .. literalinclude:: code/selecting-grouping-columns.txt
+        .. literalinclude:: code/selecting-grouping-columns.rst
             :language: python
-            :start-after: dp-release
-            :end-before: /dp-release
+            :dedent:
+            :start-after: # dp-release
+            :end-before: # /dp-release
+
+    .. tab-item:: R
+        :sync: r
+
+        .. literalinclude:: code/selecting-grouping-columns.R
+            :language: r
+            :start-after: # dp-release
+            :end-before: # /dp-release
 
 Successive runs will return different sets of columns that satisfy your criteria.

@@ -20,6 +20,7 @@ const BLOCKLIST: &'static [&'static str] = &[
     "_function_free",
     "_measurement_free",
     "_transformation_free",
+    "_odometer_free",
     "_function_free",
     "_metric_free",
     "_measure_free",
@@ -34,20 +35,8 @@ const BLOCKLIST: &'static [&'static str] = &[
     "extrinsic_object_free",
     "fill_bytes",
     "erfc",
-    // plugins
-    "make_user_transformation",
-    "make_user_measurement",
-    "new_function",
-    "new_queryable",
-    "new_privacy_profile",
-    "user_domain",
-    "_make_transformation",
-    "_make_measurement",
-    "_new_pure_function",
-    "_extrinsic_domain",
-    "_extrinsic_domain_descriptor",
-    "_extrinsic_distance",
-    "_extrinsic_divergence",
+    "debias_randomized_response_bitvec",
+    "as_array",
     // polars
     "new_arrow_array",
     "series_domain",
@@ -67,6 +56,7 @@ const BLOCKLIST: &'static [&'static str] = &[
     "_lazyframe_from_domain",
     "with_margin",
     "wild_expr_domain",
+    "_get_bound",
     "make_stable_lazyframe",
     "make_stable_expr",
     "make_private_lazyframe",
@@ -92,7 +82,6 @@ pub fn generate_bindings(modules: &HashMap<String, Vec<Function>>) -> HashMap<Pa
 
     let r_bindings = modules
         .into_iter()
-        .filter(|(name, _)| name.as_str() != "internal")
         .map(|(module_name, module)| {
             (
                 PathBuf::from(format!("R/{}.R", module_name)),
@@ -103,7 +92,6 @@ pub fn generate_bindings(modules: &HashMap<String, Vec<Function>>) -> HashMap<Pa
 
     let mut c_bindings = modules
         .into_iter()
-        .filter(|(name, _)| name.as_str() != "internal")
         .map(|(module_name, module)| {
             (
                 PathBuf::from(format!("src/{}.c", module_name)),

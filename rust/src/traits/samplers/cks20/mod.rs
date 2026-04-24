@@ -44,7 +44,7 @@
 
 use crate::error::Fallible;
 use dashu::{
-    base::Abs,
+    base::{Abs, Sign},
     integer::{IBig, UBig},
     rational::RBig,
     rbig,
@@ -52,6 +52,32 @@ use dashu::{
 use opendp_derive::proven;
 
 use super::{sample_bernoulli_rational, sample_standard_bernoulli, sample_uniform_ubig_below};
+
+#[cfg(test)]
+mod test;
+
+fn gcd_ubig(mut a: UBig, mut b: UBig) -> UBig {
+    while !b.is_zero() {
+        let r = &a % &b;
+        a = b;
+        b = r;
+    }
+    a
+}
+
+fn div_rbig_by_ubig_exact(numer: &UBig, denom: &UBig, k: &UBig) -> RBig {
+    assert!(!k.is_zero(), "division by zero");
+
+    if numer.is_zero() {
+        return RBig::ZERO;
+    }
+
+    let g = gcd_ubig(numer.clone(), k.clone());
+    let n_red = numer / &g;
+    let k_red = k / g;
+
+    RBig::from_parts(n_red.into(), (denom * k_red).into())
+}
 
 #[proven]
 /// Sample exactly from the Bernoulli(exp(-x)) distribution, where $x \in [0, 1]$.
@@ -61,9 +87,18 @@ use super::{sample_bernoulli_rational, sample_standard_bernoulli, sample_uniform
 /// `sample_bernoulli_exp1` either returns `Err(e)`, due to a lack of system entropy,
 /// or `Ok(out)`, where `out` is distributed as $Bernoulli(exp(-x))$.
 fn sample_bernoulli_exp1(x: RBig) -> Fallible<bool> {
+    let (numer_signed, denom) = x.into_parts();
+    let (Sign::Positive, numer) = numer_signed.into_parts() else {
+        return fallible!(FailedFunction, "x must be in [0, 1]");
+    };
+
     let mut k = UBig::ONE;
     loop {
-        if sample_bernoulli_rational(x.clone() / &k)? {
+        // Build x/k with corrected exact division, bypassing buggy RBig `/`.
+        // Drop when fix is available upstream: https://github.com/cmpute/dashu/issues/57
+        let x_div_k = div_rbig_by_ubig_exact(&numer, &denom, &k);
+
+        if sample_bernoulli_rational(x_div_k)? {
             k += UBig::ONE;
         } else {
             return Ok(k % 2u8 == 1);
@@ -78,8 +113,7 @@ fn sample_bernoulli_exp1(x: RBig) -> Fallible<bool> {
 /// For any non-negative finite rational `x`,
 /// `sample_bernoulli_exp` either returns `Err(e)` due to a lack of system entropy,
 /// or `Ok(out)`, where `out` is distributed as $Bernoulli(exp(-x))$.
-
-fn sample_bernoulli_exp(mut x: RBig) -> Fallible<bool> {
+pub(crate) fn sample_bernoulli_exp(mut x: RBig) -> Fallible<bool> {
     // Sample floor(x) independent Bernoulli(exp(-1))
     // If all are 1, return Bernoulli(exp(-(x-floor(x))))
     while x > RBig::ONE {

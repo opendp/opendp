@@ -56,8 +56,8 @@ pub fn make_bounded_float_checked_sum<S>(
 ) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<S::Item>>,
-        AtomDomain<S::Item>,
         SymmetricDistance,
+        AtomDomain<S::Item>,
         AbsoluteDistance<S::Item>,
     >,
 >
@@ -80,7 +80,9 @@ where
 
     Transformation::new(
         VectorDomain::new(AtomDomain::new_closed(bounds)?),
+        SymmetricDistance,
         AtomDomain::new_non_nan(),
+        AbsoluteDistance::default(),
         Function::new_fallible(move |arg: &Vec<S::Item>| {
             let mut data = arg.clone();
             if arg.len() > size_limit {
@@ -88,8 +90,6 @@ where
             }
             Ok(S::unchecked_sum(&data[..size_limit.min(data.len())]))
         }),
-        SymmetricDistance,
-        AbsoluteDistance::default(),
         StabilityMap::new_fallible(move |d_in: &IntDistance| {
             // d_out =  |BS*(v) - BS*(v')| where BS* is the finite sum and BS the ideal sum
             //       <= |BS*(v) - BS(v)| + |BS(v) - BS(v')| + |BS(v') - BS*(v')|
@@ -140,8 +140,8 @@ pub fn make_sized_bounded_float_checked_sum<S>(
 ) -> Fallible<
     Transformation<
         VectorDomain<AtomDomain<S::Item>>,
-        AtomDomain<S::Item>,
         SymmetricDistance,
+        AtomDomain<S::Item>,
         AbsoluteDistance<S::Item>,
     >,
 >
@@ -162,11 +162,11 @@ where
 
     Transformation::new(
         VectorDomain::new(AtomDomain::new_closed(bounds)?).with_size(size),
+        SymmetricDistance,
         AtomDomain::new_non_nan(),
+        AbsoluteDistance::default(),
         // Under the assumption that the input data is in input domain, then an unchecked sum is safe.
         Function::new(move |arg: &Vec<S::Item>| S::unchecked_sum(arg)),
-        SymmetricDistance,
-        AbsoluteDistance::default(),
         StabilityMap::new_fallible(move |d_in: &IntDistance| {
             // d_out =  |BS*(v) - BS*(v')| where BS* is the finite sum and BS the ideal sum
             //       <= |BS*(v) - BS(v)| + |BS(v) - BS(v')| + |BS(v') - BS*(v')|

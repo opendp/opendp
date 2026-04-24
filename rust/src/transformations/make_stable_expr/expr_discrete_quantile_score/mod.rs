@@ -10,16 +10,16 @@ use crate::transformations::{
 use crate::{core::Function, error::Fallible};
 
 use polars::datatypes::{
-    Float32Type, Float64Type, Int8Type, Int16Type, Int32Type, Int64Type, PolarsDataType,
-    StaticArray, UInt32Type, UInt64Type,
+    Float32Type, Float64Type, Int8Type, Int16Type, Int32Type, Int64Type, StaticArray, UInt32Type,
+    UInt64Type,
 };
 use polars::lazy::dsl::Expr;
 use polars::prelude::DataType::{self, *};
 
 mod plugin_dq_score;
 pub(crate) use plugin_dq_score::{DiscreteQuantileScorePlugin, DiscreteQuantileScoreShim};
+use polars::prelude::{AnyValue, LiteralValue, NamedFrom, PolarsPhysicalType, Scalar};
 use polars::series::Series;
-use polars_plan::plans::typed_lit;
 
 #[cfg(test)]
 pub mod test;
@@ -37,8 +37,8 @@ pub fn make_expr_discrete_quantile_score<MI>(
 ) -> Fallible<
     Transformation<
         WildExprDomain,
-        ExprDomain,
         L01InfDistance<MI>,
+        ExprDomain,
         L0InfDistance<LInfDistance<f64>>,
     >,
 >
@@ -111,8 +111,11 @@ where
     // alpha = alpha_num / alpha_den (numerator and denominator of alpha)
     let (alpha_num, alpha_den, size_limit) = score_candidates_constants(Some(mgl as u64), alpha)?;
 
-    let len = candidates.len() as i64;
-    let fill_value = typed_lit(0u64).repeat_by(len).reshape(&[-1, len]);
+    let len = candidates.len();
+    let fill_value = Expr::Literal(LiteralValue::Scalar(Scalar::new(
+        DataType::Array(Box::new(DataType::UInt64), len),
+        AnyValue::Array(Series::new("".into(), &vec![0u64; len]), len),
+    )));
 
     let mut output_domain = active_series.clone();
     output_domain.set_dtype(DataType::Array(
@@ -131,9 +134,11 @@ where
     };
 
     t_prior
-        >> Transformation::<_, _, L01InfDistance<MI>, L0InfDistance<LInfDistance<_>>>::new(
+        >> Transformation::<_, L01InfDistance<MI>, _, L0InfDistance<LInfDistance<_>>>::new(
             middle_domain,
+            middle_metric,
             output_domain,
+            L0InfDistance(LInfDistance::new(false)),
             Function::then_expr(move |input_expr| {
                 apply_plugin(
                     vec![input_expr],
@@ -146,8 +151,6 @@ where
                 )
             })
             .fill_with(fill_value),
-            middle_metric,
-            L0InfDistance(LInfDistance::new(false)),
             StabilityMap::new_fallible(move |(l0, _, li)| {
                 let out_li = f64::inf_cast(score_candidates_map(
                     alpha_num,
@@ -159,7 +162,7 @@ where
         )?
 }
 
-fn validate<T: 'static + PolarsDataType>(candidates: &Series) -> Fallible<()>
+fn validate<T: 'static + PolarsPhysicalType>(candidates: &Series) -> Fallible<()>
 where
     for<'a> T::Physical<'a>: Number,
 {
@@ -170,10 +173,12 @@ where
             candidates.null_count()
         );
     }
-    check_candidates(&series_to_vec::<T>(&candidates.cast(&T::get_dtype())?)?)
+    check_candidates(&series_to_vec::<T>(
+        &candidates.cast(&T::get_static_dtype())?,
+    )?)
 }
 
-fn series_to_vec<'a, T: 'static + PolarsDataType>(
+fn series_to_vec<'a, T: 'static + PolarsPhysicalType>(
     series: &'a Series,
 ) -> Fallible<Vec<T::Physical<'a>>>
 where

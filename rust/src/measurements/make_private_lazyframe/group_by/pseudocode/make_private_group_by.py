@@ -156,6 +156,11 @@ def make_private_group_by(
         else: # |\label{line: helpful_error_message}|            
             raise f"num_groups ({l0}), total contributions ({l1}), and per_group ({li}) are not sufficiently well-defined."
 
+        # tighten the concrete bounds via identities that always hold
+        l0 = min(l0, l1) # |\label{line:l0-tighten}|
+        li = min(li, l1) # |\label{line:li-tighten}|
+        l1 = min(l1, l0.inf_mul(li)) # |\label{line:l1-tighten}|
+
         d_out = f_privacy_map.eval((l0, l1, li))
 
         if margin.invariant is not None or is_join:  # |\label{line:privacy-map-static-keys}|

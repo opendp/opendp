@@ -40,7 +40,7 @@ mod test;
 pub fn make_sum<MI, T>(
     input_domain: VectorDomain<AtomDomain<T>>,
     input_metric: MI,
-) -> Fallible<Transformation<VectorDomain<AtomDomain<T>>, AtomDomain<T>, MI, AbsoluteDistance<T>>>
+) -> Fallible<Transformation<VectorDomain<AtomDomain<T>>, MI, AtomDomain<T>, AbsoluteDistance<T>>>
 where
     MI: Metric,
     T: MakeSum<MI>,
@@ -72,8 +72,8 @@ where
     ) -> Fallible<
         Transformation<
             VectorDomain<AtomDomain<Self>>,
-            AtomDomain<Self>,
             MI,
+            AtomDomain<Self>,
             AbsoluteDistance<Self>,
         >,
     >;
@@ -85,7 +85,7 @@ macro_rules! impl_make_sum_int {
             fn make_sum(
                 input_domain: VectorDomain<AtomDomain<Self>>,
                 _input_metric: SymmetricDistance,
-            ) -> Fallible<Transformation<VectorDomain<AtomDomain<Self>>, AtomDomain<Self>, SymmetricDistance, AbsoluteDistance<Self>>> {
+            ) -> Fallible<Transformation<VectorDomain<AtomDomain<Self>>, SymmetricDistance, AtomDomain<Self>, AbsoluteDistance<Self>>> {
                 let bounds = input_domain.element_domain.bounds
                     .ok_or_else(|| err!(MakeTransformation, "`input_domain` must be bounded. Use `make_clamp` to bound data."))?
                     .get_closed()?;
@@ -120,7 +120,7 @@ macro_rules! impl_make_sum_int {
             fn make_sum(
                 input_domain: VectorDomain<AtomDomain<Self>>,
                 input_metric: InsertDeleteDistance,
-            ) -> Fallible<Transformation<VectorDomain<AtomDomain<Self>>, AtomDomain<Self>, InsertDeleteDistance, AbsoluteDistance<Self>>> {
+            ) -> Fallible<Transformation<VectorDomain<AtomDomain<Self>>, InsertDeleteDistance, AtomDomain<Self>, AbsoluteDistance<Self>>> {
                 let bounds = input_domain.element_domain.bounds
                     .ok_or_else(|| err!(MakeTransformation, "`input_domain` must be bounded. Use `make_clamp` to bound data."))?
                     .get_closed()?;
@@ -159,7 +159,7 @@ macro_rules! impl_make_sum_float {
             fn make_sum(
                 input_domain: VectorDomain<AtomDomain<Self>>,
                 input_metric: SymmetricDistance,
-            ) -> Fallible<Transformation<VectorDomain<AtomDomain<Self>>, AtomDomain<Self>, SymmetricDistance, AbsoluteDistance<Self>>> {
+            ) -> Fallible<Transformation<VectorDomain<AtomDomain<Self>>, SymmetricDistance, AtomDomain<Self>, AbsoluteDistance<Self>>> {
                 let bounds = input_domain.element_domain.bounds.as_ref()
                     .ok_or_else(|| err!(MakeTransformation, "`input_domain` must be bounded. Use `make_clamp` to bound data."))?
                     .get_closed()?;
@@ -190,7 +190,7 @@ macro_rules! impl_make_sum_float {
             fn make_sum(
                 input_domain: VectorDomain<AtomDomain<Self>>,
                 input_metric: InsertDeleteDistance,
-            ) -> Fallible<Transformation<VectorDomain<AtomDomain<Self>>, AtomDomain<Self>, InsertDeleteDistance, AbsoluteDistance<Self>>> {
+            ) -> Fallible<Transformation<VectorDomain<AtomDomain<Self>>, InsertDeleteDistance, AtomDomain<Self>, AbsoluteDistance<Self>>> {
                 let bounds = input_domain.element_domain.bounds.as_ref()
                     .ok_or_else(|| err!(MakeTransformation, "`input_domain` must be bounded. Use `make_clamp` to bound data."))?
                     .get_closed()?;

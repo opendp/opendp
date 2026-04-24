@@ -1,10 +1,8 @@
 use std::{collections::BTreeSet, sync::Arc};
 
-use polars::prelude::PlSmallStr;
-use polars::prelude::{JoinOptions, JoinType};
+use polars::prelude::{DslPlan, JoinOptions, JoinType, PlSmallStr, Selector};
 use polars_plan::{
     dsl::{Expr, Operator},
-    plans::DslPlan,
     prelude::GroupbyOptions,
     utils::expr_output_name,
 };
@@ -103,6 +101,20 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
         _ => None,
     };
 
+    #[cfg(patch_polars)]
+    let DslPlan::GroupBy {
+        input,
+        keys,
+        predicates,
+        aggs,
+        apply,
+        maintain_order,
+        options,
+    } = plan
+    else {
+        return Ok(None);
+    };
+    #[cfg(not(patch_polars))]
     let DslPlan::GroupBy {
         input,
         keys,
@@ -127,6 +139,17 @@ pub(crate) fn match_group_by(mut plan: DslPlan) -> Fallible<Option<MatchGroupBy>
         return fallible!(MakeMeasurement, "Apply is not supported in logical plan");
     }
 
+    #[cfg(patch_polars)]
+    if !predicates.is_empty() {
+        // Support could be added by composing over the measurements and then composing with the aggs.
+        // Not a priority to add because we'd typically rather keep groups in the DP release,
+        // especially if we've spent budget on it.
+        return fallible!(
+            MakeMeasurement,
+            "Having is not currently supported in logical plan. Please open an issue if this would be useful to you."
+        );
+    }
+
     if maintain_order {
         return fallible!(MakeMeasurement, "The order of keys is sensitive");
     }
@@ -145,7 +168,7 @@ pub fn match_grouping_columns(keys: Vec<Expr>) -> Fallible<BTreeSet<PlSmallStr>>
         .map(|e| {
             Ok(match e {
                 Expr::Column(name) => vec![name.clone()],
-                Expr::Columns(names) => names.to_vec(),
+                Expr::Selector(Selector::ByName { names, .. }) => names.to_vec(),
                 e => {
                     return fallible!(
                         MakeMeasurement,

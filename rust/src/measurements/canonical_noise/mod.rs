@@ -7,7 +7,7 @@ use dashu::{
     rbig,
 };
 use num::Zero;
-use opendp_derive::bootstrap;
+use opendp_derive::{bootstrap, proven};
 
 use crate::{
     core::{Function, Measurement, PrivacyMap},
@@ -42,7 +42,7 @@ pub fn make_canonical_noise(
     input_metric: AbsoluteDistance<f64>,
     d_in: f64,
     d_out: (f64, f64),
-) -> Fallible<Measurement<AtomDomain<f64>, f64, AbsoluteDistance<f64>, Approximate<MaxDivergence>>>
+) -> Fallible<Measurement<AtomDomain<f64>, AbsoluteDistance<f64>, Approximate<MaxDivergence>, f64>>
 {
     if input_domain.nan() {
         return fallible!(MakeMeasurement, "input_domain must consist of non-nan data");
@@ -59,17 +59,17 @@ pub fn make_canonical_noise(
 
     Measurement::new(
         input_domain,
+        input_metric,
+        Approximate(MaxDivergence),
         Function::new_fallible(move |&arg: &f64| {
             let canonical_rv = CanonicalRV {
-                shift: RBig::try_from(arg).unwrap_or(RBig::ZERO),
+                shift: RBig::try_from(arg.clamp(f64::MIN, f64::MAX)).unwrap_or(RBig::ZERO),
                 scale: &r_d_in,
                 tradeoff: &tradeoff,
                 fixed_point: &fixed_point,
             };
             PartialSample::new(canonical_rv).value()
         }),
-        input_metric,
-        Approximate(MaxDivergence),
         PrivacyMap::new_fallible(move |d_in_p: &f64| {
             if !(0.0..=d_in).contains(d_in_p) {
                 return fallible!(
@@ -85,6 +85,7 @@ pub fn make_canonical_noise(
     )
 }
 
+#[proven]
 /// # Proof Definition
 /// Given epsilon and delta, return the corresponding f-DP tradeoff curve
 /// with conservative arithmetic,
