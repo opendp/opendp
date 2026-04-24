@@ -38,7 +38,7 @@ us if you are interested in proof-writing. Thank you!
 Distribution: Laplace vs. Gaussian
 ----------------------------------
 
-The Laplace mechanism is used to privatize an aggregate, like a sum or
+The Laplace mechanism is used to release a differentially private aggregate, like a sum or
 mean.
 
 An instance of the Laplace threshold mechanism is captured by a
