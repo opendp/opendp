@@ -372,6 +372,12 @@ lazy_static! {
             vec![t!((u32, usize, usize)), t!((u32, f32, f32)), t!((u32, f64, f64))],
             vec![t!(Option<(f64, AnyObject)>), t!(Option<(f64, ExtrinsicObject)>)],
             vec![t!((f64, AnyObject)), t!((f64, ExtrinsicObject))],
+            type_vec![Option, <(u8, u8), (u16, u16), (u32, u32), (u64, u64), (u128, u128), (i8, i8), (i16, i16), (i32, i32), (i64, i64), (i128, i128), (f32, f32), (f64, f64)>],
+            vec![
+                t!((u8, i32)), t!((u16, i32)), t!((u32, i32)), t!((u64, i32)), t!((u128, i32)),
+                t!((i8, i32)), t!((i16, i32)), t!((i64, i32)), t!((i128, i32)),
+                t!((f32, i32)), t!((f64, i32))
+            ],
             vec![t!(Function<f64, f64>)],
 
             type_vec![AnyMeasurementPtr, AnyTransformationPtr, AnyOdometerPtr, AnyQueryable, AnyOdometerQueryable, AnyMeasurement, AnyOdometer],

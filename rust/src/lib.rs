@@ -189,6 +189,7 @@ pub mod measures;
 pub mod metrics;
 pub mod traits;
 pub mod transformations;
+pub mod utilities;
 
 #[cfg(all(feature = "polars", feature = "contrib"))]
 pub mod polars;
