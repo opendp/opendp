@@ -752,9 +752,21 @@ class Query(object):
         from opendp.measurements import then_canonical_noise
         from opendp._internal import _new_pure_function
         from opendp.extras.numpy.canonical import BinomialCND
+        from opendp.mod import PrivacyCurve
 
         def then(d_in, d_out):
-            m_noise = then_canonical_noise(d_in, d_out)
+            if isinstance(d_out, PrivacyCurve):
+                # Context can't hold privacy curves, so this isn't easily reachable
+                curve = d_out  # pragma: no cover
+            elif isinstance(d_out, tuple) and len(d_out) == 2:
+                epsilon, delta = d_out
+                curve = PrivacyCurve.new_approxDP([(epsilon, delta)])
+            else:
+                raise ValueError(  # pragma: no cover
+                    "canonical_noise expects d_out to be a PrivacyCurve or an (epsilon, delta) pair."
+                )
+
+            m_noise = then_canonical_noise(d_in, curve)
             if binomial_size is not None:
                 m_noise = m_noise >> _new_pure_function(
                     lambda x: BinomialCND(x, d_in, d_out, binomial_size),
@@ -1148,6 +1160,9 @@ def _cast_measure(chain, to_measure: Optional[Measure] = None, d_to=None):
         "Approximate<MaxDivergence>",
     ):
         return make_fix_delta(make_zCDP_to_approxDP(chain), d_to[1])
+
+    if from_to == ("PrivacyCurveDP", "Approximate<MaxDivergence>"):
+        return make_fix_delta(chain, d_to[1])
 
     raise ValueError(
         f"Unable to cast measure from {from_to[0]} to {from_to[1]}"

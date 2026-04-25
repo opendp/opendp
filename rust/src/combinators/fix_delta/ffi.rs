@@ -5,11 +5,11 @@ use crate::{
     core::{FfiResult, Measurement, PrivacyMap},
     error::Fallible,
     ffi::any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast},
-    measures::{Approximate, SmoothedMaxDivergence},
+    measures::{Approximate, PrivacyCurveDP},
 };
 
 #[bootstrap(features("contrib"), arguments(measurement(rust_type = b"null"),))]
-/// Fix the delta parameter in the privacy map of a `measurement` with a SmoothedMaxDivergence output measure.
+/// Fix the delta parameter in the privacy map of a `measurement` with a PrivacyCurveDP output measure.
 ///
 /// # Arguments
 /// * `measurement` - a measurement with a privacy curve to be fixed
@@ -45,7 +45,7 @@ fn make_fix_delta(measurement: &AnyMeasurement, delta: f64) -> Fallible<AnyMeasu
     let MO = measurement.output_measure.type_.clone();
     dispatch!(
         monomorphize,
-        [(MO, [SmoothedMaxDivergence, Approximate<SmoothedMaxDivergence>])],
+        [(MO, [PrivacyCurveDP, Approximate<PrivacyCurveDP>])],
         (measurement, delta)
     )
 }

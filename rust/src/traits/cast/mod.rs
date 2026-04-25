@@ -255,119 +255,35 @@ impl ExactIntBounds for f32 {
 }
 
 pub(crate) trait NextFloat {
-    // naming has a trailing underscore so as not to conflict with stabilization of the corresponding methods in Rust STD
+    // naming has a trailing underscore so as not to conflict with the corresponding methods in Rust STD
     fn next_up_(self) -> Self;
     fn next_down_(self) -> Self;
 }
 
 impl NextFloat for f64 {
     /// Returns the least number greater than `self`.
-    ///
-    /// Taken from the unstable Rust compiler implementation.
-    /// https://github.com/rust-lang/rust/blob/eb33b43bab08223fa6b46abacc1e95e859fe375d/library/core/src/num/f64.rs#L763-L810
+    #[inline]
     fn next_up_(self) -> Self {
-        // Some targets violate Rust's assumption of IEEE semantics, e.g. by flushing
-        // denormals to zero. This is in general unsound and unsupported, but here
-        // we do our best to still produce the correct result on such targets.
-        const TINY_BITS: u64 = 0x1; // Smallest positive f64.
-        const CLEAR_SIGN_MASK: u64 = 0x7fff_ffff_ffff_ffff;
-
-        let bits = self.to_bits();
-        if self.is_nan() || bits == Self::INFINITY.to_bits() {
-            return self;
-        }
-
-        let abs = bits & CLEAR_SIGN_MASK;
-        let next_bits = if abs == 0 {
-            TINY_BITS
-        } else if bits == abs {
-            bits + 1
-        } else {
-            bits - 1
-        };
-        Self::from_bits(next_bits)
+        self.next_up()
     }
 
     /// Returns the greatest number less than `self`.
-    ///
-    /// Taken from the unstable Rust compiler implementation.
-    /// https://github.com/rust-lang/rust/blob/eb33b43bab08223fa6b46abacc1e95e859fe375d/library/core/src/num/f64.rs#L812-L859
+    #[inline]
     fn next_down_(self) -> Self {
-        // Some targets violate Rust's assumption of IEEE semantics, e.g. by flushing
-        // denormals to zero. This is in general unsound and unsupported, but here
-        // we do our best to still produce the correct result on such targets.
-        const NEG_TINY_BITS: u64 = 0x8000_0000_0000_0001; // Smallest (in magnitude) negative f64.
-        const CLEAR_SIGN_MASK: u64 = 0x7fff_ffff_ffff_ffff;
-
-        let bits = self.to_bits();
-        if self.is_nan() || bits == Self::NEG_INFINITY.to_bits() {
-            return self;
-        }
-
-        let abs = bits & CLEAR_SIGN_MASK;
-        let next_bits = if abs == 0 {
-            NEG_TINY_BITS
-        } else if bits == abs {
-            bits - 1
-        } else {
-            bits + 1
-        };
-        Self::from_bits(next_bits)
+        self.next_down()
     }
 }
 impl NextFloat for f32 {
     /// Returns the least number greater than `self`.
-    ///
-    /// Taken from the unstable Rust compiler implementation.
-    /// https://github.com/rust-lang/rust/blob/eb33b43bab08223fa6b46abacc1e95e859fe375d/library/core/src/num/f32.rs#L750-L797
+    #[inline]
     fn next_up_(self) -> Self {
-        // Some targets violate Rust's assumption of IEEE semantics, e.g. by flushing
-        // denormals to zero. This is in general unsound and unsupported, but here
-        // we do our best to still produce the correct result on such targets.
-        const TINY_BITS: u32 = 0x1; // Smallest positive f32.
-        const CLEAR_SIGN_MASK: u32 = 0x7fff_ffff;
-
-        let bits = self.to_bits();
-        if self.is_nan() || bits == Self::INFINITY.to_bits() {
-            return self;
-        }
-
-        let abs = bits & CLEAR_SIGN_MASK;
-        let next_bits = if abs == 0 {
-            TINY_BITS
-        } else if bits == abs {
-            bits + 1
-        } else {
-            bits - 1
-        };
-        Self::from_bits(next_bits)
+        self.next_up()
     }
 
     /// Returns the greatest number less than `self`.
-    ///
-    /// Taken from the unstable Rust compiler implementation.
-    /// https://github.com/rust-lang/rust/blob/eb33b43bab08223fa6b46abacc1e95e859fe375d/library/core/src/num/f32.rs#L799-L846
+    #[inline]
     fn next_down_(self) -> Self {
-        // Some targets violate Rust's assumption of IEEE semantics, e.g. by flushing
-        // denormals to zero. This is in general unsound and unsupported, but here
-        // we do our best to still produce the correct result on such targets.
-        const NEG_TINY_BITS: u32 = 0x8000_0001; // Smallest (in magnitude) negative f32.
-        const CLEAR_SIGN_MASK: u32 = 0x7fff_ffff;
-
-        let bits = self.to_bits();
-        if self.is_nan() || bits == Self::NEG_INFINITY.to_bits() {
-            return self;
-        }
-
-        let abs = bits & CLEAR_SIGN_MASK;
-        let next_bits = if abs == 0 {
-            NEG_TINY_BITS
-        } else if bits == abs {
-            bits - 1
-        } else {
-            bits + 1
-        };
-        Self::from_bits(next_bits)
+        self.next_down()
     }
 }
 

@@ -59,10 +59,60 @@ where
     }
 }
 
+mod private {
+    use super::{Above, Below};
+    pub trait Sealed<T> {}
+
+    impl<T> Sealed<T> for () {}
+    impl<T> Sealed<T> for (T, T) {}
+    impl<T> Sealed<T> for Above<T> {}
+    impl<T> Sealed<T> for Below<T> {}
+    impl<T> Sealed<T> for (Option<T>, Option<T>) {}
+}
+
+pub trait BoundSpec<T>: private::Sealed<T> {
+    fn resolve(self) -> (Option<T>, Option<T>);
+}
+
+pub struct Above<T>(pub T);
+pub struct Below<T>(pub T);
+
+impl<T> BoundSpec<T> for () {
+    fn resolve(self) -> (Option<T>, Option<T>) {
+        (None, None)
+    }
+}
+
+impl<T> BoundSpec<T> for (T, T) {
+    fn resolve(self) -> (Option<T>, Option<T>) {
+        (Some(self.0), Some(self.1))
+    }
+}
+
+impl<T> BoundSpec<T> for Above<T> {
+    fn resolve(self) -> (Option<T>, Option<T>) {
+        (Some(self.0), None)
+    }
+}
+
+impl<T> BoundSpec<T> for Below<T> {
+    fn resolve(self) -> (Option<T>, Option<T>) {
+        (None, Some(self.0))
+    }
+}
+impl<T> BoundSpec<T> for (Option<T>, Option<T>) {
+    fn resolve(self) -> (Option<T>, Option<T>) {
+        self
+    }
+}
+
 /// Find the closest passing value to the decision boundary of `predicate`.
 ///
-/// If `bounds` are not passed, conducts an exponential search to infer them first.
-pub fn binary_search<T>(predicate: impl Fn(&T) -> bool, bounds: Option<(T, T)>) -> Fallible<T>
+/// Missing bounds are inferred:
+/// - if neither bound is passed, an exponential search infers both bounds
+/// - if only `lower` is passed, a band search infers `upper`
+/// - if only `upper` is passed, a band search infers `lower`
+pub fn binary_search<T>(predicate: impl Fn(&T) -> bool, bounds: impl BoundSpec<T>) -> Fallible<T>
 where
     T: BinarySearchable,
 {
@@ -74,7 +124,7 @@ where
 /// A returned sign of `1` means the passing side is above the boundary, and `-1` means it is below.
 pub fn signed_binary_search<T>(
     predicate: impl Fn(&T) -> bool,
-    bounds: Option<(T, T)>,
+    bounds: impl BoundSpec<T>,
 ) -> Fallible<(T, i8)>
 where
     T: BinarySearchable,
@@ -86,7 +136,7 @@ where
 /// Fallible version of [`binary_search`].
 pub fn fallible_binary_search<T>(
     predicate: impl Fn(&T) -> Fallible<bool>,
-    bounds: Option<(T, T)>,
+    bounds: impl BoundSpec<T>,
 ) -> Fallible<T>
 where
     T: BinarySearchable,
@@ -97,17 +147,37 @@ where
 /// Fallible version of [`signed_binary_search`].
 pub fn signed_fallible_binary_search<T>(
     predicate: impl Fn(&T) -> Fallible<bool>,
-    bounds: Option<(T, T)>,
+    bounds: impl BoundSpec<T>,
 ) -> Fallible<(T, i8)>
 where
     T: BinarySearchable,
 {
-    let bounds = match bounds {
-        Some(bounds) => bounds,
-        None => fallible_exponential_bounds_search(&predicate)?
-            .ok_or_else(|| err!(Search, "unable to infer bounds"))?,
-    };
+    let bounds = resolve_bounds(&predicate, bounds)?;
     signed_fallible_binary_search_with_bounds(predicate, bounds)
+}
+
+fn resolve_bounds<T>(
+    predicate: &impl Fn(&T) -> Fallible<bool>,
+    bounds: impl BoundSpec<T>,
+) -> Fallible<(T, T)>
+where
+    T: BinarySearchable,
+{
+    match bounds.resolve() {
+        (Some(lower), Some(upper)) => Ok((lower, upper)),
+        (Some(lower), None) => {
+            let at_lower = predicate(&lower)?;
+            fallible_signed_band_search(predicate, lower.clone(), at_lower, 1)?
+                .ok_or_else(|| err!(Search, "unable to infer upper bound"))
+        }
+        (None, Some(upper)) => {
+            let at_upper = predicate(&upper)?;
+            fallible_signed_band_search(predicate, upper.clone(), at_upper, -1)?
+                .ok_or_else(|| err!(Search, "unable to infer lower bound"))
+        }
+        (None, None) => fallible_exponential_bounds_search(predicate)?
+            .ok_or_else(|| err!(Search, "unable to infer bounds")),
+    }
 }
 
 fn signed_fallible_binary_search_with_bounds<T>(
@@ -226,12 +296,13 @@ macro_rules! impl_bands_unsigned_int {
     ($($ty:ty),+ $(,)?) => {
         $(impl Bands for $ty {
             fn bands(center: Self, sign: i8) -> Vec<Self> {
-                if sign < 0 {
-                    return Vec::new();
-                }
-
                 let mut bands = vec![center];
-                if let Some(next) = center.checked_add(1) {
+
+                if sign > 0 {
+                    if let Some(next) = center.checked_add(1) {
+                        bands.push(next);
+                    }
+                } else if let Some(next) = center.checked_sub(1) {
                     bands.push(next);
                 }
 
@@ -240,14 +311,20 @@ macro_rules! impl_bands_unsigned_int {
                         Ok(offset) => offset,
                         Err(_) => break,
                     };
-                    let Some(candidate) = center.checked_add(offset) else {
+                    let candidate = if sign > 0 {
+                        center.checked_add(offset)
+                    } else {
+                        center.checked_sub(offset)
+                    };
+                    let Some(candidate) = candidate else {
                         break;
                     };
                     bands.push(candidate);
                 }
 
-                if bands.last() != Some(&<$ty>::MAX) {
-                    bands.push(<$ty>::MAX);
+                let extreme = if sign > 0 { <$ty>::MAX } else { <$ty>::MIN };
+                if bands.last() != Some(&extreme) {
+                    bands.push(extreme);
                 }
 
                 bands
@@ -355,4 +432,40 @@ where
     }
 
     Ok(None)
+}
+
+const TERNARY_SEARCH_ITERS: usize = 160;
+
+pub(crate) fn maximize_ternary(
+    mut lo: f64,
+    mut hi: f64,
+    objective: impl Fn(f64) -> Fallible<f64>,
+) -> Fallible<f64> {
+    let mut best = objective(lo)?.max(objective(hi)?);
+
+    for _ in 0..TERNARY_SEARCH_ITERS {
+        let width = hi - lo;
+        if width <= 0.0 {
+            break;
+        }
+
+        let left = lo + width / 3.0;
+        let right = hi - width / 3.0;
+        if left == lo || right == hi || left >= right {
+            break;
+        }
+
+        let left_value = objective(left)?;
+        let right_value = objective(right)?;
+        best = best.max(left_value).max(right_value);
+
+        if left_value < right_value {
+            lo = left;
+        } else {
+            hi = right;
+        }
+    }
+
+    let mid = lo + (hi - lo) / 2.0;
+    Ok(best.max(objective(mid)?))
 }

@@ -1,7 +1,7 @@
 use crate::{
     core::{Domain, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    measures::{Approximate, MaxDivergence, PrivacyProfile, SmoothedMaxDivergence},
+    measures::{Approximate, MaxDivergence, PrivacyCurve, PrivacyCurveDP},
 };
 
 #[cfg(feature = "ffi")]
@@ -22,7 +22,7 @@ mod test;
 /// * `MI` - Input Metric
 pub fn make_fixed_approxDP_to_approxDP<DI, MI, TO>(
     measurement: Measurement<DI, MI, Approximate<MaxDivergence>, TO>,
-) -> Fallible<Measurement<DI, MI, SmoothedMaxDivergence, TO>>
+) -> Fallible<Measurement<DI, MI, PrivacyCurveDP, TO>>
 where
     DI: Domain,
     MI: 'static + Metric,
@@ -31,11 +31,11 @@ where
     let privacy_map = measurement.privacy_map.clone();
     measurement.with_map(
         measurement.input_metric.clone(),
-        SmoothedMaxDivergence::default(),
+        PrivacyCurveDP,
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
-            privacy_map
-                .eval(d_in)
-                .map(|(eps, delta)| PrivacyProfile::new(fixed_approx_dp_privacy_curve(eps, delta)))
+            privacy_map.eval(d_in).map(|(eps, delta)| {
+                PrivacyCurve::new_profile(fixed_approx_dp_privacy_curve(eps, delta))
+            })
         }),
     )
 }

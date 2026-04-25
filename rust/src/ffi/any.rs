@@ -738,7 +738,7 @@ mod tests {
 
     use crate::domains::AtomDomain;
     use crate::error::*;
-    use crate::measures::{MaxDivergence, SmoothedMaxDivergence};
+    use crate::measures::{MaxDivergence, PrivacyCurveDP};
     use crate::metrics::{ChangeOneDistance, SymmetricDistance};
 
     use super::*;
@@ -793,7 +793,7 @@ mod tests {
 
         let measure1 = AnyMeasure::new(MaxDivergence);
         let measure2 = AnyMeasure::new(MaxDivergence);
-        let measure3 = AnyMeasure::new(SmoothedMaxDivergence);
+        let measure3 = AnyMeasure::new(PrivacyCurveDP);
         assert_eq!(measure1, measure2);
         assert_ne!(measure1, measure3);
 

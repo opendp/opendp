@@ -265,6 +265,77 @@ typedef struct CallbackInvocation {
     FfiResult_____AnyObject *result;
 } CallbackInvocation;
 
+typedef struct ConversionContext {
+    SEXP out;
+    const char *type_name;
+    AnyObject *result;
+    char *message;
+} ConversionContext;
+
+typedef struct EvalContext {
+    SEXP call;
+    SEXP out;
+    int error_occurred;
+} EvalContext;
+
+static SEXP convert_output_exec(void *data)
+{
+    ConversionContext *ctx = (ConversionContext *)data;
+    SEXP type_name = PROTECT(parse_runtime_type(ctx->type_name));
+    ctx->result = sexp_to_anyobjectptr(ctx->out, type_name);
+    UNPROTECT(1);
+    return R_NilValue;
+}
+
+static SEXP convert_output_error(SEXP condition, void *data)
+{
+    ConversionContext *ctx = (ConversionContext *)data;
+    ctx->message = get_last_error_message();
+    return R_NilValue;
+}
+
+static void eval_call_exec(void *data)
+{
+    EvalContext *ctx = (EvalContext *)data;
+    ctx->out = R_tryEvalSilent(ctx->call, R_GlobalEnv, &ctx->error_occurred);
+}
+
+static FfiResult_____AnyObject *invoke_callback(
+    SEXP call,
+    const char *type_name,
+    const char *error_context)
+{
+    EvalContext eval = {
+        .call = call,
+        .out = R_NilValue,
+        .error_occurred = 0
+    };
+    eval_call_exec(&eval);
+    if (eval.error_occurred)
+    {
+        char *message = get_last_error_message();
+        FfiResult_____AnyObject *result = wrap_failure_details(error_context, message);
+        free(message);
+        return result;
+    }
+
+    ConversionContext conversion = {
+        .out = eval.out,
+        .type_name = type_name,
+        .result = NULL,
+        .message = NULL
+    };
+    R_tryCatchError(convert_output_exec, &conversion, convert_output_error, &conversion);
+    if (conversion.message)
+    {
+        FfiResult_____AnyObject *result = wrap_failure_details(error_context, conversion.message);
+        free(conversion.message);
+        return result;
+    }
+
+    return wrap_success(conversion.result);
+}
+
 static void callback_exec(void *data)
 {
     CallbackInvocation *invocation = (CallbackInvocation *)data;
@@ -272,20 +343,12 @@ static void callback_exec(void *data)
     // then convert the result back using the callback's declared output type.
     SEXP arg = PROTECT(anyobjectptr_to_sexp((AnyObject *)invocation->arg));
     SEXP call = PROTECT(lang2(invocation->ctx->function, arg));
-    int error_occurred = 0;
-    SEXP out = PROTECT(R_tryEvalSilent(call, R_GlobalEnv, &error_occurred));
-    if (error_occurred)
-    {
-        char *message = get_last_error_message();
-        invocation->result = wrap_failure_details("Exception in user-defined function", message);
-        free(message);
-        UNPROTECT(3);
-        return;
-    }
-    SEXP type_name = PROTECT(parse_runtime_type(invocation->ctx->type_name));
-    AnyObject *result = sexp_to_anyobjectptr(out, type_name);
-    invocation->result = wrap_success(result);
-    UNPROTECT(4);
+    invocation->result = invoke_callback(
+        call,
+        invocation->ctx->type_name,
+        "Exception in user-defined function"
+    );
+    UNPROTECT(2);
 }
 
 static void transition_exec(void *data)
@@ -299,38 +362,22 @@ static void transition_exec(void *data)
     {
         SEXP is_internal = PROTECT(ScalarLogical((bool)invocation->is_internal));
         call = PROTECT(lang3(invocation->ctx->function, arg, is_internal));
-        int error_occurred = 0;
-        SEXP out = PROTECT(R_tryEvalSilent(call, R_GlobalEnv, &error_occurred));
-        if (error_occurred)
-        {
-            char *message = get_last_error_message();
-            invocation->result = wrap_failure_details("Exception in user-defined transition", message);
-            free(message);
-            UNPROTECT(4);
-            return;
-        }
-        SEXP type_name = PROTECT(parse_runtime_type(invocation->ctx->type_name));
-        AnyObject *result = sexp_to_anyobjectptr(out, type_name);
-        invocation->result = wrap_success(result);
-        UNPROTECT(5);
+        invocation->result = invoke_callback(
+            call,
+            invocation->ctx->type_name,
+            "Exception in user-defined transition"
+        );
+        UNPROTECT(3);
         return;
     }
 
     call = PROTECT(lang2(invocation->ctx->function, arg));
-    int error_occurred = 0;
-    SEXP out = PROTECT(R_tryEvalSilent(call, R_GlobalEnv, &error_occurred));
-    if (error_occurred)
-    {
-        char *message = get_last_error_message();
-        invocation->result = wrap_failure_details("Exception in user-defined transition", message);
-        free(message);
-        UNPROTECT(3);
-        return;
-    }
-    SEXP type_name = PROTECT(parse_runtime_type(invocation->ctx->type_name));
-    AnyObject *result = sexp_to_anyobjectptr(out, type_name);
-    invocation->result = wrap_success(result);
-    UNPROTECT(4);
+    invocation->result = invoke_callback(
+        call,
+        invocation->ctx->type_name,
+        "Exception in user-defined transition"
+    );
+    UNPROTECT(2);
 }
 
 static FfiResult_____AnyObject *callback_stub(const AnyObject *arg, const c_void *userdata)
