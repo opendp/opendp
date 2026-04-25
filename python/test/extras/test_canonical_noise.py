@@ -198,6 +198,18 @@ def test_canonical_context_no_transformation():
         context.query().canonical_noise(binomial_size=1000).release(), BinomialCND
     )
 
+    context = dp.Context.compositor(
+        data=1.0,
+        privacy_unit=dp.unit_of(absolute=1.0),
+        privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
+        split_evenly_over=2,
+        domain=dp.atom_domain(nan=False, T=float)
+    )
+    measurement = context.query().canonical_noise().resolve()
+    epsilon, delta = measurement.map(1.0)
+    assert epsilon <= 0.5
+    assert delta <= 5e-8
+
 
 def test_canonical_context_with_transformation():
     context = dp.Context.compositor(

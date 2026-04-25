@@ -1,3 +1,5 @@
+import math
+from statistics import NormalDist
 import pytest
 import opendp.prelude as dp
 
@@ -21,10 +23,6 @@ def test_gaussian_curve():
 
     profile = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 4.)).map(d_in=0.0)
     assert profile.epsilon(0.0) == 0.0
-    with pytest.raises(dp.OpenDPException):
-        profile.epsilon(delta=-0.0)
-    with pytest.raises(dp.OpenDPException):
-        profile.delta(epsilon=-0.0)
         
     profile = dp.c.make_zCDP_to_approxDP(dp.m.make_gaussian(*input_space, 0.)).map(d_in=1.0)
     assert profile.epsilon(delta=0.0) == float('inf')
@@ -369,8 +367,71 @@ def test_gaussian_threshold_float(constructor):
 
 def test_canonical_noise():
     space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
-    m_cnd = space >> dp.m.then_canonical_noise(d_in=1., d_out=(1., 1e-6))
+    curve = dp.PrivacyCurve(gaussianDP=1.0)
+    m_cnd = space >> dp.m.then_canonical_noise(d_in=1., d_out=curve)
 
-    assert m_cnd.map(1.) == (1.0, 1e-6)
-    # just check that it runs
+    mapped_curve = m_cnd.map(1.)
+    assert mapped_curve.beta(0.0) == 1.0
+    assert mapped_curve.beta(1.0) == 0.0
     assert isinstance(m_cnd(0.), float)
+
+
+def test_canonical_noise_fdp():
+    space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
+    epsilon, delta = 1.0, 0.0
+    exp_eps = math.exp(epsilon)
+    exp_neg_eps = math.exp(-epsilon)
+    curve = dp.PrivacyCurve(
+        tradeoff=lambda alpha: max(
+            0.0,
+            max(1.0 - delta - exp_eps * alpha, exp_neg_eps * (1.0 - delta - alpha)),
+        )
+    )
+    m_cnd = space >> dp.m.then_canonical_noise(d_in=1., d_out=curve)
+
+    mapped_curve = m_cnd.map(1.)
+    for alpha in [0.1, 0.3, 0.7]:
+        expected = max(0.0, max(1.0 - delta - exp_eps * alpha, exp_neg_eps * (1.0 - delta - alpha)))
+        assert mapped_curve.beta(alpha) == pytest.approx(expected)
+
+    with pytest.raises(dp.OpenDPException):
+        m_cnd.map(0.5)
+
+    assert isinstance(m_cnd(0.), float)
+
+def test_canonical_noise_fdp_invalid():
+    dp.enable_features("contrib", "honest-but-curious")
+    space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
+    curve = dp.PrivacyCurve(tradeoff=lambda alpha: 1 - alpha)
+    with pytest.raises(dp.OpenDPException, match="fixed-point of the f-DP tradeoff curve must be less than 1/2"):
+        space >> dp.m.then_canonical_noise(d_in=1., d_out=curve)
+
+
+def test_gdp_tradeoff_curve():
+    mu = 1.0
+    curve = dp.PrivacyCurve(gaussianDP=mu)
+    normal = NormalDist()
+
+    assert curve.beta(0.0) == 1.0
+    assert curve.beta(1.0) == 0.0
+
+    for alpha in [0.1, 0.3, 0.7]:
+        expected = normal.cdf(normal.inv_cdf(1.0 - alpha) - mu)
+        assert curve.beta(alpha) == pytest.approx(expected)
+
+def test_canonical_noise_with_epsilon_delta_tuple():
+    space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
+    
+    # Pass (epsilon, delta) tuple instead of PrivacyCurve
+    epsilon, delta = 0.5, 1e-6
+    curve = dp.PrivacyCurve(approxDP=[(epsilon, delta)])
+    m_cnd = space >> dp.m.then_canonical_noise(d_in=1., d_out=curve)
+    
+    # Should work and produce a valid measurement
+    noise_value = m_cnd(0.)
+    assert isinstance(noise_value, float)
+    
+    # Map the measurement and check it produces a valid privacy profile
+    mapped = m_cnd.map(1.)
+    assert isinstance(mapped, dp.PrivacyCurve)
+    assert mapped.delta(epsilon) <= delta

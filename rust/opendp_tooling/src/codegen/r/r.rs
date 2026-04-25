@@ -474,11 +474,18 @@ fn generate_assert_is_similar(func: &Function) -> String {
                 let name = sanitize_r(arg.name(), arg.is_type);
                 format!("rt_infer({name})")
             };
-            (expected, inferred)
+            (arg, expected, inferred)
         })
-        .filter(|(expected, _)| expected != "NULL")
-        .map(|(expected, inferred)| {
-            format!("rt_assert_is_similar(expected = {expected}, inferred = {inferred})")
+        .filter(|(_, expected, _)| expected != "NULL")
+        .map(|(arg, expected, inferred)| {
+            let assertion =
+                format!("rt_assert_is_similar(expected = {expected}, inferred = {inferred})");
+            if arg.c_type().as_str() == "AnyObject *" {
+                let name = sanitize_r(arg.name(), arg.is_type);
+                format!("if (typeof({name}) != \"externalptr\") {{\n  {assertion}\n}}")
+            } else {
+                assertion
+            }
         })
         .collect::<Vec<_>>()
         .join("\n");

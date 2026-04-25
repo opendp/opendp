@@ -5,9 +5,9 @@ use crate::{
     core::{Domain, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
     measurements::{MakeNoise, NoiseDomain, NoisePrivacyMap, ZExpFamily, noise::nature::Nature},
-    measures::ZeroConcentratedDivergence,
+    measures::{PrivacyCurve, PrivacyCurveDP, ZeroConcentratedDivergence},
     metrics::L2Distance,
-    traits::InfCast,
+    traits::{DInterval, InfCast},
 };
 
 #[cfg(test)]
@@ -50,7 +50,7 @@ where
     DiscreteGaussian: MakeNoise<DI, MI, MO>,
     (DI, MI): MetricSpace,
 {
-    DiscreteGaussian { scale, k }.make_noise((input_domain, input_metric))
+    DiscreteGaussian { scale, k }.make_noise((input_domain, input_metric), MO::default())
 }
 
 pub struct DiscreteGaussian {
@@ -68,8 +68,12 @@ where
     DI::Atom: Nature,
     <DI::Atom as Nature>::RV<2>: MakeNoise<DI, MI, MO>,
 {
-    fn make_noise(self, input_space: (DI, MI)) -> Fallible<Measurement<DI, MI, MO, DI::Carrier>> {
-        DI::Atom::new_distribution(self.scale, self.k)?.make_noise(input_space)
+    fn make_noise(
+        self,
+        input_space: (DI, MI),
+        output_measure: MO,
+    ) -> Fallible<Measurement<DI, MI, MO, DI::Carrier>> {
+        DI::Atom::new_distribution(self.scale, self.k)?.make_noise(input_space, output_measure)
     }
 }
 
@@ -102,4 +106,71 @@ impl NoisePrivacyMap<L2Distance<RBig>, ZeroConcentratedDivergence> for ZExpFamil
             f64::inf_cast((d_in / scale.clone()).pow(2) / rbig!(2))
         }))
     }
+}
+
+#[allow(non_snake_case)]
+impl NoisePrivacyMap<L2Distance<RBig>, PrivacyCurveDP> for ZExpFamily<2> {
+    fn noise_privacy_map(
+        &self,
+        _input_metric: &L2Distance<RBig>,
+        _output_measure: &PrivacyCurveDP,
+    ) -> Fallible<PrivacyMap<L2Distance<RBig>, PrivacyCurveDP>> {
+        let ZExpFamily { scale } = self.clone();
+
+        if scale < RBig::ZERO {
+            return fallible!(MakeMeasurement, "scale ({scale}) must not be negative");
+        }
+
+        Ok(PrivacyMap::new_fallible(move |d_in: &RBig| {
+            if d_in < &RBig::ZERO {
+                return fallible!(FailedMap, "sensitivity ({d_in}) must be non-negative");
+            }
+
+            if d_in == &RBig::ZERO {
+                return Ok(PrivacyCurve::new().with_zCDP(0.0)?);
+            }
+
+            if scale == RBig::ZERO {
+                return fallible!(
+                    FailedMap,
+                    "nonzero sensitivity with zero scale has no finite privacy guarantee"
+                );
+            }
+
+            let sigma = f64::inf_cast(scale.clone())?;
+            let sensitivity = f64::inf_cast(d_in.clone())?;
+
+            if !sigma.is_finite() || sigma <= 0.0 {
+                return fallible!(FailedMap, "scale ({sigma}) must be finite and positive");
+            }
+            if !sensitivity.is_finite() || sensitivity < 0.0 {
+                return fallible!(
+                    FailedMap,
+                    "sensitivity ({sensitivity}) must be finite and non-negative"
+                );
+            }
+
+            Ok(PrivacyCurve::new().with_zCDP(gaussian_zcdp_upper(sensitivity, sigma)?)?)
+        }))
+    }
+}
+
+fn gaussian_zcdp_upper(sensitivity: f64, sigma: f64) -> Fallible<f64> {
+    check_sigma(sigma)?;
+
+    if sensitivity == 0.0 {
+        return Ok(0.0);
+    }
+
+    let ratio = DInterval::from_approx(sensitivity)?.div(DInterval::from_approx(sigma)?)?;
+    DInterval::point(0.5)?
+        .mul(ratio.clone().mul(ratio)?)?
+        .upper_f64()
+}
+
+fn check_sigma(sigma: f64) -> Fallible<()> {
+    if !sigma.is_finite() || sigma <= 0.0 {
+        return fallible!(FailedMap, "sigma ({sigma}) must be finite and positive");
+    }
+    Ok(())
 }

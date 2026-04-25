@@ -9,6 +9,7 @@ use crate::{
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     measurements::{MakeNoise, NoiseDomain, NoisePrivacyMap, ZExpFamily},
+    measures::MaxDivergence,
     metrics::{AbsoluteDistance, L1Distance},
     traits::{ExactIntCast, InfExp, InfSub, Integer, samplers::sample_discrete_laplace_linear},
     transformations::{make_vec, then_index_or_default},
@@ -59,10 +60,11 @@ where
     (DI, MI): MetricSpace,
 {
     let input_space = (input_domain, input_metric);
+    let output_measure = MO::default();
     if let Some(bounds) = bounds {
-        ConstantTimeGeometric { scale, bounds }.make_noise(input_space)
+        ConstantTimeGeometric { scale, bounds }.make_noise(input_space, output_measure)
     } else {
-        DiscreteLaplace { scale, k: None }.make_noise(input_space)
+        DiscreteLaplace { scale, k: None }.make_noise(input_space, output_measure)
     }
 }
 
@@ -88,9 +90,10 @@ where
     fn make_noise(
         self,
         input_space: (AtomDomain<T>, AbsoluteDistance<QI>),
+        output_measure: MO,
     ) -> Fallible<Measurement<AtomDomain<T>, AbsoluteDistance<QI>, MO, T>> {
         let t_vec = make_vec(input_space)?;
-        let m_geom = self.make_noise(t_vec.output_space())?;
+        let m_geom = self.make_noise(t_vec.output_space(), output_measure)?;
         t_vec >> m_geom >> then_index_or_default(0)
     }
 }
@@ -99,20 +102,21 @@ where
 #[proven(
     proof_path = "measurements/noise/distribution/geometric/MakeNoise_VectorDomain_for_ConstantTimeGeometric.tex"
 )]
-impl<T, QI, MO> MakeNoise<VectorDomain<AtomDomain<T>>, L1Distance<QI>, MO>
+impl<T, QI> MakeNoise<VectorDomain<AtomDomain<T>>, L1Distance<QI>, MaxDivergence>
     for ConstantTimeGeometric<T>
 where
     T: Integer,
     QI: Clone + Debug,
-    MO: 'static + Measure,
     usize: ExactIntCast<T>,
     RBig: TryFrom<QI>,
-    ZExpFamily<1>: NoisePrivacyMap<L1Distance<RBig>, MO>,
+    ZExpFamily<1>: NoisePrivacyMap<L1Distance<RBig>, MaxDivergence>,
 {
     fn make_noise(
         self,
         (input_domain, input_metric): (VectorDomain<AtomDomain<T>>, L1Distance<QI>),
-    ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, L1Distance<QI>, MO, Vec<T>>> {
+        output_measure: MaxDivergence,
+    ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, L1Distance<QI>, MaxDivergence, Vec<T>>>
+    {
         let ConstantTimeGeometric {
             scale,
             bounds: (lower, upper),
@@ -125,7 +129,6 @@ where
             scale: RBig::from_f64(scale)
                 .ok_or_else(|| err!(MakeTransformation, "scale ({}) must be finite", scale))?,
         };
-        let output_measure = MO::default();
 
         let privacy_map =
             distribution.noise_privacy_map(&L1Distance::default(), &output_measure)?;

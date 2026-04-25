@@ -33,7 +33,7 @@ use crate::ffi::any::{
 };
 use crate::ffi::util::{self, AnyDomainPtr, ExtrinsicObject, as_ref, into_c_char_p};
 use crate::ffi::util::{AnyMeasurementPtr, AnyTransformationPtr, Type, TypeContents, c_bool};
-use crate::measures::PrivacyProfile;
+use crate::measures::PrivacyCurve;
 use crate::metrics::IntDistance;
 use crate::traits::ProductOrd;
 use crate::traits::samplers::{Shuffle, fill_bytes};
@@ -787,7 +787,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
     }
 
     fn tuple_curve_f64_to_raw(obj: &AnyObject) -> Fallible<FfiSlice> {
-        let (curve, delta) = obj.downcast_ref::<(PrivacyProfile, f64)>()?;
+        let (curve, delta) = obj.downcast_ref::<(PrivacyCurve, f64)>()?;
 
         Ok(FfiSlice::new(
             util::into_raw([
@@ -846,7 +846,7 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             match element_ids.len() {
                 // In the outbound direction, we can handle tuples of both primitives and AnyObjects.
                 2 => {
-                    if types == vec![Type::of::<PrivacyProfile>(), Type::of::<f64>()] {
+                    if types == vec![Type::of::<PrivacyCurve>(), Type::of::<f64>()] {
                         return tuple_curve_f64_to_raw(obj).into();
                     }
                     if types == vec![Type::of::<f64>(), Type::of::<ExtrinsicObject>()] {
@@ -1291,52 +1291,6 @@ impl Shuffle for AnyObject {
             _ => fallible!(FFI, "Shuffle is only implemented for Vec<T>"),
         }
     }
-}
-
-#[bootstrap(
-    name = "privacy_profile_delta",
-    arguments(curve(rust_type = b"null"), delta(rust_type = "f64"))
-)]
-/// Internal function. Use a PrivacyProfile to find epsilon at a given `epsilon`.
-///
-/// # Arguments
-/// * `curve` - The PrivacyProfile.
-/// * `epsilon` - What to fix epsilon to compute delta.
-///
-/// # Returns
-/// Delta at a given `epsilon`.
-#[unsafe(no_mangle)]
-pub extern "C" fn opendp_data__privacy_profile_delta(
-    curve: *const AnyObject,
-    epsilon: f64,
-) -> FfiResult<*mut AnyObject> {
-    try_!(try_as_ref!(curve).downcast_ref::<PrivacyProfile>())
-        .delta(epsilon)
-        .map(AnyObject::new)
-        .into()
-}
-
-#[bootstrap(
-    name = "privacy_profile_epsilon",
-    arguments(profile(rust_type = b"null"), delta(rust_type = "f64"))
-)]
-/// Internal function. Use an PrivacyProfile to find epsilon at a given `delta`.
-///
-/// # Arguments
-/// * `profile` - The PrivacyProfile.
-/// * `delta` - What to fix delta to compute epsilon.
-///
-/// # Returns
-/// Epsilon at a given `delta`.
-#[unsafe(no_mangle)]
-pub extern "C" fn opendp_data__privacy_profile_epsilon(
-    profile: *const AnyObject,
-    delta: f64,
-) -> FfiResult<*mut AnyObject> {
-    try_!(try_as_ref!(profile).downcast_ref::<PrivacyProfile>())
-        .epsilon(delta)
-        .map(AnyObject::new)
-        .into()
 }
 
 #[cfg(feature = "polars")]

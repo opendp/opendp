@@ -1,3 +1,6 @@
+import math
+
+from opendp.mod import PrivacyCurve
 import pytest
 
 import opendp.prelude as dp
@@ -143,11 +146,202 @@ def test_function():
 
 
 def test_privacy_profile():
-    from opendp.measures import new_privacy_profile
     import math
-    profile = new_privacy_profile(lambda eps: math.exp(-eps))
+    with pytest.warns():
+        profile = dp.new_privacy_profile(lambda eps: math.exp(-eps))
     # formula is -ln(1e-7)
     assert profile.epsilon(delta=1e-7) == 16.11809565095832
+
+def assert_unit_interval(value):
+    assert 0.0 <= value <= 1.0
+
+
+def exact_approxdp_beta(pairs, alpha):
+    """Exact API beta(alpha) induced by approximate-DP pairs."""
+    if alpha == 0.0:
+        return 1.0
+    if alpha == 1.0:
+        return 0.0
+
+    candidates = [0.0]
+
+    for epsilon, delta in pairs:
+        candidates.append(1.0 - delta - math.exp(epsilon) * alpha)
+
+        base = max(1.0 - delta - alpha, 0.0)
+        candidates.append(math.exp(-epsilon) * base)
+
+    return max(candidates)
+
+
+def test_profile_constructor_delta_and_epsilon():
+    curve = PrivacyCurve(profile=lambda eps: math.exp(-eps))
+
+    assert curve.delta(0.0) == pytest.approx(1.0)
+    assert curve.delta(1.0) == pytest.approx(math.exp(-1.0))
+
+    # Solves exp(-epsilon) <= 1e-7.
+    assert curve.epsilon(1e-7) == pytest.approx(
+        -math.log(1e-7),
+        rel=0.0,
+        abs=1e-12,
+    )
+
+
+def test_profile_constructor_beta_is_in_range():
+    curve = PrivacyCurve(profile=lambda eps: math.exp(-eps))
+
+    assert_unit_interval(curve.beta(0.0))
+    assert_unit_interval(curve.beta(0.25))
+    assert_unit_interval(curve.beta(0.5))
+    assert_unit_interval(curve.beta(1.0))
+
+    assert curve.beta(0.0) == 1.0
+    assert curve.beta(1.0) == 0.0
+
+
+def test_log_profile_constructor_delta_and_epsilon():
+    curve = PrivacyCurve(log_profile=lambda eps: -eps)
+
+    assert curve.delta(0.0) == pytest.approx(1.0)
+    assert curve.delta(1.0) == pytest.approx(math.exp(-1.0))
+
+    assert curve.epsilon(1e-7) == pytest.approx(
+        -math.log(1e-7),
+        rel=0.0,
+        abs=1e-12,
+    )
+
+
+def test_approxdp_constructor_delta_and_epsilon():
+    pairs = [(1.0, 0.1), (2.0, 0.01)]
+    curve = PrivacyCurve(approxDP=pairs)
+
+    assert curve.delta(1.0) == pytest.approx(0.1)
+    assert curve.delta(2.0) == pytest.approx(0.01)
+
+    assert curve.epsilon(0.1) == pytest.approx(1.0)
+    assert curve.epsilon(0.01) == pytest.approx(2.0)
+
+
+def test_approxdp_constructor_beta_is_conservative_and_tight():
+    pairs = [(1.0, 0.1), (2.0, 0.01)]
+    curve = PrivacyCurve(approxDP=pairs)
+
+    for alpha in [0.0, 0.1, 0.5, 0.9, 1.0]:
+        beta = curve.beta(alpha)
+        expected = exact_approxdp_beta(pairs, alpha)
+
+        assert_unit_interval(beta)
+
+        # beta(alpha) should be downward-conservative.
+        assert beta <= expected
+
+        # But not meaningfully loose.
+        assert beta == pytest.approx(expected, rel=0.0, abs=1e-14)
+
+
+def test_tradeoff_constructor_beta_and_delta():
+    curve = PrivacyCurve(tradeoff=lambda alpha: 1.0 - alpha)
+
+    assert curve.beta(0.0) == 1.0
+    assert curve.beta(0.3) == pytest.approx(0.7)
+    assert curve.beta(1.0) == 0.0
+
+    # beta(alpha) = 1 - alpha is the perfect-privacy tradeoff.
+    assert curve.delta(0.0) == pytest.approx(0.0)
+    assert curve.delta(1.0) == pytest.approx(0.0)
+
+
+def test_symmetric_tradeoff_constructor_alpha_uses_symmetry():
+    curve = PrivacyCurve(symmetric_tradeoff=lambda alpha: 1.0 - alpha)
+
+    assert curve.alpha(0.0) == 1.0
+    assert curve.alpha(0.25) == pytest.approx(0.75)
+    assert curve.alpha(1.0) == 0.0
+
+
+def test_nonsymmetric_tradeoff_alpha_inverts_beta_not_calls_beta():
+    # Valid-looking non-symmetric decreasing convex tradeoff:
+    # beta(alpha) = (1 - alpha)^2.
+    curve = PrivacyCurve(tradeoff=lambda alpha: (1.0 - alpha) ** 2)
+
+    # alpha(beta) should solve beta = (1 - alpha)^2.
+    # For beta = 0.25, alpha = 0.5.
+    #
+    # This catches an accidental implementation that calls beta(beta),
+    # which would return 0.5625 instead.
+    assert curve.alpha(0.25) == pytest.approx(0.5, abs=1e-12)
+
+
+def test_gdp_constructor_basic_queries():
+    curve = PrivacyCurve(gaussianDP=1.0)
+
+    assert curve.beta(0.0) == 1.0
+    assert curve.beta(1.0) == 0.0
+
+    assert_unit_interval(curve.beta(0.5))
+    assert_unit_interval(curve.alpha(0.5))
+    assert_unit_interval(curve.delta(0.5))
+
+
+def test_zcdp_constructor_basic_queries():
+    curve = PrivacyCurve(zCDP=0.5)
+
+    assert curve.beta(0.0) == 1.0
+    assert curve.beta(1.0) == 0.0
+    assert_unit_interval(curve.beta(0.5))
+    assert_unit_interval(curve.delta(1.0))
+
+
+def test_renyidp_constructor_basic_queries():
+    curve = PrivacyCurve(renyiDP=lambda alpha: 0.5 * alpha)
+
+    assert curve.beta(0.0) == 1.0
+    assert curve.beta(1.0) == 0.0
+    assert_unit_interval(curve.beta(0.5))
+    assert_unit_interval(curve.delta(1.0))
+
+
+def test_multi_representation_constructor_prefers_profile_for_delta():
+    curve = PrivacyCurve(
+        profile=lambda eps: math.exp(-eps),
+        tradeoff=lambda alpha: 1.0 - alpha,
+    )
+
+    assert curve.delta(1.0) == pytest.approx(math.exp(-1.0))
+
+
+@pytest.mark.parametrize("epsilon", [-1.0, float("nan")])
+def test_delta_rejects_invalid_epsilon(epsilon):
+    curve = PrivacyCurve(tradeoff=lambda alpha: 1.0 - alpha)
+
+    with pytest.raises(Exception):
+        curve.delta(epsilon)
+
+
+@pytest.mark.parametrize("delta", [-0.1, 1.1, float("nan")])
+def test_epsilon_rejects_invalid_delta(delta):
+    curve = PrivacyCurve(tradeoff=lambda alpha: 1.0 - alpha)
+
+    with pytest.raises(Exception):
+        curve.epsilon(delta)
+
+
+@pytest.mark.parametrize("alpha", [-0.1, 1.1, float("nan")])
+def test_beta_rejects_invalid_alpha(alpha):
+    curve = PrivacyCurve(tradeoff=lambda alpha: 1.0 - alpha)
+
+    with pytest.raises(Exception):
+        curve.beta(alpha)
+
+
+@pytest.mark.parametrize("beta", [-0.1, 1.1, float("nan")])
+def test_alpha_rejects_invalid_beta(beta):
+    curve = PrivacyCurve(tradeoff=lambda alpha: 1.0 - alpha)
+
+    with pytest.raises(Exception):
+        curve.alpha(beta)
 
 
 def test_member():

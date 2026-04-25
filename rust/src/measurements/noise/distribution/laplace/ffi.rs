@@ -10,7 +10,7 @@ use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::ffi::util::{Type, as_ref};
 use crate::measurements::noise::nature::Nature;
 use crate::measurements::{DiscreteLaplace, MakeNoise, make_laplace};
-use crate::measures::MaxDivergence;
+use crate::measures::{MaxDivergence, PrivacyCurveDP};
 use crate::metrics::{AbsoluteDistance, L1Distance};
 use crate::traits::Number;
 
@@ -76,7 +76,7 @@ pub extern "C" fn opendp_measurements__make_laplace(
     let T_ = try_!(input_domain.type_.get_atom());
 
     dispatch!(monomorphize, [
-        (MO, [MaxDivergence]),
+        (MO, [MaxDivergence, PrivacyCurveDP]),
         (T_, @numbers),
         (QI_, @numbers)
     ], (input_domain, input_metric, scale, k, MO))

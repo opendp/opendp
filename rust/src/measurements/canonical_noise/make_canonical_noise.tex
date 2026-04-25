@@ -26,7 +26,7 @@ a fixed privacy guarantee \texttt{d\_out} at a fixed sensitivity \texttt{d\_in}.
     \item Argument \texttt{input\_domain} of type \texttt{AtomDomain<f64>}.
     \item Argument \texttt{input\_metric} of type \texttt{AbsoluteDistance<f64>}.
     \item Argument \texttt{d\_in} of type \texttt{f64}
-    \item Argument \texttt{d\_out} of type \texttt{(f64, f64)} corresponding to epsilon and delta.
+    \item Argument \texttt{d\_out} of type \texttt{TradeoffCurve}.
 \end{itemize}
 
 \subsubsection*{Caller-verified}
@@ -51,14 +51,16 @@ We now prove each part in the postcondition.
 hereafter referred to as just \texttt{value} (a function) 
 can only fail when the pseudorandom byte generator used in its implementation fails due to lack of system entropy. 
 This is usually related to the computer's physical environment and not the dataset. 
-This is the only source of errors in the function.
+Additionally, evaluating the user-supplied tradeoff curve may fail while computing the inverse CDF.
+This also does not depend on the dataset.
+These are the only sources of errors in the function.
 \end{proof}
 
 \subsubsection*{Privacy guarantee}
 Proving the privacy guarantee of Theorem~\ref{valid-measurement} is more involved, 
 and we need to establish several definitions and lemmas first.
 
-In the pseudocode, \texttt{d\_in} and \texttt{d\_out} are used to create a tradeoff function.  
+In the pseudocode, \texttt{d\_out} is the tradeoff curve that defines the noise distribution.  
 The following defines the corresponding noise distribution.
 \begin{definition}[\protect{\cite[Definition~3.7]{awan2023canonical}}]
     \label{def-3-7}  % Def 3.7
@@ -89,9 +91,10 @@ Due to line~\ref{non-nan}, the input domain excludes nan values,
 so if the input is a member of the input domain, then the cast will never fail.
 
 Line~\ref{sensitivity-check} ensures that \texttt{d\_in} is well-formed (distances cannot be negative).
-    
-\rustdoc{measurements/canonical\_noise/fn}{approximate\_to\_tradeoff} has no user preconditions,
-so by its postcondition, \texttt{tradeoff} is a symmetric nontrivial tradeoff function
+
+\texttt{d\_out} is passed in directly as a \texttt{TradeoffCurve}, which defines the tradeoff function via evaluation.
+By the implementation of the fixed-point search,
+\texttt{tradeoff} is a symmetric nontrivial tradeoff function
 and \texttt{fixed\_point} is the fixed-point of \texttt{tradeoff}.
 
 On Line~\ref{canonical-rv}, by the definition of \rustdoc{traits/samplers/canonical/struct}{CanonicalRV},
@@ -142,11 +145,13 @@ Therefore by Definition~\ref{def-3-1},
 for every statistic $S: X^n\rightarrow \mathbb{R}$ with sensitivity $\Delta>0$, and $N\sim F(\cdot)$, 
 the mechanism $S(X) + \Delta N$ satisfies $f$-DP.
 By Lemma~\ref{function-correctness}, \texttt{function} returns $S(X) + \Delta N$, where $S(X)$ is \texttt{arg}, $\Delta$ is \texttt{d\_in}.
-Since \texttt{tradeoff} is an equivalent but conservative representation of the privacy parameters \texttt{d\_out},
-the mechanism satisfies \texttt{d\_out}-DP when input datasets may differ by at most \texttt{d\_in}.
+Since \texttt{tradeoff} is an equivalent representation of the privacy parameters \texttt{d\_out},
+the mechanism satisfies \texttt{d\_out}-DP when input datasets differ by exactly \texttt{d\_in}.
 
 This guarantee is then reflected in the privacy map on line~\ref{privacy-map}.
-If \texttt{d\_in\_p} is no greater than \texttt{d\_in}, then the privacy loss is \texttt{d\_out}.
+If \texttt{d\_in\_p} does not equal \texttt{d\_in}, then the privacy map returns an error.
+If \texttt{d\_in\_p} equals \texttt{d\_in} and \texttt{d\_in = 0}, then the privacy loss is a tradeoff curve that always returns 1.0.
+Otherwise, if \texttt{d\_in\_p} equals \texttt{d\_in} and \texttt{d\_in > 0}, then the privacy loss is \texttt{d\_out}.
 
 Therefore, for every pair of elements $x, x'$ in \texttt{input\_domain} and for every pair $(\din, \dout)$,
 where \din\ has the associated type for \texttt{input\_metric} and \dout\ has the associated type for \\ \texttt{output\_measure},

@@ -1,8 +1,11 @@
 use std::{cmp::Ordering, ffi::c_char};
 
-use crate::ffi::{
-    any::{AnyObject, CallbackFn, Downcast, wrap_func},
-    util::{ExtrinsicObject, c_bool},
+use crate::{
+    ffi::{
+        any::Downcast,
+        util::{ExtrinsicObject, c_bool},
+    },
+    measures::PrivacyCurveDP,
 };
 use opendp_derive::bootstrap;
 
@@ -18,7 +21,7 @@ use crate::{
     traits::ProductOrd,
 };
 
-use super::{PrivacyProfile, RenyiDivergence, SmoothedMaxDivergence};
+use super::RenyiDivergence;
 
 #[bootstrap(
     name = "_measure_free",
@@ -144,7 +147,7 @@ pub extern "C" fn opendp_measures__max_divergence() -> FfiResult<*mut AnyMeasure
 /// as is done in the definition of a measurement.
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_measures__smoothed_max_divergence() -> FfiResult<*mut AnyMeasure> {
-    Ok(AnyMeasure::new(SmoothedMaxDivergence)).into()
+    Ok(AnyMeasure::new(PrivacyCurveDP)).into()
 }
 
 #[bootstrap(name = "fixed_smoothed_max_divergence")]
@@ -228,7 +231,7 @@ pub extern "C" fn opendp_measures__approximate(
             MO,
             [
                 MaxDivergence,
-                SmoothedMaxDivergence,
+                PrivacyCurveDP,
                 ZeroConcentratedDivergence,
                 ExtrinsicDivergence
             ]
@@ -262,7 +265,7 @@ pub extern "C" fn opendp_measures___approximate_divergence_get_inner_measure(
             T,
             [
                 MaxDivergence,
-                SmoothedMaxDivergence,
+                PrivacyCurveDP,
                 ZeroConcentratedDivergence,
                 ExtrinsicDivergence
             ]
@@ -413,38 +416,4 @@ pub extern "C" fn opendp_measures___extrinsic_measure_descriptor(
 ) -> FfiResult<*mut ExtrinsicObject> {
     let measure = try_!(try_as_ref!(measure).downcast_ref::<ExtrinsicDivergence>()).clone();
     FfiResult::Ok(util::into_raw(measure.element.value.clone()))
-}
-
-#[bootstrap(
-    name = "new_privacy_profile",
-    features("contrib", "honest-but-curious"),
-    arguments(curve(rust_type = "f64")),
-    returns(rust_type = "PrivacyProfile")
-)]
-/// Construct a PrivacyProfile from a user-defined callback.
-///
-/// # Arguments
-/// * `curve` - A privacy curve mapping epsilon to delta
-///
-/// # Why honest-but-curious?
-///
-/// The privacy profile should implement a well-defined $\delta(\epsilon)$ curve:
-///
-/// * monotonically decreasing
-/// * rejects epsilon values that are less than zero or nan
-/// * returns delta values only within $[0, 1]$
-#[allow(dead_code)]
-fn new_privacy_profile(curve: *const CallbackFn) -> Fallible<AnyObject> {
-    let _ = curve;
-    panic!("this signature only exists for code generation")
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn opendp_measures__new_privacy_profile(
-    curve: *const CallbackFn,
-) -> FfiResult<*mut AnyObject> {
-    let curve = wrap_func(try_as_ref!(curve).clone());
-    FfiResult::Ok(AnyObject::new_raw(PrivacyProfile::new(
-        move |epsilon: f64| curve(&AnyObject::new(epsilon))?.downcast::<f64>(),
-    )))
 }

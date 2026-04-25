@@ -1,6 +1,9 @@
 use dashu::rbig;
 
-use crate::metrics::{L1Distance, L2Distance};
+use crate::{
+    measures::{MaxDivergence, ZeroConcentratedDivergence},
+    metrics::{L1Distance, L2Distance},
+};
 
 use super::*;
 
@@ -13,11 +16,11 @@ fn test_make_noise_ibig_laplace() -> Fallible<()> {
 
     assert!(
         ZExpFamily::<1> { scale: rbig!(-1) }
-            .make_noise(space.clone())
+            .make_noise(space.clone(), MaxDivergence)
             .is_err()
     );
 
-    let m_noise = ZExpFamily::<1> { scale: rbig!(1) }.make_noise(space.clone())?;
+    let m_noise = ZExpFamily::<1> { scale: rbig!(1) }.make_noise(space.clone(), MaxDivergence)?;
     assert_eq!(m_noise.map(&rbig!(1))?, 1.0);
     assert!(m_noise.invoke(&vec![IBig::from(1)]).is_ok());
 
@@ -33,11 +36,12 @@ fn test_make_noise_ibig_gaussian() -> Fallible<()> {
 
     assert!(
         ZExpFamily::<2> { scale: rbig!(-1) }
-            .make_noise(space.clone())
+            .make_noise(space.clone(), ZeroConcentratedDivergence)
             .is_err()
     );
 
-    let m_noise = ZExpFamily::<2> { scale: rbig!(1) }.make_noise(space.clone())?;
+    let m_noise = ZExpFamily::<2> { scale: rbig!(1) }
+        .make_noise(space.clone(), ZeroConcentratedDivergence)?;
     assert_eq!(m_noise.map(&rbig!(1))?, 0.5);
     assert!(m_noise.invoke(&vec![IBig::from(1)]).is_ok());
 

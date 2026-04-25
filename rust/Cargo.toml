@@ -35,11 +35,12 @@ exclude = ["windows/*"]
 [dependencies]
 opendp_derive = { path = "opendp_derive", version = "0.14.2-dev" }
 rand = "0.7.3"
-num = "0.3.1"
+num = "0.4.0"
 thiserror = "1.0.24"
-statrs = "0.13.0"
+statrs = "0.17.1"
 dashu = { version = "0.4.0", features = ["num-traits_v02"] }
 openssl = { version = "0.10.71", features = ["vendored"], optional = true }
+errorfunctions = "0.2.0"
 
 opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.14.2-dev" }
 readonly = "0.2"
@@ -125,7 +126,8 @@ polars-ffi = [
     "dep:pyo3",
     "dep:pyo3-polars",
     "polars-plan/ffi_plugin", 
-    "polars-plan/python"
+    "polars-plan/python",
+    "pyo3-build-config",
 ]
 use-openssl = ["openssl", "dep:openssl-src"]
 
@@ -135,7 +137,7 @@ ffi = ["lazy_static", "cbindgen"]
 derive = ["opendp_tooling", "opendp_derive/full", "syn", "proc-macro2"]
 
 # generate language bindings
-bindings = ["ffi", "derive", "pyo3-build-config"]
+bindings = ["ffi", "derive"]
 
 # generate "then_xxx" functions in Rust for "make_xxx" functions whose first two arguments are the metric space
 partials = ["derive", "opendp_derive/partials"]
