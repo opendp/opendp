@@ -1,8 +1,8 @@
-# type: ignore
-def sample_uniform_uint_below(upper: T) -> T:
-    threshold = T.MAX - T.MAX % upper
+# type: ignore 
+def sample_uniform_uint_below(upper: T) -> T: 
+    reject_below = (T.MAX % upper + 1) % upper 
 
-    while True:
-        sample = sample_from_uniform_bytes()
-        if sample < threshold:
-            return sample % upper
+    while True: 
+        sample = sample_from_uniform_bytes() 
+        if sample >= reject_below: 
+            return sample % upper 
