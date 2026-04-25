@@ -32,6 +32,8 @@ macro_rules! impl_binary_searchable_int {
     ($($ty:ty),+ $(,)?) => {
         $(impl BinarySearchable for $ty {
             fn midpoint(lower: &Self, upper: &Self) -> Self {
+                // The midpoint calculation differs
+                // depending on whether the int is signed, to avoid overflow
                 if lower < &<$ty>::zero() && upper >= &<$ty>::zero() {
                     (lower + upper).halve()
                 } else {
@@ -103,7 +105,7 @@ where
     let bounds = match bounds {
         Some(bounds) => bounds,
         None => fallible_exponential_bounds_search(&predicate)?
-            .ok_or_else(|| err!(FailedFunction, "unable to infer bounds"))?,
+            .ok_or_else(|| err!(Search, "unable to infer bounds"))?,
     };
     signed_fallible_binary_search_with_bounds(predicate, bounds)
 }
@@ -125,7 +127,7 @@ where
 
     if maximize == minimize {
         return fallible!(
-            FailedFunction,
+            Search,
             "the decision boundary of the predicate is outside the bounds"
         );
     }
@@ -193,7 +195,7 @@ macro_rules! impl_bands_signed_int {
                 }
 
                 for k in 1..=8 {
-                    let offset = match <$ty>::try_from(65_536_i128 * k as i128) {
+                    let offset = match <$ty>::try_from(2i128.pow(16) * k) {
                         Ok(offset) => offset,
                         Err(_) => break,
                     };
@@ -234,7 +236,7 @@ macro_rules! impl_bands_unsigned_int {
                 }
 
                 for k in 1..=8 {
-                    let offset = match <$ty>::try_from(65_536_u128 * k as u128) {
+                    let offset = match <$ty>::try_from(2i128.pow(16) * k) {
                         Ok(offset) => offset,
                         Err(_) => break,
                     };
@@ -292,7 +294,7 @@ where
     let exception_bounds = match exponential_bounds_search(&exception_predicate) {
         Some(bounds) => bounds,
         None => match center_result {
-            Ok(_) => return fallible!(FailedFunction, "predicate always fails"),
+            Ok(_) => return fallible!(Search, "predicate always fails"),
             Err(err) => return Err(err),
         },
     };

@@ -653,6 +653,14 @@ SEXP slice_to_sexp(FfiSlice *raw, SEXP type_name)
     else if (str_equal(c_origin, "HashMap"))
         result = slice_to_hashmap(raw, type_name);
 
+    else if (str_equal(c_origin, "Option"))
+    {
+        if (raw->len == 0)
+            result = R_NilValue;
+        else
+            result = slice_to_sexp(raw, VECTOR_ELT(get_args(type_name), 0));
+    }
+
     else if (str_equal(c_origin, "Tuple"))
         result = slice_to_tuple(raw, type_name);
 

@@ -1443,6 +1443,47 @@ def binary_search_param(
 
     return binary_search(lambda param: make_chain(param).check(d_in, d_out), bounds, T)
 
+
+def _call_rust_search(
+    predicate: Callable[[float], bool],
+    T: "RuntimeType | str",
+    search: Callable[[Callable[[float], bool]], Any],
+    bounds: tuple[float, float] | None = None,
+) -> Any:
+    first_exception = None
+    had_success = False
+
+    def wrapped(arg):
+        nonlocal first_exception, had_success
+        try:
+            result = predicate(arg)
+        except Exception as err:
+            if first_exception is None:
+                first_exception = err
+            raise
+        else:
+            had_success = True
+            return result
+
+    try:
+        return search(wrapped)
+    except OpenDPException as err:
+        if first_exception is not None:
+            exc = first_exception
+            if bounds is None and not had_success and hasattr(exc, "add_note"):
+                center = 0.0 if T in {"f32", "f64"} else 0
+                exc.add_note(
+                    "Predicate in binary search always raises an exception. "
+                    f"This exception is raised when the predicate is evaluated at {center}."
+                )
+            raise exc
+        if err.variant == "Search":
+            raise ValueError(err.message)
+        if err.variant == "Type":
+            raise TypeError(err.message)
+        raise err
+
+
 # when return sign is false, only return float
 @overload
 def binary_search(
@@ -1528,67 +1569,20 @@ def binary_search(
     ...     bounds = (0, 100))
     3
     """
-    if bounds is None:
-        bounds = exponential_bounds_search(predicate, T) # type: ignore
+    from opendp._internal import _binary_search
+    from opendp.typing import RuntimeType
 
-    if bounds is None:
-        raise ValueError("unable to infer bounds")  # pragma: no cover
-
-    if len(set(map(type, bounds))) != 1:
+    if bounds is not None and len(set(map(type, bounds))) != 1:
         raise TypeError("bounds must share the same type")  # pragma: no cover
-    lower, upper = sorted(bounds)
 
-    maximize = predicate(lower)  # if the lower bound passes, we should maximize
-    minimize = predicate(upper)  # if the upper bound passes, we should minimize
-    if maximize == minimize:
-        raise ValueError("the decision boundary of the predicate is outside the bounds")
+    runtime_T = RuntimeType.infer(bounds[0]) if bounds is not None else RuntimeType.parse(T or _infer_type(predicate))
 
-    if isinstance(lower, float):
-        tolerance = 0.
-        half = lambda x: x / 2.
-    elif isinstance(lower, int):
-        tolerance = 1  # the lower and upper bounds never meet due to int truncation
-        half = lambda x: x // 2
-    else:
-        raise TypeError("bounds must be either float or int")  # pragma: no cover
-
-    mid = lower
-    while upper - lower > tolerance:
-        new_mid = lower + half(upper - lower)  # avoid overflow
-
-        # avoid an infinite loop from float roundoff
-        if new_mid == mid:
-            break
-
-        mid = new_mid
-        if predicate(mid) == minimize:
-            upper = mid
-        else:
-            lower = mid
-
-    # one bound is always false, the other true. Return the truthy bound
-    value = upper if minimize else lower
-
-    # optionally return sign
-    if return_sign:
-        return value, 1 if minimize else -1 # type: ignore
-    
-    return value
-
-
-_EXPONENTIAL_SEARCH_BANDS: dict[Type, list[float]] = {
-    # Searching bands of [(k - 1) * 2^16, k * 2^16].
-    # Integers have linear space between bands.
-    # Additionally include 1 because zero is prone to error.
-    int: [0, 1, *(2 ** 16 * k for k in range(1, 9))],
-
-    # Searching bands of [2^((k - 1)^2), 2^(k^2)].
-    # Exponent has ten bits (2^1024 overflows) so k must be in [0, 32).
-    # Unlikely to need numbers greater than 2**64, and to avoid overflow from shifted centers,
-    #    only check k in [0, 8). 
-    # Set your own bounds if this is not sufficient.
-    float: [0.0, 0.5, *(2. ** k ** 2 for k in range(1024 // 32 // 4))]
-}
+    return _call_rust_search(
+        predicate,
+        runtime_T,
+        lambda wrapped: _binary_search(wrapped, bounds=bounds, return_sign=return_sign, T=runtime_T),
+        bounds=bounds,
+    )
 
 def exponential_bounds_search(
     predicate: Callable[[float], bool], T: Optional[Union[Type[float], Type[int]]]
@@ -1605,71 +1599,23 @@ def exponential_bounds_search(
     :raises TypeError: if the type is not inferrable (pass T)
     :raises ValueError: if the predicate function is constant
     """
+    from opendp.typing import RuntimeType
+    from opendp._internal import _exponential_bounds_search
 
-    # try to infer T
-    T = T or _infer_type(predicate)
-                
-    # core search functionality
-    def signed_band_search(center, at_center, sign):
-        """Identify which band (of eight) the decision boundary lies in.
+    runtime_T = RuntimeType.parse(T or _infer_type(predicate))
 
-        :param center: Start here
-        :param at_center: How the predicate evaluates at `center`. Search terminates when predicate changes
-        :param sign: Search in this direction
-        """
-
-        if T not in _EXPONENTIAL_SEARCH_BANDS:
-            raise TypeError(f"unknown type {T}. Must be one of int, float")  # pragma: no cover
-        bands = [center + sign * c for c in _EXPONENTIAL_SEARCH_BANDS[T]]
-
-        for i in range(1, len(bands)):
-            # looking for a change in sign that indicates the decision boundary is within this band
-            if at_center != predicate(bands[i]):
-                # return the band
-                return tuple(sorted(bands[i - 1:i + 1]))
-        
-        # No band found!
-        return None
-
-    center = {int: 0, float: 0.}[T]
-    try:
-        at_center = predicate(center)
-        # search positive bands, then negative bands
-        return signed_band_search(center, at_center, 1) or signed_band_search(center, at_center, -1)
-    except Exception:
-        pass
-
-    # predicate has thrown an exception
-    # 1. Treat exceptions as a secondary decision boundary, and find the edge value
-    # 2. Return a bound by searching from the exception edge, in the direction away from the exception
-    def _exception_predicate(v):
-        try:
-            predicate(v)
-            return True
-        except Exception:
-            return False
-    
-    exception_bounds = exponential_bounds_search(_exception_predicate, T=T)
-    if exception_bounds is None:
-        try:
-            predicate(center)
-        except Exception as e:
-            # enrich the error message if in Python 3.11+.
-            if hasattr(e, "add_note"):
-                e.add_note(f"Predicate in binary search always raises an exception. This exception is raised when the predicate is evaluated at {center}.")
-            raise
-    
-
-    center, sign = binary_search(_exception_predicate, bounds=exception_bounds, T=T, return_sign=True)
-    at_center = predicate(center)
-    return signed_band_search(center, at_center, sign)
+    return _call_rust_search(
+        predicate,
+        runtime_T,
+        lambda wrapped: _exponential_bounds_search(wrapped, runtime_T),
+    )
 
 
 def _infer_type(predicate: Callable[[float], bool]) -> Union[Type[float], Type[int]]:
     def _is_type_error(e):
-        is_match_error = isinstance(e, OpenDPException) and "No match for concrete type" in (e.message or "")
-        is_type_error = isinstance(e, TypeError)
-        return is_match_error or is_type_error
+        return isinstance(e, TypeError) or (
+            isinstance(e, OpenDPException) and e.variant == "Type"
+        )
 
     try:
         predicate(0.)

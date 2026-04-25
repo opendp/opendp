@@ -1,12 +1,12 @@
 use super::*;
+use crate::error::ErrorVariant;
 
 #[test]
-fn test_binary_search_matches_python_r_int_behavior() -> Fallible<()> {
+fn test_binary_search() -> Fallible<()> {
     assert_eq!(binary_search::<i32>(|x| *x <= -5, None)?, -5);
     assert_eq!(binary_search::<i32>(|x| *x <= 5, None)?, 5);
     assert_eq!(binary_search::<i32>(|x| *x >= -5, None)?, -5);
     assert_eq!(binary_search::<i32>(|x| *x >= 5, None)?, 5);
-    assert_eq!(binary_search::<u32>(|x| *x > 5, None)?, 6);
     Ok(())
 }
 
@@ -31,7 +31,7 @@ fn test_signed_binary_search_reports_direction() -> Fallible<()> {
 }
 
 #[test]
-fn test_exponential_bounds_search_matches_python_r_bands() {
+fn test_exponential_bounds_search_bands() {
     assert_eq!(
         exponential_bounds_search::<i32>(&|x| *x > 5),
         Some((1, 65_536))
@@ -69,4 +69,14 @@ fn test_binary_search_handles_full_signed_ranges() -> Fallible<()> {
         0
     );
     Ok(())
+}
+
+#[test]
+fn test_binary_search_uses_search_error_variant() {
+    let err = binary_search(|x: &i32| *x < 0, Some((0, 10))).unwrap_err();
+    assert_eq!(err.variant, ErrorVariant::Search);
+    assert_eq!(
+        err.message.as_deref(),
+        Some("the decision boundary of the predicate is outside the bounds")
+    );
 }

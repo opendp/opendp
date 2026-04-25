@@ -1,6 +1,7 @@
 #include <R.h>
 #include <Rinternals.h>
 #include <R_ext/Boolean.h>
+#include <R_ext/Error.h>
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -89,7 +90,7 @@ static int count_formals(SEXP function)
         return 1;
 
     int count = 0;
-    for (SEXP node = FORMALS(function); node != R_NilValue; node = CDR(node))
+    for (SEXP node = R_ClosureFormals(function); node != R_NilValue; node = CDR(node))
         count++;
     return count;
 }
@@ -271,7 +272,16 @@ static void callback_exec(void *data)
     // then convert the result back using the callback's declared output type.
     SEXP arg = PROTECT(anyobjectptr_to_sexp((AnyObject *)invocation->arg));
     SEXP call = PROTECT(lang2(invocation->ctx->function, arg));
-    SEXP out = PROTECT(Rf_eval(call, R_GlobalEnv));
+    int error_occurred = 0;
+    SEXP out = PROTECT(R_tryEvalSilent(call, R_GlobalEnv, &error_occurred));
+    if (error_occurred)
+    {
+        char *message = get_last_error_message();
+        invocation->result = wrap_failure_details("Exception in user-defined function", message);
+        free(message);
+        UNPROTECT(3);
+        return;
+    }
     SEXP type_name = PROTECT(parse_runtime_type(invocation->ctx->type_name));
     AnyObject *result = sexp_to_anyobjectptr(out, type_name);
     invocation->result = wrap_success(result);
@@ -289,7 +299,16 @@ static void transition_exec(void *data)
     {
         SEXP is_internal = PROTECT(ScalarLogical((bool)invocation->is_internal));
         call = PROTECT(lang3(invocation->ctx->function, arg, is_internal));
-        SEXP out = PROTECT(Rf_eval(call, R_GlobalEnv));
+        int error_occurred = 0;
+        SEXP out = PROTECT(R_tryEvalSilent(call, R_GlobalEnv, &error_occurred));
+        if (error_occurred)
+        {
+            char *message = get_last_error_message();
+            invocation->result = wrap_failure_details("Exception in user-defined transition", message);
+            free(message);
+            UNPROTECT(4);
+            return;
+        }
         SEXP type_name = PROTECT(parse_runtime_type(invocation->ctx->type_name));
         AnyObject *result = sexp_to_anyobjectptr(out, type_name);
         invocation->result = wrap_success(result);
@@ -298,7 +317,16 @@ static void transition_exec(void *data)
     }
 
     call = PROTECT(lang2(invocation->ctx->function, arg));
-    SEXP out = PROTECT(Rf_eval(call, R_GlobalEnv));
+    int error_occurred = 0;
+    SEXP out = PROTECT(R_tryEvalSilent(call, R_GlobalEnv, &error_occurred));
+    if (error_occurred)
+    {
+        char *message = get_last_error_message();
+        invocation->result = wrap_failure_details("Exception in user-defined transition", message);
+        free(message);
+        UNPROTECT(3);
+        return;
+    }
     SEXP type_name = PROTECT(parse_runtime_type(invocation->ctx->type_name));
     AnyObject *result = sexp_to_anyobjectptr(out, type_name);
     invocation->result = wrap_success(result);
