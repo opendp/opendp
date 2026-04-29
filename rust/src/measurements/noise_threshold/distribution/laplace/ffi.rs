@@ -8,7 +8,7 @@ use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::ffi::util::{Type, TypeContents, as_ref};
 use crate::measurements::nature::Nature;
 use crate::measurements::{MakeNoiseThreshold, make_laplace_threshold};
-use crate::measures::{Approximate, MaxDivergence};
+use crate::measures::{Approximate, PureDP};
 use crate::metrics::{AbsoluteDistance, L01InfDistance};
 use crate::traits::{Hashable, Number};
 
@@ -74,7 +74,7 @@ pub extern "C" fn opendp_measurements__make_laplace_threshold(
     let k = as_ref(k as *const i32).map(Clone::clone);
 
     dispatch!(monomorphize, [
-        (MO, [Approximate<MaxDivergence>]),
+        (MO, [Approximate<PureDP>]),
         (TK, @hashable),
         (TV, @numbers),
         (QI, @numbers)

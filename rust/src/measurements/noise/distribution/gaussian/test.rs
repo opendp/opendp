@@ -17,11 +17,11 @@ fn test_make_gaussian_native_types() -> Fallible<()> {
     macro_rules! test_make_gaussian_type {
         ($($ty:ty),+) => {$(
             // scalar
-            let meas = make_gaussian::<_, _, ZeroConcentratedDivergence>(AtomDomain::<$ty>::new_non_nan(), AbsoluteDistance::<$ty>::default(), 1., None)?;
+            let meas = make_gaussian::<_, _, zCDP>(AtomDomain::<$ty>::new_non_nan(), AbsoluteDistance::<$ty>::default(), 1., None)?;
             meas.invoke(&<$ty>::zero())?; // checking to see if invoke works
             assert_eq!(meas.map(&<$ty>::one())?, 0.5);
             // vector
-            let meas = make_gaussian::<_, _, ZeroConcentratedDivergence>(VectorDomain::new(AtomDomain::<$ty>::new_non_nan()), L2Distance::<$ty>::default(), 1., None)?;
+            let meas = make_gaussian::<_, _, zCDP>(VectorDomain::new(AtomDomain::<$ty>::new_non_nan()), L2Distance::<$ty>::default(), 1., None)?;
             meas.invoke(&vec![<$ty>::zero()])?; // checking to see if invoke works
             assert_eq!(meas.map(&<$ty>::one())?, 0.5);
         )+}
@@ -36,7 +36,7 @@ fn test_make_gaussian_native_types() -> Fallible<()> {
 #[test]
 fn test_make_gaussian_bigint() -> Fallible<()> {
     // scalar ibig
-    let meas = make_gaussian::<_, _, ZeroConcentratedDivergence>(
+    let meas = make_gaussian::<_, _, zCDP>(
         AtomDomain::<IBig>::default(),
         AbsoluteDistance::<RBig>::default(),
         1.,
@@ -45,7 +45,7 @@ fn test_make_gaussian_bigint() -> Fallible<()> {
     meas.invoke(&IBig::ZERO)?; // checking to see if invoke works
     assert_eq!(meas.map(&RBig::ONE)?, 0.5);
     // vector ibig
-    let meas = make_gaussian::<_, _, ZeroConcentratedDivergence>(
+    let meas = make_gaussian::<_, _, zCDP>(
         VectorDomain::new(AtomDomain::<IBig>::default()),
         L2Distance::<RBig>::default(),
         1.,
@@ -60,8 +60,7 @@ fn test_make_gaussian_bigint() -> Fallible<()> {
 fn test_make_gaussian_kolmogorov_smirnov() -> Fallible<()> {
     let input_domain = VectorDomain::new(AtomDomain::<f64>::new_non_nan());
     let input_metric = L2Distance::<f64>::default();
-    let meas =
-        make_gaussian::<_, _, ZeroConcentratedDivergence>(input_domain, input_metric, 1.0, None)?;
+    let meas = make_gaussian::<_, _, zCDP>(input_domain, input_metric, 1.0, None)?;
     let samples = <[f64; 5000]>::try_from(meas.invoke(&vec![0.0; 5000])?).unwrap();
 
     pub fn normal_cdf(x: f64) -> f64 {
@@ -98,7 +97,7 @@ fn test_make_gaussian_map() -> Fallible<()> {
         Ok(())
     }
 
-    let m_float = make_gaussian::<_, _, ZeroConcentratedDivergence>(
+    let m_float = make_gaussian::<_, _, zCDP>(
         AtomDomain::<f64>::new_non_nan(),
         AbsoluteDistance::<f64>::default(),
         1f64,
@@ -106,7 +105,7 @@ fn test_make_gaussian_map() -> Fallible<()> {
     )?;
     test_map(m_float.privacy_map.0.as_ref())?;
 
-    let m_int = make_gaussian::<_, _, ZeroConcentratedDivergence>(
+    let m_int = make_gaussian::<_, _, zCDP>(
         AtomDomain::<i32>::default(),
         AbsoluteDistance::<f64>::default(),
         1f64,
@@ -119,7 +118,7 @@ fn test_make_gaussian_map() -> Fallible<()> {
 #[test]
 fn test_make_gaussian_extreme_int() -> Fallible<()> {
     // an extreme noise scale dominates the output, resulting in the release always being saturated
-    let meas = make_gaussian::<_, _, ZeroConcentratedDivergence>(
+    let meas = make_gaussian::<_, _, zCDP>(
         AtomDomain::<u32>::default(),
         AbsoluteDistance::<f64>::default(),
         f64::MAX,
@@ -143,7 +142,7 @@ fn test_make_noise_zexpfamily2_large_scale() -> Fallible<()> {
         scale: rbig!(23948285282902934157),
     };
 
-    let meas = distribution.make_noise(space, ZeroConcentratedDivergence)?;
+    let meas = distribution.make_noise(space, zCDP)?;
     // random large number:
     assert!(i8::try_from(meas.invoke(&ibig!(0))?).is_err());
     assert_eq!(meas.map(&rbig!(23948285282902934157))?, 0.5);
@@ -156,7 +155,7 @@ fn test_make_noise_zexpfamily2_zero_scale() -> Fallible<()> {
     let metric = L2Distance::default();
     let distribution = ZExpFamily { scale: rbig!(0) };
 
-    let meas = distribution.make_noise((domain, metric), ZeroConcentratedDivergence)?;
+    let meas = distribution.make_noise((domain, metric), zCDP)?;
     assert_eq!(meas.invoke(&vec![ibig!(0)])?, vec![ibig!(0)]);
     assert_eq!(meas.map(&rbig!(0))?, 0.);
     assert_eq!(meas.map(&rbig!(1))?, f64::INFINITY);

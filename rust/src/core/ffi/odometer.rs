@@ -214,7 +214,7 @@ mod tests {
         error::{ErrorVariant, Fallible},
         ffi::any::Downcast,
         interactive::Queryable,
-        measures::MaxDivergence,
+        measures::PureDP,
         metrics::SymmetricDistance,
     };
 
@@ -224,7 +224,7 @@ mod tests {
         Odometer::new(
             AnyDomain::new(VectorDomain::new(AtomDomain::<i32>::default())),
             AnyMetric::new(SymmetricDistance),
-            AnyMeasure::new(MaxDivergence),
+            AnyMeasure::new(PureDP),
             Function::new_fallible(|arg: &AnyObject| {
                 let data = arg.downcast_ref::<Vec<i32>>()?.clone();
                 Queryable::new_external(move |query: &OdometerQuery<AnyObject, AnyObject>| {

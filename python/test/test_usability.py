@@ -139,7 +139,7 @@ def test_margins_dict_instead_of_list():
 def test_polars_data_loader_error_is_human_readable(domain):
     pytest.importorskip("polars")
     overall_pipeline = dp.c.make_adaptive_composition(
-        domain, dp.symmetric_distance(), dp.max_divergence(), d_in=1,
+        domain, dp.symmetric_distance(), dp.pure_dp(), d_in=1,
         d_mids=[1.])
     with pytest.raises(ValueError, match="expected Polars *"):
         overall_pipeline("I'm not the right type!")
@@ -151,7 +151,7 @@ def test_polars_expr_loader_error_is_human_readable():
         dp.m.make_private_expr(
             dp.wild_expr_domain([]),
             dp.symmetric_distance(),
-            dp.max_divergence(),
+            dp.pure_dp(),
             pl.LazyFrame({}),
         )
 

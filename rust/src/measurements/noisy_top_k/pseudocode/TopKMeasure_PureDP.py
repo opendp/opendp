@@ -1,5 +1,5 @@
 # type: ignore
-# MaxDivergence
+# PureDP
 REPLACEMENT = False
 
 def privacy_map(d_in: f64, scale: f64) -> f64:

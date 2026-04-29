@@ -12,7 +12,7 @@ use crate::domains::{CategoricalDomain, Context, DslPlanDomain, WildExprDomain};
 use crate::error::*;
 use crate::measurements::PrivateExpr;
 use crate::measurements::expr_noise::NoiseDistribution;
-use crate::measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence};
+use crate::measures::{Approximate, PureDP, zCDP};
 use crate::metrics::{Bounds, FrameDistance, L0PInfDistance, L01InfDistance};
 use crate::traits::{InfAdd, InfMul, InfPowI, InfSub, option_min};
 use crate::transformations::traits::UnboundedMetric;
@@ -351,8 +351,8 @@ macro_rules! impl_measure_non_catastrophic {
     };
 }
 
-impl_measure_non_catastrophic!(MaxDivergence);
-impl_measure_non_catastrophic!(ZeroConcentratedDivergence);
+impl_measure_non_catastrophic!(PureDP);
+impl_measure_non_catastrophic!(zCDP);
 
 impl<MO: CompositionMeasure> ApproximateMeasure for Approximate<MO>
 where

@@ -45,7 +45,7 @@ def test_private_selection_threshold_plugin():
     space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
 
     m_plugin = space >> dp.m.then_user_measurement(
-        dp.max_divergence(),
+        dp.pure_dp(),
         lambda x: (np.random.normal(loc=x), x),
         lambda d_in: d_in,
         TO="(f64, ExtrinsicObject)"
@@ -71,7 +71,7 @@ def test_private_selection_no_answer():
     space = dp.atom_domain(T=float), dp.absolute_distance(T=float)
 
     m_plugin = space >> dp.m.then_user_measurement(
-        dp.max_divergence(),
+        dp.pure_dp(),
         lambda x: (np.random.normal(loc=x), x),
         lambda d_in: d_in,
         TO="(f64, ExtrinsicObject)"

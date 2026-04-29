@@ -46,9 +46,9 @@ def test_typed_dict_domain():
 
 
 def test_get_std():
-    message = "output_measure (RenyiDivergence) must be"
+    message = "output_measure (RenyiDP) must be"
     with pytest.raises(ValueError, match=re.escape(message)):
-        get_std(dp.renyi_divergence(), 1.0)
+        get_std(dp.renyi_dp(), 1.0)
 
 
 @pytest.mark.parametrize(
@@ -123,7 +123,7 @@ def test_make_noise_marginal():
             {("A",): dp.numpy.arrayd_domain(shape=(1, 2), T="u32")}
         ),
         input_metric=typed_dict_distance(dp.l1_distance(T="u32")),
-        output_measure=dp.max_divergence(),
+        output_measure=dp.pure_dp(),
         clique=("A",),
         scale=1.0,
     )

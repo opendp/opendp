@@ -9,7 +9,7 @@ use crate::{
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     measurements::{MakeNoise, NoiseDomain, NoisePrivacyMap, ZExpFamily},
-    measures::MaxDivergence,
+    measures::PureDP,
     metrics::{AbsoluteDistance, L1Distance},
     traits::{ExactIntCast, InfExp, InfSub, Integer, samplers::sample_discrete_laplace_linear},
     transformations::{make_vec, then_index_or_default},
@@ -26,7 +26,7 @@ mod test;
 #[bootstrap(
     features("contrib"),
     arguments(bounds(rust_type = "OptionT", default = b"null")),
-    generics(DI(suppress), MI(suppress), MO(default = "MaxDivergence")),
+    generics(DI(suppress), MI(suppress), MO(default = "PureDP")),
     derived_types(
         T = "$get_atom(get_carrier_type(input_domain))",
         OptionT = "Option<(T, T)>"
@@ -47,7 +47,7 @@ mod test;
 /// # Generics
 /// * `DI` - Domain of the data type to be released. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 /// * `MI` - Metric used to measure distance between members of the input domain.
-/// * `MO` - Measure used to quantify privacy loss. Valid values are just `MaxDivergence`
+/// * `MO` - Measure used to quantify privacy loss. Valid values are just `PureDP`
 pub fn make_geometric<DI: NoiseDomain, MI: Metric, MO: Measure>(
     input_domain: DI,
     input_metric: MI,
@@ -102,21 +102,20 @@ where
 #[proven(
     proof_path = "measurements/noise/distribution/geometric/MakeNoise_VectorDomain_for_ConstantTimeGeometric.tex"
 )]
-impl<T, QI> MakeNoise<VectorDomain<AtomDomain<T>>, L1Distance<QI>, MaxDivergence>
+impl<T, QI> MakeNoise<VectorDomain<AtomDomain<T>>, L1Distance<QI>, PureDP>
     for ConstantTimeGeometric<T>
 where
     T: Integer,
     QI: Clone + Debug,
     usize: ExactIntCast<T>,
     RBig: TryFrom<QI>,
-    ZExpFamily<1>: NoisePrivacyMap<L1Distance<RBig>, MaxDivergence>,
+    ZExpFamily<1>: NoisePrivacyMap<L1Distance<RBig>, PureDP>,
 {
     fn make_noise(
         self,
         (input_domain, input_metric): (VectorDomain<AtomDomain<T>>, L1Distance<QI>),
-        output_measure: MaxDivergence,
-    ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, L1Distance<QI>, MaxDivergence, Vec<T>>>
-    {
+        output_measure: PureDP,
+    ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, L1Distance<QI>, PureDP, Vec<T>>> {
         let ConstantTimeGeometric {
             scale,
             bounds: (lower, upper),

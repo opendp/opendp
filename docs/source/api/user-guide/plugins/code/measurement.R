@@ -11,7 +11,7 @@ make_base_constant <- function(input_domain, input_metric, constant) {
   make_user_measurement(
     input_domain = input_domain,
     input_metric = input_metric,
-    output_measure = max_divergence(),
+    output_measure = pure_dp(),
     function_ = function_,
     privacy_map = privacy_map,
     .TO = String

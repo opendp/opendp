@@ -77,7 +77,7 @@ test_that("make_fix_delta", {
   metric <- absolute_distance(i32)
 
   meas_zCDP <- make_gaussian(domain, metric, scale = 1.)
-  meas_εδ <- make_zCDP_to_approxDP(meas_zCDP)
+  meas_εδ <- make_zCDP_to_curveDP(meas_zCDP)
 
   curve <- meas_εδ(d_in = 1L)
 
@@ -129,13 +129,13 @@ test_that("make_sequential_composition", {
 test_that("test_fully_adaptive_composition", {
   max_influence <- 1L
   space <- c(vector_domain(atom_domain(.T = "i32")), symmetric_distance())
-  o_sc <- space |> then_fully_adaptive_composition(max_divergence())
+  o_sc <- space |> then_fully_adaptive_composition(pure_dp())
 
   expect_equal(toString(o_sc), paste0(
     "Odometer(\n",
     "  input_domain=VectorDomain(AtomDomain(T=i32)),\n",
     "  input_metric=SymmetricDistance(),\n",
-    "  output_measure=MaxDivergence\n",
+    "  output_measure=PureDP\n",
     ")"
   ))
 
@@ -151,7 +151,7 @@ test_that("test_fully_adaptive_composition", {
   m_lap <- make_laplace(atom_domain(.T = "i32"), absolute_distance(.T = "i32"), 200.)
   t_sum <- space |> then_clamp(c(0L, 10L)) |> then_sum()
   m_sum_compositor <- t_sum |> then_adaptive_composition(
-    output_measure = max_divergence(),
+    output_measure = pure_dp(),
     d_in = t_sum(d_in = max_influence),
     d_mids = c(0.2, 0.09)
   )
@@ -174,11 +174,11 @@ test_that("test_odometer_supporting_elements", {
   sc_odo <- make_fully_adaptive_composition(
     vector_domain(atom_domain(.T = "i32")),
     symmetric_distance(),
-    max_divergence()
+    pure_dp()
   )
 
   expect_s3_class(sc_odo(arg = 1L), "odometer_queryable")
   expect_equal(toString(sc_odo("input_domain")), toString(vector_domain(atom_domain(.T = "i32"))))
   expect_equal(toString(sc_odo("input_metric")), toString(symmetric_distance()))
-  expect_equal(toString(sc_odo("output_measure")), toString(max_divergence()))
+  expect_equal(toString(sc_odo("output_measure")), toString(pure_dp()))
 })

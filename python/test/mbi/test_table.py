@@ -225,7 +225,7 @@ def test_make_contingency_table_invalid_d_out():
         dp.mbi.make_contingency_table(
             dp.lazyframe_domain([dp.series_domain("A", dp.atom_domain(T=int))]),
             dp.frame_distance(dp.symmetric_distance()),
-            dp.max_divergence(),
+            dp.pure_dp(),
             d_in=[dp.polars.Bound(per_group=1)],
             d_out=(1.0, 1e-8),
         )

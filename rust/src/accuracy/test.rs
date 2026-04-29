@@ -5,7 +5,7 @@ use super::*;
 use crate::domains::AtomDomain;
 use crate::error::ExplainUnwrap;
 use crate::measurements::{make_gaussian, make_laplace};
-use crate::measures::{MaxDivergence, ZeroConcentratedDivergence};
+use crate::measures::{PureDP, zCDP};
 use crate::metrics::AbsoluteDistance;
 
 #[test]
@@ -222,8 +222,7 @@ pub fn test_empirical_laplace_accuracy() -> Fallible<()> {
     let scale = accuracy_to_laplacian_scale(accuracy, theoretical_alpha)?;
     let input_domain = AtomDomain::<f64>::new_non_nan();
     let input_metric = AbsoluteDistance::<i32>::default();
-    let laplace =
-        make_laplace::<_, _, MaxDivergence>(input_domain, input_metric, scale, Some(-100))?;
+    let laplace = make_laplace::<_, _, PureDP>(input_domain, input_metric, scale, Some(-100))?;
     let n = 50_000;
     let empirical_alpha = (0..n)
         .filter(|_| laplace.invoke(&0.0).unwrap().abs() > accuracy)
@@ -243,7 +242,7 @@ pub fn test_empirical_gaussian_accuracy() -> Fallible<()> {
     let accuracy = 1.0;
     let theoretical_alpha = 0.05;
     let scale = accuracy_to_gaussian_scale(accuracy, theoretical_alpha)?;
-    let base_gaussian = make_gaussian::<_, _, ZeroConcentratedDivergence>(
+    let base_gaussian = make_gaussian::<_, _, zCDP>(
         AtomDomain::<f64>::new_non_nan(),
         AbsoluteDistance::<u32>::default(),
         scale,
@@ -271,7 +270,7 @@ pub fn test_empirical_discrete_laplace_accuracy() -> Fallible<()> {
     println!("scale: {scale}");
     let input_domain = AtomDomain::<i32>::default();
     let input_metric = AbsoluteDistance::<i32>::default();
-    let base_dl = make_laplace::<_, _, MaxDivergence>(input_domain, input_metric, scale, None)?;
+    let base_dl = make_laplace::<_, _, PureDP>(input_domain, input_metric, scale, None)?;
     let n = 50_000;
     let empirical_alpha = (0..n)
         .filter(|_| base_dl.invoke(&0).unwrap().clamp(-127, 127).abs() >= accuracy)
@@ -294,7 +293,7 @@ pub fn test_empirical_discrete_gaussian_accuracy() -> Fallible<()> {
     // let scale = 12.503562372734077;
 
     println!("scale: {}", scale);
-    let base_dg = make_gaussian::<_, _, ZeroConcentratedDivergence>(
+    let base_dg = make_gaussian::<_, _, zCDP>(
         AtomDomain::<i8>::default(),
         AbsoluteDistance::<i32>::default(),
         scale,

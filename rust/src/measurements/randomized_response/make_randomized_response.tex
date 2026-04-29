@@ -136,7 +136,7 @@ Pseudocode line \ref{line:map} implements this bound with conservative rounding 
 When $\din > 0$ and no exception is raised in computing $\texttt{c} = \texttt{privacy\_map}(\din)$, then $\ln\left(\frac{p \cdot (t - 1)}{1 - p}\right) \leq \texttt{c}$. 
 
 Therefore it has been shown that for every pair of elements $x, x' \in \texttt{input\_domain}$ and every $d_{DM}(x, x') \le \din$ with $\din \ge 0$, 
-if $x, x'$ are $\din$-close then $\function(x),\function(x')$ are $\texttt{privacy\_map}(\din)$-close under $\texttt{output\_measure}$ (the Max-Divergence).
+if $x, x'$ are $\din$-close then $\function(x),\function(x')$ are $\texttt{privacy\_map}(\din)$-close under $\texttt{output\_measure}$ (pure-DP).
 \end{proof}
 
 \bibliographystyle{plain}
