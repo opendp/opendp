@@ -161,6 +161,7 @@ impl From<FfiError> for Error {
         let variant = match variant {
             "FFI" => ErrorVariant::FFI,
             "TypeParse" => ErrorVariant::TypeParse,
+            "Type" => ErrorVariant::Type,
             "FailedFunction" => ErrorVariant::FailedFunction,
             "FailedMap" => ErrorVariant::FailedMap,
             "RelationDebug" => ErrorVariant::RelationDebug,
@@ -173,6 +174,7 @@ impl From<FfiError> for Error {
             "MakeMeasurement" => ErrorVariant::MakeMeasurement,
             "MetricSpace" => ErrorVariant::MetricSpace,
             "InvalidDistance" => ErrorVariant::InvalidDistance,
+            "Search" => ErrorVariant::Search,
             "Overflow" => ErrorVariant::Overflow,
             "NotImplemented" => ErrorVariant::NotImplemented,
             unknown => return err!(NotImplemented, "Unknown ErrorVariant {}", unknown),

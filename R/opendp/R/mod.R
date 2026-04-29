@@ -635,6 +635,83 @@ binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
   }, bounds, .T))
 }
 
+.call_search_callback <- function(predicate, .T, call_expr, bounds = NULL) {
+  parse_rust_error_message <- function(message) {
+    first_line <- strsplit(message, "\n", fixed = TRUE)[[1]][1]
+    parsed <- regexec("^\\[([^]]+)\\] : (.*)$", first_line)
+    parts <- regmatches(first_line, parsed)[[1]]
+    if (length(parts) == 3) {
+      return(list(variant = parts[[2]], message = parts[[3]]))
+    }
+    list(variant = NULL, message = first_line)
+  }
+
+  state <- new.env(parent = emptyenv())
+  state$first_error <- NULL
+  state$had_success <- FALSE
+
+  wrapped <- function(v) {
+    tryCatch({
+      out <- predicate(v)
+      state$had_success <- TRUE
+      out
+    }, error = function(e) {
+      if (is.null(state$first_error)) {
+        state$first_error <- e
+      }
+      stop(conditionMessage(e), call. = FALSE)
+    })
+  }
+
+  tryCatch(
+    force(call_expr(wrapped)),
+    error = function(e) {
+      if (!is.null(state$first_error)) {
+        if (is.null(bounds) && !isTRUE(state$had_success)) {
+          center <- if (.T$origin %in% c("f32", "f64")) 0. else 0L
+          msg <- "Predicate always fails. Example error at %s: %s"
+          stop(sprintf(msg, center, conditionMessage(state$first_error)), call. = FALSE)
+        }
+        stop(conditionMessage(state$first_error), call. = FALSE)
+      }
+      rust_error <- parse_rust_error_message(conditionMessage(e))
+      if (identical(rust_error$variant, "Search")) {
+        stop(rust_error$message, call. = FALSE)
+      }
+      stop(conditionMessage(e), call. = FALSE)
+    }
+  )
+}
+
+.infer_search_type <- function(predicate, .T = NULL, bounds = NULL) {
+  if (!is.null(bounds)) {
+    if (inherits(bounds, "integer")) {
+      return(rt_parse("int"))
+    }
+    if (inherits(bounds, "numeric")) {
+      return(rt_parse("float"))
+    }
+    stop("bounds must be either float or int", call. = FALSE)
+  }
+
+  if (!is.null(.T)) {
+    return(rt_parse(.T))
+  }
+
+  check_type <- function(v) {
+    f <- try(predicate(v), TRUE)
+    !inherits(f, "try-error")
+  }
+
+  if (check_type(0.)) {
+    return(rt_parse("float"))
+  }
+  if (check_type(0L)) {
+    return(rt_parse("int"))
+  }
+  stop("unable to infer type `.T`; pass the type `.T` or bounds", call. = FALSE)
+}
+
 #' Find the closest passing value to the decision boundary of `predicate`
 #'
 #' If bounds are not passed, conducts an exponential search.
@@ -647,143 +724,36 @@ binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
 #' @return the discovered parameter within the bounds
 #' @export
 binary_search <- function(predicate, bounds = NULL, .T = NULL, return_sign = FALSE) {
-  if (is.null(bounds)) {
-    bounds <- exponential_bounds_search(predicate, .T)
-  }
+  .T <- .infer_search_type(predicate, .T, bounds)
 
-  if (is.null(bounds)) {
-    stop("unable to infer bounds", call. = FALSE)
-  }
-
-  tmp <- sort(bounds)
-  lower <- tmp[1]
-  upper <- tmp[2]
-
-  maximize <- predicate(lower) # if the lower bound passes, we should maximize
-  minimize <- predicate(upper) # if the upper bound passes, we should minimize
-  if (maximize == minimize) {
-    stop("the decision boundary of the predicate is outside the bounds", call. = FALSE)
-  }
-
-  if (inherits(lower, "numeric")) {
-    tolerance <- 0.
-    half <- function(x) x / 2.
-  } else if (inherits(lower, "integer")) {
-    tolerance <- 1L # the lower and upper bounds never meet due to int truncation
-    half <- function(x) x %/% 2L
-  } else {
-    stop("bounds must be either float or int", call. = FALSE)
-  }
-
-  mid <- lower
-  while (upper - lower > tolerance) {
-    new_mid <- lower + half(upper - lower) # avoid overflow
-
-    # avoid an infinite loop from float roundoff
-    if (new_mid == mid) break
-    mid <- new_mid
-
-    if (predicate(mid) == minimize) {
-      upper <- mid
-    } else {
-      lower <- mid
+  result <- .call_search_callback(
+    predicate = predicate,
+    .T = .T,
+    bounds = bounds,
+    call_expr = function(wrapped) {
+      `_binary_search`(wrapped, bounds = bounds, .T = .T, return_sign = return_sign)
     }
-  }
-  # one bound is always false, the other true. Return the truthy bound
-  value <- ifelse(minimize, upper, lower)
+  )
 
-  # optionally return sign
   if (return_sign) {
-    return(c(value, ifelse(minimize, 1, -1)))
+    return(c(result[[1]], result[[2]]))
   }
-  return(value)
+  result
 }
 
-# nolint start: cyclocomp_linter
 exponential_bounds_search <- function(predicate, .T) {
-  # try to infer T
-  if (is.null(.T)) {
-    check_type <- function(v) {
-      f <- try(predicate(v), TRUE)
-      if (inherits(f, "try-error")) {
-        return(FALSE)
-      } else {
-        return(TRUE)
-      }
-    }
+  .T <- .infer_search_type(predicate, .T)
 
+  result <- .call_search_callback(
+    predicate = predicate,
+    .T = .T,
+    call_expr = function(wrapped) {
+      `_exponential_bounds_search`(wrapped, .T = .T)
+    }
+  )
 
-    if (check_type(0.)) {
-      .T <- "float"
-    } else {
-      if (check_type(0L)) {
-        .T <- "int"
-      } else {
-        stop("unable to infer type `.T`; pass the type `.T` or bounds", call. = FALSE)
-      }
-    }
-  }
-
-  # core search functionality
-  signed_band_search <- function(center, at_center, sign) {
-    if (.T == "int") {
-      bands <- as.integer(c(center, center + 1, (center + sign * 2**16 * (0:(9 - 1)))))
-    }
-    if (.T == "float") {
-      bands <- c(center, (center + sign * 2.**(0:(1024 %/% 32 %/% 4 - 1))**2))
-    }
-
-    for (i in 2:(length(bands) - 1)) {
-      #   looking for a change in sign that indicates the decision boundary is within this band
-      if (at_center != predicate(bands[i])) {
-        # return the band
-        return(c(sort(bands[(i - 1):i])))
-      }
-    }
-    # No band found!
+  if (is.null(result)) {
     return(NULL)
   }
-
-  if (.T == "int") center <- 0L
-  if (.T == "float") center <- 0.
-
-  at_center <- try(predicate(center), TRUE)
-  # search positive bands, then negative bands
-  ret <- try(signed_band_search(center, at_center, 1), TRUE)
-
-  if (is.null(ret)) {
-    ret <- try(signed_band_search(center, at_center, -1), TRUE)
-  }
-
-  if (!inherits(at_center, "try-error") && !inherits(ret, "try-error")) {
-    return(ret)
-  }
-
-  # predicate has thrown an exception
-  # 1. Treat exceptions as a secondary decision boundary, and find the edge value
-  # 2. Return a bound by searching from the exception edge, in the direction away from the exception
-  exception_predicate <- function(v) {
-    f <- try(predicate(v), TRUE)
-    if (inherits(f, "try-error")) {
-      return(FALSE)
-    } else {
-      return(TRUE)
-    }
-  }
-
-  exception_bounds <- exponential_bounds_search(exception_predicate, .T = .T)
-
-  if (is.null(exception_bounds)) {
-    msg <- "Predicate always fails. Example error at %s: %s"
-    stop(sprintf(msg, center, try(predicate(center), TRUE)), call. = FALSE)
-  }
-
-  tmp <- binary_search(exception_predicate, bounds = exception_bounds, .T = .T, return_sign = TRUE)
-  center <- tmp[1]
-  if (length(tmp) > 1) {
-    sign <- tmp[2]
-  }
-  at_center <- predicate(center)
-  return(signed_band_search(center, at_center, sign))
+  unlist(result, use.names = FALSE)
 }
-# nolint end

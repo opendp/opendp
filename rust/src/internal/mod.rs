@@ -12,12 +12,16 @@ use crate::{
     ffi::{
         any::{
             AnyDomain, AnyFunction, AnyMeasure, AnyMeasurement, AnyMetric, AnyObject,
-            AnyTransformation, CallbackFn, wrap_func,
+            AnyTransformation, CallbackFn, Downcast, wrap_func,
         },
-        util::{self, ExtrinsicObject},
+        util::{self, ExtrinsicObject, Type, as_ref},
     },
     measures::ffi::opendp_measures__user_divergence,
     metrics::ffi::opendp_metrics__user_distance,
+    utilities::{
+        BinarySearchable, fallible_binary_search, fallible_exponential_bounds_search,
+        signed_fallible_binary_search,
+    },
 };
 
 #[bootstrap(
@@ -234,4 +238,126 @@ pub extern "C" fn opendp_internal___new_pure_function(
     FfiResult::Ok(util::into_raw(Function::new_fallible(wrap_func(
         try_as_ref!(function).clone(),
     ))))
+}
+
+fn wrap_search_predicate<T>(predicate: *const CallbackFn) -> Fallible<impl Fn(&T) -> Fallible<bool>>
+where
+    T: Clone + 'static + Send + Sync,
+{
+    let predicate = wrap_func(try_as_ref!(predicate).clone());
+    Ok(move |arg: &T| predicate(&AnyObject::new(arg.clone()))?.downcast::<bool>())
+}
+
+#[bootstrap(
+    name = "_binary_search",
+    arguments(
+        predicate(rust_type = "bool"),
+        bounds(default = b"null", rust_type = "Option<(T, T)>"),
+        return_sign(default = false),
+    ),
+    generics(T(example = "$get_first(bounds)"))
+)]
+/// Find the closest passing value to the decision boundary of `predicate`.
+///
+/// This is meant for internal use by the Python and R bindings.
+///
+/// # Arguments
+/// * `predicate` - A monotonic unary function from a number to a boolean.
+/// * `bounds` - Optional lower and upper bounds on the input to `predicate`.
+/// * `return_sign` - If true, also return the direction away from the decision boundary.
+///
+/// # Generics
+/// * `T` - Search type.
+#[allow(dead_code)]
+fn _binary_search<T>(
+    predicate: CallbackFn,
+    bounds: Option<(T, T)>,
+    return_sign: bool,
+) -> Fallible<AnyObject> {
+    let _ = (predicate, bounds, return_sign);
+    panic!("this signature only exists for code generation")
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_internal___binary_search(
+    predicate: *const CallbackFn,
+    bounds: *const AnyObject,
+    return_sign: bool,
+    T: *const c_char,
+) -> FfiResult<*mut AnyObject> {
+    fn monomorphize<T>(
+        predicate: *const CallbackFn,
+        bounds: *const AnyObject,
+        return_sign: bool,
+    ) -> Fallible<AnyObject>
+    where
+        T: BinarySearchable + 'static + Send + Sync,
+    {
+        let predicate = wrap_search_predicate::<T>(predicate)?;
+        let bounds = as_ref(bounds)
+            .map(|obj| obj.downcast_ref::<(T, T)>().cloned())
+            .transpose()?;
+
+        if return_sign {
+            signed_fallible_binary_search(predicate, bounds)
+                .map(|(value, sign)| AnyObject::new((value, i32::from(sign))))
+        } else {
+            fallible_binary_search(predicate, bounds).map(AnyObject::new)
+        }
+    }
+
+    let T = try_!(Type::try_from(T));
+    dispatch!(
+        monomorphize,
+        [(
+            T,
+            [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64]
+        )],
+        (predicate, bounds, return_sign)
+    )
+    .into()
+}
+
+#[bootstrap(
+    name = "_exponential_bounds_search",
+    arguments(predicate(rust_type = "bool"))
+)]
+/// Determine bounds for a binary search via an exponential search.
+///
+/// This is meant for internal use by the Python and R bindings.
+///
+/// # Arguments
+/// * `predicate` - A monotonic unary function from a number to a boolean.
+///
+/// # Generics
+/// * `T` - Search type.
+#[allow(dead_code)]
+fn _exponential_bounds_search<T>(predicate: CallbackFn) -> Fallible<Option<(T, T)>> {
+    let _ = predicate;
+    panic!("this signature only exists for code generation")
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_internal___exponential_bounds_search(
+    predicate: *const CallbackFn,
+    T: *const c_char,
+) -> FfiResult<*mut AnyObject> {
+    fn monomorphize<T>(predicate: *const CallbackFn) -> Fallible<AnyObject>
+    where
+        T: BinarySearchable + 'static + Send + Sync,
+    {
+        let predicate = wrap_search_predicate::<T>(predicate)?;
+        fallible_exponential_bounds_search(&predicate).map(AnyObject::new)
+    }
+
+    let T = try_!(Type::try_from(T));
+    dispatch!(
+        monomorphize,
+        [(
+            T,
+            [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64]
+        )],
+        (predicate)
+    )
+    .into()
 }
