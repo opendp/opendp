@@ -90,6 +90,9 @@ pub enum ErrorVariant {
     #[error("FailedCast")]
     FailedCast,
 
+    #[error("EntropyExhausted")]
+    EntropyExhausted,
+
     #[error("DomainMismatch")]
     DomainMismatch,
 
