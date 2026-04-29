@@ -19,7 +19,7 @@ def test_TODOs():
     the real tests for the FFI may be on the Rust side in many cases.
     '''
     # TODO: Add meaningful tests of measures:
-    assert str(dp.smoothed_max_divergence()) == 'PrivacyCurveDP'
+    assert str(dp.privacy_curve_dp()) == 'PrivacyCurveDP'
 
     # TODO: Add meaningful tests of partial constructors:
     dp.m.then_private_expr(None, None) # type: ignore[arg-type]

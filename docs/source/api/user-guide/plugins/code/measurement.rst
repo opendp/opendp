@@ -18,7 +18,7 @@
     ...     return dp.m.make_user_measurement(
     ...         input_domain=dp.atom_domain(T=int),
     ...         input_metric=dp.absolute_distance(T=int),
-    ...         output_measure=dp.max_divergence(),
+    ...         output_measure=dp.pure_dp(),
     ...         function=function,
     ...         privacy_map=privacy_map,
     ...         TO=type(constant),

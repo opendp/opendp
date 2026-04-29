@@ -25,7 +25,7 @@ mod test;
 #[bootstrap(
     features("contrib"),
     arguments(bounds(rust_type = "OptionT", default = b"null")),
-    generics(DI(suppress), MI(suppress), MO(default = "MaxDivergence")),
+    generics(DI(suppress), MI(suppress), MO(default = "PureDP")),
     derived_types(
         T = "$get_atom(get_carrier_type(input_domain))",
         OptionT = "Option<(T, T)>"
@@ -46,7 +46,7 @@ mod test;
 /// # Generics
 /// * `DI` - Domain of the data type to be released. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`
 /// * `MI` - Metric used to measure distance between members of the input domain.
-/// * `MO` - Measure used to quantify privacy loss. Valid values are just `MaxDivergence`
+/// * `MO` - Measure used to quantify privacy loss. Valid values are just `PureDP`
 pub fn make_geometric<DI: NoiseDomain, MI: Metric, MO: Measure>(
     input_domain: DI,
     input_metric: MI,

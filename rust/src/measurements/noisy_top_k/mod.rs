@@ -2,7 +2,7 @@ use crate::{
     core::{Function, Measure, Measurement, PrivacyMap},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
-    measures::{MaxDivergence, ZeroConcentratedDivergence},
+    measures::{PureDP, zCDP},
     metrics::LInfDistance,
     traits::{
         CastInternalRational, FiniteBounds, InfCast, InfDiv, InfMul, InfPowI, Number, ProductOrd,
@@ -45,7 +45,7 @@ mod test;
 /// # Arguments
 /// * `input_domain` - Domain of the input vector. Must be a non-nullable VectorDomain.
 /// * `input_metric` - Metric on the input domain. Must be LInfDistance
-/// * `output_measure` - One of `MaxDivergence` or `ZeroConcentratedDivergence`
+/// * `output_measure` - One of `PureDP` or `zCDP`
 /// * `k` - Number of indices to select.
 /// * `scale` - Scale for the noise distribution.
 /// * `negate` - Set to true to return bottom k
@@ -145,8 +145,8 @@ pub trait TopKMeasure: Measure<Distance = f64> + 'static {
     fn privacy_map(d_in: f64, scale: f64) -> Fallible<f64>;
 }
 
-#[proven(proof_path = "measurements/noisy_top_k/TopKMeasure_MaxDivergence.tex")]
-impl TopKMeasure for MaxDivergence {
+#[proven(proof_path = "measurements/noisy_top_k/TopKMeasure_PureDP.tex")]
+impl TopKMeasure for PureDP {
     const REPLACEMENT: bool = false;
 
     fn privacy_map(d_in: f64, scale: f64) -> Fallible<f64> {
@@ -155,8 +155,8 @@ impl TopKMeasure for MaxDivergence {
     }
 }
 
-#[proven(proof_path = "measurements/noisy_top_k/TopKMeasure_ZeroConcentratedDivergence.tex")]
-impl TopKMeasure for ZeroConcentratedDivergence {
+#[proven(proof_path = "measurements/noisy_top_k/TopKMeasure_zCDP.tex")]
+impl TopKMeasure for zCDP {
     const REPLACEMENT: bool = true;
 
     fn privacy_map(d_in: f64, scale: f64) -> Fallible<f64> {

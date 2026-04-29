@@ -3,7 +3,7 @@ use opendp_derive::bootstrap;
 use crate::core::{Function, Measurement, PrivacyMap};
 use crate::domains::{BitVector, BitVectorDomain};
 use crate::error::Fallible;
-use crate::measures::MaxDivergence;
+use crate::measures::PureDP;
 use crate::metrics::DiscreteDistance;
 use crate::traits::{InfCast, InfDiv, InfLn, InfMul, InfSub, samplers::sample_bernoulli_float};
 
@@ -28,7 +28,7 @@ pub fn make_randomized_response_bitvec(
     input_metric: DiscreteDistance,
     f: f64,
     constant_time: bool,
-) -> Fallible<Measurement<BitVectorDomain, DiscreteDistance, MaxDivergence, BitVector>> {
+) -> Fallible<Measurement<BitVectorDomain, DiscreteDistance, PureDP, BitVector>> {
     let m = match input_domain.max_weight {
         Some(m) => m,
         None => {
@@ -54,7 +54,7 @@ pub fn make_randomized_response_bitvec(
     Measurement::new(
         input_domain,
         input_metric,
-        MaxDivergence,
+        PureDP,
         Function::new_fallible(move |arg: &BitVector| {
             let noise_vector = (0..arg.len())
                 .into_iter()

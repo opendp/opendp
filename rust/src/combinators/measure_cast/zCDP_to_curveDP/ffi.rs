@@ -5,15 +5,9 @@ use crate::{
     core::{FfiResult, Measurement, PrivacyMap},
     error::Fallible,
     ffi::any::{AnyMeasure, AnyMeasurement, AnyObject, Downcast},
-    measures::{Approximate, ZeroConcentratedDivergence},
+    measures::{Approximate, zCDP},
 };
 
-#[bootstrap(features("contrib"))]
-/// Constructs a new output measurement where the output measure
-/// is casted from `ZeroConcentratedDivergence` to `SmoothedMaxDivergence`.
-///
-/// # Arguments
-/// * `measurement` - a measurement with a privacy measure to be casted
 fn make_zCDP_to_approxDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement> {
     fn monomorphize<MO: 'static + ConcentratedMeasure>(
         meas: &AnyMeasurement,
@@ -28,7 +22,7 @@ fn make_zCDP_to_approxDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasuremen
                 privacy_map.eval(d_in)?.downcast::<MO::Distance>()
             }),
         )?;
-        let meas = super::make_zCDP_to_approxDP(meas)?;
+        let meas = super::make_zCDP_to_curveDP(meas)?;
         let privacy_map = meas.privacy_map.clone();
         Measurement::new(
             meas.input_domain.clone(),
@@ -44,15 +38,34 @@ fn make_zCDP_to_approxDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasuremen
     let MO = measurement.output_measure.type_.clone();
     dispatch!(
         monomorphize,
-        [(MO, [ZeroConcentratedDivergence, Approximate<ZeroConcentratedDivergence>])],
+        [(MO, [zCDP, Approximate<zCDP>])],
         (measurement)
     )
 }
 
+#[bootstrap(name = "make_zCDP_to_curveDP", features("contrib"))]
+/// Constructs a new output measurement where the output measure
+/// is casted from `zCDP` to `PrivacyCurveDP`.
+///
+/// # Arguments
+/// * `measurement` - a measurement with a privacy measure to be casted
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_combinators__make_zCDP_to_approxDP(
+pub extern "C" fn opendp_combinators__make_zCDP_to_curveDP(
     measurement: *const AnyMeasurement,
 ) -> FfiResult<*mut AnyMeasurement> {
     // run combinator on measurement
     FfiResult::from(make_zCDP_to_approxDP(try_as_ref!(measurement)))
+}
+
+#[bootstrap(name = "make_zCDP_to_approxDP", features("contrib"))]
+#[deprecated(since = "0.15.0", note = "Use `make_zCDP_to_curveDP` instead.")]
+/// Deprecated alias for `make_zCDP_to_curveDP`.
+///
+/// # Arguments
+/// * `measurement` - a measurement with a privacy measure to be casted
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_combinators__make_zCDP_to_approxDP(
+    measurement: *const AnyMeasurement,
+) -> FfiResult<*mut AnyMeasurement> {
+    opendp_combinators__make_zCDP_to_curveDP(measurement)
 }

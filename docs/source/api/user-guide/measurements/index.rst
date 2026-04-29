@@ -56,10 +56,10 @@ If you need constant-time execution to protect against timing side-channels, spe
      - Output Measure
    * - ``AtomDomain<T>``
      - ``AbsoluteDistance<QI>``
-     - ``MaxDivergence``
+     - ``PureDP``
    * - ``VectorDomain<AtomDomain<T>>``
      - ``L1Distance<QI>``
-     - ``MaxDivergence``
+     - ``PureDP``
 
 
 Gaussian Noise
@@ -78,10 +78,10 @@ Use :func:`~opendp.accuracy.gaussian_scale_to_accuracy` and
      - Output Measure
    * - ``AtomDomain<T>``
      - ``AbsoluteDistance<QI>``
-     - ``ZeroConcentratedDivergence``
+     - ``zCDP``
    * - ``VectorDomain<AtomDomain<T>>``
      - ``L2Distance<QI>``
-     - ``ZeroConcentratedDivergence``
+     - ``zCDP``
 
 Canonical Noise
 ***************
@@ -140,7 +140,7 @@ functions to convert to/from accuracy estimates.
      - Output Measure
    * - ``MapDomain<AtomDomain<TK>, AtomDomain<TV>>``
      - ``L01InfDistance<AbsoluteDistance<QI>>``
-     - ``Approximate<MaxDivergence>``
+     - ``ApproxDP``
 
 
 Thresholded Gaussian Noise
@@ -159,7 +159,7 @@ Refer to :ref:`measure-casting` to convert to approximate DP.
      - Output Measure
    * - ``MapDomain<AtomDomain<TK>, AtomDomain<TV>>``
      - ``L02InfDistance<AbsoluteDistance<QI>>``
-     - ``Approximate<ZeroConcentratedDivergence>``
+     - ``ApproxZCDP``
 
 Approximate Laplace Projection
 ------------------------------
@@ -176,7 +176,7 @@ another approach is to release a differentially private low-dimensional projecti
      - Output Measure
    * - ``MapDomain<AtomDomain<TK>, AtomDomain<TV>>``
      - ``L01InfDistance<AbsoluteDistance<QI>>``
-     - ``MaxDivergence``
+     - ``PureDP``
 
 More details on :ref:`approximate laplace projection here <approximate-laplace-projection>`.
 
@@ -191,8 +191,8 @@ Noisy Max and Noisy Top K
 :func:`~opendp.measurements.make_noisy_top_k` and :func:`~opendp.measurements.make_noisy_max`:
 The report noisy top-k mechanism is used to privately release the indices of the maximum k values in a vector.
 This is useful for private selection, and overlaps with the exponential mechanism.
-Exponential noise is added to scores when the output measure is ``MaxDivergence``,
-and Gumbel noise is added when the output measure is ``ZeroConcentratedDivergence``. 
+Exponential noise is added to scores when the output measure is ``PureDP``,
+and Gumbel noise is added when the output measure is ``zCDP``. 
 
 .. list-table::
    :header-rows: 1
@@ -202,10 +202,10 @@ and Gumbel noise is added when the output measure is ``ZeroConcentratedDivergenc
      - Output Measure
    * - ``VectorDomain<AtomDomain<T>>``
      - ``LInfDistance<T>``
-     - ``MaxDivergence`` or ``ZeroConcentratedDivergence``
+     - ``PureDP`` or ``zCDP``
    * - ``VectorDomain<AtomDomain<T>>``
      - ``LInfDistance<T>``
-     - ``MaxDivergence`` or ``ZeroConcentratedDivergence``
+     - ``PureDP`` or ``zCDP``
 
 Report noisy max is a special case of noisy top k when k equals one.
 
@@ -230,15 +230,15 @@ These measurements are used to randomize an individual's response to a query in 
    * - :func:`~opendp.measurements.make_randomized_response_bool`
      - ``AtomDomain<bool>``
      - ``DiscreteDistance``
-     - ``MaxDivergence``
+     - ``PureDP``
    * - :func:`~opendp.measurements.make_randomized_response`
      - ``AtomDomain<T>``
      - ``DiscreteDistance``
-     - ``MaxDivergence``
+     - ``PureDP``
    * - :func:`~opendp.measurements.make_randomized_response_bitvec`
      - ``AtomDomain<T>``
      - ``DiscreteDistance``
-     - ``MaxDivergence``
+     - ``PureDP``
 
 More details on `randomized response here <randomized-response.html>`_.
 

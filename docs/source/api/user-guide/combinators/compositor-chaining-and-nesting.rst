@@ -17,7 +17,7 @@ they also support chaining.
             >>> meas_adaptive_comp = dp.c.make_adaptive_composition(
             ...     input_domain=dp.vector_domain(dp.atom_domain(T=int)),
             ...     input_metric=dp.symmetric_distance(),
-            ...     output_measure=dp.max_divergence(),
+            ...     output_measure=dp.pure_dp(),
             ...     d_in=1,
             ...     d_mids=[2.0, 1.0],
             ... )
@@ -86,7 +86,7 @@ the output distance from the previous transformation:
             >>> meas_adaptive_comp = (
             ...     sum_trans
             ...     >> dp.c.then_adaptive_composition(
-            ...         output_measure=dp.max_divergence(),
+            ...         output_measure=dp.pure_dp(),
             ...         d_in=sum_trans.map(max_contributions),
             ...         d_mids=[2.0, 1.0],
             ...     )
@@ -127,7 +127,7 @@ second (1, 0)-DP.
             >>> meas_adaptive_comp = dp.c.make_adaptive_composition(
             ...     input_domain=dp.vector_domain(dp.atom_domain(T=int)),
             ...     input_metric=dp.symmetric_distance(),
-            ...     output_measure=dp.approximate(dp.max_divergence()),
+            ...     output_measure=dp.approximate(dp.pure_dp()),
             ...     d_in=1,
             ...     d_mids=[(2.0, 1e-6), (1.0, 0.0)],
             ... )
@@ -158,13 +158,13 @@ that will satisfy this level of privacy, under a given set of weights.
 
             >>> def make_zcdp_adaptive_composition(scale):
             ...     return dp.c.make_fix_delta(
-            ...         dp.c.make_zCDP_to_approxDP(
+            ...         dp.c.make_zCDP_to_curveDP(
             ...             dp.c.make_adaptive_composition(
             ...                 input_domain=dp.vector_domain(
             ...                     dp.atom_domain(T=int)
             ...                 ),
             ...                 input_metric=dp.symmetric_distance(),
-            ...                 output_measure=dp.zero_concentrated_divergence(),
+            ...                 output_measure=dp.zcdp(),
             ...                 d_in=1,
             ...                 d_mids=scale_weights(scale, weights),
             ...             )

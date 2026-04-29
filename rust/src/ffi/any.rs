@@ -738,7 +738,7 @@ mod tests {
 
     use crate::domains::AtomDomain;
     use crate::error::*;
-    use crate::measures::{MaxDivergence, PrivacyCurveDP};
+    use crate::measures::{PureDP, PrivacyCurveDP};
     use crate::metrics::{ChangeOneDistance, SymmetricDistance};
 
     use super::*;
@@ -787,18 +787,18 @@ mod tests {
 
     #[test]
     fn test_any_measure() -> Fallible<()> {
-        let measure1 = MaxDivergence;
-        let measure2 = MaxDivergence;
+        let measure1 = PureDP;
+        let measure2 = PureDP;
         assert_eq!(measure1, measure2);
 
-        let measure1 = AnyMeasure::new(MaxDivergence);
-        let measure2 = AnyMeasure::new(MaxDivergence);
+        let measure1 = AnyMeasure::new(PureDP);
+        let measure2 = AnyMeasure::new(PureDP);
         let measure3 = AnyMeasure::new(PrivacyCurveDP);
         assert_eq!(measure1, measure2);
         assert_ne!(measure1, measure3);
 
-        let _measure1: MaxDivergence = measure1.downcast()?;
-        let measure3: Fallible<MaxDivergence> = measure3.downcast();
+        let _measure1: PureDP = measure1.downcast()?;
+        let measure3: Fallible<PureDP> = measure3.downcast();
         assert_eq!(
             measure3.err().unwrap_test().variant,
             ErrorVariant::FailedCast

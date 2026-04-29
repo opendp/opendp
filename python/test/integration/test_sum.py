@@ -30,7 +30,7 @@ def test_sized_bounded_float_sum():
         d_in=1, d_out=1.)
 
     gaussian_known_n_sum_from_dataframe = dp.binary_search_chain(
-        lambda s: dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(preprocess >> dp.m.then_gaussian(s)), 1e-5),
+        lambda s: dp.c.make_fix_delta(dp.c.make_zCDP_to_curveDP(preprocess >> dp.m.then_gaussian(s)), 1e-5),
         d_in=1, d_out=(1., 1e-5))
 
     assert laplace_known_n_sum_from_dataframe.check(1, 1.)
@@ -99,7 +99,7 @@ def test_bounded_float_sum():
         d_in=1, d_out=1.)
 
     gaussian_sum_from_dataframe = dp.binary_search_chain(
-        lambda s: dp.c.make_fix_delta(dp.c.make_zCDP_to_approxDP(preprocess >> dp.m.then_gaussian(s)), 1e-5),
+        lambda s: dp.c.make_fix_delta(dp.c.make_zCDP_to_curveDP(preprocess >> dp.m.then_gaussian(s)), 1e-5),
         d_in=1, d_out=(1., 1e-5))
 
     assert laplace_sum_from_dataframe.check(1, 1.)

@@ -66,7 +66,7 @@ pub extern "C" fn opendp_measures___privacy_curve_new_profile(
     arguments(curve(rust_type = "f64")),
     returns(rust_type = "PrivacyCurve")
 )]
-/// Construct a TradeoffCurve from a user-defined callback.
+/// Construct a PrivacyCurve from a user-defined callback.
 ///
 /// # Arguments
 /// * `curve` - An $f$-DP tradeoff curve mapping alpha to beta

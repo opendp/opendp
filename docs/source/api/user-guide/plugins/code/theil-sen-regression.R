@@ -131,7 +131,7 @@ input_space <- c(
   symmetric_distance()
 )
 meas <- input_space |>
-  then_private_theil_sen(max_divergence(), x_bounds, y_bounds, scale = 1.)
+  then_private_theil_sen(pure_dp(), x_bounds, y_bounds, scale = 1.)
 meas(d_in = 1L)
 # /mechanism
 

@@ -41,7 +41,7 @@ make_select_grouping_cols <- function(
 ) {
   c(input_domain, input_metric) |>
     then_grouping_cols_score(candidates, min_bin_size) |>
-    then_noisy_max(max_divergence(), scale = scale) |>
+    then_noisy_max(pure_dp(), scale = scale) |>
     then_postprocess(function(idx) candidates[[idx + 1L]])
 }
 then_select_grouping_cols <- to_then(make_select_grouping_cols)

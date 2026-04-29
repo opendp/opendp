@@ -87,7 +87,7 @@ class LinearRegression:
         ...     pytest.skip('Requires extra install')
         >>> dp.enable_features("idealized-numerics")
         >>> lin_reg = dp.sklearn.linear_model.LinearRegression(
-        ...     dp.max_divergence(),
+        ...     dp.pure_dp(),
         ...     x_bounds=[(0, 10)],
         ...     y_bounds=(0, 10),
         ...     scale=1,

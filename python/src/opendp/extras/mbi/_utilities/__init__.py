@@ -13,7 +13,7 @@ from opendp.combinators import make_composition
 from opendp.domains import atom_domain, vector_domain
 from opendp.extras._utilities import to_then
 from opendp.measurements import then_noise
-from opendp.measures import max_divergence, zero_concentrated_divergence
+from opendp.measures import pure_dp, zcdp
 from opendp.metrics import (
     _get_bound,
     frame_distance,
@@ -163,20 +163,20 @@ def get_std(measure: Measure, scale: float) -> float:
     if isinstance(measure, ApproximateDivergence):
         measure = measure.inner_measure
 
-    if measure == max_divergence():
+    if measure == pure_dp():
         return scale * sqrt(2)
-    if measure == zero_concentrated_divergence():
+    if measure == zcdp():
         return scale
-    message = f"output_measure ({measure}) must be max_divergence() or zero_concentrated_divergence()"
+    message = f"output_measure ({measure}) must be pure_dp() or zcdp()"
     raise ValueError(message)
 
 
 def get_associated_metric(measure: Measure) -> Metric:
-    if measure == max_divergence():
+    if measure == pure_dp():
         return l1_distance(T="u32")
-    if measure == zero_concentrated_divergence():
+    if measure == zcdp():
         return l2_distance(T="u32")
-    message = f"output_measure ({measure}) must be max_divergence() or zero_concentrated_divergence()"
+    message = f"output_measure ({measure}) must be pure_dp() or zcdp()"
     raise ValueError(message)
 
 

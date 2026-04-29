@@ -1,18 +1,14 @@
 use crate::{
     combinators::make_fully_adaptive_composition, domains::AtomDomain, error::Fallible,
-    measurements::make_randomized_response_bool, measures::MaxDivergence,
-    metrics::DiscreteDistance,
+    measurements::make_randomized_response_bool, measures::PureDP, metrics::DiscreteDistance,
 };
 
 use super::make_privacy_filter;
 
 #[test]
 fn test_privacy_filter() -> Fallible<()> {
-    let odom_comp = make_fully_adaptive_composition(
-        AtomDomain::<bool>::default(),
-        DiscreteDistance,
-        MaxDivergence,
-    )?;
+    let odom_comp =
+        make_fully_adaptive_composition(AtomDomain::<bool>::default(), DiscreteDistance, PureDP)?;
 
     let meas_filter = make_privacy_filter(odom_comp, 1, 1.0)?;
     let mut qbl_filter = meas_filter.invoke(&true)?;

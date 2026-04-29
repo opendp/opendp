@@ -139,7 +139,7 @@ def make_private_pca(
     compositor = dp.c.make_adaptive_composition(
         input_domain,
         input_metric,
-        dp.max_divergence(),
+        dp.pure_dp(),
         d_in=unit_d_in,
         d_mids=[unit_epsilon.mean, _make_eigdecomp(norm, 0).map(unit_d_in)],
     )
