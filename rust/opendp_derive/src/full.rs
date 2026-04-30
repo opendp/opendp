@@ -1,5 +1,5 @@
 use quote::ToTokens;
-use syn::{Item, ItemFn, Meta, Token, parse_macro_input, punctuated::Punctuated};
+use syn::{ImplItemFn, Item, ItemFn, Meta, Token, parse_macro_input, punctuated::Punctuated};
 
 use proc_macro::TokenStream;
 
@@ -9,7 +9,7 @@ use opendp_tooling::{
         docstring::{get_proof_path, insert_proof_attribute},
         partial::generate_partial,
     },
-    proven::{Proven, filesystem::load_proof_paths},
+    proven::{Proven, ProvenItem, filesystem::load_proof_paths},
 };
 
 macro_rules! try_ {
@@ -83,15 +83,30 @@ pub(crate) fn proven(attr_args: TokenStream, input: TokenStream) -> TokenStream 
         parse_macro_input!(attr_args with Punctuated::<Meta, Token![,]>::parse_terminated)
             .into_iter()
             .collect::<Vec<_>>();
-    let mut item = parse_macro_input!(input as Item);
+    let input_ts: TokenStream = input.into();
+    let mut item = if let Ok(item) = syn::parse::<Item>(input_ts.clone()) {
+        ProvenItem::Item(item)
+    } else {
+        match syn::parse::<ImplItemFn>(input_ts.clone()) {
+            Ok(method) => ProvenItem::Method(method),
+            Err(err) => {
+                return TokenStream::from_iter(
+                    TokenStream::from(err.to_compile_error())
+                        .into_iter()
+                        .chain(original_input),
+                );
+            }
+        }
+    };
 
     let proven = try_!(Proven::from_ast(attr_args, item.clone()), original_input);
 
     let proof_path = proven.proof_path.expect("unreachable");
 
     let attr_docs = match &mut item {
-        Item::Fn(item_fn) => &mut item_fn.attrs,
-        Item::Impl(item_impl) => &mut item_impl.attrs,
+        ProvenItem::Item(Item::Fn(item_fn)) => &mut item_fn.attrs,
+        ProvenItem::Item(Item::Impl(item_impl)) => &mut item_impl.attrs,
+        ProvenItem::Method(method) => &mut method.attrs,
         _ => unreachable!(),
     };
     // mutate the docstring to add a proof path
@@ -106,6 +121,9 @@ pub(crate) fn proven(attr_args: TokenStream, input: TokenStream) -> TokenStream 
     (proven.features.0.iter())
         .for_each(|feat| output.extend(TokenStream::from(quote::quote!(#[cfg(feature = #feat)]))));
 
-    output.extend(TokenStream::from(item.to_token_stream()));
+    output.extend(TokenStream::from(match item {
+        ProvenItem::Item(item) => item.to_token_stream(),
+        ProvenItem::Method(method) => method.to_token_stream(),
+    }));
     output
 }
