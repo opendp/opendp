@@ -347,10 +347,10 @@ pub fn bootstrap(_attr_args: TokenStream, input: TokenStream) -> TokenStream {
 /// and is meant to be used on internal functions that don't get foreign language bindings.
 /// This macro throws a compile error if the proof file cannot be found.
 ///
-/// This macro can also be affixed on trait and struct impls.
-/// When used on a trait impl, it looks for `TraitName.tex`,
-/// and when used on a struct impl, it looks for `StructName.tex`.
-///
+/// This macro can also be affixed on methods, trait impls, and struct impls.
+/// When used on a trait impl, it looks for `TraitName.tex`.
+/// When used on a struct impl, it looks for `StructName.tex`.
+/// When used on a method, it looks for `method_name.tex`.
 #[cfg(feature = "full")]
 #[proc_macro_attribute]
 pub fn proven(attr_args: TokenStream, input: TokenStream) -> TokenStream {
