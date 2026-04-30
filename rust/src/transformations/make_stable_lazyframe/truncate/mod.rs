@@ -1,10 +1,11 @@
 use std::collections::HashSet;
 
-use crate::core::{Function, StabilityMap, Transformation};
+use crate::core::{Domain, Function, Metric, MetricSpace, StabilityMap, Transformation};
 use crate::domains::{Context, DslPlanDomain, FrameDomain, SeriesDomain, WildExprDomain};
 use crate::error::*;
 use crate::metrics::{
-    Bound, Bounds, FrameDistance, L0PInfDistance, L01InfDistance, SymmetricDistance,
+    expr_identifies_protected_id, normalize_claims, Bound, Bounds,
+    FrameDistance, L0PInfDistance, L01InfDistance, OwnerClaim, PolarsMetric, SymmetricDistance,
     SymmetricIdDistance,
 };
 use crate::traits::{InfMul, option_min};
@@ -23,35 +24,89 @@ mod test;
 mod matching;
 pub(crate) use matching::match_truncations;
 
+fn sort_claims(mut claims: Vec<OwnerClaim>) -> Vec<OwnerClaim> {
+    claims.sort_by(|left, right| {
+        left.len()
+            .cmp(&right.len())
+            .then_with(|| format!("{left:?}").cmp(&format!("{right:?}")))
+    });
+    claims
+}
+
+pub(crate) fn find_truncation_claim(
+    metric: &SymmetricIdDistance,
+    plan: &DslPlan,
+) -> Fallible<Option<OwnerClaim>> {
+    let claims = normalize_claims(&metric.owner_claims);
+    let singleton_claims = sort_claims(
+        claims
+            .iter()
+            .filter(|claim| {
+                claim.len() == 1
+                    && expr_identifies_protected_id(&metric.bindings, &metric.protect, &claim[0])
+            })
+            .cloned()
+            .collect(),
+    );
+
+    for claim in singleton_claims {
+        if !match_truncations(plan.clone(), &claim[0])?.1.is_empty() {
+            return Ok(Some(claim));
+        }
+    }
+    Ok(None)
+}
+
+pub(crate) fn has_binding_matched_truncation(
+    metric: &SymmetricIdDistance,
+    plan: &DslPlan,
+) -> Fallible<bool> {
+    Ok(metric
+        .active_bindings()
+        .into_iter()
+        .flat_map(|binding| binding.exprs.into_iter())
+        .any(|expr| {
+            match_truncations(plan.clone(), &expr)
+                .map(|(_, truncations, _)| !truncations.is_empty())
+                .unwrap_or(false)
+        }))
+}
+
+pub(crate) fn has_any_truncation(metric: &SymmetricIdDistance, plan: &DslPlan) -> Fallible<bool> {
+    Ok(find_truncation_claim(metric, plan)?.is_some() || has_binding_matched_truncation(metric, plan)?)
+}
+
 /// Transformation for creating a stable LazyFrame truncation.
 ///
 /// # Arguments
 /// * `input_domain` - The domain of the input LazyFrame.
 /// * `input_metric` - The metric of the input LazyFrame.
 /// * `plan` - The LazyFrame to transform.
-pub fn make_stable_truncate(
-    input_domain: DslPlanDomain,
-    input_metric: FrameDistance<SymmetricIdDistance>,
+pub(crate) fn make_chain_truncate<DI, MI>(
+    t_prior: Transformation<DI, MI, DslPlanDomain, FrameDistance<SymmetricIdDistance>>,
     plan: DslPlan,
-) -> Fallible<
-    Transformation<
-        DslPlanDomain,
-        FrameDistance<SymmetricIdDistance>,
-        DslPlanDomain,
-        FrameDistance<SymmetricDistance>,
-    >,
-> {
-    // the identifier is protected from changes, so we can use the identifier from the input metric
-    // instead of the identifier from the middle_metric to match truncations
-    let (input, truncations, truncation_bounds) =
-        match_truncations(plan, &input_metric.0.identifier)?;
+) -> Fallible<Transformation<DI, MI, DslPlanDomain, FrameDistance<SymmetricDistance>>>
+where
+    DI: Domain + 'static,
+    MI: Metric + 'static,
+    (DI, MI): MetricSpace,
+    (DslPlanDomain, FrameDistance<SymmetricIdDistance>): MetricSpace,
+    (DslPlanDomain, FrameDistance<SymmetricDistance>): MetricSpace,
+{
+    let claim = find_truncation_claim(&t_prior.output_metric.0, &plan)?.ok_or_else(|| {
+        err!(
+            MakeTransformation,
+            "truncation requires a compatible owner claim"
+        )
+    })?;
+    let identifier = claim[0].clone();
+
+    let (_, truncations, truncation_bounds) = match_truncations(plan, &identifier)?;
 
     if truncations.is_empty() {
-        // should be unreachable in practice, but makes this function self-contained
         return fallible!(MakeTransformation, "failed to match truncation");
-    };
+    }
 
-    let t_prior = input.make_stable(input_domain, input_metric)?;
     let (middle_domain, middle_metric): (_, FrameDistance<SymmetricIdDistance>) =
         t_prior.output_space();
 
@@ -125,6 +180,30 @@ pub fn make_stable_truncate(
         }),
     )?;
     t_prior >> t_truncate
+}
+
+pub fn make_stable_truncate(
+    input_domain: DslPlanDomain,
+    input_metric: FrameDistance<SymmetricIdDistance>,
+    plan: DslPlan,
+) -> Fallible<
+    Transformation<
+        DslPlanDomain,
+        FrameDistance<SymmetricIdDistance>,
+        DslPlanDomain,
+        FrameDistance<SymmetricDistance>,
+    >,
+> {
+    let claim = find_truncation_claim(&input_metric.0, &plan)?.ok_or_else(|| {
+        err!(
+            MakeTransformation,
+            "truncation requires a compatible owner claim"
+        )
+    })?;
+    let identifier = claim[0].clone();
+    let (input, _, _) = match_truncations(plan.clone(), &identifier)?;
+    let t_prior = input.make_stable(input_domain, input_metric)?;
+    make_chain_truncate(t_prior, plan)
 }
 
 /// # Proof Definition

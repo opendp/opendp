@@ -3,6 +3,7 @@ import pytest
 import logging
 import opendp.prelude as dp
 from opendp._internal import _make_measurement
+from opendp.extras.polars import ForeignKey, FunctionalDependency, UniqueKey
 
 
 def test_unit_of():
@@ -39,6 +40,153 @@ def test_unit_of_identifier():
         dp.unit_of(identifier="A", contributions=3, ordered=True)
 
     assert dp.unit_of(identifier="A", changes=3) == (dp.change_one_id_distance("A"), 3)
+
+
+def test_unit_of_database_identifier():
+    metric, d_in = dp.unit_of(
+        bindings={
+            "events": [dp.bind("user_id", to="identifier")],
+            "users": [dp.bind("id", to="identifier")],
+        },
+        protect="identifier",
+        contributions=2,
+    )
+
+    assert isinstance(metric, dp.DatabaseIdDistance)
+    assert metric.protect == "identifier"
+    assert set(metric.bindings) == {"events", "users"}
+    assert d_in == 2
+
+
+def test_unit_of_database_identifier_generalized():
+    metric, d_in = dp.unit_of(
+        bindings={
+            "events": [dp.bind("user_id", to="user")],
+            "users": [dp.bind("id", to="user"), dp.bind("household_id", to="household")],
+            "households": [dp.bind("id", to="household")],
+        },
+        protect="user",
+        contributions=2,
+    )
+
+    assert isinstance(metric, dp.DatabaseIdDistance)
+    assert metric.protect == "user"
+    assert d_in == 2
+    assert set(metric.bindings) == {"events", "users", "households"}
+    assert [site.space for site in metric.bindings["households"]] == ["household"]
+
+
+def test_unit_of_database_identifier_compiles_schema_metadata():
+    metric, d_in = dp.unit_of(
+        bindings={
+            "users": [dp.bind("user_id", to="user")],
+        },
+        protect="user",
+        unique_keys=[UniqueKey("users", "user_id")],
+        foreign_keys=[ForeignKey("events", "user_id", "users", "user_id")],
+        functional_dependencies=[FunctionalDependency("users", "merchant_id", "user_id")],
+        contributions=2,
+    )
+
+    assert isinstance(metric, dp.DatabaseIdDistance)
+    assert d_in == 2
+    assert [binding.space for binding in metric.bindings["events"]] == ["user"]
+    user_roots = [next(iter(binding.exprs[0].meta.root_names())) for binding in metric.bindings["users"]]
+    assert set(user_roots) == {"user_id", "merchant_id"}
+
+
+def test_unit_of_database_identifier_rejects_implicit_shapes():
+        with pytest.raises(TypeError, match="list\\[bind"):
+            dp.unit_of(
+                bindings={
+                    "events": "user_id",
+                    "users": [dp.bind("id", to="user")],
+                },
+                protect="user",
+                contributions=2,
+            )
+
+
+def test_unit_of_database_identifier_id_site_objects():
+    pl = pytest.importorskip("polars")
+
+    metric, d_in = dp.unit_of(
+        bindings={
+            "events": [
+                dp.bind("src_user_id", to="user"),
+                dp.bind("dst_user_id", to="user"),
+                dp.bind("household_id", to="household"),
+            ],
+            "users": [dp.bind("user_id", to="user")],
+        },
+        protect="user",
+        contributions=2,
+    )
+
+    assert isinstance(metric, dp.DatabaseIdDistance)
+    assert metric.protect == "user"
+    assert d_in == 2
+    assert [site.space for site in metric.bindings["events"]] == ["user", "user", "household"]
+    assert len(metric.bindings["events"][0].exprs) == 1
+    assert len(metric.bindings["events"][1].exprs) == 1
+    assert len(metric.bindings["users"][0].exprs) == 1
+
+
+def test_bind_constructor_coerces_exprs():
+    pl = pytest.importorskip("polars")
+
+    assert dp.bind("user_id", to="user").space == "user"
+    assert dp.bind(pl.col("user_id"), to="user").space == "user"
+    assert len(dp.bind(["user_id", pl.col("user_id")], to="user").exprs) == 2
+
+
+def test_bind_allows_duplicate_exprs_for_identical_columns():
+    site = dp.bind(["user_id", "user_id"], to="user")
+
+    assert site.space == "user"
+    assert len(site.exprs) == 2
+
+
+def test_bind_requires_to():
+    with pytest.raises(TypeError):
+        dp.bind("user_id")
+
+
+def test_bind_to_is_keyword_only():
+    with pytest.raises(TypeError):
+        dp.bind("user_id", "user")
+
+
+def test_unit_of_database_identifier_requires_protect_for_multiple_spaces():
+    with pytest.raises(ValueError, match="protect must be specified"):
+        dp.unit_of(
+            bindings={
+                "events": [
+                    dp.bind("user_id", to="user"),
+                    dp.bind("household_id", to="household"),
+                ]
+            },
+            contributions=2,
+        )
+
+
+def test_unit_of_database_identifier_requires_list_values():
+    with pytest.raises(TypeError, match="non-empty list\\[bind"):
+        dp.unit_of(
+            bindings={"events": dp.bind("user_id", to="user")},
+            protect="user",
+            contributions=2,
+        )
+
+
+def test_unit_of_schema_metadata_requires_database_bindings():
+    with pytest.raises(ValueError, match="database bindings"):
+        dp.unit_of(
+            bindings=[dp.bind("user_id", to="user")],
+            protect="user",
+            unique_keys=[UniqueKey("users", "user_id")],
+            contributions=2,
+        )
 
 def test_privacy_loss_of():
     assert dp.loss_of(epsilon=3) == (dp.max_divergence(), 3.0)
@@ -452,22 +600,24 @@ def test_filter_pure_dp():
     assert context.remaining_privacy_loss() == 1.0
 
     # query with fixed privacy loss
-    query = context.query(epsilon=0.5).count().laplace()
-    assert isinstance(query.release(), int)
+    query = context.query().count().laplace()
+    assert isinstance(query.release(epsilon=0.5), int)
     assert context.current_privacy_loss() == 0.5
     assert context.remaining_privacy_loss() == 0.5
 
-    # query with fixed measurement
-    query = context.query().count().laplace(scale=2.0)
+    # deprecated query-time privacy loss
+    with pytest.warns(DeprecationWarning, match=r'Passing privacy kwargs to "\.query'):
+        query = context.query(epsilon=0.5).count().laplace()
     assert isinstance(query.release(), int)
     assert context.current_privacy_loss() == 1.0
     assert context.remaining_privacy_loss() == 0.0
 
-    # reject query because privacy budget is exhausted
     msg = "filter is now exhausted: pending privacy loss (1.5) would exceed privacy budget (1.0)"
     with pytest.raises(dp.OpenDPException, match=re.escape(msg)):
-        context.query(epsilon=0.5).count().laplace().release()
+        context.query().count().laplace(scale=2.0).release()
     msg = "filter is exhausted: no more queries can be answered"
+    with pytest.raises(dp.OpenDPException, match=re.escape(msg)):
+        context.query().count().laplace().release(epsilon=0.5)
     with pytest.raises(dp.OpenDPException, match=re.escape(msg)):
         context.current_privacy_loss()
 
@@ -481,12 +631,13 @@ def test_filter_approx_dp():
     assert context.current_privacy_loss() == (0.0, 0.0)
     assert context.remaining_privacy_loss() == (1.0, 1e-8)
 
+    query = context.query().count().laplace()
     with pytest.raises(ValueError, match="Consider setting `delta=0.0` in your query"):
-        context.query(epsilon=0.5)
+        query.resolve(epsilon=0.5)
 
     # query with fixed privacy loss
-    query = context.query(epsilon=0.5, delta=0.0).count().laplace()
-    assert isinstance(query.release(), int)
+    query = context.query().count().laplace()
+    assert isinstance(query.release(epsilon=0.5, delta=0.0), int)
     assert context.current_privacy_loss() == (0.5, 0.0)
     assert context.remaining_privacy_loss() == (0.5, 1e-8)
 
@@ -499,8 +650,8 @@ def test_odometer():
     assert context.current_privacy_loss() == 0.0
 
     # query with fixed privacy loss
-    query = context.query(epsilon=0.5).count().laplace()
-    assert isinstance(query.release(), int)
+    query = context.query().count().laplace()
+    assert isinstance(query.release(epsilon=0.5), int)
     assert context.current_privacy_loss() == 0.5
 
     # query with fixed measurement
