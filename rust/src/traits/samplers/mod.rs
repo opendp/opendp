@@ -30,6 +30,8 @@ use crate::error::Fallible;
 /// Return `Err(e)` if there is insufficient system entropy, otherwise return `Ok(())`.
 #[cfg(feature = "use-openssl")]
 pub fn fill_bytes(buffer: &mut [u8]) -> Fallible<()> {
+    // "RAND_priv_bytes() has the same semantics as RAND_bytes(). It is intended to be used for generating values that should remain private."
+    // https://docs.openssl.org/3.0/man3/RAND_bytes/
     use openssl::rand::rand_priv_bytes;
     if let Err(e) = rand_priv_bytes(buffer) {
         fallible!(FailedFunction, "OpenSSL error: {:?}", e)
