@@ -392,22 +392,26 @@ new_function_internal <- function(ptr, log) {
   opendp_function
 }
 
-#' new privacy profile
+#' new privacy curve
 #'
 #' @concept mod
-#' @param ptr a pointer to a privacy profile
-new_privacy_profile_internal <- function(ptr) {
-  privacy_profile <- function(attr, epsilon, delta) {
-    if (missing(attr) + missing(epsilon) + missing(delta) != 2) {
+#' @param ptr a pointer to a privacy curve
+new_privacy_curve_internal <- function(ptr) {
+  privacy_curve <- function(attr, epsilon, delta, alpha) {
+    if (missing(attr) + missing(epsilon) + missing(delta) + missing(alpha) != 3) {
       stop("expected exactly one of attr, epsilon or delta", call. = FALSE)
     }
 
     if (!missing(epsilon)) {
-      return(privacy_profile_delta(ptr, epsilon))
+      return(`_privacy_curve_delta`(ptr, epsilon))
     }
 
     if (!missing(delta)) {
-      return(privacy_profile_epsilon(ptr, delta))
+      return(`_privacy_curve_epsilon`(ptr, delta))
+    }
+
+    if (!missing(alpha)) {
+      return(`_privacy_curve_beta`(ptr, alpha))
     }
 
     switch(attr,
@@ -415,8 +419,32 @@ new_privacy_profile_internal <- function(ptr) {
       stop("unrecognized attribute", call. = FALSE)
     )
   }
-  class(privacy_profile) <- "privacy_profile"
-  privacy_profile
+  class(privacy_curve) <- "privacy_curve"
+  privacy_curve
+}
+
+#' Construct a privacy curve.
+#'
+#' @concept mod
+#' @param profile callback mapping epsilon to delta
+#' @param tradeoff callback mapping alpha to beta
+#' @param approxdp list of (epsilon, delta) pairs
+#' @param mu GDP parameter
+#' @export
+privacy_curve <- function(profile, tradeoff, approxdp, mu) {
+  if (missing(profile) + missing(tradeoff) + missing(approxdp) + missing(mu) != 3) {
+    stop("expected exactly one of profile, tradeoff, approxdp or mu", call. = FALSE)
+  }
+  if (!missing(profile)) {
+    return(`_privacy_curve_new_profile`(profile))
+  }
+  if (!missing(tradeoff)) {
+    return(`_privacy_curve_new_tradeoff`(tradeoff))
+  }
+  if (!missing(approxdp)) {
+    return(`_privacy_curve_new_approxdp`(approxdp))
+  }
+  `_privacy_curve_new_gdp`(mu)
 }
 
 #' new queryable
@@ -684,6 +712,10 @@ binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
 }
 
 .infer_search_type <- function(predicate, .T = NULL, bounds = NULL) {
+  if (!is.null(.T)) {
+    return(rt_parse(.T))
+  }
+
   if (!is.null(bounds)) {
     if (inherits(bounds, "integer")) {
       return(rt_parse("int"))
@@ -692,10 +724,6 @@ binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
       return(rt_parse("float"))
     }
     stop("bounds must be either float or int", call. = FALSE)
-  }
-
-  if (!is.null(.T)) {
-    return(rt_parse(.T))
   }
 
   check_type <- function(v) {
@@ -724,6 +752,13 @@ binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
 #' @return the discovered parameter within the bounds
 #' @export
 binary_search <- function(predicate, bounds = NULL, .T = NULL, return_sign = FALSE) {
+  if (is.null(bounds)) {
+    lower <- NULL
+    upper <- NULL
+  } else {
+    lower <- bounds[1]
+    upper <- bounds[2]
+  }
   .T <- .infer_search_type(predicate, .T, bounds)
 
   result <- .call_search_callback(
@@ -731,7 +766,7 @@ binary_search <- function(predicate, bounds = NULL, .T = NULL, return_sign = FAL
     .T = .T,
     bounds = bounds,
     call_expr = function(wrapped) {
-      `_binary_search`(wrapped, bounds = bounds, .T = .T, return_sign = return_sign)
+      `_binary_search`(wrapped, lower = lower, upper = upper, .T = .T, return_sign = return_sign)
     }
   )
 

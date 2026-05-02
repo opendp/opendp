@@ -43,6 +43,7 @@ __all__ = [
     'Measure',
     'ExtrinsicDivergence',
     'ApproximateDivergence',
+    'PrivacyCurve',
     'PrivacyProfile',
     '_PartialConstructor',
     'UnknownTypeException',
@@ -1145,13 +1146,16 @@ class ApproximateDivergence(Measure):
         return _approximate_divergence_get_inner_measure(self)
     
 
-class PrivacyProfile(object):
+class PrivacyCurve(object):
     '''
-    Given a profile function provided by the user,
-    gives the epsilon corresponding to a given delta, and vice versa.
+    Wrapper over a privacy curve that can be queried as either a privacy profile
+    or an f-DP tradeoff curve.
 
-    :py:func:`~opendp.measures.new_privacy_profile`
-    should be used to create new instances.
+    Use this class to:
+    1. evaluate ``delta(epsilon)``
+    2. invert to ``epsilon(delta)``
+    3. evaluate ``beta(alpha)``
+    4. construct from callbacks, sampled `(epsilon, delta)` pairs, GDP, or approximate-DP parameters
     '''
     def __init__(self, curve):
         self.curve = curve
@@ -1162,8 +1166,8 @@ class PrivacyProfile(object):
         
         :param epsilon: Allowance for a multiplicative difference, or max divergence, in the distributions of releases on adjacent datasets
         '''
-        from opendp._data import privacy_profile_delta
-        return privacy_profile_delta(self.curve, epsilon)
+        from opendp.measures import _privacy_curve_delta
+        return _privacy_curve_delta(self.curve, epsilon)
 
     def epsilon(self, delta):
         '''
@@ -1171,9 +1175,69 @@ class PrivacyProfile(object):
         
         :param delta: Allowance for an additive difference between the distributions of releases on adjacent datasets
         '''
-        from opendp._data import privacy_profile_epsilon
-        return privacy_profile_epsilon(self.curve, delta)
-    
+        from opendp.measures import _privacy_curve_epsilon
+        return _privacy_curve_epsilon(self.curve, delta)
+
+    def beta(self, alpha):
+        '''
+        Returns the beta that corresponds to this alpha.
+
+        :param alpha: Type I error of a hypothesis test distinguishing releases on adjacent datasets
+        '''
+        from opendp.measures import _privacy_curve_beta
+        return _privacy_curve_beta(self.curve, alpha)
+
+    @staticmethod
+    def new_profile(curve: Callable[[float], float]) -> PrivacyCurve:
+        '''
+        Construct a PrivacyCurve from a user-defined privacy profile callback.
+
+        # Why honest-but-curious?
+
+        The privacy profile should implement a well-defined $\\delta(\\epsilon)$ curve:
+
+        * monotonically decreasing
+        * rejects epsilon values that are less than zero or nan
+        * returns delta values only within $[0, 1]$
+
+        :param curve: A privacy curve mapping epsilon to delta
+        '''
+        from opendp.measures import _privacy_curve_new_profile
+        return _privacy_curve_new_profile(curve)
+
+    @staticmethod
+    def new_tradeoff(curve: Callable[[float], float]) -> PrivacyCurve:
+        '''Construct a PrivacyCurve from a callback mapping ``alpha`` to ``beta``.
+        
+        # Why honest-but-curious?
+
+        The tradeoff curve should implement a well-defined $\beta(\alpha)$ curve.
+        In particular, canonical-noise sampling assumes the following requirements:
+
+        * accepts finite alpha values on $[0, 1]$
+        * returns finite beta values only within $[0, 1]$
+        * is nonincreasing on $[0, 1]$
+        * is symmetric in the sense that $\beta(\beta(\alpha)) = \alpha$
+        * has a fixed point $c$ with $c < 1/2$
+
+        :param curve: A tradeoff curve mapping alpha to beta
+        '''
+        from opendp.measures import _privacy_curve_new_tradeoff
+        return _privacy_curve_new_tradeoff(curve)
+
+    @staticmethod
+    def new_approxDP(pairs: list[tuple[float, float]]) -> PrivacyCurve:
+        '''Construct a PrivacyCurve from approximate-DP ``(epsilon, delta)`` pairs.'''
+        from opendp.measures import _privacy_curve_new_approxdp
+        return _privacy_curve_new_approxdp(pairs)
+
+    @staticmethod
+    def new_gdp(mu: float) -> PrivacyCurve:
+        '''Construct the GDP privacy curve for parameter ``mu``.'''
+        from opendp.measures import _privacy_curve_new_gdp
+        return _privacy_curve_new_gdp(mu)
+
+PrivacyProfile = PrivacyCurve
 
 class _PartialConstructor(object):
     '''
@@ -1572,15 +1636,26 @@ def binary_search(
     from opendp._internal import _binary_search
     from opendp.typing import RuntimeType
 
-    if bounds is not None and len(set(map(type, bounds))) != 1:
-        raise TypeError("bounds must share the same type")  # pragma: no cover
+    if bounds is not None:
+        if len(set(map(type, bounds))) != 1:
+            raise TypeError("bounds must share the same type")  # pragma: no cover
+        lower, upper = bounds
+    else:
+        lower, upper = None, None
 
-    runtime_T = RuntimeType.infer(bounds[0]) if bounds is not None else RuntimeType.parse(T or _infer_type(predicate))
+    if T is not None:
+        runtime_T = RuntimeType.parse(T)
+    elif lower is not None:
+        runtime_T = RuntimeType.infer(lower)
+    elif upper is not None:
+        runtime_T = RuntimeType.infer(upper)
+    else:
+        runtime_T = RuntimeType.parse(_infer_type(predicate))
 
     return _call_rust_search(
         predicate,
         runtime_T,
-        lambda wrapped: _binary_search(wrapped, bounds=bounds, return_sign=return_sign, T=runtime_T),
+        lambda wrapped: _binary_search(wrapped, lower=lower, upper=upper, return_sign=return_sign, T=runtime_T),
         bounds=bounds,
     )
 

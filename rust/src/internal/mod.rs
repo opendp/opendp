@@ -1,7 +1,7 @@
 /// This code is used to generate a hidden `_internal` module in Python
 /// containing APIs that allow for the construction of library primitives like Transformations and Measurements
 /// that do not require the "honest-but-curious" flag to be set.
-use std::ffi::c_char;
+use std::{ffi::c_char, os::raw::c_void};
 
 use opendp_derive::bootstrap;
 
@@ -252,7 +252,8 @@ where
     name = "_binary_search",
     arguments(
         predicate(rust_type = "bool"),
-        bounds(default = b"null", rust_type = "Option<(T, T)>"),
+        lower(default = b"null", c_type = "void *"),
+        upper(default = b"null", c_type = "void *"),
         return_sign(default = false),
     ),
     generics(T(example = "$get_first(bounds)"))
@@ -263,7 +264,8 @@ where
 ///
 /// # Arguments
 /// * `predicate` - A monotonic unary function from a number to a boolean.
-/// * `bounds` - Optional lower and upper bounds on the input to `predicate`.
+/// * `lower` - Optional lower bound on the input to `predicate`.
+/// * `upper` - Optional upper bound on the input to `predicate`.
 /// * `return_sign` - If true, also return the direction away from the decision boundary.
 ///
 /// # Generics
@@ -271,32 +273,35 @@ where
 #[allow(dead_code)]
 fn _binary_search<T>(
     predicate: CallbackFn,
-    bounds: Option<(T, T)>,
+    lower: Option<T>,
+    upper: Option<T>,
     return_sign: bool,
 ) -> Fallible<AnyObject> {
-    let _ = (predicate, bounds, return_sign);
+    let _ = (predicate, lower, upper, return_sign);
     panic!("this signature only exists for code generation")
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn opendp_internal___binary_search(
     predicate: *const CallbackFn,
-    bounds: *const AnyObject,
+    lower: *const c_void,
+    upper: *const c_void,
     return_sign: bool,
     T: *const c_char,
 ) -> FfiResult<*mut AnyObject> {
     fn monomorphize<T>(
         predicate: *const CallbackFn,
-        bounds: *const AnyObject,
+        lower: *const c_void,
+        upper: *const c_void,
         return_sign: bool,
     ) -> Fallible<AnyObject>
     where
         T: BinarySearchable + 'static + Send + Sync,
     {
         let predicate = wrap_search_predicate::<T>(predicate)?;
-        let bounds = as_ref(bounds)
-            .map(|obj| obj.downcast_ref::<(T, T)>().cloned())
-            .transpose()?;
+        let lower = as_ref(lower as *const T).cloned();
+        let upper = as_ref(upper as *const T).cloned();
+        let bounds = (lower, upper);
 
         if return_sign {
             signed_fallible_binary_search(predicate, bounds)
@@ -313,7 +318,7 @@ pub extern "C" fn opendp_internal___binary_search(
             T,
             [u8, u16, u32, u64, u128, i8, i16, i32, i64, i128, f32, f64]
         )],
-        (predicate, bounds, return_sign)
+        (predicate, lower, upper, return_sign)
     )
     .into()
 }

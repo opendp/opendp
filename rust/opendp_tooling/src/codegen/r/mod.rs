@@ -70,6 +70,8 @@ const BLOCKLIST: &'static [&'static str] = &[
     "_symmetric_id_distance_get_identifier",
     "frame_distance",
     "_frame_distance_get_inner_metric",
+    // deprecated
+    "new_privacy_profile",
 ];
 
 /// Top-level function to generate R bindings, including all modules.

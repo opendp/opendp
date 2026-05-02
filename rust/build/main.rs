@@ -31,7 +31,7 @@ fn main() {
         std::process::exit(1);
     }
 
-    #[cfg(feature = "bindings")]
+    #[cfg(all(feature = "bindings", feature = "polars-ffi"))]
     {
         // https://pyo3.rs/v0.25.1/building-and-distribution.html#macos
         pyo3_build_config::add_extension_module_link_args();

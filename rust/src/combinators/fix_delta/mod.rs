@@ -1,7 +1,7 @@
 use crate::{
     core::{Domain, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    measures::{Approximate, MaxDivergence, PrivacyProfile, SmoothedMaxDivergence},
+    measures::{Approximate, MaxDivergence, PrivacyCurve, PrivacyCurveDP},
     traits::InfSub,
 };
 
@@ -11,7 +11,7 @@ mod ffi;
 #[cfg(test)]
 mod test;
 
-/// Fix the delta parameter in the privacy map of a `measurement` with a `SmoothedMaxDivergence` output measure.
+/// Fix the delta parameter in the privacy map of a `measurement` with a `PrivacyCurveDP` output measure.
 ///
 /// # Arguments
 /// * `measurement` - a measurement with a privacy curve to be fixed
@@ -20,7 +20,7 @@ mod test;
 /// # Generics
 /// * `DI` - Input Domain
 /// * `MI` - Input Metric.
-/// * `MO` - Output Measure of the input argument. Must be `SmoothedMaxDivergence`
+/// * `MO` - Output Measure of the input argument.
 /// * `TO` - Output Type
 pub fn make_fix_delta<DI, MI, MO, TO>(
     m: &Measurement<DI, MI, MO, TO>,
@@ -59,7 +59,7 @@ pub trait FixDeltaMeasure: Measure {
     ) -> Fallible<<Self::FixedMeasure as Measure>::Distance>;
 }
 
-impl FixDeltaMeasure for SmoothedMaxDivergence {
+impl FixDeltaMeasure for PrivacyCurveDP {
     type FixedMeasure = Approximate<MaxDivergence>;
 
     fn new_fixed_measure(&self) -> Fallible<Self::FixedMeasure> {
@@ -70,7 +70,7 @@ impl FixDeltaMeasure for SmoothedMaxDivergence {
     }
 }
 
-impl FixDeltaMeasure for Approximate<SmoothedMaxDivergence> {
+impl FixDeltaMeasure for Approximate<PrivacyCurveDP> {
     type FixedMeasure = Approximate<MaxDivergence>;
 
     fn new_fixed_measure(&self) -> Fallible<Self::FixedMeasure> {
@@ -78,7 +78,7 @@ impl FixDeltaMeasure for Approximate<SmoothedMaxDivergence> {
     }
     fn fix_delta(
         &self,
-        (curve, fixed_delta): &(PrivacyProfile, f64),
+        (curve, fixed_delta): &(PrivacyCurve, f64),
         delta: f64,
     ) -> Fallible<(f64, f64)> {
         let remaining_delta = delta.neg_inf_sub(&fixed_delta)?;

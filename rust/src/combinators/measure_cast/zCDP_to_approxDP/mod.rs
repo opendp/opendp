@@ -1,7 +1,7 @@
 use crate::{
     core::{Domain, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    measures::{Approximate, PrivacyProfile, SmoothedMaxDivergence, ZeroConcentratedDivergence},
+    measures::{Approximate, PrivacyCurve, PrivacyCurveDP, ZeroConcentratedDivergence},
 };
 
 use self::cdp_delta::cdp_delta;
@@ -15,7 +15,7 @@ mod test;
 mod cdp_delta;
 
 /// Constructs a new output measurement where the output measure
-/// is casted from `ZeroConcentratedDivergence` to `SmoothedMaxDivergence`.
+/// is casted from `ZeroConcentratedDivergence` to `PrivacyCurveDP`.
 ///
 /// # Arguments
 /// * `meas` - a measurement with a privacy measure to be casted
@@ -55,23 +55,23 @@ pub trait ConcentratedMeasure: Measure {
 }
 
 impl ConcentratedMeasure for ZeroConcentratedDivergence {
-    type ApproxMeasure = SmoothedMaxDivergence;
+    type ApproxMeasure = PrivacyCurveDP;
 
     fn convert(rho: Self::Distance) -> Fallible<<Self::ApproxMeasure as Measure>::Distance> {
-        Ok(PrivacyProfile::new(move |epsilon: f64| {
+        Ok(PrivacyCurve::new_profile(move |epsilon: f64| {
             cdp_delta(rho, epsilon)
         }))
     }
 }
 
 impl ConcentratedMeasure for Approximate<ZeroConcentratedDivergence> {
-    type ApproxMeasure = Approximate<SmoothedMaxDivergence>;
+    type ApproxMeasure = Approximate<PrivacyCurveDP>;
 
     fn convert(
         (rho, delta): Self::Distance,
     ) -> Fallible<<Self::ApproxMeasure as Measure>::Distance> {
         Ok((
-            PrivacyProfile::new(move |epsilon: f64| cdp_delta(rho, epsilon)),
+            PrivacyCurve::new_profile(move |epsilon: f64| cdp_delta(rho, epsilon)),
             delta,
         ))
     }

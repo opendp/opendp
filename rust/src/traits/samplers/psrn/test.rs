@@ -3,19 +3,19 @@ use super::*;
 pub fn assert_ordered_progression<D: InverseCDF>(
     sampler: &mut PartialSample<D>,
     min_refinements: usize,
-) -> (D::Edge, D::Edge)
+) -> Fallible<(D::Edge, D::Edge)>
 where
     D::Edge: PartialOrd,
 {
     loop {
         sampler.refine().unwrap();
-        let Some((l, r)) = sampler.lower().zip(sampler.upper()) else {
+        let Some((l, r)) = sampler.lower()?.zip(sampler.upper()?) else {
             continue;
         };
         assert!(l <= r);
 
         if sampler.refinements >= min_refinements {
-            return (l, r);
+            return Ok((l, r));
         }
     }
 }
@@ -25,8 +25,12 @@ struct UniformRV;
 impl InverseCDF for UniformRV {
     type Edge = RBig;
 
-    fn inverse_cdf<R: ODPRound>(&self, uniform: RBig, _refinements: usize) -> Option<Self::Edge> {
-        Some(uniform)
+    fn inverse_cdf<R: ODPRound>(
+        &self,
+        uniform: RBig,
+        _refinements: usize,
+    ) -> Fallible<Option<Self::Edge>> {
+        Ok(Some(uniform))
     }
 }
 

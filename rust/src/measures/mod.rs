@@ -6,12 +6,12 @@
 #[cfg(feature = "ffi")]
 pub(crate) mod ffi;
 
-use std::{cmp::Ordering, fmt::Debug, sync::Arc};
+pub(crate) mod curves;
+pub use curves::*;
 
-use crate::{
-    core::{Function, Measure},
-    error::Fallible,
-};
+use std::fmt::Debug;
+
+use crate::core::{Function, Measure};
 
 /// Privacy measure used to define $\epsilon$-pure differential privacy.
 ///
@@ -39,21 +39,52 @@ impl Measure for MaxDivergence {
     type Distance = f64;
 }
 
-/// Privacy measure used to define $\delta(\epsilon)$-approximate differential privacy.
+/// Privacy measure used to define privacy guarantees represented by a [`PrivacyCurve`].
 ///
-/// In the following proof definition, $d$ corresponds to a privacy profile when also quantified over all adjacent datasets.
+/// There is a dual interpretation of the privacy curve.
+/// The curve can be evaluated as a privacy profile via [`PrivacyCurve::delta`]
+/// or as an f-DP tradeoff curve via [`PrivacyCurve::beta`].
+///
+/// Under the privacy profile interpretation,
+/// $d$ corresponds to a privacy profile when also quantified over all adjacent datasets.
 /// That is, a privacy profile $\delta(\epsilon)$ is no smaller than $d(\epsilon)$ for all possible choices of $\epsilon$,
 /// and over all pairs of adjacent datasets $x, x'$ where $Y \sim M(x)$, $Y' \sim M(x')$.
 /// $M(\cdot)$ is a measurement (commonly known as a mechanism).
 /// The measurement's input metric defines the notion of adjacency,
 /// and the measurement's input domain defines the set of possible datasets.
 ///
-/// The distance $d$ is of type [`PrivacyProfile`], so it can be invoked with an $\epsilon$
-/// to retrieve the corresponding $\delta$.
+/// Under the tradeoff curve interpretation,
+/// In one sense, $d$ corresponds to an $f$-DP tradeoff curve
+/// when also quantified over all adjacent datasets.
+/// That is, a tradeoff curve $\beta(\alpha)$ is no smaller than $d(\alpha)$
+/// for all possible choices of $\alpha$,
+/// and over all pairs of adjacent datasets $x, x'$ where $Y \sim M(x)$, $Y' \sim M(x')$.
+/// $M(\cdot)$ is a measurement (commonly known as a mechanism).
+/// The measurement's input metric defines the notion of adjacency,
+/// and the measurement's input domain defines the set of possible datasets.
+///
+/// The distance $d$ is of type [`TradeoffCurve`], so it can be invoked with an $\alpha$
+/// to retrieve the corresponding $\beta$.
 ///
 /// # Proof Definition
 ///
-/// ## `d`-closeness
+/// ## `d`-closeness ($f$-DP)
+/// For any two distributions $Y, Y'$ and any curve $d(\cdot)$,
+/// we say that $Y, Y'$ are $d$-close under f-DP
+/// whenever, for every $\alpha \in [0, 1]$,
+/// with $\beta = d(\alpha)$,
+///
+/// ```math
+/// T(Y, Y')(\alpha) \ge \beta,
+/// ```
+///
+/// where $T(Y, Y')$ is the hypothesis-testing tradeoff function between $Y$ and $Y'$.
+///
+/// Note that this $\alpha$ and $\beta$ are not privacy parameters
+/// until quantified over all adjacent datasets,
+/// as is done in the definition of a measurement.
+///
+/// ## `d`-closeness (profile-DP)
 ///
 /// For any two distributions $Y, Y'$ and any curve $d(\cdot)$,
 /// we say that $Y, Y'$ are $d$-close under the smoothed max divergence measure
@@ -68,98 +99,14 @@ impl Measure for MaxDivergence {
 /// until quantified over all adjacent datasets,
 /// as is done in the definition of a measurement.
 #[derive(Default, Clone, Debug, PartialEq)]
-pub struct SmoothedMaxDivergence;
+pub struct PrivacyCurveDP;
 
-impl Measure for SmoothedMaxDivergence {
-    type Distance = PrivacyProfile;
+impl Measure for PrivacyCurveDP {
+    type Distance = PrivacyCurve;
 }
 
-/// A function mapping from $\epsilon$ to $\delta$
-///
-/// This is the distance type for [`SmoothedMaxDivergence`].
-#[derive(Clone)]
-pub struct PrivacyProfile(Arc<dyn Fn(f64) -> Fallible<f64> + Send + Sync>);
-
-impl PrivacyProfile {
-    pub fn new(delta: impl Fn(f64) -> Fallible<f64> + 'static + Send + Sync) -> Self {
-        PrivacyProfile(Arc::new(delta))
-    }
-
-    pub fn epsilon(&self, delta: f64) -> Fallible<f64> {
-        // reject negative zero
-        if delta.is_sign_negative() {
-            return fallible!(FailedMap, "delta ({}) must not be negative", delta);
-        }
-
-        if !(0.0..=1.0).contains(&delta) {
-            return fallible!(FailedMap, "delta ({}) must be between zero and one", delta);
-        }
-
-        if delta == 1.0 {
-            return Ok(0.0);
-        }
-
-        self.epsilon_unchecked(delta)
-    }
-
-    pub(crate) fn epsilon_unchecked(&self, delta: f64) -> Fallible<f64> {
-        let mut e_min: f64 = 0.0;
-        let mut e_max: f64 = 2.0;
-        while self.delta(e_max)? > delta {
-            e_max *= e_max;
-            if e_max.is_infinite() {
-                // For mechanisms that are not pureDP, e_max will be infinity.
-                // This loop can be very long running.
-                return Ok(f64::INFINITY);
-            }
-        }
-
-        // delta(e_max) <= delta <= delta(e_min) -> always holds
-        // We always try to find the smallest e that minimizes |delta(e) - delta| and enforces delta(e) <= delta
-        //           -> if delta == delta(e_min), we can pick e_min, otherwise we have to take e_max
-        // same as   -> if e
-        // For delta == 1.0, we find the largest e that gives delta(e) == 1.0
-        // (so as not to create a discontinuity and go to zero.)
-        let mut e_mid = e_min;
-        loop {
-            let new_mid = e_min + ((e_max - e_min) / 2.0);
-
-            // converge when midpoint doesn't change
-            if new_mid == e_mid {
-                if delta == 1. {
-                    return Ok(e_max);
-                }
-
-                return Ok(if delta == self.delta(e_min)? {
-                    e_min
-                } else {
-                    e_max
-                });
-            }
-
-            e_mid = new_mid;
-
-            // get delta corresponding to e_mid
-            let d_mid: f64 = self.delta(e_mid)?;
-            match d_mid.partial_cmp(&delta) {
-                Some(Ordering::Greater) => e_min = e_mid,
-                Some(Ordering::Less) => e_max = e_mid,
-                Some(Ordering::Equal) => {
-                    if delta == 1. {
-                        e_min = e_mid
-                    } else {
-                        e_max = e_mid
-                    }
-                }
-                None => return fallible!(FailedMap, "not comparable"),
-            }
-        }
-    }
-
-    pub fn delta(&self, epsilon: f64) -> Fallible<f64> {
-        (self.0)(epsilon)
-    }
-}
+#[deprecated(since = "0.15.0", note = "Use `PrivacyCurveDP` instead.")]
+pub type SmoothedMaxDivergence = PrivacyCurveDP;
 
 /// Privacy measure used to define $\delta$-approximate PM-differential privacy.
 ///
@@ -194,7 +141,7 @@ impl PrivacyProfile {
 /// ```
 ///
 /// The profile form of this notion, where $\delta$ is a function of $\epsilon$,
-/// is represented by [`SmoothedMaxDivergence`].
+/// is represented by [`PrivacyCurveDP`].
 ///
 /// Note that $d'$ and $\delta$ are not privacy parameters until quantified over
 /// all adjacent datasets, as is done in the definition of a measurement.

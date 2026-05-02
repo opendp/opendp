@@ -1,0 +1,96 @@
+\documentclass{article}
+\input{../../lib.sty}
+
+\usepackage[backend=biber, style=authoryear-comp, sorting=nyt]{biblatex}
+\addbibresource{ref.bib} 
+
+\title{\texttt{fn approximate\_to\_tradeoff}}
+\author{\AishwaryaRamasethuAuthor, \YuJuKuAuthor, \JordanAwanAuthor, \MichaelShoemateAuthor}
+\begin{document}
+
+\maketitle
+
+\contrib
+
+\section{Hoare Triple}
+
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item Argument \texttt{epsilon} of type \texttt{f64}
+    \item Argument \texttt{delta} of type \texttt{f64}
+\end{itemize}
+
+\subsubsection*{Caller-verified}
+\texttt{epsilon} is finite and nonnegative, and \texttt{delta} is in $[0,1]$.
+
+\subsection*{Pseudocode}
+
+\lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/approximate_to_tradeoff.py}
+
+\subsection*{Postcondition}
+
+\begin{theorem}
+    The pseudocode returns a function $\tilde{f}$ that is conservative with respect to the intent $I$.
+    For \texttt{Reporting}, for all $\alpha \in [0, 1]$,
+    \[
+        \tilde{f}(\alpha) \le f_{\epsilon,\delta}(\alpha).
+    \]
+    For \texttt{Calibration}, for all $\alpha \in [0, 1]$,
+    \[
+        \tilde{f}(\alpha) \ge f_{\epsilon,\delta}(\alpha).
+    \]
+    Here $f_{\epsilon,\delta}$ is the exact approximate-DP tradeoff curve.
+\end{theorem}
+
+We start with the following definition of DP from~\cite{dong2019gaussian}.
+\begin{definition}[\protect{\cite[Proposition~2.5]{dong2019gaussian}}]
+    \label{def-2-2}
+    Let $\epsilon > 0$ and $\delta \geq 0$, and define 
+    \begin{equation}
+        f_{\epsilon,\delta}(\alpha) = \max(0, 1 - \delta - \exp(\epsilon) \alpha, \exp(-\epsilon) (1 - \delta - \alpha)).
+    \end{equation}
+    Then we say that a mechanism $M$ satisfies $(\epsilon, \delta)$-DP if it satisfies $f_{\epsilon,\delta}$-DP.
+\end{definition}
+
+\begin{proof} 
+The definition assumes $\alpha \in [0, 1]$, which is the domain of the returned function.
+The code clamps the base of the second affine branch at zero, as in Definition~\ref{def-2-2}.
+
+For \texttt{Reporting}, \texttt{Dir[I]} is upward rounding and \texttt{Opp[I]} is downward rounding.
+Thus line \ref{exp-eps} over-estimates $\exp(\epsilon)$, and line \ref{exp-neg-eps} under-estimates $\exp(-\epsilon)$.
+The results of these constants are converted exactly into rationals to be used in the tradeoff function.
+
+The function defined on line \ref{tradeoff} implements the formula in Definition~\ref{def-2-2} with exact fractional arithmetic, except that it substitutes these conservative rounded constants for $\exp(\epsilon)$ and $\exp(-\epsilon)$.
+
+For $\alpha \in [0, 1]$, the first branch
+\[
+    1 - \delta - \texttt{exp\_eps} \cdot \alpha
+\]
+is no greater than
+\[
+    1 - \delta - \exp(\epsilon)\alpha,
+\]
+because $\texttt{exp\_eps} \ge \exp(\epsilon)$ and $\alpha \ge 0$.
+
+For the second branch, if $1 - \delta - \alpha \ge 0$, then
+\[
+    \texttt{exp\_neg\_eps} \cdot (1 - \delta - \alpha)
+    \le
+    \exp(-\epsilon)(1 - \delta - \alpha),
+\]
+because $\texttt{exp\_neg\_eps} \le \exp(-\epsilon)$.
+If instead $1 - \delta - \alpha < 0$, then both expressions are negative, so they do not affect the outer maximum with $0$.
+
+Therefore, for all $\alpha \in [0, 1]$, the function returned by the pseudocode is pointwise no greater than $f_{\epsilon,\delta}(\alpha)$.
+This is the desired reporting behavior because smaller $\beta$ means a weaker reported tradeoff curve.
+
+For \texttt{Calibration}, the same monotonicity argument reverses.
+Now \texttt{Dir[I]} rounds downward and \texttt{Opp[I]} rounds upward, so line \ref{exp-eps} under-estimates $\exp(\epsilon)$ and line \ref{exp-neg-eps} over-estimates $\exp(-\epsilon)$.
+The first branch is therefore no smaller than the exact first branch, and the second branch is no smaller than the exact second branch whenever the nonnegative base contributes.
+Taking the maximum with zero preserves this pointwise inequality, so $\tilde{f}(\alpha) \ge f_{\epsilon,\delta}(\alpha)$.
+This is the desired calibration behavior because larger $\beta$ means a stronger tradeoff curve.
+\end{proof}
+
+\printbibliography
+\end{document}

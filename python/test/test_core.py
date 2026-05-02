@@ -1,3 +1,4 @@
+from opendp.mod import PrivacyCurve
 import pytest
 
 import opendp.prelude as dp
@@ -143,11 +144,35 @@ def test_function():
 
 
 def test_privacy_profile():
-    from opendp.measures import new_privacy_profile
     import math
-    profile = new_privacy_profile(lambda eps: math.exp(-eps))
+    with pytest.warns():
+        profile = dp.new_privacy_profile(lambda eps: math.exp(-eps))
     # formula is -ln(1e-7)
     assert profile.epsilon(delta=1e-7) == 16.11809565095832
+
+
+def test_profile_tradeoff_constructors_and_helpers():
+    import math
+
+    dp.enable_features("contrib", "honest-but-curious")
+
+    profile_from_curve = PrivacyCurve.new_profile(lambda eps: math.exp(-eps))
+    assert profile_from_curve.delta(0.0) == 1.0
+    assert profile_from_curve.epsilon(1e-7) == 16.11809565095832
+
+    profile_from_pairs = PrivacyCurve.new_approxDP([(1.0, 0.1), (2.0, 0.01)])
+    assert profile_from_pairs.delta(1.0) == 0.1
+
+    assert 0.0 <= profile_from_pairs.beta(0.5) <= 1.0
+
+    curve_from_tradeoff = PrivacyCurve.new_tradeoff(lambda alpha: 1.0 - alpha)
+    assert curve_from_tradeoff.beta(0.3) == 0.7
+
+    curve_from_gdp = PrivacyCurve.new_gdp(1.0)
+    assert curve_from_gdp.beta(0.0) == 1.0
+    assert curve_from_gdp.beta(1.0) == 0.0
+
+    assert 0.0 <= curve_from_gdp.delta(0.5) <= 1.0
 
 
 def test_member():

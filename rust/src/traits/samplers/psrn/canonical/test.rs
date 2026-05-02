@@ -1,8 +1,9 @@
+use dashu::float::{FBig, round::mode::Down};
 use num::FromPrimitive;
 
 use crate::{
     error::Fallible,
-    measurements::approximate_to_tradeoff,
+    measures::ApproxDPPoint,
     traits::samplers::{
         PartialSample, psrn::test::assert_ordered_progression, test::check_kolmogorov_smirnov,
     },
@@ -12,7 +13,13 @@ use super::*;
 
 #[test]
 fn test_sample_cnd_interval_progression() -> Fallible<()> {
-    let (tradeoff, c) = approximate_to_tradeoff((1.0, 1e-6))?;
+    let (eps, delta) = (1.0, 1e-6);
+    let tradeoff = |alpha| Ok(ApproxDPPoint::build((eps, delta))?.beta(&alpha));
+
+    let exp_eps = RBig::try_from(FBig::<Down>::try_from(eps)?.exp())?;
+    //              = (1 - δ) / (1 + exp(ε))
+    let c = (rbig!(1) - &RBig::try_from(delta)?) / (rbig!(1) + &exp_eps);
+
     let scale = &RBig::ONE;
     let mut cnd = PartialSample::new(CanonicalRV {
         shift: RBig::ZERO,
@@ -20,7 +27,7 @@ fn test_sample_cnd_interval_progression() -> Fallible<()> {
         tradeoff: &tradeoff,
         fixed_point: &c,
     });
-    let (l, r) = assert_ordered_progression(&mut cnd, 20);
+    let (l, r) = assert_ordered_progression(&mut cnd, 20)?;
     let (l, r) = (l.to_f64().value(), r.to_f64().value());
     println!("{l:?}, {r:?}, {}", cnd.refinements);
     Ok(())
@@ -40,7 +47,13 @@ fn F_f(x: f64, f: impl Fn(f64) -> f64 + Clone, c: f64) -> f64 {
 
 #[test]
 fn test_cnd_psrn() -> Fallible<()> {
-    let (tradeoff, c) = approximate_to_tradeoff((1.0, 1e-6))?;
+    let (eps, delta) = (1.0, 1e-6);
+    let tradeoff = |alpha| Ok(ApproxDPPoint::build((eps, delta))?.beta(&alpha));
+
+    let exp_eps = RBig::try_from(FBig::<Down>::try_from(eps)?.exp())?;
+    //              = (1 - δ) / (1 + exp(ε))
+    let c = (rbig!(1) - &RBig::try_from(delta)?) / (rbig!(1) + &exp_eps);
+
     let scale = &RBig::ONE;
     let cnd = CanonicalRV {
         shift: RBig::ZERO,
@@ -54,7 +67,12 @@ fn test_cnd_psrn() -> Fallible<()> {
 
     let samples = <[f64; 5000]>::try_from(samples).unwrap();
 
-    let f_tradeoff = |x: f64| -> f64 { tradeoff(RBig::from_f64(x).unwrap()).to_f64().value() };
+    let f_tradeoff = |x: f64| -> f64 {
+        tradeoff(RBig::from_f64(x).unwrap())
+            .unwrap()
+            .to_f64()
+            .value()
+    };
     let f_c = c.to_f64().value();
     check_kolmogorov_smirnov(samples, |x| F_f(x, f_tradeoff, f_c))?;
     Ok(())
