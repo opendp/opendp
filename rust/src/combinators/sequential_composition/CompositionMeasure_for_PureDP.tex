@@ -1,7 +1,7 @@
 \documentclass{article}
 \input{../../lib.sty}
 
-\title{\texttt{CompositionMeasure for RenyiDivergence}}
+\title{\texttt{CompositionMeasure for PureDP}}
 \author{\MichaelShoemateAuthor}
 \date{}
 
@@ -11,7 +11,7 @@
 
 \contrib
 Proves soundness of the implementation of \rustdoc{combinators/sequential_composition/trait}{CompositionMeasure} 
-for \texttt{RenyiDivergence} in \asOfCommit{mod.rs}{f5bb719}.
+for \texttt{PureDP} in \asOfCommit{mod.rs}{f5bb719}.
 
 \section{Hoare Triple}
 \subsection*{Precondition}
@@ -23,7 +23,7 @@ Types matching pseudocode.
 None
 
 \subsection*{Pseudocode}
-\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/CompositionMeasure_for_RenyiDivergence.py}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/CompositionMeasure_for_PureDP.py}
 
 \subsection*{Postcondition}
 \begin{theorem}
@@ -33,16 +33,15 @@ None
 \end{theorem}
 
 \begin{proof}
-  The new curve constructed on line \ref{line:curve} composes all epsilon parameters at a given fixed \texttt{alpha}.
-  By the postcondition of \rustdoc{traits/trait}{InfAdd} we have that for any choice of \texttt{alpha}, $\sum_i \texttt{d\_mid}_i(\texttt{alpha}) \le \texttt{compose(d\_mids)}(\alpha)$.
+  By the postcondition of \rustdoc{traits/trait}{InfAdd} we have that $\sum_i \texttt{d\_mids}_i \le \texttt{compose(d\_mids)}$.
 
   \begin{center}
     \begin{tabular}{ r | l l }
       Adaptivity & Sequential & Concurrent \\ 
       \hline
-      Non-Adaptive & Proposition~1\cite{mironov2017renyi} & Theorem~2\cite{lyu2022interactive} \\  
-      Adaptive & - & - \\
-      Fully-Adaptive & Theorem~4.3\cite{feldman2022individual} & Theorem~1.22\cite{vadhan2021concurrent}
+      Non-Adaptive & Theorem~1\cite{dwork2006calibrating} & Theorem~1.8\cite{vadhan2021concurrent} \\  
+      Adaptive & Theorem~1\cite{dwork2006calibrating} & Theorem~1.8\cite{vadhan2021concurrent} \\
+      Fully-Adaptive & None & None
     \end{tabular}
 
     This table is reflected in the implementation of \texttt{composability} on line~\ref{line:composability}.

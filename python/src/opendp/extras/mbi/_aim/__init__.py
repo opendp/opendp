@@ -22,7 +22,7 @@ from opendp.extras.mbi._utilities import (
     Algorithm,
 )
 from opendp.measurements import then_noisy_max
-from opendp.measures import max_divergence, zero_concentrated_divergence
+from opendp.measures import pure_dp, zcdp
 from opendp.metrics import linf_distance
 from opendp.mod import (
     ExtrinsicDomain,
@@ -251,9 +251,9 @@ def _make_aim_marginal(
     }
 
     # factors to convert stddev -> scale and scale -> half-distribution expectation
-    if output_measure == max_divergence():
+    if output_measure == pure_dp():
         to_scale, to_mu = 1 / sqrt(2), 1.0
-    elif output_measure == zero_concentrated_divergence():
+    elif output_measure == zcdp():
         to_scale, to_mu = 1.0, sqrt(2 / pi)
 
     d_measure = d_out * algorithm.measure_split
@@ -341,9 +341,9 @@ def _make_aim_select(
     import mbi
 
     # factor to convert scale -> half-distribution expectation
-    if output_measure == max_divergence():
+    if output_measure == pure_dp():
         to_mu = 1.0
-    elif output_measure == zero_concentrated_divergence():
+    elif output_measure == zcdp():
         to_mu = sqrt(2 / pi)
 
     model = cast(mbi.MarkovRandomField, model)

@@ -3,7 +3,7 @@ use crate::{
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     measurements::MakeNoise,
-    measures::{MaxDivergence, ZeroConcentratedDivergence},
+    measures::{PureDP, zCDP},
     traits::CheckAtom,
 };
 
@@ -53,14 +53,14 @@ impl<T: 'static + CheckAtom> NoiseDomain for VectorDomain<AtomDomain<T>> {
 /// # Arguments
 /// * `input_domain` - Domain of the data type to be released.
 /// * `input_metric` - Metric of the data type to be released.
-/// * `output_measure` - Privacy measure. Either `MaxDivergence` or `ZeroConcentratedDivergence`.
+/// * `output_measure` - Privacy measure. Either `PureDP` or `zCDP`.
 /// * `scale` - Noise scale parameter.
 /// * `k` - The noise granularity in terms of 2^k.
 ///
 /// # Generics
 /// * `DI` - Domain of the data to be released. Valid values are `VectorDomain<AtomDomain<T>>` or `AtomDomain<T>`.
 /// * `MI` - Input Metric to measure distances between members of the input domain.
-/// * `MO` - Output Measure. Either `MaxDivergence` or `ZeroConcentratedDivergence`.
+/// * `MO` - Output Measure. Either `PureDP` or `zCDP`.
 pub fn make_noise<DI: Domain, MI: Metric, MO: NoiseMeasure>(
     input_domain: DI,
     input_metric: MI,
@@ -82,7 +82,7 @@ pub trait NoiseMeasure: Measure + 'static {
     fn new_distribution(self, scale: f64, k: Option<i32>) -> Self::Distribution;
 }
 
-impl NoiseMeasure for MaxDivergence {
+impl NoiseMeasure for PureDP {
     type Distribution = DiscreteLaplace;
 
     fn new_distribution(self, scale: f64, k: Option<i32>) -> Self::Distribution {
@@ -90,7 +90,7 @@ impl NoiseMeasure for MaxDivergence {
     }
 }
 
-impl NoiseMeasure for ZeroConcentratedDivergence {
+impl NoiseMeasure for zCDP {
     type Distribution = DiscreteGaussian;
 
     fn new_distribution(self, scale: f64, k: Option<i32>) -> Self::Distribution {

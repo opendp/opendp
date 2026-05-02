@@ -1,7 +1,7 @@
 use crate::{
     core::{Domain, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    measures::{Approximate, PrivacyCurve, PrivacyCurveDP, ZeroConcentratedDivergence},
+    measures::{Approximate, PrivacyCurve, PrivacyCurveDP, zCDP},
 };
 
 use self::cdp_delta::cdp_delta;
@@ -15,7 +15,7 @@ mod test;
 mod cdp_delta;
 
 /// Constructs a new output measurement where the output measure
-/// is casted from `ZeroConcentratedDivergence` to `PrivacyCurveDP`.
+/// is casted from `zCDP` to `PrivacyCurveDP`.
 ///
 /// # Arguments
 /// * `meas` - a measurement with a privacy measure to be casted
@@ -25,7 +25,7 @@ mod cdp_delta;
 /// * `TO` - Output Type
 /// * `MI` - Input Metric
 /// * `MO` - Privacy Measure
-pub fn make_zCDP_to_approxDP<DI, MI, MO, TO>(
+pub fn make_zCDP_to_curveDP<DI, MI, MO, TO>(
     meas: Measurement<DI, MI, MO, TO>,
 ) -> Fallible<Measurement<DI, MI, MO::ApproxMeasure, TO>>
 where
@@ -48,13 +48,30 @@ where
     )
 }
 
+#[deprecated(since = "0.15.0", note = "Use `make_zCDP_to_curveDP` instead.")]
+/// Deprecated alias for `make_zCDP_to_curveDP`.
+///
+/// # Arguments
+/// * `meas` - a measurement with a privacy measure to be casted
+pub fn make_zCDP_to_approxDP<DI, MI, MO, TO>(
+    meas: Measurement<DI, MI, MO, TO>,
+) -> Fallible<Measurement<DI, MI, MO::ApproxMeasure, TO>>
+where
+    DI: Domain,
+    MI: 'static + Metric,
+    MO: 'static + ConcentratedMeasure,
+    (DI, MI): MetricSpace,
+{
+    make_zCDP_to_curveDP(meas)
+}
+
 pub trait ConcentratedMeasure: Measure {
     type ApproxMeasure: Measure;
 
     fn convert(d_mid: Self::Distance) -> Fallible<<Self::ApproxMeasure as Measure>::Distance>;
 }
 
-impl ConcentratedMeasure for ZeroConcentratedDivergence {
+impl ConcentratedMeasure for zCDP {
     type ApproxMeasure = PrivacyCurveDP;
 
     fn convert(rho: Self::Distance) -> Fallible<<Self::ApproxMeasure as Measure>::Distance> {
@@ -64,7 +81,7 @@ impl ConcentratedMeasure for ZeroConcentratedDivergence {
     }
 }
 
-impl ConcentratedMeasure for Approximate<ZeroConcentratedDivergence> {
+impl ConcentratedMeasure for Approximate<zCDP> {
     type ApproxMeasure = Approximate<PrivacyCurveDP>;
 
     fn convert(

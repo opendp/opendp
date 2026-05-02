@@ -10,7 +10,7 @@ use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::ffi::util::{Type, as_ref};
 use crate::measurements::noise::nature::Nature;
 use crate::measurements::{DiscreteGaussian, MakeNoise, make_gaussian};
-use crate::measures::ZeroConcentratedDivergence;
+use crate::measures::zCDP;
 use crate::metrics::{AbsoluteDistance, L2Distance};
 use crate::traits::Number;
 
@@ -76,7 +76,7 @@ pub extern "C" fn opendp_measurements__make_gaussian(
     let T_ = try_!(input_domain.type_.get_atom());
 
     dispatch!(monomorphize, [
-        (MO, [ZeroConcentratedDivergence]),
+        (MO, [zCDP]),
         (T_, @numbers),
         (QI_, @numbers)
     ], (input_domain, input_metric, scale, k, MO))
@@ -102,7 +102,7 @@ mod tests {
             util::into_raw(AnyMetric::new(AbsoluteDistance::<i32>::default())),
             0.0,
             null(),
-            "ZeroConcentratedDivergence".to_char_p(),
+            "zCDP".to_char_p(),
         ))?;
         let arg = AnyObject::new_raw(99);
         let res = core::opendp_core__measurement_invoke(&measurement, arg);

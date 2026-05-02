@@ -1,7 +1,7 @@
 \documentclass{article}
 \input{../../lib.sty}
 
-\title{\texttt{CompositionMeasure for ZeroConcentratedDivergence}}
+\title{\texttt{CompositionMeasure for zCDP}}
 \author{\MichaelShoemateAuthor}
 \date{}
 
@@ -11,7 +11,7 @@
 
 \contrib
 Proves soundness of the implementation of \rustdoc{combinators/sequential_composition/trait}{CompositionMeasure} 
-for \texttt{ZeroConcentratedDivergence} in \asOfCommit{mod.rs}{f5bb719}.
+for \texttt{zCDP} in \asOfCommit{mod.rs}{f5bb719}.
 
 \section{Hoare Triple}
 \subsection*{Precondition}
@@ -23,7 +23,7 @@ Types matching pseudocode.
 None
 
 \subsection*{Pseudocode}
-\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/CompositionMeasure_for_ZeroConcentratedDivergence.py}
+\lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/CompositionMeasure_for_zCDP.py}
 
 \subsection*{Postcondition}
 \begin{theorem}
@@ -32,10 +32,10 @@ None
   Otherwise returns an error.
 \end{theorem}
 
-\begin{definition}[Definition of \texttt{ZeroConcentratedDivergence}]
+\begin{definition}[Definition of \texttt{zCDP}]
   \label{def:zc-div}
   For any two distributions $Y, Y'$ and any non-negative $d$,
-  $Y, Y'$ are $d$-close under the zero-concentrated divergence measure if,
+  $Y, Y'$ are $d$-close under the zCDP privacy measure if,
   for every possible choice of $\alpha \in (1, \infty)$,
 
   \begin{equation}

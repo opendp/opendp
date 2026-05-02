@@ -4,7 +4,7 @@ use crate::{
     combinators::make_adaptive_composition,
     domains::AtomDomain,
     measurements::make_randomized_response_bool,
-    measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{Approximate, PureDP, zCDP},
     metrics::DiscreteDistance,
 };
 
@@ -16,7 +16,7 @@ fn test_privacy_odometer() -> Fallible<()> {
     let root = make_fully_adaptive_composition::<_, _, _, Box<dyn Any>>(
         AtomDomain::default(),
         DiscreteDistance::default(),
-        MaxDivergence::default(),
+        PureDP::default(),
     )?;
 
     // pass dataset in and receive a queryable
@@ -34,7 +34,7 @@ fn test_privacy_odometer() -> Fallible<()> {
     let cc_query_3 = make_adaptive_composition::<_, _, _, bool>(
         AtomDomain::<bool>::default(),
         DiscreteDistance::default(),
-        MaxDivergence::default(),
+        PureDP::default(),
         1,
         vec![0.1, 0.1],
     )?
@@ -54,7 +54,7 @@ fn test_privacy_odometer() -> Fallible<()> {
     let cc_query_4 = make_adaptive_composition::<_, _, _, Box<dyn Any>>(
         AtomDomain::<bool>::default(),
         DiscreteDistance::default(),
-        MaxDivergence::default(),
+        PureDP::default(),
         1,
         vec![0.2, 0.3],
     )?
@@ -78,7 +78,7 @@ fn test_fully_adaptive_interactive_postprocessing() -> Fallible<()> {
     let m_query = (Measurement::new(
         AtomDomain::<bool>::default(),
         DiscreteDistance,
-        Approximate(ZeroConcentratedDivergence),
+        Approximate(zCDP),
         Function::new_fallible(|&arg: &bool| Queryable::new_external(move |_: &()| Ok(!arg))),
         PrivacyMap::new(|_| (1.0, 1e-7)),
     )? >> Function::<Queryable<(), bool>, bool>::new_fallible(|qbl: &_| {
@@ -87,7 +87,7 @@ fn test_fully_adaptive_interactive_postprocessing() -> Fallible<()> {
     let m_odo = make_fully_adaptive_composition(
         AtomDomain::<bool>::default(),
         DiscreteDistance,
-        Approximate(ZeroConcentratedDivergence),
+        Approximate(zCDP),
     )?;
 
     let mut qbl = m_odo.invoke(&false)?;

@@ -101,7 +101,7 @@
     >>> x_bounds = (-3.0, 3.0)
     >>> y_bounds = (-10.0, 10.0)
     >>> meas = make_private_theil_sen(
-    ...     dp.max_divergence(), x_bounds, y_bounds, scale=1.0
+    ...     dp.pure_dp(), x_bounds, y_bounds, scale=1.0
     ... )
     >>> meas.map(1)
     2.0

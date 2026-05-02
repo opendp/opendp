@@ -4,7 +4,7 @@ def make_randomized_response_bitvec(
         input_metric: DiscreteDistance, 
         f: f64, 
         constant_time: bool):
-    output_measure = MaxDivergence(f64)
+    output_measure = PureDP(f64)
     
     if f <= 0.0 or f > 1: # |\label{line:range}|
         raise Exception("Probability must be in (0.0, 1]")

@@ -1,7 +1,7 @@
 use crate::{
     core::{Domain, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    measures::{MaxDivergence, ZeroConcentratedDivergence},
+    measures::{PureDP, zCDP},
     traits::{InfDiv, InfPowI},
 };
 
@@ -9,7 +9,7 @@ use crate::{
 mod ffi;
 
 /// Constructs a new output measurement where the output measure
-/// is casted from `MaxDivergence` to `ZeroConcentratedDivergence`.
+/// is casted from `PureDP` to `zCDP`.
 ///
 /// # Citations
 /// - [BS16 Concentrated Differential Privacy: Simplifications, Extensions, and Lower Bounds](https://arxiv.org/pdf/1605.02065.pdf#subsection.3.1)
@@ -22,8 +22,8 @@ mod ffi;
 /// * `MI` - Input Metric
 /// * `TO` - Output Type
 pub fn make_pureDP_to_zCDP<DI, MI, TO>(
-    m: Measurement<DI, MI, MaxDivergence, TO>,
-) -> Fallible<Measurement<DI, MI, ZeroConcentratedDivergence, TO>>
+    m: Measurement<DI, MI, PureDP, TO>,
+) -> Fallible<Measurement<DI, MI, zCDP, TO>>
 where
     DI: Domain,
     MI: 'static + Metric,
@@ -32,7 +32,7 @@ where
     let privacy_map = m.privacy_map.clone();
     m.with_map(
         m.input_metric.clone(),
-        ZeroConcentratedDivergence::default(),
+        zCDP::default(),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
             privacy_map
                 .eval(d_in)

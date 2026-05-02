@@ -213,7 +213,7 @@ showing the source changes from the previous version.
 - Serialize query [#2253](https://github.com/opendp/opendp/pull/2253)
 - Domain descriptor ffi [#2240](https://github.com/opendp/opendp/pull/2240)
 - Add `make_private_quantile` [#2293](https://github.com/opendp/opendp/pull/2293)
-- Add `make_fixed_approxdp_to_approxdp` [#1860](https://github.com/opendp/opendp/pull/1860)
+- Add `make_fixed_approxDP_to_approxDP` [#1860](https://github.com/opendp/opendp/pull/1860)
 - Show errors when binary search type inference fails [#2366](https://github.com/opendp/opendp/pull/2366)
 - `member` is true or false, with a warning; expand serialization tests [#2265](https://github.com/opendp/opendp/pull/2265)
 

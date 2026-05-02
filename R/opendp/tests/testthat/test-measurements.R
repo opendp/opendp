@@ -61,7 +61,7 @@ test_that("make_discrete_laplace", {
 
 test_that("test_gaussian_curve", {
   input_space <- c(atom_domain(.T = f64, nan = FALSE), absolute_distance(.T = f64))
-  meas <- make_zCDP_to_approxDP(input_space |> then_gaussian(4.))
+  meas <- make_zCDP_to_curveDP(input_space |> then_gaussian(4.))
   curve <- meas(d_in = 1.)
   expect_equal(curve(delta = 0.), Inf)
   # see cdp_delta for formula of 0.688...
@@ -72,18 +72,18 @@ test_that("test_gaussian_curve", {
   expect_equal(curve(epsilon = 0.), 0.1508457845622862)
   expect_equal(curve(epsilon = 0.6880024554878085), 1e-3)
 
-  curve <- make_zCDP_to_approxDP(input_space |> then_gaussian(4.))(d_in = 0.0)
+  curve <- make_zCDP_to_curveDP(input_space |> then_gaussian(4.))(d_in = 0.0)
   expect_equal(curve(delta = 0.0), 0.0)
   expect_error(curve(delta = -0.0))
   expect_error(curve(epsilon = -0.0))
 
-  curve <- make_zCDP_to_approxDP(input_space |> then_gaussian(0.))(d_in = 1.0)
+  curve <- make_zCDP_to_curveDP(input_space |> then_gaussian(0.))(d_in = 1.0)
   expect_equal(curve(delta = 0.0), Inf)
   expect_equal(curve(delta = 0.1), Inf)
   expect_equal(curve(epsilon = 0.0), 1.0)
   expect_equal(curve(epsilon = 0.1), 1.0)
 
-  curve <- make_zCDP_to_approxDP(input_space |> then_gaussian(0.))(d_in = 0.0)
+  curve <- make_zCDP_to_curveDP(input_space |> then_gaussian(0.))(d_in = 0.0)
   expect_equal(curve(delta = 0.0), 0.0)
   expect_equal(curve(delta = 0.1), 0.0)
   expect_equal(curve(epsilon = 0.0), 0.0)
@@ -94,7 +94,7 @@ test_that("test_gaussian_search", {
   input_space <- c(atom_domain(.T = f64, nan = FALSE), absolute_distance(.T = f64))
 
   make_approx_gauss <- function(scale, delta) {
-    make_fix_delta(make_zCDP_to_approxDP(input_space |> then_gaussian(scale)), delta)
+    make_fix_delta(make_zCDP_to_curveDP(input_space |> then_gaussian(scale)), delta)
   }
 
   fixed_meas <- make_approx_gauss(1., 1e-5)
@@ -121,9 +121,9 @@ test_that("test_vector_laplace", {
   expect_lt(meas(d_in = 1.), 1.3)
 })
 
-test_that("test_gaussian_smoothed_max_divergence", {
+test_that("test_gaussian_profile_dp", {
   input_space <- c(atom_domain(.T = f64, nan = FALSE), absolute_distance(.T = f64))
-  meas <- make_zCDP_to_approxDP(input_space |> then_gaussian(scale = 10.5))
+  meas <- make_zCDP_to_curveDP(input_space |> then_gaussian(scale = 10.5))
   meas(arg = 100.)
 
   epsilon <- meas(d_in = 1.)(delta = 0.000001)
@@ -132,7 +132,7 @@ test_that("test_gaussian_smoothed_max_divergence", {
 
 test_that("test_gaussian_zcdp", {
   input_space <- c(atom_domain(.T = f64, nan = FALSE), absolute_distance(.T = f64))
-  meas <- input_space |> then_gaussian(scale = 1.5, .MO = "ZeroConcentratedDivergence")
+  meas <- input_space |> then_gaussian(scale = 1.5, .MO = "zCDP")
   meas(arg = 100.)
 
   expect_lt(meas(d_in = 1.), 0.223)
@@ -142,7 +142,7 @@ test_that("test_vector_gaussian", {
   delta <- 0.000001
   input_space <- c(vector_domain(atom_domain(.T = f64, nan = FALSE)), l2_distance(.T = f64))
   meas <- make_fix_delta(
-    make_zCDP_to_approxDP(
+    make_zCDP_to_curveDP(
       input_space |> then_gaussian(scale = 10.5)
     ), delta
   )

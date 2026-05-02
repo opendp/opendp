@@ -31,8 +31,8 @@ chained = input_space >> dp.t.then_mean() >> dp.m.then_laplace(scale=0.5)
         dp.linf_distance("float", True),
         dp.user_distance("user_distance"),
         # Measures:
-        dp.m.max_divergence(),
-        dp.m.approximate(dp.m.max_divergence()),
+        dp.m.pure_dp(),
+        dp.m.approximate(dp.m.pure_dp()),
         dp.m.user_divergence("user_divergence"),
         # Measurements:
         dp.m.make_gaussian(atom, dp.absolute_distance(float), 1),
@@ -182,14 +182,14 @@ if pl is not None:
             dp.m.make_private_lazyframe(
                 lf_domain_with_margin,
                 dp.symmetric_distance(),
-                dp.max_divergence(),
+                dp.pure_dp(),
                 lf.select([dp.len(), pl.col("A").dp.sum((0, 1))]),
                 global_scale=1.0
             ),
             dp.m.make_private_expr(
                 dp.wild_expr_domain([], dp.polars.Margin(by=[])),
                 dp.l01inf_distance(dp.symmetric_distance()),
-                dp.max_divergence(),
+                dp.pure_dp(),
                 dp.len(scale=1.0)
             ),
         ],

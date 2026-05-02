@@ -1,7 +1,7 @@
 use crate::{
     core::{Domain, Measure, Measurement, Metric, MetricSpace, PrivacyMap},
     error::Fallible,
-    measures::{Approximate, MaxDivergence, PrivacyCurve, PrivacyCurveDP},
+    measures::{Approximate, PureDP, PrivacyCurve, PrivacyCurveDP},
     traits::InfSub,
 };
 
@@ -60,7 +60,7 @@ pub trait FixDeltaMeasure: Measure {
 }
 
 impl FixDeltaMeasure for PrivacyCurveDP {
-    type FixedMeasure = Approximate<MaxDivergence>;
+    type FixedMeasure = Approximate<PureDP>;
 
     fn new_fixed_measure(&self) -> Fallible<Self::FixedMeasure> {
         Ok(Approximate::default())
@@ -71,7 +71,7 @@ impl FixDeltaMeasure for PrivacyCurveDP {
 }
 
 impl FixDeltaMeasure for Approximate<PrivacyCurveDP> {
-    type FixedMeasure = Approximate<MaxDivergence>;
+    type FixedMeasure = Approximate<PureDP>;
 
     fn new_fixed_measure(&self) -> Fallible<Self::FixedMeasure> {
         Ok(Approximate::default())

@@ -5,7 +5,7 @@ use dashu::{integer::IBig, rational::RBig, rbig, ubig};
 use crate::{
     domains::AtomDomain,
     measurements::make_laplace,
-    measures::MaxDivergence,
+    measures::PureDP,
     metrics::AbsoluteDistance,
     traits::{
         ExactIntCast,
@@ -20,7 +20,7 @@ fn test_laplace_tail(tail: UBig, theoretical_alpha: f64, label: &str) -> Fallibl
     let scale = 1.;
 
     println!("alpha: {}", theoretical_alpha);
-    let m_dlap = make_laplace::<AtomDomain<i8>, AbsoluteDistance<i8>, MaxDivergence>(
+    let m_dlap = make_laplace::<AtomDomain<i8>, AbsoluteDistance<i8>, PureDP>(
         Default::default(),
         Default::default(),
         scale,

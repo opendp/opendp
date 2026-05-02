@@ -30,7 +30,7 @@ There is also an illustrative notebook `A Framework to Understand DP <../../../t
 * :ref:`Measures <measures-user-guide>` and :ref:`metrics <metrics-user-guide>` are things that specify distances between two mathematical objects.
 
   * Measures characterize a distance between two probability distributions.
-    An example measure is the "max-divergence" of pure differential privacy.
+    An example measure is pure differential privacy.
   * Metrics capture a distance between two private datasets or values. 
     An example metric is "symmetric distance" (counting the number of additions or removals).
 

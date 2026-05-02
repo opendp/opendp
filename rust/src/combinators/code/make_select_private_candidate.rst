@@ -8,7 +8,7 @@
 >>> # The tuple released must satisfy the privacy guarantee from the map.
 >>> import numpy as np
 >>> m_mock = space >> dp.m.then_user_measurement(
-...     dp.max_divergence(),
+...     dp.pure_dp(),
 ...     lambda x: (np.random.laplace(loc=x), "arbitrary candidate"),
 ...     lambda d_in: d_in,
 ...     TO="(f64, ExtrinsicObject)"

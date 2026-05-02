@@ -80,7 +80,7 @@ def make_constant_mechanism(constant):
     return dp.m.make_user_measurement(
         dp.atom_domain(T=int),
         dp.absolute_distance(int),
-        dp.max_divergence(),
+        dp.pure_dp(),
         function,
         privacy_map,
         TO=dp.RuntimeType.infer(constant),
@@ -122,7 +122,7 @@ def test_user_constructors():
     meas = dp.m.make_user_measurement(
         dp.atom_domain((2, 10)),
         dp.symmetric_distance(),
-        dp.max_divergence(),
+        dp.pure_dp(),
         lambda x: [x] * 10,
         lambda d_in: float(d_in * 10),
         TO=dp.Vec[int],
@@ -147,7 +147,7 @@ def test_hash():
         input_domain, input_metric, output_measure = get_elements(mechanisms)
 
         # ensure that the privacy measure is pure-DP
-        assert output_measure == dp.max_divergence()
+        assert output_measure == dp.pure_dp()
 
         return dp.m.make_user_measurement(
             input_domain, input_metric, output_measure,

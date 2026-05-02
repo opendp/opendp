@@ -5,7 +5,7 @@ use crate::domains::{
     AtomDomain, ExprDomain, ExprPlan, NumericDataType, OuterMetric, VectorDomain, WildExprDomain,
 };
 use crate::measurements::{DiscreteGaussian, DiscreteLaplace, MakeNoise, NoiseMeasure, make_noise};
-use crate::measures::ZeroConcentratedDivergence;
+use crate::measures::zCDP;
 use crate::metrics::{L1Distance, L01InfDistance, L2Distance};
 use crate::polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_plugin};
 use crate::traits::{CheckAtom, InfMul, Number};
@@ -14,7 +14,7 @@ use crate::transformations::traits::UnboundedMetric;
 use crate::{
     core::{Function, Measurement},
     error::Fallible,
-    measures::MaxDivergence,
+    measures::PureDP,
 };
 use dashu::rational::RBig;
 use polars::prelude::{AnonymousColumnsUdf, Column, IntoColumn, PolarsNumericType};
@@ -263,11 +263,11 @@ pub trait NoiseExprMeasure: 'static + NoiseMeasure<Distance = f64> {
     const DISTRIBUTION: NoiseDistribution;
 }
 
-impl NoiseExprMeasure for MaxDivergence {
+impl NoiseExprMeasure for PureDP {
     type Metric = L1Distance<f64>;
     const DISTRIBUTION: NoiseDistribution = NoiseDistribution::Laplace;
 }
-impl NoiseExprMeasure for ZeroConcentratedDivergence {
+impl NoiseExprMeasure for zCDP {
     type Metric = L2Distance<f64>;
     const DISTRIBUTION: NoiseDistribution = NoiseDistribution::Gaussian;
 }
@@ -361,27 +361,22 @@ where
     <T::NumericPolars as PolarsDataType>::Array: ArrayFromIter<T> + ArrayFromIter<Option<T>>,
     // must be able to convert the chunked array to a series
     ChunkedArray<T::NumericPolars>: IntoSeries,
-    DiscreteLaplace: MakeNoise<VectorDomain<AtomDomain<T>>, L1Distance<f64>, MaxDivergence>,
-    DiscreteGaussian:
-        MakeNoise<VectorDomain<AtomDomain<T>>, L2Distance<f64>, ZeroConcentratedDivergence>,
+    DiscreteLaplace: MakeNoise<VectorDomain<AtomDomain<T>>, L1Distance<f64>, PureDP>,
+    DiscreteGaussian: MakeNoise<VectorDomain<AtomDomain<T>>, L2Distance<f64>, zCDP>,
     RBig: TryFrom<T>,
 {
     let domain = VectorDomain::new(AtomDomain::<T>::new_non_nan());
     let function = match distribution {
         NoiseDistribution::Laplace => {
-            make_noise(domain, L1Distance::default(), MaxDivergence, scale, None)?
+            make_noise(domain, L1Distance::default(), PureDP, scale, None)?
                 .function
                 .clone()
         }
-        NoiseDistribution::Gaussian => make_noise(
-            domain,
-            L2Distance::default(),
-            ZeroConcentratedDivergence,
-            scale,
-            None,
-        )?
-        .function
-        .clone(),
+        NoiseDistribution::Gaussian => {
+            make_noise(domain, L2Distance::default(), zCDP, scale, None)?
+                .function
+                .clone()
+        }
     };
     let chunk_iter = series
         // unpack the series into a chunked array

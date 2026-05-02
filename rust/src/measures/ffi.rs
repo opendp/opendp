@@ -17,11 +17,11 @@ use crate::{
         any::AnyMeasure,
         util::{self, into_c_char_p},
     },
-    measures::{Approximate, MaxDivergence, ZeroConcentratedDivergence},
+    measures::{Approximate, PureDP, zCDP},
     traits::ProductOrd,
 };
 
-use super::RenyiDivergence;
+use super::RenyiDP;
 
 #[bootstrap(
     name = "_measure_free",
@@ -102,6 +102,14 @@ pub extern "C" fn opendp_measures__measure_distance_type(
 }
 
 #[bootstrap(name = "max_divergence")]
+#[deprecated(since = "0.15.0", note = "Use `pure_dp` instead.")]
+/// Deprecated alias for `pure_dp`.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measures__max_divergence() -> FfiResult<*mut AnyMeasure> {
+    opendp_measures__pure_dp()
+}
+
+#[bootstrap(name = "pure_dp")]
 /// Privacy measure used to define $\epsilon$-pure differential privacy.
 ///
 /// In the following proof definition, $d$ corresponds to $\epsilon$ when also quantified over all adjacent datasets.
@@ -114,15 +122,23 @@ pub extern "C" fn opendp_measures__measure_distance_type(
 /// # Proof Definition
 ///
 /// For any two distributions $Y, Y'$ and any non-negative $d$,
-/// $Y, Y'$ are $d$-close under the max divergence measure whenever
+/// $Y, Y'$ are $d$-close under the pure-DP privacy measure whenever
 ///
 /// $D_\infty(Y, Y') = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y \in S]}{\Pr[Y' \in S]} \Big] \leq d$.
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_measures__max_divergence() -> FfiResult<*mut AnyMeasure> {
-    Ok(AnyMeasure::new(MaxDivergence)).into()
+pub extern "C" fn opendp_measures__pure_dp() -> FfiResult<*mut AnyMeasure> {
+    Ok(AnyMeasure::new(PureDP)).into()
 }
 
 #[bootstrap(name = "smoothed_max_divergence")]
+#[deprecated(since = "0.15.0", note = "Use `privacy_curve_dp` instead.")]
+/// Deprecated alias for `privacy_curve_dp`.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measures__smoothed_max_divergence() -> FfiResult<*mut AnyMeasure> {
+    opendp_measures__privacy_curve_dp()
+}
+
+#[bootstrap(name = "profile_dp")]
 /// Privacy measure used to define $\epsilon(\delta)$-approximate differential privacy.
 ///
 /// In the following proof definition, $d$ corresponds to a privacy profile when also quantified over all adjacent datasets.
@@ -138,7 +154,7 @@ pub extern "C" fn opendp_measures__max_divergence() -> FfiResult<*mut AnyMeasure
 /// # Proof Definition
 ///
 /// For any two distributions $Y, Y'$ and any curve $d(\cdot)$,
-/// $Y, Y'$ are $d$-close under the smoothed max divergence measure whenever,
+/// $Y, Y'$ are $d$-close under the profile-DP privacy measure whenever,
 /// for any choice of non-negative $\epsilon$, and $\delta = d(\epsilon)$,
 ///
 /// $D_\infty^\delta(Y, Y') = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y \in S] + \delta}{\Pr[Y' \in S]} \Big] \leq \epsilon$.
@@ -146,11 +162,19 @@ pub extern "C" fn opendp_measures__max_divergence() -> FfiResult<*mut AnyMeasure
 /// Note that $\epsilon$ and $\delta$ are not privacy parameters $\epsilon$ and $\delta$ until quantified over all adjacent datasets,
 /// as is done in the definition of a measurement.
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_measures__smoothed_max_divergence() -> FfiResult<*mut AnyMeasure> {
+pub extern "C" fn opendp_measures__privacy_curve_dp() -> FfiResult<*mut AnyMeasure> {
     Ok(AnyMeasure::new(PrivacyCurveDP)).into()
 }
 
 #[bootstrap(name = "fixed_smoothed_max_divergence")]
+#[deprecated(since = "0.15.0", note = "Use `approx_dp` instead.")]
+/// Deprecated alias for `approx_dp`.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measures__fixed_smoothed_max_divergence() -> FfiResult<*mut AnyMeasure> {
+    opendp_measures__approx_dp()
+}
+
+#[bootstrap(name = "approx_dp")]
 /// Privacy measure used to define $(\epsilon, \delta)$-approximate differential privacy.
 ///
 /// In the following definition, $d$ corresponds to $(\epsilon, \delta)$ when also quantified over all adjacent datasets.
@@ -163,15 +187,15 @@ pub extern "C" fn opendp_measures__smoothed_max_divergence() -> FfiResult<*mut A
 /// # Proof Definition
 ///
 /// For any two distributions $Y, Y'$ and any 2-tuple $d$ of non-negative numbers $\epsilon$ and $\delta$,
-/// $Y, Y'$ are $d$-close under the fixed smoothed max divergence measure whenever
+/// $Y, Y'$ are $d$-close under the approx-DP privacy measure whenever
 ///
 /// $D_\infty^\delta(Y, Y') = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y \in S] + \delta}{\Pr[Y' \in S]} \Big] \leq \epsilon$.
 ///
 /// Note that this $\epsilon$ and $\delta$ are not privacy parameters $\epsilon$ and $\delta$ until quantified over all adjacent datasets,
 /// as is done in the definition of a measurement.
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_measures__fixed_smoothed_max_divergence() -> FfiResult<*mut AnyMeasure> {
-    Ok(AnyMeasure::new(Approximate(MaxDivergence))).into()
+pub extern "C" fn opendp_measures__approx_dp() -> FfiResult<*mut AnyMeasure> {
+    Ok(AnyMeasure::new(Approximate(PureDP))).into()
 }
 
 #[bootstrap(
@@ -227,27 +251,19 @@ pub extern "C" fn opendp_measures__approximate(
 
     dispatch!(
         monomorphize,
-        [(
-            MO,
-            [
-                MaxDivergence,
-                PrivacyCurveDP,
-                ZeroConcentratedDivergence,
-                ExtrinsicDivergence
-            ]
-        )],
+        [(MO, [PureDP, PrivacyCurveDP, zCDP, ExtrinsicDivergence])],
         (measure)
     )
     .into()
 }
 
-#[bootstrap(name = "_approximate_divergence_get_inner_measure")]
+#[bootstrap(name = "_approximate_get_inner_measure")]
 /// Retrieve the inner privacy measure of an approximate privacy measure.
 ///
 /// # Arguments
 /// * `privacy_measure` - The privacy measure to inspect
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_measures___approximate_divergence_get_inner_measure(
+pub extern "C" fn opendp_measures___approximate_get_inner_measure(
     privacy_measure: *const AnyMeasure,
 ) -> FfiResult<*mut AnyMeasure> {
     let privacy_measure = try_as_ref!(privacy_measure);
@@ -261,21 +277,21 @@ pub extern "C" fn opendp_measures___approximate_divergence_get_inner_measure(
 
     dispatch!(
         monomorphize,
-        [(
-            T,
-            [
-                MaxDivergence,
-                PrivacyCurveDP,
-                ZeroConcentratedDivergence,
-                ExtrinsicDivergence
-            ]
-        )],
+        [(T, [PureDP, PrivacyCurveDP, zCDP, ExtrinsicDivergence])],
         (privacy_measure)
     )
     .into()
 }
 
 #[bootstrap(name = "zero_concentrated_divergence")]
+#[deprecated(since = "0.15.0", note = "Use `zcdp` instead.")]
+/// Deprecated alias for `zero_concentrated_divergence`.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measures__zero_concentrated_divergence() -> FfiResult<*mut AnyMeasure> {
+    opendp_measures__zcdp()
+}
+
+#[bootstrap(name = "zcdp")]
 /// Privacy measure used to define $\rho$-zero concentrated differential privacy.
 ///
 /// In the following proof definition, $d$ corresponds to $\rho$ when also quantified over all adjacent datasets.
@@ -288,16 +304,24 @@ pub extern "C" fn opendp_measures___approximate_divergence_get_inner_measure(
 /// # Proof Definition
 ///
 /// For any two distributions $Y, Y'$ and any non-negative $d$,
-/// $Y, Y'$ are $d$-close under the zero-concentrated divergence measure if,
+/// $Y, Y'$ are $d$-close under the zCDP privacy measure if,
 /// for every possible choice of $\alpha \in (1, \infty)$,
 ///
 /// $D_\alpha(Y, Y') = \frac{1}{1 - \alpha} \mathbb{E}_{x \sim Y'} \Big[\ln \left( \dfrac{\Pr[Y = x]}{\Pr[Y' = x]} \right)^\alpha \Big] \leq d \cdot \alpha$.
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_measures__zero_concentrated_divergence() -> FfiResult<*mut AnyMeasure> {
-    Ok(AnyMeasure::new(ZeroConcentratedDivergence)).into()
+pub extern "C" fn opendp_measures__zcdp() -> FfiResult<*mut AnyMeasure> {
+    Ok(AnyMeasure::new(zCDP)).into()
 }
 
 #[bootstrap(name = "renyi_divergence")]
+#[deprecated(since = "0.15.0", note = "Use `renyi_dp` instead.")]
+/// Deprecated alias for `renyi_dp`.
+#[unsafe(no_mangle)]
+pub extern "C" fn opendp_measures__renyi_divergence() -> FfiResult<*mut AnyMeasure> {
+    opendp_measures__renyi_dp()
+}
+
+#[bootstrap(name = "renyi_dp")]
 /// Privacy measure used to define $\epsilon(\alpha)$-Rényi differential privacy.
 ///
 /// In the following proof definition, $d$ corresponds to an RDP curve when also quantified over all adjacent datasets.
@@ -310,7 +334,7 @@ pub extern "C" fn opendp_measures__zero_concentrated_divergence() -> FfiResult<*
 /// # Proof Definition
 ///
 /// For any two distributions $Y, Y'$ and any curve $d$,
-/// $Y, Y'$ are $d$-close under the Rényi divergence measure if,
+/// $Y, Y'$ are $d$-close under the Rényi-DP privacy measure if,
 /// for any given $\alpha \in (1, \infty)$,
 ///
 /// $D_\alpha(Y, Y') = \frac{1}{1 - \alpha} \mathbb{E}_{x \sim Y'} \Big[\ln \left( \dfrac{\Pr[Y = x]}{\Pr[Y' = x]} \right)^\alpha \Big] \leq d(\alpha)$
@@ -318,8 +342,8 @@ pub extern "C" fn opendp_measures__zero_concentrated_divergence() -> FfiResult<*
 /// Note that this $\epsilon$ and $\alpha$ are not privacy parameters $\epsilon$ and $\alpha$ until quantified over all adjacent datasets,
 /// as is done in the definition of a measurement.
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_measures__renyi_divergence() -> FfiResult<*mut AnyMeasure> {
-    Ok(AnyMeasure::new(RenyiDivergence)).into()
+pub extern "C" fn opendp_measures__renyi_dp() -> FfiResult<*mut AnyMeasure> {
+    Ok(AnyMeasure::new(RenyiDP)).into()
 }
 
 #[derive(Clone)]
