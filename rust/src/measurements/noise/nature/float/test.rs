@@ -1,6 +1,6 @@
 use crate::{
     measurements::make_laplace,
-    measures::{MaxDivergence, ZeroConcentratedDivergence},
+    measures::{PureDP, zCDP},
     metrics::AbsoluteDistance,
 };
 
@@ -15,7 +15,7 @@ fn test_make_noise_floatexpfamily() -> Fallible<()> {
 
     assert!(
         FloatExpFamily::<1> { scale: 1.0, k: 0 }
-            .make_noise(space.clone(), MaxDivergence)
+            .make_noise(space.clone(), PureDP)
             .is_ok()
     );
     assert!(
@@ -23,7 +23,7 @@ fn test_make_noise_floatexpfamily() -> Fallible<()> {
             scale: f64::NAN,
             k: 0
         }
-        .make_noise(space.clone(), MaxDivergence)
+        .make_noise(space.clone(), PureDP)
         .is_err()
     );
     assert!(
@@ -31,7 +31,7 @@ fn test_make_noise_floatexpfamily() -> Fallible<()> {
             scale: 1.0,
             k: i32::MIN
         }
-        .make_noise(space.clone(), ZeroConcentratedDivergence)
+        .make_noise(space.clone(), zCDP)
         .is_err()
     );
 
@@ -40,7 +40,7 @@ fn test_make_noise_floatexpfamily() -> Fallible<()> {
             scale: 1.0,
             k: i32::MAX
         }
-        .make_noise(space.clone(), ZeroConcentratedDivergence)
+        .make_noise(space.clone(), zCDP)
         .is_ok()
     );
 
@@ -61,7 +61,7 @@ fn test_then_deintegerize_vec() -> Fallible<()> {
 
 #[allow(non_snake_case)]
 fn sample_dlap_Z2K(shift: f64, scale: f64, k: i32) -> Fallible<f64> {
-    make_laplace::<_, _, MaxDivergence>(
+    make_laplace::<_, _, PureDP>(
         AtomDomain::<f64>::new_non_nan(),
         AbsoluteDistance::<i8>::default(),
         scale,

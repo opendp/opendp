@@ -26,7 +26,7 @@ a fixed privacy guarantee \texttt{d\_out} at a fixed sensitivity \texttt{d\_in}.
     \item Argument \texttt{input\_domain} of type \texttt{AtomDomain<f64>}.
     \item Argument \texttt{input\_metric} of type \texttt{AbsoluteDistance<f64>}.
     \item Argument \texttt{d\_in} of type \texttt{f64}
-    \item Argument \texttt{d\_out} of type \texttt{TradeoffCurve}.
+    \item Argument \texttt{d\_out} of type \texttt{PrivacyCurve}.
 \end{itemize}
 
 \subsubsection*{Caller-verified}
@@ -92,7 +92,7 @@ so if the input is a member of the input domain, then the cast will never fail.
 
 Line~\ref{sensitivity-check} ensures that \texttt{d\_in} is well-formed (distances cannot be negative).
 
-\texttt{d\_out} is passed in directly as a \texttt{TradeoffCurve}, which defines the tradeoff function via evaluation.
+\texttt{d\_out} is passed in directly as a \texttt{PrivacyCurve}, which defines the tradeoff function via evaluation.
 By the implementation of the fixed-point search,
 \texttt{tradeoff} is a symmetric nontrivial tradeoff function
 and \texttt{fixed\_point} is the fixed-point of \texttt{tradeoff}.

@@ -5,7 +5,7 @@ def approximate_to_tradeoff(
 ) -> Callable[[RBig], RBig]:
     epsilon = FBig.try_from(epsilon)
     delta = RBig.try_from(delta)
-
+    
     precision = epsilon.precision().max(10)
     epsilon = epsilon.with_precision(precision).value()
 

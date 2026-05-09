@@ -2,7 +2,7 @@
 def make_randomized_response(categories: set[T], prob: f64):
     input_domain = AtomDomain(bool)
     input_metric = DiscreteMetric()
-    output_measure = MaxDivergence()
+    output_measure = PureDP()
 
     categories = list(categories)
 

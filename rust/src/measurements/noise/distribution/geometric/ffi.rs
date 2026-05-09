@@ -10,7 +10,7 @@ use crate::measurements::noise::nature::Nature;
 use crate::measurements::{
     ConstantTimeGeometric, DiscreteLaplace, MakeNoise, NoiseDomain, make_geometric,
 };
-use crate::measures::MaxDivergence;
+use crate::measures::PureDP;
 use crate::metrics::{AbsoluteDistance, L1Distance};
 use crate::traits::{Integer, Number};
 
@@ -87,7 +87,7 @@ pub extern "C" fn opendp_measurements__make_geometric(
     let T_ = try_!(input_domain.type_.get_atom());
 
     dispatch!(monomorphize, [
-        (MO, [MaxDivergence]),
+        (MO, [PureDP]),
         (T_, @integers),
         (QI_, @integers)
     ], (input_domain, input_metric, scale, bounds, MO))

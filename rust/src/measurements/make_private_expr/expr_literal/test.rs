@@ -2,7 +2,7 @@ use polars::{df, prelude::lit};
 
 use crate::{
     measurements::{PrivateExpr, make_private_lazyframe},
-    measures::MaxDivergence,
+    measures::PureDP,
     metrics::{FrameDistance, L0PInfDistance, SymmetricDistance},
     transformations::test_helper::get_test_data,
 };
@@ -14,12 +14,8 @@ fn test_make_expr_private_lit() -> Fallible<()> {
     let (lf_domain, lf) = get_test_data()?;
     let expr_domain = lf_domain.select();
 
-    let m_lit = lit(1).make_private(
-        expr_domain,
-        L0PInfDistance(SymmetricDistance),
-        MaxDivergence,
-        None,
-    )?;
+    let m_lit =
+        lit(1).make_private(expr_domain, L0PInfDistance(SymmetricDistance), PureDP, None)?;
 
     let actual = m_lit.invoke(&lf.logical_plan)?;
     assert_eq!(actual.expr, lit(1));
@@ -33,7 +29,7 @@ fn test_make_expr_private_lit_groupby() -> Fallible<()> {
     let m_lit = make_private_lazyframe(
         lf_domain.cast_carrier(),
         FrameDistance(SymmetricDistance),
-        MaxDivergence,
+        PureDP,
         lf.clone().group_by(["chunk_2_bool"]).agg([lit(1)]),
         None,
         None,

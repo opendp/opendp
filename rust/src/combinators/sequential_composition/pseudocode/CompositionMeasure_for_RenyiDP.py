@@ -1,5 +1,5 @@
 # type: ignore
-class CompositionMeasure(RenyiDivergence):
+class CompositionMeasure(RenyiDP):
     def composability(  # |\label{line:composability}|
         self, adaptivity: Adaptivity
     ) -> Composability:

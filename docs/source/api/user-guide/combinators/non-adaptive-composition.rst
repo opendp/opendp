@@ -76,13 +76,13 @@ input metric, and output measure:
             count: Measurement(
                 input_domain   = VectorDomain(AtomDomain(T=i32)),
                 input_metric   = SymmetricDistance(),
-                output_measure = MaxDivergence)
+                output_measure = PureDP)
 
             >>> print("sum:", meas_sum)
             sum: Measurement(
                 input_domain   = VectorDomain(AtomDomain(T=i32)),
                 input_metric   = SymmetricDistance(),
-                output_measure = MaxDivergence)
+                output_measure = PureDP)
 
     .. tab-item:: R
         :sync: r

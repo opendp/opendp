@@ -86,7 +86,7 @@ Similarly, \texttt{inf\_div} and \texttt{inf\_ln} round up.
 When $\din > 0$ and no exception is raised in computing $\texttt{c} = \texttt{privacy\_map}(\din)$, then $\ln\left(\frac{p}{1 - p}\right) \leq \texttt{c}$. 
 
 Therefore we've shown that for every pair of elements $x, x' \in \{\bot, \top\}$ and every $d_{DM}(x, x') \le \din$ with $\din \ge 0$, 
-if $x, x'$ are $\din$-close then $\function(x),\function(x') \in \{\bot, \top\}$ are $\texttt{privacy\_map}(\din)$-close under $\texttt{output\_measure}$ (the Max-Divergence).
+if $x, x'$ are $\din$-close then $\function(x),\function(x') \in \{\bot, \top\}$ are $\texttt{privacy\_map}(\din)$-close under $\texttt{output\_measure}$ (pure-DP).
 \end{proof}
 
 

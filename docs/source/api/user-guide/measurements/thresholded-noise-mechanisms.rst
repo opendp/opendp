@@ -90,7 +90,7 @@ An instance of the Laplace threshold mechanism is captured by a
 
     5. We similarly describe units on the output
     (:math:`(\epsilon, \delta)`) via the **output measure**
-    (``Approximate<MaxDivergence>``).
+    (``ApproxDP``).
 
 
 The ``make_laplace_threshold`` constructor function returns the
@@ -188,9 +188,9 @@ In this case, :math:`\Delta_1` in ``d_in`` is replaced with
   value
 
 ``m_lap`` measures privacy with :math:`\epsilon` and :math:`\delta` (in
-the ``Approximate<MaxDivergence>`` measure), and ``m_gauss`` measures
+the ``ApproxDP`` measure), and ``m_gauss`` measures
 privacy with :math:`\rho` and :math:`\delta` (in the
-``Approximate<ZeroConcentratedDivergence>`` measure).
+``ApproxZCDP`` measure).
 
 Notice how much smaller :math:`\delta` is this time (``2.8e-9`` vs
 ``1.1e-16``). This is because the laplace distribution is a “fat-tailed”
@@ -209,7 +209,7 @@ compare with the thresholded laplace mechanism:
         .. code:: pycon
 
             >>> # convert ρ to an ε(δ_2) privacy profile, where total privacy loss is (ε(δ_2), δ_1 + δ_2)
-            >>> m_gauss_profile = dp.c.make_zCDP_to_approxDP(m_gauss)
+            >>> m_gauss_profile = dp.c.make_zCDP_to_curveDP(m_gauss)
             >>> # fix overall δ to that used by the laplace threshold, for comparison
             >>> m_gauss_approx = dp.c.make_fix_delta(
             ...     m_gauss_profile, delta=lap_eps_del[1]

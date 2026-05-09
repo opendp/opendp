@@ -43,8 +43,8 @@ def make_private_np_mean(
         raise ValueError("input_domain must consist of sized data")  # pragma: no cover
 
     privacy_measure = {
-        1: dp.max_divergence(),
-        2: dp.zero_concentrated_divergence(),
+        1: dp.pure_dp(),
+        2: dp.zcdp(),
     }[input_desc.p]
 
     t_sum = make_private_np_sum(

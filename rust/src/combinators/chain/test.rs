@@ -1,7 +1,7 @@
 use crate::core::*;
 use crate::domains::AtomDomain;
 use crate::error::ExplainUnwrap;
-use crate::measures::MaxDivergence;
+use crate::measures::PureDP;
 use crate::metrics::AbsoluteDistance;
 
 use super::*;
@@ -19,7 +19,7 @@ fn test_make_chain_mt() -> Fallible<()> {
     let measurement1 = Measurement::new(
         AtomDomain::<i32>::default(),
         AbsoluteDistance::<i32>::default(),
-        MaxDivergence,
+        PureDP,
         Function::new(|a: &i32| (a + 1) as f64),
         PrivacyMap::new(|d_in: &i32| *d_in as f64 + 1.),
     )?;
@@ -72,7 +72,7 @@ fn test_make_chain_pm() -> Fallible<()> {
     let measurement0 = Measurement::new(
         AtomDomain::<u8>::default(),
         AbsoluteDistance::<i32>::default(),
-        MaxDivergence,
+        PureDP,
         Function::new(|a: &u8| (a + 1) as i32),
         PrivacyMap::new_from_constant(1.),
     )?;

@@ -9,7 +9,7 @@ use crate::{
         util,
     },
     measurements::PrivateExpr,
-    measures::{MaxDivergence, ZeroConcentratedDivergence},
+    measures::{PureDP, zCDP},
     metrics::{L01InfDistance, SymmetricDistance},
 };
 
@@ -62,7 +62,7 @@ pub extern "C" fn opendp_measurements__make_private_expr(
 
     dispatch!(
         monomorphize,
-        [(MO_, [MaxDivergence, ZeroConcentratedDivergence])],
+        [(MO_, [PureDP, zCDP])],
         (
             input_domain,
             input_metric,

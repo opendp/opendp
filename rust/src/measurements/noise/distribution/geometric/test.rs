@@ -3,7 +3,7 @@ use core::f64;
 use super::*;
 use crate::{
     domains::{AtomDomain, VectorDomain},
-    measures::MaxDivergence,
+    measures::PureDP,
     metrics::{AbsoluteDistance, L1Distance},
 };
 use num::{One, Zero};
@@ -13,7 +13,7 @@ fn test_make_geometric_native_types() -> Fallible<()> {
     macro_rules! test_make_geometric_type {
         ($($ty:ty),+) => {$(
             // scalar
-            let meas = make_geometric::<_, _, MaxDivergence>(
+            let meas = make_geometric::<_, _, PureDP>(
                 AtomDomain::<$ty>::new_non_nan(),
                 AbsoluteDistance::<$ty>::default(),
                 1., Some((0, 4))
@@ -22,7 +22,7 @@ fn test_make_geometric_native_types() -> Fallible<()> {
             assert!((0..=4).contains(&r), "sampled value out of bounds: {}", r);
             assert_eq!(meas.map(&<$ty>::one())?, 1.0);
             // vector
-            let meas = make_geometric::<_, _, MaxDivergence>(
+            let meas = make_geometric::<_, _, PureDP>(
                 VectorDomain::new(AtomDomain::<$ty>::new_non_nan()),
                 L1Distance::<$ty>::default(),
                 1., Some((0, 4))
@@ -42,7 +42,7 @@ fn test_make_geometric_native_types() -> Fallible<()> {
 fn test_make_geometric_extreme_int() -> Fallible<()> {
     // p too big
     assert!(
-        make_geometric::<_, _, MaxDivergence>(
+        make_geometric::<_, _, PureDP>(
             AtomDomain::<u32>::default(),
             AbsoluteDistance::<u32>::default(),
             f64::MAX,
@@ -52,7 +52,7 @@ fn test_make_geometric_extreme_int() -> Fallible<()> {
     );
 
     // an extreme noise scale dominates the output, resulting in the release always being saturated
-    let meas = make_geometric::<_, _, MaxDivergence>(
+    let meas = make_geometric::<_, _, PureDP>(
         AtomDomain::<u32>::default(),
         AbsoluteDistance::<u32>::default(),
         100_000.0,
@@ -71,7 +71,7 @@ fn test_make_noise_zexpfamily1_zero_scale() -> Fallible<()> {
         bounds: (0, u8::MAX),
     };
 
-    let meas = distribution.make_noise((domain, metric), MaxDivergence)?;
+    let meas = distribution.make_noise((domain, metric), PureDP)?;
     assert_eq!(meas.invoke(&vec![0])?, vec![0]);
     assert_eq!(meas.map(&0)?, 0.);
     assert_eq!(meas.map(&1)?, f64::INFINITY);

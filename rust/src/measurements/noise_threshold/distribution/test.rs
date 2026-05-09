@@ -2,7 +2,7 @@ use crate::{
     domains::{AtomDomain, MapDomain},
     error::Fallible,
     measurements::{make_laplace_threshold, make_noise_threshold},
-    measures::{Approximate, MaxDivergence},
+    measures::{Approximate, PureDP},
     metrics::L0PInfDistance,
 };
 
@@ -11,7 +11,7 @@ fn test_noise_threshold() -> Fallible<()> {
     let m_noise = make_noise_threshold(
         MapDomain::new(AtomDomain::<bool>::default(), AtomDomain::<i32>::default()),
         L0PInfDistance::default(),
-        Approximate(MaxDivergence),
+        Approximate(PureDP),
         1.0,
         10,
         None,

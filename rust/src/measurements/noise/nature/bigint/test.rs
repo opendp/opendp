@@ -1,6 +1,6 @@
 use dashu::{ibig, rbig};
 
-use crate::measures::ZeroConcentratedDivergence;
+use crate::measures::zCDP;
 
 use super::*;
 
@@ -9,7 +9,7 @@ fn test_make_noise_atomdomain_ibig() -> Fallible<()> {
     let distribution = ZExpFamily::<2> { scale: rbig!(1) };
     let meas = distribution.make_noise(
         (AtomDomain::<IBig>::default(), AbsoluteDistance::default()),
-        ZeroConcentratedDivergence,
+        zCDP,
     )?;
     assert!(i8::try_from(meas.invoke(&ibig!(0))?).is_ok());
     assert_eq!(meas.map(&rbig!(0))?, 0.0);
