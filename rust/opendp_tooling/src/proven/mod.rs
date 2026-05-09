@@ -1,5 +1,5 @@
 use darling::{Error, FromMeta, Result, ast::NestedMeta};
-use syn::{Item, Meta, Type, TypePath};
+use syn::{ImplItemFn, Item, Meta, Type, TypePath};
 
 use crate::bootstrap::arguments::Features;
 
@@ -14,9 +14,15 @@ pub struct Proven {
     pub features: Features,
 }
 
+#[derive(Clone)]
+pub enum ProvenItem {
+    Item(Item),
+    Method(ImplItemFn),
+}
+
 impl Proven {
     // assumes that proof paths have already been written in the lib's build script
-    pub fn from_ast(attr_args: Vec<Meta>, item: Item) -> Result<Self> {
+    pub fn from_ast(attr_args: Vec<Meta>, item: ProvenItem) -> Result<Self> {
         let mut proven = Proven::from_list(
             &attr_args
                 .into_iter()
@@ -30,8 +36,8 @@ impl Proven {
 
         // parse function
         let name = match item {
-            Item::Fn(func) => func.sig.ident.to_string(),
-            Item::Impl(imp) => {
+            ProvenItem::Item(Item::Fn(func)) => func.sig.ident.to_string(),
+            ProvenItem::Item(Item::Impl(imp)) => {
                 let path = match &imp.trait_ {
                     Some(v) => &v.1,
                     None => match &*imp.self_ty {
@@ -47,9 +53,12 @@ impl Proven {
                     .to_string()
             }
 
-            input => {
+            ProvenItem::Method(method) => method.sig.ident.to_string(),
+
+            ProvenItem::Item(input) => {
                 return Err(
-                    Error::custom("only functions or impls can be proven").with_span(&input)
+                    Error::custom("only functions, impls, or methods can be proven")
+                        .with_span(&input),
                 );
             }
         };
