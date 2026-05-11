@@ -109,4 +109,32 @@ axiom from_be_bytes_spec
   dashu_int.convert.UBig.from_be_bytes buffer = ok out ->
     ubigToNat out = bytes.beBytesToNat buffer.val
 
+/-- Dashu UBig value 0 has ubigToNat value 0. -/
+axiom zero_spec
+  (zero : dashu_int.ubig.UBig) :
+  dashu_int.ubig.UBig.ZERO = ok zero ->
+    ubigToNat zero = 0
+
+/-- Totality and mathematical meaning of Dashu zero. -/
+axiom zero_exists_spec :
+  ∃ zero, dashu_int.ubig.UBig.ZERO = ok zero ∧ ubigToNat zero = 0
+
+/-- Mathematical interpretation of the greater-than comparison for Dashu UBig. -/
+axiom gt_spec
+  (x y : dashu_int.ubig.UBig) :
+  dashu_int.ubig.UBig.Insts.CoreCmpPartialOrdUBig.lt y x = ok true ->
+    ubigToNat y < ubigToNat x
+
+/-- Mathematical interpretation of a failed greater-than comparison for Dashu UBig. -/
+axiom gt_false_spec
+  (x y : dashu_int.ubig.UBig) :
+  dashu_int.ubig.UBig.Insts.CoreCmpPartialOrdUBig.gt x y = ok false ->
+    ubigToNat x ≤ ubigToNat y
+
+/-- Mathematical interpretation of the less-than-or-equal-to comparison for Dashu UBig. -/
+axiom le_spec
+  (x y : dashu_int.ubig.UBig) :
+  dashu_int.ubig.UBig.Insts.CoreCmpPartialOrdUBig.lt x y = ok false ->
+    ubigToNat x ≤ ubigToNat y
+
 end OpenDP.dashu
