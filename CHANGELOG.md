@@ -20,13 +20,17 @@ There are a few changes in feature names to be aware of:
 - Rust binary search utilities [#472](https://github.com/opendp/opendp/pull/472)
 - R plugin APIs [#2681](https://github.com/opendp/opendp/pull/2681)
 
-### Improved fuctionality
+### Improved functionality
 
 - Optimize numpy vector FFI [#2697](https://github.com/opendp/opendp/pull/2697)
 - Use `rand_priv_bytes` from SSL [#2717](https://github.com/opendp/opendp/pull/2717)
 
 
 ### Fixes and upgrades
+
+#### Fixes
+
+- Randomized response bitvec randomization was off-by-one [#2708](https://github.com/opendp/opendp/pull/2708)
 
 #### Features and feature naming
 
@@ -36,7 +40,6 @@ There are a few changes in feature names to be aware of:
 #### Algorithms
 
 - Re-normalize distance bounds before thresholding [#2696](https://github.com/opendp/opendp/pull/2696)
-- Randomized response bitvec randomization was off-by-one [#2708](https://github.com/opendp/opendp/pull/2708)
 - Add missing `proven` annotations [#2698](https://github.com/opendp/opendp/pull/2698)
 - Skip invalid Wald tests [#2670](https://github.com/opendp/opendp/pull/2670)
 
