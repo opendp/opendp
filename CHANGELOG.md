@@ -1,10 +1,101 @@
 # OpenDP Changelog
 
-This file documents the version history of OpenDP. The links on each version number will take you to a comparison
-showing the source changes from the previous version.
+This file documents the version history of OpenDP. The links on each version number will take you to a comparison showing the source changes from the previous version.
 
 
-## [0.14.2](https://github.com/opendp/opendp/compare/v0.14.1...v0.14.2) - 2026-03-10
+
+## [0.15.0](https://github.com/opendp/opendp/compare/v1.14.2...v0.15.0) - 2026-05-08
+
+### Migration
+
+The Polars and MBI dependencies have been upgraded.
+
+There are a few changes in feature names to be aware of:
+- To be more accurate, `floating-point` renamed to `idealized-numerics`.
+- The separate `polars` and `ffi` features have been combined as `polars-ffi`.
+- The `extension-module` feature has been removed.
+
+### New features
+
+- Rust binary search utilities [#472](https://github.com/opendp/opendp/pull/472)
+- R plugin APIs [#2681](https://github.com/opendp/opendp/pull/2681)
+
+### Improved functionality
+
+- Optimize numpy vector FFI [#2697](https://github.com/opendp/opendp/pull/2697)
+- Use `rand_priv_bytes` from SSL [#2717](https://github.com/opendp/opendp/pull/2717)
+
+
+### Fixes and upgrades
+
+#### Fixes
+
+- Randomized response bitvec randomization was off-by-one [#2708](https://github.com/opendp/opendp/pull/2708)
+
+#### Features and feature naming
+
+- Rename `floating-point` to `idealized-numerics` to be more accurate [#2701](https://github.com/opendp/opendp/pull/2701)
+- Create a single `polars-ffi` feature and remove `extension-module` [#2666](https://github.com/opendp/opendp/pull/2666)
+
+#### Algorithms
+
+- Re-normalize distance bounds before thresholding [#2696](https://github.com/opendp/opendp/pull/2696)
+- Add missing `proven` annotations [#2698](https://github.com/opendp/opendp/pull/2698)
+- Skip invalid Wald tests [#2670](https://github.com/opendp/opendp/pull/2670)
+
+#### Build
+
+- Fix R-universe build [#2678](https://github.com/opendp/opendp/pull/2678)
+- Patch-free publish-able polars build [#2676](https://github.com/opendp/opendp/pull/2676)
+- Set `pyo3_build_extension_module` in builds [#2672](https://github.com/opendp/opendp/pull/2672)
+
+### Dependency upgrades
+
+- Upgrade polars to 0.52 [#2642](https://github.com/opendp/opendp/pull/2642)
+- Upgrade mbi to github hash for l2 loss and warning fixes [#2645](https://github.com/opendp/opendp/pull/2645)
+- Use mbi 1.1.0 instead of git pin [#2674](https://github.com/opendp/opendp/pull/2674)
+
+
+### Docs
+
+#### Search and replace
+
+- Rephrase "private" in docs [#2429](https://github.com/opendp/opendp/pull/2429)
+- Replace "info@opendp.org" with "contact@opendp.org" [#2668](https://github.com/opendp/opendp/pull/2668)
+- Replace "registry.oblivious" with "registry.opendp" [#2652](https://github.com/opendp/opendp/pull/2652)
+
+#### Fill gaps
+
+- Fill in migration notes back to v12 [#2541](https://github.com/opendp/opendp/pull/2541)
+- Clarify commitments for OpenDP Commons [#2661](https://github.com/opendp/opendp/pull/2661)
+- Add citations and utility/runtime information in Rust code [#2702](https://github.com/opendp/opendp/pull/2702)
+
+#### Clean up
+
+- Clean up measure/metric docs [#2659](https://github.com/opendp/opendp/pull/2659)
+- Clean up release process notes [#2651](https://github.com/opendp/opendp/pull/2651)
+- Update banner for email outage [#2650](https://github.com/opendp/opendp/pull/2650)
+- Normalize `.tex` proof template [#2699](https://github.com/opendp/opendp/pull/2699)
+
+
+### Git and Github
+
+- Rewrite version tags to keep repo size small [#2680](https://github.com/opendp/opendp/pull/2680)
+- Make "sync from upstream" the release workflow default [#2653](https://github.com/opendp/opendp/pull/2653)
+- Remove unused `workflow_dispatch` [#2655](https://github.com/opendp/opendp/pull/2655)
+- Add `.gitignore` for Lean  [#2712](https://github.com/opendp/opendp/pull/2712)
+- At the start of the CLA process, ask to be added to team [#2667](https://github.com/opendp/opendp/pull/2667)
+- Add missing cla-bot [#2695](https://github.com/opendp/opendp/pull/2695)
+
+
+### Proofs
+
+- Prove `make_np_sum` [#1316](https://github.com/opendp/opendp/pull/1316)
+
+
+
+## [0.14.2](https://github.com/opendp/opendp/compare/v0.14.1...v0.14.2) - 2026-05-08
+
 
 ### Features
 
