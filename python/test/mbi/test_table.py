@@ -72,9 +72,9 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
     )
 
     table: ContingencyTable = (
-        context.query(**privacy_loss)
+        context.query()
         .contingency_table(cuts=cuts, keys=keys, algorithm=algorithm)
-        .release()
+        .release(**privacy_loss)
     )
 
     try:
@@ -198,21 +198,21 @@ def test_make_contingency_table_multi_fit():
     )
 
     table: ContingencyTable = (
-        context.query(rho=0.15)
+        context.query()
         .select("A", "B")
         .contingency_table(
             keys={"A": list(range(5)), "B": list(range(10))},
             algorithm=Fixed(queries=[Count(("A", "B"))]),
         )
-        .release()
+        .release(rho=0.15)
     )
 
     # expand the contingency table to also include ("B", "C")
     table2: ContingencyTable = (
-        context.query(rho=0.05)
+        context.query()
         .select("B", "C")
         .contingency_table(keys={"C": list(range(20))}, table=table)
-        .release()
+        .release(rho=0.05)
     )
 
     assert table2.schema == {"A": pl.Int64, "B": pl.Int64, "C": pl.Int64}
@@ -286,7 +286,7 @@ def test_contingency_table_delta():
 
     message = "delta (1e-08) must be zero because keys and cuts span all columns"
     with pytest.raises(ValueError, match=re.escape(message)):
-        context.query(epsilon=1.0, delta=1e-8).contingency_table(keys={"A": [1]})
+        context.query().contingency_table(keys={"A": [1]}).resolve(epsilon=1.0, delta=1e-8)
 
     context = dp.Context.compositor(
         data=pl.LazyFrame({"A": [1]}),
@@ -296,7 +296,7 @@ def test_contingency_table_delta():
 
     message = "delta (None) must be nonzero because keys and cuts don't span all columns"
     with pytest.raises(ValueError, match=re.escape(message)):
-        context.query(epsilon=1.0).contingency_table()
+        context.query().contingency_table().resolve(epsilon=1.0)
 
     context = dp.Context.compositor(
         data=pl.LazyFrame({"A": [1]}),
@@ -304,9 +304,9 @@ def test_contingency_table_delta():
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
     )
 
-    context.query(epsilon=1.0, delta=1e-7).contingency_table(
+    context.query().contingency_table(
         algorithm=AIM(oneway_split=0.9)
-    )
+    ).resolve(epsilon=1.0, delta=1e-7)
 
 
 def test_contingency_table_len():
@@ -321,7 +321,7 @@ def test_contingency_table_len():
 
     message = 'input_domain must not contain a column named "len"'
     with pytest.raises(ValueError, match=message):
-        context.query(epsilon=1.0).contingency_table(keys={"len": [1]})
+        context.query().contingency_table(keys={"len": [1]}).resolve(epsilon=1.0)
 
 
 def test_contingency_table_minimum_variance_weighted_total():
@@ -336,9 +336,9 @@ def test_contingency_table_minimum_variance_weighted_total():
 
     # tests fit when no columns have keys, so total is estimated directly
     table: ContingencyTable = (
-        context.query(epsilon=1.0, delta=1e-8)
+        context.query()
         .contingency_table(algorithm=Fixed(queries=[Count(("A",))], oneway_split=0.9))
-        .release()
+        .release(epsilon=1.0, delta=1e-8)
     )
 
     assert 950 < table.project([]) < 1050

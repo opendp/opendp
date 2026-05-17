@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::marker::PhantomData;
@@ -8,7 +8,9 @@ use polars::lazy::dsl::len;
 use polars::prelude::*;
 
 use crate::core::Domain;
-use crate::metrics::{FrameDistance, LInfDistance, LpDistance, MicrodataMetric};
+use crate::metrics::{
+    DatabaseIdDistance, FrameDistance, LInfDistance, LpDistance, MicrodataMetric,
+};
 use crate::traits::{InfMul, ProductOrd};
 use crate::transformations::traits::UnboundedMetric;
 use crate::{core::MetricSpace, domains::SeriesDomain, error::Fallible};
@@ -103,6 +105,11 @@ impl<F: Frame> PartialEq for FrameDomain<F> {
 pub type LazyFrameDomain = FrameDomain<LazyFrame>;
 pub(crate) type DslPlanDomain = FrameDomain<DslPlan>;
 
+pub const OPENDP_TABLE_NAME_PREFIX: &str = "__OPENDP_TABLE_NAME__";
+
+#[derive(Clone, PartialEq)]
+pub struct DatabaseDomain(pub HashMap<String, LazyFrameDomain>);
+
 impl<F: Frame, M: MicrodataMetric> MetricSpace for (FrameDomain<F>, M) {
     fn check_space(&self) -> Fallible<()> {
         if let Some(identifier) = self.1.identifier() {
@@ -111,6 +118,49 @@ impl<F: Frame, M: MicrodataMetric> MetricSpace for (FrameDomain<F>, M) {
                 .root_names()
                 .into_iter()
                 .try_for_each(|n| self.0.series_domain(n).map(|_| ()))?;
+        }
+        Ok(())
+    }
+}
+
+impl MetricSpace for (DatabaseDomain, DatabaseIdDistance) {
+    fn check_space(&self) -> Fallible<()> {
+        let mut has_protected_site = false;
+        for (table_name, id_sites) in &self.1.bindings {
+            let Some(frame_domain) = self.0.0.get(table_name) else {
+                return fallible!(
+                    MetricSpace,
+                    "metric references unrecognized table: {}",
+                    table_name
+                );
+            };
+            has_protected_site |= id_sites.iter().any(|site| site.space == self.1.protect);
+            for expr in id_sites.iter().flat_map(|site| site.exprs.iter()) {
+                for root in expr.clone().meta().root_names() {
+                    frame_domain.series_domain(root)?;
+                }
+            }
+        }
+        for (table_name, owner_claims) in &self.1.base_owner_claims {
+            let Some(frame_domain) = self.0.0.get(table_name) else {
+                return fallible!(
+                    MetricSpace,
+                    "metric references unrecognized table: {}",
+                    table_name
+                );
+            };
+            for expr in owner_claims.iter().flatten() {
+                for root in expr.clone().meta().root_names() {
+                    frame_domain.series_domain(root)?;
+                }
+            }
+        }
+        if !has_protected_site {
+            return fallible!(
+                MetricSpace,
+                "database metric does not reference the protected identifier label: {}",
+                self.1.protect
+            );
         }
         Ok(())
     }
@@ -317,6 +367,22 @@ impl<F: Frame> FrameDomain<F> {
     }
 }
 
+impl DatabaseDomain {
+    pub fn new(table_domains: HashMap<String, LazyFrameDomain>) -> Self {
+        Self(table_domains)
+    }
+
+    pub fn table(&self, table_name: &str) -> Fallible<LazyFrameDomain> {
+        self.0.get(table_name).cloned().ok_or_else(|| {
+            err!(
+                MakeTransformation,
+                "unrecognized table domain: {}",
+                table_name
+            )
+        })
+    }
+}
+
 impl<F: Frame> Debug for FrameDomain<F> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let margins_debug = self
@@ -335,6 +401,20 @@ impl<F: Frame> Debug for FrameDomain<F> {
                 .collect::<Vec<_>>()
                 .join(", "),
             margins_debug
+        )
+    }
+}
+
+impl Debug for DatabaseDomain {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "DatabaseDomain({})",
+            self.0
+                .iter()
+                .map(|(name, domain)| format!("{name}: {domain:?}"))
+                .collect::<Vec<_>>()
+                .join(", ")
         )
     }
 }
@@ -365,6 +445,99 @@ impl<F: Frame> Domain for FrameDomain<F> {
         for margin in self.margins.iter() {
             let by = margin.by.iter().cloned().collect::<Vec<_>>();
             if !margin.member(val.clone().lazyframe().group_by(by))? {
+                return Ok(false);
+            }
+        }
+
+        Ok(true)
+    }
+}
+
+fn table_marker_columns(schema: &Schema) -> Vec<PlSmallStr> {
+    schema
+        .iter_names()
+        .filter(|name| name.as_str().starts_with(OPENDP_TABLE_NAME_PREFIX))
+        .cloned()
+        .collect()
+}
+
+pub(crate) fn strip_table_markers_from_schema(schema: &Schema) -> Schema {
+    let mut stripped = schema.clone();
+    for marker in table_marker_columns(schema) {
+        stripped.remove(marker.as_str());
+    }
+    stripped
+}
+
+pub(crate) fn table_name_from_schema(schema: &Schema) -> Fallible<String> {
+    let markers = table_marker_columns(schema);
+    let [marker] = markers.as_slice() else {
+        return fallible!(
+            MakeTransformation,
+            "expected exactly one source table marker column prefixed by {}, found {:?}",
+            OPENDP_TABLE_NAME_PREFIX,
+            markers
+        );
+    };
+
+    let table_name = marker
+        .as_str()
+        .strip_prefix(OPENDP_TABLE_NAME_PREFIX)
+        .ok_or_else(|| {
+            err!(
+                MakeTransformation,
+                "table marker column must have form `{}table_name`, found `{}`",
+                OPENDP_TABLE_NAME_PREFIX,
+                marker
+            )
+        })?;
+
+    Ok(table_name
+        .strip_prefix('[')
+        .and_then(|name| name.strip_suffix(']'))
+        .unwrap_or(table_name)
+        .to_string())
+}
+
+pub(crate) fn table_name_from_schema_or_domain(
+    schema: &Schema,
+    database_domain: &DatabaseDomain,
+) -> Fallible<String> {
+    table_name_from_schema(schema).or_else(|_| match database_domain.0.len() {
+        1 => database_domain.0.keys().next().cloned().ok_or_else(|| {
+            err!(
+                MakeTransformation,
+                "database domain unexpectedly had no tables"
+            )
+        }),
+        _ => fallible!(
+            MakeTransformation,
+            "expected exactly one source table marker column for a multi-table query"
+        ),
+    })
+}
+
+pub(crate) fn strip_table_markers(df: &DataFrame) -> Fallible<DataFrame> {
+    table_marker_columns(df.schema())
+        .into_iter()
+        .try_fold(df.clone(), |acc, marker| {
+            acc.drop(marker.as_str()).map_err(Into::into)
+        })
+}
+
+pub type Database = HashMap<String, LazyFrame>;
+impl Domain for DatabaseDomain {
+    type Carrier = Database;
+
+    fn member(&self, val: &Self::Carrier) -> Fallible<bool> {
+        if self.0.len() != val.len() {
+            return fallible!(FailedFunction);
+        }
+
+        for (name, frame) in val {
+            let frame_domain = self.0.get(name).ok_or_else(|| err!(FailedFunction))?;
+            let stripped = strip_table_markers(&frame.clone().collect()?)?;
+            if !frame_domain.cast_carrier::<DataFrame>().member(&stripped)? {
                 return Ok(false);
             }
         }
@@ -447,23 +620,25 @@ impl Margin {
     /// # Proof Definition
     /// Only returns `Ok(true)` if the grouped data `value` is consistent with the domain descriptors in `self`.
     pub(crate) fn member(&self, value: LazyGroupBy) -> Fallible<bool> {
-        // retrieves the first row/first column from $tgt as type $ty
-        macro_rules! item {
-            ($tgt:expr, $ty:ident) => {
-                ($tgt.collect()?.get_columns()[0].$ty()?.get(0))
-                    .ok_or_else(|| err!(FailedFunction))?
-            };
+        let max_part_length = value.clone().agg([len()]).select(&[max("len")]).collect()?;
+        if max_part_length.height() == 0 {
+            return Ok(true);
         }
 
-        let max_part_length = value.clone().agg([len()]).select(&[max("len")]);
+        let max_part_length = max_part_length.get_columns()[0].u32()?.get(0).unwrap_or(0);
 
-        if item!(max_part_length, u32) > self.max_length.unwrap_or(u32::MAX) {
+        if max_part_length > self.max_length.unwrap_or(u32::MAX) {
             return Ok(false);
         }
 
-        let max_num_parts = value.agg([]).select(&[len()]);
+        let max_num_parts = value.agg([]).select(&[len()]).collect()?;
+        if max_num_parts.height() == 0 {
+            return Ok(true);
+        }
 
-        if item!(max_num_parts, u32) > self.max_groups.unwrap_or(u32::MAX) {
+        let max_num_parts = max_num_parts.get_columns()[0].u32()?.get(0).unwrap_or(0);
+
+        if max_num_parts > self.max_groups.unwrap_or(u32::MAX) {
             return Ok(false);
         }
         Ok(true)
