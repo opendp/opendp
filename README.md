@@ -11,6 +11,8 @@
 [![nightly CI](https://github.com/opendp/opendp/actions/workflows/nightly.yml/badge.svg)](https://github.com/opendp/opendp/actions/workflows/nightly.yml?query=branch%3Amain)
 [![doc-check CI](https://github.com/opendp/opendp/actions/workflows/weekly-doc-check.yml/badge.svg)](https://github.com/opendp/opendp/actions/workflows/weekly-doc-check.yml?query=branch%3Amain)
 
+R Universe: [![R Universe build](https://github.com/r-universe/opendp/actions/workflows/build.yml/badge.svg)](https://github.com/r-universe/opendp/actions/workflows/build.yml)
+
 The OpenDP Library is a modular collection of statistical algorithms that adhere to the definition of
 [differential privacy](https://en.wikipedia.org/wiki/Differential_privacy).
 It can be used to build applications of privacy-preserving computations, using a number of different models of privacy.
