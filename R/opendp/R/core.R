@@ -305,7 +305,7 @@ measurement_output_measure <- function(
 #'
 #' Required features: `contrib`, `honest-but-curious`
 #'
-#' [new_function in Rust documentation.](https://docs.rs/opendp/0.15.0-beta.20260518.1/opendp/core/struct.Function.html)
+#' [new_function in Rust documentation.](https://docs.rs/opendp/0.15.0/opendp/core/struct.Function.html)
 #'
 #' **Why honest-but-curious?:**
 #'
