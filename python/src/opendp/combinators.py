@@ -59,7 +59,7 @@ def make_adaptive_composition(
 
     Required features: `contrib`
 
-    [make_adaptive_composition in Rust documentation.](https://docs.rs/opendp/0.15.0-nightly.20260518.1/opendp/combinators/fn.make_adaptive_composition.html)
+    [make_adaptive_composition in Rust documentation.](https://docs.rs/opendp/0.15.0-beta.20260518.1/opendp/combinators/fn.make_adaptive_composition.html)
 
     **Citations:**
 
@@ -172,7 +172,7 @@ def make_approximate(
 
     Required features: `contrib`
 
-    [make_approximate in Rust documentation.](https://docs.rs/opendp/0.15.0-nightly.20260518.1/opendp/combinators/fn.make_approximate.html)
+    [make_approximate in Rust documentation.](https://docs.rs/opendp/0.15.0-beta.20260518.1/opendp/combinators/fn.make_approximate.html)
 
     .. end-markdown
 
@@ -268,7 +268,7 @@ def make_chain_mt(
 
     Required features: `contrib`
 
-    [make_chain_mt in Rust documentation.](https://docs.rs/opendp/0.15.0-nightly.20260518.1/opendp/combinators/fn.make_chain_mt.html)
+    [make_chain_mt in Rust documentation.](https://docs.rs/opendp/0.15.0-beta.20260518.1/opendp/combinators/fn.make_chain_mt.html)
 
     .. end-markdown
 
@@ -317,7 +317,7 @@ def make_chain_pm(
 
     Required features: `contrib`
 
-    [make_chain_pm in Rust documentation.](https://docs.rs/opendp/0.15.0-nightly.20260518.1/opendp/combinators/fn.make_chain_pm.html)
+    [make_chain_pm in Rust documentation.](https://docs.rs/opendp/0.15.0-beta.20260518.1/opendp/combinators/fn.make_chain_pm.html)
 
     .. end-markdown
 
@@ -365,7 +365,7 @@ def make_chain_tt(
 
     Required features: `contrib`
 
-    [make_chain_tt in Rust documentation.](https://docs.rs/opendp/0.15.0-nightly.20260518.1/opendp/combinators/fn.make_chain_tt.html)
+    [make_chain_tt in Rust documentation.](https://docs.rs/opendp/0.15.0-beta.20260518.1/opendp/combinators/fn.make_chain_tt.html)
 
     .. end-markdown
 
@@ -462,7 +462,7 @@ def make_fix_delta(
 
     Required features: `contrib`
 
-    [make_fix_delta in Rust documentation.](https://docs.rs/opendp/0.15.0-nightly.20260518.1/opendp/combinators/fn.make_fix_delta.html)
+    [make_fix_delta in Rust documentation.](https://docs.rs/opendp/0.15.0-beta.20260518.1/opendp/combinators/fn.make_fix_delta.html)
 
     .. end-markdown
 
@@ -509,7 +509,7 @@ def make_fixed_approxDP_to_approxDP(
 
     Required features: `contrib`
 
-    [make_fixed_approxDP_to_approxDP in Rust documentation.](https://docs.rs/opendp/0.15.0-nightly.20260518.1/opendp/combinators/fn.make_fixed_approxDP_to_approxDP.html)
+    [make_fixed_approxDP_to_approxDP in Rust documentation.](https://docs.rs/opendp/0.15.0-beta.20260518.1/opendp/combinators/fn.make_fixed_approxDP_to_approxDP.html)
 
     .. end-markdown
 
@@ -554,7 +554,7 @@ def make_fully_adaptive_composition(
 
     Required features: `contrib`
 
-    [make_fully_adaptive_composition in Rust documentation.](https://docs.rs/opendp/0.15.0-nightly.20260518.1/opendp/combinators/fn.make_fully_adaptive_composition.html)
+    [make_fully_adaptive_composition in Rust documentation.](https://docs.rs/opendp/0.15.0-beta.20260518.1/opendp/combinators/fn.make_fully_adaptive_composition.html)
 
     **Citations:**
 
@@ -572,7 +572,7 @@ def make_fully_adaptive_composition(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/combinators/sequential_composition/fully_adaptive/make_fully_adaptive_composition.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/combinators/sequential_composition/fully_adaptive/make_fully_adaptive_composition.pdf)
 
     .. end-markdown
 
@@ -653,7 +653,7 @@ def make_population_amplification(
 
     Required features: `contrib`, `honest-but-curious`
 
-    [make_population_amplification in Rust documentation.](https://docs.rs/opendp/0.15.0-nightly.20260518.1/opendp/combinators/fn.make_population_amplification.html)
+    [make_population_amplification in Rust documentation.](https://docs.rs/opendp/0.15.0-beta.20260518.1/opendp/combinators/fn.make_population_amplification.html)
 
     **Why honest-but-curious?:**
 
@@ -709,7 +709,7 @@ def make_privacy_filter(
 
     Required features: `contrib`
 
-    [make_privacy_filter in Rust documentation.](https://docs.rs/opendp/0.15.0-nightly.20260518.1/opendp/combinators/fn.make_privacy_filter.html)
+    [make_privacy_filter in Rust documentation.](https://docs.rs/opendp/0.15.0-beta.20260518.1/opendp/combinators/fn.make_privacy_filter.html)
 
     **Citations:**
 
@@ -725,7 +725,7 @@ def make_privacy_filter(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/combinators/privacy_filter/make_privacy_filter.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/combinators/privacy_filter/make_privacy_filter.pdf)
 
     .. end-markdown
 
@@ -773,7 +773,7 @@ def make_pureDP_to_zCDP(
 
     Required features: `contrib`
 
-    [make_pureDP_to_zCDP in Rust documentation.](https://docs.rs/opendp/0.15.0-nightly.20260518.1/opendp/combinators/fn.make_pureDP_to_zCDP.html)
+    [make_pureDP_to_zCDP in Rust documentation.](https://docs.rs/opendp/0.15.0-beta.20260518.1/opendp/combinators/fn.make_pureDP_to_zCDP.html)
 
     **Citations:**
 
@@ -836,7 +836,7 @@ def make_select_private_candidate(
 
     Required features: `contrib`
 
-    [make_select_private_candidate in Rust documentation.](https://docs.rs/opendp/0.15.0-nightly.20260518.1/opendp/combinators/fn.make_select_private_candidate.html)
+    [make_select_private_candidate in Rust documentation.](https://docs.rs/opendp/0.15.0-beta.20260518.1/opendp/combinators/fn.make_select_private_candidate.html)
 
     **Supporting Elements:**
 
@@ -847,7 +847,7 @@ def make_select_private_candidate(
 
     **Proof Definition:**
 
-    [(Proof Document)](https://docs.opendp.org/en/nightly/proofs/rust/src/combinators/select_private_candidate/make_select_private_candidate.pdf)
+    [(Proof Document)](https://docs.opendp.org/en/beta/proofs/rust/src/combinators/select_private_candidate/make_select_private_candidate.pdf)
 
     .. end-markdown
 
@@ -933,7 +933,7 @@ def make_sequential_composition(
 
     Required features: `contrib`
 
-    [make_sequential_composition in Rust documentation.](https://docs.rs/opendp/0.15.0-nightly.20260518.1/opendp/combinators/fn.make_sequential_composition.html)
+    [make_sequential_composition in Rust documentation.](https://docs.rs/opendp/0.15.0-beta.20260518.1/opendp/combinators/fn.make_sequential_composition.html)
 
     **Citations:**
 
@@ -1046,7 +1046,7 @@ def make_zCDP_to_approxDP(
 
     Required features: `contrib`
 
-    [make_zCDP_to_approxDP in Rust documentation.](https://docs.rs/opendp/0.15.0-nightly.20260518.1/opendp/combinators/fn.make_zCDP_to_approxDP.html)
+    [make_zCDP_to_approxDP in Rust documentation.](https://docs.rs/opendp/0.15.0-beta.20260518.1/opendp/combinators/fn.make_zCDP_to_approxDP.html)
 
     .. end-markdown
 

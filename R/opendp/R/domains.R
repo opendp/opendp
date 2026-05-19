@@ -6,7 +6,7 @@ NULL
 
 #' Retrieve bounds from an AtomDomain<T>
 #'
-#' [_atom_domain_get_bounds_closed in Rust documentation.](https://docs.rs/opendp/0.15.0-nightly.20260518.1/opendp/domains/fn._atom_domain_get_bounds_closed.html)
+#' [_atom_domain_get_bounds_closed in Rust documentation.](https://docs.rs/opendp/0.15.0-beta.20260518.1/opendp/domains/fn._atom_domain_get_bounds_closed.html)
 #'
 #' @concept domains
 #' @param domain undocumented
@@ -30,7 +30,7 @@ NULL
 
 #' Retrieve whether members of AtomDomain<T> may be NaN.
 #'
-#' [_atom_domain_nan in Rust documentation.](https://docs.rs/opendp/0.15.0-nightly.20260518.1/opendp/domains/fn._atom_domain_nan.html)
+#' [_atom_domain_nan in Rust documentation.](https://docs.rs/opendp/0.15.0-beta.20260518.1/opendp/domains/fn._atom_domain_nan.html)
 #'
 #' @concept domains
 #' @param domain undocumented
@@ -215,7 +215,7 @@ NULL
 #' The domain defaults to unbounded if `bounds` is `None`,
 #' If `T` is float, `nan` defaults to `true`.
 #'
-#' [atom_domain in Rust documentation.](https://docs.rs/opendp/0.15.0-nightly.20260518.1/opendp/domains/struct.AtomDomain.html)
+#' [atom_domain in Rust documentation.](https://docs.rs/opendp/0.15.0-beta.20260518.1/opendp/domains/struct.AtomDomain.html)
 #'
 #' @concept domains
 #' @param bounds Optional bounds of elements in the domain, if the data type is numeric.
@@ -386,7 +386,7 @@ map_domain <- function(
 
 #' Construct an instance of `OptionDomain`.
 #'
-#' [option_domain in Rust documentation.](https://docs.rs/opendp/0.15.0-nightly.20260518.1/opendp/domains/struct.OptionDomain.html)
+#' [option_domain in Rust documentation.](https://docs.rs/opendp/0.15.0-beta.20260518.1/opendp/domains/struct.OptionDomain.html)
 #'
 #' @concept domains
 #' @param element_domain undocumented
