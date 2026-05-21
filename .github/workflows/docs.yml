@@ -75,8 +75,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+          echo "Select recent version tags."
+          export OPENDP_SMV_TAG_WHITELIST="$(python tools/select_smv_versions.py)"
+          echo "Using tag whitelist: ${OPENDP_SMV_TAG_WHITELIST}"
+
           echo "Create docs."
           make versions
+
+          if [ ! -f build/html/en/stable/index.html ]; then
+            echo "Missing build/html/en/stable/index.html; refusing to deploy partial docs build."
+            exit 1
+          fi
+
           # Sphinx caches parsed sources in .doctrees, but the published site does not need them.
           rm -rf build/html/en/*/.doctrees
           cp -r build /tmp
