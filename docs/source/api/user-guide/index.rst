@@ -50,7 +50,7 @@ Features that are available from Python and R:
    * - Name
      - Description
    * - ``contrib``
-     - Enable to include constructors that have not passed the vetting process.
+     - Enable to include constructors that have not completed the vetting process.
    * - ``honest-but-curious``
      - Enable to include constructors whose differential privacy (or stability) properties
        rely on the constructor arguments being correct.
