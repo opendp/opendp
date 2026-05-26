@@ -195,19 +195,17 @@ def _list_release_tags():
     return subprocess.check_output(["git", "tag", "--list", "v*"], text=True).splitlines()
 
 
-# With a quarterly release cadence (not counting patches),
-# this will generate API docs just for the past year.
 def _select_recent_release_tags(tags):
     """
     Return a regex matching the latest patch release from the most recent release lines.
 
-    >>> _select_recent_release_tags(
+    >>> print(_select_recent_release_tags(
     ...     ["v0.11.0", "v0.11.1", "v0.12.0", "v0.12.0-rc.1", "not-a-tag"],
-    ...     number_to_keep=2,
-    ... )
-    '^(v0\\\\.11\\\\.1|v0\\\\.12\\\\.0)$'
+    ... ))
+    ^(v0\.11\.1|v0\.12\.0)$
     """
-    # assuming quarterly release cadence
+    # With a quarterly release cadence (not counting patches),
+    # this will generate API docs just for the past two years.
     number_to_keep = 8
     
     latest_patch_for_major_minor = {}
