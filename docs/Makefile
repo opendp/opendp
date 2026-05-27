@@ -14,6 +14,7 @@ SPHINXMULTI   = sphinx-multiversion
 PAPER         =
 BUILDDIR      = build
 VERSION       = $(shell cat ../VERSION)
+SMV_TAG_WHITELIST ?= $(shell python3 tools/select_smv_versions.py)
 
 # User-friendly check for sphinx-build
 ifeq ($(shell which $(SPHINXBUILD) >/dev/null 2>&1; echo $$?), 1)
@@ -46,7 +47,7 @@ doctest-rust:
 
 versions:
 	# "/en" is the default, but someday we might have translations
-	$(SPHINXMULTI) $(SPHINXOPTS) source $(BUILDDIR)/html/en
+	OPENDP_SMV_TAG_WHITELIST='$(SMV_TAG_WHITELIST)' $(SPHINXMULTI) $(SPHINXOPTS) source $(BUILDDIR)/html/en
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 	cp redirect.html $(BUILDDIR)/html/index.html
