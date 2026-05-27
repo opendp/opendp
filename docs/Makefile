@@ -32,6 +32,7 @@ clean:
 
 html:
 	@set -e
+	@cd source && python -m doctest conf.py && cd ..
 	# If sphinx-apidoc options change, also update conf.py!
 	$(SPHINXAPIDOC) -f -F -e -d 3 -H "OpenDP" -A "The OpenDP Project" -V $(VERSION) -o source/api/python ../python/src/opendp --templatedir source/_templates
 	OPENDP_SPHINX_LOCAL=1 $(SPHINXBUILD) $(SPHINXOPTS) -D version=$(VERSION) source $(BUILDDIR)/html
