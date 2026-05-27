@@ -18,11 +18,12 @@ def select_recent_release_tags(tags: list[str]) -> str:
     """
     Return a regex matching the latest patch release from the most recent release lines.
 
-    >>> select_recent_release_tags(
+    >>> print(select_recent_release_tags(
     ...     ["v0.11.0", "v0.11.1", "v0.12.0", "v0.12.0-rc.1", "not-a-tag"],
-    ... )
-    '^(v0\\\\.11\\\\.1|v0\\\\.12\\\\.0)$'
+    ... ))
+    ^(v0\\.11\\.1|v0\\.12\\.0)$
     """
+    # latest patch for each minor version
     pareto_versions: dict[tuple[int, int], tuple[int, str]] = {}
     for tag in tags:
         match = TAG_PATTERN.fullmatch(tag)

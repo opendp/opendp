@@ -190,9 +190,7 @@ html_context = {
 
 # Whitelist pattern for tags (set to None to ignore all tags)
 smv_tag_whitelist = os.environ.get("OPENDP_SMV_TAG_WHITELIST", r"^$")
-# # keep all released versions, as well as prereleases for the stable version. Doesn't work, because version != stable
-# import re
-# smv_tag_whitelist = rf'(^v\d+\.\d+\.\d+$)|(^v{re.escape(version.split("-")[0])}.+$)'
+
 
 # Whitelist pattern for branches (set to None to ignore all branches)
 smv_branch_whitelist = r'(stable|beta|nightly)'
