@@ -4,7 +4,29 @@ This file documents the version history of OpenDP. The links on each version num
 
 
 
-## [0.15.0](https://github.com/opendp/opendp/compare/v1.14.2...v0.15.0) - 2026-05-08
+
+
+## [0.15.1-dev](https://github.com/opendp/opendp/compare/v0.15.0...HEAD) - TBD
+
+
+### Fix
+
+- Fix docs build: Multiversion conf.py was referencing invalid git state [#2731](https://github.com/opendp/opendp/pull/2731)
+- Fix docs.rs build: Skip polars, for now [#2739](https://github.com/opendp/opendp/pull/2739)
+
+### Docs
+
+- Proof-initiation fixes [#2735](https://github.com/opendp/opendp/pull/2735)
+- Remove WIP warning from readme [#2732](https://github.com/opendp/opendp/pull/2732)
+
+### Maintenance
+
+- Just run nightly once a week [#2726](https://github.com/opendp/opendp/pull/2726)
+
+
+
+## [0.15.0](https://github.com/opendp/opendp/compare/v1.14.2...v0.15.0) - 2026-05-28
+
 
 ### Migration
 
