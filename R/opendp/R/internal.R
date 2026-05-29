@@ -270,7 +270,7 @@ NULL
 #'
 #' Required features: `contrib`
 #'
-#' [_new_pure_function in Rust documentation.](https://docs.rs/opendp/0.15.1-beta.20260528.1/opendp/internal/fn._new_pure_function.html)
+#' [_new_pure_function in Rust documentation.](https://docs.rs/opendp/0.15.1/opendp/internal/fn._new_pure_function.html)
 #'
 #' @concept internal
 #' @param function_ A function mapping data to a value of type `TO`
