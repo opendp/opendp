@@ -44,9 +44,13 @@ jobs:
         with:
           name: r_bindings
           path: R/opendp/
+
+      - name: Drop R release tarballs from tracked history
+        run: rm -f R/opendp/src/*.tar.xz
       
       - name: Push changes
         run: |
-          git add --force . # Generated files are git-ignored, so we need --force.
+          # Generated files are git-ignored, so we need --force.
+          git add --force python/src/opendp/ R/opendp/
           git commit -m "Update bindings"
           git push origin ${{ inputs.channel }}

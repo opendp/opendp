@@ -92,6 +92,9 @@ markupsafe==2.1.5
     # via
     #   jinja2
     #   nbconvert
+matplotlib
+    # via
+    #   -r requirements.in
 matplotlib-inline==0.1.7
     # via ipython
 mistune==3.0.2

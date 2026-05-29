@@ -187,7 +187,6 @@ pub(crate) fn is_cast_fallible(from: &DataType, to: &DataType) -> bool {
 
     if let DataType::Unknown(child) = from {
         return match child {
-            UnknownKind::Ufunc => true,
             UnknownKind::Int(v) => {
                 return if let Ok(v) = i64::try_from(*v) {
                     AnyValue::Int64(v).cast(&to).is_null()

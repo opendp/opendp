@@ -2,7 +2,7 @@
 \input{../../../lib.sty}
 
 \title{\texttt{fn find\_min\_covering}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 \date{}
 
 \begin{document}
@@ -24,17 +24,16 @@ from \texttt{sets} that spans \texttt{must\_cover}.
     \item Generic \texttt{T} is some type that implements Hash and has total Ord, so that it can be used in a B-tree set.
 \end{itemize}
 
-\subsubsection*{Human-verified}
+\subsubsection*{Caller-verified}
 None
 
 \subsection*{Pseudocode}
 \lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/find_min_covering.py}
 
 \subsection*{Postcondition}
+\begin{theorem}
 Return a subset of \texttt{sets} whose intersection contains \texttt{must\_cover}, or None.
-
-\section{Proofs}
-
+\end{theorem}
 \begin{proof} 
     All that needs to be proven is that the return set covers \texttt{must\_cover}.
     While the algorithm makes a best effort to minimize the cardinality of the cover,

@@ -17,6 +17,9 @@ use super::{Adaptivity, Composability, CompositionMeasure};
 /// Construct the DP composition of [`measurement0`, `measurement1`, ...].
 /// Returns a Measurement that when invoked, computes `[measurement0(x), measurement1(x), ...]`
 ///
+/// # Citations
+/// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
+///
 /// **Composition Properties**
 ///
 /// * sequential: all measurements are applied to the same dataset
@@ -120,6 +123,9 @@ where
 
 /// Construct the DP composition \[`measurement0`, `measurement1`, ...\].
 /// Returns a Measurement that when invoked, computes `[measurement0(x), measurement1(x), ...]`
+///
+/// # Citations
+/// * [DMNS06 Calibrating Noise to Sensitivity in Private Data Analysis](https://people.csail.mit.edu/asmith/PS/sensitivity-tcc-final.pdf)
 ///
 /// All metrics and domains must be equivalent.
 ///

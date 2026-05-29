@@ -14,9 +14,9 @@
 #[cfg(feature = "ffi")]
 pub(crate) mod ffi;
 
-#[cfg(feature = "polars")]
+#[cfg(all(feature = "polars", feature = "contrib"))]
 pub mod polars;
-#[cfg(feature = "polars")]
+#[cfg(all(feature = "polars", feature = "contrib"))]
 pub use polars::*;
 
 use std::hash::Hash;
@@ -310,7 +310,7 @@ impl<D: Domain> MetricSpace for (VectorDomain<D>, HammingDistance) {
 /// we say that $u, v$ are $d$-close under the the $L_p$ distance metric (abbreviated as $d_{LP}$) whenever
 ///
 /// ```math
-/// d_{LP}(u, v) = \|u_i - v_i\|_p \leq d
+/// d_{LP}(u, v) = \|u - v\|_p \leq d
 /// ```
 ///
 /// If $u$ and $v$ are different lengths, then
@@ -470,11 +470,11 @@ impl<T: CheckAtom, Q> MetricSpace for (AtomDomain<T>, AbsoluteDistance<Q>) {
 /// where `M` is a valid metric on the indexed space.
 /// If a dataset `x` does not contain an index `i`, assume `x_i` is the additive identity.
 ///
-/// For any $d$ of type `(usize, M::Distance, M::Distance)`,
-/// we say that $x, x'$ are $d$-close under the the multi-norm distance metric whenever
+/// For any $d$ of type ([`IntDistance`], `M::Distance`),
+/// we say that $x, x'$ are $d$-close under the multi-norm distance metric whenever
 ///
 /// ```math
-/// |s|_0 \leq d_0 \land |s|_\infty \leq d_2.
+/// |s|_0 \leq d_0 \land |s|_\infty \leq d_1.
 /// ```
 #[derive(Clone, PartialEq, Default)]
 pub struct L0InfDistance<M: Metric>(pub M);
@@ -499,7 +499,7 @@ impl<M: Metric> Metric for L0InfDistance<M> {
 ///
 /// ## $d$-closeness
 /// For any two datasets $x, x' \in \texttt{D}$,
-/// where $x$ and $x'$ are indexed by $1, \ldots, r$, let
+/// where $x$ and $x'$ are indexed by $0, \ldots, r$, let
 ///
 /// ```math
 /// s = [d_M(x_0, x'_0), \ldots, d_M(x_r, x'_r)],
@@ -508,7 +508,7 @@ impl<M: Metric> Metric for L0InfDistance<M> {
 /// If a dataset `x` does not contain an index `i`, assume `x_i` is the additive identity.
 ///
 /// For any integer $P > 0$,
-/// and $d$ of type `(usize, M::Distance, M::Distance)`,
+/// and $d$ of type ([`IntDistance`], `M::Distance`, `M::Distance`),
 /// we say that $x, x'$ are $d$-close under the the multi-norm distance metric whenever
 ///
 /// ```math
@@ -558,7 +558,7 @@ impl<T: CheckAtom, const P: usize> MetricSpace
 /// we say that $u, v$ are $d$-close under the discrete metric (abbreviated as $d_{Eq}$) whenever
 ///
 /// ```math
-/// d_{Eq}(u, v) = \mathbb{1}[u = v] \leq d
+/// d_{Eq}(u, v) = \mathbb{1}[u \ne v] \leq d
 /// ```
 ///
 /// # Notes
@@ -600,24 +600,34 @@ impl MetricSpace for (BitVectorDomain, DiscreteDistance) {
 ///
 /// ## `d`-closeness
 /// For any two datasets $x$, $x'$ and any $d$ of type `Q`,
-/// we say that $x$, $x'$ are $d$-close under the l-infinity metric (abbreviated as $d_{\infty}$) whenever
+/// we say that $x$, $x'$ are $d$-close under the l-infinity metric
+/// (abbreviated as $d_{\infty}$) whenever
+///
+/// ```math
+/// d_{\infty}(x, x') \le d
+/// ```
+///
+/// where
+///
+/// ```math
+/// d_{\infty}(x, x') = \begin{cases}
+///     \infty & \text{if } \texttt{monotonic} \land \exists i,j : (x_i - x'_i)(x_j - x'_j) < 0 \\
+///     \max_i |x_i - x'_i| & \text{otherwise}
+/// \end{cases}
+/// ```
+///
+/// # Notes
+///
+/// When `monotonic` is `false`, this is simply:
 ///
 /// ```math
 /// d_{\infty}(x, x') = \max_{i} |x_i - x'_i|
 /// ```
 ///
-/// If `monotonic` is `true`, then the distance is infinity if any of the differences have opposing signs.
+/// When `monotonic` is `true`, then the distance is infinity if any of the differences have opposing signs.
+/// For proof-writers: Careful! This doesn't satisfy the triangle inequality.
 ///
-/// Equivalently,
-///
-/// ```math
-/// d_{\infty}(x, x') = \begin{cases}
-///     \infty & \text{if } \exists i, x_i \cdot x'_i < 0 \land \texttt{monotonic} \\
-///     \max_i |x_i - x'_i| & \text{otherwise} \\
-/// \end{cases}
-/// ```
-///
-/// # Monotonicity Descriptor
+/// ## Monotonicity Descriptor
 ///
 /// The $L_\infty$ distance is a common metric to express the sensitivity
 /// of score vectors passed into private selection mechanisms.
@@ -626,7 +636,7 @@ impl MetricSpace for (BitVectorDomain, DiscreteDistance) {
 /// have a factor of two in the privacy loss.
 ///
 /// This factor of two is eliminated by the more flexible range distance,
-/// which in turn has twice the sensitivity when scores may vary in different directions:
+/// which in turn has twice the sensitivity when scores vary in different directions:
 /// ```math
 /// d_{\mathrm{Range}}(x, x') = \max_{ij} |(x_i - x'_i) - (x_j - x'_j)|.
 /// ```
@@ -640,8 +650,6 @@ impl MetricSpace for (BitVectorDomain, DiscreteDistance) {
 /// Any bound on the $L_\infty$ distance with the monotonicity flag set to `True` is also valid with the monotonicity flag set to `False`.
 /// This design allows the sensitivity to be expressed in terms of the more familiar $L_\infty$ distance,
 /// while also enabling the tighter privacy analysis from monotonic scoring functions.
-///
-/// You can use the `range_distance` method to derive an upper bound for the range distance.
 pub struct LInfDistance<Q> {
     pub monotonic: bool,
     _marker: PhantomData<fn() -> Q>,

@@ -2,7 +2,7 @@
 \input{../../../../lib.sty}
 
 \title{\texttt{NoiseThresholdPrivacyMap<L02I<AbsoluteDistance<UBig>>, Approximate<ZeroConcentratedDivergence>> for ZExpFamily<2>}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 \date{}
 
 \begin{document}
@@ -14,14 +14,14 @@ Proves soundness of the implementation of \rustdoc{measurements/noise_threshold/
 
 \section{Hoare Triple}
 \subsection*{Precondition}
-\subsubsection*{Compiler-Verified}
+\subsubsection*{Compiler-verified}
 \texttt{NoiseThresholdPrivacyMap} is parameterized as follows:
 \begin{itemize}
     \item \texttt{MI}, the input metric, is of type \rustdoc{metrics/type}{L02I}\texttt{<AbsoluteDistance<UBig>>}
     \item \texttt{MO}, the output measure, is of type \rustdoc{measures/struct}{Approximate}\texttt{<ZeroConcentratedDivergence>}
 \end{itemize}
 
-\subsubsection*{User-Verified}
+\subsubsection*{Caller-verified}
 None
 
 \subsection*{Pseudocode}

@@ -15,8 +15,10 @@ jobs:
       - name: Collect diffs
         id: "diffs"
         run: |
-          files=$(git --no-pager diff --diff-filter=d --name-only origin/${{ github.event.pull_request.base.ref }} -- '*.tex')
-          
+          set -euo pipefail
+          mb="$(git merge-base HEAD^1 HEAD^2)"
+          files="$(git --no-pager diff --diff-filter=d --name-only "$mb" HEAD^2 -- '*.tex')"
+
           # using syntax from: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
           # construct list of .tex files
           echo "tex<<EOF" >> $GITHUB_OUTPUT
@@ -25,7 +27,9 @@ jobs:
     
           # construct list of .pdf files
           echo "pdf<<EOF" >> $GITHUB_OUTPUT
-          echo "${files//$'.tex'/.pdf}" >> $GITHUB_OUTPUT
+          # Command substitution strips the trailing newline from git diff output,
+          # so re-add one before rewriting the extension on the final path.
+          printf '%s\n' "$files" | sed 's/\.tex$/.pdf/' >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
           echo "$files"

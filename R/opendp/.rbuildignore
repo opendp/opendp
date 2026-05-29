@@ -16,6 +16,7 @@
 ^_pkgdown\.yml$
 ^docs$
 ^pkgdown$
+^\\.Rprofile$
 .*/out/.*$
 .*\.DS_Store$
 

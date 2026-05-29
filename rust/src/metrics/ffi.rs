@@ -347,6 +347,7 @@ pub extern "C" fn opendp_metrics__user_distance(
 
 #[bootstrap(
     name = "_extrinsic_metric_descriptor",
+    arguments(metric(rust_type = b"null")),
     returns(c_type = "FfiResult<ExtrinsicObject *>")
 )]
 /// Retrieve the descriptor value stored in an extrinsic metric.

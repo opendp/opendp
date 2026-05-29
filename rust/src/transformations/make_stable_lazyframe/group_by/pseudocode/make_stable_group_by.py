@@ -6,7 +6,7 @@ def make_stable_group_by(
         case DslPlan.GroupBy(input, keys, aggs, apply, maintain_order, options):
             pass
         case _:
-            raise "Expected group by in logical plan"
+            raise "Expected group-by in logical plan"
 
     if apply is not None:
         raise "apply is not currently supported"

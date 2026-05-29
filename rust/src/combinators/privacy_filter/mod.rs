@@ -38,6 +38,15 @@ mod ffi;
 /// to reject any query that would increase the total privacy loss
 /// above the privacy guarantee of the mechanism.
 ///
+/// # Citations
+/// * [RRUV21 Privacy Odometers and Filters: Pay-as-you-Go Composition](https://arxiv.org/abs/1605.08294v1)
+/// * [HSTVVXZ23 Concurrent Composition for Interactive Differential Privacy with Adaptive Privacy-Loss Parameters](https://arxiv.org/abs/2309.05901)
+///
+/// # Runtime
+/// Construction is `O(1)`.
+/// Each answered query adds `O(1)` filter bookkeeping
+/// plus one privacy-loss query to the wrapped odometer/queryable.
+///
 /// # Arguments
 /// * `odometer` - A privacy odometer
 /// * `d_in` - Upper bound on the distance between adjacent datasets

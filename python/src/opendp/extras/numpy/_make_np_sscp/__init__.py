@@ -16,7 +16,7 @@ def make_np_sscp(input_domain: Domain, input_metric: Metric) -> Transformation:
     """
     import opendp.prelude as dp
 
-    dp.assert_features("contrib", "floating-point")
+    dp.assert_features("contrib", "idealized-numerics")
 
     if not str(input_domain).startswith("NPArray2Domain"):
         raise ValueError(

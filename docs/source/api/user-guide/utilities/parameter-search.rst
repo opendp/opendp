@@ -35,7 +35,7 @@ This is extremely powerful!
     .. code:: pycon
 
         >>> import opendp.prelude as dp
-        >>> dp.enable_features("contrib", "floating-point")
+        >>> dp.enable_features("contrib", "idealized-numerics")
 
 * | If you have a bound on ``d_in`` and a budget ``d_out``, you can solve for the smallest noise scale that is still differentially private.
   | This is useful when you want to determine how accurate you can make a query with a given budget.

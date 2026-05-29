@@ -1,7 +1,6 @@
 use crate::core::{FfiResult, IntoAnyTransformationFfiResultExt, Metric, MetricSpace};
 
 use crate::domains::{AtomDomain, VectorDomain};
-use crate::err;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMetric, AnyTransformation, Downcast};
 use crate::metrics::{InsertDeleteDistance, SymmetricDistance};

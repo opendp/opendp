@@ -1,7 +1,7 @@
 from opendp.mod import enable_features
 import opendp.prelude as dp
 
-enable_features("floating-point", "contrib")
+enable_features("idealized-numerics", "contrib")
 
 
 def test_quantile_score_candidates():

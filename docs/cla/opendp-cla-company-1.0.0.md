@@ -54,14 +54,15 @@ By signing below, you are representing that you have the authority to provide th
 This is a reference copy of the OpenDP Contributor License Agreement.
 In order to complete the agreement, please follow these steps:
 
-1. Sign into your GitHub account (necessary for authentication).
-2. Visit https://github.com/opendp/clabot-config/actions/workflows/sign-company.yml.
-3. Click the “Run workflow” drop-down on the right side of the page.
-4. In the form that appears, enter your name and check the “I AGREE” checkbox.
-5. Enter your company, representative name, and check the “CO. REP. AGREES” checkbox.
-6. Click the green “Run workflow” button.
-7. Your signature will be recorded electronically.
-8. If you have a pending PR, please allow up to 1 business day for your status to be updated.
+1. Provide your GitHub username to OpenDP staff so they can add you to the `opendp-library-contributors` team.
+2. Sign into your GitHub account (necessary for authentication).
+3. Visit https://github.com/opendp/clabot-config/actions/workflows/sign-company.yml.
+4. Click the “Run workflow” drop-down on the right side of the page.
+5. In the form that appears, enter your name and check the “I AGREE” checkbox.
+6. Enter your company, representative name, and check the “CO. REP. AGREES” checkbox.
+7. Click the green “Run workflow” button.
+8. Your signature will be recorded electronically.
+9. If you have a pending PR, please allow up to 1 business day for your status to be updated.
 
 ---
 

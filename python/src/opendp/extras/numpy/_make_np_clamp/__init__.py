@@ -1,3 +1,5 @@
+from dataclasses import asdict
+
 from opendp.extras._utilities import to_then
 from opendp.mod import Domain, Metric, Transformation
 from opendp.context import register
@@ -60,7 +62,7 @@ def make_np_clamp(
 
         return arg + origin
 
-    kwargs = input_domain.descriptor._asdict() | {
+    kwargs = asdict(input_domain.descriptor) | {
         "norm": norm,
         "p": p,
         "origin": origin,

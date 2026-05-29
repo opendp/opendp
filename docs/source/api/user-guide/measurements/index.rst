@@ -87,7 +87,7 @@ Canonical Noise
 ***************
 
 The canonical noise mechanism (:func:`~opendp.measurements.make_canonical_noise`)
-can privatize any float-valued statistic with finite sensitivity.
+can be used to release any float-valued differentially private statistic with finite sensitivity.
 Under :math:`(\epsilon, \delta)`-DP,
 the canonical noise distribution follows the Tulap distribution,
 which is a combination of discrete laplace noise and continuous uniform noise.

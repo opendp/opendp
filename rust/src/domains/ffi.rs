@@ -31,7 +31,10 @@ pub extern "C" fn opendp_domains___domain_free(this: *mut AnyDomain) -> FfiResul
 
 #[bootstrap(
     name = "_member",
-    arguments(this(hint = "Domain"), val(rust_type = "$domain_carrier_type(this)")),
+    arguments(
+        this(hint = "Domain", rust_type = b"null"),
+        val(rust_type = "$domain_carrier_type(this)")
+    ),
     returns(c_type = "FfiResult<bool *>", hint = "bool")
 )]
 /// Check membership in a `domain`.
@@ -738,6 +741,7 @@ pub extern "C" fn opendp_domains__user_domain(
 
 #[bootstrap(
     name = "_extrinsic_domain_descriptor",
+    arguments(domain(rust_type = b"null")),
     returns(c_type = "FfiResult<ExtrinsicObject *>")
 )]
 /// Retrieve the descriptor value stored in an extrinsic domain.

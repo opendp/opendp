@@ -121,7 +121,6 @@ macro_rules! cartesian {
     ([$($a:tt)*], $lower:tt, $diag:tt, $upper:tt) =>
         (cartesian!{@diag[], [$($a)*], [], [$($a)*], $lower, $diag, $upper});
 }
-pub(crate) use cartesian;
 
 // TRAIT ExactIntCast
 macro_rules! impl_exact_int_cast_from {
@@ -508,25 +507,33 @@ impl InfCast<f64> for f32 {
 impl_inf_cast_from!(f64, f64);
 
 macro_rules! impl_inf_cast_float_int {
-    ($ti:ty, $to:ty) => (impl InfCast<$ti> for $to {
-        fn inf_cast(mut v: $ti) -> Fallible<Self> {
-            v = v.ceil();
-            if Self::MIN as $ti > v || Self::MAX as $ti < v {
-                fallible!(FailedCast, "Failed to cast float to int. Float value is outside of range.")
-            } else {
-                Ok(v as Self)
+    ($ti:ty, $to:ty) => {
+        impl InfCast<$ti> for $to {
+            fn inf_cast(mut v: $ti) -> Fallible<Self> {
+                v = v.ceil();
+                if (Self::MIN as $ti) > v || (Self::MAX as $ti) < v {
+                    fallible!(
+                        FailedCast,
+                        "Failed to cast float to int. Float value is outside of range."
+                    )
+                } else {
+                    Ok(v as Self)
+                }
             }
-        }
 
-        fn neg_inf_cast(mut v: $ti) -> Fallible<Self> {
-            v = v.floor();
-            if Self::MIN as $ti > v || Self::MAX as $ti < v {
-                fallible!(FailedCast, "Failed to cast float to int. Float value is outside of range.")
-            } else {
-                Ok(v as Self)
+            fn neg_inf_cast(mut v: $ti) -> Fallible<Self> {
+                v = v.floor();
+                if (Self::MIN as $ti) > v || (Self::MAX as $ti) < v {
+                    fallible!(
+                        FailedCast,
+                        "Failed to cast float to int. Float value is outside of range."
+                    )
+                } else {
+                    Ok(v as Self)
+                }
             }
         }
-    })
+    };
 }
 cartesian!(
     [f32, f64],

@@ -116,7 +116,7 @@ fake_function <- function(
   ))
 
   # Assert that arguments are correctly typed.
-  rt_assert_is_similar(expected = f64, inferred = rt_infer(fake_argument))
+  rt_assert_is_similar(expected = \"f64\", inferred = rt_infer(fake_argument))
 
   # Call wrapper function.
   output <- .Call(

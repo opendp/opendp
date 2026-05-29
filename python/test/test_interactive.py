@@ -2,7 +2,6 @@ import opendp.prelude as dp
 import pytest
 
 
-
 def test_sequential_composition():
     max_influence = 1
     sc_meas = dp.c.make_adaptive_composition(
@@ -176,4 +175,3 @@ def test_privacy_filter():
     assert qbl_filter.privacy_loss(1) == 1.0
     qbl_filter(m_count)
     assert qbl_filter.privacy_loss(1) == 2.0
-

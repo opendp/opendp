@@ -93,9 +93,21 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
         [lookup_B[c] for c in synthetic_df["B"]],
         [lookup_C[c] for c in synthetic_df["C"]],
     ]
-    synthetic_cov = np.cov(np.stack(synthetic_list))
-    assert np.linalg.norm(cov - synthetic_cov) < 0.5, f"\n{synthetic_cov}"
+    cov_syn = np.cov(np.stack(synthetic_list))
 
+    def test_cov(clique):
+        idx = {"A": 0, "B": 1, "C": 2}
+        i, j = idx[clique[0]], idx[clique[-1]]
+        
+        assert abs(cov[i, j] - cov_syn[i, j]) < 0.2, (
+            f"{clique} cov drifted: {cov[i, j]=:.3f}, {cov_syn[i, j]=:.3f}"
+        )
+
+    # in an MRF, a missing 2-way marginal does not imply independence
+    # max-entropy does not guarantee spurious correlations won't be formed on undetermined pairs
+    test_cov(("A", "B"))
+    for clique in (cl for cl in table.marginals if len(cl) <= 2):
+        test_cov(clique)
 
 def test_contingency_table_int_cuts():
     pytest.importorskip("mbi")
@@ -103,7 +115,7 @@ def test_contingency_table_int_cuts():
     import numpy as np  # type: ignore[import-not-found]
     import polars as pl  # type: ignore[import-not-found]
 
-    exact = [100, 200, 400, 300, 200]
+    exact = np.array([100, 200, 400, 300, 200])
 
     lm = LinearMeasurement(exact, clique=("A",), stddev=0.01)
     model = mirror_descent(Domain(("A",), (5,)), [lm])
@@ -131,8 +143,8 @@ def test_contingency_table_project():
     import polars as pl  # type: ignore[import-not-found]
     from polars.testing import assert_frame_equal  # type: ignore[import-not-found]
 
-    A_exact = [3, 5]
-    B_exact = [1, 3, 4]
+    A_exact = np.array([3, 5])
+    B_exact = np.array([1, 3, 4])
     A_keys = pl.Series("A", ["a1", "a2"])
     B_keys = pl.Series("B", ["b1", "b2", "b3"])
 
@@ -333,7 +345,7 @@ def test_contingency_table_minimum_variance_weighted_total():
 
 
 def test_unique():
-    pytest.importorskip("pl")
+    pytest.importorskip("polars")
     import polars as pl  # type: ignore[import-not-found]
 
     with pytest.raises(ValueError, match='cuts must be unique: "col" has duplicates'):
@@ -341,7 +353,7 @@ def test_unique():
 
 
 def test_increasing():
-    pytest.importorskip("pl")
+    pytest.importorskip("polars")
     import polars as pl  # type: ignore[import-not-found]
 
     message = 'cuts must be strictly increasing: "col" is not strictly increasing'
@@ -350,15 +362,16 @@ def test_increasing():
 
 
 def test_with_null():
-    pytest.importorskip("pl")
+    pytest.importorskip("polars")
     import polars as pl  # type: ignore[import-not-found]
+    from polars.testing import assert_series_equal
 
-    assert _with_null(pl.Series(["a", "b"])) == pl.Series(["a", "b", None])
-    assert _with_null(pl.Series(["a", None, "b"])) == pl.Series(["a", None, "b"])
+    assert_series_equal(_with_null(pl.Series(["a", "b"])), pl.Series(["a", "b", None]))
+    assert_series_equal(_with_null(pl.Series(["a", None, "b"])), pl.Series(["a", None, "b"]))
 
 
 def test_get_null_index():
-    pytest.importorskip("pl")
+    pytest.importorskip("polars")
     import polars as pl  # type: ignore[import-not-found]
 
     assert _get_null_index(pl.Series(["a", "b", None])) == 2

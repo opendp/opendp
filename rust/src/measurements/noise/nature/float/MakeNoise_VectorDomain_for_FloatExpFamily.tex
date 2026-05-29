@@ -2,7 +2,7 @@
 \input{../../../../lib.sty}
 
 \title{\texttt{MakeNoise<VectorDomain<AtomDomain<T>>, LpDistance<P, QI>, MO> for FloatExpFamily<P>}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 \date{}
 
 \begin{document}
@@ -22,7 +22,7 @@ and then converting back to the nearest float, or saturating to positive or nega
 
 \section{Hoare Triple}
 \subsection*{Precondition}
-\subsubsection*{Compiler-Verified}
+\subsubsection*{Compiler-verified}
 
 \begin{itemize}
     \item Generic \texttt{T} implements trait \rustdoc{traits/trait}{Float}
@@ -37,7 +37,7 @@ and then converting back to the nearest float, or saturating to positive or nega
         This bound requires that it must be possible to construct a privacy map for this combination of noise distribution, distance type and privacy measure.
 \end{itemize}
 
-\subsubsection*{User-Verified}
+\subsubsection*{Caller-verified}
 None
 
 \subsection*{Pseudocode}

@@ -24,25 +24,8 @@ on:
         type: boolean
         required: false
         default: false
-  workflow_dispatch:
-    inputs:
-      channel:
-        description: Target Channel
-        type: choice
-        options:
-          - dev
-          - nightly
-          - beta
-          - stable
-        required: true
-        default: dev
-      fake:
-        description: Fake Build?
-        type: boolean
-        required: false
-        default: false
 env:
-  FEATURES: untrusted,ffi,polars,extension-module
+  FEATURES: untrusted,polars-ffi
 
 jobs:
   credential-check:
@@ -229,7 +212,7 @@ jobs:
 
       - name: Create Rust build for linux
         if: ${{ !inputs.fake }}
-        run: docker run --rm -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -g $TARGET -f \"$FEATURES\""
+        run: docker run --rm -e PYO3_BUILD_EXTENSION_MODULE=1 -v `pwd`:/io $DOCKER_IMAGE bash -c "cd /io && bash tools/rust_build.sh -i -r -g $TARGET -f \"$FEATURES\""
 
       - name: Create Rust build for linux (FAKE)
         if: ${{ inputs.fake }}
@@ -307,13 +290,16 @@ jobs:
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           # overrides packages so that dependencies for package in cwd are not installed
-          packages: RcppTOML,stringr
-      
+          packages: RcppTOML,stringr,roxygen2
+
       - name: Download R bindings
         uses: actions/download-artifact@v4
         with:
           name: r_bindings
           path: R/opendp/
+
+      - name: Generate R documentation
+        run: Rscript -e 'roxygen2::roxygenise("R/opendp", roclets = c("rd", "namespace"), load_code = roxygen2::load_source)'
 
       - name: Source tar
         run: bash tools/r_stage.sh -s

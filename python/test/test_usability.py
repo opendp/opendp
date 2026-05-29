@@ -2,6 +2,8 @@ import re
 import pytest
 import opendp.prelude as dp
 
+from .helpers import ids
+
 
 @pytest.mark.xfail(raises=dp.UnknownTypeException)
 def test_iterable_data():
@@ -130,7 +132,10 @@ def test_margins_dict_instead_of_list():
 
 
 @pytest.mark.parametrize(
-    "domain", [dp.lazyframe_domain([]), dp.series_domain("A", dp.atom_domain(T=bool))])
+    "domain",
+    [dp.lazyframe_domain([]), dp.series_domain("A", dp.atom_domain(T=bool))],
+    ids=ids,
+)
 def test_polars_data_loader_error_is_human_readable(domain):
     pytest.importorskip("polars")
     overall_pipeline = dp.c.make_adaptive_composition(

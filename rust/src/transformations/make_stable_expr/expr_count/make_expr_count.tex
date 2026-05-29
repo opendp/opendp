@@ -3,7 +3,7 @@
 \usepackage{bbm}
 
 \title{\texttt{fn make\_expr\_count}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 
 \begin{document}
 \maketitle
@@ -12,7 +12,7 @@ This document proves that the implementation of \rustdoc{transformations/make_st
 satisfies its proof definition.
 
 \section{Hoare Triple}
-\subsection*{Preconditions}
+\subsection*{Precondition}
 \subsubsection*{Compiler-verified}
 \begin{itemize}
     \item Argument \texttt{input\_domain} of type \texttt{ExprDomain}
@@ -28,14 +28,14 @@ satisfies its proof definition.
 \subsubsection*{Caller-verified}
 None
 
-\subsubsection*{Pseudocode}
+\subsection*{Pseudocode}
 
 \lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/make_expr_count.py}
 
-\subsubsection*{Postcondition}
+\subsection*{Postcondition}
+\begin{theorem}
 \validTransformation{(input\_domain, input\_metric, expr, MI, P)}{make\_expr\_count}
-
-\section{Proof}
+\end{theorem}
 Starting from line \ref{match-strategy}, 
 \texttt{expr} is analyzed to determine the type of counting query \texttt{strategy} and input to the counting query \texttt{input}.
 

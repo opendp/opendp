@@ -5,7 +5,6 @@
 #include <Rdefines.h>
 #include <Rinternals.h>
 #include <R_ext/Complex.h>
-#include <R_ext/Callbacks.h>
 
 // Import C headers for rust API
 #include "Ropendp.h"
@@ -412,7 +411,7 @@ SEXP anyfunctionptr_to_sexp(AnyFunction *input, SEXP log)
     R_RegisterCFinalizerEx(XPtr, odp_AnyFunction_finalizer, TRUE);
 
     int errorOccurred;
-    SEXP new_function = get_private_func("new_function");
+    SEXP new_function = get_private_func("new_function_internal");
     SEXP function_expr = lang3(new_function, XPtr, log);
     SEXP function = R_tryEval(function_expr, R_GlobalEnv, &errorOccurred);
     if (errorOccurred)
@@ -472,7 +471,7 @@ SEXP privacyprofileptr_to_sexp(AnyObject *input, SEXP info)
     R_RegisterCFinalizerEx(XPtr, odp_AnyObject_finalizer, TRUE);
 
     int errorOccurred;
-    SEXP new_privacy_profile = get_private_func("new_privacy_profile");
+    SEXP new_privacy_profile = get_private_func("new_privacy_profile_internal");
     SEXP privacy_profile_expr = lang2(new_privacy_profile, XPtr);
     SEXP privacy_profile = R_tryEval(privacy_profile_expr, R_GlobalEnv, &errorOccurred);
     if (errorOccurred)
@@ -511,7 +510,7 @@ SEXP anyqueryableptr_to_sexp(AnyObject *input, SEXP info)
     R_RegisterCFinalizerEx(XPtr, odp_AnyObject_finalizer, TRUE);
 
     int errorOccurred;
-    SEXP new_queryable = get_private_func("new_queryable");
+    SEXP new_queryable = get_private_func("new_queryable_internal");
     SEXP queryable_expr = lang2(new_queryable, XPtr);
     SEXP queryable = R_tryEval(queryable_expr, R_GlobalEnv, &errorOccurred);
     if (errorOccurred)
@@ -551,7 +550,7 @@ SEXP anyodometerqueryableptr_to_sexp(AnyObject *input, SEXP info)
     R_RegisterCFinalizerEx(XPtr, odp_AnyObject_finalizer, TRUE);
 
     int errorOccurred;
-    SEXP new_queryable = get_private_func("new_odometer_queryable");
+    SEXP new_queryable = get_private_func("new_odometer_queryable_internal");
     SEXP queryable_expr = lang2(new_queryable, XPtr);
     SEXP queryable = R_tryEval(queryable_expr, R_GlobalEnv, &errorOccurred);
     if (errorOccurred)

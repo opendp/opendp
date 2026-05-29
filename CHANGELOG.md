@@ -1,10 +1,179 @@
 # OpenDP Changelog
 
-This file documents the version history of OpenDP. The links on each version number will take you to a comparison
-showing the source changes from the previous version.
+This file documents the version history of OpenDP. The links on each version number will take you to a comparison showing the source changes from the previous version.
+
+
+
+
+
+## [0.15.1-dev](https://github.com/opendp/opendp/compare/v0.15.0...HEAD) - TBD
+
+
+### Fix
+
+- Fix docs build: Multiversion conf.py was referencing invalid git state [#2731](https://github.com/opendp/opendp/pull/2731)
+- Fix docs.rs build: Skip polars, for now [#2739](https://github.com/opendp/opendp/pull/2739)
+
+### Docs
+
+- Proof-initiation fixes [#2735](https://github.com/opendp/opendp/pull/2735)
+- Remove WIP warning from readme [#2732](https://github.com/opendp/opendp/pull/2732)
+
+### Maintenance
+
+- Just run nightly once a week [#2726](https://github.com/opendp/opendp/pull/2726)
+
+
+
+## [0.15.0](https://github.com/opendp/opendp/compare/v1.14.2...v0.15.0) - 2026-05-28
+
+
+### Migration
+
+The Polars and MBI dependencies have been upgraded.
+
+There are a few changes in feature names to be aware of:
+- To be more accurate, `floating-point` renamed to `idealized-numerics`.
+- The separate `polars` and `ffi` features have been combined as `polars-ffi`.
+- The `extension-module` feature has been removed.
+
+### New features
+
+- Rust binary search utilities [#472](https://github.com/opendp/opendp/pull/472)
+- R plugin APIs [#2681](https://github.com/opendp/opendp/pull/2681)
+
+### Improved functionality
+
+- Optimize numpy vector FFI [#2697](https://github.com/opendp/opendp/pull/2697)
+- Use `rand_priv_bytes` from SSL [#2717](https://github.com/opendp/opendp/pull/2717)
+
+
+### Fixes and upgrades
+
+#### Fixes
+
+- Randomized response bitvec randomization was off-by-one [#2708](https://github.com/opendp/opendp/pull/2708)
+
+#### Features and feature naming
+
+- Rename `floating-point` to `idealized-numerics` to be more accurate [#2701](https://github.com/opendp/opendp/pull/2701)
+- Create a single `polars-ffi` feature and remove `extension-module` [#2666](https://github.com/opendp/opendp/pull/2666)
+
+#### Algorithms
+
+- Re-normalize distance bounds before thresholding [#2696](https://github.com/opendp/opendp/pull/2696)
+- Add missing `proven` annotations [#2698](https://github.com/opendp/opendp/pull/2698)
+- Skip invalid Wald tests [#2670](https://github.com/opendp/opendp/pull/2670)
+
+#### Build
+
+- Fix R-universe build [#2678](https://github.com/opendp/opendp/pull/2678)
+- Patch-free publish-able polars build [#2676](https://github.com/opendp/opendp/pull/2676)
+- Set `pyo3_build_extension_module` in builds [#2672](https://github.com/opendp/opendp/pull/2672)
+
+### Dependency upgrades
+
+- Upgrade polars to 0.52 [#2642](https://github.com/opendp/opendp/pull/2642)
+- Upgrade mbi to github hash for l2 loss and warning fixes [#2645](https://github.com/opendp/opendp/pull/2645)
+- Use mbi 1.1.0 instead of git pin [#2674](https://github.com/opendp/opendp/pull/2674)
+
+
+### Docs
+
+#### Search and replace
+
+- Rephrase "private" in docs [#2429](https://github.com/opendp/opendp/pull/2429)
+- Replace "info@opendp.org" with "contact@opendp.org" [#2668](https://github.com/opendp/opendp/pull/2668)
+- Replace "registry.oblivious" with "registry.opendp" [#2652](https://github.com/opendp/opendp/pull/2652)
+
+#### Fill gaps
+
+- Fill in migration notes back to v12 [#2541](https://github.com/opendp/opendp/pull/2541)
+- Clarify commitments for OpenDP Commons [#2661](https://github.com/opendp/opendp/pull/2661)
+- Add citations and utility/runtime information in Rust code [#2702](https://github.com/opendp/opendp/pull/2702)
+
+#### Clean up
+
+- Clean up measure/metric docs [#2659](https://github.com/opendp/opendp/pull/2659)
+- Clean up release process notes [#2651](https://github.com/opendp/opendp/pull/2651)
+- Update banner for email outage [#2650](https://github.com/opendp/opendp/pull/2650)
+- Normalize `.tex` proof template [#2699](https://github.com/opendp/opendp/pull/2699)
+
+
+### Git and Github
+
+- Rewrite version tags to keep repo size small [#2680](https://github.com/opendp/opendp/pull/2680)
+- Make "sync from upstream" the release workflow default [#2653](https://github.com/opendp/opendp/pull/2653)
+- Remove unused `workflow_dispatch` [#2655](https://github.com/opendp/opendp/pull/2655)
+- Add `.gitignore` for Lean  [#2712](https://github.com/opendp/opendp/pull/2712)
+- At the start of the CLA process, ask to be added to team [#2667](https://github.com/opendp/opendp/pull/2667)
+- Add missing cla-bot [#2695](https://github.com/opendp/opendp/pull/2695)
+
+
+### Proofs
+
+- Prove `make_np_sum` [#1316](https://github.com/opendp/opendp/pull/1316)
+
+
+
+## [0.14.2](https://github.com/opendp/opendp/compare/v0.14.1...v0.14.2) - 2026-05-08
+
+
+### Features
+
+- Faster and simpler exponential mechanism [#2549](https://github.com/opendp/opendp/pull/2549)
+
+### Fixes
+
+- Additive noise sampler bias, statistical testing [#2639](https://github.com/opendp/opendp/pull/2639)
+- Swap in numpy cumsum for deprecated sklearn function [#2589](https://github.com/opendp/opendp/pull/2589)
+- Ffi for stable truncation transformations [#2557](https://github.com/opendp/opendp/pull/2557)
+
+### Proof Reviews
+
+- Make_count [#2122](https://github.com/opendp/opendp/pull/2122)
+- Sample_bernoulli_exp [#2113](https://github.com/opendp/opendp/pull/2113)
+- Sample_discrete_gaussian [#2115](https://github.com/opendp/opendp/pull/2115)
+- Sample_geometric_exp_slow [#2118](https://github.com/opendp/opendp/pull/2118)
+
+### Docs
+
+- Group by -> group-by [#2636](https://github.com/opendp/opendp/pull/2636)
+- Remove intern announcement from banner [#2624](https://github.com/opendp/opendp/pull/2624)
+- Check formating of code samples in docs in smoke-tests, not just weekly [#2578](https://github.com/opendp/opendp/pull/2578)
+- Mention "hierarchical queries" [#2584](https://github.com/opendp/opendp/pull/2584)
+- Fix ordering of docs sections by adding indent [#2586](https://github.com/opendp/opendp/pull/2586)
+- Add bounds estimation section [#2583](https://github.com/opendp/opendp/pull/2583)
+- Add a redirect from old cla to current [#2591](https://github.com/opendp/opendp/pull/2591)
+- Include job and internship announcement [#2593](https://github.com/opendp/opendp/pull/2593)
+- Better formatting of api reference docs [#2546](https://github.com/opendp/opendp/pull/2546)
+- Https for registry [#2582](https://github.com/opendp/opendp/pull/2582)
+- Use tilde in rst [#2544](https://github.com/opendp/opendp/pull/2544)
+- Clean up measurements index page [#2543](https://github.com/opendp/opendp/pull/2543)
+- Update issue templates [#2538](https://github.com/opendp/opendp/pull/2538)
+- Search and replace framework PDF URL [#2570](https://github.com/opendp/opendp/pull/2570)
+- Update slack link; remove office hours [#2606](https://github.com/opendp/opendp/pull/2606)
+
+### Maintenance
+
+- To fix rdocs build, use action provided by pandoc to upgrade pandoc version [#2628](https://github.com/opendp/opendp/pull/2628) (Reverts: Disable llm-docs rdocs generation [#2608](https://github.com/opendp/opendp/pull/2608) and Downgrade pkgdown to work around "definition_lists is not supported for gfm" error [#2616](https://github.com/opendp/opendp/pull/2616))
+- Swap macos 15 for 13 [#2597](https://github.com/opendp/opendp/pull/2597)
+- Stub codeowners [#2566](https://github.com/opendp/opendp/pull/2566)
+- Convert from namedtuples to dataclasses [#2623](https://github.com/opendp/opendp/pull/2623)
+- Minor docs and test quality-of-life improvements [#2622](https://github.com/opendp/opendp/pull/2622)
+- R Linting: turn off return_linter [#2576](https://github.com/opendp/opendp/pull/2576)
+
+### Testing
+
+- Ignore deprecation warning from transitive dependency [#2620](https://github.com/opendp/opendp/pull/2620)
+
 
 
 ## [0.14.1](https://github.com/opendp/opendp/compare/v0.14.0...v0.14.1) - 2025-09-16
+
+### Migration
+
+- If null or nan values are encountered, the default behavior is now to impute the mean of the upper and lower clipping bounds. Use `fill_null` and `fill_nan` if a different value would be appropriate.
 
 ### Fix
 
@@ -29,6 +198,21 @@ showing the source changes from the previous version.
 
 ## [0.14.0](https://github.com/opendp/opendp/compare/v0.13.0...v0.14.0) - 2025-09-08
 
+### Migration
+
+- Renamed compositor APIs:
+    - `make_basic_composition` → `make_composition`
+    - `make_sequential_composition` → `make_adaptive_composition`
+- RNM Gumbel renaming and privacy measure parametrization:
+    - `make_report_noisy_max_gumbel` → `make_noisy_max`
+- `dp.polars.Margin` kwargs renamed:
+    - `public_info` → `invariant`
+    - `max_partition_length` → `max_length`
+    - `max_num_partitions` → `max_groups`
+- Other API Changes:
+    - `make_private_quantile` is parametrized with `output_measure`
+    - `make_laplace_threshold`: `input_metric` is now `L0PInfDistance`
+    - `make_gaussian_threshold`: `input_metric` is now `L0PInfDistance`
 
 ### Feature
 
@@ -123,6 +307,10 @@ showing the source changes from the previous version.
 
 ## [0.13.0](https://github.com/opendp/opendp/compare/v0.12.1...v0.13.0) - 2025-04-22
 
+### Migration
+
+- We now default to the assumption that NaN values exist in float data in all settings. You’ll notice that you now need to specify `nan=False` in atom domains, [even when building the Laplace or Gaussian measurements](https://docs.opendp.org/en/v0.13.0/api/user-guide/measurements/additive-noise-mechanisms.html#Distribution:-Laplace-vs.-Gaussian).
+- The recommended format for margins in the Context API is now a list of margins containing group-by keys, instead of a dictionary of group-by keys and margins. An example of the new syntax [can be found here](https://docs.opendp.org/en/v0.13.0/api/user-guide/polars/gaussian-noise.html#Max-Partition-Contributions). This allows group-by keys to be arbitrary expressions. 
 
 ### Feat
 
@@ -223,6 +411,14 @@ showing the source changes from the previous version.
 
 
 ## [0.12.0](https://github.com/opendp/opendp/compare/v0.11.1...v0.12.0) - 2024-12-19
+
+### Migration
+
+Previously, OpenDP allowed arbitrary functions to be used as postprocessors. Unfortunately, postprocessors from an adversary could introduce vulnerabilities, for instance, reading from local files and releasing information in the clear. OpenDP now requires `honest-but-curious` to be enabled in order to build postprocessors from Python, and states necessary conditions for valid postprocessors.
+
+Also:
+- Replace `SMDCurve`, which represented the function ε(δ), with `PrivacyProfile`, which represents the function δ(ε).
+- Remove argument for distance type on privacy measures: `max_divergence(T=float)` is now just `max_divergence()`
 
 
 ### Added

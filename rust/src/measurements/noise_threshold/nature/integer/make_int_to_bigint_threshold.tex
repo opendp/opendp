@@ -2,7 +2,7 @@
 \input{../../../../lib.sty}
 
 \title{\texttt{fn make\_int\_to\_bigint\_threshold}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 \date{}
 
 \begin{document}
@@ -14,7 +14,7 @@ Proves soundness of the implementation of \rustdoc{measurements/noise_threshold/
 
 \section{Hoare Triple}
 \subsection*{Precondition}
-\subsubsection*{Compiler-Verified}
+\subsubsection*{Compiler-verified}
 
 \begin{itemize}
     \item Generic \texttt{TK} implements trait \rustdoc{traits/trait}{Hashable}
@@ -23,7 +23,7 @@ Proves soundness of the implementation of \rustdoc{measurements/noise_threshold/
     \item Generic \texttt{QI} implements trait \rustdoc{traits/trait}{Number}
 \end{itemize}
 
-\subsubsection*{User-Verified}
+\subsubsection*{Caller-verified}
 None
 
 \subsection*{Pseudocode}

@@ -96,3 +96,7 @@ Otherwise, you will get an error that includes:
 
     /docs/source/api/index.rst:4:toctree contains reference to nonexisting document 'api/python/index'
 
+Version selection for `make versions` is computed before Sphinx starts by
+`docs/tools/select_smv_versions.py`, then passed into `conf.py` via
+`OPENDP_SMV_TAG_WHITELIST`. This keeps `conf.py` static when
+`sphinx-multiversion` re-evaluates it inside per-ref temporary build directories.

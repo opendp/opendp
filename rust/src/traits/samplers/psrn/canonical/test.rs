@@ -27,6 +27,7 @@ fn test_sample_cnd_interval_progression() -> Fallible<()> {
 }
 
 // CDF from Definition 3.7 in https://arxiv.org/pdf/2108.04303
+#[allow(non_snake_case)]
 fn F_f(x: f64, f: impl Fn(f64) -> f64 + Clone, c: f64) -> f64 {
     if x < -0.5 {
         f(1. - F_f(x + 1.0, f.clone(), c))
@@ -47,11 +48,11 @@ fn test_cnd_psrn() -> Fallible<()> {
         tradeoff: &tradeoff,
         fixed_point: &c,
     };
-    let samples = (0..1000)
+    let samples = (0..5000)
         .map(|_| PartialSample::new(cnd.clone()).value())
         .collect::<Fallible<Vec<f64>>>()?;
 
-    let samples = <[f64; 1000]>::try_from(samples).unwrap();
+    let samples = <[f64; 5000]>::try_from(samples).unwrap();
 
     let f_tradeoff = |x: f64| -> f64 { tradeoff(RBig::from_f64(x).unwrap()).to_f64().value() };
     let f_c = c.to_f64().value();

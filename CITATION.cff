@@ -38,7 +38,7 @@ authors:
     given-names: Claire
 cff-version: 1.2.0
 contact:
-  - email: info@opendp.org
+  - email: contact@opendp.org
     name: The OpenDP Team
     website: https://opendp.org
 identifiers:

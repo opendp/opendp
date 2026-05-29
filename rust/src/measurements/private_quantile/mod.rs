@@ -24,7 +24,20 @@ mod ffi;
     generics(MI(suppress), MO(suppress), T(suppress)),
     derived_types(T = "$get_atom(get_type(input_domain))")
 )]
-/// Makes a Measurement the computes the quantile of a dataset.
+/// Make a Measurement that computes the quantile of a dataset.
+///
+/// # Citations
+/// * [Smith11 Privacy-Preserving Statistical Estimation with Optimal Convergence Rates](https://doi.org/10.1145/1993636.1993743)
+/// * [MS20 Permute-and-Flip: A New Mechanism for Differentially Private Selection](https://arxiv.org/abs/2010.12603)
+///
+/// # Runtime
+/// Construction time is `O(c log c)` to sort `c` candidates.
+/// For a dataset of size `n`, each release then runs in `O(n log c + c)`.
+///
+/// # Utility
+/// The release is always one of the supplied `candidates`.
+/// If the input domain size is known, the scoring sensitivity is reduced by a factor of 2
+/// relative to the unknown-size case, which can improve utility.
 ///
 /// # Arguments
 /// * `input_domain` - Uses a tighter sensitivity when the size of vectors in the input domain is known.

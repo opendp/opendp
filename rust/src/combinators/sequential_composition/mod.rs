@@ -94,7 +94,7 @@ impl CompositionMeasure for Approximate<MaxDivergence> {
 }
 
 #[proven(
-    proof_path = "combinators/sequential_composition/CompositionMeasure_for_ZeroConcentratedDivergence.tex"
+    proof_path = "combinators/sequential_composition/CompositionMeasure_for_ApproximateZeroConcentratedDivergence.tex"
 )]
 impl CompositionMeasure for Approximate<ZeroConcentratedDivergence> {
     fn composability(&self, _adaptivity: Adaptivity) -> Fallible<Composability> {

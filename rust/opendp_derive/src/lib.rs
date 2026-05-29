@@ -42,7 +42,7 @@ mod full;
 /// You can indicate a list of features that must be enabled by the user for the function to exist.
 /// ```no_run
 /// #[bootstrap(
-///     features("contrib", "floating-point")
+///     features("contrib", "idealized-numerics")
 /// )]
 /// ```
 /// It is recommended to specify features through the `bootstrap` function, not via `cfg` attributes,

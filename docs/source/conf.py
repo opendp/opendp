@@ -176,10 +176,11 @@ html_css_files = [
 ]
 
 # See https://pydata-sphinx-theme.readthedocs.io/en/v0.6.3/user_guide/configuring.html#configure-the-sidebar
-# Note: Overridden in the Makefile for local builds. Be sure to update both places.
-html_sidebars = {
-   '**': ['sidebar-nav-bs.html', 'versioning.html'],
-}
+universal_sidebars = ['sidebar-nav-bs.html']
+if os.getenv("OPENDP_SPHINX_LOCAL") != "1":
+    universal_sidebars.append('versioning.html')
+html_sidebars = {'**': universal_sidebars}
+
 html_context = {
     # Expected sphinx-multiversion to set "latest_version", but it was None, so set it manually.
     'latest_version_name': f'v{version}',
@@ -187,12 +188,9 @@ html_context = {
     # 'current_version': 'some-old-version'
 }
 
-# SPHINX-MULTIVERSION STUFF
 # Whitelist pattern for tags (set to None to ignore all tags)
-smv_tag_whitelist = r'^v.*$'
-# # keep all released versions, as well as prereleases for the stable version. Doesn't work, because version != stable
-# import re
-# smv_tag_whitelist = rf'(^v\d+\.\d+\.\d+$)|(^v{re.escape(version.split("-")[0])}.+$)'
+smv_tag_whitelist = os.environ.get("OPENDP_SMV_TAG_WHITELIST", r"^$")
+
 
 # Whitelist pattern for branches (set to None to ignore all branches)
 smv_branch_whitelist = r'(stable|beta|nightly)'

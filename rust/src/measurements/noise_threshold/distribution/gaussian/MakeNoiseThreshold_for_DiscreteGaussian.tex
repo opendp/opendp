@@ -2,7 +2,7 @@
 \input{../../../../lib.sty}
 
 \title{\texttt{MakeNoiseThreshold<DI, MI, MO> for DiscreteGaussian}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 \date{}
 
 \begin{document}
@@ -25,7 +25,7 @@ by simplifying the type signature.
 
 \section{Hoare Triple}
 \subsection*{Precondition}
-\subsubsection*{Compiler-Verified}
+\subsubsection*{Compiler-verified}
 \texttt{MakeNoiseThreshold} is parameterized as follows:
 \begin{itemize}
     \item \texttt{DI} implements trait \rustdoc{core/trait}{Domain}
@@ -45,7 +45,7 @@ The following trait bounds are also required:
     \item type \texttt{(DI, MI)} implements trait \rustdoc{core/trait}{MetricSpace}
 \end{itemize}
 
-\subsubsection*{User-Verified}
+\subsubsection*{Caller-verified}
 None
 
 \subsection*{Pseudocode}

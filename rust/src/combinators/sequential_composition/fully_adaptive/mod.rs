@@ -25,6 +25,16 @@ mod ffi;
 )]
 /// Construct an odometer that can spawn a compositor queryable.
 ///
+/// # Citations
+/// * [WRRW23 Fully Adaptive Composition in Differential Privacy](https://arxiv.org/abs/2203.05481)
+/// * [VZ23 Concurrent Composition Theorems for Differential Privacy](http://dx.doi.org/10.1145/3564246.3585241)
+/// * [HSTVVXZ23 Concurrent Composition for Interactive Differential Privacy with Adaptive Privacy-Loss Parameters](https://arxiv.org/abs/2309.05901)
+///
+/// # Runtime
+/// Constructing the odometer is `O(1)`.
+/// Each invocation adds `O(1)` bookkeeping beyond the cost of the queried measurement,
+/// while a privacy-loss query over `m` prior invocations costs `O(m)`.
+///
 /// # Arguments
 /// * `input_domain` - indicates the space of valid input datasets
 /// * `input_metric` - how distances are measured between members of the input domain

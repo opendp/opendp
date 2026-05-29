@@ -2,7 +2,7 @@
 \input{../../../lib.sty}
 
 \title{\texttt{fn make\_private\_group\_by}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 \date{}
 
 \begin{document}
@@ -20,25 +20,23 @@ Proves soundness of \texttt{fn make\_private\_group\_by} in \asOfCommit{mod.rs}{
     \item Generic \texttt{MO} must implement trait \texttt{ApproximateMeasure}.
 \end{itemize}
 
-\subsubsection*{User-verified}
+\subsubsection*{Caller-verified}
 None
 
 \subsection*{Pseudocode}
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_private_group_by.py}
 
-\subsubsection*{Postconditions}
+\subsection*{Postcondition}
 \begin{theorem}
     \label{postcondition}
     \validMeasurement{\texttt{(input\_domain, input\_metric, \\output\_measure, plan, global\_scale, threshold, MI, MO)}}{\texttt{make\_private\_group\_by}}
 \end{theorem}
-\section{Proof}
-
 We now prove the postcondition (Theorem~\ref{postcondition}).
 \begin{proof}
 
 The function logic breaks down into parts:
 \begin{enumerate}
-    \item establish stability of group by (line \ref{line:input_stability})
+    \item establish stability of group-by (line \ref{line:input_stability})
     \item prepare for release of \texttt{aggs} (line \ref{line:prep-release-aggs})
     \item prepare for release of \texttt{keys} (line \ref{line:prep-release-keys})
     \begin{enumerate}
@@ -79,8 +77,8 @@ By the postcondition of \texttt{make\_basic\_composition},
 \texttt{m\_exprs} is a valid measurement that prepares a batch of expressions that, 
 when executed via \texttt{f\_comp}, satisfies the privacy guarantee of \texttt{f\_privacy\_map}.
 
-Now that we've prepared the necessary prerequisites for privatizing the aggregations,
-we switch to privatizing the keys.
+Now that we've prepared the necessary prerequisites for releasing the aggregations,
+we switch to releasing the keys.
 
 \subsection{Prepare to release \texttt{keys}}
 \texttt{key\_sanitization} needs to be updated with information that was not available in the initial match on line \ref{line:match-group-by}.
@@ -142,9 +140,9 @@ using all of the properties proven of the variables established thus far.
 The function returns a \texttt{DslPlan} that applies each expression from \texttt{m\_exprs}
 to \texttt{arg} grouped by \texttt{keys}.
 \texttt{key\_sanitizer} is conveyed into the plan, if set, 
-to ensure that the keys are also privatized if necessary.
+to ensure that the keys are also released with differential privacy if necessary.
 
-In the case of the join privatization, by the definition of \texttt{KeySanitizer},
+In the case of the join sanitization, by the definition of \texttt{KeySanitizer},
 the join will either be a left or right join.
 The branching swaps the input plan and labels plan to ensure that the sensitive input data is always joined against the labels,
 but using the same join type as in the original plan.
@@ -168,8 +166,15 @@ The measurement for each expression expects data set distances in terms of a tri
     but can also be bounded by the product of the $L^0$ and $L^\infty$ bounds on line \ref{line:l1-from-l0-li}.
 \end{itemize}
 
-By the postcondition of \texttt{f\_privacy\_map}, the privacy loss of releasing the output of \texttt{aggs}, 
-when grouped data sets may differ by this distance triple,
+Once all three bounds are concrete, the logic tightens them using identities that always hold for grouped distances:
+\[
+    \Delta_0 \le \Delta_1, \qquad \Delta_\infty \le \Delta_1, \qquad \Delta_1 \le \Delta_0 \cdot \Delta_\infty.
+\]
+Therefore the assignments on lines \ref{line:l0-tighten}, \ref{line:li-tighten}, and \ref{line:l1-tighten}
+preserve validity while potentially reducing looseness introduced by independently supplied upper bounds.
+
+By the postcondition of \texttt{f\_privacy\_map}, the privacy loss of releasing the output of \texttt{aggs},
+when grouped data sets may differ by this tightened distance triple,
 is \texttt{d\_out}.
 
 We also need to consider the privacy loss from releasing \texttt{keys}.

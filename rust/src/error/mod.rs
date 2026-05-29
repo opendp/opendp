@@ -75,6 +75,9 @@ pub enum ErrorVariant {
     #[error("TypeParse")]
     TypeParse,
 
+    #[error("Type")]
+    Type,
+
     #[error("FailedFunction")]
     FailedFunction,
 
@@ -110,6 +113,9 @@ pub enum ErrorVariant {
 
     #[error("InvalidDistance")]
     InvalidDistance,
+
+    #[error("Search")]
+    Search,
 
     #[error("Overflow")]
     Overflow,

@@ -28,6 +28,16 @@ mod test;
 )]
 /// Make a Measurement that takes a vector of scores and privately selects the index of the highest score.
 ///
+/// # Citations
+/// * [MS20 Permute-and-Flip: A New Mechanism for Differentially Private Selection](https://arxiv.org/abs/2010.12603)
+///
+/// # Runtime
+/// Per release, worst-case runtime is `O(n)`, where `n` is the number of scores.
+///
+/// # Utility
+/// When `scale = 0`, the mechanism returns the exact maximizing index.
+/// For positive `scale`, utility improves as score gaps grow relative to `scale`.
+///
 /// # Arguments
 /// * `input_domain` - Domain of the input vector. Must be a non-nullable `VectorDomain`
 /// * `input_metric` - Metric on the input domain. Must be `LInfDistance`
@@ -68,6 +78,12 @@ where
     note = "Use :py:func:`~opendp.measurements.make_noisy_max` instead."
 )]
 /// Make a Measurement that takes a vector of scores and privately selects the index of the highest score.
+///
+/// # Citations
+/// * [MS20 Permute-and-Flip: A New Mechanism for Differentially Private Selection](https://arxiv.org/abs/2010.12603)
+///
+/// # Runtime
+/// Per release, worst-case runtime is `O(n)`, where `n` is the number of scores.
 ///
 /// # Arguments
 /// * `input_domain` - Domain of the input vector. Must be a non-nullable `VectorDomain`

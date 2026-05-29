@@ -14,6 +14,8 @@ from opendp.extras.mbi._utilities import (
     weight_marginals,
 )
 
+from ..helpers import ids
+
 
 def test_count_post_init():
     with pytest.raises(ValueError):
@@ -73,6 +75,7 @@ def test_get_std():
             "input_domain columns must be lower bounded by zero",
         ),
     ],
+    ids=ids,
 )
 def test_get_cardinalities(domain, message):
     with pytest.raises(Exception, match=re.escape(message)):
@@ -169,8 +172,8 @@ def test_weight_marginals():
     ):
         weight_marginals({}, False)
 
-    lm1 = LinearMeasurement([1], clique=("A",), stddev=1.0)
-    lm2 = LinearMeasurement([2], clique=("A",), stddev=1.0)
+    lm1 = LinearMeasurement(np.array([1]), clique=("A",), stddev=1.0)
+    lm2 = LinearMeasurement(np.array([2]), clique=("A",), stddev=1.0)
     marginals = weight_marginals({("A",): lm1}, lm2)
     weighted: LinearMeasurement = marginals[("A",)]
     assert weighted.stddev == sqrt(1 / 2)

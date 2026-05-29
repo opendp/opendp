@@ -58,7 +58,7 @@ mod canonical_noise;
 #[cfg(feature = "contrib")]
 pub use canonical_noise::*;
 
-#[cfg(all(feature = "floating-point", feature = "contrib"))]
+#[cfg(all(feature = "idealized-numerics", feature = "contrib"))]
 mod alp;
-#[cfg(all(feature = "floating-point", feature = "contrib"))]
+#[cfg(all(feature = "idealized-numerics", feature = "contrib"))]
 pub use alp::*;

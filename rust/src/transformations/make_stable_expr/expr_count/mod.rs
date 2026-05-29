@@ -46,7 +46,10 @@ where
     Expr: StableExpr<L01InfDistance<MI>, L01InfDistance<MI>>,
 {
     let (input, strategy) = match expr {
-        Expr::Agg(AggExpr::Count(input, include_nulls)) => (
+        Expr::Agg(AggExpr::Count {
+            input,
+            include_nulls,
+        }) => (
             input.as_ref().clone(),
             if include_nulls {
                 Strategy::Len

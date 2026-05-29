@@ -4,6 +4,7 @@ import logging
 import opendp.prelude as dp
 from opendp._internal import _make_measurement
 
+
 def test_unit_of():
     assert dp.unit_of(contributions=3) == (dp.symmetric_distance(), 3)
     assert dp.unit_of(contributions=3, ordered=True) == (dp.insert_delete_distance(), 3)

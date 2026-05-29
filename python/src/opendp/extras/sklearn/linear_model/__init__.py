@@ -85,7 +85,7 @@ class LinearRegression:
         ... except ModuleNotFoundError:
         ...     import pytest
         ...     pytest.skip('Requires extra install')
-        >>> dp.enable_features("floating-point")
+        >>> dp.enable_features("idealized-numerics")
         >>> lin_reg = dp.sklearn.linear_model.LinearRegression(
         ...     dp.max_divergence(),
         ...     x_bounds=[(0, 10)],

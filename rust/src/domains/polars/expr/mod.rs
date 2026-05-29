@@ -20,7 +20,7 @@ mod ffi;
 /// Expressions used in the Polars API fall into four categories:
 ///
 /// 1. Not useful on their own for DP (shift)
-/// 2. Leaf nodes, like only col or lit (impute, group by or join keys, explode)
+/// 2. Leaf nodes, like only col or lit (impute, group-by or join keys, explode)
 /// 3. Row-by-row (sorting by, filter, with column, top/bottom k)
 /// 4. Grouping (select, aggregate)
 ///

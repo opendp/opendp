@@ -1,5 +1,6 @@
 import pytest
 import opendp.prelude as dp
+from opendp.mod import OpenDPException, _call_rust_search
 
 
 def test_binary_search_fail():
@@ -76,7 +77,36 @@ def test_binary_search_failed_infer():
     with pytest.raises(TypeError):
         dp.binary_search(predicate)
 
-    
+
+def test_binary_search_forwards_rust_type_errors():
+    def search(_):
+        raise OpenDPException("Type", "expected int")
+
+    with pytest.raises(TypeError, match="expected int"):
+        _call_rust_search(lambda _: True, "i32", search)
+
+
+def test_binary_search_forwards_rust_search_errors():
+    def search(_):
+        raise OpenDPException("Search", "predicate is constant")
+
+    with pytest.raises(ValueError, match="predicate is constant"):
+        _call_rust_search(lambda _: True, "i32", search)
+
+
+def test_binary_search_forwards_untranslated_rust_errors():
+    def search(_):
+        raise OpenDPException("FailedFunction", "callback failed")
+
+    with pytest.raises(OpenDPException, match='FailedFunction\\("callback failed"\\)'):
+        _call_rust_search(lambda _: True, "i32", search)
+
+
+def test_exponential_bounds_search():
+    assert dp.exponential_bounds_search(lambda x: x > 0, int) == (0, 1)
+    assert dp.exponential_bounds_search(lambda x: x > 0, float) == (0.0, 0.5)
+
+
 def test_type_inference():
     def chainer(b):
         return dp.t.make_sum(
@@ -95,4 +125,3 @@ def test_type_inference():
             dp.vector_domain(dp.atom_domain(bounds=(-b, b)), size=1000), 
             dp.symmetric_distance())
     assert 499.999 < dp.binary_search_param(mean_chainer_b, 2, 1.) < 500.
-

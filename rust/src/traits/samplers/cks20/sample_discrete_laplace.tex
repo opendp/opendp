@@ -2,35 +2,36 @@
 \input{../../../lib.sty}
 
 \title{\texttt{fn sample\_discrete\_laplace}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 
 \begin{document}
 \maketitle
-
 \contrib
 Proves soundness of \texttt{fn sample\_discrete\_laplace} in \asOfCommit{mod.rs}{0be3ab3e6}.
 This proof is an adaptation of \href{https://arxiv.org/pdf/2004.00010.pdf#subsection.5.2}{subsection 5.2} of \cite{CKS20}.
 
-\subsection*{Vetting history}
-\begin{itemize}
-    \item \vettingPR{519}
-    \item \vettingPR{1134}
-\end{itemize}
-
 \section{Hoare Triple}
 \subsection*{Precondition}
-$\texttt{scale} \in \mathbb{Q} \land \texttt{scale} > 0$
+\subsubsection*{Compiler-verified}
+\begin{itemize}
+    \item \texttt{scale} is of type \texttt{Rational}.
+\end{itemize}
+
+\subsubsection*{Caller-verified}
+\begin{itemize}
+    \item $\texttt{scale} > 0$.
+\end{itemize}
 
 \subsection*{Pseudocode}        
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/sample_discrete_laplace.py}
 
 \subsection*{Postcondition}
+\begin{theorem}
 \label{postcondition}
 For any setting of the input parameter \texttt{scale} such that the given preconditions hold, \\
 \texttt{sample\_discrete\_laplace} either returns \texttt{Err(e)} due to a lack of system entropy,
 or \texttt{Ok(out)}, where \texttt{out} is distributed as $\mathcal{L}_\mathbb{Z}(0, scale)$.
-
-\section{Proof}
+\end{theorem}
 \begin{definition} \cite{BV17}
     (Discrete Laplace). Let $\mu, \sigma \in \mathbb{R}$ with $\sigma > 0$. 
     The discrete laplace distribution with location $\mu$ and scale $s$ is denoted $\mathcal{L}_\mathbb{Z}(\mu, s)$. 

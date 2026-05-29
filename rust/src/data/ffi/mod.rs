@@ -37,7 +37,6 @@ use crate::measures::PrivacyProfile;
 use crate::metrics::IntDistance;
 use crate::traits::ProductOrd;
 use crate::traits::samplers::{Shuffle, fill_bytes};
-use crate::{err, fallible, try_, try_as_ref};
 use opendp_derive::bootstrap;
 
 #[bootstrap(
@@ -238,7 +237,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         let slices = unsafe { slice::from_raw_parts(raw.ptr as *const *const FfiSlice, raw.len) };
         let series = slices.iter().map(|&s| raw_to_concrete_series(try_as_ref!(s)).map(|s| s.into_column()))
         .collect::<Fallible<Vec<Column>>>()?;
-        
+
         Ok(AnyObject::new(DataFrame::new(series)?))
     }
 
@@ -252,7 +251,7 @@ pub extern "C" fn opendp_data__slice_as_object(
         // the slice is lf.__getstate__ from the python side and then deserialized here
         polars_utils::pl_serialize::SerializeOptions::default()
             // `false` disables forward compatibility
-            .deserialize_from_reader::<_, _, false>(slice)
+            .deserialize_from_reader::<T, &[u8], false>(slice)
             .map_err(
             |e| err!(FFI, "Error when deserializing '{}'. This may be because you're using features from Polars that are not currently supported. {}", name, e)
         )
@@ -518,6 +517,19 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             2,
         ))
     }
+    fn option_tuple2_to_raw<T0: 'static, T1: 'static>(obj: &AnyObject) -> Fallible<FfiSlice> {
+        if let Some(tuple) = obj.downcast_ref::<Option<(T0, T1)>>()? {
+            Ok(FfiSlice::new(
+                util::into_raw([
+                    &tuple.0 as *const T0 as *const c_void,
+                    &tuple.1 as *const T1 as *const c_void,
+                ]) as *mut c_void,
+                2,
+            ))
+        } else {
+            Ok(FfiSlice::new(null::<c_void>() as *mut c_void, 0))
+        }
+    }
     fn option_to_raw(obj: &AnyObject, args: &Vec<TypeId>) -> Fallible<FfiSlice> {
         let [T] = try_!(parse_type_args(args, "Option"));
 
@@ -540,6 +552,21 @@ pub extern "C" fn opendp_data__object_as_slice(obj: *const AnyObject) -> FfiResu
             } else {
                 FfiSlice::new(null::<c_void>() as *mut c_void, 0)
             }
+        } else if let TypeContents::TUPLE(ref element_ids) = T.contents {
+            let types = try_!(
+                element_ids
+                    .iter()
+                    .map(Type::of_id)
+                    .collect::<Fallible<Vec<_>>>()
+            );
+            if element_ids.len() != 2 {
+                return fallible!(
+                    FFI,
+                    "Only Option-wrapped tuples of length 2 are supported, found length {}",
+                    element_ids.len()
+                );
+            }
+            dispatch!(option_tuple2_to_raw, [(types[0], @primitives_plus), (types[1], @primitives_plus)], (obj))?
         } else {
             return fallible!(FFI, "unsupported object type: Option<{}>", T.to_string());
         })

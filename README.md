@@ -1,6 +1,5 @@
 <img src="https://docs.opendp.org/en/stable/_static/opendp-logo.png" width="200" alt="OpenDP logo">
 
-[![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/license/MIT)
 
 [![Python](https://img.shields.io/badge/Python-3.10%20%E2%80%93%203.13-blue)](https://docs.opendp.org/en/stable/api/python/index.html)
@@ -19,9 +18,13 @@ OpenDP is implemented in Rust, with bindings for easy use from Python and R.
 The architecture of the OpenDP Library is based on a conceptual framework for expressing privacy-aware computations.
 This framework is described in the paper [A Programming Framework for OpenDP](https://opendp.org/files/2025/11/opendp_programming_framework_11may2020_1_01.pdf).
 
-The OpenDP Library is part of the larger [OpenDP Project](https://opendp.org), a community effort to build trustworthy,
-open source software tools for analysis of private data.
-(For simplicity in these docs, when we refer to “OpenDP,” we mean just the library, not the entire project.)
+> [!NOTE]
+> This software is part of the [**OpenDP Commons**](https://sites.harvard.edu/opendp/tools/#opendp-commons). As such, the OpenDP Executive Committee commits to:
+> - Releasing this software under an [OSI approved licence](https://opensource.org/licenses), in this case the [MIT License](https://github.com/opendp/opendp/blob/main/LICENSE).
+> - Ensuring there are at least two maintainers, in this case Michael Shoemate (`Shoeboxam`) and Chuck McCallum (`mccalluc`), who will respond within a week to new issues and PRs.
+> - Only making changes on `main` through PRs, and getting approval on these PRs before merging.
+> - On an annual basis, recruiting one or more volunteers (not active contributors) who will conduct a health-check, focussed not on the details of the algorithms but on the health of this repo as open source software. Their report will be linked here. The next (and first) health-check is scheduled for September 2026.
+
 
 ## Status
 
@@ -71,7 +74,7 @@ If you're having problems using OpenDP, or want to submit feedback, please reach
 -->
 
 * Report a bug or request a feature on [Github](https://github.com/opendp/opendp/issues).
-* Send general queries to [info@opendp.org](mailto:info@opendp.org), or email [security@opendp.org](mailto:security@opendp.org) if it is related to security.
+* Send general queries to [contact@opendp.org](mailto:contact@opendp.org), or email [security@opendp.org](mailto:security@opendp.org) if it is related to security.
 * Join the conversation on [Slack](https://join.slack.com/t/opendp/shared_invite/zt-1t8rrbqhd-z8LiZiP06vVE422HJd6ciQ), or the [mailing list](https://groups.google.com/a/g.harvard.edu/g/opendp-community).
 
 ## Contributing

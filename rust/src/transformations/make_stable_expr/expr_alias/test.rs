@@ -1,8 +1,8 @@
 use polars::{
     df,
     lazy::frame::{IntoLazy, LazyFrame},
+    prelude::col,
 };
-use polars_plan::dsl::col;
 
 use crate::{
     domains::{AtomDomain, LazyFrameDomain, SeriesDomain},

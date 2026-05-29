@@ -2,7 +2,7 @@
 \input{../../../../lib.sty}
 
 \title{\texttt{MakeNoise<AtomDomain<T>, AbsoluteDistance<T>, MO> for ConstantTimeGeometric<T>}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 \date{}
 
 \begin{document}
@@ -13,13 +13,13 @@
 Proves soundness of the implementation of \rustdoc{measurements/noise/trait}{MakeNoise} over scalars
 for \rustdoc{measurements/noise/distribution/geometric/struct}{ConstantTimeGeometric} in \asOfCommit{mod.rs}{f5bb719}.
 
-The intuition of this implementation is that a vector-valued mechanism can be used to privatize a scalar-valued input,
+The intuition of this implementation is that a vector-valued mechanism can be used to release a scalar-valued input,
 by transforming the input into a singleton vector, 
 applying the vector mechanism, and then unpacking the resulting singleton vector.
 
 \section{Hoare Triple}
 \subsection*{Precondition}
-\subsubsection*{Compiler-Verified}
+\subsubsection*{Compiler-verified}
 
 \texttt{MakeNoise} is parameterized as follows:
 \begin{itemize}
@@ -40,7 +40,7 @@ The following trait bounds are also required:
         maps built for \texttt{ZExpFamily<1>} can be used for \texttt{ConstantTimeGeometric}.
 \end{itemize}
 
-\subsubsection*{User-Verified}
+\subsubsection*{Caller-verified}
 None
 
 \subsection*{Pseudocode}

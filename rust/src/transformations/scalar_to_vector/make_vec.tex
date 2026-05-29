@@ -2,7 +2,7 @@
 \input{../../lib.sty}
 
 \title{\texttt{fn make\_vec}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 \date{}
 
 \begin{document}
@@ -16,13 +16,13 @@ This transformation simply wraps an input scalar in a singleton vec.
 The output metric then becomes an Lp distance.
 \section{Hoare Triple}
 \subsection*{Precondition}
-\subsubsection*{Compiler-Verified}
+\subsubsection*{Compiler-verified}
 \begin{itemize}
     \item Generic \texttt{T} implements trait \rustdoc{traits/trait}{Number}
     \item Generic \texttt{Q} implements trait \rustdoc{traits/trait}{Number}
 \end{itemize}
 
-\subsubsection*{User-Verified}
+\subsubsection*{Caller-verified}
 None
 
 \subsection*{Pseudocode}

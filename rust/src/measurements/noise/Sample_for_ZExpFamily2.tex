@@ -2,18 +2,21 @@
 \input{../../lib.sty}
 
 \title{\texttt{impl Sample for ZExpFamily<2>}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 \date{}
 
 \begin{document}
 
 \maketitle
-
 \contrib
 Proves soundness of the implementation of \rustdoc{measurements/noise/trait}{Sample} for \texttt{ZExpFamily<2>} in \asOfCommit{mod.rs}{f5bb719}.
 
 \section{Hoare Triple}
 \subsection*{Precondition}
+\subsubsection*{Compiler-verified}
+None
+
+\subsubsection*{Caller-verified}
 \texttt{self} represents a valid probability distribution.
 
 \subsection*{Pseudocode}

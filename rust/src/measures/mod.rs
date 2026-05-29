@@ -24,7 +24,7 @@ use crate::{
 ///
 /// # Proof Definition
 ///
-/// ### `d`-closeness
+/// ## `d`-closeness
 ///
 /// For any two distributions $Y, Y'$ and any non-negative $d$,
 /// $Y, Y'$ are $d$-close under the max divergence measure whenever
@@ -53,17 +53,19 @@ impl Measure for MaxDivergence {
 ///
 /// # Proof Definition
 ///
-/// ### `d`-closeness
+/// ## `d`-closeness
 ///
 /// For any two distributions $Y, Y'$ and any curve $d(\cdot)$,
-/// $Y, Y'$ are $d$-close under the smoothed max divergence measure whenever,
-/// for any choice of non-negative $\epsilon$, and $\delta = d(\epsilon)$,
+/// we say that $Y, Y'$ are $d$-close under the smoothed max divergence measure
+/// whenever, for every non-negative $\epsilon$, with $\delta = d(\epsilon)$,
+/// and for every event $S \subseteq \mathrm{Supp}(Y)$,
 ///
 /// ```math
-/// D_\infty^\delta(Y, Y') = \max_{S \subseteq \textrm{Supp}(Y)} \Big[\ln \dfrac{\Pr[Y \in S] + \delta}{\Pr[Y' \in S]} \Big] \leq \epsilon.
+/// \Pr[Y \in S] \le e^\epsilon \Pr[Y' \in S] + \delta.
 /// ```
 ///
-/// Note that $\epsilon$ and $\delta$ are not privacy parameters $\epsilon$ and $\delta$ until quantified over all adjacent datasets,
+/// Note that $\epsilon$ and $\delta$ are not privacy parameters
+/// until quantified over all adjacent datasets,
 /// as is done in the definition of a measurement.
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct SmoothedMaxDivergence;
@@ -172,22 +174,30 @@ impl PrivacyProfile {
 ///
 /// # Proof Definition
 ///
-/// ### `d`-closeness
+/// ## `d`-closeness
 /// For any two distributions $Y, Y'$ and 2-tuple $d = (d', \delta)$,
 /// where $d'$ is the distance with respect to privacy measure PM,
-/// $Y, Y'$ are $d$-close under the approximate PM measure whenever,
-/// for any choice of $\delta \in [0, 1]$,
-/// there exist events $E$ (depending on $Y$) and $E'$ (depending on $Y'$)
-/// such that $\Pr[E] \ge 1 - \delta$, $\Pr[E'] \ge 1 - \delta$, and
+/// we say that $Y, Y'$ are $d$-close under the approximate PM measure
+/// whenever they satisfy the privacy guarantee of PM with parameter $d'$,
+/// up to slack $\delta$.
+///
+/// The exact interpretation of the slack depends on the underlying privacy
+/// measure PM.
+///
+/// ### Special case: `PM = MaxDivergence`
+/// When $d = (\epsilon, \delta)$ and `PM = MaxDivergence`,
+/// this is exactly fixed $(\epsilon, \delta)$-approximate differential privacy:
 ///
 /// ```math
-/// D_{\mathrm{PM}}^\delta(Y|_E, Y'|_{E'}) = D_{\mathrm{PM}}(Y|_E, Y'|_{E'})
+/// \Pr[Y \in S] \le e^\epsilon \Pr[Y' \in S] + \delta
+/// \quad\text{for every event } S \subseteq \mathrm{Supp}(Y).
 /// ```
 ///
-/// where $Y|_E$ denotes the distribution of $Y$ conditioned on the event $E$.
+/// The profile form of this notion, where $\delta$ is a function of $\epsilon$,
+/// is represented by [`SmoothedMaxDivergence`].
 ///
-/// Note that this $\delta$ is not privacy parameter $\delta$ until quantified over all adjacent datasets,
-/// as is done in the definition of a measurement.
+/// Note that $d'$ and $\delta$ are not privacy parameters until quantified over
+/// all adjacent datasets, as is done in the definition of a measurement.
 #[derive(Clone, PartialEq, Debug, Default)]
 pub struct Approximate<PM: Measure>(pub PM);
 
@@ -206,14 +216,17 @@ impl<M: Measure> Measure for Approximate<M> {
 ///
 /// # Proof Definition
 ///
-/// ### `d`-closeness
+/// ## `d`-closeness
 ///
 /// For any two distributions $Y, Y'$ and any non-negative $d$,
-/// $Y, Y'$ are $d$-close under the zero-concentrated divergence measure if,
-/// for every possible choice of $\alpha \in (1, \infty)$,
+/// we say that $Y, Y'$ are $d$-close under the zero-concentrated divergence measure
+/// whenever, for every $\alpha \in (1, \infty)$,
 ///
 /// ```math
-/// D_\alpha(Y, Y') = \frac{1}{1 - \alpha} \mathbb{E}_{x \sim Y'} \Big[\ln \left( \dfrac{\Pr[Y = x]}{\Pr[Y' = x]} \right)^\alpha \Big] \leq d \cdot \alpha.
+/// D_\alpha(Y, Y') = \frac{1}{\alpha - 1}
+/// \ln \mathbb{E}_{x \sim Y'} \left[ \left(
+/// \dfrac{\Pr[Y = x]}{\Pr[Y' = x]}
+/// \right)^\alpha \right] \le d \cdot \alpha.
 /// ```
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct ZeroConcentratedDivergence;
@@ -233,16 +246,20 @@ impl Measure for ZeroConcentratedDivergence {
 ///
 /// # Proof Definition
 ///
-/// ### `d`-closeness
-/// For any two distributions $Y, Y'$ and any curve $d$,
-/// $Y, Y'$ are $d$-close under the Rényi divergence measure if,
-/// for any given $\alpha \in (1, \infty)$,
+/// ## `d`-closeness
+/// For any two distributions $Y, Y'$ and any curve $d(\cdot)$,
+/// we say that $Y, Y'$ are $d$-close under the Rényi divergence measure
+/// whenever, for every $\alpha \in (1, \infty)$,
 ///
 /// ```math
-/// D_\alpha(Y, Y') = \frac{1}{1 - \alpha} \mathbb{E}_{x \sim Y'} \Big[\ln \left( \dfrac{\Pr[Y = x]}{\Pr[Y' = x]} \right)^\alpha \Big] \leq d(\alpha).
+/// D_\alpha(Y, Y') = \frac{1}{\alpha - 1}
+/// \ln \mathbb{E}_{x \sim Y'} \left[ \left(
+/// \dfrac{\Pr[Y = x]}{\Pr[Y' = x]}
+/// \right)^\alpha \right] \le d(\alpha).
 /// ```
 ///
-/// Note that this $\epsilon$ and $\alpha$ are not privacy parameters $\epsilon$ and $\alpha$ until quantified over all adjacent datasets,
+/// Note that this $\epsilon$ and $\alpha$ are not privacy parameters
+/// until quantified over all adjacent datasets,
 /// as is done in the definition of a measurement.
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct RenyiDivergence;

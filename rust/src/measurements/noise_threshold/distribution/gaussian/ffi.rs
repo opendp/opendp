@@ -3,7 +3,6 @@ use std::os::raw::c_void;
 
 use crate::core::{FfiResult, IntoAnyMeasurementFfiResultExt, Measure};
 use crate::domains::{AtomDomain, MapDomain};
-use crate::err;
 use crate::error::Fallible;
 use crate::ffi::any::{AnyDomain, AnyMeasurement, AnyMetric, Downcast};
 use crate::ffi::util::{Type, TypeContents, as_ref};

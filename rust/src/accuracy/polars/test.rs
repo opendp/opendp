@@ -2,10 +2,9 @@ use core::f64;
 
 use polars::{
     df,
-    prelude::{IntoLazy, NamedFrom, lit},
+    prelude::{Column, IntoLazy, NamedFrom, col, len, lit},
     series::Series,
 };
-use polars_plan::dsl::{col, len};
 
 use crate::{
     accuracy::discrete_laplacian_scale_to_accuracy,
@@ -54,7 +53,7 @@ fn test_summarize_polars_measurement_basic() -> Fallible<()> {
     let description = summarize_polars_measurement(meas.clone(), Some(0.05))?;
 
     let accuracy = discrete_laplacian_scale_to_accuracy(1.0, 0.05)?;
-    expected.with_column(Series::new("accuracy".into(), &[accuracy, accuracy]))?;
+    expected.with_column(Column::new("accuracy".into(), &[accuracy, accuracy]))?;
     println!("{:?}", expected);
     assert_eq!(expected, description);
 
@@ -97,7 +96,7 @@ fn test_summarize_polars_measurement_mean() -> Fallible<()> {
     let description = summarize_polars_measurement(meas.clone(), Some(0.05))?;
 
     let accuracy = discrete_laplacian_scale_to_accuracy(1.0, 0.05)?;
-    expected.with_column(Series::new(
+    expected.with_column(Column::new(
         "accuracy".into(),
         &[Some(accuracy), Some(f64::NAN)],
     ))?;

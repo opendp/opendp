@@ -1,6 +1,7 @@
 from opendp.mod import Measure
 import opendp.prelude as dp
 from opendp._lib import import_optional_dependency
+from opendp._internal import _new_pure_function
 
 
 def pairwise_predict(data, x_cuts):
@@ -122,5 +123,5 @@ def make_private_theil_sen(
             output_measure, y_bounds, scale, candidates_count=candidates_count
         )
         # transform median y values to coefficients (slope and intercept)
-        >> (lambda ys: P_inv @ ys)
+        >> _new_pure_function(lambda ys: P_inv @ np.asarray(ys))
     )

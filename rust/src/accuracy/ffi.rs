@@ -5,7 +5,6 @@ use std::os::raw::{c_char, c_void};
 
 use crate::accuracy::*;
 use crate::core::{FfiError, FfiResult};
-use crate::err;
 use crate::ffi::any::AnyObject;
 use crate::ffi::util;
 use crate::ffi::util::Type;

@@ -1,0 +1,4 @@
+{
+    "contributors": "https://api.github.com/repos/opendp/clabot-config/contents/contributors.json",
+    "message": "Thank you for your pull request and welcome to the OpenDP community! We require contributors to sign our Contributor License Agreement, and we don’t seem to have the user(s) {{usersWithoutCLA}} on file. In order for us to review and merge your code, please visit [our CLA page](https://docs.opendp.org/en/stable/contributing/cla.html) and follow the instructions there. If you have questions or concerns, feel free to [contact us](mailto:contact@opendp.org)."
+}

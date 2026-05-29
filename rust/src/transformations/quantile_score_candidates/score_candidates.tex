@@ -2,7 +2,7 @@
 \input{../../lib.sty}
 
 \title{\texttt{fn score\_candidates}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 \begin{document}
 \maketitle  
 
@@ -16,12 +16,12 @@ where the score is the distance between the candidate and the ideal alpha-quanti
 
 \section{Hoare Triple}
 \subsection*{Precondition}
-\subsubsection*{Compiler Verified}
+\subsubsection*{Compiler-verified}
 \begin{itemize}
     \item Generic \texttt{TI} (input atom type) is a type with trait \texttt{PartialOrd}.
 \end{itemize}
 
-\subsubsection*{Caller Verified}
+\subsubsection*{Caller-verified}
 \begin{itemize}
     \item \texttt{x} has at most $2^{64}$ elements.
     \item \texttt{x} elements are totally ordered (excluding non-nan/non-null).
@@ -31,7 +31,7 @@ where the score is the distance between the candidate and the ideal alpha-quanti
 \end{itemize}
 
 
-\subsection*{Function}
+\subsection*{Pseudocode}
 \label{sec:python-pseudocode}
 \lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/score_candidates.py}
 

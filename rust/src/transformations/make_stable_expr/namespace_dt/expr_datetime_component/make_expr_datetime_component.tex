@@ -2,7 +2,7 @@
 \input{../../../../lib.sty}
 
 \title{\texttt{fn make\_expr\_datetime\_component}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 \date{}
 
 \begin{document}
@@ -36,11 +36,10 @@ None
 
 \subsection*{Postcondition}
 \begin{sloppypar}
+\begin{theorem}
 \validTransformation{\texttt{(input\_domain, input\_metric, M)}}{\texttt{make\_expr\_datetime\_component}}
+\end{theorem}
 \end{sloppypar}
-
-\section{Proof}
-
 Starting from line \ref{match-strategy}, 
 \texttt{expr} is matched as if it were a temporal expression, or otherwise rejects the expression.
 All preconditions for \rustdoc{transformations/make\_stable\_expr/namespace\_dt/expr\_datetime\_component/fn}{make\_datetime\_component} 

@@ -30,6 +30,11 @@ use super::CompositionMeasure;
 /// Construct a Measurement that when invoked,
 /// returns a queryable that interactively composes measurements.
 ///
+/// # Citations
+/// * [LW22 Composition Theorems for Interactive Differential Privacy](https://arxiv.org/abs/2207.09397)
+/// * [VW21 Concurrent Composition of Differential Privacy](https://arxiv.org/abs/2105.14427)
+/// * [HSTVVXZ23 Concurrent Composition for Interactive Differential Privacy with Adaptive Privacy-Loss Parameters](https://arxiv.org/abs/2309.05901)
+///
 /// **Composition Properties**
 ///
 /// * sequential: all measurements are applied to the same dataset
@@ -40,6 +45,11 @@ use super::CompositionMeasure;
 /// If the privacy measure supports concurrency,
 /// this compositor allows you to spawn multiple interactive mechanisms
 /// and interleave your queries amongst them.
+///
+/// # Runtime
+/// Construction is `O(q)` in the number of budget entries `q = d_mids.len()`.
+/// Each accepted query adds `O(1)` compositor bookkeeping
+/// beyond the cost of checking and evaluating the queried measurement.
 ///
 /// # Arguments
 /// * `input_domain` - indicates the space of valid input datasets
@@ -211,6 +221,11 @@ where
 /// Construct a Measurement that when invoked,
 /// returns a queryable that interactively composes measurements.
 ///
+/// # Citations
+/// * [LW22 Composition Theorems for Interactive Differential Privacy](https://arxiv.org/abs/2207.09397)
+/// * [VW21 Concurrent Composition of Differential Privacy](https://arxiv.org/abs/2105.14427)
+/// * [HSTVVXZ23 Concurrent Composition for Interactive Differential Privacy with Adaptive Privacy-Loss Parameters](https://arxiv.org/abs/2309.05901)
+///
 /// **Composition Properties**
 ///
 /// * sequential: all measurements are applied to the same dataset
@@ -221,6 +236,11 @@ where
 /// If the privacy measure supports concurrency,
 /// this compositor allows you to spawn multiple interactive mechanisms
 /// and interleave your queries amongst them.
+///
+/// # Runtime
+/// Construction is `O(q)` in the number of budget entries `q = d_mids.len()`.
+/// Each accepted query adds `O(1)` compositor bookkeeping
+/// beyond the cost of checking and evaluating the queried measurement.
 ///
 /// # Arguments
 /// * `input_domain` - indicates the space of valid input datasets

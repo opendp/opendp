@@ -13,17 +13,6 @@ on:
     secrets:
       ARTIFACTS_REPO_TOKEN:
         required: true
-  workflow_dispatch:
-    inputs:
-      channel:
-        description: Target Channel
-        type: choice
-        options:
-          - nightly
-          - beta
-          - stable
-        required: true
-        default: nightly
 
 jobs:
   credential-check:

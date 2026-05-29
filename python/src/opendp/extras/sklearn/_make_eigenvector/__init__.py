@@ -1,4 +1,5 @@
 from typing import Sequence
+from dataclasses import asdict
 
 from opendp.extras.numpy import _sscp_domain
 from opendp.extras._utilities import to_then
@@ -21,7 +22,7 @@ def make_private_eigenvector(
     np = import_optional_dependency('numpy')
     import opendp.prelude as dp
 
-    dp.assert_features("contrib", "floating-point")
+    dp.assert_features("contrib", "idealized-numerics")
     
     np_csprng = get_np_csprng()
     input_desc = input_domain.descriptor
@@ -112,7 +113,7 @@ def make_np_sscp_projection(
     """
     import opendp.prelude as dp
 
-    dp.assert_features("contrib", "floating-point")
+    dp.assert_features("contrib", "idealized-numerics")
     input_desc = input_domain.descriptor
 
     if input_desc.num_features != P.shape[1]:
@@ -120,7 +121,7 @@ def make_np_sscp_projection(
             f"projection P (axis-1 size: {P.shape[1]}) does not conform with data in input_domain (num_features: {input_domain.num_features})"
         )  # pragma: no cover
 
-    kwargs = input_desc._asdict() | {"num_features": P.shape[0]}
+    kwargs = asdict(input_desc) | {"num_features": P.shape[0]}
     return _make_transformation(
         input_domain,
         input_metric,
@@ -144,7 +145,7 @@ def make_private_eigenvectors(
     import opendp.prelude as dp
     linalg = import_optional_dependency('scipy.linalg')
 
-    dp.assert_features("contrib", "floating-point")
+    dp.assert_features("contrib", "idealized-numerics")
 
     input_desc = input_domain.descriptor
     if input_desc.p != 2:
@@ -181,6 +182,7 @@ def make_private_eigenvectors(
                 (input_domain, input_metric)
                 >> then_np_sscp_projection(P)  # 2.c happens inside this transformation
                 >> then_private_eigenvector(epsilon_i)
+                >> dp.as_array()
             )
             u = qbl(m_eigvec)
 

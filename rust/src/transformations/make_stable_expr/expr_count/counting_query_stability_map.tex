@@ -3,7 +3,7 @@
 \usepackage{bbm}
 
 \title{\texttt{fn counting\_query\_stability\_map}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 
 \begin{document}
 \maketitle
@@ -12,7 +12,7 @@ This document proves that the implementation of \rustdoc{transformations/make_st
 satisfies its proof definition.
 
 \section{Hoare Triple}
-\subsection*{Preconditions}
+\subsection*{Precondition}
 \subsubsection*{Compiler-verified}
 \begin{itemize}
     \item Argument \texttt{public\_info} must be Keys, Lengths or None
@@ -20,22 +20,22 @@ satisfies its proof definition.
     \item Const generic \texttt{P} must be of type \texttt{usize}
 \end{itemize}
 
-\subsubsection*{User-verified}
+\subsubsection*{Caller-verified}
 None
 
-\subsubsection*{Pseudocode}
+\subsection*{Pseudocode}
 
 \lstinputlisting[language=Python,firstline=2,escapechar=`]{./pseudocode/counting_query_stability_map.py}
 
-\subsubsection*{Postcondition}
-\begin{definition}
+\subsection*{Postcondition}
+\begin{theorem}
     \label{sample-bernoulli}
     For any setting of the input parameters \texttt{public\_info}, \texttt{M} and \texttt{P}, 
     returns a \texttt{StabilityMap} where for any predicate $p(\cdot)$ 
     and $f(x) = [\sum_i \mathbbm{1}_{p(x_{1i})}, \sum_i \mathbbm{1}_{p(x_{2i})}, \dots]$, 
     if $d_{\mathrm{PartitionDistance<M>}}(x, x') \leq d_{in}$,
     then $d_{LP}(f(x), f(x')) \leq d_{out}$, where $d_{out} = \texttt{StabilityMap.eval}(d_{in})$.
-\end{definition}
+\end{theorem}
 
 \begin{proof} 
 Since the input metric is PartitionDistance<M>,

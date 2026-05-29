@@ -1,8 +1,7 @@
 use polars::df;
 use polars::lazy::frame::IntoLazy;
-use polars::prelude::{NamedFrom, lit};
+use polars::prelude::{NamedFrom, col, lit};
 use polars::series::Series;
-use polars_plan::dsl::col;
 
 use crate::domains::{AtomDomain, LazyFrameDomain, OptionDomain, SeriesDomain};
 use crate::metrics::{FrameDistance, SymmetricDistance};

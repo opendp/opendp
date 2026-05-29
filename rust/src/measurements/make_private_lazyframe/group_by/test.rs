@@ -7,8 +7,6 @@ use crate::polars::PrivacyNamespace;
 use crate::traits::samplers::test::{check_chi_square, check_kolmogorov_smirnov};
 use polars::prelude::*;
 
-use statrs::function::erf;
-
 use crate::metrics::SymmetricDistance;
 
 use super::*;
@@ -103,7 +101,7 @@ fn test_stable_keys_zcdp() -> Fallible<()> {
 
 #[test]
 fn test_explicit_keys() -> Fallible<()> {
-    static N_SAMPLES: u32 = 1000;
+    static N_SAMPLES: u32 = 5000;
     static N_CANDIDATES: usize = 10;
 
     let lf_domain = LazyFrameDomain::new(vec![
@@ -130,29 +128,33 @@ fn test_explicit_keys() -> Fallible<()> {
         lf.clone()
             .group_by(&[col("A")])
             .agg(&[sum_expr, median_expr])
-            // add a privatizing join (the constructor adds an imputer to the resulting onceframe)
+            // add a DP join (the constructor adds an imputer to the resulting onceframe)
             .join(keys, [col("A")], [col("A")], JoinType::Right.into()),
         Some(1.),
         None,
     )?;
 
     let release = meas.invoke(&lf)?.collect()?;
-    let gauss_samples: Vec<_> = release.column("sum")?.f64()?.iter().flatten().collect();
-    let gauss_samples = <[f64; 1000]>::try_from(gauss_samples).unwrap();
+    let lap_samples: Vec<_> = release.column("sum")?.f64()?.iter().flatten().collect();
+    let lap_samples = <[f64; 5000]>::try_from(lap_samples).unwrap();
 
-    pub fn normal_cdf(x: f64) -> f64 {
-        (erf::erf(x / std::f64::consts::SQRT_2) + 1.0) / 2.0
+    pub fn laplace_cdf(x: f64) -> f64 {
+        if x < 0.0 {
+            0.5 * x.exp()
+        } else {
+            1.0 - 0.5 * (-x).exp()
+        }
     }
 
-    check_kolmogorov_smirnov(gauss_samples, normal_cdf)?;
+    check_kolmogorov_smirnov(lap_samples, laplace_cdf)?;
 
     // check for uniformity of samples (all scores are matching)
     let unif_samples: Vec<_> = release.column("med")?.f64()?.iter().flatten().collect();
-    let mut counts = [0.0; N_CANDIDATES];
-    unif_samples.iter().for_each(|&s| counts[s as usize] += 1.0);
+    let mut counts = [0; N_CANDIDATES];
+    unif_samples.iter().for_each(|&s| counts[s as usize] += 1);
     check_chi_square(
-        counts,
-        [N_SAMPLES as f64 / (N_CANDIDATES as f64); N_CANDIDATES],
+        &counts,
+        &[N_SAMPLES as f64 / (N_CANDIDATES as f64); N_CANDIDATES],
     )?;
 
     Ok(())

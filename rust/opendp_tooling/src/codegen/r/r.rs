@@ -116,7 +116,7 @@ pub(crate) fn generate_r_function(
 }}{then_func}
 "#,
         doc_block = generate_doc_block(module_name, func, hierarchy),
-        func_name = func.name.trim_start_matches("_"),
+        func_name = format_r_function_name(&func.name),
         args = tab_r(args.join(",\n")),
         body = tab_r(generate_r_body(module_name, func))
     )
@@ -334,9 +334,17 @@ output"#,
 
 /// generate code that provides an example of the type of the type_arg
 fn generate_public_example(func: &Function, type_arg: &Argument) -> Option<String> {
+    let type_names = func.type_names();
+    let value_names = func
+        .args
+        .iter()
+        .filter(|arg| !arg.is_type)
+        .map(Argument::name)
+        .collect::<Vec<_>>();
+
     // the json has supplied explicit instructions to find an example
     if let Some(example) = &type_arg.example {
-        return Some(example.to_r(Some(&func.type_names())));
+        return Some(example.to_r(Some(&type_names), Some(&value_names)));
     }
 
     let type_name = type_arg.name.as_ref().unwrap();
@@ -375,6 +383,12 @@ fn generate_public_example(func: &Function, type_arg: &Argument) -> Option<Strin
 /// the generated code ensures every type arg is a RuntimeType, and constructs derived RuntimeTypes
 fn generate_type_arg_formatter(func: &Function) -> String {
     let type_names = func.type_names();
+    let value_names = func
+        .args
+        .iter()
+        .filter(|arg| !arg.is_type)
+        .map(Argument::name)
+        .collect::<Vec<_>>();
     let type_arg_formatter: String = func.args.iter()
         .filter(|arg| arg.is_type)
         .map(|type_arg| {
@@ -396,9 +410,9 @@ fn generate_type_arg_formatter(func: &Function) -> String {
         // additional types that are constructed by introspecting existing types
         .chain(func.derived_types.iter()
             .map(|type_spec|
-                format!("{name} <- {derivation}",
+                format!("{name} <- rt_canon({derivation})",
                         name = sanitize_r(type_spec.name(), true),
-                        derivation = type_spec.rust_type.as_ref().unwrap().to_r(Some(&type_names)))))
+                        derivation = type_spec.rust_type.as_ref().unwrap().to_r(Some(&type_names), Some(&value_names)))))
         // substitute concrete types in for generics
         .chain(func.args.iter()
             .filter(|arg| arg.is_type && !arg.generics(&type_names).is_empty())
@@ -412,8 +426,8 @@ fn generate_type_arg_formatter(func: &Function) -> String {
         .chain(func.args.iter().filter(|arg| arg.has_implicit_type())
             .map(|arg| {
                 let name = sanitize_r(arg.name(), arg.is_type);
-                let converter = arg.rust_type.as_ref().unwrap().to_r(Some(&type_names));
-                format!(r#".T.{name} <- {converter}"#)
+                let converter = arg.rust_type.as_ref().unwrap().to_r(Some(&type_names), Some(&value_names));
+                format!(r#".T.{name} <- rt_canon({converter})"#)
             }))
         .collect::<Vec<_>>()
         .join("\n");
@@ -430,8 +444,22 @@ fn generate_type_arg_formatter(func: &Function) -> String {
 }
 
 fn generate_assert_is_similar(func: &Function) -> String {
+    let type_names = func.type_names();
+    let value_names = func
+        .args
+        .iter()
+        .filter(|arg| !arg.is_type)
+        .map(Argument::name)
+        .collect::<Vec<_>>();
     let assert_is_similar: String = (func.args.iter())
         .filter(|arg| !arg.is_type)
+        .filter(|arg| !matches!(arg.c_type().as_str(), "CallbackFn" | "TransitionFn"))
+        .filter(|arg| {
+            !matches!(
+                arg.rust_type,
+                Some(TypeRecipe::Name(ref name)) if name == "ExtrinsicObject"
+            )
+        })
         .map(|arg| {
             let expected = if arg.has_implicit_type() {
                 let name = sanitize_r(arg.name(), arg.is_type);
@@ -440,7 +468,7 @@ fn generate_assert_is_similar(func: &Function) -> String {
                 arg.rust_type
                     .as_ref()
                     .unwrap()
-                    .to_r(Some(&func.type_names()))
+                    .to_r(Some(&type_names), Some(&value_names))
             };
             let inferred = {
                 let name = sanitize_r(arg.name(), arg.is_type);
@@ -485,7 +513,11 @@ fn generate_logger(module_name: &str, func: &Function, then: bool) -> String {
         .iter()
         .map(|arg| {
             let r_name = sanitize_r(arg.name().clone(), arg.is_type);
-            generate_recipe_logger(arg.rust_type.clone().unwrap_or(TypeRecipe::None), r_name)
+            if matches!(arg.c_type().as_str(), "CallbackFn" | "TransitionFn") {
+                r_name
+            } else {
+                generate_recipe_logger(arg.rust_type.clone().unwrap_or(TypeRecipe::None), r_name)
+            }
         })
         .collect::<Vec<_>>()
         .join(", ");
@@ -521,7 +553,7 @@ fn generate_wrapper_call(module_name: &str, func: &Function) -> String {
         .chain(
             (func.args.iter().filter(|arg| arg.has_implicit_type()))
                 .map(|arg| sanitize_r(arg.name(), arg.is_type))
-                .map(|name| format!("rt_parse(.T.{name})")),
+                .map(|name| format!(".T.{name}")),
         )
         .map(|name| format!("{name},"))
         .collect::<Vec<_>>()
@@ -586,12 +618,22 @@ fn sanitize_r<T: AsRef<str> + ToString>(name: T, is_type: bool) -> String {
     name
 }
 
+fn format_r_function_name(name: &str) -> String {
+    if name.starts_with('_') {
+        format!("`{name}`")
+    } else {
+        name.to_string()
+    }
+}
+
 impl Argument {
     // R wants to resolve all types on the R side, before passing them to C
     // some function arguments contain their own nontrivial types/TypeRecipes,
     //     like `Vec<T>` or `measurement_input_carrier_type(this)`
     pub fn has_implicit_type(&self) -> bool {
-        !self.is_type && !matches!(self.rust_type, Some(TypeRecipe::Name(_) | TypeRecipe::None))
+        !self.is_type
+            && (matches!(self.c_type().as_str(), "CallbackFn" | "TransitionFn")
+                || !matches!(self.rust_type, Some(TypeRecipe::Name(_) | TypeRecipe::None)))
     }
 }
 
@@ -607,17 +649,25 @@ impl Function {
 
 impl TypeRecipe {
     /// translate the abstract derived_types info into R RuntimeType constructors
-    pub fn to_r(&self, sanitize_types: Option<&[String]>) -> String {
+    pub fn to_r(
+        &self,
+        sanitize_types: Option<&[String]>,
+        sanitize_values: Option<&[String]>,
+    ) -> String {
         match self {
             Self::Name(name) => sanitize_types
-                .map(|types| sanitize_r(name, types.contains(name)))
-                .unwrap_or_else(|| name.to_string()),
+                .and_then(|types| types.contains(name).then(|| sanitize_r(name, true)))
+                .or_else(|| {
+                    sanitize_values
+                        .and_then(|values| values.contains(name).then(|| sanitize_r(name, false)))
+                })
+                .unwrap_or_else(|| format!("\"{name}\"")),
             Self::Function { function, params } => format!(
                 "{function}({params})",
                 function = function,
                 params = params
                     .iter()
-                    .map(|v| v.to_r(sanitize_types))
+                    .map(|v| v.to_r(sanitize_types, sanitize_values))
                     .collect::<Vec<_>>()
                     .join(", ")
             ),
@@ -626,7 +676,7 @@ impl TypeRecipe {
                 origin = origin,
                 args = args
                     .iter()
-                    .map(|arg| arg.to_r(sanitize_types))
+                    .map(|arg| arg.to_r(sanitize_types, sanitize_values))
                     .collect::<Vec<_>>()
                     .join(", ")
             ),

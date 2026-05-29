@@ -4,7 +4,7 @@
 
 
 \title{\texttt{fn make\_randomized\_response}}
-\author{Michael Shoemate}
+\author{\MichaelShoemateAuthor}
 \begin{document}
 
 \maketitle
@@ -30,23 +30,25 @@ The mechanism returned by \texttt{make\_randomized\_response} takes in a data se
 
 \section{Hoare Triple}
 
-\subsection*{Preconditions}
+\subsection*{Precondition}
+\subsubsection*{Compiler-verified}
 \begin{itemize}
     \item Variable \texttt{categories} must be a set with members of type \texttt{T}
     \item Variable \texttt{prob} must be of type \texttt{f64}
 \end{itemize}
 
+\subsubsection*{Caller-verified}
+None
+
 \subsection*{Pseudocode}
 \lstinputlisting[language=Python,firstline=2,escapechar=|]{./pseudocode/make_randomized_response.py}
 
 \subsection*{Postcondition}
-
+\begin{theorem}
 \validMeasurement{\texttt{(categories, prob, T)}}{\\ \texttt{make\_randomized\_response}}
-
-\section{Proof}
-
+\end{theorem}
 \begin{proof} 
-\textbf{(Privacy guarantee.)} 
+\textbf{(Privacy guarantee.)}
     
 \begin{tcolorbox}
     The proof assumes the following lemma.

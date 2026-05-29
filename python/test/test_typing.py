@@ -1,5 +1,6 @@
 import re
 from typing import List, Tuple, Any
+import warnings
 
 import pytest
 
@@ -99,6 +100,26 @@ def test_set_feature():
 
     disable_features("A")
     assert "A" not in GLOBAL_FEATURES
+
+
+def test_deprecated_floating_point():
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        disable_features("floating-point")
+
+    disable_features("idealized-numerics")
+
+    with pytest.deprecated_call(match=re.escape('"floating-point" is deprecated. Use "idealized-numerics" instead.')):
+        enable_features("floating-point")
+
+    assert "floating-point" not in GLOBAL_FEATURES
+    assert "idealized-numerics" in GLOBAL_FEATURES
+    assert_features("idealized-numerics")
+
+    with pytest.deprecated_call(match=re.escape('"floating-point" is deprecated. Use "idealized-numerics" instead.')):
+        assert_features("floating-point")
+
+    disable_features("idealized-numerics")
 
 
 def test_default_float_type():

@@ -1,5 +1,4 @@
-use polars::{df, lazy::frame::IntoLazy};
-use polars_plan::dsl::lit;
+use polars::{df, lazy::frame::IntoLazy, prelude::lit};
 
 use crate::{
     domains::{AtomDomain, LazyFrameDomain},

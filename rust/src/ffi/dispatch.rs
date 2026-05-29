@@ -155,8 +155,7 @@ impl<T> FailedDispatch for Fallible<T> {
             "See https://github.com/opendp/opendp/discussions/451."
         };
         fallible!(
-            FFI,
-            // If you change this, you should also change the corresponding check in Python binary search type inference.
+            Type,
             "No match for concrete type {}. {}",
             type_,
             debug_message
