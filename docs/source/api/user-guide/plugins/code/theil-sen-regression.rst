@@ -58,10 +58,10 @@
     ...     )
     ...
     >>> def make_private_percentile_medians(
-    ...     output_measure, y_bounds, scale
+    ...     privacy_measure, y_bounds, scale
     ... ):
     ...     m_median = dp.m.then_private_quantile(
-    ...         output_measure,
+    ...         privacy_measure,
     ...         candidates=np.linspace(*y_bounds, 100),
     ...         alpha=0.5,
     ...         scale=scale,
@@ -82,7 +82,7 @@
 
     # mechanism
     >>> def make_private_theil_sen(
-    ...     output_measure, x_bounds, y_bounds, scale, runs=1
+    ...     privacy_measure, x_bounds, y_bounds, scale, runs=1
     ... ):
     ...     x_cuts = x_bounds[0] + (
     ...         x_bounds[1] - x_bounds[0]
@@ -93,7 +93,7 @@
     ...     return (
     ...         make_pairwise_predict(x_cuts, runs)
     ...         >> make_private_percentile_medians(
-    ...             output_measure, y_bounds, scale
+    ...             privacy_measure, y_bounds, scale
     ...         )
     ...         >> (lambda ys: p_inv @ ys)
     ...     )

@@ -38,7 +38,7 @@
     >>> m_sc = dp.c.make_adaptive_composition(
     ...     input_domain=input_domain,
     ...     input_metric=input_metric,
-    ...     output_measure=privacy_measure,
+    ...     privacy_measure=privacy_measure,
     ...     d_in=d_in,
     ...     d_mids=[d_out / 3] * 3,
     ... )

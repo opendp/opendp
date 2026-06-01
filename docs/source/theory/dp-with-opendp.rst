@@ -112,7 +112,7 @@ above:
             input domain:   AtomDomain(T=f64)
             >>> print("input metric:  ", base_lap.input_metric)
             input metric:   AbsoluteDistance(f64)
-            >>> print("output measure:", base_lap.output_measure)
+            >>> print("output measure:", base_lap.privacy_measure)
             output measure: MaxDivergence
 
 We now invoke the measurement on some aggregate ``0.``, to sample

@@ -206,7 +206,7 @@ Measure
 (See also :py:mod:`opendp.measures` in the API reference.)
 
 In OpenDP, a measure is a function for measuring the distance between probability distributions.
-Transformations don't make use of a measure, but measurements do have an ``output_measure``.
+Transformations don't make use of a measure, but measurements do have an ``privacy_measure``.
 
 .. _max-divergence:
 
@@ -220,7 +220,7 @@ Another example is ``SmoothedMaxDivergence``.
 The smoothed max divergence measure corresponds to approximate differential privacy,
 where distances are ``(epsilon, delta)`` tuples.
 
-Every Measurement (:ref:`see listing <measurement-constructors>`) contains an output_measure, and compositors are always typed by a Measure.
+Every Measurement (:ref:`see listing <measurement-constructors>`) contains an privacy_measure, and compositors are always typed by a Measure.
 
 
 .. _maps:
@@ -293,7 +293,7 @@ The usefulness of this property is shown in the :ref:`parameter-search` section.
 Distance
 --------
 
-You can determine what units ``d_in`` and ``d_out`` are expressed in based on the ``input_metric``, and ``output_metric`` or ``output_measure``.
+You can determine what units ``d_in`` and ``d_out`` are expressed in based on the ``input_metric``, and ``output_metric`` or ``privacy_measure``.
 Follow the links into the example metrics and measures to get more detail on what the distances mean for that kind of metric or measure.
 
 On Transformations, the ``input_metric`` will typically be a dataset metric like :ref:`SymmetricDistance <symmetric-distance>`.
@@ -302,7 +302,7 @@ or some kind of global sensitivity metric like :ref:`AbsoluteDistance <absolute-
 
 The ``input_metric`` of Measurements is initially only some kind of global sensitivity metric.
 However, once you chain the Measurement with a Transformation, the resulting Measurement will have whatever ``input_metric`` was on the Transformation.
-The ``output_measure`` of Measurements is some kind of privacy measure like :ref:`MaxDivergence <max-divergence>` or :ref:`SmoothedMaxDivergence <smoothed-max-divergence>`.
+The ``privacy_measure`` of Measurements is some kind of privacy measure like :ref:`MaxDivergence <max-divergence>` or :ref:`SmoothedMaxDivergence <smoothed-max-divergence>`.
 
 In some cases, distances may not form a total order. 
 For example, in :math:`(\epsilon, \delta)`-DP, :math:`(\epsilon_1, \delta_1) = (1.5, 1e-6)` is incomparable to :math:`(\epsilon_2, \delta_2) = (1.0, 1e-7)`, 

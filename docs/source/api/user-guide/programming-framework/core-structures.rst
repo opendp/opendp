@@ -34,7 +34,7 @@ Transformations and measurements have two additional fields, and this is where t
 =================   ==================
 Transformation      Measurement
 =================   ==================
-``output_metric``   ``output_measure``
+``output_metric``   ``privacy_measure``
 ``stability_map``   ``privacy_map``
 =================   ==================
 

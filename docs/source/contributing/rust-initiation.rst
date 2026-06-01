@@ -322,12 +322,12 @@ differences.
    pub struct Measurement<DI: Domain, MI: Metric, MO: Measure, TO> {
        pub input_domain: DI,
        pub input_metric: MI,
-       pub output_measure: MO,
+       pub privacy_measure: MO,
        pub function: Function<DI::Carrier, TO>,
        pub privacy_map: PrivacyMap<MI, MO>,
    }
 
-First, the ``output_metric`` is replaced with an ``output_measure``, as
+First, the ``output_metric`` is replaced with a ``privacy_measure``, as
 distances in the output space are measured in terms of divergences
 between probability distributions.
 

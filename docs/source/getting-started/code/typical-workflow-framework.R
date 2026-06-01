@@ -29,7 +29,7 @@ data <- runif(100L, min = 0.0, max = 100.0)
 m_sc <- make_adaptive_composition(
   input_domain = input_domain,
   input_metric = input_metric,
-  output_measure = privacy_measure,
+  privacy_measure = privacy_measure,
   d_in = d_in,
   d_mids = rep(d_out / 3L, 3L)
 )

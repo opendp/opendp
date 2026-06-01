@@ -99,7 +99,7 @@ making gumbel noise competitive.
             ...         dp.atom_domain(T=float, nan=False)
             ...     ),
             ...     input_metric=dp.linf_distance(T=float),
-            ...     output_measure=dp.max_divergence(),
+            ...     privacy_measure=dp.max_divergence(),
             ...     scale=2.0,
             ... )
 
@@ -127,7 +127,7 @@ additive noise mechanisms (laplace and gaussian).
             ...         dp.atom_domain(T=float, nan=False)
             ...     ),
             ...     input_metric=dp.linf_distance(T=float),
-            ...     output_measure=dp.zero_concentrated_divergence(),
+            ...     privacy_measure=dp.zero_concentrated_divergence(),
             ...     scale=2.0,
             ... )
 
@@ -165,7 +165,7 @@ monotonic, the privacy loss is halved:
             ...         dp.atom_domain(T=float, nan=False)
             ...     ),
             ...     input_metric=input_metric,
-            ...     output_measure=dp.max_divergence(),
+            ...     privacy_measure=dp.max_divergence(),
             ...     scale=2.0,
             ... )
 
@@ -200,7 +200,7 @@ largest, then negate the inputs:
             ...         dp.atom_domain(T=float, nan=False)
             ...     ),
             ...     input_metric=dp.linf_distance(T=float),
-            ...     output_measure=dp.max_divergence(),
+            ...     privacy_measure=dp.max_divergence(),
             ...     scale=2.0,
             ...     # negate input scores
             ...     negate=True,
@@ -229,7 +229,7 @@ simultaneously:
             ...         dp.atom_domain(T=float, nan=False)
             ...     ),
             ...     input_metric=dp.linf_distance(T=float),
-            ...     output_measure=dp.max_divergence(),
+            ...     privacy_measure=dp.max_divergence(),
             ...     k=2,
             ...     scale=2.0,
             ... )

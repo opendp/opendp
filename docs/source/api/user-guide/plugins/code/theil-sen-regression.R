@@ -67,7 +67,7 @@ then_select_column <- to_then(make_select_column)
 make_private_medians <- function(
   input_domain,
   input_metric,
-  output_measure,
+  privacy_measure,
   y_bounds,
   scale
 ) {
@@ -77,7 +77,7 @@ make_private_medians <- function(
     then_select_column(1L) |>
     then_drop_null() |>
     then_private_quantile(
-      output_measure = output_measure,
+      privacy_measure = privacy_measure,
       candidates = candidates,
       alpha = 0.5,
       scale = scale
@@ -86,7 +86,7 @@ make_private_medians <- function(
     then_select_column(2L) |>
     then_drop_null() |>
     then_private_quantile(
-      output_measure = output_measure,
+      privacy_measure = privacy_measure,
       candidates = candidates,
       alpha = 0.5,
       scale = scale
@@ -102,7 +102,7 @@ then_private_medians <- to_then(make_private_medians)
 make_private_theil_sen <- function(
   input_domain,
   input_metric,
-  output_measure,
+  privacy_measure,
   x_bounds,
   y_bounds,
   scale,
@@ -113,7 +113,7 @@ make_private_theil_sen <- function(
 
   c(input_domain, input_metric) |>
     then_pairwise_predict(x_cuts, runs) |>
-    then_private_medians(output_measure, y_bounds, scale) |>
+    then_private_medians(privacy_measure, y_bounds, scale) |>
     then_postprocess(
       function(ys) as.vector(p_inv %*% as.numeric(unlist(ys))),
       .TO = "Vec<f64>"
