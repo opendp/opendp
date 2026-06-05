@@ -112,7 +112,11 @@ where
                 Query::External(OdometerQuery::Invoke(meas)) => {
                     assert_elements_match!(DomainMismatch, &input_domain, &meas.input_domain);
                     assert_elements_match!(MetricMismatch, &input_metric, &meas.input_metric);
-                    assert_elements_match!(MeasureMismatch, &privacy_measure, &meas.privacy_measure);
+                    assert_elements_match!(
+                        MeasureMismatch,
+                        &privacy_measure,
+                        &meas.privacy_measure
+                    );
 
                     let enforce_sequentiality = Rc::new(RefCell::new(false));
 

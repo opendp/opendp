@@ -60,12 +60,18 @@ where
     FBig: TryFrom<TIA> + TryFrom<f64>,
     f64: InfCast<TIA>,
 {
-    make_noisy_top_k(input_domain, input_metric, privacy_measure, 1, scale, negate)
-        >> Function::new_fallible(|arg: &Vec<usize>| {
-            arg.get(0)
-                .cloned()
-                .ok_or_else(|| err!(FailedFunction, "candidates set is empty"))
-        })
+    make_noisy_top_k(
+        input_domain,
+        input_metric,
+        privacy_measure,
+        1,
+        scale,
+        negate,
+    ) >> Function::new_fallible(|arg: &Vec<usize>| {
+        arg.get(0)
+            .cloned()
+            .ok_or_else(|| err!(FailedFunction, "candidates set is empty"))
+    })
 }
 
 #[bootstrap(

@@ -51,8 +51,15 @@ pub extern "C" fn opendp_measurements__make_noisy_top_k(
             .clone();
         let input_metric = input_metric.downcast_ref::<LInfDistance<TIA>>()?.clone();
         let privacy_measure = privacy_measure.downcast_ref::<MO>()?.clone();
-        make_noisy_top_k::<MO, TIA>(input_domain, input_metric, privacy_measure, k, scale, negate)
-            .into_any()
+        make_noisy_top_k::<MO, TIA>(
+            input_domain,
+            input_metric,
+            privacy_measure,
+            k,
+            scale,
+            negate,
+        )
+        .into_any()
     }
 
     dispatch!(
@@ -61,7 +68,14 @@ pub extern "C" fn opendp_measurements__make_noisy_top_k(
             (MO, [MaxDivergence, ZeroConcentratedDivergence]),
             (TIA_, [u32, u64, i32, i64, usize, f32, f64])
         ],
-        (input_domain, input_metric, privacy_measure, k, scale, negate)
+        (
+            input_domain,
+            input_metric,
+            privacy_measure,
+            k,
+            scale,
+            negate
+        )
     )
     .into()
 }
