@@ -22,7 +22,7 @@ mod test;
 #[bootstrap(
     features("contrib"),
     arguments(
-        output_measure(c_type = "AnyMeasure *", rust_type = b"null"),
+        privacy_measure(c_type = "AnyMeasure *", rust_type = b"null"),
         negate(default = false),
     ),
     generics(MO(suppress), TIA(suppress))
@@ -45,7 +45,7 @@ mod test;
 /// # Arguments
 /// * `input_domain` - Domain of the input vector. Must be a non-nullable VectorDomain.
 /// * `input_metric` - Metric on the input domain. Must be LInfDistance
-/// * `output_measure` - One of `MaxDivergence` or `ZeroConcentratedDivergence`
+/// * `privacy_measure` - One of `MaxDivergence` or `ZeroConcentratedDivergence`
 /// * `k` - Number of indices to select.
 /// * `scale` - Scale for the noise distribution.
 /// * `negate` - Set to true to return bottom k
@@ -56,7 +56,7 @@ mod test;
 pub fn make_noisy_top_k<MO: TopKMeasure, TIA>(
     input_domain: VectorDomain<AtomDomain<TIA>>,
     input_metric: LInfDistance<TIA>,
-    output_measure: MO,
+    privacy_measure: MO,
     k: usize,
     scale: f64,
     negate: bool,
@@ -91,7 +91,7 @@ where
     Measurement::new(
         input_domain,
         input_metric,
-        output_measure,
+        privacy_measure,
         Function::new_fallible(move |x: &Vec<TIA>| {
             noisy_top_k(x, scale, k, negate, MO::REPLACEMENT)
         }),

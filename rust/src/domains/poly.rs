@@ -45,7 +45,7 @@ where
         Measurement::new(
             self.input_domain.clone(),
             self.input_metric.clone(),
-            self.output_measure.clone(),
+            self.privacy_measure.clone(),
             self.function.clone().into_poly(),
             self.privacy_map.clone(),
         )

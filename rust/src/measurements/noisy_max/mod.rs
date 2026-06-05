@@ -21,7 +21,7 @@ mod test;
 #[bootstrap(
     features("contrib"),
     arguments(
-        output_measure(c_type = "AnyMeasure *", rust_type = b"null"),
+        privacy_measure(c_type = "AnyMeasure *", rust_type = b"null"),
         negate(default = false),
     ),
     generics(MO(suppress), TIA(suppress))
@@ -41,7 +41,7 @@ mod test;
 /// # Arguments
 /// * `input_domain` - Domain of the input vector. Must be a non-nullable `VectorDomain`
 /// * `input_metric` - Metric on the input domain. Must be `LInfDistance`
-/// * `output_measure` - One of `MaxDivergence`, `ZeroConcentratedDivergence`
+/// * `privacy_measure` - One of `MaxDivergence`, `ZeroConcentratedDivergence`
 /// * `scale` - Scale for the noise distribution
 /// * `negate` - Set to true to return min
 ///
@@ -51,7 +51,7 @@ mod test;
 pub fn make_noisy_max<MO: TopKMeasure, TIA>(
     input_domain: VectorDomain<AtomDomain<TIA>>,
     input_metric: LInfDistance<TIA>,
-    output_measure: MO,
+    privacy_measure: MO,
     scale: f64,
     negate: bool,
 ) -> Fallible<Measurement<VectorDomain<AtomDomain<TIA>>, LInfDistance<TIA>, MO, usize>>
@@ -60,7 +60,7 @@ where
     FBig: TryFrom<TIA> + TryFrom<f64>,
     f64: InfCast<TIA>,
 {
-    make_noisy_top_k(input_domain, input_metric, output_measure, 1, scale, negate)
+    make_noisy_top_k(input_domain, input_metric, privacy_measure, 1, scale, negate)
         >> Function::new_fallible(|arg: &Vec<usize>| {
             arg.get(0)
                 .cloned()

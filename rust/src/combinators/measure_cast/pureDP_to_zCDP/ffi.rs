@@ -21,7 +21,7 @@ fn make_pureDP_to_zCDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement>
     let measurement = measurement.with_map(
         measurement.input_metric.clone(),
         measurement
-            .output_measure
+            .privacy_measure
             .clone()
             .downcast::<MaxDivergence>()?,
         PrivacyMap::new_fallible(move |d_in: &AnyObject| privacy_map.eval(d_in)?.downcast::<f64>()),
@@ -32,7 +32,7 @@ fn make_pureDP_to_zCDP(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement>
     let privacy_map = m.privacy_map.clone();
     m.with_map(
         m.input_metric.clone(),
-        AnyMeasure::new(m.output_measure.clone()),
+        AnyMeasure::new(m.privacy_measure.clone()),
         PrivacyMap::new_fallible(move |d_in: &AnyObject| {
             privacy_map.eval(d_in).map(AnyObject::new)
         }),

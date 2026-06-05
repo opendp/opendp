@@ -21,7 +21,7 @@ def make_privacy_filter(
     return Measurement.new(
         odometer.input_domain,
         odometer.input_metric,
-        odometer.output_measure,
+        odometer.privacy_measure,
         Function.new_interactive(function),
         PrivacyMap.new_fallible(privacy_map),
     )

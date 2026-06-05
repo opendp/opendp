@@ -51,7 +51,7 @@ pub extern "C" fn opendp_core__odometer_input_metric(
 }
 
 #[bootstrap(
-    name = "odometer_output_measure",
+    name = "odometer_privacy_measure",
     arguments(this(rust_type = b"null")),
     returns(c_type = "FfiResult<AnyMeasure *>")
 )]
@@ -60,10 +60,10 @@ pub extern "C" fn opendp_core__odometer_input_metric(
 /// # Arguments
 /// * `this` - The odometer to retrieve the value from.
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_core__odometer_output_measure(
+pub extern "C" fn opendp_core__odometer_privacy_measure(
     this: *mut AnyOdometer,
 ) -> FfiResult<*mut AnyMeasure> {
-    FfiResult::Ok(util::into_raw(try_as_ref!(this).output_measure.clone()))
+    FfiResult::Ok(util::into_raw(try_as_ref!(this).privacy_measure.clone()))
 }
 
 #[bootstrap(

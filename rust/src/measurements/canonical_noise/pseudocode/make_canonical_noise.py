@@ -32,6 +32,6 @@ def make_canonical_noise(
         input_domain,
         function,
         input_metric,
-        output_measure=approximate(max_divergence()),
+        privacy_measure=approximate(max_divergence()),
         privacy_map=privacy_map,
     )

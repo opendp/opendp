@@ -110,7 +110,7 @@ class Algorithm(ABC):
         self,
         input_domain: LazyFrameDomain,
         input_metric: FrameDistance,
-        output_measure: Measure,
+        privacy_measure: Measure,
         d_in: list["Bound"],
         d_out: float,
         *,
@@ -167,7 +167,7 @@ def get_std(measure: Measure, scale: float) -> float:
         return scale * sqrt(2)
     if measure == zero_concentrated_divergence():
         return scale
-    message = f"output_measure ({measure}) must be max_divergence() or zero_concentrated_divergence()"
+    message = f"privacy_measure ({measure}) must be max_divergence() or zero_concentrated_divergence()"
     raise ValueError(message)
 
 
@@ -176,7 +176,7 @@ def get_associated_metric(measure: Measure) -> Metric:
         return l1_distance(T="u32")
     if measure == zero_concentrated_divergence():
         return l2_distance(T="u32")
-    message = f"output_measure ({measure}) must be max_divergence() or zero_concentrated_divergence()"
+    message = f"privacy_measure ({measure}) must be max_divergence() or zero_concentrated_divergence()"
     raise ValueError(message)
 
 
@@ -271,7 +271,7 @@ def make_stable_marginals(
 def make_noise_marginals(
     input_domain: ExtrinsicDomain,
     input_metric: ExtrinsicDistance,
-    output_measure: Measure,
+    privacy_measure: Measure,
     cliques: list[tuple[str, ...]],
     scale: float,
     weights: Optional[list[float]] = None,
@@ -279,7 +279,7 @@ def make_noise_marginals(
     """Make a measurement that releases multiple DP marginals"""
     measurements = [
         make_noise_marginal(
-            input_domain, input_metric, output_measure, clique, scale / weight
+            input_domain, input_metric, privacy_measure, clique, scale / weight
         )
         for clique, weight in zip(cliques, weights or [1] * len(cliques))
     ]
@@ -292,7 +292,7 @@ then_noise_marginals = to_then(make_noise_marginals)
 def make_noise_marginal(
     input_domain: ExtrinsicDomain,
     input_metric: ExtrinsicDistance,
-    output_measure: Measure,
+    privacy_measure: Measure,
     clique: tuple[str, ...],
     scale: float,
 ) -> Measurement:
@@ -307,10 +307,10 @@ def make_noise_marginal(
 
     clique_domain.cast(NPArrayDDomain)
 
-    associated_metric = get_associated_metric(output_measure)
+    associated_metric = get_associated_metric(privacy_measure)
 
     if inner_metric != associated_metric:
-        message = f"input_metric's inner metric ({inner_metric}) doesn't match the output_measure's associated metric ({associated_metric})"
+        message = f"input_metric's inner metric ({inner_metric}) doesn't match the privacy_measure's associated metric ({associated_metric})"
         raise ValueError(message)
 
     t_marginal = _make_transformation(
@@ -323,11 +323,11 @@ def make_noise_marginal(
     )
 
     def function(x):
-        return LinearMeasurement(x, clique, stddev=get_std(output_measure, scale))
+        return LinearMeasurement(x, clique, stddev=get_std(privacy_measure, scale))
 
     return (
         t_marginal
-        >> then_noise(output_measure, scale)
+        >> then_noise(privacy_measure, scale)
         >> as_array()
         >> _new_pure_function(function)
     )

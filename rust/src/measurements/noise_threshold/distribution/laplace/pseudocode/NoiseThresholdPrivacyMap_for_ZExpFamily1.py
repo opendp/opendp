@@ -4,11 +4,11 @@ class ZExpFamily1:
     def noise_threshold_privacy_map(
         self,
         _input_metric: L01InfDistance[AbsoluteDistance[RBig]],
-        output_measure: Approximate[MaxDivergence],
+        privacy_measure: Approximate[MaxDivergence],
         threshold: UBig,
     ) -> PrivacyMap[L01InfDistance[AbsoluteDistance[RBig]], Approximate[MaxDivergence]]:
         # |\label{line:noise-privacy-map}|
-        noise_privacy_map = self.noise_privacy_map(L1Distance.default(), output_measure[0])
+        noise_privacy_map = self.noise_privacy_map(L1Distance.default(), privacy_measure[0])
         scale = self.scale
 
         def privacy_map(d_in: tuple[u32, RBig, RBig]):

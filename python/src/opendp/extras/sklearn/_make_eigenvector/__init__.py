@@ -202,7 +202,7 @@ def make_private_eigenvectors(
     return _make_measurement(
         input_domain,
         input_metric,
-        m_compose.output_measure,
+        m_compose.privacy_measure,
         function,
         lambda d_in: d_in / 2 * m_compose.map(2),
     )

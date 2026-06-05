@@ -63,7 +63,7 @@ macro_rules! new_make_expr_counting_query {
         pub fn $constructor<MI: 'static + UnboundedMetric, MO: NoiseExprMeasure>(
             input_domain: WildExprDomain,
             input_metric: L01InfDistance<MI>,
-            output_measure: MO,
+            privacy_measure: MO,
             expr: Expr,
             global_scale: Option<f64>,
         ) -> Fallible<Measurement<WildExprDomain, L01InfDistance<MI>, MO, ExprPlan>>
@@ -78,7 +78,7 @@ macro_rules! new_make_expr_counting_query {
             apply_plugin(vec![input.$stable_method(), scale], expr, NoiseShim).make_private(
                 input_domain.clone(),
                 input_metric,
-                output_measure,
+                privacy_measure,
                 global_scale,
             )
         }

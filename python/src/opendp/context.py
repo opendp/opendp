@@ -580,7 +580,7 @@ class Context(object):
         elif kwargs:
             observed_measure, d_query = loss_of(**kwargs)
 
-            expected_measure = self.accountant.output_measure
+            expected_measure = self.accountant.privacy_measure
             if observed_measure != expected_measure:
                 msg = f"Expected output measure {expected_measure} but got {observed_measure}."
                 if (
@@ -593,7 +593,7 @@ class Context(object):
         chain = self.query_space or self.accountant.input_space
         query = Query(
             chain=chain,
-            output_measure=self.accountant.output_measure,
+            privacy_measure=self.accountant.privacy_measure,
             d_in=self.d_in,
             d_out=d_query,
             context=self,
@@ -649,7 +649,7 @@ class Query(object):
     However, this can be used stand-alone to help build a transformation/measurement that is not part of a context.
 
     :param chain: an initial metric space (tuple of domain and metric) or transformation
-    :param output_measure: how privacy will be measured on the output of the query
+    :param privacy_measure: how privacy will be measured on the output of the query
     :param d_in: an upper bound on the distance between adjacent datasets
     :param d_out: an upper bound on the overall privacy loss
     :param context: if specified, then when the query is released, the chain will be submitted to this context
@@ -658,7 +658,7 @@ class Query(object):
 
     _chain: Chain
     """The current chain of transformations and measurements."""
-    _output_measure: Measure
+    _privacy_measure: Measure
     """The output measure of the query."""
     _context: Optional["Context"]
     """The context that the query is part of. ``query.release()`` submits ``_chain`` to ``_context``."""
@@ -669,14 +669,14 @@ class Query(object):
     def __init__(
         self,
         chain: Chain,
-        output_measure: Measure,
+        privacy_measure: Measure,
         d_in: Optional[Union[float, Sequence[Bound]]] = None,
         d_out: Optional[Union[float, tuple[float, float]]] = None,
         context: Optional["Context"] = None,
         _wrap_release=None,
     ) -> None:
         self._chain = chain
-        self._output_measure = output_measure
+        self._privacy_measure = privacy_measure
         self._d_in = d_in
         self._d_out = d_out
         self._context = context
@@ -689,7 +689,7 @@ class Query(object):
 
         return f"""Query(
     chain          = {indent(repr(self._chain))},
-    output_measure = {self._output_measure},
+    privacy_measure = {self._privacy_measure},
     d_in           = {self._d_in},
     d_out          = {self._d_out}{context})"""
 
@@ -785,7 +785,7 @@ class Query(object):
         """
         return Query(
             chain=chain,
-            output_measure=self._output_measure,
+            privacy_measure=self._privacy_measure,
             d_in=self._d_in,
             d_out=self._d_out,
             context=self._context,  # type: ignore[arg-type]
@@ -815,13 +815,13 @@ class Query(object):
             assert self._d_in is not None
             assert self._d_out is not None
             chain = self._chain.fix(
-                self._d_in, self._d_out, self._output_measure, bounds=bounds, T=T
+                self._d_in, self._d_out, self._privacy_measure, bounds=bounds, T=T
             )
         else:
             chain = self._chain
         if not allow_transformations and isinstance(chain, Transformation):
             raise ValueError("Query is not yet a measurement or odometer.")
-        return _cast_measure(chain, self._output_measure, self._d_out)
+        return _cast_measure(chain, self._privacy_measure, self._d_out)
 
     def release(
         self,
@@ -874,7 +874,7 @@ class Query(object):
         split_evenly_over: Optional[int] = None,
         split_by_weights: Optional[Sequence[float]] = None,
         d_out: Optional[Union[float, tuple[float, float]]] = None,
-        output_measure: Optional[Measure] = None,
+        privacy_measure: Optional[Measure] = None,
         alpha: Optional[float] = None,
     ) -> "Query":
         """Constructs a new context containing a sequential compositor with the given weights.
@@ -884,7 +884,7 @@ class Query(object):
         :param split_evenly_over: The number of parts to evenly distribute the privacy loss
         :param split_by_weights: A list of weights for each intermediate privacy loss
         :param d_out: Optional upper bound on privacy loss.
-        :param output_measure: Optional method of accounting to be used by this compositor. Defaults to same.
+        :param privacy_measure: Optional method of accounting to be used by this compositor. Defaults to same.
         :param alpha: Optional parameter to split delta between zCDP conversion and δ-approximate in approx-ZCDP
         """
 
@@ -895,9 +895,9 @@ class Query(object):
                 "`d_out` is unknown. Please specify it in the query."
             )  # pragma: no cover
 
-        if output_measure is not None:
+        if privacy_measure is not None:
             d_out = _translate_measure_distance(
-                d_out, self._output_measure, output_measure, alpha
+                d_out, self._privacy_measure, privacy_measure, alpha
             )
 
         def _compositor(chain: Union[tuple[Domain, Metric], Transformation], d_in):
@@ -908,7 +908,7 @@ class Query(object):
                 d_in = chain.map(d_in)
 
             privacy_unit = input_metric, d_in
-            privacy_loss = output_measure or self._output_measure, d_out
+            privacy_loss = privacy_measure or self._privacy_measure, d_out
 
             accountant, d_mids, _ = _normalize_compositor(
                 input_domain,
@@ -966,7 +966,7 @@ class PartialChain(object):
         self,
         d_in: Union[float, Sequence[Bound]],
         d_out: Union[float, tuple[float, float]],
-        output_measure: Optional[Measure] = None,
+        privacy_measure: Optional[Measure] = None,
         bounds: Optional[tuple[float, float]] = None,
         T=None,
     ):
@@ -976,26 +976,26 @@ class PartialChain(object):
 
         :param d_in: Upper bound on the distance between adjacent input datasets.
         :param d_out: Upper bound on the distance between adjacent output distributions.
-        :param output_measure: How to measure distances between output distributions.
+        :param privacy_measure: How to measure distances between output distributions.
         :param bounds: The bounds for the parameter search.
         :param T: The type of the parameter to search for.
         """
         # When the output measure corresponds to approx-DP, only optimize the epsilon parameter.
         # The delta parameter should be fixed in _cast_measure, and if not, then the search will be impossible here anyways.
         if (
-            output_measure is not None
-            and isinstance(output_measure.type, RuntimeType)
-            and output_measure.type.origin == "Approximate"
+            privacy_measure is not None
+            and isinstance(privacy_measure.type, RuntimeType)
+            and privacy_measure.type.origin == "Approximate"
         ):
 
             def _predicate(param):
-                meas = _cast_measure(self(param), output_measure, d_out)
+                meas = _cast_measure(self(param), privacy_measure, d_out)
                 return meas.map(d_in)[0] <= d_out[0]  # type: ignore[index]
 
         else:
 
             def _predicate(param):
-                meas = _cast_measure(self(param), output_measure, d_out)
+                meas = _cast_measure(self(param), privacy_measure, d_out)
                 return meas.check(d_in, d_out)
 
         param = binary_search(_predicate, bounds=bounds, T=T)
@@ -1065,7 +1065,7 @@ def _normalize_compositor(
     :return: a tuple of the measurement, d_mids, and d_out
     """
     input_metric, d_in = privacy_unit
-    output_measure, d_out = privacy_loss
+    privacy_measure, d_out = privacy_loss
 
     if split_evenly_over is not None and split_by_weights is not None:
         raise ValueError(
@@ -1085,7 +1085,7 @@ def _normalize_compositor(
         odometer = make_fully_adaptive_composition(
             input_domain=domain,
             input_metric=input_metric,
-            output_measure=output_measure,
+            privacy_measure=privacy_measure,
         )
 
         inf = float("inf")
@@ -1107,7 +1107,7 @@ def _normalize_compositor(
         return make_adaptive_composition(
             input_domain=domain,
             input_metric=input_metric,
-            output_measure=output_measure,
+            privacy_measure=privacy_measure,
             d_in=d_in,
             d_mids=_scale_weights(scale, weights),
         )
@@ -1123,10 +1123,10 @@ def _cast_measure(chain, to_measure: Optional[Measure] = None, d_to=None):
 
     If provided, ``d_to`` is the privacy loss wrt the new measure.
     """
-    if to_measure is None or chain.output_measure == to_measure:
+    if to_measure is None or chain.privacy_measure == to_measure:
         return chain
 
-    from_to = str(chain.output_measure.type), str(to_measure.type)
+    from_to = str(chain.privacy_measure.type), str(to_measure.type)
 
     if from_to == ("MaxDivergence", "Approximate<MaxDivergence>"):
         return make_approximate(chain)

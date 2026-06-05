@@ -4,7 +4,7 @@ def make_randomized_response_bitvec(
         input_metric: DiscreteDistance, 
         f: f64, 
         constant_time: bool):
-    output_measure = MaxDivergence(f64)
+    privacy_measure = MaxDivergence(f64)
     
     if f <= 0.0 or f > 1: # |\label{line:range}|
         raise Exception("Probability must be in (0.0, 1]")
@@ -24,4 +24,4 @@ def make_randomized_response_bitvec(
         noise_vector = [bool.sample_bernoulli(f/2, constant_time) for _ in range(len(arg))]
         return xor(arg, noise_vector)
     
-    return Measurement(input_domain, function, input_metric, output_measure, privacy_map)
+    return Measurement(input_domain, function, input_metric, privacy_measure, privacy_map)

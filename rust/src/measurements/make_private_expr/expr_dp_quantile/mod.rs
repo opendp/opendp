@@ -78,7 +78,7 @@ impl OpenDPPlugin for DPQuantileShim {
 pub(crate) fn make_expr_dp_quantile<MI: 'static + UnboundedMetric, MO: NoiseExprMeasure>(
     input_domain: WildExprDomain,
     input_metric: L01InfDistance<MI>,
-    output_measure: MO,
+    privacy_measure: MO,
     expr: Expr,
     global_scale: Option<f64>,
 ) -> Fallible<Measurement<WildExprDomain, L01InfDistance<MI>, MO, ExprPlan>>
@@ -117,7 +117,7 @@ where
     input = apply_anonymous_function(vec![input, negate, scale], NoisyMaxShim);
     input = apply_anonymous_function(vec![input, candidates], IndexCandidatesShim);
 
-    input.make_private(input_domain, input_metric, output_measure, global_scale)
+    input.make_private(input_domain, input_metric, privacy_measure, global_scale)
 }
 
 #[cfg(feature = "ffi")]

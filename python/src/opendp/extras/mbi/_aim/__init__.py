@@ -142,7 +142,7 @@ class AIM(Algorithm):
         self,
         input_domain: LazyFrameDomain,
         input_metric: FrameDistance,
-        output_measure: Measure,
+        privacy_measure: Measure,
         d_in: list["Bound"],
         d_out: float,
         *,
@@ -153,7 +153,7 @@ class AIM(Algorithm):
 
         :param input_domain: domain of input data
         :param input_metric: how to compute distance between datasets
-        :param output_measure: how to measure privacy of release
+        :param privacy_measure: how to measure privacy of release
         :param d_in: distance between adjacent input datasets
         :param d_out: upper bound on the privacy loss
         :param marginals: prior marginal releases
@@ -168,7 +168,7 @@ class AIM(Algorithm):
         queries = _expand_queries(self.queries, input_domain.columns)
         algorithm = replace(self, queries=queries)
 
-        lp_metric = get_associated_metric(output_measure)
+        lp_metric = get_associated_metric(privacy_measure)
         cliques = [query.by for query in queries]
 
         t_marginals = make_stable_marginals(
@@ -190,7 +190,7 @@ class AIM(Algorithm):
             while d_step:
                 m_step = _make_aim_marginal(
                     *t_marginals.output_space,
-                    output_measure,
+                    privacy_measure,
                     t_marginals.map(d_in),
                     d_step,
                     marginals=current_marginals,
@@ -218,7 +218,7 @@ class AIM(Algorithm):
             t_marginals
             >> make_privacy_filter(
                 make_fully_adaptive_composition(
-                    *t_marginals.output_space, output_measure
+                    *t_marginals.output_space, privacy_measure
                 ),
                 d_in=d_marginals,
                 d_out=d_out,
@@ -230,7 +230,7 @@ class AIM(Algorithm):
 def _make_aim_marginal(
     input_domain: ExtrinsicDomain,  # TypedDictDomain of {clique: d-dimensional counts}
     input_metric: Metric,
-    output_measure: Measure,
+    privacy_measure: Measure,
     d_in: int,
     d_out: float,
     marginals: dict[tuple[str, ...], Any],
@@ -251,9 +251,9 @@ def _make_aim_marginal(
     }
 
     # factors to convert stddev -> scale and scale -> half-distribution expectation
-    if output_measure == max_divergence():
+    if privacy_measure == max_divergence():
         to_scale, to_mu = 1 / sqrt(2), 1.0
-    elif output_measure == zero_concentrated_divergence():
+    elif privacy_measure == zero_concentrated_divergence():
         to_scale, to_mu = 1.0, sqrt(2 / pi)
 
     d_measure = d_out * algorithm.measure_split
@@ -262,7 +262,7 @@ def _make_aim_marginal(
     m_select = _make_aim_select(  # type: ignore[misc]
         input_domain,
         input_metric,
-        output_measure,
+        privacy_measure,
         queries=algorithm.queries,  # type: ignore[arg-type]
         model=model,
         d_in=d_in,
@@ -284,7 +284,7 @@ def _make_aim_marginal(
             lambda s: make_noise_marginal(
                 input_domain,
                 input_metric,
-                output_measure,
+                privacy_measure,
                 clique=selected_clique,
                 scale=s,
             ),
@@ -321,7 +321,7 @@ def _make_aim_marginal(
     return make_adaptive_composition(
         input_domain,
         input_metric,
-        output_measure,
+        privacy_measure,
         d_in=d_in,
         d_mids=[d_select, d_measure],
     ) >> _new_pure_function(function)
@@ -330,7 +330,7 @@ def _make_aim_marginal(
 def _make_aim_select(
     input_domain: ExtrinsicDomain,
     input_metric: Metric,
-    output_measure: Measure,
+    privacy_measure: Measure,
     d_in,
     d_out,
     queries: list[Count],
@@ -341,9 +341,9 @@ def _make_aim_select(
     import mbi
 
     # factor to convert scale -> half-distribution expectation
-    if output_measure == max_divergence():
+    if privacy_measure == max_divergence():
         to_mu = 1.0
-    elif output_measure == zero_concentrated_divergence():
+    elif privacy_measure == zero_concentrated_divergence():
         to_mu = sqrt(2 / pi)
 
     model = cast(mbi.MarkovRandomField, model)
@@ -363,7 +363,7 @@ def _make_aim_select(
     def make(scale: float) -> Measurement:
         return _make_aim_scores(
             input_domain, input_metric, candidates, scale * to_mu, model
-        ) >> then_noisy_max(output_measure=output_measure, scale=scale)
+        ) >> then_noisy_max(privacy_measure=privacy_measure, scale=scale)
 
     try:
         return binary_search_chain(

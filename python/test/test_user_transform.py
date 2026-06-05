@@ -139,18 +139,18 @@ def test_hash():
         # ensure that all mechanisms have homogeneous...
         input_domain, = {m.input_domain for m in mechanisms} # ...input domain,
         input_metric, = {m.input_metric for m in mechanisms} # ...input metric,
-        output_measure, = {m.output_measure for m in mechanisms} # ...and measure
+        privacy_measure, = {m.privacy_measure for m in mechanisms} # ...and measure
 
-        return input_domain, input_metric, output_measure
+        return input_domain, input_metric, privacy_measure
     
     def make_mock_basic_composition(mechanisms):
-        input_domain, input_metric, output_measure = get_elements(mechanisms)
+        input_domain, input_metric, privacy_measure = get_elements(mechanisms)
 
         # ensure that the privacy measure is pure-DP
-        assert output_measure == dp.max_divergence()
+        assert privacy_measure == dp.max_divergence()
 
         return dp.m.make_user_measurement(
-            input_domain, input_metric, output_measure,
+            input_domain, input_metric, privacy_measure,
             function=lambda arg: [M(arg) for M in mechanisms], 
             privacy_map=lambda d_in: sum(M.map(d_in) for M in mechanisms))
     

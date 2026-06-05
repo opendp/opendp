@@ -22,16 +22,16 @@ use super::make_private_lazyframe;
 pub extern "C" fn opendp_measurements__make_private_lazyframe(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
-    output_measure: *const AnyMeasure,
+    privacy_measure: *const AnyMeasure,
     lazyframe: *const AnyObject,
     global_scale: *const AnyObject,
     threshold: *const AnyObject,
 ) -> FfiResult<*mut AnyMeasurement> {
     let input_domain = try_!(try_as_ref!(input_domain).downcast_ref::<LazyFrameDomain>()).clone();
     let input_metric = try_as_ref!(input_metric);
-    let output_measure = try_as_ref!(output_measure);
+    let privacy_measure = try_as_ref!(privacy_measure);
     let MI_ = input_metric.type_.clone();
-    let MO_ = output_measure.type_.clone();
+    let MO_ = privacy_measure.type_.clone();
 
     let lazyframe = try_!(try_as_ref!(lazyframe).downcast_ref::<LazyFrame>()).clone();
 
@@ -50,7 +50,7 @@ pub extern "C" fn opendp_measurements__make_private_lazyframe(
     fn monomorphize<MI: 'static + Metric, MO: 'static + Measure>(
         input_domain: LazyFrameDomain,
         input_metric: &AnyMetric,
-        output_measure: &AnyMeasure,
+        privacy_measure: &AnyMeasure,
         lazyframe: LazyFrame,
         global_scale: Option<f64>,
         threshold: Option<u32>,
@@ -61,11 +61,11 @@ pub extern "C" fn opendp_measurements__make_private_lazyframe(
         (DslPlanDomain, MI): MetricSpace,
     {
         let input_metric = input_metric.downcast_ref::<MI>()?.clone();
-        let output_measure = output_measure.downcast_ref::<MO>()?.clone();
+        let privacy_measure = privacy_measure.downcast_ref::<MO>()?.clone();
         Ok(make_private_lazyframe(
             input_domain,
             input_metric,
-            output_measure,
+            privacy_measure,
             lazyframe,
             global_scale,
             threshold,
@@ -87,7 +87,7 @@ pub extern "C" fn opendp_measurements__make_private_lazyframe(
         (
             input_domain,
             input_metric,
-            output_measure,
+            privacy_measure,
             lazyframe,
             global_scale,
             threshold

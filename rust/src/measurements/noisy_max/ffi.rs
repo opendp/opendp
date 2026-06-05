@@ -23,22 +23,22 @@ use crate::{
 pub extern "C" fn opendp_measurements__make_noisy_max(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
-    output_measure: *const AnyMeasure,
+    privacy_measure: *const AnyMeasure,
     scale: f64,
     negate: c_bool,
 ) -> FfiResult<*mut AnyMeasurement> {
     let input_domain = try_as_ref!(input_domain);
     let input_metric = try_as_ref!(input_metric);
-    let output_measure = try_as_ref!(output_measure);
+    let privacy_measure = try_as_ref!(privacy_measure);
     let TIA_ = try_!(input_domain.type_.get_atom());
-    let MO = output_measure.type_.clone();
+    let MO = privacy_measure.type_.clone();
 
     let negate = to_bool(negate);
 
     fn monomorphize<MO, TIA>(
         input_domain: &AnyDomain,
         input_metric: &AnyMetric,
-        output_measure: &AnyMeasure,
+        privacy_measure: &AnyMeasure,
         scale: f64,
         negate: bool,
     ) -> Fallible<AnyMeasurement>
@@ -52,8 +52,8 @@ pub extern "C" fn opendp_measurements__make_noisy_max(
             .downcast_ref::<VectorDomain<AtomDomain<TIA>>>()?
             .clone();
         let input_metric = input_metric.downcast_ref::<LInfDistance<TIA>>()?.clone();
-        let output_measure = output_measure.downcast_ref::<MO>()?.clone();
-        make_noisy_max::<MO, TIA>(input_domain, input_metric, output_measure, scale, negate)
+        let privacy_measure = privacy_measure.downcast_ref::<MO>()?.clone();
+        make_noisy_max::<MO, TIA>(input_domain, input_metric, privacy_measure, scale, negate)
             .into_any()
     }
 
@@ -63,7 +63,7 @@ pub extern "C" fn opendp_measurements__make_noisy_max(
             (MO, [MaxDivergence, ZeroConcentratedDivergence]),
             (TIA_, [u32, u64, i32, i64, usize, f32, f64])
         ],
-        (input_domain, input_metric, output_measure, scale, negate)
+        (input_domain, input_metric, privacy_measure, scale, negate)
     )
     .into()
 }

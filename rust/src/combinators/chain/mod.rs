@@ -103,7 +103,7 @@ where
     Measurement::new(
         transformation0.input_domain.clone(),
         transformation0.input_metric.clone(),
-        measurement1.output_measure.clone(),
+        measurement1.privacy_measure.clone(),
         Function::make_chain(&measurement1.function, &transformation0.function),
         PrivacyMap::make_chain(&measurement1.privacy_map, &transformation0.stability_map),
     )
@@ -192,7 +192,7 @@ where
     Measurement::new(
         measurement0.input_domain.clone(),
         measurement0.input_metric.clone(),
-        measurement0.output_measure.clone(),
+        measurement0.privacy_measure.clone(),
         Function::make_chain(postprocess1, &measurement0.function),
         measurement0.privacy_map.clone(),
     )

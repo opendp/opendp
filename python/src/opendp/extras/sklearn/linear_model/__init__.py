@@ -42,7 +42,7 @@ class LinearRegression:
 
     def __init__(
         self,
-        output_measure: Measure,
+        privacy_measure: Measure,
         x_bounds: Iterable[tuple[float, float]],
         y_bounds: tuple[float, float],
         scale: float,
@@ -56,7 +56,7 @@ class LinearRegression:
             raise Exception(msg)
         
         self.measurement = _make_private_theil_sen(
-            output_measure=output_measure,
+            privacy_measure=privacy_measure,
             x_bounds=x_bounds[0],
             y_bounds=y_bounds,
             scale=scale,

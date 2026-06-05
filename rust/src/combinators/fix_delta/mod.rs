@@ -33,15 +33,15 @@ where
     (DI, MI): MetricSpace,
 {
     let privacy_map = m.privacy_map.clone();
-    let output_measure: MO = m.output_measure.clone();
+    let privacy_measure: MO = m.privacy_measure.clone();
 
     m.with_map(
         m.input_metric.clone(),
-        m.output_measure.new_fixed_measure()?,
+        m.privacy_measure.new_fixed_measure()?,
         PrivacyMap::new_fallible(move |d_in| {
             // find the smallest epsilon at the given delta
             let profile = privacy_map.eval(d_in)?;
-            output_measure.fix_delta(&profile, delta)
+            privacy_measure.fix_delta(&profile, delta)
         }),
     )
 }

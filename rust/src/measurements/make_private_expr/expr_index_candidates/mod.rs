@@ -36,7 +36,7 @@ mod test;
 pub fn make_expr_index_candidates<MI: 'static + Metric, MO: 'static + Measure>(
     input_domain: WildExprDomain,
     input_metric: MI,
-    output_measure: MO,
+    privacy_measure: MO,
     expr: Expr,
     param: Option<f64>,
 ) -> Fallible<Measurement<WildExprDomain, MI, MO, ExprPlan>>
@@ -55,7 +55,7 @@ where
 
     let m_prior = input
         .clone()
-        .make_private(input_domain, input_metric, output_measure, param)?;
+        .make_private(input_domain, input_metric, privacy_measure, param)?;
 
     m_prior
         >> Function::then_expr(move |input_expr| {

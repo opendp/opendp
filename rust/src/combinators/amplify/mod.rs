@@ -89,13 +89,13 @@ where
     }
 
     let privacy_map = measurement.privacy_map.clone();
-    let output_measure: MO = measurement.output_measure.clone();
+    let privacy_measure: MO = measurement.privacy_measure.clone();
 
     measurement.with_map(
         measurement.input_metric.clone(),
-        measurement.output_measure.clone(),
+        measurement.privacy_measure.clone(),
         PrivacyMap::new_fallible(move |d_in| {
-            output_measure.amplify(&privacy_map.eval(d_in)?, population_size, sample_size)
+            privacy_measure.amplify(&privacy_map.eval(d_in)?, population_size, sample_size)
         }),
     )
 }

@@ -63,7 +63,7 @@ pub extern "C" fn opendp_core__measurement_input_metric(
 }
 
 #[bootstrap(
-    name = "measurement_output_measure",
+    name = "measurement_privacy_measure",
     arguments(this(rust_type = b"null")),
     returns(c_type = "FfiResult<AnyMeasure *>")
 )]
@@ -72,10 +72,10 @@ pub extern "C" fn opendp_core__measurement_input_metric(
 /// # Arguments
 /// * `this` - The measurement to retrieve the value from.
 #[unsafe(no_mangle)]
-pub extern "C" fn opendp_core__measurement_output_measure(
+pub extern "C" fn opendp_core__measurement_privacy_measure(
     this: *mut AnyMeasurement,
 ) -> FfiResult<*mut AnyMeasure> {
-    FfiResult::Ok(util::into_raw(try_as_ref!(this).output_measure.clone()))
+    FfiResult::Ok(util::into_raw(try_as_ref!(this).privacy_measure.clone()))
 }
 
 #[bootstrap(
@@ -235,7 +235,7 @@ pub extern "C" fn opendp_core__measurement_output_distance_type(
 ) -> FfiResult<*mut c_char> {
     let this = try_as_ref!(this);
     FfiResult::Ok(try_!(into_c_char_p(
-        this.output_measure.distance_type.descriptor.to_string()
+        this.privacy_measure.distance_type.descriptor.to_string()
     )))
 }
 

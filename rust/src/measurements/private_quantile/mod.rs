@@ -20,7 +20,7 @@ mod ffi;
 
 #[bootstrap(
     features("contrib"),
-    arguments(output_measure(c_type = "AnyMeasure *", rust_type = b"null", hint = "Measure")),
+    arguments(privacy_measure(c_type = "AnyMeasure *", rust_type = b"null", hint = "Measure")),
     generics(MI(suppress), MO(suppress), T(suppress)),
     derived_types(T = "$get_atom(get_type(input_domain))")
 )]
@@ -42,7 +42,7 @@ mod ffi;
 /// # Arguments
 /// * `input_domain` - Uses a tighter sensitivity when the size of vectors in the input domain is known.
 /// * `input_metric` - Either SymmetricDistance or InsertDeleteDistance.
-/// * `output_measure` - Either MaxDivergence or ZeroConcentratedDivergence.
+/// * `privacy_measure` - Either MaxDivergence or ZeroConcentratedDivergence.
 /// * `candidates` - Potential quantiles to score
 /// * `alpha` - a value in $[0, 1]$. Choose 0.5 for median
 /// * `scale` - the scale of the noise added
@@ -53,7 +53,7 @@ mod ffi;
 pub fn make_private_quantile<MI: 'static + UnboundedMetric, MO: TopKMeasure, T: Number>(
     input_domain: VectorDomain<AtomDomain<T>>,
     input_metric: MI,
-    output_measure: MO,
+    privacy_measure: MO,
     mut candidates: Vec<T>,
     alpha: f64,
     scale: f64,
@@ -83,7 +83,7 @@ where
     let m_rnm = make_noisy_max(
         t_score.output_domain.clone(),
         t_score.output_metric.clone(),
-        output_measure,
+        privacy_measure,
         scale * denominator as f64,
         true,
     )?;

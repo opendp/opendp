@@ -22,10 +22,10 @@ use super::CompositionMeasure;
     arguments(
         d_in(rust_type = "$get_distance_type(input_metric)", c_type = "AnyObject *"),
         d_mids(rust_type = "Vec<QO>", c_type = "AnyObject *"),
-        output_measure(c_type = "AnyMeasure *", rust_type = b"null")
+        privacy_measure(c_type = "AnyMeasure *", rust_type = b"null")
     ),
     generics(DI(suppress), TO(suppress), MI(suppress), MO(suppress)),
-    derived_types(QO = "$get_distance_type(output_measure)")
+    derived_types(QO = "$get_distance_type(privacy_measure)")
 )]
 /// Construct a Measurement that when invoked,
 /// returns a queryable that interactively composes measurements.
@@ -54,7 +54,7 @@ use super::CompositionMeasure;
 /// # Arguments
 /// * `input_domain` - indicates the space of valid input datasets
 /// * `input_metric` - how distances are measured between members of the input domain
-/// * `output_measure` - how privacy is measured
+/// * `privacy_measure` - how privacy is measured
 /// * `d_in` - maximum distance between adjacent input datasets
 /// * `d_mids` - maximum privacy expenditure of each query
 ///
@@ -71,7 +71,7 @@ pub fn make_adaptive_composition<
 >(
     input_domain: DI,
     input_metric: MI,
-    output_measure: MO,
+    privacy_measure: MO,
     d_in: MI::Distance,
     mut d_mids: Vec<MO::Distance>,
 ) -> Fallible<Measurement<DI, MI, MO, Queryable<Measurement<DI, MI, MO, TO>, TO>>>
@@ -88,10 +88,10 @@ where
     // we'll iteratively pop from the end
     d_mids.reverse();
 
-    let d_out = output_measure.compose(d_mids.clone())?;
+    let d_out = privacy_measure.compose(d_mids.clone())?;
 
     let require_sequentiality = matches!(
-        output_measure.composability(Adaptivity::Adaptive)?,
+        privacy_measure.composability(Adaptivity::Adaptive)?,
         Composability::Sequential
     );
 
@@ -101,14 +101,14 @@ where
     Measurement::new(
         input_domain.clone(),
         input_metric.clone(),
-        output_measure.clone(),
+        privacy_measure.clone(),
         Function::new_fallible(move |data: &DI::Carrier| {
             // a new copy of the state variables is made each time the Function is called:
 
             // IMMUTABLE STATE VARIABLES
             let input_domain = input_domain.clone();
             let input_metric = input_metric.clone();
-            let output_measure = output_measure.clone();
+            let privacy_measure = privacy_measure.clone();
             let d_in = d_in.clone();
             let data = data.clone();
 
@@ -129,7 +129,7 @@ where
                 if let Query::External(meas) = query {
                     assert_elements_match!(DomainMismatch, input_domain, meas.input_domain);
                     assert_elements_match!(MetricMismatch, input_metric, meas.input_metric);
-                    assert_elements_match!(MeasureMismatch, output_measure, meas.output_measure);
+                    assert_elements_match!(MeasureMismatch, privacy_measure, meas.privacy_measure);
 
                     // retrieve the last distance from d_mids, or bubble an error if d_mids is empty
                     let d_mid =
@@ -213,10 +213,10 @@ where
     arguments(
         d_in(rust_type = "$get_distance_type(input_metric)", c_type = "AnyObject *"),
         d_mids(rust_type = "Vec<QO>", c_type = "AnyObject *"),
-        output_measure(c_type = "AnyMeasure *", rust_type = b"null")
+        privacy_measure(c_type = "AnyMeasure *", rust_type = b"null")
     ),
     generics(DI(suppress), TO(suppress), MI(suppress), MO(suppress)),
-    derived_types(QO = "$get_distance_type(output_measure)")
+    derived_types(QO = "$get_distance_type(privacy_measure)")
 )]
 /// Construct a Measurement that when invoked,
 /// returns a queryable that interactively composes measurements.
@@ -245,7 +245,7 @@ where
 /// # Arguments
 /// * `input_domain` - indicates the space of valid input datasets
 /// * `input_metric` - how distances are measured between members of the input domain
-/// * `output_measure` - how privacy is measured
+/// * `privacy_measure` - how privacy is measured
 /// * `d_in` - maximum distance between adjacent input datasets
 /// * `d_mids` - maximum privacy expenditure of each query
 ///
@@ -266,7 +266,7 @@ pub fn make_sequential_composition<
 >(
     input_domain: DI,
     input_metric: MI,
-    output_measure: MO,
+    privacy_measure: MO,
     d_in: MI::Distance,
     d_mids: Vec<MO::Distance>,
 ) -> Fallible<Measurement<DI, MI, MO, Queryable<Measurement<DI, MI, MO, TO>, TO>>>
@@ -276,5 +276,5 @@ where
     MO::Distance: 'static + ProductOrd + Clone + Send + Sync + Debug,
     (DI, MI): MetricSpace,
 {
-    make_adaptive_composition(input_domain, input_metric, output_measure, d_in, d_mids)
+    make_adaptive_composition(input_domain, input_metric, privacy_measure, d_in, d_mids)
 }

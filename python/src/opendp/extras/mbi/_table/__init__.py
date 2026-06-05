@@ -188,7 +188,7 @@ class ContingencyTable:
 def make_contingency_table(
     input_domain: LazyFrameDomain,
     input_metric: FrameDistance,
-    output_measure: Measure,
+    privacy_measure: Measure,
     d_in: list["Bound"],
     d_out: Union[float, tuple[float, float]],
     keys: Optional[Mapping[str, Sequence]] = None,
@@ -201,7 +201,7 @@ def make_contingency_table(
 
     :param input_domain: domain of input data
     :param input_metric: how to compute distance between datasets
-    :param output_measure: how to measure privacy of release
+    :param privacy_measure: how to measure privacy of release
     :param d_in: bounds on distances between adjacent input datasets
     :param d_out: upper bound on the privacy loss
     :param keys: dictionary of column names and unique categories
@@ -247,8 +247,8 @@ def make_contingency_table(
     if cuts_pl:
         plan = plan.with_columns(pl.col(c).cut(cutset, labels=get_categories(cutset)) for c, cutset in cuts_pl.items() if c in schema)  # type: ignore[arg-type]
 
-    if (QO := RuntimeType.infer(d_out)) != output_measure.distance_type:
-        raise ValueError(f"d_out type ({QO}) must be {output_measure.distance_type}")
+    if (QO := RuntimeType.infer(d_out)) != privacy_measure.distance_type:
+        raise ValueError(f"d_out type ({QO}) must be {privacy_measure.distance_type}")
 
     delta = None
     if isinstance(d_out, tuple):
@@ -286,7 +286,7 @@ def make_contingency_table(
         m_oneway, scale, threshold = _make_oneway_marginals(
             input_domain,
             input_metric,
-            output_measure,
+            privacy_measure,
             d_in=d_in,
             d_out=d_oneway,
             keys=keys_pl,
@@ -299,13 +299,13 @@ def make_contingency_table(
             }
 
     m_comp = make_adaptive_composition(
-        input_domain, input_metric, output_measure, d_in, d_mids
+        input_domain, input_metric, privacy_measure, d_in, d_mids
     )
 
-    if isinstance(output_measure, ApproximateDivergence):
-        inner_measure = output_measure.inner_measure
+    if isinstance(privacy_measure, ApproximateDivergence):
+        inner_measure = privacy_measure.inner_measure
     else:
-        inner_measure = output_measure
+        inner_measure = privacy_measure
 
     if "len" in input_domain.columns:
         raise ValueError('input_domain must not contain a column named "len"')
@@ -351,7 +351,7 @@ def make_contingency_table(
         m_marginals = algorithm.make_marginals(
             input_domain=t_index.output_domain,
             input_metric=t_index.output_metric,
-            output_measure=inner_measure,
+            privacy_measure=inner_measure,
             d_in=t_index.map(d_in),
             d_out=d_multiway,  # type: ignore[arg-type]
             marginals=current_marginals,
@@ -416,7 +416,7 @@ def _get_null_index(series, default=None) -> Optional[int]:
 def _make_oneway_marginals(
     input_domain: LazyFrameDomain,
     input_metric: FrameDistance,
-    output_measure: Measure,
+    privacy_measure: Measure,
     d_in,
     d_out,
     keys: dict[str, Any],
@@ -450,7 +450,7 @@ def _make_oneway_marginals(
         )
 
     def _make(scale: float, threshold: Optional[int] = None) -> Measurement:
-        std = get_std(output_measure, scale)
+        std = get_std(privacy_measure, scale)
 
         # all columns that should be estimated
         names = [
@@ -465,7 +465,7 @@ def _make_oneway_marginals(
             make_private_lazyframe(
                 input_domain,
                 input_metric,
-                output_measure,
+                privacy_measure,
                 group_by_agg(plan, name),
                 global_scale=scale,
                 threshold=threshold,
@@ -477,7 +477,7 @@ def _make_oneway_marginals(
             m_total = make_private_lazyframe(
                 input_domain,
                 input_metric,
-                output_measure,
+                privacy_measure,
                 plan.select(dp_len()),
                 global_scale=scale,
             ) >> _new_pure_function(lambda x: x.collect())
@@ -517,7 +517,7 @@ def _make_oneway_marginals(
 
         return make_composition(one_way_measurements) >> _new_pure_function(postprocess)
 
-    if isinstance(output_measure, ApproximateDivergence):
+    if isinstance(privacy_measure, ApproximateDivergence):
         compare_s = lambda s: _make(s, threshold=2**32 - 1).map(d_in)[0] < d_out[0]  # type: ignore[index]
         scale = binary_search(compare_s, T=float)
 

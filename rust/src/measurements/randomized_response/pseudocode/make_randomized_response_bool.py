@@ -2,7 +2,7 @@
 def make_randomized_response_bool(prob: f64, constant_time: bool):
     input_domain = AtomDomain(bool)
     input_metric = DiscreteMetric()
-    output_measure = MaxDivergence()
+    privacy_measure = MaxDivergence()
     
     if (prob < 0.5 or prob > 1):  # |\label{line:range}|
         raise Exception("probability must be in [0.5, 1]")
@@ -23,4 +23,4 @@ def make_randomized_response_bool(prob: f64, constant_time: bool):
 
         return arg ^ sample
     
-    return Measurement(input_domain, function, input_metric, output_measure, privacy_map)
+    return Measurement(input_domain, function, input_metric, privacy_measure, privacy_map)

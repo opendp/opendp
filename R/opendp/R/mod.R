@@ -177,7 +177,7 @@ new_measurement <- function(ptr, log) {
     switch(attr,
       input_domain = measurement_input_domain(ptr),
       input_metric = measurement_input_metric(ptr),
-      output_measure = measurement_output_measure(ptr),
+      privacy_measure = measurement_privacy_measure(ptr),
       `function` = measurement_function(ptr),
       json = jsonlite::toJSON(to_ast(log), pretty = TRUE),
       ptr = ptr,
@@ -197,7 +197,7 @@ toString.measurement <- function(x, ...) {
     "Measurement(\n",
     "  input_domain=", toString(x("input_domain")), ",\n",
     "  input_metric=", toString(x("input_metric")), ",\n",
-    "  output_measure=", toString(x("output_measure")), "\n",
+    "  privacy_measure=", toString(x("privacy_measure")), "\n",
     ")"
   )
 }
@@ -227,7 +227,7 @@ new_odometer <- function(ptr, log) {
     switch(attr,
       input_domain = odometer_input_domain(ptr),
       input_metric = odometer_input_metric(ptr),
-      output_measure = odometer_output_measure(ptr),
+      privacy_measure = odometer_privacy_measure(ptr),
       json = jsonlite::toJSON(to_ast(log), pretty = TRUE),
       ptr = ptr,
       log = log,
@@ -245,7 +245,7 @@ toString.odometer <- function(x, ...) {
     "Odometer(\n",
     "  input_domain=", toString(x("input_domain")), ",\n",
     "  input_metric=", toString(x("input_metric")), ",\n",
-    "  output_measure=", toString(x("output_measure")), "\n",
+    "  privacy_measure=", toString(x("privacy_measure")), "\n",
     ")"
   )
 }

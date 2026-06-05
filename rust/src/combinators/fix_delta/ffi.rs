@@ -23,7 +23,7 @@ fn make_fix_delta(measurement: &AnyMeasurement, delta: f64) -> Fallible<AnyMeasu
         let meas = Measurement::new(
             meas.input_domain.clone(),
             meas.input_metric.clone(),
-            meas.output_measure.downcast_ref::<MO>()?.clone(),
+            meas.privacy_measure.downcast_ref::<MO>()?.clone(),
             meas.function.clone(),
             PrivacyMap::new_fallible(move |d_in: &AnyObject| {
                 privacy_map.eval(d_in)?.downcast::<MO::Distance>()
@@ -34,7 +34,7 @@ fn make_fix_delta(measurement: &AnyMeasurement, delta: f64) -> Fallible<AnyMeasu
         Measurement::new(
             meas.input_domain.clone(),
             meas.input_metric.clone(),
-            AnyMeasure::new(meas.output_measure.clone()),
+            AnyMeasure::new(meas.privacy_measure.clone()),
             meas.function.clone(),
             PrivacyMap::new_fallible(move |d_in: &AnyObject| {
                 Ok(AnyObject::new(privacy_map.eval(d_in)?))
@@ -42,7 +42,7 @@ fn make_fix_delta(measurement: &AnyMeasurement, delta: f64) -> Fallible<AnyMeasu
         )
     }
 
-    let MO = measurement.output_measure.type_.clone();
+    let MO = measurement.privacy_measure.type_.clone();
     dispatch!(
         monomorphize,
         [(MO, [SmoothedMaxDivergence, Approximate<SmoothedMaxDivergence>])],

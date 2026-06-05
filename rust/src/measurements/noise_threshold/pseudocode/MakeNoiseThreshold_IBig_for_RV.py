@@ -9,10 +9,10 @@ class RV:
         MapDomain[AtomDomain[TK], AtomDomain[IBig]], HashMap[TK, IBig], MI, MO
     ]:
         input_domain, input_metric = input_space
-        output_measure = MO.default()
+        privacy_measure = MO.default()
         threshold_magnitude = threshold.into_parts()[1] # |\label{line:threshold-mag}|
         privacy_map = self.noise_threshold_privacy_map( # |\label{line:privacy-map}|
-            input_metric, output_measure, threshold_magnitude
+            input_metric, privacy_measure, threshold_magnitude
         )
 
         match threshold.sign():
@@ -36,6 +36,6 @@ class RV:
             input_domain,
             Function.new_fallible(function),
             input_metric,
-            output_measure,
+            privacy_measure,
             privacy_map,
         )

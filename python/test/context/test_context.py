@@ -91,7 +91,7 @@ def test_context_repr():
     accountant = Measurement(
         input_domain   = VectorDomain(AtomDomain(T=i32)),
         input_metric   = SymmetricDistance(),
-        output_measure = MaxDivergence),
+        privacy_measure = MaxDivergence),
     d_in       = 3,
     d_mids     = [3.0],
     d_out      = None)'''
@@ -106,7 +106,7 @@ def test_context_repr():
     accountant = Measurement(
         input_domain   = VectorDomain(AtomDomain(T=i32)),
         input_metric   = SymmetricDistance(),
-        output_measure = MaxDivergence),
+        privacy_measure = MaxDivergence),
     d_in       = 3,
     d_mids     = None,
     d_out      = 3.0)'''
@@ -121,7 +121,7 @@ def test_context_repr():
     accountant = Odometer(
         input_domain   = VectorDomain(AtomDomain(T=i32)),
         input_metric   = SymmetricDistance(),
-        output_measure = MaxDivergence),
+        privacy_measure = MaxDivergence),
     d_in       = 3,
     d_mids     = None,
     d_out      = None)'''
@@ -215,14 +215,14 @@ def test_query_repr():
     )
     assert repr(context.query()) == '''Query(
     chain          = (VectorDomain(AtomDomain(T=i32)), SymmetricDistance()),
-    output_measure = MaxDivergence,
+    privacy_measure = MaxDivergence,
     d_in           = 1,
     d_out          = 1.0,
     context        = Context(
         accountant = Measurement(
             input_domain   = VectorDomain(AtomDomain(T=i32)),
             input_metric   = SymmetricDistance(),
-            output_measure = MaxDivergence),
+            privacy_measure = MaxDivergence),
         d_in       = 1,
         d_mids     = [1.0],
         d_out      = None))'''
@@ -256,7 +256,7 @@ def test_measure_cast():
         split_evenly_over=2,
         domain=dp.vector_domain(dp.atom_domain(T=int)),
     )
-    context.query().compositor(split_evenly_over=1) # TODO: Exercise different output_measure params
+    context.query().compositor(split_evenly_over=1) # TODO: Exercise different privacy_measure params
 
 
 def test_split_by_weights_ints():
@@ -296,7 +296,7 @@ def test_sc_query():
     # build a child sequential compositor in zCDP, and then use it to release some gaussian queries
     sub_context_2 = context.query().compositor(  # type: ignore[attr-defined]
         split_evenly_over=2, 
-        output_measure=dp.zero_concentrated_divergence()
+        privacy_measure=dp.zero_concentrated_divergence()
     ).release()
     dp_sum_2 = sub_context_2.query().clamp((1, 10)).sum().gaussian()
     # with partials, fusing, and measure convention, would shorten to
@@ -339,7 +339,7 @@ def test_approx_to_approx_zCDP():
     )
 
     azcdp_measure = dp.approximate(dp.zero_concentrated_divergence())
-    context_azcdp = context.query().compositor(3, output_measure=azcdp_measure, alpha=0.3).release()
+    context_azcdp = context.query().compositor(3, privacy_measure=azcdp_measure, alpha=0.3).release()
 
     dom, met = context_azcdp.accountant.input_space
     # the important test is that the following is a valid query for an approx-zCDP compositor

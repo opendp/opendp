@@ -115,13 +115,13 @@ impl
     fn noise_threshold_privacy_map(
         &self,
         _input_metric: &L02InfDistance<AbsoluteDistance<RBig>>,
-        output_measure: &Approximate<ZeroConcentratedDivergence>,
+        privacy_measure: &Approximate<ZeroConcentratedDivergence>,
         threshold: UBig,
     ) -> Fallible<
         PrivacyMap<L02InfDistance<AbsoluteDistance<RBig>>, Approximate<ZeroConcentratedDivergence>>,
     > {
         let noise_privacy_map =
-            self.noise_privacy_map(&L2Distance::default(), &output_measure.0)?;
+            self.noise_privacy_map(&L2Distance::default(), &privacy_measure.0)?;
         let ZExpFamily { scale } = self.clone();
 
         Ok(PrivacyMap::new_fallible(

@@ -62,7 +62,7 @@ pub(crate) mod expr_noisy_max;
 #[bootstrap(
     features("contrib", "honest-but-curious"),
     arguments(
-        output_measure(c_type = "AnyMeasure *", rust_type = b"null"),
+        privacy_measure(c_type = "AnyMeasure *", rust_type = b"null"),
         global_scale(rust_type = "Option<f64>", c_type = "AnyObject *", default = b"null")
     ),
     generics(MI(suppress), MO(suppress))
@@ -75,7 +75,7 @@ pub(crate) mod expr_noisy_max;
 /// # Arguments
 /// * `input_domain` - The domain of the input data.
 /// * `input_metric` - How to measure distances between neighboring input data sets.
-/// * `output_measure` - How to measure privacy loss.
+/// * `privacy_measure` - How to measure privacy loss.
 /// * `expr` - The [`Expr`] to be calculated and released with differential privacy.
 /// * `global_scale` - A tune-able parameter that affects the privacy-utility tradeoff.
 ///
@@ -84,7 +84,7 @@ pub(crate) mod expr_noisy_max;
 pub fn make_private_expr<MI: 'static + Metric, MO: 'static + Measure>(
     input_domain: WildExprDomain,
     input_metric: MI,
-    output_measure: MO,
+    privacy_measure: MO,
     expr: Expr,
     global_scale: Option<f64>,
 ) -> Fallible<Measurement<WildExprDomain, MI, MO, ExprPlan>>
@@ -92,7 +92,7 @@ where
     Expr: PrivateExpr<MI, MO>,
     (WildExprDomain, MI): MetricSpace,
 {
-    expr.make_private(input_domain, input_metric, output_measure, global_scale)
+    expr.make_private(input_domain, input_metric, privacy_measure, global_scale)
 }
 
 pub trait PrivateExpr<MI: Metric, MO: Measure> {
@@ -132,14 +132,14 @@ where
         self,
         input_domain: WildExprDomain,
         input_metric: L01InfDistance<MI>,
-        output_measure: MO,
+        privacy_measure: MO,
         global_scale: Option<f64>,
     ) -> Fallible<Measurement<WildExprDomain, L01InfDistance<MI>, MO, ExprPlan>> {
         if match_shim::<DPFrameLenShim, 1>(&self)?.is_some() {
             return expr_dp_frame_len::make_expr_dp_frame_len(
                 input_domain,
                 input_metric,
-                output_measure,
+                privacy_measure,
                 self,
                 global_scale,
             );
@@ -150,7 +150,7 @@ where
                     return expr_dp_counting_query::$constructor(
                         input_domain,
                         input_metric,
-                        output_measure,
+                        privacy_measure,
                         self,
                         global_scale,
                     );
@@ -167,7 +167,7 @@ where
             return expr_dp_sum::make_expr_dp_sum(
                 input_domain,
                 input_metric,
-                output_measure,
+                privacy_measure,
                 self,
                 global_scale,
             );
@@ -177,7 +177,7 @@ where
             return expr_dp_median::make_expr_dp_median(
                 input_domain,
                 input_metric,
-                output_measure,
+                privacy_measure,
                 self,
                 global_scale,
             );
@@ -187,7 +187,7 @@ where
             return expr_dp_quantile::make_expr_dp_quantile(
                 input_domain,
                 input_metric,
-                output_measure,
+                privacy_measure,
                 self,
                 global_scale,
             );
@@ -197,7 +197,7 @@ where
             return expr_dp_mean::make_expr_dp_mean(
                 input_domain,
                 input_metric,
-                output_measure,
+                privacy_measure,
                 self,
                 global_scale,
             );
@@ -220,7 +220,7 @@ where
             return expr_index_candidates::make_expr_index_candidates(
                 input_domain,
                 input_metric,
-                output_measure,
+                privacy_measure,
                 self,
                 global_scale,
             );
@@ -229,7 +229,7 @@ where
         if let Some(meas) = expr_postprocess::match_postprocess(
             input_domain.clone(),
             input_metric.clone(),
-            output_measure.clone(),
+            privacy_measure.clone(),
             self.clone(),
             global_scale,
         )? {
@@ -239,7 +239,7 @@ where
         match &self {
             #[cfg(feature = "contrib")]
             Expr::Len => {
-                expr_len::make_expr_private_len(input_domain, input_metric, output_measure, self)
+                expr_len::make_expr_private_len(input_domain, input_metric, privacy_measure, self)
             }
 
             #[cfg(feature = "contrib")]
@@ -266,13 +266,13 @@ where
         self,
         input_domain: WildExprDomain,
         input_metric: L01InfDistance<MI>,
-        output_measure: Approximate<MO>,
+        privacy_measure: Approximate<MO>,
         global_scale: Option<f64>,
     ) -> Fallible<Measurement<WildExprDomain, L01InfDistance<MI>, Approximate<MO>, ExprPlan>> {
         make_approximate(self.make_private(
             input_domain,
             input_metric,
-            output_measure.0,
+            privacy_measure.0,
             global_scale,
         )?)
     }

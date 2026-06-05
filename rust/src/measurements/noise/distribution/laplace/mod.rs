@@ -88,7 +88,7 @@ impl NoisePrivacyMap<L1Distance<RBig>, MaxDivergence> for ZExpFamily<1> {
     fn noise_privacy_map(
         &self,
         _input_metric: &L1Distance<RBig>,
-        _output_measure: &MaxDivergence,
+        _privacy_measure: &MaxDivergence,
     ) -> Fallible<PrivacyMap<L1Distance<RBig>, MaxDivergence>> {
         let ZExpFamily { scale } = self.clone();
         if scale < RBig::ZERO {

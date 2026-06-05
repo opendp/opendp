@@ -116,7 +116,7 @@ class MST(Algorithm):
         self,
         input_domain: LazyFrameDomain,
         input_metric: FrameDistance,
-        output_measure: Measure,
+        privacy_measure: Measure,
         d_in: list["Bound"],
         d_out: float,
         *,
@@ -127,7 +127,7 @@ class MST(Algorithm):
 
         :param input_domain: domain of input data
         :param input_metric: how to compute distance between datasets
-        :param output_measure: how to measure privacy of release
+        :param privacy_measure: how to measure privacy of release
         :param d_in: distance between adjacent input datasets
         :param d_out: upper bound on the privacy loss
         :param marginals: prior marginal releases
@@ -142,7 +142,7 @@ class MST(Algorithm):
         d_measure = d_out * self.measure_split
         d_select = prior(prior(d_out - d_measure))
 
-        lp_metric = get_associated_metric(output_measure)
+        lp_metric = get_associated_metric(privacy_measure)
         edges = list(itertools.combinations(input_domain.columns, 2))
 
         t_marginals = make_stable_marginals(input_domain, input_metric, lp_metric, edges)  # type: ignore[arg-type]
@@ -155,7 +155,7 @@ class MST(Algorithm):
             # SELECT a set of queries that best reduces the error
             m_select = _make_mst_select(
                 *t_marginals.output_space,
-                output_measure,
+                privacy_measure,
                 d_in=d_marginals,
                 d_out=d_select,
                 edges=edges,
@@ -169,7 +169,7 @@ class MST(Algorithm):
             m_measure = binary_search_chain(
                 lambda s: make_noise_marginals(
                     *t_marginals.output_space,
-                    output_measure,
+                    privacy_measure,
                     selected_cliques,
                     scale=s,
                 ),
@@ -191,7 +191,7 @@ class MST(Algorithm):
         return (
             t_marginals
             >> then_adaptive_composition(
-                output_measure=output_measure,
+                privacy_measure=privacy_measure,
                 d_in=t_marginals.map(d_in),
                 d_mids=[d_select, d_measure],
             )
@@ -202,7 +202,7 @@ class MST(Algorithm):
 def _make_mst_select(
     input_domain: ExtrinsicDomain,
     input_metric: ExtrinsicDistance,
-    output_measure: Measure,
+    privacy_measure: Measure,
     d_in,
     d_out,
     edges: list[tuple[str, str]],
@@ -241,7 +241,7 @@ def _make_mst_select(
 
             m_rnm = binary_search_chain(
                 lambda s: make_noisy_max(
-                    *t_unconnected.output_space, output_measure=output_measure, scale=s
+                    *t_unconnected.output_space, privacy_measure=privacy_measure, scale=s
                 ),
                 d_in=d_mst_scores,
                 d_out=d_select,
@@ -258,7 +258,7 @@ def _make_mst_select(
     return (
         t_mst_scores
         >> then_adaptive_composition(
-            output_measure,
+            privacy_measure,
             d_in=d_mst_scores,
             d_mids=[d_select] * num_selections,
         )

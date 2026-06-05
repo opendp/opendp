@@ -163,7 +163,7 @@ def make_private_pca(
     return _make_measurement(
         input_domain,
         input_metric,
-        compositor.output_measure,
+        compositor.privacy_measure,
         _function,
         compositor.map,
     )

@@ -951,7 +951,7 @@ class LazyFrameQuery:
             return make_private_lazyframe(
                 input_domain=input_domain,
                 input_metric=input_metric,
-                output_measure=query._output_measure,
+                privacy_measure=query._privacy_measure,
                 lazyframe=polars_plan,
                 global_scale=scale,
                 threshold=threshold,
@@ -967,7 +967,7 @@ class LazyFrameQuery:
             pass
 
         # when the output measure is δ-approximate, then there are two free parameters to tune
-        if getattr(query._output_measure.type, "origin", None) == "Approximate":
+        if getattr(query._privacy_measure.type, "origin", None) == "Approximate":
             # search for a scale parameter. Solve for epsilon first,
             # setting threshold to u32::MAX so as not to interfere with the search for a suitable scale parameter
             scale = binary_search(
@@ -1092,7 +1092,7 @@ class LazyFrameQuery:
         m_table, oneway_scale, oneway_threshold = make_contingency_table(
             input_domain=t_plan.output_domain,
             input_metric=t_plan.output_metric,
-            output_measure=query._output_measure,
+            privacy_measure=query._privacy_measure,
             d_in=t_plan.map(d_in),
             d_out=d_out,  # type: ignore[arg-type]
             keys=keys,
@@ -1103,7 +1103,7 @@ class LazyFrameQuery:
 
         return ContingencyTableQuery(
             chain=t_plan >> m_table,
-            output_measure=query._output_measure,
+            privacy_measure=query._privacy_measure,
             context=query._context,
             oneway_scale=oneway_scale,
             oneway_threshold=oneway_threshold

@@ -53,14 +53,14 @@ pub trait NoiseThresholdPrivacyMap<MI: Metric, MO: Measure>: Sample {
     ///
     /// For every pair of elements $x, x'$ in `MapDomain<AtomDomain<TK>, AtomDomain<IBig>>`,
     /// and for every pair (`d_in`, `d_out`),
-    /// where `d_in` has the associated type for `input_metric` and `d_out` has the associated type for `output_measure`,
+    /// where `d_in` has the associated type for `input_metric` and `d_out` has the associated type for `privacy_measure`,
     /// if $x, x'$ are `d_in`-close under `input_metric`, `privacy_map(d_in)` does not raise an exception,
     /// and `privacy_map(d_in) <= d_out`,
-    /// then `function(x)`, `function(x')` are `d_out`-close under `output_measure`.
+    /// then `function(x)`, `function(x')` are `d_out`-close under `privacy_measure`.
     fn noise_threshold_privacy_map(
         &self,
         input_metric: &MI,
-        output_measure: &MO,
+        privacy_measure: &MO,
         threshold: UBig,
     ) -> Fallible<PrivacyMap<MI, MO>>;
 }
@@ -92,10 +92,10 @@ where
             HashMap<TK, IBig>,
         >,
     > {
-        let output_measure = MO::default();
+        let privacy_measure = MO::default();
         let threshold_magnitude = threshold.clone().into_parts().1;
         let privacy_map =
-            self.noise_threshold_privacy_map(&input_metric, &output_measure, threshold_magnitude)?;
+            self.noise_threshold_privacy_map(&input_metric, &privacy_measure, threshold_magnitude)?;
 
         let inner = match threshold.sign() {
             Sign::Positive => Ordering::Less,
@@ -105,7 +105,7 @@ where
         Measurement::new(
             input_domain,
             input_metric,
-            output_measure,
+            privacy_measure,
             Function::new_fallible(move |data: &HashMap<TK, IBig>| {
                 data.into_iter()
                     // noise output count

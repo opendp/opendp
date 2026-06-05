@@ -27,7 +27,7 @@ def test_private_quantile():
     input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
     
     m_median = input_space >> dp.m.then_private_quantile(
-        output_measure=dp.max_divergence(),
+        privacy_measure=dp.max_divergence(),
         candidates=[0, 25, 50, 75, 100],
         alpha=0.5,
         scale=0.1,

@@ -2,7 +2,7 @@
 def make_private_group_by(
     input_domain: DslPlanDomain,
     input_metric: FrameDistance[MI],
-    output_measure: MO,
+    privacy_measure: MO,
     plan: DslPlan,
     global_scale: Optional[f64],
     threshold: Optional[u32],
@@ -51,7 +51,7 @@ def make_private_group_by(
                 context=ExprContext.Aggregation(margin),
             ),
             PartitionDistance(middle_metric),
-            output_measure,
+            privacy_measure,
             expr,
             global_scale,
         ) for expr in aggs
@@ -187,6 +187,6 @@ def make_private_group_by(
         middle_domain,
         function,
         middle_metric,
-        output_measure,
+        privacy_measure,
         privacy_map,
     )

@@ -244,7 +244,7 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
 /// The trait bounds provided by the Rust type system guarantee that:
 /// * `input_domain` and `output_domain` are valid domains
 /// * `input_metric` is a valid metric
-/// * `output_measure` is a valid measure
+/// * `privacy_measure` is a valid measure
 ///
 /// It is, however, left to constructor functions to prove that:
 /// * `input_metric` is compatible with `input_domain`
@@ -253,7 +253,7 @@ impl<MI: 'static + Metric, MO: 'static + Metric> StabilityMap<MI, MO> {
 pub struct Measurement<DI: Domain, MI: Metric, MO: Measure, TO> {
     pub input_domain: DI,
     pub input_metric: MI,
-    pub output_measure: MO,
+    pub privacy_measure: MO,
     pub function: Function<DI::Carrier, TO>,
     pub privacy_map: PrivacyMap<MI, MO>,
 }
@@ -263,7 +263,7 @@ impl<DI: Domain, MI: Metric, MO: Measure, TO> Clone for Measurement<DI, MI, MO, 
         Self {
             input_domain: self.input_domain.clone(),
             input_metric: self.input_metric.clone(),
-            output_measure: self.output_measure.clone(),
+            privacy_measure: self.privacy_measure.clone(),
             function: self.function.clone(),
             privacy_map: self.privacy_map.clone(),
         }
@@ -277,7 +277,7 @@ where
     pub fn new(
         input_domain: DI,
         input_metric: MI,
-        output_measure: MO,
+        privacy_measure: MO,
         function: Function<DI::Carrier, TO>,
         privacy_map: PrivacyMap<MI, MO>,
     ) -> Fallible<Self> {
@@ -286,7 +286,7 @@ where
             input_domain,
             function,
             input_metric,
-            output_measure,
+            privacy_measure,
             privacy_map,
         })
     }
@@ -337,7 +337,7 @@ impl<DI: Domain, MI: Metric, MO: Measure, TO> Debug for Measurement<DI, MI, MO, 
         f.debug_struct("Measurement")
             .field("input_domain", &self.input_domain)
             .field("input_metric", &self.input_metric)
-            .field("output_measure", &self.output_measure)
+            .field("privacy_measure", &self.privacy_measure)
             .finish()
     }
 }
@@ -461,7 +461,7 @@ impl<DI: Domain, MI: Metric, DO: Domain, MO: Metric> Debug for Transformation<DI
 pub struct Odometer<DI: Domain, MI: Metric, MO: Measure, Q, A> {
     pub input_domain: DI,
     pub input_metric: MI,
-    pub output_measure: MO,
+    pub privacy_measure: MO,
     pub function: Function<DI::Carrier, OdometerQueryable<Q, A, MI::Distance, MO::Distance>>,
 }
 
@@ -471,7 +471,7 @@ impl<DI: Domain, MI: Metric, MO: Measure, Q, A> Clone for Odometer<DI, MI, MO, Q
             input_domain: self.input_domain.clone(),
             function: self.function.clone(),
             input_metric: self.input_metric.clone(),
-            output_measure: self.output_measure.clone(),
+            privacy_measure: self.privacy_measure.clone(),
         }
     }
 }
@@ -483,14 +483,14 @@ where
     pub fn new(
         input_domain: DI,
         input_metric: MI,
-        output_measure: MO,
+        privacy_measure: MO,
         function: Function<DI::Carrier, OdometerQueryable<Q, A, MI::Distance, MO::Distance>>,
     ) -> Fallible<Self> {
         (input_domain.clone(), input_metric.clone()).check_space()?;
         Ok(Self {
             input_domain,
             input_metric,
-            output_measure,
+            privacy_measure,
             function,
         })
     }
@@ -511,7 +511,7 @@ impl<DI: Domain, MI: Metric, MO: Measure, Q, A> Debug for Odometer<DI, MI, MO, Q
         f.debug_struct("Odometer")
             .field("input_domain", &self.input_domain)
             .field("input_metric", &self.input_metric)
-            .field("output_measure", &self.output_measure)
+            .field("privacy_measure", &self.privacy_measure)
             .finish()
     }
 }

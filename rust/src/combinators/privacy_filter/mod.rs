@@ -27,7 +27,7 @@ mod ffi;
         ),
         d_out(
             c_type = "AnyObject *",
-            rust_type = "$get_distance_type(odometer_output_measure(odometer))"
+            rust_type = "$get_distance_type(odometer_privacy_measure(odometer))"
         )
     ),
     generics(DI(suppress), MI(suppress), MO(suppress), Q(suppress), A(suppress))
@@ -71,7 +71,7 @@ where
     Measurement::new(
         odometer.input_domain.clone(),
         odometer.input_metric.clone(),
-        odometer.output_measure.clone(),
+        odometer.privacy_measure.clone(),
         Function::new_fallible(move |arg: &DI::Carrier| {
             wrap(continuation_rule.clone(), || odometer.invoke(arg))
         }),

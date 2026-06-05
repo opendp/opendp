@@ -70,11 +70,11 @@ def make_select_column(j, T=float):
     )
 
 
-def make_private_percentile_medians(output_measure, y_bounds, scale, candidates_count=100):
+def make_private_percentile_medians(privacy_measure, y_bounds, scale, candidates_count=100):
     np = import_optional_dependency("numpy")
     # this median mechanism favors candidates closest to the true median
     m_median = dp.m.then_private_quantile(
-        output_measure=output_measure,
+        privacy_measure=privacy_measure,
         # Evenly spaced points between y_bounds
         candidates=np.linspace(*y_bounds, candidates_count),
         alpha=0.5,
@@ -90,7 +90,7 @@ def make_private_percentile_medians(output_measure, y_bounds, scale, candidates_
 
 
 def make_private_theil_sen(
-    output_measure: Measure,
+    privacy_measure: Measure,
     x_bounds: tuple[float, float],
     y_bounds: tuple[float, float],
     scale: float,
@@ -120,7 +120,7 @@ def make_private_theil_sen(
         make_pairwise_predict(x_cuts, runs)
         # privately select median y values for each x_cut
         >> make_private_percentile_medians(
-            output_measure, y_bounds, scale, candidates_count=candidates_count
+            privacy_measure, y_bounds, scale, candidates_count=candidates_count
         )
         # transform median y values to coefficients (slope and intercept)
         >> _new_pure_function(lambda ys: P_inv @ np.asarray(ys))

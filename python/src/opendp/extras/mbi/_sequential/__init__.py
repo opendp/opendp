@@ -59,7 +59,7 @@ class Sequential(Algorithm):
         self,
         input_domain: LazyFrameDomain,
         input_metric: FrameDistance,
-        output_measure: Measure,
+        privacy_measure: Measure,
         d_in: list["Bound"],
         d_out: float,
         *,
@@ -72,7 +72,7 @@ class Sequential(Algorithm):
 
         :param input_domain: domain of input data
         :param input_metric: how to compute distance between datasets
-        :param output_measure: how to measure privacy of release
+        :param privacy_measure: how to measure privacy of release
         :param d_in: distance between adjacent input datasets
         :param d_out: upper bound on the privacy loss
         :param marginals: prior marginal releases
@@ -86,7 +86,7 @@ class Sequential(Algorithm):
         if input_metric != frame_distance(symmetric_distance()):
             message = f"input_metric ({input_metric}) must be frame_distance(symmetric_distance())"
             raise ValueError(message)
-        get_associated_metric(output_measure)
+        get_associated_metric(privacy_measure)
 
         if not isinstance(model, MarkovRandomField):
             raise ValueError("model must be a MarkovRandomField")
@@ -95,7 +95,7 @@ class Sequential(Algorithm):
 
         scale = binary_search_param(
             lambda scale: make_adaptive_composition(
-                input_domain, input_metric, output_measure, d_in, d_mids=weights * scale
+                input_domain, input_metric, privacy_measure, d_in, d_mids=weights * scale
             ),
             d_in=d_in,
             d_out=d_out,
@@ -112,7 +112,7 @@ class Sequential(Algorithm):
                 m_algo = algo.make_marginals(
                     input_domain,
                     input_metric,
-                    output_measure,
+                    privacy_measure,
                     d_in,
                     d_mid,
                     marginals=all_marginals,
@@ -124,5 +124,5 @@ class Sequential(Algorithm):
             return all_marginals, current_model
 
         return make_adaptive_composition(
-            input_domain, input_metric, output_measure, d_in, d_mids=d_mids
+            input_domain, input_metric, privacy_measure, d_in, d_mids=d_mids
         ) >> _new_pure_function(function)

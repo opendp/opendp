@@ -37,7 +37,7 @@ impl<T: 'static + CheckAtom> NoiseDomain for VectorDomain<AtomDomain<T>> {
     features("contrib"),
     arguments(
         k(default = b"null"),
-        output_measure(c_type = "AnyMeasure *", rust_type = b"null")
+        privacy_measure(c_type = "AnyMeasure *", rust_type = b"null")
     ),
     generics(DI(suppress), MI(suppress), MO(suppress))
 )]
@@ -53,7 +53,7 @@ impl<T: 'static + CheckAtom> NoiseDomain for VectorDomain<AtomDomain<T>> {
 /// # Arguments
 /// * `input_domain` - Domain of the data type to be released.
 /// * `input_metric` - Metric of the data type to be released.
-/// * `output_measure` - Privacy measure. Either `MaxDivergence` or `ZeroConcentratedDivergence`.
+/// * `privacy_measure` - Privacy measure. Either `MaxDivergence` or `ZeroConcentratedDivergence`.
 /// * `scale` - Noise scale parameter.
 /// * `k` - The noise granularity in terms of 2^k.
 ///
@@ -64,7 +64,7 @@ impl<T: 'static + CheckAtom> NoiseDomain for VectorDomain<AtomDomain<T>> {
 pub fn make_noise<DI: Domain, MI: Metric, MO: NoiseMeasure>(
     input_domain: DI,
     input_metric: MI,
-    output_measure: MO,
+    privacy_measure: MO,
     scale: f64,
     k: Option<i32>,
 ) -> Fallible<Measurement<DI, MI, MO, DI::Carrier>>
@@ -72,7 +72,7 @@ where
     MO::Distribution: MakeNoise<DI, MI, MO>,
     (DI, MI): MetricSpace,
 {
-    output_measure
+    privacy_measure
         .new_distribution(scale, k)
         .make_noise((input_domain, input_metric))
 }

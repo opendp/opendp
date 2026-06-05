@@ -15,11 +15,11 @@ use crate::{
 pub extern "C" fn opendp_measurements__make_noise(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
-    output_measure: *const AnyMeasure,
+    privacy_measure: *const AnyMeasure,
     scale: f64,
     k: *const i32,
 ) -> FfiResult<*mut AnyMeasurement> {
-    let MO = &try_as_ref!(output_measure).type_;
+    let MO = &try_as_ref!(privacy_measure).type_;
     if *MO == Type::of::<ZeroConcentratedDivergence>() {
         opendp_measurements__make_gaussian(
             input_domain,
@@ -39,7 +39,7 @@ pub extern "C" fn opendp_measurements__make_noise(
     } else {
         err!(
             FFI,
-            "output_measure must be MaxDivergence or ZeroConcentratedDivergence"
+            "privacy_measure must be MaxDivergence or ZeroConcentratedDivergence"
         )
         .into()
     }

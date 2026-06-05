@@ -19,7 +19,7 @@ use super::make_private_expr;
 pub extern "C" fn opendp_measurements__make_private_expr(
     input_domain: *const AnyDomain,
     input_metric: *const AnyMetric,
-    output_measure: *const AnyMeasure,
+    privacy_measure: *const AnyMeasure,
     expr: *const AnyObject,
     global_scale: *const AnyObject,
 ) -> FfiResult<*mut AnyMeasurement> {
@@ -28,8 +28,8 @@ pub extern "C" fn opendp_measurements__make_private_expr(
         try_!(try_as_ref!(input_metric).downcast_ref::<L01InfDistance<SymmetricDistance>>())
             .clone();
 
-    let output_measure = try_as_ref!(output_measure);
-    let MO_ = output_measure.type_.clone();
+    let privacy_measure = try_as_ref!(privacy_measure);
+    let MO_ = privacy_measure.type_.clone();
 
     let expr = try_!(try_as_ref!(expr).downcast_ref::<Expr>()).clone();
 
@@ -42,18 +42,18 @@ pub extern "C" fn opendp_measurements__make_private_expr(
     fn monomorphize<MO: 'static + Measure>(
         input_domain: WildExprDomain,
         input_metric: L01InfDistance<SymmetricDistance>,
-        output_measure: &AnyMeasure,
+        privacy_measure: &AnyMeasure,
         expr: Expr,
         global_scale: Option<f64>,
     ) -> Fallible<AnyMeasurement>
     where
         Expr: PrivateExpr<L01InfDistance<SymmetricDistance>, MO>,
     {
-        let output_measure = output_measure.downcast_ref::<MO>()?.clone();
+        let privacy_measure = privacy_measure.downcast_ref::<MO>()?.clone();
         make_private_expr(
             input_domain,
             input_metric,
-            output_measure,
+            privacy_measure,
             expr,
             global_scale,
         )
@@ -66,7 +66,7 @@ pub extern "C" fn opendp_measurements__make_private_expr(
         (
             input_domain,
             input_metric,
-            output_measure,
+            privacy_measure,
             expr,
             global_scale
         )

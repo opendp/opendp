@@ -2,7 +2,7 @@
 def make_randomized_response(categories: set[T], prob: f64):
     input_domain = AtomDomain(bool)
     input_metric = DiscreteMetric()
-    output_measure = MaxDivergence()
+    privacy_measure = MaxDivergence()
 
     categories = list(categories)
 
@@ -42,4 +42,4 @@ def make_randomized_response(categories: set[T], prob: f64):
         is_member = index != -1
         return truth if be_honest and is_member else lie
     
-    return Measurement(input_domain, function, input_metric, output_measure, privacy_map)
+    return Measurement(input_domain, function, input_metric, privacy_measure, privacy_map)

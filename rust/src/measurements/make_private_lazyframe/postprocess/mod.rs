@@ -18,7 +18,7 @@ mod test;
 pub fn match_postprocess<MI: 'static + Metric, MO: 'static + CompositionMeasure>(
     input_domain: DslPlanDomain,
     input_metric: MI,
-    output_measure: MO,
+    privacy_measure: MO,
     plan: DslPlan,
     global_scale: Option<f64>,
     threshold: Option<u32>,
@@ -45,7 +45,7 @@ where
             let m_in = input.as_ref().clone().make_private(
                 input_domain,
                 input_metric,
-                output_measure,
+                privacy_measure,
                 global_scale,
                 threshold,
             )?;

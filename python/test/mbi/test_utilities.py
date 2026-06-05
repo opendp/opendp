@@ -46,7 +46,7 @@ def test_typed_dict_domain():
 
 
 def test_get_std():
-    message = "output_measure (RenyiDivergence) must be"
+    message = "privacy_measure (RenyiDivergence) must be"
     with pytest.raises(ValueError, match=re.escape(message)):
         get_std(dp.renyi_divergence(), 1.0)
 
@@ -123,7 +123,7 @@ def test_make_noise_marginal():
             {("A",): dp.numpy.arrayd_domain(shape=(1, 2), T="u32")}
         ),
         input_metric=typed_dict_distance(dp.l1_distance(T="u32")),
-        output_measure=dp.max_divergence(),
+        privacy_measure=dp.max_divergence(),
         clique=("A",),
         scale=1.0,
     )
@@ -151,7 +151,7 @@ def test_make_noise_marginal():
             **kwargs_without("input_metric"),
         )
 
-    msg = "input_metric's inner metric (L1Distance(f64)) doesn't match the output_measure's associated metric (L1Distance(u32))"
+    msg = "input_metric's inner metric (L1Distance(f64)) doesn't match the privacy_measure's associated metric (L1Distance(u32))"
     with pytest.raises(ValueError, match=re.escape(msg)):
         make_noise_marginal(
             input_metric=typed_dict_distance(dp.l1_distance(T="f64")),

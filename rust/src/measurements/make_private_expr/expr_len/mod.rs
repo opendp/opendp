@@ -30,12 +30,12 @@ mod test;
 /// # Arguments
 /// * `input_domain` - ExprDomain
 /// * `input_metric` - valid selections shown in table above
-/// * `output_measure` - how to measure privacy loss
+/// * `privacy_measure` - how to measure privacy loss
 /// * `expr` - count expression
 pub fn make_expr_private_len<MI: 'static + UnboundedMetric, MO: 'static + Measure>(
     input_domain: WildExprDomain,
     input_metric: L01InfDistance<MI>,
-    output_measure: MO,
+    privacy_measure: MO,
     expr: Expr,
 ) -> Fallible<Measurement<WildExprDomain, L01InfDistance<MI>, MO, ExprPlan>>
 where
@@ -58,7 +58,7 @@ where
     Measurement::new(
         input_domain,
         input_metric,
-        output_measure,
+        privacy_measure,
         Function::from_expr(len()).fill_with(typed_lit(0u32)),
         PrivacyMap::new(move |_| MO::Distance::zero()),
     )

@@ -95,7 +95,7 @@ test_that("make_adaptive_composition", {
   meas_sc <- make_adaptive_composition(
     input_domain = meas_rr("input_domain"),
     input_metric = meas_rr("input_metric"),
-    output_measure = meas_rr("output_measure"),
+    privacy_measure = meas_rr("privacy_measure"),
     d_mids = c(2, 2),
     d_in = 1L
   )
@@ -114,7 +114,7 @@ test_that("make_sequential_composition", {
     meas_sc <- make_sequential_composition(
       input_domain = meas_rr("input_domain"),
       input_metric = meas_rr("input_metric"),
-      output_measure = meas_rr("output_measure"),
+      privacy_measure = meas_rr("privacy_measure"),
       d_mids = c(2, 2),
       d_in = 1L
     )
@@ -135,7 +135,7 @@ test_that("test_fully_adaptive_composition", {
     "Odometer(\n",
     "  input_domain=VectorDomain(AtomDomain(T=i32)),\n",
     "  input_metric=SymmetricDistance(),\n",
-    "  output_measure=MaxDivergence\n",
+    "  privacy_measure=MaxDivergence\n",
     ")"
   ))
 
@@ -151,7 +151,7 @@ test_that("test_fully_adaptive_composition", {
   m_lap <- make_laplace(atom_domain(.T = "i32"), absolute_distance(.T = "i32"), 200.)
   t_sum <- space |> then_clamp(c(0L, 10L)) |> then_sum()
   m_sum_compositor <- t_sum |> then_adaptive_composition(
-    output_measure = max_divergence(),
+    privacy_measure = max_divergence(),
     d_in = t_sum(d_in = max_influence),
     d_mids = c(0.2, 0.09)
   )
@@ -180,5 +180,5 @@ test_that("test_odometer_supporting_elements", {
   expect_s3_class(sc_odo(arg = 1L), "odometer_queryable")
   expect_equal(toString(sc_odo("input_domain")), toString(vector_domain(atom_domain(.T = "i32"))))
   expect_equal(toString(sc_odo("input_metric")), toString(symmetric_distance()))
-  expect_equal(toString(sc_odo("output_measure")), toString(max_divergence()))
+  expect_equal(toString(sc_odo("privacy_measure")), toString(max_divergence()))
 })

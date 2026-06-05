@@ -125,10 +125,10 @@ where
             scale: RBig::from_f64(scale)
                 .ok_or_else(|| err!(MakeTransformation, "scale ({}) must be finite", scale))?,
         };
-        let output_measure = MO::default();
+        let privacy_measure = MO::default();
 
         let privacy_map =
-            distribution.noise_privacy_map(&L1Distance::default(), &output_measure)?;
+            distribution.noise_privacy_map(&L1Distance::default(), &privacy_measure)?;
 
         let p = 1f64.neg_inf_sub(&(-scale.recip()).inf_exp()?)?;
         if !(0.0..=1.0).contains(&p) {
@@ -141,7 +141,7 @@ where
         Measurement::new(
             input_domain,
             input_metric,
-            output_measure,
+            privacy_measure,
             Function::new_fallible(move |arg: &Vec<T>| {
                 arg.iter()
                     .map(|v| sample_discrete_laplace_linear::<T, f64>(*v, scale, (lower, upper)))

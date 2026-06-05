@@ -29,7 +29,7 @@ fn make_select_private_candidate(
         measurement.input_domain.clone(),
         measurement.input_metric.clone(),
         measurement
-            .output_measure
+            .privacy_measure
             .downcast_ref::<MaxDivergence>()?
             .clone(),
         Function::new_fallible(move |arg: &AnyObject| {
@@ -62,7 +62,7 @@ fn make_select_private_candidate(
     Measurement::new(
         m.input_domain.clone(),
         m.input_metric.clone(),
-        AnyMeasure::new(m.output_measure.clone()),
+        AnyMeasure::new(m.privacy_measure.clone()),
         Function::new_fallible(move |arg: &AnyObject| function.eval(arg).map(AnyObject::new)),
         PrivacyMap::new_fallible(move |d_in: &AnyObject| {
             privacy_map.eval(d_in).map(AnyObject::new)

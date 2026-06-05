@@ -111,12 +111,12 @@ impl NoiseThresholdPrivacyMap<L01InfDistance<AbsoluteDistance<RBig>>, Approximat
     fn noise_threshold_privacy_map(
         &self,
         _input_metric: &L01InfDistance<AbsoluteDistance<RBig>>,
-        output_measure: &Approximate<MaxDivergence>,
+        privacy_measure: &Approximate<MaxDivergence>,
         threshold: UBig,
     ) -> Fallible<PrivacyMap<L01InfDistance<AbsoluteDistance<RBig>>, Approximate<MaxDivergence>>>
     {
         let noise_privacy_map =
-            self.noise_privacy_map(&L1Distance::default(), &output_measure.0)?;
+            self.noise_privacy_map(&L1Distance::default(), &privacy_measure.0)?;
         let ZExpFamily { scale } = self.clone();
 
         Ok(PrivacyMap::new_fallible(

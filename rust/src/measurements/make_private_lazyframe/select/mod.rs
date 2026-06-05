@@ -19,13 +19,13 @@ mod test;
 /// # Arguments
 /// * `input_domain` - The domain of the input LazyFrame.
 /// * `input_metric` - The metric of the input LazyFrame.
-/// * `output_measure` - The measure of the output LazyFrame.
+/// * `privacy_measure` - The measure of the output LazyFrame.
 /// * `plan` - The LazyFrame to transform.
 /// * `global_scale` - The parameter for the measurement.
 pub(crate) fn make_private_select<MI, MO>(
     input_domain: DslPlanDomain,
     input_metric: FrameDistance<MI>,
-    output_measure: MO,
+    privacy_measure: MO,
     plan: DslPlan,
     global_scale: Option<f64>,
 ) -> Fallible<Measurement<DslPlanDomain, FrameDistance<MI>, MO, DslPlan>>
@@ -92,7 +92,7 @@ where
             expr.clone().make_private(
                 expr_domain.clone(),
                 L0PInfDistance(middle_metric.0.clone()),
-                output_measure.clone(),
+                privacy_measure.clone(),
                 global_scale,
             )
         })
@@ -103,7 +103,7 @@ where
     let m_select = Measurement::new(
         middle_domain,
         middle_metric,
-        output_measure,
+        privacy_measure,
         Function::new_fallible(move |arg: &DslPlan| {
             let mut output = plan.clone();
             if let DslPlan::Select {

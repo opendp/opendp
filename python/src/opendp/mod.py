@@ -84,7 +84,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
     Measurement(
         input_domain   = AtomDomain(T=i32),
         input_metric   = AbsoluteDistance(i32),
-        output_measure = MaxDivergence)
+        privacy_measure = MaxDivergence)
 
     >>> # invoke the measurement (invoke and __call__ are equivalent)
     >>> print('explicit: ', laplace.invoke(100))  # -> 101   # doctest: +ELLIPSIS
@@ -196,12 +196,12 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         return self.input_domain, self.input_metric
     
     @property
-    def output_measure(self) -> "Measure":
+    def privacy_measure(self) -> "Measure":
         '''
         Output measure of measurement
         '''
-        from opendp.core import measurement_output_measure
-        return measurement_output_measure(self)
+        from opendp.core import measurement_privacy_measure
+        return measurement_privacy_measure(self)
     
     @property
     def function(self) -> "Function":
@@ -257,7 +257,7 @@ class Measurement(ctypes.POINTER(AnyMeasurement)): # type: ignore[misc]
         return f"""Measurement(
     input_domain   = {self.input_domain},
     input_metric   = {self.input_metric},
-    output_measure = {self.output_measure})"""
+    privacy_measure = {self.privacy_measure})"""
 
     def __iter__(self):
         # this overrides the implementation of __iter__ on POINTER, 
@@ -284,7 +284,7 @@ class Odometer(ctypes.POINTER(AnyOdometer)): # type: ignore[misc]
     >>> odometer = dp.c.make_fully_adaptive_composition(
     ...     input_domain=meas_rr.input_domain,
     ...     input_metric=meas_rr.input_metric,
-    ...     output_measure=meas_rr.output_measure,
+    ...     privacy_measure=meas_rr.privacy_measure,
     ... )
     ...
     >>> # invoke the odometer to get a queryable
@@ -344,12 +344,12 @@ class Odometer(ctypes.POINTER(AnyOdometer)): # type: ignore[misc]
         return self.input_domain, self.input_metric
     
     @property
-    def output_measure(self) -> "Measure":
+    def privacy_measure(self) -> "Measure":
         '''
         Output measure of odometer
         '''
-        from opendp.core import odometer_output_measure
-        return odometer_output_measure(self)
+        from opendp.core import odometer_privacy_measure
+        return odometer_privacy_measure(self)
     
     @property
     def input_distance_type(self) -> Union["RuntimeType", str]:
@@ -367,7 +367,7 @@ class Odometer(ctypes.POINTER(AnyOdometer)): # type: ignore[misc]
         
         :return: distance type
         """
-        return self.output_measure.distance_type
+        return self.privacy_measure.distance_type
 
     @property
     def input_carrier_type(self) -> Union["RuntimeType", str]:
@@ -391,7 +391,7 @@ class Odometer(ctypes.POINTER(AnyOdometer)): # type: ignore[misc]
         return f"""Odometer(
     input_domain   = {self.input_domain},
     input_metric   = {self.input_metric},
-    output_measure = {self.output_measure})"""
+    privacy_measure = {self.privacy_measure})"""
 
     def __iter__(self):
         # this overrides the implementation of __iter__ on POINTER, 

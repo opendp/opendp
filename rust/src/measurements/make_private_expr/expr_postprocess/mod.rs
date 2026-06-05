@@ -20,14 +20,14 @@ mod test;
 /// # Arguments
 /// * `input_domain` - ExprDomain
 /// * `input_metric` - valid selections shown in table above
-/// * `output_measure` - how to measure privacy loss
+/// * `privacy_measure` - how to measure privacy loss
 /// * `input_exprs` - expressions to be post-processed
 /// * `postprocessor` - function that applies post-processing to the expressions
 /// * `param` - global noise (re)scale parameter
 pub fn make_expr_postprocess<MI: 'static + Metric, MO: 'static + CompositionMeasure>(
     input_domain: WildExprDomain,
     input_metric: MI,
-    output_measure: MO,
+    privacy_measure: MO,
     input_exprs: Vec<Expr>,
     postprocessor: impl Fn(Vec<Expr>) -> Fallible<Expr> + 'static + Send + Sync,
     param: Option<f64>,
@@ -42,7 +42,7 @@ where
             expr.make_private(
                 input_domain.clone(),
                 input_metric.clone(),
-                output_measure.clone(),
+                privacy_measure.clone(),
                 param,
             )
         })
@@ -54,7 +54,7 @@ where
     Measurement::new(
         input_domain,
         input_metric,
-        output_measure,
+        privacy_measure,
         Function::new_fallible(move |arg| {
             let plans = f_comp.eval(&arg)?;
             let plan = plans[0].plan.clone();
@@ -78,7 +78,7 @@ where
 pub fn match_postprocess<MI: 'static + Metric, MO: 'static + CompositionMeasure>(
     input_domain: WildExprDomain,
     input_metric: MI,
-    output_measure: MO,
+    privacy_measure: MO,
     expr: Expr,
     global_scale: Option<f64>,
 ) -> Fallible<Option<Measurement<WildExprDomain, MI, MO, ExprPlan>>>
@@ -91,7 +91,7 @@ where
         Expr::Alias(expr, name) => make_expr_postprocess(
             input_domain,
             input_metric,
-            output_measure,
+            privacy_measure,
             vec![expr.as_ref().clone()],
             move |exprs| {
                 let [expr] = <[Expr; 1]>::try_from(exprs)
@@ -106,7 +106,7 @@ where
             make_expr_postprocess(
                 input_domain,
                 input_metric,
-                output_measure,
+                privacy_measure,
                 vec![left.as_ref().clone(), right.as_ref().clone()],
                 move |exprs| {
                     let [left, right] = <[Expr; 2]>::try_from(exprs)

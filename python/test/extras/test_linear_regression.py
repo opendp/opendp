@@ -32,7 +32,7 @@ def test_input_validation():
     msg = "For now, the x_bounds array must consist of a single tuple, not [0, 10]"
     with pytest.raises(Exception, match=re.escape(msg)):
         dp.sklearn.linear_model.LinearRegression(
-            output_measure=dp.max_divergence(),
+            privacy_measure=dp.max_divergence(),
             x_bounds=(0, 10),  # type: ignore[arg-type]
             y_bounds=(0, 10),
             scale=1,

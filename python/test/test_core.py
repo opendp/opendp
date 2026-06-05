@@ -121,8 +121,8 @@ def test_supporting_elements():
     assert str(mechanism.input_domain.carrier_type) == 'f64'
     assert str(mechanism.input_metric) == 'AbsoluteDistance(f64)'
     assert str(mechanism.input_metric.distance_type) == 'f64'
-    assert str(mechanism.output_measure) == 'MaxDivergence'
-    assert str(mechanism.output_measure.distance_type) == 'f64'
+    assert str(mechanism.privacy_measure) == 'MaxDivergence'
+    assert str(mechanism.privacy_measure.distance_type) == 'f64'
 
 
 def test_function():
@@ -371,11 +371,11 @@ def test_custom_distance(new_distance, new_divergence):
 
     assert meas(2.0) == 0.0
     assert meas.map(2.0)(3.0) == 12.0
-    assert isinstance(meas.output_measure, dp.ExtrinsicDivergence)
-    assert meas.output_measure.descriptor == {"kind": "tCDP"}
-    assert meas.output_measure.cast(dict) == {"kind": "tCDP"}
+    assert isinstance(meas.privacy_measure, dp.ExtrinsicDivergence)
+    assert meas.privacy_measure.descriptor == {"kind": "tCDP"}
+    assert meas.privacy_measure.cast(dict) == {"kind": "tCDP"}
     with pytest.raises(ValueError, match=r"measure descriptor must be a list"):
-        meas.output_measure.cast(list)
+        meas.privacy_measure.cast(list)
 
 
 def test_pure_function():

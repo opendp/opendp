@@ -34,7 +34,7 @@ def make_select_private_candidate(
     return Measurement(
         input_domain=measurement.input_domain,
         input_metric=measurement.input_metric,
-        output_measure=measurement.output_measure,
+        privacy_measure=measurement.privacy_measure,
         function=function,
         privacy_map=lambda d_in: measurement.map(d_in).inf_mul(2),
     )

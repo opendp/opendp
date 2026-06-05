@@ -54,7 +54,7 @@ class Fixed(Algorithm):
         self,
         input_domain: LazyFrameDomain,
         input_metric: FrameDistance,
-        output_measure: Measure,
+        privacy_measure: Measure,
         d_in: list["Bound"],
         d_out: float,
         *,
@@ -67,7 +67,7 @@ class Fixed(Algorithm):
 
         :param input_domain: domain of input data
         :param input_metric: how to compute distance between datasets
-        :param output_measure: how to measure privacy of release
+        :param privacy_measure: how to measure privacy of release
         :param d_in: distance between adjacent input datasets
         :param d_out: upper bound on the privacy loss
         :param marginals: prior marginal releases
@@ -79,7 +79,7 @@ class Fixed(Algorithm):
         if not isinstance(model, MarkovRandomField):
             raise ValueError("model must be a MarkovRandomField")
 
-        lp_metric = get_associated_metric(output_measure)
+        lp_metric = get_associated_metric(privacy_measure)
         cliques = [q.by for q in self.queries]
         weights = [q.weight for q in self.queries]
 
@@ -87,7 +87,7 @@ class Fixed(Algorithm):
             return make_stable_marginals(
                 input_domain, input_metric, lp_metric, cliques  # type: ignore[arg-type]
             ) >> then_noise_marginals(
-                output_measure, cliques, scale, weights
+                privacy_measure, cliques, scale, weights
             )  # type: ignore[return-type]
 
         m_marginals = binary_search_chain(make, d_in, d_out, T=float)

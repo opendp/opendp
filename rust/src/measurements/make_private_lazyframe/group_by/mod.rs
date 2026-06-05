@@ -36,14 +36,14 @@ use polars_plan::prelude::ProjectionOptions;
 /// # Arguments
 /// * `input_domain` - The domain of the input LazyFrame.
 /// * `input_metric` - The metric of the input LazyFrame.
-/// * `output_measure` - The measure of the output LazyFrame.
+/// * `privacy_measure` - The measure of the output LazyFrame.
 /// * `plan` - The LazyFrame to transform.
 /// * `global_scale` - The parameter for the measurement.
 /// * `threshold` - Only keep groups with length greater than threshold
 pub(crate) fn make_private_group_by<MI, MO>(
     input_domain: DslPlanDomain,
     input_metric: FrameDistance<MI>,
-    output_measure: MO,
+    privacy_measure: MO,
     plan: DslPlan,
     global_scale: Option<f64>,
     threshold: Option<u32>,
@@ -115,7 +115,7 @@ where
                 },
             },
             L0PInfDistance(middle_metric.0.clone()),
-            output_measure.clone(),
+            privacy_measure.clone(),
             global_scale,
         )
     });
@@ -314,7 +314,7 @@ where
         >> Measurement::new(
             middle_domain,
             middle_metric,
-            output_measure,
+            privacy_measure,
             function,
             privacy_map,
         )?

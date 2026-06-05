@@ -7,7 +7,7 @@ def test_sequential_composition():
     sc_meas = dp.c.make_adaptive_composition(
         input_domain=dp.vector_domain(dp.atom_domain(T=int)),
         input_metric=dp.symmetric_distance(),
-        output_measure=dp.max_divergence(),
+        privacy_measure=dp.max_divergence(),
         d_in=max_influence,
         d_mids=[0.2, 0.3, 0.4, 0.7],
     )
@@ -35,7 +35,7 @@ def test_sequential_composition():
         >> dp.c.make_adaptive_composition(
             input_domain=exact_sum.output_domain,
             input_metric=exact_sum.output_metric,
-            output_measure=dp.max_divergence(),
+            privacy_measure=dp.max_divergence(),
             d_in=exact_sum.map(max_influence),
             d_mids=[0.2, 0.09],
         )
@@ -52,7 +52,7 @@ def test_sequential_composition_approxdp():
     sc_meas = dp.c.make_adaptive_composition(
         input_domain=dp.vector_domain(dp.atom_domain(T=int)),
         input_metric=dp.symmetric_distance(),
-        output_measure=dp.fixed_smoothed_max_divergence(),
+        privacy_measure=dp.fixed_smoothed_max_divergence(),
         d_in=max_influence,
         d_mids=[(1.0, 1e-6), (1.0, 1e-6)],
     )
@@ -108,7 +108,7 @@ def test_fully_adaptive_composition():
     assert str(o_comp) == """Odometer(
     input_domain   = VectorDomain(AtomDomain(T=i32)),
     input_metric   = SymmetricDistance(),
-    output_measure = MaxDivergence)"""
+    privacy_measure = MaxDivergence)"""
 
     qbl_comp: dp.OdometerQueryable = o_comp([1] * 200)
     assert qbl_comp.privacy_loss(max_influence) == 0.0
@@ -123,7 +123,7 @@ def test_fully_adaptive_composition():
     m_lap = dp.m.make_laplace(dp.atom_domain(T=int), dp.absolute_distance(T=int), 200.)
     t_sum = space >> dp.t.then_clamp((0, 10)) >> dp.t.then_sum()
     m_sum_compositor = t_sum >> dp.c.then_adaptive_composition(
-        output_measure=dp.max_divergence(),
+        privacy_measure=dp.max_divergence(),
         d_in=t_sum.map(max_influence),
         d_mids=[0.2, 0.09]
     )
@@ -143,13 +143,13 @@ def test_odometer_supporting_elements():
     o_ac = dp.c.make_fully_adaptive_composition(
         input_domain=dp.vector_domain(dp.atom_domain(T=int)),
         input_metric=dp.symmetric_distance(),
-        output_measure=dp.max_divergence(),
+        privacy_measure=dp.max_divergence(),
     )
 
     assert isinstance(o_ac.invoke([]), dp.OdometerQueryable)
     assert o_ac.input_domain == dp.vector_domain(dp.atom_domain(T=int))
     assert o_ac.input_metric == dp.symmetric_distance()
-    assert o_ac.output_measure == dp.max_divergence()
+    assert o_ac.privacy_measure == dp.max_divergence()
     assert o_ac.input_space == (dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance())
     assert o_ac.input_distance_type == dp.u32
     assert o_ac.output_distance_type == dp.f64
@@ -161,7 +161,7 @@ def test_privacy_filter():
         dp.c.make_fully_adaptive_composition(
             input_domain=dp.vector_domain(dp.atom_domain(T=int)),
             input_metric=dp.symmetric_distance(),
-            output_measure=dp.max_divergence(),
+            privacy_measure=dp.max_divergence(),
         ),
         d_in=1,
         d_out=2.0

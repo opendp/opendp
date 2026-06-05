@@ -77,7 +77,7 @@ impl OpenDPPlugin for DPSumShim {
 pub(crate) fn make_expr_dp_sum<MI: 'static + UnboundedMetric, MO: NoiseExprMeasure>(
     input_domain: WildExprDomain,
     input_metric: L01InfDistance<MI>,
-    output_measure: MO,
+    privacy_measure: MO,
     expr: Expr,
     global_scale: Option<f64>,
 ) -> Fallible<Measurement<WildExprDomain, L01InfDistance<MI>, MO, ExprPlan>>
@@ -152,7 +152,7 @@ where
     apply_plugin(vec![input.sum(), scale], expr, NoiseShim).make_private(
         input_domain,
         input_metric,
-        output_measure,
+        privacy_measure,
         global_scale,
     )
 }

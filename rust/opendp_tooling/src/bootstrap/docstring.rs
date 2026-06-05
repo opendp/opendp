@@ -335,7 +335,7 @@ fn parse_supporting_elements(ty: &Type) -> Result<Option<String>> {
         },
         i if i == "Odometer" => match arguments {
             syn::PathArguments::AngleBracketed(ab) => {
-                let [input_domain, input_metric, output_measure, query, answer] =
+                let [input_domain, input_metric, privacy_measure, query, answer] =
                     <[&_; 5]>::try_from(ab.args.iter().collect::<Vec<&_>>()).map_err(|_| {
                         Error::custom(format!("Odometer needs 5 angle-bracketed arguments"))
                     })?;
@@ -343,7 +343,7 @@ fn parse_supporting_elements(ty: &Type) -> Result<Option<String>> {
                 let lines = vec![
                     format!("* Input Domain    `{}`", pprint(input_domain)),
                     format!("* Input Metric    `{}`", pprint(input_metric)),
-                    format!("* Output Measure  `{}`", pprint(output_measure)),
+                    format!("* Output Measure  `{}`", pprint(privacy_measure)),
                     format!("* Query           `{}`", pprint(query)),
                     format!("* Answer          `{}`", pprint(answer)),
                 ];

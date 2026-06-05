@@ -81,7 +81,7 @@ def test_deprecated_composition():
 
     with pytest.deprecated_call():
         input_space >> dp.c.then_sequential_composition(
-            m_lap.output_measure,
+            m_lap.privacy_measure,
             1,
             [1.0] * 2,
         )

@@ -20,7 +20,7 @@ mod ffi;
 
 #[bootstrap(
     features("contrib"),
-    arguments(output_measure(c_type = "AnyMeasure *", rust_type = b"null"),),
+    arguments(privacy_measure(c_type = "AnyMeasure *", rust_type = b"null"),),
     generics(DI(suppress), TO(suppress), MI(suppress), MO(suppress))
 )]
 /// Construct an odometer that can spawn a compositor queryable.
@@ -38,7 +38,7 @@ mod ffi;
 /// # Arguments
 /// * `input_domain` - indicates the space of valid input datasets
 /// * `input_metric` - how distances are measured between members of the input domain
-/// * `output_measure` - how privacy is measured
+/// * `privacy_measure` - how privacy is measured
 pub fn make_fully_adaptive_composition<
     DI: 'static + Domain,
     MI: 'static + Metric,
@@ -47,24 +47,24 @@ pub fn make_fully_adaptive_composition<
 >(
     input_domain: DI,
     input_metric: MI,
-    output_measure: MO,
+    privacy_measure: MO,
 ) -> Fallible<Odometer<DI, MI, MO, Measurement<DI, MI, MO, TO>, TO>>
 where
     DI::Carrier: Clone,
     (DI, MI): MetricSpace,
 {
     // check if fully adaptive composition is supported
-    output_measure.composability(Adaptivity::FullyAdaptive)?;
+    privacy_measure.composability(Adaptivity::FullyAdaptive)?;
 
     Odometer::new(
         input_domain.clone(),
         input_metric.clone(),
-        output_measure.clone(),
+        privacy_measure.clone(),
         Function::new_fallible(move |arg: &DI::Carrier| {
             new_fully_adaptive_composition_queryable(
                 input_domain.clone(),
                 input_metric.clone(),
-                output_measure.clone(),
+                privacy_measure.clone(),
                 arg.clone(),
             )
         }),
@@ -82,14 +82,14 @@ fn new_fully_adaptive_composition_queryable<
 >(
     input_domain: DI,
     input_metric: MI,
-    output_measure: MO,
+    privacy_measure: MO,
     data: DI::Carrier,
 ) -> Fallible<OdometerQueryable<Measurement<DI, MI, MO, TO>, TO, MI::Distance, MO::Distance>>
 where
     (DI, MI): MetricSpace,
 {
     let require_sequentiality = matches!(
-        output_measure.composability(Adaptivity::FullyAdaptive)?,
+        privacy_measure.composability(Adaptivity::FullyAdaptive)?,
         Composability::Sequential
     );
 
@@ -112,7 +112,7 @@ where
                 Query::External(OdometerQuery::Invoke(meas)) => {
                     assert_elements_match!(DomainMismatch, &input_domain, &meas.input_domain);
                     assert_elements_match!(MetricMismatch, &input_metric, &meas.input_metric);
-                    assert_elements_match!(MeasureMismatch, &output_measure, &meas.output_measure);
+                    assert_elements_match!(MeasureMismatch, &privacy_measure, &meas.privacy_measure);
 
                     let enforce_sequentiality = Rc::new(RefCell::new(false));
 
@@ -151,7 +151,7 @@ where
                         .map(|m| m.eval(d_in))
                         .collect::<Fallible<_>>()?;
 
-                    let d_out = output_measure.compose(d_mids)?;
+                    let d_out = privacy_measure.compose(d_mids)?;
                     Answer::External(OdometerAnswer::PrivacyLoss(d_out))
                 }
                 Query::Internal(query) => {

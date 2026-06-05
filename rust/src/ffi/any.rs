@@ -202,7 +202,7 @@ where
         Measurement::new(
             self.input_domain.clone(),
             self.input_metric.clone(),
-            self.output_measure.clone(),
+            self.privacy_measure.clone(),
             Function::new_fallible(
                 move |arg: &DI::Carrier| -> Fallible<Queryable<AnyObject, A>> {
                     let mut inner_qbl = function.eval(arg)?;
@@ -248,7 +248,7 @@ where
         Measurement::new(
             self.input_domain.clone(),
             self.input_metric.clone(),
-            self.output_measure.clone(),
+            self.privacy_measure.clone(),
             Function::new_fallible(
                 move |arg: &DI::Carrier| -> Fallible<Queryable<Q, AnyObject>> {
                     let mut inner_qbl = function.eval(arg)?;
@@ -293,7 +293,7 @@ impl From<Odometer<AnyDomain, AnyMetric, AnyMeasure, AnyMeasurement, AnyObject>>
         Odometer::new(
             val.input_domain.clone(),
             val.input_metric.clone(),
-            val.output_measure.clone(),
+            val.privacy_measure.clone(),
             Function::new_fallible(
                 move |arg: &AnyObject| -> Fallible<Queryable<AnyOdometerQuery, AnyOdometerAnswer>> {
                     let QI = QI.clone();
@@ -611,7 +611,7 @@ where
         AnyMeasurement::new(
             AnyDomain::new(self.input_domain.clone()),
             AnyMetric::new(self.input_metric.clone()),
-            AnyMeasure::new(self.output_measure.clone()),
+            AnyMeasure::new(self.privacy_measure.clone()),
             self.function.clone().into_any(),
             self.privacy_map.clone().into_any(),
         )
@@ -624,7 +624,7 @@ impl<TO: 'static> Measurement<AnyDomain, AnyMetric, AnyMeasure, TO> {
         Measurement::new(
             self.input_domain.clone(),
             self.input_metric.clone(),
-            self.output_measure.clone(),
+            self.privacy_measure.clone(),
             self.function.clone().into_any_out(),
             self.privacy_map.clone(),
         )

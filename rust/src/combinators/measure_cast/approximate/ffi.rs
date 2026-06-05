@@ -20,7 +20,7 @@ fn make_approximate(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement> {
         let privacy_map = measurement.privacy_map.clone();
         let measurement = measurement.with_map(
             measurement.input_metric.clone(),
-            try_!(measurement.output_measure.clone().downcast::<MO>()),
+            try_!(measurement.privacy_measure.clone().downcast::<MO>()),
             PrivacyMap::new_fallible(move |d_in: &AnyObject| {
                 privacy_map.eval(d_in)?.downcast::<MO::Distance>()
             }),
@@ -31,7 +31,7 @@ fn make_approximate(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement> {
         let privacy_map = m.privacy_map.clone();
         m.with_map(
             m.input_metric.clone(),
-            AnyMeasure::new(m.output_measure.clone()),
+            AnyMeasure::new(m.privacy_measure.clone()),
             PrivacyMap::new_fallible(move |d_in: &AnyObject| {
                 privacy_map.eval(d_in).map(AnyObject::new)
             }),
@@ -41,7 +41,7 @@ fn make_approximate(measurement: &AnyMeasurement) -> Fallible<AnyMeasurement> {
     dispatch!(
         monomorphize,
         [(
-            measurement.output_measure.type_,
+            measurement.privacy_measure.type_,
             [
                 MaxDivergence,
                 ZeroConcentratedDivergence,

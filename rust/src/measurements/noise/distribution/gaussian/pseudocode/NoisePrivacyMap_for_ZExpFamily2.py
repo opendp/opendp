@@ -2,7 +2,7 @@
 # analogous to impl NoisePrivacyMap<L2Distance<RBig>, ZeroConcentratedDivergence> for ZExpFamily<1> in Rust
 class ZExpFamily2:
     def noise_privacy_map(
-        self, _input_metric: L2Distance[RBig], _output_measure: ZeroConcentratedDivergence
+        self, _input_metric: L2Distance[RBig], _privacy_measure: ZeroConcentratedDivergence
     ) -> PrivacyMap[L2Distance[RBig], ZeroConcentratedDivergence]:
         scale = self.scale
         if scale < RBig.ZERO:  # |\label{line:neg-scale}|

@@ -2,12 +2,12 @@
 def new_fully_adaptive_composition_queryable(
     input_domain: DI,
     input_metric: MI,
-    output_measure: MO,
+    privacy_measure: MO,
     data: DI_Carrier,
 ) -> OdometerQueryable[Measurement[DI, MI, MO, TO], TO, MO_Distance]:
 
     require_sequentiality = matches(
-        output_measure.composability(Adaptivity.FullyAdaptive),
+        privacy_measure.composability(Adaptivity.FullyAdaptive),
         Composability.Sequential
     )
 
@@ -37,7 +37,7 @@ def new_fully_adaptive_composition_queryable(
                 )
 
                 assert_elements_match(  # `\label{measure-check}`
-                    MeasureMismatch, output_measure, meas.output_measure
+                    MeasureMismatch, privacy_measure, meas.privacy_measure
                 )
 
                 enforce_sequentiality = False
@@ -75,7 +75,7 @@ def new_fully_adaptive_composition_queryable(
             # evaluate external privacy loss query
             case Query.External(OdometerQuery.PrivacyLoss(d_in)):
                 d_mids = [m.eval(d_in) for m in privacy_maps]
-                d_out = output_measure.compose(d_mids)
+                d_out = privacy_measure.compose(d_mids)
                 return Answer.External(OdometerAnswer.Map(d_out))
 
             case Query.Internal(query):

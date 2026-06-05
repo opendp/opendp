@@ -10,10 +10,10 @@ class ConstantTimeGeometric:
             raise "lower may not be greater than upper"
 
         distribution = ZExpFamily(scale=RBig.from_f64(scale))
-        output_measure = MO.default()
+        privacy_measure = MO.default()
 
         privacy_map = distribution.noise_privacy_map(
-            L1Distance.default(), output_measure
+            L1Distance.default(), privacy_measure
         )
 
         p = (1.0).neg_inf_sub((-scale.recip()).inf_exp()) # |\label{line:prob-check}|
@@ -29,6 +29,6 @@ class ConstantTimeGeometric:
             input_domain,
             Function.new_fallible(function),
             input_metric,
-            output_measure,
+            privacy_measure,
             PrivacyMap.new_fallible(lambda d_in: privacy_map.eval(RBig.try_from(d_in))),
         )

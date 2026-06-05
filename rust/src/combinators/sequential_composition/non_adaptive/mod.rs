@@ -50,7 +50,7 @@ where
     }
     let input_domain = measurements[0].input_domain.clone();
     let input_metric = measurements[0].input_metric.clone();
-    let output_measure = measurements[0].output_measure.clone();
+    let privacy_measure = measurements[0].privacy_measure.clone();
 
     if !measurements.iter().all(|v| input_domain == v.input_domain) {
         return fallible!(DomainMismatch, "All input domains must be the same");
@@ -60,7 +60,7 @@ where
     }
     if !measurements
         .iter()
-        .all(|v| output_measure == v.output_measure)
+        .all(|v| privacy_measure == v.privacy_measure)
     {
         return fallible!(MetricMismatch, "All output measures must be the same");
     }
@@ -76,14 +76,14 @@ where
         .collect::<Vec<_>>();
 
     let require_sequentiality = matches!(
-        output_measure.composability(Adaptivity::NonAdaptive)?,
+        privacy_measure.composability(Adaptivity::NonAdaptive)?,
         Composability::Sequential
     );
 
     Measurement::new(
         input_domain,
         input_metric,
-        output_measure.clone(),
+        privacy_measure.clone(),
         Function::new_fallible(move |arg: &DI::Carrier| {
             let active_id = Rc::new(RefCell::new(0));
 
@@ -112,7 +112,7 @@ where
             }
         }),
         PrivacyMap::new_fallible(move |d_in: &MI::Distance| {
-            output_measure.compose(
+            privacy_measure.compose(
                 maps.iter()
                     .map(|map| map.eval(d_in))
                     .collect::<Fallible<_>>()?,

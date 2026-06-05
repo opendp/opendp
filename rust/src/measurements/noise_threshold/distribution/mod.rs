@@ -21,7 +21,7 @@ mod test;
 #[bootstrap(
     features("contrib"),
     arguments(
-        output_measure(c_type = "AnyMeasure *", rust_type = b"null"),
+        privacy_measure(c_type = "AnyMeasure *", rust_type = b"null"),
         threshold(c_type = "void *", rust_type = "TV"),
         k(default = b"null"),
     ),
@@ -57,7 +57,7 @@ mod test;
 /// # Arguments
 /// * `input_domain` - Domain of the input.
 /// * `input_metric` - Metric for the input domain.
-/// * `output_measure` - Privacy measure. Either `MaxDivergence` or `ZeroConcentratedDivergence`.
+/// * `privacy_measure` - Privacy measure. Either `MaxDivergence` or `ZeroConcentratedDivergence`.
 /// * `scale` - Noise scale parameter for the laplace distribution. `scale` == standard_deviation / sqrt(2).
 /// * `threshold` - Exclude counts that are less than this minimum value.
 /// * `k` - The noise granularity in terms of 2^k.
@@ -69,7 +69,7 @@ mod test;
 pub fn make_noise_threshold<DI: NoiseDomain, MI: Metric, MO: NoiseMeasure>(
     input_domain: DI,
     input_metric: MI,
-    output_measure: Approximate<MO>,
+    privacy_measure: Approximate<MO>,
     scale: f64,
     threshold: DI::Atom,
     k: Option<i32>,
@@ -78,7 +78,7 @@ where
     MO::Distribution: MakeNoiseThreshold<DI, MI, Approximate<MO>, Threshold = DI::Atom>,
     (DI, MI): MetricSpace,
 {
-    (output_measure.0)
+    (privacy_measure.0)
         .new_distribution(scale, k)
         .make_noise_threshold((input_domain, input_metric), threshold)
 }

@@ -41,7 +41,7 @@ mod select;
 fn make_private_aggregation<MI, MO>(
     input_domain: DslPlanDomain,
     input_metric: FrameDistance<MI>,
-    output_measure: MO,
+    privacy_measure: MO,
     plan: DslPlan,
     global_scale: Option<f64>,
     threshold: Option<u32>,
@@ -59,7 +59,7 @@ where
         return group_by::make_private_group_by::<MI, MO>(
             input_domain,
             input_metric,
-            output_measure,
+            privacy_measure,
             plan,
             global_scale,
             threshold,
@@ -70,7 +70,7 @@ where
         plan if matches!(plan, DslPlan::Select { .. }) => select::make_private_select::<MI, MO>(
             input_domain,
             input_metric,
-            output_measure,
+            privacy_measure,
             plan,
             global_scale,
         ),
@@ -87,7 +87,7 @@ where
 #[bootstrap(
     features("contrib"),
     arguments(
-        output_measure(c_type = "AnyMeasure *", rust_type = b"null"),
+        privacy_measure(c_type = "AnyMeasure *", rust_type = b"null"),
         global_scale(rust_type = "Option<f64>", c_type = "AnyObject *", default = b"null"),
         threshold(rust_type = "Option<u32>", c_type = "AnyObject *", default = b"null")
     ),
@@ -112,14 +112,14 @@ where
 /// # Arguments
 /// * `input_domain` - The domain of the input data.
 /// * `input_metric` - How to measure distances between neighboring input data sets.
-/// * `output_measure` - How to measure privacy loss.
+/// * `privacy_measure` - How to measure privacy loss.
 /// * `lazyframe` - A description of the computations to be run, in the form of a [`LazyFrame`].
 /// * `global_scale` - Optional. A tune-able parameter that affects the privacy-utility tradeoff.
 /// * `threshold` - Optional. Minimum number of rows in each released group.
 pub fn make_private_lazyframe<MI: Metric, MO: 'static + Measure>(
     input_domain: LazyFrameDomain,
     input_metric: MI,
-    output_measure: MO,
+    privacy_measure: MO,
     lazyframe: LazyFrame,
     global_scale: Option<f64>,
     threshold: Option<u32>,
@@ -132,7 +132,7 @@ where
     let m_lp = lazyframe.logical_plan.make_private(
         input_domain.cast_carrier(),
         input_metric,
-        output_measure,
+        privacy_measure,
         global_scale,
         threshold,
     )?;
@@ -141,7 +141,7 @@ where
     Measurement::new(
         m_lp.input_domain.cast_carrier(),
         m_lp.input_metric.clone(),
-        m_lp.output_measure.clone(),
+        m_lp.privacy_measure.clone(),
         Function::new_fallible(move |arg: &LazyFrame| {
             let lf = LazyFrame::from(f_lp.eval(&arg.logical_plan)?)
                 .with_optimizations(arg.get_current_optimizations());
@@ -156,7 +156,7 @@ pub trait PrivateDslPlan<MI: Metric, MO: Measure> {
         self,
         input_domain: DslPlanDomain,
         input_metric: MI,
-        output_measure: MO,
+        privacy_measure: MO,
         global_scale: Option<f64>,
         threshold: Option<u32>,
     ) -> Fallible<Measurement<DslPlanDomain, MI, MO, DslPlan>>;
@@ -175,7 +175,7 @@ where
         self,
         input_domain: DslPlanDomain,
         input_metric: FrameDistance<MI>,
-        output_measure: MaxDivergence,
+        privacy_measure: MaxDivergence,
         global_scale: Option<f64>,
         threshold: Option<u32>,
     ) -> Fallible<Measurement<DslPlanDomain, FrameDistance<MI>, MaxDivergence, DslPlan>> {
@@ -186,7 +186,7 @@ where
         if let Some(meas) = postprocess::match_postprocess(
             input_domain.clone(),
             input_metric.clone(),
-            output_measure.clone(),
+            privacy_measure.clone(),
             self.clone(),
             global_scale,
             threshold,
@@ -197,7 +197,7 @@ where
         make_private_aggregation::<MI, _>(
             input_domain,
             input_metric,
-            output_measure,
+            privacy_measure,
             self,
             global_scale,
             threshold,
@@ -215,7 +215,7 @@ where
         self,
         input_domain: DslPlanDomain,
         input_metric: FrameDistance<MI>,
-        output_measure: ZeroConcentratedDivergence,
+        privacy_measure: ZeroConcentratedDivergence,
         global_scale: Option<f64>,
         threshold: Option<u32>,
     ) -> Fallible<Measurement<DslPlanDomain, FrameDistance<MI>, ZeroConcentratedDivergence, DslPlan>>
@@ -227,7 +227,7 @@ where
         if let Some(meas) = postprocess::match_postprocess(
             input_domain.clone(),
             input_metric.clone(),
-            output_measure.clone(),
+            privacy_measure.clone(),
             self.clone(),
             global_scale,
             threshold,
@@ -238,7 +238,7 @@ where
         make_private_aggregation::<MI, _>(
             input_domain,
             input_metric,
-            output_measure,
+            privacy_measure,
             self,
             global_scale,
             threshold,
@@ -262,7 +262,7 @@ where
         self,
         input_domain: DslPlanDomain,
         input_metric: FrameDistance<MI>,
-        output_measure: Approximate<MO>,
+        privacy_measure: Approximate<MO>,
         global_scale: Option<f64>,
         threshold: Option<u32>,
     ) -> Fallible<Measurement<DslPlanDomain, FrameDistance<MI>, Approximate<MO>, DslPlan>> {
@@ -273,7 +273,7 @@ where
         if let Some(meas) = postprocess::match_postprocess::<FrameDistance<MI>, Approximate<MO>>(
             input_domain.clone(),
             input_metric.clone(),
-            output_measure.clone(),
+            privacy_measure.clone(),
             self.clone(),
             global_scale,
             threshold,
@@ -284,7 +284,7 @@ where
         if let Ok(meas) = make_private_aggregation::<MI, _>(
             input_domain.clone(),
             input_metric.clone(),
-            output_measure.clone(),
+            privacy_measure.clone(),
             self.clone(),
             global_scale,
             threshold,
@@ -295,7 +295,7 @@ where
         make_approximate(self.make_private(
             input_domain,
             input_metric,
-            output_measure.0,
+            privacy_measure.0,
             global_scale,
             threshold,
         )?)
@@ -312,7 +312,7 @@ where
         self,
         input_domain: DslPlanDomain,
         input_metric: MI,
-        output_measure: MO,
+        privacy_measure: MO,
         global_scale: Option<f64>,
         threshold: Option<u32>,
     ) -> Fallible<Measurement<DslPlanDomain, MI, MO, DslPlan>> {
@@ -326,7 +326,7 @@ where
         ) >> self.make_private(
             input_domain,
             FrameDistance(input_metric),
-            output_measure,
+            privacy_measure,
             global_scale,
             threshold,
         )?
@@ -343,7 +343,7 @@ macro_rules! impl_plan_bounded_dp {
                 self,
                 input_domain: DslPlanDomain,
                 input_metric: $ty,
-                output_measure: MO,
+                privacy_measure: MO,
                 global_scale: Option<f64>,
                 threshold: Option<u32>,
             ) -> Fallible<Measurement<DslPlanDomain, $ty, MO, DslPlan>> {
@@ -371,7 +371,7 @@ macro_rules! impl_plan_bounded_dp {
                 )? >> self.make_private(
                     middle_domain,
                     middle_metric,
-                    output_measure,
+                    privacy_measure,
                     global_scale,
                     threshold,
                 )?
@@ -391,7 +391,7 @@ where
         self,
         input_domain: DslPlanDomain,
         input_metric: ChangeOneIdDistance,
-        output_measure: MO,
+        privacy_measure: MO,
         global_scale: Option<f64>,
         threshold: Option<u32>,
     ) -> Fallible<Measurement<DslPlanDomain, ChangeOneIdDistance, MO, DslPlan>> {
@@ -406,7 +406,7 @@ where
         )? >> self.make_private(
             input_domain,
             middle_metric,
-            output_measure,
+            privacy_measure,
             global_scale,
             threshold,
         )?
