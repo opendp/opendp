@@ -86,6 +86,7 @@ where
         output_measure,
         global_scale,
     )
+/// Is this where the non-negativity is being enforced?
 }
 
 #[cfg(feature = "ffi")]

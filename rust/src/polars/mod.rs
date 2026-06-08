@@ -477,7 +477,8 @@ impl DPExpr {
 ///
 /// # Arguments
 /// * `scale` - parameter for the noise distribution
-pub fn dp_len(scale: Option<f64>) -> Expr {
+/// * `clipping_flag` - optional flag to remove non-negativity post processing.
+pub fn dp_len(scale: Option<f64>, clipping_flag: Option<bool>) -> Expr {
     let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
     apply_anonymous_function(vec![scale], DPFrameLenShim)
 }
