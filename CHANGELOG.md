@@ -25,7 +25,7 @@ This file documents the version history of OpenDP. The links on each version num
 
 
 
-## [0.15.0](https://github.com/opendp/opendp/compare/v1.14.2...v0.15.0) - 2026-05-19
+## [0.15.0](https://github.com/opendp/opendp/compare/v0.14.2...v0.15.0) - 2026-05-19
 
 
 ### Migration
@@ -88,7 +88,7 @@ There are a few changes in feature names to be aware of:
 
 #### Fill gaps
 
-- Fill in migration notes back to v12 [#2541](https://github.com/opendp/opendp/pull/2541)
+- Fill in migration notes back to v0.12 [#2541](https://github.com/opendp/opendp/pull/2541)
 - Clarify commitments for OpenDP Commons [#2661](https://github.com/opendp/opendp/pull/2661)
 - Add citations and utility/runtime information in Rust code [#2702](https://github.com/opendp/opendp/pull/2702)
 
