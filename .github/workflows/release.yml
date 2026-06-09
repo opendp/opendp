@@ -64,7 +64,7 @@ on:
 
 jobs:
   prepare:
-    uses: ./.github/workflows/prepare.yml
+    uses: ./.github/workflows/helpers/prepare.yml
     with:
       channel: ${{ inputs.channel }}
       sync: ${{ inputs.sync }}
