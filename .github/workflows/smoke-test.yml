@@ -12,6 +12,9 @@ on:
   pull_request:
 
 jobs:
+  test-workflows-subdirectory:
+    uses: ./.github/workflows/helpers/test-workflows-subdirectory.yml
+
   rust-build:
     runs-on: ubuntu-22.04
     defaults:

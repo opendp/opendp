@@ -1,0 +1,10 @@
+name: Test workflows subdirectory
+on:
+  workflow_call:
+
+jobs:
+  hello:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: hello
+        run: echo 'hello world!'
