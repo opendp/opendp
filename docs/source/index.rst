@@ -10,13 +10,10 @@ The algorithm is differentially private if by looking at the output,
 you cannot tell whether any individual's data was included in the original dataset or not.
 Differential privacy achieves this by carefully injecting random noise into the released statistics to hide the effects of each individual. 
 
-For more background on differential privacy and its applications:
-
-* "`Designing Access with Differential Privacy <https://admindatahandbook.mit.edu/book/v1.0/diffpriv.html>`_" from *Handbook on Using Administrative Data for Research and Evidence-based Policy*
-* The `Resources list <https://differentialprivacy.org/resources/>`_ from *differentialprivacy.org*
-* A shorter list of `Educational Resources <https://opendp.github.io/learning/>`_
-* OpenDP's own :doc:`theory/resources`
-* `Hand-On Differential Privacy <https://www.oreilly.com/library/view/hands-on-differential-privacy/9781492097730/>`_ is co-authored by the OpenDP Library architect
+For more background on differential privacy and its applications
+see the OpenDP Project's `Educational Resources <https://opendp.github.io/learning/>`_,
+and `Hands-On Differential Privacy <https://www.oreilly.com/library/view/hands-on-differential-privacy/9781492097730/>`_,
+which is co-authored by the OpenDP Library architect
 
 Why OpenDP?
 -----------
