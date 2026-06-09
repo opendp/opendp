@@ -17,16 +17,19 @@ data types.
             >>> import polars as pl
             >>> import opendp.prelude as dp
             >>> dp.enable_features("contrib")
-            
+
             >>> context = dp.Context.compositor(
             ...     # Many columns contain mixtures of strings and numbers and cannot be parsed as floats,
             ...     # so we'll set `ignore_errors` to true to avoid conversion errors.
-            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path(), ignore_errors=True),
+            ...     data=pl.scan_csv(
+            ...         dp.examples.get_france_lfs_path(),
+            ...         ignore_errors=True,
+            ...     ),
             ...     privacy_unit=dp.unit_of(contributions=36),
             ...     privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
             ...     split_evenly_over=2,
             ... )
-            
+
 
 Strptime, To Date, To Datetime, To Time
 ---------------------------------------
@@ -43,7 +46,9 @@ Dates can be parsed from strings via ``.str.strptime``, and its variants
 
             >>> query = (
             ...     context.query()
-            ...     .with_columns(pl.col.YEAR.cast(str).str.to_date(format=r"%Y"))
+            ...     .with_columns(
+            ...         pl.col.YEAR.cast(str).str.to_date(format=r"%Y")
+            ...     )
             ...     .group_by("YEAR")
             ...     .agg(dp.len())
             ... )
@@ -86,7 +91,11 @@ inputs <https://github.com/pola-rs/polars/issues/19928>`__.
 
             >>> query = (
             ...     context.query()
-            ...     .with_columns(pl.col.YEAR.cast(str).str.to_datetime(format=r"%Y", time_unit="ns"))
+            ...     .with_columns(
+            ...         pl.col.YEAR.cast(str).str.to_datetime(
+            ...             format=r"%Y", time_unit="ns"
+            ...         )
+            ...     )
             ...     .group_by("YEAR")
             ...     .agg(dp.len())
             ... )
@@ -94,9 +103,10 @@ inputs <https://github.com/pola-rs/polars/issues/19928>`__.
             ...     query.release()
             ... except dp.OpenDPException as err:
             ...     print(err)
+            ...
             <BLANKLINE>
               MakeMeasurement("Nanoseconds are not currently supported due to potential panics when parsing inputs. Please open an issue on the OpenDP repository if you would find this functionality useful. Otherwise, consider parsing into micro- or millisecond datetimes instead.")
-            
+
 
 Parsed data can then be manipulated with `temporal
 expressions <temporal.ipynb>`__.

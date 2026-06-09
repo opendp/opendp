@@ -19,11 +19,11 @@ dataset meet a given condition.
 
         .. code:: pycon
 
-            >>> import polars as pl 
+            >>> import polars as pl
             >>> import opendp.prelude as dp
-            
+
             >>> dp.enable_features("contrib")
-            
+
 
 To get started, we’ll recreate the Context from the `tabular data
 introduction <../index.rst>`__.
@@ -36,12 +36,15 @@ introduction <../index.rst>`__.
         .. code:: pycon
 
             >>> context = dp.Context.compositor(
-            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path(), ignore_errors=True),
+            ...     data=pl.scan_csv(
+            ...         dp.examples.get_france_lfs_path(),
+            ...         ignore_errors=True,
+            ...     ),
             ...     privacy_unit=dp.unit_of(contributions=36),
             ...     privacy_loss=dp.loss_of(epsilon=1.0),
             ...     split_evenly_over=5,
             ... )
-            
+
 
 Frame Length vs Expression Length
 ---------------------------------
@@ -63,12 +66,14 @@ rows.
             >>> query_len_variations = (
             ...     context.query()
             ...     .group_by("SEX")
-            ...     .agg([
-            ...         # total number of rows in the frame, including nulls
-            ...         dp.len(),
-            ...         # total number of rows in the HWUSUAL column (including nulls)
-            ...         pl.col.HWUSUAL.dp.len(),
-            ...     ])
+            ...     .agg(
+            ...         [
+            ...             # total number of rows in the frame, including nulls
+            ...             dp.len(),
+            ...             # total number of rows in the HWUSUAL column (including nulls)
+            ...             pl.col.HWUSUAL.dp.len(),
+            ...         ]
+            ...     )
             ...     # explicitly specifying keys makes the query satisfy pure-DP
             ...     .with_keys(pl.LazyFrame({"SEX": [1, 2]}))
             ... )
@@ -126,10 +131,12 @@ result in one more, or one less, unique value.
 
         .. code:: pycon
 
-            >>> query_n_unique = context.query().select([
-            ...     # total number of unique elements in the HWUSUAL column (including null)
-            ...     pl.col.HWUSUAL.dp.n_unique(),
-            ... ])
+            >>> query_n_unique = context.query().select(
+            ...     [
+            ...         # total number of unique elements in the HWUSUAL column (including null)
+            ...         pl.col.HWUSUAL.dp.n_unique(),
+            ...     ]
+            ... )
             >>> query_n_unique.summarize()
             shape: (1, 4)
             ┌─────────┬───────────┬─────────────────┬───────┐
@@ -178,12 +185,14 @@ respectively, as follows:
 
         .. code:: pycon
 
-            >>> query_counts = context.query().select([
-            ...     # total number of non-null elements in the HWUSUAL column
-            ...     pl.col.HWUSUAL.dp.count(),
-            ...     # total number of null elements in the HWUSUAL column
-            ...     pl.col.HWUSUAL.dp.null_count(),
-            ... ])
+            >>> query_counts = context.query().select(
+            ...     [
+            ...         # total number of non-null elements in the HWUSUAL column
+            ...         pl.col.HWUSUAL.dp.count(),
+            ...         # total number of null elements in the HWUSUAL column
+            ...         pl.col.HWUSUAL.dp.null_count(),
+            ...     ]
+            ... )
             >>> query_counts.summarize()
             shape: (2, 4)
             ┌─────────┬────────────┬─────────────────┬───────┐
@@ -212,11 +221,15 @@ privacy loss, but with half as much noise.
 
             >>> query_counts_via_grouping = (
             ...     context.query()
-            ...     .with_columns(pl.col("HWUSUAL").is_null().alias("HWUSUAL_is_null"))
+            ...     .with_columns(
+            ...         pl.col("HWUSUAL").is_null().alias("HWUSUAL_is_null")
+            ...     )
             ...     .group_by("HWUSUAL_is_null")
             ...     .agg(dp.len())
             ...     # we're grouping on a bool column, so the groups are:
-            ...     .with_keys(pl.LazyFrame({"HWUSUAL_is_null": [True, False]}))
+            ...     .with_keys(
+            ...         pl.LazyFrame({"HWUSUAL_is_null": [True, False]})
+            ...     )
             ... )
             >>> query_counts_via_grouping.summarize()
             shape: (1, 4)

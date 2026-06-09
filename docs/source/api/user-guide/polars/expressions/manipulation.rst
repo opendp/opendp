@@ -13,19 +13,22 @@ Documentation <https://docs.pola.rs/api/python/dev/reference/lazyframe/modify_se
 
             >>> import polars as pl
             >>> import opendp.prelude as dp
-            
+
             >>> dp.enable_features("contrib")
-            
+
             >>> context = dp.Context.compositor(
             ...     # Many columns contain mixtures of strings and numbers and cannot be parsed as floats,
             ...     # so we'll set `ignore_errors` to true to avoid conversion errors.
-            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path(), ignore_errors=True),
+            ...     data=pl.scan_csv(
+            ...         dp.examples.get_france_lfs_path(),
+            ...         ignore_errors=True,
+            ...     ),
             ...     privacy_unit=dp.unit_of(contributions=36),
             ...     privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
             ...     split_evenly_over=4,
-            ...     margins=[dp.polars.Margin(max_length=150_000 * 36)]
+            ...     margins=[dp.polars.Margin(max_length=150_000 * 36)],
             ... )
-            
+
 
 Cast
 ----
@@ -77,7 +80,9 @@ scale to satisfy the same level of privacy.
 
         .. code:: pycon
 
-            >>> context.query().select(pl.col.HWUSUAL.cast(int).dp.sum((0, 100))).summarize()
+            >>> context.query().select(
+            ...     pl.col.HWUSUAL.cast(int).dp.sum((0, 100))
+            ... ).summarize()
             shape: (1, 4)
             ┌─────────┬───────────┬─────────────────┬─────────┐
             │ column  ┆ aggregate ┆ distribution    ┆ scale   │
@@ -118,7 +123,9 @@ broken apart into different data processing phases.
 
             >>> (
             ...     context.query()
-            ...     .with_columns(pl.col.HWUSUAL.cast(int).fill_null(0).clip(0, 100))
+            ...     .with_columns(
+            ...         pl.col.HWUSUAL.cast(int).fill_null(0).clip(0, 100)
+            ...     )
             ...     .select(pl.col.HWUSUAL.sum().dp.noise())
             ...     .summarize()
             ... )
@@ -147,7 +154,7 @@ individuals working each hour range.
         .. code:: pycon
 
             >>> breaks = [0, 20, 40, 60, 80, 98]
-            
+
             >>> query = (
             ...     context.query()
             ...     .with_columns(pl.col.HWUSUAL.cut(breaks=breaks))
@@ -186,10 +193,16 @@ from grouping:
             >>> def cut_labels(breaks, left_closed=False):
             ...     edges = ["-inf", *breaks, "inf"]
             ...     bl, br = ("[", ")") if left_closed else ("(", "]")
-            ...     return [f"{bl}{l}, {r}{br}" for l, r in zip(edges[:-1], edges[1:])]
-            
-            >>> labels = pl.Series("HWUSUAL", cut_labels(breaks), dtype=pl.Categorical)
-            
+            ...     return [
+            ...         f"{bl}{l}, {r}{br}"
+            ...         for l, r in zip(edges[:-1], edges[1:])
+            ...     ]
+            ...
+
+            >>> labels = pl.Series(
+            ...     "HWUSUAL", cut_labels(breaks), dtype=pl.Categorical
+            ... )
+
             >>> query = (
             ...     context.query()
             ...     .with_columns(pl.col.HWUSUAL.cut(breaks=breaks))
@@ -265,7 +278,11 @@ In the following example, all nans and nulls are dropped from the
 
             >>> (
             ...     context.query()
-            ...     .select(pl.col.HWUSUAL.drop_nans().drop_nulls().dp.sum((0, 100)))
+            ...     .select(
+            ...         pl.col.HWUSUAL.drop_nans()
+            ...         .drop_nulls()
+            ...         .dp.sum((0, 100))
+            ...     )
             ...     .summarize()
             ... )
             shape: (1, 4)
@@ -298,12 +315,17 @@ simply a single scalar, but more complicated expressions are valid:
             >>> (
             ...     context.query()
             ...     # prepare actual work hours as a valid fill column
-            ...     .with_columns(pl.col.HWACTUAL.fill_nan(0.0).fill_null(0.0))
+            ...     .with_columns(
+            ...         pl.col.HWACTUAL.fill_nan(0.0).fill_null(0.0)
+            ...     )
             ...     # prepare usual work hours with actual work hours as a fill
-            ...     .with_columns(pl.col.HWUSUAL.fill_nan(pl.col.HWACTUAL).fill_null(pl.col.HWACTUAL))
+            ...     .with_columns(
+            ...         pl.col.HWUSUAL.fill_nan(pl.col.HWACTUAL).fill_null(
+            ...             pl.col.HWACTUAL
+            ...         )
+            ...     )
             ...     # compute the dp sum
-            ...     .select(pl.col.HWUSUAL.dp.sum((0, 100)))
-            ...     .summarize()
+            ...     .select(pl.col.HWUSUAL.dp.sum((0, 100))).summarize()
             ... )
             shape: (1, 4)
             ┌─────────┬───────────┬───────────────┬──────────────┐
@@ -351,10 +373,11 @@ simply a single scalar, but more complicated expressions are valid:
             ...     # prepare actual work hours as a valid fill column
             ...     .with_columns(pl.col.HWACTUAL.cast(int).fill_null(0.0))
             ...     # prepare usual work hours with actual work hours as a fill
-            ...     .with_columns(pl.col.HWUSUAL.cast(int).fill_null(pl.col.HWACTUAL))
+            ...     .with_columns(
+            ...         pl.col.HWUSUAL.cast(int).fill_null(pl.col.HWACTUAL)
+            ...     )
             ...     # compute the dp sum
-            ...     .select(pl.col.HWUSUAL.dp.sum((0, 100)))
-            ...     .summarize()
+            ...     .select(pl.col.HWUSUAL.dp.sum((0, 100))).summarize()
             ... )
             shape: (1, 4)
             ┌─────────┬───────────┬─────────────────┬─────────┐
@@ -399,7 +422,11 @@ age:
             ...     context.query()
             ...     .with_columns(pl.col.HWUSUAL.fill_nan(0).fill_null(0))
             ...     # compute the dp sum of individuals over 64 years old
-            ...     .select(pl.col.HWUSUAL.filter(pl.col.AGE > 64).dp.sum((0, 100)))
+            ...     .select(
+            ...         pl.col.HWUSUAL.filter(pl.col.AGE > 64).dp.sum(
+            ...             (0, 100)
+            ...         )
+            ...     )
             ...     .summarize()
             ... )
             shape: (1, 4)
@@ -456,7 +483,11 @@ by ``.dp.sum``.
             ...     context.query()
             ...     .with_columns(pl.col.HWUSUAL.fill_nan(0))
             ...     # compute the dp sum of individuals over 64 years old
-            ...     .select(pl.col.HWUSUAL.filter(pl.col.HWUSUAL.is_not_null()).dp.sum((0, 98)))
+            ...     .select(
+            ...         pl.col.HWUSUAL.filter(
+            ...             pl.col.HWUSUAL.is_not_null()
+            ...         ).dp.sum((0, 98))
+            ...     )
             ...     .summarize()
             ... )
             shape: (1, 4)
@@ -492,7 +523,9 @@ column to ``0``.
             ...     context.query()
             ...     .select(
             ...         pl.col.ILOSTAT.cast(int)
-            ...         .replace(old=[99, None], new=0) # replace 99 and None with 0
+            ...         .replace(
+            ...             old=[99, None], new=0
+            ...         )  # replace 99 and None with 0
             ...         .dp.sum((0, 98))
             ...     )
             ...     .summarize()
@@ -505,7 +538,7 @@ column to ``0``.
             ╞═════════╪═══════════╪═════════════════╪═════════╡
             │ ILOSTAT ┆ Sum       ┆ Integer Laplace ┆ 14112.0 │
             └─────────┴───────────┴─────────────────┴─────────┘
-            
+
 
 When passed ``old`` and ``new`` arguments, ``new`` can either match the
 length of ``old``, or be a single value that is then broadcast.
@@ -545,7 +578,7 @@ differ from that of the input.
             ...     3: "Unemployed",
             ...     9: "Not in labor force",
             ... }
-            
+
             >>> (
             ...     context.query()
             ...     .group_by(pl.col.ILOSTAT.replace_strict(ilostat_labels))
@@ -586,11 +619,15 @@ expression to retrieve the bin indices of the ``.cut`` expression.
         .. code:: pycon
 
             >>> breaks = [0, 20, 40, 60, 80, 98]
-            >>> labels = pl.Series("HWUSUAL", list(range(len(breaks) + 1)), dtype=pl.UInt32)
-            
+            >>> labels = pl.Series(
+            ...     "HWUSUAL", list(range(len(breaks) + 1)), dtype=pl.UInt32
+            ... )
+
             >>> query = (
             ...     context.query()
-            ...     .with_columns(pl.col.HWUSUAL.cut(breaks=breaks).to_physical())
+            ...     .with_columns(
+            ...         pl.col.HWUSUAL.cut(breaks=breaks).to_physical()
+            ...     )
             ...     .group_by("HWUSUAL")
             ...     .agg(dp.len())
             ...     .with_keys(pl.LazyFrame([labels]))

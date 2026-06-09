@@ -15,23 +15,33 @@ useful in predicates and grouping functions.
         .. code:: pycon
 
             >>> import polars as pl
-            
+
             >>> import opendp.prelude as dp
             >>> dp.enable_features("contrib")
-            
+
             >>> lf_dates = (
-            ...     pl.scan_csv(dp.examples.get_france_lfs_path(), ignore_errors=True)
+            ...     pl.scan_csv(
+            ...         dp.examples.get_france_lfs_path(),
+            ...         ignore_errors=True,
+            ...     )
             ...     # prepare the data with some expressions that are not yet supported in OpenDP
-            ...     .select(DATE=pl.concat_str("YEAR", pl.col.QUARTER * 3, pl.lit("01"), separator="-"))
+            ...     .select(
+            ...         DATE=pl.concat_str(
+            ...             "YEAR",
+            ...             pl.col.QUARTER * 3,
+            ...             pl.lit("01"),
+            ...             separator="-",
+            ...         )
+            ...     )
             ... )
-            
+
             >>> context = dp.Context.compositor(
             ...     data=lf_dates,
             ...     privacy_unit=dp.unit_of(contributions=36),
             ...     privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
             ...     split_evenly_over=1,
             ... )
-            
+
 
 Date/Time Components
 --------------------
@@ -71,8 +81,13 @@ the dates.
 
             >>> query = (
             ...     context.query()
-            ...     .with_columns(pl.col.DATE.str.to_date(format=r"%Y-%m-%d"))
-            ...     .with_columns(YEAR=pl.col.DATE.dt.year(), MONTH=pl.col.DATE.dt.month())
+            ...     .with_columns(
+            ...         pl.col.DATE.str.to_date(format=r"%Y-%m-%d")
+            ...     )
+            ...     .with_columns(
+            ...         YEAR=pl.col.DATE.dt.year(),
+            ...         MONTH=pl.col.DATE.dt.month(),
+            ...     )
             ...     .group_by("YEAR", "MONTH")
             ...     .agg(dp.len())
             ... )

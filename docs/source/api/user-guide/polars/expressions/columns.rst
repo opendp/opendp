@@ -20,17 +20,22 @@ time. The column name may be changed via ``.alias``.
 
             >>> import polars as pl
             >>> import opendp.prelude as dp
-            
+
             >>> dp.enable_features("contrib")
-            
+
             >>> work_hours_cols = ["HWUSUAL", "HWACTUAL"]
-            
+
             >>> # not recommended, OpenDP will reject this joint expression over multiple columns
-            >>> single_expr = pl.col(work_hours_cols).cast(int).dp.sum((0, 60))
-            
+            >>> single_expr = (
+            ...     pl.col(work_hours_cols).cast(int).dp.sum((0, 60))
+            ... )
+
             >>> # build individual expressions for each query
-            >>> split_exprs = [pl.col(c).cast(int).dp.sum((0, 60)) for c in work_hours_cols]
-            
+            >>> split_exprs = [
+            ...     pl.col(c).cast(int).dp.sum((0, 60))
+            ...     for c in work_hours_cols
+            ... ]
+
 
 Demonstration of use:
 
@@ -42,15 +47,16 @@ Demonstration of use:
         .. code:: pycon
 
             >>> context = dp.Context.compositor(
-            ...     data=pl.scan_csv(dp.examples.get_france_lfs_path(), ignore_errors=True),
+            ...     data=pl.scan_csv(
+            ...         dp.examples.get_france_lfs_path(),
+            ...         ignore_errors=True,
+            ...     ),
             ...     privacy_unit=dp.unit_of(contributions=36),
             ...     privacy_loss=dp.loss_of(epsilon=1.0),
             ...     split_evenly_over=1,
-            ...     margins=[
-            ...         dp.polars.Margin(max_length=150_000 * 36)
-            ...     ],
+            ...     margins=[dp.polars.Margin(max_length=150_000 * 36)],
             ... )
-            
+
             >>> context.query().select(split_exprs).summarize()
             shape: (2, 4)
             ┌──────────┬───────────┬─────────────────┬────────┐
