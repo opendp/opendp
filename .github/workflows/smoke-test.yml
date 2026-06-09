@@ -57,7 +57,7 @@ jobs:
         run: cargo build --verbose --features untrusted,polars-ffi
       
       - name: Upload (dynamic w/ polars)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dynamic_lib
           path: rust/target/debug/libopendp.so
@@ -66,19 +66,19 @@ jobs:
         run: cargo build --verbose --features untrusted,ffi
       
       - name: Upload (static w/o Polars)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: static_lib
           path: rust/target/debug/libopendp.a
   
       - name: Upload Python bindings
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: python_bindings
           path: python/src/opendp/
 
       - name: Upload R bindings
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: r_bindings
           path: R/opendp/
@@ -165,13 +165,13 @@ jobs:
           python -m pip install -r requirements-dev.txt
 
       - name: Download dynamic lib
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: dynamic_lib
           path: python/src/opendp/lib
 
       - name: Download Python bindings
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: python_bindings
           path: python/src/opendp/
@@ -208,7 +208,7 @@ jobs:
 
       - name: Upload coverage
         if: matrix.extra-install == 'mbi' && matrix.python-version == '3.13'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: /tmp/coverage.txt
@@ -219,7 +219,7 @@ jobs:
     steps:
       - name: Download coverage
         # No additional action needed: We just need to confirm that at least one test produced a coverage report.
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: coverage-report
 
@@ -239,7 +239,7 @@ jobs:
         run: "! ( grep 'https://docs.opendp.org' -r source --binary-file=without-match | grep -v https://docs.opendp.org/en/stable/api/r )"
 
       - name: Download Python bindings
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: python_bindings
           path: python/src/opendp/
@@ -269,7 +269,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download Python bindings
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: python_bindings
           path: python/src/opendp/
@@ -297,7 +297,7 @@ jobs:
           python -m pip install -r requirements_notebooks.txt
 
       - name: Download dynamic lib
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: dynamic_lib
           path: python/src/opendp/lib
@@ -322,7 +322,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download libs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           # R uses a static library build that doesn't include Polars 
           # (Polars currently links against Python)
@@ -330,7 +330,7 @@ jobs:
           path: libs/
 
       - name: Download R bindings
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: r_bindings
           path: R/opendp/
