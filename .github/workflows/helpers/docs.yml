@@ -14,7 +14,7 @@ on:
 
 jobs:
   credential-check:
-    uses: ./.github/workflow/helpers/credential-check.yml
+    uses: ./.github/workflows/helpers/credential-check.yml
     with:
       assert_version: false
 

@@ -28,7 +28,7 @@ on:
 
 jobs:
   credential-check:
-    uses: ./.github/workflow/helpers/credential-check.yml
+    uses: ./.github/workflows/helpers/credential-check.yml
     with:
       ref: ${{ inputs.channel }}
       assert_version: ${{ inputs.channel != 'dev' }}
