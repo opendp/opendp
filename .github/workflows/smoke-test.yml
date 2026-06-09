@@ -14,6 +14,7 @@ on:
 jobs:
   test-workflows-subdirectory:
     uses: ./.github/workflows/helpers/test-workflows-subdirectory
+    with: {}
 
   rust-build:
     runs-on: ubuntu-22.04
