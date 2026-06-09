@@ -83,7 +83,7 @@ jobs:
 
   update-bindings:
     needs: build
-    uses: ./.github/workflows/update-bindings.yml
+    uses: ./.github/workflows/helpers/update-bindings.yml
     if: ${{ inputs.kind != 'fake' }}
     with:
       channel: ${{ inputs.channel }}
