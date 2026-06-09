@@ -64,7 +64,7 @@ on:
 
 jobs:
   prepare:
-    uses: ./.github/workflows/helpers/prepare.yml
+    uses: ./.github/workflows/helpers/prepare
     with:
       channel: ${{ inputs.channel }}
       sync: ${{ inputs.sync }}
@@ -76,21 +76,21 @@ jobs:
 
   build:
     needs: prepare
-    uses: ./.github/workflows/helpers/build.yml
+    uses: ./.github/workflows/helpers/build
     with:
       channel: ${{ inputs.channel }}
       fake: ${{ inputs.kind == 'fake' }}
 
   update-bindings:
     needs: build
-    uses: ./.github/workflows/helpers/update-bindings.yml
+    uses: ./.github/workflows/helpers/update-bindings
     if: ${{ inputs.kind != 'fake' }}
     with:
       channel: ${{ inputs.channel }}
 
   sanity-test-pre:
     needs: build
-    uses: ./.github/workflows/helpers/sanity-test.yml
+    uses: ./.github/workflows/helpers/sanity-test
     with:
       channel: ${{ inputs.channel }}
       python_repository: local
@@ -98,7 +98,7 @@ jobs:
 
   publish:
     needs: [ prepare, sanity-test-pre ]
-    uses: ./.github/workflows/helpers/publish.yml
+    uses: ./.github/workflows/helpers/publish
     with:
       channel: ${{ inputs.channel }}
       date: ${{ needs.prepare.outputs.date }}
@@ -107,7 +107,7 @@ jobs:
 
   sanity-test-post:
     needs: publish
-    uses: ./.github/workflows/helpers/sanity-test.yml
+    uses: ./.github/workflows/helpers/sanity-test
     with:
       channel: ${{ inputs.channel }}
       # dry-runs and fake went to TestPyPI instead of PyPI
@@ -118,13 +118,13 @@ jobs:
     needs: prepare
     # don't build latex or docs for dev builds
     if: ${{ inputs.channel != 'dev' }}
-    uses: ./.github/workflows/helpers/latex-release.yml
+    uses: ./.github/workflows/helpers/latex-release
     with:
       channel: ${{ inputs.channel }}
     secrets: inherit
 
   docs:
     needs: [ sanity-test-post, update-bindings, latex ]
-    uses: ./.github/workflows/helpers/docs.yml
+    uses: ./.github/workflows/helpers/docs
     with:
       dry_run: ${{ inputs.kind != 'real' }}
