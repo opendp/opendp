@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: stable
 
@@ -57,7 +57,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           # Make sure we get all refs needed to build docs for different versions
           fetch-depth: 0
@@ -104,7 +104,7 @@ jobs:
           path: en/stable/api/r
       
       - name: Checkout artifacts
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: 'opendp/artifacts'
           path: ./artifacts

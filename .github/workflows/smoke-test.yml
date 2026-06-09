@@ -33,7 +33,7 @@ jobs:
           swap-storage: false   # no: having swap is useful
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -105,7 +105,7 @@ jobs:
           swap-storage: false   # no: having swap is useful
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -140,7 +140,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -231,7 +231,7 @@ jobs:
         working-directory: docs
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Look for URLs that should be relative
         # R docs are copied into place after build, so they do not use relative URLs.
@@ -266,7 +266,7 @@ jobs:
         working-directory: docs
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download Python bindings
         uses: actions/download-artifact@v4
@@ -319,7 +319,7 @@ jobs:
     steps:
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download libs
         uses: actions/download-artifact@v4

@@ -51,7 +51,7 @@ jobs:
           swap-storage: false   # no: having swap is useful
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.channel }}
 
@@ -113,7 +113,7 @@ jobs:
           swap-storage: false   # no: having swap is useful
   
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.channel }}
 
@@ -198,7 +198,7 @@ jobs:
 
       - name: Checkout repository
         if: ${{ !inputs.fake }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.channel }}
 
@@ -252,7 +252,7 @@ jobs:
     needs: bindings
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         ref: ${{ inputs.channel }}
 
@@ -280,7 +280,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.channel }}
 
