@@ -76,7 +76,7 @@ jobs:
 
   build:
     needs: prepare
-    uses: ./.github/workflows/build.yml
+    uses: ./.github/workflows/helpers/build.yml
     with:
       channel: ${{ inputs.channel }}
       fake: ${{ inputs.kind == 'fake' }}
