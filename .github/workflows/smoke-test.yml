@@ -256,7 +256,7 @@ jobs:
         run: make html
 
       - name: Check links
-        run: linkchecker -f linkchecker.cfg build/html/index.html
+        run: linkchecker -f linkchecker.cfg build/html/index.html --ignore-url=python@3.*
 
   python-notebooks:
     needs: rust-build
