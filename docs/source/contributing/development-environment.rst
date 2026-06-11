@@ -49,6 +49,7 @@ Make sure you are on the latest Rust version:
 Now run ``cargo build`` in the ``rust`` subdirectory of the repo.
 (There will be warnings: They can safely be ignored. `Cleaning them up is tech debt. <https://github.com/opendp/opendp/issues/2476>`)
 
+
 .. code-block:: bash
 
     cd rust
@@ -56,6 +57,13 @@ Now run ``cargo build`` in the ``rust`` subdirectory of the repo.
 
 This will compile a debug build of the OpenDP shared library, placing it in the directory ``opendp/rust/target/debug``. 
 (The specific name of the library file will vary depending on your platform.)
+
+For Apple Silicon, if there were linking errors for python such as: library 'python3.*' not found; run the following commands.
+.. code-block:: bash
+
+    brew install python@3.12
+    PYO3_PYTHON=$(brew --prefix python@3.12)/bin/python3.12
+    cargo build --all-features
 
 Substitute ``cargo build`` with ``cargo test`` to test, or ``cargo check`` to check syntax.
 
