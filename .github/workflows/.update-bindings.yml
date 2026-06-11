@@ -5,7 +5,7 @@
 #
 # INPUTS
 # * channel:  The release channel
-name: Prepare Channel
+name: helper - Prepare Channel
 on:
   workflow_call:
     inputs:
@@ -15,7 +15,7 @@ on:
 
 jobs:
   credential-check:
-    uses: ./.github/workflows/credential-check.yml
+    uses: ./.github/workflows/.credential-check.yml
     with:
       assert_version: false
 
