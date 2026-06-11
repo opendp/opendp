@@ -31,7 +31,7 @@ jobs:
           swap-storage: false   # no: having swap is useful
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -44,7 +44,7 @@ jobs:
         run: cargo check --verbose --features bindings,untrusted
   
       - name: Upload Python bindings
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: python_bindings
           path: python/src/opendp/
@@ -57,10 +57,10 @@ jobs:
         working-directory: docs
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download Python bindings
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: python_bindings
           path: python/src/opendp/
