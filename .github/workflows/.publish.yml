@@ -4,7 +4,7 @@
 # * channel:  The release channel
 # * date:     The release date
 # * dry_run:  Whether to do a dry-run (don't actually publish)
-name: Publish Channel
+name: helper - Publish Channel
 on:
   workflow_call:
     inputs:

@@ -13,7 +13,7 @@
 # INPUTS
 # * channel:  The release channel
 # * fake:     Whether to do a fake build (to save time, for testing only)
-name: Build Channel
+name: helper - Build Channel
 on:
   workflow_call:
     inputs:
