@@ -1,11 +1,19 @@
 from opendp._convert import *
 from opendp._convert import (
-    _scalar_to_slice, _slice_to_scalar, _py_to_slice,
+    _scalar_to_slice,
+    _slice_to_scalar,
+    _py_to_slice,
+    _vector_to_slice,
+    _slice_to_vector,
+    _hashmap_to_slice,
+    py_to_c,
+    _slice_to_hashmap
 )
+
 from opendp._convert_maps import (
-    _vector_to_slice, _slice_to_vector,
-    _slice_to_numpy,_numpy_dtype_for_rust_type,
-    _numpy_to_slice
+    _slice_to_numpy,
+    _numpy_to_slice,
+    _numpy_dtype_for_rust_type,
 )
 
 from opendp._convert import _check_and_cast_scalar
@@ -94,6 +102,27 @@ def test_roundtrip_ffisliceptr_int_lib():
     ffi_slice_ptr = _scalar_to_slice(in_, 'i32')
     out = _slice_to_scalar(ffi_slice_ptr, 'i32')
     assert out == in_
+
+
+def test_vec_str():
+    data = ["a", "bbb", "c"]
+    # partial roundtrip
+    slice = _vector_to_slice(data, type_name=Vec[str])
+    assert _slice_to_vector(slice, type_name=Vec[str]) == data
+
+    # complete roundtrip
+    any = py_to_c(data, c_type=AnyObjectPtr)
+    assert c_to_py(any) == data
+
+
+def test_hashmap():
+    data = {"A": 23, "B": 12, "C": 234}
+    slice = _hashmap_to_slice(data, HashMap[str, int])
+    assert _slice_to_hashmap(slice) == data
+
+    # complete roundtrip
+    any = py_to_c(data, c_type=AnyObjectPtr)
+    assert c_to_py(any) == data
 
 
 @pytest.mark.parametrize(
