@@ -14,12 +14,11 @@ from opendp.mod import (
 from opendp.typing import RuntimeType, RuntimeTypeDescriptor
 
 from opendp._convert_maps import (
-    _ConvertMaps,
     ATOM_MAP,
     INT_SIZES,
     check_c_int_cast,
-    _numpy_to_slice,
     _ConvertMaps,
+    _numpy_to_slice,
     _wrap_in_slice,
     _check_polars_by,
     _NUMPY_COMPATIBLE_ATOM_TYPES,

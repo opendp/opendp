@@ -1,10 +1,9 @@
-from typing import Any, Sequence, Union, cast, MutableMapping
+from typing import Any, Sequence
 
 from opendp._lib import *
 from opendp.mod import (
     ApproximateDivergence,
     ChangeOneIdDistance,
-    Domain,
     ExtrinsicDistance,
     ExtrinsicDivergence,
     ExtrinsicDomain,
@@ -14,7 +13,6 @@ from opendp.mod import (
     SymmetricIdDistance,
     Transformation,
     Measurement,
-    PrivacyProfile,
     Function,
     AtomDomain,
     OptionDomain,
