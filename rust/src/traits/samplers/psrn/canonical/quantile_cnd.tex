@@ -38,8 +38,9 @@ Compute the quantile of a canonical noise distribution, as specified by a tradeo
 
 \begin{theorem}
     \label{postcondition}
-    Evaluates the quantile function $F^{-1}_f(u)$
+    If \texttt{uniform} $\in (0,1)$, the pseudocode evaluates the quantile function $F^{-1}_f(u)$
     as defined in Proposition F.6 of \cite{awan2023canonical}.
+    If $\texttt{uniform} \in \{0,1\}$, the pseudocode returns \texttt{None}.
 \end{theorem}
 
 \begin{proof} 
@@ -81,8 +82,12 @@ The quantile function $F^{-1}_f(u)$ is defined in the following lemma.
 \texttt{uniform} is $u$,
 and \texttt{c} is the fixed point of $f$, as guaranteed in the precondition.
 
-Since the pseudocode uses exact arithmetic, \texttt{quantile\_cnd} implements \ref{prop-f-6},
-satisfying the postcondition.
+If $\texttt{uniform} \in \{0,1\}$, the pseudocode returns \texttt{None} immediately.
+This is consistent with Proposition~\ref{prop-f-6}, which defines $F_f^{-1}$ only on $(0,1)$,
+and avoids infinite recursion at the endpoints.
+
+If $\texttt{uniform} \in (0,1)$, the endpoint guard does not apply, and the pseudocode uses exact arithmetic to implement the three cases of Proposition~\ref{prop-f-6} exactly.
+Therefore, on $(0,1)$, \texttt{quantile\_cnd} evaluates $F_f^{-1}(u)$, satisfying the postcondition.
 
 \end{proof}
 

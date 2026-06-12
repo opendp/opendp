@@ -1,9 +1,11 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::{
     Argument, Function, TypeRecipe,
     codegen::{r::BLOCKLIST, tab_c},
 };
+
+const R_LOG_ARG: &str = "__log";
 
 /// Generate the R/src/lib.c file.
 /// This file registers all the C functions that R can interface with.
@@ -95,7 +97,7 @@ pub fn generate_Ropendp_h(modules: &HashMap<String, Vec<Function>>) -> String {
                         .collect::<Vec<_>>()
                         .join("");
                     let func_name = &func.name;
-                    format!(r#"SEXP {module_name}__{func_name}({args}SEXP log);"#)
+                    format!(r#"SEXP {module_name}__{func_name}({args}SEXP {R_LOG_ARG});"#)
                 })
                 .collect::<Vec<_>>()
                 .join("\n")
@@ -178,7 +180,7 @@ SEXP {module_name}__{func_name}(
 }}
 "#,
         func_name = func.name,
-        args = tab_c(format!("{args}SEXP log")),
+        args = tab_c(format!("{args}SEXP {R_LOG_ARG}")),
         body = tab_c(generate_c_body(module_name, func))
     )
 }
@@ -203,6 +205,9 @@ fn generate_c_input_argument(arg: &Argument) -> String {
 
 /// Generates code to convert all arguments to their C representations.
 fn generate_data_converter(func: &Function) -> String {
+    let named_runtime_types = named_runtime_type_converters(func);
+    let used_type_string_names = used_type_string_names(func);
+
     // all R objects being manipulated need to be protected to prevent them from being freed by R gc
     // without PROTECT, R doesn't know we're manipulating/reading/using this memory
     // will be unprotected in `generate_c_call` at the appropriate time
@@ -220,7 +225,11 @@ fn generate_data_converter(func: &Function) -> String {
         .map(|arg| {
             // types are normalized/always packaged in readable runtime types
             if arg.is_type {
-                return format!("char * c_{name} = rt_to_string({name});", name = arg.name());
+                let name = arg.name();
+                return used_type_string_names
+                    .contains(&name)
+                    .then(|| format!("char * c_{name} = rt_to_string({name});"))
+                    .unwrap_or_default();
             }
             format!(
                 r#"{c_type} c_{name} = {converter};"#,
@@ -233,16 +242,73 @@ fn generate_data_converter(func: &Function) -> String {
         .join("\n");
 
     if data_converter.is_empty() {
-        "// No arguments to convert to c types.\nPROTECT(log);".to_string()
+        format!("// No arguments to convert to c types.\nPROTECT({R_LOG_ARG});")
     } else {
         format!(
             r#"// Convert arguments to c types.
 {protect}
-PROTECT(log);
+PROTECT({R_LOG_ARG});
 
+{named_runtime_types}
 {data_converter}
-"#
+"#,
+            named_runtime_types = named_runtime_types.code
         )
+    }
+}
+
+fn used_type_string_names(func: &Function) -> HashSet<String> {
+    let mut names = func
+        .args
+        .iter()
+        .filter(|arg| arg.is_type)
+        .map(|arg| arg.name())
+        .collect::<HashSet<_>>();
+
+    names.extend(func.args.iter().filter_map(|arg| {
+        matches!(arg.c_type().as_str(), "CallbackFn" | "TransitionFn")
+            .then(|| format!("T_{}", arg.name()))
+    }));
+    names
+}
+
+struct NamedRuntimeTypeConverters {
+    code: String,
+    protect_count: usize,
+}
+
+fn explicit_type_arg_names(func: &Function) -> HashSet<String> {
+    flatten_args_for_c(func)
+        .iter()
+        .filter(|arg| arg.is_type)
+        .map(|arg| arg.name())
+        .collect()
+}
+
+fn named_runtime_type_converters(func: &Function) -> NamedRuntimeTypeConverters {
+    let type_arg_names = explicit_type_arg_names(func);
+    let mut protect_count = 0;
+
+    let code = flatten_args_for_c(func)
+        .iter()
+        .filter_map(named_runtime_type_arg)
+        .filter_map(|(arg_name, type_name)| {
+            if type_arg_names.contains(&format!("T_{arg_name}")) {
+                return None;
+            }
+            Some(if type_arg_names.contains(&type_name) {
+                format!(r#"SEXP T_{arg_name} = {type_name};"#)
+            } else {
+                protect_count += 1;
+                format!(r#"SEXP T_{arg_name} = PROTECT(parse_runtime_type("{type_name}"));"#)
+            })
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    NamedRuntimeTypeConverters {
+        code,
+        protect_count,
     }
 }
 
@@ -251,6 +317,7 @@ PROTECT(log);
 /// - handles errors returned by the Rust
 /// - converts the response to SEXP
 fn generate_c_call(module_name: &str, func: &Function) -> String {
+    let named_runtime_types = named_runtime_type_converters(func);
     // all converted arguments were prefixed with `c_`
     let args = (func.args.iter())
         .map(|arg| {
@@ -278,7 +345,10 @@ fn generate_c_call(module_name: &str, func: &Function) -> String {
         .join("\n");
 
     // mirrors the PROTECT calls in `generate_data_converter`. One addition for `log`
-    let unprotect = format!("UNPROTECT({});", flatten_args_for_c(func).len() + 1);
+    let unprotect = format!(
+        "UNPROTECT({});",
+        flatten_args_for_c(func).len() + named_runtime_types.protect_count + 1
+    );
     let cleanup = if cleanup.is_empty() {
         String::new()
     } else {
@@ -320,7 +390,7 @@ fn r_to_c(arg: &Argument) -> String {
 
     let rust_type = (arg.rust_type.clone())
         .map(|rt| match rt {
-            TypeRecipe::Name(v) => v,
+            TypeRecipe::Name(_) => format!("T_{name}"),
             TypeRecipe::None => "R_NilValue".to_string(),
             _ => format!("T_{name}"),
         })
@@ -353,6 +423,21 @@ fn r_to_c(arg: &Argument) -> String {
         ty if ty == "uint32_t" => format!("(unsigned int)Rf_asInteger({name})"),
         ty if ty == "bool" => format!("asLogical({name})"),
         _ => format!("\"UNKNOWN TYPE: {c_type}\""),
+    }
+}
+
+fn named_runtime_type_arg(arg: &Argument) -> Option<(String, String)> {
+    if arg.is_type {
+        return None;
+    }
+    let Some(TypeRecipe::Name(type_name)) = &arg.rust_type else {
+        return None;
+    };
+    match arg.c_type().as_str() {
+        "void *" | "AnyObject *" | "CallbackFn" | "TransitionFn" => {
+            Some((arg.name(), type_name.clone()))
+        }
+        _ => None,
     }
 }
 
@@ -405,13 +490,15 @@ fn c_to_r(arg: Argument) -> String {
         }
         // call out to hand-written code from `convert.c` and `convert_elements.c`
         ty if ty == "AnyObject *" => format!("anyobjectptr_to_sexp({name})"),
-        ty if ty == "AnyTransformation *" => format!("anytransformationptr_to_sexp({name}, log)"),
-        ty if ty == "AnyMeasurement *" => format!("anymeasurementptr_to_sexp({name}, log)"),
-        ty if ty == "AnyOdometer *" => format!("anyodometerptr_to_sexp({name}, log)"),
-        ty if ty == "AnyDomain *" => format!("anydomainptr_to_sexp({name}, log)"),
-        ty if ty == "AnyMetric *" => format!("anymetricptr_to_sexp({name}, log)"),
-        ty if ty == "AnyMeasure *" => format!("anymeasureptr_to_sexp({name}, log)"),
-        ty if ty == "AnyFunction *" => format!("anyfunctionptr_to_sexp({name}, log)"),
+        ty if ty == "AnyTransformation *" => {
+            format!("anytransformationptr_to_sexp({name}, {R_LOG_ARG})")
+        }
+        ty if ty == "AnyMeasurement *" => format!("anymeasurementptr_to_sexp({name}, {R_LOG_ARG})"),
+        ty if ty == "AnyOdometer *" => format!("anyodometerptr_to_sexp({name}, {R_LOG_ARG})"),
+        ty if ty == "AnyDomain *" => format!("anydomainptr_to_sexp({name}, {R_LOG_ARG})"),
+        ty if ty == "AnyMetric *" => format!("anymetricptr_to_sexp({name}, {R_LOG_ARG})"),
+        ty if ty == "AnyMeasure *" => format!("anymeasureptr_to_sexp({name}, {R_LOG_ARG})"),
+        ty if ty == "AnyFunction *" => format!("anyfunctionptr_to_sexp({name}, {R_LOG_ARG})"),
         ty if ty == "ExtrinsicObject *" => format!("extrinsic_object_to_sexp({name})"),
         // https://github.com/hadley/r-internals/blob/master/vectors.md
         ty if ty == "char *" => format!("ScalarString(mkChar({name}))"),

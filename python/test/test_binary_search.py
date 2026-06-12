@@ -51,6 +51,19 @@ def test_binary_search():
     assert dp.binary_search(lambda x: x >= 5, T=int) == 5
 
 
+def test_binary_search_one_sided():
+    assert dp.binary_search(lambda x: x <= -5, bounds=(-10, None)) == -5
+    assert dp.binary_search(lambda x: x <= -5, bounds=(None, -1)) == -5
+
+    with pytest.raises(ValueError, match="unable to infer upper bound"):
+        dp.binary_search(lambda x: x <= -5, bounds=(0, None))
+    with pytest.raises(ValueError, match="unable to infer lower bound"):
+        dp.binary_search(lambda x: x <= -5, bounds=(None, -10))
+
+def test_mixed_type_bounds():
+    with pytest.raises(TypeError, match="bounds must share the same type"):
+        dp.binary_search(lambda x: x <= -5, bounds=(-10, 20.))
+
 def test_binary_search_inferred_int():
     def predicate(v):
         if not isinstance(v, int):

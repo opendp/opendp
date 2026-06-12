@@ -6,8 +6,16 @@ test_that("binary search", {
   m_sum <- binary_search_chain(\(s) t_sum |> then_laplace(s), d_in = 1L, d_out = 1., .T = "float")
 })
 
+test_that("binary search honors explicit integer type without bounds", {
+  expect_equal(binary_search(\(x) x > 5L, .T = "int"), 6L)
+  expect_equal(binary_search(\(x) x < 5L, .T = "int"), 4L)
+})
+
 test_that("floating-point aliases to idealized-numerics", {
-  disable_features("floating-point", "idealized-numerics")
+  expect_warning(
+    disable_features("floating-point", "idealized-numerics"),
+    "\"floating-point\" is deprecated. Use \"idealized-numerics\" instead."
+  )
 
   expect_warning(
     enable_features("floating-point"),
