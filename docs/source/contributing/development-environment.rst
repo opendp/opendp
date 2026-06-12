@@ -57,12 +57,16 @@ Now run ``cargo build`` in the ``rust`` subdirectory of the repo.
 This will compile a debug build of the OpenDP shared library, placing it in the directory ``opendp/rust/target/debug``. 
 (The specific name of the library file will vary depending on your platform.)
 
-For Apple Silicon, if there were linking errors for python such as: library 'python3.*' not found; run the following commands.
-.. code-block:: bash
+.. note::
 
-    brew install python@3.12
-    PYO3_PYTHON=$(brew --prefix python@3.12)/bin/python3.12
-    cargo build --all-features
+    If Python is missing or too old there may be an error like ``library 'python3.*' not found``.
+    In that case, providing an envvar to the correct python should help. For example on MacOS with homebrew:
+
+    .. code-block:: bash
+
+        brew install python@3.10
+        PYO3_PYTHON=$(which python3.10)
+        cargo build --all-features
 
 Substitute ``cargo build`` with ``cargo test`` to test, or ``cargo check`` to check syntax.
 
