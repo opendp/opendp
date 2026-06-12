@@ -208,7 +208,7 @@ def c_to_py(value: Any) -> Any:
             rt_type = rt_type.origin
 
         if rt_type in _ConvertMaps.DISTANCE_CLASS_FROM_RT_TYPE:
-            value.__class__ = _ConvertMaps.DISTANCE_FROM_RT_TYPE
+            value.__class__ = _ConvertMaps.DISTANCE_FROM_RT_TYPE[rt_type]
 
         # if you fall through these cases, then it is just treated as a generic Metric
 
@@ -221,7 +221,7 @@ def c_to_py(value: Any) -> Any:
             rt_type = rt_type.origin
 
         if rt_type in _ConvertMaps.MEASURE_CLASS_FROM_RT_TYPE:
-            value.__class__ = _ConvertMaps.MEASURE_CLASS_FROM_RT_TYPE
+            value.__class__ = _ConvertMaps.MEASURE_CLASS_FROM_RT_TYPE[rt_type]
 
         # if you fall through these cases, then it is just treated as a generic Measure
 
