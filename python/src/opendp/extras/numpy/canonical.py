@@ -245,7 +245,7 @@ def one_sided_pvalue(
     stats = import_optional_dependency("scipy.stats")
     np = import_optional_dependency("numpy")
 
-    values = np.arange(size)
+    values = np.arange(0, size + 1)
     B = stats.binom.pmf(k=values, n=size, p=theta)
     if tail == "right":
         F = _cnd_cdf(values, Z, d_in=d_in, d_out=d_out)

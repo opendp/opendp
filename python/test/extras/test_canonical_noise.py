@@ -152,21 +152,21 @@ def test_oneside_pvalue():
     pytest.importorskip("scipy")
     tulap = BinomialCND(5.0, d_in=1.0, d_out=(0.1, 1e-6), size=10)
     assert str(tulap) == "BinomialCND(estimate=5.0, d_in=1.0, d_out=(0.1, 1e-06), size=10)"
-    
+
     # should be approximately equal to 0.5
-    assert np.allclose(tulap.p_value(theta=0.5, tail="right"), 0.4993195913951362)
-    assert np.allclose(tulap.p_value(theta=0.5, tail="left"), 0.49970384610486424)
+    assert np.allclose(tulap.p_value(theta=0.5, tail="right"), 0.5000000000000002)
+    assert np.allclose(tulap.p_value(theta=0.5, tail="left"), 0.5000000000000002)
 
     pvalue = one_sided_pvalue(
         Z=3, d_in=1.0, d_out=(0.5, 1e-8), size=10, theta=0.5, tail="right"
     )
-    assert np.allclose(pvalue, 0.7606589354450621)
+    assert np.allclose(pvalue, 0.7616207531435369)
 
 
 def test_twoside_pvalue():
     pytest.importorskip("scipy")
     tulap = BinomialCND(1.0, d_in=1.0, d_out=(0.5, 1e-8), size=10)
-    assert np.allclose(tulap.p_value(theta=0.5), 0.18443148204450355)
+    assert np.allclose(tulap.p_value(theta=0.5), 0.1841407488015684)
 
 
 def test_1s_ump_basic():
