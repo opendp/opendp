@@ -1,6 +1,14 @@
 from typing import Any, Sequence
 
-from opendp._lib import *
+from opendp._lib import (
+    ATOM_EQUIVALENCE_CLASSES,
+    AnyFunction,
+    ExtrinsicObject,
+    FfiSlice,
+    FfiSlicePtr,
+    ctypes, 
+    import_optional_dependency, 
+)
 from opendp.mod import (
     ApproximateDivergence,
     ChangeOneIdDistance,
@@ -169,18 +177,6 @@ def _slice_to_numpy(raw: FfiSlicePtr, type_name: RuntimeType):
 
     array_ptr: Any = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))
     return np.ctypeslib.as_array(array_ptr, shape=(raw.contents.len,)).copy()
-
-
-
-
-
-
-def _slice_to_option(raw: FfiSlicePtr, type_name: RuntimeType) -> Optional[Any]:
-    if raw.contents.len == 0:
-        return None
-    return _slice_to_py(raw, type_name.args[0])
-
-
 
 
 def _slice_to_function(raw: FfiSlicePtr) -> Function:
@@ -369,7 +365,7 @@ class _ConvertMaps:
     FROM_SLICE_RT_TYPE = {
         "NDArray": _slice_to_numpy,
         "Function": lambda raw, _: _slice_to_function(raw),
-        "Option": _slice_to_option,
+        
     }
 
     DOMAIN_CLASS_FROM_RT_TYPE = {
