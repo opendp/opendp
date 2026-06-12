@@ -48,7 +48,7 @@ impl AnonymousColumnsUdf for DPFrameLenShim {
         _: &polars::prelude::Schema,
         _: &[polars::prelude::Field],
     ) -> PolarsResult<polars::prelude::Field> {
-        Ok(Field::new("len".into(), DataType::UInt32))
+        Ok(Field::new("len".into(), DataType::Int64))
     }
 }
 impl OpenDPPlugin for DPFrameLenShim {
@@ -72,21 +72,31 @@ where
     Expr: StableExpr<L01InfDistance<MI>, L01InfDistance<MI>> + PrivateExpr<L01InfDistance<MI>, MO>,
     (ExprDomain, MO::Metric): MetricSpace,
 {
-    let Some([scale]) = match_shim::<DPFrameLenShim, _>(&expr)? else {
+    let Some([scale, allow_negative]) = match_shim::<DPFrameLenShim, 2>(&expr)? else {
         return fallible!(
             MakeMeasurement,
             "Expected {} function",
             DPFrameLenShim::NAME
         );
     };
+    
+    let allow_negative = match allow_negative {
+        Expr::Literal(lit) => lit.bool().unwrap_or(false),
+        _ =>false,
+    };
+    let len_expr = if allow_negative {
+        len().cast(DataType::Int64)
+    } else {
+        len()
+    };
 
-    apply_plugin(vec![len(), scale], expr, NoiseShim).make_private(
+    // Cast to Int64 when allow_negative is True.
+    apply_plugin(vec![len_expr, scale], expr, NoiseShim).make_private(
         input_domain.clone(),
         input_metric,
         output_measure,
         global_scale,
     )
-/// Is this where the non-negativity is being enforced?
 }
 
 #[cfg(feature = "ffi")]
