@@ -280,7 +280,7 @@ def one_sided_uniformly_most_powerful_tests(
     stats = import_optional_dependency("scipy.stats")
     np = import_optional_dependency("numpy")
 
-    values = np.arange(0, size + 1)
+    values = np.arange(size + 1)
     B = stats.binom.pmf(k=values, n=size, p=theta)
 
     predicate = lambda s: np.dot(B, _cnd_cdf(values, s, d_in, d_out)) > alpha
