@@ -153,8 +153,8 @@ def test_oneside_pvalue():
     tulap = BinomialCND(5.0, d_in=1.0, d_out=(0.1, 1e-6), size=10)
     assert str(tulap) == "BinomialCND(estimate=5.0, d_in=1.0, d_out=(0.1, 1e-06), size=10)"
 
-    assert np.allclose(tulap.p_value(theta=0.5, tail="right"), 0.5000000000000002)
-    assert np.allclose(tulap.p_value(theta=0.5, tail="left"), 0.5000000000000002)
+    assert np.allclose(tulap.p_value(theta=0.5, tail="right"), 0.5)
+    assert np.allclose(tulap.p_value(theta=0.5, tail="left"), 0.5)
 
     pvalue = one_sided_pvalue(
         Z=3, d_in=1.0, d_out=(0.5, 1e-8), size=10, theta=0.5, tail="right"
