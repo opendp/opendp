@@ -6,8 +6,8 @@ from opendp._lib import (
     ExtrinsicObject,
     FfiSlice,
     FfiSlicePtr,
-    ctypes, 
-    import_optional_dependency, 
+    ctypes,
+    import_optional_dependency,
 )
 from opendp.mod import (
     ApproximateDivergence,
@@ -29,25 +29,29 @@ from opendp.mod import (
 from opendp.typing import RuntimeType
 
 ATOM_MAP = {
-    'f32': ctypes.c_float,
-    'f64': ctypes.c_double,
-    'u8': ctypes.c_uint8,
-    'u16': ctypes.c_uint16,
-    'u32': ctypes.c_uint32,
-    'u64': ctypes.c_uint64,
-    'i8': ctypes.c_int8,
-    'i16': ctypes.c_int16,
-    'i32': ctypes.c_int32,
-    'i64': ctypes.c_int64,
-    'usize': ctypes.c_size_t,
-    'bool': ctypes.c_bool,
-    'AnyMeasurementPtr': Measurement,
-    'AnyTransformationPtr': Transformation,
+    "f32": ctypes.c_float,
+    "f64": ctypes.c_double,
+    "u8": ctypes.c_uint8,
+    "u16": ctypes.c_uint16,
+    "u32": ctypes.c_uint32,
+    "u64": ctypes.c_uint64,
+    "i8": ctypes.c_int8,
+    "i16": ctypes.c_int16,
+    "i32": ctypes.c_int32,
+    "i64": ctypes.c_int64,
+    "usize": ctypes.c_size_t,
+    "bool": ctypes.c_bool,
+    "AnyMeasurementPtr": Measurement,
+    "AnyTransformationPtr": Transformation,
 }
 
-_NUMPY_COMPATIBLE_ATOM_TYPES = frozenset(ATOM_MAP) - {'AnyMeasurementPtr', 'AnyTransformationPtr'}
+_NUMPY_COMPATIBLE_ATOM_TYPES = frozenset(ATOM_MAP) - {
+    "AnyMeasurementPtr",
+    "AnyTransformationPtr",
+}
 
 _ERROR_URL_298 = "https://github.com/opendp/opendp/discussions/298"
+
 
 def c_int_limits(type_name):
     c_int_type = ATOM_MAP[type_name]
@@ -56,35 +60,50 @@ def c_int_limits(type_name):
     signed_limit = 2 ** (bit_size - 1)
     return (-signed_limit, signed_limit - 1) if signed else (0, 2 * signed_limit - 1)
 
+
 INT_SIZES = {
-    ty: c_int_limits(ty) for ty in (
-        'u8', 'u16', 'u32', 'u64', 'i8', 'i16', 'i32', 'i64', 'usize',
+    ty: c_int_limits(ty)
+    for ty in (
+        "u8",
+        "u16",
+        "u32",
+        "u64",
+        "i8",
+        "i16",
+        "i32",
+        "i64",
+        "usize",
     )
 }
 
+
 def _numpy_dtype_for_rust_type(type_name: str) -> Any:
-    np = import_optional_dependency('numpy')
+    np = import_optional_dependency("numpy")
     if type_name not in _NUMPY_COMPATIBLE_ATOM_TYPES:
         raise ValueError(f"unrecognized numpy dtype: {type_name}")
     return np.dtype(ATOM_MAP[type_name])
 
 
-
-
 def _check_and_cast_scalar(expected, value):
-    '''
+    """
     1. Converts integer value to float if expected value is float
     2. Checks that value is roughly a member of the same data type as expected
     3. Checks that integers are representable at the given data type
-    '''
+    """
     # relax checks in the case of an int
-    if isinstance(value, int) and expected in ["f32", "f64"] and not isinstance(value, bool):
+    if (
+        isinstance(value, int)
+        and expected in ["f32", "f64"]
+        and not isinstance(value, bool)
+    ):
         return float(value)
 
     inferred = str(RuntimeType.infer(value))
 
     if expected not in ATOM_EQUIVALENCE_CLASSES.get(inferred, [inferred]):
-        raise TypeError(f"inferred type is {inferred}, expected {expected}. See {_ERROR_URL_298}")
+        raise TypeError(
+            f"inferred type is {inferred}, expected {expected}. See {_ERROR_URL_298}"
+        )
 
     if expected in INT_SIZES:
         check_c_int_cast(value, expected)
@@ -101,31 +120,37 @@ def check_c_int_cast(v, type_name):
 def _extrinsic_to_slice(val) -> FfiSlicePtr:
     return _wrap_in_slice(ctypes.pointer(ExtrinsicObject(ctypes.py_object(val))), 1)
 
+
 def _slice_to_extrinsic(raw: FfiSlicePtr):
     return ctypes.cast(raw.contents.ptr, ctypes.POINTER(ExtrinsicObject)).contents.ptr
 
+
 def _string_to_slice(val: str) -> FfiSlicePtr:
-    np = import_optional_dependency('numpy', raise_error=False)
+    np = import_optional_dependency("numpy", raise_error=False)
     if np is not None and isinstance(val, np.ndarray):
         val = val.item()
     return _wrap_in_slice(ctypes.pointer(ctypes.c_char_p(val.encode())), 1)
 
 
 def _slice_to_string(raw: FfiSlicePtr) -> str:
-    value = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_char_p)).contents.value
+    value = ctypes.cast(
+        raw.contents.ptr, ctypes.POINTER(ctypes.c_char_p)
+    ).contents.value
     assert value is not None
     return value.decode()
 
 
 def _bitvector_to_slice(val: Sequence[Any]) -> FfiSlicePtr:
-    np = import_optional_dependency('numpy', raise_error=False)
+    np = import_optional_dependency("numpy", raise_error=False)
     if np is not None and isinstance(val, np.ndarray):
         val = val.tobytes()
 
     if not isinstance(val, (bytes, bytearray)):
-        raise TypeError("Expected type is BitVector but input data is not bytes or bytearray.")  # pragma: no cover
+        raise TypeError(
+            "Expected type is BitVector but input data is not bytes or bytearray."
+        )  # pragma: no cover
 
-    array = (ctypes.c_uint8 * len(val)).from_buffer_copy(val) # type: ignore[operator]
+    array = (ctypes.c_uint8 * len(val)).from_buffer_copy(val)  # type: ignore[operator]
     return _wrap_in_slice(array, len(val) * 8)
 
 
@@ -133,20 +158,22 @@ def _slice_to_bitvector(raw: FfiSlicePtr) -> bytes:
     # raw.contents.len is the number of valid bits.
     # Division by -8 is ceiling rather than floor: the number of bytes in the buffer
     n_bytes = -(raw.contents.len // -8)
-    buffer = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_uint8))[0:n_bytes] # type: ignore
+    buffer = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_uint8))[0:n_bytes]  # type: ignore
     return bytes(buffer)
-
-
 
 
 def _numpy_to_slice(val, type_name: RuntimeType) -> FfiSlicePtr:
     np = import_optional_dependency("numpy")
-    if type_name.origin != 'NDArray' or len(type_name.args) != 1:
-        raise ValueError(f"type_name must be NDArray<T> with one type argument, found {type_name}")  # pragma: no cover
+    if type_name.origin != "NDArray" or len(type_name.args) != 1:
+        raise ValueError(
+            f"type_name must be NDArray<T> with one type argument, found {type_name}"
+        )  # pragma: no cover
 
     inner_type_name = type_name.args[0]
     if not isinstance(inner_type_name, str):
-        raise ValueError(f"inner type must be atomic, found {inner_type_name}")  # pragma: no cover
+        raise ValueError(
+            f"inner type must be atomic, found {inner_type_name}"
+        )  # pragma: no cover
 
     np_dtype = _numpy_dtype_for_rust_type(inner_type_name)
     if not isinstance(val, np.ndarray):
@@ -166,16 +193,24 @@ def _numpy_to_slice(val, type_name: RuntimeType) -> FfiSlicePtr:
 
 def _slice_to_numpy(raw: FfiSlicePtr, type_name: RuntimeType):
     np = import_optional_dependency("numpy")
-    if type_name.origin != 'NDArray' or len(type_name.args) != 1:
-        raise ValueError(f"type_name must be NDArray<T> with one type argument, found {type_name}")  # pragma: no cover
+    if type_name.origin != "NDArray" or len(type_name.args) != 1:
+        raise ValueError(
+            f"type_name must be NDArray<T> with one type argument, found {type_name}"
+        )  # pragma: no cover
 
     inner_type_name = type_name.args[0]
     if not isinstance(inner_type_name, str):
-        raise ValueError(f"inner type must be atomic, found {inner_type_name}")  # pragma: no cover
+        raise ValueError(
+            f"inner type must be atomic, found {inner_type_name}"
+        )  # pragma: no cover
 
-    _numpy_dtype_for_rust_type(inner_type_name)  # validate numpy compatibility before casting
+    _numpy_dtype_for_rust_type(
+        inner_type_name
+    )  # validate numpy compatibility before casting
 
-    array_ptr: Any = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name]))
+    array_ptr: Any = ctypes.cast(
+        raw.contents.ptr, ctypes.POINTER(ATOM_MAP[inner_type_name])
+    )
     return np.ctypeslib.as_array(array_ptr, shape=(raw.contents.len,)).copy()
 
 
@@ -189,15 +224,13 @@ def _slice_to_function(raw: FfiSlicePtr) -> Function:
 def _function_to_slice(raw: Function, type_name: RuntimeType) -> FfiSlicePtr:
     if not isinstance(raw, Function):
         from opendp.core import new_function
+
         raw = new_function(raw, TO=type_name.args[1])
     return _wrap_in_slice(raw, 1)
 
 
-
-
-
 def _lazyframe_to_slice(val) -> FfiSlicePtr:
-    pl = import_optional_dependency('polars')
+    pl = import_optional_dependency("polars")
     if not isinstance(val, pl.LazyFrame):
         raise ValueError("expected Polars LazyFrame")
 
@@ -208,15 +241,15 @@ def _lazyframe_to_slice(val) -> FfiSlicePtr:
 
 
 def _slice_to_lazyframe(raw: FfiSlicePtr):
-    pl = import_optional_dependency('polars')
+    pl = import_optional_dependency("polars")
     lf = pl.LazyFrame()
     slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_uint8))
-    lf.__setstate__(bytes(slice_array[0:raw.contents.len]))
+    lf.__setstate__(bytes(slice_array[0 : raw.contents.len]))
     return lf
 
 
 def _expr_to_slice(val) -> FfiSlicePtr:
-    pl = import_optional_dependency('polars')
+    pl = import_optional_dependency("polars")
     if isinstance(val, str):
         val = pl.col(val)
 
@@ -230,20 +263,24 @@ def _expr_to_slice(val) -> FfiSlicePtr:
 
 
 def _slice_to_expr(raw: FfiSlicePtr):
-    pl = import_optional_dependency('polars')
+    pl = import_optional_dependency("polars")
     expr = pl.all()
     slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_uint8))
-    expr.__setstate__(bytes(slice_array[0:raw.contents.len]))
+    expr.__setstate__(bytes(slice_array[0 : raw.contents.len]))
     return expr
 
 
 def _slice_to_exprplan(raw: FfiSlicePtr):
     void_array_ptr = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
-    ptr_data: list[ctypes.c_void_p] = void_array_ptr[0:raw.contents.len]
+    ptr_data: list[ctypes.c_void_p] = void_array_ptr[0 : raw.contents.len]
 
     plan = _slice_to_lazyframe(ctypes.cast(ptr_data[0], FfiSlicePtr))
     expr = _slice_to_expr(ctypes.cast(ptr_data[1], FfiSlicePtr))
-    fill = _slice_to_expr(ctypes.cast(ptr_data[2], FfiSlicePtr)) if raw.contents.len == 3 else None
+    fill = (
+        _slice_to_expr(ctypes.cast(ptr_data[2], FfiSlicePtr))
+        if raw.contents.len == 3
+        else None
+    )
 
     from collections import namedtuple
 
@@ -251,25 +288,16 @@ def _slice_to_exprplan(raw: FfiSlicePtr):
     return ExprPlan(plan, expr, fill)
 
 
-
-
-
-
 def _check_polars_by(by):
     if isinstance(by, str):
-        raise ValueError(f"by ({by}) must be a sequence type; Did you mean [\"{by}\"]?")
+        raise ValueError(f'by ({by}) must be a sequence type; Did you mean ["{by}"]?')
 
     if not isinstance(by, Sequence):
         raise ValueError(f"by ({by}) must be a sequence type")
 
 
-
-
-
-
-
 def _dataframe_to_slice(val) -> FfiSlicePtr:
-    pl = import_optional_dependency('polars')
+    pl = import_optional_dependency("polars")
     if not isinstance(val, pl.DataFrame):
         raise ValueError("expected Polars DataFrame")  # pragma: no cover
 
@@ -279,17 +307,21 @@ def _dataframe_to_slice(val) -> FfiSlicePtr:
     raw.depends_on(slices)
     return raw
 
+
 def _slice_to_dataframe(raw: FfiSlicePtr):
-    pl = import_optional_dependency('polars')
+    pl = import_optional_dependency("polars")
     slice_array = ctypes.cast(raw.contents.ptr, FfiSlicePtr)
-    series = [_slice_to_series(FfiSlicePtr(ffislice)) for ffislice in slice_array[0:raw.contents.len]]
+    series = [
+        _slice_to_series(FfiSlicePtr(ffislice))
+        for ffislice in slice_array[0 : raw.contents.len]
+    ]
     return pl.DataFrame(series)
 
 
 def _series_to_slice(val) -> FfiSlicePtr:
     from opendp._data import new_arrow_array, arrow_array_free
 
-    pl = import_optional_dependency('polars')
+    pl = import_optional_dependency("polars")
     if not isinstance(val, pl.Series):
         raise ValueError("expected Polars Series")
 
@@ -315,8 +347,8 @@ def _series_to_slice(val) -> FfiSlicePtr:
 
 
 def _slice_to_series(raw: FfiSlicePtr):
-    pl = import_optional_dependency('polars')
-    pyarrow = import_optional_dependency('pyarrow')
+    pl = import_optional_dependency("polars")
+    pyarrow = import_optional_dependency("pyarrow")
     slice_array = ctypes.cast(raw.contents.ptr, ctypes.POINTER(ctypes.c_void_p))
     array_ptr, schema_ptr, name_ptr = slice_array[0:3]
 
@@ -365,7 +397,6 @@ class _ConvertMaps:
     FROM_SLICE_RT_TYPE = {
         "NDArray": _slice_to_numpy,
         "Function": lambda raw, _: _slice_to_function(raw),
-        
     }
 
     DOMAIN_CLASS_FROM_RT_TYPE = {
@@ -388,5 +419,3 @@ class _ConvertMaps:
         "Approximate": ApproximateDivergence,
         ExtrinsicDivergence.__name__: ExtrinsicDivergence,
     }
-
-
