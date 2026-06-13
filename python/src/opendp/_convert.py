@@ -635,6 +635,7 @@ def _slice_to_anyobject(raw: FfiSlicePtr):
 
 class _NestedConvertMaps:
     FROM_SLICE_STR = {
+        "AnyObject": _slice_to_anyobject,
         "Bound": _slice_to_group_bound,
         "Bounds": lambda raw: _slice_to_vector(raw, RuntimeType("Vec", ["Bound"])),
         "Margin": _slice_to_margin,
@@ -647,7 +648,6 @@ class _NestedConvertMaps:
     }
 
     FROM_SLICE_RT_TYPE = {
-        "AnyObject": _slice_to_anyobject,
         "HashMap": lambda raw, _: _slice_to_hashmap(raw),
         "Option": _slice_to_option,
         "Tuple": _slice_to_tuple,
