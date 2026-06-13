@@ -208,7 +208,7 @@ def c_to_py(value: Any) -> Any:
             rt_type = rt_type.origin
 
         if rt_type in _ConvertMaps.DISTANCE_CLASS_FROM_RT_TYPE:
-            value.__class__ = _ConvertMaps.DISTANCE_FROM_RT_TYPE[rt_type]
+            value.__class__ = _ConvertMaps.DISTANCE_CLASS_FROM_RT_TYPE[rt_type]
 
         # if you fall through these cases, then it is just treated as a generic Metric
 
@@ -280,7 +280,7 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
             return _ConvertMaps.TO_SLICE_FROM_STR[type_name](value)
 
         if type_name in _NestedConvertMaps.TO_SLICE_FROM_STR:
-            return _NestedConvertMaps._TO_SLICE_FROM_STR[type_name](value)
+            return _NestedConvertMaps.TO_SLICE_FROM_STR[type_name](value)
 
     if isinstance(type_name, RuntimeType):
         if type_name.origin in _ConvertMaps.TO_SLICE_FROM_ORIGIN:
