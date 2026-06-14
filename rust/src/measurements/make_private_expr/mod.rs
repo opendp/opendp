@@ -243,10 +243,6 @@ where
                 expr_len::make_expr_private_len(input_domain, input_metric, output_measure, self)
             }
 
-            Expr::Cast {expr, dtype, options} => {
-                expr_len::make_expr_private_len(input_domain, input_metric, output_measure, self)
-            }
-
             #[cfg(feature = "contrib")]
             Expr::Literal(_) => {
                 expr_literal::make_expr_private_lit(input_domain, input_metric, self)

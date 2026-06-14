@@ -7,14 +7,18 @@ use crate::{
     metrics::{FrameDistance, InsertDeleteDistance, L0PInfDistance, SymmetricDistance},
     polars::PrivacyNamespace,
     transformations::test_helper::get_test_data,
+    domains::WildExprDomain,
+    error::Fallible,
+    core::Measurement,
+
 };
 
 #[test]
-fn test_make_expr_puredp() -> Fallible<()> {
+fn test_make_expr_puredp<MI,MO>(){
     let (lf_domain, lf) = get_test_data()?;
     let scale: f64 = 0.0;
 
-    let m_quant = make_private_expr(
+    let m_quant: Fallible<Measurement<WildExprDomain, MI, MO, ExprPlan>> = make_private_expr(
         lf_domain.select(),
         L0PInfDistance(InsertDeleteDistance),
         MaxDivergence,
@@ -26,16 +30,14 @@ fn test_make_expr_puredp() -> Fallible<()> {
     let df_actual = lf.select([dp_expr]).collect()?;
 
     assert_eq!(df_actual, df!("const_1f64" => [1000.0])?);
-
-    Ok(())
 }
 
 #[test]
-fn test_make_expr_zcdp() -> Fallible<()> {
+fn test_make_expr_zcdp<MI, MO>() {
     let (lf_domain, lf) = get_test_data()?;
     let scale: f64 = 0.0;
 
-    let m_quant = make_private_expr(
+    let m_quant: Fallible<Measurement<WildExprDomain, MI, MO, ExprPlan>> = make_private_expr(
         lf_domain.select(),
         L0PInfDistance(InsertDeleteDistance),
         ZeroConcentratedDivergence::default(),
@@ -47,16 +49,14 @@ fn test_make_expr_zcdp() -> Fallible<()> {
     let df_actual = lf.select([dp_expr]).collect()?;
 
     assert_eq!(df_actual, df!("const_1f64" => [1000.0])?);
-
-    Ok(())
 }
 
 #[test]
-fn test_make_expr_gaussian() -> Fallible<()> {
+fn test_make_expr_gaussian<MI, MO>() {
     let (lf_domain, lf) = get_test_data()?;
     let scale: f64 = 0.0;
 
-    let m_quant = make_private_expr(
+    let m_quant: Fallible<Measurement<WildExprDomain, MI, MO, ExprPlan>> = make_private_expr(
         lf_domain.select(),
         L0PInfDistance(InsertDeleteDistance),
         ZeroConcentratedDivergence::default(),
@@ -68,12 +68,10 @@ fn test_make_expr_gaussian() -> Fallible<()> {
     let df_actual = lf.select([dp_expr]).collect()?;
 
     assert_eq!(df_actual, df!("const_1f64" => [1000.0])?);
-
-    Ok(())
 }
 
 #[test]
-fn test_make_laplace_grouped() -> Fallible<()> {
+fn test_make_laplace_grouped() {
     let (lf_domain, lf) = get_test_data()?;
     let scale: f64 = 0.0;
 
@@ -103,14 +101,12 @@ fn test_make_laplace_grouped() -> Fallible<()> {
         df_act.sort(["chunk_2_bool"], Default::default())?,
         df_exp.sort(["chunk_2_bool"], Default::default())?
     );
-    Ok(())
 }
 
 fn check_autocalibration(
     margin: Margin,
     bounds: (u32, u32),
-    d_in: (u32, u32, u32),
-) -> Fallible<()> {
+    d_in: (u32, u32, u32),) {
     let series_domain = SeriesDomain::new("A", AtomDomain::<i32>::default());
     let lf_domain = LazyFrameDomain::new(vec![series_domain])?.with_margin(margin)?;
     let expr_domain = lf_domain.select();
@@ -133,8 +129,6 @@ fn check_autocalibration(
     // because of this, epsilon will always work out to 1.
     println!("epsilon: {:?}", epsilon);
     assert_eq!(epsilon, 1.0);
-
-    Ok(())
 }
 
 #[test]

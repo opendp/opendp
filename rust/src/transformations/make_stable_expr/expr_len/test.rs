@@ -40,6 +40,8 @@ fn test_grouped_make_len_expr() -> Fallible<()> {
         .collect()?
         .sort(["chunk_(..10u32)"], Default::default())?;
 
+        // NEED TO ADD A TEST HERE.
+
     let df_expected = df!(
         "chunk_(..10u32)" => [0u32, 1, 2, 3, 4, 5, 6, 7, 8, 9],
         "len" => [100u32; 10]

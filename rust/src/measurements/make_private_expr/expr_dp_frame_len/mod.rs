@@ -52,7 +52,7 @@ impl AnonymousColumnsUdf for DPFrameLenShim {
     }
 }
 impl OpenDPPlugin for DPFrameLenShim {
-    const NAME: &'static str = "dp_frame_len";
+    const NAME: &'static str = "dp_frame_len"; // This is how Python is identifying what to execute.
     #[cfg(feature = "ffi")]
     const SHIM: bool = true;
     fn function_options() -> FunctionOptions {
