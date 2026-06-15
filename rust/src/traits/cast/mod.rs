@@ -16,6 +16,8 @@ use num::{NumCast, One, Zero};
 
 use crate::error::Fallible;
 
+mod to_float;
+
 // general overview of casters:
 // https://docs.google.com/spreadsheets/d/1DJohiOI3EVHjwj8g4IEdFZVf7MMyFk_4oaSyjTfkO_0/edit?usp=sharing
 
@@ -254,7 +256,7 @@ impl ExactIntBounds for f32 {
     const MIN_CONSECUTIVE: Self = -16_777_216.0;
 }
 
-pub(crate) trait NextFloat {
+pub trait NextFloat {
     // naming has a trailing underscore so as not to conflict with stabilization of the corresponding methods in Rust STD
     fn next_up_(self) -> Self;
     fn next_down_(self) -> Self;
@@ -371,7 +373,7 @@ impl NextFloat for f32 {
     }
 }
 
-/// Wrapper around Dashu's FBig::to_f32 and FBig::to_f32 that guarantees correct rounding, even in edge cases
+/// Wrapper around Dashu's FBig::to_f32 and FBig::to_f64 that guarantees correct rounding, even in edge cases.
 pub trait ToFloatRounded {
     fn to_f32_rounded(self) -> f32;
     fn to_f64_rounded(self) -> f64;
@@ -410,6 +412,36 @@ impl ToFloatRounded for FBig<Down> {
             Approximation::Inexact(v, Rounding::AddOne)
             | Approximation::Inexact(v, Rounding::NoOp) => v.next_down_(),
         }
+    }
+}
+
+impl ToFloatRounded for RBig {
+    fn to_f32_rounded(self) -> f32 {
+        to_float::to_f32_rounded(self)
+    }
+
+    fn to_f64_rounded(self) -> f64 {
+        to_float::to_f64_rounded(self)
+    }
+}
+
+impl ToFloatRounded for UBig {
+    fn to_f32_rounded(self) -> f32 {
+        RBig::from(self).to_f32_rounded()
+    }
+
+    fn to_f64_rounded(self) -> f64 {
+        RBig::from(self).to_f64_rounded()
+    }
+}
+
+impl ToFloatRounded for IBig {
+    fn to_f32_rounded(self) -> f32 {
+        RBig::from(self).to_f32_rounded()
+    }
+
+    fn to_f64_rounded(self) -> f64 {
+        RBig::from(self).to_f64_rounded()
     }
 }
 
@@ -625,25 +657,25 @@ impl<R: Round> RoundCast<f64> for FBig<R> {
 
 impl<R: Round> RoundCast<FBig<R>> for f32 {
     fn round_cast(v: FBig<R>) -> Fallible<Self> {
-        Ok(v.with_rounding::<HalfEven>().to_f32().value())
+        Ok(RBig::try_from(v.with_rounding::<HalfEven>())?.to_f32_rounded())
     }
 }
 
 impl<R: Round> RoundCast<FBig<R>> for f64 {
     fn round_cast(v: FBig<R>) -> Fallible<Self> {
-        Ok(v.with_rounding::<HalfEven>().to_f64().value())
+        Ok(RBig::try_from(v.with_rounding::<HalfEven>())?.to_f64_rounded())
     }
 }
 
 impl RoundCast<RBig> for f32 {
     fn round_cast(v: RBig) -> Fallible<Self> {
-        Ok(v.to_f32().value())
+        Ok(v.to_f32_rounded())
     }
 }
 
 impl RoundCast<RBig> for f64 {
     fn round_cast(v: RBig) -> Fallible<Self> {
-        Ok(v.to_f64().value())
+        Ok(v.to_f64_rounded())
     }
 }
 
@@ -687,30 +719,53 @@ impl<R: Round> InfCast<FBig<R>> for f64 {
     }
 }
 
-macro_rules! impl_InfCast_dashu {
-    ($($TI:ty),+; $TO:ty, $to:ident) => {
-        $(impl InfCast<$TI> for $TO {
-            fn inf_cast(v: $TI) -> Fallible<Self> {
-                use Approximation::*;
-                Ok(match v.$to() {
-                    Exact(v) | Inexact(v, Sign::Positive) => v,
-                    Inexact(v, _) => v.next_up_(),
+macro_rules! impl_inf_cast_rational_float {
+    ($from:ty, f32) => {
+        impl InfCast<$from> for f32 {
+            fn inf_cast(v: $from) -> Fallible<Self> {
+                Ok(match to_float::to_f32_approx(RBig::from(v)) {
+                    Approximation::Exact(v) | Approximation::Inexact(v, Sign::Positive) => v,
+                    Approximation::Inexact(f32::NEG_INFINITY, Sign::Negative) => f32::MIN,
+                    Approximation::Inexact(v, Sign::Negative) => v.next_up_(),
                 })
             }
 
-            fn neg_inf_cast(v: $TI) -> Fallible<Self> {
-                use Approximation::*;
-                Ok(match v.$to() {
-                    Exact(v) | Inexact(v, Sign::Negative) => v,
-                    Inexact(v, _) => v.next_down_(),
+            fn neg_inf_cast(v: $from) -> Fallible<Self> {
+                Ok(match to_float::to_f32_approx(RBig::from(v)) {
+                    Approximation::Exact(v) | Approximation::Inexact(v, Sign::Negative) => v,
+                    Approximation::Inexact(f32::INFINITY, Sign::Positive) => f32::MAX,
+                    Approximation::Inexact(v, Sign::Positive) => v.next_down_(),
                 })
             }
-        })+
-    }
+        }
+    };
+    ($from:ty, f64) => {
+        impl InfCast<$from> for f64 {
+            fn inf_cast(v: $from) -> Fallible<Self> {
+                Ok(match to_float::to_f64_approx(RBig::from(v)) {
+                    Approximation::Exact(v) | Approximation::Inexact(v, Sign::Positive) => v,
+                    Approximation::Inexact(f64::NEG_INFINITY, Sign::Negative) => f64::MIN,
+                    Approximation::Inexact(v, Sign::Negative) => v.next_up_(),
+                })
+            }
+
+            fn neg_inf_cast(v: $from) -> Fallible<Self> {
+                Ok(match to_float::to_f64_approx(RBig::from(v)) {
+                    Approximation::Exact(v) | Approximation::Inexact(v, Sign::Negative) => v,
+                    Approximation::Inexact(f64::INFINITY, Sign::Positive) => f64::MAX,
+                    Approximation::Inexact(v, Sign::Positive) => v.next_down_(),
+                })
+            }
+        }
+    };
 }
 
-impl_InfCast_dashu!(RBig, UBig, IBig; f64, to_f64);
-impl_InfCast_dashu!(RBig, UBig, IBig; f32, to_f32);
+impl_inf_cast_rational_float!(RBig, f32);
+impl_inf_cast_rational_float!(UBig, f32);
+impl_inf_cast_rational_float!(IBig, f32);
+impl_inf_cast_rational_float!(RBig, f64);
+impl_inf_cast_rational_float!(UBig, f64);
+impl_inf_cast_rational_float!(IBig, f64);
 
 macro_rules! impl_saturating_cast_ubig_int {
     ($($T:ty)+) => {$(
@@ -740,7 +795,7 @@ macro_rules! impl_cast_internal_rational_float {
     ($ty:ty, $method:ident) => {
         impl CastInternalRational for $ty {
             fn from_rational(v: RBig) -> Self {
-                v.$method().value()
+                v.$method()
             }
             fn into_rational(self) -> Fallible<RBig> {
                 RBig::try_from(self).map_err(|_| {
@@ -755,8 +810,8 @@ macro_rules! impl_cast_internal_rational_float {
     };
 }
 
-impl_cast_internal_rational_float!(f32, to_f32);
-impl_cast_internal_rational_float!(f64, to_f64);
+impl_cast_internal_rational_float!(f32, to_f32_rounded);
+impl_cast_internal_rational_float!(f64, to_f64_rounded);
 
 macro_rules! impl_cast_internal_rational_int {
     ($($ty:ty)+) => {

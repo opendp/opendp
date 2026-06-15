@@ -1,4 +1,7 @@
-use crate::traits::samplers::{Shuffle, test::check_chi_square};
+use crate::traits::{
+    CastInternalRational,
+    samplers::{Shuffle, test::check_chi_square},
+};
 use crate::{error::Fallible, measures::ZeroConcentratedDivergence};
 use dashu::rbig;
 use std::array::from_fn;
@@ -186,7 +189,7 @@ fn test_permute_and_flip_distribution_varied() -> Fallible<()> {
     let expected: Vec<f64> = permute_and_flip_pmf(
         &scores
             .into_iter()
-            .map(|r| r.to_f64().value())
+            .map(f64::from_rational)
             .collect::<Vec<_>>(),
         1.0,
     )
