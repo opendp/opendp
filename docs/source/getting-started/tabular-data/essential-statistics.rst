@@ -1,3 +1,5 @@
+.. _essential-statistics:
+
 Essential Statistics
 ====================
 
