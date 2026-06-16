@@ -340,7 +340,7 @@ simply a single scalar, but more complicated expressions are valid:
 
 
 If the fill expression is not a scalar literal, then the input
-expression and fill expression must both by row-by-row. This is to
+expression and fill expression must both be row-by-row. This is to
 prevent a mismatch in lengths that results in data-dependent errors.
 
 At this time ``.fill_nan`` always drops data bounds, so make sure your
@@ -392,7 +392,7 @@ simply a single scalar, but more complicated expressions are valid:
 
 
 If the fill expression is not a scalar literal, then the input
-expression and fill expression must both by row-by-row. This is to
+expression and fill expression must both be row-by-row. This is to
 prevent a mismatch in lengths that results in data-dependent errors.
 
 At this time ``.fill_null`` always drops data bounds, so make sure your

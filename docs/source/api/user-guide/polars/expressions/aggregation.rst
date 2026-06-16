@@ -167,7 +167,7 @@ result in one more, or one less, unique value.
 
 Noise added to a count can make the count go negative, but since the
 output data type is an unsigned integer, the library may return zero.
-This is more likely to happen with the true value is small.
+This is more likely to happen when the true value is small.
 
 This release tells us that the number of null values is relatively
 small.
