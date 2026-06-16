@@ -1,3 +1,5 @@
+.. _string:
+
 String
 ======
 
@@ -108,5 +110,4 @@ inputs <https://github.com/pola-rs/polars/issues/19928>`__.
               MakeMeasurement("Nanoseconds are not currently supported due to potential panics when parsing inputs. Please open an issue on the OpenDP repository if you would find this functionality useful. Otherwise, consider parsing into micro- or millisecond datetimes instead.")
 
 
-Parsed data can then be manipulated with `temporal
-expressions <temporal.ipynb>`__.
+Parsed data can then be manipulated with :ref:`temporal expressions <temporal>`.
