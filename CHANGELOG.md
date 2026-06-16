@@ -4,7 +4,29 @@ This file documents the version history of OpenDP. The links on each version num
 
 
 
-## [0.15.0](https://github.com/opendp/opendp/compare/v1.14.2...v0.15.0) - 2026-05-08
+
+
+## [0.15.1](https://github.com/opendp/opendp/compare/v0.15.0...v0.15.1) - 2026-05-28
+
+
+### Fix
+
+- Fix docs build: Multiversion conf.py was referencing invalid git state [#2731](https://github.com/opendp/opendp/pull/2731)
+- Fix docs.rs build: Skip polars, for now [#2739](https://github.com/opendp/opendp/pull/2739)
+
+### Docs
+
+- Proof-initiation fixes [#2735](https://github.com/opendp/opendp/pull/2735)
+- Remove WIP warning from readme [#2732](https://github.com/opendp/opendp/pull/2732)
+
+### Maintenance
+
+- Just run nightly once a week [#2726](https://github.com/opendp/opendp/pull/2726)
+
+
+
+## [0.15.0](https://github.com/opendp/opendp/compare/v0.14.2...v0.15.0) - 2026-05-19
+
 
 ### Migration
 
@@ -66,7 +88,7 @@ There are a few changes in feature names to be aware of:
 
 #### Fill gaps
 
-- Fill in migration notes back to v12 [#2541](https://github.com/opendp/opendp/pull/2541)
+- Fill in migration notes back to v0.12 [#2541](https://github.com/opendp/opendp/pull/2541)
 - Clarify commitments for OpenDP Commons [#2661](https://github.com/opendp/opendp/pull/2661)
 - Add citations and utility/runtime information in Rust code [#2702](https://github.com/opendp/opendp/pull/2702)
 
@@ -94,7 +116,7 @@ There are a few changes in feature names to be aware of:
 
 
 
-## [0.14.2](https://github.com/opendp/opendp/compare/v0.14.1...v0.14.2) - 2026-05-08
+## [0.14.2](https://github.com/opendp/opendp/compare/v0.14.1...v0.14.2) - 2026-03-11
 
 
 ### Features

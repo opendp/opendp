@@ -18,8 +18,10 @@ Each document should at least have these components:
 1. Hoare Triple
 
    1. Precondition
+
       1. Compiler-verified
       2. Caller-verified
+
    2. Pseudocode
    3. Postcondition
 
@@ -129,12 +131,12 @@ Here’s a template for ``absolute_distance.tex``:
 
    \end{document}
 
-This template uses several macros defined in ``rust/src/lib.sty``:
-
+This template uses several macros defined in
+`rust/src/lib.sty <https://github.com/opendp/opendp/blob/main/rust/src/lib.sty>`_.
 Proof documents may include feature-flag warning macros near the top of
-the file. These correspond to Rust feature flags documented in
-:ref:`rust-feature-listing`. Enable whichever warnings apply to the
-proof:
+the file. These correspond to Rust feature flags documented in the
+:ref:`list of Rust features <rust-feature-listing>`.
+Enable whichever warnings apply to the proof:
 
 -  ``\contrib`` adds a header to the document indicating the proof is in
    ``"contrib"`` because it has not completed the vetting process.
@@ -148,6 +150,10 @@ proof:
    such as non-closure and overflow. Use this when the proof holds in
    idealized numerics but the implementation is not privately sound on
    finite computers.
+
+
+Other macros ensure that we have consistent patterns for referencing
+source code and git versions:
 
 -  ``\YourNameAuthor`` and similar macros expand to an author's
    name and GitHub handle together. Use these in ``\author{...}`` so

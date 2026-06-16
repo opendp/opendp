@@ -1,5 +1,5 @@
 [workspace.package]
-version = "0.15.0-dev"
+version = "0.15.1-dev"
 license-file = "../LICENSE"
 readme = "../README.md"
 homepage = "https://opendp.org/"
@@ -33,7 +33,7 @@ rust-version.workspace = true
 exclude = ["windows/*"]
 
 [dependencies]
-opendp_derive = { path = "opendp_derive", version = "0.15.0-dev" }
+opendp_derive = { path = "opendp_derive", version = "0.15.1-dev" }
 rand = "0.7.3"
 num = "0.3.1"
 thiserror = "1.0.24"
@@ -41,7 +41,7 @@ statrs = "0.13.0"
 dashu = { version = "0.4.0", features = ["num-traits_v02"] }
 openssl = { version = "0.10.71", features = ["vendored"], optional = true }
 
-opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.15.0-dev" }
+opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.15.1-dev" }
 readonly = "0.2"
 bitvec = "1.0"
 
@@ -51,6 +51,8 @@ bitvec = "1.0"
 #
 # The features track the features enabled in the Rust build for the Polars Python crate.
 # Having matching features is necessary for cross-binary DSL compatibility.
+#
+# TODO: re-enable docs.rs polars once https://github.com/pola-rs/polars/issues/27105 is released
 polars = { version = "=0.52.0", features = ["full", "meta", "cutqcut", "row_hash"], optional = true }
 polars-python = { version = "=0.52.0", optional = true }
 
@@ -73,7 +75,7 @@ lazy_static = { version = "1.4.0", optional = true }
 
 [build-dependencies]
 autocfg = "1.4"
-opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.15.0-dev" }
+opendp_tooling = { path = "opendp_tooling", optional = true, version = "0.15.1-dev" }
 syn = { workspace = true, optional = true }
 proc-macro2 = { workspace = true, optional = true }
 cbindgen = { version = "0.28.0", optional = true }
@@ -145,7 +147,7 @@ crate-type = ["rlib", "cdylib", "staticlib"]
 
 [package.metadata.docs.rs]
 no-default-features = true
-features = ["use-openssl", "derive", "untrusted", "polars"]
+features = ["use-openssl", "derive", "untrusted"]
 rustdoc-args = [
     # so that latex renders
     "--html-in-header", "katex.html",
