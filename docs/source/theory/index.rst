@@ -15,4 +15,3 @@ For that, see :doc:`../getting-started/index` or :doc:`../api/index`.
   accuracy-pitfalls
   attacks/index
   mechanisms/index
-  resources

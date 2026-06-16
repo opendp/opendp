@@ -1,5 +1,13 @@
+:orphan:
+
 Resources List
 ==============
+
+.. note::
+
+    We are not actively maintaining this list.
+    Instead see the OpenDP Project's `Educational Resources <https://opendp.github.io/learning/>`_ page.
+
 
 Foundations
 -----------
