@@ -299,36 +299,44 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
             return _slice_to_bitvector(raw)
 
         if type_name == "ExtrinsicObject":
+            raise Exception("fake error")
             return _slice_to_extrinsic(raw)
 
         if type_name == "String":
             return _slice_to_string(raw)
 
         if type_name == "LazyFrame":
+            raise Exception("fake error")
             return _slice_to_lazyframe(raw)
 
         if type_name == "DataFrame":
             return _slice_to_dataframe(raw)
 
         if type_name == "Series":
+            raise Exception("fake error")
             return _slice_to_series(raw)
 
         if type_name == "Expr":
             return _slice_to_expr(raw)
 
         if type_name == "ExprPlan":
+            raise Exception("fake error ExprPlan")
             return _slice_to_exprplan(raw)
 
         if type_name == "Bound":
+            raise Exception("fake error Bound")
             return _slice_to_group_bound(raw)
         
         if type_name == "Margin":
+            raise Exception("fake error Margin")
             return _slice_to_margin(raw)
         
         if type_name == "Bounds":
+            raise Exception("fake error Bounds")
             return _slice_to_vector(raw, RuntimeType("Vec", ["Bound"]))
 
         if type_name == "AnyObject":
+            raise Exception("fake error AnyObject")
             return _slice_to_anyobject(raw)
 
     if isinstance(type_name, RuntimeType):
@@ -339,6 +347,7 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
             return _slice_to_numpy(raw, type_name)
 
         if type_name.origin == "Function":
+            raise Exception("fake error Function")
             return _slice_to_function(raw)
 
         if type_name.origin == "HashMap":
@@ -348,6 +357,7 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
             return _slice_to_tuple(raw, type_name)
 
         if type_name.origin == "Option":
+            raise Exception("fake error Option")
             return _slice_to_option(raw, type_name)
 
     raise UnknownTypeException(type_name)  # pragma: no cover
@@ -370,33 +380,40 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
             return _bitvector_to_slice(value)
 
         if type_name == "ExtrinsicObject":
+            raise Exception("fake slice ExtrObj")
             return _extrinsic_to_slice(value)
 
         if type_name == "AnyMeasurement":
+            raise Exception("fake slice AnyMeasurement")
             return _wrap_in_slice(value, 1)
 
         if type_name == "String":
             return _string_to_slice(value)
 
         if type_name == "Series":
+            raise Exception("fake slice Series")
             return _series_to_slice(value)
 
         if type_name in {"LazyFrame", "DslPlan"}:
+            raise Exception("fake slice" + type_name)
             return _lazyframe_to_slice(value)
 
         if type_name == "DataFrame":
             return _dataframe_to_slice(value)
         
         if type_name == "Margin":
+            raise Exception("fake slice Margin")
             return _margin_to_slice(value)
             
         if type_name == "Expr":
             return _expr_to_slice(value)
 
         if type_name == "Bound":
+            raise Exception("fake slice Bound")
             return _bound_to_slice(value)
         
         if type_name == "Bounds":
+            raise Exception("fake slice Bounds")
             return _vector_to_slice(value, RuntimeType("Vec", ["Bound"]))
 
     if isinstance(type_name, RuntimeType):
@@ -410,6 +427,7 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
             return _hashmap_to_slice(value, type_name)
 
         if type_name.origin == "Function":
+            raise Exception("fake slice Function")
             return _function_to_slice(value, type_name)
 
         if type_name.origin == "Tuple":

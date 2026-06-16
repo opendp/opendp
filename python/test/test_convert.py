@@ -1,17 +1,31 @@
-from opendp._convert import *
 from opendp._convert import (
-    _scalar_to_slice, _slice_to_scalar,
-    _vector_to_slice, _slice_to_vector,
-    _hashmap_to_slice, _slice_to_hashmap,
-    _numpy_dtype_for_rust_type, _numpy_to_slice, _py_to_slice, _slice_to_numpy,
+    py_to_c,
+    c_to_py,
+    _check_and_cast_scalar,
+    _scalar_to_slice,
+    _slice_to_scalar,
+    _vector_to_slice,
+    _slice_to_vector,
+    _hashmap_to_slice,
+    _slice_to_hashmap,
+    _numpy_dtype_for_rust_type,
+    _numpy_to_slice,
+    _py_to_slice,
+    _slice_to_numpy,
 )
-from opendp._convert import _check_and_cast_scalar
+from opendp._lib import AnyObjectPtr, ctypes, FfiSlice, FfiSlicePtr
 from opendp.typing import *
 import pytest
 
-
-def test_data_object_int():
-    val_in = 123
+@pytest.mark.parametrize("val_type,val_in", [
+    [int, 123],
+    [float, 123.123],
+    [str, "hello, world"],
+    [list, [1, 2, 3]],
+    [tuple, (1., 1e-7)]
+])
+def test_data_object_int(val_type, val_in):
+    assert type(val_in) == val_type
     obj = py_to_c(val_in, c_type=AnyObjectPtr)
     val_out = c_to_py(obj)
     assert val_out == val_in
@@ -20,34 +34,6 @@ def test_data_object_int():
 def test_data_object_int_to_float():
     val_in = 123
     obj = py_to_c(val_in, c_type=AnyObjectPtr, type_name='f64')
-    val_out = c_to_py(obj)
-    assert val_out == val_in
-
-
-def test_data_object_float():
-    val_in = 123.123
-    obj = py_to_c(val_in, c_type=AnyObjectPtr)
-    val_out = c_to_py(obj)
-    assert val_out == val_in
-
-
-def test_data_object_str():
-    val_in = "hello, world"
-    obj = py_to_c(val_in, c_type=AnyObjectPtr)
-    val_out = c_to_py(obj)
-    assert val_out == val_in
-
-
-def test_data_object_list():
-    val_in = [1, 2, 3]
-    obj = py_to_c(val_in, c_type=AnyObjectPtr)
-    val_out = c_to_py(obj)
-    assert val_out == val_in
-
-
-def test_data_object_tuple():
-    val_in = (1., 1e-7)
-    obj = py_to_c(val_in, c_type=AnyObjectPtr)
     val_out = c_to_py(obj)
     assert val_out == val_in
 
