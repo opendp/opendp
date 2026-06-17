@@ -82,7 +82,7 @@ def _check_and_cast_scalar(expected, value):
 
     if expected not in ATOM_EQUIVALENCE_CLASSES.get(inferred, [inferred]):
         raise TypeError(f"inferred type is {inferred}, expected {expected}. See {_ERROR_URL_298}")
-    
+
     if expected in INT_SIZES:
         check_c_int_cast(value, expected)
 
@@ -148,7 +148,7 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
     if c_type == AnyObjectPtr:
         if isinstance(value, ctypes.POINTER(AnyObject)):
             return value
-        
+
         from opendp._data import slice_as_object
         return slice_as_object(value, type_name) # type: ignore[arg-type]
 
@@ -169,7 +169,6 @@ def py_to_c(value: Any, c_type, type_name: RuntimeTypeDescriptor = None) -> Any:
         if hasattr(value, "_type_"):
             raise ValueError(f"Cannot convert {value} to {c_type}")  # pragma: no cover
         value = c_type(value)
-
     return value
 
 
@@ -299,65 +298,60 @@ def _slice_to_py(raw: FfiSlicePtr, type_name: Union[RuntimeType, str]) -> Any:
             return _slice_to_bitvector(raw)
 
         if type_name == "ExtrinsicObject":
-            raise Exception("fake error")
+            # TODO: Add test_convert.py unit test
             return _slice_to_extrinsic(raw)
 
         if type_name == "String":
             return _slice_to_string(raw)
 
         if type_name == "LazyFrame":
-            raise Exception("fake error")
             return _slice_to_lazyframe(raw)
 
         if type_name == "DataFrame":
             return _slice_to_dataframe(raw)
 
         if type_name == "Series":
-            raise Exception("fake error")
             return _slice_to_series(raw)
 
         if type_name == "Expr":
             return _slice_to_expr(raw)
 
         if type_name == "ExprPlan":
-            raise Exception("fake error ExprPlan")
+            # TODO: Add test_convert.py unit test
             return _slice_to_exprplan(raw)
 
         if type_name == "Bound":
-            raise Exception("fake error Bound")
             return _slice_to_group_bound(raw)
-        
+
         if type_name == "Margin":
-            raise Exception("fake error Margin")
             return _slice_to_margin(raw)
-        
+
         if type_name == "Bounds":
-            raise Exception("fake error Bounds")
             return _slice_to_vector(raw, RuntimeType("Vec", ["Bound"]))
 
         if type_name == "AnyObject":
-            raise Exception("fake error AnyObject")
+            # TODO: Add test_convert.py unit test
             return _slice_to_anyobject(raw)
 
     if isinstance(type_name, RuntimeType):
         if type_name.origin == "Vec":
             return _slice_to_vector(raw, type_name)
-        
+
         if type_name.origin == "NDArray":
             return _slice_to_numpy(raw, type_name)
 
         if type_name.origin == "Function":
-            raise Exception("fake error Function")
+            # TODO add test_convert.py unit test
             return _slice_to_function(raw)
 
         if type_name.origin == "HashMap":
             return _slice_to_hashmap(raw)
 
         if type_name.origin == "Tuple":
+            # TODO add test_convert.py unit test
             return _slice_to_tuple(raw, type_name)
 
         if type_name.origin == "Option":
-            raise Exception("fake error Option")
             return _slice_to_option(raw, type_name)
 
     raise UnknownTypeException(type_name)  # pragma: no cover
@@ -380,46 +374,42 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
             return _bitvector_to_slice(value)
 
         if type_name == "ExtrinsicObject":
-            raise Exception("fake slice ExtrObj")
+            # TODO add test_convert.py unit test
             return _extrinsic_to_slice(value)
 
         if type_name == "AnyMeasurement":
-            raise Exception("fake slice AnyMeasurement")
+            # TODO add test_convert.py unit test
             return _wrap_in_slice(value, 1)
 
         if type_name == "String":
             return _string_to_slice(value)
 
         if type_name == "Series":
-            raise Exception("fake slice Series")
             return _series_to_slice(value)
 
         if type_name in {"LazyFrame", "DslPlan"}:
-            raise Exception("fake slice" + type_name)
+            # TODO add test_convert.py unit test for DslPlan
             return _lazyframe_to_slice(value)
 
         if type_name == "DataFrame":
             return _dataframe_to_slice(value)
-        
+
         if type_name == "Margin":
-            raise Exception("fake slice Margin")
             return _margin_to_slice(value)
-            
+
         if type_name == "Expr":
             return _expr_to_slice(value)
 
         if type_name == "Bound":
-            raise Exception("fake slice Bound")
             return _bound_to_slice(value)
-        
+
         if type_name == "Bounds":
-            raise Exception("fake slice Bounds")
             return _vector_to_slice(value, RuntimeType("Vec", ["Bound"]))
 
     if isinstance(type_name, RuntimeType):
         if type_name.origin == "Vec":
             return _vector_to_slice(value, type_name)
-        
+
         if type_name.origin == "NDArray":
             return _numpy_to_slice(value, type_name)
 
@@ -427,12 +417,11 @@ def _py_to_slice(value: Any, type_name: Union[RuntimeType, str]) -> FfiSlicePtr:
             return _hashmap_to_slice(value, type_name)
 
         if type_name.origin == "Function":
-            raise Exception("fake slice Function")
+            # TODO add test_convert.py unit test
             return _function_to_slice(value, type_name)
 
         if type_name.origin == "Tuple":
             return _tuple_to_slice(value, type_name)
-
     raise UnknownTypeException(type_name)  # pragma: no cover
 
 

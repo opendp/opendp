@@ -1,3 +1,8 @@
+import pytest
+
+import opendp.prelude as dp
+
+from opendp.typing import *
 from opendp._convert import (
     py_to_c,
     c_to_py,
@@ -14,15 +19,13 @@ from opendp._convert import (
     _slice_to_numpy,
 )
 from opendp._lib import AnyObjectPtr, ctypes, FfiSlice, FfiSlicePtr
-from opendp.typing import *
-import pytest
 
 @pytest.mark.parametrize("val_type,val_in", [
-    [int, 123],
-    [float, 123.123],
-    [str, "hello, world"],
-    [list, [1, 2, 3]],
-    [tuple, (1., 1e-7)]
+    (int, 123),
+    (float, 123.123),
+    (str, "hello, world"),
+    (list, [1, 2, 3]),
+    (tuple, (1., 1e-7)),
 ])
 def test_data_object_int(val_type, val_in):
     assert type(val_in) == val_type
