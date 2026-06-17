@@ -16,8 +16,6 @@ from opendp.typing import RuntimeType
     (Margin(by=[]), "Margin"),
     (Bound(by=[]), "Bound"),
     ([Bound(by=[])], "Bounds"),
-
-
 ])
 def test_extras_object(val_in, type_name):
     obj = py_to_c(val_in, c_type=AnyObjectPtr, type_name=type_name)
@@ -32,4 +30,3 @@ def test_extras_object_polars(val_in, type_name):
     obj = py_to_c(val_in, c_type=AnyObjectPtr, type_name=type_name)
     val_out = c_to_py(obj)
     assert_frame_equal(val_out, val_in)
-
