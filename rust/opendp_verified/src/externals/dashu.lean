@@ -1,5 +1,5 @@
 import Aeneas
-import Generated.OpenDP.FunsExternal
+import Generated.OpenDP
 import src.samplers.bytes
 
 open Aeneas Aeneas.Std Result ControlFlow Error
@@ -119,6 +119,221 @@ axiom zero_spec
 axiom zero_exists_spec :
   ∃ zero, dashu_int.ubig.UBig.ZERO = ok zero ∧ ubigToNat zero = 0
 
+/-- Totality of `UBig::is_zero`. -/
+axiom is_zero_exists_spec
+  (x : dashu_int.ubig.UBig) :
+  ∃ b, dashu_int.ubig.UBig.is_zero x = ok b
+
+/-- Mathematical meaning of a successful `is_zero` check returning `true`. -/
+axiom is_zero_true_spec
+  (x : dashu_int.ubig.UBig) :
+  dashu_int.ubig.UBig.is_zero x = ok true ->
+    ubigToNat x = 0
+
+/-- Mathematical meaning of a successful `is_zero` check returning `false`. -/
+axiom is_zero_false_spec
+  (x : dashu_int.ubig.UBig) :
+  dashu_int.ubig.UBig.is_zero x = ok false ->
+    0 < ubigToNat x
+
+/-- Positive Dashu naturals report `false` to `is_zero`. -/
+axiom is_zero_of_pos_spec
+  (x : dashu_int.ubig.UBig) :
+  0 < ubigToNat x ->
+    dashu_int.ubig.UBig.is_zero x = ok false
+
+/-- Mathematical meaning of Dashu addition assignment. -/
+axiom add_assign_spec
+  (x y z : dashu_int.ubig.UBig) :
+  dashu_int.ubig.UBig.Insts.CoreOpsArithAddAssignUBig.add_assign x y = ok z ->
+    ubigToNat z = ubigToNat x + ubigToNat y
+
+/-- Cloning a Dashu `UBig` preserves its mathematical value. -/
+axiom clone_spec
+  (x y : dashu_int.ubig.UBig) :
+  dashu_int.ubig.UBig.Insts.CoreCloneClone.clone x = ok y ->
+    ubigToNat y = ubigToNat x
+
+/-- Cloning a Dashu `UBig` succeeds. -/
+axiom clone_exists_spec
+  (x : dashu_int.ubig.UBig) :
+  ∃ y,
+    dashu_int.ubig.UBig.Insts.CoreCloneClone.clone x = ok y ∧
+    ubigToNat y = ubigToNat x
+
+/-- Mathematical meaning of exact division by a shared positive divisor. -/
+axiom div_shared_spec
+  (x y q : dashu_int.ubig.UBig) :
+  SharedLUBig.Insts.CoreOpsArithDivSharedRUBigUBig.div x y = ok q ->
+    ubigToNat y ∣ ubigToNat x ->
+    ubigToNat q = ubigToNat x / ubigToNat y
+
+/-- Mathematical meaning of exact division by a positive divisor. -/
+axiom div_spec
+  (x y q : dashu_int.ubig.UBig) :
+  SharedLUBig.Insts.CoreOpsArithDivUBigUBig.div x y = ok q ->
+    ubigToNat y ∣ ubigToNat x ->
+    ubigToNat q = ubigToNat x / ubigToNat y
+
+/-- Exact shared-operand division succeeds on divisible inputs. -/
+axiom div_shared_exists_spec
+  (x y : dashu_int.ubig.UBig) :
+  ubigToNat y ∣ ubigToNat x ->
+  ∃ q,
+    SharedLUBig.Insts.CoreOpsArithDivSharedRUBigUBig.div x y = ok q ∧
+    ubigToNat q = ubigToNat x / ubigToNat y
+
+/-- Exact division succeeds on divisible inputs. -/
+axiom div_exists_spec
+  (x y : dashu_int.ubig.UBig) :
+  ubigToNat y ∣ ubigToNat x ->
+  ∃ q,
+    SharedLUBig.Insts.CoreOpsArithDivUBigUBig.div x y = ok q ∧
+    ubigToNat q = ubigToNat x / ubigToNat y
+
+/-- Mathematical meaning of Dashu multiplication. -/
+axiom mul_spec
+  (x y z : dashu_int.ubig.UBig) :
+  SharedLUBig.Insts.CoreOpsArithMulUBigUBig.mul x y = ok z ->
+    ubigToNat z = ubigToNat x * ubigToNat y
+
+/-- Dashu multiplication succeeds. -/
+axiom mul_exists_spec
+  (x y : dashu_int.ubig.UBig) :
+  ∃ z,
+    SharedLUBig.Insts.CoreOpsArithMulUBigUBig.mul x y = ok z ∧
+    ubigToNat z = ubigToNat x * ubigToNat y
+
+/-- Converting a `UBig` into an `IBig` yields a positive signed value with the
+same natural magnitude. -/
+axiom ibig_from_ubig_spec
+  (u : dashu_int.ubig.UBig) (i : dashu_int.ibig.IBig) :
+  core.convert.IntoFrom.into dashu_int.ibig.IBig.Insts.CoreConvertFromUBig u = ok i ->
+    dashu_int.ibig.IBig.into_parts i = ok (dashu_base.sign.Sign.Positive, u)
+
+/-- Converting a `UBig` into an `IBig` succeeds. -/
+axiom ibig_from_ubig_exists_spec
+  (u : dashu_int.ubig.UBig) :
+  ∃ i,
+    core.convert.IntoFrom.into dashu_int.ibig.IBig.Insts.CoreConvertFromUBig u = ok i ∧
+    dashu_int.ibig.IBig.into_parts i = ok (dashu_base.sign.Sign.Positive, u)
+
+/-- Constructing an `RBig` from positive numerator parts preserves those parts
+when the denominator is positive. -/
+axiom rbig_from_parts_positive_spec
+  (n d : dashu_int.ubig.UBig)
+  (i : dashu_int.ibig.IBig)
+  (x : dashu_ratio.rbig.RBig) :
+  0 < ubigToNat d ->
+  dashu_int.ibig.IBig.into_parts i = ok (dashu_base.sign.Sign.Positive, n) ->
+  dashu_ratio.rbig.RBig.from_parts i d = ok x ->
+    dashu_ratio.rbig.RBig.into_parts x = ok (i, d)
+
+/-- Constructing an `RBig` from positive numerator parts succeeds on positive
+denominators. -/
+axiom rbig_from_parts_positive_exists_spec
+  (n d : dashu_int.ubig.UBig)
+  (i : dashu_int.ibig.IBig) :
+  0 < ubigToNat d ->
+  dashu_int.ibig.IBig.into_parts i = ok (dashu_base.sign.Sign.Positive, n) ->
+  ∃ x,
+    dashu_ratio.rbig.RBig.from_parts i d = ok x ∧
+    dashu_ratio.rbig.RBig.into_parts x = ok (i, d)
+
+/-- Mathematical zero rational setup. -/
+axiom rbig_zero_setup_spec :
+  ∃ x : dashu_ratio.rbig.RBig,
+    ∃ i : dashu_int.ibig.IBig,
+      ∃ z d : dashu_int.ubig.UBig,
+        dashu_ratio.rbig.RBig.ZERO = ok x ∧
+        dashu_int.ubig.UBig.ZERO = ok z ∧
+        dashu_int.ubig.UBig.ONE = ok d ∧
+        dashu_ratio.rbig.RBig.into_parts x = ok (i, d) ∧
+        dashu_int.ibig.IBig.into_parts i = ok (dashu_base.sign.Sign.Positive, z)
+
+/-- Mathematical one rational setup. -/
+axiom rbig_one_setup_spec :
+  ∃ x : dashu_ratio.rbig.RBig,
+    ∃ i : dashu_int.ibig.IBig,
+      ∃ one : dashu_int.ubig.UBig,
+        dashu_ratio.rbig.RBig.ONE = ok x ∧
+        dashu_int.ubig.UBig.ONE = ok one ∧
+        dashu_ratio.rbig.RBig.into_parts x = ok (i, one) ∧
+        dashu_int.ibig.IBig.into_parts i = ok (dashu_base.sign.Sign.Positive, one)
+
+/-- Constructing the constant positive rational `1 / 1` yields a rational with
+matching positive numerator and denominator parts. -/
+axiom rbig_from_parts_const_one_spec
+  (u128one : Std.U128)
+  (x : dashu_ratio.rbig.RBig) :
+  u128one.val = 1 ->
+  dashu_ratio.rbig.RBig.from_parts_const dashu_base.sign.Sign.Positive u128one u128one = ok x ->
+  ∃ i : dashu_int.ibig.IBig,
+    ∃ one : dashu_int.ubig.UBig,
+      dashu_int.ubig.UBig.ONE = ok one ∧
+      dashu_ratio.rbig.RBig.into_parts x = ok (i, one) ∧
+      dashu_int.ibig.IBig.into_parts i = ok (dashu_base.sign.Sign.Positive, one)
+
+/-- For nonnegative rationals, `x > 1` means the positive numerator is strictly
+larger than the positive denominator. -/
+axiom rbig_gt_one_true_spec
+  (x : dashu_ratio.rbig.RBig)
+  (numerSigned : dashu_int.ibig.IBig)
+  (denom numer : dashu_int.ubig.UBig)
+  (oneRat : dashu_ratio.rbig.RBig) :
+  dashu_ratio.rbig.RBig.into_parts x = ok (numerSigned, denom) ->
+  dashu_int.ibig.IBig.into_parts numerSigned = ok (dashu_base.sign.Sign.Positive, numer) ->
+  dashu_ratio.rbig.RBig.Insts.CoreCmpPartialOrdRBig.gt x oneRat = ok true ->
+    ubigToNat denom < ubigToNat numer
+
+/-- For nonnegative rationals, failing the `x > 1` test means the positive
+numerator is at most the positive denominator. -/
+axiom rbig_gt_one_false_spec
+  (x : dashu_ratio.rbig.RBig)
+  (numerSigned : dashu_int.ibig.IBig)
+  (denom numer : dashu_int.ubig.UBig)
+  (oneRat : dashu_ratio.rbig.RBig) :
+  dashu_ratio.rbig.RBig.into_parts x = ok (numerSigned, denom) ->
+  dashu_int.ibig.IBig.into_parts numerSigned = ok (dashu_base.sign.Sign.Positive, numer) ->
+  dashu_ratio.rbig.RBig.Insts.CoreCmpPartialOrdRBig.gt x oneRat = ok false ->
+    ubigToNat numer ≤ ubigToNat denom
+
+/-- For nonnegative rationals, if the positive numerator is at most the
+positive denominator then the `x > 1` test returns `false`. -/
+axiom rbig_gt_one_false_of_le_spec
+  (x : dashu_ratio.rbig.RBig)
+  (numerSigned : dashu_int.ibig.IBig)
+  (denom numer : dashu_int.ubig.UBig)
+  (oneRat : dashu_ratio.rbig.RBig) :
+  dashu_ratio.rbig.RBig.into_parts x = ok (numerSigned, denom) ->
+  dashu_int.ibig.IBig.into_parts numerSigned = ok (dashu_base.sign.Sign.Positive, numer) ->
+  ubigToNat numer ≤ ubigToNat denom ->
+  dashu_ratio.rbig.RBig.Insts.CoreCmpPartialOrdRBig.gt x oneRat = ok false
+
+/-- Subtracting `1` from a nonnegative rational with numerator at least the
+denominator preserves the denominator and subtracts it from the numerator. -/
+axiom rbig_sub_one_positive_spec
+  (x oneRat x' : dashu_ratio.rbig.RBig)
+  (numerSigned numerSigned' : dashu_int.ibig.IBig)
+  (numer denom numer' one : dashu_int.ubig.UBig) :
+  dashu_ratio.rbig.RBig.into_parts x = ok (numerSigned, denom) ->
+  dashu_int.ibig.IBig.into_parts numerSigned = ok (dashu_base.sign.Sign.Positive, numer) ->
+  dashu_int.ubig.UBig.ONE = ok one ->
+  dashu_ratio.rbig.RBig.into_parts oneRat = ok (numerSigned', one) ->
+  dashu_int.ibig.IBig.into_parts numerSigned' = ok (dashu_base.sign.Sign.Positive, one) ->
+  ubigToNat denom ≤ ubigToNat numer ->
+  dashu_ratio.rbig.RBig.Insts.CoreOpsArithSubAssignRBig.sub_assign x oneRat = ok x' ->
+  ∃ i' : dashu_int.ibig.IBig,
+    SharedLUBig.Insts.CoreOpsArithSubUBigUBig.sub numer denom = ok numer' ∧
+    dashu_ratio.rbig.RBig.into_parts x' = ok (i', denom) ∧
+    dashu_int.ibig.IBig.into_parts i' = ok (dashu_base.sign.Sign.Positive, numer')
+
+/-- Mathematical meaning of Dashu remainder by an 8-bit integer. -/
+axiom rem_u8_spec
+  (x : dashu_int.ubig.UBig) (y r : Std.U8) :
+  dashu_int.ubig.UBig.Insts.CoreOpsArithRemU8U8.rem x y = ok r ->
+    r.val = ubigToNat x % y.val
+
 /-- Mathematical interpretation of the greater-than comparison for Dashu UBig. -/
 axiom gt_spec
   (x y : dashu_int.ubig.UBig) :
@@ -130,6 +345,13 @@ axiom gt_false_spec
   (x y : dashu_int.ubig.UBig) :
   dashu_int.ubig.UBig.Insts.CoreCmpPartialOrdUBig.gt x y = ok false ->
     ubigToNat x ≤ ubigToNat y
+
+/-- If the mathematical values are ordered, the greater-than comparison
+returns `false`. -/
+axiom gt_false_of_le_spec
+  (x y : dashu_int.ubig.UBig) :
+  ubigToNat x ≤ ubigToNat y ->
+    dashu_int.ubig.UBig.Insts.CoreCmpPartialOrdUBig.gt x y = ok false
 
 /-- Mathematical interpretation of the less-than-or-equal-to comparison for Dashu UBig. -/
 axiom le_spec
