@@ -44,7 +44,7 @@
 
 use crate::error::Fallible;
 use dashu::{
-    base::{Abs, Sign},
+    base::Sign,
     integer::{IBig, UBig},
     rational::RBig,
     rbig,
@@ -165,6 +165,25 @@ pub(crate) fn sample_geometric_exp_fast(x: RBig) -> Fallible<UBig> {
     Ok((v2 * denom + u) / numer.into_parts().1)
 }
 
+pub(crate) fn sample_discrete_half_gaussian(scale: RBig) -> Fallible<UBig> {
+    let t = RBig::from(scale.clone().floor() + 1i8);
+    let sigma2 = scale.pow(2);
+
+    let (numer, denom) = t.clone().into_parts();
+    let inv_t = RBig::from_parts(denom.as_ibig().clone(), numer.into_parts().1);
+
+    loop {
+        let candidate = sample_geometric_exp_fast(inv_t.clone())?;
+
+        let x = &candidate - sigma2.clone() / &t;
+        let bias = x.pow(2) / (sigma2.clone() * rbig!(2));
+
+        if sample_bernoulli_exp(bias)? {
+            return Ok(candidate);
+        }
+    }
+}
+
 #[proven]
 /// Sample exactly from the discrete laplace distribution with arbitrary precision.
 ///
@@ -176,7 +195,7 @@ pub(crate) fn sample_geometric_exp_fast(x: RBig) -> Fallible<UBig> {
 /// Specifically, the probability of returning any `x` of type [`IBig`] is
 /// ```math
 /// \forall x \in \mathbb{Z}, \quad  
-/// P[X = x] = \frac{e^{-1/scale} - 1}{e^{-1/scale} + 1} e^{-|x|/scale}, \quad
+/// P[X = x] = \frac{1 - e^{-1/scale}}{1 + e^{-1/scale}} e^{-|x|/scale}, \quad
 /// \text{where } X \sim \mathcal{L}_\mathbb{Z}(0, scale)
 /// ```
 ///
@@ -184,7 +203,7 @@ pub(crate) fn sample_geometric_exp_fast(x: RBig) -> Fallible<UBig> {
 /// * [CKS20 The Discrete Gaussian for Differential Privacy](https://arxiv.org/abs/2004.00010)
 pub fn sample_discrete_laplace(scale: RBig) -> Fallible<IBig> {
     if scale.is_zero() {
-        return Ok(0.into());
+        return Ok(IBig::ZERO);
     }
     let (numer, denom) = scale.into_parts();
     let inv_scale = RBig::from_parts(denom.as_ibig().clone(), numer.into_parts().1);
@@ -221,14 +240,14 @@ pub fn sample_discrete_gaussian(scale: RBig) -> Fallible<IBig> {
     if scale.is_zero() {
         return Ok(IBig::ZERO);
     }
-    let t = RBig::from(scale.clone().floor() + 1i8);
-    let sigma2 = scale.pow(2);
+
     loop {
-        let candidate = sample_discrete_laplace(t.clone())?;
-        let x = (&candidate).abs() - sigma2.clone() / &t;
-        let bias = x.pow(2) / (sigma2.clone() * rbig!(2));
-        if sample_bernoulli_exp(bias)? {
-            return Ok(candidate);
+        let positive = sample_standard_bernoulli()?;
+        let magnitude = sample_discrete_half_gaussian(scale.clone())?
+            .as_ibig()
+            .clone();
+        if positive || !magnitude.is_zero() {
+            return Ok(if positive { magnitude } else { -magnitude });
         }
     }
 }

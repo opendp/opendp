@@ -24,91 +24,105 @@
 //!
 //! is contained in one IEEE rounding cell.
 
-use dashu::{integer::UBig, rational::RBig, rbig, ubig};
+use dashu::{integer::UBig, rational::RBig, rbig};
 
 use crate::{
     error::Fallible,
     traits::{
         Float,
-        samplers::{
-            PartialSample, PartialUniform01, Uniform01, sample_bernoulli_exp,
-            sample_geometric_exp_fast,
-        },
+        samplers::{PartialSample, PartialUniform01, Uniform01RV, sample_discrete_half_gaussian},
     },
 };
 
-use super::{sample_standard_bernoulli, sample_uniform_ubig_below};
+use super::sample_standard_bernoulli;
 
-/// Karney's integer primitive:
+#[cfg(test)]
+mod test;
+
+mod native;
+
+/// One Bernoulli trial with success probability `exp(-x)` for lazy `x`.
 ///
-///     P[K = k] ∝ exp(-k^2 / 2), k ∈ {0, 1, 2, ...}.
-fn sample_k() -> Fallible<UBig> {
-    let half = rbig!(1 / 2);
+/// This is the generalized von Neumann decreasing-sequence test used by DFW20.
+fn sample_bernoulli_exp_uniform(x: &mut PartialUniform01) -> Fallible<bool> {
+    // First term: continue iff U_1 < x.
+    let mut y = PartialSample::new(Uniform01RV);
+
+    if !x.greater_than(&mut y)? {
+        return Ok(true);
+    }
+
+    // We have seen one success, so the next failure returns false.
+    let mut accept_on_failure = false;
 
     loop {
-        // Proposal mass is proportional to exp(-candidate / 2).
-        let candidate = sample_geometric_exp_fast(half.clone())?;
+        let mut u = PartialSample::new(Uniform01RV);
 
-        // Unit-scale CKS correction term for the one-sided proposal:
-        //     (candidate - 1/2)^2 / 2
-        let centered = RBig::from(candidate.clone()) - half.clone();
-        let bias = centered.clone() * centered / rbig!(2);
+        // Continue iff U_{n+1} < U_n.
+        if !y.greater_than(&mut u)? {
+            return Ok(accept_on_failure);
+        }
 
-        if sample_bernoulli_exp(bias)? {
-            return Ok(candidate);
+        y = u;
+        accept_on_failure = !accept_on_failure;
+    }
+}
+
+/// Return whether `u < x / 2` for lazy uniforms `u` and `x`.
+fn sample_bernoulli_u_lt_x2(u: &mut PartialUniform01, x: &mut PartialUniform01) -> Fallible<bool> {
+    loop {
+        if u.upper().unwrap() * rbig!(2) < x.lower().unwrap() {
+            return Ok(true);
+        }
+
+        if u.lower().unwrap() * rbig!(2) > x.upper().unwrap() {
+            return Ok(false);
+        }
+
+        if u.refinements() <= x.refinements().saturating_add(1) {
+            u.refine()?;
+        } else {
+            x.refine()?;
         }
     }
 }
 
-/// One Bernoulli trial with success probability
+/// One Bernoulli trial with success probability `exp(-x^2 / 2)`.
 ///
-///     exp(-x * (2k + x) / (2k + 2)).
-///
-/// This is Karney's Algorithm B, using the T/C selector transformation
-/// to avoid arithmetic on the real-valued lazy uniform `x`.
-fn sample_karney_b(k: &UBig, x: &mut PartialUniform01) -> Fallible<bool> {
-    let m = k * ubig!(2) + ubig!(2);
+/// This is DFW20's `B_{e^{-xy}}` algorithm with parameters `(x/2, x)`.
+fn sample_bernoulli_exp_half_x_squared(x: &mut PartialUniform01) -> Fallible<bool> {
+    // First continuation event:
+    //     u_1 < x / 2
+    //     v_1 < x
+    let mut w = PartialSample::new(Uniform01RV);
 
-    let mut accept_on_failure = true;
-    let mut y: Option<PartialUniform01> = None;
+    if !sample_bernoulli_u_lt_x2(&mut w, x)? {
+        return Ok(true);
+    }
+
+    let mut v = PartialSample::new(Uniform01RV);
+    if !x.greater_than(&mut v)? {
+        return Ok(true);
+    }
+
+    // One completed continuation, so next failure returns false.
+    let mut accept_on_failure = false;
 
     loop {
-        // Step B2(a): sample z and require z < y.
-        // Initially y is x; after a successful loop, y is the previous z.
-        let mut z = PartialSample::new(Uniform01);
+        let mut u = PartialSample::new(Uniform01RV);
 
-        let z_lt_y = match y.as_mut() {
-            Some(y_prev) => y_prev.greater_than(&mut z)?,
-            None => x.greater_than(&mut z)?,
-        };
-
-        if !z_lt_y {
+        // Later continuation events use the decreasing-uniform chain:
+        //     u_{i+1} < u_i
+        if !w.greater_than(&mut u)? {
             return Ok(accept_on_failure);
         }
 
-        // Steps B2(b,c), using Karney's T/C selector:
-        //
-        // r < (2k + x)/(2k + 2)
-        //
-        // is implemented by:
-        // - fail with probability 1/m,
-        // - succeed with probability 1 - 2/m,
-        // - otherwise compare a fresh r < x.
-        debug_assert!(m >= ubig!(2));
-        let u = sample_uniform_ubig_below(m.clone())?;
-
-        if u.is_zero() {
+        let mut v = PartialSample::new(Uniform01RV);
+        if !x.greater_than(&mut v)? {
             return Ok(accept_on_failure);
         }
-        if u.is_one() {
-            let mut r = PartialSample::new(Uniform01);
 
-            if !x.greater_than(&mut r)? {
-                return Ok(accept_on_failure);
-            }
-        }
-
-        y = Some(z);
+        w = u;
         accept_on_failure = !accept_on_failure;
     }
 }
@@ -117,27 +131,26 @@ fn sample_karney_b(k: &UBig, x: &mut PartialUniform01) -> Fallible<bool> {
 ///
 ///     exp(-x * (2k + x) / 2).
 ///
-/// Karney obtains this by running Algorithm B exactly k + 1 times.
+/// DFW20 factorizes this as
+///
+///     exp(-k x) * exp(-x^2 / 2).
 fn accept_fraction(k: &UBig, x: &mut PartialUniform01) -> Fallible<bool> {
     let mut remaining = k.clone();
 
-    loop {
-        if !sample_karney_b(k, x)? {
+    while !remaining.is_zero() {
+        if !sample_bernoulli_exp_uniform(x)? {
             return Ok(false);
         }
-
-        if remaining.is_zero() {
-            return Ok(true);
-        }
-
         remaining -= UBig::ONE;
     }
+
+    sample_bernoulli_exp_half_x_squared(x)
 }
 
-struct ExactStdNormal {
-    negative: bool,
-    k: RBig,
-    x: PartialUniform01,
+pub(super) struct ExactStdNormal {
+    pub(super) negative: bool,
+    pub(super) k: RBig,
+    pub(super) x: PartialUniform01,
 }
 
 /// Sample an exact lazy standard normal in Karney form:
@@ -145,15 +158,15 @@ struct ExactStdNormal {
 ///     Z = S * (K + X).
 fn sample_exact_std_normal() -> Fallible<ExactStdNormal> {
     loop {
-        let k = sample_k()?;
-        let mut x = PartialSample::new(Uniform01);
+        let k = sample_discrete_half_gaussian(RBig::ONE)?;
+        let mut x = PartialSample::new(Uniform01RV);
 
         if !accept_fraction(&k, &mut x)? {
             continue;
         }
 
         let negative = sample_standard_bernoulli()?;
-        let k = RBig::from(k.as_ibig().clone());
+        let k = RBig::from(k);
 
         return Ok(ExactStdNormal { negative, k, x });
     }
@@ -243,6 +256,15 @@ fn normal_interval(z: &ExactStdNormal, mu: &RBig, scale: &RBig) -> (RBig, RBig) 
     }
 }
 
+fn clip_value(value: RBig, range: &RBig) -> RBig {
+    value.max(-range.clone()).min(range.clone())
+}
+
+fn clip_interval(interval: (RBig, RBig), range: &RBig) -> (RBig, RBig) {
+    let (lo, hi) = interval;
+    (clip_value(lo, range), clip_value(hi, range))
+}
+
 type RoundingCell = (Option<RBig>, Option<RBig>);
 
 fn interval_inside_cell(interval: &(RBig, RBig), cell: &RoundingCell) -> bool {
@@ -308,5 +330,111 @@ pub fn sample_rounded_gaussian<T: Float>(mu: T, scale: T) -> Fallible<T> {
         // The current interval straddles a rounding boundary. Refine only the
         // accepted fractional component X; K and sign are already exact.
         z.x.refine()?;
+    }
+}
+
+/// Sample exactly from a clipped continuous Gaussian rounded to f32/f64.
+///
+/// For finite `mu`, finite nonnegative `scale`, and finite nonnegative `range`,
+/// this implements
+///
+///     round_T(clip_R(clip_R(mu) + scale * Z)).
+///
+/// Clipping is deterministic post-processing; values outside the clipping
+/// range are not rejected and resampled.
+pub fn sample_rounded_gaussian_clipped<T: Float>(mu: T, scale: T, range: T) -> Fallible<T> {
+    if !mu.is_finite() || !scale.is_finite() || !range.is_finite() {
+        return fallible!(FailedFunction, "mu, scale and range must be finite");
+    }
+
+    if scale < T::zero() {
+        return fallible!(FailedFunction, "scale must be nonnegative");
+    }
+
+    if range < T::zero() {
+        return fallible!(FailedFunction, "range must be nonnegative");
+    }
+
+    let range = range.into_rational()?;
+    let mu = clip_value(mu.into_rational()?, &range);
+
+    if scale == T::zero() {
+        return Ok(T::from_rational(mu));
+    }
+
+    let scale = scale.into_rational()?;
+    let mut z = sample_exact_std_normal()?;
+
+    loop {
+        let interval = clip_interval(normal_interval(&z, &mu, &scale), &range);
+        let (y, cell) = candidate_and_cell_from_interval::<T>(&interval)?;
+
+        if interval_inside_cell(&interval, &cell) {
+            return Ok(y);
+        }
+
+        z.x.refine()?;
+    }
+}
+
+/// Sample from a continuous Gaussian with f64 input parameters, rounded as a
+/// real affine value directly into the extended f32 output lattice.
+///
+/// This path does not construct a native floating-point noise value and add it
+/// to `mu`; it certifies which finite f32 rounding cell contains the exact real
+/// value `mu +/- scale * (k + x)`.
+///
+/// If the native prefix cannot certify one f32 cell, the accepted trace is
+/// rejected as an unresolved rounding-boundary comb and the sampler restarts.
+/// This intentionally avoids exact rational finalization at the cost of the
+/// small conditioning term accounted for by the comb probability.
+/// Pre-accept native resource limits are treated as implementation failures,
+/// not as fresh-sample fallbacks. Infinite f32 cells are ordinary outputs.
+pub fn sample_rounded_gaussian_f64_to_f32_native(mu: f64, scale: f64) -> Fallible<f32> {
+    sample_rounded_gaussian_f64_to_f32_native_clipped(mu, scale, None)
+}
+
+/// Sample from a continuous Gaussian with f64 input parameters, optionally
+/// clipping the input location and noisy real value to `[-range, range]`
+/// before extended f32 rounding.
+///
+/// When `range` is `None`, this is the unclipped extended rounded mechanism.
+/// When `Some(R)`, this implements
+///
+///     round_ext_f32(clip_R(clip_R(mu) + scale * Z)).
+pub fn sample_rounded_gaussian_f64_to_f32_native_clipped(
+    mu: f64,
+    scale: f64,
+    range: Option<f64>,
+) -> Fallible<f32> {
+    if !mu.is_finite() || !scale.is_finite() {
+        return fallible!(FailedFunction, "mu and scale must be finite");
+    }
+    if scale < 0.0 {
+        return fallible!(FailedFunction, "scale must be nonnegative");
+    }
+    if let Some(range) = range
+        && (!range.is_finite() || range < 0.0)
+    {
+        return fallible!(FailedFunction, "range must be finite and nonnegative");
+    }
+
+    let mu = range.map(|range| mu.max(-range).min(range)).unwrap_or(mu);
+
+    if scale == 0.0 {
+        return Ok(mu as f32);
+    }
+
+    loop {
+        match native::sample_f64_to_f32_clipped(mu, scale, range)? {
+            native::NativeF32Sample::Output(out) => return Ok(out),
+            native::NativeF32Sample::RejectedComb => continue,
+            native::NativeF32Sample::ResourceLimit => {
+                return fallible!(
+                    FailedFunction,
+                    "native resource limit before an accepted continuation"
+                );
+            }
+        }
     }
 }

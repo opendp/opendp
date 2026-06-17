@@ -19,7 +19,7 @@ mod canonical;
 pub use canonical::CanonicalRV;
 
 mod uniform;
-pub use uniform::{PartialUniform01, Uniform01};
+pub use uniform::{PartialUniform01, Uniform01RV};
 
 pub trait InverseCDF: Sized {
     /// Type of lower or upper bound on the true random sample.
@@ -82,6 +82,10 @@ impl<D: InverseCDF> PartialSample<D> {
         Ok(())
     }
 
+    pub(crate) fn refinements(&mut self) -> usize {
+        self.refinements
+    }
+
     /// Retrieve a lower bound on the sample.
     pub(crate) fn lower(&self) -> Option<D::Edge> {
         self.edge::<Down>()
@@ -97,9 +101,9 @@ impl<D: InverseCDF> PartialSample<D> {
     ///
     /// # Proof Definition
     /// Returns `true` if `self` is greater than `other`, and `false` otherwise.
-    pub fn greater_than(
+    pub fn greater_than<D2: InverseCDF<Edge = D::Edge>>(
         self: &mut PartialSample<D>,
-        other: &mut PartialSample<D>,
+        other: &mut PartialSample<D2>,
     ) -> Fallible<bool> {
         Ok(loop {
             match self.lower().zip(other.upper()) {
