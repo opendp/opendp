@@ -61,7 +61,7 @@ jobs:
 
       - name: Run sccache-cache
         # Enables caching of compilation results.
-        #   For more info: https://github.com/marketplace/actions/sccache-action
+        #   Link to action doc: https://github.com/marketplace/actions/sccache-action
         uses: mozilla-actions/sccache-action@v0.0.10
         with:
           version: "v0.15.0"  # Ensure sccache binary supports cache v2 API
