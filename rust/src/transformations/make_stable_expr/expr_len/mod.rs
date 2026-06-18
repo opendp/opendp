@@ -1,13 +1,13 @@
+use super::expr_count::counting_query_stability_map;
 use crate::core::{Function, MetricSpace, Transformation};
 use crate::domains::{AtomDomain, Context, ExprDomain, Margin, SeriesDomain, WildExprDomain};
 use crate::error::*;
 use crate::metrics::{L01InfDistance, LpDistance};
 use crate::transformations::traits::UnboundedMetric;
+use polars::datatypes::DataType;
 use polars::prelude::len;
 use polars_plan::dsl::Expr;
 use polars_plan::plans::typed_lit;
-use polars::datatypes::DataType;
-use super::expr_count::counting_query_stability_map;
 
 #[cfg(test)]
 mod test;
@@ -36,8 +36,12 @@ where
 {
     let output_expr = match &expr {
         Expr::Len => expr.clone(),
-        Expr::Cast{expr: inner, dtype: _, options: _} if matches!(**inner, Expr::Len) => expr.clone(),
-        _ => return fallible!(MakeTransformation, "expected len expression")
+        Expr::Cast {
+            expr: inner,
+            dtype: _,
+            options: _,
+        } if matches!(**inner, Expr::Len) => expr.clone(),
+        _ => return fallible!(MakeTransformation, "expected len expression"),
     };
 
     let old_margin = input_domain.context.aggregation("len")?;
@@ -55,7 +59,6 @@ where
             margin: margin.clone(),
         },
     };
-
 
     // Need to cast here?
     Transformation::new(

@@ -88,8 +88,7 @@ where
 
     let len_func = if allow_negative {
         len().cast(DataType::Int64)
-    }
-    else {
+    } else {
         len()
     };
     // Not using len_func temporarily.

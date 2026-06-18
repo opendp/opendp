@@ -9,11 +9,11 @@ use crate::{
     polars::dp_len,
 };
 
-
 #[test]
-fn test_dp_frame_len_allow_negative() -> Fallible<()>{
-    let lf_domain = LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?
-        .with_margin(Margin::select().with_max_length(10))?;
+fn test_dp_frame_len_allow_negative() -> Fallible<()> {
+    let lf_domain =
+        LazyFrameDomain::new(vec![SeriesDomain::new("A", AtomDomain::<i32>::default())])?
+            .with_margin(Margin::select().with_max_length(10))?;
 
     let lf = df!("A" => &[1i32, 2, 3])?.lazy();
 

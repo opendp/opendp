@@ -259,7 +259,6 @@ where
             #[cfg(feature = "contrib")]
             Len => expr_len::make_expr_len(input_domain, input_metric, self, false),
 
-
             // Here I should see if there is a length transform in the compute graph.
             // If so build a cast transform around the len transform.
             #[cfg(feature = "contrib")]
