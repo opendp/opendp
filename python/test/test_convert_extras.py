@@ -22,8 +22,9 @@ def test_extras_object(val_in, type_name):
 
 def test_extras_object_polars():
     pl = pytest.importorskip("polars")
+    from polars.testing import assert_frame_equal
     val_in = pl.LazyFrame(schema={"A": pl.Int32, "B": pl.String})
     type_name = "LazyFrame"
     obj = py_to_c(val_in, c_type=AnyObjectPtr, type_name=type_name)
     val_out = c_to_py(obj)
-    pl.testing.assert_frame_equal(val_out, val_in)
+    assert_frame_equal(val_out, val_in)
