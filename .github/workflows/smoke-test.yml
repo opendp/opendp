@@ -47,7 +47,7 @@ jobs:
         # fix formatting with: cargo fmt --manifest-path=rust/Cargo.toml --all
         run: cargo fmt --manifest-path=Cargo.toml --all --check
 
-      - uses: actions/cache@v2
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
