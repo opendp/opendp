@@ -176,6 +176,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
 
+          # Only for builds
+          python -m pip install pytest-split pytest-xdist
+
       - name: Download dynamic lib
         uses: actions/download-artifact@v7
         with:
@@ -196,10 +199,10 @@ jobs:
         # (Even in unittests we should use "importskip" rather than "skipif".)
         run: |
           case "${{ matrix.extra-install }}" in
-            PLACEHOLDER)          pytest -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
-            numpy)                pytest -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
-            scikit-learn)         pytest -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
-            polars)               pytest -v -k "not contingency and not synthetic";;
+            PLACEHOLDER)          pytest --splits ${{ matrix.shard_total }} --group ${{ matrix.shard }} -n auto -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
+            numpy)                pytest --splits ${{ matrix.shard_total }} --group ${{ matrix.shard }} -n auto -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
+            scikit-learn)         pytest --splits ${{ matrix.shard_total }} --group ${{ matrix.shard }} -n auto -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
+            polars)               pytest --splits ${{ matrix.shard_total }} --group ${{ matrix.shard }} -n auto -v -k "not contingency and not synthetic";;
             mbi)  coverage run -m pytest -v;;
 
             *)    print "unexpected extra-install"; exit 1;;
