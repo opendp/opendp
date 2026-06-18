@@ -149,7 +149,7 @@ jobs:
           - 'scikit-learn'
           - 'polars'
           - 'mbi'
-        shard: [1, 2, 3, 4]
+        group: [1, 2, 3, 4]
 
     steps:
       - name: Checkout repository
@@ -200,10 +200,10 @@ jobs:
         # (Even in unittests we should use "importskip" rather than "skipif".)
         run: |
           case "${{ matrix.extra-install }}" in
-            PLACEHOLDER)          pytest --splits ${{ matrix.shard_total }} --group ${{ matrix.shard }} -n auto -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
-            numpy)                pytest --splits ${{ matrix.shard_total }} --group ${{ matrix.shard }} -n auto -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
-            scikit-learn)         pytest --splits ${{ matrix.shard_total }} --group ${{ matrix.shard }} -n auto -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
-            polars)               pytest --splits ${{ matrix.shard_total }} --group ${{ matrix.shard }} -n auto -v -k "not contingency and not synthetic";;
+            PLACEHOLDER)          pytest --splits 4 --group ${{ matrix.group }} -n auto -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
+            numpy)                pytest --splits 4 --group ${{ matrix.group }} -n auto -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
+            scikit-learn)         pytest --splits 4 --group ${{ matrix.group }} -n auto -v -k "not contingency and not synthetic and not lazyframe and not polars and not pca and not rst";;
+            polars)               pytest --splits 4 --group ${{ matrix.group }} -n auto -v -k "not contingency and not synthetic";;
             mbi)  coverage run -m pytest -v;;
 
             *)    print "unexpected extra-install"; exit 1;;
