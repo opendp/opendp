@@ -49,7 +49,7 @@ jobs:
 
         # Add rust caching following example:
         #   https://github.com/actions/cache/blob/main/examples.md#rust---cargo
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/bin
@@ -62,11 +62,12 @@ jobs:
       - name: Run sccache-cache
         # Enables caching of compilation results.
         #   For more info: https://github.com/marketplace/actions/sccache-action
-        uses: mozilla-actions/sccache-action@v0.0.7
+        uses: mozilla-actions/sccache-action@v0.0.10
+        with:
+          version: "v0.15.0"  # Ensure sccache binary supports cache v2 API
 
       - name: Build
         env:
-          SCCACHE_GHA_ENABLED: "true"
           RUSTC_WRAPPER: "sccache"
         run: cargo build --verbose --all-features
       
