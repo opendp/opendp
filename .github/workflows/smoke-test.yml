@@ -149,6 +149,7 @@ jobs:
           - 'scikit-learn'
           - 'polars'
           - 'mbi'
+        shard: [1, 2, 3, 4]
 
     steps:
       - name: Checkout repository
