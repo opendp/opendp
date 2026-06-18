@@ -60,6 +60,8 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run sccache-cache
+        # Enables caching of compilation results.
+        #   For more info: https://github.com/marketplace/actions/sccache-action
         uses: mozilla-actions/sccache-action@v0.0.7
 
       - name: Build
