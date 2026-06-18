@@ -26,7 +26,7 @@ from opendp._lib import AnyObjectPtr, ctypes, FfiSlice, FfiSlicePtr
     (tuple, (1., 1e-7)),
 ])
 def test_data_object(val_type, val_in):
-    assert type(val_in) == val_type
+    assert isinstance(val_in, val_type)
     obj = py_to_c(val_in, c_type=AnyObjectPtr)
     val_out = c_to_py(obj)
     assert val_out == val_in

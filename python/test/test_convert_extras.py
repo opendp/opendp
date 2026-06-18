@@ -1,9 +1,6 @@
 import pytest
 
-import opendp.prelude as dp
-
 from opendp.extras.polars import Bound, Margin
-from opendp.typing import RuntimeType
 
 from opendp._convert import py_to_c, c_to_py
 from opendp._lib import AnyObjectPtr
