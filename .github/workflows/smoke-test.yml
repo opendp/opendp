@@ -177,7 +177,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
 
-          # Only for builds
+          # Dependencies added for quicker builds
           python -m pip install pytest-split pytest-xdist
 
       - name: Download dynamic lib
