@@ -7,16 +7,16 @@ from opendp._convert import (
     py_to_c,
     c_to_py,
     _check_and_cast_scalar,
-    _scalar_to_slice,
-    _slice_to_scalar,
-    _vector_to_slice,
-    _slice_to_vector,
     _hashmap_to_slice,
-    _slice_to_hashmap,
     _numpy_dtype_for_rust_type,
     _numpy_to_slice,
     _py_to_slice,
+    _scalar_to_slice,
+    _slice_to_hashmap,
     _slice_to_numpy,
+    _slice_to_scalar,
+    _slice_to_vector,
+    _vector_to_slice,
 )
 from opendp._lib import AnyObjectPtr, ctypes, FfiSlice, FfiSlicePtr
 
