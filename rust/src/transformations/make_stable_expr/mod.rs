@@ -226,7 +226,7 @@ where
 
             expr => fallible!(
                 MakeTransformation,
-                "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
+                "2Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
                 expr,
                 get_disabled_features_message()
             ),
@@ -257,11 +257,17 @@ where
             Agg(AggExpr::Sum(_)) => expr_sum::make_expr_sum(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
-            Len => expr_len::make_expr_len(input_domain, input_metric, self),
+            Len => expr_len::make_expr_len(input_domain, input_metric, self, false),
+
+
+            // Here I should see if there is a length transform in the compute graph.
+            // If so build a cast transform around the len transform.
+            #[cfg(feature = "contrib")]
+            ref Cast => expr_len::make_expr_len(input_domain, input_metric, self, true),
 
             expr => fallible!(
                 MakeTransformation,
-                "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
+                "3Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
                 expr,
                 get_disabled_features_message()
             ),
@@ -295,7 +301,7 @@ where
         match self {
             expr => fallible!(
                 MakeTransformation,
-                "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
+                "4Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
                 expr,
                 get_disabled_features_message()
             ),

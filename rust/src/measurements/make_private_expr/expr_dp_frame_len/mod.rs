@@ -10,7 +10,7 @@ use polars_plan::prelude::FunctionOptions;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    core::{Measurement, MetricSpace},
+    core::{Function, Measurement, MetricSpace},
     domains::{ExprDomain, ExprPlan, WildExprDomain},
     error::Fallible,
     measurements::{
@@ -61,6 +61,7 @@ impl OpenDPPlugin for DPFrameLenShim {
 }
 
 /// Make a dp frame-length expression measurement.
+/// NEED CHANGES HERE.
 pub(crate) fn make_expr_dp_frame_len<MI: 'static + UnboundedMetric, MO: NoiseExprMeasure>(
     input_domain: WildExprDomain,
     input_metric: L01InfDistance<MI>,
@@ -79,19 +80,21 @@ where
             DPFrameLenShim::NAME
         );
     };
-    
+
     let allow_negative = match allow_negative {
         Expr::Literal(lit) => lit.bool().unwrap_or(false),
-        _ =>false,
-    };
-    let len_expr = if allow_negative {
-        len().cast(DataType::Int64)
-    } else {
-        len()
+        _ => todo!(),
     };
 
-    // Cast to Int64 when allow_negative is True.
-    apply_plugin(vec![len_expr, scale], expr, NoiseShim).make_private(
+    let len_func = if allow_negative {
+        len().cast(DataType::Int64)
+    }
+    else {
+        len()
+    };
+    // Not using len_func temporarily.
+
+    apply_plugin(vec![len_func, scale], expr, NoiseShim).make_private(
         input_domain.clone(),
         input_metric,
         output_measure,
@@ -104,3 +107,6 @@ where
 fn dp_frame_len(_: &[Series]) -> PolarsResult<Series> {
     polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")
 }
+
+#[cfg(test)]
+mod test;
