@@ -47,6 +47,18 @@ jobs:
         # fix formatting with: cargo fmt --manifest-path=rust/Cargo.toml --all
         run: cargo fmt --manifest-path=Cargo.toml --all --check
 
+        # Add rust caching following example:
+        #   https://github.com/actions/cache/blob/main/examples.md#rust---cargo
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
       - name: Build
         run: cargo build --verbose --all-features
       
