@@ -1,6 +1,5 @@
 import pytest
 
-
 import opendp.prelude as dp
 
 from opendp.extras.polars import Bound, Margin

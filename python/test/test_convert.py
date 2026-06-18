@@ -1,7 +1,5 @@
 import pytest
 
-import opendp.prelude as dp
-
 from opendp.typing import *
 from opendp._convert import (
     py_to_c,
@@ -175,8 +173,9 @@ def test_numpy_ndarray_validation():
 def test_numpy_trans():
     np = pytest.importorskip('numpy')
     import opendp.prelude as dp
+
     assert dp.t.make_sum(
-        dp.vector_domain(dp.atom_domain(bounds=(0, 10))), 
+        dp.vector_domain(dp.atom_domain(bounds=(0, 10))),
         dp.symmetric_distance(),
     )(np.array([1, 2, 3], dtype=np.int32)) == 6
 
@@ -198,13 +197,12 @@ def test_numpy_vector_output_from_rust_transformation():
 
 
 def test_overflow():
-    import pytest
     with pytest.raises(ValueError):
         py_to_c(-1, AnyObjectPtr, u8)
 
     with pytest.raises(ValueError):
         py_to_c(256, AnyObjectPtr, u8)
-  
+
     with pytest.raises(ValueError):
         py_to_c(-129, AnyObjectPtr, i8)
 
