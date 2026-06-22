@@ -545,7 +545,7 @@ def dp_len(scale: float | None = None, allow_negative: bool = False):
     return register_plugin_function(
         plugin_path=_get_opendp_polars_lib_path(),
         function_name="dp_frame_len",
-        args=(scale,allow_negative),
+        args=(scale, allow_negative),
         returns_scalar=True,
     )
 
