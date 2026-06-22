@@ -50,7 +50,7 @@ test_that("new function and privacy profile work in R", {
   )
   expect_equal(postprocess(arg = list(12., 100.)), 0.12)
 
-  profile <- new_privacy_profile(\(epsilon) if (epsilon < 0.5) 1. else 1e-8)
+  profile <- privacy_curve(profile = \(epsilon) if (epsilon < 0.5) 1. else 1e-8)
   expect_equal(profile(epsilon = 0.499), 1.)
   expect_equal(profile(delta = 1e-8), 0.5)
 })

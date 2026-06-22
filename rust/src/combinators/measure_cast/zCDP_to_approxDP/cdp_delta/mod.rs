@@ -42,15 +42,10 @@
 // This file is derived from the following implementation by Thomas Steinke:
 //     https://github.com/IBM/discrete-gaussian-differential-privacy/blob/cb190d2a990a78eff6e21159203bc888e095f01b/cdp2adp.py#L74-L102
 
-use std::ops::Neg;
-
 use num::Zero;
 use opendp_derive::proven;
 
-use crate::{
-    error::Fallible,
-    traits::{InfAdd, InfDiv, InfExp, InfLn1P, InfMul, InfSub},
-};
+use crate::{error::Fallible, traits::InfExp};
 
 #[cfg(test)]
 pub(crate) mod test;
@@ -61,6 +56,14 @@ pub(crate) mod test;
 /// For any possible setting of $\rho$ and $\epsilon$, $\texttt{cdp\_delta}$ either returns an error,
 /// or a $\delta$ such that any $\rho$-differentially private measurement is also $(\epsilon, \delta)$-differentially private.
 pub(crate) fn cdp_delta(rho: f64, eps: f64) -> Fallible<f64> {
+    if rho.is_nan() {
+        return fallible!(FailedMap, "rho must not be NaN");
+    }
+
+    if eps.is_nan() {
+        return fallible!(FailedMap, "epsilon must not be NaN");
+    }
+
     if rho.is_sign_negative() {
         return fallible!(FailedMap, "rho ({}) must be non-negative", rho);
     }
@@ -77,75 +80,337 @@ pub(crate) fn cdp_delta(rho: f64, eps: f64) -> Fallible<f64> {
         return Ok(1.0);
     }
 
-    // It has been proven that...
-    //    delta = exp((α-1) (αρ - ε) + α ln1p(-1/α)) / (α-1)
-    // ...for any choice of alpha in (1, infty)
+    // We search over alpha using ordinary floating point.
+    // This is fine: any alpha > 1 gives a valid bound.
+    // The search only affects tightness, not validity, provided final evaluation is conservative enough.
 
-    // This algorithm searches for the best alpha, the alpha that minimizes delta.
+    let mut best_log_delta = f64::INFINITY;
 
-    // Since any alpha in (1, infty) yields a valid upper bound on delta,
-    //    the search for alpha does not need conservative rounding.
-    // If this search is slightly "incorrect" by float rounding it will only result in larger delta (still valid)
+    // ---------------------------------------------------------------------
+    // Branch 0:
+    //
+    // delta_0(alpha)
+    //   = exp((alpha - 1) * (alpha * rho - eps)
+    //         + alpha * ln1p(-1 / alpha))
+    //     / (alpha - 1)
+    //
+    // This is the bound you are already using.
+    // ---------------------------------------------------------------------
 
-    // We now choose bounds for the binary search over alpha.
+    let alpha_lo = alpha_lower();
 
-    // The optimal alpha is no greater than (ε+1)/(2ρ)
-    let mut a_max = eps
-        .inf_add(&1.0)?
-        .inf_div(&(2.0).neg_inf_mul(&rho)?)?
-        .inf_add(&2.0)?;
+    let alpha0_hi = alpha0_upper(rho, eps);
 
-    // Don't let alpha be too small, due to numerical stability.
-    // We only encounter α <= 1.01 when eps <= rho or close to it.
-    // This is not an interesting parameter regime, as you will
-    //     inherently get large delta in this regime.
-    let mut a_min = 1.01f64;
+    if alpha0_hi > alpha_lo {
+        let alpha0 =
+            minimize_unimodal_log(alpha_lo, alpha0_hi, |alpha| log_delta0(alpha, rho, eps));
 
-    // run binary search to find ideal alpha
-    // Since the function is convex (when restricted to the bounds)
-    //     the ideal alpha is the critical point of the derivative of the function for delta
-    loop {
-        let diff = a_max - a_min;
+        best_log_delta = best_log_delta.min(log_delta0(alpha0, rho, eps));
+        best_log_delta = best_log_delta.min(log_delta0(alpha_lo, rho, eps));
+        best_log_delta = best_log_delta.min(log_delta0(alpha0_hi, rho, eps));
+    }
 
-        let a_mid = a_min + diff / 2.0;
+    // ---------------------------------------------------------------------
+    // Branch 1:
+    //
+    // delta_1(alpha)
+    //   = (exp((alpha - 1) * alpha * rho) - 1)
+    //     / (alpha * (exp((alpha - 1) * eps) - 1))
+    //
+    // This branch is useful when eps > alpha * rho.
+    // Therefore alpha must lie in:
+    //
+    //     1 < alpha < eps / rho
+    //
+    // ---------------------------------------------------------------------
 
-        if a_mid == a_max || a_mid == a_min {
-            break;
-        }
+    if eps > rho {
+        if let Some((alpha1_lo, alpha1_hi)) = alpha1_interval(rho, eps) {
+            if alpha1_hi > alpha1_lo {
+                let alpha1 = minimize_unimodal_log(alpha1_lo, alpha1_hi, |alpha| {
+                    log_delta1(alpha, rho, eps)
+                });
 
-        // calculate derivative
-        let deriv = (2.0 * a_mid - 1.0) * rho - eps + a_mid.recip().neg().ln_1p();
-        //        = (2α - 1)            * ρ   - ε   + ln1p(-1/α)
-
-        if deriv.is_sign_negative() {
-            a_min = a_mid;
-        } else {
-            a_max = a_mid;
+                best_log_delta = best_log_delta.min(log_delta1(alpha1, rho, eps));
+                best_log_delta = best_log_delta.min(log_delta1(alpha1_lo, rho, eps));
+                best_log_delta = best_log_delta.min(log_delta1(alpha1_hi, rho, eps));
+            } else {
+                best_log_delta = best_log_delta.min(log_delta1(alpha1_lo, rho, eps));
+            }
         }
     }
 
-    // calculate delta
-    let a_1 = a_max.inf_sub(&1.0)?;
-    let ar_e = a_max.inf_mul(&rho)?.inf_sub(&eps)?;
-    //  t1 = (α-1) (αρ - ε)
-    let t1 = match a_1.inf_mul(&ar_e) {
-        // if t1 is negative, then handle negative overflow by making t1 larger: the most negative finite float
-        // making t1 larger makes delta larger, so it's still a valid upper bound
-        Err(_) if a_1.is_sign_negative() != ar_e.is_sign_negative() => f64::MIN,
-        Ok(v) => v,
-        err => err?,
+    log_to_delta(best_log_delta)
+}
+
+fn alpha_lower() -> f64 {
+    // Avoid alpha extremely close to 1, where cancellation is unpleasant.
+    // This is much less restrictive than 1.01, so it keeps the near-alpha=1
+    // improvement from branch 1.
+    1.0 + f64::EPSILON.sqrt()
+}
+
+fn alpha0_upper(rho: f64, eps: f64) -> f64 {
+    // Same upper-bound idea as your existing implementation:
+    //
+    //     alpha* <= roughly (eps + 1) / (2 rho) + 2
+    //
+    // If this overflows, cap the search. Any alpha remains valid; this only
+    // affects tightness in extreme regimes.
+    let hi = (eps + 1.0) / (2.0 * rho) + 2.0;
+
+    if hi.is_finite() && hi > alpha_lower() {
+        hi
+    } else {
+        // Large enough to cover all practical finite optima while reducing
+        // alpha^2 overflow risk in the objective.
+        f64::MAX.sqrt()
+    }
+}
+
+fn alpha1_interval(rho: f64, eps: f64) -> Option<(f64, f64)> {
+    if !(eps > rho) {
+        return None;
+    }
+
+    // alpha < eps / rho.
+    // Compute the upper endpoint in log-space so eps / rho can overflow safely.
+    let log_hi = eps.ln() - rho.ln();
+
+    if !(log_hi > 0.0) || log_hi.is_nan() {
+        return None;
+    }
+
+    let cap = f64::MAX.sqrt();
+    let cap_log = cap.ln();
+
+    let raw_hi = if log_hi >= cap_log { cap } else { log_hi.exp() };
+
+    if !(raw_hi > 1.0) || !raw_hi.is_finite() {
+        return None;
+    }
+
+    let gap = raw_hi - 1.0;
+
+    // Pick an interior lower endpoint.
+    let lo = if gap > 4.0 * f64::EPSILON.sqrt() {
+        alpha_lower()
+    } else {
+        1.0 + gap * 0.25
     };
 
-    //  t2 = α ln1p(-1/α)
-    let t2 = a_max.inf_mul(&a_max.recip().neg().inf_ln_1p()?)?;
+    // Pick an interior upper endpoint.
+    let hi = if raw_hi < 2.0 {
+        1.0 + gap * 0.75
+    } else if raw_hi == cap {
+        cap
+    } else {
+        raw_hi * (1.0 - 1e-12)
+    };
 
-    //  delta = exp((α-1) (αρ - ε) + α ln1p(-1/α)) / (α-1)
-    //        = exp(t1             + t2          ) / (α-1)
-    let delta = t1
-        .inf_add(&t2)?
-        .inf_exp()?
-        .inf_div(&(a_max.inf_sub(&1.0)?))?;
+    if lo > 1.0 && hi > 1.0 && hi >= lo {
+        Some((lo, hi))
+    } else {
+        None
+    }
+}
 
-    // delta is always <= 1
+fn log_delta0(alpha: f64, rho: f64, eps: f64) -> f64 {
+    if !(alpha > 1.0) {
+        return f64::INFINITY;
+    }
+
+    let alpha_m1 = alpha - 1.0;
+
+    if !(alpha_m1 > 0.0) {
+        return f64::INFINITY;
+    }
+
+    let gamma = alpha * rho;
+
+    let out = alpha_m1 * (gamma - eps) + alpha * (-1.0 / alpha).ln_1p() - alpha_m1.ln();
+
+    clean_log_objective(out)
+}
+
+fn log_delta1(alpha: f64, rho: f64, eps: f64) -> f64 {
+    if !(alpha > 1.0) || !(eps > 0.0) || !(rho > 0.0) {
+        return f64::INFINITY;
+    }
+
+    // Branch 1 is only valid/useful when eps > alpha * rho.
+    // Do this comparison in log-space to avoid overflow in alpha * rho.
+    let log_alpha = alpha.ln();
+    let log_rho = rho.ln();
+    let log_eps = eps.ln();
+
+    if log_alpha + log_rho >= log_eps {
+        return f64::INFINITY;
+    }
+
+    let alpha_m1 = alpha - 1.0;
+
+    if !(alpha_m1 > 0.0) {
+        return f64::INFINITY;
+    }
+
+    let log_alpha_m1 = alpha_m1.ln();
+
+    // x = (alpha - 1) * alpha * rho
+    // y = (alpha - 1) * eps
+    //
+    // delta_1 = expm1(x) / (alpha * expm1(y))
+    //
+    // Work with ln(x) and ln(y) to avoid underflow when x and y are tiny.
+    let log_x = log_alpha_m1 + log_alpha + log_rho;
+    let log_y = log_alpha_m1 + log_eps;
+
+    let out = log_expm1_from_log_arg(log_x) - log_alpha - log_expm1_from_log_arg(log_y);
+
+    clean_log_objective(out)
+}
+
+fn clean_log_objective(value: f64) -> f64 {
+    if value.is_nan() { f64::INFINITY } else { value }
+}
+
+fn log_expm1_from_log_arg(log_x: f64) -> f64 {
+    // Returns ln(exp(x) - 1), given ln(x).
+    //
+    // If x is tiny, expm1(x) ~= x, so ln(expm1(x)) ~= ln(x).
+    // This avoids forming x when x would underflow.
+
+    if log_x.is_nan() {
+        return f64::NAN;
+    }
+
+    if log_x == f64::NEG_INFINITY {
+        return f64::NEG_INFINITY;
+    }
+
+    if log_x < -37.0 {
+        return log_x;
+    }
+
+    let x = log_x.exp();
+
+    if x.is_infinite() {
+        return f64::INFINITY;
+    }
+
+    log_expm1_pos(x)
+}
+
+fn log_expm1_pos(x: f64) -> f64 {
+    // Returns ln(exp(x) - 1), for x >= 0.
+
+    if x.is_nan() || x < 0.0 {
+        return f64::NAN;
+    }
+
+    if x == 0.0 {
+        return f64::NEG_INFINITY;
+    }
+
+    if x < std::f64::consts::LN_2 {
+        x.exp_m1().ln()
+    } else {
+        // ln(exp(x) - 1)
+        //   = x + ln(1 - exp(-x))
+        x + (-(-x).exp()).ln_1p()
+    }
+}
+
+fn minimize_unimodal_log<F>(mut lo: f64, mut hi: f64, f: F) -> f64
+where
+    F: Fn(f64) -> f64,
+{
+    debug_assert!(lo > 1.0);
+    debug_assert!(hi >= lo);
+
+    if !(hi > lo) {
+        return lo;
+    }
+
+    // Golden-section search.
+    const INV_PHI: f64 = 0.618_033_988_749_894_9;
+    const INV_PHI2: f64 = 0.381_966_011_250_105_1;
+
+    let mut c = lo + INV_PHI2 * (hi - lo);
+    let mut d = lo + INV_PHI * (hi - lo);
+
+    let mut fc = f(c);
+    let mut fd = f(d);
+
+    for _ in 0..160 {
+        let width = hi - lo;
+
+        if width <= f64::EPSILON * (lo.abs() + hi.abs()).max(1.0) {
+            break;
+        }
+
+        if fc <= fd {
+            hi = d;
+            d = c;
+            fd = fc;
+            c = lo + INV_PHI2 * (hi - lo);
+            fc = f(c);
+        } else {
+            lo = c;
+            c = d;
+            fc = fd;
+            d = lo + INV_PHI * (hi - lo);
+            fd = f(d);
+        }
+    }
+
+    let mid = lo + (hi - lo) / 2.0;
+
+    let candidates = [(lo, f(lo)), (c, fc), (d, fd), (hi, f(hi)), (mid, f(mid))];
+
+    let mut best_alpha = mid;
+    let mut best_value = f(mid);
+
+    for (alpha, value) in candidates {
+        if value < best_value {
+            best_alpha = alpha;
+            best_value = value;
+        }
+    }
+
+    best_alpha
+}
+
+fn log_to_delta(log_delta: f64) -> Fallible<f64> {
+    if log_delta.is_nan() {
+        return fallible!(FailedMap, "computed log(delta) is NaN");
+    }
+
+    if log_delta == f64::INFINITY {
+        return Ok(1.0);
+    }
+
+    if log_delta >= 0.0 {
+        return Ok(1.0);
+    }
+
+    // Smallest positive subnormal is 2^-1074.
+    const LN_MIN_POSITIVE_SUBNORMAL: f64 = -744.440_071_921_381_2;
+
+    // Add a small upward slack because the search/objective uses ordinary
+    // libm transcendental functions. This makes the returned delta slightly
+    // larger, which is the safe direction.
+    let slack = 64.0 * f64::EPSILON * log_delta.abs().max(1.0);
+    let log_delta = log_delta + slack;
+
+    if log_delta <= LN_MIN_POSITIVE_SUBNORMAL {
+        // Returning 0.0 would not be conservative unless the true value is
+        // exactly zero. Here rho > 0 and eps < infinity, so return the
+        // smallest positive f64 instead.
+        return Ok(f64::from_bits(1));
+    }
+
+    let delta = log_delta.inf_exp()?;
+
     Ok(delta.min(1.0))
 }

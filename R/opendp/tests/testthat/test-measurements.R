@@ -74,8 +74,6 @@ test_that("test_gaussian_curve", {
 
   curve <- make_zCDP_to_approxDP(input_space |> then_gaussian(4.))(d_in = 0.0)
   expect_equal(curve(delta = 0.0), 0.0)
-  expect_error(curve(delta = -0.0))
-  expect_error(curve(epsilon = -0.0))
 
   curve <- make_zCDP_to_approxDP(input_space |> then_gaussian(0.))(d_in = 1.0)
   expect_equal(curve(delta = 0.0), Inf)

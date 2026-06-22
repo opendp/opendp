@@ -14,7 +14,7 @@ import importlib
 import json
 import warnings
 
-from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, AnyOdometer, import_optional_dependency, get_opendp_version
+from opendp._lib import AnyMeasurement, AnyTransformation, AnyDomain, AnyMetric, AnyMeasure, AnyFunction, AnyOdometer, AnyObject, import_optional_dependency, get_opendp_version
 
 
 # https://mypy.readthedocs.io/en/stable/runtime_troubles.html#import-cycles
@@ -43,6 +43,7 @@ __all__ = [
     'Measure',
     'ExtrinsicDivergence',
     'ApproximateDivergence',
+    'PrivacyCurve',
     'PrivacyProfile',
     '_PartialConstructor',
     'UnknownTypeException',
@@ -1145,16 +1146,93 @@ class ApproximateDivergence(Measure):
         return _approximate_divergence_get_inner_measure(self)
     
 
-class PrivacyProfile(object):
+class PrivacyCurve:
     '''
-    Given a profile function provided by the user,
-    gives the epsilon corresponding to a given delta, and vice versa.
+    Wrapper over a privacy curve that can be queried as either a privacy profile
+    or an f-DP tradeoff curve.
 
-    :py:func:`~opendp.measures.new_privacy_profile`
-    should be used to create new instances.
+    Use this class to:
+    1. evaluate ``delta(epsilon)``
+    2. invert to ``epsilon(delta)``
+    3. evaluate ``beta(alpha)``
+    4. invert to ``alpha(beta)``
+    5. construct from one or more privacy representations at once
+
+    Conventions:
+    * ``delta(epsilon)`` returns an upper-conservative delta value.
+    * ``epsilon(delta)`` returns a certified epsilon sufficient for the given delta.
+    * ``beta(alpha)`` returns a lower-conservative beta value.
+    * ``alpha(beta)`` returns a lower-conservative alpha value.
     '''
-    def __init__(self, curve):
-        self.curve = curve
+    def __init__(
+        self,
+        curve=None,
+        *,
+        profile: Optional[Callable[[float], float]] = None,
+        log_profile: Optional[Callable[[float], float]] = None,
+        tradeoff: Optional[Callable[[float], float]] = None,
+        symmetric_tradeoff: Optional[Callable[[float], float]] = None,
+        approxDP: Optional[list[tuple[float, float]]] = None,
+        gaussianDP: Optional[float] = None,
+        renyiDP: Optional[Callable[[float], float]] = None,
+        zCDP: Optional[float] = None,
+    ):
+        supplied = [
+            profile is not None,
+            log_profile is not None,
+            tradeoff is not None,
+            symmetric_tradeoff is not None,
+            approxDP is not None,
+            gaussianDP is not None,
+            renyiDP is not None,
+            zCDP is not None,
+        ]
+
+        if isinstance(curve, ctypes.POINTER(AnyObject)):
+            if any(supplied):
+                raise TypeError("internal `curve` pointer cannot be combined with constructor keyword arguments")
+            self.curve = curve
+            return
+
+        if curve is not None:
+            raise TypeError("`curve` is reserved for internal use; construct with keyword arguments like `PrivacyCurve(profile=...)`")
+
+        if not any(supplied):
+            raise TypeError(
+                "expected at least one of profile, log_profile, tradeoff, symmetric_tradeoff, "
+                "approxDP, gaussianDP, renyiDP, or zCDP"
+            )
+
+        from opendp.measures import (
+            _new_privacy_curve,
+            _privacy_curve_with_approxDP,
+            _privacy_curve_with_gaussianDP,
+            _privacy_curve_with_profile,
+            _privacy_curve_with_renyiDP,
+            _privacy_curve_with_tradeoff,
+            _privacy_curve_with_zCDP,
+        )
+
+        curve = _new_privacy_curve()
+
+        if profile is not None:
+            curve = _privacy_curve_with_profile(curve, profile, log=False)
+        if log_profile is not None:
+            curve = _privacy_curve_with_profile(curve, log_profile, log=True)
+        if tradeoff is not None:
+            curve = _privacy_curve_with_tradeoff(curve, tradeoff, symmetric=False)
+        if symmetric_tradeoff is not None:
+            curve = _privacy_curve_with_tradeoff(curve, symmetric_tradeoff, symmetric=True)
+        if approxDP is not None:
+            curve = _privacy_curve_with_approxDP(curve, approxDP)
+        if gaussianDP is not None:
+            curve = _privacy_curve_with_gaussianDP(curve, gaussianDP)
+        if renyiDP is not None:
+            curve = _privacy_curve_with_renyiDP(curve, renyiDP)
+        if zCDP is not None:
+            curve = _privacy_curve_with_zCDP(curve, zCDP)
+
+        self.curve = curve.curve
 
     def delta(self, epsilon):
         '''
@@ -1162,8 +1240,8 @@ class PrivacyProfile(object):
         
         :param epsilon: Allowance for a multiplicative difference, or max divergence, in the distributions of releases on adjacent datasets
         '''
-        from opendp._data import privacy_profile_delta
-        return privacy_profile_delta(self.curve, epsilon)
+        from opendp.measures import _privacy_curve_delta
+        return _privacy_curve_delta(self.curve, epsilon)
 
     def epsilon(self, delta):
         '''
@@ -1171,9 +1249,29 @@ class PrivacyProfile(object):
         
         :param delta: Allowance for an additive difference between the distributions of releases on adjacent datasets
         '''
-        from opendp._data import privacy_profile_epsilon
-        return privacy_profile_epsilon(self.curve, delta)
+        from opendp.measures import _privacy_curve_epsilon
+        return _privacy_curve_epsilon(self.curve, delta)
+
+    def beta(self, alpha):
+        '''
+        Returns the beta that corresponds to this alpha.
+
+        :param alpha: Type I error of a hypothesis test distinguishing releases on adjacent datasets
+        '''
+        from opendp.measures import _privacy_curve_beta
+        return _privacy_curve_beta(self.curve, alpha)
     
+    def alpha(self, beta):
+        '''
+        Returns the alpha that corresponds to beta.
+
+        :param beta: Type II error of a hypothesis test distinguishing releases on adjacent datasets
+        '''
+        from opendp.measures import _privacy_curve_alpha
+        return _privacy_curve_alpha(self.curve, beta)
+    
+
+PrivacyProfile = PrivacyCurve
 
 class _PartialConstructor(object):
     '''
@@ -1448,7 +1546,7 @@ def _call_rust_search(
     predicate: Callable[[float], bool],
     T: "RuntimeType | str",
     search: Callable[[Callable[[float], bool]], Any],
-    bounds: tuple[float, float] | None = None,
+    bounds: tuple[float | None, float | None] | None = None,
 ) -> Any:
     first_exception = None
     had_success = False
@@ -1488,7 +1586,7 @@ def _call_rust_search(
 @overload
 def binary_search(
         predicate: Callable[[float], bool],
-        bounds: tuple[float, float] | None = ...,
+        bounds: tuple[float | None, float | None] | None = ...,
         T: Type[float] | None = ...,
         return_sign: Literal[False] = False) -> float:
     ...
@@ -1498,7 +1596,7 @@ def binary_search(
 @overload
 def binary_search(
         predicate: Callable[[float], bool],
-        bounds: tuple[float, float] | None = ...,
+        bounds: tuple[float | None, float | None] | None = ...,
         T: Type[float] | None = ...,
         *, # see https://stackoverflow.com/questions/66435480/overload-following-optional-argument
         return_sign: Literal[True]) -> tuple[float, int]:
@@ -1508,7 +1606,7 @@ def binary_search(
 @overload
 def binary_search(
         predicate: Callable[[float], bool],
-        bounds: tuple[float, float] | None,
+        bounds: tuple[float | None, float | None] | None,
         T: Type[float] | None,
         return_sign: Literal[True]) -> tuple[float, int]:
     ...
@@ -1516,7 +1614,7 @@ def binary_search(
 
 def binary_search(
         predicate: Callable[[float], bool],
-        bounds: tuple[float, float] | None = None,
+        bounds: tuple[float | None, float | None] | None = None,
         T: Type[float] | None = None,
         return_sign: bool = False) -> float | tuple[float, int]:
     """Find the closest passing value to the decision boundary of `predicate`.
@@ -1572,15 +1670,26 @@ def binary_search(
     from opendp._internal import _binary_search
     from opendp.typing import RuntimeType
 
-    if bounds is not None and len(set(map(type, bounds))) != 1:
-        raise TypeError("bounds must share the same type")  # pragma: no cover
+    if bounds is not None:
+        lower, upper = bounds
+        if lower is not None and upper is not None and type(lower) != type(upper):
+            raise TypeError("bounds must share the same type")
+    else:
+        lower, upper = None, None
 
-    runtime_T = RuntimeType.infer(bounds[0]) if bounds is not None else RuntimeType.parse(T or _infer_type(predicate))
+    if T is not None:
+        runtime_T = RuntimeType.parse(T)
+    elif lower is not None:
+        runtime_T = RuntimeType.infer(lower)
+    elif upper is not None:
+        runtime_T = RuntimeType.infer(upper)
+    else:
+        runtime_T = RuntimeType.parse(_infer_type(predicate))
 
     return _call_rust_search(
         predicate,
         runtime_T,
-        lambda wrapped: _binary_search(wrapped, bounds=bounds, return_sign=return_sign, T=runtime_T),
+        lambda wrapped: _binary_search(wrapped, lower=lower, upper=upper, return_sign=return_sign, T=runtime_T),
         bounds=bounds,
     )
 

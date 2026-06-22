@@ -392,22 +392,30 @@ new_function_internal <- function(ptr, log) {
   opendp_function
 }
 
-#' new privacy profile
+#' new privacy curve
 #'
 #' @concept mod
-#' @param ptr a pointer to a privacy profile
-new_privacy_profile_internal <- function(ptr) {
-  privacy_profile <- function(attr, epsilon, delta) {
-    if (missing(attr) + missing(epsilon) + missing(delta) != 2) {
-      stop("expected exactly one of attr, epsilon or delta", call. = FALSE)
+#' @param ptr a pointer to a privacy curve
+new_privacy_curve_internal <- function(ptr) {
+  privacy_curve <- function(attr, epsilon, delta, alpha, beta) {
+    if (missing(attr) + missing(epsilon) + missing(delta) + missing(alpha) + missing(beta) != 4) {
+      stop("expected exactly one of attr, epsilon, delta, alpha or beta", call. = FALSE)
     }
 
     if (!missing(epsilon)) {
-      return(privacy_profile_delta(ptr, epsilon))
+      return(`_privacy_curve_delta`(ptr, epsilon))
     }
 
     if (!missing(delta)) {
-      return(privacy_profile_epsilon(ptr, delta))
+      return(`_privacy_curve_epsilon`(ptr, delta))
+    }
+
+    if (!missing(alpha)) {
+      return(`_privacy_curve_beta`(ptr, alpha))
+    }
+
+    if (!missing(beta)) {
+      return(`_privacy_curve_alpha`(ptr, beta))
     }
 
     switch(attr,
@@ -415,8 +423,120 @@ new_privacy_profile_internal <- function(ptr) {
       stop("unrecognized attribute", call. = FALSE)
     )
   }
-  class(privacy_profile) <- "privacy_profile"
-  privacy_profile
+  class(privacy_curve) <- "privacy_curve"
+  privacy_curve
+}
+
+#' Construct a privacy curve.
+#'
+#' A privacy curve can be queried as either a privacy profile or an f-DP
+#' tradeoff curve. Supply one or more of `profile`, `log_profile`, `tradeoff`,
+#' `symmetric_tradeoff`, `approxDP`, `gaussianDP`, `renyiDP`, or `zCDP`.
+#'
+#' @concept mod
+#'
+#' @param profile Callback mapping epsilon to delta.
+#' @param log_profile Callback mapping epsilon to log(delta).
+#' @param tradeoff Callback mapping alpha to beta.
+#' @param symmetric_tradeoff Symmetric callback mapping alpha to beta.
+#' @param approxDP List of approximate-DP `(epsilon, delta)` pairs.
+#' @param gaussianDP Gaussian-DP parameter `mu`.
+#' @param renyiDP Callback mapping Renyi order `alpha` to `epsilon(alpha)`.
+#' @param zCDP zCDP parameter `rho`.
+#'
+#' @section Callback contracts:
+#'
+#' Callback-based constructors are honest-but-curious: OpenDP cannot fully
+#' verify semantic properties of a black-box callback.
+#'
+#' A `profile` callback should define a valid privacy profile:
+#'
+#' * it is functionally pure;
+#' * it is nonincreasing in epsilon;
+#' * it returns delta values in `[0, 1]`;
+#' * returned delta values are upper-conservative if numerically approximate;
+#' * `lambda -> delta(log(lambda))` is convex and nonincreasing for
+#'   `lambda >= 1`.
+#'
+#' A `log_profile` callback should define the same privacy profile, but return
+#' log-delta values in `[-Inf, 0]`.
+#'
+#' A `tradeoff` callback should define a valid f-DP tradeoff curve:
+#'
+#' * it is functionally pure;
+#' * it returns finite beta values in `[0, 1]`;
+#' * it satisfies `beta(0) = 1` and `beta(1) = 0`;
+#' * it is nonincreasing and convex on `[0, 1]`;
+#' * returned beta values are downward-conservative if numerically approximate.
+#'
+#' A `symmetric_tradeoff` callback must additionally satisfy
+#' `beta(beta(alpha)) = alpha`.
+#'
+#' @export
+privacy_curve <- function(
+  profile,
+  log_profile,
+  tradeoff,
+  symmetric_tradeoff,
+  approxDP,
+  gaussianDP,
+  renyiDP,
+  zCDP
+) {
+  supplied <- c(
+    profile = !missing(profile),
+    log_profile = !missing(log_profile),
+    tradeoff = !missing(tradeoff),
+    symmetric_tradeoff = !missing(symmetric_tradeoff),
+    approxDP = !missing(approxDP),
+    gaussianDP = !missing(gaussianDP),
+    renyiDP = !missing(renyiDP),
+    zCDP = !missing(zCDP)
+  )
+
+  if (!any(supplied)) {
+    stop(
+      "expected at least one of profile, log_profile, tradeoff, ",
+      "symmetric_tradeoff, approxDP, gaussianDP, renyiDP or zCDP",
+      call. = FALSE
+    )
+  }
+
+  curve <- `_new_privacy_curve`()
+
+  if (supplied[["profile"]]) {
+    curve <- `_privacy_curve_with_profile`(curve, profile, log = FALSE)
+  }
+
+  if (supplied[["log_profile"]]) {
+    curve <- `_privacy_curve_with_profile`(curve, log_profile, log = TRUE)
+  }
+
+  if (supplied[["tradeoff"]]) {
+    curve <- `_privacy_curve_with_tradeoff`(curve, tradeoff, symmetric = FALSE)
+  }
+
+  if (supplied[["symmetric_tradeoff"]]) {
+    curve <- `_privacy_curve_with_tradeoff`(curve, symmetric_tradeoff, symmetric = TRUE)
+  }
+
+  if (supplied[["approxDP"]]) {
+    curve <- `_privacy_curve_with_approxDP`(curve, approxDP)
+  }
+
+  if (supplied[["gaussianDP"]]) {
+    curve <- `_privacy_curve_with_gaussianDP`(curve, gaussianDP)
+  }
+
+  if (supplied[["renyiDP"]]) {
+    curve <- `_privacy_curve_with_renyiDP`(curve, renyiDP)
+  }
+
+  if (supplied[["zCDP"]]) {
+    curve <- `_privacy_curve_with_zCDP`(curve, zCDP)
+  }
+
+  curve
 }
 
 #' new queryable
@@ -684,6 +804,10 @@ binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
 }
 
 .infer_search_type <- function(predicate, .T = NULL, bounds = NULL) {
+  if (!is.null(.T)) {
+    return(rt_parse(.T))
+  }
+
   if (!is.null(bounds)) {
     if (inherits(bounds, "integer")) {
       return(rt_parse("int"))
@@ -692,10 +816,6 @@ binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
       return(rt_parse("float"))
     }
     stop("bounds must be either float or int", call. = FALSE)
-  }
-
-  if (!is.null(.T)) {
-    return(rt_parse(.T))
   }
 
   check_type <- function(v) {
@@ -724,6 +844,13 @@ binary_search_param <- function(make_chain, d_in, d_out, bounds = NULL, .T = NUL
 #' @return the discovered parameter within the bounds
 #' @export
 binary_search <- function(predicate, bounds = NULL, .T = NULL, return_sign = FALSE) {
+  if (is.null(bounds)) {
+    lower <- NULL
+    upper <- NULL
+  } else {
+    lower <- bounds[1]
+    upper <- bounds[2]
+  }
   .T <- .infer_search_type(predicate, .T, bounds)
 
   result <- .call_search_callback(
@@ -731,7 +858,7 @@ binary_search <- function(predicate, bounds = NULL, .T = NULL, return_sign = FAL
     .T = .T,
     bounds = bounds,
     call_expr = function(wrapped) {
-      `_binary_search`(wrapped, bounds = bounds, .T = .T, return_sign = return_sign)
+      `_binary_search`(wrapped, lower = lower, upper = upper, .T = .T, return_sign = return_sign)
     }
   )
 

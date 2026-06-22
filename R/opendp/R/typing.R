@@ -32,7 +32,7 @@ R_TO_RUST <- list(
   measure = "AnyMeasure",
   measurement = "AnyMeasurement",
   transformation = "AnyTransformation",
-  privacy_profile = "PrivacyProfile",
+  privacy_curve = "PrivacyCurve",
   queryable = "AnyQueryable",
   odometer_queryable = "AnyOdometerQueryable",
   `function` = "AnyFunction"
