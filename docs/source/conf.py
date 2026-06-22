@@ -20,6 +20,7 @@ sys.path.insert(0, rootdir)
 # and we should also be cautious about adding new extensions.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx_autodoc_typehints',
     'sphinx.ext.doctest',
     'sphinx.ext.extlinks',
     'sphinx.ext.graphviz',
