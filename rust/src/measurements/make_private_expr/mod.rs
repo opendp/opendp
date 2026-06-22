@@ -238,7 +238,6 @@ where
 
         match &self {
             #[cfg(feature = "contrib")]
-            // When len or len cast?
             Expr::Len => {
                 expr_len::make_expr_private_len(input_domain, input_metric, output_measure, self)
             }

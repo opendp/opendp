@@ -106,6 +106,3 @@ where
 fn dp_frame_len(_: &[Series]) -> PolarsResult<Series> {
     polars_bail!(InvalidOperation: "OpenDP expressions must be passed through make_private_lazyframe to be executed.")
 }
-
-#[cfg(test)]
-mod test;

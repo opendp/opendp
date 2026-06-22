@@ -112,6 +112,28 @@ pub trait StableExpr<MI: Metric, MO: Metric> {
     ) -> Fallible<Transformation<WildExprDomain, MI, ExprDomain, MO>>;
 }
 
+impl<const P: usize> StableExpr<LpDistance<P, f64>, LpDistance<P, f64>> for Expr {
+    fn make_stable(
+        self,
+        input_domain: WildExprDomain,
+        input_metric: LpDistance<P, f64>,
+    ) -> Fallible<Transformation<WildExprDomain, LpDistance<P, f64>, ExprDomain, LpDistance<P, f64>>>
+    {
+        use Expr::*;
+        match self {
+            #[cfg(feature = "contrib")]
+            Cast { .. } => your_constructor_here,
+
+            expr => fallible!(
+                MakeTransformation,
+                "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
+                expr,
+                get_disabled_features_message()
+            ),
+        }
+    }
+}
+
 impl<M: OuterMetric> StableExpr<M, M> for Expr
 where
     M::InnerMetric: UnboundedMetric,
