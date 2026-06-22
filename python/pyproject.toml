@@ -1,3 +1,7 @@
+[project]
+name = "my-project"
+version = "0.1.0"
+requires-python = ">=3.10"
 [build-system]
 requires = [
     "setuptools>=42",
@@ -9,3 +13,6 @@ build-backend = "setuptools.build_meta"
 [tool.pyright]
 include = ["src", "test", "../docs/source"]
 reportWildcardImportFromLibrary = false
+
+[tool.mypy]
+plugins = ["numpy.typing.mypy_plugin"]
