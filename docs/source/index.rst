@@ -11,7 +11,7 @@ you cannot tell whether any individual's data was included in the original datas
 Differential privacy achieves this by carefully injecting random noise into the released statistics to hide the effects of each individual. 
 
 For more background on differential privacy and its applications
-see the OpenDP Project's `Educational Resources <https://opendp.github.io/learning/>`_,
+see the OpenDP Project's `Educational Resources <https://learning.opendp.org/>`_,
 and `Hands-On Differential Privacy <https://www.oreilly.com/library/view/hands-on-differential-privacy/9781492097730/>`_,
 which is co-authored by the OpenDP Library architect
 

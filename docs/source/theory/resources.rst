@@ -6,7 +6,7 @@ Resources List
 .. note::
 
     We are not actively maintaining this list.
-    Instead see the OpenDP Project's `Educational Resources <https://opendp.github.io/learning/>`_ page.
+    Instead see the OpenDP Project's `Educational Resources <https://learning.opendp.org/>`_ page.
 
 
 Foundations
@@ -30,7 +30,6 @@ Learning About Differential Privacy
 * `Programming Differential Privacy <https://programming-dp.com/>`_
 * `Privacy and Confidentiality Protection Overview <https://www2.census.gov/cac/nac/meetings/2019-05/garfinkel-privacy-confidentiality-protection.pdf>`_
 * `Hands-On Differential Privacy <https://www.oreilly.com/library/view/hands-on-differential-privacy/9781492097730/>`_ is co-authored by the OpenDP Library architect
-* A short list of `Educational Resources <https://opendp.github.io/learning/>`_ maintained by the community
 
 
 Papers
