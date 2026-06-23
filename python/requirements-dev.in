@@ -15,8 +15,8 @@ flake8
 pytest
 wheel
 coverage
-mypy==1.18.2
-pip-tools==7.3.0
+mypy
+pip-tools
 types-Deprecated
 blacken-docs
 
