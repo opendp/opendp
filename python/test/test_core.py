@@ -231,7 +231,7 @@ def test_new_domain():
             dp.max_divergence(),
             lambda x: x,
             lambda _: 0.0,
-        ), 
+        ),
         dp.t.make_user_transformation(
             dp.atom_domain(T=int),
             dp.absolute_distance(T=int),
@@ -338,7 +338,10 @@ def test_extrinsic_free():
     # this test will pass if Queryable extends the lifetime of [] by holding a reference to it
 
 
-@pytest.mark.parametrize("new_distance,new_divergence", zip([dp.user_distance, _extrinsic_distance], [dp.user_divergence, _extrinsic_divergence]))
+@pytest.mark.parametrize("new_distance, new_divergence", [
+        (dp.user_distance, dp.user_divergence),
+        (_extrinsic_distance,  _extrinsic_divergence)
+    ])
 def test_custom_distance(new_distance, new_divergence):
     from datetime import datetime, timedelta
 

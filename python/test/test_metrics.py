@@ -1,7 +1,8 @@
+import pytest
+
 from opendp.extras.polars import Bound
 from opendp.mod import ExtrinsicDistance, FrameDistance, SymmetricIdDistance
 import opendp.prelude as dp
-import pytest
 
 
 def test_l01inf_distance():

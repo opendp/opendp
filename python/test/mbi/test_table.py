@@ -54,7 +54,7 @@ def test_fit_effectiveness(algorithm, privacy_loss, approximate):
     data_lf = pl.LazyFrame(data_dict)
     lookup_B = {"a": -2.5, "b": -1.5, "c": -0.5, "d": 0.5, "e": 1.5, "f": 2.5, None: 0}
     lookup_C = dict(zip(range(8), np.linspace(-3.5, 3.5, 8)))
-    lookup_C[None] = 0  # type: ignore[index]
+    lookup_C[None] = np.float64(0)  # type: ignore[index]
 
     roundtrip_np = np.stack(
         [
