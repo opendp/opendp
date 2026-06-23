@@ -4,15 +4,10 @@ black==26.5.1
     # via blacken-docs
 blacken-docs==1.20.0
     # via -r requirements-dev.in
-build==1.5.0
-    # via pip-tools
 click==8.4.1
+    # via black
+colorama==0.4.6 ; sys_platform == 'win32'
     # via
-    #   black
-    #   pip-tools
-colorama==0.4.6 ; os_name == 'nt' or sys_platform == 'win32'
-    # via
-    #   build
     #   click
     #   pytest
 coverage==7.14.3
@@ -21,8 +16,6 @@ exceptiongroup==1.3.1 ; python_full_version < '3.11'
     # via pytest
 flake8==7.3.0
     # via -r requirements-dev.in
-importlib-metadata==9.0.0 ; python_full_version < '3.10.2'
-    # via build
 iniconfig==2.3.0
     # via pytest
 mccabe==0.7.0
@@ -42,7 +35,6 @@ numpy==2.5.0 ; python_full_version >= '3.12'
 packaging==26.2
     # via
     #   black
-    #   build
     #   pytest
     #   wheel
 pandas==2.3.3 ; python_full_version < '3.11'
@@ -53,10 +45,6 @@ pathspec==1.1.1
     # via
     #   black
     #   mypy
-pip==26.1.2
-    # via pip-tools
-pip-tools==7.3.0
-    # via -r requirements-dev.in
 platformdirs==4.10.0
     # via black
 pluggy==1.6.0
@@ -67,8 +55,6 @@ pyflakes==3.4.0
     # via flake8
 pygments==2.20.0
     # via pytest
-pyproject-hooks==1.2.0
-    # via build
 pytest==9.1.1
     # via -r requirements-dev.in
 python-dateutil==2.9.0.post0
@@ -77,16 +63,12 @@ pytokens==0.4.1
     # via black
 pytz==2026.2 ; python_full_version < '3.11'
     # via pandas
-setuptools==82.0.1
-    # via pip-tools
 six==1.17.0
     # via python-dateutil
 tomli==2.4.1 ; python_full_version < '3.11'
     # via
     #   black
-    #   build
     #   mypy
-    #   pip-tools
     #   pytest
 types-deprecated==1.3.1.20260520
     # via -r requirements-dev.in
@@ -98,8 +80,4 @@ typing-extensions==4.15.0
 tzdata==2026.2 ; python_full_version < '3.11' or sys_platform == 'emscripten' or sys_platform == 'win32'
     # via pandas
 wheel==0.47.0
-    # via
-    #   -r requirements-dev.in
-    #   pip-tools
-zipp==4.1.0 ; python_full_version < '3.10.2'
-    # via importlib-metadata
+    # via -r requirements-dev.in

@@ -16,7 +16,6 @@ pytest
 wheel
 coverage
 mypy
-pip-tools
 types-Deprecated
 blacken-docs
 
