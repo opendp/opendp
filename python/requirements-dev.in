@@ -1,9 +1,14 @@
-# To add dev dependencies, make changes here and then
-# regenerate requirements-dev.txt by running
+# To add dev dependencies, make changes here and then regenerate the
+# per-Python-version lock files. These must be compiled under each
+# interpreter, because the resolved versions of dependencies like numpy
+# and pandas differ between Python versions (e.g. mypy type checking on
+# 3.13 needs newer numpy than is installable on 3.10):
 #
-#   pip-compile requirements-dev.in
+#   python3.10 -m pip-compile requirements-dev.in --output-file requirements-dev-3.10.txt
+#   python3.13 -m pip-compile requirements-dev.in --output-file requirements-dev-3.13.txt
 #
-# and then commit this file and requirements-dev.txt.
+# and then commit this file and both requirements-dev-3.*.txt files.
+# The smoke-test CI matrix installs the file matching its Python version.
 
 flake8
 pytest
