@@ -16,7 +16,6 @@ The members of this module will then be accessible at ``dp.polars``.
 from __future__ import annotations
 
 import os
-import sys
 
 from dataclasses import asdict, dataclass, field, replace
 from deprecated import deprecated
@@ -60,7 +59,7 @@ def _get_opendp_polars_lib_path():
 
 def _size_warning(keys):
     mb_factor = 1024**2  # For scaling to mb to shorten warnings
-    est_size: int = len(keys.serialize()) / mb_factor
+    est_size: float = len(keys.serialize()) / mb_factor
 
     if est_size > _KEY_SIZE_THRESHOLD_MB:
         warn(f"Large key-set (~{est_size}mb > {_KEY_SIZE_THRESHOLD_MB}mb) loaded into memory. Consider writing it to disk for the plan to read it in via scan_parquet.")
