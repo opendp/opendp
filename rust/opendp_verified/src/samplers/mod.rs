@@ -1,6 +1,9 @@
 mod bernoulli;
 pub use bernoulli::*;
 
+mod geometric;
+pub use geometric::*;
+
 mod uniform;
 pub use uniform::*;
 

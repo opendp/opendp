@@ -22,9 +22,9 @@ theorem exists_ok_of_spec
       simp [Aeneas.Std.WP.spec_ok] at h
       exact ⟨x, rfl, h⟩
   | fail e =>
-      simpa [hm] using h
+      simp [hm] at h
   | div =>
-      simpa [hm] using h
+      simp [hm] at h
 
 /-- Concrete witnesses for the valid-input branch of
 `sample_bernoulli_rational`. -/
@@ -118,6 +118,19 @@ theorem bernoulliExp1Target_apply_true
   unfold bernoulliExp1Target
   simp
 
+/-- The `false` mass of `sample_bernoulli_exp1`'s canonical target PMF. -/
+theorem bernoulliExp1Target_apply_false
+    (numer denom : dashu_int.ubig.UBig)
+    (hdenom : 0 < dashu.ubigToNat denom)
+    (hfrac : dashu.ubigToNat numer ≤ dashu.ubigToNat denom) :
+    bernoulliExp1Target numer denom hdenom hfrac false =
+      1 - ENNReal.ofReal
+        (Real.exp
+          (-(((dashu.ubigToNat numer : ENNReal) /
+              (dashu.ubigToNat denom : ENNReal)).toReal))) := by
+  unfold bernoulliExp1Target
+  simp
+
 /-- Canonical SampCert target distribution for the full nonnegative
 `sample_bernoulli_exp` sampler. -/
 noncomputable def bernoulliExpTarget
@@ -137,9 +150,7 @@ theorem bernoulliExpTarget_apply_true
           (-(((dashu.ubigToNat numer : NNReal) /
               (dashu.ubigToNat denom : NNReal) : NNReal) : ℝ))) := by
   unfold bernoulliExpTarget
-  simpa using
-    (SLang.BernoulliExpNegSample_apply_true
-      (dashu.ubigToNat numer) ⟨dashu.ubigToNat denom, hdenom⟩)
+  simp
 
 /-- The `false` mass of the full negative-exponential target PMF. -/
 theorem bernoulliExpTarget_apply_false
@@ -151,9 +162,7 @@ theorem bernoulliExpTarget_apply_false
           (-(((dashu.ubigToNat numer : NNReal) /
               (dashu.ubigToNat denom : NNReal) : NNReal) : ℝ))) := by
   unfold bernoulliExpTarget
-  simpa using
-    (SLang.BernoulliExpNegSample_apply_false
-      (dashu.ubigToNat numer) ⟨dashu.ubigToNat denom, hdenom⟩)
+  simp
 
 /-- When the input rational already lies in `[0, 1]`, the full
 negative-exponential target collapses definitionally to the unit-step target. -/
@@ -167,18 +176,178 @@ theorem bernoulliExpTarget_eq_exp1_of_le
   unfold SLang.BernoulliExpNegSample
   simp [hfrac]
 
-/-- The `false` mass of `sample_bernoulli_exp1`'s canonical target PMF. -/
-theorem bernoulliExp1Target_apply_false
-    (numer denom : dashu_int.ubig.UBig)
+/-- One recursive `x > 1` step of the full SampCert target. This is the pure
+probabilistic counterpart of the Rust outer loop body: sample `exp(-1)`, and
+on success continue with `x - 1`; on failure return `false`.
+
+The remaining proof work is arithmetic transport between SampCert's quotient /
+remainder decomposition and repeated subtraction by one. -/
+theorem bernoulliExpTarget_eq_exp1_one_bind_sub_one_of_gt
+    (numer denom numerMinusDenom one : dashu_int.ubig.UBig)
     (hdenom : 0 < dashu.ubigToNat denom)
-    (hfrac : dashu.ubigToNat numer ≤ dashu.ubigToNat denom) :
-    bernoulliExp1Target numer denom hdenom hfrac false =
-      1 - ENNReal.ofReal
-        (Real.exp
-          (-(((dashu.ubigToNat numer : ENNReal) /
-              (dashu.ubigToNat denom : ENNReal)).toReal))) := by
+    (honePos : 0 < dashu.ubigToNat one)
+    (hone : dashu.ubigToNat one = 1)
+    (hgt : dashu.ubigToNat denom < dashu.ubigToNat numer)
+    (hminus :
+      dashu.ubigToNat numerMinusDenom =
+        dashu.ubigToNat numer - dashu.ubigToNat denom) :
+    bernoulliExpTarget numer denom hdenom =
+      (do
+        let b ← bernoulliExp1Target one one honePos (le_refl _)
+        if b
+        then bernoulliExpTarget numerMinusDenom denom hdenom
+        else pure false) := by
+  have hnum : dashu.ubigToNat numer = dashu.ubigToNat numerMinusDenom + dashu.ubigToNat denom := by
+    exact (Nat.sub_eq_iff_eq_add (Nat.le_of_lt hgt)).mp (by
+      simp [hminus])
+  have hreal :
+      ((dashu.ubigToNat numer : ENNReal) / (dashu.ubigToNat denom : ENNReal)).toReal =
+        1 + ((dashu.ubigToNat numerMinusDenom : ENNReal) / (dashu.ubigToNat denom : ENNReal)).toReal := by
+    calc
+      ((dashu.ubigToNat numer : ENNReal) / (dashu.ubigToNat denom : ENNReal)).toReal
+          = (dashu.ubigToNat numer : ℝ) / (dashu.ubigToNat denom : ℝ) := by
+              simp [ENNReal.toReal_div]
+      _ = ((dashu.ubigToNat numerMinusDenom : ℝ) + dashu.ubigToNat denom) / (dashu.ubigToNat denom : ℝ) := by
+            congr 1
+            exact_mod_cast hnum
+      _ = 1 + ((dashu.ubigToNat numerMinusDenom : ℝ) / (dashu.ubigToNat denom : ℝ)) := by
+            field_simp [Nat.ne_of_lt hdenom]
+            ring
+      _ = 1 + ((dashu.ubigToNat numerMinusDenom : ENNReal) / (dashu.ubigToNat denom : ENNReal)).toReal := by
+            simp [ENNReal.toReal_div]
+  have hneg :
+      -(((dashu.ubigToNat numer : ENNReal) / (dashu.ubigToNat denom : ENNReal)).toReal) =
+        -1 + -(((dashu.ubigToNat numerMinusDenom : ENNReal) / (dashu.ubigToNat denom : ENNReal)).toReal) := by
+    rw [hreal]
+    ring
+  let a : ENNReal := ENNReal.ofReal (Real.exp (-1))
+  let c : ENNReal :=
+    ENNReal.ofReal
+      (Real.exp
+        (-(((dashu.ubigToNat numerMinusDenom : ENNReal) /
+            (dashu.ubigToNat denom : ENNReal)).toReal)))
+  have ha : a ≤ 1 := by
+    dsimp [a]
+    have hle : Real.exp (-1 : ℝ) ≤ 1 := by
+      exact (Real.exp_le_one_iff).2 (by linarith)
+    have h' : ENNReal.ofReal (Real.exp (-1 : ℝ)) ≤ ENNReal.ofReal (1 : ℝ) :=
+      ENNReal.ofReal_le_ofReal hle
+    simp
+  have hc : c ≤ 1 := by
+    dsimp [c]
+    have hle :
+        Real.exp
+          (-(((dashu.ubigToNat numerMinusDenom : ENNReal) /
+              (dashu.ubigToNat denom : ENNReal)).toReal)) ≤ 1 := by
+      exact (Real.exp_le_one_iff).2 (by
+        have : -(((dashu.ubigToNat numerMinusDenom : ENNReal) /
+            (dashu.ubigToNat denom : ENNReal)).toReal) ≤ 0 := by
+          have hnonneg :
+              0 ≤
+                (((dashu.ubigToNat numerMinusDenom : ENNReal) /
+                    (dashu.ubigToNat denom : ENNReal)).toReal) := by
+            exact ENNReal.toReal_nonneg
+          linarith
+        linarith)
+    have h' :
+        ENNReal.ofReal
+          (Real.exp
+            (-(((dashu.ubigToNat numerMinusDenom : ENNReal) /
+                (dashu.ubigToNat denom : ENNReal)).toReal))) ≤
+          ENNReal.ofReal (1 : ℝ) :=
+      ENNReal.ofReal_le_ofReal hle
+    simpa using h'
+  have hab : a * c ≤ a := by
+    calc
+      a * c ≤ a * 1 := by
+        exact mul_le_mul_right hc a
+      _ = a := by simp [a]
+  have hsum : ((1 - a) + (a - a * c)) + a * c = 1 := by
+    rw [add_assoc, tsub_add_cancel_of_le hab]
+    exact tsub_add_cancel_of_le ha
+  have hmain : (1 - a) + (a - a * c) = 1 - a * c := by
+    apply ENNReal.eq_sub_of_add_eq' (by simp)
+    simpa [add_assoc, add_comm, add_left_comm] using hsum
+  have hmulsub : a * (1 - c) = a - a * c := by
+    apply ENNReal.eq_sub_of_add_eq' (by simp [a])
+    calc
+      a * (1 - c) + a * c = a * ((1 - c) + c) := by
+        rw [mul_add]
+      _ = a * 1 := by rw [tsub_add_cancel_of_le hc]
+      _ = a := by simp
+  (ext bb; cases bb)
+  · have hfalse : bernoulliExpTarget numer denom hdenom false = a * (1 - c) + (1 - a) := by
+      calc
+        bernoulliExpTarget numer denom hdenom false
+            = 1 -
+                ENNReal.ofReal
+                  (Real.exp
+                    (-(((dashu.ubigToNat numer : ENNReal) /
+                        (dashu.ubigToNat denom : ENNReal)).toReal))) := by
+                simp [bernoulliExpTarget_apply_false]
+        _ = 1 - (a * c) := by
+              rw [hneg, Real.exp_add]
+              simp [a, c, ENNReal.ofReal_mul' (Real.exp_nonneg _)]
+        _ = a * (1 - c) + (1 - a) := by
+              rw [hmulsub]
+              simpa [a, c, add_comm, add_left_comm, add_assoc] using hmain.symm
+    have hdo_false :
+        (do
+          let b ← bernoulliExp1Target one one honePos (le_refl _)
+          if b
+          then bernoulliExpTarget numerMinusDenom denom hdenom
+          else pure false) false =
+          a * (1 - c) + (1 - a) := by
+      simp [a, c, hone, SLang.bind_apply, SLang.pure_apply, bernoulliExp1Target_apply_false,
+        bernoulliExp1Target_apply_true, bernoulliExpTarget_apply_false]
+    exact hfalse.trans hdo_false.symm
+  · have htrue :
+      bernoulliExpTarget numer denom hdenom true =
+        ENNReal.ofReal (Real.exp (-1)) * bernoulliExpTarget numerMinusDenom denom hdenom true := by
+      calc
+        bernoulliExpTarget numer denom hdenom true
+            = ENNReal.ofReal
+                (Real.exp
+                  (-(((dashu.ubigToNat numer : ENNReal) /
+                      (dashu.ubigToNat denom : ENNReal)).toReal))) := by
+                simp [bernoulliExpTarget_apply_true]
+        _ = ENNReal.ofReal
+              (Real.exp
+                (-1 +
+                  -(((dashu.ubigToNat numerMinusDenom : ENNReal) /
+                      (dashu.ubigToNat denom : ENNReal)).toReal))) := by
+              rw [hneg]
+        _ = ENNReal.ofReal (Real.exp (-1)) *
+              ENNReal.ofReal
+                (Real.exp
+                  (-(((dashu.ubigToNat numerMinusDenom : ENNReal) /
+                      (dashu.ubigToNat denom : ENNReal)).toReal))) := by
+              rw [Real.exp_add, ← ENNReal.ofReal_mul' (Real.exp_nonneg _)]
+        _ = ENNReal.ofReal (Real.exp (-1)) *
+              bernoulliExpTarget numerMinusDenom denom hdenom true := by
+              simp [bernoulliExpTarget_apply_true]
+    have hdo_true :
+        (do
+          let b ← bernoulliExp1Target one one honePos (le_refl _)
+          if b
+          then bernoulliExpTarget numerMinusDenom denom hdenom
+          else pure false) true =
+          ENNReal.ofReal (Real.exp (-1)) * bernoulliExpTarget numerMinusDenom denom hdenom true := by
+      simp [hone, SLang.bind_apply, SLang.pure_apply, bernoulliExp1Target_apply_true,
+        bernoulliExp1Target_apply_false, bernoulliExpTarget_apply_true]
+    exact htrue.trans hdo_true.symm
+
+/-- Canonical unit target used by the extracted `rbig!(1)` call. -/
+theorem bernoulliExp1Target_one_eq_sampcert_unit_one
+    (one : dashu_int.ubig.UBig)
+    (honePos : 0 < dashu.ubigToNat one)
+    (hone : dashu.ubigToNat one = 1) :
+    bernoulliExp1Target one one honePos (le_refl _) =
+      SLang.BernoulliExpNegSampleUnit 1 ⟨1, by decide⟩ (le_refl 1) := by
   unfold bernoulliExp1Target
-  simp
+  congr 1
+  apply Subtype.ext
+  simp [hone]
 
 /-- If `0 < k`, then a Bernoulli step with success count `numer` and base
 denominator `denom` is well-formed at the scaled denominator `k * denom`. -/

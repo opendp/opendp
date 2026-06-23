@@ -277,6 +277,197 @@ theorem sample_bernoulli_exp1_initial_step_sampcert_spec
   exact sample_bernoulli_exp1_step_sampcert_spec
     setup.numer setup.denom setup.one honePos setup.hdenom setup.hfrac
 
+/-- SampCert tail target for the `exp1` loop when started from an arbitrary
+positive counter `k`. This is the clean mathematical object that the extracted
+loop should eventually be shown to realize operationally. -/
+noncomputable def bernoulliExp1LoopTailTarget
+    (numer denom : dashu_int.ubig.UBig)
+    (hdenom : 0 < dashu.ubigToNat denom)
+    (hfrac : dashu.ubigToNat numer ≤ dashu.ubigToNat denom)
+    (k : Nat)
+    (hk : 0 < k) :
+    SLang Bool := do
+  let K ←
+    (do
+      let st ←
+        SLang.probWhile
+          (fun state : Bool × PNat => state.1)
+          (SLang.BernoulliExpNegSampleUnitLoop
+            (dashu.ubigToNat numer)
+            ⟨dashu.ubigToNat denom, hdenom⟩
+            hfrac)
+          (true, ⟨k, hk⟩)
+      pure (st.2 : Nat))
+  if K % 2 = 0 then pure true else pure false
+
+/-- Starting the `exp1` tail target at counter `1` is definitionally SampCert's
+canonical unit negative-exponential sampler. -/
+theorem bernoulliExp1LoopTailTarget_one_eq
+    (numer denom : dashu_int.ubig.UBig)
+    (hdenom : 0 < dashu.ubigToNat denom)
+    (hfrac : dashu.ubigToNat numer ≤ dashu.ubigToNat denom) :
+    bernoulliExp1LoopTailTarget numer denom hdenom hfrac 1 (by decide) =
+      bernoulliExp1Target numer denom hdenom hfrac := by
+  unfold bernoulliExp1LoopTailTarget bernoulliExp1Target
+  unfold SLang.BernoulliExpNegSampleUnit SLang.BernoulliExpNegSampleUnitAux
+  simp
+
+/-- Target-side PMF theorem for `sample_bernoulli_exp1`. This is the final
+mathematical statement we want the extracted loop to realize: the success mass
+is exactly `exp (-numer / denom)`, and the whole target is SampCert's
+`BernoulliExpNegSampleUnit`. -/
+theorem sample_bernoulli_exp1_pmf_spec
+    (x : dashu_ratio.rbig.RBig)
+    (setup : BernoulliExp1Setup x) :
+    bernoulliExp1Target setup.numer setup.denom setup.hdenom setup.hfrac true =
+      ENNReal.ofReal
+        (Real.exp
+          (-(((dashu.ubigToNat setup.numer : ENNReal) /
+              (dashu.ubigToNat setup.denom : ENNReal)).toReal))) ∧
+    bernoulliExp1Target setup.numer setup.denom setup.hdenom setup.hfrac false =
+      1 - ENNReal.ofReal
+        (Real.exp
+          (-(((dashu.ubigToNat setup.numer : ENNReal) /
+              (dashu.ubigToNat setup.denom : ENNReal)).toReal))) ∧
+    bernoulliExp1Target setup.numer setup.denom setup.hdenom setup.hfrac =
+      SLang.BernoulliExpNegSampleUnit
+        (dashu.ubigToNat setup.numer)
+        ⟨dashu.ubigToNat setup.denom, setup.hdenom⟩
+        setup.hfrac := by
+  refine ⟨?_, ?_, rfl⟩
+  · exact bernoulliExp1Target_apply_true setup.numer setup.denom setup.hdenom setup.hfrac
+  · exact bernoulliExp1Target_apply_false setup.numer setup.denom setup.hdenom setup.hfrac
+
+/-- The unit-step negative-exponential target is a proper distribution. -/
+theorem bernoulliExp1Target_normalizes
+    (numer denom : dashu_int.ubig.UBig)
+    (hdenom : 0 < dashu.ubigToNat denom)
+    (hfrac : dashu.ubigToNat numer ≤ dashu.ubigToNat denom) :
+    bernoulliExp1Target numer denom hdenom hfrac true +
+      bernoulliExp1Target numer denom hdenom hfrac false = 1 := by
+  rw [bernoulliExp1Target_apply_true, bernoulliExp1Target_apply_false]
+  have hle :
+      ENNReal.ofReal
+        (Real.exp
+          (-(((dashu.ubigToNat numer : ENNReal) /
+              (dashu.ubigToNat denom : ENNReal)).toReal))) ≤ 1 := by
+    have hexp_le :
+        Real.exp
+          (-(((dashu.ubigToNat numer : ENNReal) /
+              (dashu.ubigToNat denom : ENNReal)).toReal)) ≤ 1 := by
+      apply (Real.exp_le_one_iff).2
+      have hnonneg :
+          0 ≤
+            (((dashu.ubigToNat numer : ENNReal) /
+                (dashu.ubigToNat denom : ENNReal)).toReal) := by
+        positivity
+      linarith
+    simpa using ENNReal.ofReal_le_ofReal hexp_le
+  simpa [add_comm, add_left_comm, add_assoc] using
+    (tsub_add_cancel_of_le hle :
+      1 - ENNReal.ofReal
+        (Real.exp
+          (-(((dashu.ubigToNat numer : ENNReal) /
+              (dashu.ubigToNat denom : ENNReal)).toReal))) +
+        ENNReal.ofReal
+          (Real.exp
+            (-(((dashu.ubigToNat numer : ENNReal) /
+                (dashu.ubigToNat denom : ENNReal)).toReal))) = 1)
+
+/-- Intended final end-to-end correctness theorem for the extracted
+`sample_bernoulli_exp1`.
+
+This is the theorem we ultimately care about: the stochastic behavior induced
+by the extracted Rust function should coincide exactly with SampCert's
+`BernoulliExpNegSampleUnit`, equivalently with the explicit PMF of
+`exp (-numer / denom)`.
+
+At the moment, all target-side PMF facts and the local control-flow / setup
+bridges are in place; the remaining work is the operational probabilistic
+bridge from the extracted Aeneas loop to `bernoulliExp1LoopTailTarget`. -/
+theorem sample_bernoulli_exp1_end_to_end_spec
+    (x : dashu_ratio.rbig.RBig)
+    (setup : BernoulliExp1Setup x) :
+    ∃ x_div_k : dashu_ratio.rbig.RBig,
+      ∃ rationalSetup : BernoulliRationalSetup x_div_k,
+        ∃ _hsetupDenom : 0 < dashu.ubigToNat rationalSetup.denom,
+          ∃ uniformSetup : OpenDP.samplers.uniform.UniformBelowSetup rationalSetup.denom,
+            utilities.div_rbig_by_ubig_exact setup.numer setup.denom setup.one = ok x_div_k ∧
+            OpenDP.samplers.uniform.sample_uniform_ubig_below_setup rationalSetup.denom =
+              ok uniformSetup ∧
+            samplers.bernoulli.sample_bernoulli_rational x_div_k =
+              (do
+                let buffer ← alloc.vec.from_elem core.clone.CloneU8 0#u8 uniformSetup.byte_len
+                let r ←
+                  samplers.uniform.sample_uniform_ubig_below_loop rationalSetup.denom
+                    uniformSetup.threshold buffer
+                core.result.Result.map
+                  samplers.bernoulli.sample_bernoulli_rational.closure.Insts.CoreOpsFunctionFnOnceTupleUBigBool
+                  r rationalSetup.numer) ∧
+            samplers.bernoulli.sample_bernoulli_exp1 x =
+              samplers.bernoulli.sample_bernoulli_exp1_loop
+                setup.one setup.denom setup.numer setup.one ∧
+            bernoulliExp1LoopTailTarget
+              setup.numer setup.denom setup.hdenom setup.hfrac 1 (by decide) =
+              bernoulliExp1Target setup.numer setup.denom setup.hdenom setup.hfrac ∧
+            bernoulliExp1Target setup.numer setup.denom setup.hdenom setup.hfrac =
+              SLang.BernoulliExpNegSampleUnit
+                (dashu.ubigToNat setup.numer)
+                ⟨dashu.ubigToNat setup.denom, setup.hdenom⟩
+                setup.hfrac ∧
+            bernoulliExp1Target setup.numer setup.denom setup.hdenom setup.hfrac true =
+              ENNReal.ofReal
+                (Real.exp
+                  (-(((dashu.ubigToNat setup.numer : ENNReal) /
+                      (dashu.ubigToNat setup.denom : ENNReal)).toReal))) ∧
+            bernoulliExp1Target setup.numer setup.denom setup.hdenom setup.hfrac false =
+              1 - ENNReal.ofReal
+                (Real.exp
+                  (-(((dashu.ubigToNat setup.numer : ENNReal) /
+                      (dashu.ubigToNat setup.denom : ENNReal)).toReal))) := by
+  rcases sample_bernoulli_exp1_initial_step_sampcert_spec x setup with
+    ⟨x_div_k, rationalSetup, hsetupDenom, uniformSetup, hdiv, huniform, hrat, hstep⟩
+  rcases sample_bernoulli_exp1_spec x setup with ⟨hextract, hone, htarget⟩
+  rcases sample_bernoulli_exp1_pmf_spec x setup with ⟨htrue, hfalse, hpmf⟩
+  refine ⟨x_div_k, rationalSetup, hsetupDenom, uniformSetup, ?_⟩
+  refine ⟨hdiv, huniform, hrat, ?_⟩
+  refine ⟨hextract, ?_⟩
+  refine ⟨bernoulliExp1LoopTailTarget_one_eq setup.numer setup.denom setup.hdenom setup.hfrac, ?_⟩
+  refine ⟨hpmf, ?_⟩
+  exact ⟨htrue, hfalse⟩
+
+/-- Structural packaging for `sample_bernoulli_exp1`: the extracted loop,
+the unit-step PMF facts, and the SampCert target are all aligned in one
+place. -/
+theorem sample_bernoulli_exp1_structural_spec
+    (x : dashu_ratio.rbig.RBig)
+    (setup : BernoulliExp1Setup x) :
+    samplers.bernoulli.sample_bernoulli_exp1 x =
+      samplers.bernoulli.sample_bernoulli_exp1_loop
+        setup.one setup.denom setup.numer setup.one ∧
+    bernoulliExp1Target setup.numer setup.denom setup.hdenom setup.hfrac true =
+      ENNReal.ofReal
+        (Real.exp
+          (-(((dashu.ubigToNat setup.numer : ENNReal) /
+              (dashu.ubigToNat setup.denom : ENNReal)).toReal))) ∧
+    bernoulliExp1Target setup.numer setup.denom setup.hdenom setup.hfrac false =
+      1 - ENNReal.ofReal
+        (Real.exp
+          (-(((dashu.ubigToNat setup.numer : ENNReal) /
+              (dashu.ubigToNat setup.denom : ENNReal)).toReal))) ∧
+    bernoulliExp1Target setup.numer setup.denom setup.hdenom setup.hfrac =
+      SLang.BernoulliExpNegSampleUnit
+        (dashu.ubigToNat setup.numer)
+        ⟨dashu.ubigToNat setup.denom, setup.hdenom⟩
+        setup.hfrac ∧
+    bernoulliExp1Target setup.numer setup.denom setup.hdenom setup.hfrac true +
+      bernoulliExp1Target setup.numer setup.denom setup.hdenom setup.hfrac false = 1 := by
+  rcases sample_bernoulli_exp1_spec x setup with ⟨hexp, hone, htarget⟩
+  rcases sample_bernoulli_exp1_pmf_spec x setup with ⟨htrue, hfalse, hpmf⟩
+  refine ⟨hexp, htrue, hfalse, hpmf, ?_⟩
+  exact bernoulliExp1Target_normalizes
+    setup.numer setup.denom setup.hdenom setup.hfrac
+
 /-- One extracted `exp1` loop step continues with the incremented counter when
 the rational Bernoulli subcall succeeds with `true`. -/
 theorem sample_bernoulli_exp1_loop_body_eq_continue
@@ -423,20 +614,31 @@ theorem sample_bernoulli_exp_eq
       samplers.bernoulli.sample_bernoulli_exp_loop x := by
   rfl
 
-/-- Primary top-level target for the full Bernoulli negative-exponential
-sampler: for any nonnegative rational input, the intended mathematical law is
-SampCert's `BernoulliExpNegSample` at the corresponding numerator and
-denominator. -/
-theorem sample_bernoulli_exp_spec
+/-- Primary PMF theorem for the full Bernoulli negative-exponential sampler.
+For any nonnegative rational input, the verified target induced by the Rust
+sampler has the same pointwise mass function as SampCert's
+`BernoulliExpNegSample`, and therefore samples `true` with probability
+`exp (-numer / denom)` and `false` with the complementary mass. -/
+theorem sample_bernoulli_exp_pmf_spec
     (x : dashu_ratio.rbig.RBig)
     (setup : BernoulliExpSetup x) :
-    samplers.bernoulli.sample_bernoulli_exp x =
-      samplers.bernoulli.sample_bernoulli_exp_loop x ∧
+    bernoulliExpTarget setup.numer setup.denom setup.hdenom true =
+      ENNReal.ofReal
+        (Real.exp
+          (-(((dashu.ubigToNat setup.numer : NNReal) /
+              (dashu.ubigToNat setup.denom : NNReal) : NNReal) : ℝ))) ∧
+    bernoulliExpTarget setup.numer setup.denom setup.hdenom false =
+      1 - ENNReal.ofReal
+        (Real.exp
+          (-(((dashu.ubigToNat setup.numer : NNReal) /
+              (dashu.ubigToNat setup.denom : NNReal) : NNReal) : ℝ))) ∧
     bernoulliExpTarget setup.numer setup.denom setup.hdenom =
       SLang.BernoulliExpNegSample
         (dashu.ubigToNat setup.numer)
         ⟨dashu.ubigToNat setup.denom, setup.hdenom⟩ := by
-  exact ⟨rfl, rfl⟩
+  refine ⟨?_, ?_, rfl⟩
+  · exact bernoulliExpTarget_apply_true setup.numer setup.denom setup.hdenom
+  · exact bernoulliExpTarget_apply_false setup.numer setup.denom setup.hdenom
 
 /-- When the extracted `x > 1` test fails, the outer Bernoulli-exp loop body
 stops immediately and delegates to `sample_bernoulli_exp1 x`. -/
@@ -562,5 +764,388 @@ theorem sample_bernoulli_exp_spec_of_le
       bernoulliExp1Target setup.numer setup.denom setup.hdenom setup.hfrac := by
   refine ⟨?_, bernoulliExpTarget_eq_exp1_of_le setup.numer setup.denom setup.hdenom setup.hfrac⟩
   exact sample_bernoulli_exp_eq_of_le_parts x oneRat setup honeRat hr hexp1
+
+/-- Setup bridge for the extracted `rbig!(1)` call in `sample_bernoulli_exp`.
+The scalar cast and Dashu constructor should together produce the same
+positive `1 / 1` rational expected by SampCert's generator loop. -/
+theorem sample_bernoulli_exp_one_setup_of_from_parts_const
+    (i : Std.U128)
+    (oneRat : dashu_ratio.rbig.RBig)
+    (hi : lift (UScalar.cast .U128 1#u32) = ok i)
+    (honeRat :
+      dashu_ratio.rbig.RBig.from_parts_const dashu_base.sign.Sign.Positive i i =
+        ok oneRat) :
+    ∃ setup : BernoulliExp1Setup oneRat,
+      setup.numer = setup.one ∧
+      setup.denom = setup.one ∧
+      dashu.ubigToNat setup.numer = 1 ∧
+      dashu.ubigToNat setup.denom = 1 := by
+  have hiEq : (UScalar.cast .U128 (1#u32)) = i := by
+    simpa [Aeneas.Std.lift] using hi
+  have hiNat : i.val = 1 := by
+    simpa [hiEq] using (U32.cast_U128_val_eq (1#u32))
+  rcases dashu.rbig_from_parts_const_one_spec i oneRat hiNat honeRat with
+    ⟨numerSigned, one, hone, hparts, hsign⟩
+  refine ⟨
+    { numerSigned := numerSigned
+      denom := one
+      numer := one
+      one := one
+      hparts := hparts
+      hsign := hsign
+      hone := hone
+      hdenom := by
+        rw [dashu.one_spec one hone]
+        norm_num
+      hfrac := by simp },
+    ?_⟩
+  constructor
+  · rfl
+  · constructor
+    · rfl
+    · constructor <;> simpa using dashu.one_spec one hone
+
+/-- Subtract-one state bridge for the outer `sample_bernoulli_exp` loop.
+On the `x > 1` branch, the extracted `x -= RBig::ONE` state represents the
+same denominator with numerator decreased by one denominator. -/
+theorem sample_bernoulli_exp_sub_one_setup
+    (x one xMinusOne : dashu_ratio.rbig.RBig)
+    (i : Std.U128)
+    (setup : BernoulliExpSetup x)
+    (hlt :
+      dashu.ubigToNat setup.denom < dashu.ubigToNat setup.numer)
+    (hi : lift (UScalar.cast .U128 1#u32) = ok i)
+    (honeRat :
+      dashu_ratio.rbig.RBig.from_parts_const dashu_base.sign.Sign.Positive i i =
+        ok one)
+    (hsub :
+      dashu_ratio.rbig.RBig.Insts.CoreOpsArithSubAssignRBig.sub_assign x one =
+        ok xMinusOne) :
+    ∃ setupMinusOne : BernoulliExpSetup xMinusOne,
+      setupMinusOne.denom = setup.denom ∧
+      dashu.ubigToNat setupMinusOne.numer =
+        dashu.ubigToNat setup.numer - dashu.ubigToNat setup.denom := by
+  rcases sample_bernoulli_exp_one_setup_of_from_parts_const i one hi honeRat with
+    ⟨oneSetup, honeNumerEq, honeDenomEq, honeNumer, honeDenom⟩
+  have honeParts :
+      dashu_ratio.rbig.RBig.into_parts one =
+        ok (oneSetup.numerSigned, oneSetup.one) := by
+    simpa [honeDenomEq] using oneSetup.hparts
+  have honeSign :
+      dashu_int.ibig.IBig.into_parts oneSetup.numerSigned =
+        ok (dashu_base.sign.Sign.Positive, oneSetup.one) := by
+    simpa [honeNumerEq] using oneSetup.hsign
+  have hle : dashu.ubigToNat setup.denom ≤ dashu.ubigToNat setup.numer :=
+    Nat.le_of_lt hlt
+  rcases dashu.sub_exists_spec setup.numer setup.denom hle with ⟨numer', hsubnumer, hsubnumerNat⟩
+  rcases dashu.rbig_sub_one_positive_spec
+      x one xMinusOne
+      setup.numerSigned oneSetup.numerSigned
+      setup.numer setup.denom numer' oneSetup.one
+      setup.hparts setup.hsign oneSetup.hone
+      honeParts honeSign hle hsub with
+    ⟨numerSignedMinusOne, hsubEq, hpartsMinus, hsignMinus⟩
+  refine ⟨
+    { numerSigned := numerSignedMinusOne
+      denom := setup.denom
+      numer := numer'
+      hparts := hpartsMinus
+      hsign := hsignMinus
+      hdenom := setup.hdenom },
+    ?_⟩
+  constructor
+  · rfl
+  · exact dashu.sub_spec setup.numer setup.denom numer' hsubnumer
+
+/-- SampCert target bridge for one `x > 1` step. This is the mathematical
+counterpart of the extracted outer loop body: `exp(-x)` is sampled by first
+sampling `exp(-1)` and, on success, recurring on `x - 1`. -/
+theorem sample_bernoulli_exp_target_step_of_gt
+    (x oneRat xMinusOne : dashu_ratio.rbig.RBig)
+    (setup : BernoulliExpSetup x)
+    (oneSetup : BernoulliExp1Setup oneRat)
+    (honePos : 0 < dashu.ubigToNat oneSetup.one)
+    (setupMinusOne : BernoulliExpSetup xMinusOne)
+    (hlt :
+      dashu.ubigToNat setup.denom < dashu.ubigToNat setup.numer)
+    (hnumerMinus :
+      dashu.ubigToNat setupMinusOne.numer =
+        dashu.ubigToNat setup.numer - dashu.ubigToNat setup.denom) :
+    bernoulliExpTarget setup.numer setup.denom setup.hdenom =
+      (do
+        let b ←
+          bernoulliExp1Target oneSetup.one oneSetup.one honePos (le_refl _)
+        if b
+        then bernoulliExpTarget setupMinusOne.numer setup.denom setup.hdenom
+        else pure false) := by
+  have honeNat : dashu.ubigToNat oneSetup.one = 1 := dashu.one_spec oneSetup.one oneSetup.hone
+  have hstep :=
+    bernoulliExpTarget_eq_exp1_one_bind_sub_one_of_gt
+      setup.numer setup.denom setupMinusOne.numer oneSetup.one
+      setup.hdenom honePos honeNat hlt hnumerMinus
+  exact hstep
+
+/-- Extracted control-flow bridge for one `x > 1` continuation step. This
+packages the generated branch lemmas together with the semantic state updates
+needed by the full induction. -/
+theorem sample_bernoulli_exp_loop_body_continue_structural
+    (x one xMinusOne : dashu_ratio.rbig.RBig)
+    (i : Std.U128)
+    (setup : BernoulliExpSetup x)
+    (hone : dashu_ratio.rbig.RBig.ONE = ok one)
+    (hgt :
+      dashu_ratio.rbig.RBig.Insts.CoreCmpPartialOrdRBig.gt x one = ok true)
+    (hi : lift (UScalar.cast .U128 1#u32) = ok i)
+    (honeRat :
+      dashu_ratio.rbig.RBig.from_parts_const dashu_base.sign.Sign.Positive i i =
+        ok one)
+    (hexp1 :
+      samplers.bernoulli.sample_bernoulli_exp1 one =
+        ok (core.result.Result.Ok true))
+    (hsub :
+      dashu_ratio.rbig.RBig.Insts.CoreOpsArithSubAssignRBig.sub_assign x one =
+        ok xMinusOne) :
+    ∃ oneSetup : BernoulliExp1Setup one,
+      ∃ setupMinusOne : BernoulliExpSetup xMinusOne,
+        samplers.bernoulli.sample_bernoulli_exp_loop.body x =
+          ok (ControlFlow.cont xMinusOne) ∧
+        setupMinusOne.denom = setup.denom ∧
+        dashu.ubigToNat setupMinusOne.numer =
+          dashu.ubigToNat setup.numer - dashu.ubigToNat setup.denom ∧
+        bernoulliExpTarget setup.numer setup.denom setup.hdenom =
+          (do
+            let b ←
+              bernoulliExp1Target oneSetup.numer oneSetup.denom
+                oneSetup.hdenom oneSetup.hfrac
+            if b
+            then bernoulliExpTarget setupMinusOne.numer setupMinusOne.denom setupMinusOne.hdenom
+            else pure false) := by
+  have hlt :
+      dashu.ubigToNat setup.denom < dashu.ubigToNat setup.numer :=
+    dashu.rbig_gt_one_true_spec
+      x setup.numerSigned setup.denom setup.numer one
+      setup.hparts setup.hsign hgt
+  rcases sample_bernoulli_exp_one_setup_of_from_parts_const i one hi honeRat with
+    ⟨oneSetup, honeNumerEq, honeDenomEq, honeNumer, honeDenom⟩
+  let oneSetupCanon : BernoulliExp1Setup one :=
+    { numerSigned := oneSetup.numerSigned
+      denom := oneSetup.one
+      numer := oneSetup.one
+      one := oneSetup.one
+      hparts := by
+        simpa [honeDenomEq] using oneSetup.hparts
+      hsign := by
+        simpa [honeNumerEq] using oneSetup.hsign
+      hone := oneSetup.hone
+      hdenom := by
+        simpa [honeDenomEq] using oneSetup.hdenom
+      hfrac := le_refl _ }
+  have honePos : 0 < dashu.ubigToNat oneSetup.one := by
+    rw [dashu.one_spec oneSetup.one oneSetup.hone]
+    decide
+  rcases sample_bernoulli_exp_sub_one_setup
+      x one xMinusOne i setup hlt hi honeRat hsub with
+    ⟨setupMinusOne, hsetupMinusOne⟩
+  let setupMinusOneCanon : BernoulliExpSetup xMinusOne :=
+    { numerSigned := setupMinusOne.numerSigned
+      denom := setup.denom
+      numer := setupMinusOne.numer
+      hparts := by
+        simpa [hsetupMinusOne.1] using setupMinusOne.hparts
+      hsign := by
+        simpa [hsetupMinusOne.1] using setupMinusOne.hsign
+      hdenom := by
+        simpa [hsetupMinusOne.1] using setupMinusOne.hdenom }
+  have hbody :
+      samplers.bernoulli.sample_bernoulli_exp_loop.body x =
+        ok (ControlFlow.cont xMinusOne) :=
+    sample_bernoulli_exp_loop_body_eq_continue
+      x one one xMinusOne i hone hgt hi honeRat hexp1 hsub
+  have htarget :
+      bernoulliExpTarget setup.numer setup.denom setup.hdenom =
+      (do
+          let b ←
+            bernoulliExp1Target oneSetupCanon.numer oneSetupCanon.denom
+              oneSetupCanon.hdenom oneSetupCanon.hfrac
+          if b then
+            bernoulliExpTarget setupMinusOneCanon.numer
+              setupMinusOneCanon.denom setupMinusOneCanon.hdenom
+          else
+            pure false) :=
+      sample_bernoulli_exp_target_step_of_gt
+      x one xMinusOne setup oneSetupCanon honePos setupMinusOneCanon hlt
+      (by simpa using hsetupMinusOne.2)
+  refine ⟨oneSetupCanon, setupMinusOneCanon, ?_, ?_⟩
+  · exact hbody
+  · constructor
+    · rfl
+    · constructor
+      · simpa using hsetupMinusOne.2
+      · simpa [oneSetupCanon, setupMinusOneCanon] using htarget
+
+/-- Structural proposition for the outer `sample_bernoulli_exp` loop.
+On inputs already in `[0, 1]`, the target collapses to the unit-step
+negative-exponential sampler. On inputs `> 1`, the target factors into one
+unit step followed by the subtract-one recursive target. -/
+def sample_bernoulli_exp_loop_structural_prop
+    (x : dashu_ratio.rbig.RBig)
+    (setup : BernoulliExpSetup x) : Prop :=
+    ∃ oneRat : dashu_ratio.rbig.RBig,
+      dashu_ratio.rbig.RBig.ONE = ok oneRat ∧
+      (if _hfrac : dashu.ubigToNat setup.numer ≤ dashu.ubigToNat setup.denom
+       then
+        ∃ exp1Setup : BernoulliExp1Setup x,
+          exp1Setup.numer = setup.numer ∧
+          exp1Setup.denom = setup.denom ∧
+          bernoulliExpTarget setup.numer setup.denom setup.hdenom =
+            bernoulliExp1Target exp1Setup.numer exp1Setup.denom
+              exp1Setup.hdenom exp1Setup.hfrac
+       else
+        ∃ oneSetup : BernoulliExp1Setup oneRat,
+          ∃ xMinusOne : dashu_ratio.rbig.RBig,
+            ∃ setupMinusOne : BernoulliExpSetup xMinusOne,
+              setupMinusOne.denom = setup.denom ∧
+              dashu.ubigToNat setupMinusOne.numer =
+                dashu.ubigToNat setup.numer - dashu.ubigToNat setup.denom ∧
+              bernoulliExpTarget setup.numer setup.denom setup.hdenom =
+                (do
+                  let b ←
+                    bernoulliExp1Target oneSetup.numer oneSetup.denom
+                      oneSetup.hdenom oneSetup.hfrac
+                  if b
+                  then
+                    bernoulliExpTarget setupMinusOne.numer setupMinusOne.denom
+                      setupMinusOne.hdenom
+                  else pure false))
+
+/-- Complete structural specification of the outer `sample_bernoulli_exp`
+loop: the handwritten model makes the same branch split and recursive target
+decomposition as SampCert. -/
+theorem sample_bernoulli_exp_loop_structural_spec
+    (x : dashu_ratio.rbig.RBig)
+    (setup : BernoulliExpSetup x) :
+    sample_bernoulli_exp_loop_structural_prop x setup := by
+  rcases dashu.rbig_one_setup_spec with
+    ⟨oneRat, oneSigned, one, honeRat, hone, honeParts, honeSign⟩
+  refine ⟨oneRat, honeRat, ?_⟩
+  by_cases hfrac : dashu.ubigToNat setup.numer ≤ dashu.ubigToNat setup.denom
+  · simp [hfrac]
+    refine ⟨
+      { numerSigned := setup.numerSigned
+        denom := setup.denom
+        numer := setup.numer
+        one := one
+        hparts := setup.hparts
+        hsign := setup.hsign
+        hone := hone
+        hdenom := setup.hdenom
+        hfrac := hfrac },
+      rfl,
+      rfl,
+      ?_⟩
+    simpa using
+      (bernoulliExpTarget_eq_exp1_of_le
+        setup.numer setup.denom setup.hdenom hfrac)
+  · simp [hfrac]
+    have hgt : dashu.ubigToNat setup.denom < dashu.ubigToNat setup.numer := by
+      exact Nat.lt_of_not_ge hfrac
+    have hle : dashu.ubigToNat setup.denom ≤ dashu.ubigToNat setup.numer :=
+      Nat.le_of_lt hgt
+    rcases dashu.sub_exists_spec setup.numer setup.denom hle with
+      ⟨numer', hsub, hnumer'⟩
+    rcases dashu.ibig_from_ubig_exists_spec numer' with
+      ⟨numerSignedMinusOne, hconvMinus, hsignMinus⟩
+    rcases dashu.rbig_from_parts_positive_exists_spec
+        numer' setup.denom numerSignedMinusOne setup.hdenom hsignMinus with
+      ⟨xMinusOne, hpartsMinus, hxMinusOne⟩
+    let oneSetup : BernoulliExp1Setup oneRat :=
+      { numerSigned := oneSigned
+        denom := one
+        numer := one
+        one := one
+        hparts := honeParts
+        hsign := honeSign
+        hone := hone
+        hdenom := by
+          have hnat : dashu.ubigToNat one = 1 := dashu.one_spec one hone
+          simp [hnat]
+        hfrac := by
+          have hnat : dashu.ubigToNat one = 1 := dashu.one_spec one hone
+          simp [hnat] }
+    have honePos : 0 < dashu.ubigToNat one := by
+      rw [dashu.one_spec one hone]
+      decide
+    let setupMinusOne : BernoulliExpSetup xMinusOne :=
+      { numerSigned := numerSignedMinusOne
+        denom := setup.denom
+        numer := numer'
+        hparts := hxMinusOne
+        hsign := hsignMinus
+        hdenom := setup.hdenom }
+    have hnumerMinus :
+        dashu.ubigToNat setupMinusOne.numer =
+          dashu.ubigToNat setup.numer - dashu.ubigToNat setup.denom := by
+      simpa [setupMinusOne] using
+        (dashu.sub_spec setup.numer setup.denom numer' hsub)
+    have htarget :=
+      sample_bernoulli_exp_target_step_of_gt
+        x oneRat xMinusOne setup oneSetup honePos setupMinusOne hgt hnumerMinus
+    refine ⟨oneSetup, xMinusOne, setupMinusOne, ?_, ?_, ?_⟩
+    · rfl
+    · exact hnumerMinus
+    · simpa [setupMinusOne, oneSetup] using htarget
+
+/-- Structural specification of the extracted `sample_bernoulli_exp`.
+This theorem pins down the exact recursive SampCert target used by the Rust
+function, without yet proving the final distributional correctness bridge. -/
+theorem sample_bernoulli_exp_structural_spec
+    (x : dashu_ratio.rbig.RBig)
+    (setup : BernoulliExpSetup x) :
+    samplers.bernoulli.sample_bernoulli_exp x =
+      samplers.bernoulli.sample_bernoulli_exp_loop x ∧
+    bernoulliExpTarget setup.numer setup.denom setup.hdenom true =
+      ENNReal.ofReal
+        (Real.exp
+          (-(((dashu.ubigToNat setup.numer : NNReal) /
+              (dashu.ubigToNat setup.denom : NNReal) : NNReal) : ℝ))) ∧
+    bernoulliExpTarget setup.numer setup.denom setup.hdenom false =
+      1 - ENNReal.ofReal
+        (Real.exp
+          (-(((dashu.ubigToNat setup.numer : NNReal) /
+              (dashu.ubigToNat setup.denom : NNReal) : NNReal) : ℝ))) ∧
+    bernoulliExpTarget setup.numer setup.denom setup.hdenom =
+      SLang.BernoulliExpNegSample
+        (dashu.ubigToNat setup.numer)
+        ⟨dashu.ubigToNat setup.denom, setup.hdenom⟩ ∧
+    sample_bernoulli_exp_loop_structural_prop x setup := by
+  rcases sample_bernoulli_exp_pmf_spec x setup with ⟨htrue, hfalse, hpmf⟩
+  refine ⟨sample_bernoulli_exp_eq x, htrue, hfalse, hpmf, ?_⟩
+  exact sample_bernoulli_exp_loop_structural_spec x setup
+
+/-- End-to-end PMF specification for the extracted `sample_bernoulli_exp`.
+This packages the extracted wrapper equality together with the closed-form
+negative-exponential target law. -/
+theorem sample_bernoulli_exp_end_to_end_spec
+    (x : dashu_ratio.rbig.RBig)
+    (setup : BernoulliExpSetup x) :
+    samplers.bernoulli.sample_bernoulli_exp x =
+      samplers.bernoulli.sample_bernoulli_exp_loop x ∧
+    bernoulliExpTarget setup.numer setup.denom setup.hdenom true =
+      ENNReal.ofReal
+        (Real.exp
+          (-(((dashu.ubigToNat setup.numer : NNReal) /
+              (dashu.ubigToNat setup.denom : NNReal) : NNReal) : ℝ))) ∧
+    bernoulliExpTarget setup.numer setup.denom setup.hdenom false =
+      1 - ENNReal.ofReal
+        (Real.exp
+          (-(((dashu.ubigToNat setup.numer : NNReal) /
+              (dashu.ubigToNat setup.denom : NNReal) : NNReal) : ℝ))) ∧
+    bernoulliExpTarget setup.numer setup.denom setup.hdenom =
+      SLang.BernoulliExpNegSample
+        (dashu.ubigToNat setup.numer)
+        ⟨dashu.ubigToNat setup.denom, setup.hdenom⟩ := by
+  rcases sample_bernoulli_exp_structural_spec x setup with
+    ⟨hloop, htrue, hfalse, hpmf, _hstruct⟩
+  exact ⟨hloop, htrue, hfalse, hpmf⟩
 
 end OpenDP.samplers.bernoulli

@@ -11,7 +11,25 @@
  /-- [core::num::{usize}::div_ceil]:
      Source: '/rustc/library/core/src/num/uint_macros.rs', lines 3597:8-3597:54
      Name pattern: [core::num::{usize}::div_ceil] -/
-@@ -76,27 +80,39 @@
+@@ -65,8 +69,12 @@
+ /-- [core::result::{core::result::Result<T, E>}::map]:
+     Source: '/rustc/library/core/src/result.rs', lines 831:4-833:53
+     Name pattern: [core::result::{core::result::Result<@T, @E>}::map] -/
+ @[rust_fun "core::result::{core::result::Result<@T, @E>}::map"]
+-axiom core.result.Result.map
+-  {T : Type} {E : Type} {U : Type} {F : Type} (opsfunctionFnOnceFTupleTUInst :
+-  core.ops.function.FnOnce F T U) :
+-  core.result.Result T E → F → Result (core.result.Result U E)
++def core.result.Result.map
++  {T : Type} {E : Type} {U : Type} {F : Type} (inst :
++  core.ops.function.FnOnce F T U) :
++  core.result.Result T E → F → Result (core.result.Result U E)
++  | core.result.Result.Ok v, x => do
++      let u ← inst.call_once x v
++      ok (core.result.Result.Ok u)
++  | core.result.Result.Err e, _ => ok (core.result.Result.Err e)
+
+@@ -76,27 +84,39 @@
      Name pattern: [core::result::{core::ops::try_trait::Try<core::result::Result<@T, @E>, @T, core::result::Result<core::convert::Infallible, @E>>}::branch] -/
  @[rust_fun
    "core::result::{core::ops::try_trait::Try<core::result::Result<@T, @E>, @T, core::result::Result<core::convert::Infallible, @E>>}::branch"]
@@ -64,8 +82,3 @@
  /-- [alloc::string::{core::cmp::PartialEq<alloc::string::String> for alloc::string::String}::eq]:
      Source: '/rustc/library/alloc/src/string.rs', lines 350:9-350:18
      Name pattern: [alloc::string::{core::cmp::PartialEq<alloc::string::String, alloc::string::String>}::eq] -/
-@@ -425,4 +445,3 @@
-   :
-   Slice Std.U8 → Result ((core.result.Result Unit openssl.error.ErrorStack)
-     × (Slice Std.U8))
--

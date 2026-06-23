@@ -247,3 +247,5 @@ rust/aeneas-out/
 rust/opendp_verified/Generated/
 SampCert/
 aeneas/
+
+.codex

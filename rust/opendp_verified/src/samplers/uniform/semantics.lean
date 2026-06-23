@@ -2,7 +2,9 @@ import Aeneas
 import Mathlib.Algebra.Order.Floor.Div
 import src.externals.dashu
 import src.externals.core_num_usize
+import src.samplers.bytes
 import SampCert.Samplers.Uniform.Properties
+import SampCert.Foundations.Until
 
 open Aeneas Aeneas.Std Result
 open OpenDP
@@ -404,5 +406,57 @@ theorem sample_uniform_ubig_below_success_pmf_eq_uniform
     _ = uniformNatBelowPMF upper hupper := by
           unfold uniformNatBelowPMF
           rfl
+
+/-! ### Key mathematical lemma: probUntil of uniform = uniform -/
+
+/-- Rejection sampling from `uniformByteNatPMF byte_len` with accept condition `< threshold`
+    gives `UniformSample_PMF {threshold}`.
+
+    Standard result: Uniform[0, N) conditioned on `< k` (with k ≤ N, k > 0) = Uniform[0, k).
+    Proof: use `probUntil_apply_norm` with body = UniformSample N.
+      - body x * (∑ y < k, body y)⁻¹ = (1/N) * (k/N)⁻¹ = 1/k  for each x < k. -/
+theorem probUntil_uniformByteNat_eq_uniform
+    (byte_len : Nat)
+    (threshold_nat : Nat)
+    (hthreshold : 0 < threshold_nat)
+    (hle : threshold_nat ≤ bytes.byteRadix ^ byte_len) :
+    SLang.probUntil (bytes.uniformByteNatPMF byte_len) (· < threshold_nat) =
+    ↑(SLang.UniformSample_PMF ⟨threshold_nat, hthreshold⟩) := by
+  -- Work entirely in terms of UniformSample (definitional equality)
+  let N : ℕ+ := ⟨bytes.byteRadix ^ byte_len, pow_pos (by decide) byte_len⟩
+  change SLang.probUntil (SLang.UniformSample N) (· < threshold_nat) =
+      SLang.UniformSample ⟨threshold_nat, hthreshold⟩
+  have hNorm : ∑' x : ℕ, SLang.UniformSample N x = 1 := SLang.UniformSample_normalizes N
+  have hN0 : (N : ENNReal) ≠ 0 := by positivity
+  have hNtop : (N : ENNReal) ≠ ⊤ := by simp
+  have hle_pnat : threshold_nat ≤ (N : ℕ) := hle
+  -- Sum over accepted region equals threshold_nat / N
+  have hsum : ∑' x : ℕ, (if x < threshold_nat then SLang.UniformSample N x else 0) =
+      (threshold_nat : ENNReal) / (N : ENNReal) := by
+    have step1 : ∑' x : ℕ, (if x < threshold_nat then SLang.UniformSample N x else 0) =
+        ∑ x ∈ Finset.range threshold_nat, SLang.UniformSample N x := by
+      rw [tsum_eq_sum (s := Finset.range threshold_nat) (fun x hx =>
+          if_neg (by simpa [Finset.mem_range] using hx))]
+      exact Finset.sum_congr rfl (fun x hx => if_pos (Finset.mem_range.mp hx))
+    rw [step1]
+    exact SLang.UniformSample_support_Sum N threshold_nat hle_pnat
+  funext x
+  rw [SLang.probUntil_apply_norm _ _ _ hNorm]
+  simp only [decide_eq_true_eq]
+  rw [hsum]
+  by_cases hx : x < threshold_nat
+  · -- Accepted: 1/N * (threshold_nat/N)⁻¹ = 1/threshold_nat
+    simp only [hx, ↓reduceIte]
+    rw [SLang.UniformSample_apply N x (Nat.lt_of_lt_of_le hx hle_pnat),
+        SLang.UniformSample_apply ⟨threshold_nat, hthreshold⟩ x hx]
+    -- 1/N * (threshold_nat/N)⁻¹ = 1/threshold_nat
+    rw [ENNReal.inv_div (Or.inl hNtop) (Or.inl hN0),
+        one_div, one_div, div_eq_mul_inv, ← mul_assoc,
+        ENNReal.inv_mul_cancel hN0 hNtop, one_mul]
+    norm_cast
+  · -- Rejected: both sides 0
+    have hge := Nat.not_lt.mp hx
+    rw [if_neg hx, zero_mul]
+    exact (SLang.UniformSample_apply_out ⟨threshold_nat, hthreshold⟩ x hge).symm
 
 end OpenDP.samplers.uniform
