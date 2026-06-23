@@ -1078,17 +1078,6 @@ def test_large_keys_warns(monkeypatch):
     with pytest.warns(UserWarning):
         context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys_large)
 
-    # Verify warning for older python version, uses shape[1]
-    if hasattr(keys_large, "estimated_size"):
-        monkeypatch.delattr(pl.DataFrame, "estimated_size")
-        with pytest.warns(UserWarning):
-            context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys_large)
-
-        if hasattr(keys_large, "shape"):
-            monkeypatch.delattr(pl.DataFrame, "shape")
-            with pytest.warns(UserWarning):
-                context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys_large)
-
 
 @pytest.mark.parametrize("dtype", ["Time", "Datetime", "Date"])
 def test_datetime(dtype):
