@@ -112,28 +112,6 @@ pub trait StableExpr<MI: Metric, MO: Metric> {
     ) -> Fallible<Transformation<WildExprDomain, MI, ExprDomain, MO>>;
 }
 
-impl<const P: usize> StableExpr<LpDistance<P, f64>, LpDistance<P, f64>> for Expr {
-    fn make_stable(
-        self,
-        input_domain: WildExprDomain,
-        input_metric: LpDistance<P, f64>,
-    ) -> Fallible<Transformation<WildExprDomain, LpDistance<P, f64>, ExprDomain, LpDistance<P, f64>>>
-    {
-        use Expr::*;
-        match self {
-            #[cfg(feature = "contrib")]
-            Cast { .. } => your_constructor_here,
-
-            expr => fallible!(
-                MakeTransformation,
-                "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
-                expr,
-                get_disabled_features_message()
-            ),
-        }
-    }
-}
-
 impl<M: OuterMetric> StableExpr<M, M> for Expr
 where
     M::InnerMetric: UnboundedMetric,
@@ -248,7 +226,7 @@ where
 
             expr => fallible!(
                 MakeTransformation,
-                "2Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
+                "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
                 expr,
                 get_disabled_features_message()
             ),
@@ -279,16 +257,11 @@ where
             Agg(AggExpr::Sum(_)) => expr_sum::make_expr_sum(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
-            Len => expr_len::make_expr_len(input_domain, input_metric, self, false),
-
-            // Here I should see if there is a length transform in the compute graph.
-            // If so build a cast transform around the len transform.
-            #[cfg(feature = "contrib")]
-            ref Cast => expr_len::make_expr_len(input_domain, input_metric, self, true),
+            Len => expr_len::make_expr_len(input_domain, input_metric, self),
 
             expr => fallible!(
                 MakeTransformation,
-                "3Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
+                "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
                 expr,
                 get_disabled_features_message()
             ),
@@ -322,7 +295,7 @@ where
         match self {
             expr => fallible!(
                 MakeTransformation,
-                "4Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
+                "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
                 expr,
                 get_disabled_features_message()
             ),

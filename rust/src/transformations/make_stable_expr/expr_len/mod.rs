@@ -1,10 +1,8 @@
-use super::expr_count::counting_query_stability_map;
 use crate::core::{Function, MetricSpace, Transformation};
 use crate::domains::{AtomDomain, Context, ExprDomain, Margin, SeriesDomain, WildExprDomain};
 use crate::error::*;
 use crate::metrics::{L01InfDistance, LpDistance};
 use crate::transformations::traits::UnboundedMetric;
-use polars::datatypes::DataType;
 use polars::prelude::len;
 use polars_plan::dsl::Expr;
 use polars_plan::plans::typed_lit;
@@ -27,21 +25,14 @@ pub fn make_expr_len<MI, const P: usize>(
     input_domain: WildExprDomain,
     input_metric: L01InfDistance<MI>,
     expr: Expr,
-    allow_negative: bool,
 ) -> Fallible<Transformation<WildExprDomain, L01InfDistance<MI>, ExprDomain, LpDistance<P, f64>>>
 where
     MI: 'static + UnboundedMetric,
     (WildExprDomain, L01InfDistance<MI>): MetricSpace,
     (ExprDomain, LpDistance<P, f64>): MetricSpace,
 {
-    let output_expr = match &expr {
-        Expr::Len => expr.clone(),
-        Expr::Cast {
-            expr: inner,
-            dtype: _,
-            options: _,
-        } if matches!(**inner, Expr::Len) => expr.clone(),
-        _ => return fallible!(MakeTransformation, "expected len expression"),
+    let Expr::Len = expr else {
+        return fallible!(MakeTransformation, "expected len expression");
     };
 
     let old_margin = input_domain.context.aggregation("len")?;
@@ -60,13 +51,12 @@ where
         },
     };
 
-    // Need to cast here?
     Transformation::new(
         input_domain,
         input_metric,
         output_domain,
         LpDistance::default(),
-        Function::from_expr(output_expr).fill_with(typed_lit(0u32)),
+        Function::from_expr(len()).fill_with(typed_lit(0u32)),
         counting_query_stability_map(margin.invariant),
     )
 }

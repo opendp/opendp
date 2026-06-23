@@ -48,7 +48,7 @@ impl AnonymousColumnsUdf for DPFrameLenShim {
         _: &polars::prelude::Schema,
         _: &[polars::prelude::Field],
     ) -> PolarsResult<polars::prelude::Field> {
-        Ok(Field::new("len".into(), DataType::Int64))
+        Ok(Field::new("len".into(), DataType::UInt32))
     }
 }
 impl OpenDPPlugin for DPFrameLenShim {
