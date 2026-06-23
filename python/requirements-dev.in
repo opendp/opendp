@@ -1,14 +1,15 @@
-# To add dev dependencies, make changes here and then regenerate the
-# per-Python-version lock files. These must be compiled under each
-# interpreter, because the resolved versions of dependencies like numpy
-# and pandas differ between Python versions (e.g. mypy type checking on
-# 3.13 needs newer numpy than is installable on 3.10):
+# 
+# To add dev dependencies, make changes here and then run uv to update
+# requirements-dev.txt with Python 3.10 + compatibility:
 #
-#   python3.10 -m pip-compile requirements-dev.in --output-file requirements-dev-3.10.txt
-#   python3.13 -m pip-compile requirements-dev.in --output-file requirements-dev-3.13.txt
+#   uv pip compile requirements-dev.in --universal --python-version 3.10 -o requirements-dev.txt
 #
-# and then commit this file and both requirements-dev-3.*.txt files.
-# The smoke-test CI matrix installs the file matching its Python version.
+# This produces a single requirements-dev.txt with support for 3.10 +.
+# Numpy versions differ across python 3.10 and 3.13 after the 2.5.0 release.
+#
+# Only regenerating needs uv; CI and contributors install with plain pip
+# ("pip install -r requirements-dev.txt"), which evaluates the markers.
+# #
 
 flake8
 pytest
