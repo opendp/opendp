@@ -4,7 +4,7 @@ use std::sync::Arc;
 use polars::series::Series;
 use polars::{
     error::{PolarsResult, polars_bail},
-    prelude::{AnonymousColumnsUdf, Column, ColumnsUdf, DataType, Expr, Field, len},
+    prelude::{AnonymousColumnsUdf, Column, ColumnsUdf, DataType, Expr, Field, len, cast},
 };
 use polars_plan::prelude::FunctionOptions;
 use serde::{Deserialize, Serialize};
@@ -21,6 +21,9 @@ use crate::{
     polars::{OpenDPPlugin, apply_plugin, match_shim},
     transformations::{StableExpr, traits::UnboundedMetric},
 };
+
+#[cfg(test)]
+mod test;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub(crate) struct DPFrameLenShim;
@@ -80,20 +83,20 @@ where
             DPFrameLenShim::NAME
         );
     };
+    println!("scale: {}, allow_negative: {}, expr: {}", scale, allow_negative, expr)
 
     let allow_negative = match allow_negative {
         Expr::Literal(lit) => lit.bool().unwrap_or(false),
         _ => todo!(),
     };
 
-    let len_func = if allow_negative {
-        len().cast(DataType::Int64)
+    let output_dtype = if allow_negative {
+        DataType::Int64
     } else {
-        len()
+        DataType::UInt32
     };
-    // Not using len_func temporarily.
 
-    apply_plugin(vec![len_func, scale], expr, NoiseShim).make_private(
+    apply_plugin(vec![len(), cast(output_dtype), scale], expr, NoiseShim).make_private(
         input_domain.clone(),
         input_metric,
         output_measure,
