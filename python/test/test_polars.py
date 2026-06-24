@@ -275,6 +275,29 @@ def test_filter(measure):
     pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
 
 
+@pytest.mark.parametrize(
+    "measure",
+    [dp.max_divergence(), dp.zero_concentrated_divergence()],
+    ids=ids,
+)
+def test_filter_allow_negative(measure):
+    """ensure dp.len(allow_negative=True) releases a signed (negatable) length"""
+    pl = pytest.importorskip("polars")
+    pl_testing = pytest.importorskip("polars.testing")
+
+    lf_domain, lf = example_lf(margin=[], invariant="keys", max_length=50)
+
+    plan = lf.filter(pl.col("B") < 2).select(dp.len(scale=0.0, allow_negative=True))
+
+    m_lf = dp.m.make_private_lazyframe(
+        lf_domain, dp.symmetric_distance(), measure, plan
+    )
+
+    # with allow_negative the length is released as a signed integer
+    expect = pl.DataFrame([pl.Series("len", [10], dtype=pl.Int64)])
+    pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
+
+
 def test_onceframe_multi_collect():
     lf_domain, lf = example_lf()
     plan = seed(lf.collect_schema()).select(dp.len(0.0))
