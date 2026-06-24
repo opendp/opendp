@@ -4,7 +4,7 @@ use std::sync::Arc;
 use polars::series::Series;
 use polars::{
     error::{PolarsResult, polars_bail},
-    prelude::{AnonymousColumnsUdf, Column, ColumnsUdf, DataType, Expr, Field, len, cast},
+    prelude::{AnonymousColumnsUdf, Column, ColumnsUdf, DataType, Expr, Field, len},
 };
 use polars_plan::prelude::FunctionOptions;
 use serde::{Deserialize, Serialize};
@@ -19,7 +19,7 @@ use crate::{
     },
     metrics::L01InfDistance,
     polars::{OpenDPPlugin, apply_plugin, match_shim},
-    transformations::{StableExpr, traits::UnboundedMetric},
+    transformations::{StableExpr, traits::UnboundedMetric, make_cast},
 };
 
 #[cfg(test)]
@@ -97,7 +97,7 @@ where
         DataType::UInt32
     };
     // CAST AFTER APPLY PLUGIN IS RUN.
-    apply_plugin(vec![len(), scale], expr, NoiseShim).cast(output_dtype).make_private(
+    apply_plugin(vec![len(), scale], expr, NoiseShim).make_cast(input_domain, input_metric).make_private(
         input_domain.clone(),
         input_metric,
         output_measure,
