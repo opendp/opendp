@@ -298,6 +298,34 @@ def test_filter_allow_negative(measure):
     pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
 
 
+@pytest.mark.parametrize(
+    "measure",
+    [dp.max_divergence(), dp.zero_concentrated_divergence()],
+    ids=ids,
+)
+def test_filter_releases_negative(measure):
+    """ensure dp.len(allow_negative=True) can actually release a negative length"""
+    pl = pytest.importorskip("polars")
+
+    lf_domain, lf = example_lf(margin=[], invariant="keys", max_length=50)
+
+    # the true length is 10; with a large scale relative to that, roughly half of
+    # the noisy releases land below zero, so over 100 samples at least one being
+    # negative is a near-certainty (P(all non-negative) ~ 0.5^100).
+    plan = lf.filter(pl.col("B") < 2).select(dp.len(scale=1e7, allow_negative=True))
+
+    m_lf = dp.m.make_private_lazyframe(
+        lf_domain, dp.symmetric_distance(), measure, plan
+    )
+
+    saw_negative = any(m_lf(lf).collect().item(0, "len") < 0 for _ in range(100))
+
+    assert saw_negative, (
+        "expected at least one negative release over 100 samples "
+        "with allow_negative=True"
+    )
+
+
 def test_onceframe_multi_collect():
     lf_domain, lf = example_lf()
     plan = seed(lf.collect_schema()).select(dp.len(0.0))
