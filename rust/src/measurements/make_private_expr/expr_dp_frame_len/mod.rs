@@ -91,13 +91,13 @@ where
         _ => todo!(),
     };
 
-    let output_dtype = if allow_negative {
-        DataType::Int64
+    let len_expr = if allow_negative {
+        len().cast(DataType::Int64)
     } else {
-        DataType::UInt32
+        len()
     };
-    // CAST AFTER APPLY PLUGIN IS RUN.
-    apply_plugin(vec![len(), scale], expr, NoiseShim).make_cast(input_domain, input_metric).make_private(
+    
+    apply_plugin(vec![len_expr, scale], expr, NoiseShim).make_private(
         input_domain.clone(),
         input_metric,
         output_measure,
