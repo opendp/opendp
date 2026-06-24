@@ -4,7 +4,7 @@
 # * channel:  The release channel
 # * date:     The release date
 # * dry_run:  Whether to do a dry-run (don't actually publish)
-name: Publish Channel
+name: helper - Publish Channel
 on:
   workflow_call:
     inputs:
@@ -28,7 +28,7 @@ on:
 
 jobs:
   credential-check:
-    uses: ./.github/workflows/credential-check.yml
+    uses: ./.github/workflows/.credential-check.yml
     with:
       ref: ${{ inputs.channel }}
       assert_version: ${{ inputs.channel != 'dev' }}
@@ -41,12 +41,12 @@ jobs:
       PYPI_API_TOKEN: ${{ inputs.dry_run && secrets.TEST_PYPI_API_TOKEN || secrets.PYPI_API_TOKEN }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.channel }}
 
       - name: Download Python bindings
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: python_bindings
           path: python/src/opendp/
@@ -57,13 +57,13 @@ jobs:
           python-version: 3.13
 
       - name: Download Python wheel
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: python_wheel_*
           path: python/dist
           merge-multiple: true
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: python_sdist
           path: python/dist
@@ -82,12 +82,12 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.channel }}
 
       - name: Download R bindings
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: r_package
           path: R/opendp/
@@ -125,7 +125,7 @@ jobs:
       CRATES_IO_API_TOKEN: ${{ secrets.CRATES_IO_API_TOKEN }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.channel }}
 
@@ -146,18 +146,18 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.channel }}
 
       - name: Download Python bindings
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: python_bindings
           path: python/src/opendp/          
 
       - name: Download R bindings
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: r_package
           path: R/opendp/

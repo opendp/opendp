@@ -33,7 +33,7 @@ jobs:
           swap-storage: false   # no: having swap is useful
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -47,8 +47,34 @@ jobs:
         # fix formatting with: cargo fmt --manifest-path=rust/Cargo.toml --all
         run: cargo fmt --manifest-path=Cargo.toml --all --check
 
+        # Add rust caching following example:
+        #   https://github.com/actions/cache/blob/main/examples.md#rust---cargo
+      - uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      # Enables caching of compilation results via:
+      #   https://github.com/marketplace/actions/sccache-action
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.10
+        with:
+          version: "v0.15.0"  # Ensure sccache binary supports cache v2 API
+
       - name: Build
+        env:
+          RUSTC_WRAPPER: "sccache"
+          SCCACHE_GHA_ENABLED: "true"
         run: cargo build --verbose --all-features
+
+      - name: Check sccache stats
+        shell: bash
+        run: sccache --show-stats
       
       - name: Check --no-default-features
         run: cargo check --verbose --no-default-features --features untrusted,bindings
@@ -57,7 +83,7 @@ jobs:
         run: cargo build --verbose --features untrusted,polars-ffi
       
       - name: Upload (dynamic w/ polars)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dynamic_lib
           path: rust/target/debug/libopendp.so
@@ -66,19 +92,19 @@ jobs:
         run: cargo build --verbose --features untrusted,ffi
       
       - name: Upload (static w/o Polars)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: static_lib
           path: rust/target/debug/libopendp.a
   
       - name: Upload Python bindings
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: python_bindings
           path: python/src/opendp/
 
       - name: Upload R bindings
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: r_bindings
           path: R/opendp/
@@ -105,7 +131,7 @@ jobs:
           swap-storage: false   # no: having swap is useful
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -140,7 +166,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -165,13 +191,13 @@ jobs:
           python -m pip install -r requirements-dev.txt
 
       - name: Download dynamic lib
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: dynamic_lib
           path: python/src/opendp/lib
 
       - name: Download Python bindings
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: python_bindings
           path: python/src/opendp/
@@ -208,7 +234,7 @@ jobs:
 
       - name: Upload coverage
         if: matrix.extra-install == 'mbi' && matrix.python-version == '3.13'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: /tmp/coverage.txt
@@ -219,7 +245,7 @@ jobs:
     steps:
       - name: Download coverage
         # No additional action needed: We just need to confirm that at least one test produced a coverage report.
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: coverage-report
 
@@ -231,7 +257,7 @@ jobs:
         working-directory: docs
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Look for URLs that should be relative
         # R docs are copied into place after build, so they do not use relative URLs.
@@ -239,7 +265,7 @@ jobs:
         run: "! ( grep 'https://docs.opendp.org' -r source --binary-file=without-match | grep -v https://docs.opendp.org/en/stable/api/r )"
 
       - name: Download Python bindings
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: python_bindings
           path: python/src/opendp/
@@ -266,10 +292,10 @@ jobs:
         working-directory: docs
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download Python bindings
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: python_bindings
           path: python/src/opendp/
@@ -297,7 +323,7 @@ jobs:
           python -m pip install -r requirements_notebooks.txt
 
       - name: Download dynamic lib
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: dynamic_lib
           path: python/src/opendp/lib
@@ -319,10 +345,10 @@ jobs:
     steps:
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download libs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           # R uses a static library build that doesn't include Polars 
           # (Polars currently links against Python)
@@ -330,7 +356,7 @@ jobs:
           path: libs/
 
       - name: Download R bindings
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: r_bindings
           path: R/opendp/

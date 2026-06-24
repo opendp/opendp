@@ -1,6 +1,6 @@
 # Disallow everything except for /stable.
 # The is no official "Allow", so we just need to list all the old versions.
-# With quarterly releases, automating the creation of this file is low value.
+# With quarterly releases, automating the updating of this file is low value.
 
 User-agent: *
 Disallow: /en/beta/

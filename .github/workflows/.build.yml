@@ -13,7 +13,7 @@
 # INPUTS
 # * channel:  The release channel
 # * fake:     Whether to do a fake build (to save time, for testing only)
-name: Build Channel
+name: helper - Build Channel
 on:
   workflow_call:
     inputs:
@@ -29,7 +29,7 @@ env:
 
 jobs:
   credential-check:
-    uses: ./.github/workflows/credential-check.yml
+    uses: ./.github/workflows/.credential-check.yml
     with:
       ref: ${{ inputs.channel }}
       assert_version: ${{ inputs.channel != 'dev' }}
@@ -51,7 +51,7 @@ jobs:
           swap-storage: false   # no: having swap is useful
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.channel }}
 
@@ -64,7 +64,7 @@ jobs:
         run: bash tools/rust_build.sh -r -n -f "$FEATURES,bindings"
 
       - name: Upload Python bindings
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: python_bindings
           path: python/src/opendp/
@@ -80,7 +80,7 @@ jobs:
           echo fake > R/opendp/src/vendor.tar.xz
   
       - name: Upload R bindings
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: r_bindings
           path: R/opendp/
@@ -113,7 +113,7 @@ jobs:
           swap-storage: false   # no: having swap is useful
   
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.channel }}
 
@@ -121,7 +121,7 @@ jobs:
         run: bash tools/python_stage.sh
 
       - name: Download Python bindings
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: python_bindings
           path: python/src/opendp/
@@ -173,7 +173,7 @@ jobs:
           CIBW_BUILD_VERBOSITY: 1
           CIBW_TEST_COMMAND: python -c "import opendp"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: python_wheel_${{ matrix.os }}
           path: python/dist/*.whl
@@ -198,7 +198,7 @@ jobs:
 
       - name: Checkout repository
         if: ${{ !inputs.fake }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.channel }}
 
@@ -221,7 +221,7 @@ jobs:
           echo linux > rust/target/${{ env.TARGET }}/release/libopendp.so
       
       - name: Download Python bindings
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: python_bindings
           path: python/src/opendp/
@@ -243,7 +243,7 @@ jobs:
           python setup.py bdist_wheel --plat-name=manylinux_2_28_aarch64 --py-limited-api=cp310
 
       - name: Upload Python wheel
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: python_wheel_aarch64
           path: python/dist/opendp-*.whl
@@ -252,7 +252,7 @@ jobs:
     needs: bindings
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         ref: ${{ inputs.channel }}
 
@@ -260,7 +260,7 @@ jobs:
       run: bash tools/python_stage.sh
 
     - name: Download Python bindings
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v7
       with:
         name: python_bindings
         path: python/src/opendp/
@@ -270,7 +270,7 @@ jobs:
         python -m pip install build &&
         python -m build python/. --sdist
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: python_sdist
         path: python/dist/*.tar.gz
@@ -280,7 +280,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.channel }}
 
@@ -293,7 +293,7 @@ jobs:
           packages: RcppTOML,stringr,roxygen2
 
       - name: Download R bindings
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: r_bindings
           path: R/opendp/
@@ -308,7 +308,7 @@ jobs:
         run: bash tools/r_stage.sh -n
 
       - name: Upload R package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: r_package
           path: R/opendp/

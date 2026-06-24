@@ -8,7 +8,7 @@
 # * channel:  The release channel
 # * sync:     Whether to sync the channel branch from its upstream branch
 # * counter:  A number to append to the version, to allow multiple releases per day (for nightly/beta testing only)
-name: Prepare Channel
+name: helper - Prepare Channel
 on:
   workflow_call:
     inputs:
@@ -37,7 +37,7 @@ env:
 
 jobs:
   credential-check:
-    uses: ./.github/workflows/credential-check.yml
+    uses: ./.github/workflows/.credential-check.yml
     with:
       assert_version: false
 
@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Configure git user
         run: |

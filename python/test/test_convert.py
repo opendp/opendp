@@ -1,17 +1,32 @@
-from opendp._convert import *
-from opendp._convert import (
-    _scalar_to_slice, _slice_to_scalar,
-    _vector_to_slice, _slice_to_vector,
-    _hashmap_to_slice, _slice_to_hashmap,
-    _numpy_dtype_for_rust_type, _numpy_to_slice, _py_to_slice, _slice_to_numpy,
-)
-from opendp._convert import _check_and_cast_scalar
-from opendp.typing import *
 import pytest
 
+from opendp.typing import *
+from opendp._convert import (
+    py_to_c,
+    c_to_py,
+    _check_and_cast_scalar,
+    _hashmap_to_slice,
+    _numpy_dtype_for_rust_type,
+    _numpy_to_slice,
+    _py_to_slice,
+    _scalar_to_slice,
+    _slice_to_hashmap,
+    _slice_to_numpy,
+    _slice_to_scalar,
+    _slice_to_vector,
+    _vector_to_slice,
+)
+from opendp._lib import AnyObjectPtr, ctypes, FfiSlice, FfiSlicePtr
 
-def test_data_object_int():
-    val_in = 123
+@pytest.mark.parametrize("val_type,val_in", [
+    (int, 123),
+    (float, 123.123),
+    (str, "hello, world"),
+    (list, [1, 2, 3]),
+    (tuple, (1., 1e-7)),
+])
+def test_data_object(val_type, val_in):
+    assert isinstance(val_in, val_type)
     obj = py_to_c(val_in, c_type=AnyObjectPtr)
     val_out = c_to_py(obj)
     assert val_out == val_in
@@ -20,34 +35,6 @@ def test_data_object_int():
 def test_data_object_int_to_float():
     val_in = 123
     obj = py_to_c(val_in, c_type=AnyObjectPtr, type_name='f64')
-    val_out = c_to_py(obj)
-    assert val_out == val_in
-
-
-def test_data_object_float():
-    val_in = 123.123
-    obj = py_to_c(val_in, c_type=AnyObjectPtr)
-    val_out = c_to_py(obj)
-    assert val_out == val_in
-
-
-def test_data_object_str():
-    val_in = "hello, world"
-    obj = py_to_c(val_in, c_type=AnyObjectPtr)
-    val_out = c_to_py(obj)
-    assert val_out == val_in
-
-
-def test_data_object_list():
-    val_in = [1, 2, 3]
-    obj = py_to_c(val_in, c_type=AnyObjectPtr)
-    val_out = c_to_py(obj)
-    assert val_out == val_in
-
-
-def test_data_object_tuple():
-    val_in = (1., 1e-7)
-    obj = py_to_c(val_in, c_type=AnyObjectPtr)
     val_out = c_to_py(obj)
     assert val_out == val_in
 
@@ -186,8 +173,9 @@ def test_numpy_ndarray_validation():
 def test_numpy_trans():
     np = pytest.importorskip('numpy')
     import opendp.prelude as dp
+
     assert dp.t.make_sum(
-        dp.vector_domain(dp.atom_domain(bounds=(0, 10))), 
+        dp.vector_domain(dp.atom_domain(bounds=(0, 10))),
         dp.symmetric_distance(),
     )(np.array([1, 2, 3], dtype=np.int32)) == 6
 
@@ -209,13 +197,12 @@ def test_numpy_vector_output_from_rust_transformation():
 
 
 def test_overflow():
-    import pytest
     with pytest.raises(ValueError):
         py_to_c(-1, AnyObjectPtr, u8)
 
     with pytest.raises(ValueError):
         py_to_c(256, AnyObjectPtr, u8)
-  
+
     with pytest.raises(ValueError):
         py_to_c(-129, AnyObjectPtr, i8)
 

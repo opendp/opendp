@@ -4,7 +4,7 @@
 # * channel:            The release channel
 # * python_repository:  The repository to download the package from (use "local" for an unpublished artifact)
 # * fake:               Whether this was a fake build (no actual test, will just be downloaded)
-name: Sanity Test Channel
+name: helper - Sanity Test Channel
 on:
   workflow_call:
     inputs:
@@ -24,13 +24,13 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.channel }}
 
       - name: Download Python wheel
         if: ${{ inputs.python_repository == 'local' }}
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: python_wheel_ubuntu-latest 
           path: python/dist

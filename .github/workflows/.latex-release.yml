@@ -3,7 +3,7 @@
 #
 # INPUTS
 # * channel:  The release channel
-name: Latex Build (Release)
+name: helper - Latex Build (Release)
 on:
   workflow_call:
     inputs:
@@ -16,7 +16,7 @@ on:
 
 jobs:
   credential-check:
-    uses: ./.github/workflows/credential-check.yml
+    uses: ./.github/workflows/.credential-check.yml
     with:
       ref: ${{ inputs.channel }}
       assert_version: ${{ inputs.channel != 'dev' }}
@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.channel }}
 

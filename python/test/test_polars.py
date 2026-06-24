@@ -1,11 +1,13 @@
-from opendp.extras.polars import Margin
-import pytest
-import opendp.prelude as dp
-import warnings
-import re
-import os
 import io
+import os
+import pytest
+import re
+import warnings
+
 from datetime import date, time, datetime
+
+import opendp.prelude as dp
+from opendp.extras.polars import Margin
 
 from .helpers import ids
 
@@ -80,7 +82,7 @@ def test_domains():
 # data loaders
 @pytest.mark.parametrize(
     "domain,series",
-    zip(*example_series()),
+    list(zip(*example_series())),
     ids=ids,
 )
 def test_series_ffi(domain, series):
