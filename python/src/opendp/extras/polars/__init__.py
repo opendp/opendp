@@ -510,12 +510,13 @@ if pl is not None:
     pl.api.register_expr_namespace("dp")(DPExpr)
 
 
-def dp_len(scale: float | None = None):
+def dp_len(scale: float | None = None, allow_negative: bool = False):
     """Compute a differentially private estimate of the number of rows.
 
     If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
 
     :param scale: parameter for the noise distribution.
+    :param allow_negative: if True, release the noisy length as a signed integer so that noise may make it negative. Otherwise the length is non-negative.
 
     :example:
 
@@ -544,7 +545,7 @@ def dp_len(scale: float | None = None):
     return register_plugin_function(
         plugin_path=_get_opendp_polars_lib_path(),
         function_name="dp_frame_len",
-        args=(scale,),
+        args=(scale, allow_negative),
         returns_scalar=True,
     )
 

@@ -477,9 +477,11 @@ impl DPExpr {
 ///
 /// # Arguments
 /// * `scale` - parameter for the noise distribution
-pub fn dp_len(scale: Option<f64>) -> Expr {
+/// * `allow_negative` - if true, the noisy length is released as a signed integer
+///   so that noise may make it negative. Otherwise the length is non-negative.
+pub fn dp_len(scale: Option<f64>, allow_negative: bool) -> Expr {
     let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
-    apply_anonymous_function(vec![scale], DPFrameLenShim)
+    apply_anonymous_function(vec![scale, lit(allow_negative)], DPFrameLenShim)
 }
 
 pub enum OnceFrameQuery {

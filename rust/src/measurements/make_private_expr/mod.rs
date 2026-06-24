@@ -135,7 +135,7 @@ where
         output_measure: MO,
         global_scale: Option<f64>,
     ) -> Fallible<Measurement<WildExprDomain, L01InfDistance<MI>, MO, ExprPlan>> {
-        if match_shim::<DPFrameLenShim, 1>(&self)?.is_some() {
+        if match_shim::<DPFrameLenShim, 2>(&self)?.is_some() {
             return expr_dp_frame_len::make_expr_dp_frame_len(
                 input_domain,
                 input_metric,

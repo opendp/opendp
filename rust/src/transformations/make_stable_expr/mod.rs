@@ -259,6 +259,11 @@ where
             #[cfg(feature = "contrib")]
             Len => expr_len::make_expr_len(input_domain, input_metric, self),
 
+            #[cfg(feature = "contrib")]
+            Cast { .. } => {
+                expr_cast::make_expr_cast_aggregate(input_domain, input_metric, self)
+            }
+
             expr => fallible!(
                 MakeTransformation,
                 "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",

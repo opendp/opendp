@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod test;
+
 use std::sync::Arc;
 
 #[cfg(feature = "ffi")]
@@ -18,7 +21,7 @@ use crate::{
         expr_noise::{NoiseExprMeasure, NoiseShim},
     },
     metrics::L01InfDistance,
-    polars::{OpenDPPlugin, apply_plugin, match_shim},
+    polars::{OpenDPPlugin, apply_plugin, literal_value_of, match_shim},
     transformations::{StableExpr, traits::UnboundedMetric},
 };
 
@@ -72,7 +75,7 @@ where
     Expr: StableExpr<L01InfDistance<MI>, L01InfDistance<MI>> + PrivateExpr<L01InfDistance<MI>, MO>,
     (ExprDomain, MO::Metric): MetricSpace,
 {
-    let Some([scale]) = match_shim::<DPFrameLenShim, _>(&expr)? else {
+    let Some([scale, allow_negative]) = match_shim::<DPFrameLenShim, _>(&expr)? else {
         return fallible!(
             MakeMeasurement,
             "Expected {} function",
@@ -80,7 +83,17 @@ where
         );
     };
 
-    apply_plugin(vec![len(), scale], expr, NoiseShim).make_private(
+    // When negative releases are allowed, cast the length to a signed integer
+    // before noise is added so that the noisy result may fall below zero.
+    // Otherwise the length remains an unsigned integer and is non-negative.
+    let allow_negative = literal_value_of::<bool>(&allow_negative)?.unwrap_or(false);
+    let len_expr = if allow_negative {
+        len().cast(DataType::Int64)
+    } else {
+        len()
+    };
+
+    apply_plugin(vec![len_expr, scale], expr, NoiseShim).make_private(
         input_domain.clone(),
         input_metric,
         output_measure,
