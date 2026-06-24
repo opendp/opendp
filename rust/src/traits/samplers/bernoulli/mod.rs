@@ -31,10 +31,10 @@ pub fn sample_standard_bernoulli() -> Fallible<bool> {
 ///
 /// # Arguments
 /// * `prob`- The desired probability of success (bit = 1).
-/// * `constant_time` - Whether or not to enforce the algorithm to run in constant time
+/// * `mitigate_timing` - try to run the algorithm in constant time wrt any given value of `prob`
 ///
 /// # Return
-/// A true boolean with probability "prob".
+/// A true boolean with probability `prob`.
 ///
 /// # Examples
 ///
@@ -50,9 +50,7 @@ pub fn sample_standard_bernoulli() -> Fallible<bool> {
 /// where `prob` is within $[0, 1]$,
 /// returns `Err(e)` if there is a lack of system entropy,
 /// or `Ok(out)` where `out` is `true` with probability `prob`, otherwise `false`.
-///
-/// If `constant_time` is set, the implementation's runtime is constant.
-pub fn sample_bernoulli_float<T>(prob: T, constant_time: bool) -> Fallible<bool>
+pub fn sample_bernoulli_float<T>(prob: T, mitigate_timing: bool) -> Fallible<bool>
 where
     T: Float,
     T::Bits: PartialOrd + ExactIntCast<usize>,
@@ -92,7 +90,7 @@ where
         let buffer_len = max_coin_flips.inf_div(&8)?;
 
         // repeatedly flip a fair coin (up to j times) to identify 0-based index i of first heads
-        match sample_geometric_buffer(buffer_len, constant_time)? {
+        match sample_geometric_buffer(buffer_len, mitigate_timing)? {
             // i is in terms of T::Bits, not usize; assign to first_heads_index
             Some(i) => T::Bits::exact_int_cast(i)?,
             // otherwise return early because i > j
