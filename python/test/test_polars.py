@@ -3,6 +3,7 @@ import os
 import pytest
 import re
 import warnings
+import polars as pl
 
 from datetime import date, time, datetime
 
@@ -1300,3 +1301,33 @@ def test_zero_budget():
         split_evenly_over=1,
     )
     context.query().select(pl.len()).release().collect()
+
+def test_unbiased_groupby_len():
+    """Tests that dp.len() can return counts centered on zero."""
+    TEST_SIZE = 10_000
+    
+    # Polars dataframe with no rows so that the counts are all none.
+    test_data = {
+        "A": []
+    }
+
+    # lots of keys where some portion should have negative counts with noise applied.
+    keys = pl.LazyFrame({"A": [i for i in range(TEST_SIZE)]})
+
+    # A very low budget for highly noisy results.
+    privacy_budget = 10e-10
+
+    context = dp.Context.compositor(
+        data = pl.LazyFrame(test_data),
+        privacy_unit=dp.unit_of(changes=1),
+        privacy_loss=dp.loss_of(epsilon=privacy_budget),
+        split_evenly_over = 1,
+    )
+    result = (
+        context.query()
+        .groupby("A")
+        .agg(dp.len())
+        .with_keys(keys)
+        .release()
+        .collect())
+    assert result[result[""]]
