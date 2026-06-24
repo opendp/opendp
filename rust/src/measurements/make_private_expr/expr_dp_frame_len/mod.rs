@@ -76,6 +76,7 @@ where
     Expr: StableExpr<L01InfDistance<MI>, L01InfDistance<MI>> + PrivateExpr<L01InfDistance<MI>, MO>,
     (ExprDomain, MO::Metric): MetricSpace,
 {
+    // perhaps the issue is that the noise function should cast the result to int64 before 
     let Some([scale, allow_negative]) = match_shim::<DPFrameLenShim, 2>(&expr)? else {
         return fallible!(
             MakeMeasurement,
@@ -83,7 +84,7 @@ where
             DPFrameLenShim::NAME
         );
     };
-    println!("scale: {}, allow_negative: {}, expr: {}", scale, allow_negative, expr)
+    println!("scale: {}, allow_negative: {}, expr: {}", scale, allow_negative, expr);
 
     let allow_negative = match allow_negative {
         Expr::Literal(lit) => lit.bool().unwrap_or(false),
@@ -95,8 +96,8 @@ where
     } else {
         DataType::UInt32
     };
-
-    apply_plugin(vec![len(), cast(output_dtype), scale], expr, NoiseShim).make_private(
+    // CAST AFTER APPLY PLUGIN IS RUN.
+    apply_plugin(vec![len(), scale], expr, NoiseShim).cast(output_dtype).make_private(
         input_domain.clone(),
         input_metric,
         output_measure,
