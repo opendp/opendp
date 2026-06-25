@@ -1304,12 +1304,14 @@ def test_zero_budget():
 
 def test_unbiased_groupby_len():
     """Tests that dp.len() can return counts centered on zero."""
+
+    dp.enable_features("contrib")
+
     TEST_SIZE = 10_000
-    
+
     # Polars dataframe with no rows so that the counts are all none.
-    test_data = {
-        "A": []
-    }
+    test_data = {"A": [], "B": []}
+    data_schema = pl.Schema({"A": pl.Int32, "B": pl.Int32})
 
     # lots of keys where some portion should have negative counts with noise applied.
     keys = pl.LazyFrame({"A": [i for i in range(TEST_SIZE)]})
@@ -1318,16 +1320,14 @@ def test_unbiased_groupby_len():
     privacy_budget = 10e-10
 
     context = dp.Context.compositor(
-        data = pl.LazyFrame(test_data),
+        data=pl.DataFrame(test_data, schema=data_schema).lazy(),
         privacy_unit=dp.unit_of(changes=1),
         privacy_loss=dp.loss_of(epsilon=privacy_budget),
-        split_evenly_over = 1,
+        split_evenly_over=1,
     )
     result = (
-        context.query()
-        .groupby("A")
-        .agg(dp.len())
-        .with_keys(keys)
-        .release()
-        .collect())
-    assert result[result[""]]
+        context.query().group_by("A").agg(dp.len()).with_keys(keys).release().collect()
+    )
+    assert (
+        len(result.filter(pl.col("len") < 0)) > 0
+    ), "dp.len result didn't have any negative values."
