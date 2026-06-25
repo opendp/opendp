@@ -104,7 +104,8 @@ def test_lazyframe_ffi():
 
 
 @pytest.mark.parametrize(
-    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()],
+    "measure",
+    [dp.max_divergence(), dp.zero_concentrated_divergence()],
     ids=ids,
 )
 def test_private_lazyframe_explicit_sum(measure):
@@ -234,9 +235,7 @@ def test_private_lazyframe_median():
     pl = pytest.importorskip("polars")
     pl_testing = pytest.importorskip("polars.testing")
 
-    lf_domain, lf = example_lf(
-        margin=["A"], invariant="keys", max_length=50
-    )
+    lf_domain, lf = example_lf(margin=["A"], invariant="keys", max_length=50)
     candidates = list(range(1, 6))
     expr = pl.col("B").dp.median(candidates, 1.0)
     plan = seed(lf.collect_schema()).group_by("A").agg(expr)
@@ -327,6 +326,7 @@ def test_mechanisms(measure):
 
     expect = pl.DataFrame([pl.Series("len", [50], dtype=pl.UInt32)])
     pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
+
 
 def test_polars_context():
     pl = pytest.importorskip("polars")
@@ -436,11 +436,7 @@ def test_polars_accuracy_threshold():
         schema_overrides={"threshold": pl.UInt32},
     )
 
-    query = (
-        context.query()
-        .group_by("B")
-        .agg(dp.len(), pl.col("A").dp.sum((0, 3)))
-    )
+    query = context.query().group_by("B").agg(dp.len(), pl.col("A").dp.sum((0, 3)))
 
     actual = query.summarize()
     pl_testing.assert_frame_equal(expected, actual)
@@ -636,9 +632,13 @@ def test_polars_grouped_quantile_max_groups_contribution_bound():
         ],
     )
 
-    query = context.query().group_by(["class_year_str"]).agg(
-        dp.len(),
-        pl.col("grade").dp.quantile(0.5, [50, 60, 70, 80, 90, 100]),
+    query = (
+        context.query()
+        .group_by(["class_year_str"])
+        .agg(
+            dp.len(),
+            pl.col("grade").dp.quantile(0.5, [50, 60, 70, 80, 90, 100]),
+        )
     )
 
     expected = pl.DataFrame(
@@ -768,7 +768,9 @@ def test_execute_shim():
     )
     plan = context.query(epsilon=1.0).select(dp.len()).polars_plan
 
-    with pytest.raises(pl.exceptions.ComputeError, match="OpenDP expressions must be passed through"):
+    with pytest.raises(
+        pl.exceptions.ComputeError, match="OpenDP expressions must be passed through"
+    ):
         plan.collect()  # type: ignore[union-attr]
 
 
@@ -924,7 +926,8 @@ def test_float_sum_with_unlimited_reorderable_partitions():
         ]
     )
     lf_domain = dp.with_margin(
-        lf_domain, dp.polars.Margin(by=[pl.col("region")], invariant="lengths", max_length=6)
+        lf_domain,
+        dp.polars.Margin(by=[pl.col("region")], invariant="lengths", max_length=6),
     )
 
     from opendp.domains import _lazyframe_from_domain
@@ -1230,29 +1233,38 @@ def test_enum_domain():
     assert observed == expected
 
 
-@pytest.mark.xfail(reason="broken until https://github.com/pola-rs/polars/issues/20162 is fixed")
+@pytest.mark.xfail(
+    reason="broken until https://github.com/pola-rs/polars/issues/20162 is fixed"
+)
 def test_array_domain_query():
     pl = pytest.importorskip("polars")
 
     # this triggers construction of a lazyframe domain from the schema
     context = dp.Context.compositor(
-        data=pl.LazyFrame(pl.Series("alpha", [["A", "B", "C"]] * 100, dtype=pl.Array(pl.String, 3))),
+        data=pl.LazyFrame(
+            pl.Series("alpha", [["A", "B", "C"]] * 100, dtype=pl.Array(pl.String, 3))
+        ),
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0, delta=1e-7),
         split_evenly_over=1,
     )
-    
+
     # this is broken until https://github.com/pola-rs/polars/issues/20162 is fixed
-    context.query().with_columns(pl.col.alpha.explode()).select(dp.len()).release().collect()
+    context.query().with_columns(pl.col.alpha.explode()).select(
+        dp.len()
+    ).release().collect()
+
 
 def test_arithmetic():
     pl = pytest.importorskip("polars")
 
     context = dp.Context.compositor(
-        data=pl.LazyFrame({
-            "data": [1, 2, 3] * 100,
-            "weights": [0.2, 0.5, 0.7] * 100,
-        }),
+        data=pl.LazyFrame(
+            {
+                "data": [1, 2, 3] * 100,
+                "weights": [0.2, 0.5, 0.7] * 100,
+            }
+        ),
         privacy_unit=dp.unit_of(contributions=1),
         privacy_loss=dp.loss_of(epsilon=1.0),
         split_evenly_over=1,
@@ -1270,6 +1282,7 @@ def test_arithmetic():
 
     # expectation is 330.0
     assert 260 < observed < 400
+
 
 @pytest.mark.parametrize(
     "privacy_unit",
@@ -1301,6 +1314,7 @@ def test_zero_budget():
         split_evenly_over=1,
     )
     context.query().select(pl.len()).release().collect()
+
 
 def test_unbiased_groupby_len():
     """Tests that dp.len() can return counts centered on zero."""
