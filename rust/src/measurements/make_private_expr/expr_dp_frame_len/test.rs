@@ -9,7 +9,7 @@ use crate::{
 };
 
 #[test]
-fn test_test_dp_frame_len_types() -> Fallible<()>{
+fn test_dp_frame_len_types() -> Fallible<()>{
     _test_dp_frame_len_default_dtype(true, DataType::Int64)?;
     _test_dp_frame_len_default_dtype(true, DataType::UInt32)?;
     Ok(())
