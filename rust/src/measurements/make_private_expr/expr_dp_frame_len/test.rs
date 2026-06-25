@@ -5,6 +5,7 @@ use crate::{
     measures::MaxDivergence,
     metrics::{L0PInfDistance, SymmetricDistance},
     polars::dp_len,
+    error::Fallible,
     transformations::test_helper::get_test_data,
 };
 
@@ -18,7 +19,7 @@ fn _test_dp_frame_len_default_dtype(allow_negative: bool, output_type: DataType)
     let (lf_domain, lf) = get_test_data()?;
     let measurement = make_expr_dp_frame_len(
         lf_domain.select(),
-        L01PInfDistance(SymmetricDistance),
+        L0PInfDistance(SymmetricDistance),
         MaxDivergence,
         dp_len(Some(0.0), allow_negative),
         None,
