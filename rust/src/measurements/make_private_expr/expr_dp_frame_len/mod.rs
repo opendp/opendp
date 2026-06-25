@@ -22,6 +22,10 @@ use crate::{
     transformations::{StableExpr, traits::UnboundedMetric},
 };
 
+#[cfg(test)]
+mod test;
+
+
 #[derive(Clone, Serialize, Deserialize)]
 pub(crate) struct DPFrameLenShim;
 
