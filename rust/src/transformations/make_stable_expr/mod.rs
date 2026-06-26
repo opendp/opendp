@@ -259,12 +259,18 @@ where
             #[cfg(feature = "contrib")]
             Len => expr_len::make_expr_len(input_domain, input_metric, self),
 
-            expr => fallible!(
+            #[cfg(feature = "contrib")]
+            ref Cast => expr_len::make_expr_len(input_domain, input_metric, self),
+
+            expr => {
+                println!("AT THIS POINT 12345");
+                // HERE IS A PROBLEM
+                fallible!(
                 MakeTransformation,
                 "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
                 expr,
                 get_disabled_features_message()
-            ),
+            )}
         }
     }
 }
@@ -293,12 +299,14 @@ where
             );
         }
         match self {
-            expr => fallible!(
+            expr => {
+                println!("AT THIS POINT 1234");
+                fallible!(
                 MakeTransformation,
                 "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
                 expr,
                 get_disabled_features_message()
-            ),
+            )}
         }
     }
 }

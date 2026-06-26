@@ -43,6 +43,7 @@ where
     if match_datetime_component(temporal_function).is_some() {
         return make_expr_datetime_component(input_domain, input_metric, expr);
     }
+    println!("AT THIS POINT 123");
 
     fallible!(
         MakeTransformation,

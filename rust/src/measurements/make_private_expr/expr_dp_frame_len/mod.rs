@@ -4,7 +4,7 @@ use std::sync::Arc;
 use polars::series::Series;
 use polars::{
     error::{PolarsResult, polars_bail},
-    prelude::{AnonymousColumnsUdf, Column, ColumnsUdf, DataType, Expr, Field, len},
+    prelude::{AnonymousColumnsUdf, Column, ColumnsUdf, DataType, Expr, Field, len, cast},
 };
 use polars_plan::prelude::FunctionOptions;
 use serde::{Deserialize, Serialize};

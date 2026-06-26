@@ -33,9 +33,18 @@ where
     (WildExprDomain, L01InfDistance<MI>): MetricSpace,
     (ExprDomain, LpDistance<P, f64>): MetricSpace,
 {
-    let Expr::Len = expr else {
-        return fallible!(MakeTransformation, "expected len expression");
-    };
+    let mut default_zero = 0u32;
+    match expr{
+        Expr::Len => {
+            let default_zero = 0u32;
+        }
+        Expr::Cast { .. } => {
+            let default_zero = 0i64;
+        }
+        _ => {
+        return fallible!(MakeTransformation, "expected len or cast expression");
+    }
+    }
 
     let old_margin = input_domain.context.aggregation("len")?;
     let margin = Margin {
@@ -53,12 +62,15 @@ where
         },
     };
 
+
+
+
     Transformation::new(
         input_domain,
         input_metric,
         output_domain,
         LpDistance::default(),
-        Function::from_expr(len()).fill_with(typed_lit(0u32)),
+        Function::from_expr(len()).fill_with(typed_lit(default_zero)),
         counting_query_stability_map(margin.invariant),
     )
 }

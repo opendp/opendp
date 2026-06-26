@@ -9,7 +9,7 @@ use crate::{
 
 use num::Zero;
 use polars::lazy::dsl::Expr;
-use polars::prelude::len;
+use polars::prelude:: {DataType, len, cast};
 use polars_plan::plans::typed_lit;
 
 #[cfg(test)]
@@ -41,9 +41,24 @@ pub fn make_expr_private_len<MI: 'static + UnboundedMetric, MO: 'static + Measur
 where
     MO::Distance: Zero,
 {
-    let Expr::Len = expr else {
-        return fallible!(MakeMeasurement, "Expected len() expression");
-    };
+    let mut len_expr = len();
+    let mut output_type = 0u32;
+    println!("Expr: {}", expr);
+    match expr {
+        Expr::Len => {
+            let output_type = 0u32;
+            let len_expr = len();
+        }
+
+        Expr::Cast { expr: _, dtype: _, options: _ } => {
+            let len_expr = len().cast(DataType::Int64);
+            let output_type = 0i64;
+        }
+
+        _ => {
+            return fallible!(MakeMeasurement, "Expected len() or len().cast() expression");
+        }
+    }
 
     let margin = input_domain.context.aggregation("len")?;
 
@@ -59,7 +74,7 @@ where
         input_domain,
         input_metric,
         output_measure,
-        Function::from_expr(len()).fill_with(typed_lit(0u32)),
+        Function::from_expr(len_expr).fill_with(typed_lit(output_type)),
         PrivacyMap::new(move |_| MO::Distance::zero()),
     )
 }
