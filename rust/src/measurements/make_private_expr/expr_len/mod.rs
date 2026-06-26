@@ -9,7 +9,7 @@ use crate::{
 
 use num::Zero;
 use polars::lazy::dsl::Expr;
-use polars::prelude:: {DataType, len, cast};
+use polars::prelude::{DataType, cast, len};
 use polars_plan::plans::typed_lit;
 
 #[cfg(test)]
@@ -50,7 +50,11 @@ where
             let len_expr = len();
         }
 
-        Expr::Cast { expr: _, dtype: _, options: _ } => {
+        Expr::Cast {
+            expr: _,
+            dtype: _,
+            options: _,
+        } => {
             let len_expr = len().cast(DataType::Int64);
             let output_type = 0i64;
         }

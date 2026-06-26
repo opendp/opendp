@@ -34,7 +34,7 @@ where
     (ExprDomain, LpDistance<P, f64>): MetricSpace,
 {
     let mut default_zero = 0u32;
-    match expr{
+    match expr {
         Expr::Len => {
             let default_zero = 0u32;
         }
@@ -42,8 +42,8 @@ where
             let default_zero = 0i64;
         }
         _ => {
-        return fallible!(MakeTransformation, "expected len or cast expression");
-    }
+            return fallible!(MakeTransformation, "expected len or cast expression");
+        }
     }
 
     let old_margin = input_domain.context.aggregation("len")?;
@@ -61,9 +61,6 @@ where
             margin: margin.clone(),
         },
     };
-
-
-
 
     Transformation::new(
         input_domain,

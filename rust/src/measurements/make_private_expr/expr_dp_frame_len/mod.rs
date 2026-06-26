@@ -4,7 +4,7 @@ use std::sync::Arc;
 use polars::series::Series;
 use polars::{
     error::{PolarsResult, polars_bail},
-    prelude::{AnonymousColumnsUdf, Column, ColumnsUdf, DataType, Expr, Field, len, cast},
+    prelude::{AnonymousColumnsUdf, Column, ColumnsUdf, DataType, Expr, Field, cast, len},
 };
 use polars_plan::prelude::FunctionOptions;
 use serde::{Deserialize, Serialize};
@@ -19,7 +19,7 @@ use crate::{
     },
     metrics::L01InfDistance,
     polars::{OpenDPPlugin, apply_plugin, match_shim},
-    transformations::{StableExpr, traits::UnboundedMetric, make_cast},
+    transformations::{StableExpr, make_cast, traits::UnboundedMetric},
 };
 
 #[cfg(test)]
@@ -55,7 +55,7 @@ impl AnonymousColumnsUdf for DPFrameLenShim {
     }
 }
 impl OpenDPPlugin for DPFrameLenShim {
-    const NAME: &'static str = "dp_frame_len"; // This is how Python is identifying what to execute.
+    const NAME: &'static str = "dp_frame_len";
     #[cfg(feature = "ffi")]
     const SHIM: bool = true;
     fn function_options() -> FunctionOptions {
@@ -64,7 +64,6 @@ impl OpenDPPlugin for DPFrameLenShim {
 }
 
 /// Make a dp frame-length expression measurement.
-/// NEED CHANGES HERE.
 pub(crate) fn make_expr_dp_frame_len<MI: 'static + UnboundedMetric, MO: NoiseExprMeasure>(
     input_domain: WildExprDomain,
     input_metric: L01InfDistance<MI>,
@@ -76,7 +75,6 @@ where
     Expr: StableExpr<L01InfDistance<MI>, L01InfDistance<MI>> + PrivateExpr<L01InfDistance<MI>, MO>,
     (ExprDomain, MO::Metric): MetricSpace,
 {
-    // perhaps the issue is that the noise function should cast the result to int64 before 
     let Some([scale, allow_negative]) = match_shim::<DPFrameLenShim, 2>(&expr)? else {
         return fallible!(
             MakeMeasurement,
@@ -84,7 +82,10 @@ where
             DPFrameLenShim::NAME
         );
     };
-    println!("scale: {}, allow_negative: {}, expr: {}", scale, allow_negative, expr);
+    println!(
+        "scale: {}, allow_negative: {}, expr: {}",
+        scale, allow_negative, expr
+    );
 
     let allow_negative = match allow_negative {
         Expr::Literal(lit) => lit.bool().unwrap_or(false),
@@ -96,7 +97,7 @@ where
     } else {
         len()
     };
-    
+
     apply_plugin(vec![len_expr, scale], expr, NoiseShim).make_private(
         input_domain.clone(),
         input_metric,

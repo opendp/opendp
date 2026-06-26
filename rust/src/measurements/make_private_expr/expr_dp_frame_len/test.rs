@@ -1,16 +1,16 @@
 use polars::prelude::*;
 
 use crate::{
+    error::Fallible,
     measurements::make_private_expr::expr_dp_frame_len::make_expr_dp_frame_len,
     measures::MaxDivergence,
     metrics::{L0PInfDistance, SymmetricDistance},
     polars::dp_len,
-    error::Fallible,
     transformations::test_helper::get_test_data,
 };
 
 #[test]
-fn test_dp_frame_len_types() -> Fallible<()>{
+fn test_dp_frame_len_types() -> Fallible<()> {
     _test_dp_frame_len_default_dtype(true, DataType::Int64)?;
     _test_dp_frame_len_default_dtype(true, DataType::UInt32)?;
     Ok(())

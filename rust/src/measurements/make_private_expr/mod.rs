@@ -236,34 +236,29 @@ where
             return Ok(meas);
         }
 
-
-        println!("{:#?}", self);
         match &self {
             #[cfg(feature = "contrib")]
             Expr::Len => {
-                println!("LEN MATCH MADE, HUGE PROBLEM");
                 expr_len::make_expr_private_len(input_domain, input_metric, output_measure, self)
             }
-            
+
             Expr::Cast { .. } => {
-                println!("MATCH MADE");
                 expr_len::make_expr_private_len(input_domain, input_metric, output_measure, self)
             }
 
             #[cfg(feature = "contrib")]
             Expr::Literal(_) => {
-                println!("Match Literal made, HUGE PROBLEM");
                 expr_literal::make_expr_private_lit(input_domain, input_metric, self)
             }
 
             expr => {
-                println!("MATCH NOT MADE, HUGE PROBLEM");
                 fallible!(
-                MakeMeasurement,
-                "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
-                expr,
-                get_disabled_features_message()
-            )}
+                    MakeMeasurement,
+                    "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
+                    expr,
+                    get_disabled_features_message()
+                )
+            }
         }
     }
 }
