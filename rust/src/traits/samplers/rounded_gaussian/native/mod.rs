@@ -105,6 +105,7 @@ impl NativeUniform01 {
             return None;
         }
 
+        // if denominators match then compare prefixes
         if self.bits == other.bits {
             if self.prefix > other.prefix {
                 return Some(true);
@@ -166,6 +167,7 @@ impl NativeUniform01 {
     }
 }
 
+// Algorithm 4 https://arxiv.org/pdf/2008.03855
 fn sample_bernoulli_exp_half_with(entropy: &mut NativeEntropy) -> Fallible<Option<bool>> {
     if entropy.coin()? {
         return Ok(Some(true));
@@ -188,6 +190,7 @@ fn sample_bernoulli_exp_half_with(entropy: &mut NativeEntropy) -> Fallible<Optio
     }
 }
 
+// Algorithm 5: https://arxiv.org/pdf/2008.03855
 fn sample_k_with(entropy: &mut NativeEntropy) -> Fallible<Option<u64>> {
     'restart: loop {
         match sample_bernoulli_exp_half_with(entropy)? {
@@ -232,6 +235,7 @@ fn sample_k_with(entropy: &mut NativeEntropy) -> Fallible<Option<u64>> {
     }
 }
 
+// sample_bernoulli_exp(-x) within [0, 1]
 fn sample_bernoulli_exp_uniform_native(
     entropy: &mut NativeEntropy,
     x: &mut NativeUniform01,
@@ -340,6 +344,7 @@ fn uniform_less_than_half_native(
     }
 }
 
+// Algorithm 6 https://arxiv.org/pdf/2008.03855
 fn sample_bernoulli_exp_half_x_squared_native(
     entropy: &mut NativeEntropy,
     x: &mut NativeUniform01,
@@ -373,6 +378,7 @@ fn sample_bernoulli_exp_half_x_squared_native(
     }
 }
 
+// Algorithm 7 https://arxiv.org/pdf/2008.03855
 fn accept_fraction_native(
     entropy: &mut NativeEntropy,
     k: u64,
@@ -380,6 +386,7 @@ fn accept_fraction_native(
 ) -> Fallible<Option<bool>> {
     let mut remaining = k;
 
+    // peeling off bernoulli exp(-x) for x in [0, 1] k times
     while remaining != 0 {
         match sample_bernoulli_exp_uniform_native(entropy, x)? {
             Some(true) => {}
@@ -388,6 +395,7 @@ fn accept_fraction_native(
         }
         remaining -= 1;
     }
+
 
     sample_bernoulli_exp_half_x_squared_native(entropy, x)
 }
