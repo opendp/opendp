@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+    <!--
+        Since this will be copied up to the top level, we don't want to depend on any static assets.
+        Easiest just to write raw HTML and skip Sphinx altogether.
+    -->
+    <head>
+        <title>Page not found &mdash; OpenDP</title>
+        <style>
+            * {
+                font-family: -apple-system, BlinkMacSystemFont, Segoe UI, "Helvetica Neue", Arial, sans-serif;
+            }
+            
+        </style>
+    </head>
+    <body>
+        <h1>Page not found</h1>
+        <p>
+            The page you are looking for doesn't exist.
+        </p>
+        <script>
+            (function(){
+                const url = document.location.toString();
+    
+                const pairs = Object.entries({
+                    // Check longer, more precise patterns first:
+
+                    '/user/utilities/accuracy/accuracy-pitfalls.html': '/theory/accuracy-pitfalls.html',
+                    '/user/getting-started.html': '/getting-started/index.html',
+                    '/user/measurements/pca.html': '/getting-started/statistical-modeling/pca.html',
+                    '/user/combinators.html': '/api/user-guide/combinators/index.html',
+                    '/user/': '/api/user-guide/',
+                    '/getting-started/examples/pums-data-analysis.html': '/getting-started/examples/index.html',
+                    '/getting-started/examples/unknown-dataset-size.html': '/api/user-guide/transformations/preprocess-size.html',
+                    '/getting-started/examples/histograms.html': '/getting-started/examples/index.html',
+                    '/getting-started/statistical-modeling/regression.html': '/api/user-guide/plugins/theil-sen-regression.html',
+
+                    '/getting-started/utility/index.html': '/getting-started/utility.html',
+                    '/getting-started/utility/accuracy.html': '/getting-started/utility.html',
+
+                    '/developer/cla.html': '/contributing/cla.html',
+                    '/contact.html': '/contributing/contact.html',
+                    '/contributor/': '/contributing/',
+
+                    '/examples/': '/getting-started/examples/',
+                    '/quickstart.html': '/getting-started/quickstart.html',
+
+                    '/resources/index.html': '/theory/resources.html',
+                    '/examples/attacks/': '/theory/attacks/',
+                });
+                
+                for ([old_fragment, new_fragment] of pairs) {
+                    if (url.includes(old_fragment)) {
+                        const new_url = url.replace(old_fragment, new_fragment)
+                        document.write(`<p>Our site structure has changed: Redirecting to <code>${new_url}</code> in five seconds...</p>`);
+                        setTimeout(function() {
+                            document.location = new_url;
+                        }, 5000);
+                        break;
+                    }
+                };
+            })();
+        </script>
+    </body>
+</html>
