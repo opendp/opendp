@@ -42,7 +42,7 @@ pub fn conservative_continuous_laplacian_tail_to_alpha(scale: RBig, tail: RBig) 
 /// $\mathcal{L}_\mathbb{Z}(0, scale)$ is distributed as follows:
 /// ```math
 /// \forall x \in \mathbb{Z}, \quad  
-/// P[X = x] = \frac{e^{-1/scale} - 1}{e^{-1/scale} + 1} e^{-|x|/scale}, \quad
+/// P[X = x] = \frac{1 - e^{-1/scale}}{1 + e^{-1/scale}} e^{-|x|/scale}, \quad
 /// \text{where } X \sim \mathcal{L}_\mathbb{Z}(0, scale)
 /// ```
 pub fn conservative_discrete_laplacian_tail_to_alpha(scale: RBig, tail: UBig) -> Fallible<f64> {
