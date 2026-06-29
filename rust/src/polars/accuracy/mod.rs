@@ -1,4 +1,3 @@
-use opendp_derive::bootstrap;
 use polars::{
     datatypes::{AnyValue, DataType, Field},
     frame::{DataFrame, row::Row},
@@ -30,16 +29,6 @@ use crate::{
 #[cfg(feature = "ffi")]
 mod ffi;
 
-#[bootstrap(
-    name = "summarize_polars_measurement",
-    features("contrib"),
-    arguments(
-        measurement(rust_type = "AnyMeasurement"),
-        alpha(c_type = "AnyObject *", default = b"null")
-    ),
-    generics(MI(suppress), MO(suppress)),
-    returns(c_type = "FfiResult<AnyObject *>")
-)]
 /// Summarize the statistics to be released from a measurement that returns a OnceFrame.
 ///
 /// If a threshold is configured for censoring small/sensitive groups,
