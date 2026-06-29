@@ -70,3 +70,32 @@ fn native_f32_certification_clips_before_rounding() {
         F32CellCertification::Output(out) if out == 1.0
     ));
 }
+
+#[test]
+fn native_fixed_scratch_affine_comparison() {
+    assert_eq!(
+        compare_affine_to_boundary(1.0, 0.5, 1.25, false, 0, 1, 1),
+        Some(std::cmp::Ordering::Equal)
+    );
+    assert_eq!(
+        compare_affine_to_boundary(1.0, 0.5, 1.0, false, 0, 1, 1),
+        Some(std::cmp::Ordering::Greater)
+    );
+    assert_eq!(
+        compare_affine_to_boundary(1.0, 0.5, 1.5, false, 0, 1, 1),
+        Some(std::cmp::Ordering::Less)
+    );
+}
+
+#[test]
+fn native_scale_snaps_up_to_f32() -> Fallible<()> {
+    assert_eq!(snap_scale_up_to_f32(1.0)?, 1.0_f32);
+    assert_eq!(
+        snap_scale_up_to_f32(f64::from(f32::from_bits(1)) / 2.0)?,
+        f32::from_bits(1)
+    );
+
+    let halfway = 1.0 + f64::from(f32::EPSILON) * 0.75;
+    assert!(f64::from(snap_scale_up_to_f32(halfway)?) >= halfway);
+    Ok(())
+}

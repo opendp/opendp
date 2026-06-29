@@ -382,14 +382,17 @@ pub fn sample_rounded_gaussian_clipped<T: Float>(mu: T, scale: T, range: T) -> F
 ///
 /// This path does not construct a native floating-point noise value and add it
 /// to `mu`; it certifies which finite f32 rounding cell contains the exact real
-/// value `mu +/- scale * (k + x)`.
+/// value `mu +/- scale32 * (k + x)`, where `scale32` is the smallest finite
+/// positive f32 at least as large as `scale`.
 ///
 /// If the native prefix cannot certify one f32 cell, the accepted trace is
 /// rejected as an unresolved rounding-boundary comb and the sampler restarts.
 /// This intentionally avoids exact rational finalization at the cost of the
 /// small conditioning term accounted for by the comb probability.
 /// Pre-accept native resource limits are treated as implementation failures,
-/// not as fresh-sample fallbacks. Infinite f32 cells are ordinary outputs.
+/// not as fresh-sample fallbacks. Infinite f32 cells are ordinary outputs for
+/// the unclipped path, or when a finite real clipping range still exceeds the
+/// f32 finite-output threshold.
 pub fn sample_rounded_gaussian_f64_to_f32_native(mu: f64, scale: f64) -> Fallible<f32> {
     sample_rounded_gaussian_f64_to_f32_native_clipped(mu, scale, None)
 }
@@ -401,7 +404,12 @@ pub fn sample_rounded_gaussian_f64_to_f32_native(mu: f64, scale: f64) -> Fallibl
 /// When `range` is `None`, this is the unclipped extended rounded mechanism.
 /// When `Some(R)`, this implements
 ///
-///     round_ext_f32(clip_R(clip_R(mu) + scale * Z)).
+///     round_ext_f32(clip_R(clip_R(mu) + scale32 * Z)).
+///
+/// Here `scale32` is the upward-snapped f32 scale used by the native
+/// specialization. Privacy accounting for this path must use `scale32`. If
+/// `R` is at or below the f32 finite-output threshold, infinities are excluded
+/// from the support.
 pub fn sample_rounded_gaussian_f64_to_f32_native_clipped(
     mu: f64,
     scale: f64,
