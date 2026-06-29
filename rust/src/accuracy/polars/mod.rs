@@ -11,8 +11,6 @@ use crate::{
     polars::OnceFrame,
 };
 
-pub use crate::polars::accuracy::summarize_lazyframe;
-
 #[bootstrap(
     name = "summarize_polars_measurement",
     features("contrib"),
@@ -23,6 +21,15 @@ pub use crate::polars::accuracy::summarize_lazyframe;
     generics(MI(suppress), MO(suppress)),
     returns(c_type = "FfiResult<AnyObject *>")
 )]
+/// Summarize the statistics to be released from a measurement that returns a OnceFrame.
+///
+/// If a threshold is configured for censoring small/sensitive groups,
+/// a threshold column will be included,
+/// containing the cutoff for the respective count query being thresholded.
+///
+/// # Arguments
+/// * `measurement` - computation from which you want to read noise scale parameters from
+/// * `alpha` - optional statistical significance to use to compute accuracy estimates
 pub fn summarize_polars_measurement<MI: Metric, MO: 'static + Measure>(
     measurement: Measurement<LazyFrameDomain, MI, MO, OnceFrame>,
     alpha: Option<f64>,
