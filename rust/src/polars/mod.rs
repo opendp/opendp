@@ -33,6 +33,8 @@ use polars_plan::{
 #[cfg(feature = "ffi")]
 use serde::{Deserialize, Serialize};
 
+pub mod accuracy;
+
 #[cfg(test)]
 mod test;
 
