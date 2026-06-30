@@ -1323,7 +1323,7 @@ def test_zero_budget():
 
 def test_unbiased_groupby_len():
     """Tests that dp.len() can return counts centered on zero."""
-
+    pl = pytest.importorskip("polars")
     dp.enable_features("contrib")
 
     TEST_SIZE = 10_000
