@@ -50,13 +50,16 @@ where
             let len_expr = len();
         }
 
-        Expr::Cast {
-            expr: _,
-            dtype: _,
-            options: _,
-        } => {
-            let len_expr = len().cast(DataType::Int64);
-            let output_type = 0i64;
+        Expr::Cast { expr, .. } => {
+            if matches!(expr.as_ref(), Expr::Len) {
+                let len_expr = len().cast(DataType::Int64);
+                let output_type = 0i64;
+            } else {
+                return fallible!(
+                    MakeMeasurement,
+                    "Expected len().cast() and got an unsupported expression"
+                );
+            }
         }
 
         _ => {

@@ -82,10 +82,7 @@ where
             DPFrameLenShim::NAME
         );
     };
-    println!(
-        "scale: {}, signed: {}, expr: {}",
-        scale, signed, expr
-    );
+    println!("scale: {}, signed: {}, expr: {}", scale, signed, expr);
 
     let signed = match signed {
         Expr::Literal(lit) => lit.bool().unwrap_or(false),
