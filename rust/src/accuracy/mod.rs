@@ -21,6 +21,39 @@ use std::fmt::Debug;
 #[cfg(all(test, feature = "untrusted"))]
 pub mod test;
 
+/// Validate a noise `scale` and the significance level `alpha`.
+///
+/// `scale` must be non-negative and `alpha` must be in `(0, 1]`.
+fn check_scale_and_alpha<T: Float + Zero + One + Debug>(scale: T, alpha: T) -> Fallible<()> {
+    if scale.is_sign_negative() {
+        return fallible!(InvalidDistance, "scale ({:?}) may not be negative", scale);
+    }
+    if alpha <= T::zero() || T::one() < alpha {
+        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1]", alpha);
+    }
+    Ok(())
+}
+
+/// Validate a desired `accuracy` and the significance level `alpha`.
+///
+/// `accuracy` must be non-negative and `alpha` must be in `(0, 1)`.
+fn check_accuracy_and_alpha<T: Float + Zero + One + Debug>(
+    accuracy: T,
+    alpha: T,
+) -> Fallible<()> {
+    if accuracy.is_sign_negative() {
+        return fallible!(
+            InvalidDistance,
+            "accuracy ({:?}) may not be negative",
+            accuracy
+        );
+    }
+    if alpha <= T::zero() || T::one() <= alpha {
+        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1)", alpha);
+    }
+    Ok(())
+}
+
 #[bootstrap(arguments(scale(c_type = "void *"), alpha(c_type = "void *")))]
 /// Convert a Laplacian scale into an accuracy estimate (tolerance) at a statistical significance level `alpha`.
 ///
@@ -34,12 +67,7 @@ pub fn laplacian_scale_to_accuracy<T: Float + Zero + One + Debug>(
     scale: T,
     alpha: T,
 ) -> Fallible<T> {
-    if scale.is_sign_negative() {
-        return fallible!(InvalidDistance, "scale ({:?}) may not be negative", scale);
-    }
-    if alpha <= T::zero() || T::one() < alpha {
-        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1]", alpha);
-    }
+    check_scale_and_alpha(scale, alpha)?;
     Ok(-scale * alpha.ln())
 }
 
@@ -62,12 +90,7 @@ pub fn discrete_laplacian_scale_to_accuracy<T: Float + Zero + One + Debug>(
     scale: T,
     alpha: T,
 ) -> Fallible<T> {
-    if scale.is_sign_negative() {
-        return fallible!(InvalidDistance, "scale ({:?}) may not be negative", scale);
-    }
-    if alpha <= T::zero() || T::one() < alpha {
-        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1]", alpha);
-    }
+    check_scale_and_alpha(scale, alpha)?;
 
     let _1 = T::one();
     let _2 = _1 + _1;
@@ -96,16 +119,7 @@ pub fn accuracy_to_laplacian_scale<T: Float + Zero + One + Debug>(
     accuracy: T,
     alpha: T,
 ) -> Fallible<T> {
-    if accuracy.is_sign_negative() {
-        return fallible!(
-            InvalidDistance,
-            "accuracy ({:?}) may not be negative",
-            accuracy
-        );
-    }
-    if alpha <= T::zero() || T::one() <= alpha {
-        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1)", alpha);
-    }
+    check_accuracy_and_alpha(accuracy, alpha)?;
     Ok(-accuracy / alpha.ln())
 }
 
@@ -164,12 +178,7 @@ where
 {
     let scale = f64::inf_cast(scale)?;
     let alpha = f64::inf_cast(alpha)?;
-    if scale.is_sign_negative() {
-        return fallible!(InvalidDistance, "scale ({:?}) may not be negative", scale);
-    }
-    if alpha <= 0. || 1. < alpha {
-        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1]", alpha);
-    }
+    check_scale_and_alpha(scale, alpha)?;
     T::inf_cast(scale * SQRT_2 * erf_inv(1. - alpha))
 }
 
@@ -189,6 +198,7 @@ where
 {
     let scale = f64::inf_cast(scale)?;
     let alpha = f64::inf_cast(alpha)?;
+    check_scale_and_alpha(scale, alpha)?;
 
     let mut total = (1. - alpha) * tail_bounds::dg_normalization_term(scale);
     let mut i = 0;
@@ -220,16 +230,7 @@ where
 {
     let accuracy = f64::inf_cast(accuracy)?;
     let alpha = f64::inf_cast(alpha)?;
-    if accuracy.is_sign_negative() {
-        return fallible!(
-            InvalidDistance,
-            "accuracy ({:?}) may not be negative",
-            accuracy
-        );
-    }
-    if alpha <= 0. || 1. <= alpha {
-        return fallible!(InvalidDistance, "alpha ({:?}) must be in (0, 1)", alpha);
-    }
+    check_accuracy_and_alpha(accuracy, alpha)?;
     T::inf_cast(accuracy / SQRT_2 / erf_inv(1. - alpha))
 }
 
