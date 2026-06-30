@@ -37,10 +37,7 @@ fn check_scale_and_alpha<T: Float + Zero + One + Debug>(scale: T, alpha: T) -> F
 /// Validate a desired `accuracy` and the significance level `alpha`.
 ///
 /// `accuracy` must be non-negative and `alpha` must be in `(0, 1)`.
-fn check_accuracy_and_alpha<T: Float + Zero + One + Debug>(
-    accuracy: T,
-    alpha: T,
-) -> Fallible<()> {
+fn check_accuracy_and_alpha<T: Float + Zero + One + Debug>(accuracy: T, alpha: T) -> Fallible<()> {
     if accuracy.is_sign_negative() {
         return fallible!(
             InvalidDistance,
