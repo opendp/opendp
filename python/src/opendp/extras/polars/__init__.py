@@ -58,11 +58,17 @@ def _get_opendp_polars_lib_path():
     return os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path)
 
 def _size_warning(keys):
-    mb_factor = 1024**2  # For scaling to mb to shorten warnings
+    mb_factor = 1024**2  # bytes per MB
+
     est_size: float = len(keys.serialize()) / mb_factor
 
     if est_size > _KEY_SIZE_THRESHOLD_MB:
-        warn(f"Large key-set (~{est_size}mb > {_KEY_SIZE_THRESHOLD_MB}mb) loaded into memory. Consider writing it to disk for the plan to read it in via scan_parquet.")
+        warn(
+            f"Large key-set (~{est_size:.2f}MB > {_KEY_SIZE_THRESHOLD_MB}MB) "
+            "loaded into memory. Consider writing it to disk for the plan to "
+            "read it in via scan_parquet.",
+            stacklevel=3,
+        )
 
 class DPExpr(object):
     """

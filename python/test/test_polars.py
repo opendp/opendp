@@ -1075,7 +1075,11 @@ def test_large_keys_warns(monkeypatch):
     context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys_small)
 
     keys_large = pl.DataFrame([pl.Series(str(x), [2, 3, 4, 5, 6], dtype=pl.Int32) for x in range(local_scale_factor)])
-    with pytest.warns(UserWarning):
+    with pytest.warns(
+        UserWarning,
+        match=rf"Large key-set \(~[\d.]+MB > {local_limit}MB\) loaded into memory\. "
+        r"Consider writing it to disk for the plan to read it in via scan_parquet\.",
+    ):
         context.query().group_by("B").agg(pl.col("D").dp.sum((0, 10))).with_keys(keys_large)
 
 
