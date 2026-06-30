@@ -3,7 +3,6 @@ import os
 import pytest
 import re
 import warnings
-import polars as pl
 
 from datetime import date, time, datetime
 
