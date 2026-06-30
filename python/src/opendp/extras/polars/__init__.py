@@ -52,7 +52,8 @@ if TYPE_CHECKING:  # pragma: no cover
     from opendp.context import Query
     from opendp.extras.polars.contingency_table import ContingencyTableQuery
 
-_KEY_SIZE_THRESHOLD_MB = 1 << 10
+# Exposed as global for testing.
+_KEY_SIZE_THRESHOLD_MB = 2 ** 10
 
 def _get_opendp_polars_lib_path():
     return os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path)
