@@ -13,45 +13,63 @@ We suggest importing under the conventional name ``dp``:
 
 The members of this module will then be accessible at ``dp.polars``.
 """
-
 from __future__ import annotations
-from dataclasses import asdict, dataclass, field, replace
+
 import os
-from typing import Any, Literal, Mapping, Optional, Sequence, Union, cast
+
+from dataclasses import asdict, dataclass, field, replace
+from deprecated import deprecated
+from typing import cast, Any, Literal, Mapping, Optional, Sequence, Union, TYPE_CHECKING
+from warnings import warn
+
 from opendp._lib import lib_path, import_optional_dependency
-from opendp.extras.mbi import ContingencyTable, make_contingency_table, AIM, Algorithm
-from opendp.mod import (
-    ChangeOneIdDistance,
-    Domain,
-    Measurement,
-    FrameDistance,
-    Metric,
-    OpenDPException,
-    SymmetricIdDistance,
-    binary_search,
-    binary_search_chain,
-)
 from opendp.domains import (
-    series_domain,
-    lazyframe_domain,
-    option_domain,
+    array_domain,
     atom_domain,
     categorical_domain,
     datetime_domain,
     enum_domain,
-    array_domain,
+    lazyframe_domain,
+    option_domain,
+    series_domain,
 )
+from opendp.extras.mbi import ContingencyTable, make_contingency_table, AIM, Algorithm
 from opendp.measurements import make_private_lazyframe
-from deprecated import deprecated
+from opendp.mod import (
+    binary_search,
+    binary_search_chain,
+    ChangeOneIdDistance,
+    Domain,
+    FrameDistance,
+    Measurement,
+    Metric,
+    OpenDPException,
+    SymmetricIdDistance,
+)
 from opendp.transformations import make_stable_lazyframe
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover
     from opendp.context import Query
     from opendp.extras.polars.contingency_table import ContingencyTableQuery
 
+# Exposed as global for testing.
+_KEY_SIZE_THRESHOLD_MB = 2 ** 10
+
 def _get_opendp_polars_lib_path():
     return os.environ.get("OPENDP_POLARS_LIB_PATH", lib_path)
+
+def _size_warning(keys):
+    mb_factor = 1024**2  # bytes per MB
+
+    est_size: float = len(keys.serialize()) / mb_factor
+
+    if est_size > _KEY_SIZE_THRESHOLD_MB:
+        warn(
+            f"Large key-set (~{est_size:.2f}MB > {_KEY_SIZE_THRESHOLD_MB}MB) "
+            "loaded into memory. Consider writing it to disk for the plan to "
+            "read it in via scan_parquet.",
+            stacklevel=3,
+        )
 
 class DPExpr(object):
     """
@@ -846,6 +864,7 @@ class LazyFrameQuery:
         #   This gives an easier shorthand to write a left join.
         # 2. Left joins are more likely to be supported by database backends.
         # 3. Easier to use; with the Polars API the key set needs to be lazy, user must specify they want a right join and the join keys.
+        _size_warning(keys)
 
         if pl is not None:
             if isinstance(keys, pl.dataframe.frame.DataFrame):
