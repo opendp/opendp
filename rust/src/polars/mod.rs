@@ -379,11 +379,11 @@ impl DPExpr {
     ///
     /// # Arguments
     /// * `scale` - parameter for the noise distribution
-    /// * `allow_negative` - parameter to flip len output from unsigned int to signed int.
-    pub fn len(self, scale: Option<f64>, allow_negative: bool) -> Expr {
+    /// * `signed` - parameter to flip len output from unsigned int to signed int.
+    pub fn len(self, scale: Option<f64>, signed: bool) -> Expr {
         let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
-        let allow_negative = lit(allow_negative);
-        apply_anonymous_function(vec![self.0, scale, allow_negative], DPLenShim)
+        let signed = lit(signed);
+        apply_anonymous_function(vec![self.0, scale, signed], DPLenShim)
     }
 
     /// Compute the differentially private count (excluding nulls).
@@ -479,11 +479,11 @@ impl DPExpr {
 ///
 /// # Arguments
 /// * `scale` - parameter for the noise distribution
-/// * `allow_negative` - parameter to flip len output from unsigned int to signed int.
-pub fn dp_len(scale: Option<f64>, allow_negative: bool) -> Expr {
+/// * `signed` - parameter to flip len output from unsigned int to signed int.
+pub fn dp_len(scale: Option<f64>, signed: bool) -> Expr {
     let scale = scale.map(lit).unwrap_or_else(|| lit(Null {}));
-    let allow_negative = lit(allow_negative);
-    apply_anonymous_function(vec![scale, allow_negative], DPFrameLenShim)
+    let signed = lit(signed);
+    apply_anonymous_function(vec![scale, signed], DPFrameLenShim)
 }
 
 pub enum OnceFrameQuery {

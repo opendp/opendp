@@ -15,13 +15,13 @@ fn test_dp_frame_len_types() -> Fallible<()> {
     _test_dp_frame_len_default_dtype(true, DataType::UInt32)?;
     Ok(())
 }
-fn _test_dp_frame_len_default_dtype(allow_negative: bool, output_type: DataType) -> Fallible<()> {
+fn _test_dp_frame_len_default_dtype(signed: bool, output_type: DataType) -> Fallible<()> {
     let (lf_domain, lf) = get_test_data()?;
     let measurement = make_expr_dp_frame_len(
         lf_domain.select(),
         L0PInfDistance(SymmetricDistance),
         MaxDivergence,
-        dp_len(Some(0.0), allow_negative),
+        dp_len(Some(0.0), signed),
         None,
     )?;
 

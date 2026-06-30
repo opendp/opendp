@@ -75,7 +75,7 @@ where
     Expr: StableExpr<L01InfDistance<MI>, L01InfDistance<MI>> + PrivateExpr<L01InfDistance<MI>, MO>,
     (ExprDomain, MO::Metric): MetricSpace,
 {
-    let Some([scale, allow_negative]) = match_shim::<DPFrameLenShim, 2>(&expr)? else {
+    let Some([scale, signed]) = match_shim::<DPFrameLenShim, 2>(&expr)? else {
         return fallible!(
             MakeMeasurement,
             "Expected {} function",
@@ -83,16 +83,16 @@ where
         );
     };
     println!(
-        "scale: {}, allow_negative: {}, expr: {}",
-        scale, allow_negative, expr
+        "scale: {}, signed: {}, expr: {}",
+        scale, signed, expr
     );
 
-    let allow_negative = match allow_negative {
+    let signed = match signed {
         Expr::Literal(lit) => lit.bool().unwrap_or(false),
         _ => todo!(),
     };
 
-    let len_expr = if allow_negative {
+    let len_expr = if signed {
         len().cast(DataType::Int64)
     } else {
         len()

@@ -258,18 +258,18 @@ def test_private_lazyframe_median():
     ids=ids,
 )
 @pytest.mark.parametrize(
-    "allow_negative",
+    "signed",
     [True, False],
     ids=["AllowsNegative", "NegativeIgnored"]
 )
-def test_filter(measure, allow_negative):
+def test_filter(measure, signed):
     """ensure that expr domain's carrier type can be passed to/from Rust"""
     pl = pytest.importorskip("polars")
     pl_testing = pytest.importorskip("polars.testing")
 
     lf_domain, lf = example_lf(margin=[], invariant="keys", max_length=50)
 
-    plan = lf.filter(pl.col("B") < 2).select(dp.len(scale=0.0, allow_negative=allow_negative))
+    plan = lf.filter(pl.col("B") < 2).select(dp.len(scale=0.0, signed=signed))
 
     m_lf = dp.m.make_private_lazyframe(
         lf_domain, dp.symmetric_distance(), measure, plan
