@@ -3,8 +3,11 @@ use num::FromPrimitive;
 use crate::{
     error::Fallible,
     measurements::approximate_to_tradeoff,
-    traits::samplers::{
-        PartialSample, psrn::test::assert_ordered_progression, test::check_kolmogorov_smirnov,
+    traits::{
+        CastInternalRational,
+        samplers::{
+            PartialSample, psrn::test::assert_ordered_progression, test::check_kolmogorov_smirnov,
+        },
     },
 };
 
@@ -21,7 +24,7 @@ fn test_sample_cnd_interval_progression() -> Fallible<()> {
         fixed_point: &c,
     });
     let (l, r) = assert_ordered_progression(&mut cnd, 20);
-    let (l, r) = (l.to_f64().value(), r.to_f64().value());
+    let (l, r) = (f64::from_rational(l), f64::from_rational(r));
     println!("{l:?}, {r:?}, {}", cnd.refinements);
     Ok(())
 }
@@ -54,8 +57,8 @@ fn test_cnd_psrn() -> Fallible<()> {
 
     let samples = <[f64; 5000]>::try_from(samples).unwrap();
 
-    let f_tradeoff = |x: f64| -> f64 { tradeoff(RBig::from_f64(x).unwrap()).to_f64().value() };
-    let f_c = c.to_f64().value();
+    let f_tradeoff = |x: f64| -> f64 { f64::from_rational(tradeoff(RBig::from_f64(x).unwrap())) };
+    let f_c = f64::from_rational(c);
     check_kolmogorov_smirnov(samples, |x| F_f(x, f_tradeoff, f_c))?;
     Ok(())
 }

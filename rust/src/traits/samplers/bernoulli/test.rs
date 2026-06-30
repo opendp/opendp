@@ -1,5 +1,6 @@
-use crate::traits::samplers::test::{
-    ALPHA, BASE_N, assert_close_normal, run_wilson_test, sample_mean_bool,
+use crate::traits::{
+    CastInternalRational,
+    samplers::test::{ALPHA, BASE_N, assert_close_normal, run_wilson_test, sample_mean_bool},
 };
 
 use super::*;
@@ -32,7 +33,7 @@ fn wilson_rational_fixed_points() {
     ];
 
     for p in ps {
-        let p0 = p.to_f64().value();
+        let p0 = f64::from_rational(p.clone());
         run_wilson_test(
             || sample_bernoulli_rational(p.clone()).unwrap(),
             p0,

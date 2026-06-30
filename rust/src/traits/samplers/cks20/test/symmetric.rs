@@ -3,9 +3,12 @@ use std::convert::TryFrom;
 use dashu::integer::IBig;
 use dashu::rbig;
 
-use crate::traits::samplers::{
-    sample_discrete_gaussian,
-    test::{assert_close_binomial_mean, assert_close_normal},
+use crate::traits::{
+    CastInternalRational,
+    samplers::{
+        sample_discrete_gaussian,
+        test::{assert_close_binomial_mean, assert_close_normal},
+    },
 };
 
 use super::*;
@@ -166,7 +169,7 @@ mod laplace {
             if s.is_zero() {
                 continue;
             }
-            let th = LaplaceTheory::build(s.to_f64().value());
+            let th = LaplaceTheory::build(f64::from_rational(s.clone()));
 
             let mut sum: i128 = 0;
 
@@ -186,7 +189,7 @@ mod laplace {
     #[test]
     fn per_k_symmetry_matches_theory() {
         let s = rbig!(1);
-        let th = LaplaceTheory::build(s.to_f64().value());
+        let th = LaplaceTheory::build(f64::from_rational(s.clone()));
         let kmax = 8usize;
 
         let mut pos = vec![0u64; kmax + 1];
@@ -220,7 +223,7 @@ mod laplace {
     #[test]
     fn goodness_of_fit_chi_square_binned() {
         let s = rbig!(1);
-        let th = LaplaceTheory::build(s.to_f64().value());
+        let th = LaplaceTheory::build(f64::from_rational(s.clone()));
 
         let kmax = 9usize;
         let hist = SignedHist::sample(N_LAPLACE, kmax, || {
@@ -248,7 +251,7 @@ mod laplace {
             if s.is_zero() {
                 continue;
             }
-            let th = LaplaceTheory::build(s.to_f64().value());
+            let th = LaplaceTheory::build(f64::from_rational(s.clone()));
 
             let hist = SignedHist::sample(N_LAPLACE, kmax, || {
                 sample_discrete_laplace(s.clone()).unwrap()
@@ -392,7 +395,7 @@ mod gaussian {
             if s.is_zero() {
                 continue;
             }
-            let th = GaussTheory::build(s.to_f64().value());
+            let th = GaussTheory::build(f64::from_rational(s.clone()));
 
             // empirical mean + m2 in one pass
             let mut sum: i128 = 0;
@@ -420,7 +423,7 @@ mod gaussian {
     #[test]
     fn per_k_symmetry_matches_theory() {
         let s = rbig!(1);
-        let th = GaussTheory::build(s.to_f64().value());
+        let th = GaussTheory::build(f64::from_rational(s.clone()));
         let kmax = th.choose_kmax_for_expected(N_GAUSS, 10.0, 25).min(10);
 
         let mut pos = vec![0u64; kmax + 1];
@@ -454,7 +457,7 @@ mod gaussian {
     #[test]
     fn discrete_gaussian_goodness_of_fit_binned_chi_square() {
         let s = rbig!(2);
-        let th = GaussTheory::build(s.to_f64().value());
+        let th = GaussTheory::build(f64::from_rational(s.clone()));
 
         // Choose kmax so edge expected counts are >= 10 (very safe).
         let kmax = th.choose_kmax_for_expected(N_GAUSS, 10.0, 60);
@@ -493,7 +496,7 @@ mod gaussian {
             if s.is_zero() {
                 continue;
             }
-            let th = GaussTheory::build(s.to_f64().value());
+            let th = GaussTheory::build(f64::from_rational(s.clone()));
 
             let hist = SignedHist::sample(N_GAUSS, kmax, || {
                 sample_discrete_gaussian(s.clone()).unwrap()

@@ -1,11 +1,15 @@
-use dashu::float::{
-    FBig,
-    round::mode::{Down, Up},
+use dashu::{
+    float::{
+        FBig,
+        round::mode::{Down, Up},
+    },
+    integer::UBig,
+    rational::RBig,
 };
 
 use crate::{
     error::Fallible,
-    traits::{InfCast, cast::ToFloatRounded},
+    traits::{InfCast, RoundCast, cast::ToFloatRounded},
 };
 
 #[allow(dead_code)]
@@ -145,5 +149,57 @@ fn test_to_native_inf() -> Fallible<()> {
     let double: FBig<Up> = min * 2;
     assert_eq!(double.to_f64_rounded(), f64::MIN);
 
+    Ok(())
+}
+
+#[test]
+fn test_round_cast_rbig_to_f64_corrects_dashu_double_rounding() -> Fallible<()> {
+    let input = RBig::from_parts(
+        (-10534148920556696739i128).into(),
+        73786976294838206464u128.into(),
+    );
+
+    // Documents the upstream Dashu double-rounding bug. When Dashu fixes this,
+    // this assertion should fail and the OpenDP workaround can be revisited.
+    assert_eq!(input.to_f64().value(), f64::from_bits(0xbfc2461a14309b16));
+
+    assert_eq!(f64::round_cast(input)?, f64::from_bits(0xbfc2461a14309b17));
+    Ok(())
+}
+
+#[test]
+fn test_round_cast_rbig_to_f32_subnormal_boundary() -> Fallible<()> {
+    let just_above_half_min_subnormal = RBig::from_parts(3.into(), UBig::ONE << 151);
+
+    assert_eq!(
+        f32::round_cast(just_above_half_min_subnormal)?,
+        f32::from_bits(1)
+    );
+    Ok(())
+}
+
+#[test]
+fn test_round_cast_rbig_to_f32_ties_to_even() -> Fallible<()> {
+    let tie_between_one_and_next = RBig::from_parts(16_777_217.into(), 16_777_216u32.into());
+    let tie_between_next_and_next_next = RBig::from_parts(16_777_219.into(), 16_777_216u32.into());
+
+    assert_eq!(f32::round_cast(tie_between_one_and_next)?, 1.0);
+    assert_eq!(
+        f32::round_cast(tie_between_next_and_next_next)?,
+        f32::from_bits(0x3f80_0002)
+    );
+    Ok(())
+}
+
+#[test]
+fn test_round_cast_rbig_to_f64_underflow_ties_to_even_zero() -> Fallible<()> {
+    let half_min_subnormal = RBig::from_parts(1.into(), UBig::ONE << 1075);
+    let just_above_half_min_subnormal = RBig::from_parts(3.into(), UBig::ONE << 1076);
+
+    assert_eq!(f64::round_cast(half_min_subnormal)?, 0.0);
+    assert_eq!(
+        f64::round_cast(just_above_half_min_subnormal)?,
+        f64::from_bits(1)
+    );
     Ok(())
 }

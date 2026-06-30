@@ -1,4 +1,4 @@
-use crate::{measurements::make_laplace, metrics::AbsoluteDistance};
+use crate::{measurements::make_laplace, metrics::AbsoluteDistance, traits::CastInternalRational};
 
 use super::*;
 
@@ -47,7 +47,7 @@ fn test_make_noise_floatexpfamily() -> Fallible<()> {
 fn test_then_deintegerize_vec() -> Fallible<()> {
     // rationals with greater magnitude than MAX saturate to infinity
     let q = RBig::try_from(f64::MAX).unwrap();
-    assert!((q * IBig::from(2u8)).to_f64().value().is_infinite());
+    assert!(f64::from_rational(q * IBig::from(2u8)).is_infinite());
 
     assert!(then_deintegerize_vec::<f64>(i32::MIN).is_err());
     assert!(then_deintegerize_vec::<f64>(i32::MAX).is_ok());
