@@ -30,11 +30,19 @@ if [[ -e "$sampcert/.git" && -f "$sc_patch" ]]; then
   fi
 fi
 
-# 1. Refuse to build on a mismatched stack.
-"$script_dir/check_lean_pins.sh"
+# 1. Refuse to build if any dependency checkout was edited (only the SampCert
+#    patch above is allowed). Runs while SampCert is in its patched state.
+"$script_dir/check_deps_pristine.sh"
 
-# 2. Fetch the pinned Mathlib oleans (no-op if already cached).
+# 2. Fetch the pinned Mathlib oleans (no-op if already cached). This also RESOLVES
+#    the dependency graph, materialising `.lake/packages/mathlib/` — which the pin
+#    guard inspects. Running it before the guard means a fresh checkout (CI or
+#    local) has every dependency present, so the guard sees the real fetched
+#    toolchains instead of empty strings.
 ( cd "$proj_dir" && lake exe cache get )
 
-# 3. Build the verified library.
+# 3. Refuse to build on a mismatched stack (now that every dep checkout exists).
+"$script_dir/check_lean_pins.sh"
+
+# 4. Build the verified library.
 ( cd "$proj_dir" && lake build OpenDPVerified )

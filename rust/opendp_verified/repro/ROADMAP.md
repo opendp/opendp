@@ -61,7 +61,7 @@ Draw `k` uniform on `[0, denom)`; return `⊤` iff `k < numer` → `Bernoulli(nu
 - **SampCert target:** `SLang.BernoulliExpNegSampleUnit`.
 - **repro:** `sample_bernoulli_exp1_spec` = `BernoulliExpNegSampleUnit` (`src/samplers/bernoulli/exp1.lean`), via `exp1_loop_cut_step` (cut-depth ↔ SampCert `BESL` loop), `exp1_loop_probWhile` (`⨆`/`tsum_iSup_commute` lift), and `probWhile_besl_eq_aux` (SampCert `..._sup`/`..._apply`) + `ℕ+`→`ℕ` reindex. One temporary axiom `div_rbig_by_ubig_exact_bernoulli_setup` (Dashu exact-division boundary).
 
-### 5. `sample_bernoulli_exp1` → `sample_bernoulli_exp` 🟡  ← **next step to port**
+### 5. `sample_bernoulli_exp1` → `sample_bernoulli_exp` ✅
 `Bernoulli(e^{-x})` for arbitrary `x ≥ 0`: `⌊x⌋` independent `Bernoulli(e^{-1})` all true, then `Bernoulli(e^{-frac(x)})` via stage 4.
 - **Rust:** `samplers.bernoulli.sample_bernoulli_exp` (+ `_loop`). **SampCert target:** `SLang.BernoulliExpNegSample`. **Status:** extracted; not ported.
 

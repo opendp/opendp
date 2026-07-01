@@ -33,6 +33,7 @@ LEAN_TOOLCHAIN="leanprover/lean4:v4.30.0-rc2"
 AENEAS_URL="https://github.com/AeneasVerif/aeneas.git"
 AENEAS_TAG="build-2026.05.07.071200-a14083a6c9b0658e79d7f80cf996ad95e0864ccd"
 AENEAS_COMMIT="a14083a6c9b0658e79d7f80cf996ad95e0864ccd"   # == the tag's commit
+CHARON_URL="https://github.com/AeneasVerif/charon.git"     # charon is NOT an aeneas submodule; cloned separately
 CHARON_COMMIT="ed22146b1cd4d0b578006a58b3299d41ecbe0fd4"   # == Aeneas's charon-pin
 # SampCert: our team's fork commit (has no tags). The build also needs the vendored
 # 4.30 patch (repro/sampcert_patches/sampcert-4.30.patch) applied on top — build_lean.sh

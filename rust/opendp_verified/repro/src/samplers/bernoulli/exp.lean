@@ -108,6 +108,12 @@ theorem bernoulliExpNegSample_succ (num : ℕ) (den : ℕ+) (hgt : (den : ℕ) <
     simp
   · exact htrue.symm
 
+/-- Collapse a unit sampler whose (equal) index is provably `1` to `BernoulliExpNegSampleUnit 1 1`. -/
+lemma bernoulliExpNegSampleUnit_collapse_one {m : ℕ} (hpos : 0 < m)
+    (hfrac : m ≤ (⟨m, hpos⟩ : ℕ+)) (hm : m = 1) :
+    BernoulliExpNegSampleUnit m ⟨m, hpos⟩ hfrac = BernoulliExpNegSampleUnit 1 1 (le_refl 1) := by
+  subst hm; rfl
+
 /-- The unit sampler on the extracted `1/1` rational realises `BernoulliExpNegSampleUnit 1 1`
 (reuses stage 4; the `ubigToNat one = 1` witnesses collapse the indices). -/
 lemma samplerDist_exp1_one (oneRat : dashu_ratio.rbig.RBig) (oneI : dashu_int.ibig.IBig)
@@ -120,11 +126,7 @@ lemma samplerDist_exp1_one (oneRat : dashu_ratio.rbig.RBig) (oneI : dashu_int.ib
   have hvalid : dashu_int.ubig.UBig.Insts.CoreCmpPartialOrdUBig.gt oneU oneU = ok false :=
     dashu.gt_false_of_le_spec oneU oneU (le_refl _)
   rw [sample_bernoulli_exp1_spec oneRat ⟨oneI, oneU, oneU, hparts, hsign, hvalid⟩ hdenom1 (le_refl _)]
-  -- collapse `ubigToNat oneU` to `1`.
-  have : (⟨dashu.ubigToNat oneU, hdenom1⟩ : ℕ+) = 1 := Subtype.ext honeval
-  rw [this]
-  congr 1
-  exact honeval
+  exact bernoulliExpNegSampleUnit_collapse_one hdenom1 (le_refl _) honeval
 
 /-- **Distributional correctness (roadmap stage 5).** On the nonnegative-input branch, the extracted
 `sample_bernoulli_exp` realises SampCert's `BernoulliExpNegSample` — i.e. `Bernoulli(e^{-x})` for
@@ -182,7 +184,9 @@ theorem sample_bernoulli_exp_spec (x : dashu_ratio.rbig.RBig) (setup : Bernoulli
         (le_of_lt hle) hsub
       let setupMinusOne : BernoulliExpSetup xMinusOne :=
         ⟨i', setup.denom, numer', hpartsX', hsignX', setup.hdenom⟩
-      have hlt : dashu.ubigToNat numer' < n := by rw [hnumer'val, hn]; omega
+      have hlt : dashu.ubigToNat numer' < n := by
+        have hd := setup.hdenom
+        rw [hnumer'val]; omega
       have hih := ih (dashu.ubigToNat numer') hlt xMinusOne setupMinusOne rfl
       -- One extracted loop iteration draws `exp1 oneRat`, continues (`x-1`) or settles.
       have hbody_gt : samplers.bernoulli.sample_bernoulli_exp_loop.body x =
@@ -195,7 +199,10 @@ theorem sample_bernoulli_exp_spec (x : dashu_ratio.rbig.RBig) (setup : Bernoulli
         simp [honeRat, hgt_true, hi, hfromparts, hsub,
           core.result.Result.Insts.CoreOpsTry_traitTryTResultInfallibleE.branch,
           core.result.Result.Insts.CoreOpsTry_traitFromResidualResultInfallibleE.from_residual]
-        congr 1; funext r; rcases r with (b | e) <;> simp
+        congr 1; funext r
+        rcases r with (b | e)
+        · cases b <;> rfl
+        · rfl
       have hprog_gt : samplers.bernoulli.sample_bernoulli_exp x =
           (do let r ← samplers.bernoulli.sample_bernoulli_exp1 oneRat
               match r with
@@ -205,17 +212,31 @@ theorem sample_bernoulli_exp_spec (x : dashu_ratio.rbig.RBig) (setup : Bernoulli
               | core.result.Result.Err e => ok (core.result.Result.Err e)) := by
         unfold samplers.bernoulli.sample_bernoulli_exp samplers.bernoulli.sample_bernoulli_exp_loop
         rw [loop.eq_def, hbody_gt]
-        rcases samplers.bernoulli.sample_bernoulli_exp1 oneRat with (b | e) | _
-        · cases b <;> rfl
-        · rfl
-        · rfl
-      rw [hprog_gt, samplerDist_bind]
-      simp only [apply_ite samplerDist, samplerDist_pure_ok,
-        samplerDist_exp1_one oneRat oneI oneU honePartsRat honeSignRat honeval, hih]
-      rw [bernoulliExpNegSample_succ (dashu.ubigToNat setup.numer) ⟨dashu.ubigToNat setup.denom, setup.hdenom⟩ hle,
+        rcases samplers.bernoulli.sample_bernoulli_exp1 oneRat with hr | e | _
+        · rcases hr with (b | e)
+          · cases b <;> rfl
+          · simp [bind_ok]
+        · simp
+        · simp
+      funext b
+      show samplerDistGen (samplers.bernoulli.sample_bernoulli_exp x) (core.result.Result.Ok b) =
+        BernoulliExpNegSample (dashu.ubigToNat setup.numer) ⟨dashu.ubigToNat setup.denom, setup.hdenom⟩ b
+      have hIH : samplerDistGen (samplers.bernoulli.sample_bernoulli_exp xMinusOne) (core.result.Result.Ok b) =
+          BernoulliExpNegSample (dashu.ubigToNat numer') ⟨dashu.ubigToNat setup.denom, setup.hdenom⟩ b := by
+        have := congrFun hih b; simpa [samplerDist] using this
+      have hone_true : samplerDistGen (samplers.bernoulli.sample_bernoulli_exp1 oneRat) (core.result.Result.Ok true) =
+          BernoulliExpNegSampleUnit 1 1 (le_refl 1) true :=
+        congrFun (samplerDist_exp1_one oneRat oneI oneU honePartsRat honeSignRat honeval) true
+      have hone_false : samplerDistGen (samplers.bernoulli.sample_bernoulli_exp1 oneRat) (core.result.Result.Ok false) =
+          BernoulliExpNegSampleUnit 1 1 (le_refl 1) false :=
+        congrFun (samplerDist_exp1_one oneRat oneI oneU honePartsRat honeSignRat honeval) false
+      rw [hprog_gt, samplerDistGen_bind, SLang.bind_apply,
+        tsum_result_ok_eq (fun e => by simp [samplerDistGen_pure_ok, PMF.pure_apply]), tsum_bool]
+      simp only [samplerDistGen_pure_ok, PMF.pure_apply, if_true, Bool.false_eq_true, if_false]
+      rw [hIH, hone_true, hone_false,
+        bernoulliExpNegSample_succ (dashu.ubigToNat setup.numer) ⟨dashu.ubigToNat setup.denom, setup.hdenom⟩ hle,
         hnumer'val]
-      congr 1
-      funext v
-      cases v <;> rfl
+      simp only [Bind.bind, SLang.bind_apply, tsum_bool, SLang.pure_apply]
+      cases b <;> simp
 
 end OpenDP.samplers.bernoulli
