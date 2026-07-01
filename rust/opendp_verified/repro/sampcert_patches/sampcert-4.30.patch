@@ -1,0 +1,161 @@
+# SampCert 4.30 compatibility patch.
+#
+# Vendors the changes our team's SampCert fork commit 9cb29f35 needs to build on the
+# pinned Lean v4.30.0-rc2 stack: two proof fixes (Foundations/UniformByte.lean,
+# Samplers/Uniform/Properties.lean) plus the 4.29->4.30 toolchain/mathlib bump
+# (lean-toolchain, lakefile.lean, lake-manifest.json).
+#
+# Apply from the SampCert checkout root:  git -C SampCert apply <this file>
+# (git apply ignores these leading comment lines.)
+#
+diff --git a/SampCert/Foundations/UniformByte.lean b/SampCert/Foundations/UniformByte.lean
+index 88cfe62..6b96434 100644
+--- a/SampCert/Foundations/UniformByte.lean
++++ b/SampCert/Foundations/UniformByte.lean
+@@ -116,7 +116,7 @@ def probUniformByteUpperBits_eval_support {i x : ℕ} (Hx : x < 2 ^ (min 8 i)) :
+       refine (ENNReal.toReal_eq_toReal_iff' ?G1 ?G2).mp this
+       case G1 =>
+         rw [tsum_eq_finsum ?G1]
+-        case G1 => simp [Function.support, Set.toFinite (Set.univ : Set T)]
++        case G1 => exact Set.toFinite _
+         simp
+         have R := @finsum_induction ENNReal T _ (fun _ => 1) (fun z => z ≠ ⊤) (by simp) (by aesop) (by simp)
+         simp at R
+diff --git a/SampCert/Samplers/Uniform/Properties.lean b/SampCert/Samplers/Uniform/Properties.lean
+index 4b15f3e..9695ad5 100644
+--- a/SampCert/Samplers/Uniform/Properties.lean
++++ b/SampCert/Samplers/Uniform/Properties.lean
+@@ -36,6 +36,8 @@ theorem rw1 (n : PNat) :
+     dsimp [a]
+     exact ENNReal.mul_ne_top (by simp) (by simp)
+   simp
++  congr 1
++  rw [ENNReal.mul_inv (by simp) (by simp), inv_inv, mul_comm]
+ 
+ theorem rw2 (n : PNat) : ((↑↑n)⁻¹ : ENNReal) = ((↑↑n)⁻¹ : NNReal) := by
+   let a : ENNReal := (↑↑n)⁻¹
+diff --git a/lake-manifest.json b/lake-manifest.json
+index ffba15a..5119960 100644
+--- a/lake-manifest.json
++++ b/lake-manifest.json
+@@ -1,21 +1,21 @@
+-{"version": "1.1.0",
++{"version": "1.2.0",
+  "packagesDir": ".lake/packages",
+  "packages":
+  [{"url": "https://github.com/leanprover-community/mathlib4.git",
+    "type": "git",
+    "subDir": null,
+    "scope": "",
+-   "rev": "33a7291a345d718bca41f8ae8a9bae365d8f2a3e",
++   "rev": "5450b53e5ddc75d46418fabb605edbf36bd0beb6",
+    "name": "mathlib",
+    "manifestFile": "lake-manifest.json",
+-   "inputRev": "v4.29.0-rc1",
++   "inputRev": "v4.30.0-rc2",
+    "inherited": false,
+    "configFile": "lakefile.lean"},
+   {"url": "https://github.com/leanprover-community/plausible",
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover-community",
+-   "rev": "a8191ec244102f576a8cd93399cdd8cc489e47cd",
++   "rev": "86210d4ad1b08b086d0bd638637a75246523dbb8",
+    "name": "plausible",
+    "manifestFile": "lake-manifest.json",
+    "inputRev": "main",
+@@ -35,7 +35,7 @@
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover-community",
+-   "rev": "7ccd5e026eb2b3581915ff3f0d1cd918e18c2ab9",
++   "rev": "cdab3938ccabbdb044be6896e251b5814bec932e",
+    "name": "importGraph",
+    "manifestFile": "lake-manifest.json",
+    "inputRev": "main",
+@@ -45,51 +45,52 @@
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover-community",
+-   "rev": "06c949a3f4a3b2eb0bd8601e31269b9f4f820aa6",
++   "rev": "2db6054a44326f8c0230ee0570e2ddb894816511",
+    "name": "proofwidgets",
+    "manifestFile": "lake-manifest.json",
+-   "inputRev": "v0.0.88",
++   "inputRev": "v0.0.98",
+    "inherited": true,
+    "configFile": "lakefile.lean"},
+   {"url": "https://github.com/leanprover-community/aesop",
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover-community",
+-   "rev": "eb165126bfb2988738792c9ae37e09d58e2fec83",
++   "rev": "f0c6e183ea26531e82773feb4b73ab6595ca17a5",
+    "name": "aesop",
+    "manifestFile": "lake-manifest.json",
+-   "inputRev": "master",
++   "inputRev": "v4.30.0-rc2",
+    "inherited": true,
+    "configFile": "lakefile.toml"},
+   {"url": "https://github.com/leanprover-community/quote4",
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover-community",
+-   "rev": "90217e10b2db6c6c445d30faae7fea453d9782c0",
++   "rev": "1cc7e819b9b9bc1e87c9edcccb62e0269e00a809",
+    "name": "Qq",
+    "manifestFile": "lake-manifest.json",
+-   "inputRev": "master",
++   "inputRev": "v4.30.0-rc2",
+    "inherited": true,
+    "configFile": "lakefile.toml"},
+   {"url": "https://github.com/leanprover-community/batteries",
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover-community",
+-   "rev": "965500ff9171556698ec2714b936739d5da438c2",
++   "rev": "5c57f3857ba81924a88b2cdf4f062e34ec04ff11",
+    "name": "batteries",
+    "manifestFile": "lake-manifest.json",
+-   "inputRev": "main",
++   "inputRev": "v4.30.0-rc2",
+    "inherited": true,
+    "configFile": "lakefile.toml"},
+   {"url": "https://github.com/leanprover/lean4-cli",
+    "type": "git",
+    "subDir": null,
+    "scope": "leanprover",
+-   "rev": "474983579ecce1ca7d8a63e65c7ae0b1a22db6a3",
++   "rev": "13567aed1ac4f12aea9484178e07e51f8c9f7658",
+    "name": "Cli",
+    "manifestFile": "lake-manifest.json",
+-   "inputRev": "v4.29.0-rc1",
++   "inputRev": "v4.30.0-rc2",
+    "inherited": true,
+    "configFile": "lakefile.toml"}],
+  "name": "sampcert",
+- "lakeDir": ".lake"}
++ "lakeDir": ".lake",
++ "fixedToolchain": false}
+diff --git a/lakefile.lean b/lakefile.lean
+index c6f1c5d..da8c89e 100644
+--- a/lakefile.lean
++++ b/lakefile.lean
+@@ -4,7 +4,7 @@ open System Lake DSL
+ package «sampcert» where
+ 
+ require mathlib from git
+-  "https://github.com/leanprover-community/mathlib4.git" @ "v4.29.0-rc1"
++  "https://github.com/leanprover-community/mathlib4.git" @ "v4.30.0-rc2"
+ 
+ @[default_target]
+ lean_lib «SampCert» where
+diff --git a/lean-toolchain b/lean-toolchain
+index 4433603..635bb95 100644
+--- a/lean-toolchain
++++ b/lean-toolchain
+@@ -1 +1 @@
+-leanprover/lean4:v4.29.0-rc1
+\ No newline at end of file
++leanprover/lean4:v4.30.0-rc2
+\ No newline at end of file

@@ -1,0 +1,81 @@
+name: lean-repro checks
+
+# Parallel reproduction of the Lean verification results (branch eddie/lean-repro).
+# It is NOT wired into the normal PR gate — it runs manually (workflow_dispatch) and
+# on pushes to the repro branch, so we can exercise the checks while the branch lives
+# on its own for a while. Everything it touches is confined to
+# rust/opendp_verified/repro/ plus this workflow file.
+
+on:
+  workflow_dispatch: {}          # manual "Run workflow" button
+  push:
+    branches: [eddie/lean-repro]
+    paths:
+      - 'rust/opendp_verified/repro/**'
+      - '.github/workflows/lean-repro.yml'
+
+concurrency:
+  group: lean-repro-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lean-and-blueprint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pins live in exactly one place (check_lean_pins.sh); read them here so the
+      # clone commands can never drift from what the build verifies.
+      - name: Read dependency pins
+        run: |
+          eval "$(grep -E '^(AENEAS_URL|AENEAS_TAG|SAMPCERT_URL|SAMPCERT_COMMIT)=' \
+                  rust/opendp_verified/repro/tools/check_lean_pins.sh)"
+          {
+            echo "AENEAS_URL=$AENEAS_URL"
+            echo "AENEAS_TAG=$AENEAS_TAG"
+            echo "SAMPCERT_URL=$SAMPCERT_URL"
+            echo "SAMPCERT_COMMIT=$SAMPCERT_COMMIT"
+          } >> "$GITHUB_ENV"
+
+      - name: Install elan (Lean toolchain manager)
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \
+            | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      # graphviz + dev headers must precede `uv tool install` so pygraphviz builds.
+      - name: Install graphviz + uv + leanblueprint (for the blueprint check)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz libgraphviz-dev pkg-config
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/uv" tool install leanblueprint
+
+      # Cache the heavy, pin-keyed artifacts: the two gitignored dep checkouts and the
+      # sub-package .lake build. Key on the pins + the manifest so a bump invalidates it.
+      - name: Cache Lean deps + build
+        uses: actions/cache@v4
+        with:
+          path: |
+            aeneas
+            SampCert
+            rust/opendp_verified/repro/.lake
+          key: lean-repro-${{ runner.os }}-${{ env.AENEAS_TAG }}-${{ env.SAMPCERT_COMMIT }}-${{ hashFiles('rust/opendp_verified/repro/lake-manifest.json') }}
+
+      - name: Clone pinned aeneas (build-tag) + charon, and SampCert (fork hash)
+        run: |
+          if [ ! -e aeneas/.git ]; then
+            git clone --recurse-submodules "$AENEAS_URL" aeneas
+            git -C aeneas checkout "$AENEAS_TAG"
+            git -C aeneas submodule update --init --recursive
+          fi
+          if [ ! -e SampCert/.git ]; then
+            git clone "$SAMPCERT_URL" SampCert
+            git -C SampCert checkout "$SAMPCERT_COMMIT"
+          fi
+          # build_lean.sh applies the vendored SampCert 4.30 patch (git apply) itself.
+
+      - name: Run lean-repro checks (pins + Lean build + blueprint)
+        run: bash rust/opendp_verified/repro/tools/test_build.sh
