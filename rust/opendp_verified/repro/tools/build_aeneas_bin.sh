@@ -68,6 +68,17 @@ opam install -y "${OPAM_DEPS[@]}"
 # charon/rust-toolchain pins the nightly (with rustc-dev); rustup auto-installs
 # it on first invocation. `aeneas/src/charon` symlinks to this checkout, so
 # building here is what makes the `charon` OCaml library available to aeneas.
+#
+# charon's Rust Makefile runs `cargo fmt` as a build prerequisite, but the pinned
+# nightly's component list (rustc-dev/llvm-tools/rust-src/miri) omits rustfmt —
+# nix supplies it out-of-band, so the opam/rustup path must add it explicitly or
+# `make` dies with "'cargo-fmt' is not installed for the toolchain". Idempotent;
+# run from the crate dir so the rust-toolchain override selects the right nightly.
+if command -v rustup >/dev/null 2>&1; then
+  log "ensuring rustfmt is present for charon's pinned nightly…"
+  ( cd "$aeneas_dir/charon/charon" && rustup component add rustfmt )
+fi
+
 log "building charon (rust + charon-ml) — first run pulls the pinned rust nightly…"
 ( cd "$aeneas_dir/charon" && "$MAKE" )
 [[ -x "$charon_bin" ]] \
