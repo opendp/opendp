@@ -96,6 +96,18 @@ echo "[2/4] Regenerating Lean with Aeneas"
   -namespace OpenDP \
   -split-files
 
+# Aeneas with -split-files emits Generated/OpenDP/{Funs,Types,...}.lean but NOT a
+# namespace-root aggregator, and `Generated/` is gitignored — so `import
+# Generated.OpenDP` (from OpenDPVerified.lean) has nothing to resolve to on a
+# fresh checkout. Write the aggregator here so generation produces a complete,
+# importable tree. `Funs` transitively imports `Types` and `FunsExternal`.
+echo "[2b/4] Writing Generated/OpenDP.lean namespace-root aggregator"
+cat > "${crate_root}/Generated/OpenDP.lean" <<'EOF'
+-- Namespace-root aggregator for the Aeneas-generated `OpenDP` modules.
+-- `Funs` transitively imports `Types` and `FunsExternal`.
+import Generated.OpenDP.Funs
+EOF
+
 echo "[3/4] Rebuilding external companion files from templates"
 cp "${generated_root}/TypesExternal_Template.lean" "${generated_root}/TypesExternal.lean"
 cp "${generated_root}/FunsExternal_Template.lean" "${generated_root}/FunsExternal.lean"

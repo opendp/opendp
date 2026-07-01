@@ -18,12 +18,23 @@ fail() { echo "FAIL: $*" >&2; exit 1; }
 # --------------------------------------------------------------------------- #
 # 1. Lean library compiles (pins guarded, then `lake build`).
 # --------------------------------------------------------------------------- #
-echo "==> [1/2] Lean: check pins + lake build OpenDPVerified ..."
+echo "==> [1/2] Lean: check pins + generate (Charon->Aeneas) + lake build OpenDPVerified ..."
 lean_log="$tmp/lean.log"
 if ! "$script_dir/build_lean.sh" >"$lean_log" 2>&1; then
   echo "---- lean build output (tail) ----" >&2
-  tail -n 40 "$lean_log" >&2
-  fail "Lean build did not complete (pins mismatch or compile error)."
+  tail -n 60 "$lean_log" >&2
+  # Disambiguate the most common failure modes so the one-line FAIL is actionable
+  # rather than a catch-all. The Charon->Aeneas generation step is a frequent
+  # culprit on fresh checkouts (its output is gitignored and must be regenerated).
+  if grep -q "Generated/ is still incomplete\|Aeneas did not emit" "$lean_log"; then
+    fail "Charon->Aeneas generation did not produce Generated/ — see the [1/4]..[4/4] refresh output above (charon/aeneas binary build or 'charon cargo' likely failed)."
+  elif grep -qi "opam not found\|charon build finished but\|aeneas build finished but\|GNU make not found" "$lean_log"; then
+    fail "Aeneas/Charon binary build failed — see build_aeneas_bin.sh output above (OCaml/opam toolchain or rust nightly)."
+  elif grep -q "no such file or directory" "$lean_log" && grep -q "repro/Generated" "$lean_log"; then
+    fail "lake could not find Generated/ (Charon->Aeneas output missing) — generation must run before 'lake build'."
+  else
+    fail "Lean build did not complete (pins mismatch, generation failure, or compile error)."
+  fi
 fi
 if grep -qE '^error:|: error:' "$lean_log"; then
   grep -nE '^error:|: error:' "$lean_log" | sed 's#.*/repro/##' >&2

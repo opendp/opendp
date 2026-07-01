@@ -47,13 +47,26 @@ jobs:
           echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
 
       # graphviz + dev headers must precede `uv tool install` so pygraphviz builds.
+      # libgmp-dev/pkg-config/m4 are the system deps for the OCaml build (zarith
+      # links against gmp; opam needs m4) — installed here so the Aeneas binary
+      # build below has them.
       - name: Install graphviz + uv + leanblueprint (for the blueprint check)
         run: |
           sudo apt-get update
-          sudo apt-get install -y graphviz libgraphviz-dev pkg-config
+          sudo apt-get install -y graphviz libgraphviz-dev pkg-config libgmp-dev m4
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           "$HOME/.local/bin/uv" tool install leanblueprint
+
+      # OCaml 5.2 via opam — the toolchain that build_aeneas_bin.sh builds
+      # charon/aeneas with (opam is the single source of truth for the OCaml
+      # deps; we do NOT use aeneas's nix flake). The action caches ~/.opam itself.
+      # charon's Rust frontend uses the nightly pinned in its rust-toolchain file,
+      # which the preinstalled rustup fetches on first build.
+      - name: Set up OCaml 5.2 (opam) for the Aeneas build
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: "5.2.1"
 
       # Cache the heavy, pin-keyed artifacts: the two gitignored dep checkouts and the
       # sub-package .lake build. Key on the pins + the manifest so a bump invalidates it.
@@ -64,6 +77,7 @@ jobs:
             aeneas
             SampCert
             rust/opendp_verified/repro/.lake
+            rust/opendp_verified/repro/target
           key: lean-repro-${{ runner.os }}-${{ env.AENEAS_TAG }}-${{ env.CHARON_COMMIT }}-${{ env.SAMPCERT_COMMIT }}-${{ hashFiles('rust/opendp_verified/repro/lake-manifest.json') }}
 
       - name: Clone pinned aeneas (build-tag) + charon, and SampCert (fork hash)

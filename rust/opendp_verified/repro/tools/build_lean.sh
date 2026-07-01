@@ -44,5 +44,38 @@ fi
 # 3. Refuse to build on a mismatched stack (now that every dep checkout exists).
 "$script_dir/check_lean_pins.sh"
 
-# 4. Build the verified library.
+# 4. Ensure the Aeneas-generated Lean sources exist. `Generated/` is a build
+#    artifact of the Charon->Aeneas pipeline and is gitignored, so a fresh
+#    checkout — CI or a new clone — has none, and `lake build` then fails with a
+#    cryptic "no such file or directory: .../repro/Generated" from the
+#    `.submodules `Generated`` glob. Regenerate when absent (or when REFRESH=1),
+#    which first builds the charon/aeneas binaries if they are missing. A local
+#    proof-dev whose Generated/ already exists skips this — regeneration rebuilds
+#    the Rust crate (minutes) — unless REFRESH=1 forces a refresh.
+gen_funs="$proj_dir/Generated/OpenDP/Funs.lean"
+gen_root="$proj_dir/Generated/OpenDP.lean"
+if [[ "${REFRESH:-0}" == "1" || ! -f "$gen_funs" || ! -f "$gen_root" ]]; then
+  if [[ "${REFRESH:-0}" == "1" ]]; then
+    echo "==> REFRESH=1 — (re)generating Aeneas Lean sources under Generated/…"
+  else
+    echo "==> Generated/ is absent or incomplete — generating Aeneas Lean sources…"
+    echo "    (missing: $( [[ -f "$gen_funs" ]] || echo -n "Generated/OpenDP/Funs.lean " )$( [[ -f "$gen_root" ]] || echo -n "Generated/OpenDP.lean" ))"
+  fi
+  "$script_dir/build_aeneas_bin.sh"
+  "$script_dir/refresh_opendp_verified_aeneas.sh"
+  if [[ ! -f "$gen_funs" || ! -f "$gen_root" ]]; then
+    echo "" >&2
+    echo "ERROR: Charon->Aeneas refresh ran but Generated/ is still incomplete." >&2
+    echo "       Expected both:" >&2
+    echo "         $gen_funs        $( [[ -f "$gen_funs" ]] && echo '(ok)' || echo '(MISSING)' )" >&2
+    echo "         $gen_root  $( [[ -f "$gen_root" ]] && echo '(ok)' || echo '(MISSING)' )" >&2
+    echo "       Inspect the [1/4]..[4/4] refresh output above (charon cargo / aeneas)." >&2
+    exit 1
+  fi
+  echo "==> Aeneas Lean sources generated."
+else
+  echo "==> Generated/ present — skipping Charon->Aeneas refresh (set REFRESH=1 to force)."
+fi
+
+# 5. Build the verified library.
 ( cd "$proj_dir" && lake build OpenDPVerified )
