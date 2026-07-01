@@ -272,33 +272,55 @@ below \(\numer\); so \(\Pr[\top]=\numer/\denom\).
 \end{proof}
 
 % =============================================================================
-\chapter{Frontier (not yet ported / not yet extracted)}\label{chap:frontier}
+\chapter{Roadmap: toward the discrete Gaussian}\label{chap:roadmap}
 % =============================================================================
 
-These exist in the legacy tree (\texttt{proofs\_legacy/}) and/or as extracted Rust
-but are \emph{not yet ported} to the pinned from-scratch \texttt{src/}; the last
-two are not extracted into Lean at all. They mark how far the verification
-reaches today.
+The remaining chain (see \texttt{ROADMAP.md}) continues linearly from the rational
+Bernoulli up to the discrete Gaussian noise mechanism. Each node below is one
+stage; the \texttt{uses} edges are the pipeline. They start as stubs and each turns
+green the moment its \(\sd(\cdot) = \text{SampCert PMF}\) theorem lands in
+\texttt{repro/src/} --- so this graph \emph{is} the progress bar. Marked
+\statusStub{} = target only: (extracted, not ported) extracted (Rust in \texttt{Generated/}, proof not
+yet ported) or (not extracted) not extracted (needs a Charon/Aeneas pass first).
 
-\begin{theorem}[\texttt{sample\_bernoulli\_exp1} (unit neg-exponential)]\label{thm:exp1}
+\begin{theorem}[\texttt{sample\_bernoulli\_exp1}: unit negative-exponential]\label{thm:exp1}
   \uses{thm:bernoulli-rational, thm:samplerDist-loop}
-  \statusStub{} Extracted Rust exists; a probWhile-loop distribution proof is
-  ported in \texttt{proofs\_legacy} but not yet on the pinned stack.
+  \statusStub{} (extracted, not ported) \emph{Next to port.} Target \(\sd(\texttt{sample\_bernoulli\_exp1}) =
+  \SLang.\mathrm{BernoulliExpNegSampleUnit}\): \(\Pr[\top] = e^{-x}\) for
+  \(x \in [0,1]\), a \(\probWhile\) loop drawing \(\Bern{x/k}\) until failure and
+  returning the parity of \(k\). Reuses \ref{thm:bernoulli-rational} per iteration
+  + \ref{thm:samplerDist-loop}. Partial reference in \texttt{proofs\_legacy/}.
 \end{theorem}
 
-\begin{theorem}[\texttt{sample\_bernoulli\_exp} (full neg-exponential)]\label{thm:exp}
-  \uses{thm:exp1, thm:bernoulli-rational}
-  \statusStub{} Extracted; not yet ported.
+\begin{theorem}[\texttt{sample\_bernoulli\_exp}: full negative-exponential]\label{thm:exp}
+  \uses{thm:exp1}
+  \statusStub{} (extracted, not ported) Target \(\SLang.\mathrm{BernoulliExpNegSample}\): \(\Pr[\top]=e^{-x}\)
+  for \(x \ge 0\) --- \(\lfloor x\rfloor\) copies of \(\Bern{e^{-1}}\) all true, then
+  \(\Bern{e^{-\mathrm{frac}(x)}}\) via \ref{thm:exp1}. Extracted; not yet ported.
 \end{theorem}
 
-\begin{theorem}[\texttt{sample\_geometric\_exp\_slow/fast}]\label{thm:geom}
-  \uses{thm:exp, thm:uniform-spec}
-  \statusStub{} Extracted; slow variant proved in legacy, not yet ported.
+\begin{theorem}[\texttt{sample\_geometric\_exp\_slow}]\label{thm:geom-slow}
+  \uses{thm:exp}
+  \statusStub{} (extracted, not ported) Geometric law: count consecutive successes of \(\Bern{e^{-x}}\).
+  Extracted; slow variant proved in \texttt{proofs\_legacy/}, not yet ported.
 \end{theorem}
 
-\begin{theorem}[\texttt{sample\_discrete\_laplace} / \texttt{discrete\_gaussian}]\label{thm:dp-mechs}
-  \uses{thm:geom}
-  \statusStub{} \textbf{Not extracted into Lean yet} --- no \texttt{Generated/}
-  code exists, so there is nothing to verify against until a Charon/Aeneas pass
-  emits them.
+\begin{theorem}[\texttt{sample\_geometric\_exp\_fast} (the ``dast''/fast variant)]\label{thm:geom-fast}
+  \uses{thm:geom-slow}
+  \statusStub{} (extracted, not ported) Optimized geometric (inversion + residual Bernoulli test).
+  Extracted; not proved even in legacy.
+\end{theorem}
+
+\begin{theorem}[\texttt{sample\_discrete\_laplace}]\label{thm:discrete-laplace}
+  \uses{thm:geom-fast}
+  \statusStub{} (not extracted) Target \(\SLang.\mathrm{DiscreteLaplaceSample}\): sign \(\times\)
+  geometric magnitude (the pure-DP noise). \textbf{Not extracted} --- no
+  \texttt{Generated/} code yet.
+\end{theorem}
+
+\begin{theorem}[\texttt{sample\_discrete\_gaussian} --- final target]\label{thm:discrete-gaussian}
+  \uses{thm:discrete-laplace}
+  \statusStub{} (not extracted) Target \(\SLang.\mathrm{DiscreteGaussianSample}\): rejection
+  sampling from a discrete-Laplace proposal (the zCDP noise mechanism).
+  \textbf{Not extracted} yet.
 \end{theorem}
