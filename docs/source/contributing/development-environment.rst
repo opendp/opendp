@@ -420,7 +420,6 @@ A few notes on Intellij IDEA:
 
 
 Git Hooks
-^^^^^^^^^
 
 A suggested (opt-in) pre-commit hook lives in ``.githooks``.
 Enable it with ``git config core.hooksPath .githooks``; see ``.githooks/README.md`` for details.
