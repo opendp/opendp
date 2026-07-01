@@ -417,3 +417,14 @@ A few notes on Intellij IDEA:
 * Be sure to install the Python and Rust plugins for interactivity
 * Be sure to "attach" the Cargo.toml in the red banner the first time you open a Rust source file
 * Use run configurations to `build the Rust library <https://plugins.jetbrains.com/plugin/8182-rust/docs/cargo-command-configuration.html#cargo-command-config>`_ and run tests
+
+
+Git Hooks
+
+A suggested (opt-in) pre-commit hook lives in ``.githooks``.
+Enable it with ``git config core.hooksPath .githooks``; see ``.githooks/README.md`` for details.
+
+Git only runs the hook if it is executable. A fresh clone is fine, but if the executable
+bit was stripped, git will skip the hook or complain it is not executable.
+
+Restore it with ``chmod +x .githooks/pre-commit``
