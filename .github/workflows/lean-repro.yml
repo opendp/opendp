@@ -29,11 +29,13 @@ jobs:
       # clone commands can never drift from what the build verifies.
       - name: Read dependency pins
         run: |
-          eval "$(grep -E '^(AENEAS_URL|AENEAS_TAG|SAMPCERT_URL|SAMPCERT_COMMIT)=' \
+          eval "$(grep -E '^(AENEAS_URL|AENEAS_TAG|CHARON_URL|CHARON_COMMIT|SAMPCERT_URL|SAMPCERT_COMMIT)=' \
                   rust/opendp_verified/repro/tools/check_lean_pins.sh)"
           {
             echo "AENEAS_URL=$AENEAS_URL"
             echo "AENEAS_TAG=$AENEAS_TAG"
+            echo "CHARON_URL=$CHARON_URL"
+            echo "CHARON_COMMIT=$CHARON_COMMIT"
             echo "SAMPCERT_URL=$SAMPCERT_URL"
             echo "SAMPCERT_COMMIT=$SAMPCERT_COMMIT"
           } >> "$GITHUB_ENV"
@@ -62,14 +64,22 @@ jobs:
             aeneas
             SampCert
             rust/opendp_verified/repro/.lake
-          key: lean-repro-${{ runner.os }}-${{ env.AENEAS_TAG }}-${{ env.SAMPCERT_COMMIT }}-${{ hashFiles('rust/opendp_verified/repro/lake-manifest.json') }}
+          key: lean-repro-${{ runner.os }}-${{ env.AENEAS_TAG }}-${{ env.CHARON_COMMIT }}-${{ env.SAMPCERT_COMMIT }}-${{ hashFiles('rust/opendp_verified/repro/lake-manifest.json') }}
 
       - name: Clone pinned aeneas (build-tag) + charon, and SampCert (fork hash)
         run: |
           if [ ! -e aeneas/.git ]; then
-            git clone --recurse-submodules "$AENEAS_URL" aeneas
+            git clone "$AENEAS_URL" aeneas
             git -C aeneas checkout "$AENEAS_TAG"
-            git -C aeneas submodule update --init --recursive
+          fi
+          # charon is NOT an aeneas submodule — clone it separately at the pin so the
+          # pin guard's `charon HEAD` check has a real checkout to inspect. Guard on the
+          # resolved HEAD (not just `.git`'s presence): a stale cache can leave a broken
+          # submodule stub at aeneas/charon whose `.git` exists but resolves to nothing.
+          if [ "$(git -C aeneas/charon rev-parse HEAD 2>/dev/null)" != "$CHARON_COMMIT" ]; then
+            rm -rf aeneas/charon
+            git clone "$CHARON_URL" aeneas/charon
+            git -C aeneas/charon checkout "$CHARON_COMMIT"
           fi
           if [ ! -e SampCert/.git ]; then
             git clone "$SAMPCERT_URL" SampCert
