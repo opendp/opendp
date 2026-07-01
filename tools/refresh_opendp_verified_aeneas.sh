@@ -4,9 +4,12 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 llbc_file="${repo_root}/opendp_verified.llbc"
+# The crate manifest (Cargo.toml) stays at the workspace-member root so Charon can
+# `cargo`-build it, but its sources and all generated Lean live under repro/.
 crate_root="${repo_root}/rust/opendp_verified"
-generated_root="${crate_root}/Generated/OpenDP"
-patch_root="${crate_root}/aeneas_patches"
+repro_root="${crate_root}/repro"
+generated_root="${repro_root}/Generated/OpenDP"
+patch_root="${repro_root}/aeneas_patches"
 default_charon_bin="${repo_root}/aeneas/charon/bin/charon"
 default_aeneas_bin="${repo_root}/aeneas/bin/aeneas"
 CHARON_BIN="${default_charon_bin}"
@@ -84,7 +87,7 @@ echo "[1/4] Regenerating LLBC with Charon"
 
 echo "[2/4] Regenerating Lean with Aeneas"
 "${AENEAS_BIN}" -backend lean "${llbc_file}" \
-  -dest "${crate_root}" \
+  -dest "${repro_root}" \
   -subdir /Generated/OpenDP \
   -namespace OpenDP \
   -split-files
