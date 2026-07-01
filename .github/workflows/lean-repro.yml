@@ -50,10 +50,18 @@ jobs:
       # libgmp-dev/pkg-config/m4 are the system deps for the OCaml build (zarith
       # links against gmp; opam needs m4) — installed here so the Aeneas binary
       # build below has them.
-      - name: Install graphviz + uv + leanblueprint (for the blueprint check)
+      # TeXLive is required by the blueprint step: plasTeX shells out to `kpsewhich`
+      # to locate \usepackage .sty files (amsthm etc.) and to resolve \input files.
+      # Without it, \newtheorem never registers the theorem environments, so
+      # `\begin{definition}` becomes plasTeX's UnrecognizedMacro — which is
+      # unhashable and crashes plastexdepgraph's `set(nodes)` with
+      # "TypeError: unhashable type: 'definition'".
+      - name: Install graphviz + TeXLive + uv + leanblueprint (for the blueprint check)
         run: |
           sudo apt-get update
-          sudo apt-get install -y graphviz libgraphviz-dev pkg-config libgmp-dev m4
+          sudo apt-get install -y graphviz libgraphviz-dev pkg-config libgmp-dev m4 perl \
+            texlive-latex-base texlive-latex-recommended texlive-latex-extra \
+            texlive-fonts-recommended texlive-science
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           "$HOME/.local/bin/uv" tool install leanblueprint

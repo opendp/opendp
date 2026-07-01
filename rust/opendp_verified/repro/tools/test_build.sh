@@ -62,6 +62,15 @@ bp_status=0
 if grep -q 'RecursionError' "$bp_log"; then
   fail "Blueprint hit a plasTeX RecursionError -- this almost always means a MALFORMED blueprint .tex: a literal '[' in a theorem-environment optional-argument title makes plasTeX run past the closing ']' (use \\lbrack instead). Check rust/opendp_verified/repro/blueprint/src/*.tex."
 fi
+# "unhashable type: '<thm-env>'" from plastexdepgraph's set(nodes) means a theorem
+# environment (definition/lemma/...) resolved to plasTeX's unhashable
+# UnrecognizedMacro -- i.e. \newtheorem never registered it. The usual cause is a
+# MISSING TeX INSTALL: plasTeX needs `kpsewhich` (TeXLive) to locate the amsthm
+# .sty and the \input'd macro files. Verify texlive-* is installed in CI.
+if grep -qE "unhashable type: '(definition|theorem|lemma|proposition|corollary|remark)'" "$bp_log" \
+   || { grep -q 'unhashable type' "$bp_log" && grep -q 'depgraph' "$bp_log"; }; then
+  fail "Blueprint: a theorem environment was unrecognized (plastexdepgraph 'unhashable type' in set(nodes)). This almost always means TeXLive is MISSING — plasTeX needs kpsewhich to resolve amsthm/.sty and \\input files so \\newtheorem can register the environments. Install texlive-* (see .github/workflows/lean-repro.yml)."
+fi
 if [[ "$bp_status" -ne 0 ]]; then
   echo "---- blueprint build output (tail) ----" >&2
   tail -n 40 "$bp_log" >&2
