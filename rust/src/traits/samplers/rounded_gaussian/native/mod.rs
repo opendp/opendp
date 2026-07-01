@@ -8,24 +8,32 @@ mod test;
 
 const NATIVE_UNIFORM_REFINE_BITS: u32 = 4;
 
-// Finalization budget for the PSRN fractional prefix.
+// Fixed native sampler profile for the proof-oriented GPU path.
 //
-// This native path has two finite-budget events with privacy-accounting cost:
-// the sampler-side tail from representing K in a native integer, and the
-// finalization comb from giving up near f32 cell boundaries. K is left at the
-// natural u64 sampler bound because its half-Gaussian tail is already far below
-// any practical comb term. The useful arithmetic budget is spent on the PSRN
-// prefix instead.
+// K is capped at 14, each Bernoulli factory is capped at 26 rounds, and scalar
+// partial-uniform comparisons use the 96-bit native prefix budget. The sampler
+// caps are declared resampling events accounted by the native proof. The same
+// 96-bit prefix budget is also used for finalization, where unresolved traces
+// are accounted by the public rounding-boundary comb.
 //
 // With a snapped f32 scale, m_sigma has at most 24 bits. At b = 96 the upper
 // endpoint can use q = n + 1 = 2^96, so m_sigma * q needs at most 121 bits and
 // still fits in u128. Larger prefixes would need a wider product type.
 const NATIVE_UNIFORM_MAX_BITS: u32 = 96;
+const NATIVE_SAMPLER_K_MAX: u64 = 14;
+const NATIVE_BERNOULLI_MAX_DEPTH: u32 = 26;
+const NATIVE_CLIP_SCALE_MAX_RATIO: f64 = 7.5;
 
 pub(super) enum NativeF32Sample {
     Output(f32),
+    RejectedSampler,
     RejectedComb,
     ResourceLimit,
+}
+
+enum NativeSamplerOutcome<T> {
+    Value(T),
+    Rejected,
 }
 
 struct NativeEntropy {
@@ -172,21 +180,29 @@ impl NativeUniform01 {
 }
 
 // Algorithm 4 https://arxiv.org/pdf/2008.03855
-fn sample_bernoulli_exp_half_with(entropy: &mut NativeEntropy) -> Fallible<Option<bool>> {
+fn sample_bernoulli_exp_half_with(
+    entropy: &mut NativeEntropy,
+) -> Fallible<NativeSamplerOutcome<bool>> {
     if entropy.coin()? {
-        return Ok(Some(true));
+        return Ok(NativeSamplerOutcome::Value(true));
     }
 
     let mut accept_on_failure = false;
     let mut y = NativeUniform01 { prefix: 0, bits: 1 };
+    let mut depth = 0u32;
 
     loop {
+        if depth >= NATIVE_BERNOULLI_MAX_DEPTH {
+            return Ok(NativeSamplerOutcome::Rejected);
+        }
+        depth += 1;
+
         let mut u = NativeUniform01::new();
 
         match y.greater_than(&mut u, entropy)? {
             Some(true) => {}
-            Some(false) => return Ok(Some(accept_on_failure)),
-            None => return Ok(None),
+            Some(false) => return Ok(NativeSamplerOutcome::Value(accept_on_failure)),
+            None => return Ok(NativeSamplerOutcome::Rejected),
         }
 
         y = u;
@@ -195,46 +211,45 @@ fn sample_bernoulli_exp_half_with(entropy: &mut NativeEntropy) -> Fallible<Optio
 }
 
 // Algorithm 5: https://arxiv.org/pdf/2008.03855
-fn sample_k_with(entropy: &mut NativeEntropy) -> Fallible<Option<u64>> {
+fn sample_k_with(entropy: &mut NativeEntropy) -> Fallible<NativeSamplerOutcome<u64>> {
     'restart: loop {
         match sample_bernoulli_exp_half_with(entropy)? {
-            Some(true) => {}
-            Some(false) => return Ok(Some(0)),
-            None => return Ok(None),
+            NativeSamplerOutcome::Value(true) => {}
+            NativeSamplerOutcome::Value(false) => return Ok(NativeSamplerOutcome::Value(0)),
+            NativeSamplerOutcome::Rejected => return Ok(NativeSamplerOutcome::Rejected),
         }
 
         match sample_bernoulli_exp_half_with(entropy)? {
-            Some(true) => {}
-            Some(false) => return Ok(Some(1)),
-            None => return Ok(None),
+            NativeSamplerOutcome::Value(true) => {}
+            NativeSamplerOutcome::Value(false) => return Ok(NativeSamplerOutcome::Value(1)),
+            NativeSamplerOutcome::Rejected => return Ok(NativeSamplerOutcome::Rejected),
         }
 
         let mut k = 2u64;
 
         loop {
-            let Some(mut t) = k.checked_sub(1).and_then(|value| value.checked_mul(2)) else {
-                return Ok(None);
-            };
+            if k > NATIVE_SAMPLER_K_MAX {
+                continue 'restart;
+            }
+
+            let mut t = (k - 1) * 2;
 
             while t != 0 {
                 match sample_bernoulli_exp_half_with(entropy)? {
-                    Some(true) => {}
-                    Some(false) => continue 'restart,
-                    None => return Ok(None),
+                    NativeSamplerOutcome::Value(true) => {}
+                    NativeSamplerOutcome::Value(false) => continue 'restart,
+                    NativeSamplerOutcome::Rejected => return Ok(NativeSamplerOutcome::Rejected),
                 }
                 t -= 1;
             }
 
             match sample_bernoulli_exp_half_with(entropy)? {
-                Some(true) => {}
-                Some(false) => return Ok(Some(k)),
-                None => return Ok(None),
+                NativeSamplerOutcome::Value(true) => {}
+                NativeSamplerOutcome::Value(false) => return Ok(NativeSamplerOutcome::Value(k)),
+                NativeSamplerOutcome::Rejected => return Ok(NativeSamplerOutcome::Rejected),
             }
 
-            let Some(next) = k.checked_add(1) else {
-                return Ok(None);
-            };
-            k = next;
+            k += 1;
         }
     }
 }
@@ -243,24 +258,31 @@ fn sample_k_with(entropy: &mut NativeEntropy) -> Fallible<Option<u64>> {
 fn sample_bernoulli_exp_uniform_native(
     entropy: &mut NativeEntropy,
     x: &mut NativeUniform01,
-) -> Fallible<Option<bool>> {
+) -> Fallible<NativeSamplerOutcome<bool>> {
     let mut y = NativeUniform01::new();
+    let mut depth = 0u32;
 
+    depth += 1;
     match x.greater_than(&mut y, entropy)? {
         Some(true) => {}
-        Some(false) => return Ok(Some(true)),
-        None => return Ok(None),
+        Some(false) => return Ok(NativeSamplerOutcome::Value(true)),
+        None => return Ok(NativeSamplerOutcome::Rejected),
     }
 
     let mut accept_on_failure = false;
 
     loop {
+        if depth >= NATIVE_BERNOULLI_MAX_DEPTH {
+            return Ok(NativeSamplerOutcome::Rejected);
+        }
+        depth += 1;
+
         let mut u = NativeUniform01::new();
 
         match y.greater_than(&mut u, entropy)? {
             Some(true) => {}
-            Some(false) => return Ok(Some(accept_on_failure)),
-            None => return Ok(None),
+            Some(false) => return Ok(NativeSamplerOutcome::Value(accept_on_failure)),
+            None => return Ok(NativeSamplerOutcome::Rejected),
         }
 
         y = u;
@@ -354,11 +376,17 @@ fn uniform_less_than_half_native(
 fn sample_bernoulli_exp_half_x_squared_native(
     entropy: &mut NativeEntropy,
     x: &mut NativeUniform01,
-) -> Fallible<Option<bool>> {
+) -> Fallible<NativeSamplerOutcome<bool>> {
     let mut accept_on_failure = true;
     let mut w: Option<NativeUniform01> = None;
+    let mut depth = 0u32;
 
     loop {
+        if depth >= NATIVE_BERNOULLI_MAX_DEPTH {
+            return Ok(NativeSamplerOutcome::Rejected);
+        }
+        depth += 1;
+
         let mut u = NativeUniform01::new();
 
         let u_lt_w = match w.as_mut() {
@@ -368,15 +396,15 @@ fn sample_bernoulli_exp_half_x_squared_native(
 
         match u_lt_w {
             Some(true) => {}
-            Some(false) => return Ok(Some(accept_on_failure)),
-            None => return Ok(None),
+            Some(false) => return Ok(NativeSamplerOutcome::Value(accept_on_failure)),
+            None => return Ok(NativeSamplerOutcome::Rejected),
         }
 
         let mut v = NativeUniform01::new();
         match x.greater_than(&mut v, entropy)? {
             Some(true) => {}
-            Some(false) => return Ok(Some(accept_on_failure)),
-            None => return Ok(None),
+            Some(false) => return Ok(NativeSamplerOutcome::Value(accept_on_failure)),
+            None => return Ok(NativeSamplerOutcome::Rejected),
         }
 
         w = Some(u);
@@ -389,15 +417,15 @@ fn accept_fraction_native(
     entropy: &mut NativeEntropy,
     k: u64,
     x: &mut NativeUniform01,
-) -> Fallible<Option<bool>> {
+) -> Fallible<NativeSamplerOutcome<bool>> {
     let mut remaining = k;
 
     // peeling off bernoulli exp(-x) for x in [0, 1] k times
     while remaining != 0 {
         match sample_bernoulli_exp_uniform_native(entropy, x)? {
-            Some(true) => {}
-            Some(false) => return Ok(Some(false)),
-            None => return Ok(None),
+            NativeSamplerOutcome::Value(true) => {}
+            NativeSamplerOutcome::Value(false) => return Ok(NativeSamplerOutcome::Value(false)),
+            NativeSamplerOutcome::Rejected => return Ok(NativeSamplerOutcome::Rejected),
         }
         remaining -= 1;
     }
@@ -407,7 +435,8 @@ fn accept_fraction_native(
 
 enum F32CellCertification {
     Output(f32),
-    Unknown,
+    Unresolved,
+    ResourceLimit,
 }
 
 #[derive(Clone, Copy)]
@@ -517,64 +546,149 @@ fn cmp_words(lhs: &[u64; 4], rhs: &[u64; 4]) -> std::cmp::Ordering {
     lhs.iter().rev().cmp(rhs.iter().rev())
 }
 
-fn sign_dyadic_sum(terms: &[Dyadic]) -> Option<std::cmp::Ordering> {
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum DyadicSign {
+    Exact(std::cmp::Ordering),
+    Near { units: u8, exponent: i32 },
+}
+
+const SIGN_WINDOW_BITS: i32 = 192;
+
+fn add_small_words(acc: &mut [u64; 4], addend: u64) -> Option<()> {
+    let (sum, carry) = acc[0].overflowing_add(addend);
+    acc[0] = sum;
+    if !carry {
+        return Some(());
+    }
+    for word in &mut acc[1..] {
+        let (sum, carry) = word.overflowing_add(1);
+        *word = sum;
+        if !carry {
+            return Some(());
+        }
+    }
+    None
+}
+
+fn truncated_term_words(term: &Dyadic, cutoff: i32) -> Option<([u64; 4], bool)> {
+    let shift = term.exponent.checked_sub(cutoff)?;
+    if shift >= 0 {
+        return shifted_u128_words(term.mantissa, shift as u32).map(|words| (words, false));
+    }
+
+    let shift = (-shift) as u32;
+    if shift >= u128::BITS {
+        return Some(([0u64; 4], term.mantissa != 0));
+    }
+
+    let high = term.mantissa >> shift;
+    let mask = (1u128 << shift) - 1;
+    let has_remainder = term.mantissa & mask != 0;
+    shifted_u128_words(high, 0).map(|words| (words, has_remainder))
+}
+
+fn sign_dyadic_sum(terms: &[Dyadic]) -> Option<DyadicSign> {
     let terms: Vec<_> = terms.iter().copied().filter(|t| t.mantissa != 0).collect();
     if terms.is_empty() {
-        return Some(std::cmp::Ordering::Equal);
+        return Some(DyadicSign::Exact(std::cmp::Ordering::Equal));
     }
 
     // Align all terms to the smallest exponent and accumulate positives and
-    // negatives separately in 256 bits. If the aligned span is too wide, this
-    // comparison is unresolved unless the dominance check below can decide it.
-    let min_exponent = terms.iter().map(|t| t.exponent).min()?;
+    // negatives separately in 256 bits. If the aligned span is too wide, fall
+    // through to the fixed top-window comparison below.
+    let min_exponent = terms
+        .iter()
+        .map(|t| t.exponent)
+        .min()
+        .expect("nonempty terms");
     let mut positive = [0u64; 4];
     let mut negative = [0u64; 4];
 
     let mut can_accumulate = true;
     for term in &terms {
-        let shift = term.exponent.checked_sub(min_exponent)? as u32;
+        let Some(shift) = term
+            .exponent
+            .checked_sub(min_exponent)
+            .map(|shift| shift as u32)
+        else {
+            can_accumulate = false;
+            break;
+        };
         let Some(words) = shifted_u128_words(term.mantissa, shift) else {
             can_accumulate = false;
             break;
         };
-        if term.negative {
-            add_words(&mut negative, words)?;
+        let added = if term.negative {
+            add_words(&mut negative, words)
         } else {
-            add_words(&mut positive, words)?;
+            add_words(&mut positive, words)
+        };
+        if added.is_none() {
+            can_accumulate = false;
+            break;
         }
     }
 
     if can_accumulate {
-        return Some(cmp_words(&positive, &negative));
+        return Some(DyadicSign::Exact(cmp_words(&positive, &negative)));
     }
 
-    // If the highest bit of one term is far above all other terms together,
-    // its sign determines the sum without needing a huge common denominator.
-    let mut ranked: Vec<_> = terms
+    let top = terms
         .iter()
-        .filter_map(|term| term_top_bit(term).map(|top| (top, term.negative)))
-        .collect();
-    ranked.sort_by_key(|(top, _)| *top);
-    let (top, top_negative) = *ranked.last()?;
-    let Some((second, _)) = ranked.iter().rev().nth(1).copied() else {
-        return Some(if top_negative {
-            std::cmp::Ordering::Less
-        } else {
-            std::cmp::Ordering::Greater
-        });
-    };
+        .filter_map(term_top_bit)
+        .max()
+        .expect("nonempty terms");
 
-    // There are at most four terms. If the leading bit is at least four places
-    // above the next possible leading bit, the lower terms cannot cancel it.
-    if top - second >= 4 {
-        Some(if top_negative {
-            std::cmp::Ordering::Less
+    // GPU-oriented fallback: keep a fixed top-bit window and bound the discarded
+    // lower bits. If the retained signed sum dominates the remainder radius,
+    // the sign is exact; otherwise the retained sum is within that radius of
+    // zero, and the true sum is within twice that radius of zero.
+    let cutoff = top - SIGN_WINDOW_BITS + 1;
+    let mut positive = [0u64; 4];
+    let mut negative = [0u64; 4];
+    let mut remainder_units = 0u8;
+
+    for term in &terms {
+        let Some((words, has_remainder)) = truncated_term_words(term, cutoff) else {
+            return None;
+        };
+
+        let added = if term.negative {
+            add_words(&mut negative, words)
         } else {
-            std::cmp::Ordering::Greater
-        })
-    } else {
-        None
+            add_words(&mut positive, words)
+        };
+        if added.is_none() {
+            return None;
+        }
+
+        if has_remainder {
+            remainder_units = remainder_units.saturating_add(1);
+        }
     }
+
+    if remainder_units == 0 {
+        return Some(DyadicSign::Exact(cmp_words(&positive, &negative)));
+    }
+
+    let mut negative_plus_radius = negative;
+    if add_small_words(&mut negative_plus_radius, remainder_units as u64).is_some()
+        && cmp_words(&positive, &negative_plus_radius).is_gt()
+    {
+        return Some(DyadicSign::Exact(std::cmp::Ordering::Greater));
+    }
+
+    let mut positive_plus_radius = positive;
+    if add_small_words(&mut positive_plus_radius, remainder_units as u64).is_some()
+        && cmp_words(&negative, &positive_plus_radius).is_gt()
+    {
+        return Some(DyadicSign::Exact(std::cmp::Ordering::Less));
+    }
+
+    Some(DyadicSign::Near {
+        units: remainder_units.saturating_mul(2),
+        exponent: cutoff,
+    })
 }
 
 fn product_term(negative: bool, lhs: u128, rhs: u128, exponent: i32) -> Option<Dyadic> {
@@ -589,9 +703,10 @@ fn product_term(negative: bool, lhs: u128, rhs: u128, exponent: i32) -> Option<D
 //
 //     mu +/- scale * (k + q * 2^-bits)
 //
-// against an exact f32 cell boundary. This is the core proof step. Returning
-// None means the fixed native scratch could not certify the sign, so the caller
-// must refine the same trace or charge the public comb event at the prefix cap.
+// against an exact f32 cell boundary. This is the core proof step. The common
+// path uses 256-bit accumulation; wide exponent spans fall back to a fixed
+// top-bit window with a rigorous discarded-tail radius. `Near { units,
+// exponent }` certifies |endpoint - boundary| <= units * 2^exponent.
 fn compare_affine_to_boundary(
     mu: f64,
     scale: f32,
@@ -600,7 +715,7 @@ fn compare_affine_to_boundary(
     k: u64,
     q: u128,
     bits: u32,
-) -> Option<std::cmp::Ordering> {
+) -> Option<DyadicSign> {
     debug_assert!(boundary.is_finite());
 
     let mu = finite_f64_to_dyadic(mu);
@@ -699,6 +814,18 @@ fn candidate_set(hint: f32) -> [f32; 3] {
     [hint, hint.next_down_(), hint.next_up_()]
 }
 
+enum CandidateCheck {
+    Output(f32),
+    Scan(CellScan),
+    Near,
+}
+
+#[derive(Clone, Copy)]
+struct CellScan {
+    left_of_interval: bool,
+    right_of_interval: bool,
+}
+
 fn compare_clipped_endpoint_to_boundary(
     mu: f64,
     scale: f32,
@@ -708,7 +835,7 @@ fn compare_clipped_endpoint_to_boundary(
     q: u128,
     bits: u32,
     boundary: f64,
-) -> Option<std::cmp::Ordering> {
+) -> Option<DyadicSign> {
     let Some(range) = clip else {
         return compare_affine_to_boundary(mu, scale, boundary, negative, k, q, bits);
     };
@@ -717,12 +844,18 @@ fn compare_clipped_endpoint_to_boundary(
     // below -range or above +range; if so, compare that constant clipped value
     // to the cell boundary. Otherwise compare the original affine endpoint.
     let lower_cmp = compare_affine_to_boundary(mu, scale, -range, negative, k, q, bits)?;
-    if lower_cmp.is_lt() {
+    if matches!(lower_cmp, DyadicSign::Near { .. }) {
+        return Some(lower_cmp);
+    }
+    if matches!(lower_cmp, DyadicSign::Exact(ordering) if ordering.is_lt()) {
         return compare_affine_to_boundary(-range, 1.0, boundary, false, 0, 0, 0);
     }
 
     let upper_cmp = compare_affine_to_boundary(mu, scale, range, negative, k, q, bits)?;
-    if upper_cmp.is_gt() {
+    if matches!(upper_cmp, DyadicSign::Near { .. }) {
+        return Some(upper_cmp);
+    }
+    if matches!(upper_cmp, DyadicSign::Exact(ordering) if ordering.is_gt()) {
         return compare_affine_to_boundary(range, 1.0, boundary, false, 0, 0, 0);
     }
 
@@ -736,36 +869,135 @@ fn certify_real_affine_rounds_to_f32(
     negative: bool,
     k: u64,
     x: &NativeUniform01,
+    exhaustive: bool,
 ) -> F32CellCertification {
     // For S = +1, the lower endpoint uses q = n and the upper endpoint uses
     // q = n + 1. For S = -1, the affine map reverses the prefix interval.
     let lo_q = if negative { x.prefix + 1 } else { x.prefix };
     let hi_q = if negative { x.prefix } else { x.prefix + 1 };
 
-    for candidate in candidate_set(candidate_hint(mu, scale, clip, negative, k, x)) {
+    let check_candidate = |candidate: f32| -> Option<CandidateCheck> {
         let (lower, upper) = f32_cell_bounds(candidate);
-        let lower_inside = lower.is_none_or(|boundary| {
-            compare_clipped_endpoint_to_boundary(
-                mu, scale, clip, negative, k, lo_q, x.bits, boundary,
-            )
-            .is_some_and(|ordering| ordering.is_ge())
-        });
-        let upper_inside = upper.is_none_or(|boundary| {
-            compare_clipped_endpoint_to_boundary(
-                mu, scale, clip, negative, k, hi_q, x.bits, boundary,
-            )
-            .is_some_and(|ordering| ordering.is_le())
-        });
 
-        if lower_inside && upper_inside {
-            return F32CellCertification::Output(candidate);
+        let lower_endpoint_above_lower = match lower {
+            Some(boundary) => {
+                match compare_clipped_endpoint_to_boundary(
+                    mu, scale, clip, negative, k, lo_q, x.bits, boundary,
+                )? {
+                    DyadicSign::Exact(ordering) => ordering.is_ge(),
+                    DyadicSign::Near { .. } => return Some(CandidateCheck::Near),
+                }
+            }
+            None => true,
+        };
+
+        let upper_endpoint_below_upper = match upper {
+            Some(boundary) => {
+                match compare_clipped_endpoint_to_boundary(
+                    mu, scale, clip, negative, k, hi_q, x.bits, boundary,
+                )? {
+                    DyadicSign::Exact(ordering) => ordering.is_le(),
+                    DyadicSign::Near { .. } => return Some(CandidateCheck::Near),
+                }
+            }
+            None => true,
+        };
+
+        if lower_endpoint_above_lower && upper_endpoint_below_upper {
+            return Some(CandidateCheck::Output(candidate));
         }
+
+        let left_of_interval = match upper {
+            Some(boundary) => {
+                match compare_clipped_endpoint_to_boundary(
+                    mu, scale, clip, negative, k, lo_q, x.bits, boundary,
+                )? {
+                    DyadicSign::Exact(ordering) => ordering.is_gt(),
+                    DyadicSign::Near { .. } => return Some(CandidateCheck::Near),
+                }
+            }
+            None => false,
+        };
+
+        let right_of_interval = match lower {
+            Some(boundary) => {
+                match compare_clipped_endpoint_to_boundary(
+                    mu, scale, clip, negative, k, hi_q, x.bits, boundary,
+                )? {
+                    DyadicSign::Exact(ordering) => ordering.is_lt(),
+                    DyadicSign::Near { .. } => return Some(CandidateCheck::Near),
+                }
+            }
+            None => false,
+        };
+
+        Some(CandidateCheck::Scan(CellScan {
+            left_of_interval,
+            right_of_interval,
+        }))
+    };
+
+    let hint = candidate_hint(mu, scale, clip, negative, k, x);
+
+    if !exhaustive {
+        for candidate in candidate_set(hint) {
+            match check_candidate(candidate) {
+                Some(CandidateCheck::Output(out)) => return F32CellCertification::Output(out),
+                Some(CandidateCheck::Scan(_)) | Some(CandidateCheck::Near) => {}
+                None => return F32CellCertification::ResourceLimit,
+            }
+        }
+        return F32CellCertification::Unresolved;
     }
 
-    // Unknown is not a sampler rejection by itself. The caller refines the same
-    // accepted trace until the prefix cap; only then is it the declared comb
-    // rejection event used in the privacy accounting.
-    F32CellCertification::Unknown
+    let mut left = hint;
+    let mut right = hint;
+    let mut left_bracket = false;
+    let mut right_bracket = false;
+
+    loop {
+        match check_candidate(left) {
+            Some(CandidateCheck::Output(out)) => return F32CellCertification::Output(out),
+            Some(CandidateCheck::Near) => return F32CellCertification::Unresolved,
+            Some(CandidateCheck::Scan(scan)) => {
+                left_bracket |= scan.left_of_interval;
+                right_bracket |= scan.right_of_interval;
+            }
+            None => return F32CellCertification::ResourceLimit,
+        }
+
+        if left_bracket && right_bracket {
+            return F32CellCertification::Unresolved;
+        }
+
+        if right != left {
+            match check_candidate(right) {
+                Some(CandidateCheck::Output(out)) => return F32CellCertification::Output(out),
+                Some(CandidateCheck::Near) => return F32CellCertification::Unresolved,
+                Some(CandidateCheck::Scan(scan)) => {
+                    left_bracket |= scan.left_of_interval;
+                    right_bracket |= scan.right_of_interval;
+                }
+                None => return F32CellCertification::ResourceLimit,
+            }
+
+            if left_bracket && right_bracket {
+                return F32CellCertification::Unresolved;
+            }
+        }
+
+        let at_left_edge = left == f32::NEG_INFINITY;
+        let at_right_edge = right == f32::INFINITY;
+        if at_left_edge && at_right_edge {
+            return F32CellCertification::Unresolved;
+        }
+        if !at_left_edge {
+            left = left.next_down_();
+        }
+        if !at_right_edge {
+            right = right.next_up_();
+        }
+    }
 }
 
 /// Sample with f64 input parameters and try to certify the exact real affine
@@ -777,15 +1009,18 @@ fn certify_real_affine_rounds_to_f32(
 ///
 ///     mu +/- scale32 * (k + x)
 ///
-/// rounds to one f32 cell, including overflow cells represented by infinities.
-/// `scale32` is the smallest finite positive f32 at least as large as the
-/// requested scale.
+/// rounds to one extended f32 cell, including overflow cells represented by
+/// infinities. `scale32` is the smallest finite positive f32 at least as large
+/// as the requested scale.
 ///
-/// Failure to certify before the native PSRN cap rejects the accepted trace as
-/// an unresolved rounding-boundary comb. This slightly conditions the target
-/// law and is charged by the comb normalization term. K remains capped by u64;
-/// its half-Gaussian tail is a separate sampler-side finite-budget term and is
-/// intentionally not traded down unless accounting shows it is the bottleneck.
+/// Failure to certify before the native PSRN cap only refines the same trace.
+/// At the cap, cells are scanned outward from the native hint until a containing
+/// cell is found or the checked contiguous block brackets the interval. Thus
+/// the hint affects runtime but not the proof. Endpoint comparisons are exact
+/// when the fixed top-bit window dominates its discarded-tail radius; otherwise
+/// they certify a public near-boundary event that is charged through the comb.
+/// The integer part K, Bernoulli-factory depth, and sampler comparison prefix
+/// are fixed public caps in the native sampler profile.
 pub(super) fn sample_f64_to_f32_clipped(
     mu: f64,
     scale: f64,
@@ -807,26 +1042,53 @@ pub(super) fn sample_f64_to_f32_clipped(
         return Ok(NativeF32Sample::Output(out));
     }
     let scale = snap_scale_up_to_f32(scale)?;
+    let Some(clip) = clip else {
+        return fallible!(
+            FailedFunction,
+            "fixed native sampler requires a finite clipping range"
+        );
+    };
+    if clip >= NATIVE_CLIP_SCALE_MAX_RATIO * f64::from(scale) {
+        return fallible!(
+            FailedFunction,
+            "fixed native sampler requires range < 7.5 * snapped scale"
+        );
+    }
 
     let mut entropy = NativeEntropy::new();
     loop {
-        let Some(k) = sample_k_with(&mut entropy)? else {
-            return Ok(NativeF32Sample::ResourceLimit);
+        let k = match sample_k_with(&mut entropy)? {
+            NativeSamplerOutcome::Value(k) => k,
+            NativeSamplerOutcome::Rejected => return Ok(NativeF32Sample::RejectedSampler),
         };
-        let mut x = NativeUniform01::new();
+        debug_assert!(k <= NATIVE_SAMPLER_K_MAX);
 
+        let mut x = NativeUniform01::new();
         match accept_fraction_native(&mut entropy, k, &mut x)? {
-            Some(true) => {}
-            Some(false) => continue,
-            None => return Ok(NativeF32Sample::ResourceLimit),
+            NativeSamplerOutcome::Value(true) => {}
+            NativeSamplerOutcome::Value(false) => continue,
+            NativeSamplerOutcome::Rejected => return Ok(NativeF32Sample::RejectedSampler),
         }
 
         let negative = entropy.coin()?;
 
         loop {
-            match certify_real_affine_rounds_to_f32(mu, scale, clip, negative, k, &x) {
+            let at_budget = x.bits >= NATIVE_UNIFORM_MAX_BITS;
+            match certify_real_affine_rounds_to_f32(
+                mu,
+                scale,
+                Some(clip),
+                negative,
+                k,
+                &x,
+                at_budget,
+            ) {
                 F32CellCertification::Output(out) => return Ok(NativeF32Sample::Output(out)),
-                F32CellCertification::Unknown => {}
+                F32CellCertification::Unresolved if at_budget => {
+                    return Ok(NativeF32Sample::RejectedComb);
+                }
+                F32CellCertification::Unresolved => {}
+                F32CellCertification::ResourceLimit => return Ok(NativeF32Sample::ResourceLimit),
             }
 
             if x.refine(&mut entropy)?.is_none() {

@@ -267,12 +267,61 @@ fn clip_interval(interval: (RBig, RBig), range: &RBig) -> (RBig, RBig) {
 
 type RoundingCell = (Option<RBig>, Option<RBig>);
 
-fn interval_inside_cell(interval: &(RBig, RBig), cell: &RoundingCell) -> bool {
-    let (x_lo, x_hi) = interval;
+#[derive(Clone, Copy)]
+enum Endpoint {
+    Lower,
+    Upper,
+}
+
+/// Exact affine endpoint for the current accepted normal trace prefix.
+///
+/// This mirrors the native cell-boundary certificate: the final proof step is
+/// a comparison of affine endpoints against rounding-cell boundaries, not
+/// rounded native interval arithmetic.
+fn normal_endpoint(z: &ExactStdNormal, mu: &RBig, scale: &RBig, endpoint: Endpoint) -> RBig {
+    let use_upper_fraction = matches!(
+        (z.negative, endpoint),
+        (false, Endpoint::Upper) | (true, Endpoint::Lower)
+    );
+    let x = if use_upper_fraction {
+        z.x.upper().expect("Uniform01 inverse CDF is identity")
+    } else {
+        z.x.lower().expect("Uniform01 inverse CDF is identity")
+    };
+
+    if z.negative {
+        mu - scale * (&z.k + x)
+    } else {
+        mu + scale * (&z.k + x)
+    }
+}
+
+fn clipped_normal_endpoint(
+    z: &ExactStdNormal,
+    mu: &RBig,
+    scale: &RBig,
+    range: Option<&RBig>,
+    endpoint: Endpoint,
+) -> RBig {
+    let endpoint = normal_endpoint(z, mu, scale, endpoint);
+    range
+        .map(|range| clip_value(endpoint.clone(), range))
+        .unwrap_or(endpoint)
+}
+
+fn affine_trace_inside_cell(
+    z: &ExactStdNormal,
+    mu: &RBig,
+    scale: &RBig,
+    range: Option<&RBig>,
+    cell: &RoundingCell,
+) -> bool {
+    let x_lo = clipped_normal_endpoint(z, mu, scale, range, Endpoint::Lower);
+    let x_hi = clipped_normal_endpoint(z, mu, scale, range, Endpoint::Upper);
     let (c_lo, c_hi) = cell;
 
-    let lower_in = c_lo.as_ref().is_none_or(|c_lo| x_lo >= c_lo);
-    let upper_in = c_hi.as_ref().is_none_or(|c_hi| x_hi <= c_hi);
+    let lower_in = c_lo.as_ref().is_none_or(|c_lo| &x_lo >= c_lo);
+    let upper_in = c_hi.as_ref().is_none_or(|c_hi| &x_hi <= c_hi);
     lower_in && upper_in
 }
 
@@ -323,7 +372,7 @@ pub fn sample_rounded_gaussian<T: Float>(mu: T, scale: T) -> Fallible<T> {
         let interval = normal_interval(&z, &mu, &scale);
         let (y, cell) = candidate_and_cell_from_interval::<T>(&interval)?;
 
-        if interval_inside_cell(&interval, &cell) {
+        if affine_trace_inside_cell(&z, &mu, &scale, None, &cell) {
             return Ok(y);
         }
 
@@ -369,7 +418,7 @@ pub fn sample_rounded_gaussian_clipped<T: Float>(mu: T, scale: T, range: T) -> F
         let interval = clip_interval(normal_interval(&z, &mu, &scale), &range);
         let (y, cell) = candidate_and_cell_from_interval::<T>(&interval)?;
 
-        if interval_inside_cell(&interval, &cell) {
+        if affine_trace_inside_cell(&z, &mu, &scale, Some(&range), &cell) {
             return Ok(y);
         }
 
@@ -381,18 +430,18 @@ pub fn sample_rounded_gaussian_clipped<T: Float>(mu: T, scale: T, range: T) -> F
 /// real affine value directly into the extended f32 output lattice.
 ///
 /// This path does not construct a native floating-point noise value and add it
-/// to `mu`; it certifies which finite f32 rounding cell contains the exact real
-/// value `mu +/- scale32 * (k + x)`, where `scale32` is the smallest finite
-/// positive f32 at least as large as `scale`.
+/// to `mu`; it certifies which extended f32 rounding cell contains the exact
+/// real value `mu +/- scale32 * (k + x)`, where `scale32` is the smallest
+/// finite positive f32 at least as large as `scale`.
 ///
-/// If the native prefix cannot certify one f32 cell, the accepted trace is
+/// If the native prefix cannot certify one extended f32 cell, the accepted trace is
 /// rejected as an unresolved rounding-boundary comb and the sampler restarts.
 /// This intentionally avoids exact rational finalization at the cost of the
 /// small conditioning term accounted for by the comb probability.
-/// Pre-accept native resource limits are treated as implementation failures,
-/// not as fresh-sample fallbacks. Infinite f32 cells are ordinary outputs for
-/// the unclipped path, or when a finite real clipping range still exceeds the
-/// f32 finite-output threshold.
+/// Pre-accept sampler caps in the native specialization are declared
+/// sampler-side resampling events. For positive scale, the fixed native sampler
+/// profile is proof-grade only for the clipped wrapper below; this unclipped
+/// convenience wrapper returns an error unless `scale == 0`.
 pub fn sample_rounded_gaussian_f64_to_f32_native(mu: f64, scale: f64) -> Fallible<f32> {
     sample_rounded_gaussian_f64_to_f32_native_clipped(mu, scale, None)
 }
@@ -401,15 +450,16 @@ pub fn sample_rounded_gaussian_f64_to_f32_native(mu: f64, scale: f64) -> Fallibl
 /// clipping the input location and noisy real value to `[-range, range]`
 /// before extended f32 rounding.
 ///
-/// When `range` is `None`, this is the unclipped extended rounded mechanism.
+/// When `range` is `None`, this path is available only for `scale == 0`.
 /// When `Some(R)`, this implements
 ///
 ///     round_ext_f32(clip_R(clip_R(mu) + scale32 * Z)).
 ///
 /// Here `scale32` is the upward-snapped f32 scale used by the native
-/// specialization. Privacy accounting for this path must use `scale32`. If
-/// `R` is at or below the f32 finite-output threshold, infinities are excluded
-/// from the support.
+/// specialization. Privacy accounting for this path must use `scale32`, and
+/// the fixed sampler profile requires `R < 7.5 * scale32`. If `R` is at or
+/// below the f32 finite-output threshold, infinities are excluded from the
+/// support.
 pub fn sample_rounded_gaussian_f64_to_f32_native_clipped(
     mu: f64,
     scale: f64,
@@ -432,15 +482,22 @@ pub fn sample_rounded_gaussian_f64_to_f32_native_clipped(
     if scale == 0.0 {
         return Ok(mu as f32);
     }
+    if range.is_none() {
+        return fallible!(
+            FailedFunction,
+            "positive-scale native f64-to-f32 sampler requires a finite clipping range"
+        );
+    }
 
     loop {
         match native::sample_f64_to_f32_clipped(mu, scale, range)? {
             native::NativeF32Sample::Output(out) => return Ok(out),
+            native::NativeF32Sample::RejectedSampler => continue,
             native::NativeF32Sample::RejectedComb => continue,
             native::NativeF32Sample::ResourceLimit => {
                 return fallible!(
                     FailedFunction,
-                    "native resource limit before an accepted continuation"
+                    "native arithmetic resource limit outside declared resampling events"
                 );
             }
         }
