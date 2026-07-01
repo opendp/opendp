@@ -9,7 +9,7 @@ use crate::{
 
 use num::Zero;
 use polars::lazy::dsl::Expr;
-use polars::prelude::{DataType, cast, len};
+use polars::prelude::{DataType, len};
 use polars_plan::plans::typed_lit;
 
 #[cfg(test)]
@@ -41,8 +41,8 @@ pub fn make_expr_private_len<MI: 'static + UnboundedMetric, MO: 'static + Measur
 where
     MO::Distance: Zero,
 {
-    let mut len_expr = len();
-    let mut output_type = 0u32;
+    let len_expr = len();
+    let output_type = 0u32;
     println!("Expr: {}", expr);
     match expr {
         Expr::Len => {

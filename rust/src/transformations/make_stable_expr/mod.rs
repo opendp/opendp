@@ -260,7 +260,7 @@ where
             Len => expr_len::make_expr_len(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
-            ref Cast => expr_len::make_expr_len(input_domain, input_metric, self),
+            Cast { .. } => expr_len::make_expr_len(input_domain, input_metric, self),
 
             expr => {
                 fallible!(

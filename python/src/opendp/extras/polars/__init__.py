@@ -138,7 +138,7 @@ class DPExpr(object):
         """
         return self.noise(scale=scale)
 
-    def len(self, scale: float | None = None):
+    def len(self, scale: float | None = None, signed: bool = False):
         """Compute a differentially private estimate of the number of elements in `self`, including null values.
 
         If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
@@ -177,7 +177,7 @@ class DPExpr(object):
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
             function_name="dp_len",
-            args=(self.expr, scale),
+            args=(self.expr, scale, signed), # signed
             returns_scalar=True,
         )
 

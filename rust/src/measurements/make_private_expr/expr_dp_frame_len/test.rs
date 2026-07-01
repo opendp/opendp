@@ -12,7 +12,7 @@ use crate::{
 #[test]
 fn test_dp_frame_len_types() -> Fallible<()> {
     _test_dp_frame_len_default_dtype(true, DataType::Int64)?;
-    _test_dp_frame_len_default_dtype(true, DataType::UInt32)?;
+    _test_dp_frame_len_default_dtype(false, DataType::UInt32)?;
     Ok(())
 }
 fn _test_dp_frame_len_default_dtype(signed: bool, output_type: DataType) -> Fallible<()> {
@@ -28,6 +28,7 @@ fn _test_dp_frame_len_default_dtype(signed: bool, output_type: DataType) -> Fall
     let dp_expr = measurement.invoke(&lf.logical_plan)?.expr;
     let df = lf.select([dp_expr]).collect()?;
 
-    assert_eq!(df.column("len")?.dtype(), &DataType::UInt32);
+    println!("df: {}", df);
+    assert_eq!(df.column("len")?.dtype(), &output_type);
     Ok(())
 }

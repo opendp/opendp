@@ -4,13 +4,13 @@ use std::sync::Arc;
 use polars::series::Series;
 use polars::{
     error::{PolarsResult, polars_bail},
-    prelude::{AnonymousColumnsUdf, Column, ColumnsUdf, DataType, Expr, Field, cast, len},
+    prelude::{AnonymousColumnsUdf, Column, ColumnsUdf, DataType, Expr, Field, len},
 };
 use polars_plan::prelude::FunctionOptions;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    core::{Function, Measurement, MetricSpace},
+    core::{Measurement, MetricSpace},
     domains::{ExprDomain, ExprPlan, WildExprDomain},
     error::Fallible,
     measurements::{
@@ -19,7 +19,7 @@ use crate::{
     },
     metrics::L01InfDistance,
     polars::{OpenDPPlugin, apply_plugin, match_shim},
-    transformations::{StableExpr, make_cast, traits::UnboundedMetric},
+    transformations::{StableExpr, traits::UnboundedMetric},
 };
 
 #[cfg(test)]
@@ -89,6 +89,7 @@ where
         _ => todo!(),
     };
 
+    println!("signed: {}", signed);
     let len_expr = if signed {
         len().cast(DataType::Int64)
     } else {
