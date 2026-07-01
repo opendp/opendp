@@ -13,3 +13,4 @@ import src.samplers.uniform.pmf
 import src.samplers.bernoulli.rational
 import src.samplers.bernoulli.pmf
 import src.samplers.bernoulli.exp1
+import src.samplers.bernoulli.exp
