@@ -1,5 +1,31 @@
 # Handoff — `sample_bernoulli_exp1` final theorem (roadmap stage 4)
 
+## ✅ DONE (2026-07-01) — stage 4 is fully proved
+
+The final end-to-end theorem **`sample_bernoulli_exp1_spec`** (`= BernoulliExpNegSampleUnit`)
+is proved and the project builds GREEN. The plan below was executed as Increment 4 in
+`repro/src/samplers/bernoulli/exp1.lean`:
+- `exp1_loop_probWhile` — lift `exp1_loop_cut_step` to the full `probWhile` (via
+  `simp only [probWhile]` + `simp_rw [ENNReal.iSup_mul]` + `tsum_iSup_commute` + `iSup_congr`;
+  NOTE: `conv … ext` cannot descend into `⨆`/`∑'` on this Mathlib — use `iSup_congr` / `simp_rw`).
+- `probWhile_besl_eq_aux` — per-counter mass = `BernoulliExpNegSampleUnitAux` via SampCert's
+  `..._sup` + `..._apply`.
+- `sample_bernoulli_exp1_loop_spec` — reindex `∑' : ℕ+` → `∑' : ℕ` with
+  `Function.Injective.tsum_eq PNat.coe_injective` (needs a `Function.support f ⊆ Set.range PNat.val`
+  arg, and `f` pinned via a typed `have` or instance search gets stuck on `TopologicalSpace ?`) +
+  parity split of `BernoulliExpNegSampleUnit` + `BernoulliExpNegSampleUnitAux_at_zero`.
+- `sample_bernoulli_exp1_eq_of_setup` / `sample_bernoulli_exp1_spec` — outer `x`-destructuring,
+  reusing `RationalSetup` + `dashu.one_exists_spec`.
+
+Axiom footprint of the final theorem: the expected boundary (`openssl.rand.rand_bytes`,
+`samplerDistGen_exists`, dashu specs, `div_rbig_by_ubig_exact_bernoulli_setup`) plus `sorryAx`,
+which is **pre-existing Aeneas `Std` infrastructure** (the accepted uniform theorem carries it too),
+not from this proof. Next up: roadmap stage 5 (`sample_bernoulli_exp`).
+
+---
+
+_Original handoff (pre-session) below, for reference:_
+
 **Status as of end of 2026-06-30 session:** `repro/` builds **GREEN** (exit 0, 2866/2866
 jobs, no `sorry` in `exp1.lean`). Increment 3 of
 `repro/src/samplers/bernoulli/exp1.lean` is fully proved. The **final end-to-end

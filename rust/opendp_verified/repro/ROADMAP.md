@@ -53,15 +53,15 @@ Rejection sampling to get an exact uniform on `[0, upper)` (draw enough bytes, r
 Draw `k` uniform on `[0, denom)`; return `⊤` iff `k < numer` → `Bernoulli(numer/denom)`.
 - **Rust:** `samplers.bernoulli.sample_bernoulli_rational` · **repro:** `sample_bernoulli_rational_pmf`; `bernoulliPMF = SLang.BernoulliSamplePMF` grounds it against the trusted reference.
 
-### 4. `sample_bernoulli_fraction` → `sample_bernoulli_exp1` 🟡  ← **next step to port**
+### 4. `sample_bernoulli_fraction` → `sample_bernoulli_exp1` ✅
 `Bernoulli(e^{-x})` for `x ∈ [0,1]`. CKS unit construction: repeatedly draw
 `Bernoulli(x/k)` for `k = 1,2,…` until one fails; return the parity of `k`.
 `Pr[⊤] = e^{-x}`.
 - **Rust:** `samplers.bernoulli.sample_bernoulli_exp1` (+ `_loop`, `_loop.body`) — a `probWhile` loop.
 - **SampCert target:** `SLang.BernoulliExpNegSampleUnit`.
-- **Status:** extracted; **not ported**. Partial reference in `proofs_legacy/samplers/bernoulli/`. This is the natural next proof: it reuses stage 3 per loop iteration + the shared `samplerDistGen_loop`.
+- **repro:** `sample_bernoulli_exp1_spec` = `BernoulliExpNegSampleUnit` (`src/samplers/bernoulli/exp1.lean`), via `exp1_loop_cut_step` (cut-depth ↔ SampCert `BESL` loop), `exp1_loop_probWhile` (`⨆`/`tsum_iSup_commute` lift), and `probWhile_besl_eq_aux` (SampCert `..._sup`/`..._apply`) + `ℕ+`→`ℕ` reindex. One temporary axiom `div_rbig_by_ubig_exact_bernoulli_setup` (Dashu exact-division boundary).
 
-### 5. `sample_bernoulli_exp1` → `sample_bernoulli_exp` 🟡
+### 5. `sample_bernoulli_exp1` → `sample_bernoulli_exp` 🟡  ← **next step to port**
 `Bernoulli(e^{-x})` for arbitrary `x ≥ 0`: `⌊x⌋` independent `Bernoulli(e^{-1})` all true, then `Bernoulli(e^{-frac(x)})` via stage 4.
 - **Rust:** `samplers.bernoulli.sample_bernoulli_exp` (+ `_loop`). **SampCert target:** `SLang.BernoulliExpNegSample`. **Status:** extracted; not ported.
 
@@ -85,8 +85,8 @@ Optimized geometric that avoids the linear loop (inversion + a residual Bernoull
 
 ## Where the frontier is today
 
-- **Proved end-to-end (✅):** bit flips → `fill_bytes` → uniform → bernoulli-fraction.
-- **Extracted but unported (🟡):** bernoulli-exp1, bernoulli-exp, geometric-slow, geometric-fast. These are pure porting work on the pinned a14083a6 stack — no new extraction needed. Recommended order: exp1 → exp → geometric-slow → geometric-fast (each depends on the previous).
+- **Proved end-to-end (✅):** bit flips → `fill_bytes` → uniform → bernoulli-fraction → bernoulli-exp1.
+- **Extracted but unported (🟡):** bernoulli-exp, geometric-slow, geometric-fast. These are pure porting work on the pinned a14083a6 stack — no new extraction needed. Recommended order: exp → geometric-slow → geometric-fast (each depends on the previous).
 - **Not extracted yet (⚪):** discrete Laplace, discrete Gaussian. These need the Rust samplers run through Charon/Aeneas into `Generated/` first; only then can they be verified against `DiscreteLaplaceSample` / `DiscreteGaussianSample`.
 
 ## Notes

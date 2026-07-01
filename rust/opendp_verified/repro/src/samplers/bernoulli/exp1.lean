@@ -385,4 +385,117 @@ private lemma exp1_loop_cut_step
     -- double coercion `↑↑⟨k1,hk1⟩` (defeq to `↑k1`), so `rfl` discharges the whole equation.
     rfl
 
+/-! ### Increment 4 — full `probWhile` lift and the SampCert equality
+
+The cut-depth correspondence (`exp1_loop_cut_step`) is lifted to the whole `probWhile` (via the
+`⨆`/`tsum_iSup_commute` skeleton of `samplers/uniform/pmf.lean`), then bridged to SampCert's
+`BernoulliExpNegSampleUnit`: SampCert's `..._sup`/`..._apply` identify the per-counter `probWhile`
+mass with `BernoulliExpNegSampleUnitAux`, and `..._at_zero` lets the extracted `∑' : ℕ+` be reindexed
+against SampCert's `∑' : ℕ`. -/
+
+/-- Lift the cut-depth correspondence to the full `probWhile`: the extracted exp1 loop, started at
+counter `kOne` (= 1), outputs `Ok b` with exactly the mass SampCert's `BESL` loop assigns to
+terminating at some counter `m` with parity `b`. -/
+lemma exp1_loop_probWhile (numer denom kOne : dashu_int.ubig.UBig)
+    (hdenom : 0 < dashu.ubigToNat denom) (hfrac : dashu.ubigToNat numer ≤ dashu.ubigToNat denom)
+    (hkOne : dashu.ubigToNat kOne = 1) (b : Bool) :
+    samplerDist (samplers.bernoulli.sample_bernoulli_exp1_loop kOne denom numer kOne) b =
+    ∑' m : ℕ+, probWhile (fun s : Bool × ℕ+ => s.1) (BESL numer denom hdenom hfrac)
+        (true, (1 : ℕ+)) (false, m) * (if decide ((m : ℕ) % 2 = 0) = b then 1 else 0) := by
+  have hk1 : 0 < dashu.ubigToNat kOne := by rw [hkOne]; exact Nat.one_pos
+  have hstate : (⟨dashu.ubigToNat kOne, hk1⟩ : ℕ+) = (1 : ℕ+) := Subtype.ext hkOne
+  let cond : ControlFlow dashu_int.ubig.UBig (core.result.Result Bool error.Error) → Bool :=
+    fun cf => match cf with | cont _ => true | done _ => false
+  let bd : ControlFlow dashu_int.ubig.UBig (core.result.Result Bool error.Error) →
+      SLang (ControlFlow dashu_int.ubig.UBig (core.result.Result Bool error.Error)) :=
+    fun cf => match cf with
+      | cont a => samplerDistGen (samplers.bernoulli.sample_bernoulli_exp1_loop.body kOne denom numer a)
+      | done _ => PMF.pure cf
+  have hcc : ∀ a, cond (cont a) = true := fun _ => rfl
+  have hcd : ∀ w, cond (done w) = false := fun _ => rfl
+  have hbc : ∀ a, bd (cont a) =
+      samplerDistGen (samplers.bernoulli.sample_bernoulli_exp1_loop.body kOne denom numer a) := fun _ => rfl
+  -- Step 1: `samplerDist` of the extracted loop is `probWhile` of the body distribution.
+  have hstep1 : samplerDist (samplers.bernoulli.sample_bernoulli_exp1_loop kOne denom numer kOne) b
+      = probWhile cond bd (cont kOne) (done (core.result.Result.Ok b)) := by
+    simp only [samplerDist, samplers.bernoulli.sample_bernoulli_exp1_loop, samplerDistGen_loop]
+    congr 1 <;> (funext cf; cases cf <;> rfl)
+  rw [hstep1]
+  -- Step 2: unfold every `probWhile` to `⨆ probWhileCut`, pull the parity out of each sup, then
+  -- commute `∑' m` past the `⨆ n` on the RHS.
+  simp only [probWhile]
+  simp_rw [ENNReal.iSup_mul]
+  rw [tsum_iSup_commute _ (fun m => (probWhileCut_monotonic (fun s : Bool × ℕ+ => s.1)
+      (BESL numer denom hdenom hfrac) (true, (1 : ℕ+)) (false, m)).mul_const (zero_le _))]
+  -- Step 3: match each cut on the LHS via `exp1_loop_cut_step`.
+  refine iSup_congr (fun n => ?_)
+  rw [exp1_loop_cut_step numer denom kOne hdenom hfrac hkOne cond bd hcc hcd hbc n kOne hk1 b, hstate]
+
+/-- The per-counter `probWhile` mass of the `BESL` loop is SampCert's `BernoulliExpNegSampleUnitAux`
+at that counter (`..._sup` computes the `⨆ probWhileCut`, `..._apply` the closed form; they agree). -/
+lemma probWhile_besl_eq_aux (numer denom : dashu_int.ubig.UBig)
+    (hdenom : 0 < dashu.ubigToNat denom) (hfrac : dashu.ubigToNat numer ≤ dashu.ubigToNat denom)
+    (n : ℕ+) :
+    probWhile (fun s : Bool × ℕ+ => s.1) (BESL numer denom hdenom hfrac) (true, 1) (false, n) =
+    BernoulliExpNegSampleUnitAux (dashu.ubigToNat numer) ⟨dashu.ubigToNat denom, hdenom⟩ hfrac ↑n := by
+  rw [BernoulliExpNegSampleUnitAux_apply]
+  simp only [BESL, probWhile]
+  rw [BernoulliExpNegSampleUnitAux_sup]
+
+/-- **The exp1 loop realises SampCert's unit negative-exponential sampler.** Combining the
+`probWhile` lift, the per-counter `Aux` identification, and the `ℕ+`→`ℕ` reindex (valid since
+`Aux 0 = 0`) with the parity split of `BernoulliExpNegSampleUnit`. -/
+lemma sample_bernoulli_exp1_loop_spec (numer denom kOne : dashu_int.ubig.UBig)
+    (hdenom : 0 < dashu.ubigToNat denom) (hfrac : dashu.ubigToNat numer ≤ dashu.ubigToNat denom)
+    (hkOne : dashu.ubigToNat kOne = 1) :
+    samplerDist (samplers.bernoulli.sample_bernoulli_exp1_loop kOne denom numer kOne) =
+    BernoulliExpNegSampleUnit (dashu.ubigToNat numer) ⟨dashu.ubigToNat denom, hdenom⟩ hfrac := by
+  funext b
+  rw [exp1_loop_probWhile numer denom kOne hdenom hfrac hkOne b]
+  simp_rw [probWhile_besl_eq_aux numer denom hdenom hfrac]
+  -- RHS: unfold `BernoulliExpNegSampleUnit` into `∑' K:ℕ, Aux K * parity`.
+  have hRHS : BernoulliExpNegSampleUnit (dashu.ubigToNat numer) ⟨dashu.ubigToNat denom, hdenom⟩ hfrac b =
+      ∑' K : ℕ, BernoulliExpNegSampleUnitAux (dashu.ubigToNat numer) ⟨dashu.ubigToNat denom, hdenom⟩ hfrac K *
+        (if decide (K % 2 = 0) = b then 1 else 0) := by
+    simp only [BernoulliExpNegSampleUnit, Bind.bind, SLang.bind_apply]
+    refine tsum_congr (fun K => ?_)
+    congr 1
+    by_cases hK : K % 2 = 0 <;> cases b <;> simp [hK, SLang.pure_apply]
+  rw [hRHS]
+  -- Reindex `∑' K:ℕ` to `∑' m:ℕ+` (the `K = 0` term vanishes since `Aux 0 = 0`). The vanishing
+  -- proof is hoisted into a typed `have` so the summand function (hence `ENNReal`) is pinned before
+  -- `Function.Injective.tsum_eq` needs the topology instance.
+  have hbij : Function.support
+        (fun K : ℕ => BernoulliExpNegSampleUnitAux (dashu.ubigToNat numer) ⟨dashu.ubigToNat denom, hdenom⟩ hfrac K *
+          (if decide (K % 2 = 0) = b then 1 else 0)) ⊆ Set.range PNat.val := by
+    intro K hK
+    rcases Nat.eq_zero_or_pos K with h0 | hpos
+    · exact absurd (by subst h0; simp [BernoulliExpNegSampleUnitAux_at_zero]) hK
+    · exact ⟨⟨K, hpos⟩, rfl⟩
+  exact Function.Injective.tsum_eq PNat.coe_injective hbij
+
+/-- On the valid-input branch (captured by `RationalSetup`, reused from `rational.lean`), the
+deterministic destructuring of `x` — `into_parts`, the positive-sign match, and `UBig.ONE` — reduces
+`sample_bernoulli_exp1 x` to its loop started at counter `1`. -/
+theorem sample_bernoulli_exp1_eq_of_setup (x : dashu_ratio.rbig.RBig) (setup : RationalSetup x) :
+    ∃ kOne, dashu.ubigToNat kOne = 1 ∧
+      samplers.bernoulli.sample_bernoulli_exp1 x =
+        samplers.bernoulli.sample_bernoulli_exp1_loop kOne setup.denom setup.numer kOne := by
+  obtain ⟨one, hone, honeval⟩ := dashu.one_exists_spec
+  refine ⟨one, honeval, ?_⟩
+  unfold samplers.bernoulli.sample_bernoulli_exp1
+  simp [setup.hparts, setup.hsign, hone]
+
+/-- **Distributional correctness (roadmap stage 4).** On the valid-input branch, the extracted
+`sample_bernoulli_exp1` realises SampCert's `BernoulliExpNegSampleUnit` — i.e. `Bernoulli(e^{-x})`
+for `x = numer/denom ∈ [0,1]`. -/
+theorem sample_bernoulli_exp1_spec (x : dashu_ratio.rbig.RBig) (setup : RationalSetup x)
+    (hdenom : 0 < dashu.ubigToNat setup.denom)
+    (hfrac : dashu.ubigToNat setup.numer ≤ dashu.ubigToNat setup.denom) :
+    samplerDist (samplers.bernoulli.sample_bernoulli_exp1 x) =
+      BernoulliExpNegSampleUnit (dashu.ubigToNat setup.numer) ⟨dashu.ubigToNat setup.denom, hdenom⟩ hfrac := by
+  obtain ⟨kOne, hkOne, heq⟩ := sample_bernoulli_exp1_eq_of_setup x setup
+  rw [heq]
+  exact sample_bernoulli_exp1_loop_spec setup.numer setup.denom kOne hdenom hfrac hkOne
+
 end OpenDP.samplers.bernoulli
