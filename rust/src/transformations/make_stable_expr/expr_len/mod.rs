@@ -3,7 +3,7 @@ use crate::domains::{AtomDomain, Context, ExprDomain, Margin, SeriesDomain, Wild
 use crate::error::*;
 use crate::metrics::{L01InfDistance, LpDistance};
 use crate::transformations::traits::UnboundedMetric;
-use polars::prelude::len;
+use polars::prelude::{DataType, len};
 use polars_plan::dsl::Expr;
 use polars_plan::plans::typed_lit;
 
@@ -33,9 +33,22 @@ where
     (WildExprDomain, L01InfDistance<MI>): MetricSpace,
     (ExprDomain, LpDistance<P, f64>): MetricSpace,
 {
-    let Expr::Len = expr else {
-        return fallible!(MakeTransformation, "expected len expression");
-    };
+    let default_zero = 0u32;
+    let domain_type = AtomDomain::<u32>::default();
+    let mut pl_expr = len();
+    match expr {
+        Expr::Len => {
+            let default_zero = 0u32;
+        }
+        Expr::Cast { .. } => {
+            let default_zero = 0i64;
+            let domain_type = AtomDomain::<f64>::default();
+            pl_expr = len().cast(DataType::Int64);
+        }
+        _ => {
+            return fallible!(MakeTransformation, "expected len or cast expression");
+        }
+    }
 
     let old_margin = input_domain.context.aggregation("len")?;
     let margin = Margin {
@@ -47,7 +60,7 @@ where
 
     // build output domain
     let output_domain = ExprDomain {
-        column: SeriesDomain::new("len", AtomDomain::<u32>::default()),
+        column: SeriesDomain::new("len", domain_type),
         context: Context::Aggregation {
             margin: margin.clone(),
         },
@@ -58,7 +71,7 @@ where
         input_metric,
         output_domain,
         LpDistance::default(),
-        Function::from_expr(len()).fill_with(typed_lit(0u32)),
+        Function::from_expr(pl_expr).fill_with(typed_lit(default_zero)),
         counting_query_stability_map(margin.invariant),
     )
 }

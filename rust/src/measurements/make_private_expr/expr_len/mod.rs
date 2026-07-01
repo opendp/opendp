@@ -9,7 +9,7 @@ use crate::{
 
 use num::Zero;
 use polars::lazy::dsl::Expr;
-use polars::prelude::len;
+use polars::prelude::{DataType, len};
 use polars_plan::plans::typed_lit;
 
 #[cfg(test)]
@@ -41,9 +41,31 @@ pub fn make_expr_private_len<MI: 'static + UnboundedMetric, MO: 'static + Measur
 where
     MO::Distance: Zero,
 {
-    let Expr::Len = expr else {
-        return fallible!(MakeMeasurement, "Expected len() expression");
-    };
+    let len_expr = len();
+    let output_type = 0u32;
+    println!("Expr: {}", expr);
+    match expr {
+        Expr::Len => {
+            let output_type = 0u32;
+            let len_expr = len();
+        }
+
+        Expr::Cast { expr, .. } => {
+            if matches!(expr.as_ref(), Expr::Len) {
+                let len_expr = len().cast(DataType::Int64);
+                let output_type = 0i64;
+            } else {
+                return fallible!(
+                    MakeMeasurement,
+                    "Expected len().cast() and got an unsupported expression"
+                );
+            }
+        }
+
+        _ => {
+            return fallible!(MakeMeasurement, "Expected len() or len().cast() expression");
+        }
+    }
 
     let margin = input_domain.context.aggregation("len")?;
 
@@ -59,7 +81,7 @@ where
         input_domain,
         input_metric,
         output_measure,
-        Function::from_expr(len()).fill_with(typed_lit(0u32)),
+        Function::from_expr(len_expr).fill_with(typed_lit(output_type)),
         PrivacyMap::new(move |_| MO::Distance::zero()),
     )
 }

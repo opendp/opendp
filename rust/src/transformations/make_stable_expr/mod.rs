@@ -259,12 +259,17 @@ where
             #[cfg(feature = "contrib")]
             Len => expr_len::make_expr_len(input_domain, input_metric, self),
 
-            expr => fallible!(
-                MakeTransformation,
-                "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
-                expr,
-                get_disabled_features_message()
-            ),
+            #[cfg(feature = "contrib")]
+            Cast { .. } => expr_len::make_expr_len(input_domain, input_metric, self),
+
+            expr => {
+                fallible!(
+                    MakeTransformation,
+                    "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
+                    expr,
+                    get_disabled_features_message()
+                )
+            }
         }
     }
 }
@@ -293,12 +298,14 @@ where
             );
         }
         match self {
-            expr => fallible!(
-                MakeTransformation,
-                "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
-                expr,
-                get_disabled_features_message()
-            ),
+            expr => {
+                fallible!(
+                    MakeTransformation,
+                    "Expr is not recognized at this time: {:?}. {}If you would like to see this supported, please file an issue.",
+                    expr,
+                    get_disabled_features_message()
+                )
+            }
         }
     }
 }
