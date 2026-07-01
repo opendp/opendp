@@ -245,6 +245,7 @@ R/opendp-docs
 *.llbc
 rust/aeneas-out/
 rust/opendp_verified/Generated/
+rust/opendp_verified/repro/Generated/
 SampCert/
 aeneas/
 

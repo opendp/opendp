@@ -1,0 +1,27 @@
+\documentclass[a4paper]{report}
+
+\usepackage{amssymb,amsthm,amsmath}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+% The blueprint package supplies \lean, \leanok, \uses, \notready, \proves and
+% augments the theorem environments with dependency-graph metadata.
+% `showmore` prints the Lean decl names; `dep_graph` emits the dependency graph.
+\usepackage[showmore, dep_graph]{blueprint}
+
+\input{macros/common}
+\input{macros/print}
+
+\title{OpenDP Verified --- Blueprint\\\large Aeneas-extracted Rust samplers, verified against SampCert}
+\author{OpenDP contributors}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+\input{content}
+
+\end{document}

@@ -1,0 +1,25 @@
+\documentclass{report}
+
+\usepackage{amssymb,amsthm,amsmath}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+% On the web build these are provided by the plasTeX blueprint plugin;
+% the `dep_graph` option emits the colour-coded dependency graph.
+\usepackage[dep_graph]{blueprint}
+
+\input{macros/common}
+\input{macros/web}
+
+\title{OpenDP Verified --- Blueprint}
+\author{OpenDP contributors}
+\home{https://github.com/opendp/opendp}
+\github{https://github.com/opendp/opendp/tree/main/rust/opendp_verified}
+\dochome{https://docs.opendp.org}
+
+\begin{document}
+\maketitle
+\input{content}
+
+\end{document}

@@ -1,0 +1,45 @@
+% Shared math macros for both the web and print builds of the
+% opendp_verified blueprint. Keep this file free of any environment
+% definitions that differ between plasTeX (web) and LaTeX (print);
+% those live in macros/web.tex and macros/print.tex respectively.
+
+% --- Probabilistic-semantics vocabulary -------------------------------------
+\newcommand{\Result}{\mathsf{Result}}                 % Aeneas deterministic monad
+\newcommand{\SLang}{\mathsf{SLang}}                    % SampCert sub-probability monad
+\newcommand{\PMF}{\mathsf{PMF}}
+\newcommand{\ok}{\mathsf{ok}}
+\newcommand{\fail}{\mathsf{fail}}
+\newcommand{\Ok}{\mathsf{Ok}}
+\newcommand{\Err}{\mathsf{Err}}
+\newcommand{\done}{\mathsf{done}}                      % ControlFlow.done (loop exit)
+\newcommand{\cont}{\mathsf{cont}}                      % ControlFlow.cont (loop continue)
+\newcommand{\fillbytes}{\texttt{fill\_bytes}}
+\newcommand{\probWhile}{\mathrm{probWhile}}
+\newcommand{\probUntil}{\mathrm{probUntil}}
+\newcommand{\probGeometric}{\mathrm{probGeometric}}
+\newcommand{\ONE}{\mathsf{ONE}}
+\newcommand{\sdg}{\mathrm{samplerDistGen}}             % full Result A -> SLang A functor
+\newcommand{\sd}{\mathrm{samplerDist}}                 % Ok-projection (success distribution)
+
+% --- Distributions ----------------------------------------------------------
+\newcommand{\Unif}[1]{\mathrm{Uniform}[0, #1)}
+\newcommand{\Bern}[1]{\mathrm{Bernoulli}(#1)}
+\newcommand{\Geom}[1]{\mathrm{Geometric}(#1)}
+\DeclareMathOperator{\numer}{numer}
+\DeclareMathOperator{\denom}{denom}
+
+% --- Status tags shown inline in node text ----------------------------------
+% These are plain-text badges so they render identically on web and in print,
+% independently of the green/blue/grey colouring the dependency graph derives
+% from \leanok. They make the *kind* of node explicit when reading the prose.
+\newcommand{\statusDone}{\textbf{[proved in Lean]}}
+\newcommand{\statusGap}{\textbf{[GAP: statement only]}}
+\newcommand{\statusAxiom}{\textbf{[axiom / trust boundary]}}
+\newcommand{\statusStub}{\textbf{[stub: not yet stated]}}
+
+% --- Theorem environments ---------------------------------------------------
+% Declared here (shared web+print) so the plasTeX blueprint dependency-graph
+% plugin, which hooks \newtheorem, registers each as a graph node.
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{definition}[theorem]{Definition}

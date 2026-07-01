@@ -1,0 +1,12 @@
+# leanblueprint build outputs
+web/
+print/
+*.aux
+*.log
+*.out
+*.toc
+*.fdb_latexmk
+*.fls
+*.bbl
+*.blg
+*.pdf
