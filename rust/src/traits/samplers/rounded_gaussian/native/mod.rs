@@ -8,21 +8,24 @@ mod test;
 
 const NATIVE_UNIFORM_REFINE_BITS: u32 = 4;
 
-// Fixed native sampler profile for the proof-oriented GPU path.
+// Default hybrid native sampler profile for the proof-oriented GPU path.
 //
-// K is capped at 14, each Bernoulli factory is capped at 26 rounds, and scalar
-// partial-uniform comparisons use the 96-bit native prefix budget. The sampler
-// caps are declared resampling events accounted by the native proof. The same
-// 96-bit prefix budget is also used for finalization, where unresolved traces
-// are accounted by the public rounding-boundary comb.
+// K is capped at 2^20 - 1, each Bernoulli factory is capped at 40 rounds, and
+// scalar partial-uniform comparisons use a 128-bit native prefix budget. The K
+// cap is a declared structural tail, Bernoulli-factory depth is charged to an
+// approximate-DP failure budget, and finite sampler comparisons are accounted by
+// the native proof. Finalization still uses a 96-bit prefix budget, where
+// unresolved traces are accounted by the public rounding-boundary comb.
 //
-// With a snapped f32 scale, m_sigma has at most 24 bits. At b = 96 the upper
-// endpoint can use q = n + 1 = 2^96, so m_sigma * q needs at most 121 bits and
-// still fits in u128. Larger prefixes would need a wider product type.
-const NATIVE_UNIFORM_MAX_BITS: u32 = 96;
-const NATIVE_SAMPLER_K_MAX: u64 = 14;
-const NATIVE_BERNOULLI_MAX_DEPTH: u32 = 26;
-const NATIVE_CLIP_SCALE_MAX_RATIO: f64 = 7.5;
+// With a snapped f32 scale, m_sigma has at most 24 bits. At the finalization
+// cap b = 96, the upper endpoint can use q = n + 1 = 2^96, so m_sigma * q needs
+// at most 121 bits and still fits in u128. Sampler-side PSRN comparisons may
+// refine to 128 bits, but finalization certifies with a coarsened 96-bit prefix.
+const NATIVE_SAMPLER_UNIFORM_MAX_BITS: u32 = 128;
+const NATIVE_FINALIZATION_UNIFORM_MAX_BITS: u32 = 96;
+const NATIVE_SAMPLER_K_MAX: u64 = (1 << 20) - 1;
+const NATIVE_BERNOULLI_MAX_DEPTH: u32 = 40;
+const NATIVE_CLIP_SCALE_MAX_RATIO: f64 = ((NATIVE_SAMPLER_K_MAX + 1) / 2) as f64;
 
 pub(super) enum NativeF32Sample {
     Output(f32),
@@ -98,10 +101,19 @@ impl NativeUniform01 {
 
     #[inline]
     fn refine(&mut self, entropy: &mut NativeEntropy) -> Fallible<Option<()>> {
+        self.refine_with_cap(entropy, NATIVE_SAMPLER_UNIFORM_MAX_BITS)
+    }
+
+    #[inline]
+    fn refine_with_cap(
+        &mut self,
+        entropy: &mut NativeEntropy,
+        max_bits: u32,
+    ) -> Fallible<Option<()>> {
         let Some(bits) = self.bits.checked_add(NATIVE_UNIFORM_REFINE_BITS) else {
             return Ok(None);
         };
-        if bits > NATIVE_UNIFORM_MAX_BITS {
+        if bits > max_bits {
             return Ok(None);
         }
 
@@ -109,6 +121,17 @@ impl NativeUniform01 {
         self.prefix = (self.prefix << NATIVE_UNIFORM_REFINE_BITS) | random;
         self.bits = bits;
         Ok(Some(()))
+    }
+
+    #[inline]
+    fn coarsen_to(&self, max_bits: u32) -> Self {
+        if self.bits <= max_bits {
+            return *self;
+        }
+        Self {
+            prefix: self.prefix >> (self.bits - max_bits),
+            bits: max_bits,
+        }
     }
 
     #[inline]
@@ -132,15 +155,28 @@ impl NativeUniform01 {
         let self_shift = bits - self.bits;
         let other_shift = bits - other.bits;
 
-        let self_lo = self.prefix << self_shift;
-        let self_hi = (self.prefix + 1) << self_shift;
-        let other_lo = other.prefix << other_shift;
-        let other_hi = (other.prefix + 1) << other_shift;
-
-        if self_lo >= other_hi {
+        if cmp_shifted_prefix(
+            self.prefix,
+            false,
+            self_shift,
+            other.prefix,
+            true,
+            other_shift,
+        )?
+        .is_ge()
+        {
             return Some(true);
         }
-        if self_hi <= other_lo {
+        if cmp_shifted_prefix(
+            self.prefix,
+            true,
+            self_shift,
+            other.prefix,
+            false,
+            other_shift,
+        )?
+        .is_le()
+        {
             return Some(false);
         }
         None
@@ -327,24 +363,74 @@ fn shifted_bit_len(value: u128, shift: u32) -> u32 {
 }
 
 #[inline]
-fn cmp_shifted_u128(lhs: u128, lhs_shift: u32, rhs: u128, rhs_shift: u32) -> std::cmp::Ordering {
-    if shifted_bit_len(lhs, lhs_shift).max(shifted_bit_len(rhs, rhs_shift)) <= u128::BITS {
-        return (lhs << lhs_shift).cmp(&(rhs << rhs_shift));
+fn shifted_prefix_words(prefix: u128, add_one: bool, shift: u32) -> Option<[u64; 5]> {
+    let mut out = [0u64; 5];
+
+    if add_one && prefix == u128::MAX {
+        let bit = u128::BITS.checked_add(shift)?;
+        let word = (bit / u64::BITS) as usize;
+        let offset = bit % u64::BITS;
+        *out.get_mut(word)? = 1u64 << offset;
+        return Some(out);
     }
 
-    let lhs = shifted_u128_words(lhs, lhs_shift).expect("comparison exceeds fixed scratch");
-    let rhs = shifted_u128_words(rhs, rhs_shift).expect("comparison exceeds fixed scratch");
+    let value = if add_one {
+        prefix.checked_add(1)?
+    } else {
+        prefix
+    };
+    if value == 0 {
+        return Some(out);
+    }
 
-    lhs.into_iter().rev().cmp(rhs.into_iter().rev())
+    let word_shift = (shift / u64::BITS) as usize;
+    let bit_shift = shift % u64::BITS;
+    let src = [value as u64, (value >> u64::BITS) as u64];
+
+    for (idx, word) in src.into_iter().enumerate() {
+        if word == 0 {
+            continue;
+        }
+        let out_idx = idx + word_shift;
+        if out_idx >= out.len() {
+            return None;
+        }
+
+        out[out_idx] |= word << bit_shift;
+
+        if bit_shift != 0 {
+            let carry_idx = out_idx + 1;
+            if carry_idx >= out.len() {
+                return None;
+            }
+            out[carry_idx] |= word >> (u64::BITS - bit_shift);
+        }
+    }
+
+    Some(out)
+}
+
+#[inline]
+fn cmp_shifted_prefix(
+    lhs: u128,
+    lhs_add_one: bool,
+    lhs_shift: u32,
+    rhs: u128,
+    rhs_add_one: bool,
+    rhs_shift: u32,
+) -> Option<std::cmp::Ordering> {
+    let lhs = shifted_prefix_words(lhs, lhs_add_one, lhs_shift)?;
+    let rhs = shifted_prefix_words(rhs, rhs_add_one, rhs_shift)?;
+    Some(lhs.into_iter().rev().cmp(rhs.into_iter().rev()))
 }
 
 #[inline]
 fn uniform_less_than_half_decided(u: &NativeUniform01, x: &NativeUniform01) -> Option<bool> {
-    if cmp_shifted_u128(u.prefix + 1, x.bits + 1, x.prefix, u.bits).is_lt() {
+    if cmp_shifted_prefix(u.prefix, true, x.bits + 1, x.prefix, false, u.bits)?.is_lt() {
         return Some(true);
     }
 
-    if cmp_shifted_u128(u.prefix, x.bits + 1, x.prefix + 1, u.bits).is_gt() {
+    if cmp_shifted_prefix(u.prefix, false, x.bits + 1, x.prefix, true, u.bits)?.is_gt() {
         return Some(false);
     }
 
@@ -1045,13 +1131,13 @@ pub(super) fn sample_f64_to_f32_clipped(
     let Some(clip) = clip else {
         return fallible!(
             FailedFunction,
-            "fixed native sampler requires a finite clipping range"
+            "hybrid native sampler requires a finite clipping range"
         );
     };
     if clip >= NATIVE_CLIP_SCALE_MAX_RATIO * f64::from(scale) {
         return fallible!(
             FailedFunction,
-            "fixed native sampler requires range < 7.5 * snapped scale"
+            "hybrid native sampler requires range < 524288 * snapped scale"
         );
     }
 
@@ -1071,16 +1157,17 @@ pub(super) fn sample_f64_to_f32_clipped(
         }
 
         let negative = entropy.coin()?;
+        let mut final_x = x.coarsen_to(NATIVE_FINALIZATION_UNIFORM_MAX_BITS);
 
         loop {
-            let at_budget = x.bits >= NATIVE_UNIFORM_MAX_BITS;
+            let at_budget = final_x.bits >= NATIVE_FINALIZATION_UNIFORM_MAX_BITS;
             match certify_real_affine_rounds_to_f32(
                 mu,
                 scale,
                 Some(clip),
                 negative,
                 k,
-                &x,
+                &final_x,
                 at_budget,
             ) {
                 F32CellCertification::Output(out) => return Ok(NativeF32Sample::Output(out)),
@@ -1091,7 +1178,10 @@ pub(super) fn sample_f64_to_f32_clipped(
                 F32CellCertification::ResourceLimit => return Ok(NativeF32Sample::ResourceLimit),
             }
 
-            if x.refine(&mut entropy)?.is_none() {
+            if final_x
+                .refine_with_cap(&mut entropy, NATIVE_FINALIZATION_UNIFORM_MAX_BITS)?
+                .is_none()
+            {
                 return Ok(NativeF32Sample::RejectedComb);
             }
         }

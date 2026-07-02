@@ -22,8 +22,7 @@ fn native_f64_to_f32_clipped_rounded_gaussian_clips_input_and_output() -> Fallib
         sample_rounded_gaussian_f64_to_f32_native_clipped(2.0, 0.0, Some(1.0))?,
         1.0_f32
     );
-    assert!(sample_rounded_gaussian_f64_to_f32_native_clipped(0.0, 1.0, Some(7.5)).is_err());
-    assert!(sample_rounded_gaussian_f64_to_f32_native_clipped(0.0, 1.0, Some(8.0)).is_err());
+    assert!(sample_rounded_gaussian_f64_to_f32_native_clipped(0.0, 1.0, Some(524_288.0)).is_err());
 
     for _ in 0..100 {
         let out = sample_rounded_gaussian_f64_to_f32_native_clipped(0.0, 100.0, Some(1.0))?;
