@@ -20,7 +20,15 @@ fail() { echo "FAIL: $*" >&2; exit 1; }
 # --------------------------------------------------------------------------- #
 echo "==> [1/2] Lean: check pins + generate (Charon->Aeneas) + lake build OpenDPVerified ..."
 lean_log="$tmp/lean.log"
-if ! "$script_dir/build_lean.sh" >"$lean_log" 2>&1; then
+# Stream build_lean.sh live — lake's per-module `[k/n] Building …` progress, the
+# pins guard, and the Charon->Aeneas generation — each line prefixed with elapsed
+# seconds, so a slow module is visible on a runner whose logs carry no per-line
+# clock. `tee` keeps an UNPREFIXED copy in "$lean_log" for the error/sorry greps
+# below (which anchor on `^error:` etc.). pipefail (set above) makes the pipeline
+# report build_lean.sh's exit, not tee's/the reader's.
+SECONDS=0
+if ! "$script_dir/build_lean.sh" 2>&1 | tee "$lean_log" \
+     | while IFS= read -r line; do printf '[+%5ds] %s\n' "$SECONDS" "$line"; done; then
   echo "---- lean build output (tail) ----" >&2
   tail -n 60 "$lean_log" >&2
   # Disambiguate the most common failure modes so the one-line FAIL is actionable

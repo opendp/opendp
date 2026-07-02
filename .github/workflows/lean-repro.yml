@@ -46,25 +46,71 @@ jobs:
             | sh -s -- -y --default-toolchain none
           echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
 
+      # The graphviz + TeXLive .debs are ~374 MB, and a throttled apt mirror once
+      # turned that download into a 71-minute stall ("Fetched 374 MB in 1h 10min,
+      # 87.9 kB/s"). Cache the downloaded .debs under a FIXED key so the mirror is
+      # contacted at most once: on a cache hit every install runs from local .debs.
+      # actions/cache entries are immutable per key, so this cache is written once
+      # (~374 MB) and does NOT grow run-to-run — bump `-vN` by hand only when the
+      # package list below changes.
+      - name: Cache apt .debs (graphviz + system deps + TeXLive, ~374 MB, fixed)
+        uses: actions/cache@v5
+        with:
+          path: ~/apt-archives
+          key: apt-debs-${{ runner.os }}-v1
+
+      - name: apt-get update
+        run: |
+          SECONDS=0
+          sudo apt-get update
+          echo "::notice title=apt-get update::${SECONDS}s"
+
       # graphviz + dev headers must precede `uv tool install` so pygraphviz builds.
       # libgmp-dev/pkg-config/m4 are the system deps for the OCaml build (zarith
-      # links against gmp; opam needs m4) — installed here so the Aeneas binary
-      # build below has them.
-      # TeXLive is required by the blueprint step: plasTeX shells out to `kpsewhich`
-      # to locate \usepackage .sty files (amsthm etc.) and to resolve \input files.
-      # Without it, \newtheorem never registers the theorem environments, so
-      # `\begin{definition}` becomes plasTeX's UnrecognizedMacro — which is
-      # unhashable and crashes plastexdepgraph's `set(nodes)` with
+      # links against gmp; opam needs m4). TeXLive is required by the blueprint step:
+      # plasTeX shells out to `kpsewhich` to locate \usepackage .sty files (amsthm
+      # etc.) and to resolve \input files; without it \newtheorem never registers the
+      # theorem environments and plastexdepgraph crashes with
       # "TypeError: unhashable type: 'definition'".
-      - name: Install graphviz + TeXLive + uv + leanblueprint (for the blueprint check)
+      #
+      # Both apt calls target our own archive dir (so actions/cache can own it without
+      # root): `--download-only` fetches just the .debs not already cached (≈0s on a
+      # warm cache; a one-package top-up if the base image bumped a version; the full
+      # 374 MB only cold), then `--no-download` installs straight from those .debs
+      # with no mirror contact. The two timings separate network from TeXLive's
+      # single-threaded post-install triggers (fmtutil/mktexlsr).
+      - name: Install graphviz + system deps + TeXLive (from .deb cache)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y graphviz libgraphviz-dev pkg-config libgmp-dev m4 perl \
-            texlive-latex-base texlive-latex-recommended texlive-latex-extra \
-            texlive-fonts-recommended texlive-science
+          PKGS="graphviz libgraphviz-dev pkg-config libgmp-dev m4 perl
+                texlive-latex-base texlive-latex-recommended texlive-latex-extra
+                texlive-fonts-recommended texlive-science"
+          arch="$HOME/apt-archives"
+          mkdir -p "$arch/partial"
+          opts="-o Dir::Cache::archives=$arch/ -o Dir::Cache::archives::partial=$arch/partial/"
+          SECONDS=0
+          sudo apt-get install -y --download-only $opts $PKGS
+          echo "::notice title=apt download (cold≈374MB, warm≈0)::${SECONDS}s"
+          SECONDS=0
+          sudo apt-get install -y --no-download $opts $PKGS
+          echo "::notice title=apt unpack+triggers::${SECONDS}s"
+          # Persist only the .debs: drop apt's lock/partial cruft and hand the dir to
+          # the runner user so the post-job cache save hits no permission errors.
+          sudo rm -rf "$arch/partial" "$arch/lock"
+          sudo chown -R "$(id -u):$(id -g)" "$arch"
+
+      - name: Install uv
+        run: |
+          SECONDS=0
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          echo "::notice title=uv install::${SECONDS}s"
+
+      # `uv tool install` compiles pygraphviz from source against libgraphviz-dev.
+      - name: Install leanblueprint (uv tool)
+        run: |
+          SECONDS=0
           "$HOME/.local/bin/uv" tool install leanblueprint
+          echo "::notice title=leanblueprint (uv tool) install::${SECONDS}s"
 
       # OCaml 5.2 via opam — the toolchain that build_aeneas_bin.sh builds
       # charon/aeneas with (opam is the single source of truth for the OCaml

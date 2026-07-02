@@ -63,15 +63,43 @@ Draw `k` uniform on `[0, denom)`; return `⊤` iff `k < numer` → `Bernoulli(nu
 
 ### 5. `sample_bernoulli_exp1` → `sample_bernoulli_exp` ✅
 `Bernoulli(e^{-x})` for arbitrary `x ≥ 0`: `⌊x⌋` independent `Bernoulli(e^{-1})` all true, then `Bernoulli(e^{-frac(x)})` via stage 4.
-- **Rust:** `samplers.bernoulli.sample_bernoulli_exp` (+ `_loop`). **SampCert target:** `SLang.BernoulliExpNegSample`. **Status:** extracted; not ported.
+- **Rust:** `samplers.bernoulli.sample_bernoulli_exp` (+ `_loop`). **SampCert target:** `SLang.BernoulliExpNegSample`.
+- **repro:** `sample_bernoulli_exp_spec` (`src/samplers/bernoulli/exp.lean`) — strong induction on
+  `ubigToNat numer` at the *program level* (`loop.eq_def`; the loop terminates, so no `probWhile`
+  cut machinery), closed by the SampCert-side recursive law `bernoulliExpNegSample_succ`.
 
-### 6. `sample_bernoulli_exp` → `sample_geometric_exp_slow` 🟡
+### 6. `sample_bernoulli_exp` → `sample_geometric_exp_slow` ✅
 Count consecutive successes of `Bernoulli(e^{-x})` → a geometric law.
-- **Rust:** `samplers.geometric.sample_geometric_exp_slow` (+ `_loop`, `_loop.body`). **Status:** extracted; slow variant proved in `proofs_legacy/samplers/geometric/`, not ported.
+- **Rust:** `samplers.geometric.sample_geometric_exp_slow` (+ `_loop`, `_loop.body`). **SampCert target:** `SLang.probGeometric` over the `BernoulliExpNegSample` trial.
+- **repro:** `sample_geometric_exp_slow_spec` (`src/samplers/geometric/slow.lean`):
+  `samplerDist_nat ⟦slow x⟧ = fun v => probGeometric (Bernoulli(e^{-x})) (v+1)` (the `+1` is
+  SampCert counting the final failing draw), plus the closed form
+  `sample_geometric_exp_slow_closed_form` (`P[v] = q^v·(1-q)`, `q = e^{-x}`). Technique mirrors
+  exp1: body factored through the stage-5 draw (`geo_step`), cut-depth induction against
+  SampCert's `geometric_succ_true/false`, `tsum_iSup_commute` lift, `geometric_pwc_sup` finish.
+  The opaque-`UBig` counter is pushed to `ℕ` with `samplerDist_nat`. Two new dashu axioms:
+  `rbig_clone_exists_spec`, `rbig_clone_parts_spec` (the loop clones `x` each iteration).
 
-### 7. `sample_geometric_exp_slow` → `sample_geometric_exp_fast` 🟡  (the "dast"/fast variant)
-Optimized geometric that avoids the linear loop (inversion + a residual Bernoulli test).
-- **Rust:** `samplers.geometric.sample_geometric_exp_fast` (+ `_loop`). **Status:** extracted; **not proved even in legacy**.
+### 7. `sample_geometric_exp_slow` → `sample_geometric_exp_fast` ✅  (the "dast"/fast variant)
+Optimized geometric that avoids the linear loop (uniform residue + acceptance test + one slow
+geometric at `1`, combined as `⌊(v·denom + u) / numer⌋`).
+- **Rust:** `samplers.geometric.sample_geometric_exp_fast` (+ `_loop`). **SampCert target:** `DiscreteLaplaceSampleLoopIn1`/`In2` (the Laplace inner loop) and `SLang.Geo`.
+- **repro:** `sample_geometric_exp_fast_spec` (`src/samplers/geometric/fast.lean`):
+  `samplerDist_nat ⟦fast x⟧ = fun v => probGeometric (Bernoulli(e^{-x})) (v+1)` — the *same law
+  as stage 6* — plus `…_zero_spec` (point mass at `0`) for the `x = 0` branch. Proof pieces:
+  1. **`partial_fixpoint` → `loop` bridge** (`sample_geometric_exp_fast_loop_eq_loop`): Aeneas
+     extracts this loop as genuine Lean recursion, outside the loop-semantics axiom; proved
+     equal to `Aeneas.Std.loop (fast_body …)` by two-sided least-fixpoint induction in the flat
+     `Result` order (generated `fixpoint_induct` principles; **no new axiom**).
+  2. Fiber laws of `fast_body`: accept = stage-6 slow at `1` through the floor-division
+     arithmetic (new dashu axioms `div_ubig_floor_spec`/`…_exists_spec`, `as_ibig_exists_spec`,
+     `ibig_clone_exists_spec`); reject = stage-2 uniform.
+  3. Cut-depth induction against a SampCert-side model loop (`fastLoopBody`), lifted via
+     `tsum_iSup_commute`.
+  4. Rejection-sampling closed form as a geometric series over the reject mass
+     (`fast_mixed_probWhile`), identified with `DiscreteLaplaceSampleLoopIn1`'s normalized law
+     (`In1_apply_form`), and closed by the ported legacy `Geo` algebra
+     (`fastTarget_pmf`, `fastTarget_eq_slowLaw` via `DiscreteLaplaceSampleLoop_equiv`).
 
 ### 8. `sample_geometric_exp_fast` → `sample_discrete_laplace` ⚪
 `DiscreteLaplace(t)`: a sign times a geometric magnitude (CKS).
@@ -85,8 +113,10 @@ Optimized geometric that avoids the linear loop (inversion + a residual Bernoull
 
 ## Where the frontier is today
 
-- **Proved end-to-end (✅):** bit flips → `fill_bytes` → uniform → bernoulli-fraction → bernoulli-exp1.
-- **Extracted but unported (🟡):** bernoulli-exp, geometric-slow, geometric-fast. These are pure porting work on the pinned a14083a6 stack — no new extraction needed. Recommended order: exp → geometric-slow → geometric-fast (each depends on the previous).
+- **Proved end-to-end (✅):** bit flips → `fill_bytes` → uniform → bernoulli-fraction →
+  bernoulli-exp1 → bernoulli-exp → geometric-slow → geometric-fast. Both geometric samplers are
+  verified against the same SampCert geometric law, closing the sampler chain currently
+  extracted into `Generated/`.
 - **Not extracted yet (⚪):** discrete Laplace, discrete Gaussian. These need the Rust samplers run through Charon/Aeneas into `Generated/` first; only then can they be verified against `DiscreteLaplaceSample` / `DiscreteGaussianSample`.
 
 ## Notes

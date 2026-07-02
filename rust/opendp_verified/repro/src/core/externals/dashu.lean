@@ -231,6 +231,24 @@ axiom div_ubig_exists_spec
     dashu_int.ubig.UBig.Insts.CoreOpsArithDivUBigUBig.div x y = ok q ∧
     ubigToNat q = ubigToNat x / ubigToNat y
 
+/-- Mathematical meaning of the direct `UBig / UBig` division for any positive
+divisor: Dashu division is Euclidean (truncating), which on naturals is exactly
+Lean's floor division. Generalizes `div_ubig_spec` (the exact-division case). -/
+axiom div_ubig_floor_spec
+  (x y q : dashu_int.ubig.UBig) :
+  dashu_int.ubig.UBig.Insts.CoreOpsArithDivUBigUBig.div x y = ok q ->
+  0 < ubigToNat y ->
+    ubigToNat q = ubigToNat x / ubigToNat y
+
+/-- Direct `UBig / UBig` division succeeds on positive divisors, with floor
+semantics. -/
+axiom div_ubig_floor_exists_spec
+  (x y : dashu_int.ubig.UBig) :
+  0 < ubigToNat y ->
+  ∃ q,
+    dashu_int.ubig.UBig.Insts.CoreOpsArithDivUBigUBig.div x y = ok q ∧
+    ubigToNat q = ubigToNat x / ubigToNat y
+
 /-- Mathematical meaning of Dashu multiplication. -/
 axiom mul_spec
   (x y z : dashu_int.ubig.UBig) :
@@ -286,6 +304,20 @@ axiom as_ibig_spec
   dashu_int.convert.UBig.as_ibig u = ok i ->
     dashu_int.ibig.IBig.into_parts i = ok (dashu_base.sign.Sign.Positive, u)
 
+/-- `UBig::as_ibig` succeeds, yielding a positive signed value with the same
+natural magnitude. -/
+axiom as_ibig_exists_spec
+  (u : dashu_int.ubig.UBig) :
+  ∃ i,
+    dashu_int.convert.UBig.as_ibig u = ok i ∧
+    dashu_int.ibig.IBig.into_parts i = ok (dashu_base.sign.Sign.Positive, u)
+
+/-- `IBig::clone` succeeds. -/
+axiom ibig_clone_exists_spec
+  (i : dashu_int.ibig.IBig) :
+  ∃ i',
+    dashu_int.ibig.IBig.Insts.CoreCloneClone.clone i = ok i'
+
 /-- Converting a `UBig` into an `IBig` succeeds. -/
 axiom ibig_from_ubig_exists_spec
   (u : dashu_int.ubig.UBig) :
@@ -300,6 +332,20 @@ axiom ibig_clone_parts_spec
   dashu_int.ibig.IBig.Insts.CoreCloneClone.clone i = ok i' ->
   dashu_int.ibig.IBig.into_parts i = ok parts ->
     dashu_int.ibig.IBig.into_parts i' = ok parts
+
+/-- Cloning a Dashu `RBig` succeeds. -/
+axiom rbig_clone_exists_spec
+  (x : dashu_ratio.rbig.RBig) :
+  ∃ y,
+    dashu_ratio.rbig.RBig.Insts.CoreCloneClone.clone x = ok y
+
+/-- `RBig::clone` preserves its rational parts. -/
+axiom rbig_clone_parts_spec
+  (x y : dashu_ratio.rbig.RBig)
+  (parts : dashu_int.ibig.IBig × dashu_int.ubig.UBig) :
+  dashu_ratio.rbig.RBig.Insts.CoreCloneClone.clone x = ok y ->
+  dashu_ratio.rbig.RBig.into_parts x = ok parts ->
+    dashu_ratio.rbig.RBig.into_parts y = ok parts
 
 /-- Constructing an `RBig` from positive numerator parts preserves those parts
 when the denominator is positive. -/

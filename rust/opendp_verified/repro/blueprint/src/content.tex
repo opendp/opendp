@@ -284,32 +284,68 @@ green the moment its \(\sd(\cdot) = \text{SampCert PMF}\) theorem lands in
 yet ported) or (not extracted) not extracted (needs a Charon/Aeneas pass first).
 
 \begin{theorem}[\texttt{sample\_bernoulli\_exp1}: unit negative-exponential]\label{thm:exp1}
+  \lean{OpenDP.samplers.bernoulli.sample_bernoulli_exp1_spec}\leanok
   \uses{thm:bernoulli-rational, thm:samplerDist-loop}
-  \statusStub{} (extracted, not ported) \emph{Next to port.} Target \(\sd(\texttt{sample\_bernoulli\_exp1}) =
+  \(\sd(\texttt{sample\_bernoulli\_exp1}) =
   \SLang.\mathrm{BernoulliExpNegSampleUnit}\): \(\Pr[\top] = e^{-x}\) for
   \(x \in [0,1]\), a \(\probWhile\) loop drawing \(\Bern{x/k}\) until failure and
-  returning the parity of \(k\). Reuses \ref{thm:bernoulli-rational} per iteration
-  + \ref{thm:samplerDist-loop}. Partial reference in \texttt{proofs\_legacy/}.
+  returning the parity of \(k\). \statusDone
 \end{theorem}
+\begin{proof}\leanok
+  File \texttt{src/samplers/bernoulli/exp1.lean}. Per-step law via
+  \ref{thm:bernoulli-rational}; cut-depth induction against SampCert's
+  \(\mathrm{BESL}\) recurrences; \(\sup\)/\(\sum\) interchange lift; SampCert
+  \(\mathrm{Aux}\) closed form + \(\mathbb{N}^{+}\!\to\mathbb{N}\) reindex. One
+  temporary axiom at the Dashu exact-division boundary.
+\end{proof}
 
 \begin{theorem}[\texttt{sample\_bernoulli\_exp}: full negative-exponential]\label{thm:exp}
+  \lean{OpenDP.samplers.bernoulli.sample_bernoulli_exp_spec}\leanok
   \uses{thm:exp1}
-  \statusStub{} (extracted, not ported) Target \(\SLang.\mathrm{BernoulliExpNegSample}\): \(\Pr[\top]=e^{-x}\)
+  \(\SLang.\mathrm{BernoulliExpNegSample}\): \(\Pr[\top]=e^{-x}\)
   for \(x \ge 0\) --- \(\lfloor x\rfloor\) copies of \(\Bern{e^{-1}}\) all true, then
-  \(\Bern{e^{-\mathrm{frac}(x)}}\) via \ref{thm:exp1}. Extracted; not yet ported.
+  \(\Bern{e^{-\mathrm{frac}(x)}}\) via \ref{thm:exp1}. \statusDone
 \end{theorem}
+\begin{proof}\leanok
+  File \texttt{src/samplers/bernoulli/exp.lean}. The loop terminates, so no
+  \(\probWhile\) machinery: strong induction on the numerator at the program
+  level (\texttt{loop.eq\_def}), closed by the SampCert-side recursive law
+  \(e^{-\numer/\denom} = e^{-1}\cdot e^{-(\numer-\denom)/\denom}\).
+\end{proof}
 
 \begin{theorem}[\texttt{sample\_geometric\_exp\_slow}]\label{thm:geom-slow}
+  \lean{OpenDP.samplers.geometric.sample_geometric_exp_slow_spec}\leanok
   \uses{thm:exp}
-  \statusStub{} (extracted, not ported) Geometric law: count consecutive successes of \(\Bern{e^{-x}}\).
-  Extracted; slow variant proved in \texttt{proofs\_legacy/}, not yet ported.
+  Geometric law: count consecutive successes of \(\Bern{e^{-x}}\). The pushed-to-\(\mathbb{N}\)
+  output law equals \(\mathrm{probGeometric}\,(\Bern{e^{-x}})\,(\cdot+1)\), with closed form
+  \(\Pr[v] = e^{-xv}(1-e^{-x})\). \statusDone
 \end{theorem}
+\begin{proof}\leanok
+  File \texttt{src/samplers/geometric/slow.lean}. Body factored through
+  \ref{thm:exp}; cut-depth induction against SampCert's
+  \(\mathrm{geometric\_succ\_true/false}\) recurrences; lift;
+  \(\mathrm{geometric\_pwc\_sup}\) finish. The opaque counter is pushed to
+  \(\mathbb{N}\) by \(\sd_{\mathbb{N}}\).
+\end{proof}
 
 \begin{theorem}[\texttt{sample\_geometric\_exp\_fast} (the ``dast''/fast variant)]\label{thm:geom-fast}
+  \lean{OpenDP.samplers.geometric.sample_geometric_exp_fast_spec}\leanok
   \uses{thm:geom-slow}
-  \statusStub{} (extracted, not ported) Optimized geometric (inversion + residual Bernoulli test).
-  Extracted; not proved even in legacy.
+  Optimized geometric (uniform residue + acceptance test + slow geometric at \(1\),
+  combined as \(\lfloor(v\denom+u)/\numer\rfloor\)): the pushed-to-\(\mathbb{N}\)
+  output law equals the stage-6 slow law
+  \(\mathrm{probGeometric}\,(\Bern{e^{-x}})\,(\cdot+1)\). \statusDone
 \end{theorem}
+\begin{proof}\leanok
+  File \texttt{src/samplers/geometric/fast.lean}. The extracted loop is a Lean
+  \texttt{partial\_fixpoint} (genuine recursion); a proved two-sided least-fixpoint
+  induction rewrites it as an Aeneas \texttt{loop} (no new axiom). Then: fiber laws
+  (accept = \ref{thm:geom-slow} at \(1\) through floor division; reject = stage-2
+  uniform), a cut-depth induction against a SampCert-side model loop, a geometric-series
+  rejection closed form, identification with
+  \(\mathrm{DiscreteLaplaceSampleLoopIn1}\), and the \(\mathrm{Geo}\) algebra via
+  \(\mathrm{DiscreteLaplaceSampleLoop\_equiv}\).
+\end{proof}
 
 \begin{theorem}[\texttt{sample\_discrete\_laplace}]\label{thm:discrete-laplace}
   \uses{thm:geom-fast}

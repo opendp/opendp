@@ -20,3 +20,7 @@ OpenDP.samplers.bernoulli.bernoulliPMF
 OpenDP.samplers.bernoulli.bernoulliPMF_eq_BernoulliSamplePMF
 OpenDP.samplers.bernoulli.sample_bernoulli_rational_eq_of_setup
 OpenDP.samplers.bernoulli.sample_bernoulli_rational_pmf
+OpenDP.samplers.bernoulli.sample_bernoulli_exp1_spec
+OpenDP.samplers.bernoulli.sample_bernoulli_exp_spec
+OpenDP.samplers.geometric.sample_geometric_exp_slow_spec
+OpenDP.samplers.geometric.sample_geometric_exp_fast_spec
