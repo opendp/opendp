@@ -443,7 +443,7 @@ lemma lap_body_done_summed (x r : dashu_ratio.rbig.RBig)
 
 /-- Truncation closed form for a unit-state rejection loop with per-iteration settle law `A`
 and self-loop mass `ρ`. -/
-private lemma lap_cut_closed
+lemma lap_cut_closed
     (cond : ControlFlow Unit (core.result.Result dashu_int.ibig.IBig error.Error) → Bool)
     (bd : ControlFlow Unit (core.result.Result dashu_int.ibig.IBig error.Error) →
       SLang (ControlFlow Unit (core.result.Result dashu_int.ibig.IBig error.Error)))
@@ -500,7 +500,7 @@ private lemma lap_cut_closed
     ring
 
 /-- `probWhile` limit of the unit-state rejection loop: `A(z) / (1 - ρ)`. -/
-private lemma lap_probWhile_closed
+lemma lap_probWhile_closed
     (cond : ControlFlow Unit (core.result.Result dashu_int.ibig.IBig error.Error) → Bool)
     (bd : ControlFlow Unit (core.result.Result dashu_int.ibig.IBig error.Error) →
       SLang (ControlFlow Unit (core.result.Result dashu_int.ibig.IBig error.Error)))

@@ -562,6 +562,27 @@ axiom ibig_neg_exists_spec
     dashu_int.ibig.IBig.Insts.CoreOpsArithNegIBig.neg i = ok j ∧
     ibigToInt j = -(ibigToInt i)
 
+/-- `IBig` cloning preserves the denoted integer (value form of `ibig_clone_parts_spec`,
+sign-agnostic). -/
+axiom ibig_clone_int_spec
+  (i i' : dashu_int.ibig.IBig) :
+  dashu_int.ibig.IBig.Insts.CoreCloneClone.clone i = ok i' ->
+    ibigToInt i' = ibigToInt i
+
+/-- `IBig` subtraction succeeds and denotes integer subtraction. -/
+axiom ibig_sub_exists_spec
+  (i j : dashu_int.ibig.IBig) :
+  ∃ k,
+    dashu_int.ibig.IBig.Insts.CoreOpsArithSubIBigIBig.sub i j = ok k ∧
+    ibigToInt k = ibigToInt i - ibigToInt j
+
+/-- `IBig::unsigned_abs` succeeds and denotes the natural absolute value. -/
+axiom ibig_unsigned_abs_exists_spec
+  (i : dashu_int.ibig.IBig) :
+  ∃ u,
+    dashu_int.ibig.IBig.Insts.Dashu_baseSignUnsignedAbsUBig.unsigned_abs i = ok u ∧
+    ubigToNat u = (ibigToInt i).natAbs
+
 /-- Constructing the constant positive rational `1 / 2` succeeds, yielding a rational whose
 parts denote `1` and `2`. -/
 axiom rbig_from_parts_const_half_exists_spec

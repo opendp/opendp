@@ -79,3 +79,10 @@ fi
 
 # 5. Build the verified library.
 ( cd "$proj_dir" && lake build OpenDPVerified )
+
+# 6. Assert the verified chain is COMPLETE: every end-to-end sampler theorem
+#    (stages 2-9, uniform through discrete Gaussian) exists and depends only on
+#    the sanctioned axiom set, and no handwritten source contains a `sorry`.
+#    `lake build` alone enforces neither (a sorry is only a warning; a deleted
+#    theorem doesn't break compilation).
+"$script_dir/check_verified_chain.sh"

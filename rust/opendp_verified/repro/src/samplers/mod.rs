@@ -4,6 +4,9 @@ pub use bernoulli::*;
 mod geometric;
 pub use geometric::*;
 
+mod gaussian;
+pub use gaussian::*;
+
 mod laplace;
 pub use laplace::*;
 

@@ -363,8 +363,17 @@ yet ported) or (not extracted) not extracted (needs a Charon/Aeneas pass first).
 \end{proof}
 
 \begin{theorem}[\texttt{sample\_discrete\_gaussian} --- final target]\label{thm:discrete-gaussian}
-  \uses{thm:discrete-laplace}
-  \statusStub{} (not extracted) Target \(\SLang.\mathrm{DiscreteGaussianSample}\): rejection
-  sampling from a discrete-Laplace proposal (the zCDP noise mechanism).
-  \textbf{Not extracted} yet.
+  \lean{OpenDP.samplers.gaussian.sample_discrete_gaussian_spec}\leanok
+  \uses{thm:discrete-laplace, thm:exp}
+  \(\sd_{\mathbb{Z}}(\texttt{sample\_discrete\_gaussian}) =
+  \SLang.\mathrm{DiscreteGaussianSample}\): rejection sampling from the verified
+  discrete-Laplace proposal with the CKS acceptance test --- the zCDP noise mechanism.
+  Holds for every SampCert \texttt{mix} parameter. \statusDone
 \end{theorem}
+\begin{proof}\leanok
+  File \texttt{src/samplers/gaussian.lean}. Value-tracked deterministic body chain feeding
+  the stage-5 acceptance trial; unit-state rejection reuses the stage-8 scalar series; the
+  closed form meets SampCert via \(\mathrm{probUntil\_apply\_norm}\) and a locally
+  re-proved factored loop law (the upstream analytic layer does not compile on the pinned
+  stack).
+\end{proof}

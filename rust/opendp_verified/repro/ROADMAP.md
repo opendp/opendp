@@ -116,19 +116,40 @@ geometric at `1`, combined as `⌊(v·denom + u) / numer⌋`).
   (`lap_closed_form_eq`). New dashu axioms: `ibigToInt` interpretation (`ibigToInt_pos_spec`,
   `ibig_neg_exists_spec`) and the `1/2` constant (`rbig_from_parts_const_half_exists_spec`).
 
-### 9. `sample_discrete_laplace` → `sample_discrete_gaussian` ⚪  ← **final target**
-`DiscreteGaussian(σ²)` by rejection sampling from a discrete Laplace proposal (CKS Algorithm).
-- **Rust:** — · **SampCert target:** `SLang.DiscreteGaussianSample` (`…Loop`, `…Get`).
-- **Status:** **not extracted.** This is the DP noise mechanism (zCDP); discrete Laplace (stage 8) is the pure-DP counterpart.
+### 9. `sample_discrete_laplace` → `sample_discrete_gaussian` ✅  ← **final target, complete**
+`DiscreteGaussian(σ²)` by rejection sampling from a discrete Laplace proposal (CKS Algorithm 3).
+- **Rust:** `samplers.gaussian.sample_discrete_gaussian` (`src/samplers/gaussian/mod.rs`):
+  propose `Y ~ DiscreteLaplace(⌊σ⌋+1)` (stage 8), accept with probability
+  `e^{-(|Y|·t·den − num)²/(2·num·t²·den)}` over `σ²`'s parts (stage 5).
+- **SampCert target:** `SLang.DiscreteGaussianSample` (for every `mix` parameter, via
+  `DiscreteLaplaceSampleMixed_equiv`).
+- **repro:** `sample_discrete_gaussian_spec` (`src/samplers/gaussian.lean`):
+  `samplerDist_int ⟦gaussian numer denom⟧ = DiscreteGaussianSample ⟨numer⟩ ⟨denom⟩ mix` on `ℤ`.
+  Proof: value-tracked 22-step deterministic body chain feeding the stage-5 acceptance trial
+  (`gauss_step_chain`); `Unit`-state rejection → the stage-8 scalar-series lemmas verbatim;
+  closed form meets SampCert via `probUntil_apply_norm` + a locally-ported factored loop law
+  (`gaussLoop_apply` — SampCert's own `Gaussian/Properties` analytic layer does not compile on
+  the pinned stack, so the two sampler-level facts it provides are re-proved here against
+  `Gaussian/Code` only). New dashu axioms: `ibig_sub_exists_spec`,
+  `ibig_unsigned_abs_exists_spec`, `ibig_clone_int_spec`.
 
 ## Where the frontier is today
 
-- **Proved end-to-end (✅):** bit flips → `fill_bytes` → uniform → bernoulli-fraction →
-  bernoulli-exp1 → bernoulli-exp → geometric-slow → geometric-fast → **discrete Laplace**.
-  The pure-DP noise mechanism is now verified down to the hardware axiom.
-- **Not extracted yet (⚪):** discrete Gaussian (stage 9, the final target). Needs the Rust
-  sampler written + a Charon/Aeneas pass, then verification against
-  `SLang.DiscreteGaussianSample` (rejection from the now-verified discrete Laplace proposal).
+**The chain is complete.** Every stage — bit flips → `fill_bytes` → uniform →
+bernoulli-fraction → bernoulli-exp1 → bernoulli-exp → geometric-slow → geometric-fast →
+discrete Laplace → **discrete Gaussian** — is a Lean theorem over the single randomness axiom
+plus the deterministic dashu/usize external specs. The extracted Rust noise mechanisms for both
+pure DP (`sample_discrete_laplace` = `DiscreteLaplaceSample`) and zCDP
+(`sample_discrete_gaussian` = `DiscreteGaussianSample`) are verified against SampCert's
+reference samplers end-to-end.
+
+**Toward the DP guarantees themselves:** SampCert carries the privacy theorems for these
+reference samplers (e.g. the zCDP bound for the discrete Gaussian mechanism); since the
+extracted Rust samplers are now *equal* to SampCert's, those guarantees transfer by rewriting.
+The remaining engineering is that SampCert's analytic Gaussian layer
+(`SampCert/Util/Gaussian`, `Samplers/Gaussian/Properties`, and the `DifferentialPrivacy`
+modules) does not compile on the pinned v4.30-rc2 stack — porting those files (or bumping the
+SampCert pin) is the last step to state `⟦rust mechanism⟧ satisfies zCDP` as a single theorem.
 
 ## Notes
 
@@ -138,3 +159,9 @@ geometric at `1`, combined as `⌊(v·denom + u) / numer⌋`).
 - Every stage's correctness is *relative to* the single randomness axiom (stage 0)
   plus the deterministic dashu/usize specs; run `#print axioms` on any end-to-end
   theorem to see exactly which it depends on.
+- **Completion is machine-checked**: `tools/build_lean.sh` ends with
+  `tools/check_verified_chain.sh`, which fails the build if any of the eight
+  end-to-end theorems (stages 2–9) is missing, if any depends on an axiom outside
+  the sanctioned trust surface (`tools/check_chain.lean`), or if any handwritten
+  source contains a `sorry` token (`lake build` alone enforces none of these — a
+  `sorry` is only a warning, and a deleted theorem doesn't break compilation).
