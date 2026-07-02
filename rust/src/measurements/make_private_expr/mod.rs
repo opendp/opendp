@@ -243,7 +243,7 @@ where
             }
 
             Expr::Cast { .. } => {
-                expr_len::make_expr_private_len(input_domain, input_metric, output_measure, self)
+                expr_cast::make_cast_measurement_to_i64(input_domain, input_metric, self);
             }
 
             #[cfg(feature = "contrib")]
