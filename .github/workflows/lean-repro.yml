@@ -1,17 +1,39 @@
 name: lean-repro checks
 
-# Parallel reproduction of the Lean verification results (branch eddie/lean-repro).
-# It is NOT wired into the normal PR gate — it runs manually (workflow_dispatch) and
-# on pushes to the repro branch, so we can exercise the checks while the branch lives
-# on its own for a while. Everything it touches is confined to
-# rust/opendp_verified/repro/ plus this workflow file.
+# Checks for the Lean verification work (targets the `lean` branch). It is NOT
+# wired into the normal PR gate for `main` — it runs manually (workflow_dispatch),
+# on PRs into `lean`, and on pushes to the lean branches, exercising the full
+# pins-guard -> Charon/Aeneas generation -> lake build -> blueprint pipeline.
 
 on:
   workflow_dispatch: {}          # manual "Run workflow" button
-  push:
-    branches: [eddie/lean-repro]
+  pull_request:
+    branches: [lean]
     paths:
-      - 'rust/opendp_verified/repro/**'
+      - 'rust/opendp_verified/**'
+      - 'tools/build_aeneas_bin_lean.sh'
+      - 'tools/build_blueprint_lean.sh'
+      - 'tools/build_lean.sh'
+      - 'tools/check_chain.lean'
+      - 'tools/check_deps_pristine_lean.sh'
+      - 'tools/check_lean_pins.sh'
+      - 'tools/check_verified_chain_lean.sh'
+      - 'tools/refresh_opendp_verified_aeneas.sh'
+      - 'tools/test_build_lean.sh'
+      - '.github/workflows/lean-repro.yml'
+  push:
+    branches: [lean, eddie/lean-repro]
+    paths:
+      - 'rust/opendp_verified/**'
+      - 'tools/build_aeneas_bin_lean.sh'
+      - 'tools/build_blueprint_lean.sh'
+      - 'tools/build_lean.sh'
+      - 'tools/check_chain.lean'
+      - 'tools/check_deps_pristine_lean.sh'
+      - 'tools/check_lean_pins.sh'
+      - 'tools/check_verified_chain_lean.sh'
+      - 'tools/refresh_opendp_verified_aeneas.sh'
+      - 'tools/test_build_lean.sh'
       - '.github/workflows/lean-repro.yml'
 
 concurrency:
@@ -30,7 +52,7 @@ jobs:
       - name: Read dependency pins
         run: |
           eval "$(grep -E '^(AENEAS_URL|AENEAS_TAG|CHARON_URL|CHARON_COMMIT|SAMPCERT_URL|SAMPCERT_COMMIT)=' \
-                  rust/opendp_verified/repro/tools/check_lean_pins.sh)"
+                  tools/check_lean_pins.sh)"
           {
             echo "AENEAS_URL=$AENEAS_URL"
             echo "AENEAS_TAG=$AENEAS_TAG"
@@ -112,7 +134,7 @@ jobs:
           "$HOME/.local/bin/uv" tool install leanblueprint
           echo "::notice title=leanblueprint (uv tool) install::${SECONDS}s"
 
-      # OCaml 5.2 via opam — the toolchain that build_aeneas_bin.sh builds
+      # OCaml 5.2 via opam — the toolchain that build_aeneas_bin_lean.sh builds
       # charon/aeneas with (opam is the single source of truth for the OCaml
       # deps; we do NOT use aeneas's nix flake). The action caches ~/.opam itself.
       # charon's Rust frontend uses the nightly pinned in its rust-toolchain file,
@@ -130,9 +152,9 @@ jobs:
           path: |
             aeneas
             SampCert
-            rust/opendp_verified/repro/.lake
-            rust/opendp_verified/repro/target
-          key: lean-repro-${{ runner.os }}-${{ env.AENEAS_TAG }}-${{ env.CHARON_COMMIT }}-${{ env.SAMPCERT_COMMIT }}-${{ hashFiles('rust/opendp_verified/repro/lake-manifest.json') }}
+            rust/opendp_verified/.lake
+            rust/target
+          key: lean-repro-${{ runner.os }}-${{ env.AENEAS_TAG }}-${{ env.CHARON_COMMIT }}-${{ env.SAMPCERT_COMMIT }}-${{ hashFiles('rust/opendp_verified/lake-manifest.json') }}
 
       - name: Clone pinned aeneas (build-tag) + charon, and SampCert (fork hash)
         run: |
@@ -156,4 +178,4 @@ jobs:
           # build_lean.sh applies the vendored SampCert 4.30 patch (git apply) itself.
 
       - name: Run lean-repro checks (pins + Lean build + blueprint)
-        run: bash rust/opendp_verified/repro/tools/test_build.sh
+        run: bash tools/test_build_lean.sh

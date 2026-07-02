@@ -1,17 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# This script lives at tools/. The verified crate (Cargo.toml + src/ +
+# Generated/) is rust/opendp_verified/; the gitignored aeneas/charon checkouts
+# live at the git repo root = one up from here.
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+git_root="$(cd "${script_dir}/.." && pwd)"
 
-llbc_file="${repo_root}/opendp_verified.llbc"
-# The crate manifest (Cargo.toml) stays at the workspace-member root so Charon can
-# `cargo`-build it, but its sources and all generated Lean live under repro/.
-crate_root="${repo_root}/rust/opendp_verified"
-repro_root="${crate_root}/repro"
-generated_root="${repro_root}/Generated/OpenDP"
-patch_root="${repro_root}/aeneas_patches"
-default_charon_bin="${repo_root}/aeneas/charon/bin/charon"
-default_aeneas_bin="${repo_root}/aeneas/bin/aeneas"
+# Charon `cargo`-builds the crate in place (a normal member of the rust/
+# workspace), and all generated Lean lands beside it under Generated/.
+crate_root="${git_root}/rust/opendp_verified"
+llbc_file="${git_root}/opendp_verified.llbc"
+generated_root="${crate_root}/Generated/OpenDP"
+patch_root="${crate_root}/aeneas_patches"
+default_charon_bin="${git_root}/aeneas/charon/bin/charon"
+default_aeneas_bin="${git_root}/aeneas/bin/aeneas"
 CHARON_BIN="${default_charon_bin}"
 AENEAS_BIN="${default_aeneas_bin}"
 
@@ -87,10 +90,22 @@ echo "[1/4] Regenerating LLBC with Charon"
 
 echo "[2/4] Regenerating Lean with Aeneas"
 "${AENEAS_BIN}" -backend lean "${llbc_file}" \
-  -dest "${repro_root}" \
+  -dest "${crate_root}" \
   -subdir /Generated/OpenDP \
   -namespace OpenDP \
   -split-files
+
+# Aeneas with -split-files emits Generated/OpenDP/{Funs,Types,...}.lean but NOT a
+# namespace-root aggregator, and `Generated/` is gitignored — so `import
+# Generated.OpenDP` (from OpenDPVerified.lean) has nothing to resolve to on a
+# fresh checkout. Write the aggregator here so generation produces a complete,
+# importable tree. `Funs` transitively imports `Types` and `FunsExternal`.
+echo "[2b/4] Writing Generated/OpenDP.lean namespace-root aggregator"
+cat > "${crate_root}/Generated/OpenDP.lean" <<'EOF'
+-- Namespace-root aggregator for the Aeneas-generated `OpenDP` modules.
+-- `Funs` transitively imports `Types` and `FunsExternal`.
+import Generated.OpenDP.Funs
+EOF
 
 echo "[3/4] Rebuilding external companion files from templates"
 cp "${generated_root}/TypesExternal_Template.lean" "${generated_root}/TypesExternal.lean"

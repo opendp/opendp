@@ -1,0 +1,390 @@
+% =============================================================================
+% OpenDP Verified --- Blueprint content
+%
+% Mirrors the from-scratch, version-pinned Lean development in
+%   rust/opendp_verified/src/**/*.lean
+% (pinned stack: lean 4.30.0-rc2, aeneas a14083a6, charon ed22146b, SampCert
+%  9cb29f35, mathlib v4.30.0-rc2 -- enforced by tools/check_lean_pins.sh).
+%
+% Every node carries the *real* Lean declaration name via \lean{...}; the graph
+% colours by status:
+%   - \leanok on a statement  => the statement exists in Lean
+%   - \leanok on a proof      => the proof is complete (green)
+%   - \notready on a proof    => stated but not yet proved (a GAP)
+% Inline badges label the kind: \statusDone / \statusGap / \statusAxiom (trust
+% boundary) / \statusStub (not yet stated; records the intended result).
+% =============================================================================
+
+\chapter{Orientation}
+
+\section{The pipeline this blueprint documents}
+
+The verified crate \texttt{rust/opendp\_verified} is processed by a fixed,
+version-pinned pipeline:
+\[
+\text{\texttt{src/**/*.rs}} \xrightarrow{\;\text{Charon}\;} \text{\texttt{opendp\_verified.llbc}}
+\xrightarrow{\;\text{Aeneas (-backend lean)}\;} \text{\texttt{Generated/OpenDP/*.lean}}.
+\]
+Aeneas extracts Rust into the \emph{deterministic} \(\Result\) monad. All
+randomness enters through a single stochastic external, \fillbytes{} (OpenSSL).
+Handwritten proofs in \texttt{src/**/*.lean} import the generated code and prove
+each extracted function realises a SampCert reference distribution.
+
+Every stage additionally has a \emph{human-readable face} in
+\texttt{src/main\_results.lean} (\texttt{OpenDP.MainResults}): the correctness statements
+restated in this blueprint's vocabulary --- denotation brackets
+\(\llbracket\cdot\rrbracket\), textbook law names
+(\(\mathrm{Bernoulli}\), \(\mathrm{GeometricSuccesses}\),
+\(\mathrm{DiscreteLaplace}\), \(\mathrm{DiscreteGaussian}\)) --- together with the
+pointwise mass functions stated in this document (\(\Pr[\top]=e^{-x}\),
+\(P[v]=e^{-xv}(1-e^{-x})\), the discrete-Laplace mass). Each is a one-to-few-line
+consequence of the corresponding spec theorem, so the Lean and the prose can be read side by
+side.
+
+The development is layered: a shared \emph{semantic core}
+(\texttt{src/core/primitives/}, Chapter~\ref{chap:foundation}) assigning a
+sub-probability law to every \(\Result\) program and resting on a single
+randomness axiom; a \emph{trust boundary} of deterministic external specs
+(\texttt{src/core/externals/}, Chapter~\ref{chap:externals}); and one chapter per
+sampler (\texttt{src/samplers/}) proving \(\sd(\text{extracted fn}) =
+\text{target PMF}\). The core is what every sampler reuses --- the green spine of
+the graph.
+
+\section{How to read the status badges}
+
+\begin{itemize}
+  \item \statusDone{} --- statement and proof complete in Lean; green.
+  \item \statusGap{} --- stated in Lean but the proof is not yet complete.
+  \item \statusAxiom{} --- a declared \texttt{axiom}: trusted, not proved.
+    \texttt{\#print axioms} on any end-to-end theorem enumerates the axioms it
+    actually depends on.
+  \item \statusStub{} --- no Lean statement yet; records the intended result so
+    the frontier is visible (e.g.\ samplers not yet ported, or Rust not yet
+    extracted into Lean at all).
+\end{itemize}
+
+% =============================================================================
+\chapter{The probabilistic semantics (shared core)}\label{chap:foundation}
+% =============================================================================
+
+Files: \texttt{src/core/primitives/\{bytes,semantics\}.lean}. Every sampler proof
+in later chapters bottoms out here.
+
+\begin{definition}[Big-endian byte decoding]\label{def:beBytesToNat}
+  \lean{OpenDP.Core.Bytes.beBytesToNat}\leanok
+  \(\mathrm{beBytesToNat}\) interprets a byte list as a big-endian natural
+  number. \statusDone
+\end{definition}
+
+\begin{definition}[Uniform byte distribution]\label{def:uniformByteNatPMF}
+  \lean{OpenDP.Core.Bytes.uniformByteNatPMF}\leanok
+  \uses{def:beBytesToNat}
+  \(\mathrm{uniformByteNatPMF}\;n\) is the uniform law on \([0, 256^n)\): the
+  target distribution of \(n\) freshly sampled bytes. The hardware-facing
+  reference. \statusDone
+\end{definition}
+
+\begin{theorem}[Randomness axiom: a consistent semantics exists]\label{ax:sdg-exists}
+  \lean{OpenDP.Core.Semantics.samplerDistGen_exists}\leanok
+  \uses{def:uniformByteNatPMF}
+  \statusAxiom{} There exists \(f : \forall A,\ \Result\,A \to \SLang\,A\)
+  satisfying simultaneously: (i) \(\ok\,v \mapsto\) point mass; (ii) bind
+  distributes as \(\mathrm{probBind}\); (iii) \fillbytes{} draws a big-endian nat
+  uniformly (\emph{the only stochastic claim}); (iii.b) \fillbytes{} preserves
+  buffer length; (iv) an Aeneas \texttt{loop} distributes as SampCert
+  \(\probWhile\). The \emph{single} assumption about randomness in the crate.
+\end{theorem}
+\begin{proof}\leanok Declared as an \texttt{axiom}. Trusted. \end{proof}
+
+\begin{definition}[The semantics functor]\label{def:samplerDistGen}
+  \lean{OpenDP.Core.Semantics.samplerDistGen}\leanok
+  \uses{ax:sdg-exists}
+  \(\sdg\,(\mathit{prog})\) is the canonical \(\SLang\) law of any \(\Result\,A\)
+  program, chosen from \ref{ax:sdg-exists}. \statusDone
+\end{definition}
+
+\begin{definition}[Success distribution]\label{def:samplerDist}
+  \lean{OpenDP.Core.Semantics.samplerDist}\leanok
+  \uses{def:samplerDistGen}
+  \(\sd\,(\mathit{prog})\,v\) is the probability \(\mathit{prog}\) returns
+  \(\Ok\,v\); sub-probabilistic, the deficit being failure mass. \statusDone
+\end{definition}
+
+\begin{lemma}[Bind distributes over \(\sd\)]\label{thm:samplerDist-bind}
+  \lean{OpenDP.Core.Semantics.samplerDist_bind}\leanok
+  \uses{def:samplerDist}
+  Composition of \(\Result\) programs distributes as \(\mathrm{probBind}\) under
+  \(\sd\), with \(\Err\) carrying zero mass. \statusDone
+\end{lemma}
+\begin{proof}\leanok
+  From axiom constraints (i),(ii) plus \texttt{tsum\_result\_ok\_eq}.
+\end{proof}
+
+\begin{lemma}[Master \fillbytes{} bridge]\label{thm:fill-bytes-bridge}
+  \lean{OpenDP.Core.Semantics.fill_bytes_nat_bridge}\leanok
+  \uses{def:samplerDistGen, def:uniformByteNatPMF}
+  Any nat-indexed weight summed against the body's first \fillbytes{} draw
+  collapses to \(\mathrm{uniformByteNatPMF}\) weighted by that function. Every
+  sampler's randomness flows through here. \statusDone
+\end{lemma}
+\begin{proof}\leanok Routes through axiom constraint (iii). \end{proof}
+
+\begin{lemma}[Loops are \(\probWhile\)]\label{thm:samplerDist-loop}
+  \lean{OpenDP.Core.Semantics.samplerDistGen_loop}\leanok
+  \uses{def:samplerDistGen}
+  An Aeneas \texttt{loop} distributes as \(\probWhile\) of the body's
+  distribution, lifting state through \(\mathrm{ControlFlow}\). \statusDone
+\end{lemma}
+\begin{proof}\leanok From axiom constraint (iv). \end{proof}
+
+% =============================================================================
+\chapter{The trust boundary (externals)}\label{chap:externals}
+% =============================================================================
+
+Deterministic library/hardware specs in \texttt{src/core/externals/} --- a trust
+category \emph{separate} from the single randomness axiom.
+
+\begin{theorem}[OpenSSL uniform bytes]\label{ax:openssl}
+  \lean{openssl.rand.rand_bytes_uniform_spec}\leanok
+  \statusAxiom{} \texttt{rand\_bytes} fills the buffer with independent uniform
+  bytes --- the hardware contract under axiom constraint (iii). \statusDone
+\end{theorem}
+\begin{proof}\leanok Declared as an \texttt{axiom}. Trusted. \end{proof}
+
+\begin{theorem}[Dashu bignum specifications]\label{ax:dashu}
+  \lean{OpenDP.dashu.from_be_bytes_spec}\leanok
+  \statusAxiom{} A family of axioms (\(\sim 60\)) in \texttt{externals/dashu.lean}
+  giving deterministic value/totality specs for the bignum ops the samplers call
+  (\texttt{from\_be\_bytes}, \texttt{rem}, \texttt{lt}/\texttt{gt}, rational
+  construction, \ldots). Auditable library contracts. \statusDone
+\end{theorem}
+\begin{proof}\leanok Declared as \texttt{axiom}s. Trusted, deterministic. \end{proof}
+
+\begin{theorem}[\texttt{usize::div\_ceil}]\label{ax:divceil}
+  \lean{OpenDP.core_num_usize.div_ceil_spec}\leanok
+  \statusAxiom{} Ceiling-division spec for the Rust standard library. \statusDone
+\end{theorem}
+\begin{proof}\leanok Declared as an \texttt{axiom}. Trusted. \end{proof}
+
+% =============================================================================
+\chapter{Uniform sampler}\label{chap:uniform}
+% =============================================================================
+
+Files: \texttt{src/samplers/uniform/\{semantics,mod,pmf,blockers\}.lean}. The
+foundation every other sampler builds on; fully proven, with the a14083a6
+\texttt{deref\_mut} codegen handled in \texttt{blockers.lean}.
+
+% NB: use \lbrack (control seq), not a literal '[', in this optional-arg title --
+% plasTeX counts raw '['/']' tokens and a literal '[' makes it run past the
+% closing ']', swallowing the rest of the document (cyclic DOM -> RecursionError).
+\begin{definition}[Target: uniform on \(\lbrack 0,\mathit{upper})\)]\label{def:uniformNatBelowPMF}
+  \lean{OpenDP.samplers.uniform.uniformNatBelowPMF}\leanok
+  The reference law for \texttt{sample\_uniform\_ubig\_below}. \statusDone
+\end{definition}
+
+\begin{theorem}[Setup totality]\label{ax:uniform-setup}
+  \lean{OpenDP.samplers.uniform.sample_uniform_ubig_below_setup_exists}\leanok
+  \statusAxiom{} For positive \texttt{upper} the deterministic setup phase
+  (bit-length \(\to\) byte-length \(\to\) rejection threshold) succeeds. \statusDone
+\end{theorem}
+\begin{proof}\leanok Declared as an \texttt{axiom}. \end{proof}
+
+\begin{lemma}[Loop-body reshaping past \texttt{deref\_mut}]\label{thm:body-eq}
+  \lean{OpenDP.samplers.uniform.body_eq}\leanok
+  \uses{thm:samplerDist-loop}
+  The a14083a6 backend wraps the loop body's \fillbytes{} draw in a
+  \texttt{deref\_mut} back-function. \texttt{body\_eq} restates the body in clean
+  \(\gg\!=\) form (single binder + projections), proved \texttt{by unfold; rfl};
+  \texttt{simp\_rw [body\_eq]} then exposes the \fillbytes{} bind so the standard
+  bridge applies. This is the reusable key to every a14083a6 loop proof.
+  \statusDone
+\end{lemma}
+\begin{proof}\leanok Definitional (\texttt{unfold; rfl}). \end{proof}
+
+\begin{lemma}[Accepted-outcome mass]\label{thm:body-done}
+  \lean{OpenDP.samplers.uniform.body_done_nat_dist}\leanok
+  \uses{thm:body-eq, thm:fill-bytes-bridge}
+  The \(\done(\Ok\,\cdot)\) mass of one loop step equals
+  \(\sum_k \mathrm{uniformByteNatPMF}\,[k<\mathit{thr}\wedge k \bmod
+  \mathit{upper}=v]\). \statusDone
+\end{lemma}
+\begin{proof}\leanok \texttt{body\_eq} entry, then the legacy body analysis. \end{proof}
+
+\begin{lemma}[Rejected-outcome mass]\label{thm:body-cont}
+  \lean{OpenDP.samplers.uniform.body_cont_total_mass}\leanok
+  \uses{thm:body-eq, thm:fill-bytes-bridge}
+  The total \(\cont\) (reject) mass of one loop step equals \(\sum_k
+  \mathrm{uniformByteNatPMF}\,[k \ge \mathit{thr}]\). \statusDone
+\end{lemma}
+\begin{proof}\leanok As \ref{thm:body-done}; injective-\(\cont\) point mass. \end{proof}
+
+\begin{lemma}[Rejection loop is uniform]\label{thm:uniform-pmf}
+  \lean{OpenDP.MainResults.uniform_correct, OpenDP.MainResults.uniform_mass, OpenDP.samplers.uniform.sample_uniform_ubig_below_pmf}\leanok
+  \uses{thm:body-done, thm:body-cont, thm:samplerDist-loop, def:uniformNatBelowPMF}
+  The extracted rejection loop distributes as
+  \(\probUntil(\mathrm{uniformByteNatPMF},\ \cdot<\mathit{thr})\), and after
+  rejection the mapped output is uniform on \([0,\mathit{upper})\). \statusDone
+\end{lemma}
+\begin{proof}\leanok
+  Splits the body into done/continue fibres (\ref{thm:body-done},
+  \ref{thm:body-cont}); assembles via the loop theorem.
+\end{proof}
+
+\begin{theorem}[End-to-end: \texttt{sample\_uniform\_ubig\_below}]\label{thm:uniform-spec}
+  \lean{OpenDP.samplers.uniform.sample_uniform_ubig_below_spec}\leanok
+  \uses{thm:uniform-pmf, ax:uniform-setup}
+  For any positive \texttt{upper}, the extracted function has a setup witness,
+  reduces to the rejection loop, and its success distribution is exactly
+  \(\Unif{\mathit{upper}}\). \statusDone
+\end{theorem}
+\begin{proof}\leanok From \ref{thm:uniform-pmf} and \ref{ax:uniform-setup}. \end{proof}
+
+% =============================================================================
+\chapter{Bernoulli (rational)}\label{chap:bernoulli}
+% =============================================================================
+
+Files: \texttt{src/samplers/bernoulli/\{rational,pmf\}.lean}. The simplest
+end-to-end distributional proof, and the ``Lean that reads like the prose''
+target. Human proof: sample uniformly from \([0,\denom)\); return \(\top\) iff
+below \(\numer\); so \(\Pr[\top]=\numer/\denom\).
+
+\begin{definition}[Bernoulli law as mapped uniform]\label{def:bernoulliPMF}
+  \lean{OpenDP.samplers.bernoulli.bernoulliPMF}\leanok
+  \uses{def:uniformNatBelowPMF}
+  \(\mathrm{bernoulliPMF}\,\mathit{num}\,\mathit{den} = \PMF.\mathrm{map}\,(x
+  \mapsto x<\mathit{num})\,(\mathrm{UniformSample}\,\mathit{den})\). \statusDone
+\end{definition}
+
+\begin{lemma}[Matches SampCert's Bernoulli]\label{thm:bernoulliPMF-eq}
+  \lean{OpenDP.samplers.bernoulli.bernoulliPMF_eq_BernoulliSamplePMF}\leanok
+  \uses{def:bernoulliPMF}
+  \(\mathrm{bernoulliPMF} = \SLang.\mathrm{BernoulliSamplePMF}\); grounds the
+  result against the trusted reference. \statusDone
+\end{lemma}
+\begin{proof}\leanok Pointwise on \(\{\top,\bot\}\) via SampCert apply lemmas. \end{proof}
+
+\begin{theorem}[Translation layer]\label{thm:bernoulli-eq-setup}
+  \lean{OpenDP.samplers.bernoulli.sample_bernoulli_rational_eq_of_setup}\leanok
+  \uses{thm:uniform-spec}
+  On the valid-input branch the extracted function reduces to a uniform draw
+  below \(\denom\) followed by the comparison closure \(\numer>\cdot\). \statusDone
+\end{theorem}
+\begin{proof}\leanok \texttt{unfold} + the setup specs. \end{proof}
+
+\begin{theorem}[End-to-end: \texttt{sample\_bernoulli\_rational}]\label{thm:bernoulli-rational}
+  \lean{OpenDP.MainResults.bernoulli_correct, OpenDP.MainResults.bernoulli_mass, OpenDP.samplers.bernoulli.sample_bernoulli_rational_pmf}\leanok
+  \uses{thm:bernoulli-eq-setup, thm:uniform-pmf, def:bernoulliPMF, thm:bernoulliPMF-eq}
+  \(\sd(\text{extracted sample\_bernoulli\_rational}) = \mathrm{bernoulliPMF}\),
+  i.e.\ SampCert's \(\Bern{\numer/\denom}\). \statusDone
+\end{theorem}
+\begin{proof}\leanok
+  Push \(\sd\) through the comparison closure (\texttt{Result.map}) and the
+  uniform PMF via a \(\mathrm{UBig}\!\to\!\mathrm{Nat}\) bridge.
+\end{proof}
+
+% =============================================================================
+\chapter{Roadmap: toward the discrete Gaussian}\label{chap:roadmap}
+% =============================================================================
+
+The remaining chain (see \texttt{ROADMAP.md}) continues linearly from the rational
+Bernoulli up to the discrete Gaussian noise mechanism. Each node below is one
+stage; the \texttt{uses} edges are the pipeline. They start as stubs and each turns
+green the moment its \(\sd(\cdot) = \text{SampCert PMF}\) theorem lands in
+\texttt{rust/opendp\_verified/src/} --- so this graph \emph{is} the progress bar. Marked
+\statusStub{} = target only: (extracted, not ported) extracted (Rust in \texttt{Generated/}, proof not
+yet ported) or (not extracted) not extracted (needs a Charon/Aeneas pass first).
+
+\begin{theorem}[\texttt{sample\_bernoulli\_exp1}: unit negative-exponential]\label{thm:exp1}
+  \lean{OpenDP.MainResults.bernoulli_exp_unit_correct, OpenDP.MainResults.bernoulli_exp_unit_mass, OpenDP.samplers.bernoulli.sample_bernoulli_exp1_spec}\leanok
+  \uses{thm:bernoulli-rational, thm:samplerDist-loop}
+  \(\sd(\texttt{sample\_bernoulli\_exp1}) =
+  \SLang.\mathrm{BernoulliExpNegSampleUnit}\): \(\Pr[\top] = e^{-x}\) for
+  \(x \in [0,1]\), a \(\probWhile\) loop drawing \(\Bern{x/k}\) until failure and
+  returning the parity of \(k\). \statusDone
+\end{theorem}
+\begin{proof}\leanok
+  File \texttt{src/samplers/bernoulli/exp1.lean}. Per-step law via
+  \ref{thm:bernoulli-rational}; cut-depth induction against SampCert's
+  \(\mathrm{BESL}\) recurrences; \(\sup\)/\(\sum\) interchange lift; SampCert
+  \(\mathrm{Aux}\) closed form + \(\mathbb{N}^{+}\!\to\mathbb{N}\) reindex. One
+  temporary axiom at the Dashu exact-division boundary.
+\end{proof}
+
+\begin{theorem}[\texttt{sample\_bernoulli\_exp}: full negative-exponential]\label{thm:exp}
+  \lean{OpenDP.MainResults.bernoulli_exp_correct, OpenDP.MainResults.bernoulli_exp_mass, OpenDP.samplers.bernoulli.sample_bernoulli_exp_spec}\leanok
+  \uses{thm:exp1}
+  \(\SLang.\mathrm{BernoulliExpNegSample}\): \(\Pr[\top]=e^{-x}\)
+  for \(x \ge 0\) --- \(\lfloor x\rfloor\) copies of \(\Bern{e^{-1}}\) all true, then
+  \(\Bern{e^{-\mathrm{frac}(x)}}\) via \ref{thm:exp1}. \statusDone
+\end{theorem}
+\begin{proof}\leanok
+  File \texttt{src/samplers/bernoulli/exp.lean}. The loop terminates, so no
+  \(\probWhile\) machinery: strong induction on the numerator at the program
+  level (\texttt{loop.eq\_def}), closed by the SampCert-side recursive law
+  \(e^{-\numer/\denom} = e^{-1}\cdot e^{-(\numer-\denom)/\denom}\).
+\end{proof}
+
+\begin{theorem}[\texttt{sample\_geometric\_exp\_slow}]\label{thm:geom-slow}
+  \lean{OpenDP.MainResults.geometric_slow_correct, OpenDP.MainResults.geometric_slow_mass, OpenDP.samplers.geometric.sample_geometric_exp_slow_spec}\leanok
+  \uses{thm:exp}
+  Geometric law: count consecutive successes of \(\Bern{e^{-x}}\). The pushed-to-\(\mathbb{N}\)
+  output law equals \(\mathrm{probGeometric}\,(\Bern{e^{-x}})\,(\cdot+1)\), with closed form
+  \(\Pr[v] = e^{-xv}(1-e^{-x})\). \statusDone
+\end{theorem}
+\begin{proof}\leanok
+  File \texttt{src/samplers/geometric/slow.lean}. Body factored through
+  \ref{thm:exp}; cut-depth induction against SampCert's
+  \(\mathrm{geometric\_succ\_true/false}\) recurrences; lift;
+  \(\mathrm{geometric\_pwc\_sup}\) finish. The opaque counter is pushed to
+  \(\mathbb{N}\) by \(\sd_{\mathbb{N}}\).
+\end{proof}
+
+\begin{theorem}[\texttt{sample\_geometric\_exp\_fast} (the ``dast''/fast variant)]\label{thm:geom-fast}
+  \lean{OpenDP.MainResults.geometric_fast_correct, OpenDP.MainResults.geometric_fast_mass, OpenDP.MainResults.geometric_fast_eq_slow, OpenDP.samplers.geometric.sample_geometric_exp_fast_spec}\leanok
+  \uses{thm:geom-slow}
+  Optimized geometric (uniform residue + acceptance test + slow geometric at \(1\),
+  combined as \(\lfloor(v\denom+u)/\numer\rfloor\)): the pushed-to-\(\mathbb{N}\)
+  output law equals the stage-6 slow law
+  \(\mathrm{probGeometric}\,(\Bern{e^{-x}})\,(\cdot+1)\). \statusDone
+\end{theorem}
+\begin{proof}\leanok
+  File \texttt{src/samplers/geometric/fast.lean}. The extracted loop is a Lean
+  \texttt{partial\_fixpoint} (genuine recursion); a proved two-sided least-fixpoint
+  induction rewrites it as an Aeneas \texttt{loop} (no new axiom). Then: fiber laws
+  (accept = \ref{thm:geom-slow} at \(1\) through floor division; reject = stage-2
+  uniform), a cut-depth induction against a SampCert-side model loop, a geometric-series
+  rejection closed form, identification with
+  \(\mathrm{DiscreteLaplaceSampleLoopIn1}\), and the \(\mathrm{Geo}\) algebra via
+  \(\mathrm{DiscreteLaplaceSampleLoop\_equiv}\).
+\end{proof}
+
+\begin{theorem}[\texttt{sample\_discrete\_laplace}]\label{thm:discrete-laplace}
+  \lean{OpenDP.MainResults.discrete_laplace_correct, OpenDP.MainResults.discrete_laplace_mass, OpenDP.samplers.laplace.sample_discrete_laplace_spec}\leanok
+  \uses{thm:geom-fast, thm:bernoulli-rational}
+  \(\sd_{\mathbb{Z}}(\texttt{sample\_discrete\_laplace}) =
+  \SLang.\mathrm{DiscreteLaplaceSample}\): sign \(\times\) geometric magnitude with the
+  \((\text{negative},0)\) outcome rejected --- the pure-DP noise mechanism. \statusDone
+\end{theorem}
+\begin{proof}\leanok
+  File \texttt{src/samplers/laplace.lean}. Body = stage-7 magnitude + stage-3 fair coin;
+  unit-state rejection loop \(\Rightarrow\) scalar geometric series; closed form meets
+  SampCert via \(\mathrm{probUntil\_apply\_norm}\) and
+  \(\mathrm{DiscreteLaplaceSampleLoop\_apply}\). Signed outputs via the
+  \(\mathrm{ibigToInt}\) trust layer.
+\end{proof}
+
+\begin{theorem}[\texttt{sample\_discrete\_gaussian} --- final target]\label{thm:discrete-gaussian}
+  \lean{OpenDP.MainResults.discrete_gaussian_correct, OpenDP.samplers.gaussian.sample_discrete_gaussian_spec}\leanok
+  \uses{thm:discrete-laplace, thm:exp}
+  \(\sd_{\mathbb{Z}}(\texttt{sample\_discrete\_gaussian}) =
+  \SLang.\mathrm{DiscreteGaussianSample}\): rejection sampling from the verified
+  discrete-Laplace proposal with the CKS acceptance test --- the zCDP noise mechanism.
+  Holds for every SampCert \texttt{mix} parameter. \statusDone
+\end{theorem}
+\begin{proof}\leanok
+  File \texttt{src/samplers/gaussian.lean}. Value-tracked deterministic body chain feeding
+  the stage-5 acceptance trial; unit-state rejection reuses the stage-8 scalar series; the
+  closed form meets SampCert via \(\mathrm{probUntil\_apply\_norm}\) and a locally
+  re-proved factored loop law (the upstream analytic layer does not compile on the pinned
+  stack).
+\end{proof}

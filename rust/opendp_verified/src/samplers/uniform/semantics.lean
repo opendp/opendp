@@ -1,8 +1,8 @@
 import Aeneas
 import Mathlib.Algebra.Order.Floor.Div
-import src.externals.dashu
-import src.externals.core_num_usize
-import src.samplers.bytes
+import src.core.externals.dashu
+import src.core.externals.core_num_usize
+import src.core.primitives.bytes
 import SampCert.Samplers.Uniform.Properties
 import SampCert.Foundations.Until
 
@@ -296,7 +296,7 @@ byte-sized bound `256 ^ byte_len`. -/
 theorem setup_range_eq_byte_range
     (upper : dashu_int.ubig.UBig)
     (setup : UniformBelowSetup upper) :
-    dashu.ubigToNat setup.range = bytes.byteRadix ^ setup.byte_len.val := by
+    dashu.ubigToNat setup.range = OpenDP.Core.Bytes.byteRadix ^ setup.byte_len.val := by
   have hone_nat : dashu.ubigToNat setup.one = 1 := dashu.one_spec setup.one setup.hone
   have hshift_nat : setup.shift.val = setup.byte_len.val * 8 := by
     have hmul := Aeneas.Std.UScalar.mul_equiv setup.byte_len 8#usize
@@ -309,8 +309,8 @@ theorem setup_range_eq_byte_range
   calc
     2 ^ (setup.byte_len.val * 8) = (2 ^ 8) ^ setup.byte_len.val := by
       rw [Nat.mul_comm, Nat.pow_mul]
-    _ = bytes.byteRadix ^ setup.byte_len.val := by
-      norm_num [OpenDP.bytes.byteRadix]
+    _ = OpenDP.Core.Bytes.byteRadix ^ setup.byte_len.val := by
+      norm_num [OpenDP.Core.Bytes.byteRadix]
 
 /-- The concrete rejection threshold computed by `sample_uniform_ubig_below`
 is a positive multiple of `upper`. -/
@@ -362,7 +362,7 @@ theorem sample_uniform_ubig_below_setup_spec
     (upper : dashu_int.ubig.UBig)
     (hupper : 0 < dashu.ubigToNat upper)
     (setup : UniformBelowSetup upper) :
-    dashu.ubigToNat setup.range = bytes.byteRadix ^ setup.byte_len.val ∧
+    dashu.ubigToNat setup.range = OpenDP.Core.Bytes.byteRadix ^ setup.byte_len.val ∧
     0 < dashu.ubigToNat setup.threshold := by
   exact ⟨setup_range_eq_byte_range upper setup, threshold_pos upper hupper setup⟩
 
@@ -419,11 +419,11 @@ theorem probUntil_uniformByteNat_eq_uniform
     (byte_len : Nat)
     (threshold_nat : Nat)
     (hthreshold : 0 < threshold_nat)
-    (hle : threshold_nat ≤ bytes.byteRadix ^ byte_len) :
-    SLang.probUntil (bytes.uniformByteNatPMF byte_len) (· < threshold_nat) =
+    (hle : threshold_nat ≤ OpenDP.Core.Bytes.byteRadix ^ byte_len) :
+    SLang.probUntil (OpenDP.Core.Bytes.uniformByteNatPMF byte_len) (· < threshold_nat) =
     ↑(SLang.UniformSample_PMF ⟨threshold_nat, hthreshold⟩) := by
   -- Work entirely in terms of UniformSample (definitional equality)
-  let N : ℕ+ := ⟨bytes.byteRadix ^ byte_len, pow_pos (by decide) byte_len⟩
+  let N : ℕ+ := ⟨OpenDP.Core.Bytes.byteRadix ^ byte_len, pow_pos (by decide) byte_len⟩
   change SLang.probUntil (SLang.UniformSample N) (· < threshold_nat) =
       SLang.UniformSample ⟨threshold_nat, hthreshold⟩
   have hNorm : ∑' x : ℕ, SLang.UniformSample N x = 1 := SLang.UniformSample_normalizes N

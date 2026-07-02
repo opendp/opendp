@@ -3,14 +3,16 @@ import Generated.OpenDP
 import SampCert.SLang
 import SampCert.Samplers.Uniform.Properties
 import SampCert.Foundations.Until
-import src.samplers.bytes
-import src.samplers.functor
+import src.core.primitives.bytes
+import src.core.primitives.semantics
 import src.samplers.uniform.semantics
 import src.samplers.uniform.mod
-import src.externals.dashu
+import src.samplers.uniform.blockers
+import src.core.externals.dashu
+import src.core.readable.tactics
 
 open Aeneas Aeneas.Std Aeneas.Std.WP Result ControlFlow
-open OpenDP OpenDP.bytes OpenDP.samplers
+open OpenDP OpenDP.Core.Bytes OpenDP.Core.Semantics OpenDP.Core.Readable
 open SLang PMF ENNReal Finset Classical
 
 namespace OpenDP.samplers.uniform
@@ -50,145 +52,11 @@ Proofs follow by unfolding the Aeneas-extracted body via `samplerDistGen_bind`,
 then applying `samplerDistGen_fill_bytes_nat` for the stochastic step, and the
 dashu specs (`from_be_bytes_spec`, `lt_true_spec`, `lt_false_spec`, `rem_spec`)
 for the deterministic steps.
+
+NOTE: the accept/reject mass lemmas `body_done_nat_dist` and `body_cont_total_mass` live in
+`src/samplers/uniform/blockers.lean` (now fully proved — the a14083a6 `deref_mut` obstacle is
+resolved there via `body_eq`). They are consumed unchanged below via that import.
 -/
-
-/-- Accepted body outcomes: when the random nat k < threshold, the body outputs
-    `done (Ok u)` with `ubigToNat u = k % upper`. -/
-private lemma body_done_nat_dist
-    (upper threshold : dashu_int.ubig.UBig)
-    (byte_len : Usize)
-    (buf : alloc.vec.Vec Std.U8)
-    (hlen : buf.length = byte_len.val)
-    (hupper : 0 < dashu.ubigToNat upper)
-    (nat_val : Nat) :
-    ∑' ubig : dashu_int.ubig.UBig,
-      samplerDistGen (sample_uniform_ubig_below_loop.body upper threshold buf)
-        (done (core.result.Result.Ok ubig)) *
-      (if dashu.ubigToNat ubig = nat_val then 1 else 0) =
-    ∑' k : Nat,
-      uniformByteNatPMF byte_len.val k *
-      (if k < dashu.ubigToNat threshold ∧ k % dashu.ubigToNat upper = nat_val
-       then 1 else 0) := by
-  rw [← fill_bytes_nat_bridge buf byte_len hlen
-        (fun k => if k < dashu.ubigToNat threshold ∧ k % dashu.ubigToNat upper = nat_val
-                  then 1 else 0)]
-  simp only [sample_uniform_ubig_below_loop.body, alloc.vec.Vec.deref_mut, lift,
-             alloc.vec.Vec.deref, bind_tc_ok, samplerDistGen_bind, SLang.probBind]
-  -- Swap ∑ubig outward to ∑pair, factor out the (ubig-independent) fill_bytes weight.
-  simp_rw [← ENNReal.tsum_mul_right]
-  rw [ENNReal.tsum_comm]
-  apply tsum_congr; intro pair
-  simp_rw [mul_assoc]
-  rw [ENNReal.tsum_mul_left]
-  congr 1
-  obtain ⟨r, s⟩ := pair
-  rcases r with ⟨⟩ | e
-  · -- r = Ok (): branch is deterministic (→ Continue ()); collapse ∑ over control-flow.
-    have hbr : core.result.Result.Insts.CoreOpsTry_traitTryTResultInfallibleE.branch
-        (core.result.Result.Ok () : core.result.Result Unit error.Error) =
-        ok (core.ops.control_flow.ControlFlow.Continue ()) := rfl
-    simp only [hbr, samplerDistGen_pure_ok, PMF.pure_apply]
-    -- collapse the control-flow sum (point mass at Continue ())
-    simp_rw [← ENNReal.tsum_mul_right]
-    rw [ENNReal.tsum_comm,
-        tsum_eq_single (core.ops.control_flow.ControlFlow.Continue ()
-          : core.ops.control_flow.ControlFlow (core.result.Result core.convert.Infallible error.Error) Unit)
-          (fun a ha => by simp [if_neg ha])]
-    simp only
-    -- Reduce the deterministic from_be_bytes / lt / rem chain.
-    obtain ⟨sample, hfbe, hsamp⟩ := dashu.from_be_bytes_exists_spec ⟨s.val, s.property⟩
-    obtain ⟨b, hlt⟩ := dashu.lt_exists_spec sample threshold
-    simp_rw [hfbe, samplerDistGen_bind_ok_left, hlt, samplerDistGen_bind_ok_left]
-    have hsv : beBytesToNat (s.val) = dashu.ubigToNat sample := hsamp.symm
-    rcases b with _ | _
-    · -- b = false: threshold ≤ k₀, body continues (cont) — no `done (Ok _)` mass.
-      have hge : dashu.ubigToNat threshold ≤ dashu.ubigToNat sample := dashu.lt_false_spec _ _ hlt
-      simp only [if_true, Bool.false_eq_true, if_false, samplerDistGen_pure_ok, PMF.pure_apply,
-        reduceCtorEq, zero_mul, mul_zero, tsum_zero]
-      rw [if_neg]; rw [hsv]; omega
-    · -- b = true: k₀ < threshold, body accepts with `done (Ok u)`, `ubigToNat u = k₀ % upper`.
-      have hlt' : dashu.ubigToNat sample < dashu.ubigToNat threshold := dashu.lt_true_spec _ _ hlt
-      obtain ⟨u, hrem, hu⟩ := dashu.rem_body_exists_spec sample upper hupper
-      simp only [if_true, one_mul]
-      simp_rw [hrem, samplerDistGen_bind_ok_left, samplerDistGen_pure_ok, PMF.pure_apply,
-               done.injEq, core.result.Result.Ok.injEq]
-      rw [tsum_eq_single u (fun a ha => by rw [if_neg ha, zero_mul])]
-      rw [if_pos rfl, one_mul, hu, hsv]
-      by_cases hnv : dashu.ubigToNat sample % dashu.ubigToNat upper = nat_val
-      · rw [if_pos hnv, if_pos ⟨hlt', hnv⟩]
-      · rw [if_neg hnv, if_neg (fun h => hnv h.2)]
-  · -- r = Err e: branch → Break, body fails with `done (Err e)` — no `done (Ok _)` mass.
-    have hbr : core.result.Result.Insts.CoreOpsTry_traitTryTResultInfallibleE.branch
-        (core.result.Result.Err e : core.result.Result Unit error.Error) =
-        ok (core.ops.control_flow.ControlFlow.Break (core.result.Result.Err e)) := rfl
-    have hfr := from_residual_err_ok (T := dashu_int.ubig.UBig) e
-    simp only [hbr, samplerDistGen_pure_ok, PMF.pure_apply]
-    simp_rw [← ENNReal.tsum_mul_right]
-    rw [ENNReal.tsum_comm,
-        tsum_eq_single (core.ops.control_flow.ControlFlow.Break (core.result.Result.Err e)
-          : core.ops.control_flow.ControlFlow (core.result.Result core.convert.Infallible error.Error) Unit)
-          (fun a ha => by simp [if_neg ha])]
-    simp only [hfr, samplerDistGen_bind_ok_left, samplerDistGen_pure_ok, PMF.pure_apply, if_true,
-      done.injEq, reduceCtorEq, if_false, mul_zero, zero_mul, tsum_zero]
-
-/-- Rejected body mass: the total probability of `cont` outcomes equals ∑ k ≥ threshold, U k. -/
-private lemma body_cont_total_mass
-    (upper threshold : dashu_int.ubig.UBig)
-    (byte_len : Usize)
-    (buf : alloc.vec.Vec Std.U8)
-    (hlen : buf.length = byte_len.val) :
-    ∑' buf' : alloc.vec.Vec Std.U8,
-      samplerDistGen (sample_uniform_ubig_below_loop.body upper threshold buf) (cont buf') =
-    ∑' k : Nat,
-      uniformByteNatPMF byte_len.val k * (if k < dashu.ubigToNat threshold then 0 else 1) := by
-  rw [← fill_bytes_nat_bridge buf byte_len hlen
-        (fun k => if k < dashu.ubigToNat threshold then 0 else 1)]
-  simp only [sample_uniform_ubig_below_loop.body, alloc.vec.Vec.deref_mut, lift,
-             alloc.vec.Vec.deref, bind_tc_ok, samplerDistGen_bind, SLang.probBind]
-  rw [ENNReal.tsum_comm]
-  apply tsum_congr; intro pair
-  rw [ENNReal.tsum_mul_left]
-  congr 1
-  obtain ⟨r, s⟩ := pair
-  rcases r with ⟨⟩ | e
-  · -- r = Ok (): branch → Continue; collapse control-flow sum.
-    have hbr : core.result.Result.Insts.CoreOpsTry_traitTryTResultInfallibleE.branch
-        (core.result.Result.Ok () : core.result.Result Unit error.Error) =
-        ok (core.ops.control_flow.ControlFlow.Continue ()) := rfl
-    simp only [hbr, samplerDistGen_pure_ok, PMF.pure_apply]
-    rw [ENNReal.tsum_comm,
-        tsum_eq_single (core.ops.control_flow.ControlFlow.Continue ()
-          : core.ops.control_flow.ControlFlow (core.result.Result core.convert.Infallible error.Error) Unit)
-          (fun a ha => by simp [if_neg ha])]
-    simp only
-    obtain ⟨sample, hfbe, hsamp⟩ := dashu.from_be_bytes_exists_spec ⟨s.val, s.property⟩
-    obtain ⟨b, hlt⟩ := dashu.lt_exists_spec sample threshold
-    have hsv : beBytesToNat (s.val) = dashu.ubigToNat sample := hsamp.symm
-    simp_rw [hfbe, samplerDistGen_bind_ok_left, hlt, samplerDistGen_bind_ok_left]
-    rcases b with _ | _
-    · -- b = false: body continues with `cont ⟨s.val,_⟩` — total cont mass is 1; k₀ ≥ threshold.
-      have hge : dashu.ubigToNat threshold ≤ dashu.ubigToNat sample := dashu.lt_false_spec _ _ hlt
-      simp only [Bool.false_eq_true, if_false, samplerDistGen_pure_ok, PMF.pure_apply, cont.injEq,
-                 if_true, one_mul]
-      rw [tsum_ite_eq, if_neg]; rw [hsv]; omega
-    · -- b = true: body accepts with `done (Ok u)` — contributes no cont mass; k₀ < threshold.
-      have hlt' : dashu.ubigToNat sample < dashu.ubigToNat threshold := dashu.lt_true_spec _ _ hlt
-      simp only [if_true]
-      simp_rw [samplerDistGen_bind, SLang.probBind, samplerDistGen_pure_ok, PMF.pure_apply]
-      simp only [reduceCtorEq, if_false, mul_zero, tsum_zero]
-      rw [hsv, if_pos hlt']
-  · -- r = Err e: branch → Break, body fails — no cont mass.
-    have hbr : core.result.Result.Insts.CoreOpsTry_traitTryTResultInfallibleE.branch
-        (core.result.Result.Err e : core.result.Result Unit error.Error) =
-        ok (core.ops.control_flow.ControlFlow.Break (core.result.Result.Err e)) := rfl
-    have hfr := from_residual_err_ok (T := dashu_int.ubig.UBig) e
-    simp only [hbr, samplerDistGen_pure_ok, PMF.pure_apply]
-    rw [ENNReal.tsum_comm,
-        tsum_eq_single (core.ops.control_flow.ControlFlow.Break (core.result.Result.Err e)
-          : core.ops.control_flow.ControlFlow (core.result.Result core.convert.Infallible error.Error) Unit)
-          (fun a ha => by simp [if_neg ha])]
-    simp only [if_true, hfr, samplerDistGen_bind_ok_left, samplerDistGen_pure_ok, PMF.pure_apply,
-      reduceCtorEq, if_false, mul_zero, tsum_zero]
 
 /-- Length preservation: every `cont buf'` with positive probability satisfies
     `buf'.length = byte_len.val`. -/
@@ -516,7 +384,7 @@ noncomputable def samplerDist_nat
 theorem threshold_le_byte_range
     (upper : dashu_int.ubig.UBig)
     (setup : UniformBelowSetup upper) :
-    dashu.ubigToNat setup.threshold ≤ bytes.byteRadix ^ setup.byte_len.val := by
+    dashu.ubigToNat setup.threshold ≤ OpenDP.Core.Bytes.byteRadix ^ setup.byte_len.val := by
   rw [← setup_range_eq_byte_range upper setup]
   rw [dashu.sub_spec setup.range setup.remainder setup.threshold setup.hthreshold]
   exact Nat.sub_le _ _

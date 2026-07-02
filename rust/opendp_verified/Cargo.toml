@@ -23,7 +23,4 @@ openssl-src = { version = "=300.3.1", optional = true }
 rand = "0.7.3"
 
 [lib]
-# The verified crate's Rust sources were moved under repro/ (everything the
-# lean-repro pipeline touches is confined there); the manifest stays at the
-# workspace-member root so the opendp path-dep and workspace membership hold.
-path = "repro/src/lib.rs"
+path = "src/lib.rs"

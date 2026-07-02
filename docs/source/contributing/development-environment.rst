@@ -347,31 +347,34 @@ Install
 ^^^^^^^
 
 1. Install Lean with ``elan``.
-2. Open the repository root and let ``elan`` select the toolchain from ``lean-toolchain``.
-3. Clone Aeneas into ``./aeneas`` and build.
-4. Optional: Clone SampCert into ``./SampCert`` if you want a local editable checkout.
-   Use the ``private-selection`` branch from:
-
-   * ``https://github.com/Shoeboxam/SampCert/tree/private-selection``
-
-5. Run:
+2. The lake package is rooted at the verified crate: ``rust/opendp_verified/``
+   (its ``lean-toolchain`` is the canonical Lean version — ``elan`` selects it
+   whenever you run ``lake`` from that directory).
+3. Clone the pinned Aeneas (with Charon) into ``./aeneas`` and SampCert into
+   ``./SampCert`` at the repository root — ``tools/check_lean_pins.sh`` holds the
+   canonical pins and prints the exact ``git clone``/``checkout`` commands if a
+   checkout is missing or at the wrong commit.
+4. Run the guarded build entry point, which checks the pins, applies the vendored
+   SampCert patch, builds the Charon/Aeneas binaries if needed, regenerates
+   ``Generated/``, builds the library, and machine-checks the verified chain:
 
 .. code-block:: bash
 
-    lake update
-    tools/refresh_opendp_verified_aeneas.sh
-    lake build OpenDPVerified
+    tools/build_lean.sh
 
 Workflow
 ^^^^^^^^
 
 Keep the files in the following layout:
 
+* the lake package files (``lakefile.lean``, ``lean-toolchain``, ``lake-manifest.json``) at the crate root ``rust/opendp_verified/``
 * generated Aeneas Lean in ``rust/opendp_verified/Generated/``
 * handwritten Lean proofs next to the Rust they prove in ``rust/opendp_verified/src/**/*.lean``
 * the tracked ``FunsExternal`` patch set in ``rust/opendp_verified/aeneas_patches/``
-* semantic sidecar modules for externals in ``rust/opendp_verified/src/externals/``
+* the vendored SampCert compatibility patch in ``rust/opendp_verified/sampcert_patches/``
+* semantic sidecar modules for externals in ``rust/opendp_verified/src/core/externals/``
 * the root Lean module for the verified crate in ``rust/opendp_verified/OpenDPVerified.lean``
+* the blueprint (prose + dependency graph) in ``rust/opendp_verified/blueprint/`` (build with ``tools/build_blueprint_lean.sh``)
 
 To regenerate the LLBC file, run Aeneas, and rebuild the external companion files from
 their templates plus the tracked patch set, run:
@@ -391,13 +394,13 @@ the patch set, and then rerun the script again.
 
 After regeneration:
 
-1. Put semantic predicates and proof-facing contracts for externals in sidecar modules under ``rust/opendp_verified/src/externals``.
+1. Put semantic predicates and proof-facing contracts for externals in sidecar modules under ``rust/opendp_verified/src/core/externals``.
 2. Leave handwritten proof files in ``rust/opendp_verified/src``.
-3. Rebuild the Lean target.
+3. Rebuild the Lean target (from ``rust/opendp_verified/``, or via ``tools/build_lean.sh``).
 
 .. code-block:: bash
 
-    lake build OpenDPVerified
+    cd rust/opendp_verified && lake build OpenDPVerified
 
 Release Process
 -----------------
