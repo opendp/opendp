@@ -18,3 +18,4 @@ import src.samplers.geometric.slow
 import src.samplers.geometric.fast
 import src.samplers.laplace
 import src.samplers.gaussian
+import src.main_results

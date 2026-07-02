@@ -25,8 +25,8 @@ open SLang PMF ENNReal Classical
 namespace OpenDP.samplers.gaussian
 
 open OpenDP.samplers.bernoulli (BernoulliExpSetup sample_bernoulli_exp_spec)
-open OpenDP.samplers.laplace (samplerDist_int tsum_samplerDist_int sample_discrete_laplace_spec
-  lap_cut_closed lap_probWhile_closed)
+open OpenDP.samplers.laplace (samplerDist_int tsum_samplerDist_int
+  sample_discrete_laplace_spec)
 
 /-- The candidate-dependent acceptance trial of the Gaussian rejection loop, at the
 mathematical values `tN = ⌊σ⌋+1`, `nN = numer²`, `dN = denom²`. -/
@@ -349,7 +349,8 @@ private lemma gauss_body_done_summed (u t num den u1 : dashu_int.ubig.UBig)
     rw [if_neg (fun h => hY h.symm), mul_zero, mul_zero])]
   rw [if_pos rfl, mul_one]
 
-/-- Lift: the extracted Gaussian loop's `ℤ`-law is the scalar rejection closed form. -/
+/-- Lift: the extracted Gaussian loop's `ℤ`-law is the scalar rejection closed form
+(instance of the generic unit-state rejection series). -/
 private lemma gauss_loop_lift (u t num den u1 : dashu_int.ubig.UBig)
     (hcloneT : dashu_int.ubig.UBig.Insts.CoreCloneClone.clone t = ok u1)
     (tN nN dN : ℕ) (hD : 0 < 2 * nN * tN * tN * dN)
@@ -363,38 +364,17 @@ private lemma gauss_loop_lift (u t num den u1 : dashu_int.ubig.UBig)
     samplerDist_int (samplers.gaussian.sample_discrete_gaussian_loop u t num den) z =
       (lapLaw z * gaussAccept tN nN dN hD z true) *
       (1 - ∑' Y : ℤ, lapLaw Y * gaussAccept tN nN dN hD Y false)⁻¹ := by
-  let cond : ControlFlow Unit (core.result.Result dashu_int.ibig.IBig error.Error) → Bool :=
-    fun cf => match cf with | cont _ => true | done _ => false
-  let bd : ControlFlow Unit (core.result.Result dashu_int.ibig.IBig error.Error) →
-      SLang (ControlFlow Unit (core.result.Result dashu_int.ibig.IBig error.Error)) :=
-    fun cf => match cf with
-      | cont _ => samplerDistGen
-          (samplers.gaussian.sample_discrete_gaussian_loop.body u t num den)
-      | done _ => PMF.pure cf
-  have hcc : ∀ a, cond (cont a) = true := fun _ => rfl
-  have hcd : ∀ w, cond (done w) = false := fun _ => rfl
-  have hstep1 : ∀ j : dashu_int.ibig.IBig,
-      samplerDist (samplers.gaussian.sample_discrete_gaussian_loop u t num den) j =
-        probWhile cond bd (cont ()) (done (core.result.Result.Ok j)) := by
-    intro j
-    simp only [samplerDist, samplers.gaussian.sample_discrete_gaussian_loop,
-      samplerDistGen_loop]
-    congr 1 <;> (funext cf; cases cf <;> rfl)
   have hexpand : samplerDist_int (samplers.gaussian.sample_discrete_gaussian_loop u t num den)
       z = ∑' j : dashu_int.ibig.IBig,
         samplerDist (samplers.gaussian.sample_discrete_gaussian_loop u t num den) j *
-          (if z = dashu.ibigToInt j then 1 else 0) := by
-    simp only [samplerDist_int, SLang.probBind, SLang.probPure]
-    refine tsum_congr fun j => ?_
-    by_cases h : z = dashu.ibigToInt j <;> simp [h]
+          (if z = dashu.ibigToInt j then 1 else 0) :=
+    probBind_pure_apply _ _ z
   rw [hexpand]
-  simp_rw [hstep1]
-  exact lap_probWhile_closed cond bd hcc hcd
-    (∑' Y : ℤ, lapLaw Y * gaussAccept tN nN dN hD Y false)
-    (fun z => lapLaw z * gaussAccept tN nN dN hD z true)
+  unfold samplers.gaussian.sample_discrete_gaussian_loop
+  exact tsum_probWhile_unit_rejection _ _ _ _
     (gauss_body_cont u t num den u1 hcloneT tN nN dN hD huv hu1v hnumv hdenv lapLaw hlap)
-    (fun z => gauss_body_done_summed u t num den u1 hcloneT tN nN dN hD huv hu1v hnumv hdenv
-      lapLaw hlap z) z
+    (gauss_body_done_summed u t num den u1 hcloneT tN nN dN hD huv hu1v hnumv hdenv
+      lapLaw hlap z)
 
 /-! ### The SampCert equality -/
 
@@ -451,12 +431,7 @@ private lemma gauss_closed_form_eq (num den : ℕ+) (mix : ℕ)
   -- RHS: unfold the sampler through the normalized `probUntil`.
   simp only [DiscreteGaussianSample, Bind.bind, Pure.pure, SLang.bind_apply, SLang.pure_apply]
   simp_rw [probUntil_apply_norm _ _ _ (gaussLoop_normalizes _ _ _ mix)]
-  have hcomm : ∀ (f g : (ℤ × Bool) → ENNReal) (c : ENNReal),
-      (∑' st : ℤ × Bool, f st * c * g st) = (∑' st : ℤ × Bool, f st * g st) * c := by
-    intro f g c
-    rw [← ENNReal.tsum_mul_right]
-    exact tsum_congr fun st => by ring
-  rw [hcomm]
+  rw [tsum_mul_right_comm]
   congr 1
   · -- numerator
     rw [ENNReal.tsum_prod']

@@ -417,4 +417,177 @@ theorem tsum_iSup_commute {α : Type*} (g : α → ℕ → ENNReal) (hmono : ∀
   rw [iSup_comm]
   simp_rw [← ENNReal.tsum_eq_iSup_sum]
 
+/-! ### Canonical loop semantics
+
+Every sampler-loop proof interprets an Aeneas `loop` as a `probWhile` over the same
+guard/body pair. Naming them once here (instead of `let`-binding per proof) means every file
+shares one matcher constant, so lemmas about them rewrite across files without the
+matcher-identity defeq traps. -/
+
+/-- Canonical `probWhile` guard of an Aeneas loop: live on `cont`, frozen on `done`. -/
+def loopCond {A B : Type} : ControlFlow A B → Bool
+  | cont _ => true
+  | done _ => false
+
+/-- Canonical `probWhile` body of an Aeneas loop: the body's distribution on live states,
+a point mass on frozen states. -/
+noncomputable def loopBd {A B : Type} (body : A → Result (ControlFlow A B)) :
+    ControlFlow A B → SLang (ControlFlow A B)
+  | cont a => samplerDistGen (body a)
+  | done w => PMF.pure (done w)
+
+@[simp] lemma loopCond_cont {A B : Type} (a : A) :
+    (loopCond (cont a : ControlFlow A B)) = true := rfl
+
+@[simp] lemma loopCond_done {A B : Type} (w : B) :
+    (loopCond (done w : ControlFlow A B)) = false := rfl
+
+@[simp] lemma loopBd_cont {A B : Type} (body : A → Result (ControlFlow A B)) (a : A) :
+    loopBd body (cont a) = samplerDistGen (body a) := rfl
+
+@[simp] lemma loopBd_done {A B : Type} (body : A → Result (ControlFlow A B)) (w : B) :
+    loopBd body (done w) = PMF.pure (done w) := rfl
+
+/-- `samplerDist` of an Aeneas loop is `probWhile` of the canonical guard/body. -/
+theorem samplerDist_loop_eq_probWhile {A β : Type}
+    (body : A → Result (ControlFlow A (core.result.Result β error.Error))) (x0 : A) (w : β) :
+    samplerDist (Aeneas.Std.loop body x0) w =
+      probWhile loopCond (loopBd body) (cont x0) (done (core.result.Result.Ok w)) := by
+  simp only [samplerDist, samplerDistGen_loop]
+  congr 1 <;> (funext cf; cases cf <;> rfl)
+
+/-- The `⨆`/`∑'` interchange for a loop's settle mass against an arbitrary weight — the shared
+skeleton of every sampler's `probWhile` lift. -/
+theorem tsum_samplerDist_loop {A β : Type}
+    (body : A → Result (ControlFlow A (core.result.Result β error.Error))) (x0 : A)
+    (g : β → ENNReal) :
+    (∑' w : β, samplerDist (Aeneas.Std.loop body x0) w * g w) =
+      ⨆ n, ∑' w : β, probWhileCut loopCond (loopBd body) n (cont x0)
+        (done (core.result.Result.Ok w)) * g w := by
+  simp_rw [samplerDist_loop_eq_probWhile]
+  simp only [probWhile]
+  simp_rw [ENNReal.iSup_mul]
+  rw [tsum_iSup_commute _ (fun w => (probWhileCut_monotonic loopCond (loopBd body) (cont x0)
+      (done (core.result.Result.Ok w))).mul_const (zero_le _))]
+
+/-! ### Pushforward of a sampler's law along a value interpretation -/
+
+/-- Apply a pushed-forward law (`samplerDist prog >>= probPure ∘ f`) at a point. Written once
+so every use shares the same `if` decidability instance. -/
+theorem probBind_pure_apply {α β : Type} (D : SLang α) (f : α → β) (b : β)
+    [inst : ∀ a : α, Decidable (b = f a)] :
+    SLang.probBind D (fun a => SLang.probPure (f a)) b =
+      ∑' a : α, D a * (if b = f a then 1 else 0) := by
+  simp only [SLang.probBind, SLang.probPure]
+  refine tsum_congr fun a => ?_
+  by_cases h : b = f a <;> simp [h]
+
+/-- Sum a weight factored through a value interpretation against the raw law: equals summing
+the weight against the pushed-forward law. Shared by the `ubigToNat` (`samplerDist_nat`) and
+`ibigToInt` (`samplerDist_int`) pushforwards. -/
+theorem tsum_samplerDist_comp {α β : Type}
+    (prog : Result (core.result.Result α error.Error)) (f : α → β) (g : β → ENNReal) :
+    (∑' w : α, samplerDist prog w * g (f w)) =
+      ∑' b : β, SLang.probBind (samplerDist prog) (fun a => SLang.probPure (f a)) b * g b := by
+  symm
+  simp_rw [SLang.probBind]
+  have hpush : ∀ b : β,
+      (∑' w : α, samplerDist prog w * SLang.probPure (f w) b) * g b =
+      ∑' w : α, samplerDist prog w * SLang.probPure (f w) b * g b :=
+    fun b => (ENNReal.tsum_mul_right).symm
+  simp_rw [hpush]
+  rw [ENNReal.tsum_comm]
+  refine tsum_congr fun w => ?_
+  rw [tsum_eq_single (f w) (fun b hb => by simp [SLang.probPure, hb])]
+  simp [SLang.probPure]
+
+/-- Pull a constant middle factor out of a summed triple product (the `probUntil`
+normalizer rearrangement). -/
+theorem tsum_mul_right_comm {ι : Type} (f g : ι → ENNReal) (c : ENNReal) :
+    (∑' i : ι, f i * c * g i) = (∑' i : ι, f i * g i) * c := by
+  rw [← ENNReal.tsum_mul_right]
+  exact tsum_congr fun i => by ring
+
+/-! ### Unit-state rejection loops
+
+A loop whose state is `Unit` redraws everything each iteration, so its settle mass obeys a
+*scalar* geometric series: with per-iteration self-loop mass `ρ` and settle mass `A` (against
+a chosen output weight), the truncations are `A · Σ_{i<k} ρ^i` and the limit is
+`A · (1 - ρ)⁻¹`. Shared by the discrete Laplace and discrete Gaussian rejection loops. -/
+
+theorem tsum_probWhileCut_unit_rejection {γ : Type}
+    (body : Unit → Result (ControlFlow Unit (core.result.Result γ error.Error)))
+    (ρ A : ENNReal) (g : γ → ENNReal)
+    (hρ : samplerDistGen (body ()) (cont ()) = ρ)
+    (hA : (∑' j : γ, samplerDistGen (body ()) (done (core.result.Result.Ok j)) * g j) = A) :
+    ∀ k : ℕ,
+      (∑' j : γ, probWhileCut loopCond (loopBd body) (k + 1) (cont ())
+        (done (core.result.Result.Ok j)) * g j) =
+      A * ∑ i ∈ Finset.range k, ρ ^ i := by
+  intro k
+  induction k with
+  | zero =>
+    have h1 : ∀ j : γ,
+        probWhileCut loopCond (loopBd body) 1 (cont ())
+          (done (core.result.Result.Ok j)) = 0 := by
+      intro j
+      rw [probWhileCut, probWhileFunctional, if_pos (loopCond_cont ())]
+      simp only [Bind.bind, SLang.bind_apply, probWhileCut, SLang.probZero, mul_zero,
+        tsum_zero]
+    simp [h1]
+  | succ k ih =>
+    have hunf : ∀ j : γ,
+        probWhileCut loopCond (loopBd body) (k + 1 + 1) (cont ())
+          (done (core.result.Result.Ok j)) =
+          ρ * probWhileCut loopCond (loopBd body) (k + 1) (cont ())
+            (done (core.result.Result.Ok j)) +
+          samplerDistGen (body ()) (done (core.result.Result.Ok j)) := by
+      intro j
+      rw [probWhileCut, probWhileFunctional, if_pos (loopCond_cont ())]
+      simp only [Bind.bind, SLang.bind_apply]
+      rw [tsum_controlFlow]
+      congr 1
+      · rw [tsum_eq_single () (fun a ha => absurd (Subsingleton.elim a ()) ha),
+          loopBd_cont, hρ]
+      · simp_rw [probWhileCut_done_pt loopCond (loopBd body) (fun _ => rfl) k,
+          SLang.pure_apply]
+        rw [tsum_eq_single (core.result.Result.Ok j) (fun r' hr' => by
+          rw [if_neg (fun h => hr' ((ControlFlow.done.inj h).symm)), mul_zero]),
+          if_pos rfl, mul_one, loopBd_cont]
+    simp_rw [hunf, add_mul]
+    rw [ENNReal.tsum_add]
+    simp_rw [mul_assoc]
+    rw [ENNReal.tsum_mul_left, ih, hA]
+    have hgeom : (∑ i ∈ Finset.range (k + 1), ρ ^ i) =
+        1 + ρ * ∑ i ∈ Finset.range k, ρ ^ i := by
+      rw [Finset.sum_range_succ']
+      simp_rw [pow_succ']
+      rw [← Finset.mul_sum, pow_zero]
+      ring
+    rw [hgeom]
+    ring
+
+theorem tsum_probWhile_unit_rejection {γ : Type}
+    (body : Unit → Result (ControlFlow Unit (core.result.Result γ error.Error)))
+    (ρ A : ENNReal) (g : γ → ENNReal)
+    (hρ : samplerDistGen (body ()) (cont ()) = ρ)
+    (hA : (∑' j : γ, samplerDistGen (body ()) (done (core.result.Result.Ok j)) * g j) = A) :
+    (∑' j : γ, samplerDist (Aeneas.Std.loop body ()) j * g j) = A * (1 - ρ)⁻¹ := by
+  rw [tsum_samplerDist_loop body () g]
+  have hmono : Monotone (fun k => ∑' j : γ, probWhileCut loopCond (loopBd body) k (cont ())
+      (done (core.result.Result.Ok j)) * g j) := by
+    intro k1 k2 hk
+    exact ENNReal.tsum_le_tsum fun j =>
+      mul_le_mul_right' (probWhileCut_monotonic loopCond (loopBd body) (cont ())
+        (done (core.result.Result.Ok j)) hk) _
+  have hshift : (⨆ k : ℕ, ∑' j : γ, probWhileCut loopCond (loopBd body) k (cont ())
+      (done (core.result.Result.Ok j)) * g j) =
+      ⨆ k : ℕ, ∑' j : γ, probWhileCut loopCond (loopBd body) (k + 1) (cont ())
+        (done (core.result.Result.Ok j)) * g j := by
+    refine le_antisymm (iSup_le fun k => ?_) (iSup_le fun k => le_iSup_of_le (k + 1) le_rfl)
+    exact le_iSup_of_le k (hmono (Nat.le_succ k))
+  rw [hshift]
+  simp_rw [tsum_probWhileCut_unit_rejection body ρ A g hρ hA]
+  rw [← ENNReal.mul_iSup, ← ENNReal.tsum_eq_iSup_nat, ENNReal.tsum_geometric]
+
 end OpenDP.Core.Semantics

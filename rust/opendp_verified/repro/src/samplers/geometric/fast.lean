@@ -736,20 +736,8 @@ distribution against `g ∘ ubigToNat` equals summing the `ℕ`-pushforward agai
 lemma tsum_samplerDist_nat
     (prog : Result (core.result.Result dashu_int.ubig.UBig error.Error)) (g : ℕ → ENNReal) :
     (∑' w : dashu_int.ubig.UBig, samplerDist prog w * g (dashu.ubigToNat w)) =
-      ∑' n : ℕ, samplerDist_nat prog n * g n := by
-  symm
-  simp only [samplerDist_nat, SLang.probBind]
-  have hpush : ∀ n : ℕ,
-      (∑' w : dashu_int.ubig.UBig,
-        samplerDist prog w * SLang.probPure (dashu.ubigToNat w) n) * g n =
-      ∑' w : dashu_int.ubig.UBig,
-        samplerDist prog w * SLang.probPure (dashu.ubigToNat w) n * g n :=
-    fun n => (ENNReal.tsum_mul_right).symm
-  simp_rw [hpush]
-  rw [ENNReal.tsum_comm]
-  refine tsum_congr fun w => ?_
-  rw [tsum_eq_single (dashu.ubigToNat w) (fun n hn => by simp [SLang.probPure, hn])]
-  simp [SLang.probPure]
+      ∑' n : ℕ, samplerDist_nat prog n * g n :=
+  tsum_samplerDist_comp prog dashu.ubigToNat g
 
 /-- The mathematical value 1 collapses the trial indices to SampCert's `1 / 1`. -/
 lemma bernExpNeg_collapse_one (mval : ℕ) (hpos : 0 < mval) (hm : mval = 1) :
@@ -1112,19 +1100,11 @@ private lemma geo_fast_loop_cut_step (denom numer : dashu_int.ubig.UBig)
     (hone : dashu_ratio.rbig.RBig.ONE = ok oneRat)
     (hslowLaw : samplerDist_nat (samplers.geometric.sample_geometric_exp_slow oneRat) =
       slowLaw 1 1)
-    (cond : ControlFlow dashu_int.ubig.UBig
-      (core.result.Result dashu_int.ubig.UBig error.Error) → Bool)
-    (bd : ControlFlow dashu_int.ubig.UBig
-        (core.result.Result dashu_int.ubig.UBig error.Error) →
-      SLang (ControlFlow dashu_int.ubig.UBig
-        (core.result.Result dashu_int.ubig.UBig error.Error)))
-    (hcc : ∀ a, cond (cont a) = true)
-    (hcd : ∀ w, cond (done w) = false)
-    (hbc : ∀ a, bd (cont a) = samplerDistGen (fast_body denom numerSigned a))
     (n : ℕ) :
     ∀ (u : dashu_int.ubig.UBig) (m : ℕ),
       (∑' w : dashu_int.ubig.UBig,
-        probWhileCut cond bd n (cont u) (done (core.result.Result.Ok w)) *
+        probWhileCut loopCond (loopBd (fast_body denom numerSigned)) n (cont u)
+          (done (core.result.Result.Ok w)) *
           (if m = dashu.ubigToNat w then 1 else 0)) =
       probWhileCut geoLoopCond
         (fastLoopBody ⟨dashu.ubigToNat denom, hdenom⟩ ⟨dashu.ubigToNat numer, hpos⟩) n
@@ -1145,9 +1125,10 @@ private lemma geo_fast_loop_cut_step (denom numer : dashu_int.ubig.UBig)
     cases n with
     | zero =>
       have hz : ∀ w : dashu_int.ubig.UBig,
-          probWhileCut cond bd 1 (cont u) (done (core.result.Result.Ok w)) = 0 := by
+          probWhileCut loopCond (loopBd (fast_body denom numerSigned)) 1 (cont u)
+            (done (core.result.Result.Ok w)) = 0 := by
         intro w
-        rw [probWhileCut, probWhileFunctional, if_pos (hcc u)]
+        rw [probWhileCut, probWhileFunctional, if_pos (loopCond_cont u)]
         simp only [Bind.bind, SLang.bind_apply, probWhileCut, SLang.probZero, mul_zero,
           tsum_zero]
       simp only [hz, zero_mul, tsum_zero]
@@ -1155,21 +1136,26 @@ private lemma geo_fast_loop_cut_step (denom numer : dashu_int.ubig.UBig)
       simp only [probWhileCut, SLang.probZero, mul_zero, tsum_zero, add_zero]
     | succ n' =>
       have hunf : ∀ w : dashu_int.ubig.UBig,
-          probWhileCut cond bd (n' + 1 + 1) (cont u) (done (core.result.Result.Ok w)) =
-            (∑' a : dashu_int.ubig.UBig, bd (cont u) (cont a) *
-              probWhileCut cond bd (n' + 1) (cont a) (done (core.result.Result.Ok w))) +
+          probWhileCut loopCond (loopBd (fast_body denom numerSigned)) (n' + 1 + 1) (cont u)
+              (done (core.result.Result.Ok w)) =
+            (∑' a : dashu_int.ubig.UBig,
+              loopBd (fast_body denom numerSigned) (cont u) (cont a) *
+              probWhileCut loopCond (loopBd (fast_body denom numerSigned)) (n' + 1) (cont a)
+                (done (core.result.Result.Ok w))) +
             (∑' r' : core.result.Result dashu_int.ubig.UBig error.Error,
-              bd (cont u) (done r') *
-                probWhileCut cond bd (n' + 1) (done r') (done (core.result.Result.Ok w))) := by
+              loopBd (fast_body denom numerSigned) (cont u) (done r') *
+                probWhileCut loopCond (loopBd (fast_body denom numerSigned)) (n' + 1)
+                  (done r') (done (core.result.Result.Ok w))) := by
         intro w
-        rw [probWhileCut, probWhileFunctional, if_pos (hcc u)]
+        rw [probWhileCut, probWhileFunctional, if_pos (loopCond_cont u)]
         simp only [Bind.bind, SLang.bind_apply]
         rw [tsum_controlFlow]
       simp_rw [hunf, add_mul]
       rw [ENNReal.tsum_add]
       have hcont : (∑' w : dashu_int.ubig.UBig,
-          (∑' a : dashu_int.ubig.UBig, bd (cont u) (cont a) *
-            probWhileCut cond bd (n' + 1) (cont a) (done (core.result.Result.Ok w))) *
+          (∑' a : dashu_int.ubig.UBig, loopBd (fast_body denom numerSigned) (cont u) (cont a) *
+            probWhileCut loopCond (loopBd (fast_body denom numerSigned)) (n' + 1) (cont a)
+              (done (core.result.Result.Ok w))) *
             (if m = dashu.ubigToNat w then 1 else 0)) =
           BernoulliExpNegSample (dashu.ubigToNat u) ⟨dashu.ubigToNat denom, hdenom⟩ false *
             (∑' x : ℕ, UniformSample ⟨dashu.ubigToNat denom, hdenom⟩ x *
@@ -1178,7 +1164,7 @@ private lemma geo_fast_loop_cut_step (denom numer : dashu_int.ubig.UBig)
                 (n' + 1) (true, x) (false, m)) := by
         simp_rw [← ENNReal.tsum_mul_right]
         rw [ENNReal.tsum_comm]
-        simp_rw [hbc u,
+        simp_rw [loopBd_cont,
           fast_body_cont_mass denom numer numerSigned hdenom hsign hpos u i i1 u1 r oneRat
             hI hIparts hC hD hF hone,
           mul_assoc, ENNReal.tsum_mul_left, ih]
@@ -1191,23 +1177,26 @@ private lemma geo_fast_loop_cut_step (denom numer : dashu_int.ubig.UBig)
           rw [samplerDist_nat_uniform_clone denom u1 hdenom hD hu1pos x]
       have hdone : (∑' w : dashu_int.ubig.UBig,
           (∑' r' : core.result.Result dashu_int.ubig.UBig error.Error,
-            bd (cont u) (done r') *
-              probWhileCut cond bd (n' + 1) (done r') (done (core.result.Result.Ok w))) *
+            loopBd (fast_body denom numerSigned) (cont u) (done r') *
+              probWhileCut loopCond (loopBd (fast_body denom numerSigned)) (n' + 1) (done r')
+                (done (core.result.Result.Ok w))) *
             (if m = dashu.ubigToNat w then 1 else 0)) =
           BernoulliExpNegSample (dashu.ubigToNat u) ⟨dashu.ubigToNat denom, hdenom⟩ true *
             fastAccept ⟨dashu.ubigToNat denom, hdenom⟩ ⟨dashu.ubigToNat numer, hpos⟩
               (dashu.ubigToNat u) m := by
         have hcol : ∀ w : dashu_int.ubig.UBig,
             (∑' r' : core.result.Result dashu_int.ubig.UBig error.Error,
-              bd (cont u) (done r') *
-                probWhileCut cond bd (n' + 1) (done r') (done (core.result.Result.Ok w))) =
-            bd (cont u) (done (core.result.Result.Ok w)) := by
+              loopBd (fast_body denom numerSigned) (cont u) (done r') *
+                probWhileCut loopCond (loopBd (fast_body denom numerSigned)) (n' + 1) (done r')
+                  (done (core.result.Result.Ok w))) =
+            loopBd (fast_body denom numerSigned) (cont u) (done (core.result.Result.Ok w)) := by
           intro w
-          simp_rw [probWhileCut_done_pt cond bd hcd n', SLang.pure_apply]
+          simp_rw [probWhileCut_done_pt loopCond (loopBd (fast_body denom numerSigned)) (fun _ => rfl) n',
+            SLang.pure_apply]
           rw [tsum_eq_single (core.result.Result.Ok w) (fun r' hr' => by
             rw [if_neg (fun h => hr' ((ControlFlow.done.inj h).symm)), mul_zero]),
             if_pos rfl, mul_one]
-        simp_rw [hcol, hbc u]
+        simp_rw [hcol, loopBd_cont]
         rw [fast_body_done_summed denom numer numerSigned hdenom hsign hpos u i i1 u1 r oneRat
           hI hIparts hC hD hF hone ⟨dashu.ubigToNat denom, hdenom⟩
           ⟨dashu.ubigToNat numer, hpos⟩ rfl rfl m]
@@ -1247,41 +1236,16 @@ private lemma geo_fast_loop_probWhile (denom numer : dashu_int.ubig.UBig)
       probWhile geoLoopCond
         (fastLoopBody ⟨dashu.ubigToNat denom, hdenom⟩ ⟨dashu.ubigToNat numer, hpos⟩)
         (true, dashu.ubigToNat u0) (false, m) := by
-  let cond : ControlFlow dashu_int.ubig.UBig
-      (core.result.Result dashu_int.ubig.UBig error.Error) → Bool :=
-    fun cf => match cf with | cont _ => true | done _ => false
-  let bd : ControlFlow dashu_int.ubig.UBig
-      (core.result.Result dashu_int.ubig.UBig error.Error) →
-      SLang (ControlFlow dashu_int.ubig.UBig
-        (core.result.Result dashu_int.ubig.UBig error.Error)) :=
-    fun cf => match cf with
-      | cont a => samplerDistGen (fast_body denom numerSigned a)
-      | done _ => PMF.pure cf
-  have hcc : ∀ a, cond (cont a) = true := fun _ => rfl
-  have hcd : ∀ w, cond (done w) = false := fun _ => rfl
-  have hbc : ∀ a, bd (cont a) = samplerDistGen (fast_body denom numerSigned a) := fun _ => rfl
-  have hstep1 : ∀ w : dashu_int.ubig.UBig,
-      samplerDist (Aeneas.Std.loop (fast_body denom numerSigned) u0) w =
-        probWhile cond bd (cont u0) (done (core.result.Result.Ok w)) := by
-    intro w
-    simp only [samplerDist, samplerDistGen_loop]
-    congr 1 <;> (funext cf; cases cf <;> rfl)
   have hexpand : samplerDist_nat (Aeneas.Std.loop (fast_body denom numerSigned) u0) m =
       ∑' w : dashu_int.ubig.UBig,
         samplerDist (Aeneas.Std.loop (fast_body denom numerSigned) u0) w *
-          (if m = dashu.ubigToNat w then 1 else 0) := by
-    simp only [samplerDist_nat, SLang.probBind, SLang.probPure]
-    refine tsum_congr fun w => ?_
-    by_cases h : m = dashu.ubigToNat w <;> simp [h]
-  rw [hexpand]
-  simp_rw [hstep1]
+          (if m = dashu.ubigToNat w then 1 else 0) :=
+    probBind_pure_apply _ _ m
+  rw [hexpand, tsum_samplerDist_loop]
   simp only [probWhile]
-  simp_rw [ENNReal.iSup_mul]
-  rw [tsum_iSup_commute _ (fun w => (probWhileCut_monotonic cond bd (cont u0)
-      (done (core.result.Result.Ok w))).mul_const (zero_le _))]
-  refine iSup_congr (fun n => ?_)
-  exact geo_fast_loop_cut_step denom numer numerSigned u1 oneRat hdenom hpos hsign hD hu1pos
-    hone hslowLaw cond bd hcc hcd hbc n u0 m
+  exact iSup_congr fun n =>
+    geo_fast_loop_cut_step denom numer numerSigned u1 oneRat hdenom hpos hsign hD hu1pos
+      hone hslowLaw n u0 m
 
 /-- Push `samplerDist_nat` through a bind whose continuation propagates errors. -/
 private lemma samplerDist_nat_bind

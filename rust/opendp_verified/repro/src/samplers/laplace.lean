@@ -36,24 +36,13 @@ noncomputable def samplerDist_int
     (prog : Result (core.result.Result dashu_int.ibig.IBig error.Error)) : SLang ℤ :=
   SLang.probBind (samplerDist prog) (fun i => SLang.probPure (dashu.ibigToInt i))
 
-/-- Push an `ibigToInt`-factored weight through an `IBig`-valued program. -/
+/-- Push an `ibigToInt`-factored weight through an `IBig`-valued program
+(instance of the generic `tsum_samplerDist_comp`). -/
 lemma tsum_samplerDist_int
     (prog : Result (core.result.Result dashu_int.ibig.IBig error.Error)) (g : ℤ → ENNReal) :
     (∑' j : dashu_int.ibig.IBig, samplerDist prog j * g (dashu.ibigToInt j)) =
-      ∑' z : ℤ, samplerDist_int prog z * g z := by
-  symm
-  simp only [samplerDist_int, SLang.probBind]
-  have hpush : ∀ z : ℤ,
-      (∑' j : dashu_int.ibig.IBig,
-        samplerDist prog j * SLang.probPure (dashu.ibigToInt j) z) * g z =
-      ∑' j : dashu_int.ibig.IBig,
-        samplerDist prog j * SLang.probPure (dashu.ibigToInt j) z * g z :=
-    fun z => (ENNReal.tsum_mul_right).symm
-  simp_rw [hpush]
-  rw [ENNReal.tsum_comm]
-  refine tsum_congr fun j => ?_
-  rw [tsum_eq_single (dashu.ibigToInt j) (fun z hz => by simp [SLang.probPure, hz])]
-  simp [SLang.probPure]
+      ∑' z : ℤ, samplerDist_int prog z * g z :=
+  tsum_samplerDist_comp prog dashu.ibigToInt g
 
 /-- Index collapse for the fair coin: values `1`/`2` pin SampCert's `BernoulliSample 1 2`. -/
 lemma bernoulliSample_collapse (mv nv : ℕ) (hn : 0 < nv) (wf : mv ≤ nv)
@@ -439,109 +428,10 @@ lemma lap_body_done_summed (x r : dashu_ratio.rbig.RBig)
         (if z = (m : ℤ) then 1 else 0))) ?_
   rw [hfast]
 
-/-! ### Scalar rejection series and the `probWhile` limit -/
-
-/-- Truncation closed form for a unit-state rejection loop with per-iteration settle law `A`
-and self-loop mass `ρ`. -/
-lemma lap_cut_closed
-    (cond : ControlFlow Unit (core.result.Result dashu_int.ibig.IBig error.Error) → Bool)
-    (bd : ControlFlow Unit (core.result.Result dashu_int.ibig.IBig error.Error) →
-      SLang (ControlFlow Unit (core.result.Result dashu_int.ibig.IBig error.Error)))
-    (hcc : ∀ a, cond (cont a) = true)
-    (hcd : ∀ w, cond (done w) = false)
-    (ρ : ENNReal) (A : ℤ → ENNReal)
-    (hρ : bd (cont ()) (cont ()) = ρ)
-    (hA : ∀ z : ℤ, (∑' j : dashu_int.ibig.IBig,
-      bd (cont ()) (done (core.result.Result.Ok j)) *
-        (if z = dashu.ibigToInt j then 1 else 0)) = A z) :
-    ∀ (k : ℕ) (z : ℤ),
-      (∑' j : dashu_int.ibig.IBig,
-        probWhileCut cond bd (k + 1) (cont ()) (done (core.result.Result.Ok j)) *
-          (if z = dashu.ibigToInt j then 1 else 0)) =
-      A z * ∑ i ∈ Finset.range k, ρ ^ i := by
-  intro k
-  induction k with
-  | zero =>
-    intro z
-    have h1 : ∀ j : dashu_int.ibig.IBig,
-        probWhileCut cond bd 1 (cont ()) (done (core.result.Result.Ok j)) = 0 := by
-      intro j
-      rw [probWhileCut, probWhileFunctional, if_pos (hcc ())]
-      simp only [Bind.bind, SLang.bind_apply, probWhileCut, SLang.probZero, mul_zero,
-        tsum_zero]
-    simp [h1]
-  | succ k ih =>
-    intro z
-    have hunf : ∀ j : dashu_int.ibig.IBig,
-        probWhileCut cond bd (k + 1 + 1) (cont ()) (done (core.result.Result.Ok j)) =
-          ρ * probWhileCut cond bd (k + 1) (cont ()) (done (core.result.Result.Ok j)) +
-          bd (cont ()) (done (core.result.Result.Ok j)) := by
-      intro j
-      rw [probWhileCut, probWhileFunctional, if_pos (hcc ())]
-      simp only [Bind.bind, SLang.bind_apply]
-      rw [tsum_controlFlow]
-      congr 1
-      · rw [tsum_eq_single () (fun a ha => absurd (Subsingleton.elim a ()) ha), hρ]
-      · simp_rw [probWhileCut_done_pt cond bd hcd k, SLang.pure_apply]
-        rw [tsum_eq_single (core.result.Result.Ok j) (fun r' hr' => by
-          rw [if_neg (fun h => hr' ((ControlFlow.done.inj h).symm)), mul_zero]),
-          if_pos rfl, mul_one]
-    simp_rw [hunf, add_mul]
-    rw [ENNReal.tsum_add]
-    simp_rw [mul_assoc]
-    rw [ENNReal.tsum_mul_left, ih z, hA z]
-    have hgeom : (∑ i ∈ Finset.range (k + 1), ρ ^ i) =
-        1 + ρ * ∑ i ∈ Finset.range k, ρ ^ i := by
-      rw [Finset.sum_range_succ']
-      simp_rw [pow_succ']
-      rw [← Finset.mul_sum, pow_zero]
-      ring
-    rw [hgeom]
-    ring
-
-/-- `probWhile` limit of the unit-state rejection loop: `A(z) / (1 - ρ)`. -/
-lemma lap_probWhile_closed
-    (cond : ControlFlow Unit (core.result.Result dashu_int.ibig.IBig error.Error) → Bool)
-    (bd : ControlFlow Unit (core.result.Result dashu_int.ibig.IBig error.Error) →
-      SLang (ControlFlow Unit (core.result.Result dashu_int.ibig.IBig error.Error)))
-    (hcc : ∀ a, cond (cont a) = true)
-    (hcd : ∀ w, cond (done w) = false)
-    (ρ : ENNReal) (A : ℤ → ENNReal)
-    (hρ : bd (cont ()) (cont ()) = ρ)
-    (hA : ∀ z : ℤ, (∑' j : dashu_int.ibig.IBig,
-      bd (cont ()) (done (core.result.Result.Ok j)) *
-        (if z = dashu.ibigToInt j then 1 else 0)) = A z) (z : ℤ) :
-    (∑' j : dashu_int.ibig.IBig,
-      probWhile cond bd (cont ()) (done (core.result.Result.Ok j)) *
-        (if z = dashu.ibigToInt j then 1 else 0)) = A z * (1 - ρ)⁻¹ := by
-  simp only [probWhile]
-  simp_rw [ENNReal.iSup_mul]
-  rw [tsum_iSup_commute (fun j k => probWhileCut cond bd k (cont ())
-      (done (core.result.Result.Ok j)) * (if z = dashu.ibigToInt j then 1 else 0))
-    (fun j => (probWhileCut_monotonic cond bd (cont ())
-      (done (core.result.Result.Ok j))).mul_const (zero_le _))]
-  have hmono : Monotone (fun k => ∑' j : dashu_int.ibig.IBig,
-      probWhileCut cond bd k (cont ()) (done (core.result.Result.Ok j)) *
-        (if z = dashu.ibigToInt j then 1 else 0)) := by
-    intro k1 k2 hk
-    exact ENNReal.tsum_le_tsum fun j =>
-      mul_le_mul_right' (probWhileCut_monotonic cond bd (cont ())
-        (done (core.result.Result.Ok j)) hk) _
-  have hshift : (⨆ k : ℕ, ∑' j : dashu_int.ibig.IBig,
-      probWhileCut cond bd k (cont ()) (done (core.result.Result.Ok j)) *
-        (if z = dashu.ibigToInt j then 1 else 0)) =
-      ⨆ k : ℕ, ∑' j : dashu_int.ibig.IBig,
-        probWhileCut cond bd (k + 1) (cont ()) (done (core.result.Result.Ok j)) *
-          (if z = dashu.ibigToInt j then 1 else 0) := by
-    refine le_antisymm (iSup_le fun k => ?_) (iSup_le fun k => le_iSup_of_le (k + 1) le_rfl)
-    exact le_iSup_of_le k (hmono (Nat.le_succ k))
-  rw [hshift]
-  simp_rw [lap_cut_closed cond bd hcc hcd ρ A hρ hA]
-  rw [← ENNReal.mul_iSup, ← ENNReal.tsum_eq_iSup_nat, ENNReal.tsum_geometric]
-
 /-! ### Lift, wrapper, and the SampCert equality -/
 
-/-- Lift: the extracted Laplace loop's `ℤ`-law is the scalar rejection closed form. -/
+/-- Lift: the extracted Laplace loop's `ℤ`-law is the scalar rejection closed form
+(instance of the generic unit-state rejection series). -/
 private lemma lap_loop_lift (x r : dashu_ratio.rbig.RBig)
     (hclone : dashu_ratio.rbig.RBig.Insts.CoreCloneClone.clone x = ok r)
     (magLaw : SLang ℕ)
@@ -560,41 +450,17 @@ private lemma lap_loop_lift (x r : dashu_ratio.rbig.RBig)
          BernoulliSample 1 2 (Nat.le.step Nat.le.refl) false *
           (if z = (m : ℤ) then 1 else 0))) *
       (1 - BernoulliSample 1 2 (Nat.le.step Nat.le.refl) true * magLaw 0)⁻¹ := by
-  let cond : ControlFlow Unit (core.result.Result dashu_int.ibig.IBig error.Error) → Bool :=
-    fun cf => match cf with | cont _ => true | done _ => false
-  let bd : ControlFlow Unit (core.result.Result dashu_int.ibig.IBig error.Error) →
-      SLang (ControlFlow Unit (core.result.Result dashu_int.ibig.IBig error.Error)) :=
-    fun cf => match cf with
-      | cont _ => samplerDistGen (samplers.laplace.sample_discrete_laplace_loop.body x)
-      | done _ => PMF.pure cf
-  have hcc : ∀ a, cond (cont a) = true := fun _ => rfl
-  have hcd : ∀ w, cond (done w) = false := fun _ => rfl
-  have hstep1 : ∀ j : dashu_int.ibig.IBig,
-      samplerDist (samplers.laplace.sample_discrete_laplace_loop x) j =
-        probWhile cond bd (cont ()) (done (core.result.Result.Ok j)) := by
-    intro j
-    simp only [samplerDist, samplers.laplace.sample_discrete_laplace_loop,
-      samplerDistGen_loop]
-    congr 1 <;> (funext cf; cases cf <;> rfl)
   have hexpand : samplerDist_int (samplers.laplace.sample_discrete_laplace_loop x) z =
       ∑' j : dashu_int.ibig.IBig,
         samplerDist (samplers.laplace.sample_discrete_laplace_loop x) j *
-          (if z = dashu.ibigToInt j then 1 else 0) := by
-    simp only [samplerDist_int, SLang.probBind, SLang.probPure]
-    refine tsum_congr fun j => ?_
-    by_cases h : z = dashu.ibigToInt j <;> simp [h]
+          (if z = dashu.ibigToInt j then 1 else 0) :=
+    probBind_pure_apply _ _ z
   rw [hexpand]
-  simp_rw [hstep1]
-  exact lap_probWhile_closed cond bd hcc hcd
-    (BernoulliSample 1 2 (Nat.le.step Nat.le.refl) true * magLaw 0)
-    (fun z => ∑' m : ℕ, magLaw m *
-      (BernoulliSample 1 2 (Nat.le.step Nat.le.refl) true *
-        (if 0 = m then 0 else if z = -(m : ℤ) then 1 else 0) +
-       BernoulliSample 1 2 (Nat.le.step Nat.le.refl) false *
-        (if z = (m : ℤ) then 1 else 0)))
+  unfold samplers.laplace.sample_discrete_laplace_loop
+  exact tsum_probWhile_unit_rejection _ _ _ _
     (lap_body_cont x r hclone magLaw hfast halfRat iH one two hhalf hparts hsign h1 h2)
-    (fun z => lap_body_done_summed x r hclone magLaw hfast halfRat iH one two hhalf hparts
-      hsign h1 h2 z) z
+    (lap_body_done_summed x r hclone magLaw hfast halfRat iH one two hhalf hparts hsign
+      h1 h2 z)
 
 /-- The scalar closed form equals SampCert's `DiscreteLaplaceSample` (pure SLang algebra). -/
 private lemma lap_closed_form_eq (num den : ℕ+) (z : ℤ) :
@@ -625,12 +491,7 @@ private lemma lap_closed_form_eq (num den : ℕ+) (z : ℤ) :
   -- RHS: unfold the sampler through the normalized `probUntil`.
   simp only [DiscreteLaplaceSample, Bind.bind, Pure.pure, SLang.bind_apply, SLang.pure_apply]
   simp_rw [probUntil_apply_norm _ _ _ (DiscreteLaplaceSampleLoop_normalizes num den)]
-  have hcomm : ∀ (f g : (Bool × ℕ) → ENNReal) (c : ENNReal),
-      (∑' st : Bool × ℕ, f st * c * g st) = (∑' st : Bool × ℕ, f st * g st) * c := by
-    intro f g c
-    rw [← ENNReal.tsum_mul_right]
-    exact tsum_congr fun st => by ring
-  rw [hcomm]
+  rw [tsum_mul_right_comm]
   congr 1
   · -- numerator
     rw [ENNReal.tsum_prod', tsum_bool]

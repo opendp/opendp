@@ -173,20 +173,12 @@ private lemma geo_slow_loop_cut_step (x r : dashu_ratio.rbig.RBig)
       samplerDistGen (samplers.bernoulli.sample_bernoulli_exp r) (core.result.Result.Ok b) =
         geoTrial numer denom hdenom b)
     (hclone : dashu_ratio.rbig.RBig.Insts.CoreCloneClone.clone x = ok r)
-    (cond : ControlFlow dashu_int.ubig.UBig
-      (core.result.Result dashu_int.ubig.UBig error.Error) → Bool)
-    (bd : ControlFlow dashu_int.ubig.UBig
-        (core.result.Result dashu_int.ubig.UBig error.Error) →
-      SLang (ControlFlow dashu_int.ubig.UBig
-        (core.result.Result dashu_int.ubig.UBig error.Error)))
-    (hcc : ∀ a, cond (cont a) = true)
-    (hcd : ∀ w, cond (done w) = false)
-    (hbc : ∀ a, bd (cont a) =
-      samplerDistGen (samplers.geometric.sample_geometric_exp_slow_loop.body x a))
     (n : ℕ) :
     ∀ (k : dashu_int.ubig.UBig) (v : ℕ),
       (∑' u : dashu_int.ubig.UBig,
-        probWhileCut cond bd n (cont k) (done (core.result.Result.Ok u)) *
+        probWhileCut loopCond
+          (loopBd (samplers.geometric.sample_geometric_exp_slow_loop.body x)) n (cont k)
+          (done (core.result.Result.Ok u)) *
           (if v = dashu.ubigToNat u then 1 else 0)) =
       probWhileCut geoLoopCond (geoLoopBody (geoTrial numer denom hdenom)) n
         (true, dashu.ubigToNat k) (false, v + 1) := by
@@ -203,22 +195,26 @@ private lemma geo_slow_loop_cut_step (x r : dashu_ratio.rbig.RBig)
     | zero =>
       -- Depth 1: reaching a `done` output takes at least two cut steps on both sides.
       rw [geo_cut_succ_true]
-      simp only [probWhileCut, probWhileFunctional, hcc k, if_true, Bind.bind,
+      simp only [probWhileCut, probWhileFunctional, loopCond_cont, if_true, Bind.bind,
         SLang.bind_apply, SLang.probZero, mul_zero, tsum_zero, zero_mul, add_zero]
     | succ n' =>
       -- One-step unfolding of the extracted cut, pointwise in the output `u`.
       have hpt : ∀ u : dashu_int.ubig.UBig,
-          probWhileCut cond bd (n' + 1 + 1) (cont k) (done (core.result.Result.Ok u)) =
+          probWhileCut loopCond
+              (loopBd (samplers.geometric.sample_geometric_exp_slow_loop.body x))
+              (n' + 1 + 1) (cont k) (done (core.result.Result.Ok u)) =
             geoTrial numer denom hdenom true *
-              probWhileCut cond bd (n' + 1) (cont k1') (done (core.result.Result.Ok u)) +
+              probWhileCut loopCond
+                (loopBd (samplers.geometric.sample_geometric_exp_slow_loop.body x))
+                (n' + 1) (cont k1') (done (core.result.Result.Ok u)) +
             geoTrial numer denom hdenom false * (if u = k then 1 else 0) := by
         intro u
-        rw [probWhileCut, probWhileFunctional, if_pos (hcc k)]
+        rw [probWhileCut, probWhileFunctional, if_pos (loopCond_cont k)]
         simp only [Bind.bind, SLang.bind_apply]
         rw [tsum_controlFlow]
         congr 1
         · -- CONT fiber: only the incremented counter `k1'` survives.
-          simp_rw [hbc k,
+          simp_rw [loopBd_cont,
             geo_body_cont_apply (x := x) (r := r) (numer := numer) (denom := denom)
               (hdenom := hdenom) (hbern := hbern) (hclone := hclone) (k := k) (one := one)
               (k1' := k1') (hone := hone) (hadd := hadd),
@@ -227,10 +223,12 @@ private lemma geo_slow_loop_cut_step (x r : dashu_ratio.rbig.RBig)
           congr 1
           rw [tsum_eq_single k1' (fun a ha => by rw [if_neg ha, zero_mul]), if_pos rfl, one_mul]
         · -- DONE fiber: only `done (Ok u)` survives; the body settles at the current counter.
-          simp_rw [probWhileCut_done_pt cond bd hcd n', SLang.pure_apply]
+          simp_rw [probWhileCut_done_pt loopCond
+            (loopBd (samplers.geometric.sample_geometric_exp_slow_loop.body x))
+            (fun _ => rfl) n', SLang.pure_apply]
           rw [tsum_eq_single (core.result.Result.Ok u) (fun w hw => by
               rw [if_neg (fun h => by injection h with h'; exact hw h'.symm), mul_zero]),
-            if_pos rfl, mul_one, hbc k,
+            if_pos rfl, mul_one, loopBd_cont,
             geo_body_done_ok_apply x r numer denom hdenom hbern hclone k u]
       -- Assemble: distribute the `ubigToNat` indicator, recurse via `ih`, match SampCert.
       simp_rw [hpt, add_mul, mul_assoc]
@@ -260,47 +258,17 @@ lemma geo_slow_loop_probWhile (x r : dashu_ratio.rbig.RBig)
     samplerDist_nat (samplers.geometric.sample_geometric_exp_slow_loop x k0) v =
       probWhile geoLoopCond (geoLoopBody (geoTrial numer denom hdenom))
         (true, dashu.ubigToNat k0) (false, v + 1) := by
-  let cond : ControlFlow dashu_int.ubig.UBig
-      (core.result.Result dashu_int.ubig.UBig error.Error) → Bool :=
-    fun cf => match cf with | cont _ => true | done _ => false
-  let bd : ControlFlow dashu_int.ubig.UBig
-      (core.result.Result dashu_int.ubig.UBig error.Error) →
-      SLang (ControlFlow dashu_int.ubig.UBig
-        (core.result.Result dashu_int.ubig.UBig error.Error)) :=
-    fun cf => match cf with
-      | cont a => samplerDistGen (samplers.geometric.sample_geometric_exp_slow_loop.body x a)
-      | done _ => PMF.pure cf
-  have hcc : ∀ a, cond (cont a) = true := fun _ => rfl
-  have hcd : ∀ w, cond (done w) = false := fun _ => rfl
-  have hbc : ∀ a, bd (cont a) =
-      samplerDistGen (samplers.geometric.sample_geometric_exp_slow_loop.body x a) := fun _ => rfl
-  -- Step 1: `samplerDist` of the extracted loop is `probWhile` of the body distribution.
-  have hstep1 : ∀ u : dashu_int.ubig.UBig,
-      samplerDist (samplers.geometric.sample_geometric_exp_slow_loop x k0) u =
-        probWhile cond bd (cont k0) (done (core.result.Result.Ok u)) := by
-    intro u
-    simp only [samplerDist, samplers.geometric.sample_geometric_exp_slow_loop,
-      samplerDistGen_loop]
-    congr 1 <;> (funext cf; cases cf <;> rfl)
-  -- Step 2: expand the nat-pushforward into the settle sum.
   have hexpand : samplerDist_nat (samplers.geometric.sample_geometric_exp_slow_loop x k0) v =
       ∑' u : dashu_int.ubig.UBig,
         samplerDist (samplers.geometric.sample_geometric_exp_slow_loop x k0) u *
-          (if v = dashu.ubigToNat u then 1 else 0) := by
-    simp only [samplerDist_nat, SLang.probBind, SLang.probPure]
-    refine tsum_congr fun u => ?_
-    by_cases h : v = dashu.ubigToNat u <;> simp [h]
+          (if v = dashu.ubigToNat u then 1 else 0) :=
+    probBind_pure_apply _ _ v
   rw [hexpand]
-  simp_rw [hstep1]
-  -- Step 3: unfold every `probWhile` to `⨆ probWhileCut`, pull the indicator into each sup,
-  -- then commute `∑' u` past the `⨆ n`.
+  unfold samplers.geometric.sample_geometric_exp_slow_loop
+  rw [tsum_samplerDist_loop]
   simp only [probWhile]
-  simp_rw [ENNReal.iSup_mul]
-  rw [tsum_iSup_commute _ (fun u => (probWhileCut_monotonic cond bd (cont k0)
-      (done (core.result.Result.Ok u))).mul_const (zero_le _))]
-  -- Step 4: match each cut via the correspondence lemma.
-  refine iSup_congr (fun n => ?_)
-  exact geo_slow_loop_cut_step x r numer denom hdenom hbern hclone cond bd hcc hcd hbc n k0 v
+  exact iSup_congr fun n =>
+    geo_slow_loop_cut_step x r numer denom hdenom hbern hclone n k0 v
 
 /-- The extracted slow-geometric wrapper reduces to its loop started at counter `0`. -/
 lemma sample_geometric_exp_slow_eq_loop (x : dashu_ratio.rbig.RBig)

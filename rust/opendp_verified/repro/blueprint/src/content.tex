@@ -30,6 +30,17 @@ randomness enters through a single stochastic external, \fillbytes{} (OpenSSL).
 Handwritten proofs in \texttt{src/**/*.lean} import the generated code and prove
 each extracted function realises a SampCert reference distribution.
 
+Every stage additionally has a \emph{human-readable face} in
+\texttt{src/main\_results.lean} (\texttt{OpenDP.MainResults}): the correctness statements
+restated in this blueprint's vocabulary --- denotation brackets
+\(\llbracket\cdot\rrbracket\), textbook law names
+(\(\mathrm{Bernoulli}\), \(\mathrm{GeometricSuccesses}\),
+\(\mathrm{DiscreteLaplace}\), \(\mathrm{DiscreteGaussian}\)) --- together with the
+pointwise mass functions stated in this document (\(\Pr[\top]=e^{-x}\),
+\(P[v]=e^{-xv}(1-e^{-x})\), the discrete-Laplace mass). Each is a one-to-few-line
+consequence of the corresponding spec theorem, so the Lean and the prose can be read side by
+side.
+
 The development is layered: a shared \emph{semantic core}
 (\texttt{src/core/primitives/}, Chapter~\ref{chap:foundation}) assigning a
 sub-probability law to every \(\Result\) program and resting on a single
@@ -208,7 +219,7 @@ foundation every other sampler builds on; fully proven, with the a14083a6
 \begin{proof}\leanok As \ref{thm:body-done}; injective-\(\cont\) point mass. \end{proof}
 
 \begin{lemma}[Rejection loop is uniform]\label{thm:uniform-pmf}
-  \lean{OpenDP.samplers.uniform.sample_uniform_ubig_below_pmf}\leanok
+  \lean{OpenDP.MainResults.uniform_correct, OpenDP.MainResults.uniform_mass, OpenDP.samplers.uniform.sample_uniform_ubig_below_pmf}\leanok
   \uses{thm:body-done, thm:body-cont, thm:samplerDist-loop, def:uniformNatBelowPMF}
   The extracted rejection loop distributes as
   \(\probUntil(\mathrm{uniformByteNatPMF},\ \cdot<\mathit{thr})\), and after
@@ -261,7 +272,7 @@ below \(\numer\); so \(\Pr[\top]=\numer/\denom\).
 \begin{proof}\leanok \texttt{unfold} + the setup specs. \end{proof}
 
 \begin{theorem}[End-to-end: \texttt{sample\_bernoulli\_rational}]\label{thm:bernoulli-rational}
-  \lean{OpenDP.samplers.bernoulli.sample_bernoulli_rational_pmf}\leanok
+  \lean{OpenDP.MainResults.bernoulli_correct, OpenDP.MainResults.bernoulli_mass, OpenDP.samplers.bernoulli.sample_bernoulli_rational_pmf}\leanok
   \uses{thm:bernoulli-eq-setup, thm:uniform-pmf, def:bernoulliPMF, thm:bernoulliPMF-eq}
   \(\sd(\text{extracted sample\_bernoulli\_rational}) = \mathrm{bernoulliPMF}\),
   i.e.\ SampCert's \(\Bern{\numer/\denom}\). \statusDone
@@ -284,7 +295,7 @@ green the moment its \(\sd(\cdot) = \text{SampCert PMF}\) theorem lands in
 yet ported) or (not extracted) not extracted (needs a Charon/Aeneas pass first).
 
 \begin{theorem}[\texttt{sample\_bernoulli\_exp1}: unit negative-exponential]\label{thm:exp1}
-  \lean{OpenDP.samplers.bernoulli.sample_bernoulli_exp1_spec}\leanok
+  \lean{OpenDP.MainResults.bernoulli_exp_unit_correct, OpenDP.MainResults.bernoulli_exp_unit_mass, OpenDP.samplers.bernoulli.sample_bernoulli_exp1_spec}\leanok
   \uses{thm:bernoulli-rational, thm:samplerDist-loop}
   \(\sd(\texttt{sample\_bernoulli\_exp1}) =
   \SLang.\mathrm{BernoulliExpNegSampleUnit}\): \(\Pr[\top] = e^{-x}\) for
@@ -300,7 +311,7 @@ yet ported) or (not extracted) not extracted (needs a Charon/Aeneas pass first).
 \end{proof}
 
 \begin{theorem}[\texttt{sample\_bernoulli\_exp}: full negative-exponential]\label{thm:exp}
-  \lean{OpenDP.samplers.bernoulli.sample_bernoulli_exp_spec}\leanok
+  \lean{OpenDP.MainResults.bernoulli_exp_correct, OpenDP.MainResults.bernoulli_exp_mass, OpenDP.samplers.bernoulli.sample_bernoulli_exp_spec}\leanok
   \uses{thm:exp1}
   \(\SLang.\mathrm{BernoulliExpNegSample}\): \(\Pr[\top]=e^{-x}\)
   for \(x \ge 0\) --- \(\lfloor x\rfloor\) copies of \(\Bern{e^{-1}}\) all true, then
@@ -314,7 +325,7 @@ yet ported) or (not extracted) not extracted (needs a Charon/Aeneas pass first).
 \end{proof}
 
 \begin{theorem}[\texttt{sample\_geometric\_exp\_slow}]\label{thm:geom-slow}
-  \lean{OpenDP.samplers.geometric.sample_geometric_exp_slow_spec}\leanok
+  \lean{OpenDP.MainResults.geometric_slow_correct, OpenDP.MainResults.geometric_slow_mass, OpenDP.samplers.geometric.sample_geometric_exp_slow_spec}\leanok
   \uses{thm:exp}
   Geometric law: count consecutive successes of \(\Bern{e^{-x}}\). The pushed-to-\(\mathbb{N}\)
   output law equals \(\mathrm{probGeometric}\,(\Bern{e^{-x}})\,(\cdot+1)\), with closed form
@@ -329,7 +340,7 @@ yet ported) or (not extracted) not extracted (needs a Charon/Aeneas pass first).
 \end{proof}
 
 \begin{theorem}[\texttt{sample\_geometric\_exp\_fast} (the ``dast''/fast variant)]\label{thm:geom-fast}
-  \lean{OpenDP.samplers.geometric.sample_geometric_exp_fast_spec}\leanok
+  \lean{OpenDP.MainResults.geometric_fast_correct, OpenDP.MainResults.geometric_fast_mass, OpenDP.MainResults.geometric_fast_eq_slow, OpenDP.samplers.geometric.sample_geometric_exp_fast_spec}\leanok
   \uses{thm:geom-slow}
   Optimized geometric (uniform residue + acceptance test + slow geometric at \(1\),
   combined as \(\lfloor(v\denom+u)/\numer\rfloor\)): the pushed-to-\(\mathbb{N}\)
@@ -348,7 +359,7 @@ yet ported) or (not extracted) not extracted (needs a Charon/Aeneas pass first).
 \end{proof}
 
 \begin{theorem}[\texttt{sample\_discrete\_laplace}]\label{thm:discrete-laplace}
-  \lean{OpenDP.samplers.laplace.sample_discrete_laplace_spec}\leanok
+  \lean{OpenDP.MainResults.discrete_laplace_correct, OpenDP.MainResults.discrete_laplace_mass, OpenDP.samplers.laplace.sample_discrete_laplace_spec}\leanok
   \uses{thm:geom-fast, thm:bernoulli-rational}
   \(\sd_{\mathbb{Z}}(\texttt{sample\_discrete\_laplace}) =
   \SLang.\mathrm{DiscreteLaplaceSample}\): sign \(\times\) geometric magnitude with the
@@ -363,7 +374,7 @@ yet ported) or (not extracted) not extracted (needs a Charon/Aeneas pass first).
 \end{proof}
 
 \begin{theorem}[\texttt{sample\_discrete\_gaussian} --- final target]\label{thm:discrete-gaussian}
-  \lean{OpenDP.samplers.gaussian.sample_discrete_gaussian_spec}\leanok
+  \lean{OpenDP.MainResults.discrete_gaussian_correct, OpenDP.samplers.gaussian.sample_discrete_gaussian_spec}\leanok
   \uses{thm:discrete-laplace, thm:exp}
   \(\sd_{\mathbb{Z}}(\texttt{sample\_discrete\_gaussian}) =
   \SLang.\mathrm{DiscreteGaussianSample}\): rejection sampling from the verified

@@ -19,6 +19,6 @@ open OpenDP.Core.Semantics
 
 /-- `⟦ prog ⟧` — the success distribution of an extracted sampler `prog`
 (`samplerDist prog`): the probability it returns `Ok v`, as a `SLang` law. -/
-scoped notation "⟦" prog "⟧" => OpenDP.Core.Semantics.samplerDist prog
+scoped notation (priority := high) "⟦" prog "⟧" => OpenDP.Core.Semantics.samplerDist prog
 
 end OpenDP.Core.Readable

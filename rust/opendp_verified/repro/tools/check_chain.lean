@@ -106,7 +106,18 @@ def chainTheorems : Array Name := #[
   ``OpenDP.samplers.geometric.sample_geometric_exp_slow_spec,
   ``OpenDP.samplers.geometric.sample_geometric_exp_fast_spec,
   ``OpenDP.samplers.laplace.sample_discrete_laplace_spec,
-  ``OpenDP.samplers.gaussian.sample_discrete_gaussian_spec]
+  ``OpenDP.samplers.gaussian.sample_discrete_gaussian_spec,
+  -- The human-readable face (`src/main_results.lean`): blueprint-aligned restatements
+  -- and pointwise mass functions. Existence + axiom footprint checked the same way.
+  ``OpenDP.MainResults.uniform_correct, ``OpenDP.MainResults.uniform_mass,
+  ``OpenDP.MainResults.bernoulli_correct, ``OpenDP.MainResults.bernoulli_mass,
+  ``OpenDP.MainResults.bernoulli_exp_unit_correct, ``OpenDP.MainResults.bernoulli_exp_unit_mass,
+  ``OpenDP.MainResults.bernoulli_exp_correct, ``OpenDP.MainResults.bernoulli_exp_mass,
+  ``OpenDP.MainResults.geometric_slow_correct, ``OpenDP.MainResults.geometric_slow_mass,
+  ``OpenDP.MainResults.geometric_fast_correct, ``OpenDP.MainResults.geometric_fast_mass,
+  ``OpenDP.MainResults.geometric_fast_eq_slow,
+  ``OpenDP.MainResults.discrete_laplace_correct, ``OpenDP.MainResults.discrete_laplace_mass,
+  ``OpenDP.MainResults.discrete_gaussian_correct]
 
 /-- Named axioms of the sanctioned trust surface. -/
 def allowedExact : Array Name := #[
