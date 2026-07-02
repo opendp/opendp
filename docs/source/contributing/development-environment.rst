@@ -347,20 +347,26 @@ Install
 ^^^^^^^
 
 1. Install Lean with ``elan``.
-2. The lake package is rooted at the verified crate: ``rust/opendp_verified/``
-   (its ``lean-toolchain`` is the canonical Lean version — ``elan`` selects it
-   whenever you run ``lake`` from that directory).
-3. Clone the pinned Aeneas (with Charon) into ``./aeneas`` and SampCert into
-   ``./SampCert`` at the repository root — ``tools/check_lean_pins.sh`` holds the
-   canonical pins and prints the exact ``git clone``/``checkout`` commands if a
-   checkout is missing or at the wrong commit.
-4. Run the guarded build entry point, which checks the pins, applies the vendored
-   SampCert patch, builds the Charon/Aeneas binaries if needed, regenerates
-   ``Generated/``, builds the library, and machine-checks the verified chain:
+2. Open ``rust/opendp_verified/`` (the lake package root) and let ``elan`` select the toolchain from its ``lean-toolchain``.
+3. Clone Aeneas into ``./aeneas`` and build.
+4. Optional: Clone SampCert into ``./SampCert`` if you want a local editable checkout.
+   Use the ``private-selection`` branch from:
+
+   * ``https://github.com/Shoeboxam/SampCert/tree/private-selection``
+
+5. Run (from ``rust/opendp_verified/``):
 
 .. code-block:: bash
 
-    tools/build_lean.sh
+    lake exe cache get
+    ../../tools/refresh_opendp_verified_aeneas.sh
+    lake build OpenDPVerified
+
+Alternatively, ``tools/build_lean.sh`` (from the repository root) performs the same
+steps behind guards: it verifies the pinned toolchain set (``tools/check_lean_pins.sh``
+prints the exact clone/checkout commands for a missing or mismatched ``aeneas``/``SampCert``),
+applies the vendored SampCert patch, builds the Charon/Aeneas binaries if absent,
+regenerates ``Generated/``, and machine-checks the verified chain after the build.
 
 Workflow
 ^^^^^^^^
@@ -396,7 +402,7 @@ After regeneration:
 
 1. Put semantic predicates and proof-facing contracts for externals in sidecar modules under ``rust/opendp_verified/src/core/externals``.
 2. Leave handwritten proof files in ``rust/opendp_verified/src``.
-3. Rebuild the Lean target (from ``rust/opendp_verified/``, or via ``tools/build_lean.sh``).
+3. Rebuild the Lean target.
 
 .. code-block:: bash
 
