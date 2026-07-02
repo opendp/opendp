@@ -10,7 +10,7 @@ const NATIVE_UNIFORM_REFINE_BITS: u32 = 4;
 
 // Default hybrid native sampler profile for the proof-oriented GPU path.
 //
-// K is capped at 2^20 - 1, each Bernoulli factory is capped at 40 rounds, and
+// K is capped at 2^20 - 1, each Bernoulli factory is capped at 64 rounds, and
 // scalar partial-uniform comparisons use a 128-bit native prefix budget. The K
 // cap is a declared structural tail, Bernoulli-factory depth is charged to an
 // approximate-DP failure budget, and finite sampler comparisons are accounted by
@@ -24,7 +24,7 @@ const NATIVE_UNIFORM_REFINE_BITS: u32 = 4;
 const NATIVE_SAMPLER_UNIFORM_MAX_BITS: u32 = 128;
 const NATIVE_FINALIZATION_UNIFORM_MAX_BITS: u32 = 96;
 const NATIVE_SAMPLER_K_MAX: u64 = (1 << 20) - 1;
-const NATIVE_BERNOULLI_MAX_DEPTH: u32 = 40;
+const NATIVE_BERNOULLI_MAX_DEPTH: u32 = 64;
 const NATIVE_CLIP_SCALE_MAX_RATIO: f64 = ((NATIVE_SAMPLER_K_MAX + 1) / 2) as f64;
 
 pub(super) enum NativeF32Sample {

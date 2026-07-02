@@ -281,14 +281,14 @@ fn hybrid_native_profile_accounting_stays_below_paper_floor() -> Fallible<()> {
     let terms = hybrid_native_profile_accounting(2.0, 1, 0.0)?;
 
     assert_eq!(NATIVE_SAMPLER_K_MAX, (1 << 20) - 1);
-    assert_eq!(NATIVE_BERNOULLI_MAX_DEPTH, 40);
+    assert_eq!(NATIVE_BERNOULLI_MAX_DEPTH, 64);
     assert_eq!(NATIVE_SAMPLER_UNIFORM_MAX_BITS, 128);
     assert_eq!(NATIVE_FINALIZATION_UNIFORM_MAX_BITS, 96);
     assert!(terms.structural_tail == 0.0);
-    assert!(terms.factory_depth_failure < 2.0f64.powf(-123.0));
-    assert!(terms.approximate_delta_overhead < 2.0f64.powf(-121.0));
-    assert!(terms.comparison_failure < 2.0f64.powf(-79.6));
-    assert!(terms.sampler_overhead < 2.0f64.powf(-78.6));
+    assert!(terms.factory_depth_failure < 2.0f64.powf(-260.5));
+    assert!(terms.approximate_delta_overhead < 2.0f64.powf(-258.5));
+    assert!(terms.comparison_failure < 2.0f64.powf(-78.9));
+    assert!(terms.sampler_overhead < 2.0f64.powf(-77.9));
     assert_eq!(terms.comb_overhead, 0.0);
     assert_eq!(terms.total_overhead, terms.sampler_overhead);
     Ok(())
