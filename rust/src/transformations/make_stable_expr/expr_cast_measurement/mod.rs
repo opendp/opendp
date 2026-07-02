@@ -1,12 +1,15 @@
+use std::sync::Arc;
+
 use polars::chunked_array::cast::CastOptions;
 use polars::prelude::*;
 use polars_plan::dsl::Expr;
 
 use super::StableExpr;
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
-use crate::domains::{AtomDomain, ExprDomain, VectorDomain, WildExprDomain};
+use crate::domains::{AtomDomain, ExprDomain, WildExprDomain};
 use crate::error::*;
-use crate::transformations::make_stable_expr::{L01InfDistance, LpDistance, UnboundedMetric};
+use crate::metrics::{L01InfDistance, LpDistance};
+use crate::transformations::traits::UnboundedMetric;
 
 #[cfg(test)]
 mod test;
@@ -22,9 +25,9 @@ mod test;
 /// # Generics
 /// * `TIA` - Atomic Input Type to cast from
 /// * `TOA` - Atomic Output Type to cast into
-pub fn make_cast_measurement_to_i64<MI, const P: usize, TIA>(
-    input_domain: VectorDomain<AtomDomain<TIA>>,
-    input_metric: MI,
+pub fn make_cast_measurement<MI, const P: usize>(
+    input_domain: WildExprDomain,
+    input_metric: L01InfDistance<MI>,
     expr: Expr,
 ) -> Fallible<Transformation<WildExprDomain, L01InfDistance<MI>, ExprDomain, LpDistance<P, f64>>>
 where
@@ -47,36 +50,44 @@ where
         .ok_or_else(|| {
             err!(
                 MakeTransformation,
-                "make_cast_measurement_to_i64 only supports literal dtype"
+                "make_cast_measurement only supports literal dtype"
             )
         })?
         .clone();
 
-    if to_type_dtype != DataType::Int64 {
-        return fallible!(
-            MakeTransformation,
-            "make_cast_measurement_to_i64 cast expects target dtype Int64, found {}",
-            to_type_dtype
-        );
+    match &to_type_dtype {
+        DataType::Int8 | DataType::Int16 | DataType::Int32 | DataType::Int64 => {}
+        dt => {
+            return fallible!(
+                MakeTransformation,
+                "make_cast_measurement cast expects target dtype Int64, found {}",
+                to_type_dtype
+            );
+        }
     }
 
     if matches!(options, CastOptions::Strict) {
         options = CastOptions::NonStrict;
     }
 
-    // This recursively stabilizes len/count/n_unique/count_null.
-    // The child emits ExprDomain under LpDistance<P, f64>.
     let t_prior = input
         .as_ref()
         .clone()
-        .make_stable(input_domain.clone(), input_metric.clone())?;
+        .make_stable(input_domain, input_metric)?;
 
     let (middle_domain, middle_metric) = t_prior.output_space();
 
     let mut output_domain = middle_domain.clone();
-    let active_series = &mut output_domain.column;
+    let active_column = &mut output_domain.column;
 
-    active_series.set_element_domain(AtomDomain::<i64>::default());
+    match &to_type_dtype {
+        DataType::Int8 => active_column.set_element_domain(AtomDomain::<i8>::default()),
+        DataType::Int16 => active_column.set_element_domain(AtomDomain::<i16>::default()),
+        DataType::Int32 => active_column.set_element_domain(AtomDomain::<i32>::default()),
+        DataType::Int64 => active_column.set_element_domain(AtomDomain::<i64>::default()),
+
+        _ => unreachable!(),
+    }
 
     t_prior
         >> Transformation::new(

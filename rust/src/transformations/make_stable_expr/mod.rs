@@ -155,18 +155,7 @@ where
             }
 
             #[cfg(feature = "contrib")]
-            Cast { expr: inner, .. } => match inner.as_ref() {
-                Expr::AnonymousFunction { .. }
-                | Expr::Function {
-                    function: FunctionExpr::FfiPlugin { .. },
-                    ..
-                } => expr_cast_measurement::make_cast_measurement_to_i64(
-                    input_domain,
-                    input_metric,
-                    self,
-                ),
-                _ => expr_cast::make_expr_cast(input_domain, input_metric, self),
-            },
+            Cast { .. } => expr_cast::make_expr_cast(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
             Function {
@@ -274,7 +263,9 @@ where
             Len => expr_len::make_expr_len(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
-            Cast { .. } => expr_len::make_expr_len(input_domain, input_metric, self),
+            Cast { .. } => {
+                expr_cast_measurement::make_cast_measurement::<MI, P>(input_domain, input_metric, self)
+            }
 
             expr => {
                 fallible!(

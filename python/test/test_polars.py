@@ -275,8 +275,11 @@ def test_filter(measure, signed):
         lf_domain, dp.symmetric_distance(), measure, plan
     )
 
-    expect = pl.DataFrame([pl.Series("len", [10], dtype=pl.UInt32)])
-    pl_testing.assert_frame_equal(m_lf(lf).collect(), expect)
+    expected = pl.DataFrame(
+        [pl.Series("len", [10], dtype=pl.Int64 if signed else pl.UInt32)]
+    )
+
+    pl_testing.assert_frame_equal(m_lf(lf).collect(), expected)
 
 
 def test_onceframe_multi_collect():
@@ -1344,7 +1347,7 @@ def test_unbiased_groupby_len():
         split_evenly_over=1,
     )
     result = (
-        context.query().group_by("A").agg(dp.len()).with_keys(keys).release().collect()
+        context.query().group_by("A").agg(dp.len(signed=True)).with_keys(keys).release().collect()
     )
     assert (
         len(result.filter(pl.col("len") < 0)) > 0

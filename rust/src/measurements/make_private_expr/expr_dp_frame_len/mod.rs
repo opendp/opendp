@@ -82,14 +82,12 @@ where
             DPFrameLenShim::NAME
         );
     };
-    println!("scale: {}, signed: {}, expr: {}", scale, signed, expr);
 
     let signed = match signed {
         Expr::Literal(lit) => lit.bool().unwrap_or(false),
-        _ => todo!(),
+        _ => return fallible!(MakeMeasurement, "signed argument must be a literal bool"),
     };
 
-    println!("signed: {}", signed);
     let len_expr = if signed {
         len().cast(DataType::Int64)
     } else {

@@ -19,7 +19,6 @@ use crate::{
     measures::Approximate,
     metrics::L01InfDistance,
     polars::{get_disabled_features_message, match_shim},
-    transformations::make_stable_expr,
     transformations::{StableExpr, traits::UnboundedMetric},
 };
 
@@ -159,7 +158,16 @@ where
             };
         }
 
-        counting_query!(DPLenShim, make_expr_dp_len);
+        if match_shim::<DPLenShim, 3>(&self)?.is_some() {
+            return expr_dp_counting_query::make_expr_dp_len(
+                input_domain,
+                input_metric,
+                output_measure,
+                self,
+                global_scale,
+            );
+        }
+
         counting_query!(DPCountShim, make_expr_dp_count);
         counting_query!(DPNullCountShim, make_expr_dp_null_count);
         counting_query!(DPNUniqueShim, make_expr_dp_n_unique);
@@ -241,14 +249,6 @@ where
             #[cfg(feature = "contrib")]
             Expr::Len => {
                 expr_len::make_expr_private_len(input_domain, input_metric, output_measure, self)
-            }
-
-            Expr::Cast { .. } => {
-                make_stable_expr::expr_cast::make_cast_measurement_to_i64(
-                    input_domain,
-                    input_metric,
-                    self,
-                );
             }
 
             #[cfg(feature = "contrib")]

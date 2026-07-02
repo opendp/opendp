@@ -33,6 +33,10 @@ where
     (WildExprDomain, L01InfDistance<MI>): MetricSpace,
     (ExprDomain, LpDistance<P, f64>): MetricSpace,
 {
+    if !matches!(expr, Expr::Len) {
+        return fallible!(MakeTransformation, "expected len expression");
+    }
+
     let default_zero = 0u32;
     let domain_type = AtomDomain::<u32>::default();
     let mut pl_expr = len();
