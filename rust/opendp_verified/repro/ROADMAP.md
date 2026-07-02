@@ -101,10 +101,20 @@ geometric at `1`, combined as `⌊(v·denom + u) / numer⌋`).
      (`In1_apply_form`), and closed by the ported legacy `Geo` algebra
      (`fastTarget_pmf`, `fastTarget_eq_slowLaw` via `DiscreteLaplaceSampleLoop_equiv`).
 
-### 8. `sample_geometric_exp_fast` → `sample_discrete_laplace` ⚪
-`DiscreteLaplace(t)`: a sign times a geometric magnitude (CKS).
-- **Rust:** — · **SampCert target:** `SLang.DiscreteLaplaceSample` (`…Loop`, `…Optimized`, `…Mixed`).
-- **Status:** **not extracted** — no `Generated/` code. Needs a Charon/Aeneas extraction pass on the Rust discrete-Laplace sampler before any proof can start.
+### 8. `sample_geometric_exp_fast` → `sample_discrete_laplace` ✅
+`DiscreteLaplace(t)`: a sign times a geometric magnitude, rejecting `(negative, 0)` (CKS).
+- **Rust:** `samplers.laplace.sample_discrete_laplace` (`src/samplers/laplace/mod.rs`, extracted
+  via the standard Charon→Aeneas refresh — a genuine Aeneas `loop` with `Unit` state).
+- **SampCert target:** `SLang.DiscreteLaplaceSample`.
+- **repro:** `sample_discrete_laplace_spec` (`src/samplers/laplace.lean`):
+  `samplerDist_int ⟦laplace numer denom⟧ = DiscreteLaplaceSample ⟨numer⟩ ⟨denom⟩` on `ℤ`
+  (plus the new `samplerDist_int` pushforward over `dashu.ibigToInt`). Proof: body factored
+  through the stage-7 magnitude draw and the stage-3 fair coin (`lap_step`); since each
+  iteration is independent (`Unit` state), the rejection analysis is a *scalar* geometric
+  series (`lap_cut_closed`/`lap_probWhile_closed`, abstract in the magnitude law); the closed
+  form meets SampCert via `probUntil_apply_norm` + `DiscreteLaplaceSampleLoop_apply`
+  (`lap_closed_form_eq`). New dashu axioms: `ibigToInt` interpretation (`ibigToInt_pos_spec`,
+  `ibig_neg_exists_spec`) and the `1/2` constant (`rbig_from_parts_const_half_exists_spec`).
 
 ### 9. `sample_discrete_laplace` → `sample_discrete_gaussian` ⚪  ← **final target**
 `DiscreteGaussian(σ²)` by rejection sampling from a discrete Laplace proposal (CKS Algorithm).
@@ -114,10 +124,11 @@ geometric at `1`, combined as `⌊(v·denom + u) / numer⌋`).
 ## Where the frontier is today
 
 - **Proved end-to-end (✅):** bit flips → `fill_bytes` → uniform → bernoulli-fraction →
-  bernoulli-exp1 → bernoulli-exp → geometric-slow → geometric-fast. Both geometric samplers are
-  verified against the same SampCert geometric law, closing the sampler chain currently
-  extracted into `Generated/`.
-- **Not extracted yet (⚪):** discrete Laplace, discrete Gaussian. These need the Rust samplers run through Charon/Aeneas into `Generated/` first; only then can they be verified against `DiscreteLaplaceSample` / `DiscreteGaussianSample`.
+  bernoulli-exp1 → bernoulli-exp → geometric-slow → geometric-fast → **discrete Laplace**.
+  The pure-DP noise mechanism is now verified down to the hardware axiom.
+- **Not extracted yet (⚪):** discrete Gaussian (stage 9, the final target). Needs the Rust
+  sampler written + a Charon/Aeneas pass, then verification against
+  `SLang.DiscreteGaussianSample` (rejection from the now-verified discrete Laplace proposal).
 
 ## Notes
 

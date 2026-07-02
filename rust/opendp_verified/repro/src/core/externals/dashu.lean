@@ -546,6 +546,38 @@ axiom rbig_from_parts_const_eq_one
   Aeneas.Std.lift (UScalar.cast UScalarTy.U128 1#u32) = ok i →
   dashu_ratio.rbig.RBig.from_parts_const dashu_base.sign.Sign.Positive i i = ok oneRat
 
+/-- Mathematical interpretation of Dashu signed integers used in the verified crate. -/
+opaque ibigToInt : dashu_int.ibig.IBig → Int
+
+/-- A positive-signed `IBig` denotes its magnitude. -/
+axiom ibigToInt_pos_spec
+  (i : dashu_int.ibig.IBig) (u : dashu_int.ubig.UBig) :
+  dashu_int.ibig.IBig.into_parts i = ok (dashu_base.sign.Sign.Positive, u) ->
+    ibigToInt i = (ubigToNat u : Int)
+
+/-- `IBig` negation succeeds and negates the denoted integer. -/
+axiom ibig_neg_exists_spec
+  (i : dashu_int.ibig.IBig) :
+  ∃ j,
+    dashu_int.ibig.IBig.Insts.CoreOpsArithNegIBig.neg i = ok j ∧
+    ibigToInt j = -(ibigToInt i)
+
+/-- Constructing the constant positive rational `1 / 2` succeeds, yielding a rational whose
+parts denote `1` and `2`. -/
+axiom rbig_from_parts_const_half_exists_spec
+  (u128one u128two : Std.U128) :
+  u128one.val = 1 ->
+  u128two.val = 2 ->
+  ∃ x : dashu_ratio.rbig.RBig,
+    ∃ i : dashu_int.ibig.IBig,
+      ∃ one two : dashu_int.ubig.UBig,
+        dashu_ratio.rbig.RBig.from_parts_const dashu_base.sign.Sign.Positive u128one u128two =
+          ok x ∧
+        dashu_ratio.rbig.RBig.into_parts x = ok (i, two) ∧
+        dashu_int.ibig.IBig.into_parts i = ok (dashu_base.sign.Sign.Positive, one) ∧
+        ubigToNat one = 1 ∧
+        ubigToNat two = 2
+
 /-- Subtracting `oneRat` from a nonneg rational whose numerator ≥ denominator always succeeds. -/
 axiom rbig_sub_assign_one_exists
   (x oneRat : dashu_ratio.rbig.RBig)

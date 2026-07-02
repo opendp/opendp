@@ -348,11 +348,19 @@ yet ported) or (not extracted) not extracted (needs a Charon/Aeneas pass first).
 \end{proof}
 
 \begin{theorem}[\texttt{sample\_discrete\_laplace}]\label{thm:discrete-laplace}
-  \uses{thm:geom-fast}
-  \statusStub{} (not extracted) Target \(\SLang.\mathrm{DiscreteLaplaceSample}\): sign \(\times\)
-  geometric magnitude (the pure-DP noise). \textbf{Not extracted} --- no
-  \texttt{Generated/} code yet.
+  \lean{OpenDP.samplers.laplace.sample_discrete_laplace_spec}\leanok
+  \uses{thm:geom-fast, thm:bernoulli-rational}
+  \(\sd_{\mathbb{Z}}(\texttt{sample\_discrete\_laplace}) =
+  \SLang.\mathrm{DiscreteLaplaceSample}\): sign \(\times\) geometric magnitude with the
+  \((\text{negative},0)\) outcome rejected --- the pure-DP noise mechanism. \statusDone
 \end{theorem}
+\begin{proof}\leanok
+  File \texttt{src/samplers/laplace.lean}. Body = stage-7 magnitude + stage-3 fair coin;
+  unit-state rejection loop \(\Rightarrow\) scalar geometric series; closed form meets
+  SampCert via \(\mathrm{probUntil\_apply\_norm}\) and
+  \(\mathrm{DiscreteLaplaceSampleLoop\_apply}\). Signed outputs via the
+  \(\mathrm{ibigToInt}\) trust layer.
+\end{proof}
 
 \begin{theorem}[\texttt{sample\_discrete\_gaussian} --- final target]\label{thm:discrete-gaussian}
   \uses{thm:discrete-laplace}

@@ -16,3 +16,4 @@ import src.samplers.bernoulli.exp1
 import src.samplers.bernoulli.exp
 import src.samplers.geometric.slow
 import src.samplers.geometric.fast
+import src.samplers.laplace

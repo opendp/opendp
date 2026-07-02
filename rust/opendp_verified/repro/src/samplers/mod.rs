@@ -4,6 +4,9 @@ pub use bernoulli::*;
 mod geometric;
 pub use geometric::*;
 
+mod laplace;
+pub use laplace::*;
+
 mod uniform;
 pub use uniform::*;
 

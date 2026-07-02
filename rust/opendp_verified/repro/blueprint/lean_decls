@@ -24,3 +24,4 @@ OpenDP.samplers.bernoulli.sample_bernoulli_exp1_spec
 OpenDP.samplers.bernoulli.sample_bernoulli_exp_spec
 OpenDP.samplers.geometric.sample_geometric_exp_slow_spec
 OpenDP.samplers.geometric.sample_geometric_exp_fast_spec
+OpenDP.samplers.laplace.sample_discrete_laplace_spec
