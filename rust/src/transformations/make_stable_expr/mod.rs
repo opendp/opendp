@@ -27,6 +27,9 @@ mod expr_boolean_function;
 mod expr_cast;
 
 #[cfg(feature = "contrib")]
+mod expr_cast_measurement;
+
+#[cfg(feature = "contrib")]
 mod expr_clip;
 
 #[cfg(feature = "contrib")]
@@ -152,7 +155,18 @@ where
             }
 
             #[cfg(feature = "contrib")]
-            Cast { .. } => expr_cast::make_expr_cast(input_domain, input_metric, self),
+            Cast { expr: inner, .. } => match inner.as_ref() {
+                Expr::AnonymousFunction { .. }
+                | Expr::Function {
+                    function: FunctionExpr::FfiPlugin { .. },
+                    ..
+                } => expr_cast_measurement::make_cast_measurement_to_i64(
+                    input_domain,
+                    input_metric,
+                    self,
+                ),
+                _ => expr_cast::make_expr_cast(input_domain, input_metric, self),
+            },
 
             #[cfg(feature = "contrib")]
             Function {

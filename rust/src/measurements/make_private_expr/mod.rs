@@ -19,6 +19,7 @@ use crate::{
     measures::Approximate,
     metrics::L01InfDistance,
     polars::{get_disabled_features_message, match_shim},
+    transformations::make_stable_expr,
     transformations::{StableExpr, traits::UnboundedMetric},
 };
 
@@ -243,7 +244,11 @@ where
             }
 
             Expr::Cast { .. } => {
-                expr_cast::make_cast_measurement_to_i64(input_domain, input_metric, self);
+                make_stable_expr::expr_cast::make_cast_measurement_to_i64(
+                    input_domain,
+                    input_metric,
+                    self,
+                );
             }
 
             #[cfg(feature = "contrib")]
