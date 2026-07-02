@@ -17,7 +17,10 @@ jobs:
         run: |
           set -euo pipefail
           mb="$(git merge-base HEAD^1 HEAD^2)"
-          files="$(git --no-pager diff --diff-filter=d --name-only "$mb" HEAD^2 -- '*.tex')"
+          # Exclude the Lean blueprint sources: they are plasTeX/leanblueprint
+          # inputs (fragments without \documentclass, blueprint.sty from the
+          # leanblueprint toolchain) and are built by their own workflow.
+          files="$(git --no-pager diff --diff-filter=d --name-only "$mb" HEAD^2 -- '*.tex' ':(exclude)rust/opendp_verified/blueprint/**')"
 
           # using syntax from: https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
           # construct list of .tex files
