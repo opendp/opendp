@@ -37,23 +37,6 @@ where
         return fallible!(MakeTransformation, "expected len expression");
     }
 
-    let default_zero = 0u32;
-    let domain_type = AtomDomain::<u32>::default();
-    let mut pl_expr = len();
-    match expr {
-        Expr::Len => {
-            let default_zero = 0u32;
-        }
-        Expr::Cast { .. } => {
-            let default_zero = 0i64;
-            let domain_type = AtomDomain::<f64>::default();
-            pl_expr = len().cast(DataType::Int64);
-        }
-        _ => {
-            return fallible!(MakeTransformation, "expected len or cast expression");
-        }
-    }
-
     let old_margin = input_domain.context.aggregation("len")?;
     let margin = Margin {
         by: old_margin.by,
@@ -62,20 +45,42 @@ where
         invariant: old_margin.invariant,
     };
 
-    // build output domain
-    let output_domain = ExprDomain {
-        column: SeriesDomain::new("len", domain_type),
-        context: Context::Aggregation {
-            margin: margin.clone(),
-        },
-    };
-
-    Transformation::new(
-        input_domain,
-        input_metric,
-        output_domain,
-        LpDistance::default(),
-        Function::from_expr(pl_expr).fill_with(typed_lit(default_zero)),
-        counting_query_stability_map(margin.invariant),
-    )
+    match expr {
+        Expr::Len => {
+            let output_domain = ExprDomain {
+                column: SeriesDomain::new("len", AtomDomain::<u32>::default()),
+                context: Context::Aggregation {
+                    margin: margin.clone(),
+                },
+            };
+            Transformation::new(
+                input_domain,
+                input_metric,
+                output_domain,
+                LpDistance::default(),
+                Function::from_expr(len()).fill_with(typed_lit(0u32)),
+                counting_query_stability_map(margin.invariant),
+            )
+        }
+        Expr::Cast { .. } => {
+            // build output domain
+            let output_domain = ExprDomain {
+                column: SeriesDomain::new("len", AtomDomain::<f64>::default()),
+                context: Context::Aggregation {
+                    margin: margin.clone(),
+                },
+            };
+            Transformation::new(
+                input_domain,
+                input_metric,
+                output_domain,
+                LpDistance::default(),
+                Function::from_expr(len().cast(DataType::Int64)).fill_with(typed_lit(0i64)),
+                counting_query_stability_map(margin.invariant),
+            )
+        }
+        _ => {
+            return fallible!(MakeTransformation, "expected len or cast expression");
+        }
+    }
 }

@@ -263,9 +263,11 @@ where
             Len => expr_len::make_expr_len(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
-            Cast { .. } => {
-                expr_cast_measurement::make_cast_measurement::<MI, P>(input_domain, input_metric, self)
-            }
+            Cast { .. } => expr_cast_measurement::make_cast_measurement::<MI, P>(
+                input_domain,
+                input_metric,
+                self,
+            ),
 
             expr => {
                 fallible!(
