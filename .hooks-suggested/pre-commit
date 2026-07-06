@@ -3,7 +3,7 @@
 # Suggested pre-commit hook: checks Rust formatting before a commit.
 #
 # This is opt-in. Enable it with:
-#   git config core.hooksPath .githooks
+#   git config core.hooksPath .hooks-suggested
 # Disable it again with:
 #   git config --unset core.hooksPath
 set -eu
