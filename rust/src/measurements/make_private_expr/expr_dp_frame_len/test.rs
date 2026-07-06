@@ -28,7 +28,6 @@ fn _test_dp_frame_len_default_dtype(signed: bool, output_type: DataType) -> Fall
     let dp_expr = measurement.invoke(&lf.logical_plan)?.expr;
     let df = lf.select([dp_expr]).collect()?;
 
-    println!("df: {}", df);
     assert_eq!(df.column("len")?.dtype(), &output_type);
     Ok(())
 }
