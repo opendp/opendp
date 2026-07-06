@@ -258,9 +258,7 @@ def test_private_lazyframe_median():
     ids=ids,
 )
 @pytest.mark.parametrize(
-    "signed",
-    [True, False],
-    ids=["AllowsNegative", "NegativeIgnored"]
+    "signed", [True, False], ids=["AllowsNegative", "NegativeIgnored"]
 )
 def test_filter(measure, signed):
     """ensure that expr domain's carrier type can be passed to/from Rust"""
@@ -689,7 +687,7 @@ def test_replace_binary_path():
 
     # check that local paths in new expressions get overwritten
     os.environ["OPENDP_POLARS_LIB_PATH"] = __file__
-    assert str(dp.len(scale=1.0)) == f"dyn float: 1.{__file__}:dp_frame_len()"
+    assert str(dp.len(scale=1.0)) == f"dyn float: 1.{__file__}:dp_frame_len([false])"
 
     # cleanup
     del os.environ["OPENDP_POLARS_LIB_PATH"]
@@ -1347,7 +1345,12 @@ def test_unbiased_groupby_len():
         split_evenly_over=1,
     )
     result = (
-        context.query().group_by("A").agg(dp.len(signed=True)).with_keys(keys).release().collect()
+        context.query()
+        .group_by("A")
+        .agg(dp.len(signed=True))
+        .with_keys(keys)
+        .release()
+        .collect()
     )
     assert (
         len(result.filter(pl.col("len") < 0)) > 0
