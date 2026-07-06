@@ -22,5 +22,5 @@ Runs `cargo fmt --all -- --check` on the opendp/rust/`
 
 If the hook finds issues, the commit will be staged. It can then be unstaged with
 ```
-git restore --staged rust/src/...
+git restore --staged <file/s>
 ```
