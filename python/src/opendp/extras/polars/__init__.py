@@ -138,7 +138,7 @@ class DPExpr(object):
         """
         return self.noise(scale=scale)
 
-    def len(self, scale: float | None = None, signed: bool = False):
+    def len(self, scale: float | None = None):
         """Compute a differentially private estimate of the number of elements in `self`, including null values.
 
         If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
@@ -177,7 +177,7 @@ class DPExpr(object):
         return register_plugin_function(
             plugin_path=_get_opendp_polars_lib_path(),
             function_name="dp_len",
-            args=(self.expr, scale, signed), # signed
+            args=(self.expr, scale),
             returns_scalar=True,
         )
 
@@ -514,6 +514,7 @@ def dp_len(scale: float | None = None, signed: bool = False):
     """Compute a differentially private estimate of the number of rows.
 
     If scale is None it is filled by ``global_scale`` in :py:func:`~opendp.measurements.make_private_lazyframe`.
+    If signed is True, this returns values that are of i64 instead of u32, allowing for unbiased noise.
 
     :param scale: parameter for the noise distribution.
     :param signed: if True, the output type is Int64 and negative noisy results are preserved.
