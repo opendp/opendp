@@ -14,10 +14,12 @@
         </style>
     </head>
     <body>
-        <h1>Page not found</h1>
-        <p>
-            The page you are looking for doesn't exist.
-        </p>
+        <div id="default">
+            <h1>Page not found</h1>
+            <p>
+                The page you are looking for doesn't exist.
+            </p>
+        </div>
         <script>
             (function(){
                 const url = document.location.toString();
@@ -52,7 +54,11 @@
                 for ([old_fragment, new_fragment] of pairs) {
                     if (url.includes(old_fragment)) {
                         const new_url = url.replace(old_fragment, new_fragment)
-                        document.write(`<p>Our site structure has changed: Redirecting to <code>${new_url}</code> in five seconds...</p>`);
+                        document.getElementById("default").remove();
+                        document.write(`
+                            <h1>Site has changed</h1>
+                            <p>Our site structure has changed: Redirecting to <code>${new_url}</code> in five seconds...</p>
+                        `);
                         setTimeout(function() {
                             document.location = new_url;
                         }, 5000);
