@@ -422,7 +422,7 @@ A few notes on Intellij IDEA:
 Git Hooks
 ---------
 
-A suggested (opt-in) pre-commit hook lives in ``.githooks``.
+A suggested (opt-in) pre-commit hook lives in ``.hooks-suggested``.
 Enable it with ``git config core.hooksPath .hooks-suggested``.
 `See <https://github.com/opendp/opendp/tree/main/.hooks-suggested/README.md>` for more details.
 md
@@ -430,4 +430,4 @@ md
 Git only runs the hook if it is executable. A fresh clone is fine, but if the executable
 bit was stripped, git will skip the hook or complain it is not executable.
 
-Restore it with ``chmod +x .githooks/pre-commit``
+Restore it with ``chmod +x .hooks-suggested/pre-commit``
