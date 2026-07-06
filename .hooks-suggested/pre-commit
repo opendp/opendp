@@ -1,0 +1,33 @@
+#!/bin/sh
+#
+# Suggested pre-commit hook: checks Rust formatting before a commit.
+#
+# This is opt-in. Enable it with:
+#   git config core.hooksPath .hooks-suggested
+# Disable it again with:
+#   git config --unset core.hooksPath
+set -eu
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+MANIFEST="$REPO_ROOT/rust/Cargo.toml"
+
+# Locate cargo check PATH, and only fall back to the default rustup install
+CARGO=$(command -v cargo || true)
+if [ -z "$CARGO" ] && [ -x "$HOME/.cargo/bin/cargo" ]; then
+    CARGO="$HOME/.cargo/bin/cargo"
+fi
+if [ -z "$CARGO" ]; then
+    echo "pre-commit: cargo not found — install from https://rustup.rs/ or add ~/.cargo/bin to PATH." >&2
+    exit 1
+fi
+
+if ! "$CARGO" fmt --version >/dev/null 2>&1; then
+    echo "pre-commit: rustfmt not found — install it with: rustup component add rustfmt" >&2
+    exit 1
+fi
+
+if ! "$CARGO" fmt --manifest-path "$MANIFEST" --all -- --check; then
+    echo "pre-commit: formatting issues found. Fix with:" >&2
+    echo "  $CARGO fmt --manifest-path \"$MANIFEST\" --all" >&2
+    exit 1
+fi
