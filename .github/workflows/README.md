@@ -143,6 +143,9 @@ on github, or with the `gh` command line tool. Parameters:
         python channel_tool.py bump_version --position patch # or minor or major
         ```
 
+
+    1. Only if it's a patch release, update `404.html` to redirect to the latest minor version.
+
     1. Increment changelog.
 
         ```shell
