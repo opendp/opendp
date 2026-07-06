@@ -41,32 +41,6 @@ pub fn make_expr_private_len<MI: 'static + UnboundedMetric, MO: 'static + Measur
 where
     MO::Distance: Zero,
 {
-    let len_expr = len();
-    let output_type = 0u32;
-    println!("Expr: {}", expr);
-    match expr {
-        Expr::Len => {
-            let output_type = 0u32;
-            let len_expr = len();
-        }
-
-        Expr::Cast { expr, .. } => {
-            if matches!(expr.as_ref(), Expr::Len) {
-                let len_expr = len().cast(DataType::Int64);
-                let output_type = 0i64;
-            } else {
-                return fallible!(
-                    MakeMeasurement,
-                    "Expected len().cast() and got an unsupported expression"
-                );
-            }
-        }
-
-        _ => {
-            return fallible!(MakeMeasurement, "Expected len() or len().cast() expression");
-        }
-    }
-
     let margin = input_domain.context.aggregation("len")?;
 
     if Some(Invariant::Lengths) != margin.invariant {
@@ -77,11 +51,33 @@ where
         );
     }
 
-    Measurement::new(
-        input_domain,
-        input_metric,
-        output_measure,
-        Function::from_expr(len_expr).fill_with(typed_lit(output_type)),
-        PrivacyMap::new(move |_| MO::Distance::zero()),
-    )
+    match expr {
+        Expr::Len => Measurement::new(
+            input_domain,
+            input_metric,
+            output_measure,
+            Function::from_expr(len()).fill_with(typed_lit(0u32)),
+            PrivacyMap::new(move |_| MO::Distance::zero()),
+        ),
+
+        Expr::Cast { expr, .. } => {
+            if matches!(expr.as_ref(), Expr::Len) {
+                Measurement::new(
+                    input_domain,
+                    input_metric,
+                    output_measure,
+                    Function::from_expr(len().cast(DataType::Int64)).fill_with(typed_lit(0i64)),
+                    PrivacyMap::new(move |_| MO::Distance::zero()),
+                )
+            } else {
+                return fallible!(
+                    MakeMeasurement,
+                    "Expected len().cast() and got an unsupported expression"
+                );
+            }
+        }
+        _ => {
+            return fallible!(MakeMeasurement, "Expected len() or len().cast() expression");
+        }
+    }
 }

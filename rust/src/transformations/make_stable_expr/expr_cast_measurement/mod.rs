@@ -57,7 +57,7 @@ where
 
     match &to_type_dtype {
         DataType::Int8 | DataType::Int16 | DataType::Int32 | DataType::Int64 => {}
-        dt => {
+        _ => {
             return fallible!(
                 MakeTransformation,
                 "make_cast_measurement cast expects target dtype Int64, found {}",
