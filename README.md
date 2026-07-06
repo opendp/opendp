@@ -19,11 +19,11 @@ The architecture of the OpenDP Library is based on a conceptual framework for ex
 This framework is described in the paper [A Programming Framework for OpenDP](https://opendp.org/files/2025/11/opendp_programming_framework_11may2020_1_01.pdf).
 
 > [!NOTE]
-> This software is part of the [**OpenDP Commons**](https://sites.harvard.edu/opendp/tools/#opendp-commons). As such, the OpenDP Executive Committee commits to:
-> - Releasing this software under an [OSI approved licence](https://opensource.org/licenses), in this case the [MIT License](https://github.com/opendp/opendp/blob/main/LICENSE).
+> This software is part of the [**OpenDP Commons**](https://opendp.org/tools/#opendp-commons). As such, the OpenDP Executive Committee commits to:
+> - Releasing this software under an [OSI approved license](https://opensource.org/licenses), in this case the [MIT License](https://github.com/opendp/opendp/blob/main/LICENSE).
 > - Ensuring there are at least two maintainers, in this case Michael Shoemate (`Shoeboxam`) and Chuck McCallum (`mccalluc`), who will respond within a week to new issues and PRs.
 > - Only making changes on `main` through PRs, and getting approval on these PRs before merging.
-> - On an annual basis, recruiting one or more volunteers (not active contributors) who will conduct a health-check, focussed not on the details of the algorithms but on the health of this repo as open source software. Their report will be linked here. The next (and first) health-check is scheduled for September 2026.
+> - On an annual basis, recruiting one or more volunteers (not active contributors) who will conduct a health-check, focused not on the details of the algorithms but on the health of this repo as open source software. Their report will be linked here. The next (and first) health-check is scheduled for September 2026.
 
 
 ## Status
