@@ -1331,7 +1331,7 @@ def test_unbiased_groupby_len():
     TEST_SIZE = 10_000
 
     # Polars dataframe with no rows so that the counts are all none.
-    test_data = {"A": [], "B": []}
+    test_data: dict[str, list] = {"A": [], "B": []}
     data_schema = pl.Schema({"A": pl.Int32, "B": pl.Int32})
 
     # lots of keys where some portion should have negative counts with noise applied.
