@@ -5,8 +5,8 @@ struct NativeProfileAccounting {
     structural_tail: f64,
     factory_depth_failure: f64,
     comparison_failure: f64,
+    sampler_success_failure: f64,
     sampler_overhead: f64,
-    approximate_delta_overhead: f64,
     comb_overhead: f64,
     total_overhead: f64,
 }
@@ -15,7 +15,7 @@ fn factorial_f64(n: u32) -> f64 {
     (1..=n).map(f64::from).product()
 }
 
-fn hybrid_native_profile_accounting(
+fn standard_native_profile_accounting(
     alpha: f64,
     dimension: usize,
     comb_probability_per_coordinate: f64,
@@ -39,28 +39,32 @@ fn hybrid_native_profile_accounting(
     let structural_tail = (-0.5 * k_max * k_max).exp() / k_max;
     let factory_depth_failure = b_factories as f64 * std::f64::consts::E / factorial_f64(l_max + 1);
     let comparison_failure = m_comparisons as f64 * 4.0 * 2.0f64.powf(-b_s);
-    let sampler_success_failure = comparison_failure;
+    let sampler_success_failure = factory_depth_failure + comparison_failure;
 
-    let comb_probability = dimension as f64 * comb_probability_per_coordinate;
-    if structural_tail >= 1.0 || sampler_success_failure >= 1.0 || comb_probability >= 1.0 {
+    if structural_tail >= 1.0
+        || sampler_success_failure >= 1.0
+        || comb_probability_per_coordinate >= 1.0
+    {
         return fallible!(
             FailedFunction,
             "finite-budget failure probabilities must remain below one"
         );
     }
 
-    let structural_overhead = -(-structural_tail).ln_1p() / (alpha - 1.0);
-    let sampler_success_overhead = -(-sampler_success_failure).ln_1p() * alpha / (alpha - 1.0);
+    let dimension = dimension as f64;
+    let structural_overhead = -dimension * (-structural_tail).ln_1p() / (alpha - 1.0);
+    let sampler_success_overhead =
+        -dimension * (-sampler_success_failure).ln_1p() * alpha / (alpha - 1.0);
     let sampler_overhead = structural_overhead + sampler_success_overhead;
-    let approximate_delta_overhead = (1.0 + std::f64::consts::E) * factory_depth_failure;
-    let comb_overhead = -(-comb_probability).ln_1p() * alpha / (alpha - 1.0);
+    let comb_overhead =
+        -dimension * (-comb_probability_per_coordinate).ln_1p() * alpha / (alpha - 1.0);
 
     Ok(NativeProfileAccounting {
         structural_tail,
         factory_depth_failure,
         comparison_failure,
+        sampler_success_failure,
         sampler_overhead,
-        approximate_delta_overhead,
         comb_overhead,
         total_overhead: sampler_overhead + comb_overhead,
     })
@@ -166,6 +170,23 @@ fn native_f32_cell_bounds_match_midpoints() {
     let (zero_lower, zero_upper) = f32_cell_bounds(0.0);
     assert_eq!(zero_lower, Some(f64::from(0.0_f32.next_down_()) * 0.5));
     assert_eq!(zero_upper, Some(f64::from(0.0_f32.next_up_()) * 0.5));
+}
+
+#[test]
+fn native_f32_certification_canonicalizes_signed_zero() {
+    let min_subnormal = f32::from_bits(1);
+    let out = certify_real_affine_rounds_to_f32(
+        0.0,
+        min_subnormal,
+        None,
+        true,
+        0,
+        &NativeUniform01 { prefix: 0, bits: 1 },
+        true,
+    );
+
+    assert!(matches!(out, F32CellCertification::Output(zero)
+        if zero == 0.0 && zero.to_bits() == 0.0f32.to_bits()));
 }
 
 #[test]
@@ -277,8 +298,8 @@ fn native_scale_snaps_up_to_f32() -> Fallible<()> {
 }
 
 #[test]
-fn hybrid_native_profile_accounting_stays_below_paper_floor() -> Fallible<()> {
-    let terms = hybrid_native_profile_accounting(2.0, 1, 0.0)?;
+fn standard_native_profile_accounting_stays_below_paper_floor() -> Fallible<()> {
+    let terms = standard_native_profile_accounting(2.0, 1, 0.0)?;
 
     assert_eq!(NATIVE_SAMPLER_K_MAX, (1 << 20) - 1);
     assert_eq!(NATIVE_BERNOULLI_MAX_DEPTH, 64);
@@ -286,8 +307,8 @@ fn hybrid_native_profile_accounting_stays_below_paper_floor() -> Fallible<()> {
     assert_eq!(NATIVE_FINALIZATION_UNIFORM_MAX_BITS, 96);
     assert!(terms.structural_tail == 0.0);
     assert!(terms.factory_depth_failure < 2.0f64.powf(-260.5));
-    assert!(terms.approximate_delta_overhead < 2.0f64.powf(-258.5));
     assert!(terms.comparison_failure < 2.0f64.powf(-78.9));
+    assert!(terms.sampler_success_failure < 2.0f64.powf(-78.9));
     assert!(terms.sampler_overhead < 2.0f64.powf(-77.9));
     assert_eq!(terms.comb_overhead, 0.0);
     assert_eq!(terms.total_overhead, terms.sampler_overhead);

@@ -439,7 +439,7 @@ pub fn sample_rounded_gaussian_clipped<T: Float>(mu: T, scale: T, range: T) -> F
 /// This intentionally avoids exact rational finalization at the cost of the
 /// small conditioning term accounted for by the comb probability.
 /// Pre-accept sampler caps in the native specialization are declared
-/// sampler-side resampling events. For positive scale, the hybrid native sampler
+/// sampler-side resampling events. For positive scale, the standard native
 /// profile is proof-grade only for the clipped wrapper below; this unclipped
 /// convenience wrapper returns an error unless `scale == 0`.
 pub fn sample_rounded_gaussian_f64_to_f32_native(mu: f64, scale: f64) -> Fallible<f32> {
@@ -457,7 +457,7 @@ pub fn sample_rounded_gaussian_f64_to_f32_native(mu: f64, scale: f64) -> Fallibl
 ///
 /// Here `scale32` is the upward-snapped f32 scale used by the native
 /// specialization. Privacy accounting for this path must use `scale32`, and
-/// the default hybrid profile requires `R < 524288 * scale32`. If `R` is at or
+/// the standard native profile requires `R < 524288 * scale32`. If `R` is at or
 /// below the f32 finite-output threshold, infinities are excluded from the
 /// support.
 pub fn sample_rounded_gaussian_f64_to_f32_native_clipped(
@@ -494,12 +494,6 @@ pub fn sample_rounded_gaussian_f64_to_f32_native_clipped(
             native::NativeF32Sample::Output(out) => return Ok(out),
             native::NativeF32Sample::RejectedSampler => continue,
             native::NativeF32Sample::RejectedComb => continue,
-            native::NativeF32Sample::ResourceLimit => {
-                return fallible!(
-                    FailedFunction,
-                    "native arithmetic resource limit outside declared resampling events"
-                );
-            }
         }
     }
 }

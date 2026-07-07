@@ -8,14 +8,15 @@ mod test;
 
 const NATIVE_UNIFORM_REFINE_BITS: u32 = 4;
 
-// Default hybrid native sampler profile for the proof-oriented GPU path.
+// Default pure-RDP native sampler profile for the proof-oriented GPU path.
 //
 // K is capped at 2^20 - 1, each Bernoulli factory is capped at 64 rounds, and
 // scalar partial-uniform comparisons use a 128-bit native prefix budget. The K
-// cap is a declared structural tail, Bernoulli-factory depth is charged to an
-// approximate-DP failure budget, and finite sampler comparisons are accounted by
-// the native proof. Finalization still uses a 96-bit prefix budget, where
-// unresolved traces are accounted by the public rounding-boundary comb.
+// cap is a declared structural tail. Bernoulli-factory depth exhaustion and
+// finite sampler comparisons are declared sampler rejections: the public wrapper
+// retries them and charges the retained-mass loss directly to RDP. Finalization
+// still uses a 96-bit prefix budget, where unresolved traces are retried and
+// accounted by the public rounding-boundary comb.
 //
 // With a snapped f32 scale, m_sigma has at most 24 bits. At the finalization
 // cap b = 96, the upper endpoint can use q = n + 1 = 2^96, so m_sigma * q needs
@@ -31,7 +32,11 @@ pub(super) enum NativeF32Sample {
     Output(f32),
     RejectedSampler,
     RejectedComb,
-    ResourceLimit,
+}
+
+#[inline]
+fn canonicalize_f32_output(value: f32) -> f32 {
+    if value == 0.0 { 0.0 } else { value }
 }
 
 enum NativeSamplerOutcome<T> {
@@ -522,7 +527,7 @@ fn accept_fraction_native(
 enum F32CellCertification {
     Output(f32),
     Unresolved,
-    ResourceLimit,
+    StaticResourceLimit,
 }
 
 #[derive(Clone, Copy)]
@@ -990,7 +995,7 @@ fn certify_real_affine_rounds_to_f32(
         };
 
         if lower_endpoint_above_lower && upper_endpoint_below_upper {
-            return Some(CandidateCheck::Output(candidate));
+            return Some(CandidateCheck::Output(canonicalize_f32_output(candidate)));
         }
 
         let left_of_interval = match upper {
@@ -1030,7 +1035,7 @@ fn certify_real_affine_rounds_to_f32(
             match check_candidate(candidate) {
                 Some(CandidateCheck::Output(out)) => return F32CellCertification::Output(out),
                 Some(CandidateCheck::Scan(_)) | Some(CandidateCheck::Near) => {}
-                None => return F32CellCertification::ResourceLimit,
+                None => return F32CellCertification::StaticResourceLimit,
             }
         }
         return F32CellCertification::Unresolved;
@@ -1049,7 +1054,7 @@ fn certify_real_affine_rounds_to_f32(
                 left_bracket |= scan.left_of_interval;
                 right_bracket |= scan.right_of_interval;
             }
-            None => return F32CellCertification::ResourceLimit,
+            None => return F32CellCertification::StaticResourceLimit,
         }
 
         if left_bracket && right_bracket {
@@ -1064,7 +1069,7 @@ fn certify_real_affine_rounds_to_f32(
                     left_bracket |= scan.left_of_interval;
                     right_bracket |= scan.right_of_interval;
                 }
-                None => return F32CellCertification::ResourceLimit,
+                None => return F32CellCertification::StaticResourceLimit,
             }
 
             if left_bracket && right_bracket {
@@ -1107,6 +1112,11 @@ fn certify_real_affine_rounds_to_f32(
 /// they certify a public near-boundary event that is charged through the comb.
 /// The integer part K, Bernoulli-factory depth, and sampler comparison prefix
 /// are fixed public caps in the native sampler profile.
+///
+/// `RejectedSampler` and `RejectedComb` are public retry predicates charged by
+/// finite-budget RDP accounting. Static arithmetic resource limits are not
+/// retryable: they indicate that the constructor-side proof obligations have
+/// been violated and are returned as hard errors.
 pub(super) fn sample_f64_to_f32_clipped(
     mu: f64,
     scale: f64,
@@ -1124,22 +1134,25 @@ pub(super) fn sample_f64_to_f32_clipped(
         return fallible!(FailedFunction, "clip must be finite and nonnegative");
     }
     if scale == 0.0 {
-        let out = clip.map(|range| mu.max(-range).min(range)).unwrap_or(mu) as f32;
+        let out = canonicalize_f32_output(
+            clip.map(|range| mu.max(-range).min(range)).unwrap_or(mu) as f32,
+        );
         return Ok(NativeF32Sample::Output(out));
     }
     let scale = snap_scale_up_to_f32(scale)?;
     let Some(clip) = clip else {
         return fallible!(
             FailedFunction,
-            "hybrid native sampler requires a finite clipping range"
+            "standard native sampler requires a finite clipping range"
         );
     };
     if clip >= NATIVE_CLIP_SCALE_MAX_RATIO * f64::from(scale) {
         return fallible!(
             FailedFunction,
-            "hybrid native sampler requires range < 524288 * snapped scale"
+            "standard native sampler requires range < 524288 * snapped scale"
         );
     }
+    let mu = mu.max(-clip).min(clip);
 
     let mut entropy = NativeEntropy::new();
     loop {
@@ -1175,7 +1188,12 @@ pub(super) fn sample_f64_to_f32_clipped(
                     return Ok(NativeF32Sample::RejectedComb);
                 }
                 F32CellCertification::Unresolved => {}
-                F32CellCertification::ResourceLimit => return Ok(NativeF32Sample::ResourceLimit),
+                F32CellCertification::StaticResourceLimit => {
+                    return fallible!(
+                        FailedFunction,
+                        "native arithmetic resource limit outside declared resampling events"
+                    );
+                }
             }
 
             if final_x
