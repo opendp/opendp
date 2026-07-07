@@ -103,8 +103,7 @@ def test_lazyframe_ffi():
 
 
 @pytest.mark.parametrize(
-    "measure",
-    [dp.max_divergence(), dp.zero_concentrated_divergence()],
+    "measure", [dp.max_divergence(), dp.zero_concentrated_divergence()],
     ids=ids,
 )
 def test_private_lazyframe_explicit_sum(measure):
