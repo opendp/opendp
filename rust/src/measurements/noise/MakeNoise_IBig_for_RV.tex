@@ -74,12 +74,12 @@ which has an associated function \texttt{noise\_privacy\_map} to be called on li
     In this case \texttt{self} describes the noise distribution.
 
     We argue that \texttt{function} is consistent with the function described in Lemma~\ref{lemma:new-privacy-map}.
-    Line~\ref{line:sample} calls \texttt{self.sample(x\_i)} on each element in the input vector.
+    Line~\ref{line:sample} calls \texttt{self.sample(x)} on the input vector.
     The precondition that \texttt{self} represents a valid distribution is satisfied by the postcondition of Lemma~\ref{lemma:new-privacy-map};
     the distribution is valid when the construction of the privacy map does not raise an exception.
     Since the preconditions for \rustdoc{measurements/noise/trait}{Sample}\texttt{.sample} are satisfied,
     the postcondition claims that either an error is returned independently of the input \texttt{shift},
-    or \texttt{shift + Z} where \texttt{Z} is a sample from the distribution defined by \texttt{self}.
+    or \texttt{shift + Z} where \texttt{Z} is a vector sample from the distribution defined by \texttt{self}.
     This is consistent with the definition of \texttt{function(x)} in the privacy map.
 
     Therefore, the privacy guarantee from Lemma~\ref{lemma:new-privacy-map} applies to the returned measurement.

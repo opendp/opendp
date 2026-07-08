@@ -6,7 +6,7 @@ class RV:
         return Measurement.new(
             input_domain,
             Function.new_fallible(
-                lambda x: [self.sample(x_i) for x_i in x]), # |\label{line:sample}|
+                lambda x: self.sample(x)), # |\label{line:sample}|
             input_metric,
             MO.default(),
             self.noise_privacy_map(),  # |\label{line:privacy-map}|

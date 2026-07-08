@@ -18,6 +18,9 @@ pub use geometric::*;
 mod laplace;
 pub use laplace::*;
 
+mod staircase;
+pub use staircase::*;
+
 #[cfg(feature = "ffi")]
 mod ffi;
 

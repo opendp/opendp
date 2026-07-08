@@ -80,12 +80,12 @@ which has an associated function \texttt{noise\_privacy\_map} called on line~\re
     In this case \texttt{self} describes the noise distribution.
 
     We argue that \texttt{function} is consistent with the function described in Lemma~\ref{lemma:new-privacy-map}.
-    Line~\ref{line:sample} calls \texttt{self.sample(x\_i)} on each element in the input vector.
+    Line~\ref{line:sample} calls \texttt{self.sample([v])} and projects the first value.
     The precondition that \texttt{self} represents a valid distribution is satisfied by the postcondition of Lemma~\ref{lemma:new-privacy-map};
     the distribution is valid when the construction of the privacy map does not raise an exception.
     Since the preconditions for \rustdoc{measurements/noise/trait}{Sample}\texttt{.sample} are satisfied,
-    the postcondition claims that either returns an error independently of the input \texttt{v},
-    or \texttt{v + Z} where \texttt{Z} is a sample from the distribution defined by \texttt{self}.
+    the postcondition claims that either returns an error independently of the input singleton vector,
+    or \texttt{[v] + Z} where \texttt{Z} is a length-one vector sample from the distribution defined by \texttt{self}.
     The keys are then shuffled on line~\ref{line:shuffle} to ensure that the output is independent of the input ordering.
     In the Rust implementation, a random hasher is used to ensure that the output ordering is independent of the input ordering.
     This is consistent with Lemma~\ref{lemma:new-privacy-map}.

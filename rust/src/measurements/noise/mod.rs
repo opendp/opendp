@@ -79,21 +79,27 @@ pub trait Sample: 'static + Clone + Send + Sync {
     /// `self` represents a valid distribution.
     ///
     /// Either returns `Err(e)` independently of the input `shift`,
-    /// or `Ok(shift + Z)` where `Z` is a sample from the distribution defined by `self`.
-    fn sample(&self, shift: &IBig) -> Fallible<IBig>;
+    /// or `Ok(shift + Z)` where `Z` is a vector sample from the distribution defined by `self`.
+    fn sample(&self, shift: &Vec<IBig>) -> Fallible<Vec<IBig>>;
 }
 
 #[proven(proof_path = "measurements/noise/Sample_for_ZExpFamily1.tex")]
 impl Sample for ZExpFamily<1> {
-    fn sample(&self, shift: &IBig) -> Fallible<IBig> {
-        Ok(shift + sample_discrete_laplace(self.scale.clone())?)
+    fn sample(&self, shift: &Vec<IBig>) -> Fallible<Vec<IBig>> {
+        shift
+            .iter()
+            .map(|x_i| Ok(x_i + sample_discrete_laplace(self.scale.clone())?))
+            .collect()
     }
 }
 
 #[proven(proof_path = "measurements/noise/Sample_for_ZExpFamily2.tex")]
 impl Sample for ZExpFamily<2> {
-    fn sample(&self, shift: &IBig) -> Fallible<IBig> {
-        Ok(shift + sample_discrete_gaussian(self.scale.clone())?)
+    fn sample(&self, shift: &Vec<IBig>) -> Fallible<Vec<IBig>> {
+        shift
+            .iter()
+            .map(|x_i| Ok(x_i + sample_discrete_gaussian(self.scale.clone())?))
+            .collect()
     }
 }
 
@@ -116,9 +122,7 @@ where
             input_domain,
             input_metric,
             output_measure,
-            Function::new_fallible(move |x: &Vec<IBig>| {
-                x.into_iter().map(|x_i| distribution.sample(x_i)).collect()
-            }),
+            Function::new_fallible(move |x: &Vec<IBig>| distribution.sample(x)),
             privacy_map,
         )
     }

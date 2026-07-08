@@ -24,7 +24,7 @@ class RV:
         def function(data: HashMap[TK, IBig]) -> HashMap[TK, IBig]:
             out = []
             for k, v in data.items():
-                v = self.sample(v) # |\label{line:sample}|
+                v = self.sample([v])[0] # |\label{line:sample}|
 
                 if v.cmp(threshold) != inner:
                     out.append((k, v))

@@ -162,6 +162,53 @@ def test_vector_discrete_laplace():
     assert meas.check(1, 0.5)
     assert not meas.check(1, 0.49999)
 
+def test_l1_staircase_float():
+    input_space = dp.vector_domain(dp.atom_domain(T=float, nan=False)), dp.l1_distance(T=float)
+    meas = dp.m.make_l1_staircase(*input_space, delta=1., r=1., epsilon=1.)
+    release = meas([0., 1., 2.])
+    assert len(release) == 3
+    assert all(isinstance(v, float) for v in release)
+    assert meas.map(1.) == 1.
+
+
+def test_linf_staircase_float():
+    input_space = dp.vector_domain(dp.atom_domain(T=float, nan=False)), dp.linf_distance(T=float)
+    meas = input_space >> dp.m.then_linf_staircase(delta=1., r=1., epsilon=1.)
+    release = meas([0., 1., 2.])
+    assert len(release) == 3
+    assert all(isinstance(v, float) for v in release)
+    assert meas.map(1.) == 1.
+
+
+def test_l1_staircase_integer():
+    input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.l1_distance(T=int)
+    meas = input_space >> dp.m.then_l1_staircase(delta=1., r=1., epsilon=1.)
+    release = meas([0, 1, 2])
+    assert len(release) == 3
+    assert all(isinstance(v, int) for v in release)
+    assert meas.map(1) == 1.
+
+
+def test_linf_staircase_integer():
+    input_space = dp.vector_domain(dp.atom_domain(T=int)), dp.linf_distance(T=int)
+    meas = dp.m.make_linf_staircase(*input_space, delta=1., r=1., epsilon=1.)
+    release = meas([0, 1, 2])
+    assert len(release) == 3
+    assert all(isinstance(v, int) for v in release)
+    assert meas.map(1) == 1.
+
+
+def test_staircase_scalar_wrappers():
+    l1_space = dp.atom_domain(T=float, nan=False), dp.absolute_distance(T=float)
+    l1_meas = dp.m.make_l1_staircase(*l1_space, delta=1., r=1., epsilon=1.)
+    assert isinstance(l1_meas(0.), float)
+    assert l1_meas.map(1.) == 1.
+
+    linf_space = dp.atom_domain(T=int), dp.absolute_distance(T=int)
+    linf_meas = dp.m.make_linf_staircase(*linf_space, delta=1., r=1., epsilon=1.)
+    assert isinstance(linf_meas(0), int)
+    assert linf_meas.map(1) == 1.
+
 def test_discrete_gaussian():
     input_space = dp.atom_domain(T=int), dp.absolute_distance(T=int)
     meas = dp.m.make_gaussian(*input_space, scale=2.)

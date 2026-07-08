@@ -1,13 +1,16 @@
-use dashu::{integer::IBig, rational::RBig};
+use dashu::rational::RBig;
 use opendp_derive::proven;
 
 use crate::{
-    core::{Function, Measure, Measurement, StabilityMap, Transformation},
+    core::{Function, Measure, Measurement, PrivacyMap},
     domains::{AtomDomain, VectorDomain},
     error::Fallible,
     measurements::{MakeNoise, NoisePrivacyMap, ZExpFamily},
     metrics::{AbsoluteDistance, LpDistance},
-    traits::{CastInternalRational, ExactIntCast, Float, FloatBits, Number},
+    traits::{
+        Float, Number,
+        samplers::{IidContinuousGaussian, IidContinuousLaplace, RoundedContinuousVectorSampler},
+    },
     transformations::{make_vec, then_index_or_default},
 };
 
@@ -26,90 +29,92 @@ pub struct FloatExpFamily<const P: usize> {
 #[proven(
     proof_path = "measurements/noise/nature/float/MakeNoise_VectorDomain_for_FloatExpFamily.tex"
 )]
-impl<T: Float, const P: usize, QI: Number, MO: 'static + Measure>
-    MakeNoise<VectorDomain<AtomDomain<T>>, LpDistance<P, QI>, MO> for FloatExpFamily<P>
+impl<T: Float, QI: Number, MO: 'static + Measure>
+    MakeNoise<VectorDomain<AtomDomain<T>>, LpDistance<1, QI>, MO> for FloatExpFamily<1>
 where
-    i32: ExactIntCast<<T as FloatBits>::Bits>,
     RBig: TryFrom<T> + TryFrom<QI>,
-    ZExpFamily<P>: NoisePrivacyMap<LpDistance<P, RBig>, MO>,
+    ZExpFamily<1>: NoisePrivacyMap<LpDistance<1, RBig>, MO>,
 {
     fn make_noise(
         self,
-        input_space: (VectorDomain<AtomDomain<T>>, LpDistance<P, QI>),
-    ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, LpDistance<P, QI>, MO, Vec<T>>> {
-        let FloatExpFamily { scale, k } = self;
-        let distribution = ZExpFamily {
-            scale: integerize_scale(scale, k)?,
-        };
+        (input_domain, input_metric): (VectorDomain<AtomDomain<T>>, LpDistance<1, QI>),
+    ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, LpDistance<1, QI>, MO, Vec<T>>> {
+        if input_domain.element_domain.nan() {
+            return fallible!(MakeMeasurement, "input_domain may not contain NaN elements");
+        }
 
-        let t_int = make_float_to_bigint(input_space, k)?;
-        let m_noise = distribution.make_noise(t_int.output_space())?;
-        t_int >> m_noise >> then_deintegerize_vec(self.k)?
+        let scale = RBig::try_from(self.scale)?;
+        let distribution = ZExpFamily {
+            scale: scale.clone(),
+        };
+        let output_measure = MO::default();
+        let privacy_map =
+            distribution.noise_privacy_map(&LpDistance::<1, RBig>::default(), &output_measure)?;
+        let sampler = IidContinuousLaplace::<T>::new(scale)?;
+
+        Measurement::new(
+            input_domain,
+            input_metric,
+            output_measure,
+            Function::new_fallible(move |arg: &Vec<T>| sampler.sample_around(arg)),
+            PrivacyMap::new_fallible(move |d_in: &QI| {
+                let d_in = RBig::try_from(d_in.clone())
+                    .map_err(|_| err!(FailedMap, "d_in ({d_in:?}) must be finite"))?;
+                privacy_map.eval(&d_in)
+            }),
+        )
     }
 }
 
-#[proven(proof_path = "measurements/noise/nature/float/make_float_to_bigint.tex")]
-fn make_float_to_bigint<T: Float, const P: usize, QI: Number>(
-    input_space: (VectorDomain<AtomDomain<T>>, LpDistance<P, QI>),
-    k: i32,
-) -> Fallible<
-    Transformation<
-        VectorDomain<AtomDomain<T>>,
-        LpDistance<P, QI>,
-        VectorDomain<AtomDomain<IBig>>,
-        LpDistance<P, RBig>,
-    >,
->
+#[proven(
+    proof_path = "measurements/noise/nature/float/MakeNoise_VectorDomain_for_FloatExpFamily.tex"
+)]
+impl<T: Float, QI: Number, MO: 'static + Measure>
+    MakeNoise<VectorDomain<AtomDomain<T>>, LpDistance<2, QI>, MO> for FloatExpFamily<2>
 where
-    i32: ExactIntCast<<T as FloatBits>::Bits>,
     RBig: TryFrom<T> + TryFrom<QI>,
+    ZExpFamily<2>: NoisePrivacyMap<LpDistance<2, RBig>, MO>,
 {
-    let (input_domain, input_metric) = input_space;
-    if input_domain.element_domain.nan() {
-        return fallible!(
-            MakeTransformation,
-            "input_domain may not contain NaN elements"
-        );
-    }
-    let size = input_domain.size;
-    let rounding_distance = get_rounding_distance::<T, P>(k, size)?;
+    fn make_noise(
+        self,
+        (input_domain, input_metric): (VectorDomain<AtomDomain<T>>, LpDistance<2, QI>),
+    ) -> Fallible<Measurement<VectorDomain<AtomDomain<T>>, LpDistance<2, QI>, MO, Vec<T>>> {
+        if input_domain.element_domain.nan() {
+            return fallible!(MakeMeasurement, "input_domain may not contain NaN elements");
+        }
 
-    Transformation::new(
-        input_domain,
-        input_metric.clone(),
-        VectorDomain {
-            element_domain: AtomDomain::<IBig>::default(),
-            size,
-        },
-        LpDistance::default(),
-        Function::new(move |arg: &Vec<T>| {
-            arg.iter()
-                .cloned()
-                .map(|x_i| {
-                    let x_i = RBig::try_from(x_i.clamp(T::MIN_FINITE, T::MAX_FINITE))
-                        .unwrap_or(RBig::ZERO);
-                    find_nearest_multiple_of_2k(x_i, k)
-                })
-                .collect()
-        }),
-        StabilityMap::new_fallible(move |d_in: &QI| {
-            let d_in = RBig::try_from(d_in.clone())
-                .map_err(|_| err!(FailedMap, "d_in ({:?}) must be finite", d_in))?;
-            Ok(x_mul_2k(d_in + rounding_distance.clone(), -k))
-        }),
-    )
+        let scale = RBig::try_from(self.scale)?;
+        let distribution = ZExpFamily {
+            scale: scale.clone(),
+        };
+        let output_measure = MO::default();
+        let privacy_map =
+            distribution.noise_privacy_map(&LpDistance::<2, RBig>::default(), &output_measure)?;
+        let sampler = IidContinuousGaussian::<T>::new(scale)?;
+
+        Measurement::new(
+            input_domain,
+            input_metric,
+            output_measure,
+            Function::new_fallible(move |arg: &Vec<T>| sampler.sample_around(arg)),
+            PrivacyMap::new_fallible(move |d_in: &QI| {
+                let d_in = RBig::try_from(d_in.clone())
+                    .map_err(|_| err!(FailedMap, "d_in ({d_in:?}) must be finite"))?;
+                privacy_map.eval(&d_in)
+            }),
+        )
+    }
 }
 
 /// Float scalar mechanism
 #[proven(
     proof_path = "measurements/noise/nature/float/MakeNoise_AtomDomain_for_FloatExpFamily.tex"
 )]
-impl<T: Float, const P: usize, QI: Number, MO: 'static + Measure>
-    MakeNoise<AtomDomain<T>, AbsoluteDistance<QI>, MO> for FloatExpFamily<P>
+impl<T: Float, QI: Number, MO: 'static + Measure> MakeNoise<AtomDomain<T>, AbsoluteDistance<QI>, MO>
+    for FloatExpFamily<1>
 where
-    i32: ExactIntCast<<T as FloatBits>::Bits>,
     RBig: TryFrom<T> + TryFrom<QI>,
-    ZExpFamily<P>: NoisePrivacyMap<LpDistance<P, RBig>, MO>,
+    ZExpFamily<1>: NoisePrivacyMap<LpDistance<1, RBig>, MO>,
 {
     fn make_noise(
         self,
@@ -122,17 +127,22 @@ where
     }
 }
 
-#[proven(proof_path = "measurements/noise/nature/float/then_deintegerize_vec.tex")]
-pub fn then_deintegerize_vec<TO: CastInternalRational>(
-    k: i32,
-) -> Fallible<Function<Vec<IBig>, Vec<TO>>> {
-    if k == i32::MIN {
-        return fallible!(MakeTransformation, "k must not be i32::MIN");
+#[proven(
+    proof_path = "measurements/noise/nature/float/MakeNoise_AtomDomain_for_FloatExpFamily.tex"
+)]
+impl<T: Float, QI: Number, MO: 'static + Measure> MakeNoise<AtomDomain<T>, AbsoluteDistance<QI>, MO>
+    for FloatExpFamily<2>
+where
+    RBig: TryFrom<T> + TryFrom<QI>,
+    ZExpFamily<2>: NoisePrivacyMap<LpDistance<2, RBig>, MO>,
+{
+    fn make_noise(
+        self,
+        input_space: (AtomDomain<T>, AbsoluteDistance<QI>),
+    ) -> Fallible<Measurement<AtomDomain<T>, AbsoluteDistance<QI>, MO, T>> {
+        let t_vec = make_vec(input_space)?;
+        let m_noise = self.make_noise(t_vec.output_space())?;
+
+        t_vec >> m_noise >> then_index_or_default(0)
     }
-    Ok(Function::new(move |x: &Vec<IBig>| {
-        x.iter()
-            .cloned()
-            .map(|x_i| TO::from_rational(x_mul_2k(RBig::from(x_i), k)))
-            .collect()
-    }))
 }

@@ -24,6 +24,10 @@ There is a symmetric structure to the additive noise measurements:
      - :func:`~opendp.measurements.make_laplace`
    * - ``L2Distance<QI>``
      - :func:`~opendp.measurements.make_gaussian`
+   * - ``L1Distance<QI>``
+     - :func:`~opendp.measurements.make_l1_staircase`
+   * - ``LInfDistance<T>``
+     - :func:`~opendp.measurements.make_linf_staircase`
 
 ``QI`` can be any numeric type (the data type of the sensitivity can vary independently from the data type of the input).
 
@@ -31,11 +35,15 @@ By passing the appropriate input space,
 you can construct either scalar or vector-valued mechanisms.
 
 More details on `laplacian and gaussian noise mechanisms here <additive-noise-mechanisms.html>`_.
+More details on `the L1 staircase mechanism here <l1-staircase-mechanism.html>`_.
+More details on `the L-infinity staircase mechanism here <linf-staircase-mechanism.html>`_.
 
 .. toctree::
   :hidden:
 
   additive-noise-mechanisms
+  l1-staircase-mechanism
+  linf-staircase-mechanism
 
 
 Laplacian Noise
@@ -82,6 +90,49 @@ Use :func:`~opendp.accuracy.gaussian_scale_to_accuracy` and
    * - ``VectorDomain<AtomDomain<T>>``
      - ``L2Distance<QI>``
      - ``ZeroConcentratedDivergence``
+
+L1 Staircase Noise
+******************
+
+:func:`~opendp.measurements.make_l1_staircase` accepts sensitivities in terms
+of the absolute or L1 metrics and measures privacy in terms of epsilon.
+Unlike :func:`~opendp.measurements.make_laplace`, vector releases use joint
+L1-shaped noise instead of independent coordinatewise noise.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Input Domain
+     - Input Metric
+     - Output Measure
+   * - ``AtomDomain<T>``
+     - ``AbsoluteDistance<QI>``
+     - ``MaxDivergence``
+   * - ``VectorDomain<AtomDomain<T>>``
+     - ``L1Distance<QI>``
+     - ``MaxDivergence``
+
+L-infinity Staircase Noise
+**************************
+
+:func:`~opendp.measurements.make_linf_staircase` accepts sensitivities in
+terms of the absolute or L-infinity metrics and measures privacy in terms of
+epsilon. It is useful when a vector-valued statistic has a bounded maximum
+coordinate change, and vector releases use joint cube-shaped noise instead of
+independent coordinatewise noise.
+
+.. list-table::
+   :header-rows: 1
+
+   * - Input Domain
+     - Input Metric
+     - Output Measure
+   * - ``AtomDomain<T>``
+     - ``AbsoluteDistance<QI>``
+     - ``MaxDivergence``
+   * - ``VectorDomain<AtomDomain<T>>``
+     - ``LInfDistance<T>``
+     - ``MaxDivergence``
 
 Canonical Noise
 ***************

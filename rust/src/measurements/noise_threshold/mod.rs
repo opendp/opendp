@@ -109,7 +109,15 @@ where
             Function::new_fallible(move |data: &HashMap<TK, IBig>| {
                 data.into_iter()
                     // noise output count
-                    .map(|(k, v)| Ok((k.clone(), self.sample(v)?)))
+                    .map(|(k, v)| {
+                        Ok((
+                            k.clone(),
+                            self.sample(&vec![v.clone()])?
+                                .into_iter()
+                                .next()
+                                .unwrap_or_default(),
+                        ))
+                    })
                     // only keep keys with values gte threshold, and errors
                     .filter(|r| r.as_ref().map_or(true, |p| p.1.cmp(&threshold) != inner))
                     // fail the whole computation if any noise addition failed
