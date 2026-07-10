@@ -14,8 +14,8 @@ use crate::transformations::traits::UnboundedMetric;
 #[cfg(test)]
 mod test;
 
-/// Make a Transformation that casts a measurement output to int 64.
-/// Casting measurements to i64 before noise is added can enable negative values.
+/// Make a Transformation that casts an aggregation output to int 64.
+/// Casting aggregations to i64 before noise is added can enable negative values.
 ///
 /// # Arguments
 /// * `input_domain` - Domain of input data
@@ -25,7 +25,7 @@ mod test;
 /// # Generics
 /// * `TIA` - Atomic Input Type to cast from
 /// * `TOA` - Atomic Output Type to cast into
-pub fn make_cast_measurement<MI, const P: usize>(
+pub fn make_cast_aggregation<MI, const P: usize>(
     input_domain: WildExprDomain,
     input_metric: L01InfDistance<MI>,
     expr: Expr,
@@ -50,7 +50,7 @@ where
         .ok_or_else(|| {
             err!(
                 MakeTransformation,
-                "make_cast_measurement only supports literal dtype"
+                "make_cast_aggregation only supports literal dtype"
             )
         })?
         .clone();
@@ -60,7 +60,7 @@ where
         _ => {
             return fallible!(
                 MakeTransformation,
-                "make_cast_measurement cast expects target dtype Int64, found {}",
+                "make_cast_aggregation cast expects target integer dtype, found {}",
                 to_type_dtype
             );
         }

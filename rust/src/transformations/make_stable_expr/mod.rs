@@ -27,7 +27,7 @@ mod expr_boolean_function;
 mod expr_cast;
 
 #[cfg(feature = "contrib")]
-mod expr_cast_measurement;
+mod expr_cast_aggregation;
 
 #[cfg(feature = "contrib")]
 mod expr_clip;
@@ -263,7 +263,7 @@ where
             Len => expr_len::make_expr_len(input_domain, input_metric, self),
 
             #[cfg(feature = "contrib")]
-            Cast { .. } => expr_cast_measurement::make_cast_measurement::<MI, P>(
+            Cast { .. } => expr_cast_aggregation::make_cast_aggregation::<MI, P>(
                 input_domain,
                 input_metric,
                 self,
