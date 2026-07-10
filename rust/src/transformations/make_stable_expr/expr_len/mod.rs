@@ -3,7 +3,7 @@ use crate::domains::{AtomDomain, Context, ExprDomain, Margin, SeriesDomain, Wild
 use crate::error::*;
 use crate::metrics::{L01InfDistance, LpDistance};
 use crate::transformations::traits::UnboundedMetric;
-use polars::prelude::{DataType, len};
+use polars::prelude::len;
 use polars_plan::dsl::Expr;
 use polars_plan::plans::typed_lit;
 
@@ -33,9 +33,9 @@ where
     (WildExprDomain, L01InfDistance<MI>): MetricSpace,
     (ExprDomain, LpDistance<P, f64>): MetricSpace,
 {
-    if !matches!(expr, Expr::Len) {
+    let Expr::Len = expr else {
         return fallible!(MakeTransformation, "expected len expression");
-    }
+    };
 
     let old_margin = input_domain.context.aggregation("len")?;
     let margin = Margin {
@@ -45,42 +45,20 @@ where
         invariant: old_margin.invariant,
     };
 
-    match expr {
-        Expr::Len => {
-            let output_domain = ExprDomain {
-                column: SeriesDomain::new("len", AtomDomain::<u32>::default()),
-                context: Context::Aggregation {
-                    margin: margin.clone(),
-                },
-            };
-            Transformation::new(
-                input_domain,
-                input_metric,
-                output_domain,
-                LpDistance::default(),
-                Function::from_expr(len()).fill_with(typed_lit(0u32)),
-                counting_query_stability_map(margin.invariant),
-            )
-        }
-        Expr::Cast { .. } => {
-            // build output domain
-            let output_domain = ExprDomain {
-                column: SeriesDomain::new("len", AtomDomain::<f64>::default()),
-                context: Context::Aggregation {
-                    margin: margin.clone(),
-                },
-            };
-            Transformation::new(
-                input_domain,
-                input_metric,
-                output_domain,
-                LpDistance::default(),
-                Function::from_expr(len().cast(DataType::Int64)).fill_with(typed_lit(0i64)),
-                counting_query_stability_map(margin.invariant),
-            )
-        }
-        _ => {
-            return fallible!(MakeTransformation, "expected len or cast expression");
-        }
-    }
+    // build output domain
+    let output_domain = ExprDomain {
+        column: SeriesDomain::new("len", AtomDomain::<u32>::default()),
+        context: Context::Aggregation {
+            margin: margin.clone(),
+        },
+    };
+
+    Transformation::new(
+        input_domain,
+        input_metric,
+        output_domain,
+        LpDistance::default(),
+        Function::from_expr(len()).fill_with(typed_lit(0u32)),
+        counting_query_stability_map(margin.invariant),
+    )
 }
