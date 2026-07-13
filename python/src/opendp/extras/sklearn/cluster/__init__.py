@@ -44,6 +44,13 @@ from opendp.extras.sklearn.cluster._postprocess import (
     solve_tree,
 )
 
+from opendp.extras.sklearn.cluster._pe_means_binary import (
+    BinaryPEMeans,
+    BinaryPEMeansConfig,
+    SparsePrivateEvolutionMeans,
+    SparsePrivateEvolutionConfig,
+)
+
 from typing import TYPE_CHECKING, ClassVar, Literal, cast
 import opendp.prelude as dp
 from opendp._internal import _make_transformation, _new_pure_function

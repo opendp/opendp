@@ -1,0 +1,6 @@
+default  rho=0.1: baseline hard-assign=0.857  over-cluster x2 + merge=0.431  soft EM (beta=8)=0.234  
+default  rho=0.5: baseline hard-assign=0.896  over-cluster x2 + merge=0.517  soft EM (beta=8)=0.199  
+overlap  rho=0.1: baseline hard-assign=0.683  over-cluster x2 + merge=0.001  soft EM (beta=8)=0.147  
+overlap  rho=0.5: baseline hard-assign=0.766  over-cluster x2 + merge=0.001  soft EM (beta=8)=0.240  
+hard     rho=0.1: baseline hard-assign=0.209  over-cluster x2 + merge=0.098  soft EM (beta=8)=0.007  
+hard     rho=0.5: baseline hard-assign=0.440  over-cluster x2 + merge=0.330  soft EM (beta=8)=0.011  

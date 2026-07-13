@@ -1,0 +1,18 @@
+# Generated benchmark outputs
+results/
+*.csv
+*.json
+
+# Prepared datasets and raw downloads
+data/raw/
+data/prepared/
+
+# Fetched third-party repositories and local clones
+third_party/
+
+# Common local Python artifacts
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
