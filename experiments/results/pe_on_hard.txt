@@ -1,0 +1,6 @@
+n=50000 d=75688 k=16 mean_nnz=89.5 max_nnz=234
+preset  rho   PE_ARI  DPL_ARI
+weak    0.1    0.006    0.326
+weak    0.5    0.004    0.756
+hard    0.1    0.004    0.248
+hard    0.5    0.006    0.407

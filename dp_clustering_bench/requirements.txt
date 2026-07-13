@@ -1,0 +1,7 @@
+absl-py>=1.2.0
+numpy>=1.23
+pandas>=1.5
+scipy>=1.9
+scikit-learn>=1.2
+# Needed by Google Research HST. Comment out if you are not running --algorithms hst.
+apache-beam>=2.46.0
