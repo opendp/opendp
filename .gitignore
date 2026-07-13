@@ -247,5 +247,10 @@ rust/aeneas-out/
 rust/opendp_verified/Generated/
 SampCert/
 aeneas/
+alerus/
+verus-arm64-macos/
+verus-x86-macos/
+verus-x86-linux/
+verus-x86-win/
 
 .codex

@@ -1,0 +1,11 @@
+diff --git a/random/Cargo.toml b/random/Cargo.toml
+index 6e8a3af..f472959 100644
+--- a/random/Cargo.toml
++++ b/random/Cargo.toml
+@@ -4,5 +4,5 @@ version = "0.1.0"
+ edition = "2024"
+ 
+ [dependencies]
+-opendp = { version = "0.14.1", features = ["contrib"] }
++opendp = { path = "../../rust", features = ["contrib"] }
+ dashu = "0.4.0"
