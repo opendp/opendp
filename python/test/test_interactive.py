@@ -139,8 +139,52 @@ def test_fully_adaptive_composition():
     assert qbl_comp.privacy_loss(1) > m_sum.map(max_influence) * 2 + 0.2 + 0.09
 
 
-def test_odometer_supporting_elements():
-    o_ac = dp.c.make_fully_adaptive_composition(
+def test_fully_adaptive_composition_k():
+    max_influence = 1
+    space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
+    o_comp = space >> dp.c.then_fully_adaptive_composition_k(dp.max_divergence())
+    assert space == o_comp.input_space
+
+    qbl = o_comp([1] * 200)
+    assert qbl.privacy_loss(max_influence) == 0.0
+
+    m_sum = space >> dp.t.then_clamp((0, 10)) >> dp.t.then_sum() >> dp.m.then_laplace(100.)
+
+    # repeated identical queries: answers release, loss accumulates k-fold
+    k = 5
+    for _ in range(k):
+        assert isinstance(qbl(m_sum), int)
+
+    # matches the uncompressed odometer exactly for a uniform run
+    qbl_ref = (space >> dp.c.then_fully_adaptive_composition(dp.max_divergence()))([1] * 200)
+    for _ in range(k):
+        qbl_ref(m_sum)
+    assert qbl.privacy_loss(max_influence) == qbl_ref.privacy_loss(max_influence)
+
+    # interleaving a distinct measurement groups by map
+    m_sum_2 = space >> dp.t.then_clamp((0, 10)) >> dp.t.then_sum() >> dp.m.then_laplace(200.)
+    assert isinstance(qbl(m_sum_2), int)
+    assert isinstance(qbl(m_sum), int)
+    expected = (k + 1) * m_sum.map(max_influence) + m_sum_2.map(max_influence)
+    assert qbl.privacy_loss(max_influence) == pytest.approx(expected)
+
+
+def test_fully_adaptive_composition_k_zcdp():
+    space = dp.vector_domain(dp.atom_domain(T=int)), dp.symmetric_distance()
+    o_comp = space >> dp.c.then_fully_adaptive_composition_k(dp.zero_concentrated_divergence())
+    qbl = o_comp([1] * 200)
+    m_sum = space >> dp.t.then_clamp((0, 10)) >> dp.t.then_sum() >> dp.m.then_gaussian(100.)
+    for _ in range(3):
+        assert isinstance(qbl(m_sum), int)
+    assert qbl.privacy_loss(1) == pytest.approx(3 * m_sum.map(1))
+
+
+@pytest.mark.parametrize(
+    "make_odometer",
+    [dp.c.make_fully_adaptive_composition, dp.c.make_fully_adaptive_composition_k],
+)
+def test_odometer_supporting_elements(make_odometer):
+    o_ac = make_odometer(
         input_domain=dp.vector_domain(dp.atom_domain(T=int)),
         input_metric=dp.symmetric_distance(),
         output_measure=dp.max_divergence(),
@@ -156,9 +200,13 @@ def test_odometer_supporting_elements():
     assert o_ac.input_carrier_type == dp.Vec[dp.i32]
 
 
-def test_privacy_filter():
+@pytest.mark.parametrize(
+    "make_odometer",
+    [dp.c.make_fully_adaptive_composition, dp.c.make_fully_adaptive_composition_k],
+)
+def test_privacy_filter(make_odometer):
     m_filter = dp.c.make_privacy_filter(
-        dp.c.make_fully_adaptive_composition(
+        make_odometer(
             input_domain=dp.vector_domain(dp.atom_domain(T=int)),
             input_metric=dp.symmetric_distance(),
             output_measure=dp.max_divergence(),

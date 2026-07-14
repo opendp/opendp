@@ -245,6 +245,11 @@ def test_new_domain():
             dp.absolute_distance(T=int),
             dp.max_divergence(),
         ),
+        dp.c.make_fully_adaptive_composition_k(
+            dp.atom_domain(T=int),
+            dp.absolute_distance(T=int),
+            dp.max_divergence(),
+        ),
         dp.user_distance(""),
         dp.user_divergence(""),
         dp.user_domain("", lambda _: True),
