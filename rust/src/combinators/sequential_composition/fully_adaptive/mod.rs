@@ -1,9 +1,10 @@
+use std::sync::Arc;
 use std::{cell::RefCell, rc::Rc};
 
 use opendp_derive::{bootstrap, proven};
 
 use crate::{
-    combinators::{Adaptivity, Composability, CompositionMeasure, assert_elements_match},
+    combinators::{Adaptivity, Composability, ComposeK, CompositionMeasure, assert_elements_match},
     core::{
         Domain, Function, Measurement, Metric, MetricSpace, Odometer, OdometerAnswer,
         OdometerQuery, OdometerQueryable, PrivacyMap,
@@ -125,7 +126,9 @@ where
                             enforce_sequentiality,
                             move || {
                                 if *enforce_sequentiality.borrow() {
-                                    self_.eval_internal(&AskPermission(child_id))?
+                                    // no ? operator: it would make inference expect a Result answer payload,
+                                    // implementation now matches adaptive/mod.rs
+                                    self_.eval_internal(&AskPermission(child_id))
                                 } else {
                                     Ok(())
                                 }
@@ -170,6 +173,126 @@ where
 
                     return fallible!(FailedFunction, "query not recognized");
                 }
+            })
+        },
+    )
+}
+
+#[bootstrap(
+    features("contrib"),
+    arguments(output_measure(c_type = "AnyMeasure *", rust_type = b"null"),),
+    generics(DI(suppress), TO(suppress), MI(suppress), MO(suppress))
+)]
+/// Construct an odometer that can spawn a compositor queryable,
+/// aggregating the privacy loss of repeated identical queries.
+///
+/// Semantically identical to `make_fully_adaptive_composition`,
+/// but queries sharing a privacy map are grouped as `(map, k)` in first-submission order,
+/// so interleaved runs may differ in the last few ulps.
+///
+/// # Citations
+/// * [WRRW23 Fully Adaptive Composition in Differential Privacy](https://arxiv.org/abs/2203.05481)
+/// * [VZ23 Concurrent Composition Theorems for Differential Privacy](http://dx.doi.org/10.1145/3564246.3585241)
+/// * [HSTVVXZ23 Concurrent Composition for Interactive Differential Privacy with Adaptive Privacy-Loss Parameters](https://arxiv.org/abs/2309.05901)
+///
+/// # Runtime
+/// A privacy-loss query evaluates each distinct privacy map once, not once per invocation —
+/// this matters when maps are expensive to evaluate, such as Rényi curves.
+///
+/// # Arguments
+/// * `input_domain` - indicates the space of valid input datasets
+/// * `input_metric` - how distances are measured between members of the input domain
+/// * `output_measure` - how privacy is measured
+pub fn make_fully_adaptive_composition_k<
+    DI: 'static + Domain,
+    MI: 'static + Metric,
+    MO: 'static + ComposeK,
+    TO: 'static,
+>(
+    input_domain: DI,
+    input_metric: MI,
+    output_measure: MO,
+) -> Fallible<Odometer<DI, MI, MO, Measurement<DI, MI, MO, TO>, TO>>
+where
+    DI::Carrier: Clone,
+    MO::Distance: Clone,
+    (DI, MI): MetricSpace,
+{
+    output_measure.composability(Adaptivity::FullyAdaptive)?;
+
+    Odometer::new(
+        input_domain.clone(),
+        input_metric.clone(),
+        output_measure.clone(),
+        Function::new_fallible(move |arg: &DI::Carrier| {
+            new_fully_adaptive_composition_k_queryable(
+                input_domain.clone(),
+                input_metric.clone(),
+                output_measure.clone(),
+                arg.clone(),
+            )
+        }),
+    )
+}
+
+/// Delegates to the proven `new_fully_adaptive_composition_queryable` for invocation,
+/// mismatch checks, and sequentiality; answers privacy-loss queries from `(map, k)` groups.
+fn new_fully_adaptive_composition_k_queryable<
+    DI: 'static + Domain,
+    TO: 'static,
+    MI: 'static + Metric,
+    MO: 'static + ComposeK,
+>(
+    input_domain: DI,
+    input_metric: MI,
+    output_measure: MO,
+    data: DI::Carrier,
+) -> Fallible<OdometerQueryable<Measurement<DI, MI, MO, TO>, TO, MI::Distance, MO::Distance>>
+where
+    MO::Distance: Clone,
+    (DI, MI): MetricSpace,
+{
+    let mut inner = new_fully_adaptive_composition_queryable(
+        input_domain,
+        input_metric,
+        output_measure.clone(),
+        data,
+    )?;
+
+    // queries sharing a privacy map are stored as one (map, k) group, in first-submission order
+    let mut privacy_maps: Vec<(PrivacyMap<MI, MO>, u32)> = vec![];
+
+    Queryable::new(
+        move |_self: &OdometerQueryable<
+            Measurement<DI, MI, MO, TO>,
+            TO,
+            MI::Distance,
+            MO::Distance,
+        >,
+              query: Query<OdometerQuery<Measurement<DI, MI, MO, TO>, _>>| {
+            Ok(match query {
+                Query::External(OdometerQuery::PrivacyLoss(d_in)) => {
+                    let d_mids = (privacy_maps.iter())
+                        .map(|(map, k)| output_measure.compose_k(map.eval(d_in)?, *k))
+                        .collect::<Fallible<_>>()?;
+
+                    let d_out = output_measure.compose(d_mids)?;
+                    Answer::External(OdometerAnswer::PrivacyLoss(d_out))
+                }
+                Query::External(query) => {
+                    let answer = inner.eval_query(Query::External(query))?;
+                    if let OdometerQuery::Invoke(meas) = query {
+                        // groups hold a clone of the map's Arc, so ptr_eq cannot collide with a freed map
+                        let group = (privacy_maps.iter_mut())
+                            .find(|(map, _)| Arc::ptr_eq(&map.0, &meas.privacy_map.0));
+                        match group {
+                            Some((_, k)) => *k += 1,
+                            None => privacy_maps.push((meas.privacy_map.clone(), 1)),
+                        }
+                    }
+                    answer
+                }
+                Query::Internal(query) => inner.eval_query(Query::Internal(query))?,
             })
         },
     )
