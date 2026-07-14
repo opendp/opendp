@@ -14,6 +14,13 @@ use crate::transformations::traits::UnboundedMetric;
 #[cfg(test)]
 mod test;
 
+const CAST_TYPES_SUPPORTED: &[DataType] = &[
+    DataType::Int8,
+    DataType::Int16,
+    DataType::Int32,
+    DataType::Int64,
+];
+
 /// Make a Transformation that casts an aggregation output to int 64.
 /// Casting aggregations to i64 before noise is added can enable negative values.
 ///
@@ -56,7 +63,7 @@ where
         .clone();
 
     match &to_type_dtype {
-        DataType::Int8 | DataType::Int16 | DataType::Int32 | DataType::Int64 => {}
+        dtype if CAST_TYPES_SUPPORTED.contains(dtype) => {}
         _ => {
             return fallible!(
                 MakeTransformation,
