@@ -203,9 +203,7 @@ mod test_compose_k {
                 let exact_lo = (k as f64) * eps * (1.0 - 1e-12);
                 assert!(linear >= exact_lo);
                 assert!(doubled >= exact_lo);
-                assert!(
-                    (doubled - linear).abs() <= 1e-9 * linear.abs().max(f64::MIN_POSITIVE)
-                );
+                assert!((doubled - linear).abs() <= 1e-9 * linear.abs().max(f64::MIN_POSITIVE));
             }
         }
         Ok(())
