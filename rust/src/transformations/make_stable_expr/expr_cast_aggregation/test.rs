@@ -95,3 +95,27 @@ fn test_make_cast_cannot_downcast() -> Fallible<()> {
     }
     Ok(())
 }
+
+#[test]
+fn test_make_cast_cannot_downcast_hardcode() -> Fallible<()> {
+    let lf = df!(
+        "test_col" => &[0i64],
+    )?
+    .lazy()
+    .with_column(col("test_col"));
+
+    let input_domain = WildExprDomain {
+        columns: vec![],
+        context: Context::Aggregation {
+            margin: Margin::select(),
+        },
+    };
+
+    let transformation: Transformation<_, _, _, L1Distance<f64>> = len()
+        .cast(DataType::Int8)
+        .make_stable(input_domain, L0PInfDistance::<1, _>(SymmetricDistance))?;
+    // Need to ensure error occurs here.
+    let result = lf.select([expr]).collect();
+    assert!(result.is_err());
+    Ok(())
+}
