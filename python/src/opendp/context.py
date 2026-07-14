@@ -227,6 +227,14 @@ def domain_of(T, infer: bool = False) -> Domain:
 
             return _lazyframe_domain_from_schema(T.collect_schema())
 
+        # A scipy sparse matrix infers a sparse binary domain over its columns.
+        # scipy is optional: only probed here, and only imported when actually matched.
+        sp = import_optional_dependency("scipy.sparse", raise_error=False)
+        if sp is not None and sp.issparse(T):
+            from opendp.extras.sklearn.cluster import sparse_binary_domain
+
+            return sparse_binary_domain(T.shape[1])
+
     # normalize to a type descriptor
     if infer:
         T = ty.RuntimeType.infer(T)
@@ -697,6 +705,8 @@ class Query(object):
         """Creates a new query by applying a transformation or measurement to the current chain."""
         if name == "canonical_noise":
             return self._canonical_noise
+        if name == "sklearn":
+            return self._sklearn
 
         if name not in constructors:
             raise AttributeError(
@@ -776,6 +786,38 @@ class Query(object):
             )
 
         return self.new_with(chain=self._chain >> then(d_mid, self._d_out))
+
+    def _sklearn(self, estimator):
+        """Chain an OpenDP scikit-learn-style estimator onto the current query.
+
+        This is the generic bridge for every ``opendp.extras.sklearn`` estimator: the
+        estimator carries only algorithm hyperparameters, while the Context supplies
+        the input domain/metric (from the current chain), the output measure, and the
+        ``d_in``/``d_out`` distances.  It mirrors ``_canonical_noise``:
+        ``d_in`` is the stability of the prior chain and ``d_out`` is the query's
+        privacy allowance.
+        """
+        from opendp.extras.sklearn import SklearnEstimator
+
+        if not isinstance(estimator, SklearnEstimator):
+            raise ValueError(
+                "sklearn(...) expects an opendp.extras.sklearn.SklearnEstimator instance"
+            )
+        if isinstance(self._chain, tuple):
+            d_mid = self._d_in
+        elif isinstance(self._chain, Transformation):
+            d_mid = self._chain.map(self._d_in)
+        elif isinstance(self._chain, PartialChain):
+            raise ValueError(
+                "sklearn(...) requires all arguments in the input query to be specified."
+            )
+        else:
+            raise ValueError(  # pragma: no cover
+                f"sklearn(...) expects a metric space or transformation as the prior query, found {self._chain}"
+            )
+
+        partial = estimator.then_measurement(self._output_measure, d_mid, self._d_out)
+        return self.new_with(chain=self._chain >> partial)
 
     def new_with(self, *, chain: Chain, wrap_release=None) -> "Query":
         """Convenience constructor that creates a new query with a different chain.
