@@ -3,6 +3,8 @@ use std::sync::Arc;
 use polars::chunked_array::cast::CastOptions;
 use polars::prelude::*;
 use polars_plan::dsl::Expr;
+use std::collections::HashMap;
+use std::sync::LazyLock;
 
 use super::StableExpr;
 use crate::core::{Function, MetricSpace, StabilityMap, Transformation};
@@ -14,12 +16,27 @@ use crate::transformations::traits::UnboundedMetric;
 #[cfg(test)]
 mod test;
 
-const CAST_TYPES_SUPPORTED: &[DataType] = &[
-    DataType::Int8,
-    DataType::Int16,
-    DataType::Int32,
-    DataType::Int64,
-];
+// Constant hashmap of types to their allowed cast types.
+// This is necessary to prevent downcasting.
+static ALLOWED_TRANSFORMATIONS: LazyLock<HashMap<DataType, Vec<DataType>>> = LazyLock::new(|| {
+    let mut m = HashMap::new();
+    m.insert(
+        DataType::Int8,
+        vec![
+            DataType::Int8,
+            DataType::Int16,
+            DataType::Int32,
+            DataType::Int64,
+        ],
+    );
+    m.insert(
+        DataType::Int16,
+        vec![DataType::Int16, DataType::Int32, DataType::Int64],
+    );
+    m.insert(DataType::Int32, vec![DataType::Int32, DataType::Int64]);
+    m.insert(DataType::Int64, vec![DataType::Int64]);
+    m
+});
 
 /// Make a Transformation that casts an aggregation output to int 64.
 /// Casting aggregations to i64 before noise is added can enable negative values.
@@ -63,7 +80,7 @@ where
         .clone();
 
     match &to_type_dtype {
-        dtype if CAST_TYPES_SUPPORTED.contains(dtype) => {}
+        dtype if ALLOWED_TRANSFORMATIONS.contains_key(dtype) => {}
         _ => {
             return fallible!(
                 MakeTransformation,
@@ -95,6 +112,24 @@ where
 
         _ => unreachable!(),
     }
+
+    let in_dtype = active_column.dtype().clone();
+    if !ALLOWED_TRANSFORMATIONS
+        .get(&in_dtype)
+        .is_some_and(|targets| targets.contains(&to_type_dtype))
+    {
+        return fallible!(
+            MakeTransformation,
+            "cannot downcast from {} to {}",
+            in_dtype,
+            to_type_dtype
+        );
+    }
+    println!(
+        "Input type: {:?}, Allowed transformations: {:?}",
+        in_dtype,
+        ALLOWED_TRANSFORMATIONS.get(&in_dtype)
+    );
 
     t_prior
         >> Transformation::new(

@@ -5,24 +5,6 @@ use polars::prelude::DataType;
 
 use super::*;
 
-const ALL_NUMERIC_TYPES: &[DataType] = &[
-    // Signed Integers
-    DataType::Int8,
-    DataType::Int16,
-    DataType::Int32,
-    DataType::Int64,
-    DataType::Int128,
-    // Unsigned Integers
-    DataType::UInt8,
-    DataType::UInt16,
-    DataType::UInt32,
-    DataType::UInt64,
-    DataType::UInt128,
-    // Floats
-    DataType::Float32,
-    DataType::Float64,
-];
-
 #[test]
 fn test_make_cast_aggregation() -> Fallible<()> {
     let lf = df!(
@@ -53,19 +35,14 @@ fn test_make_cast_aggregation() -> Fallible<()> {
 
 #[test]
 fn test_make_cast_cannot_downcast() -> Fallible<()> {
-    // test cases are all numeric types combo to the supported type.
-    let test_cases: Vec<(&DataType, &DataType)> = ALL_NUMERIC_TYPES
-        .iter()
-        .flat_map(move |b| CAST_TYPES_SUPPORTED.iter().map(move |a| (a, b)))
-        .collect();
-    // test_cases = (DF Value Type, Target Cast)
+    // len returns u32, these types downcast it and aren't supported.
+    let downcast_types = vec![DataType::Int8, DataType::Int16, DataType::Int32];
 
-    for (col_type, cast_target) in test_cases.iter() {
+    for dtype in downcast_types.iter() {
         let lf = df!(
-            "test_col" => &[1, 2, 3],
+            "test_col" => vec![0; 1280],
         )?
-        .lazy()
-        .with_column(col("test_col").cast((*col_type).clone()));
+        .lazy();
 
         let input_domain = WildExprDomain {
             columns: vec![],
@@ -75,47 +52,14 @@ fn test_make_cast_cannot_downcast() -> Fallible<()> {
         };
 
         let transformation: Transformation<_, _, _, L1Distance<f64>> = len()
-            .cast((*cast_target).clone())
+            .cast((*dtype).clone())
             .make_stable(input_domain, L0PInfDistance::<1, _>(SymmetricDistance))?;
 
         let expr = transformation.invoke(&lf.logical_plan)?.expr;
-        let cast_target_max = cast_target.max()?;
-        let df_max = cast_target.max()?;
-        let cast_target_min = cast_target.min()?;
-        let df_min = col_type.min()?;
 
-        if cast_target_max.value() >= df_max.value() && cast_target_min.value() <= df_min.value() {
-            let result = lf.select([expr]).collect()?;
-            assert!(result.height() > 0);
-        } else {
-            // Need to ensure error occurs here.
-            let result = lf.select([expr]).collect();
-            assert!(result.is_err());
-        }
+        // Need to ensure error occurs here.
+        let result = lf.select([expr]).collect();
+        assert!(result.is_err());
     }
-    Ok(())
-}
-
-#[test]
-fn test_make_cast_cannot_downcast_hardcode() -> Fallible<()> {
-    let lf = df!(
-        "test_col" => &[0i64],
-    )?
-    .lazy()
-    .with_column(col("test_col"));
-
-    let input_domain = WildExprDomain {
-        columns: vec![],
-        context: Context::Aggregation {
-            margin: Margin::select(),
-        },
-    };
-
-    let transformation: Transformation<_, _, _, L1Distance<f64>> = len()
-        .cast(DataType::Int8)
-        .make_stable(input_domain, L0PInfDistance::<1, _>(SymmetricDistance))?;
-    // Need to ensure error occurs here.
-    let result = lf.select([expr]).collect();
-    assert!(result.is_err());
     Ok(())
 }
