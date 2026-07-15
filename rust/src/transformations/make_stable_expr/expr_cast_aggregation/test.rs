@@ -6,6 +6,11 @@ use polars::prelude::DataType;
 
 #[test]
 fn test_make_cast_aggregation() -> Fallible<()> {
+    let lf = df!(
+        "test_col" => &[1, 2, 3],
+    )?
+    .lazy();
+
     let input_domain = WildExprDomain {
         columns: vec![],
         context: Context::Aggregation {
@@ -33,11 +38,6 @@ fn test_make_cast_cannot_downcast() -> Fallible<()> {
     let downcast_types = vec![DataType::Int8, DataType::Int16, DataType::Int32];
 
     for dtype in downcast_types.iter() {
-        let lf = df!(
-            "test_col" => vec![0; 1280],
-        )?
-        .lazy();
-
         let input_domain = WildExprDomain {
             columns: vec![],
             context: Context::Aggregation {
