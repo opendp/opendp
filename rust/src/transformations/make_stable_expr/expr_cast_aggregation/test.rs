@@ -1,9 +1,9 @@
+use super::*;
 use crate::core::Transformation;
 use crate::domains::{Context, Margin, WildExprDomain};
+use crate::error;
 use crate::metrics::{L0PInfDistance, L1Distance, SymmetricDistance};
 use polars::prelude::DataType;
-
-use super::*;
 
 #[test]
 fn test_make_cast_aggregation() -> Fallible<()> {
@@ -51,15 +51,13 @@ fn test_make_cast_cannot_downcast() -> Fallible<()> {
             },
         };
 
-        let transformation: Transformation<_, _, _, L1Distance<f64>> = len()
-            .cast((*dtype).clone())
-            .make_stable(input_domain, L0PInfDistance::<1, _>(SymmetricDistance))?;
+        let error: error::Fallible<()> = Err(len()
+                .cast((*dtype).clone())
+                .make_stable(input_domain, L0PInfDistance::<1, _>(SymmetricDistance))
+                .unwrap_err());
 
-        let expr = transformation.invoke(&lf.logical_plan)?.expr;
-
-        // Need to ensure error occurs here.
-        let result = lf.select([expr]).collect();
-        assert!(result.is_err());
+        // Assert against a specific error message or variant
+        assert!(format!("{:?}", error).contains("cannot downcast"));
     }
     Ok(())
 }

@@ -35,6 +35,7 @@ static ALLOWED_TRANSFORMATIONS: LazyLock<HashMap<DataType, Vec<DataType>>> = Laz
     );
     m.insert(DataType::Int32, vec![DataType::Int32, DataType::Int64]);
     m.insert(DataType::Int64, vec![DataType::Int64]);
+    m.insert(DataType::UInt32, vec![DataType::Int64]);
     m
 });
 
@@ -109,27 +110,20 @@ where
         DataType::Int16 => active_column.set_element_domain(AtomDomain::<i16>::default()),
         DataType::Int32 => active_column.set_element_domain(AtomDomain::<i32>::default()),
         DataType::Int64 => active_column.set_element_domain(AtomDomain::<i64>::default()),
-
         _ => unreachable!(),
     }
 
-    let in_dtype = active_column.dtype().clone();
     if !ALLOWED_TRANSFORMATIONS
-        .get(&in_dtype)
+        .get(&middle_domain.column.dtype())
         .is_some_and(|targets| targets.contains(&to_type_dtype))
     {
         return fallible!(
             MakeTransformation,
             "cannot downcast from {} to {}",
-            in_dtype,
+            middle_domain.column.dtype(),
             to_type_dtype
         );
     }
-    println!(
-        "Input type: {:?}, Allowed transformations: {:?}",
-        in_dtype,
-        ALLOWED_TRANSFORMATIONS.get(&in_dtype)
-    );
 
     t_prior
         >> Transformation::new(
