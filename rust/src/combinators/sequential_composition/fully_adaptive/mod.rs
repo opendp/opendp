@@ -188,7 +188,7 @@ where
 ///
 /// Semantically identical to `make_fully_adaptive_composition`,
 /// but queries sharing a privacy map are grouped as `(map, k)` in first-submission order,
-/// so interleaved runs may differ in the last few ulps.
+/// each group is then charged an inf rounded `k`-fold multiple of its privacy loss
 ///
 /// # Citations
 /// * [WRRW23 Fully Adaptive Composition in Differential Privacy](https://arxiv.org/abs/2203.05481)
