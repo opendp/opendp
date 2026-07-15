@@ -22,7 +22,7 @@ use crate::{
     core::{Function, Measure},
     error::Fallible,
     measures::{Approximate, MaxDivergence, RenyiDivergence, ZeroConcentratedDivergence},
-    traits::InfAdd,
+    traits::{InfAdd, InfMul},
 };
 
 #[derive(Debug)]
@@ -137,75 +137,84 @@ pub trait ComposeK: CompositionMeasure {
     }
 }
 
-impl ComposeK for MaxDivergence {}
-impl ComposeK for ZeroConcentratedDivergence {}
-impl ComposeK for Approximate<MaxDivergence> {}
-impl ComposeK for Approximate<ZeroConcentratedDivergence> {}
-
-impl ComposeK for RenyiDivergence {
-    fn compose_k(&self, d_mid: Self::Distance, k: u32) -> Fallible<Self::Distance>
-    where
-        Self::Distance: Clone,
-    {
-        Ok(Function::new_fallible(move |alpha| {
-            // the shared curve is evaluated once, then charged k times
-            inf_add_k(d_mid.eval(alpha)?, k)
-        }))
+impl ComposeK for MaxDivergence {
+    fn compose_k(&self, d_mid: Self::Distance, k: u32) -> Fallible<Self::Distance> {
+        d_mid.inf_mul(&f64::from(k))
     }
 }
 
-/// Upper-bounds the sum of `k` copies of `eps` with k-fold `inf_add`a
-fn inf_add_k(eps: f64, k: u32) -> Fallible<f64> {
-    (0..k).try_fold(0.0, |sum, _| sum.inf_add(&eps))
+impl ComposeK for ZeroConcentratedDivergence {
+    fn compose_k(&self, d_mid: Self::Distance, k: u32) -> Fallible<Self::Distance> {
+        d_mid.inf_mul(&f64::from(k))
+    }
+}
+
+impl ComposeK for Approximate<MaxDivergence> {
+    fn compose_k(&self, (eps, del): Self::Distance, k: u32) -> Fallible<Self::Distance> {
+        Ok((eps.inf_mul(&f64::from(k))?, del.inf_mul(&f64::from(k))?))
+    }
+}
+
+impl ComposeK for Approximate<ZeroConcentratedDivergence> {
+    fn compose_k(&self, (rho, del): Self::Distance, k: u32) -> Fallible<Self::Distance> {
+        Ok((rho.inf_mul(&f64::from(k))?, del.inf_mul(&f64::from(k))?))
+    }
+}
+
+impl ComposeK for RenyiDivergence {
+    fn compose_k(&self, d_mid: Self::Distance, k: u32) -> Fallible<Self::Distance> {
+        let k = f64::from(k);
+        Ok(Function::new_fallible(move |alpha| {
+            // the shared curve is evaluated once, then charged k times
+            d_mid.eval(alpha)?.inf_mul(&k)
+        }))
+    }
 }
 
 #[cfg(test)]
 mod test_compose_k {
     use super::*;
 
-    /// Upper-bounds the sum of `k` copies of `eps` with ~2logk `inf_add`s
-    /// Reduces floating point exposure and would require tolerance for comparisons
-    /// with compose
-    fn inf_add_k_doubling(eps: f64, mut k: u32) -> Fallible<f64> {
-        let mut total = 0.0;
-        let mut power = eps;
-        loop {
-            if k & 1 == 1 {
-                total = total.inf_add(&power)?;
-            }
-            k >>= 1;
-            if k == 0 {
-                return Ok(total);
-            }
-            power = power.inf_add(&power)?;
-        }
+    /// `via_mul` must not be less than the exact sum, and should agree with the
+    /// `inf_add` fold up to rounding.
+    fn assert_bounds_fold(via_mul: f64, via_fold: f64, eps: f64, k: u32) {
+        // rounded-to-nearest product is a lower bound on the round-up product
+        assert!(via_mul >= (k as f64) * eps);
+        assert!((via_mul - via_fold).abs() <= 1e-9 * via_fold.abs().max(f64::MIN_POSITIVE));
     }
 
     #[test]
-    fn test_compose_k_matches_composing_k_copies() -> Fallible<()> {
+    fn test_compose_k_bounds_composing_k_copies() -> Fallible<()> {
         for (eps, k) in [(0.3, 7), (1e-9, 1000), (0.5, 1), (0.1, 0)] {
+            let via_mul = MaxDivergence.compose_k(eps, k)?;
+            let via_fold = MaxDivergence.compose(vec![eps; k as usize])?;
+            assert_bounds_fold(via_mul, via_fold, eps, k);
+
+            let via_mul = ZeroConcentratedDivergence.compose_k(eps, k)?;
+            let via_fold = ZeroConcentratedDivergence.compose(vec![eps; k as usize])?;
+            assert_bounds_fold(via_mul, via_fold, eps, k);
+
             let curve = Function::new(move |_alpha: &f64| eps);
-            let via_compose_k = RenyiDivergence.compose_k(curve.clone(), k)?;
-            let via_compose = RenyiDivergence.compose(vec![curve; k as usize])?;
-            assert_eq!(via_compose_k.eval(&2.0)?, via_compose.eval(&2.0)?);
+            let via_mul = RenyiDivergence.compose_k(curve.clone(), k)?;
+            let via_fold = RenyiDivergence.compose(vec![curve; k as usize])?;
+            assert_bounds_fold(via_mul.eval(&2.0)?, via_fold.eval(&2.0)?, eps, k);
         }
         Ok(())
     }
 
     #[test]
-    fn test_doubling_candidate_matches_inf_add_k() -> Fallible<()> {
-        for eps in [0.0, 1e-300, 1e-9, 0.1, 1.0 / 3.0, 1.0, 1e9] {
-            for k in [0u32, 1, 2, 3, 4, 5, 7, 8, 100, 999, 12345] {
-                let linear = inf_add_k(eps, k)?;
-                let doubled = inf_add_k_doubling(eps, k)?;
+    fn test_compose_k_approximate() -> Fallible<()> {
+        let (eps, del, k) = (0.3, 1e-9, 7);
+        let via_mul = Approximate(MaxDivergence).compose_k((eps, del), k)?;
+        let via_fold = Approximate(MaxDivergence).compose(vec![(eps, del); k as usize])?;
+        assert_bounds_fold(via_mul.0, via_fold.0, eps, k);
+        assert_bounds_fold(via_mul.1, via_fold.1, del, k);
 
-                // both upper-bound the exact sum k * eps
-                let exact_lo = (k as f64) * eps * (1.0 - 1e-12);
-                assert!(linear >= exact_lo);
-                assert!(doubled >= exact_lo);
-                assert!((doubled - linear).abs() <= 1e-9 * linear.abs().max(f64::MIN_POSITIVE));
-            }
-        }
+        let via_mul = Approximate(ZeroConcentratedDivergence).compose_k((eps, del), k)?;
+        let via_fold =
+            Approximate(ZeroConcentratedDivergence).compose(vec![(eps, del); k as usize])?;
+        assert_bounds_fold(via_mul.0, via_fold.0, eps, k);
+        assert_bounds_fold(via_mul.1, via_fold.1, del, k);
         Ok(())
     }
 }
