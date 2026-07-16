@@ -1,5 +1,7 @@
 import subprocess
 import sys
+from pathlib import Path
+
 import pytest
 
 tests = {
@@ -18,5 +20,6 @@ tests = {
 @pytest.mark.skipif(sys.version_info < (3, 11), reason='mypy will fail on 3.9')
 @pytest.mark.parametrize("cmd", tests.values(), ids=tests.keys())
 def test_subprocess(cmd):
-    result = subprocess.run(cmd, shell=True)
+    # Run the cmd from python/ as assumed
+    result = subprocess.run(cmd, shell=True, cwd=Path(__file__).parent.parent)
     assert result.returncode == 0, f'"{cmd}" failed'
