@@ -20,18 +20,18 @@ Why OpenDP?
 
 * OpenDP is based on a `solid conceptual framework <https://opendp.org/files/2025/11/opendp_programming_framework_11may2020_1_01.pdf>`_ for expressing privacy-aware computations.
 * OpenDP is built on a Rust core for memory and thread safety and performance.
-* OpenDP has a process for independent review of algorithms and implementations.
+* OpenDP has a process for `independent review <https://opendp.org/proof-review-board/>`_ of algorithms and implementations.
 * OpenDP has performed well in independent security audits. (`2023 <https://www.sri.inf.ethz.ch/publications/lokna2023groupandattack>`_, `2026 <https://arxiv.org/pdf/2602.17454>`_)
 * OpenDP supports a range of differential privacy algorithms.
 * OpenDP has bindings for Python and R, both built on the same Rust core for consistency and security.
-* OpenDP is a community effort and is not owned or directed by a single corporation.
+* OpenDP is a `community effort <https://opendp.org/what-we-do/>`_ and is not owned or directed by a single corporation.
 
 That said, OpenDP is not the best tool for every job.
 In particular, it is a fairly low-level interface:
-There are a number of other projects which try to make it easy to add
+There are other projects which try to make it easy to add
 differential privacy to existing SQL interfaces or ML frameworks.
-One such tool is `SmartNoise SDK <https://github.com/opendp/smartnoise-sdk>`_,
-which is built on the OpenDP library.
+Two other libraries hosted by the OpenDP Project are
+`Tumult Analytics and SmartNoise SDK <https://opendp.org/tools/>`_.
 
 Who is using OpenDP?
 --------------------
