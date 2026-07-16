@@ -56,18 +56,21 @@ introduction <index.rst>`__.
             ... )
 
 .. note::
-    Typically, data loading will be outside the scope of the privacy guarantee.
-    While it's possible for a CSV's column names and data types to contain
-    private information (perhaps because of a one-hot encoding, or pivot operation),
-    those aren't scenarios we'll worry about here.
 
-    By default, polars will infer the schema from the first rows of a CSV.
-    Other options include:
+    Loading data is not covered by OpenDP's privacy guarantee and should be performed by a trusted curator.
+    CSV schema inference is data-dependent:
+    private values can affect both the inferred types and whether parsing succeeds. 
+    In a trusted environment, however, a parsing error can be useful,
+    since it may reveal malformed data or an incorrect schema before incorrect statistics are released.
 
-    * If you know the column types ahead of time, you may use the ``schema`` kwarg;
-    * Alternatively, if you need to avoid data dependent errors, the ``ignore_errors`` kwarg can be used.
-
-    See the `Polars scan_csv docs <https://docs.pola.rs/api/python/stable/reference/api/polars.scan_csv.html>`_ for more information.
+    If loading success or failure may be observed outside the trusted environment, 
+    prefer a schema-bearing source such as Parquet or a database table, 
+    or load columns as strings via ``infer_schema=False`` and cast them explicitly. 
+    ``ignore_errors=True`` avoids some parsing failures, 
+    but may silently change the loaded data and reduce utility, 
+    so it should be used deliberately rather than by default. 
+    See the `Polars scan_csv documentation <https://docs.pola.rs/api/python/stable/reference/api/polars.scan_csv.html>`_ 
+    for the available schema and error-handling options.
 
 Count
 -----
