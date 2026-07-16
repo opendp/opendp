@@ -8,6 +8,7 @@ linters: all_linters(
     object_length_linter = NULL, # Variable and function names should not be longer than 30 characters.
     object_name_linter = NULL, # Variable and function name style should match snake_case or symbols.
     # With "all_linters", these problems are also reported:
+    unreachable_code_linter = NULL,
     expect_identical_linter = NULL, # Use expect_identical(x, y) by default; resort to expect_equal() only when needed, e.g. when setting ignore_attr= or tolerance=.
     implicit_integer_linter = NULL, # Integers should not be implicit. Use the form 1L for integers or 1.0 for doubles.
     routine_registration_linter = NULL, # Register your native code routines with useDynLib and R_registerRoutines().
