@@ -39,7 +39,10 @@ num = "0.3.1"
 thiserror = "1.0.24"
 statrs = "0.13.0"
 
-dashu = { version = "0.4.0", features = ["num-traits_v02"] }
+# 0.4.3 guarantees dashu-ratio >= 0.4.2, which fixes the RBig/UBig division
+# bug (https://github.com/cmpute/dashu/issues/57) previously worked around in
+# traits/samplers/cks20
+dashu = { version = "0.4.3", features = ["num-traits_v02"] }
 
 openssl = { version = "0.10.71", features = ["vendored"], optional = true }
 
