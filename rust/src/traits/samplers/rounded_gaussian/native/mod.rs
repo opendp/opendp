@@ -62,23 +62,37 @@ impl NativeEntropy {
     #[inline]
     fn draw_bits(&mut self, count: u32) -> Fallible<u64> {
         debug_assert!(count <= u64::BITS);
-
         if count == 0 {
             return Ok(0);
         }
-        if count == u64::BITS {
-            return self.draw_u64();
-        }
 
-        if self.available < count {
-            self.bits = self.draw_u64()?;
-            self.available = u64::BITS;
-        }
+        // Consume the reservoir in a fixed low-bit-first order, spanning source
+        // words when necessary.  In particular, a 64-bit request consumes any
+        // buffered suffix instead of silently drawing around it.
+        let mut out = 0u64;
+        let mut written = 0u32;
+        while written < count {
+            if self.available == 0 {
+                self.bits = self.draw_u64()?;
+                self.available = u64::BITS;
+            }
 
-        let mask = (1u64 << count) - 1;
-        let out = self.bits & mask;
-        self.bits >>= count;
-        self.available -= count;
+            let take = self.available.min(count - written);
+            let chunk = if take == u64::BITS {
+                self.bits
+            } else {
+                self.bits & ((1u64 << take) - 1)
+            };
+            out |= chunk << written;
+
+            if take == u64::BITS {
+                self.bits = 0;
+            } else {
+                self.bits >>= take;
+            }
+            self.available -= take;
+            written += take;
+        }
         Ok(out)
     }
 
@@ -252,7 +266,8 @@ fn scaled_prefix(
     value.checked_shl(common_denominator_bits.checked_sub(denominator_bits)?)
 }
 
-// Algorithm 4 https://arxiv.org/pdf/2008.03855
+// Exact Bernoulli(exp(-1/2)), using an early first-bit decomposition of
+// the decreasing-chain construction in DFW Algorithm 2.
 fn sample_bernoulli_exp_half_with(
     entropy: &mut NativeEntropy,
 ) -> Fallible<NativeSamplerOutcome<bool>> {
@@ -283,7 +298,7 @@ fn sample_bernoulli_exp_half_with(
     }
 }
 
-// Algorithm 5: https://arxiv.org/pdf/2008.03855
+// DFW Algorithm 5, specialized to sigma = 1.
 fn sample_k_with(entropy: &mut NativeEntropy) -> Fallible<NativeSamplerOutcome<u64>> {
     'restart: loop {
         match sample_bernoulli_exp_half_with(entropy)? {
@@ -404,7 +419,7 @@ fn uniform_less_than_half_native(
     }
 }
 
-// Algorithm 6 https://arxiv.org/pdf/2008.03855
+// DFW Algorithm 6 with parameters (x/2, x), realizing exp(-x^2/2).
 fn sample_bernoulli_exp_half_x_squared_native(
     entropy: &mut NativeEntropy,
     x: &mut NativeUniform01,
@@ -444,7 +459,7 @@ fn sample_bernoulli_exp_half_x_squared_native(
     }
 }
 
-// Algorithm 7 https://arxiv.org/pdf/2008.03855
+// Steps 3--4 of DFW Algorithm 7: exp(-k x) exp(-x^2/2).
 fn accept_fraction_native(
     entropy: &mut NativeEntropy,
     k: u64,
@@ -960,7 +975,8 @@ impl U224 {
         if self.0[1..].iter().any(|word| *word != 0) {
             return None;
         }
-        self.0[0].checked_shl(shift)
+        let shifted = (self.0[0] as u64).checked_shl(shift)?;
+        (shifted <= u32::MAX as u64).then_some(shifted as u32)
     }
 
     fn rounded_coefficient(self, shift: i32) -> Option<u32> {
@@ -1149,9 +1165,11 @@ impl NativeF32Profile {
                 }
             }
 
-            // Complete the aligned mantissa split. `j` is uniform below the
-            // scale mantissa and `completion_index` selects a uniform 64-bit
-            // bin for the unread continuous suffix.
+            // Complete the aligned mantissa split.  Conditional on the accepted
+            // 112-bit prefix, the unread suffix is an independent uniform.  We
+            // may therefore resample that suffix with fresh entropy: `j` is
+            // uniform below the scale mantissa and `completion_index` selects
+            // a uniform 64-bit completion bin.
             refine_uniform_to_profile(&mut x, &mut entropy)?;
             let j = sample_below_u32(&mut entropy, self.scale_mantissa)?;
             let completion_index = entropy.draw_bits(NATIVE_COMPLETION_BITS)?;

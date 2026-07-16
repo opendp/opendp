@@ -169,6 +169,60 @@ fn direct_dyadic_converter_preserves_f32_values_and_ties() {
     );
 }
 
+
+#[test]
+fn u224_left_shift_detects_numeric_overflow() {
+    assert_eq!(U224([1, 0, 0, 0, 0, 0, 0]).shl_to_u32(31), Some(1 << 31));
+    assert_eq!(U224([u32::MAX, 0, 0, 0, 0, 0, 0]).shl_to_u32(1), None);
+    assert_eq!(U224([1, 1, 0, 0, 0, 0, 0]).shl_to_u32(0), None);
+}
+
+fn exact_positive_f32_midpoint(lower: f32, upper: f32) -> (U224, i32) {
+    let lo = positive_f32_scale_parts(lower);
+    let hi = positive_f32_scale_parts(upper);
+    let exponent = lo.exponent.min(hi.exponent);
+    let lo_shift = (lo.exponent - exponent) as u32;
+    let hi_shift = (hi.exponent - exponent) as u32;
+    let mantissa = (u64::from(lo.mantissa) << lo_shift)
+        + (u64::from(hi.mantissa) << hi_shift);
+    (
+        U224([mantissa as u32, (mantissa >> 32) as u32, 0, 0, 0, 0, 0]),
+        exponent - 1,
+    )
+}
+
+#[test]
+fn direct_dyadic_converter_rounds_adjacent_midpoints_to_even() {
+    let mut state = 0x6a09_e667u32;
+    for _ in 0..50_000 {
+        state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+        let lower_bits = 1 + state % (f32::MAX.to_bits() - 1);
+        let lower = f32::from_bits(lower_bits);
+        let upper = f32::from_bits(lower_bits + 1);
+        let (midpoint, exponent) = exact_positive_f32_midpoint(lower, upper);
+        let expected = if lower_bits & 1 == 0 { lower } else { upper };
+        assert_eq!(round_dyadic_to_f32(false, midpoint, exponent), Some(expected));
+        assert_eq!(round_dyadic_to_f32(true, midpoint, exponent), Some(-expected));
+    }
+}
+
+#[test]
+fn direct_dyadic_converter_preserves_many_finite_f32_values() {
+    let mut state = 0xbb67_ae85u32;
+    for _ in 0..100_000 {
+        state = state.wrapping_mul(22_695_477).wrapping_add(1);
+        let bits = state & 0x7fff_ffff;
+        if bits == 0 || bits >= f32::INFINITY.to_bits() {
+            continue;
+        }
+        let value = f32::from_bits(bits);
+        let parts = positive_f32_scale_parts(value);
+        let mantissa = U224([parts.mantissa, 0, 0, 0, 0, 0, 0]);
+        assert_eq!(round_dyadic_to_f32(false, mantissa, parts.exponent), Some(value));
+        assert_eq!(round_dyadic_to_f32(true, mantissa, parts.exponent), Some(-value));
+    }
+}
+
 #[test]
 fn native_profile_matches_the_paper_constants_and_admission_checks() -> Fallible<()> {
     assert_eq!(NATIVE_SAMPLER_K_MAX, (1 << 20) - 1);
@@ -181,6 +235,7 @@ fn native_profile_matches_the_paper_constants_and_admission_checks() -> Fallible
     assert_eq!(profile.snapped_scale, 1.0);
     assert_eq!(profile.grid_exponent, -135);
     assert!(NativeF32Profile::new(1.0, NATIVE_CLIP_SCALE_MAX_RATIO + 1.0).is_err());
+    assert!(NativeF32Profile::new(2.0f64.powi(49), 0.0).is_ok());
     assert!(NativeF32Profile::new(2.0f64.powi(50), 0.0).is_err());
     Ok(())
 }
