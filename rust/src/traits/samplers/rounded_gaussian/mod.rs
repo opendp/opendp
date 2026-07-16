@@ -429,18 +429,10 @@ pub fn sample_rounded_gaussian_clipped<T: Float>(mu: T, scale: T, range: T) -> F
 /// Sample from a continuous Gaussian with f64 input parameters, rounded as a
 /// real affine value directly into the extended f32 output lattice.
 ///
-/// This path does not construct a native floating-point noise value and add it
-/// to `mu`; it certifies which extended f32 rounding cell contains the exact
-/// real value `mu +/- scale32 * (k + x)`, where `scale32` is the smallest
-/// finite positive f32 at least as large as `scale`.
-///
-/// If the native prefix cannot certify one extended f32 cell, the accepted trace is
-/// rejected as an unresolved rounding-boundary comb and the sampler restarts.
-/// This intentionally avoids exact rational finalization at the cost of the
-/// small conditioning term accounted for by the comb probability.
-/// Pre-accept sampler caps in the native specialization are declared
-/// sampler-side resampling events. For positive scale, the standard native
-/// profile is proof-grade only for the clipped wrapper below; this unclipped
+/// This path does not construct a floating-point noise value and add it to
+/// `mu`. It uses the fixed-width exact-normal trace, aligned completion, and
+/// direct binary32 conversion described by the native profile. For positive
+/// scale, the profile requires the clipped wrapper below; this unclipped
 /// convenience wrapper returns an error unless `scale == 0`.
 pub fn sample_rounded_gaussian_f64_to_f32_native(mu: f64, scale: f64) -> Fallible<f32> {
     sample_rounded_gaussian_f64_to_f32_native_clipped(mu, scale, None)
@@ -453,13 +445,12 @@ pub fn sample_rounded_gaussian_f64_to_f32_native(mu: f64, scale: f64) -> Fallibl
 /// When `range` is `None`, this path is available only for `scale == 0`.
 /// When `Some(R)`, this implements
 ///
-///     round_ext_f32(clip_R(clip_R(mu) + scale32 * Z)).
+///     round_ext_f32(clip_Rg(D_g(mu) + scale32 * Z)).
 ///
-/// Here `scale32` is the upward-snapped f32 scale used by the native
-/// specialization. Privacy accounting for this path must use `scale32`, and
-/// the standard native profile requires `R < 524288 * scale32`. If `R` is at or
-/// below the f32 finite-output threshold, infinities are excluded from the
-/// support.
+/// Here `scale32` is the upward-snapped f32 scale, `g` is its profile lattice,
+/// `D_g` is nearest-even center discretization, and `Rg = floor(R / g) * g`.
+/// Privacy accounting must use `scale32` and the discretized sensitivity. The
+/// standard profile requires `R <= 524287.5 * scale32`.
 pub fn sample_rounded_gaussian_f64_to_f32_native_clipped(
     mu: f64,
     scale: f64,
@@ -477,10 +468,8 @@ pub fn sample_rounded_gaussian_f64_to_f32_native_clipped(
         return fallible!(FailedFunction, "range must be finite and nonnegative");
     }
 
-    let mu = range.map(|range| mu.max(-range).min(range)).unwrap_or(mu);
-
     if scale == 0.0 {
-        return Ok(mu as f32);
+        return Ok(range.map(|range| mu.max(-range).min(range)).unwrap_or(mu) as f32);
     }
     if range.is_none() {
         return fallible!(
@@ -489,11 +478,14 @@ pub fn sample_rounded_gaussian_f64_to_f32_native_clipped(
         );
     }
 
+    let range = range.expect("positive scale checked to require a clipping range");
+    // Construct once on the host. `profile.sample` is the per-coordinate
+    // fixed-width reference that a device kernel should mirror.
+    let profile = native::NativeF32Profile::new(scale, range)?;
     loop {
-        match native::sample_f64_to_f32_clipped(mu, scale, range)? {
+        match profile.sample(mu)? {
             native::NativeF32Sample::Output(out) => return Ok(out),
             native::NativeF32Sample::RejectedSampler => continue,
-            native::NativeF32Sample::RejectedComb => continue,
         }
     }
 }

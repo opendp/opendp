@@ -1,291 +1,74 @@
 use super::*;
 
-#[derive(Debug)]
-struct NativeProfileAccounting {
-    structural_tail: f64,
-    factory_depth_failure: f64,
-    comparison_failure: f64,
-    sampler_success_failure: f64,
-    sampler_overhead: f64,
-    comb_overhead: f64,
-    total_overhead: f64,
+fn uniform(prefix: u128, bits: u32) -> NativeUniform01 {
+    let mut out = NativeUniform01::new();
+    out.set_prefix(prefix);
+    out.set_bits(bits);
+    out
 }
 
 fn factorial_f64(n: u32) -> f64 {
     (1..=n).map(f64::from).product()
 }
 
-fn standard_native_profile_accounting(
-    alpha: f64,
-    dimension: usize,
-    comb_probability_per_coordinate: f64,
-) -> Fallible<NativeProfileAccounting> {
-    if alpha <= 1.0 {
-        return fallible!(FailedFunction, "alpha must be greater than one");
-    }
-    if comb_probability_per_coordinate < 0.0 || comb_probability_per_coordinate >= 1.0 {
-        return fallible!(
-            FailedFunction,
-            "comb probability per coordinate must be in [0, 1)"
-        );
-    }
+fn sampler_failure_bound() -> f64 {
+    let factories = NATIVE_SAMPLER_K_MAX * NATIVE_SAMPLER_K_MAX + NATIVE_SAMPLER_K_MAX + 2;
+    let comparisons = 2 * u64::from(NATIVE_BERNOULLI_MAX_DEPTH) * factories;
+    std::f64::consts::E
+        * comparisons as f64
+        * 2.0f64.powi(1 - NATIVE_SAMPLER_UNIFORM_MAX_BITS as i32)
+        + std::f64::consts::E * factories as f64 / factorial_f64(NATIVE_BERNOULLI_MAX_DEPTH)
+}
 
-    let k_max = NATIVE_SAMPLER_K_MAX as f64;
-    let b_s = f64::from(NATIVE_SAMPLER_UNIFORM_MAX_BITS);
-    let l_max = NATIVE_BERNOULLI_MAX_DEPTH;
-    let b_factories = NATIVE_SAMPLER_K_MAX * NATIVE_SAMPLER_K_MAX + NATIVE_SAMPLER_K_MAX + 2;
-    let m_comparisons = 2 * u64::from(NATIVE_BERNOULLI_MAX_DEPTH) * b_factories;
+#[test]
+fn native_uniform_packs_the_paper_profile_in_sixteen_bytes() {
+    assert_eq!(std::mem::size_of::<NativeUniform01>(), 16);
 
-    let structural_tail = (-0.5 * k_max * k_max).exp() / k_max;
-    let factory_depth_failure = b_factories as f64 * std::f64::consts::E / factorial_f64(l_max + 1);
-    let comparison_failure = m_comparisons as f64 * 4.0 * 2.0f64.powf(-b_s);
-    let sampler_success_failure = factory_depth_failure + comparison_failure;
+    let prefix = (1u128 << NATIVE_SAMPLER_UNIFORM_MAX_BITS) - 1;
+    let mut value = uniform(prefix, NATIVE_SAMPLER_UNIFORM_MAX_BITS);
+    assert_eq!(value.prefix(), prefix);
+    assert_eq!(value.bits(), 112);
+    assert_eq!(value.denominator_bits(), 112);
 
-    if structural_tail >= 1.0
-        || sampler_success_failure >= 1.0
-        || comb_probability_per_coordinate >= 1.0
-    {
-        return fallible!(
-            FailedFunction,
-            "finite-budget failure probabilities must remain below one"
-        );
-    }
-
-    let dimension = dimension as f64;
-    let structural_overhead = -dimension * (-structural_tail).ln_1p() / (alpha - 1.0);
-    let sampler_success_overhead =
-        -dimension * (-sampler_success_failure).ln_1p() * alpha / (alpha - 1.0);
-    let sampler_overhead = structural_overhead + sampler_success_overhead;
-    let comb_overhead =
-        -dimension * (-comb_probability_per_coordinate).ln_1p() * alpha / (alpha - 1.0);
-
-    Ok(NativeProfileAccounting {
-        structural_tail,
-        factory_depth_failure,
-        comparison_failure,
-        sampler_success_failure,
-        sampler_overhead,
-        comb_overhead,
-        total_overhead: sampler_overhead + comb_overhead,
-    })
+    value.words[3] |= NATIVE_UNIFORM_SCALE_SHIFT_FLAG;
+    assert_eq!(value.prefix(), prefix);
+    assert_eq!(value.bits(), 112);
+    assert_eq!(value.denominator_bits(), 113);
 }
 
 #[test]
 fn native_uniform_less_than_half_decision() {
-    let mut u = NativeUniform01 {
-        prefix: 0b0001,
-        bits: 4,
-    };
-    let mut x = NativeUniform01 {
-        prefix: 0b1000,
-        bits: 4,
-    };
+    let mut u = uniform(0b0001, 4);
+    let mut x = uniform(0b1000, 4);
     assert_eq!(uniform_less_than_half_decided(&u, &x), Some(true));
 
-    u.prefix = 0b0101;
-    x.prefix = 0b0110;
+    u.set_prefix(0b0101);
+    x.set_prefix(0b0110);
     assert_eq!(uniform_less_than_half_decided(&u, &x), Some(false));
 
-    u.prefix = 0b0011;
-    x.prefix = 0b0111;
+    u.set_prefix(0b0011);
+    x.set_prefix(0b0111);
     assert_eq!(uniform_less_than_half_decided(&u, &x), None);
 }
 
 #[test]
-fn native_uniform_integer_interval_comparison() {
-    let low = NativeUniform01 {
-        prefix: 0b001,
-        bits: 3,
-    };
-    let high = NativeUniform01 {
-        prefix: 0b011,
-        bits: 3,
-    };
-    let overlapping = NativeUniform01 {
-        prefix: 0b0010,
-        bits: 4,
-    };
+fn native_uniform_interval_comparison_aligns_denominators() {
+    let low = uniform(0b001, 3);
+    let high = uniform(0b011, 3);
+    let overlapping = uniform(0b0010, 4);
 
     assert_eq!(high.greater_than_decided(&low), Some(true));
     assert_eq!(low.greater_than_decided(&high), Some(false));
     assert_eq!(low.greater_than_decided(&overlapping), None);
-}
 
-#[test]
-fn native_uniform_comparisons_allow_full_128_bit_prefixes() {
-    let high = NativeUniform01 {
-        prefix: u128::MAX,
-        bits: 128,
-    };
-    let low = NativeUniform01 { prefix: 0, bits: 1 };
-    let overlapping_top = NativeUniform01 {
-        prefix: u128::MAX >> 1,
-        bits: 127,
-    };
-
+    let high = uniform((1u128 << 112) - 1, 112);
+    let low = uniform(0, 1);
     assert_eq!(high.greater_than_decided(&low), Some(true));
-    assert_eq!(low.greater_than_decided(&high), Some(false));
-    assert_eq!(high.greater_than_decided(&overlapping_top), None);
     assert_eq!(uniform_less_than_half_decided(&high, &high), Some(false));
 }
 
 #[test]
-fn native_f32_certification_allows_infinite_output_cell() {
-    assert!(matches!(
-        certify_real_affine_rounds_to_f32(
-            f64::MAX,
-            1.0,
-            None,
-            false,
-            0,
-            &NativeUniform01 { prefix: 0, bits: 0 },
-            false
-        ),
-        F32CellCertification::Output(out) if out.is_infinite()
-    ));
-}
-
-#[test]
-fn native_f32_certification_clips_before_rounding() {
-    assert!(matches!(
-        certify_real_affine_rounds_to_f32(
-            10.0,
-            1.0,
-            Some(1.0),
-            false,
-            0,
-            &NativeUniform01 { prefix: 0, bits: 0 },
-            false
-        ),
-        F32CellCertification::Output(out) if out == 1.0
-    ));
-}
-
-#[test]
-fn native_f32_cell_bounds_match_midpoints() {
-    let (lower, upper) = f32_cell_bounds(1.0);
-    assert_eq!(lower, Some((f64::from(1.0_f32.next_down_()) + 1.0) * 0.5));
-    assert_eq!(upper, Some((1.0 + f64::from(1.0_f32.next_up_())) * 0.5));
-
-    let (zero_lower, zero_upper) = f32_cell_bounds(0.0);
-    assert_eq!(zero_lower, Some(f64::from(0.0_f32.next_down_()) * 0.5));
-    assert_eq!(zero_upper, Some(f64::from(0.0_f32.next_up_()) * 0.5));
-}
-
-#[test]
-fn native_f32_certification_canonicalizes_signed_zero() {
-    let min_subnormal = f32::from_bits(1);
-    let out = certify_real_affine_rounds_to_f32(
-        0.0,
-        min_subnormal,
-        None,
-        true,
-        0,
-        &NativeUniform01 { prefix: 0, bits: 1 },
-        true,
-    );
-
-    assert!(matches!(out, F32CellCertification::Output(zero)
-        if zero == 0.0 && zero.to_bits() == 0.0f32.to_bits()));
-}
-
-#[test]
-fn native_clipped_endpoint_comparison_handles_clip_thresholds() {
-    assert_eq!(
-        compare_clipped_endpoint_to_boundary(10.0, 1.0, Some(1.0), false, 0, 0, 0, 1.0),
-        Some(DyadicSign::Exact(std::cmp::Ordering::Equal))
-    );
-    assert_eq!(
-        compare_clipped_endpoint_to_boundary(-10.0, 1.0, Some(1.0), false, 0, 0, 0, -1.0),
-        Some(DyadicSign::Exact(std::cmp::Ordering::Equal))
-    );
-}
-
-#[test]
-fn native_f32_certification_marks_unresolved() {
-    assert!(matches!(
-        certify_real_affine_rounds_to_f32(
-            0.0,
-            1.0,
-            None,
-            false,
-            0,
-            &NativeUniform01 { prefix: 0, bits: 0 },
-            false
-        ),
-        F32CellCertification::Unresolved
-    ));
-}
-
-#[test]
-fn native_fixed_scratch_affine_comparison() {
-    assert_eq!(
-        compare_affine_to_boundary(1.0, 0.5, 1.25, false, 0, 1, 1),
-        Some(DyadicSign::Exact(std::cmp::Ordering::Equal))
-    );
-    assert_eq!(
-        compare_affine_to_boundary(1.0, 0.5, 1.0, false, 0, 1, 1),
-        Some(DyadicSign::Exact(std::cmp::Ordering::Greater))
-    );
-    assert_eq!(
-        compare_affine_to_boundary(1.0, 0.5, 1.5, false, 0, 1, 1),
-        Some(DyadicSign::Exact(std::cmp::Ordering::Less))
-    );
-}
-
-#[test]
-fn native_top_window_affine_comparison_certifies_near() {
-    assert!(matches!(
-        sign_dyadic_sum(&[
-            Dyadic {
-                negative: false,
-                mantissa: 1,
-                exponent: 1023,
-            },
-            Dyadic {
-                negative: true,
-                mantissa: 1,
-                exponent: 1023,
-            },
-            Dyadic {
-                negative: false,
-                mantissa: 1,
-                exponent: -1074,
-            },
-        ]),
-        Some(DyadicSign::Near {
-            units: 2,
-            exponent: _
-        })
-    ));
-
-    assert!(matches!(
-        sign_dyadic_sum(&[
-            Dyadic {
-                negative: false,
-                mantissa: 1,
-                exponent: 1023,
-            },
-            Dyadic {
-                negative: true,
-                mantissa: 1,
-                exponent: 1023,
-            },
-            Dyadic {
-                negative: true,
-                mantissa: 1,
-                exponent: -1074,
-            },
-        ]),
-        Some(DyadicSign::Near {
-            units: 2,
-            exponent: _
-        })
-    ));
-}
-
-#[test]
-fn native_scale_snaps_up_to_f32() -> Fallible<()> {
+fn native_scale_snaps_and_decomposes_exactly() -> Fallible<()> {
     assert_eq!(snap_scale_up_to_f32(1.0)?, 1.0_f32);
     assert_eq!(
         snap_scale_up_to_f32(f64::from(f32::from_bits(1)) / 2.0)?,
@@ -294,23 +77,121 @@ fn native_scale_snaps_up_to_f32() -> Fallible<()> {
 
     let halfway = 1.0 + f64::from(f32::EPSILON) * 0.75;
     assert!(f64::from(snap_scale_up_to_f32(halfway)?) >= halfway);
+
+    let one = positive_f32_scale_parts(1.0);
+    assert_eq!(one.mantissa, 1 << 23);
+    assert_eq!(one.exponent, -23);
+    let min_subnormal = positive_f32_scale_parts(f32::from_bits(1));
+    assert_eq!(min_subnormal.mantissa, 1);
+    assert_eq!(min_subnormal.exponent, -149);
     Ok(())
 }
 
 #[test]
-fn standard_native_profile_accounting_stays_below_paper_floor() -> Fallible<()> {
-    let terms = standard_native_profile_accounting(2.0, 1, 0.0)?;
+fn grid_index_rounds_to_nearest_ties_to_even() {
+    let even = rounded_f64_grid_index(2.5, 0).unwrap();
+    let odd = rounded_f64_grid_index(3.5, 0).unwrap();
+    let negative = rounded_f64_grid_index(-2.5, 0).unwrap();
 
+    assert_eq!(even, I160::new(false, U160::from_u128(2)).unwrap());
+    assert_eq!(odd, I160::new(false, U160::from_u128(4)).unwrap());
+    assert_eq!(negative, I160::new(true, U160::from_u128(2)).unwrap());
+    assert_eq!(
+        floor_positive_f64_grid_index(3.75, 0),
+        Some(U160::from_u128(3))
+    );
+}
+
+#[test]
+fn negative_fraction_normalization_preserves_the_midpoint() {
+    let base = I160::new(false, U160::from_u128(3)).unwrap();
+    let (negative, bin) = normalize_grid_bin(base, true, 0).unwrap();
+    assert!(!negative);
+    assert_eq!(bin.integer, U160::from_u128(2));
+    assert_eq!(bin.fraction_bin, u64::MAX);
+
+    let base = I160::new(true, U160::from_u128(3)).unwrap();
+    let (negative, bin) = normalize_grid_bin(base, false, u64::MAX).unwrap();
+    assert!(negative);
+    assert_eq!(bin.integer, U160::from_u128(2));
+    assert_eq!(bin.fraction_bin, 0);
+}
+
+#[test]
+fn direct_dyadic_converter_handles_ieee_edges() {
+    let min_subnormal = round_dyadic_to_f32(false, U224([1, 0, 0, 0, 0, 0, 0]), -149);
+    assert_eq!(min_subnormal, Some(f32::from_bits(1)));
+
+    // Half of the minimum subnormal is a tie to even zero.
+    let half_min_subnormal = round_dyadic_to_f32(false, U224([1, 0, 0, 0, 0, 0, 0]), -150);
+    assert_eq!(half_min_subnormal, Some(0.0));
+
+    let negative_zero = round_dyadic_to_f32(true, U224::ZERO, -150).unwrap();
+    assert_eq!(negative_zero.to_bits(), 0.0f32.to_bits());
+
+    let overflow = round_dyadic_to_f32(
+        false,
+        U224([u32::MAX, u32::MAX, u32::MAX, u32::MAX, 0, 0, 0]),
+        32,
+    );
+    assert_eq!(overflow, Some(f32::INFINITY));
+}
+
+#[test]
+fn direct_dyadic_converter_preserves_f32_values_and_ties() {
+    for bits in [
+        1,
+        2,
+        0x007f_ffff,
+        0x0080_0000,
+        1.0f32.to_bits(),
+        f32::MAX.to_bits(),
+    ] {
+        let value = f32::from_bits(bits);
+        let parts = positive_f32_scale_parts(value);
+        let converted = round_dyadic_to_f32(
+            false,
+            U224([parts.mantissa, 0, 0, 0, 0, 0, 0]),
+            parts.exponent,
+        );
+        assert_eq!(converted, Some(value));
+    }
+
+    // 1 + 2^-24 is halfway from 1.0 to its successor and rounds to even 1.0.
+    assert_eq!(
+        round_dyadic_to_f32(false, U224([(1 << 24) + 1, 0, 0, 0, 0, 0, 0]), -24),
+        Some(1.0)
+    );
+    // The next midpoint rounds away from the odd low endpoint to the even one.
+    assert_eq!(
+        round_dyadic_to_f32(false, U224([(1 << 24) + 3, 0, 0, 0, 0, 0, 0]), -24),
+        Some(f32::from_bits(1.0f32.to_bits() + 2))
+    );
+}
+
+#[test]
+fn native_profile_matches_the_paper_constants_and_admission_checks() -> Fallible<()> {
     assert_eq!(NATIVE_SAMPLER_K_MAX, (1 << 20) - 1);
-    assert_eq!(NATIVE_BERNOULLI_MAX_DEPTH, 64);
-    assert_eq!(NATIVE_SAMPLER_UNIFORM_MAX_BITS, 128);
-    assert_eq!(NATIVE_FINALIZATION_UNIFORM_MAX_BITS, 96);
-    assert!(terms.structural_tail == 0.0);
-    assert!(terms.factory_depth_failure < 2.0f64.powf(-260.5));
-    assert!(terms.comparison_failure < 2.0f64.powf(-78.9));
-    assert!(terms.sampler_success_failure < 2.0f64.powf(-78.9));
-    assert!(terms.sampler_overhead < 2.0f64.powf(-77.9));
-    assert_eq!(terms.comb_overhead, 0.0);
-    assert_eq!(terms.total_overhead, terms.sampler_overhead);
+    assert_eq!(NATIVE_BERNOULLI_MAX_DEPTH, 32);
+    assert_eq!(NATIVE_SAMPLER_UNIFORM_MAX_BITS, 112);
+    assert_eq!(NATIVE_COMPLETION_BITS, 64);
+    assert!(sampler_failure_bound() < 2.0f64.powf(-63.5));
+
+    let profile = NativeF32Profile::new(1.0, NATIVE_CLIP_SCALE_MAX_RATIO)?;
+    assert_eq!(profile.snapped_scale, 1.0);
+    assert_eq!(profile.grid_exponent, -135);
+    assert!(NativeF32Profile::new(1.0, NATIVE_CLIP_SCALE_MAX_RATIO + 1.0).is_err());
+    assert!(NativeF32Profile::new(2.0f64.powi(50), 0.0).is_err());
+    Ok(())
+}
+
+#[test]
+fn native_profile_zero_clip_has_deterministic_output() -> Fallible<()> {
+    let profile = NativeF32Profile::new(1.0, 0.0)?;
+    assert!(profile.sample(f64::NAN).is_err());
+    assert!(matches!(
+        profile.sample(f64::MAX)?,
+        NativeF32Sample::Output(value) if value.to_bits() == 0.0f32.to_bits()
+    ));
     Ok(())
 }
