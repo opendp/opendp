@@ -80,17 +80,6 @@ where
         })?
         .clone();
 
-    match &to_type_dtype {
-        dtype if ALLOWED_TRANSFORMATIONS.contains_key(dtype) => {}
-        _ => {
-            return fallible!(
-                MakeTransformation,
-                "make_cast_aggregation cast expects target integer dtype, found {}",
-                to_type_dtype
-            );
-        }
-    }
-
     if matches!(options, CastOptions::Strict) {
         options = CastOptions::NonStrict;
     }
@@ -105,12 +94,21 @@ where
     let mut output_domain = middle_domain.clone();
     let active_column = &mut output_domain.column;
 
-    match &to_type_dtype {
-        DataType::Int8 => active_column.set_element_domain(AtomDomain::<i8>::default()),
-        DataType::Int16 => active_column.set_element_domain(AtomDomain::<i16>::default()),
-        DataType::Int32 => active_column.set_element_domain(AtomDomain::<i32>::default()),
-        DataType::Int64 => active_column.set_element_domain(AtomDomain::<i64>::default()),
-        _ => unreachable!(),
+    if ALLOWED_TRANSFORMATIONS.contains_key(&to_type_dtype) {
+        match to_type_dtype {
+            DataType::Int8 => active_column.set_element_domain(AtomDomain::<i8>::default()),
+            DataType::Int16 => active_column.set_element_domain(AtomDomain::<i16>::default()),
+            DataType::Int32 => active_column.set_element_domain(AtomDomain::<i32>::default()),
+            DataType::Int64 => active_column.set_element_domain(AtomDomain::<i64>::default()),
+            _ => return fallible!(MakeTransformation, "Unsupported integer target type."),
+        }
+    } else {
+        return fallible!(
+            MakeTransformation,
+            "make_cast_aggregation cannot cast from {} to {}.",
+            active_column.dtype(),
+            to_type_dtype
+        );
     }
 
     if !ALLOWED_TRANSFORMATIONS
