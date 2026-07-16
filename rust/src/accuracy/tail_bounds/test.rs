@@ -150,3 +150,86 @@ fn test_laplace_discrete_upper_bounded_by_continuous() -> Fallible<()> {
     }
     Ok(())
 }
+
+#[test]
+fn test_tail_bounds_reject_invalid_arguments() {
+    // zero scale previously panicked in rational division; negative scale
+    // previously flipped the exponent sign and returned alpha > 1
+    for scale in [rbig!(0), rbig!(-1)] {
+        assert!(conservative_continuous_laplacian_tail_to_alpha(scale.clone(), rbig!(1)).is_err());
+        assert!(conservative_discrete_laplacian_tail_to_alpha(scale.clone(), ubig!(1)).is_err());
+        assert!(conservative_continuous_gaussian_tail_to_alpha(scale, rbig!(1)).is_err());
+    }
+    assert!(conservative_continuous_laplacian_tail_to_alpha(rbig!(1), rbig!(-1)).is_err());
+}
+
+/// Demonstrates why the original code rounded in the wrong direction
+///
+/// The function computes alpha = Pr[X > t] = exp(-t/s) / 2.
+/// We need to over estimate -t/s so that exp(-t/s) is also overestimated.
+/// Traditionally negative numerators would require the opposite, but within
+/// the exponent the direction is not flipped for the bound.
+///
+/// The previous code rounded -t/s down which decreases alpha.
+///
+/// Inputs are chosen to make the effect testable:
+/// t = 5121, s = 10 gives exponent -512.1, which is not representable in
+/// f64, and near 512 one f64 ulp is 2^-43 (~1e-13), so the two cast
+/// directions land measurably far apart:
+///
+///   alpha_old  = 1.98045884372127425e-223   <- BELOW the true value (bug)
+///                              27425
+///   alpha_true = 1.98045884372131905e-223   (inside the certified bracket)
+///                              31905
+///   alpha_new  = 1.98045884372149923e-223   <- above the true value (fixed)
+///                              49923
+#[test]
+fn test_continuous_laplace_tail_rounding_direction() -> Fallible<()> {
+    use crate::traits::{InfDiv, ToFloatRounded};
+    use dashu::float::{
+        FBig,
+        round::mode::{Down, Up},
+    };
+
+    let (scale, tail) = (rbig!(10), rbig!(5121));
+
+    // the OLD chain, reproduced verbatim: exponent rounded DOWN before exp
+    let alpha_old = f64::neg_inf_cast(-tail.clone() / scale.clone())?
+        .inf_exp()?
+        .inf_div(&2.0)?;
+
+    // the FIXED function: exponent rounded UP before exp
+    let alpha_new = conservative_continuous_laplacian_tail_to_alpha(scale, tail)?;
+
+    // an over precise lower for comparison
+    let true_lower: f64 = (FBig::<Down>::try_from(-5121.0)?.with_precision(150).value()
+        / FBig::<Down>::try_from(10.0)?)
+    .exp()
+    .to_f64_rounded()
+    .neg_inf_div(&2.0)?;
+
+    // an over precise upper for comparison
+    let true_upper: f64 = (FBig::<Up>::try_from(-5121.0)?.with_precision(150).value()
+        / FBig::<Up>::try_from(10.0)?)
+    .exp()
+    .to_f64_rounded()
+    .inf_div(&2.0)?;
+    assert!(true_lower <= true_upper);
+
+    // alpha must be >= the true value
+    assert!(
+        alpha_new >= true_upper,
+        "fixed alpha ({alpha_new:e}) must be >= the true value (<= {true_upper:e})"
+    );
+
+    // previously was below the true value
+    assert!(
+        alpha_old < true_lower,
+        "old-direction alpha ({alpha_old:e}) should under-estimate the true value (>= {true_lower:e}); \
+         if this fails, more precision may be needed"
+    );
+
+    // The final solution's alpha is larger than the previous solution
+    assert!(alpha_old < alpha_new);
+    Ok(())
+}
