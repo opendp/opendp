@@ -560,7 +560,7 @@ impl_float_inf_uni!(f64, f32; InfLn1P, inf_ln_1p, neg_inf_ln_1p, ln_1p);
 impl_float_inf_uni!(f64, f32; InfSqrt, inf_sqrt, neg_inf_sqrt, sqrt);
 
 // exp and exp_m1 are written out plainly (not via the macro above) because they
-// need per-type guards for deeply negative arguments: dashu saturates
+// need per-type guards for very negative arguments: dashu saturates
 // astronomically negative arguments (exp to zero, exp_m1 to exactly -1),
 // which would under-report an upper bound, and dashu's cost grows with the
 // argument's magnitude. Below the guard threshold the true result is closer
